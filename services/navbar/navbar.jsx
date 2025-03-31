@@ -1,16 +1,22 @@
 import React from "react";
 import styles from "./Navbar.module.scss";
+import { useRouter } from "next/router";
 
 export default function Navbar() {
+  const router = useRouter();
+
+  const handleLoginClick = () => {
+    window.open('/login', '_blank');
+  };
+  
+
   return (
     <div className={styles.navbarContainer}>
       <nav className={styles.navbar}>
-        {/* Left side - Logo and text */}
         <div className={styles.logoGroup}>
           <img src="/logo.png" alt="ตราครุฑ" className={styles.logo} />
         </div>
 
-        {/* Center - Menu items */}
         <div className={styles.menu}>
           <a href="#" className={styles.menuItem}>
             หน้าหลัก
@@ -26,9 +32,10 @@ export default function Navbar() {
           </a>
         </div>
 
-        {/* Right side - Login button */}
         <div className={styles.buttonContainer}>
-          <button className={styles.loginButton}>ลงชื่อเข้าใช้</button>
+          <button className={styles.loginButton} onClick={handleLoginClick}>
+            ลงชื่อเข้าใช้
+          </button>
         </div>
       </nav>
     </div>
