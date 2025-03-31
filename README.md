@@ -22,7 +22,7 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-## Libery Install
+## Library Install
 
 ```bash
 pip install -r requirements.txt
