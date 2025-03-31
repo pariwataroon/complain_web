@@ -28,11 +28,15 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   position: relative;
   gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 700px;
 
   @media (max-width: 768px) {
     flex-direction: column;
     padding: 1.5rem;
     gap: 1.5rem;
+    width: 50%;
   }
 }
 
@@ -65,9 +69,11 @@
   @media (max-width: 768px) {
     width: 100%;
     height: auto;
+    max-width: 320px;
     padding: 1rem;
+    margin: 0 auto;
   }
-}
+ }
 
 .divider {
   width: 2px;
@@ -85,4 +91,26 @@
     top: 50%;
     transform: translateY(-50%);
   }
+}
+
+.logoWrapper {
+  width: 100%;
+
+  @media (min-width: 769px) {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    width: auto;
+  }
+
+  @media (max-width: 768px) {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+}
+
+.logo {
+  height: 120px;
+  width: auto;
 }
