@@ -1,0 +1,113 @@
+.footer {
+  background-color: #003399; /* สีพื้นหลังน้ำเงิน */
+  color: #fff;
+  padding: 20px 0;
+  font-family: sans-serif;
+}
+
+.footerContainer {
+  display: flex;
+  align-items: flex-start; /* จัดให้อยู่ด้านบนของแต่ละคอลัมน์ */
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.column {
+  flex: 1;
+  margin: 0 10px;
+}
+
+/* หัวข้อคอลัมน์ */
+.column h4 {
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+/* กล่องลิงก์ในคอลัมน์ซ้าย */
+.linkContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* ระยะห่างระหว่างลิงก์ */
+}
+
+.linkItem {
+  color: #fff;
+  text-decoration: none;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.linkItem:hover {
+  transform: translateY(-5px); /* ลอยขึ้น 5px เมื่อ hover */
+}
+
+/* ข้อมูลติดต่อ (คอลัมน์กลาง) */
+.hotline {
+  margin-top: 10px;
+  font-weight: bold;
+  font-size: 24px;
+  color: #fff;
+}
+
+/* จัดแผนที่และปุ่มโทร (คอลัมน์ขวา) */
+.mapContainer {
+  position: relative; /* สำหรับวางปุ่มโทรแบบ absolute */
+  margin-bottom: 10px;
+}
+
+.mapContainer iframe {
+  width: 400px;
+  height: 200px;
+  border: none;
+}
+
+/* ปุ่มโทรอยู่ชิดมุมขวาล่างของแผนที่ */
+.phoneButtons {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* ระยะห่างระหว่างปุ่ม */
+}
+
+.phoneButton {
+  width: 50px;
+  height: 50px;
+  background-color: #ffcc00; /* สีพื้นหลังปุ่มโทร */
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* เงาเล็กน้อย */
+}
+
+.phoneButton:hover {
+  transform: scale(1.05);
+}
+
+.footerBottom {
+  text-align: center;
+  font-size: 14px;
+}
+
+/* Responsive: ปรับเป็นคอลัมน์เดียวหรือหลายคอลัมน์บนมือถือ */
+@media (max-width: 768px) {
+  .footerContainer {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .column {
+    margin: 10px 0;
+    width: 100%;
+  }
+
+  .mapContainer iframe {
+    width: 100% !important;
+    height: 200px;
+  }
+}
