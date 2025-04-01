@@ -7,6 +7,7 @@
       "@context/*": ["context/*"],
       "@styles/*": ["styles/*"],
       "@pages/*": ["pages/*"],
+      "@hooks/*": ["hooks/*"],
       "@services/*": ["services/*"]
     }
   }
