@@ -1,18 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  IconButton
-} from "@mui/material";
-import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+import { Box, Typography, Button, Paper, IconButton } from "@mui/material";
+import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 
 export default function ThaIDPage() {
   const router = useRouter();
   const [countdown, setCountdown] = useState(10);
-
 
   const handleRegisterClick = () => {
     router.push({
@@ -56,26 +49,26 @@ export default function ThaIDPage() {
         p: 2,
       }}
     >
-
       <Box
         component="img"
         src="/logo_No_text.png"
         alt="การคลัง"
         sx={{
-          position: {
-            xs: "absolute", 
-            md: "absolute",
+          position: "absolute",
+          top: { xs: 24, md: 24 },
+          left: {
+            xs: "50%",
+            md: 24,
           },
-          top: { xs: 70, md: 24 },
-          left: { xs: 125, md: 24 },
-          height: { xs: 150, md: 120 },
+          transform: {
+            xs: "translateX(-50%)",
+            md: "none",
+          },
+          height: { xs: 120, md: 120 },
           width: "auto",
-          mx: { xs: "auto", md: 0 },
-          my: { xs: 2, md: 0 },
           zIndex: 10,
         }}
       />
-
 
       <Paper
         elevation={6}
@@ -112,7 +105,7 @@ export default function ThaIDPage() {
 
         <Box mb={3}>
           <img
-            src="/mock_qr_thaid.png"
+            src="/qr_code_test.png"
             alt="QR สำหรับ ThaID"
             style={{ width: 200, height: 200 }}
           />
@@ -122,8 +115,14 @@ export default function ThaIDPage() {
           {countdown < 10 ? `00:0${countdown}` : `00:${countdown}`}
         </Typography>
 
-        <Typography variant="body2" color="primary" mb={4} sx={{ lineHeight: 1.5 }}>
-          คิวอาร์โค้ดนี้เป็นสิ่งยืนยันตัวตนทางดิจิทัล<br />
+        <Typography
+          variant="body2"
+          color="primary"
+          mb={4}
+          sx={{ lineHeight: 1.5 }}
+        >
+          คิวอาร์โค้ดนี้เป็นสิ่งยืนยันตัวตนทางดิจิทัล
+          <br />
           ออกให้โดยกรมการปกครอง กระทรวงมหาดไทย
         </Typography>
 

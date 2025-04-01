@@ -9,6 +9,7 @@
   justify-content: center;
   font-family: 'Prompt', sans-serif;
   padding: 1rem;
+  position: relative;
 }
 
 .title {
@@ -94,23 +95,27 @@
 }
 
 .logoWrapper {
-  width: 100%;
+  z-index: 10;
+
+  @media (max-width: 768px) {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 150px;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
 
   @media (min-width: 769px) {
     position: absolute;
-    top: 2rem;
-    left: 2rem;
-    width: auto;
-  }
-
-  @media (max-width: 768px) {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 1rem;
+    top: 24px;
+    left: 24px;
+    height: 120px;
   }
 }
 
 .logo {
-  height: 120px;
   width: auto;
+  height: 100%;
 }
