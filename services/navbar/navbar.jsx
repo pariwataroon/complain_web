@@ -38,6 +38,55 @@ export default function Navbar() {
       <nav className={styles.navbar}>
         <div className={styles.logoGroup}>
           <img src="/logo.png" alt="ตราครุฑ" className={styles.logo} />
+          {/* ย้าย Mobile Menu Container ให้ติดกับโลโก้ */}
+          <div className={styles.mobileMenuContainer} ref={menuRef}>
+            <div className={styles.hamburger} onClick={toggleMobileMenu}>
+              <div className={styles.bar}></div>
+              <div className={styles.bar}></div>
+              <div className={styles.bar}></div>
+            </div>
+            {isMobileMenuOpen && (
+              <div className={styles.mobileMenu}>
+                <a
+                  href="#"
+                  className={styles.mobileMenuItem}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  หน้าหลัก
+                </a>
+                <a
+                  href="#"
+                  className={styles.mobileMenuItem}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  ขั้นตอนการแจ้งเรื่องร้องทุกข์
+                </a>
+                <a
+                  href="#"
+                  className={styles.mobileMenuItem}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  ข่าวสาร
+                </a>
+                <a
+                  href="#"
+                  className={styles.mobileMenuItem}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  คำถามที่พบบ่อย
+                </a>
+                <button
+                  className={styles.mobileLoginButton}
+                  onClick={() => {
+                    handleLoginClick();
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  ลงชื่อเข้าใช้
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className={styles.menu}>
@@ -59,56 +108,6 @@ export default function Navbar() {
           <button className={styles.loginButton} onClick={handleLoginClick}>
             ลงชื่อเข้าใช้
           </button>
-        </div>
-
-        {/* Mobile Menu Container สำหรับจัดตำแหน่ง */}
-        <div className={styles.mobileMenuContainer} ref={menuRef}>
-          <div className={styles.hamburger} onClick={toggleMobileMenu}>
-            <div className={styles.bar}></div>
-            <div className={styles.bar}></div>
-            <div className={styles.bar}></div>
-          </div>
-          {isMobileMenuOpen && (
-            <div className={styles.mobileMenu}>
-              <a
-                href="#"
-                className={styles.mobileMenuItem}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                หน้าหลัก
-              </a>
-              <a
-                href="#"
-                className={styles.mobileMenuItem}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                ขั้นตอนการแจ้งเรื่องร้องทุกข์
-              </a>
-              <a
-                href="#"
-                className={styles.mobileMenuItem}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                ข่าวสาร
-              </a>
-              <a
-                href="#"
-                className={styles.mobileMenuItem}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                คำถามที่พบบ่อย
-              </a>
-              <button
-                className={styles.mobileLoginButton}
-                onClick={() => {
-                  handleLoginClick();
-                  setMobileMenuOpen(false);
-                }}
-              >
-                ลงชื่อเข้าใช้
-              </button>
-            </div>
-          )}
         </div>
       </nav>
     </div>

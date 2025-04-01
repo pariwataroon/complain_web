@@ -1,0 +1,69 @@
+import React from "react";
+import styles from "./Footer.module.scss";
+import { LocalPhone, ChatBubbleOutline } from "@mui/icons-material";
+
+export default function Footer() {
+  return (
+    <footer className={styles.footer}>
+      <div className={styles.footerContainer}>
+        {/* คอลัมน์ซ้าย */}
+        <div className={styles.column}>
+          <h4>เว็บไซต์</h4>
+          <div className={styles.linkContainer}>
+            <a href="#" className={styles.linkItem}>
+              หน้าหลัก
+            </a>
+            <a href="#" className={styles.linkItem}>
+              ระเบียบขั้นตอน
+            </a>
+            <a href="#" className={styles.linkItem}>
+              แจ้งเรื่องร้องทุกข์
+            </a>
+            <a href="#" className={styles.linkItem}>
+              การรับเรื่องร้องทุกข์
+            </a>
+            <a href="#" className={styles.linkItem}>
+              ลงทะเบียน
+            </a>
+            <a href="#" className={styles.linkItem}>
+              ช่องทางการติดต่อ
+            </a>
+          </div>
+        </div>
+
+        {/* คอลัมน์กลาง */}
+        <div className={styles.column}>
+          <h4>ช่องทางติดต่อ</h4>
+          <p>
+            กระทรวงการคลัง
+            <br />
+            ถนนพระรามที่ 6 แขวงพญาไท เขตพญาไท
+            <br />
+            กรุงเทพฯ 10400
+            <br />
+            รับส่งหนังสือราชการ: saraban@mof.go.th
+            <br />
+            โทรศัพท์: 02-126-5800 | โทรสาร: 02-273-9408
+          </p>
+          <p className={styles.hotline}>สายด่วน: 1689</p>
+        </div>
+
+        {/* คอลัมน์ขวา */}
+        <div className={styles.column}>
+          <div className={styles.mapContainer}>
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3874.952691334089!2d100.53412475911195!3d13.781725477105375!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30e29c018a2abc03%3A0xc4b9f24d3fcf4b15!2z4LiB4Lij4Liw4LiX4Lij4Lin4LiH4LiB4Liy4Lij4LiE4Lil4Lix4LiH!5e0!3m2!1sth!2sth!4v1743495813071!5m2!1sth!2sth"
+              style={{ border: 0 }}
+              allowFullScreen=""
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+      <div className={styles.footerBottom}>
+        <p>© 2025 MINERTA TECHNOLOGY, Inc. All Rights Reserved.</p>
+      </div>
+    </footer>
+  );
+}

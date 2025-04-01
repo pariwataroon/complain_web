@@ -1,6 +1,5 @@
 .navbarContainer {
   width: 100%;
-  background: linear-gradient(to right, #003366, #1a66cc);
   display: flex;
   justify-content: center;
   position: relative;
@@ -12,7 +11,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0px;
+  padding: 8px 0;
   color: white;
   height: 70px;
 }
@@ -27,15 +26,6 @@
   height: 60px;
 }
 
-.title {
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.subtitle {
-  font-size: 14px;
-}
-
 /* Desktop Menu */
 .menu {
   display: flex;
@@ -47,16 +37,11 @@
   color: white;
   text-decoration: none;
   font-size: 14px;
-  display: inline-block;
   transition: transform 0.2s ease;
+}
 
-  &:hover {
-    transform: translateY(-5px);
-  }
-
-  &:active {
-    transform: translateY(3px);
-  }
+.menuItem:hover {
+  transform: translateY(-5px);
 }
 
 /* Button Container & Login Button */
@@ -69,7 +54,6 @@
   position: relative;
   background: white;
   color: #003366;
-  font-weight: bold;
   font-size: 14px;
   padding: 8px 28px;
   border: none;
@@ -82,7 +66,6 @@
   z-index: 1;
 }
 
-/* Layer สำหรับเอฟเฟคแสงเรืองรอง */
 .loginButton::before {
   content: "";
   position: absolute;
@@ -104,7 +87,6 @@
   z-index: -2;
 }
 
-/* Layer สำหรับพื้นหลังคงรูปทรงปุ่มและข้อความ */
 .loginButton::after {
   content: "ลงชื่อเข้าใช้";
   position: absolute;
@@ -121,13 +103,11 @@
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Hover state: เพิ่ม scale และเงา */
 .loginButton:hover {
   transform: scale(1.05);
   box-shadow: 0 0 20px rgba(0, 51, 102, 0.5);
 }
 
-/* Click effect */
 .loginButton:active {
   transform: scale(0.98);
   box-shadow: 0 5px 15px rgba(0, 51, 102, 0.2);
@@ -139,6 +119,7 @@
   flex-direction: column;
   gap: 4px;
   cursor: pointer;
+  margin-left: 10px;
 }
 
 .hamburger .bar {
@@ -147,7 +128,7 @@
   background-color: white;
 }
 
-/* Container สำหรับ Mobile Menu เพื่อจัดตำแหน่ง dropdown */
+/* Container สำหรับ Mobile Menu */
 .mobileMenuContainer {
   position: relative;
 }
@@ -161,7 +142,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  width: 200px; /* กำหนดความกว้างตามที่ต้องการ */
+  width: 200px;
   padding: 10px 0;
   border-radius: 4px;
   animation: slideDown 0.3s ease-out;
@@ -169,18 +150,17 @@
   z-index: 10;
 }
 
-/* Mobile Menu items */
 .mobileMenuItem {
   color: white;
   text-decoration: none;
   font-size: 14px;
   padding: 10px 16px;
-  width: 85%;
+  width: 84%;
   transition: background 0.2s ease;
+}
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
+.mobileMenuItem:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .mobileLoginButton {
@@ -210,7 +190,7 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
+@media (max-width: 901px) {
   .menu,
   .buttonContainer {
     display: none;
