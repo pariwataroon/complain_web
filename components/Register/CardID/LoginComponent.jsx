@@ -55,6 +55,9 @@ export default function CardIDLoginPage() {
           {/* Citizen ID */}
           <label className={styles.inputLabel}>
             เลขบัตรประชาชน <span>*</span>
+            {errors.citizenId && (
+              <span className={styles.errorText}>{errors.citizenId.message}</span>
+            )}
           </label>
           <input
             type="text"
@@ -62,13 +65,14 @@ export default function CardIDLoginPage() {
             {...register("citizenId", { required: "กรุณากรอกเลขบัตรประชาชน" })}
             className={styles.inputField}
           />
-          {errors.citizenId && (
-            <p className={styles.errorText}>{errors.citizenId.message}</p>
-          )}
+          
 
           {/* Password */}
           <label className={styles.inputLabel}>
             รหัสผ่าน <span>*</span>
+            {errors.password && (
+              <span className={styles.errorText}>{errors.password.message}</span>
+            )}
           </label>
           <div className={styles.passwordWrapper}>
             <input
@@ -84,9 +88,6 @@ export default function CardIDLoginPage() {
               {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
             </span>
           </div>
-          {errors.password && (
-            <p className={styles.errorText}>{errors.password.message}</p>
-          )}
 
           {/* Remember & Forgot */}
           <div className={styles.formOptions}>

@@ -4,13 +4,19 @@ const Homepage3 = () => {
   return (
     <div
       style={{
-        backgroundImage: "url('/images/bg02.png')", // เปลี่ยนชื่อไฟล์ตามที่มีอยู่ใน public
+        backgroundImage: "url('/images/bg02.png')",
         backgroundSize: "cover",
         backgroundPosition: "center",
-        minHeight: "100vh",
-        width: "100%",
+        minHeight: "120vh",
+        width: "90%",
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "0 5%",
       }}
-    ></div>
+    >
+    </div>
   );
 };
 

@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 const Homepage1 = () => {
+
+
   return (
     <div style={{ position: "relative", minHeight: "90vh", width: "100%" }}>
       <div

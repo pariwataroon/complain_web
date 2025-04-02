@@ -79,6 +79,9 @@ export default function ForgetPage() {
         >
           <label className={styles.inputLabel}>
             อีเมล <span>*</span>
+            {errors.email && (
+              <span className={styles.errorText}>{errors.email.message}</span>
+            )}
           </label>
           <input
             type="email"
@@ -92,9 +95,6 @@ export default function ForgetPage() {
             })}
             className={styles.inputField}
           />
-          {errors.email && (
-            <p className={styles.errorText}>{errors.email.message}</p>
-          )}
 
           <button
             type="submit"

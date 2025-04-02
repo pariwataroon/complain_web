@@ -39,20 +39,29 @@ export default function RegisterPage() {
           {/* Citizen ID */}
           <label className={styles.inputLabel}>
             เลขบัตรประชาชน <span>*</span>
+            {errors.citizenId && (
+              <span className={styles.errorText}>{errors.citizenId.message}</span>
+            )}
           </label>
           <input
             type="text"
             placeholder="กรอกเลขบัตรประชาชน"
-            {...register("citizenId", { required: "กรุณากรอกเลขบัตรประชาชน" })}
+            {...register("citizenId", {
+              required: "กรุณากรอกเลขบัตรประชาชน",
+              pattern: {
+                value: /^[0-9]{13}$/,
+                message: "กรุณากรอกเลขบัตรประชาชนให้ถูกต้อง (13 หลัก)"
+              }
+            })}
             className={styles.inputField}
           />
-          {errors.citizenId && (
-            <p className={styles.errorText}>{errors.citizenId.message}</p>
-          )}
-
+          
           {/* Name */}
           <label className={styles.inputLabel}>
             ชื่อ-นามสกุล <span>*</span>
+            {errors.name && (
+              <span className={styles.errorText}>{errors.name.message}</span>
+            )}
           </label>
           <input
             type="text"
@@ -60,11 +69,13 @@ export default function RegisterPage() {
             {...register("name", { required: "กรุณากรอกชื่อ-นามสกุล" })}
             className={styles.inputField}
           />
-          {errors.name && <p className={styles.errorText}>{errors.name.message}</p>}
 
           {/* Email */}
           <label className={styles.inputLabel}>
             อีเมล <span>*</span>
+            {errors.email && (
+              <span className={styles.errorText}>{errors.email.message}</span>
+            )}
           </label>
           <input
             type="email"
@@ -72,23 +83,33 @@ export default function RegisterPage() {
             {...register("email", { required: "กรุณากรอกอีเมล" })}
             className={styles.inputField}
           />
-          {errors.email && <p className={styles.errorText}>{errors.email.message}</p>}
 
           {/* Phone */}
           <label className={styles.inputLabel}>
             เบอร์โทรศัพท์ <span>*</span>
+            {errors.phone && (
+              <span className={styles.errorText}>{errors.phone.message}</span>
+            )}
           </label>
           <input
             type="text"
             placeholder="กรอกเบอร์โทรศัพท์"
-            {...register("phone", { required: "กรุณากรอกเบอร์โทรศัพท์" })}
+            {...register("phone", {
+              required: "กรุณากรอกเบอร์โทรศัพท์",
+              pattern: {
+                value: /^[0-9]{10}$/,
+                message: "กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (10 หลัก)"
+              }
+            })}
             className={styles.inputField}
           />
-          {errors.phone && <p className={styles.errorText}>{errors.phone.message}</p>}
 
           {/* Password */}
           <label className={styles.inputLabel}>
             รหัสผ่าน <span>*</span>
+            {errors.password && (
+              <span className={styles.errorText}>{errors.password.message}</span>
+            )}
           </label>
           <input
             type="password"
@@ -96,8 +117,6 @@ export default function RegisterPage() {
             {...register("password", { required: "กรุณากรอกรหัสผ่าน" })}
             className={styles.inputField}
           />
-          {errors.password && <p className={styles.errorText}>{errors.password.message}</p>}
-
           {/* Submit */}
           <button type="submit" className={styles.submitButton}>
             ยืนยันข้อมูล
