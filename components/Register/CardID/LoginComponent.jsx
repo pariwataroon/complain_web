@@ -31,11 +31,12 @@ export default function CardIDLoginPage() {
   };
   return (
     <div className={styles.container}>
-      <div className={styles.logoWrapper}>
-        <img src="/Logo_Gold.png" alt="การคลัง" />
-      </div>
+      
 
       <div className={styles.loginBox}>
+        <div className={styles.logoWrapper}>
+          <img src="/Logo_Gold.png" alt="การคลัง" />
+        </div>
         <IconButton
           onClick={handleBackToLogin}
           sx={{
@@ -113,7 +114,11 @@ export default function CardIDLoginPage() {
           {/* Register */}
           <p className={styles.registerLink}>
             ไม่มีบัญชี?{" "}
-            <a href="#" className={styles.registerLinkText}>
+            <a href="#" className={styles.registerLinkText}
+              onClick={(e) => {
+                e.preventDefault();
+                handleRegisterClick();
+              }}>
               ลงทะเบียนเข้าสู่ระบบ
             </a>
           </p>

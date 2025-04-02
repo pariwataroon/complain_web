@@ -15,8 +15,9 @@
 
 .logoWrapper {
   position: absolute;
-  top: 200px;
-  transform: translateY(-50%);
+
+  left: 50%;
+  transform: translate(-50%, -100%);
   z-index: 10;
 
   display: flex;
