@@ -14,7 +14,6 @@ async def get_users() -> FormatResponseModel:
         users
     )
 
-
 @router.post("/")
 async def create_user():
     return {"message": "Create new user"}
