@@ -1,7 +1,8 @@
 from fastapi import APIRouter
 from lib.format_data import format_response,FormatResponseModel
+
 router = APIRouter(
-    prefix="/users",  
+    prefix="/users",
     tags=["users"]
 ) 
 
