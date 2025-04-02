@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import LoginComponent_ThaID from "@components/Register/ThaID/LoginComponent";
 import LoginComponent_CardID from "@components/Register/CardID/LoginComponent";
-import TimeOut_CardID from "@components/Register/CardID/Timeout/TimeOutComponent";
+import Forget_CardID from "@components/Register/CardID/forget/ForgetComponent";
+import Register_CardID from "@components/Register/CardID/register/RegisterComponent";
 import TimeOut_ThaID from "@components/Register/ThaID/Timeout/TimeOutComponent";
 import HowTo_ThaID from "@components/Register/ThaID/Howto/HowToComponent";
 
@@ -15,8 +16,9 @@ export default function Register() {
       "ThaID",
       "CardID",
       "TimeOut_ThaID",
-      "TimeOut_CardID",
       "HowTo_ThaID",
+      "Forget_CardID",
+      "Register_CardID",
     ];
     if (router.isReady && !validMethods.includes(method)) {
       router.replace("/login");
@@ -30,10 +32,12 @@ export default function Register() {
       return <LoginComponent_ThaID />;
     case "CardID":
       return <LoginComponent_CardID />;
+    case "Forget_CardID":
+      return <Forget_CardID />;
+    case "Register_CardID":
+      return <Register_CardID />;
     case "TimeOut_ThaID":
       return <TimeOut_ThaID />;
-    case "TimeOut_CardID":
-      return <TimeOut_CardID />;
     case "HowTo_ThaID":
       return <HowTo_ThaID />;
   }

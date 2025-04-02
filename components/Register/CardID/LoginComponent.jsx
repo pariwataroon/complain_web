@@ -1,21 +1,52 @@
 import React, { useState } from "react";
+import { useRouter } from "next/router";
 import { useLoginForm } from "@hooks/login/useLoginForm";
+import { IconButton } from "@mui/material";
 import styles from "./LoginPage.module.scss";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 
 export default function CardIDLoginPage() {
   const { register, handleSubmit, errors, onSubmit } = useLoginForm();
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
 
+  const handleBackToLogin = () => {
+    router.push("/login");
+  };
+
+  const handleRegisterClick = () => {
+    router.push({
+      pathname: "/register",
+      query: { method: "Register_CardID" },
+    });
+  };
+
+  const handleForgetClick = () => {
+    router.push({
+      pathname: "/register",
+      query: { method: "Forget_CardID" },
+    });
+  };
   return (
     <div className={styles.container}>
-      {/* Logo กลางบน */}
       <div className={styles.logoWrapper}>
         <img src="/Logo_Gold.png" alt="การคลัง" />
       </div>
 
       <div className={styles.loginBox}>
+        <IconButton
+          onClick={handleBackToLogin}
+          sx={{
+            position: "absolute",
+            top: 16,
+            right: 16,
+            color: "grey.700",
+          }}
+        >
+          <ArrowBackIosNewIcon />
+        </IconButton>
         <h1 className={styles.loginTitle}>ลงชื่อเข้าสู่ระบบ</h1>
         <p className={styles.loginSubtitle}>สำหรับประชาชน</p>
 
@@ -30,7 +61,9 @@ export default function CardIDLoginPage() {
             {...register("citizenId", { required: "กรุณากรอกเลขบัตรประชาชน" })}
             className={styles.inputField}
           />
-          {errors.citizenId && <p className={styles.errorText}>{errors.citizenId.message}</p>}
+          {errors.citizenId && (
+            <p className={styles.errorText}>{errors.citizenId.message}</p>
+          )}
 
           {/* Password */}
           <label className={styles.inputLabel}>
@@ -50,7 +83,9 @@ export default function CardIDLoginPage() {
               {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
             </span>
           </div>
-          {errors.password && <p className={styles.errorText}>{errors.password.message}</p>}
+          {errors.password && (
+            <p className={styles.errorText}>{errors.password.message}</p>
+          )}
 
           {/* Remember & Forgot */}
           <div className={styles.formOptions}>
@@ -58,7 +93,14 @@ export default function CardIDLoginPage() {
               <input type="checkbox" {...register("rememberMe")} />
               จดจำการเข้าสู่ระบบ
             </label>
-            <a href="#" className={styles.forgotPassword}>
+            <a
+              href="#"
+              className={styles.forgotPassword}
+              onClick={(e) => {
+                e.preventDefault();
+                handleForgetClick();
+              }}
+            >
               ลืมรหัสผ่าน
             </a>
           </div>

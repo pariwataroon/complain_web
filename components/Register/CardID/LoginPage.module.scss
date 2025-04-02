@@ -80,12 +80,13 @@
 
 .inputField {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 0.6rem 1rem;
   border: 1.5px solid #1e40af;
   border-radius: 8px;
   font-size: 1rem;
   color: #333;
-  outline: none;
 
   &::placeholder {
     color: #bbb;
@@ -96,6 +97,7 @@
     box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
   }
 }
+
 
 .passwordWrapper {
   position: relative;
