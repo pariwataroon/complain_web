@@ -10,7 +10,7 @@ export const useForgetForm = () => {
   } = useForm();
 
   const onSubmit = (data) => {
-    console.log("📧 ส่งอีเมลรีเซ็ตรหัสผ่าน:", data);
+    console.log("ส่งอีเมลรีเซ็ตรหัสผ่าน:", data);
     // TODO: call API เพื่อส่ง reset link หรือรหัสใหม่
   };
 

@@ -3,12 +3,13 @@ import { useRouter } from "next/router";
 import { useForgetForm } from "@hooks/login/forget/useForgetForm";
 import { IconButton } from "@mui/material";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import { alertSuccess, alertError } from "@utils/Alert"; // นำเข้า alertUtils
 import styles from "./ForgetPage.module.scss";
 
 export default function ForgetPage() {
   const router = useRouter();
-  const [countdown, setCountdown] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
+  const [countdown, setCountdown] = useState(0);  // จำนวนเวลาถอยหลัง
+  const [submitted, setSubmitted] = useState(false);  // เช็คว่ามีการ submit แล้ว
 
   const { register, handleSubmit, errors, onSubmit, handleResend } = useForgetForm();
 
@@ -18,12 +19,12 @@ export default function ForgetPage() {
 
   const handleClick = (data) => {
     if (!submitted) {
-      onSubmit(data); // กดครั้งแรก = ส่ง form
+      onSubmit(data);
       setSubmitted(true);
     } else {
-      handleResend(); // ครั้งถัดไป = ส่งใหม่
+      handleResend();
     }
-    setCountdown(10);
+    setCountdown(10);  // ตั้งเวลาถอยหลัง
   };
 
   useEffect(() => {
@@ -33,6 +34,16 @@ export default function ForgetPage() {
     }
     return () => clearInterval(timer);
   }, [countdown]);
+
+  // ฟังก์ชันเพื่อแสดง alert หลัง submit
+  const handleSubmitWithAlert = (data) => {
+    onSubmit(data);
+    alertSuccess("ส่งอีเมลรีเซ็ตรหัสผ่านสำเร็จ", "กรุณาตรวจสอบอีเมลของคุณ");
+
+    // ทำให้ปุ่มถูกล็อกหลังจากที่ผู้ใช้กดยืนยัน
+    setSubmitted(true);
+    setCountdown(10);  // ตั้งเวลาถอยหลังอีกครั้ง
+  };
 
   return (
     <div className={styles.container}>
@@ -63,7 +74,7 @@ export default function ForgetPage() {
         </p>
 
         <form
-          onSubmit={handleSubmit(handleClick)}
+          onSubmit={handleSubmit(handleSubmitWithAlert)}
           className={styles.forgotForm}
         >
           <label className={styles.inputLabel}>
@@ -87,20 +98,20 @@ export default function ForgetPage() {
 
           <button
             type="submit"
-            disabled={countdown > 0}
+            disabled={countdown > 0}  // ปิดการใช้งานเมื่อ countdown > 0
             className={styles.submitButton}
             style={{
-              backgroundColor: countdown > 0 ? "#ccc" : "#1e40af",
+              backgroundColor: countdown > 0 ? "#ccc" : "#1e40af",  // เปลี่ยนสีปุ่มเมื่อ countdown > 0
               color: "#fff",
-              cursor: countdown > 0 ? "not-allowed" : "pointer",
+              cursor: countdown > 0 ? "not-allowed" : "pointer",  // ปิดการใช้งานเมื่อ countdown > 0
               marginTop: "1rem",
             }}
           >
             {countdown > 0
-              ? `กรุณารอเพื่อส่งซ้ำ (${countdown})`
+              ? `กรุณารอเพื่อส่งซ้ำ (${countdown})`  // แสดงข้อความ countdown
               : submitted
-              ? "รับรหัสอีกครั้ง"
-              : "ยืนยัน"}
+                ? "รับรหัสอีกครั้ง"
+                : "ยืนยัน"}
           </button>
         </form>
       </div>

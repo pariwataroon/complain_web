@@ -13,6 +13,7 @@ function MyApp({ Component, pageProps }) {
             padding: 0;
             width: 100%;
             height: 100%;
+            font-family: "Sarabun", sans-serif;
           }
         `}</style>
       </StoreProvider>

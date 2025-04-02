@@ -10,11 +10,15 @@
   align-items: center;
 
   &-img {
-    width: 100%; /* ให้รูปปรับตามความกว้างของ container */
-    max-width: 100px; /* จำกัดความกว้างสูงสุด */
-    height: auto; /* ปรับความสูงตามสัดส่วนของรูป */
+    width: 100%;
+    /* ให้รูปปรับตามความกว้างของ container */
+    max-width: 100px;
+    /* จำกัดความกว้างสูงสุด */
+    height: auto;
+    /* ปรับความสูงตามสัดส่วนของรูป */
     margin-right: 15px;
-    object-fit: cover; /* เลือกว่าจะแสดงผลรูปแบบใด (cover/fill/contain ฯลฯ) */
+    object-fit: cover;
+    /* เลือกว่าจะแสดงผลรูปแบบใด (cover/fill/contain ฯลฯ) */
   }
 
   &-title {
