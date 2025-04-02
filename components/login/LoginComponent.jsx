@@ -1,16 +1,12 @@
 import React from "react";
 import { useRouter } from "next/router";
-import {
-  IconButton
-} from "@mui/material";
+import { IconButton } from "@mui/material";
 import styles from "./LoginPage.module.scss";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 
 export default function LoginPage() {
   const router = useRouter();
 
-
-  
   const handleClick = (method) => {
     router.push({
       pathname: "/register",
@@ -29,17 +25,17 @@ export default function LoginPage() {
       </div>
       <h1 className={styles.title}>ยินดีต้อนรับ</h1>
       <div className={styles.buttonWrapper}>
-      <IconButton
-        onClick={handleBackToHome}
-        sx={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          color: "grey.600",
-        }}
-      >
-        <ArrowBackIosNewIcon />
-      </IconButton>
+        <IconButton
+          onClick={handleBackToHome}
+          sx={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            color: "grey.600",
+          }}
+        >
+          <ArrowBackIosNewIcon />
+        </IconButton>
         <div className={styles.card} onClick={() => handleClick("ThaID")}>
           <img src="/logo_ThaID.png" alt="ThaID" />
           <div>เข้าสู่ระบบด้วย ThaID</div>

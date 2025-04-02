@@ -11,15 +11,16 @@ const LineIcon = () => (
 );
 
 const NewsComponent = () => {
+  // สามารถปรับจำนวนรูปภาพตามที่ต้องการ - ระบบจะปรับการแสดงผลอัตโนมัติ
   const imageUrls = [
     "https://picsum.photos/300/200?random=2",
     "https://picsum.photos/300/200?random=3",
     "https://picsum.photos/300/200?random=4",
     "https://picsum.photos/300/200?random=5",
-    "https://picsum.photos/300/200?random=2",
-    "https://picsum.photos/300/200?random=3",
-    "https://picsum.photos/300/200?random=4",
-    "https://picsum.photos/300/200?random=5",
+    "https://picsum.photos/300/200?random=6",
+    "https://picsum.photos/300/200?random=7",
+    "https://picsum.photos/300/200?random=8",
+    "https://picsum.photos/300/200?random=9",
   ];
 
   const [selectedImage, setSelectedImage] = useState(null);
@@ -36,6 +37,22 @@ const NewsComponent = () => {
   // Prevent closing modal when clicking on the image itself
   const handleImageClick = (e) => {
     e.stopPropagation();
+  };
+
+  // ฟังก์ชันสำหรับกำหนด class ของ grid ตามจำนวนรูปภาพ
+  const getGridClassName = () => {
+    const count = imageUrls.length;
+
+    if (count === 1) return styles.singleImage;
+    if (count === 2) return styles.twoImages;
+    if (count === 3) return styles.threeImages;
+    if (count === 4) return styles.fourImages;
+    if (count === 5) return styles.fiveImages;
+    if (count === 6) return styles.sixImages;
+    if (count === 7) return styles.sevenImages;
+    if (count === 8) return styles.eightImages;
+
+    return styles.eightImages; // default for more than 8 images
   };
 
   return (
@@ -88,28 +105,30 @@ const NewsComponent = () => {
 
       <div className={styles.galleryTitle}>รูปภาพกิจกรรม</div>
 
-      <div className={styles.imageGrid}>
-        {imageUrls.map((url, index) => (
-          <div
-            key={index}
-            className={styles.imageItem}
-            onClick={() => openModal(url)} // Open the modal with the clicked image
-          >
-            <img src={url} alt={`กิจกรรม ${index + 1}`} />
-          </div>
-        ))}
-      </div>
+      {imageUrls.length > 0 && (
+        <div className={`${styles.imageGrid} ${getGridClassName()}`}>
+          {imageUrls.map((url, index) => (
+            <div
+              key={index}
+              className={styles.imageItem}
+              onClick={() => openModal(url)}
+            >
+              <img src={url} alt={`กิจกรรม ${index + 1}`} />
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Modal for showing the full image */}
       <div
         className={`${styles.modal} ${selectedImage ? styles.active : ""}`}
-        onClick={closeModal} // Close the modal when clicking on the background
+        onClick={closeModal}
       >
         {selectedImage && (
           <img
             src={selectedImage}
             alt="Selected Activity"
-            onClick={handleImageClick} // Prevent closing when clicking the image itself
+            onClick={handleImageClick}
           />
         )}
       </div>

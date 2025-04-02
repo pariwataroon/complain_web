@@ -1,0 +1,237 @@
+/* Navbar Styles */
+.navbarContainer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.navbar {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  color: #1120a3;
+  height: 70px;
+}
+
+/* Logo Group */
+.logoGroup {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  height: 60px;
+}
+
+/* Desktop Menu */
+.menu {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.menuItem {
+  color: #1120a3;
+  text-decoration: none;
+  font-size: 14px;
+  transition: transform 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    background-color: #f0f0f0;
+  }
+
+  /* For menu items with dropdowns */
+  &.hasDropdown {
+    position: relative;
+    padding-right: 24px; /* Make space for the arrow */
+  }
+
+  &.hasDropdown::after {
+    content: "▼"; /* Down arrow by default */
+    position: absolute;
+    right: 5px;
+    font-size: 10px;
+    display: inline-block; /* Always show for dropdown items */
+    transition: transform 0.3s ease;
+  }
+
+  &.active::after {
+    transform: rotate(180deg); /* Rotate to show up arrow */
+  }
+}
+
+/* Button Container & Login Button */
+.buttonContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.loginButton {
+  background: white;
+  color: #003366;
+  font-size: 14px;
+  padding: 8px 28px;
+  border: 2px solid #003366;
+  border-radius: 50px;
+  cursor: pointer;
+  outline: none;
+  letter-spacing: 0.5px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.loginButton:hover {
+  background: #f0f0f0;
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(0, 51, 102, 0.5);
+}
+
+.loginButton:active {
+  transform: scale(0.98);
+  box-shadow: 0 5px 15px rgba(0, 51, 102, 0.2);
+}
+
+.reportButton {
+  background: #003366;
+  color: white;
+  font-size: 14px;
+  padding: 8px 28px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  outline: none;
+  letter-spacing: 0.5px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.reportButton:hover {
+  background: #0056a3;
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(0, 51, 102, 0.5);
+}
+
+.reportButton:active {
+  transform: scale(0.98);
+  box-shadow: 0 5px 15px rgba(0, 51, 102, 0.2);
+}
+
+/* Hamburger Menu สำหรับ Mobile */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+@media (max-width: 380px) {
+  .hamburger {
+    margin-left: 0px;
+  }
+}
+
+.hamburger .bar {
+  width: 25px;
+  height: 3px;
+  background-color: white;
+}
+
+/* Container สำหรับ Mobile Menu */
+.mobileMenuContainer {
+  position: relative;
+}
+
+.mobileMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #003366;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 200px;
+  padding: 10px 0;
+  border-radius: 4px;
+  animation: slideDown 0.3s ease-out;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.mobileMenuItem {
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 10px 16px;
+  width: 84%;
+  transition: background 0.2s ease;
+}
+
+.mobileMenuItem:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mobileLoginButton {
+  background: white;
+  color: #003366;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 8px 28px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  outline: none;
+  letter-spacing: 0.5px;
+  margin: 10px 16px 0;
+}
+
+/* Animation สำหรับ dropdown */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 901px) {
+  .menu,
+  .buttonContainer {
+    display: none;
+  }
+  .hamburger {
+    display: flex;
+  }
+}
+
+.dropdownMenu {
+  display: flex; /* ซ่อนเมนูย่อยเมื่อไม่ได้ hover */
+  flex-direction: column; /* ให้รายการในเมนูย่อยเรียงในแนวตั้ง */
+  background-color: #ffffff;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  position: absolute;
+  top: 100%; /* ให้เมนูย่อยอยู่ใต้เมนูหลัก */
+  left: 0; /* ตั้งให้เมนูย่อยอยู่ภายในขอบเขตของเมนูหลัก */
+  min-width: 200px;
+  z-index: 1;
+  height: auto;
+}
+
+.dropdownItem {
+  padding: 10px 15px;
+  text-decoration: none;
+  color: #003366;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}

@@ -40,6 +40,12 @@
     margin-right: 20px;
     position: relative;
     padding-right: 20px;
+    display: flex;
+    align-items: center;
+
+    svg {
+      margin-right: 5px;
+    }
 
     &:not(:last-child)::after {
       content: "|";
@@ -72,171 +78,10 @@
     }
   }
 
-  .facebook {
-    background-color: #3b5998;
-  }
-
-  .line {
-    background-color: #00b900;
-  }
-
-  .twitter {
-    background-color: #1da1f2;
-  }
-
-  .copy {
-    background-color: #6c757d;
-  }
-}
-
-.newsContent {
-  font-size: 16px;
-  line-height: 1.6;
-  margin-bottom: 30px;
-
-  p {
-    margin-bottom: 15px;
-  }
-}
-
-.galleryTitle {
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.imageGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 15px;
-  margin-bottom: 30px;
-
-  .imageItem {
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.3s ease;
-    }
-
-    /* เพิ่มการขยายรูปเมื่อ hover */
-    &:hover img {
-      transform: scale(1.1); /* ขยายรูปภาพเมื่อ mouse hover */
-    }
-  }
-}
-
-@media (max-width: 992px) {
-  .imageGrid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .imageGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 576px) {
-  .newsTitle {
-    font-size: 20px;
-  }
-
-  .imageGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .shareButtons {
-    margin-top: 10px;
-    margin-left: 0;
-    width: 100%;
-    justify-content: flex-start;
-  }
-}
-.newsContainer {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-  font-family: "Sarabun", "Tahoma", sans-serif;
-  color: #333;
-}
-
-.headerImage {
-  width: 100%;
-  margin-bottom: 20px;
-  border-radius: 8px;
-  overflow: hidden;
-
-  img {
-    width: 100%;
-    height: auto;
-    object-fit: cover;
-  }
-}
-
-.newsTitle {
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 15px;
-  line-height: 1.4;
-}
-
-.metaInfo {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 15px;
-
-  span {
-    margin-right: 20px;
-    position: relative;
-    padding-right: 20px;
-
-    &:not(:last-child)::after {
-      content: "|";
-      position: absolute;
-      right: 0;
-      top: 0;
-    }
-  }
-}
-
-.shareButtons {
-  display: flex;
-  margin-left: auto;
-
-  .shareButton {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: none;
-    margin-left: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  }
   .link {
     background-color: #878fd0;
   }
+
   .facebook {
     background-color: #3b5998;
   }
@@ -270,58 +115,130 @@
 
 .imageGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 15px;
-  margin-bottom: 30px;
+  gap: 20px; /* เพิ่มระยะห่างระหว่างรูป */
+  margin-bottom: 50px;
+  width: 100%;
+
+  // กรณีมีรูปภาพ 1 รูป
+  &.singleImage {
+    grid-template-columns: 1fr;
+    .imageItem {
+      height: 400px;
+    }
+  }
+
+  // กรณีมีรูปภาพ 2 รูป
+  &.twoImages {
+    grid-template-columns: repeat(2, 1fr);
+    .imageItem {
+      height: 300px;
+    }
+  }
+
+  // กรณีมีรูปภาพ 3 รูป
+  &.threeImages {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto auto;
+    .imageItem:first-child {
+      grid-column: 1 / -1;
+      height: 320px;
+    }
+    .imageItem:nth-child(n + 2) {
+      height: 200px;
+    }
+  }
+
+  // กรณีมีรูปภาพ 4 รูป
+  &.fourImages {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 200px;
+  }
+
+  // กรณีมีรูปภาพ 5 รูป (แก้โครงสร้างใหม่)
+  &.fiveImages {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 300px 200px 200px;
+    grid-template-areas:
+      "main main"
+      "sub1 sub2"
+      "sub3 sub4";
+
+    .imageItem:first-child {
+      grid-area: main;
+      height: 100%;
+    }
+    .imageItem:nth-child(n + 2) {
+      height: 100%;
+    }
+  }
+
+  // กรณีมีรูปภาพ 6 รูป
+  &.sixImages {
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: 180px;
+  }
+
+  /* กรณีมีรูปภาพ 7 รูป */
+  &.sevenImages {
+    grid-template-columns: repeat(3, 1fr); /* แสดง 3 คอลัมน์ */
+    grid-template-rows: 250px repeat(2, 180px); /* แถวแรกจะมีความสูง 250px (สำหรับรูปใหญ่) */
+    grid-template-areas:
+      "main main main" /* รูปแรกขยายเต็มแถว */
+      "sub1 sub2 sub3" /* แถวที่สอง */
+      "sub4 sub5 sub6"; /* แถวที่สาม */
+
+    .imageItem:first-child {
+      grid-area: main; /* รูปแรกขยายเต็มแถว */
+      height: 100%;
+    }
+
+    .imageItem:nth-child(n + 2) {
+      height: 100%;
+    }
+  }
+
+  /* กรณีมีรูปภาพ 8 รูป */
+  &.eightImages {
+    grid-template-columns: repeat(4, 1fr); /* แสดง 4 คอลัมน์ในแถว */
+    grid-template-rows: auto auto; /* สร้าง 2 แถว */
+    gap: 20px; /* เพิ่มระยะห่างระหว่างรูป */
+
+    /* กำหนดความสูงให้กับรูป */
+    .imageItem {
+      height: 200px; /* ตั้งความสูงให้กับแต่ละรูป */
+    }
+  }
 
   .imageItem {
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s ease;
+
+    /* ป้องกันการทับกันเมื่อ hover */
+    &:hover {
+      z-index: 2;
+      transform: scale(1.02);
+    }
 
     img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       transition: transform 0.3s ease;
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: center center;
     }
 
-    /* เพิ่มการขยายรูปเมื่อ hover */
     &:hover img {
-      transform: scale(1.1); /* ขยายรูปภาพเมื่อ mouse hover */
+      transform: scale(1.1);
     }
   }
 }
 
-@media (max-width: 992px) {
-  .imageGrid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .imageGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 576px) {
-  .newsTitle {
-    font-size: 20px;
-  }
-
-  .imageGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .shareButtons {
-    margin-top: 10px;
-    margin-left: 0;
-    width: 100%;
-    justify-content: flex-start;
-  }
-}
 /* Modal container */
 .modal {
   display: none; /* ซ่อน modal */
@@ -347,4 +264,142 @@
   max-height: 90%;
   border-radius: 8px;
   cursor: default; /* ทำให้ cursor เป็นปกติเมื่อคลิกที่ภาพ */
+  object-fit: contain; /* Ensure image maintains aspect ratio */
+}
+
+@media (max-width: 992px) {
+  .imageGrid {
+    &.fiveImages,
+    &.sixImages,
+    &.sevenImages,
+    &.eightImages {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 25px; /* เพิ่มระยะห่างระหว่างรูปทั้งหมด */
+    }
+
+    /* กรณี 5 รูป */
+    &.fiveImages {
+      grid-template-rows: 300px auto auto; /* แยก row สำหรับรูปใหญ่ */
+
+      .imageItem:first-child {
+        grid-column: span 2;
+        height: 300px;
+        margin-bottom: 15px; /* เพิ่มระยะห่างด้านล่างเฉพาะรูปใหญ่ */
+      }
+
+      .imageItem:not(:first-child) {
+        height: 180px; /* ลดขนาดรูปเล็กเล็กน้อย */
+      }
+    }
+
+    /* กรณี 7 รูป */
+    &.sevenImages {
+      grid-template-rows: 280px auto auto; /* แยก row สำหรับรูปใหญ่ */
+
+      .imageItem:first-child {
+        grid-column: span 2;
+        height: 280px;
+        margin-bottom: 15px; /* ระยะห่างด้านล่าง */
+      }
+
+      .imageItem:not(:first-child) {
+        height: 180px; /* กำหนดขนาดรูปเล็กให้เท่ากัน */
+      }
+    }
+
+    /* กรณี 6 และ 8 รูป */
+    &.sixImages,
+    &.eightImages {
+      .imageItem {
+        height: 200px;
+        padding: 5px; /* เพิ่มระยะขอบในให้รูป */
+        box-sizing: border-box;
+      }
+    }
+  }
+}
+@media (max-width: 768px) {
+  .imageGrid {
+    /* ปรับให้เป็นกริดที่สามารถแสดงหลายรูปภาพตามจำนวนที่กำหนด */
+    &.threeImages,
+    &.fourImages,
+    &.fiveImages,
+    &.sixImages,
+    &.sevenImages,
+    &.eightImages {
+      grid-template-columns: repeat(2, 1fr);
+      grid-auto-rows: 160px; /* ปรับแถวให้มีความสูงพอเหมาะ */
+    }
+
+    /* กรณี 3 รูป */
+    &.threeImages {
+      .imageItem:first-child {
+        grid-column: span 2; /* ให้รูปแรกขยายครอบคลุมทั้งสองคอลัมน์ */
+        height: 250px;
+      }
+    }
+
+    /* กรณี 5 รูป */
+    &.fiveImages {
+      .imageItem:first-child {
+        grid-column: span 2;
+        height: 220px;
+      }
+    }
+
+    /* กรณี 7 รูป */
+    &.sevenImages {
+      .imageItem:first-child {
+        grid-column: span 2;
+        height: 220px;
+      }
+    }
+
+    /* กรณี 8 รูป */
+    &.eightImages {
+      grid-template-columns: repeat(2, 1fr); /* แสดงในสองคอลัมน์ */
+      grid-auto-rows: 200px; /* ความสูงที่เหมาะสมสำหรับแถว */
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .newsTitle {
+    font-size: 20px;
+  }
+
+  .shareButtons {
+    margin-top: 10px;
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .imageGrid {
+    /* กำหนดให้ทุกกริดแสดงเป็นแถวเดียว */
+    &[class*="Images"] {
+      grid-template-columns: 1fr !important;
+      grid-auto-rows: auto;
+    }
+
+    /* ลบการกำหนด row span ทั้งหมด */
+    .imageItem {
+      grid-column: 1 !important;
+      grid-row: auto !important;
+      height: 250px !important; /* กำหนดความสูงเท่ากันทุกภาพ */
+      margin-bottom: 15px !important; /* เพิ่มระยะห่างระหว่างรูป */
+    }
+
+    /* ปรับระยะห่างระหว่างแถว */
+    gap: 15px !important;
+
+    /* กรณีรูปแรกใน layout ต่างๆ */
+    &.threeImages,
+    &.fiveImages,
+    &.sevenImages {
+      .imageItem:first-child {
+        height: 280px !important; /* รูปแรกสูงกว่าหน่อย */
+      }
+    }
+  }
 }
