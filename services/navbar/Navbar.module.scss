@@ -122,6 +122,12 @@
   margin-left: 10px;
 }
 
+@media (max-width: 380px) {
+  .hamburger {
+    margin-left: 0px;
+  }
+}
+
 .hamburger .bar {
   width: 25px;
   height: 3px;

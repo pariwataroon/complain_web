@@ -1,0 +1,350 @@
+.newsContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: "Sarabun", "Tahoma", sans-serif;
+  color: #333;
+}
+
+.headerImage {
+  width: 100%;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+}
+
+.newsTitle {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  line-height: 1.4;
+}
+
+.metaInfo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+
+  span {
+    margin-right: 20px;
+    position: relative;
+    padding-right: 20px;
+
+    &:not(:last-child)::after {
+      content: "|";
+      position: absolute;
+      right: 0;
+      top: 0;
+    }
+  }
+}
+
+.shareButtons {
+  display: flex;
+  margin-left: auto;
+
+  .shareButton {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    margin-left: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .facebook {
+    background-color: #3b5998;
+  }
+
+  .line {
+    background-color: #00b900;
+  }
+
+  .twitter {
+    background-color: #1da1f2;
+  }
+
+  .copy {
+    background-color: #6c757d;
+  }
+}
+
+.newsContent {
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 30px;
+
+  p {
+    margin-bottom: 15px;
+  }
+}
+
+.galleryTitle {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.imageGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  margin-bottom: 30px;
+
+  .imageItem {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    /* เพิ่มการขยายรูปเมื่อ hover */
+    &:hover img {
+      transform: scale(1.1); /* ขยายรูปภาพเมื่อ mouse hover */
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .imageGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .imageGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .newsTitle {
+    font-size: 20px;
+  }
+
+  .imageGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .shareButtons {
+    margin-top: 10px;
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+.newsContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: "Sarabun", "Tahoma", sans-serif;
+  color: #333;
+}
+
+.headerImage {
+  width: 100%;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+}
+
+.newsTitle {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  line-height: 1.4;
+}
+
+.metaInfo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+
+  span {
+    margin-right: 20px;
+    position: relative;
+    padding-right: 20px;
+
+    &:not(:last-child)::after {
+      content: "|";
+      position: absolute;
+      right: 0;
+      top: 0;
+    }
+  }
+}
+
+.shareButtons {
+  display: flex;
+  margin-left: auto;
+
+  .shareButton {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    margin-left: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  .link {
+    background-color: #878fd0;
+  }
+  .facebook {
+    background-color: #3b5998;
+  }
+
+  .line {
+    background-color: #00b900;
+  }
+
+  .twitter {
+    background-color: #1da1f2;
+  }
+}
+
+.newsContent {
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 30px;
+
+  p {
+    margin-bottom: 15px;
+  }
+}
+
+.galleryTitle {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.imageGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  margin-bottom: 30px;
+
+  .imageItem {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    /* เพิ่มการขยายรูปเมื่อ hover */
+    &:hover img {
+      transform: scale(1.1); /* ขยายรูปภาพเมื่อ mouse hover */
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .imageGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .imageGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .newsTitle {
+    font-size: 20px;
+  }
+
+  .imageGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .shareButtons {
+    margin-top: 10px;
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+/* Modal container */
+.modal {
+  display: none; /* ซ่อน modal */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7); /* พื้นหลังมืด */
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  cursor: pointer; /* ให้แสดง cursor เมื่อคลิกที่พื้นหลัง */
+}
+
+/* เมื่อ modal เปิด จะใช้ display flex */
+.modal.active {
+  display: flex;
+}
+
+.modal img {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 8px;
+  cursor: default; /* ทำให้ cursor เป็นปกติเมื่อคลิกที่ภาพ */
+}

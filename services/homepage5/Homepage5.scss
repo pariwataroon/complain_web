@@ -1,0 +1,139 @@
+// Homepage5.scss - ไฟล์ SCSS สำหรับคอมโพเนนต์ Homepage5
+
+// ตัวแปรสำหรับใช้ในไฟล์
+$primary-color: #333;
+$secondary-color: #fff;
+$border-radius: 8px;
+$spacing-unit: 10px;
+$container-max-width: 1200px;
+
+// Container หลัก
+.homepage-container {
+  padding: 2 * $spacing-unit;
+  max-width: $container-max-width;
+  margin: 0 auto;
+}
+
+// หัวข้อหลัก
+.page-heading {
+  margin-bottom: 2 * $spacing-unit;
+  color: $primary-color;
+  font-weight: 600;
+}
+
+// ส่วนของแบนเนอร์
+.banner-container {
+  position: relative;
+  margin-bottom: 2 * $spacing-unit;
+  overflow: hidden;
+  border-radius: $border-radius;
+  max-height: auto;
+}
+
+// ภาพแบนเนอร์ (ตัวที่เราต้องการทำให้ responsive)
+.banner-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-width: 100%;
+  object-fit: cover;
+  object-position: center;
+
+  // รองรับสำหรับบราวเซอร์เก่า
+  -webkit-object-fit: cover;
+  -moz-object-fit: cover;
+
+  // เพิ่ม transition เพื่อให้การปรับขนาดดูนุ่มนวลขึ้น
+  transition: all 0.3s ease;
+}
+
+// กล่องข้อความบนแบนเนอร์
+.banner-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  color: $secondary-color;
+  background: rgba(0, 0, 0, 0.5);
+  padding: $spacing-unit;
+
+  h3 {
+    margin: 0;
+    font-size: clamp(1rem, 4vw, 1.5rem);
+  }
+
+  p {
+    margin: 5px 0 0;
+    font-size: clamp(0.8rem, 3vw, 1rem);
+  }
+}
+
+// คำอธิบายใต้แบนเนอร์
+.content-description {
+  margin-bottom: 2 * $spacing-unit;
+  line-height: 1.6;
+}
+
+// ส่วนของรูปภาพย่อย
+.thumbnail-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-unit;
+  justify-content: space-between;
+}
+
+.thumbnail-item {
+  flex: 1 1 calc(25% - #{$spacing-unit});
+  min-width: 200px;
+  border-radius: $border-radius / 2;
+  overflow: hidden;
+
+  // เพิ่ม box-shadow เพื่อให้รูปมีมิติ
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  img {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: transform 0.3s ease;
+
+    &:hover {
+      transform: scale(1.05);
+    }
+  }
+}
+
+// Media Queries สำหรับการแสดงผลในหน้าจอขนาดต่างๆ
+@media (max-width: 992px) {
+  .banner-container {
+    max-height: 400px;
+  }
+
+  .thumbnail-item {
+    flex: 1 1 calc(33.33% - #{$spacing-unit});
+  }
+}
+
+@media (max-width: 768px) {
+  .banner-container {
+    max-height: 300px;
+  }
+
+  .thumbnail-item {
+    flex: 1 1 calc(50% - #{$spacing-unit});
+  }
+}
+
+@media (max-width: 480px) {
+  .homepage-container {
+    padding: $spacing-unit;
+  }
+
+  .banner-container {
+    max-height: 200px;
+  }
+
+  .thumbnail-item {
+    flex: 1 1 100%;
+  }
+}

@@ -1,0 +1,80 @@
+/* components/Chat.module.scss */
+
+.phoneIcon,
+.chatIcon {
+  position: fixed;
+  width: 60px;
+  height: 60px;
+  background-color: #f4c542; /* สีพื้นหลังของไอคอน */
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ไอคอนโทรศัพท์ */
+.phoneIcon {
+  right: 20px; /* ไอคอนโทรศัพท์อยู่ขวาล่าง */
+  bottom: 100px; /* ย้ายไอคอนโทรศัพท์ขึ้นมาบนไอคอนแชท */
+}
+
+/* ไอคอนแชท */
+.chatIcon {
+  right: 20px; /* ไอคอนแชทอยู่ขวาล่าง */
+  bottom: 20px; /* ไอคอนแชทอยู่ต่ำสุด */
+}
+
+/* กล่องแชท */
+.chatBox {
+  position: fixed;
+  bottom: 90px;
+  right: 90px; /* กล่องแชทอยู่ข้าง ๆ ไอคอนแชท */
+  width: 320px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 1000;
+}
+
+.chatContent {
+  font-family: "Arial", sans-serif;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.chatBox textarea {
+  width: 100%;
+  height: 80px;
+  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  margin-top: 10px;
+  resize: none;
+  box-sizing: border-box; /* ให้ textarea อยู่ในขอบของกล่อง */
+}
+
+.sendButton {
+  background-color: #f4c542;
+  border: none;
+  color: white;
+  padding: 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.sendButton:hover {
+  background-color: #f1b22b;
+}
