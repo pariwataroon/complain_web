@@ -4,7 +4,7 @@ from config.dotenv import prefix
 from router.user import router as user_router  
 
 rootRouter = APIRouter(  
-    prefix=prefix, 
-      )
+  prefix=prefix, 
+)
 
 rootRouter.include_router(user_router)

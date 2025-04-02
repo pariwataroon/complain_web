@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from lib.format_data import format_response,FormatResponseModel
 router = APIRouter(
     prefix="/users",  
-    tags=["users"]   
+    tags=["users"]
 ) 
 
 @router.get("/")
