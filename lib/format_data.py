@@ -1,8 +1,8 @@
 from pydantic import BaseModel
-from typing import Any
+from typing import Optional, Union, Any, Dict, List
 
 class FormatResponseModel(BaseModel):
-    res_code: str | None = None
+    res_code: Optional[str] = None
     res_message: str
     res_data: Any
 
