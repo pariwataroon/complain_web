@@ -5,9 +5,9 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config.database import Base, engine
-from models.user import User  # นำเข้าโมเดลทั้งหมดที่ต้องการสร้างตาราง
+from config.dotenv import DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME  # นำเข้าค่าจาก dotenv
+from models.user import User
 from lib.logger import get_logger
-import os
 import urllib.parse
 from sqlalchemy import create_engine, text
 
@@ -17,17 +17,10 @@ def init_database():
     """Initialize database tables based on SQLAlchemy models"""
     logger.info("Initializing database...")
     
-    # ดึงข้อมูลการเชื่อมต่อจาก environment variables หรือใช้ค่า default
-    DB_USER = os.getenv("DB_USER", "sa")
-    DB_PASSWORD = os.getenv("DB_PASSWORD", "Password@1234")
-    DB_HOST = os.getenv("DB_HOST", "localhost")
-    DB_PORT = os.getenv("DB_PORT", "1433")
-    DB_NAME = os.getenv("DB_NAME", "comp_mof")
-    
-    # Encode password
+    # ใช้ค่าจาก dotenv โดยตรง ไม่ต้องเรียก os.getenv อีกรอบ
     DB_PASSWORD_ENCODE = urllib.parse.quote_plus(DB_PASSWORD)
 
-    # Add this to config/database.py to show more detailed connection information
+    # Connection string สำหรับแสดงข้อมูล
     conn_string = f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD_ENCODE}@{DB_HOST}:{DB_PORT}/{DB_NAME}?driver=ODBC+Driver+17+for+SQL+Server"
     logger.info(f"Connection string (without password): {conn_string.replace(DB_PASSWORD_ENCODE, '****')}")
     
