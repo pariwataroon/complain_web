@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.v1.middlewares.logger_middleware import setup_logging_middleware
+from app.api.common.middlewares.logger_middleware import setup_logging_middleware
 from globals.exception_handler import setup_exception_handlers
 from lib.logger import get_logger, HourlyRotatingFileHandler
 from .database_init import init_database  # เพิ่มการนำเข้าฟังก์ชัน init_database
