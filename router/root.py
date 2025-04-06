@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from config.dotenv import PREFIX
 
 # นำเข้า router เวอร์ชัน v1
-from router.user import router as user_router_v1
+from app.api.v1.routers.user_router import router as user_router_v1
 
 # สร้างตัวแปรสำหรับ prefixes แต่ละเวอร์ชัน
 API_V1_PREFIX = f"{PREFIX}"  # เช่น /api/v1
