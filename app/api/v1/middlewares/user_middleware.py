@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from models.user import User
-from schemas.user import UserCreate, UserUpdate
+from app.api.v1.schemas.user import UserCreate, UserUpdate
 from lib.logger import get_logger
 import bcrypt
 
