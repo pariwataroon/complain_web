@@ -6,14 +6,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from lib.logger import get_logger
 
+from config.dotenv import DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
+
 logger = get_logger("database", console_output=False)
 
 # Get database connection details from environment variables
-DB_USER = os.getenv("DB_USER", "admin_comp_mof")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "Password@1234")  # แก้ไขรหัสผ่าน default ตรงนี้
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "1433")
-DB_NAME = os.getenv("DB_NAME", "comp_mof")
 DB_PASSWORD_ENCODE = urllib.parse.quote_plus(DB_PASSWORD)
 
 # Create the SQLAlchemy engine

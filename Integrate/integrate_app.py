@@ -4,13 +4,13 @@ from globals.exception_handler import setup_exception_handlers
 from lib.logger import get_logger, HourlyRotatingFileHandler
 from .database_init import init_database  # เพิ่มการนำเข้าฟังก์ชัน init_database
 
-from config.dotenv import project_name
+from config.dotenv import PROJECT_NAME
 
 # Create a logger for application startup
 logger = get_logger("app", console_output=False)
 
 def create_application() -> FastAPI:
-    app = FastAPI(title=project_name)
+    app = FastAPI(title=PROJECT_NAME)
     
     # Setup logging middleware
     setup_logging_middleware(app)

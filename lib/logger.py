@@ -3,10 +3,10 @@ import logging
 import datetime
 import shutil
 from pathlib import Path
-from config.dotenv import console_logging
+from config.dotenv import CONSOLE_LOGGING
 
 # ตรวจสอบค่า environment variable
-CONSOLE_LOGGING = console_logging.lower() == 'true' if console_logging else True
+CONSOLE_LOGGING = CONSOLE_LOGGING.lower() == 'true' if CONSOLE_LOGGING else True
 
 class HourlyRotatingFileHandler(logging.Handler):
     def __init__(self, base_dir="logs"):
