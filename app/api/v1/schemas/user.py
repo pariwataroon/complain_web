@@ -15,6 +15,9 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     is_active: Optional[bool] = None
+    
+    class Config:
+        extra = "forbid"  # ไม่อนุญาตให้มีฟิลด์อื่นนอกเหนือจากที่กำหนด
 
 class UserInDB(UserBase):
     id: int

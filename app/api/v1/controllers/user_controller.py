@@ -65,13 +65,37 @@ def update_user(db: Session, user_id: int, user_data: UserUpdate):
     if not db_user:
         return None
     
-    # Update user fields
-    for key, value in user_data.dict(exclude_unset=True).items():
+    # ตรวจสอบความซ้ำซ้อนของอีเมลและ username ก่อนอัปเดต
+    update_data = user_data.model_dump(exclude_unset=True, exclude_none=True)
+    
+    # ตรวจสอบอีเมล์
+    if "email" in update_data and update_data["email"] != db_user.email:
+        existing_email = get_user_by_email(db, update_data["email"])
+        if existing_email:
+            raise DuplicateKeyError(f"User with email {update_data['email']} already exists")
+    
+    # ตรวจสอบ username
+    if "username" in update_data and update_data["username"] != db_user.username:
+        existing_username = get_user_by_username(db, update_data["username"])
+        if existing_username:
+            raise DuplicateKeyError(f"User with username {update_data['username']} already exists")
+    
+    # อัปเดตข้อมูล
+    for key, value in update_data.items():
         setattr(db_user, key, value)
     
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+    try:
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"Database integrity error during update: {str(e)}")
+        raise DuplicateKeyError("Update would result in duplicate data")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating user: {str(e)}")
+        raise
 
 def delete_user(db: Session, user_id: int):
     db_user = get_user(db, user_id)
