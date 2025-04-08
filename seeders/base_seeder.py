@@ -1,11 +1,12 @@
 from sqlalchemy import inspect
 import json
 import os
-import sys
 from lib.logger import get_logger
 from config.database import get_db
+from passlib.context import CryptContext
 
 logger = get_logger("seeder")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class BaseSeeder:
     """Base class for all database seeders"""
@@ -45,6 +46,7 @@ class BaseSeeder:
     
     def seed(self):
         """Seed data if table is empty"""
+        """Override seed method to handle password hashing if needed"""
         try:
             self.db = next(get_db())
             
@@ -72,7 +74,11 @@ class BaseSeeder:
                         
                         # ตรวจสอบแต่ละ field ใน seed data ว่าตรงกับ model หรือไม่
                         for key, value in item_data.items():
-                            if key in model_attrs:
+                            # ถ้าเป็น password และไม่ได้เป็น hashed_password อยู่แล้ว ให้แฮช
+                            if key == 'password' and 'hashed_password' in model_attrs:
+                                model_data['hashed_password'] = pwd_context.hash(value)
+                            # ถ้าเป็น field ปกติและมีใน model
+                            elif key in model_attrs:
                                 model_data[key] = value
                         
                         # เพิ่มค่า default สำหรับ is_active ถ้ามีในโมเดล

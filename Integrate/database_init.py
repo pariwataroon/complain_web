@@ -12,8 +12,7 @@ from config.database import Base, engine, get_db
 
 # นำเข้า seeders
 from seeders.title_seeder import TitleSeeder
-# เมื่อเพิ่ม seeder ใหม่ ให้นำเข้าที่นี่
-# from seeders.user_seeder import UserSeeder
+from seeders.user_seeder import UserSeeder
 
 logger = get_logger("db_init")
 
@@ -27,8 +26,7 @@ def check_and_seed_tables():
         # รายการ seeders ที่ต้องการใช้งาน
         seeders = [
             {"name": "titles", "seeder": TitleSeeder()},
-            # เมื่อเพิ่ม seeder ใหม่ ให้เพิ่มที่นี่
-            # {"name": "users", "seeder": UserSeeder()},
+            {"name": "users", "seeder": UserSeeder()},
         ]
         
         # วนลูปตรวจสอบแต่ละตาราง
