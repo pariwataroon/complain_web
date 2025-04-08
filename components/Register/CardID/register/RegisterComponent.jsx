@@ -2,14 +2,19 @@ import React, { useState } from "react";
 import { useRouter } from "next/router";
 import { useRegisterForm } from "@hooks/login/register/useRegisterForm";
 import { IconButton } from "@mui/material";
-import { formatCitizenId, formatPhoneNumber } from "@utils/format";
+import { formatCitizenId, formatPhoneNumber } from "@utils/Formats";
 import styles from "./RegisterPage.module.scss";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 
 export default function RegisterPage() {
-  const { register, handleSubmit, errors, onSubmit, watch } = useRegisterForm();
+  const { register, handleSubmit, errors, onSubmit, watch, setValue } =
+    useRegisterForm();
   const [citizenIdDisplay, setCitizenIdDisplay] = useState("");
   const [phoneDisplay, setPhoneDisplay] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const prefix = watch("prefix");
   const router = useRouter();
 
@@ -33,10 +38,6 @@ export default function RegisterPage() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.logoWrapper}>
-        <img src="/Logo_Gold.png" alt="การคลัง" />
-      </div>
-
       {/* Registration Form */}
       <div className={styles.registerBox}>
         <IconButton
@@ -202,13 +203,35 @@ export default function RegisterPage() {
               </span>
             )}
           </label>
-          <input
-            type="password"
-            placeholder="กรอกรหัสผ่าน"
-            {...register("password", { required: "กรุณากรอกรหัสผ่าน" })}
-            className={styles.inputField}
-          />
+          <div className={styles.passwordWrapper}>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="กรอกรหัสผ่าน"
+              {...register("password", {
+                required: "กรุณากรอกรหัสผ่าน",
+                minLength: {
+                  value: 8,
+                  message: "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
+                },
+                validate: {
+                  hasUpperCase: (value) =>
+                    /[A-Z]/.test(value) || "ต้องมีอักษรตัวใหญ่ อย่างน้อย 1 ตัว",
+                  hasSpecialChar: (value) =>
+                    /[!@#$%^&*(),.?":{}|<>]/.test(value) ||
+                    "ต้องมีอักขระพิเศษ อย่างน้อย 1 ตัว",
+                },
+              })}
+              className={styles.inputField}
+            />
+            <span
+              onClick={() => setShowPassword(!showPassword)}
+              className={styles.togglePassword}
+            >
+              {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+            </span>
+          </div>
 
+          {/* Confirm Password */}
           <label className={styles.inputLabel}>
             ยืนยันรหัสผ่าน <span>*</span>
             {errors.confirmPassword && (
@@ -217,16 +240,25 @@ export default function RegisterPage() {
               </span>
             )}
           </label>
-          <input
-            type="password"
-            placeholder="กรอกรหัสผ่านอีกครั้ง"
-            {...register("confirmPassword", {
-              required: "กรุณากรอกยืนยันรหัสผ่าน",
-              validate: (value) =>
-                value === watch("password") || "รหัสผ่านไม่ตรงกัน",
-            })}
-            className={styles.inputField}
-          />
+          <div className={styles.passwordWrapper}>
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="กรอกรหัสผ่านอีกครั้ง"
+              {...register("confirmPassword", {
+                required: "กรุณากรอกยืนยันรหัสผ่าน",
+                validate: (value) =>
+                  value === watch("password") || "รหัสผ่านไม่ตรงกัน",
+              })}
+              className={styles.inputField}
+            />
+            <span
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className={styles.togglePassword}
+            >
+              {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+            </span>
+          </div>
+
           {/* Submit */}
           <button type="submit" className={styles.submitButton}>
             ยืนยันข้อมูล

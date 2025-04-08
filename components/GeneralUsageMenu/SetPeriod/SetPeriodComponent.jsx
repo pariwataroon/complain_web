@@ -1,9 +1,8 @@
-// SetPeriodComponent.js
 import React, { useState } from "react";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
-import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs"; // ปรับ path ให้ตรงกับโปรเจ็กต์
-import TextfieldService from "@services/TextfieldService/TextfieldService"; // ปรับ path ให้ตรงกับโปรเจ็กต์
-import SettingsIcon from "@mui/icons-material/Settings"; // นำไอคอนจาก MUI มาใช้
+import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
+import TextfieldService from "@services/TextfieldService/TextfieldService";
+import SettingsIcon from "@mui/icons-material/Settings";
 
 const SetPeriodComponent = () => {
   const options = [
@@ -13,18 +12,15 @@ const SetPeriodComponent = () => {
     { value: "option3", label: "ตัวเลือกที่ 3" },
   ];
 
-  // เก็บ state สำหรับ SelectMenu
   const [selectedOption, setSelectedOption] = useState({
     value: "",
     label: "",
   });
 
-  // เก็บ state สำหรับ Textfield
   const [textValue, setTextValue] = useState("");
 
   const handleSelectChange = (e) => {
     const selectedValue = e.target.value;
-    // ค้นหา label จาก options ตาม value ที่เลือก
     const option = options.find((option) => option.value === selectedValue) || {
       value: "",
       label: "",
@@ -36,7 +32,6 @@ const SetPeriodComponent = () => {
     setTextValue(e.target.value);
   };
 
-  // กำหนด breadcrumb items โดยส่ง icon จาก MUI
   const breadcrumbItems = [
     {
       label: "เมนูกำหนดการใช้งานทั่วไป",
