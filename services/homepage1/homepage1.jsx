@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
+import styles from "./Homepage1.module.scss";
 
 const Homepage1 = () => {
-
-
   return (
     <div style={{ position: "relative", minHeight: "90vh", width: "100%" }}>
       <div
@@ -17,10 +16,10 @@ const Homepage1 = () => {
           left: 0,
           zIndex: -1,
         }}
-      >
-      </div>
+      ></div>
 
       <div
+        className={styles.mobileImage}
         style={{
           position: "absolute",
           top: "25%",
@@ -39,6 +38,7 @@ const Homepage1 = () => {
         />
       </div>
 
+      {/* ข้อความใหญ่ */}
       <div
         style={{
           position: "absolute",
@@ -48,7 +48,7 @@ const Homepage1 = () => {
           color: "white",
         }}
       >
-        <h1 style={{ fontSize: "15rem", fontWeight: "bold", display: "flex", alignItems: "center" }}>
+        <h1 className={styles.headerText}> {/* ใช้ class จาก SCSS */}
           MOF
           <span
             style={{
@@ -60,58 +60,33 @@ const Homepage1 = () => {
               marginRight: "10px",
             }}
           ></span>
-          <span style={{ fontSize: "3rem", marginLeft: "10px" }}>
+          <span
+            style={{
+              fontSize: "3rem",
+              marginLeft: "10px",
+              fontWeight: "normal",
+            }}
+          >
             รับเรื่องด้วยใจ โปร่งใส ทันสมัย และเป็นธรรม
           </span>
         </h1>
       </div>
-      <div style={{
-        top: "40%",
-        left: "60%",
-        position: "absolute",
-        zIndex: 1,
-        display: "flex",
-        gap: "10px",
-        justifyContent: "center",
-        alignItems: "center", 
-      }}>
-        <button
-          style={{
-            padding: "40px 40px",
-            fontSize: "1rem",
-            color: "#1120A3",
-            backgroundColor: "#EDC458",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            marginRight: "10px",
-            boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
-            transition: "all 0.3s ease",
-            fontWeight: "bold",
-          }}
-          onMouseEnter={(e) => e.target.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.4)"}
-          onMouseLeave={(e) => e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.2)"}
-        >
-          แจ้งเรื่องร้องทุกข์
-        </button>
-        <button
-          style={{
-            padding: "40px 40px",
-            fontSize: "1rem",
-            color: "#1120A3",
-            backgroundColor: "#E8E9F6",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
-            transition: "all 0.3s ease",
-            fontWeight: "bold",
-          }}
-          onMouseEnter={(e) => e.target.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.4)"}
-          onMouseLeave={(e) => e.target.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.2)"}
-        >
-          ติดตามผล
-        </button>
+
+      {/* ปุ่ม */}
+      <div
+        style={{
+          top: "40%",
+          left: "70%",
+          position: "absolute",
+          zIndex: 1,
+          display: "flex",
+          gap: "20px",
+          justifyContent: "center",
+          transform: "translateX(-50%)", // ทำให้ปุ่มอยู่กลาง
+        }}
+      >
+        <button className={styles.button}>แจ้งเรื่องร้องทุกข์</button>
+        <button className={styles.buttonwhit}>ติดตามผล</button>
       </div>
     </div>
   );
