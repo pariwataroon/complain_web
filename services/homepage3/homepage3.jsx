@@ -15,8 +15,7 @@ const Homepage3 = () => {
         justifyContent: "space-between",
         padding: "0 5%",
       }}
-    >
-    </div>
+    ></div>
   );
 };
 

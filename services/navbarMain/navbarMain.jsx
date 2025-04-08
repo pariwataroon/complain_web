@@ -3,14 +3,16 @@ import styles from "./NavbarMain.module.scss";
 import { useRouter } from "next/router";
 
 export default function NavbarMain() {
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isDropdownOpen1, setDropdownOpen1] = useState(false); // สำหรับเมนู "ระเบียบขั้นตอน"
-  const [isDropdownOpen2, setDropdownOpen2] = useState(false); // สำหรับเมนู "การรับเรื่องร้องทุกข์"
+  const [isProfileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileRef = useRef(null);
   const menuRef = useRef(null);
   const router = useRouter();
 
-  const handleLoginClick = () => {
-    router.push("/login");
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+    router.push("/");
   };
 
   const handleReportClick = () => {
@@ -21,15 +23,19 @@ export default function NavbarMain() {
     setMobileMenuOpen((prev) => !prev);
   };
 
-  // ปิดเมนูเมื่อคลิกนอก container
   const handleClickOutside = (event) => {
     if (menuRef.current && !menuRef.current.contains(event.target)) {
       setMobileMenuOpen(false);
-      setDropdownOpen1(false);
-      setDropdownOpen2(false);
+    }
+    if (profileRef.current && !profileRef.current.contains(event.target)) {
+      setProfileDropdownOpen(false);
     }
   };
-
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setProfileDropdownOpen(false);
+    router.push("/login");
+  };
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
@@ -40,6 +46,87 @@ export default function NavbarMain() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isMobileMenuOpen]);
+
+  const renderMobileButtons = () => {
+    if (isLoggedIn) {
+      return (
+        <div className={styles.mobileUserSection}>
+          <span className={styles.userGreeting}>สวัสดิ์ คุณณภัทร</span>
+          <button
+            className={`${styles.reportButton} ${styles.loggedIn}`}
+            onClick={handleReportClick}
+          >
+            แจ้งเรื่องร้องทุกข์
+          </button>
+        </div>
+      );
+    }
+    return (
+      <>
+        <button
+          className={styles.mobileLoginButton}
+          onClick={() => {
+            handleLogin();
+            setMobileMenuOpen(false);
+          }}
+        >
+          ลงชื่อเข้าใช้
+        </button>
+        <button className={styles.reportButton} onClick={handleReportClick}>
+          แจ้งเรื่องร้องทุกข์
+        </button>
+      </>
+    );
+  };
+
+  const renderDesktopButtons = () => {
+    if (isLoggedIn) {
+      return (
+        <div className={styles.userSection} ref={profileRef}>
+          <div
+            className={styles.userInfoContainer}
+            onClick={() => setProfileDropdownOpen(!isProfileDropdownOpen)}
+          >
+            <img
+              src="/icons/userprofile.png"
+              alt="โปรไฟล์ผู้ใช้"
+              className={styles.profileImage}
+            />
+            <span className={styles.userGreeting}>สวัสดิ์ คุณณภัทร</span>
+            <span className={styles.dropdownArrow}>
+              {isProfileDropdownOpen ? "▲" : "▼"}
+            </span>
+          </div>
+
+          {isProfileDropdownOpen && (
+            <div className={styles.profileDropdown}>
+              <div className={styles.dropdownContent}>
+                <button
+                  className={styles.dropdownItem}
+                  onClick={() => {
+                    handleLogout();
+                    setProfileDropdownOpen(false);
+                  }}
+                >
+                  ออกจากระบบ
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div className={styles.authButtons}>
+        <button className={styles.loginButton} onClick={handleLogin}>
+          ลงชื่อเข้าใช้
+        </button>
+        <button className={styles.reportButton} onClick={handleReportClick}>
+          แจ้งเรื่องร้องทุกข์
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className={styles.navbarContainer}>
@@ -82,21 +169,7 @@ export default function NavbarMain() {
                 >
                   คำถามที่พบบ่อย
                 </a>
-                <button
-                  className={styles.mobileLoginButton}
-                  onClick={() => {
-                    handleLoginClick();
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  ลงชื่อเข้าใช้
-                </button>
-                <button
-                  className={styles.reportButton}
-                  onClick={handleReportClick}
-                >
-                  แจ้งเรื่องร้องทุกข์
-                </button>
+                {renderMobileButtons()}
               </div>
             )}
           </div>
@@ -109,47 +182,12 @@ export default function NavbarMain() {
           <a href="#" className={styles.menuItem}>
             เกี่ยวกับ
           </a>
-          <a
-            href="#"
-            className={`${styles.menuItem} ${styles.hasDropdown} ${
-              isDropdownOpen1 ? styles.active : ""
-            }`}
-            onClick={() => setDropdownOpen1((prev) => !prev)}
-          >
+          <a href="#" className={styles.menuItem}>
             ระเบียบขั้นตอน
-            {isDropdownOpen1 && (
-              <div className={styles.dropdownMenu}>
-                <a href="#" className={styles.dropdownItem}>
-                  ขั้นตอนที่ 1
-                </a>
-                <a href="#" className={styles.dropdownItem}>
-                  ขั้นตอนที่ 2
-                </a>
-                <a href="#" className={styles.dropdownItem}>
-                  ขั้นตอนที่ 3
-                </a>
-              </div>
-            )}
           </a>
 
-          <a
-            href="#"
-            className={`${styles.menuItem} ${styles.hasDropdown} ${
-              isDropdownOpen2 ? styles.active : ""
-            }`}
-            onClick={() => setDropdownOpen2((prev) => !prev)}
-          >
+          <a href="#" className={styles.menuItem}>
             การรับเรื่องร้องทุกข์
-            {isDropdownOpen2 && (
-              <div className={styles.dropdownMenu}>
-                <a href="#" className={styles.dropdownItem}>
-                  วิธีการรับเรื่อง 1
-                </a>
-                <a href="#" className={styles.dropdownItem}>
-                  วิธีการรับเรื่อง 2
-                </a>
-              </div>
-            )}
           </a>
 
           <a href="#" className={styles.menuItem}>
@@ -157,14 +195,7 @@ export default function NavbarMain() {
           </a>
         </div>
 
-        <div className={styles.buttonContainer}>
-          <button className={styles.loginButton} onClick={handleLoginClick}>
-            ลงชื่อเข้าใช้
-          </button>
-          <button className={styles.reportButton} onClick={handleReportClick}>
-            แจ้งเรื่องร้องทุกข์
-          </button>
-        </div>
+        <div className={styles.buttonContainer}>{renderDesktopButtons()}</div>
       </nav>
     </div>
   );
