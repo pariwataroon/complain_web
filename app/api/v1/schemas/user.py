@@ -2,22 +2,26 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 
+
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     full_name: Optional[str] = None
 
+
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
+
 
 class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     is_active: Optional[bool] = None
-    
+
     class Config:
         extra = "forbid"  # ไม่อนุญาตให้มีฟิลด์อื่นนอกเหนือจากที่กำหนด
+
 
 class UserInDB(UserBase):
     id: int
@@ -28,5 +32,19 @@ class UserInDB(UserBase):
     class Config:
         from_attributes = True
 
+
 class UserResponse(UserInDB):
+    pass
+
+
+class TitleSchema(BaseModel):
+    title_id: int
+    short_name: str | None
+    title_name: str | None
+
+    class Config:
+        from_attributes = True
+
+
+class TitleResponse(TitleSchema):
     pass

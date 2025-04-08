@@ -3,10 +3,9 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from config.database import get_db
-from app.api.v1.schemas.user import UserCreate, UserResponse, UserUpdate
-from app.api.v1.controllers.user_controller import create_user, get_user, get_users, update_user, delete_user, DuplicateKeyError
+from app.api.v1.schemas.user import UserCreate, UserResponse, UserUpdate, TitleResponse
+from app.api.v1.controllers.user_controller import create_user, get_user, get_users, update_user, delete_user, get_titles, DuplicateKeyError
 from lib.format_data import format_response, FormatResponseModel
-
 router = APIRouter(
     prefix="/users",
     tags=["users"]
@@ -69,4 +68,9 @@ async def delete_existing_user(user_id: int, db: Session = Depends(get_db)):
     return format_response("0003", {"id": user_id})
 
 
-# ะ
+@router.get("/title/details", response_model=FormatResponseModel)
+async def get_titles_midleware(db: Session = Depends(get_db)):
+    data = get_titles(db)
+    users = [TitleResponse.model_validate(
+        title).model_dump() for title in data]
+    return format_response("0000", users)
