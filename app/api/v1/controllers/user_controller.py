@@ -8,10 +8,8 @@ import bcrypt
 
 logger = get_logger("user_repository", console_output=False)
 
-
 class DuplicateKeyError(Exception):
     pass
-
 
 def get_password_hash(password: str) -> str:
     """Hash a password for storage."""
@@ -19,22 +17,17 @@ def get_password_hash(password: str) -> str:
     hashed = bcrypt.hashpw(password.encode(), salt).decode()
     return hashed
 
-
 def get_user(db: Session, user_id: int):
     return db.query(User).filter(User.id == user_id).first()
-
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
 
-
 def get_user_by_username(db: Session, username: str):
     return db.query(User).filter(User.username == username).first()
 
-
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).order_by(User.id).offset(skip).limit(limit).all()
-
 
 def create_user(db: Session, user: UserCreate):
     try:
@@ -69,7 +62,6 @@ def create_user(db: Session, user: UserCreate):
         db.rollback()
         logger.error(f"Error creating user: {str(e)}")
         raise
-
 
 def update_user(db: Session, user_id: int, user_data: UserUpdate):
     db_user = get_user(db, user_id)
@@ -110,7 +102,6 @@ def update_user(db: Session, user_id: int, user_data: UserUpdate):
         logger.error(f"Error updating user: {str(e)}")
         raise
 
-
 def delete_user(db: Session, user_id: int):
     db_user = get_user(db, user_id)
     if not db_user:
@@ -119,8 +110,6 @@ def delete_user(db: Session, user_id: int):
     db.commit()
     return True
 
-
 def get_titles(db: Session):
-    title = db.query(Title.title_id, Title.title_name, Title.short_name).filter(
-        Title.is_active == 1).all()
+    title = db.query(Title.title_id, Title.title_name, Title.short_name).filter(Title.is_active == 1).all()
     return title
