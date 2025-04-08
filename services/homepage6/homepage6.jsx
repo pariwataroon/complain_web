@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import styles from "./Homepage6.module.scss"; // นำเข้า SCSS ที่เป็น CSS Module
+import styles from "./Homepage6.module.scss";
 
 const Homepage6 = () => {
   const questionsLeft = [
@@ -89,8 +89,7 @@ const Homepage6 = () => {
                   {renderIcon(isActive)}
                 </div>
                 <div
-                  className={`${styles.accordionAnswer} ${isActive ? styles.active : ""
-                    }`}
+                  className={`${styles.accordionAnswer} ${isActive ? styles.active : ""}`}
                 >
                   <p className={styles.answerText}>{item.answer}</p>
                 </div>
@@ -112,8 +111,7 @@ const Homepage6 = () => {
                   {renderIcon(isActive)}
                 </div>
                 <div
-                  className={`${styles.accordionAnswer} ${isActive ? styles.active : ""
-                    }`}
+                  className={`${styles.accordionAnswer} ${isActive ? styles.active : ""}`}
                 >
                   <p className={styles.answerText}>{item.answer}</p>
                 </div>

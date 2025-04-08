@@ -4,7 +4,9 @@ export default function Homepage5() {
   return (
     <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
       {/* หัวข้อของหน้า */}
-      <h2 style={{ marginBottom: "20px" }}>ข่าวสารและประชาสัมพันธ์</h2>
+      <h2 style={{ marginBottom: "20px", fontSize: "24px", fontWeight: "bold" }}>
+        ข่าวสารและประชาสัมพันธ์
+      </h2>
 
       {/* ภาพแบนเนอร์ใหญ่ */}
       <div
@@ -18,30 +20,33 @@ export default function Homepage5() {
         <img
           src="https://picsum.photos/1200/400?random=1"
           alt="ข่าวสารและประชาสัมพันธ์"
-          style={{ width: "100%", height: "auto", display: "block" }}
+          style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
         />
 
         {/* กล่องข้อความซ้อนบนภาพ */}
         <div
           style={{
             position: "absolute",
-            bottom: 0,
-            left: 0,
-            width: "100%",
+            bottom: "20px", // ขยับข้อความให้ห่างจากขอบด้านล่างเล็กน้อย
+            left: "20px",
+            width: "calc(100% - 40px)", // ให้ข้อความไม่ชิดขอบ
             color: "#fff",
             background: "rgba(0, 0, 0, 0.5)",
             padding: "10px",
+            borderRadius: "8px",
           }}
         >
-          <h3 style={{ margin: 0 }}>มอบสัญญาเช่าที่ราชพัสดุ</h3>
-          <p style={{ margin: "5px 0 0" }}>
+          <h3 style={{ margin: 0, fontSize: "20px", fontWeight: "bold" }}>
+            มอบสัญญาเช่าที่ราชพัสดุ
+          </h3>
+          <p style={{ margin: "5px 0 0", fontSize: "14px" }}>
             ธนารักษ์อัจฉริยะ “สัญญาเช่าที่ราชพัสดุ พลิกชีวิตประชาชน”
           </p>
         </div>
       </div>
 
       {/* คำอธิบายใต้ภาพแบนเนอร์ */}
-      <p style={{ marginBottom: "20px" }}>
+      <p style={{ marginBottom: "20px", fontSize: "16px", lineHeight: "1.5" }}>
         เนื้อหาข่าวสารและประชาสัมพันธ์เกี่ยวกับกิจกรรมล่าสุดหรือข้อมูลสำคัญต่าง
         ๆ สามารถอธิบายรายละเอียดเพิ่มเติมได้ที่นี่
       </p>
@@ -49,10 +54,10 @@ export default function Homepage5() {
       {/* แถวรูปเล็ก 4 รูป */}
       <div
         style={{
-          display: "flex",
-          flexWrap: "wrap",
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
           gap: "10px",
-          justifyContent: "space-between",
+          marginTop: "20px",
         }}
       >
         {[
@@ -64,16 +69,20 @@ export default function Homepage5() {
           <div
             key={index}
             style={{
-              flex: "1 1 calc(25% - 10px)",
-              minWidth: "200px",
-              borderRadius: "4px",
+              borderRadius: "8px",
               overflow: "hidden",
+              boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
             }}
           >
             <img
               src={imgUrl}
               alt={`ข่าวประชาสัมพันธ์ ${index + 1}`}
-              style={{ width: "100%", height: "auto", display: "block" }}
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "block",
+                objectFit: "cover",
+              }}
             />
           </div>
         ))}

@@ -2,15 +2,33 @@ import React, { useState } from "react";
 import { useRouter } from "next/router";
 import { useRegisterForm } from "@hooks/login/register/useRegisterForm";
 import { IconButton } from "@mui/material";
+import { formatCitizenId, formatPhoneNumber } from "@utils/format";
 import styles from "./RegisterPage.module.scss";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 
 export default function RegisterPage() {
-  const { register, handleSubmit, errors, onSubmit } = useRegisterForm();
+  const { register, handleSubmit, errors, onSubmit, watch } = useRegisterForm();
+  const [citizenIdDisplay, setCitizenIdDisplay] = useState("");
+  const [phoneDisplay, setPhoneDisplay] = useState("");
+  const prefix = watch("prefix");
   const router = useRouter();
 
   const handleBackToLogin = () => {
     router.push("/login");
+  };
+
+  const handleCitizenIdChange = (e) => {
+    const rawValue = e.target.value.replace(/\D/g, "").slice(0, 13);
+    const formatted = formatCitizenId(rawValue);
+    setCitizenIdDisplay(formatted);
+    setValue("citizenId", rawValue);
+  };
+
+  const handlePhoneChange = (e) => {
+    const rawValue = e.target.value.replace(/\D/g, "").slice(0, 10);
+    const formatted = formatPhoneNumber(rawValue);
+    setPhoneDisplay(formatted);
+    setValue("phone", rawValue);
   };
 
   return (
@@ -40,33 +58,99 @@ export default function RegisterPage() {
           <label className={styles.inputLabel}>
             เลขบัตรประชาชน <span>*</span>
             {errors.citizenId && (
-              <span className={styles.errorText}>{errors.citizenId.message}</span>
+              <span className={styles.errorText}>
+                {errors.citizenId.message}
+              </span>
             )}
           </label>
           <input
             type="text"
-            placeholder="กรอกเลขบัตรประชาชน"
+            placeholder="x-xxxx-xxxxx-xx-x"
+            value={citizenIdDisplay}
+            onChange={handleCitizenIdChange}
+            className={styles.inputField}
+          />
+          <input
+            type="hidden"
             {...register("citizenId", {
               required: "กรุณากรอกเลขบัตรประชาชน",
               pattern: {
                 value: /^[0-9]{13}$/,
-                message: "กรุณากรอกเลขบัตรประชาชนให้ถูกต้อง (13 หลัก)"
-              }
+                message: "กรุณากรอกเลขบัตรประชาชนให้ถูกต้อง (13 หลัก)",
+              },
             })}
-            className={styles.inputField}
           />
-          
-          {/* Name */}
+
+          {/* Prefix */}
           <label className={styles.inputLabel}>
-            ชื่อ-นามสกุล <span>*</span>
-            {errors.name && (
-              <span className={styles.errorText}>{errors.name.message}</span>
+            คำนำหน้า <span>*</span>
+            {errors.prefix && (
+              <span className={styles.errorText}>{errors.prefix.message}</span>
+            )}
+          </label>
+          <select
+            {...register("prefix", { required: "กรุณาเลือกคำนำหน้า" })}
+            className={styles.inputField}
+            defaultValue=""
+          >
+            <option value="" disabled>
+              -- กรุณาเลือก --
+            </option>
+            <option value="นาย">นาย</option>
+            <option value="นาง">นาง</option>
+            <option value="นางสาว">นางสาว</option>
+            <option value="อื่น ๆ">อื่น ๆ</option>
+          </select>
+
+          {prefix === "อื่น ๆ" && (
+            <>
+              <label className={styles.inputLabel}>
+                โปรดระบุคำนำหน้า <span>*</span>
+                {errors.prefixOther && (
+                  <span className={styles.errorText}>
+                    {errors.prefixOther.message}
+                  </span>
+                )}
+              </label>
+              <input
+                type="text"
+                placeholder="กรอกคำนำหน้า"
+                {...register("prefixOther", {
+                  required: "กรุณาระบุคำนำหน้า",
+                })}
+                className={styles.inputField}
+              />
+            </>
+          )}
+          {/* Firstname */}
+          <label className={styles.inputLabel}>
+            ชื่อ <span>*</span>
+            {errors.firstName && (
+              <span className={styles.errorText}>
+                {errors.firstName.message}
+              </span>
             )}
           </label>
           <input
             type="text"
-            placeholder="กรอกชื่อและนามสกุล"
-            {...register("name", { required: "กรุณากรอกชื่อ-นามสกุล" })}
+            placeholder="กรอกชื่อจริง"
+            {...register("firstName", { required: "กรุณากรอกชื่อ" })}
+            className={styles.inputField}
+          />
+
+          {/* Lastname */}
+          <label className={styles.inputLabel}>
+            นามสกุล <span>*</span>
+            {errors.lastName && (
+              <span className={styles.errorText}>
+                {errors.lastName.message}
+              </span>
+            )}
+          </label>
+          <input
+            type="text"
+            placeholder="กรอกนามสกุล"
+            {...register("lastName", { required: "กรุณากรอกนามสกุล" })}
             className={styles.inputField}
           />
 
@@ -93,28 +177,54 @@ export default function RegisterPage() {
           </label>
           <input
             type="text"
-            placeholder="กรอกเบอร์โทรศัพท์"
+            placeholder="xxx-xxx-xxxx"
+            value={phoneDisplay}
+            onChange={handlePhoneChange}
+            className={styles.inputField}
+          />
+          <input
+            type="hidden"
             {...register("phone", {
               required: "กรุณากรอกเบอร์โทรศัพท์",
               pattern: {
                 value: /^[0-9]{10}$/,
-                message: "กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (10 หลัก)"
-              }
+                message: "กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (10 หลัก)",
+              },
             })}
-            className={styles.inputField}
           />
 
           {/* Password */}
           <label className={styles.inputLabel}>
             รหัสผ่าน <span>*</span>
             {errors.password && (
-              <span className={styles.errorText}>{errors.password.message}</span>
+              <span className={styles.errorText}>
+                {errors.password.message}
+              </span>
             )}
           </label>
           <input
             type="password"
             placeholder="กรอกรหัสผ่าน"
             {...register("password", { required: "กรุณากรอกรหัสผ่าน" })}
+            className={styles.inputField}
+          />
+
+          <label className={styles.inputLabel}>
+            ยืนยันรหัสผ่าน <span>*</span>
+            {errors.confirmPassword && (
+              <span className={styles.errorText}>
+                {errors.confirmPassword.message}
+              </span>
+            )}
+          </label>
+          <input
+            type="password"
+            placeholder="กรอกรหัสผ่านอีกครั้ง"
+            {...register("confirmPassword", {
+              required: "กรุณากรอกยืนยันรหัสผ่าน",
+              validate: (value) =>
+                value === watch("password") || "รหัสผ่านไม่ตรงกัน",
+            })}
             className={styles.inputField}
           />
           {/* Submit */}

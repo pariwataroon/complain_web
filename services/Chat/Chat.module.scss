@@ -78,3 +78,61 @@
 .sendButton:hover {
   background-color: #f1b22b;
 }
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  /* ลดขนาดไอคอนสำหรับหน้าจอที่เล็กลง */
+  .phoneIcon,
+  .chatIcon {
+    width: 50px;
+    height: 50px;
+    font-size: 25px;
+  }
+
+  /* ย้ายไอคอนแชทขึ้นให้สูงขึ้น */
+  .phoneIcon {
+    bottom: 80px;
+  }
+
+  .chatBox {
+    width: 280px; /* ลดขนาดกล่องแชท */
+    bottom: 70px;
+    right: 20px;
+  }
+
+  .sendButton {
+    padding: 12px;
+    font-size: 14px; /* ลดขนาดปุ่ม */
+  }
+}
+
+@media (max-width: 480px) {
+  /* ขนาดไอคอนแชทและโทรศัพท์ที่เหมาะสมกับมือถือ */
+  .phoneIcon,
+  .chatIcon {
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
+  }
+
+  /* ลดขนาดกล่องแชทและปรับตำแหน่งให้เหมาะสม */
+  .chatBox {
+    width: 260px;
+    bottom: 60px;
+    right: 10px;
+  }
+
+  .sendButton {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  /* ปรับขนาดข้อความให้เหมาะสม */
+  .chatContent {
+    font-size: 12px;
+  }
+
+  .chatBox textarea {
+    height: 70px;
+  }
+}

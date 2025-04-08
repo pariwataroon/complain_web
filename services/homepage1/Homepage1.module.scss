@@ -1,0 +1,77 @@
+/* styles/Responsive.module.scss */
+
+.mobileImage {
+  display: block; /* แสดงภาพมือถือในขนาดหน้าจอปกติ */
+}
+
+.iphoneImage {
+  display: block; /* แสดงภาพมือถือในขนาดหน้าจอปกติ */
+}
+
+/* เปลี่ยน h1 เป็น .headerText */
+.headerText {
+  font-size: 15rem; /* ขนาดตัวอักษรใหญ่ในหน้าจอปกติ */
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  text-align: center;
+}
+
+.button {
+  padding: 40px 40px;
+  font-size: 2rem;
+  color: #1120a3;
+  background-color: #edc458;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-right: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.button:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+.buttonwhit {
+  padding: 40px 40px;
+  font-size: 2rem;
+  color: #1120a3;
+  background-color: #E8E9F6;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-right: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.button:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 768px) {
+  /* ซ่อนภาพมือถือในขนาดหน้าจอเล็ก */
+  .mobileImage {
+    display: none;
+  }
+
+  .iphoneImage {
+    display: none;
+  }
+
+  /* ปรับขนาดข้อความ h1 ให้เล็กลง */
+  .headerText {
+    font-size: 6rem; /* ปรับขนาดข้อความให้เล็กลง */
+  }
+
+  .button {
+    padding: 20px;
+    font-size: 1.5rem; /* ปรับขนาดปุ่ม */
+  }
+}

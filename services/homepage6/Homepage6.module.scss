@@ -1,94 +1,92 @@
-.homepage6-container {
+.homepage6Container {
+  padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
 }
 
 .header {
-  margin-bottom: 30px;
   display: flex;
   align-items: center;
+  margin-bottom: 20px;
 
-  &-img {
-    width: 100%;
-    /* ให้รูปปรับตามความกว้างของ container */
-    max-width: 100px;
-    /* จำกัดความกว้างสูงสุด */
-    height: auto;
-    /* ปรับความสูงตามสัดส่วนของรูป */
-    margin-right: 15px;
-    object-fit: cover;
-    /* เลือกว่าจะแสดงผลรูปแบบใด (cover/fill/contain ฯลฯ) */
+  .headerImg {
+    width: 140px;
+    height: 140px;
+    margin-right: 10px;
   }
 
-  &-title {
-    margin: 0;
+  .headerTitle {
+    font-size: 44px;
+    font-weight: bold;
   }
 }
 
-.questions-container {
+.questionsContainer {
   display: flex;
+  justify-content: space-between;
   gap: 20px;
-  flex-wrap: wrap;
 }
 
-.questions-column {
+.questionsColumn {
   flex: 1;
-  min-width: 300px;
 }
 
-.question-card {
-  margin-bottom: 10px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+.questionCard {
   background-color: #fff;
-  overflow: hidden;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.question-header {
+.questionHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 15px;
   cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.question-text {
-  font-weight: 500;
+.questionText {
+  color: #333;
 }
 
-.icon-wrapper {
-  border-radius: 8px;
-  width: 32px;
-  height: 32px;
+.iconWrapper {
+  width: 30px;
+  height: 30px;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  border-radius: 50%;
   transition: background-color 0.3s ease;
 }
 
-.icon-text {
+.iconText {
   font-size: 20px;
   font-weight: bold;
-  color: #7e74cc;
+  color: #fff;
 }
 
-.accordion-answer {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.8s cubic-bezier(0.77, 0, 0.175, 1),
-    padding 0.8s cubic-bezier(0.77, 0, 0.175, 1);
-  padding: 0 15px;
-  border-top: 1px solid #eee;
-
-  .answer-text {
-    margin: 0;
-  }
-}
-
-/* เมื่อ active ให้ขยายเนื้อหา */
-.accordion-answer.active {
-  /* ใส่ค่าสูงๆ เผื่อครอบเนื้อหาได้หมด */
-  max-height: 1000px;
+.accordionAnswer {
   padding: 15px;
+  font-size: 14px;
+  color: #555;
+  display: none;
+  transition: max-height 0.3s ease;
+  max-height: 0;
+}
+
+.accordionAnswer.active {
+  display: block;
+  max-height: 500px;
+}
+
+.answerText {
+  margin: 0;
+}
+
+.questionCard:last-child {
+  margin-bottom: 0;
 }
