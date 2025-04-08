@@ -2,10 +2,12 @@ import { LoadingProvider } from "@context/LoadingProvider";
 import { StoreProvider } from "@context/StoreProvider";
 
 function MyApp({ Component, pageProps }) {
+  const getLayout = Component.getLayout || ((page) => page);
+
   return (
     <LoadingProvider>
       <StoreProvider>
-        <Component {...pageProps} />
+        {getLayout(<Component {...pageProps} />)}
         <style jsx global>{`
           html,
           body {

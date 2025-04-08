@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { useForgetForm } from "@hooks/login/forget/useForgetForm";
 import { IconButton } from "@mui/material";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
-import { alertSuccess, alertError } from "@utils/Alert"; // นำเข้า alertUtils
+import { alertSuccess, alertError } from "@utils/Alerts"; // นำเข้า alertUtils
 import styles from "./ForgetPage.module.scss";
 
 export default function ForgetPage() {

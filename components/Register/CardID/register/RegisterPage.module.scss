@@ -117,3 +117,22 @@
   color: red;
   font-size: 0.85rem;
 }
+
+.passwordWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  input {
+    flex: 1;
+  }
+}
+
+.togglePassword {
+  position: absolute;
+  right: 10px;
+  cursor: pointer;
+  color: #1e40af;
+  display: flex;
+  align-items: center;
+}

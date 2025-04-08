@@ -8,6 +8,7 @@ export const useRegisterForm = () => {
     watch,
     setError,
     reset,
+    setValue,
   } = useForm();
 
   const onSubmit = (data) => {
@@ -23,5 +24,6 @@ export const useRegisterForm = () => {
     watch,
     setError,
     reset,
+    setValue,
   };
 };

@@ -1,0 +1,16 @@
+.adminLayout {
+  display: flex;
+  height: 100vh;         // ✅ ให้สูงเท่า viewport
+  width: 100vw;
+  overflow: hidden;
+}
+
+.content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  background-color: #f8fbff;
+
+  display: flex;
+  flex-direction: column;
+}
