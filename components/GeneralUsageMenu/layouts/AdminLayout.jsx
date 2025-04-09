@@ -4,7 +4,7 @@ import styles from "./AppLayout.module.scss";
 const AdminLayout = ({ children }) => {
   return (
     <div className={styles.adminLayout}>
-      <Sidebar />
+       <Sidebar />
       <main className={styles.content}>{children}</main>
     </div>
   );
