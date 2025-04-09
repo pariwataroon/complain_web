@@ -3,18 +3,16 @@ import { Breadcrumbs, Link, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
-  backgroundColor: "#E7F1FF", 
-  padding: theme.spacing(1.5), 
-  borderRadius: "8px", 
+  padding: theme.spacing(1.5),
+  borderRadius: "8px",
   display: "flex",
   alignItems: "center",
   "& .MuiBreadcrumbs-separator": {
-    color: "#1D40F8", 
+    color: "#1D40F8",
     marginLeft: "0.5rem",
     marginRight: "0.5rem",
   },
 }));
-
 
 const BreadcrumbsService = ({ items = [], separator = ">" }) => {
   return (
@@ -22,7 +20,13 @@ const BreadcrumbsService = ({ items = [], separator = ">" }) => {
       {items.map((item, index) => {
         const ContentBlock = (
           <span
-            style={{ display: "flex", alignItems: "center", color: "#1D40F8" }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              color: "#1D40F8",
+              fontWeight: "bold", // ทำให้เป็นตัวหนา
+              fontSize: "18px", // ปรับขนาดตัวอักษร
+            }}
           >
             {item.icon && <span style={{ marginRight: 4 }}>{item.icon}</span>}
             {item.label}

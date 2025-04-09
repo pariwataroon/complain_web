@@ -101,7 +101,6 @@ const SetPeriodComponent = () => {
   return (
     <Box
       sx={{
-        backgroundColor: "#EFF3F8",
         minHeight: "100vh",
         padding: 0,
         margin: 0,

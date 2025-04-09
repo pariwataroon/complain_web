@@ -1,7 +1,7 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import AssignComponent from "@components/GeneralUsageMenu/AssignModerator/AssignComponent";
 const Users = () => {
-  return <div> กำหนดผู้ใช้งาน</div>
+  return <AssignComponent />;
 };
 
 Users.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;

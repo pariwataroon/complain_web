@@ -1,7 +1,4 @@
 .userManagement {
-  background-color: #eff3f8;
-  min-height: 100vh;
-
   width: 100%;
 }
 
@@ -11,7 +8,7 @@
   background-color: #2499ff;
   color: white;
   padding: 8px 16px;
-  border-radius: 8px 8px 0 0;
+  border-radius: 10px;
   margin-bottom: 4px;
   font-weight: bold;
 }
@@ -28,12 +25,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #c7dfff;
-  color: #0066cc;
+  background-color: #91cbff; /* Updated background color */
+  color: #1120a3;
   padding: 8px 16px;
   border-radius: 8px;
   margin-bottom: 8px;
-  cursor: pointer;
+
+  border: 2px solid #2499ff; /* Updated border color */
 }
 
 .sectionTitle {
@@ -49,6 +47,15 @@
 .addButton {
   font-size: 18px;
   font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.addButton img {
+  width: 24px; /* Adjust the width as needed */
+  height: 24px; /* Adjust the height as needed */
 }
 
 .userRow {
@@ -235,4 +242,16 @@
   .userInfo {
     padding: 8px;
   }
+}
+.iconWrapper {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center; /* Ensures the icon is vertically centered */
+  margin-right: 8px; /* Adjust space between the icon and text */
+  transition: transform 0.3s ease; /* Animation for rotating */
+  cursor: pointer;
+}
+
+.iconRotate {
+  transform: rotate(180deg); /* Rotate the icon when section is expanded */
 }

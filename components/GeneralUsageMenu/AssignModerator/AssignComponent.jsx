@@ -1,12 +1,28 @@
 import React, { useState } from "react";
 import styles from "./UserManagement.module.scss";
-import { Box, Typography, Grid, IconButton } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Grid,
+  IconButton,
+  Dialog,
+  Select,
+  MenuItem,
+  DialogContent,
+  DialogTitle,
+  Button,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import TextfieldService from "@services/TextfieldService/TextfieldService";
 import ButtonService from "@services/ButtonService/ButtonService";
 import { Search } from "@mui/icons-material";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
+import AddCircleOutlineOutlinedIcon from "@mui/icons-material/AddCircleOutlineOutlined";
+import RemoveCircleOutlineOutlinedIcon from "@mui/icons-material/RemoveCircleOutlineOutlined";
+
 const mockData = {
   admin: [
     {
@@ -25,7 +41,6 @@ const mockData = {
         addressContact: "บ้านเลขที่ 1 ถนน X",
         lastUpdated: "10 พ.ค. 2568",
       },
-      showPassword: false, // ใช้แยกสถานะของการแสดง/ซ่อน password
     },
   ],
   public: [
@@ -45,7 +60,6 @@ const mockData = {
         addressContact: "บ้านเลขที่00 ถนน xxx ซอย 00",
         lastUpdated: "01 ม.ค. 2568",
       },
-      showPassword: false, // ใช้แยกสถานะของการแสดง/ซ่อน password
     },
   ],
   executive: [
@@ -65,7 +79,6 @@ const mockData = {
         addressContact: "บ้านเลขที่ 2 ถนน Y",
         lastUpdated: "15 มิ.ย. 2568",
       },
-      showPassword: false, // ใช้แยกสถานะของการแสดง/ซ่อน password
     },
   ],
   agency: [],
@@ -97,7 +110,7 @@ const sections = [
 
 const breadcrumbItems = [
   {
-    label: "เมนูกำหนดการใช้งานทั่วไป",
+    label: "เมนูการใช้งานทั่วไป",
     icon: (
       <img
         src="/icons/settingico.png"
@@ -115,12 +128,32 @@ export default function UserManagementUI() {
   const [expandedSections, setExpandedSections] = useState(
     sections.map((section) => section.expanded)
   );
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+    group: "",
+    fullName: "",
+    idCard: "",
+    phone: "",
+    email: "",
+    address: "",
+    city: "",
+    district: "",
+  });
 
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((prevState) => ({
+      ...prevState,
+      [name]: value,
+    }));
+  };
   const toggleSection = (index) => {
     const newExpandedSections = [...expandedSections];
     newExpandedSections[index] = !newExpandedSections[index];
     setExpandedSections(newExpandedSections);
   };
+
   const [permission, setPermission] = useState("");
 
   // Options for the dropdown
@@ -139,15 +172,29 @@ export default function UserManagementUI() {
     setPermission(event.target.value);
   };
 
-  const togglePasswordVisibility = (index, userIdx) => {
-    // แก้ไขเฉพาะ showPassword โดยไม่เปลี่ยน expanded
-    const updatedUsers = [...sections[index].users];
-    updatedUsers[userIdx].showPassword = !updatedUsers[userIdx].showPassword;
-    const updatedSections = [...sections];
-    updatedSections[index].users = updatedUsers;
+  // State for showing/hiding passwords
+  const [userPasswordVisibility, setUserPasswordVisibility] = useState(() => {
+    return sections.map(
+      (section) => section.users.map(() => false) // Default all users' password hidden
+    );
+  });
 
-    // ไม่ต้อง update expandedSections
-    setExpandedSections(updatedSections);
+  const togglePasswordVisibility = (sectionIndex, userIdx) => {
+    const updatedVisibility = [...userPasswordVisibility];
+    updatedVisibility[sectionIndex][userIdx] =
+      !updatedVisibility[sectionIndex][userIdx];
+    setUserPasswordVisibility(updatedVisibility);
+  };
+
+  // Modal state
+  const [openModal, setOpenModal] = useState(false);
+
+  const handleOpenModal = () => {
+    setOpenModal(true); // Open the modal
+  };
+
+  const handleCloseModal = () => {
+    setOpenModal(false); // Close the modal
   };
 
   return (
@@ -246,19 +293,19 @@ export default function UserManagementUI() {
         <Grid item xs={12} sm={6} md={3} lg={1.5} xl={1.5}>
           <Box
             mt={{
-              xs: 0, // Margin-top 2 สำหรับขนาดหน้าจอ xs
-              sm: 0, // Margin-top 2.5 สำหรับขนาดหน้าจอ sm
-              md: 2.5, // Margin-top 3 สำหรับขนาดหน้าจอ md
-              lg: 2.5, // Margin-top 3.5 สำหรับขนาดหน้าจอ lg
-              xl: 2.5, // Margin-top 4 สำหรับขนาดหน้าจอ xl
+              xs: 0,
+              sm: 0,
+              md: 2.5,
+              lg: 2.5,
+              xl: 2.5,
             }}
             sx={{
               width: {
-                xs: "100%", // ความกว้าง 100% สำหรับขนาดหน้าจอ xs
-                sm: "100%", // ความกว้าง 100% สำหรับขนาดหน้าจอ sm
-                md: "80%", // ความกว้าง 80% สำหรับขนาดหน้าจอ md
-                lg: "70%", // ความกว้าง 70% สำหรับขนาดหน้าจอ lg
-                xl: "60%", // ความกว้าง 60% สำหรับขนาดหน้าจอ xl
+                xs: "100%",
+                sm: "100%",
+                md: "80%",
+                lg: "70%",
+                xl: "60%",
               },
             }}
           >
@@ -289,15 +336,26 @@ export default function UserManagementUI() {
           {sections.map((section, sectionIndex) => (
             <div key={sectionIndex} className={styles.section}>
               {/* Section Header */}
-              <div
-                className={styles.sectionHeader}
-                onClick={() => toggleSection(sectionIndex)}
-              >
+              <div className={styles.sectionHeader}>
                 <div className={styles.sectionTitle}>
-                  <div className={styles.circleIcon}>○</div>
+                  <div
+                    onClick={() => toggleSection(sectionIndex)}
+                    className={`${styles.iconWrapper} ${
+                      expandedSections[sectionIndex] ? styles.iconRotate : ""
+                    }`}
+                  >
+                    {expandedSections[sectionIndex] ? (
+                      <RemoveCircleOutlineOutlinedIcon />
+                    ) : (
+                      <AddCircleOutlineOutlinedIcon />
+                    )}
+                  </div>
                   <span>{section.title}</span>
                 </div>
-                <div className={styles.addButton}>+</div>
+
+                <div className={styles.addButton} onClick={handleOpenModal}>
+                  <img src="/icons/Add.png" alt="Add" />
+                </div>
               </div>
 
               {/* User Rows - Only show if section is expanded */}
@@ -347,14 +405,15 @@ export default function UserManagementUI() {
                                   Password :
                                 </span>
                                 <span className={styles.detailValue}>
-                                  {/* แสดง password หรือซ่อนตามสถานะ */}
                                   <span
                                     style={{
                                       border: "none",
                                       background: "transparent",
                                     }}
                                   >
-                                    {user.showPassword
+                                    {userPasswordVisibility[sectionIndex][
+                                      userIdx
+                                    ]
                                       ? user.details.password
                                       : "************"}
                                   </span>
@@ -367,7 +426,9 @@ export default function UserManagementUI() {
                                     }
                                     sx={{ padding: 0, margin: 0 }}
                                   >
-                                    {user.showPassword ? (
+                                    {userPasswordVisibility[sectionIndex][
+                                      userIdx
+                                    ] ? (
                                       <VisibilityOff />
                                     ) : (
                                       <Visibility />
@@ -444,6 +505,278 @@ export default function UserManagementUI() {
           ))}
         </div>
       </Box>
+
+      <Dialog
+        open={openModal}
+        onClose={handleCloseModal}
+        sx={{
+          "& .MuiDialog-paper": {
+            width: "100%", // Set dialog width to 80% of the screen width
+            maxWidth: "1200px", // Set the maximum width for the dialog
+            height: "80%", // Set dialog height to 80% of the screen height
+            maxHeight: "700px", // Set the maximum height for the dialog
+            borderRadius: "16px", // Optional: rounding the corners of the dialog
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{ fontWeight: "bold", fontSize: "24px", textAlign: "center" }}
+        >
+          เพิ่มข้อมูลผู้ใช้งาน
+        </DialogTitle>
+        <DialogContent sx={{ padding: "30px" }}>
+          <form>
+            {/* Username and Password */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 3,
+                mt: 2,
+              }}
+            >
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  color="#1120A3"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  Username
+                </Typography>
+                <TextfieldService
+                  fullWidth
+                  placeholder="Username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  color="#1120A3"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  Password
+                </Typography>
+                <TextfieldService
+                  fullWidth
+                  placeholder="Password"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  color="#1120A3"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  ชื่อ - นามสกุล
+                </Typography>
+                <TextfieldService
+                  fullWidth
+                  placeholder="ชื่อ - นามสกุล"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Box>
+            </Box>
+
+            {/* Full Name, ID Card */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 3,
+                mt: 2,
+              }}
+            >
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  color="#1120A3"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  กลุ่มสิทธิ์
+                </Typography>
+                <SelectMenuService
+                  placeholder="กลุ่มผู้ใช้งาน"
+                  name="group"
+                  value={formData.group}
+                  onChange={handleInputChange}
+                  width="100%"
+                  options={[
+                    { value: "admin", label: "ผู้ดูแลระบบ" },
+                    { value: "public", label: "ประชาชน" },
+                    { value: "executive", label: "ผู้บริหาร" },
+                  ]}
+                />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  color="#1120A3"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  เลขบัตรประชาชน
+                </Typography>
+                <TextfieldService
+                  fullWidth
+                  placeholder="เลขบัตรประชาชน"
+                  name="idCard"
+                  value={formData.idCard}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  color="#1120A3"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  หมายเลขโทรศัพท์
+                </Typography>
+                <TextfieldService
+                  fullWidth
+                  placeholder="หมายเลขโทรศัพท์"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Box>
+            </Box>
+
+            {/* Email, Address, City */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 3,
+                mt: 2,
+              }}
+            >
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  color="#1120A3"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  อีเมล
+                </Typography>
+                <TextfieldService
+                  fullWidth
+                  placeholder="อีเมล"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  color="#1120A3"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  ที่อยู่
+                </Typography>
+                <TextfieldService
+                  fullWidth
+                  placeholder="ที่อยู่"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  color="#1120A3"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  จังหวัด
+                </Typography>
+                <TextfieldService
+                  fullWidth
+                  placeholder="จังหวัด"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Box>
+            </Box>
+
+            {/* District, Zipcode */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 3,
+                mt: 2,
+              }}
+            >
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  color="#1120A3"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  อำเภอ/เขต
+                </Typography>
+                <TextfieldService
+                  fullWidth
+                  placeholder="อำเภอ/เขต"
+                  name="district"
+                  value={formData.district}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  color="#1120A3"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  รหัสไปรษณีย์
+                </Typography>
+                <TextfieldService
+                  fullWidth
+                  placeholder="รหัสไปรษณีย์"
+                  name="zipcode"
+                  value={formData.zipcode}
+                  onChange={handleInputChange}
+                />
+              </Box>
+            </Box>
+
+            {/* Action Buttons */}
+            <Box sx={{ display: "flex", gap: 3, mt: 2 }}>
+              <Box sx={{ flex: 1 }}>
+                <Button variant="outlined" color="primary" fullWidth>
+                  ยกเลิก
+                </Button>
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Button variant="contained" color="primary" fullWidth>
+                  ยืนยัน
+                </Button>
+              </Box>
+            </Box>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
