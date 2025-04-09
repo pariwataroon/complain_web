@@ -47,7 +47,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"citizen_id\": \"1234567890123\",\r\n    \"password\": \"password\"\r\n}",
+							"raw": "{\r\n    \"citizen_id\": \"1234567890125\",\r\n    \"password\": \"password\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -68,6 +68,136 @@
 								"api",
 								"v1",
 								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "thaid/auth",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// ดึงข้อมูลจาก response\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"// ตรวจสอบว่า login สำเร็จและมี token\r",
+									"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
+									"    // บันทึก access_token ลงใน Collection Variables\r",
+									"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
+									"    \r",
+									"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
+									"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
+									"    \r",
+									"    console.log(\"Token saved to collection variables!\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"auth_code\": \"NWI2M2EwZDYtNTdjNC00NDZjLWIzMzAtMjdiNmMzYzkwOWRhIzQ1MGYyMDAzLTdhN2ItNDU2Yi1iNzg2LThhYzRkYjg2MDJiZQ\",\r\n    \"redirect_uri\": \"https://ff3p4flc-3000.asse.devtunnels.ms/callback\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/v1/thaid/auth",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"thaid",
+								"auth"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "thaid/login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// ดึงข้อมูลจาก response\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"// ตรวจสอบว่า login สำเร็จและมี token\r",
+									"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
+									"    // บันทึก access_token ลงใน Collection Variables\r",
+									"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
+									"    \r",
+									"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
+									"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
+									"    \r",
+									"    console.log(\"Token saved to collection variables!\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"expires_in\": 1744111684,\r\n    \"access_token\": \"eyJhbGci...\",\r\n    \"refresh_token\": \"eyJhbGci...\",\r\n    \"token_type\": \"Bearer\",\r\n    \"scope\": \"pid given_name address family_name gender title house_address\",\r\n    \"pid\": \"1101500940655\",\r\n    \"address\": {\r\n        \"formatted\": \"123/456 ต.บึงทองหลาง อ.ลำลูกกา จ.ปทุมธานี\"\r\n    },\r\n    \"given_name\": \"ชื่อตัว\",\r\n    \"family_name\": \"ชื่อสกุล\",\r\n    \"gender\": \"male\",\r\n    \"titleTh\": \"นาย\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/v1/thaid/login",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"thaid",
 								"login"
 							]
 						}
@@ -176,7 +306,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://127.0.0.1:8000/api/v1/users/46734501-357f-4227-b427-b25824cfc21e",
+							"raw": "http://127.0.0.1:8000/api/v1/users/4a4b1744-20e2-47d4-a11e-32716f08d1ae",
 							"protocol": "http",
 							"host": [
 								"127",
@@ -189,7 +319,7 @@
 								"api",
 								"v1",
 								"users",
-								"46734501-357f-4227-b427-b25824cfc21e"
+								"4a4b1744-20e2-47d4-a11e-32716f08d1ae"
 							]
 						}
 					},
