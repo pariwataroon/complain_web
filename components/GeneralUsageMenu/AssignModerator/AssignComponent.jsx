@@ -1,79 +1,97 @@
 import React, { useState } from "react";
 import styles from "./UserManagement.module.scss";
-import { Box, Typography, Grid } from "@mui/material";
+import { Box, Typography, Grid, IconButton } from "@mui/material";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import TextfieldService from "@services/TextfieldService/TextfieldService";
 import ButtonService from "@services/ButtonService/ButtonService";
 import { Search } from "@mui/icons-material";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
-
-const mockData = [
-  {
-    permission: "กกกก_mof",
-    username: "nana_mof",
-    displayName: "ณัฎฐิรา วอนานนท์ณัฎรัต",
-    roleName: "ประชาชน",
-    expanded: true,
-    details: {
-      password: "************",
-      fullName: "ณัฎฐิรา วอนานนท์ณัฎรัต",
-      idCard: "0-0000-0000-000",
-      email: "nnnnn_n@hotmail.com",
-      phone: "000-000-0000",
-      addressCard:
-        "บ้านเลขที่00 ถนน xxx ซอย 00 แขวงวัฒนนคร เขตวัฒนนา กรุงเทพมหานคร 10120",
-      addressContact:
-        "บ้านเลขที่00 ถนน xxx ซอย 00 แขวงวัฒนนคร เขตวัฒนนา กรุงเทพมหานคร 10120",
-      lastUpdated: "01 ม.ค. 2568",
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+const mockData = {
+  admin: [
+    {
+      permission: "admin_mof",
+      username: "admin_mof",
+      displayName: "นาย A",
+      roleName: "ผู้ดูแลระบบ",
+      expanded: true,
+      details: {
+        password: "admin123",
+        fullName: "นาย A",
+        idCard: "0-0000-0000-001",
+        email: "admin@example.com",
+        phone: "000-000-0001",
+        addressCard: "บ้านเลขที่ 1 ถนน X",
+        addressContact: "บ้านเลขที่ 1 ถนน X",
+        lastUpdated: "10 พ.ค. 2568",
+      },
+      showPassword: false, // ใช้แยกสถานะของการแสดง/ซ่อน password
     },
-  },
-  {
-    permission: "กกกก_mof",
-    username: "nana_mof",
-    displayName: "ณัฎฐิรา วอนานนท์ณัฎรัต",
-    roleName: "ประชาชน",
-    expanded: false,
-  },
-  {
-    permission: "กกกก_mof",
-    username: "nana_mof",
-    displayName: "ณัฎฐิรา วอนานนท์ณัฎรัต",
-    roleName: "ประชาชน",
-    expanded: false,
-  },
-];
+  ],
+  public: [
+    {
+      permission: "public_mof",
+      username: "nana_public",
+      displayName: "ณัฎฐิรา วอนานนท์",
+      roleName: "ประชาชน",
+      expanded: true,
+      details: {
+        password: "123456789",
+        fullName: "ณัฎฐิรา วอนานนท์",
+        idCard: "0-0000-0000-000",
+        email: "nnnnn_n@hotmail.com",
+        phone: "000-000-0000",
+        addressCard: "บ้านเลขที่00 ถนน xxx ซอย 00",
+        addressContact: "บ้านเลขที่00 ถนน xxx ซอย 00",
+        lastUpdated: "01 ม.ค. 2568",
+      },
+      showPassword: false, // ใช้แยกสถานะของการแสดง/ซ่อน password
+    },
+  ],
+  executive: [
+    {
+      permission: "executive_mof",
+      username: "executive_mof",
+      displayName: "นาย B",
+      roleName: "ผู้บริหาร",
+      expanded: true,
+      details: {
+        password: "executive123",
+        fullName: "นาย B",
+        idCard: "0-0000-0000-002",
+        email: "executive@example.com",
+        phone: "000-000-0002",
+        addressCard: "บ้านเลขที่ 2 ถนน Y",
+        addressContact: "บ้านเลขที่ 2 ถนน Y",
+        lastUpdated: "15 มิ.ย. 2568",
+      },
+      showPassword: false, // ใช้แยกสถานะของการแสดง/ซ่อน password
+    },
+  ],
+  agency: [],
+  officer: [],
+};
 
-// Group sections based on the image
 const sections = [
   {
-    title: "ประชาชน",
-    expanded: true,
-    users: mockData,
-  },
-  {
     title: "ผู้ดูแลระบบ (แอดมิน)",
-    expanded: true,
-    users: mockData.slice(0, 3),
+    users: mockData.admin,
   },
   {
-    title: "ผู้ดูแลหน้าหลัก (แอดมิน Home page)",
-    expanded: true,
-    users: [],
+    title: "ประชาชน",
+    users: mockData.public,
   },
   {
     title: "ผู้บริหาร / ผู้สนงาน",
-    expanded: true,
-    users: [],
+    users: mockData.executive,
   },
   {
     title: "หน่วยงานในสังกัด",
-    expanded: true,
-    users: [],
+    users: mockData.agency,
   },
   {
     title: "เจ้าหน้าที่ สรร.",
-    expanded: true,
-    users: [],
+    users: mockData.officer,
   },
 ];
 
@@ -120,6 +138,18 @@ export default function UserManagementUI() {
   const handlePermissionChange = (event) => {
     setPermission(event.target.value);
   };
+
+  const togglePasswordVisibility = (index, userIdx) => {
+    // แก้ไขเฉพาะ showPassword โดยไม่เปลี่ยน expanded
+    const updatedUsers = [...sections[index].users];
+    updatedUsers[userIdx].showPassword = !updatedUsers[userIdx].showPassword;
+    const updatedSections = [...sections];
+    updatedSections[index].users = updatedUsers;
+
+    // ไม่ต้อง update expandedSections
+    setExpandedSections(updatedSections);
+  };
+
   return (
     <Box>
       <Grid size={{ xs: 12 }}>
@@ -317,7 +347,32 @@ export default function UserManagementUI() {
                                   Password :
                                 </span>
                                 <span className={styles.detailValue}>
-                                  {user.details.password}
+                                  {/* แสดง password หรือซ่อนตามสถานะ */}
+                                  <span
+                                    style={{
+                                      border: "none",
+                                      background: "transparent",
+                                    }}
+                                  >
+                                    {user.showPassword
+                                      ? user.details.password
+                                      : "************"}
+                                  </span>
+                                  <IconButton
+                                    onClick={() =>
+                                      togglePasswordVisibility(
+                                        sectionIndex,
+                                        userIdx
+                                      )
+                                    }
+                                    sx={{ padding: 0, margin: 0 }}
+                                  >
+                                    {user.showPassword ? (
+                                      <VisibilityOff />
+                                    ) : (
+                                      <Visibility />
+                                    )}
+                                  </IconButton>
                                 </span>
                               </div>
                               <div className={styles.detailRow}>
