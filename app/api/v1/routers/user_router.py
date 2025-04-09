@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -28,7 +29,7 @@ async def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_
 
 
 @router.get("/{user_id}", response_model=FormatResponseModel)
-async def read_user(user_id: int, db: Session = Depends(get_db)):
+async def read_user(user_id: UUID, db: Session = Depends(get_db)):
     db_user = get_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")
@@ -54,7 +55,7 @@ async def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{user_id}", response_model=FormatResponseModel)
-async def update_existing_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
+async def update_existing_user(user_id: UUID, user: UserUpdate, db: Session = Depends(get_db)):
     try:
         db_user = update_user(db, user_id, user)
         if db_user is None:
@@ -67,7 +68,7 @@ async def update_existing_user(user_id: int, user: UserUpdate, db: Session = Dep
 
 
 @router.delete("/{user_id}", response_model=FormatResponseModel)
-async def delete_existing_user(user_id: int, db: Session = Depends(get_db)):
+async def delete_existing_user(user_id: UUID, db: Session = Depends(get_db)):
     success = delete_user(db, user_id)
     if not success:
         raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")

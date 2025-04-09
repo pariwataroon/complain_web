@@ -165,9 +165,7 @@ def get_titles(db: Session):
 
 def get_users_with_titles(db: Session, skip: int = 0, limit: int = 100):
     """Get users with their titles in a simple, efficient way"""
-    users = db.query(User).options(joinedload(User.title)).order_by(
-        User.id).offset(skip).limit(limit).all()
-
+    users = db.query(User).options(joinedload(User.title)).order_by(User.id).offset(skip).limit(limit).all()
     result = []
     for user in users:
         # Basic user data
