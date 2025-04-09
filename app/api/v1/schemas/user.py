@@ -1,8 +1,7 @@
 from datetime import datetime
 from typing import Optional
-
-from pydantic import BaseModel, EmailStr, Field, computed_field, validator
-
+from uuid import UUID
+from pydantic import BaseModel, EmailStr, Field, validator
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -11,15 +10,13 @@ class UserBase(BaseModel):
     last_name: str
     phone: Optional[str] = None
 
-
 class UserLogin(BaseModel):
     citizen_id: str
     password: str
 
-
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
-    title_id: Optional[int] = None
+    title_id: int
     prefix_other: Optional[str] = None
 
     @validator('citizen_id')
@@ -34,13 +31,12 @@ class UserCreate(UserBase):
             raise ValueError('Phone number must be 9-10 digits')
         return v
 
-
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
-    title_id: Optional[int] = None
+    title_id: int
     prefix_other: Optional[str] = None
     is_active: Optional[bool] = None
     password: Optional[str] = Field(None, min_length=8)
@@ -48,15 +44,14 @@ class UserUpdate(BaseModel):
     class Config:
         extra = "forbid"  # ไม่อนุญาตให้มีฟิลด์อื่นนอกเหนือจากที่กำหนด
 
-
 class UserInDB(BaseModel):
-    id: int
+    id: UUID
     email: EmailStr
     citizen_id: str
     first_name: str
     last_name: str
     phone: Optional[str] = None
-    title_id: Optional[int] = None
+    title_id: int
     prefix_other: Optional[str] = None
     is_active: bool
     created_at: datetime
@@ -65,34 +60,28 @@ class UserInDB(BaseModel):
     class Config:
         from_attributes = True
 
-
 class UserResponse(UserInDB):
     pass
-
 
 class TitleSchema(BaseModel):
     title_id: int
     short_name: Optional[str] = None
     title_name: Optional[str] = None
-    category: Optional[str] = None
+    # category: Optional[str] = None
 
     class Config:
         from_attributes = True
 
-
 class TitleResponse(TitleSchema):
     pass
-
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
-
 class Token(BaseModel):
     access_token: str
     token_type: str
-
 
 class TokenData(BaseModel):
     email: Optional[str] = None

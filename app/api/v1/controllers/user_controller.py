@@ -52,8 +52,7 @@ def create_user(db: Session, user: UserCreate):
 
         # ตรวจสอบ citizen_id ถ้ามี
         if hasattr(user, 'citizen_id') and user.citizen_id:
-            existing_citizen = db.query(User).filter(
-                User.citizen_id == user.citizen_id).first()
+            existing_citizen = db.query(User).filter(User.citizen_id == user.citizen_id).first()
             if existing_citizen:
                 raise DuplicateKeyError(
                     f"User with citizen ID {user.citizen_id} already exists")
@@ -75,8 +74,7 @@ def create_user(db: Session, user: UserCreate):
         # จัดการเรื่องคำนำหน้า
         if hasattr(user, 'title_id') and user.title_id:
             # กรณีเลือกคำนำหน้าที่มีอยู่ในระบบ
-            title = db.query(Title).filter(
-                Title.title_id == user.title_id).first()
+            title = db.query(Title).filter(Title.title_id == user.title_id).first()
             if title:
                 db_user.title_id = title.title_id
 
@@ -161,8 +159,7 @@ def delete_user(db: Session, user_id: int):
 
 
 def get_titles(db: Session):
-    title = db.query(Title.title_id, Title.title_name,
-                     Title.short_name).filter(Title.is_active == 1).all()
+    title = db.query(Title.title_id, Title.title_name, Title.short_name).filter(Title.is_active == 1).all()
     return title
 
 
