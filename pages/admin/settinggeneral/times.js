@@ -5,6 +5,6 @@ const Times = () => {
   return <SetPeriodComponent />;
 };
 
-Times.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
+Times.getLayout = (page) => <AdminLayout backgroundColor="#e7f1ff">{page}</AdminLayout>;
 
 export default Times;
