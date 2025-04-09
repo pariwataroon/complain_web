@@ -1,20 +1,22 @@
-from sqlalchemy import create_engine, text, inspect
-import urllib.parse
 import os
 import sys
+import urllib.parse
+
+from sqlalchemy import create_engine, inspect, text
+
+from config.database import Base, engine, get_db
+from config.dotenv import DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
+from lib.logger import get_logger
+from seeders.title_seeder import TitleSeeder
+from seeders.user_seeder import UserSeeder
 
 # เพิ่ม path เพื่อป้องกัน import error
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lib.logger import get_logger
-from config.dotenv import DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME
-from config.database import Base, engine, get_db
-
 # นำเข้า seeders
-from seeders.title_seeder import TitleSeeder
-from seeders.user_seeder import UserSeeder
 
 logger = get_logger("db_init")
+
 
 def check_and_seed_tables():
     """Check if tables exist and have data, seed if necessary"""
@@ -22,26 +24,28 @@ def check_and_seed_tables():
         # ตรวจสอบว่าตารางต่างๆ มีอยู่หรือไม่
         inspector = inspect(engine)
         tables = inspector.get_table_names()
-        
+
         # รายการ seeders ที่ต้องการใช้งาน
         seeders = [
             {"name": "titles", "seeder": TitleSeeder()},
             {"name": "users", "seeder": UserSeeder()},
         ]
-        
+
         # วนลูปตรวจสอบแต่ละตาราง
         for seeder_info in seeders:
-            table_name = seeder_info["name"]
+            table_name = 'comp_'+seeder_info["name"]
             seeder = seeder_info["seeder"]
-            
+
             if table_name in tables:
-                logger.info(f"Table '{table_name}' exists. Checking for data...")
+                logger.info(
+                    f"Table '{table_name}' exists. Checking for data...")
                 # เรียกใช้ seeder เพื่อตรวจสอบข้อมูลและเพิ่มถ้าจำเป็น
                 seeder.seed()
             else:
-                logger.info(f"Table '{table_name}' does not exist yet. It will be created and seeded.")
+                logger.info(
+                    f"Table '{table_name}' does not exist yet. It will be created and seeded.")
                 # หมายเหตุ: ตารางจะถูกสร้างโดย Base.metadata.create_all และข้อมูลจะถูกเพิ่มโดย seeder
-    
+
     except Exception as e:
         logger.error(f"Error checking and seeding tables: {str(e)}")
 
@@ -84,11 +88,11 @@ def init_database():
         logger.info("Creating database tables...")
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
-        
+
         # 3. ตรวจสอบและนำข้อมูล seed เข้าระบบถ้าจำเป็น
         logger.info("Checking tables for data...")
         check_and_seed_tables()
-        
+
         return True
 
     except Exception as e:

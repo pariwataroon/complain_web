@@ -1,15 +1,18 @@
-from sqlalchemy.orm import Session, joinedload
+import bcrypt
 from sqlalchemy.exc import IntegrityError
-from models.user import User
-from models.title import Title
+from sqlalchemy.orm import Session, joinedload
+
 from app.api.v1.schemas.user import UserCreate, UserUpdate
 from lib.logger import get_logger
-import bcrypt
+from models.title import Title
+from models.user import User
 
 logger = get_logger("user_repository", console_output=False)
 
+
 class DuplicateKeyError(Exception):
     pass
+
 
 def get_password_hash(password: str) -> str:
     """Hash a password for storage."""
@@ -17,18 +20,27 @@ def get_password_hash(password: str) -> str:
     hashed = bcrypt.hashpw(password.encode(), salt).decode()
     return hashed
 
+
 def get_user(db: Session, user_id: int):
     # เพิ่ม options(joinedload(User.title)) เพื่อโหลดข้อมูล title พร้อมกัน
     return db.query(User).options(joinedload(User.title)).filter(User.id == user_id).first()
 
+
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
+
+
+def get_user_by_pid(db: Session, pid: str):
+    return db.query(User).filter(User.citizen_id == pid).first()
+
 
 def get_user_by_username(db: Session, username: str):
     return db.query(User).filter(User.username == username).first()
 
+
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).options(joinedload(User.title)).order_by(User.id).offset(skip).limit(limit).all()
+
 
 def create_user(db: Session, user: UserCreate):
     try:
@@ -40,14 +52,15 @@ def create_user(db: Session, user: UserCreate):
 
         # ตรวจสอบ citizen_id ถ้ามี
         if hasattr(user, 'citizen_id') and user.citizen_id:
-            existing_citizen = db.query(User).filter(User.citizen_id == user.citizen_id).first()
+            existing_citizen = db.query(User).filter(
+                User.citizen_id == user.citizen_id).first()
             if existing_citizen:
                 raise DuplicateKeyError(
                     f"User with citizen ID {user.citizen_id} already exists")
 
         # Create new user
         hashed_password = get_password_hash(user.password)
-        
+
         # สร้าง user object พร้อมข้อมูลใหม่
         db_user = User(
             citizen_id=user.citizen_id,
@@ -58,21 +71,22 @@ def create_user(db: Session, user: UserCreate):
             phone=user.phone if hasattr(user, 'phone') else None,
             is_active=True
         )
-        
+
         # จัดการเรื่องคำนำหน้า
         if hasattr(user, 'title_id') and user.title_id:
             # กรณีเลือกคำนำหน้าที่มีอยู่ในระบบ
-            title = db.query(Title).filter(Title.title_id == user.title_id).first()
+            title = db.query(Title).filter(
+                Title.title_id == user.title_id).first()
             if title:
                 db_user.title_id = title.title_id
-        
+
         # กรณีเลือก "อื่นๆ" และระบุคำนำหน้าเอง
         if hasattr(user, 'prefix_other') and user.prefix_other:
             # ถ้า title_id ตรงกับ "อื่นๆ" (title_id = 3 ตามข้อมูล seed)
             other_title_id = 3  # ID ของ "อื่น ๆ" ตามข้อมูล seed
             db_user.title_id = other_title_id
             db_user.prefix_other = user.prefix_other
-        
+
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
@@ -85,6 +99,7 @@ def create_user(db: Session, user: UserCreate):
         db.rollback()
         logger.error(f"Error creating user: {str(e)}")
         raise
+
 
 def update_user(db: Session, user_id: int, user_data: UserUpdate):
     db_user = get_user(db, user_id)
@@ -104,19 +119,20 @@ def update_user(db: Session, user_id: int, user_data: UserUpdate):
     # จัดการเรื่องคำนำหน้าเมื่อมีการอัพเดต
     if "title_id" in update_data and update_data["title_id"]:
         # กรณีเลือกคำนำหน้าที่มีอยู่ในระบบ
-        title = db.query(Title).filter(Title.title_id == update_data["title_id"]).first()
+        title = db.query(Title).filter(Title.title_id ==
+                                       update_data["title_id"]).first()
         if title:
             # ถ้าไม่ใช่ "อื่นๆ" ให้ล้างค่า prefix_other
             if title.title_name != "อื่น ๆ" and "prefix_other" not in update_data:
                 update_data["prefix_other"] = None
-    
+
     # กรณีเลือก "อื่นๆ" และระบุคำนำหน้าเอง
     if "prefix_other" in update_data and update_data["prefix_other"]:
         # ถ้าไม่ได้ระบุ title_id มา ให้กำหนดเป็น ID ของ "อื่น ๆ"
         if "title_id" not in update_data:
             other_title_id = 3  # ID ของ "อื่น ๆ" ตามข้อมูล seed
             update_data["title_id"] = other_title_id
-    
+
     # อัปเดตข้อมูล
     for key, value in update_data.items():
         setattr(db_user, key, value)
@@ -134,6 +150,7 @@ def update_user(db: Session, user_id: int, user_data: UserUpdate):
         logger.error(f"Error updating user: {str(e)}")
         raise
 
+
 def delete_user(db: Session, user_id: int):
     db_user = get_user(db, user_id)
     if not db_user:
@@ -142,14 +159,18 @@ def delete_user(db: Session, user_id: int):
     db.commit()
     return True
 
+
 def get_titles(db: Session):
-    title = db.query(Title.title_id, Title.title_name, Title.short_name).filter(Title.is_active == 1).all()
+    title = db.query(Title.title_id, Title.title_name,
+                     Title.short_name).filter(Title.is_active == 1).all()
     return title
+
 
 def get_users_with_titles(db: Session, skip: int = 0, limit: int = 100):
     """Get users with their titles in a simple, efficient way"""
-    users = db.query(User).options(joinedload(User.title)).order_by(User.id).offset(skip).limit(limit).all()
-    
+    users = db.query(User).options(joinedload(User.title)).order_by(
+        User.id).offset(skip).limit(limit).all()
+
     result = []
     for user in users:
         # Basic user data
@@ -167,7 +188,7 @@ def get_users_with_titles(db: Session, skip: int = 0, limit: int = 100):
             "updated_at": user.updated_at,
             "full_name": f"{user.first_name} {user.last_name}"
         }
-        
+
         # Get title name - prioritize prefix_other for "Other" titles
         if user.title_id == 3 and user.prefix_other:
             title_name = user.prefix_other
@@ -175,10 +196,10 @@ def get_users_with_titles(db: Session, skip: int = 0, limit: int = 100):
             title_name = user.title.title_name
         else:
             title_name = None
-            
+
         user_data["title_name"] = title_name
         user_data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
-        
+
         result.append(user_data)
-    
+
     return result

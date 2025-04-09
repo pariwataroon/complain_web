@@ -1,6 +1,8 @@
-from pydantic import BaseModel, EmailStr, Field, validator, computed_field
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr, Field, computed_field, validator
+
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -9,22 +11,29 @@ class UserBase(BaseModel):
     last_name: str
     phone: Optional[str] = None
 
+
+class UserLogin(BaseModel):
+    citizen_id: str
+    password: str
+
+
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
     title_id: Optional[int] = None
     prefix_other: Optional[str] = None
-    
+
     @validator('citizen_id')
     def validate_citizen_id(cls, v):
         if not v or len(v) != 13:
             raise ValueError('Citizen ID must be 13 digits')
         return v
-    
+
     @validator('phone')
     def validate_phone(cls, v):
         if v and (len(v) < 9 or len(v) > 10):
             raise ValueError('Phone number must be 9-10 digits')
         return v
+
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
@@ -38,6 +47,7 @@ class UserUpdate(BaseModel):
 
     class Config:
         extra = "forbid"  # ไม่อนุญาตให้มีฟิลด์อื่นนอกเหนือจากที่กำหนด
+
 
 class UserInDB(BaseModel):
     id: int
@@ -55,8 +65,10 @@ class UserInDB(BaseModel):
     class Config:
         from_attributes = True
 
+
 class UserResponse(UserInDB):
     pass
+
 
 class TitleSchema(BaseModel):
     title_id: int
@@ -67,16 +79,20 @@ class TitleSchema(BaseModel):
     class Config:
         from_attributes = True
 
+
 class TitleResponse(TitleSchema):
     pass
+
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
+
 
 class TokenData(BaseModel):
     email: Optional[str] = None
