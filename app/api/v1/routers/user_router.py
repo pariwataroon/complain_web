@@ -19,7 +19,6 @@ router = APIRouter(
     tags=["users"],
 )
 
-
 @router.get("/", response_model=FormatResponseModel)
 async def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     user_id = verify_token(token)

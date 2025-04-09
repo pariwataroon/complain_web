@@ -1,18 +1,18 @@
 {
-    "prettier.printWidth": 120,
-    "json.format.enable": false,
-    "[json]": {
-      "editor.defaultFormatter": null,
-      "editor.formatOnSave": false,
-      "prettier.enable": false
-    },
-    "prettier.endOfLine": "lf",
-    "files.insertFinalNewline": false,
-    
-    "python.linting.enabled": true,
-    "python.formatting.provider": "black",
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": true
-    },
-    "python.linting.pylintEnabled": true
-  }
+  "prettier.printWidth": 120,
+  "json.format.enable": false,
+  "[json]": {
+    "editor.defaultFormatter": null,
+    "editor.formatOnSave": false,
+    "prettier.enable": false
+  },
+  "prettier.endOfLine": "lf",
+  "files.insertFinalNewline": false,
+
+  "python.linting.enabled": true,
+  "python.formatting.provider": "black",
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "python.linting.pylintEnabled": true
+}

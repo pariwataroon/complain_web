@@ -27,8 +27,7 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire, "type": "access"})
-    encoded_jwt = jwt.encode(
-        to_encode, env.JWT_SECRET_KEY, algorithm=env.ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, env.JWT_SECRET_KEY, algorithm=env.ALGORITHM)
     return encoded_jwt
 
 
@@ -36,14 +35,12 @@ def create_refresh_token(data: dict, expires_delta: timedelta = timedelta(days=7
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire, "type": "refresh"})
-    encoded_jwt = jwt.encode(
-        to_encode, env.JWT_SECRET_KEY, algorithm=env.ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, env.JWT_SECRET_KEY, algorithm=env.ALGORITHM)
     return encoded_jwt
 
 
 def refresh_access_token_mapping(db: Session, user_id: str,  access_token: str, refresh_token: str):
-    db_token = Token(user_id=user_id, access_token=access_token,
-                     refresh_token=refresh_token, revoked=False)
+    db_token = Token(user_id=user_id, access_token=access_token, refresh_token=refresh_token, revoked=False)
     db.merge(db_token)
     db.commit()
     return
