@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from models.user import User
 from models.title import Title
@@ -18,7 +18,8 @@ def get_password_hash(password: str) -> str:
     return hashed
 
 def get_user(db: Session, user_id: int):
-    return db.query(User).filter(User.id == user_id).first()
+    # เพิ่ม options(joinedload(User.title)) เพื่อโหลดข้อมูล title พร้อมกัน
+    return db.query(User).options(joinedload(User.title)).filter(User.id == user_id).first()
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
@@ -27,7 +28,7 @@ def get_user_by_username(db: Session, username: str):
     return db.query(User).filter(User.username == username).first()
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(User).order_by(User.id).offset(skip).limit(limit).all()
+    return db.query(User).options(joinedload(User.title)).order_by(User.id).offset(skip).limit(limit).all()
 
 def create_user(db: Session, user: UserCreate):
     try:
@@ -144,3 +145,40 @@ def delete_user(db: Session, user_id: int):
 def get_titles(db: Session):
     title = db.query(Title.title_id, Title.title_name, Title.short_name).filter(Title.is_active == 1).all()
     return title
+
+def get_users_with_titles(db: Session, skip: int = 0, limit: int = 100):
+    """Get users with their titles in a simple, efficient way"""
+    users = db.query(User).options(joinedload(User.title)).order_by(User.id).offset(skip).limit(limit).all()
+    
+    result = []
+    for user in users:
+        # Basic user data
+        user_data = {
+            "id": user.id,
+            "email": user.email,
+            "citizen_id": user.citizen_id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone": user.phone,
+            "title_id": user.title_id,
+            "prefix_other": user.prefix_other,
+            "is_active": user.is_active,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
+            "full_name": f"{user.first_name} {user.last_name}"
+        }
+        
+        # Get title name - prioritize prefix_other for "Other" titles
+        if user.title_id == 3 and user.prefix_other:
+            title_name = user.prefix_other
+        elif user.title:
+            title_name = user.title.title_name
+        else:
+            title_name = None
+            
+        user_data["title_name"] = title_name
+        user_data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
+        
+        result.append(user_data)
+    
+    return result

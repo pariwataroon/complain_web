@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, validator, computed_field
 from typing import Optional
 from datetime import datetime
 
@@ -54,33 +54,9 @@ class UserInDB(BaseModel):
 
     class Config:
         from_attributes = True
-        
-    # เพิ่ม computed field เพื่อให้ไม่ต้องแก้ไข frontend
-    @property
-    def title_name(self) -> Optional[str]:
-        """ดึงค่า title_name จากข้อมูลที่มี"""
-        # ถูกดึงจาก User model อัตโนมัติเนื่องจากมี from_attributes = True
-        return None  # เติมโดยอัตโนมัติจาก ORM
 
 class UserResponse(UserInDB):
-    # เพิ่ม property เพื่อให้ frontend สามารถใช้งานได้สะดวก
-    @property
-    def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}"
-    
-    @property
-    def display_title(self) -> str:
-        """แสดงคำนำหน้าที่ควรใช้จริง"""
-        if self.title_id == 3 and self.prefix_other:  # ถ้าเป็น "อื่น ๆ" และมีข้อมูล prefix_other
-            return self.prefix_other
-        # จะได้รับจาก property title_name ของ User model โดยอัตโนมัติ
-        return self.title_name or ""
-    
-    @property
-    def full_name_with_title(self) -> str:
-        """แสดงชื่อเต็มพร้อมคำนำหน้า"""
-        title = self.display_title
-        return f"{title}{' ' if title else ''}{self.first_name} {self.last_name}"
+    pass
 
 class TitleSchema(BaseModel):
     title_id: int

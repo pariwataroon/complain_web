@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from config.database import get_db
 from app.api.v1.schemas.user import UserCreate, UserResponse, UserUpdate, TitleResponse
-from app.api.v1.controllers.user_controller import create_user, get_user, get_users, update_user, delete_user, get_titles, DuplicateKeyError
+from app.api.v1.controllers.user_controller import create_user, get_user, update_user, delete_user, get_titles, DuplicateKeyError, get_users_with_titles
 from lib.format_data import format_response, FormatResponseModel
 
 router = APIRouter(
@@ -13,22 +13,22 @@ router = APIRouter(
 
 @router.get("/", response_model=FormatResponseModel)
 async def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    db_users = get_users(db, skip=skip, limit=limit)
-
-    users = [UserResponse.model_validate(
-        user).model_dump() for user in db_users]
-
+    users = get_users_with_titles(db, skip=skip, limit=limit)
     return format_response("0000", users)
 
 @router.get("/{user_id}", response_model=FormatResponseModel)
 async def read_user(user_id: int, db: Session = Depends(get_db)):
     db_user = get_user(db, user_id=user_id)
     if db_user is None:
-        raise HTTPException(
-            status_code=404, detail=f"User with ID {user_id} not found")
-
-    user = UserResponse.model_validate(db_user).model_dump()
-
+        raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")
+    
+    # Convert single user to same format
+    users = get_users_with_titles(db, skip=0, limit=1)
+    if users:
+        user = users[0]
+    else:
+        user = None
+    
     return format_response("0000", user)
 
 @router.post("/", response_model=FormatResponseModel)
@@ -45,8 +45,7 @@ async def update_existing_user(user_id: int, user: UserUpdate, db: Session = Dep
     try:
         db_user = update_user(db, user_id, user)
         if db_user is None:
-            raise HTTPException(
-                status_code=404, detail=f"User with ID {user_id} not found")
+            raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")
 
         updated_user = UserResponse.model_validate(db_user).model_dump()
 
@@ -58,8 +57,7 @@ async def update_existing_user(user_id: int, user: UserUpdate, db: Session = Dep
 async def delete_existing_user(user_id: int, db: Session = Depends(get_db)):
     success = delete_user(db, user_id)
     if not success:
-        raise HTTPException(
-            status_code=404, detail=f"User with ID {user_id} not found")
+        raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")
     return format_response("0003", {"id": user_id})
 
 @router.get("/title/details", response_model=FormatResponseModel)
