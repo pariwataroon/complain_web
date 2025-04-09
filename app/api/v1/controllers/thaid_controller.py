@@ -1,0 +1,176 @@
+import jwt
+from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+import requests
+import base64
+from requests.exceptions import RequestException
+
+import app.api.v1.controllers.user_controller as user_controller
+import app.api.v1.controllers.auth_controller as auth_controller
+from app.api.v1.schemas.thaid import ThaiIDTokenResponse
+from app.api.v1.schemas.user import UserCreate
+from models.user import User
+from config.dotenv import THAID_CLIENT_ID, THAID_CLIENT_SECRET, THAID_REQUEST_URI, THAID_REDIRECT_URI
+
+def validate_thaid_token(auth_code: str, redirect_uri: str):
+    """
+    ตรวจสอบ Thai Digital ID token โดยส่งคำขอไปยัง DOPA API
+    
+    Args:
+        auth_code: รหัสจาก Thai Digital ID
+        redirect_uri: URI ที่ใช้สำหรับการ redirect
+        
+    Returns:
+        dict: ข้อมูลผู้ใช้จาก Thai Digital ID หรือ None ถ้าไม่สำเร็จ
+    """
+    try:
+        # ข้อมูลการรับรองตัวตนของแอปพลิเคชัน
+        client_id = THAID_CLIENT_ID
+        client_secret = THAID_CLIENT_SECRET
+        
+        # สร้าง Basic Authentication header
+        credentials = f"{client_id}:{client_secret}"
+        encoded_credentials = base64.b64encode(credentials.encode()).decode()
+        auth_header = f"Basic {encoded_credentials}"
+        
+        # หรือใช้ค่า Basic Auth ที่กำหนดไว้เลย
+        # auth_header = "Basic VTFseU9GSjZRMXByWVZKa1VVbFlTR1IzVGpBelJHSk5iMjF1VVZkMGNUSTphbWw2ZEVSdVdFUlVNRk5vVVZoM2NVZHFjalUzV1ZaMmNIcHRRVm96YkZZeVpYbFhURmxqY3c="
+        
+        # ข้อมูลที่ส่งในคำขอ
+        payload = {
+            'grant_type': 'authorization_code',
+            'code': auth_code,
+            'redirect_uri': redirect_uri
+        }
+        
+        # ส่งคำขอไปยัง DOPA API
+        response = requests.post(
+            THAID_REQUEST_URI,
+            headers={
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': auth_header
+            },
+            data=payload
+        )
+        
+        # ตรวจสอบผลลัพธ์
+        if response.status_code == 200:
+            token_data = response.json()
+            print(f"Token validation successful: {token_data}")
+            return token_data
+        else:
+            print(f"Token validation failed: {response.status_code} - {response.text}")
+            return None
+            
+    except RequestException as e:
+        print(f"Error validating Thai Digital ID token: {str(e)}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error during token validation: {str(e)}")
+        return None
+
+def get_or_create_user_from_thaid(db: Session, thaid_data: ThaiIDTokenResponse):
+    """
+    ค้นหาผู้ใช้จาก citizen_id หรือสร้างผู้ใช้ใหม่ถ้าไม่พบ
+    """
+    # ค้นหาผู้ใช้จาก citizen_id
+    existing_user = user_controller.get_user_by_pid(db, thaid_data.pid)
+    
+    # กำหนดค่า is_new_user เริ่มต้นเป็น False
+    is_new_user = False
+    
+    if not existing_user:
+        # ถ้าไม่พบผู้ใช้ สร้างผู้ใช้ใหม่
+        is_new_user = True
+        
+        # แปลงข้อมูลจาก Thai ID เป็น UserCreate model
+        # ต้องกำหนด password เริ่มต้น (ควรสร้างรหัสสุ่ม)
+        import secrets
+        random_password = secrets.token_urlsafe(12)
+        
+        # แปลงค่า title จาก titleTh เป็น title_id (ตามที่กำหนดในระบบของคุณ)
+        # ในที่นี้สมมติว่ามีฟังก์ชัน get_title_id_from_name สำหรับแปลงค่า
+        title_id = get_title_id_from_name(db, thaid_data.titleTh)
+        
+        new_user = UserCreate(
+            citizen_id=thaid_data.pid,
+            email=f"{thaid_data.pid}@example.com",  # สร้าง email เริ่มต้น หรืออาจให้ผู้ใช้กรอกภายหลัง
+            first_name=thaid_data.given_name,
+            last_name=thaid_data.family_name,
+            password=random_password,
+            title_id=title_id,
+            prefix_other=None if title_id != 3 else thaid_data.titleTh  # ถ้า title_id เป็น 3 (อื่นๆ) ให้เก็บ titleTh
+        )
+        
+        # สร้างผู้ใช้ใหม่
+        existing_user = user_controller.create_user(db, new_user)
+    
+    # สร้าง JWT token สำหรับผู้ใช้
+    access_token = auth_controller.create_access_token(
+        data={"sub": str(existing_user.id)}
+    )
+    refresh_token = auth_controller.create_refresh_token(
+        data={"sub": str(existing_user.id)}
+    )
+    
+    return {
+        "user": existing_user,
+        "is_new_user": is_new_user,
+        "access_token": access_token,
+        "refresh_token": refresh_token
+    }
+
+def get_title_id_from_name(db: Session, title_name: str):
+    """
+    แปลงชื่อคำนำหน้าเป็น title_id
+    """
+    # ดึงข้อมูลคำนำหน้าทั้งหมด
+    titles = user_controller.get_titles(db)
+    
+    # ค้นหา title_id จากชื่อคำนำหน้า
+    for title in titles:
+        if title.title_name == title_name:
+            return title.title_id
+    
+    # ถ้าไม่พบ ใช้ "อื่นๆ" (title_id = 3)
+    return 3
+
+# เพิ่มฟังก์ชันใหม่เพื่อรองรับการส่ง auth_code
+def process_thaid_auth_code(db: Session, auth_code: str, redirect_uri: str):
+    """
+    ดำเนินการตรวจสอบ auth_code กับ DOPA API และสร้างหรือค้นหาผู้ใช้
+    
+    Args:
+        db: Session ฐานข้อมูล
+        auth_code: รหัสจาก Thai Digital ID
+        redirect_uri: URI ที่ใช้สำหรับการ redirect
+        
+    Returns:
+        dict: ข้อมูลผู้ใช้และ token หรือ None ถ้าไม่สำเร็จ
+    """
+    # ตรวจสอบ auth_code โดยส่งคำขอไปยัง DOPA API
+    thaid_data = validate_thaid_token(auth_code, redirect_uri)
+    
+    if not thaid_data:
+        return None
+    
+    # แปลงข้อมูลให้เป็นรูปแบบที่เข้ากับ ThaiIDTokenResponse
+    from app.api.v1.schemas.thaid import ThaiIDTokenResponse, ThaiIDAddress
+    
+    # สร้าง ThaiIDTokenResponse จากข้อมูลที่ได้รับ
+    token_response = ThaiIDTokenResponse(
+        expires_in=thaid_data.get("expires_in"),
+        access_token=thaid_data.get("access_token"),
+        refresh_token=thaid_data.get("refresh_token"),
+        token_type=thaid_data.get("token_type"),
+        scope=thaid_data.get("scope"),
+        pid=thaid_data.get("pid"),
+        address=ThaiIDAddress(formatted=thaid_data.get("address", {}).get("formatted", "")),
+        given_name=thaid_data.get("given_name"),
+        family_name=thaid_data.get("family_name"),
+        gender=thaid_data.get("gender"),
+        titleTh=thaid_data.get("titleTh")
+    )
+    
+    # ค้นหาหรือสร้างผู้ใช้ใหม่
+    return get_or_create_user_from_thaid(db, token_response)
