@@ -1,10 +1,9 @@
-// SelectMenuService.js
 import React from "react";
 import { styled } from "@mui/material/styles";
 import { FormControl, Select, MenuItem } from "@mui/material";
 
+// กำหนด StyledSelect สำหรับปรับสไตล์ของ Select
 const StyledSelect = styled(Select)(({ theme }) => ({
-  minWidth: 200,
   height: "40px",
   color: "#1D40F8",
   "& .MuiOutlinedInput-notchedOutline": {
@@ -27,18 +26,38 @@ const StyledSelect = styled(Select)(({ theme }) => ({
   },
 }));
 
+// กำหนด StyledMenuItem เพื่อลด padding และทำให้ความสูงของรายการลดลง
+const StyledMenuItem = styled(MenuItem)(() => ({
+  paddingTop: 4,
+  paddingBottom: 4,
+  fontSize: 14,
+  minHeight: "unset",
+}));
+
+// กำหนด menuProps สำหรับควบคุมความสูงของ Dropdown
+const ITEM_HEIGHT = 36;
+const ITEM_PADDING_TOP = 8;
+const menuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP, // ตัวอย่าง: แสดงได้ 4.5 รายการแล้วเลื่อนสกอลล์
+    },
+  },
+};
+
 /**
  * SelectMenuService - บริการเลือกสรร
- * รับ props: options, handleChange, value
+ * รับ props: options, handleChange, value, width
  */
-const SelectMenuService = ({ options, handleChange, value }) => {
+const SelectMenuService = ({ options, handleChange, value, width }) => {
   return (
-    <FormControl variant="outlined">
-      {/* เอา InputLabel ออก เพื่อไม่ให้ “ตัวเลือก” ลอยอยู่ด้านบน */}
+    <FormControl variant="outlined" sx={{ width: width || "auto" }}>
+      {/* เอา InputLabel ออกเพื่อไม่ให้ “ตัวเลือก” ลอยอยู่ด้านบน */}
       <StyledSelect
         value={value}
         onChange={handleChange}
-        displayEmpty // หากอยากแสดงค่าเปล่าในตอนแรก
+        displayEmpty
+        MenuProps={menuProps}
         renderValue={(selected) => {
           // ถ้าไม่เลือกอะไรเลย ให้ขึ้นเป็นข้อความ placeholder
           if (selected === "") {
@@ -50,9 +69,9 @@ const SelectMenuService = ({ options, handleChange, value }) => {
         }}
       >
         {options.map((option, index) => (
-          <MenuItem key={index} value={option.value}>
+          <StyledMenuItem key={index} value={option.value}>
             {option.label}
-          </MenuItem>
+          </StyledMenuItem>
         ))}
       </StyledSelect>
     </FormControl>
