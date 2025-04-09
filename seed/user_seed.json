@@ -1,34 +1,48 @@
 {
-    "users": [
-      {
-        "citizen_id": "1234567890123",
-        "prefix": 3,
-        "email": "admin@example.com",
-        "password": "password",
-        "first_name": "Admin",
-        "last_name": "User",
-        "phone": "0812345678",
-        "is_active": true
-      },
-      {
-        "citizen_id": "1234567890124",
-        "prefix": 3,
-        "email": "user1@example.com",
-        "password": "password",
-        "first_name": "Normal",
-        "last_name": "User",
-        "phone": "0812345679",
-        "is_active": true
-      },
-      {
-        "citizen_id": "1234567890125",
-        "prefix": 4,
-        "email": "manager@example.com",
-        "password": "password",
-        "first_name": "Manager",
-        "last_name": "User",
-        "phone": "0812345680",
-        "is_active": true
-      }
-    ]
-  }
+  "users": [
+    {
+      "citizen_id": "1234567890122",
+      "title_id": 3,
+      "prefix_other": "นายย",
+      "email": "admin@example.com",
+      "password": "password",
+      "first_name": "Admin",
+      "last_name": "User",
+      "phone": "0812345678",
+      "is_active": true
+    },
+    {
+      "citizen_id": "1234567890123",
+      "title_id": 4,
+      "prefix_other": "",
+      "email": "staff@example.com",
+      "password": "password",
+      "first_name": "Admin",
+      "last_name": "User",
+      "phone": "0812345678",
+      "is_active": true
+    },
+    {
+      "citizen_id": "1234567890124",
+      "title_id": 4,
+      "prefix_other": "",
+      "email": "user1@example.com",
+      "password": "password",
+      "first_name": "Normal",
+      "last_name": "User",
+      "phone": "0812345679",
+      "is_active": true
+    },
+    {
+      "citizen_id": "1234567890125",
+      "title_id": 5,
+      "prefix_other": "",
+      "email": "manager@example.com",
+      "password": "password",
+      "first_name": "Manager",
+      "last_name": "User",
+      "phone": "0812345680",
+      "is_active": true
+    }
+  ]
+}

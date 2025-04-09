@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
 
 from config.database import get_db
 from app.api.v1.schemas.user import UserCreate, UserResponse, UserUpdate, TitleResponse
 from app.api.v1.controllers.user_controller import create_user, get_user, get_users, update_user, delete_user, get_titles, DuplicateKeyError
 from lib.format_data import format_response, FormatResponseModel
+
 router = APIRouter(
     prefix="/users",
     tags=["users"]

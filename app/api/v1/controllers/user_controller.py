@@ -37,19 +37,41 @@ def create_user(db: Session, user: UserCreate):
             raise DuplicateKeyError(
                 f"User with email {user.email} already exists")
 
-        existing_username = get_user_by_username(db, user.username)
-        if existing_username:
-            raise DuplicateKeyError(
-                f"User with username {user.username} already exists")
+        # ตรวจสอบ citizen_id ถ้ามี
+        if hasattr(user, 'citizen_id') and user.citizen_id:
+            existing_citizen = db.query(User).filter(User.citizen_id == user.citizen_id).first()
+            if existing_citizen:
+                raise DuplicateKeyError(
+                    f"User with citizen ID {user.citizen_id} already exists")
 
         # Create new user
         hashed_password = get_password_hash(user.password)
+        
+        # สร้าง user object พร้อมข้อมูลใหม่
         db_user = User(
-            username=user.username,
+            citizen_id=user.citizen_id,
             email=user.email,
             hashed_password=hashed_password,
-            full_name=user.full_name
+            first_name=user.first_name,
+            last_name=user.last_name,
+            phone=user.phone if hasattr(user, 'phone') else None,
+            is_active=True
         )
+        
+        # จัดการเรื่องคำนำหน้า
+        if hasattr(user, 'title_id') and user.title_id:
+            # กรณีเลือกคำนำหน้าที่มีอยู่ในระบบ
+            title = db.query(Title).filter(Title.title_id == user.title_id).first()
+            if title:
+                db_user.title_id = title.title_id
+        
+        # กรณีเลือก "อื่นๆ" และระบุคำนำหน้าเอง
+        if hasattr(user, 'prefix_other') and user.prefix_other:
+            # ถ้า title_id ตรงกับ "อื่นๆ" (title_id = 3 ตามข้อมูล seed)
+            other_title_id = 3  # ID ของ "อื่น ๆ" ตามข้อมูล seed
+            db_user.title_id = other_title_id
+            db_user.prefix_other = user.prefix_other
+        
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
@@ -68,7 +90,7 @@ def update_user(db: Session, user_id: int, user_data: UserUpdate):
     if not db_user:
         return None
 
-    # ตรวจสอบความซ้ำซ้อนของอีเมลและ username ก่อนอัปเดต
+    # ตรวจสอบความซ้ำซ้อนของอีเมล
     update_data = user_data.model_dump(exclude_unset=True, exclude_none=True)
 
     # ตรวจสอบอีเมล์
@@ -78,13 +100,22 @@ def update_user(db: Session, user_id: int, user_data: UserUpdate):
             raise DuplicateKeyError(
                 f"User with email {update_data['email']} already exists")
 
-    # ตรวจสอบ username
-    if "username" in update_data and update_data["username"] != db_user.username:
-        existing_username = get_user_by_username(db, update_data["username"])
-        if existing_username:
-            raise DuplicateKeyError(
-                f"User with username {update_data['username']} already exists")
-
+    # จัดการเรื่องคำนำหน้าเมื่อมีการอัพเดต
+    if "title_id" in update_data and update_data["title_id"]:
+        # กรณีเลือกคำนำหน้าที่มีอยู่ในระบบ
+        title = db.query(Title).filter(Title.title_id == update_data["title_id"]).first()
+        if title:
+            # ถ้าไม่ใช่ "อื่นๆ" ให้ล้างค่า prefix_other
+            if title.title_name != "อื่น ๆ" and "prefix_other" not in update_data:
+                update_data["prefix_other"] = None
+    
+    # กรณีเลือก "อื่นๆ" และระบุคำนำหน้าเอง
+    if "prefix_other" in update_data and update_data["prefix_other"]:
+        # ถ้าไม่ได้ระบุ title_id มา ให้กำหนดเป็น ID ของ "อื่น ๆ"
+        if "title_id" not in update_data:
+            other_title_id = 3  # ID ของ "อื่น ๆ" ตามข้อมูล seed
+            update_data["title_id"] = other_title_id
+    
     # อัปเดตข้อมูล
     for key, value in update_data.items():
         setattr(db_user, key, value)
