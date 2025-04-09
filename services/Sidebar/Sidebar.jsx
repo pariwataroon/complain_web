@@ -23,11 +23,11 @@ import styles from "./Sidebar.module.scss";
 const submenuItems = {
   setting: [
     { label: "กำหนดการใช้งานทั่วไป", type: "header" },
-    { label: "กำหนดระยะเวลา", type: "item", to: "/setting/times" },
-    { label: "กำหนดผู้ใช้งาน", type: "item", to: "/setting/users" },
-    { label: "กำหนดสิทธิ์การเข้าถึง", type: "item", to: "/setting/access" },
-    { label: "กำหนดหน่วยงานในสังกัด", type: "item", to: "/setting/department" },
-    { label: "กำหนดวันหยุด", type: "item", to: "/setting/holidays" },
+    { label: "กำหนดระยะเวลา", type: "item", to: "/admin/settinggeneral/times" },
+    { label: "กำหนดผู้ใช้งาน", type: "item", to: "/admin/settinggeneral/users" },
+    { label: "กำหนดสิทธิ์การเข้าถึง", type: "item", to: "/admin/settinggeneral/access" },
+    { label: "กำหนดหน่วยงานในสังกัด", type: "item", to: "/admin/settinggeneral/department" },
+    { label: "กำหนดวันหยุด", type: "item", to: "/admin/settinggeneral/holidays" },
   ],
   edit: [
     { label: "รับเข้าข้อมูล", type: "header" },
@@ -123,10 +123,10 @@ export default function Sidebar() {
       <ListItemButton
         onClick={() => {
           if (openSubmenu === key) {
-            setOpenSubmenu(null); // ปิดเมนูเมื่อคลิกที่เมนูที่เปิดอยู่แล้ว
+            setOpenSubmenu(null);
             return;
           }
-          setOpenSubmenu(key); // เปิดเมนูใหม่
+          setOpenSubmenu(key);
           setActiveMenu(key);
         }}
       >
@@ -172,13 +172,11 @@ export default function Sidebar() {
       </Box>
 
       <List className={styles.navList}>
-        {/* Dashboard: ไม่มี submenu */}
-
         <Box>
           <ListItemButton
             onClick={() => {
               setActiveMenu("Dashboard");
-              router.push("/Dashboard");
+              router.push("/admin/dashboard");
             }}
           >
             <ListItemIcon
