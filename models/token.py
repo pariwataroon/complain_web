@@ -9,8 +9,7 @@ from config.database import Base
 
 class Token(Base):
     __tablename__ = "comp_tokens"
-    user_id = Column(UNIQUEIDENTIFIER, ForeignKey(
-        "comp_users.id"), primary_key=True, index=True)
+    user_id = Column(UNIQUEIDENTIFIER, ForeignKey( "comp_users.id"), primary_key=True, index=True)
     access_token = Column(String(255), index=True, unique=True, nullable=False)
     refresh_token = Column(String(255), index=True, unique=True, nullable=False)
     revoked = Column(Boolean, default=False)

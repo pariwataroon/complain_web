@@ -12,13 +12,11 @@ from config.database import Base
 class User(Base):
     __tablename__ = "comp_users"
 
-    id = Column(UNIQUEIDENTIFIER, primary_key=True,
-                default=uuid.uuid4, index=True)
+    id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4, index=True)
     citizen_id = Column(String(13), unique=True, index=True, nullable=False)
 
     # Foreign key อ้างอิงไปยัง title_id ของตาราง titles
-    title_id = Column(Integer, ForeignKey(
-        "comp_titles.title_id"), nullable=True)
+    title_id = Column(Integer, ForeignKey("comp_titles.title_id"), nullable=True)
 
     # คงเก็บ prefix_other ไว้สำหรับกรณีที่เลือก "อื่น ๆ"
     prefix_other = Column(NVARCHAR(100), nullable=True)
@@ -32,8 +30,10 @@ class User(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    tokens = relationship("Token", back_populates="users",
-                          cascade="all, delete-orphan")
+    tokens = relationship("Token", back_populates="users", cascade="all, delete-orphan")
+
     # เพิ่ม relationship เพื่อให้เข้าถึง title ได้ง่าย (มีเพียงอันเดียว)
-    title = relationship("Title", back_populates="users",
-                         foreign_keys=[title_id])
+    title = relationship("Title", back_populates="users", foreign_keys=[title_id])
+
+    # เพิ่มความสัมพันธ์กับ UserRole
+    roles = relationship("UserRole", back_populates="user")
