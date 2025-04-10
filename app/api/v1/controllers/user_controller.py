@@ -80,8 +80,8 @@ def create_user(db: Session, user: UserCreate):
 
         # กรณีเลือก "อื่นๆ" และระบุคำนำหน้าเอง
         if hasattr(user, 'prefix_other') and user.prefix_other:
-            # ถ้า title_id ตรงกับ "อื่นๆ" (title_id = 3 ตามข้อมูล seed)
-            other_title_id = 3  # ID ของ "อื่น ๆ" ตามข้อมูล seed
+            # ถ้า title_id ตรงกับ "อื่นๆ" (title_id = 1 ตามข้อมูล seed)
+            other_title_id = 1  # ID ของ "อื่น ๆ" ตามข้อมูล seed
             db_user.title_id = other_title_id
             db_user.prefix_other = user.prefix_other
 
@@ -128,7 +128,7 @@ def update_user(db: Session, user_id: int, user_data: UserUpdate):
     if "prefix_other" in update_data and update_data["prefix_other"]:
         # ถ้าไม่ได้ระบุ title_id มา ให้กำหนดเป็น ID ของ "อื่น ๆ"
         if "title_id" not in update_data:
-            other_title_id = 3  # ID ของ "อื่น ๆ" ตามข้อมูล seed
+            other_title_id = 1  # ID ของ "อื่น ๆ" ตามข้อมูล seed
             update_data["title_id"] = other_title_id
 
     # อัปเดตข้อมูล
@@ -185,7 +185,7 @@ def get_users_with_titles(db: Session, skip: int = 0, limit: int = 100):
         }
 
         # Get title name - prioritize prefix_other for "Other" titles
-        if user.title_id == 3 and user.prefix_other:
+        if user.title_id == 1 and user.prefix_other:
             title_name = user.prefix_other
         elif user.title:
             title_name = user.title.title_name

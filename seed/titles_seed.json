@@ -1,7 +1,5 @@
 {
   "comp_titles": [
-    { "short_name": "", "title_name": "", "category": "ทั่วไป" },
-    { "short_name": "ไม่ระบุ", "title_name": "ไม่ระบุ", "category": "ทั่วไป" },
     { "short_name": "อื่น ๆ", "title_name": "อื่น ๆ", "category": "ทั่วไป" },
     { "short_name": "นาย", "title_name": "นาย", "category": "ทั่วไป" },
     { "short_name": "นาง", "title_name": "นาง", "category": "ทั่วไป" },

@@ -93,7 +93,7 @@ def get_or_create_user_from_thaid(db: Session, thaid_data: ThaiIDTokenResponse):
             last_name=thaid_data.family_name,
             password=random_password,
             title_id=title_id,
-            prefix_other=None if title_id != 3 else thaid_data.titleTh  # ถ้า title_id เป็น 3 (อื่นๆ) ให้เก็บ titleTh
+            prefix_other=None if title_id != 1 else thaid_data.titleTh  # ถ้า title_id เป็น 1 (อื่นๆ) ให้เก็บ titleTh
         )
         
         # สร้างผู้ใช้ใหม่
@@ -126,8 +126,8 @@ def get_title_id_from_name(db: Session, title_name: str):
         if title.title_name == title_name:
             return title.title_id
     
-    # ถ้าไม่พบ ใช้ "อื่นๆ" (title_id = 3)
-    return 3
+    # ถ้าไม่พบ ใช้ "อื่นๆ" (title_id = 1)
+    return 1
 
 # เพิ่มฟังก์ชันใหม่เพื่อรองรับการส่ง auth_code
 def process_thaid_auth_code(db: Session, auth_code: str):
