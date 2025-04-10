@@ -25,4 +25,3 @@ class ThaiIDLoginResponse(BaseModel):
 # เพิ่ม Schema ใหม่
 class ThaiIDAuthCode(BaseModel):
     auth_code: str
-    redirect_uri: str

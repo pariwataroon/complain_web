@@ -1,5 +1,3 @@
-import jwt
-from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 import requests
 import base64
@@ -9,7 +7,6 @@ import app.api.v1.controllers.user_controller as user_controller
 import app.api.v1.controllers.auth_controller as auth_controller
 from app.api.v1.schemas.thaid import ThaiIDTokenResponse
 from app.api.v1.schemas.user import UserCreate
-from models.user import User
 from config.dotenv import THAID_CLIENT_ID, THAID_CLIENT_SECRET, THAID_REQUEST_URI, THAID_REDIRECT_URI
 
 def validate_thaid_token(auth_code: str, redirect_uri: str):
@@ -133,7 +130,7 @@ def get_title_id_from_name(db: Session, title_name: str):
     return 3
 
 # เพิ่มฟังก์ชันใหม่เพื่อรองรับการส่ง auth_code
-def process_thaid_auth_code(db: Session, auth_code: str, redirect_uri: str):
+def process_thaid_auth_code(db: Session, auth_code: str):
     """
     ดำเนินการตรวจสอบ auth_code กับ DOPA API และสร้างหรือค้นหาผู้ใช้
     
@@ -146,7 +143,7 @@ def process_thaid_auth_code(db: Session, auth_code: str, redirect_uri: str):
         dict: ข้อมูลผู้ใช้และ token หรือ None ถ้าไม่สำเร็จ
     """
     # ตรวจสอบ auth_code โดยส่งคำขอไปยัง DOPA API
-    thaid_data = validate_thaid_token(auth_code, redirect_uri)
+    thaid_data = validate_thaid_token(auth_code, THAID_REDIRECT_URI)
     
     if not thaid_data:
         return None

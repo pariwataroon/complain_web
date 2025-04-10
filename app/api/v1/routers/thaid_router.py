@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.v1.controllers.thaid_controller import validate_thaid_token, get_or_create_user_from_thaid, process_thaid_auth_code
@@ -50,13 +50,13 @@ async def thaid_auth(auth_data: ThaiIDAuthCode, db: Session = Depends(get_db)):
     """
     try:
         # ตรวจสอบ auth_code และสร้างหรือค้นหาผู้ใช้
-        result = process_thaid_auth_code(db, auth_data.auth_code, auth_data.redirect_uri)
+        result = process_thaid_auth_code(db, auth_data.auth_code)
         
         if not result:
             return format_response("4010", {"error": "Invalid Thai Digital ID authorization code"})
         
         # สร้าง response
-        response_data = {
+        response_data: ThaiIDLoginResponse = {
             "is_new_user": result["is_new_user"],
             "access_token": result["access_token"],
             "refresh_token": result["refresh_token"]
