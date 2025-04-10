@@ -38,7 +38,6 @@ const Homepage1 = () => {
         />
       </div>
 
-      {/* ข้อความใหญ่ */}
       <div
         style={{
           position: "absolute",
@@ -48,7 +47,7 @@ const Homepage1 = () => {
           color: "white",
         }}
       >
-        <h1 className={styles.headerText}> {/* ใช้ class จาก SCSS */}
+        <h1 className={styles.headerText}>
           MOF
           <span
             style={{
@@ -82,7 +81,8 @@ const Homepage1 = () => {
           display: "flex",
           gap: "20px",
           justifyContent: "center",
-          transform: "translateX(-50%)", // ทำให้ปุ่มอยู่กลาง
+          transform: "translateX(-50%)",
+          marginTop: "10px"
         }}
       >
         <button className={styles.button}>แจ้งเรื่องร้องทุกข์</button>

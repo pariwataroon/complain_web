@@ -1,16 +1,15 @@
 /** @type {import('next').NextConfig} */
-const isDev = process.env.NODE_ENV === "development";
+const isDev = process.env.NEXT_PUBLIC_ENV_MODE === "development";
 
 const getEnv = (key) => {
-  const prefix = isDev ? "DEV_" : "PROD_";
-  return process.env[`${prefix}${key}`] || process.env[key];
+  return process.env[key];
 };
 
 const nextConfig = {
-  reactStrictMode: !isDev,
+  reactStrictMode: isDev,
   swcMinify: true,
   env: {
-    NEXT_PUBLIC_ENV: isDev ? "development" : "production",
+    NEXT_PUBLIC_ENV_MODE: process.env.NEXT_PUBLIC_ENV_MODE, 
     NEXT_PUBLIC_API_BASE_URL: getEnv("NEXT_PUBLIC_API_BASE_URL"),
     NEXT_PUBLIC_DEBUG_MODE: getEnv("NEXT_PUBLIC_DEBUG_MODE") === "true",
     NEXT_PUBLIC_COMMON_VAR: process.env.NEXT_PUBLIC_COMMON_VAR,
