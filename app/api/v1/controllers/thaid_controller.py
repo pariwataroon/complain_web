@@ -27,15 +27,12 @@ def validate_thaid_token(auth_code: str, redirect_uri: str):
         # ข้อมูลการรับรองตัวตนของแอปพลิเคชัน
         client_id = THAID_CLIENT_ID
         client_secret = THAID_CLIENT_SECRET
-        
+
         # สร้าง Basic Authentication header
         credentials = f"{client_id}:{client_secret}"
         encoded_credentials = base64.b64encode(credentials.encode()).decode()
         auth_header = f"Basic {encoded_credentials}"
-        
-        # หรือใช้ค่า Basic Auth ที่กำหนดไว้เลย
-        # auth_header = "Basic VTFseU9GSjZRMXByWVZKa1VVbFlTR1IzVGpBelJHSk5iMjF1VVZkMGNUSTphbWw2ZEVSdVdFUlVNRk5vVVZoM2NVZHFjalUzV1ZaMmNIcHRRVm96YkZZeVpYbFhURmxqY3c="
-        
+
         # ข้อมูลที่ส่งในคำขอ
         payload = {
             'grant_type': 'authorization_code',
