@@ -1,7 +1,6 @@
 from models.title import Title
 from seeders.base_seeder import BaseSeeder
 
-
 class TitleSeeder(BaseSeeder):
     """Seeder for titles table"""
 

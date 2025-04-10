@@ -1,0 +1,46 @@
+{
+  "resources": [
+    {
+      "name": "users",
+      "path": "/api/v1/users",
+      "description": "การจัดการผู้ใช้งาน",
+      "is_active": true
+    },
+    {
+      "name": "user_detail",
+      "path": "/api/v1/users/{user_id}",
+      "description": "ข้อมูลผู้ใช้รายบุคคล",
+      "is_active": true
+    },
+    {
+      "name": "titles",
+      "path": "/api/v1/users/title/details",
+      "description": "ข้อมูลคำนำหน้า",
+      "is_active": true
+    },
+    {
+      "name": "roles",
+      "path": "/api/v1/permissions/roles",
+      "description": "การจัดการบทบาท",
+      "is_active": true
+    },
+    {
+      "name": "resources",
+      "path": "/api/v1/permissions/resources",
+      "description": "การจัดการทรัพยากร",
+      "is_active": true
+    },
+    {
+      "name": "user_roles",
+      "path": "/api/v1/permissions/user-roles",
+      "description": "การจัดการบทบาทของผู้ใช้",
+      "is_active": true
+    },
+    {
+      "name": "user_roles_detail",
+      "path": "/api/v1/permissions/user-roles/{user_id}",
+      "description": "ข้อมูลบทบาทของผู้ใช้รายบุคคล",
+      "is_active": true
+    }
+  ]
+}

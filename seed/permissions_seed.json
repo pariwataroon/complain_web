@@ -1,0 +1,124 @@
+{
+  "permissions": [
+    {
+      "role_name": "admin",
+      "resource_name": "users",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "user_detail",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "titles",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "roles",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "resources",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "user_roles",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "user_roles_detail",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "manager",
+      "resource_name": "users",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "manager",
+      "resource_name": "user_detail",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "manager",
+      "resource_name": "titles",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "staff",
+      "resource_name": "users",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "staff",
+      "resource_name": "user_detail",
+      "can_create": false,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "staff",
+      "resource_name": "titles",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "user",
+      "resource_name": "user_detail",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "user",
+      "resource_name": "titles",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    }
+  ]
+}

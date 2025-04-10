@@ -9,11 +9,13 @@ from config.dotenv import DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
 from lib.logger import get_logger
 from seeders.title_seeder import TitleSeeder
 from seeders.user_seeder import UserSeeder
+from seeders.role_seeder import RoleSeeder
+from seeders.resource_seeder import ResourceSeeder
+from seeders.permission_seeder import PermissionSeeder
+from seeders.user_role_seeder import UserRoleSeeder
 
 # เพิ่ม path เพื่อป้องกัน import error
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# นำเข้า seeders
 
 logger = get_logger("db_init")
 
@@ -26,46 +28,62 @@ def check_and_seed_tables():
         tables = inspector.get_table_names()
 
         # รายการ seeders ที่ต้องการใช้งาน
+        # กำหนดลำดับที่ชัดเจน
         seeders = [
-            {"name": "titles", "seeder": TitleSeeder()},
-            {"name": "users", "seeder": UserSeeder()},
+            {"name": "titles", "seeder": TitleSeeder(), "table_prefix": "comp_"},
+            {"name": "users", "seeder": UserSeeder(), "table_prefix": "comp_"},
+            {"name": "roles", "seeder": RoleSeeder(), "table_prefix": ""},
+            {"name": "resources", "seeder": ResourceSeeder(), "table_prefix": ""},
+            # ต้อง seed roles และ resources ก่อน permissions
+            {"name": "permissions", "seeder": PermissionSeeder(), "table_prefix": ""},
+            # ต้อง seed users และ roles ก่อน user_roles
+            {"name": "user_roles", "seeder": UserRoleSeeder(), "table_prefix": ""}
         ]
 
-        # วนลูปตรวจสอบแต่ละตาราง
+        # วนลูปตรวจสอบแต่ละตาราง โดยเรียกตามลำดับที่กำหนดไว้ในลิสต์
         for seeder_info in seeders:
-            table_name = 'comp_'+seeder_info["name"]
+            table_name = seeder_info["table_prefix"] + seeder_info["name"]
             seeder = seeder_info["seeder"]
 
+            # ตรวจสอบว่าตารางมีอยู่ในฐานข้อมูลหรือยัง
             if table_name in tables:
-                logger.info(
-                    f"Table '{table_name}' exists. Checking for data...")
-                # เรียกใช้ seeder เพื่อตรวจสอบข้อมูลและเพิ่มถ้าจำเป็น
-                seeder.seed()
+                logger.info(f"Table '{table_name}' exists. Running seeder...")
+                # เพิ่ม debug เพื่อตรวจสอบการทำงาน
+                success = seeder.seed()
+                logger.info(f"Seeder for '{table_name}' completed with success: {success}")
             else:
-                logger.info(
-                    f"Table '{table_name}' does not exist yet. It will be created and seeded.")
-                # หมายเหตุ: ตารางจะถูกสร้างโดย Base.metadata.create_all และข้อมูลจะถูกเพิ่มโดย seeder
+                logger.info(f"Table '{table_name}' does not exist yet. Will be created on next app start.")
 
     except Exception as e:
         logger.error(f"Error checking and seeding tables: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())  # เพิ่ม stack trace เพื่อ debug
 
+# แก้ไขเฉพาะส่วนที่เกี่ยวข้องกับการสร้างฐานข้อมูล
 
 def init_database():
     """Initialize database tables based on SQLAlchemy models"""
     logger.info("Initializing database...")
 
-    # ใช้ค่าจาก dotenv โดยตรง ไม่ต้องเรียก os.getenv อีกรอบ
     DB_PASSWORD_ENCODE = urllib.parse.quote_plus(DB_PASSWORD)
 
-    # Connection string สำหรับแสดงข้อมูล
-    conn_string = f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD_ENCODE}@{DB_HOST}:{DB_PORT}/{DB_NAME}?driver=ODBC+Driver+17+for+SQL+Server"
+    # เพิ่ม charset=UTF8 ใน connection string
+    conn_string = f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD_ENCODE}@{DB_HOST}:{DB_PORT}/{DB_NAME}?driver=ODBC+Driver+17+for+SQL+Server&charset=UTF8"
+    
     logger.info(
         f"Connection string (without password): {conn_string.replace(DB_PASSWORD_ENCODE, '****')}")
 
     try:
-        # 1. เชื่อมต่อกับฐานข้อมูล master เพื่อตรวจสอบว่าฐานข้อมูลของเรามีอยู่หรือไม่
-        master_url = f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD_ENCODE}@{DB_HOST}:{DB_PORT}/master?driver=ODBC+Driver+17+for+SQL+Server"
-        engine_master = create_engine(master_url)
+        # 1. เชื่อมต่อกับฐานข้อมูล master
+        master_url = f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD_ENCODE}@{DB_HOST}:{DB_PORT}/master?driver=ODBC+Driver+17+for+SQL+Server&charset=UTF8"
+        engine_master = create_engine(
+            master_url,
+            connect_args={
+                "TrustServerCertificate": "yes",
+                "Encrypt": "yes",
+                "charset": "utf8"
+            }
+        )
 
         logger.info(f"Checking if database '{DB_NAME}' exists...")
 
@@ -78,8 +96,8 @@ def init_database():
             if not db_exists:
                 logger.info(
                     f"Database '{DB_NAME}' does not exist. Creating...")
-                # สร้างฐานข้อมูลใหม่
-                conn.execute(text(f"CREATE DATABASE {DB_NAME}"))
+                # สร้างฐานข้อมูลใหม่ด้วย collation ที่รองรับ Unicode
+                conn.execute(text(f"CREATE DATABASE {DB_NAME} COLLATE Thai_CI_AS"))
                 logger.info(f"Database '{DB_NAME}' created successfully.")
             else:
                 logger.info(f"Database '{DB_NAME}' already exists.")
@@ -92,6 +110,12 @@ def init_database():
         # 3. ตรวจสอบและนำข้อมูล seed เข้าระบบถ้าจำเป็น
         logger.info("Checking tables for data...")
         check_and_seed_tables()
+        
+        # เพิ่มการเรียก UserRoleSeeder โดยตรง
+        from seeders.user_role_seeder import UserRoleSeeder
+        logger.info("Running UserRoleSeeder directly...")
+        user_role_seeder = UserRoleSeeder()
+        user_role_seeder.seed()
 
         return True
 

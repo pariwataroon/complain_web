@@ -9,7 +9,6 @@ from lib.logger import get_logger
 
 logger = get_logger("seeder")
 
-
 class BaseSeeder:
     """Base class for all database seeders"""
 
@@ -26,20 +25,17 @@ class BaseSeeder:
             seed_path = os.path.join(os.path.dirname(os.path.dirname(
                 os.path.abspath(__file__))), "seed", f"{self.seed_file_name}_seed.json")
             if not os.path.exists(seed_path):
-                logger.warning(
-                    f"Seed file for {self.table_name} not found at: {seed_path}")
+                logger.warning(f"Seed file for {self.table_name} not found at: {seed_path}")
                 return None
 
-            # อ่านข้อมูลจากไฟล์ JSON
+            # อ่านข้อมูลจากไฟล์ JSON โดยระบุ encoding เป็น utf-8 ให้ชัดเจน
             with open(seed_path, 'r', encoding='utf-8') as file:
                 seed_data = json.load(file)
-                logger.info(
-                    f"Loaded seed data for {self.table_name} successfully")
+                logger.info(f"Loaded seed data for {self.table_name} successfully")
                 return seed_data
 
         except Exception as e:
-            logger.error(
-                f"Error loading seed data for {self.table_name}: {str(e)}")
+            logger.error(f"Error loading seed data for {self.table_name}: {str(e)}")
             return None
 
     def hash_password(self, password):
@@ -61,11 +57,9 @@ class BaseSeeder:
 
             # ตรวจสอบว่ามีข้อมูลในตารางหรือไม่
             record_count = self.db.query(self.model_class).count()
-            logger.info(
-                f"Checking {self.table_name} table for existing records: {record_count} found")
+            logger.info(f"Checking {self.table_name} table for existing records: {record_count} found")
             if record_count == 0:
-                logger.info(
-                    f"{self.table_name} table is empty. Seeding data...")
+                logger.info(f"{self.table_name} table is empty. Seeding data...")
 
                 # โหลดข้อมูล seed
                 seed_data = self.load_seed_data()
@@ -77,8 +71,7 @@ class BaseSeeder:
                 if seed_data and data_key:
                     # ดึง attributes ของ model
                     model_attrs = self.get_model_attributes()
-                    logger.info(
-                        f"Model attributes available for seeding: {model_attrs}")
+                    logger.info(f"Model attributes available for seeding: {model_attrs}")
 
                     # สร้าง objects และเพิ่มลงในฐานข้อมูล
                     for item_data in seed_data[data_key]:
@@ -105,15 +98,12 @@ class BaseSeeder:
 
                     # บันทึกการเปลี่ยนแปลง
                     self.db.commit()
-                    logger.info(
-                        f"Seeded {len(seed_data[data_key])} {self.table_name} successfully")
+                    logger.info(f"Seeded {len(seed_data[data_key])} {self.table_name} successfully")
                     return True
                 else:
-                    logger.warning(
-                        f"No {self.table_name} data found in seed file or invalid format")
+                    logger.warning(f"No {self.table_name} data found in seed file or invalid format")
             else:
-                logger.info(
-                    f"{self.table_name} table already has {record_count} records. Skipping seeding.")
+                logger.info(f"{self.table_name} table already has {record_count} records. Skipping seeding.")
 
             return False
 

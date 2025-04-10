@@ -1,0 +1,20 @@
+{
+  "user_roles": [
+    {
+      "user_email": "admin@example.com",
+      "role_name": "admin"
+    },
+    {
+      "user_email": "manager@example.com",
+      "role_name": "manager"
+    },
+    {
+      "user_email": "staff@example.com",
+      "role_name": "staff"
+    },
+    {
+      "user_email": "user1@example.com",
+      "role_name": "user"
+    }
+  ]
+}
