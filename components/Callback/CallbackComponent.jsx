@@ -9,8 +9,8 @@ const OAuthRedirector = () => {
   const [accessToken, setAccessToken] = useState("");
   const [error, setError] = useState("");
 
-  const clientId = "U1lyOFJ6Q1prYVJkUUlYSGR3TjAzRGJNb21uUVd0cTI";
-  const clientSecret = "aml6dERuWERUMFNoUVh3cUdqcjU3WVZ2cHptQVozbFYyZXlXTFljcw";
+  const clientId = "M2NlTDRmT1JrMVdJdGRtbHR0OVJOMHdlQVJjbEo4eFo";
+  const clientSecret = "bUp0N0kzalRPaTUxSFBQN1J0M1p2VUU1RTdsM3dwQVdpaFRMN3Iyeg";
   const redirectUri = "https://ff3p4flc-3000.asse.devtunnels.ms/callback";
 
   useEffect(() => {
