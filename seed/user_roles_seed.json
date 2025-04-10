@@ -5,16 +5,20 @@
       "role_name": "admin"
     },
     {
-      "user_email": "manager@example.com",
-      "role_name": "manager"
+      "user_email": "people@example.com",
+      "role_name": "people"
+    },
+    {
+      "user_email": "supervisor@example.com",
+      "role_name": "supervisor"
     },
     {
       "user_email": "staff@example.com",
       "role_name": "staff"
     },
     {
-      "user_email": "user1@example.com",
-      "role_name": "user"
+      "user_email": "staff_ed@example.com",
+      "role_name": "staff_ed"
     }
   ]
 }

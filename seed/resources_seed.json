@@ -41,6 +41,42 @@
       "path": "/api/v1/permissions/user-roles/{user_id}",
       "description": "ข้อมูลบทบาทของผู้ใช้รายบุคคล",
       "is_active": true
+    },
+    {
+      "name": "auth",
+      "path": "/api/v1/auth/login",
+      "description": "การยืนยันตัวตนเข้าสู่ระบบ",
+      "is_active": true
+    },
+    {
+      "name": "thaid_login",
+      "path": "/api/v1/thaid/login",
+      "description": "การยืนยันตัวตนผ่าน Thai Digital ID (ด้วย token)",
+      "is_active": true
+    },
+    {
+      "name": "thaid_auth",
+      "path": "/api/v1/thaid/auth",
+      "description": "การยืนยันตัวตนผ่าน Thai Digital ID (ด้วย authorization code)",
+      "is_active": true
+    },
+    {
+      "name": "permissions",
+      "path": "/api/v1/permissions",
+      "description": "การจัดการสิทธิ์การเข้าถึงในระบบ",
+      "is_active": true
+    },
+    {
+      "name": "complaints",
+      "path": "/api/v1/complaints",
+      "description": "การจัดการข้อร้องเรียนหรือร้องทุกข์",
+      "is_active": true
+    },
+    {
+      "name": "reports",
+      "path": "/api/v1/reports",
+      "description": "การจัดการรายงานต่างๆ",
+      "is_active": true
     }
   ]
 }
