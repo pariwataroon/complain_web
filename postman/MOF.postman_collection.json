@@ -1,0 +1,662 @@
+{
+	"info": {
+		"_postman_id": "af6d5189-21a1-4d83-ade6-60886d96cb74",
+		"name": "MOF",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "27339131"
+	},
+	"item": [
+		{
+			"name": "ThaID",
+			"item": [
+				{
+					"name": "ThaID_SandBox_MOF",
+					"item": [
+						{
+							"name": "Auth",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://imauthsbx.bora.dopa.go.th/api/v2/oauth2/auth/?response_type=code&client_id=M2NlTDRmT1JrMVdJdGRtbHR0OVJOMHdlQVJjbEo4eFo&redirect_uri=https://ff3p4flc-3000.asse.devtunnels.ms/callback&scope=pid name&state=login",
+									"protocol": "https",
+									"host": [
+										"imauthsbx",
+										"bora",
+										"dopa",
+										"go",
+										"th"
+									],
+									"path": [
+										"api",
+										"v2",
+										"oauth2",
+										"auth",
+										""
+									],
+									"query": [
+										{
+											"key": "response_type",
+											"value": "code"
+										},
+										{
+											"key": "client_id",
+											"value": "M2NlTDRmT1JrMVdJdGRtbHR0OVJOMHdlQVJjbEo4eFo"
+										},
+										{
+											"key": "redirect_uri",
+											"value": "https://ff3p4flc-3000.asse.devtunnels.ms/callback"
+										},
+										{
+											"key": "scope",
+											"value": "pid name"
+										},
+										{
+											"key": "state",
+											"value": "login"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Access Token",
+							"request": {
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "password",
+											"value": "bUp0N0kzalRPaTUxSFBQN1J0M1p2VUU1RTdsM3dwQVdpaFRMN3Iyeg",
+											"type": "string"
+										},
+										{
+											"key": "username",
+											"value": "M2NlTDRmT1JrMVdJdGRtbHR0OVJOMHdlQVJjbEo4eFo",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x-www-form-urlencoded",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "Basic TTJObFREUm1UMUpyTVZkSmRHUnRiSFIwT1ZKT01IZGxRVkpqYkVvNGVGbzpiVXAwTjBremFsUlBhVFV4U0ZCUU4xSjBNMXAyVlVVMVJUZHNNM2R3UVZkcGFGUk1OM0l5ZWc=",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "urlencoded",
+									"urlencoded": [
+										{
+											"key": "grant_type",
+											"value": "authorization_code",
+											"type": "text"
+										},
+										{
+											"key": "code",
+											"value": "NGRlODk4MzQtZmJjYy00MjQwLWJkNDItNTU0Y2JlMjc2OTgxI2ZjZmE5NzUzLTIyOTAtNDMwNi04MDc2LTMyOGVmZWRkYzA2YQ",
+											"type": "text"
+										},
+										{
+											"key": "redirect_uri",
+											"value": "https://ff3p4flc-3000.asse.devtunnels.ms/callback",
+											"type": "text"
+										}
+									]
+								},
+								"url": {
+									"raw": "https://imauthsbx.bora.dopa.go.th/api/v2/oauth2/token/",
+									"protocol": "https",
+									"host": [
+										"imauthsbx",
+										"bora",
+										"dopa",
+										"go",
+										"th"
+									],
+									"path": [
+										"api",
+										"v2",
+										"oauth2",
+										"token",
+										""
+									],
+									"query": [
+										{
+											"key": "client_id",
+											"value": "U1lyOFJ6Q1prYVJkUUlYSGR3TjAzRGJNb21uUVd0cTI",
+											"disabled": true
+										},
+										{
+											"key": "redirect_uri",
+											"value": "https://ff3p4flc-3000.asse.devtunnels.ms/callback",
+											"disabled": true
+										},
+										{
+											"key": "scope",
+											"value": "pid",
+											"disabled": true
+										},
+										{
+											"key": "state",
+											"value": "login",
+											"disabled": true
+										},
+										{
+											"key": "grant_type",
+											"value": "authorization_code",
+											"disabled": true
+										},
+										{
+											"key": "code",
+											"value": "ZDlkZDI4OTAtYTBkZi00NTM3LTk1MTItYTc2Y2JjNzMwM2ZmIzM5YmZlNmI2LTI1N2ItNGRiOC1iZDc0LTIxYjU5ZTNiMDY4MQ",
+											"disabled": true
+										},
+										{
+											"key": "response_type",
+											"value": "code",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "AUTH",
+					"item": [
+						{
+							"name": "auth/login",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"// ดึงข้อมูลจาก response\r",
+											"var jsonData = pm.response.json();\r",
+											"\r",
+											"// ตรวจสอบว่า login สำเร็จและมี token\r",
+											"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
+											"    // บันทึก access_token ลงใน Collection Variables\r",
+											"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
+											"    \r",
+											"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
+											"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
+											"    \r",
+											"    console.log(\"Token saved to collection variables!\");\r",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"citizen_id\": \"1234567890125\",\r\n    \"password\": \"password\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/auth/login",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"auth",
+										"login"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "thaid/auth",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"// ดึงข้อมูลจาก response\r",
+											"var jsonData = pm.response.json();\r",
+											"\r",
+											"// ตรวจสอบว่า login สำเร็จและมี token\r",
+											"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
+											"    // บันทึก access_token ลงใน Collection Variables\r",
+											"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
+											"    \r",
+											"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
+											"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
+											"    \r",
+											"    console.log(\"Token saved to collection variables!\");\r",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"auth_code\": \"NWI2M2EwZDYtNTdjNC00NDZjLWIzMzAtMjdiNmMzYzkwOWRhIzQ1MGYyMDAzLTdhN2ItNDU2Yi1iNzg2LThhYzRkYjg2MDJiZQ\",\r\n    \"redirect_uri\": \"https://ff3p4flc-3000.asse.devtunnels.ms/callback\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/thaid/auth",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"thaid",
+										"auth"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "thaid/login",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"// ดึงข้อมูลจาก response\r",
+											"var jsonData = pm.response.json();\r",
+											"\r",
+											"// ตรวจสอบว่า login สำเร็จและมี token\r",
+											"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
+											"    // บันทึก access_token ลงใน Collection Variables\r",
+											"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
+											"    \r",
+											"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
+											"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
+											"    \r",
+											"    console.log(\"Token saved to collection variables!\");\r",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"expires_in\": 1744111684,\r\n    \"access_token\": \"eyJhbGci...\",\r\n    \"refresh_token\": \"eyJhbGci...\",\r\n    \"token_type\": \"Bearer\",\r\n    \"scope\": \"pid given_name address family_name gender title house_address\",\r\n    \"pid\": \"1101500940655\",\r\n    \"address\": {\r\n        \"formatted\": \"123/456 ต.บึงทองหลาง อ.ลำลูกกา จ.ปทุมธานี\"\r\n    },\r\n    \"given_name\": \"ชื่อตัว\",\r\n    \"family_name\": \"ชื่อสกุล\",\r\n    \"gender\": \"male\",\r\n    \"titleTh\": \"นาย\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/thaid/login",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"thaid",
+										"login"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "USERS",
+					"item": [
+						{
+							"name": "users/title/details",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/users/title/details",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"users",
+										"title",
+										"details"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "users/",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/users/",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"users",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "users/UUID",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/users/4a4b1744-20e2-47d4-a11e-32716f08d1ae",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"users",
+										"4a4b1744-20e2-47d4-a11e-32716f08d1ae"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "users/",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ZjI4ZjdlNi1jZjMyLTRiOWQtODUyYS1kOTVjOTQzN2NkOTciLCJleHAiOjE3NDQyMjg0OTYsInR5cGUiOiJhY2Nlc3MifQ.nhQuRLrLZjuWUq2846wYoC75nD1G49XJAavcpEqY9KE",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"citizen_id\": \"1234567980138\",\r\n    \"title_id\": 3,\r\n    \"first_name\": \"as11\",\r\n    \"last_name\": \"afsa1\",\r\n    \"email\": \"buddyibeam88@gmail.com\",\r\n    \"phone\": \"0864703371\",\r\n    \"password\": \"test123!Z\",\r\n    \"prefix_other\": \"test\"\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/users/",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"users",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "users/UUID",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title_id\": 3,\r\n    \"first_name\": \"as11\",\r\n    \"last_name\": \"afsa1\",\r\n    \"phone\": \"0864703371\",\r\n    \"password\": \"test123!Z\",\r\n    \"is_active\": true,\r\n    \"prefix_other\": \"\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/users/46734501-357f-4227-b427-b25824cfc21e",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"users",
+										"46734501-357f-4227-b427-b25824cfc21e"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "users/UUID",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/users/9F28F7E6-CF32-4B9D-852A-D95C9437CD97",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"users",
+										"9F28F7E6-CF32-4B9D-852A-D95C9437CD97"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "ROLES",
+					"item": [
+						{
+							"name": "permissions/roles",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/roles",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"roles"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Auth",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"auth_code\": \"MWVmMzEwZjMtODkwNC00ODFiLTllY2QtN2RlNDQzYWMxNWVhIzdiYzYyODYwLTNjODMtNDE4Yi04OGU5LTBlZTk4MjVhMzRlOA\",\r\n    \"redirect_uri\": \"https://ff3p4flc-3000.asse.devtunnels.ms/callback\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/thaid/auth",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"thaid",
+								"auth"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "API",
+			"value": "https://dqkq9gn1-8000.asse.devtunnels.ms",
+			"type": "string"
+		},
+		{
+			"key": "PREFIX",
+			"value": "/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
