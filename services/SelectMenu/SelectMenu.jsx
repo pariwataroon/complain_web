@@ -47,9 +47,9 @@ const menuProps = {
 
 /**
  * SelectMenuService - บริการเลือกสรร
- * รับ props: options, handleChange, value, width
+ * รับ props: options, handleChange, value, width, name
  */
-const SelectMenuService = ({ options, handleChange, value, width }) => {
+const SelectMenuService = ({ options, handleChange, value, width, name }) => {
   return (
     <FormControl variant="outlined" sx={{ width: width || "auto" }}>
       {/* เอา InputLabel ออกเพื่อไม่ให้ “ตัวเลือก” ลอยอยู่ด้านบน */}
@@ -58,6 +58,7 @@ const SelectMenuService = ({ options, handleChange, value, width }) => {
         onChange={handleChange}
         displayEmpty
         MenuProps={menuProps}
+        name={name} // Add the name prop to the StyledSelect
         renderValue={(selected) => {
           // ถ้าไม่เลือกอะไรเลย ให้ขึ้นเป็นข้อความ placeholder
           if (selected === "") {
