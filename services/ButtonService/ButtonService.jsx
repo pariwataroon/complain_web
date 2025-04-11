@@ -94,9 +94,13 @@ const ButtonService = ({
       onMouseUp={() => setIsActive(false)}
       {...rest}
     >
-      {iconLeft && <span>{iconLeft}</span>}
+      {iconLeft && <span style={{ marginBottom: "-7px" }}>{iconLeft}</span>}{" "}
+      {/* Added marginTop to iconLeft */}
       {label}
-      {iconRight && <span>{iconRight}</span>}
+      {iconRight && (
+        <span style={{ marginBottom: "-7px" }}>{iconRight}</span>
+      )}{" "}
+      {/* Added marginTop to iconRight */}
     </button>
   );
 };
