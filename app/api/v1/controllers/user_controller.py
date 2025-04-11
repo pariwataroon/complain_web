@@ -1,4 +1,5 @@
 import bcrypt
+from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -6,6 +7,7 @@ from app.api.v1.schemas.user import UserCreate, UserUpdate
 from lib.logger import get_logger
 from models.title import Title
 from models.user import User
+from models.user_role import UserRole
 
 logger = get_logger("user_repository", console_output=False)
 
@@ -88,7 +90,24 @@ def create_user(db: Session, user: UserCreate):
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
-        return db_user
+        
+        # กำหนดบทบาทเริ่มต้นให้ผู้ใช้ใหม่ (ในที่นี้คือบทบาท "people")
+        from models.role import Role
+        default_role = db.query(Role).filter(Role.name == "people").first()
+        
+        if default_role:
+            # สร้างความสัมพันธ์ระหว่างผู้ใช้กับบทบาท
+            new_user_role = UserRole(
+                user_id=db_user.id,
+                role_id=default_role.id
+            )
+            db.add(new_user_role)
+            db.commit()
+        
+        # รับข้อมูลผู้ใช้พร้อมบทบาทเพื่อส่งกลับ
+        user_with_roles = get_user_with_roles_and_titles(db, db_user.id)
+        return user_with_roles
+        
     except IntegrityError as e:
         db.rollback()
         logger.error(f"Database integrity error: {str(e)}")
@@ -198,3 +217,114 @@ def get_users_with_titles(db: Session, skip: int = 0, limit: int = 100):
         result.append(user_data)
 
     return result
+
+
+def get_users_with_roles_and_titles(db: Session, skip: int = 0, limit: int = 100):
+    """Get users with their titles and roles in a simple, efficient way"""
+    # ใช้ joinedload เพื่อโหลดข้อมูล title และ roles พร้อมกับข้อมูลผู้ใช้
+    users = db.query(User).options(
+        joinedload(User.title),
+        joinedload(User.roles).joinedload(UserRole.role)
+    ).order_by(User.id).offset(skip).limit(limit).all()
+    
+    result = []
+    for user in users:
+        # Basic user data
+        user_data = {
+            "id": user.id,
+            "email": user.email,
+            "citizen_id": user.citizen_id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone": user.phone,
+            "title_id": user.title_id,
+            "prefix_other": user.prefix_other,
+            "is_active": user.is_active,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
+            "full_name": f"{user.first_name} {user.last_name}"
+        }
+
+        # Get title name - prioritize prefix_other for "Other" titles
+        if user.title_id == 1 and user.prefix_other:
+            title_name = user.prefix_other
+        elif user.title:
+            title_name = user.title.title_name
+        else:
+            title_name = None
+
+        user_data["title_name"] = title_name
+        user_data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
+
+        # Add user roles information
+        user_roles = []
+        for user_role in user.roles:
+            if user_role.role:
+                role_info = {
+                    "role_id": user_role.role.id,
+                    "role_name": user_role.role.name,
+                    "role_description": user_role.role.description,
+                    "is_active": user_role.role.is_active
+                }
+                user_roles.append(role_info)
+        
+        user_data["roles"] = user_roles
+
+        result.append(user_data)
+
+    return result
+
+
+def get_user_with_roles_and_titles(db: Session, user_id: UUID):
+    """Get a specific user with their titles and roles"""
+    # ใช้ joinedload เพื่อโหลดข้อมูล title และ roles พร้อมกับข้อมูลผู้ใช้
+    user = db.query(User).options(
+        joinedload(User.title),
+        joinedload(User.roles).joinedload(UserRole.role)
+    ).filter(User.id == user_id).first()
+    
+    if not user:
+        return None
+    
+    # Basic user data
+    user_data = {
+        "id": user.id,
+        "email": user.email,
+        "citizen_id": user.citizen_id,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "phone": user.phone,
+        "title_id": user.title_id,
+        "prefix_other": user.prefix_other,
+        "is_active": user.is_active,
+        "created_at": user.created_at,
+        "updated_at": user.updated_at,
+        "full_name": f"{user.first_name} {user.last_name}"
+    }
+
+    # Get title name - prioritize prefix_other for "Other" titles
+    if user.title_id == 1 and user.prefix_other:
+        title_name = user.prefix_other
+    elif user.title:
+        title_name = user.title.title_name
+    else:
+        title_name = None
+
+    user_data["title_name"] = title_name
+    user_data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
+
+    # Add user roles information
+    user_roles = []
+    for user_role in user.roles:
+        if user_role.role:
+            role_info = {
+                "role_id": user_role.role.id,
+                "role_name": user_role.role.name,
+                "role_description": user_role.role.description,
+                "is_active": user_role.role.is_active
+            }
+            user_roles.append(role_info)
+    
+    user_data["roles"] = user_roles
+
+    return user_data

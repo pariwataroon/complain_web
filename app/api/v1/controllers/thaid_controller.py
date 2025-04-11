@@ -99,12 +99,29 @@ def get_or_create_user_from_thaid(db: Session, thaid_data: ThaiIDTokenResponse):
         # สร้างผู้ใช้ใหม่
         existing_user = user_controller.create_user(db, new_user)
     
+    # ดึงข้อมูล roles ของผู้ใช้
+    roles = []
+    if hasattr(existing_user, 'roles'):
+        roles = [role.get('role_name') for role in existing_user['roles']] if isinstance(existing_user, dict) else []
+    
+    # สร้าง token payload ที่มีข้อมูลเพิ่มเติม
+    token_data = {
+        "sub": str(existing_user['id'] if isinstance(existing_user, dict) else existing_user.id),
+        "first_name": existing_user['first_name'] if isinstance(existing_user, dict) else existing_user.first_name,
+        "last_name": existing_user['last_name'] if isinstance(existing_user, dict) else existing_user.last_name,
+        "roles": roles
+    }
+    
     # สร้าง JWT token สำหรับผู้ใช้
-    access_token = auth_controller.create_access_token(
-        data={"sub": str(existing_user.id)}
-    )
-    refresh_token = auth_controller.create_refresh_token(
-        data={"sub": str(existing_user.id)}
+    access_token = auth_controller.create_access_token(data=token_data)
+    refresh_token = auth_controller.create_refresh_token(data=token_data)
+    
+    # บันทึก token ลงฐานข้อมูล
+    auth_controller.refresh_access_token_mapping(
+        db, 
+        existing_user['id'] if isinstance(existing_user, dict) else existing_user.id, 
+        access_token, 
+        refresh_token
     )
     
     return {
