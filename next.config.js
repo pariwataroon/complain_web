@@ -7,11 +7,11 @@ const getEnv = (key) => {
 
 const nextConfig = {
   reactStrictMode: isDev,
-  swcMinify: true,
   env: {
-    NEXT_PUBLIC_ENV_MODE: process.env.NEXT_PUBLIC_ENV_MODE, 
+    NEXT_PUBLIC_ENV_MODE: process.env.NEXT_PUBLIC_ENV_MODE,
     NEXT_PUBLIC_API_BASE_URL: getEnv("NEXT_PUBLIC_API_BASE_URL"),
-    NEXT_PUBLIC_DEBUG_MODE: getEnv("NEXT_PUBLIC_DEBUG_MODE") === "true",
+    NEXT_PUBLIC_DEBUG_MODE:
+      getEnv("NEXT_PUBLIC_DEBUG_MODE") === "true" ? "true" : "false",
     NEXT_PUBLIC_COMMON_VAR: process.env.NEXT_PUBLIC_COMMON_VAR,
   },
   webpack: (config, { isServer }) => {

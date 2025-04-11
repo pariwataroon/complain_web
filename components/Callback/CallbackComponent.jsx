@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { loginThaID } from "@pages/api/login/login";
+import Snackbar from "@mui/material/Snackbar";
+import MuiAlert from "@mui/material/Alert";
 
 const OAuthRedirector = () => {
   const router = useRouter();
   const [code, setCode] = useState(null);
   const [state, setState] = useState(null);
+  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     const { code, state } = router.query;
@@ -22,16 +24,17 @@ const OAuthRedirector = () => {
 
   useEffect(() => {
     if (code && state) {
-      setLoading(true); 
+      setLoading(true);
       const authenticateUser = async () => {
         try {
-          const response = await loginThaID(code);
-
+          await loginThaID(code);
           setLoading(false);
           router.push("/");
+
+          setOpen(true);
         } catch (err) {
-          setError("Login failed. Please try again.");
           setLoading(false);
+          router.push("/");
         }
       };
 
@@ -39,7 +42,24 @@ const OAuthRedirector = () => {
     }
   }, [code, state]);
 
-  return null;
+  const handleCloseSnackbar = () => {
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <Snackbar
+        open={open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <MuiAlert onClose={handleCloseSnackbar} severity="success" sx={{ width: "100%" }}>
+          เข้าสู่ระบบสำเร็จ!
+        </MuiAlert>
+      </Snackbar>
+    </>
+  );
 };
 
 export default OAuthRedirector;

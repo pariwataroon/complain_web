@@ -17,3 +17,17 @@ export function formatPhoneNumber(value) {
     return `${onlyNums.slice(0, 3)}-${onlyNums.slice(3)}`;
   return `${onlyNums.slice(0, 3)}-${onlyNums.slice(3, 6)}-${onlyNums.slice(6)}`;
 }
+
+export const handleCitizenIdChange = (e, setCitizenIdDisplay, setValue) => {
+  const rawValue = e.target.value.replace(/\D/g, "").slice(0, 13);
+  const formatted = formatCitizenId(rawValue);
+  setCitizenIdDisplay(formatted);
+  setValue("citizen_id", rawValue);
+};
+
+export const handlePhoneChange = (e, setPhoneDisplay, setValue) => {
+  const rawValue = e.target.value.replace(/\D/g, "").slice(0, 10);
+  const formatted = formatPhoneNumber(rawValue);
+  setPhoneDisplay(formatted);
+  setValue("phone", rawValue);
+};
