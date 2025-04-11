@@ -611,28 +611,674 @@
 					]
 				},
 				{
-					"name": "ROLES",
+					"name": "PERMISSIONS",
 					"item": [
 						{
-							"name": "permissions/roles",
-							"request": {
-								"auth": {
-									"type": "noauth"
+							"name": "Role Endpoints",
+							"item": [
+								{
+									"name": "Get All Roles",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/roles",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"roles"
+											]
+										}
+									},
+									"response": []
 								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{API}}{{PREFIX}}/permissions/roles",
-									"host": [
-										"{{API}}{{PREFIX}}"
-									],
-									"path": [
-										"permissions",
-										"roles"
-									]
+								{
+									"name": "Create Role",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"name\": \"test-role\",\r\n    \"description\": \"A test role\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/roles",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"roles"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Get Role by ID",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/roles/{{role_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"roles",
+												"{{role_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Update Role",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"name\": \"updated-role\",\r\n    \"description\": \"Updated description\",\r\n    \"is_active\": true\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/roles/{{role_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"roles",
+												"{{role_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Delete Role",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/roles/{{role_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"roles",
+												"{{role_id}}"
+											]
+										}
+									},
+									"response": []
 								}
-							},
-							"response": []
+							]
+						},
+						{
+							"name": "Resource Endpoints",
+							"item": [
+								{
+									"name": "Get All Resources",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/resources",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"resources"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Create Resource",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"name\": \"Test Resource\",\r\n    \"path\": \"/api/v1/test-resource\",\r\n    \"description\": \"A test resource\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/resources",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"resources"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Get Resource by ID",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"resources",
+												"{{resource_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Update Resource",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"name\": \"Updated Resource\",\r\n    \"path\": \"/api/v1/updated-resource\",\r\n    \"description\": \"Updated description\",\r\n    \"is_active\": true\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"resources",
+												"{{resource_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Delete Resource",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"resources",
+												"{{resource_id}}"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Permission Endpoints",
+							"item": [
+								{
+									"name": "Get All Permissions",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Get Permissions by Role",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions?role_id={{role_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions"
+											],
+											"query": [
+												{
+													"key": "role_id",
+													"value": "{{role_id}}"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Get Permissions by Resource",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions?resource_id={{resource_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions"
+											],
+											"query": [
+												{
+													"key": "resource_id",
+													"value": "{{resource_id}}"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Create Permission",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"role_id\": \"{{role_id}}\",\r\n    \"resource_id\": \"{{resource_id}}\",\r\n    \"can_create\": true,\r\n    \"can_read\": true,\r\n    \"can_update\": false,\r\n    \"can_delete\": false\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Get Permission by ID",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/{{permission_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"{{permission_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Update Permission",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"can_create\": true,\r\n    \"can_read\": true,\r\n    \"can_update\": true,\r\n    \"can_delete\": false\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/{{permission_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"{{permission_id}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Delete Permission",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/{{permission_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"{{permission_id}}"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "User-Role Assignment Endpoints",
+							"item": [
+								{
+									"name": "Assign Role to User",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"user_id\": \"{{user_id}}\",\r\n    \"role_id\": \"{{role_id}}\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/user-roles",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"user-roles"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Remove Role from User",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"user_id\": \"{{user_id}}\",\r\n    \"role_id\": \"{{role_id}}\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/user-roles",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"user-roles"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Get User Roles",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/user-roles/{{user_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"user-roles",
+												"{{user_id}}"
+											]
+										}
+									},
+									"response": []
+								}
+							]
 						}
 					]
 				},
