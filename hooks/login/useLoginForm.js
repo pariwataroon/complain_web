@@ -1,6 +1,11 @@
-import { useForm } from 'react-hook-form';
+import { useForm } from "react-hook-form";
+import { loginCard } from "@pages/api/login/login";
+import { alertSuccess, alertError } from "@utils/Alerts";
+import { useRouter } from "next/router";
 
 export const useLoginForm = () => {
+  const router = useRouter();
+
   const {
     register,
     handleSubmit,
@@ -8,11 +13,35 @@ export const useLoginForm = () => {
     watch,
     setError,
     reset,
+    setValue,
   } = useForm();
 
-  const onSubmit = (data) => {
-    console.log("✅ Login Data:", data);
-    // TODO: call API login
+  const onSubmit = async (data) => {
+    console.log("📥 Login Data:", data);
+
+    try {
+      const { citizen_id, password } = data;
+      const response = await loginCard({ citizen_id, password });
+      if (response && response.res_code === "0001") {
+        alertSuccess("เข้าสู่ระบบสำเร็จ", "ยินดีต้อนรับกลับมา");
+        reset();
+
+        setTimeout(() => {
+          router.push("/");
+        }, 1500);
+      } else {
+        alertError(
+          "เข้าสู่ระบบไม่สำเร็จ",
+          response.res_message || "กรุณาตรวจสอบข้อมูลอีกครั้ง"
+        );
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      alertError(
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถเข้าสู่ระบบได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง"
+      );
+    }
   };
 
   return {
@@ -23,5 +52,6 @@ export const useLoginForm = () => {
     watch,
     setError,
     reset,
+    setValue,
   };
 };

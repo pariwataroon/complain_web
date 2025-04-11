@@ -5,5 +5,21 @@
     "no-unused-vars": "warn",
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn"
+  },
+  "settings": {
+    "import/resolver": {
+      "alias": {
+        "map": [
+          ["@services", "./services"],
+          ["@utils", "./utils"],
+          ["@context", "./context"],
+          ["@styles", "./styles"],
+          ["@pages", "./pages"],
+          ["@hooks", "./hooks"],
+          ["@components", "./components"]
+        ],
+        "extensions": [".js", ".jsx", ".ts", ".tsx"]
+      }
+    }
   }
 }

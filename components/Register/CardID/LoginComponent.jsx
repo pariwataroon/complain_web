@@ -7,10 +7,19 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 
+
+
 export default function CardIDLoginPage() {
-  const { register, handleSubmit, errors, onSubmit } = useLoginForm();
+  const { register, handleSubmit, errors, onSubmit, setValue } = useLoginForm();
   const [showPassword, setShowPassword] = useState(false);
+  const [citizenId, setCitizenId] = useState("");
   const router = useRouter();
+
+  const handleCitizenIdChange = (e) => {
+    const rawValue = e.target.value.replace(/\D/g, "").slice(0, 13);
+    setCitizenId(rawValue);
+    setValue("citizen_id", rawValue);
+  };
 
   const handleBackToLogin = () => {
     router.push("/login");
@@ -29,6 +38,9 @@ export default function CardIDLoginPage() {
       query: { method: "Forget_CardID" },
     });
   };
+
+
+
   return (
     <div className={styles.container}>
       
@@ -55,17 +67,31 @@ export default function CardIDLoginPage() {
           {/* Citizen ID */}
           <label className={styles.inputLabel}>
             เลขบัตรประชาชน <span>*</span>
-            {errors.citizenId && (
-              <span className={styles.errorText}>{errors.citizenId.message}</span>
+            {errors.citizen_id && (
+              <span className={styles.errorText}>{errors.citizen_id.message}</span>
             )}
           </label>
           <input
             type="text"
             placeholder="กรอกเลขบัตรประชาชน"
-            {...register("citizenId", { required: "กรุณากรอกเลขบัตรประชาชน" })}
+            value={citizenId}
+            onChange={handleCitizenIdChange}
             className={styles.inputField}
+            autoComplete="off"
           />
+          <input
+            type="hidden"
+            {...register("citizen_id", {
+              required: "กรุณากรอกเลขบัตรประชาชน",
+              pattern: {
+                value: /^[0-9]{13}$/,
+                message: "กรุณากรอกเลขบัตรประชาชนให้ถูกต้อง (13 หลัก)",
+              },
+            })}
+          />
+
           
+
 
           {/* Password */}
           <label className={styles.inputLabel}>

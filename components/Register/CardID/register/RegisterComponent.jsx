@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useRegisterForm } from "@hooks/login/register/useRegisterForm";
 import { IconButton } from "@mui/material";
@@ -7,6 +7,7 @@ import styles from "./RegisterPage.module.scss";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { GetAllSelect } from "@pages/api/allselect/allselect";
 
 export default function RegisterPage() {
   const { register, handleSubmit, errors, onSubmit, watch, setValue } =
@@ -15,7 +16,8 @@ export default function RegisterPage() {
   const [phoneDisplay, setPhoneDisplay] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const prefix = watch("prefix");
+  const [prefixOptions, setPrefixOptions] = useState([]);
+  const prefix = watch("title_id"); // เปลี่ยนเป็น title_id เพื่อให้ตรงกับ API
   const router = useRouter();
 
   const handleBackToLogin = () => {
@@ -26,7 +28,7 @@ export default function RegisterPage() {
     const rawValue = e.target.value.replace(/\D/g, "").slice(0, 13);
     const formatted = formatCitizenId(rawValue);
     setCitizenIdDisplay(formatted);
-    setValue("citizenId", rawValue);
+    setValue("citizen_id", rawValue);
   };
 
   const handlePhoneChange = (e) => {
@@ -35,6 +37,21 @@ export default function RegisterPage() {
     setPhoneDisplay(formatted);
     setValue("phone", rawValue);
   };
+
+  useEffect(() => {
+    const fetchPrefixOptions = async () => {
+      try {
+        const response = await GetAllSelect();
+        if (response && response.res_code === "0000") {
+          setPrefixOptions(response.res_data);
+        }
+      } catch (error) {
+        console.error("Error fetching prefix options:", error);
+      }
+    };
+
+    fetchPrefixOptions();
+  }, []);
 
   return (
     <div className={styles.container}>
@@ -58,9 +75,9 @@ export default function RegisterPage() {
           {/* Citizen ID */}
           <label className={styles.inputLabel}>
             เลขบัตรประชาชน <span>*</span>
-            {errors.citizenId && (
+            {errors.citizen_id && (
               <span className={styles.errorText}>
-                {errors.citizenId.message}
+                {errors.citizen_id.message}
               </span>
             )}
           </label>
@@ -70,10 +87,11 @@ export default function RegisterPage() {
             value={citizenIdDisplay}
             onChange={handleCitizenIdChange}
             className={styles.inputField}
+            autoComplete="off"
           />
           <input
             type="hidden"
-            {...register("citizenId", {
+            {...register("citizen_id", {
               required: "กรุณากรอกเลขบัตรประชาชน",
               pattern: {
                 value: /^[0-9]{13}$/,
@@ -82,28 +100,30 @@ export default function RegisterPage() {
             })}
           />
 
-          {/* Prefix */}
+          {/* Prefix (Title) */}
           <label className={styles.inputLabel}>
             คำนำหน้า <span>*</span>
-            {errors.prefix && (
-              <span className={styles.errorText}>{errors.prefix.message}</span>
+            {errors.title_id && (
+              <span className={styles.errorText}>{errors.title_id.message}</span>
             )}
           </label>
           <select
-            {...register("prefix", { required: "กรุณาเลือกคำนำหน้า" })}
+            {...register("title_id", { required: "กรุณากรอกคำนำหน้า" })}
             className={styles.inputField}
             defaultValue=""
           >
             <option value="" disabled>
               -- กรุณาเลือก --
             </option>
-            <option value="นาย">นาย</option>
-            <option value="นาง">นาง</option>
-            <option value="นางสาว">นางสาว</option>
-            <option value="อื่น ๆ">อื่น ๆ</option>
+            {prefixOptions.length > 0 &&
+              prefixOptions.map((option) => (
+                <option key={option.title_id} value={option.title_id}>
+                  {option.title_name}
+                </option>
+              ))}
           </select>
 
-          {prefix === "อื่น ๆ" && (
+          {prefix === "1" && (
             <>
               <label className={styles.inputLabel}>
                 โปรดระบุคำนำหน้า <span>*</span>
@@ -116,42 +136,43 @@ export default function RegisterPage() {
               <input
                 type="text"
                 placeholder="กรอกคำนำหน้า"
-                {...register("prefixOther", {
+                {...register("prefix_other", {
                   required: "กรุณาระบุคำนำหน้า",
                 })}
                 className={styles.inputField}
               />
             </>
           )}
-          {/* Firstname */}
+
+          {/* First Name */}
           <label className={styles.inputLabel}>
             ชื่อ <span>*</span>
-            {errors.firstName && (
+            {errors.first_name && (
               <span className={styles.errorText}>
-                {errors.firstName.message}
+                {errors.first_name.message}
               </span>
             )}
           </label>
           <input
             type="text"
             placeholder="กรอกชื่อจริง"
-            {...register("firstName", { required: "กรุณากรอกชื่อ" })}
+            {...register("first_name", { required: "กรุณากรอกชื่อ" })}
             className={styles.inputField}
           />
 
-          {/* Lastname */}
+          {/* Last Name */}
           <label className={styles.inputLabel}>
             นามสกุล <span>*</span>
-            {errors.lastName && (
+            {errors.last_name && (
               <span className={styles.errorText}>
-                {errors.lastName.message}
+                {errors.last_name.message}
               </span>
             )}
           </label>
           <input
             type="text"
             placeholder="กรอกนามสกุล"
-            {...register("lastName", { required: "กรุณากรอกนามสกุล" })}
+            {...register("last_name", { required: "กรุณากรอกนามสกุล" })}
             className={styles.inputField}
           />
 
@@ -182,6 +203,7 @@ export default function RegisterPage() {
             value={phoneDisplay}
             onChange={handlePhoneChange}
             className={styles.inputField}
+            autoComplete="tel"
           />
           <input
             type="hidden"
@@ -222,6 +244,7 @@ export default function RegisterPage() {
                 },
               })}
               className={styles.inputField}
+              autoComplete="password"
             />
             <span
               onClick={() => setShowPassword(!showPassword)}
@@ -250,6 +273,7 @@ export default function RegisterPage() {
                   value === watch("password") || "รหัสผ่านไม่ตรงกัน",
               })}
               className={styles.inputField}
+              autoComplete="password"
             />
             <span
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
