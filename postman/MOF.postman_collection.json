@@ -1,9 +1,9 @@
 {
 	"info": {
-		"_postman_id": "af6d5189-21a1-4d83-ade6-60886d96cb74",
+		"_postman_id": "ac52639c-0968-452e-a37b-7d5c9bcbd928",
 		"name": "MOF",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "27339131"
+		"_exporter_id": "2230736"
 	},
 	"item": [
 		{
@@ -212,7 +212,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"citizen_id\": \"1234567890125\",\r\n    \"password\": \"password\"\r\n}",
+									"raw": "{\r\n    \"citizen_id\": \"1234567890124\",\r\n    \"password\": \"password\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -270,7 +270,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"auth_code\": \"NWI2M2EwZDYtNTdjNC00NDZjLWIzMzAtMjdiNmMzYzkwOWRhIzQ1MGYyMDAzLTdhN2ItNDU2Yi1iNzg2LThhYzRkYjg2MDJiZQ\",\r\n    \"redirect_uri\": \"https://ff3p4flc-3000.asse.devtunnels.ms/callback\"\r\n}",
+									"raw": "{\r\n    \"auth_code\": \"NWI2M2EwZDYtNTdjNC00NDZjLWIzMzAtMjdiNmMzYzkwOWRhIzQ1MGYyMDAzLTdhN2ItNDU2Yi1iNzg2LThhYzRkYjg2MDJiZQ\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -422,7 +422,14 @@
 							},
 							"request": {
 								"auth": {
-									"type": "noauth"
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
 								},
 								"method": "GET",
 								"header": [],
@@ -436,13 +443,13 @@
 									}
 								},
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/users/4a4b1744-20e2-47d4-a11e-32716f08d1ae",
+									"raw": "{{API}}{{PREFIX}}/users/72c03e14-c470-4079-9ddf-d2af6d1b523a",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
 										"users",
-										"4a4b1744-20e2-47d4-a11e-32716f08d1ae"
+										"72c03e14-c470-4079-9ddf-d2af6d1b523a"
 									]
 								}
 							},
@@ -456,7 +463,7 @@
 									"bearer": [
 										{
 											"key": "token",
-											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ZjI4ZjdlNi1jZjMyLTRiOWQtODUyYS1kOTVjOTQzN2NkOTciLCJleHAiOjE3NDQyMjg0OTYsInR5cGUiOiJhY2Nlc3MifQ.nhQuRLrLZjuWUq2846wYoC75nD1G49XJAavcpEqY9KE",
+											"value": "{{access_token}}",
 											"type": "string"
 										}
 									]
@@ -465,7 +472,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"citizen_id\": \"1234567980138\",\r\n    \"title_id\": 3,\r\n    \"first_name\": \"as11\",\r\n    \"last_name\": \"afsa1\",\r\n    \"email\": \"buddyibeam88@gmail.com\",\r\n    \"phone\": \"0864703371\",\r\n    \"password\": \"test123!Z\",\r\n    \"prefix_other\": \"test\"\r\n}\r\n",
+									"raw": "{\r\n    \"citizen_id\": \"1234567980139\",\r\n    \"title_id\": 3,\r\n    \"first_name\": \"as11\",\r\n    \"last_name\": \"afsa1\",\r\n    \"email\": \"buddyibeam89@gmail.com\",\r\n    \"phone\": \"0864703371\",\r\n    \"password\": \"test123!Z\",\r\n    \"prefix_other\": \"test\"\r\n}\r\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -480,6 +487,36 @@
 									"path": [
 										"users",
 										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "users/ People / register",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"citizen_id\": \"1234567980142\",\r\n    \"title_id\": 3,\r\n    \"first_name\": \"as11\",\r\n    \"last_name\": \"afsa1\",\r\n    \"email\": \"buddyibeam42@gmail.com\",\r\n    \"phone\": \"0864703371\",\r\n    \"password\": \"test123!Z\",\r\n    \"prefix_other\": \"test\"\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/users/register",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"users",
+										"register"
 									]
 								}
 							},
@@ -501,7 +538,14 @@
 							],
 							"request": {
 								"auth": {
-									"type": "noauth"
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
 								},
 								"method": "PUT",
 								"header": [],
@@ -531,7 +575,14 @@
 							"name": "users/UUID",
 							"request": {
 								"auth": {
-									"type": "noauth"
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
 								},
 								"method": "DELETE",
 								"header": [],
