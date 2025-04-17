@@ -93,6 +93,7 @@ def get_or_create_user_from_thaid(db: Session, thaid_data: ThaiIDTokenResponse):
             last_name=thaid_data.family_name,
             password=random_password,
             title_id=title_id,
+            address=thaid_data.address.formatted if thaid_data.address else "",
             prefix_other=None if title_id != 1 else thaid_data.titleTh  # ถ้า title_id เป็น 1 (อื่นๆ) ให้เก็บ titleTh
         )
         
