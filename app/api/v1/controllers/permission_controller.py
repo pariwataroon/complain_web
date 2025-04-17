@@ -294,3 +294,26 @@ def get_user_roles(db: Session, user_id: UUID):
     roles = db.query(Role).filter(Role.id.in_(role_ids)).all()
     
     return roles
+
+def check_permission_by_name(db: Session, user_id: UUID, resource_name: str, action: str) -> bool:
+    """
+    ตรวจสอบว่าผู้ใช้มีสิทธิ์ในการทำการกระทำที่ระบุกับทรัพยากรที่มีชื่อที่ระบุหรือไม่
+    
+    Args:
+        db: Session ฐานข้อมูล
+        user_id: ID ของผู้ใช้ที่ต้องการตรวจสอบสิทธิ์
+        resource_name: ชื่อของทรัพยากรที่ต้องการตรวจสอบสิทธิ์
+        action: การกระทำที่ต้องการตรวจสอบ ("create", "read", "update", "delete")
+        
+    Returns:
+        bool: True ถ้ามีสิทธิ์, False ถ้าไม่มี
+    """
+    # 1. ค้นหา resource จากชื่อ
+    resource = db.query(Resource).filter(Resource.name == resource_name, Resource.is_active == True).first()
+    
+    if not resource:
+        # ถ้าไม่พบทรัพยากรที่ระบุ ให้ถือว่าไม่มีสิทธิ์
+        return False
+    
+    # 2. ใช้ฟังก์ชันที่มีอยู่แล้วเพื่อตรวจสอบสิทธิ์ตาม resource path
+    return check_permission(db, user_id, resource.path, action)

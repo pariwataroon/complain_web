@@ -3,8 +3,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List, Optional
 
-from app.api.middleware.jwt_verify import verify_token
-from app.api.middleware.permission_middleware import permission_required
+from app.api.middleware.permission_middleware import can_create, can_read, can_update, can_delete
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
 from app.api.v1.schemas.permission import (
@@ -22,7 +21,6 @@ from app.api.v1.controllers.permission_controller import (
 from models.role import Role
 from models.resource import Resource
 from models.permission import Permission
-from models.user import User
 
 router = APIRouter(
     prefix="/permissions",
@@ -34,9 +32,9 @@ router = APIRouter(
 async def create_new_role(
     role: RoleCreate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_create("setting_access"))
 ):
-    """สร้างบทบาทใหม่"""
+    """สร้างบทบาทใหม่ - ต้องมีสิทธิ์สร้างใน setting_access"""
     try:
         db_role = create_role(db, role)
         result = RoleResponse.model_validate(db_role).model_dump()
@@ -50,9 +48,9 @@ async def read_roles(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
-    """ดึงข้อมูลบทบาททั้งหมด"""
+    """ดึงข้อมูลบทบาททั้งหมด - ต้องมีสิทธิ์อ่านใน setting_access"""
     try:
         roles = get_roles(db, skip=skip, limit=limit)
         result = [RoleResponse.model_validate(role).model_dump() for role in roles]
@@ -65,9 +63,9 @@ async def read_roles(
 async def read_role(
     role_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
-    """ดึงข้อมูลบทบาทตาม ID"""
+    """ดึงข้อมูลบทบาทตาม ID - ต้องมีสิทธิ์อ่านใน setting_access"""
     try:
         role = db.query(Role).filter(Role.id == role_id).first()
         if not role:
@@ -84,9 +82,9 @@ async def update_existing_role(
     role_id: UUID, 
     role_data: RoleUpdate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_update("setting_access"))
 ):
-    """อัปเดตข้อมูลบทบาท"""
+    """อัปเดตข้อมูลบทบาท - ต้องมีสิทธิ์แก้ไขใน setting_access"""
     try:
         updated_role = update_role(db, role_id, role_data)
         if not updated_role:
@@ -102,9 +100,9 @@ async def update_existing_role(
 async def delete_existing_role(
     role_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_delete("setting_access"))
 ):
-    """ลบบทบาท"""
+    """ลบบทบาท - ต้องมีสิทธิ์ลบใน setting_access"""
     try:
         success = delete_role(db, role_id)
         if not success:
@@ -120,9 +118,9 @@ async def delete_existing_role(
 async def create_new_resource(
     resource: ResourceCreate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_create("setting_access"))
 ):
-    """สร้างทรัพยากรใหม่"""
+    """สร้างทรัพยากรใหม่ - ต้องมีสิทธิ์สร้างใน setting_access"""
     try:
         db_resource = create_resource(db, resource)
         result = ResourceResponse.model_validate(db_resource).model_dump()
@@ -136,9 +134,9 @@ async def read_resources(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
-    """ดึงข้อมูลทรัพยากรทั้งหมด"""
+    """ดึงข้อมูลทรัพยากรทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_access"""
     try:
         resources = get_resources(db, skip=skip, limit=limit)
         result = [ResourceResponse.model_validate(resource).model_dump() for resource in resources]
@@ -151,9 +149,9 @@ async def read_resources(
 async def read_resource(
     resource_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
-    """ดึงข้อมูลทรัพยากรตาม ID"""
+    """ดึงข้อมูลทรัพยากรตาม ID - ต้องมีสิทธิ์อ่านใน setting_access"""
     try:
         resource = db.query(Resource).filter(Resource.id == resource_id).first()
         if not resource:
@@ -170,9 +168,9 @@ async def update_existing_resource(
     resource_id: UUID, 
     resource_data: ResourceUpdate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_update("setting_access"))
 ):
-    """อัปเดตข้อมูลทรัพยากร"""
+    """อัปเดตข้อมูลทรัพยากร - ต้องมีสิทธิ์แก้ไขใน setting_access"""
     try:
         updated_resource = update_resource(db, resource_id, resource_data)
         if not updated_resource:
@@ -188,9 +186,9 @@ async def update_existing_resource(
 async def delete_existing_resource(
     resource_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_delete("setting_access"))
 ):
-    """ลบทรัพยากร"""
+    """ลบทรัพยากร - ต้องมีสิทธิ์ลบใน setting_access"""
     try:
         success = delete_resource(db, resource_id)
         if not success:
@@ -206,9 +204,9 @@ async def delete_existing_resource(
 async def create_new_permission(
     permission: PermissionCreate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_create("setting_access"))
 ):
-    """สร้างสิทธิ์ใหม่ (รองรับทั้ง role-based และ user-based)"""
+    """สร้างสิทธิ์ใหม่ (รองรับทั้ง role-based และ user-based) - ต้องมีสิทธิ์สร้างใน setting_access"""
     try:
         # ตรวจสอบว่าข้อมูลถูกต้องหรือไม่
         if permission.role_id is None and permission.user_id is None:
@@ -232,9 +230,9 @@ async def read_permissions(
     resource_id: Optional[UUID] = None,
     user_id: Optional[UUID] = None, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
-    """ดึงข้อมูลสิทธิ์ทั้งหมดหรือกรองตามบทบาท, ทรัพยากร, หรือผู้ใช้"""
+    """ดึงข้อมูลสิทธิ์ทั้งหมดหรือกรองตามบทบาท, ทรัพยากร, หรือผู้ใช้ - ต้องมีสิทธิ์อ่านใน setting_access"""
     try:
         permissions = get_permissions(db, role_id=role_id, resource_id=resource_id, user_id=user_id)
         result = [PermissionResponse.model_validate(permission).model_dump() for permission in permissions]
@@ -247,9 +245,9 @@ async def read_permissions(
 async def read_permission(
     permission_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
-    """ดึงข้อมูลสิทธิ์ตาม ID"""
+    """ดึงข้อมูลสิทธิ์ตาม ID - ต้องมีสิทธิ์อ่านใน setting_access"""
     try:
         permission = db.query(Permission).filter(Permission.id == permission_id).first()
         if not permission:
@@ -266,9 +264,9 @@ async def update_existing_permission(
     permission_id: UUID, 
     permission_data: PermissionUpdate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_update("setting_access"))
 ):
-    """อัปเดตข้อมูลสิทธิ์"""
+    """อัปเดตข้อมูลสิทธิ์ - ต้องมีสิทธิ์แก้ไขใน setting_access"""
     try:
         updated_permission = update_permission(db, permission_id, permission_data)
         if not updated_permission:
@@ -284,9 +282,9 @@ async def update_existing_permission(
 async def delete_existing_permission(
     permission_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_delete("setting_access"))
 ):
-    """ลบสิทธิ์"""
+    """ลบสิทธิ์ - ต้องมีสิทธิ์ลบใน setting_access"""
     try:
         success = delete_permission(db, permission_id)
         if not success:
@@ -302,9 +300,9 @@ async def delete_existing_permission(
 async def assign_role_to_user_endpoint(
     user_role: UserRoleCreate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_create("setting_access"))
 ):
-    """กำหนดบทบาทให้กับผู้ใช้"""
+    """กำหนดบทบาทให้กับผู้ใช้ - ต้องมีสิทธิ์สร้างใน setting_access"""
     try:
         result = assign_role_to_user(db, user_role.user_id, user_role.role_id)
         return format_response("0001", {"message": "Role assigned successfully"})
@@ -316,9 +314,9 @@ async def assign_role_to_user_endpoint(
 async def remove_role_from_user_endpoint(
     user_role: UserRoleCreate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_delete("setting_access"))
 ):
-    """ลบบทบาทออกจากผู้ใช้"""
+    """ลบบทบาทออกจากผู้ใช้ - ต้องมีสิทธิ์ลบใน setting_access"""
     try:
         success = remove_role_from_user(db, user_role.user_id, user_role.role_id)
         if not success:
@@ -333,9 +331,9 @@ async def remove_role_from_user_endpoint(
 async def get_roles_for_user_endpoint(
     user_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
-    """ดึงข้อมูลบทบาทของผู้ใช้"""
+    """ดึงข้อมูลบทบาทของผู้ใช้ - ต้องมีสิทธิ์อ่านใน setting_access"""
     try:
         roles = get_user_roles(db, user_id)
         result = [RoleResponse.model_validate(role).model_dump() for role in roles]
@@ -351,10 +349,10 @@ async def get_combined_permissions(
     user_id: UUID,
     resource_path: str,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
     """
-    ดึงข้อมูลสิทธิ์รวมของผู้ใช้สำหรับทรัพยากรที่ระบุ
+    ดึงข้อมูลสิทธิ์รวมของผู้ใช้สำหรับทรัพยากรที่ระบุ - ต้องมีสิทธิ์อ่านใน setting_access
     
     คำนวณจากทั้งบทบาทที่ผู้ใช้มีและสิทธิ์เฉพาะบุคคล โดยคำนึงถึงการ override
     """
