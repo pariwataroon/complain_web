@@ -1,28 +1,33 @@
 {
   "roles": [
     {
-      "name": "admin",
-      "description": "ผู้ดูแลระบบ มีสิทธิ์ทั้งหมดในระบบ",
-      "is_active": true
-    },
-    {
       "name": "people",
-      "description": "ประชาชน สามารถดูข้อมูลส่วนตัวและทำรายการต่างๆ เช่น ร้องทุกข์ ได้",
+      "description": "กลุ่มที่ 1 : ประชาชน",
       "is_active": true
     },
     {
-      "name": "supervisor",
-      "description": "ผู้บริหาร / ผู้สนงาน สามารถดูข้อมูลและทำรายการต่างๆ ได้",
+      "name": "admin",
+      "description": "กลุ่มที่ 2 : ผู้ดูแลระบบ (แอดมิน)",
+      "is_active": true
+    },
+    {
+      "name": "admin_home",
+      "description": "กลุ่มที่ 3 : ผู้ดูแลหน้าหลัก (แอดมิน Home page)",
       "is_active": true
     },
     {
       "name": "staff",
-      "description": "หน่วยงานในสังกัด สามารถดูข้อมูลและทำรายการต่างๆ ได้",
+      "description": "กลุ่มที่ 4 : เจ้าหน้าที่ สรร.",
       "is_active": true
     },
     {
-      "name": "staff_ed",
-      "description": "เจ้าหน้าที่ สรร. สามารถดูข้อมูลและทำรายการต่างๆ ได้",
+      "name": "supervisor",
+      "description": "กลุ่มที่ 5 : ผู้บริหาร / ผู้สั่งงาน",
+      "is_active": true
+    },
+    {
+      "name": "department",
+      "description": "กลุ่มที่ 6 : หน่วยงานในสังกัด",
       "is_active": true
     }
   ]

@@ -1,24 +1,28 @@
 {
   "user_roles": [
     {
-      "user_email": "admin@example.com",
+      "user_citizen_id": "1234567890122",
       "role_name": "admin"
     },
     {
-      "user_email": "people@example.com",
+      "user_citizen_id": "1234567890123",
       "role_name": "people"
     },
     {
-      "user_email": "supervisor@example.com",
-      "role_name": "supervisor"
+      "user_citizen_id": "1234567890124",
+      "role_name": "admin_home"
     },
     {
-      "user_email": "staff@example.com",
+      "user_citizen_id": "1234567890125",
       "role_name": "staff"
     },
     {
-      "user_email": "staff_ed@example.com",
-      "role_name": "staff_ed"
+      "user_citizen_id": "1234567890126",
+      "role_name": "supervisor"
+    },
+    {
+      "user_citizen_id": "1234567890127",
+      "role_name": "department"
     }
   ]
 }

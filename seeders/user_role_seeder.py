@@ -47,10 +47,10 @@ class UserRoleSeeder(BaseSeeder):
                     return False
 
                 # สร้าง dictionaries เพื่อ lookup user และ role จากชื่อ
-                users = {user.email: user for user in self.db.query(User).all()}
+                users = {user.citizen_id: user for user in self.db.query(User).all()}
                 roles = {role.name: role for role in self.db.query(Role).all()}
                 
-                logger.info(f"Found {len(users)} users in DB: {list(users.keys())}")
+                logger.info(f"Found {len(users)} users in DB: {list(users.keys())[:5]}...")
                 logger.info(f"Found {len(roles)} roles in DB: {list(roles.keys())}")
                 
                 # ถ้าไม่มี users หรือ roles ให้แจ้งเตือนและออกจากฟังก์ชัน
@@ -65,14 +65,14 @@ class UserRoleSeeder(BaseSeeder):
                 # สร้าง user_roles
                 count = 0
                 for user_role_data in seed_data["user_roles"]:
-                    user_email = user_role_data.get("user_email")
+                    user_citizen_id = user_role_data.get("user_citizen_id")
                     role_name = user_role_data.get("role_name")
                     
-                    logger.info(f"Processing user_role: {user_email} -> {role_name}")
+                    logger.info(f"Processing user_role: {user_citizen_id} -> {role_name}")
                     
-                    # ตรวจสอบว่ามี user_email และ role_name ที่กำหนดหรือไม่
-                    if user_email not in users:
-                        logger.warning(f"User with email '{user_email}' not found, skipping user_role")
+                    # ตรวจสอบว่ามี user_citizen_id และ role_name ที่กำหนดหรือไม่
+                    if user_citizen_id not in users:
+                        logger.warning(f"User with citizen_id '{user_citizen_id}' not found, skipping user_role")
                         continue
                         
                     if role_name not in roles:
@@ -82,12 +82,12 @@ class UserRoleSeeder(BaseSeeder):
                     # ตรวจสอบว่ามี user_role นี้อยู่แล้วหรือไม่
                     try:
                         existing = self.db.query(UserRole).filter(
-                            UserRole.user_id == users[user_email].id,
+                            UserRole.user_id == users[user_citizen_id].id,
                             UserRole.role_id == roles[role_name].id
                         ).first()
                         
                         if existing:
-                            logger.info(f"User '{user_email}' already has role '{role_name}', skipping")
+                            logger.info(f"User '{user_citizen_id}' already has role '{role_name}', skipping")
                             continue
                     except Exception as e:
                         logger.error(f"Error checking existing user_role: {str(e)}")
@@ -97,13 +97,13 @@ class UserRoleSeeder(BaseSeeder):
                     try:
                         user_role = UserRole(
                             id=uuid.uuid4(),
-                            user_id=users[user_email].id,
+                            user_id=users[user_citizen_id].id,
                             role_id=roles[role_name].id
                         )
                         
                         self.db.add(user_role)
                         count += 1
-                        logger.info(f"Added user_role: {user_email} -> {role_name}")
+                        logger.info(f"Added user_role: {user_citizen_id} -> {role_name}")
                     except Exception as e:
                         logger.error(f"Error creating user_role: {str(e)}")
                         continue

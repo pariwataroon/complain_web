@@ -1,81 +1,147 @@
 {
   "resources": [
     {
-      "name": "users",
-      "path": "/api/v1/users",
-      "description": "การจัดการผู้ใช้งาน",
+      "name": "dashboard",
+      "path": "/api/v1/admin/dashboard",
+      "description": "แดชบอร์ดสรุปภาพรวมระบบ",
       "is_active": true
     },
     {
-      "name": "user_detail",
-      "path": "/api/v1/users/{user_id}",
-      "description": "ข้อมูลผู้ใช้รายบุคคล",
+      "name": "stacked_line_chart",
+      "path": "/api/v1/admin/StackedLineChart",
+      "description": "ข้อมูลกราฟแบบแสดงผลเป็นเส้น",
       "is_active": true
     },
     {
-      "name": "titles",
-      "path": "/api/v1/users/title/details",
-      "description": "ข้อมูลคำนำหน้า",
+      "name": "account_box",
+      "path": "/api/v1/admin/AccountBox",
+      "description": "ข้อมูลบัญชีผู้ใช้งาน",
       "is_active": true
     },
     {
-      "name": "roles",
-      "path": "/api/v1/permissions/roles",
-      "description": "การจัดการบทบาท",
+      "name": "setting_times",
+      "path": "/api/v1/admin/settinggeneral/times",
+      "description": "กำหนดระยะเวลาในระบบ",
       "is_active": true
     },
     {
-      "name": "resources",
-      "path": "/api/v1/permissions/resources",
-      "description": "การจัดการทรัพยากร",
+      "name": "setting_users",
+      "path": "/api/v1/admin/settinggeneral/users",
+      "description": "กำหนดผู้ใช้งานในระบบ",
       "is_active": true
     },
     {
-      "name": "user_roles",
-      "path": "/api/v1/permissions/user-roles",
-      "description": "การจัดการบทบาทของผู้ใช้",
+      "name": "setting_access",
+      "path": "/api/v1/admin/settinggeneral/access",
+      "description": "กำหนดสิทธิ์การเข้าถึงในระบบ",
       "is_active": true
     },
     {
-      "name": "user_roles_detail",
-      "path": "/api/v1/permissions/user-roles/{user_id}",
-      "description": "ข้อมูลบทบาทของผู้ใช้รายบุคคล",
+      "name": "setting_department",
+      "path": "/api/v1/admin/settinggeneral/department",
+      "description": "กำหนดหน่วยงานในสังกัด",
       "is_active": true
     },
     {
-      "name": "auth",
+      "name": "setting_holidays",
+      "path": "/api/v1/admin/settinggeneral/holidays",
+      "description": "กำหนดวันหยุดในระบบ",
+      "is_active": true
+    },
+    {
+      "name": "search_complaints",
+      "path": "/api/v1/admin/edit/search",
+      "description": "สืบค้นเรื่องร้องเรียน",
+      "is_active": true
+    },
+    {
+      "name": "website_complaints",
+      "path": "/api/v1/admin/edit/website-complaints",
+      "description": "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์",
+      "is_active": true
+    },
+    {
+      "name": "opm1111_complaints",
+      "path": "/api/v1/admin/edit/opm1111",
+      "description": "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ OPM1111",
+      "is_active": true
+    },
+    {
+      "name": "department_reports",
+      "path": "/api/v1/admin/edit/report",
+      "description": "รับเรื่องรายงานผลการพิจารณาจากหน่วยงาน",
+      "is_active": true
+    },
+    {
+      "name": "complaints_list",
+      "path": "/api/v1/admin/box/list",
+      "description": "คลังเรื่องราวร้องทุกข์",
+      "is_active": true
+    },
+    {
+      "name": "anonymous_complaints",
+      "path": "/api/v1/admin/box/new",
+      "description": "คลังบัตรสนเท่ห์",
+      "is_active": true
+    },
+    {
+      "name": "status_tracking_reports",
+      "path": "/api/v1/admin/document/pending",
+      "description": "รายงานติดตามสถานะ",
+      "is_active": true
+    },
+    {
+      "name": "department_summary_reports",
+      "path": "/api/v1/admin/document/department-summary",
+      "description": "รายงานสรุปเรื่องร้องเรียนของหน่วยงาน",
+      "is_active": true
+    },
+    {
+      "name": "new_complaints_reports",
+      "path": "/api/v1/admin/document/new-complaints",
+      "description": "รายงานสรุปเรื่องเข้าขใหม่และร้องเพิ่มทั้งหมด",
+      "is_active": true
+    },
+    {
+      "name": "annual_inspector_reports",
+      "path": "/api/v1/admin/document/annual-inspector",
+      "description": "รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ",
+      "is_active": true
+    },
+    {
+      "name": "pending_tracking_reports",
+      "path": "/api/v1/admin/document/tracking",
+      "description": "รายงานการติดตามงานค้าง",
+      "is_active": true
+    },
+    {
+      "name": "inspector_management_reports",
+      "path": "/api/v1/admin/document/inspector-management",
+      "description": "รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ",
+      "is_active": true
+    },
+    {
+      "name": "annual_fiscal_reports",
+      "path": "/api/v1/admin/document/annual-fiscal",
+      "description": "รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ",
+      "is_active": true
+    },
+    {
+      "name": "staff_notification_reports",
+      "path": "/api/v1/admin/document/staff-notifications",
+      "description": "รายงานการแจ้งเตือนเจ้าหน้าที่",
+      "is_active": true
+    },
+    {
+      "name": "login",
       "path": "/api/v1/auth/login",
-      "description": "การยืนยันตัวตนเข้าสู่ระบบ",
+      "description": "การเข้าสู่ระบบ",
       "is_active": true
     },
     {
-      "name": "thaid_login",
-      "path": "/api/v1/thaid/login",
-      "description": "การยืนยันตัวตนผ่าน Thai Digital ID (ด้วย token)",
-      "is_active": true
-    },
-    {
-      "name": "thaid_auth",
-      "path": "/api/v1/thaid/auth",
-      "description": "การยืนยันตัวตนผ่าน Thai Digital ID (ด้วย authorization code)",
-      "is_active": true
-    },
-    {
-      "name": "permissions",
-      "path": "/api/v1/permissions",
-      "description": "การจัดการสิทธิ์การเข้าถึงในระบบ",
-      "is_active": true
-    },
-    {
-      "name": "complaints",
-      "path": "/api/v1/complaints",
-      "description": "การจัดการข้อร้องเรียนหรือร้องทุกข์",
-      "is_active": true
-    },
-    {
-      "name": "reports",
-      "path": "/api/v1/reports",
-      "description": "การจัดการรายงานต่างๆ",
+      "name": "user_profile",
+      "path": "/api/v1/users/profile",
+      "description": "ข้อมูลโปรไฟล์ผู้ใช้งาน",
       "is_active": true
     }
   ]

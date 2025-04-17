@@ -11,7 +11,8 @@ class Permission(Base):
     __table_args__ = {'extend_existing': True}
     
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
-    role_id = Column(UNIQUEIDENTIFIER, ForeignKey("roles.id"), nullable=False)
+    role_id = Column(UNIQUEIDENTIFIER, ForeignKey("roles.id"), nullable=True)
+    user_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), nullable=True)
     resource_id = Column(UNIQUEIDENTIFIER, ForeignKey("resources.id"), nullable=False)
     can_create = Column(Boolean, default=False)
     can_read = Column(Boolean, default=False)
