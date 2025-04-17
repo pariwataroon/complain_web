@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "23f2972a-e94d-49ce-93fa-fbbf43114f1d",
+		"_postman_id": "ced16cae-01fd-4628-816e-8832e221c1b2",
 		"name": "MOF",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "2230736"
@@ -227,6 +227,74 @@
 									"path": [
 										"auth",
 										"login"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "auth/me",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"// ดึงข้อมูลจาก response\r",
+											"var jsonData = pm.response.json();\r",
+											"\r",
+											"// ตรวจสอบว่า login สำเร็จและมี token\r",
+											"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
+											"    // บันทึก access_token ลงใน Collection Variables\r",
+											"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
+											"    \r",
+											"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
+											"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
+											"    \r",
+											"    console.log(\"Token saved to collection variables!\");\r",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/auth/me",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"auth",
+										"me"
 									]
 								}
 							},
