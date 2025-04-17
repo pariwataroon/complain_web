@@ -11,36 +11,36 @@ router = APIRouter(
     tags=["thai digital id"],
 )
 
-@router.post("/login", response_model=FormatResponseModel)
-async def thaid_login(thaid_data: ThaiIDTokenResponse, db: Session = Depends(get_db)):
-    """
-    รับข้อมูลจาก Thai Digital ID และสร้าง JWT token สำหรับระบบเรา
-    """
-    try:
-        # ตรวจสอบความถูกต้องของ Thai Digital ID token
-        if not validate_thaid_token(thaid_data):
-            return format_response("4010", {"error": "Invalid Thai Digital ID token"})
+# @router.post("/login", response_model=FormatResponseModel)
+# async def thaid_login(thaid_data: ThaiIDTokenResponse, db: Session = Depends(get_db)):
+#     """
+#     รับข้อมูลจาก Thai Digital ID และสร้าง JWT token สำหรับระบบเรา
+#     """
+#     try:
+#         # ตรวจสอบความถูกต้องของ Thai Digital ID token
+#         if not validate_thaid_token(thaid_data):
+#             return format_response("4010", {"error": "Invalid Thai Digital ID token"})
         
-        # ค้นหาหรือสร้างผู้ใช้จากข้อมูล Thai Digital ID
-        result = get_or_create_user_from_thaid(db, thaid_data)
+#         # ค้นหาหรือสร้างผู้ใช้จากข้อมูล Thai Digital ID
+#         result = get_or_create_user_from_thaid(db, thaid_data)
         
-        # สร้าง response
-        response_data = {
-            "is_new_user": result["is_new_user"],
-            "access_token": result["access_token"],
-            "refresh_token": result["refresh_token"]
-        }
+#         # สร้าง response
+#         response_data = {
+#             "is_new_user": result["is_new_user"],
+#             "access_token": result["access_token"],
+#             "refresh_token": result["refresh_token"]
+#         }
         
-        # ถ้าเป็นผู้ใช้ใหม่ ส่งรหัส 0001 (CREATED_SUCCESSFULLY)
-        # ถ้าเป็นผู้ใช้เดิม ส่งรหัส 0000 (GET_DATA_SUCCESSFULLY)
-        res_code = "0001" if result["is_new_user"] else "0000"
+#         # ถ้าเป็นผู้ใช้ใหม่ ส่งรหัส 0001 (CREATED_SUCCESSFULLY)
+#         # ถ้าเป็นผู้ใช้เดิม ส่งรหัส 0000 (GET_DATA_SUCCESSFULLY)
+#         res_code = "0001" if result["is_new_user"] else "0000"
         
-        return format_response(res_code, response_data)
+#         return format_response(res_code, response_data)
     
-    except Exception as e:
-        # จัดการข้อผิดพลาด
-        print(f"Thai ID login error: {str(e)}")
-        return format_response("5000", {"error": "Internal server error"})
+#     except Exception as e:
+#         # จัดการข้อผิดพลาด
+#         print(f"Thai ID login error: {str(e)}")
+#         return format_response("5000", {"error": "Internal server error"})
 
 # เพิ่ม endpoint ใหม่
 @router.post("/auth", response_model=FormatResponseModel)
