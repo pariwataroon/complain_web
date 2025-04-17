@@ -317,3 +317,99 @@ def check_permission_by_name(db: Session, user_id: UUID, resource_name: str, act
     
     # 2. ใช้ฟังก์ชันที่มีอยู่แล้วเพื่อตรวจสอบสิทธิ์ตาม resource path
     return check_permission(db, user_id, resource.path, action)
+
+# เพิ่มฟังก์ชันใหม่
+
+def get_all_user_permissions(db: Session, user_id: UUID):
+    """
+    รวบรวมสิทธิ์การเข้าถึงทั้งหมดของผู้ใช้
+    ทั้งจากบทบาทที่ได้รับและสิทธิ์เฉพาะบุคคล
+    
+    คืนค่าผลลัพธ์โดยใช้ resource_name เป็นคีย์
+    """
+    # ดึงบทบาททั้งหมดของผู้ใช้
+    user_roles = get_user_roles(db, user_id)
+    role_ids = [role.id for role in user_roles]
+    
+    # ดึงทรัพยากรทั้งหมดที่มีในระบบ
+    resources = db.query(Resource).all()
+    
+    results = {}
+    
+    for resource in resources:
+        # ดึงสิทธิ์จากบทบาท
+        role_permissions = []
+        if role_ids:
+            role_perms = db.query(Permission).filter(
+                Permission.resource_id == resource.id,
+                Permission.role_id.in_(role_ids)
+            ).all()
+            for perm in role_perms:
+                role = db.query(Role).filter(Role.id == perm.role_id).first()
+                if role:
+                    role_permissions.append({
+                        "role_id": str(role.id),
+                        "role_name": role.name,
+                        "can_create": perm.can_create,
+                        "can_read": perm.can_read,
+                        "can_update": perm.can_update,
+                        "can_delete": perm.can_delete
+                    })
+        
+        # ดึงสิทธิ์เฉพาะของผู้ใช้
+        user_permission = db.query(Permission).filter(
+            Permission.resource_id == resource.id,
+            Permission.user_id == user_id
+        ).first()
+        
+        # รวมสิทธิ์ทั้งหมด โดยพิจารณาการ override ถ้ามี
+        final_permission = {
+            "resource_id": str(resource.id),
+            "resource_name": resource.name,
+            "resource_path": resource.path,
+            "can_create": False,
+            "can_read": False,
+            "can_update": False,
+            "can_delete": False,
+            "from_roles": [],
+            "has_direct_permission": False
+        }
+        
+        # เพิ่มสิทธิ์จากบทบาท
+        for role_perm in role_permissions:
+            if role_perm["can_create"]:
+                final_permission["can_create"] = True
+            if role_perm["can_read"]:
+                final_permission["can_read"] = True
+            if role_perm["can_update"]:
+                final_permission["can_update"] = True
+            if role_perm["can_delete"]:
+                final_permission["can_delete"] = True
+            
+            final_permission["from_roles"].append(role_perm["role_name"])
+        
+        # เพิ่มหรือ override สิทธิ์จากสิทธิ์เฉพาะของผู้ใช้
+        if user_permission:
+            final_permission["has_direct_permission"] = True
+            
+            if user_permission.override_role:
+                # ถ้ามีการ override ก็ใช้สิทธิ์เฉพาะของผู้ใช้แทน
+                final_permission["can_create"] = user_permission.can_create
+                final_permission["can_read"] = user_permission.can_read
+                final_permission["can_update"] = user_permission.can_update
+                final_permission["can_delete"] = user_permission.can_delete
+            else:
+                # ถ้าไม่มีการ override ก็เพิ่มสิทธิ์เฉพาะของผู้ใช้เข้าไป
+                if user_permission.can_create:
+                    final_permission["can_create"] = True
+                if user_permission.can_read:
+                    final_permission["can_read"] = True
+                if user_permission.can_update:
+                    final_permission["can_update"] = True
+                if user_permission.can_delete:
+                    final_permission["can_delete"] = True
+        
+        # เพิ่มข้อมูลสิทธิ์ลงในผลลัพธ์ โดยใช้ resource_name เป็น key
+        results[resource.name] = final_permission
+    
+    return results
