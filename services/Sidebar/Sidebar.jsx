@@ -51,7 +51,7 @@ const submenuItems = {
   box: [
     { label: "คลังเอกสาร", type: "header" },
     { label: "คลังเรื่องราวร้องทุกข์", type: "item", to: "/admin/box/list" },
-    { label: "คลังบัตรนนเท่ห์", type: "item", to: "/admin/box/new" },
+    { label: "คลังบัตรสนเท่ห์", type: "item", to: "/admin/box/new" },
   ],
   document: [
     { label: "รายงาน", type: "header" },
@@ -198,7 +198,7 @@ export default function Sidebar() {
           <ListItemButton
             onClick={() => {
               setActiveMenu("StackedLineChart");
-              router.push("/StackedLineChart");
+              router.push("/admin/StackedLineChart");
             }}
           >
             <ListItemIcon
@@ -215,7 +215,7 @@ export default function Sidebar() {
           <ListItemButton
             onClick={() => {
               setActiveMenu("AccountBox");
-              router.push("/AccountBox");
+              router.push("/admin/AccountBox");
             }}
           >
             <ListItemIcon

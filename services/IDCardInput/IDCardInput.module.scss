@@ -1,0 +1,55 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+}
+
+.label {
+    color: #0b1f8f;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.inputGroup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+.inputBox {
+    width: 42px;
+    .MuiInputBase-root {
+        border-radius: 8px !important;
+        min-height: 48px;
+        font-size: 20px;
+        padding: 6px 0;
+        border: 2px solid #1120A3 !important;
+        box-shadow: none !important;
+        background-color: white;
+    }
+
+   .MuiOutlinedInput-notchedOutline {
+       border: none !important; 
+   }
+
+   .MuiOutlinedInput-input {
+       padding: 10px 0 !important;
+       text-align: center;
+       font-weight: bold;
+       color: #1120A3;
+   }
+
+    .Mui-focused .MuiOutlinedInput-notchedOutline {
+        border-color: #1120A3 !important;
+    }
+
+}
+
+.hyphen {
+    font-weight: bold;
+    color: #0b1f8f;
+    font-size: 20px;
+    padding: 0 2px;
+    user-select: none;
+}

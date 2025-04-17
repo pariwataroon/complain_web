@@ -1,0 +1,50 @@
+.formGroup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.formField {
+    width: 100%;
+    font-family: "Prompt", sans-serif;
+
+    .MuiInputBase-root {
+        border-radius: 8px;
+        border: 1.5px solid #0b1f8f;
+        font-size: 16px;
+        padding: 10px 14px;
+        color: #0b1f8f;
+    }
+
+    .MuiOutlinedInput-root {
+        &:hover .MuiOutlinedInput-notchedOutline {
+            border-color: #0b1f8f;
+        }
+
+        &.Mui-focused .MuiOutlinedInput-notchedOutline {
+            border-color: #0b1f8f;
+            box-shadow: 0 0 0 2px rgba(11, 31, 143, 0.1);
+        }
+    }
+
+    .MuiInputLabel-root {
+        color: #0b1f8f;
+        font-weight: 500;
+    }
+
+    .MuiOutlinedInput-notchedOutline {
+        border-color: #0b1f8f;
+    }
+
+    .MuiSelect-select {
+        padding: 10px 14px;
+    }
+}
+
+.title {
+    color: #0b1f8f;
+    font-weight: bold;
+    font-size: 18px;
+    margin-bottom: 16px;
+}

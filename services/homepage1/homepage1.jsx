@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import styles from "./Homepage1.module.scss";
 
 const Homepage1 = () => {
+  const router = useRouter();
+
+  const handleComplaintClick = () => {
+    router.push("/complaint");
+  };
   return (
     <div style={{ position: "relative", minHeight: "90vh", width: "100%" }}>
       <div
@@ -85,7 +91,7 @@ const Homepage1 = () => {
           marginTop: "10px"
         }}
       >
-        <button className={styles.button}>แจ้งเรื่องร้องทุกข์</button>
+        <button className={styles.button} onClick={handleComplaintClick}>แจ้งเรื่องร้องทุกข์</button>
         <button className={styles.buttonwhit}>ติดตามผล</button>
       </div>
     </div>

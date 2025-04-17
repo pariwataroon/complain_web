@@ -11,16 +11,12 @@ const Chat = () => {
 
   return (
     <div>
-      {" "}
-      {/* Phone Icon */}
       <div className={styles.phoneIcon} onClick={() => alert("Dialing...")}>
         <Phone style={{ fontSize: 30, color: "white" }} />
       </div>
-      {/* Chat Icon */}
       <div className={styles.chatIcon} onClick={toggleChat}>
         <ChatBubbleOutline style={{ fontSize: 30, color: "white" }} />
       </div>
-      {/* Chat Box */}
       {isChatOpen && (
         <div className={styles.chatBox}>
           <div className={styles.chatContent}>

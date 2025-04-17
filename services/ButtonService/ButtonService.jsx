@@ -11,15 +11,27 @@ const ButtonService = ({
   iconRight,
   className,
   style,
-  sx, // ใช้ sx แทน width
+  sx,
   ...rest
 }) => {
-  // State สำหรับจับสถานะ hover
   const [isHovered, setIsHovered] = useState(false);
-  // State สำหรับจับสถานะ active (เมื่อกดปุ่ม)
   const [isActive, setIsActive] = useState(false);
 
-  // สไตล์พื้นฐาน (Base Style)
+  const customColors = {
+    "ย้อนกลับ": {
+      background: "#FEFAEF",
+      text: "#F1D079",
+      hover: "#f7f0d8",
+    },
+    "ถัดไป": {
+      background: "#EDC458",
+      text: "#FFFFFF",
+      hover: "#e0b849",
+    },
+  };
+
+  const isCustom = color in customColors;
+
   const baseStyle = {
     padding: "6px 20px",
     borderRadius: "15px",
@@ -31,51 +43,50 @@ const ButtonService = ({
     justifyContent: "center",
     gap: "8px",
     transition: "all 0.3s ease",
-    width: "100%", // ค่า default สำหรับ width เป็น auto
+    width: "100%",
   };
 
-  // สไตล์ตาม variant
   let variantStyle = {};
   if (variant === "outlined") {
     variantStyle = {
       backgroundColor: "#FFF",
-      border: `2px solid ${color}`,
-      color: color,
+      border: `2px solid ${isCustom ? customColors[color].text : color}`,
+      color: isCustom ? customColors[color].text : color,
     };
   } else {
     variantStyle = {
-      backgroundColor: color,
-      color: "#FFF",
+      backgroundColor: isCustom ? customColors[color].background : color,
+      color: isCustom ? customColors[color].text : "#FFF",
     };
   }
 
-  // สไตล์สำหรับ hover effect (เลื่อนขึ้นนิดๆ)
   const hoverStyle =
     isHovered && !isActive
       ? {
-          transform: "translateY(-3px)",
-          boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-        }
+        transform: "translateY(-3px)",
+        boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
+        backgroundColor:
+          variant === "contained" && isCustom
+            ? customColors[color].hover
+            : undefined,
+      }
       : { transform: "translateY(0)" };
 
-  // สไตล์สำหรับ active effect (กดแล้วเด้งลง)
   const activeStyle = isActive
     ? {
-        transform: "translateY(3px)",
-        boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.15)",
-      }
+      transform: "translateY(3px)",
+      boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.15)",
+    }
     : {};
 
-  // หาก active อยู่ ให้ใช้ activeStyle แทน hoverStyle
   const combinedTransformStyle = isActive ? activeStyle : hoverStyle;
 
-  // รวมสไตล์ทั้งหมด
   const combinedStyle = {
     ...baseStyle,
     ...variantStyle,
     ...combinedTransformStyle,
     ...style,
-    ...sx, // ใช้ sx prop เพื่อกำหนดสไตล์เพิ่มเติม
+    ...sx,
   };
 
   return (
@@ -84,7 +95,7 @@ const ButtonService = ({
       onClick={onClick}
       disabled={disabled}
       className={className}
-      style={combinedStyle} // ใช้ combinedStyle รวมทั้ง sx ที่ส่งมา
+      style={combinedStyle}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         setIsHovered(false);
@@ -94,13 +105,9 @@ const ButtonService = ({
       onMouseUp={() => setIsActive(false)}
       {...rest}
     >
-      {iconLeft && <span style={{ marginBottom: "-7px" }}>{iconLeft}</span>}{" "}
-      {/* Added marginTop to iconLeft */}
+      {iconLeft && <span style={{ marginBottom: "-7px" }}>{iconLeft}</span>}
       {label}
-      {iconRight && (
-        <span style={{ marginBottom: "-7px" }}>{iconRight}</span>
-      )}{" "}
-      {/* Added marginTop to iconRight */}
+      {iconRight && <span style={{ marginBottom: "-7px" }}>{iconRight}</span>}
     </button>
   );
 };
@@ -115,7 +122,7 @@ ButtonService.propTypes = {
   iconRight: PropTypes.node,
   className: PropTypes.string,
   style: PropTypes.object,
-  sx: PropTypes.object, // ใช้ prop sx แทน width
+  sx: PropTypes.object,
 };
 
 ButtonService.defaultProps = {
@@ -128,7 +135,7 @@ ButtonService.defaultProps = {
   iconRight: null,
   className: "",
   style: {},
-  sx: {}, // ค่า default สำหรับ sx เป็นอ็อบเจ็กต์ว่าง
+  sx: {},
 };
 
 export default ButtonService;

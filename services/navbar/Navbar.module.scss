@@ -7,11 +7,11 @@
 
 .navbar {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1440px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  padding: 8px 32px;
   color: white;
   height: 70px;
 }
@@ -189,6 +189,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -197,11 +198,96 @@
 
 /* Responsive adjustments */
 @media (max-width: 901px) {
+
   .menu,
   .buttonContainer {
     display: none;
   }
+
   .hamburger {
     display: flex;
   }
+}
+
+@media (max-width: 1024px) {
+
+  .complaintButton,
+  .followupButton {
+    padding: 6px 18px;
+    font-size: 13px;
+  }
+
+  .userDisplay {
+    justify-content: center;
+  }
+}
+
+.userDisplay {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 100%;
+}
+
+.profileImage {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.complaintButton {
+  background-color: #EDC458;
+  color: #003366;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 8px 24px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 140px;
+}
+
+.followupButton {
+  background-color: #E0E6F7;
+  color: #003366;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 8px 24px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 140px;
+}
+
+.mobileLoginInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 16px;
+  color: white;
+  gap: 8px;
+}
+
+.mobileLoginInfo .profileImage {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.mobileLoginInfo .complaintButton,
+.mobileLoginInfo .followupButton {
+  width: 100%;
+  text-align: center;
 }

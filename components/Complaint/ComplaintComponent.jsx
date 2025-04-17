@@ -7,17 +7,29 @@ import Tab1 from "./Tabs/tab1";
 import Tab2 from "./Tabs/tab2";
 import Tab3 from "./Tabs/tab3";
 import Tab4 from "./Tabs/tab4";
+import useComplaintForm from "@hooks/user/complaint/useComplaintForm";
 
-// Components per step, including Tab4 (no stepper on 4th)
 const processComponents = [Tab1, Tab2, Tab3, Tab4];
-// Step labels for the first three steps
-const stepLabels = ["กระบวนการทั่วไป", "กระบวนการพิเศษ", "ขั้นตอนราชการ"];
+const stepLabels = ["ข้อมูลผู้ร้องทุกข์", "ข้อมูลผู้ถูกร้องทุกข์", "รายละเอียดเรื่องร้องทุกข์"];
 
-function ComplaintComponent() {
+export default function ComplaintComponent() {
   const [activeStep, setActiveStep] = useState(0);
+  const [acceptSubmit, setAcceptSubmit] = useState(false);
   const StepComponent = processComponents[activeStep];
+  const {
+    formData,
+    updateStepData,
+    getStepTabData,
+    getFormData,
+    handleSubmitForm,
+  } = useComplaintForm();
 
   const handleNext = () => {
+    const currentStepKey = `step${activeStep + 1}`;
+    const currentTabData = getStepTabData(currentStepKey, "general");
+
+    console.log(`📦 Data in ${currentStepKey}:`, currentTabData);
+
     setActiveStep((prev) => Math.min(prev + 1, processComponents.length - 1));
   };
 
@@ -25,76 +37,56 @@ function ComplaintComponent() {
     setActiveStep((prev) => Math.max(prev - 1, 0));
   };
 
-  const handleSubmit = () => {
-    // TODO: implement submit logic
-    console.log("Submitting complaint...");
+  const handleSubmit = async () => {
+    await handleSubmitForm();
   };
 
-  // show stepper/navigation for first 3 steps only
-  const showNavigation = activeStep < stepLabels.length;
-
+ 
   return (
     <>
       <NavbarMain />
       <Box sx={{ backgroundColor: "#eaf5ff", minHeight: "100vh", py: 4 }}>
         <Container maxWidth="lg">
           <Box sx={{ display: "flex", gap: 4 }}>
-            {showNavigation && (
-              <Box sx={{ width: 200 }}>
-                <StepperComponent
-                  steps={stepLabels}
-                  activeStep={activeStep}
-                  setActiveStep={setActiveStep}
-                />
-              </Box>
-            )}
+            <Box sx={{ width: 200 }}>
+              <StepperComponent
+                steps={stepLabels}
+                activeStep={activeStep}
+                setActiveStep={setActiveStep}
+              />
+            </Box>
 
             <Box sx={{ flex: 1 }}>
-              {/* Render the current tab component, passing navigation props on Tab4 */}
-              {activeStep < 3 ? (
-                <StepComponent activeStep={activeStep} />
-              ) : (
-                <StepComponent onBack={handleBack} onSubmit={handleSubmit} />
-              )}
+              <StepComponent
+                stepKey={`step${activeStep + 1}`}
+                tabData={getStepTabData(`step${activeStep + 1}`, "general")}
+                updateStepData={updateStepData}
+                onAccepted={setAcceptSubmit}
+              />
 
-              {showNavigation && (
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    mt: 4,
-                    gap: 2,
-                    width: "fit-content",
-                    mx: "auto",
-                  }}
-                >
-                  {activeStep > 0 && (
-                    <ButtonService
-                      label="ย้อนกลับ"
-                      variant="outlined"
-                      onClick={handleBack}
-                      color="#EDC458"
-                      sx={{ width: "auto" }}
-                    />
-                  )}
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 4, gap: 2 }}>
+                {activeStep > 0 && (
                   <ButtonService
-                    label={
-                      activeStep === processComponents.length - 1
-                        ? "เสร็จสิ้น"
-                        : "ถัดไป"
-                    }
+                    label="ย้อนกลับ"
+                    color="ย้อนกลับ"
                     variant="contained"
-                    onClick={
-                      activeStep === stepLabels.length
-                        ? handleSubmit
-                        : handleNext
-                    }
-                    color="#EDC458"
-                    disabled={activeStep === stepLabels.length}
-                    sx={{ width: "auto" }}
+                    onClick={handleBack}
                   />
-                </Box>
-              )}
+                )}
+                <ButtonService
+                  label={activeStep === processComponents.length - 1 ? "ส่งเรื่องร้องทุกข์" : "ถัดไป"}
+                  color="ถัดไป"
+                  variant="contained"
+                  onClick={
+                    activeStep === processComponents.length - 1
+                      ? handleSubmit
+                      : handleNext
+                  }
+                  disabled={
+                    activeStep === processComponents.length - 1 && !acceptSubmit
+                  }
+                />
+              </Box>
             </Box>
           </Box>
         </Container>
@@ -102,5 +94,3 @@ function ComplaintComponent() {
     </>
   );
 }
-
-export default ComplaintComponent;

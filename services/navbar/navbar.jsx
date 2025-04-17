@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import styles from "./Navbar.module.scss";
 import { useRouter } from "next/router";
+import Cookies from "js-cookie";
 
 export default function Navbar() {
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
   const menuRef = useRef(null);
   const router = useRouter();
 
@@ -11,16 +13,35 @@ export default function Navbar() {
     router.push("/login");
   };
 
+  const handleComplaintClick = () => {
+    router.push("/complaint");
+  };
+  const handleFollowUpClick = () => {
+    router.push("/followup");
+  };
+
   const toggleMobileMenu = () => {
     setMobileMenuOpen((prev) => !prev);
   };
 
-  // ปิดเมนูเมื่อคลิกนอก container
   const handleClickOutside = (event) => {
     if (menuRef.current && !menuRef.current.contains(event.target)) {
       setMobileMenuOpen(false);
     }
   };
+
+  useEffect(() => {
+    const cookieInfo = Cookies.get("info");
+    if (cookieInfo) {
+      try {
+        const parsedInfo = JSON.parse(cookieInfo);
+        setUserInfo(parsedInfo);
+      } catch (err) {
+        console.error("Error parsing user info cookie:", err);
+      }
+    }
+  }, []);
+
 
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -38,7 +59,6 @@ export default function Navbar() {
       <nav className={styles.navbar}>
         <div className={styles.logoGroup}>
           <img src="/logo.png" alt="ตราครุฑ" className={styles.logo} />
-          {/* ย้าย Mobile Menu Container ให้ติดกับโลโก้ */}
           <div className={styles.mobileMenuContainer} ref={menuRef}>
             <div className={styles.hamburger} onClick={toggleMobileMenu}>
               <div className={styles.bar}></div>
@@ -48,7 +68,7 @@ export default function Navbar() {
             {isMobileMenuOpen && (
               <div className={styles.mobileMenu}>
                 <a
-                  href="#"
+                  href="/"
                   className={styles.mobileMenuItem}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -75,22 +95,40 @@ export default function Navbar() {
                 >
                   คำถามที่พบบ่อย
                 </a>
-                <button
-                  className={styles.mobileLoginButton}
-                  onClick={() => {
-                    handleLoginClick();
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  ลงชื่อเข้าใช้
-                </button>
+                {userInfo ? (
+                  <div className={styles.mobileLoginInfo}>
+                    <img
+                      src="/icons/userprofile.png"
+                      alt="โปรไฟล์ผู้ใช้"
+                      className={styles.profileImage}
+                    />
+                    สวัสดี คุณ {userInfo.first_name} 
+                    <button className={styles.complaintButton} onClick={handleComplaintClick}>
+                      แจ้งเรื่องร้องทุกข์
+                    </button>
+                    <button className={styles.followupButton} onClick={handleFollowUpClick}>
+                      ติดตามผล
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className={styles.mobileLoginButton}
+                    onClick={() => {
+                      handleLoginClick();
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    ลงชื่อเข้าใช้
+                  </button>
+                )}
+
               </div>
             )}
           </div>
         </div>
 
         <div className={styles.menu}>
-          <a href="#" className={styles.menuItem}>
+          <a href="/" className={styles.menuItem}>
             หน้าหลัก
           </a>
           <a href="#" className={styles.menuItem}>
@@ -105,10 +143,31 @@ export default function Navbar() {
         </div>
 
         <div className={styles.buttonContainer}>
-          <button className={styles.loginButton} onClick={handleLoginClick}>
-            ลงชื่อเข้าใช้
-          </button>
+          {userInfo ? (
+            <div className={styles.userDisplay}>
+              <img
+                src="/icons/userprofile.png"
+                alt="โปรไฟล์ผู้ใช้"
+                className={styles.profileImage}
+              />
+              <span>
+                สวัสดี คุณ {userInfo.first_name}
+              </span>
+              <button className={styles.complaintButton} onClick={handleComplaintClick}>
+                แจ้งเรื่องร้องทุกข์
+              </button>
+              <button className={styles.followupButton} onClick={handleFollowUpClick}>
+                ติดตามผล
+              </button>
+            </div>
+          ) : (
+            <button className={styles.loginButton} onClick={handleLoginClick}>
+              ลงชื่อเข้าใช้
+            </button>
+          )}
         </div>
+
+
       </nav>
     </div>
   );

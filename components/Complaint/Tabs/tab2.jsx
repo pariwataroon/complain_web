@@ -1,54 +1,78 @@
 import React, { useState } from "react";
-import styles from "./TabNav2.module.scss";
+import styles from "./TabNav.module.scss";
+import ComplaintPersonalForm from "@services/ComplaintPersonal/ComplaintPersonalForm";
 
 const tabs = ["บุคคลทั่วไป", "นิติบุคคล", "หน่วยงานของรัฐ"];
 const underlineColors = ["#0B1F8F", "#3FA9F5", "#EDC458"];
 
-const Tab2 = () => {
+const Tab2 = ({ stepKey, tabData, updateStepData }) => {
   const [active, setActive] = useState(0);
-  const underlineColor = underlineColors[active];
+
+  const handleChange = (type) => (name, value) => {
+    const updatedTypeData = {
+      ...(tabData[type] || {}),
+      [name]: value,
+    };
+
+    const updatedData = {
+      ...tabData,
+      [type]: updatedTypeData,
+    };
+
+    updateStepData(stepKey, "general", updatedData);
+  };
+
 
   return (
     <div className={styles.container}>
-      {/* Tab Navigation */}
-      <div
-        className={styles.tabNav}
-        style={{ "--underline-color": underlineColor }}
-      >
+      <div className={styles.tabNav}>
         {tabs.map((label, idx) => (
           <div
             key={idx}
-            className={`${styles.tab} ${styles[`tab${idx}`]} ${
-              active === idx ? styles.active : ""
-            }`}
+            className={`${styles.tab} ${styles[`tab${idx}`]} ${active === idx ? styles.active : ""}`}
             onClick={() => setActive(idx)}
           >
             {label}
           </div>
         ))}
+        <div
+          className={styles.underlineBar}
+          style={{ backgroundColor: underlineColors[active] }}
+        />
       </div>
 
-      {/* Form Placeholder based on active tab */}
+      {/* บุคคลทั่วไป */}
       {active === 0 && (
-        <>
-          <div className={styles.formContainer} />
-          <div className={styles.formContainer2} />
-        </>
-      )}
-      {active === 1 && (
-        <>
-          <div className={styles.formContainer} />
-          <div className={styles.formContainer2} />
-        </>
-      )}
-      {active === 2 && (
-        <>
-          <div className={styles.formContainer} />
-          <div className={styles.formContainer2} />
-        </>
+        <div className={styles.formContainer}>
+          <ComplaintPersonalForm
+            data={tabData.individual || {}}
+            onChange={handleChange("individual")}
+            title="ข้อมูลผู้ถูกร้องทุกข์"
+          />
+        </div>
       )}
 
-      {/* Next Button */}
+      {/* นิติบุคคล */}
+      {active === 1 && (
+        <div className={styles.formContainer}>
+          <ComplaintPersonalForm
+            data={tabData.corporate || {}}
+            onChange={handleChange("corporate")}
+            title="ข้อมูลผู้ถูกร้องทุกข์"
+          />
+        </div>
+      )}
+
+      {/* หน่วยงานของรัฐ */}
+      {active === 2 && (
+        <div className={styles.formContainer}>
+          <ComplaintPersonalForm
+            data={tabData.government || {}}
+            onChange={handleChange("government")}
+            title="ข้อมูลหน่วยงานของรัฐที่ถูกร้องทุกข์"
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import Navbar from "@services/navbar/navbar";
+import Navbar  from "@services/navbar/navbar";
 import Footer from "@services/footer/footer";
 import Homepage1 from "@services/homepage1/homepage1";
 import Homepage2 from "@services/homepage2/homepage2";

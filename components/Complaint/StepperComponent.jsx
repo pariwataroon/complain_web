@@ -1,4 +1,3 @@
-// StepperComponent.jsx
 import React from "react";
 import styles from "./StepperComponent.module.scss";
 

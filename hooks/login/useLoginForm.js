@@ -17,13 +17,13 @@ export const useLoginForm = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
-    console.log("📥 Login Data:", data);
+    console.log("Login Data:", data);
 
     try {
       const { citizen_id, password } = data;
       const response = await loginCard({ citizen_id, password });
-      if (response && response.res_code === "0001") {
-        alertSuccess("เข้าสู่ระบบสำเร็จ", "ยินดีต้อนรับกลับมา");
+      if (response && response.res_code === "0001" || response.res_code === "0000") {
+        alertSuccess("เข้าสู่ระบบสำเร็จ", "ยินดีต้อนรับเข้าสู่ระบบ");
         reset();
 
         setTimeout(() => {
