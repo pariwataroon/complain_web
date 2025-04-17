@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from uuid import UUID
 
 from models.user import User
@@ -7,33 +7,21 @@ from models.role import Role
 from models.permission import Permission
 from models.resource import Resource
 from models.user_role import UserRole
+from lib.logger import get_logger
+
+logger = get_logger("permission_controller")
 
 def get_user_permissions(db: Session, user_id: UUID, resource_path: str) -> Optional[dict]:
     """
-    ดึงข้อมูลสิทธิ์ของผู้ใช้สำหรับทรัพยากรที่ระบุ
+    ดึงข้อมูลสิทธิ์ของผู้ใช้สำหรับทรัพยากรที่ระบุ โดยพิจารณาทั้งสิทธิ์จากบทบาทและสิทธิ์เฉพาะบุคคล
     """
     # ดึงทรัพยากรจาก path
     resource = db.query(Resource).filter(Resource.path == resource_path, Resource.is_active == True).first()
     if not resource:
+        logger.info(f"Resource with path '{resource_path}' not found")
         return None
     
-    # ดึงบทบาทของผู้ใช้
-    user_roles = db.query(UserRole).filter(UserRole.user_id == user_id).all()
-    if not user_roles:
-        return None
-    
-    role_ids = [ur.role_id for ur in user_roles]
-    
-    # ดึงสิทธิ์ของบทบาทต่อทรัพยากร
-    permissions = db.query(Permission).filter(
-        Permission.role_id.in_(role_ids),
-        Permission.resource_id == resource.id
-    ).all()
-    
-    if not permissions:
-        return None
-    
-    # รวมสิทธิ์จากทุกบทบาท (หากมีสิทธิ์ใน role ใด ก็จะได้รับสิทธิ์นั้น)
+    # เตรียมสิทธิ์เริ่มต้น
     combined_permissions = {
         "can_create": False,
         "can_read": False,
@@ -41,12 +29,58 @@ def get_user_permissions(db: Session, user_id: UUID, resource_path: str) -> Opti
         "can_delete": False
     }
     
-    for perm in permissions:
+    # ดึงสิทธิ์เฉพาะบุคคล (user-based permission)
+    user_permissions = db.query(Permission).filter(
+        Permission.user_id == user_id,
+        Permission.resource_id == resource.id
+    ).all()
+    
+    # ถ้ามีสิทธิ์เฉพาะบุคคลที่ override บทบาท ให้ใช้สิทธิ์นั้นเลย
+    override_permissions = [p for p in user_permissions if p.override_role]
+    if override_permissions:
+        for perm in override_permissions:
+            combined_permissions["can_create"] |= perm.can_create
+            combined_permissions["can_read"] |= perm.can_read
+            combined_permissions["can_update"] |= perm.can_update
+            combined_permissions["can_delete"] |= perm.can_delete
+        
+        logger.info(f"Using override user permissions for user {user_id} on resource {resource_path}")
+        return combined_permissions
+    
+    # ถ้าไม่มีสิทธิ์ override บทบาท ให้ใช้ทั้งสิทธิ์จากบทบาทและสิทธิ์เฉพาะบุคคลรวมกัน
+    
+    # ดึงบทบาทของผู้ใช้
+    user_roles = db.query(UserRole).filter(UserRole.user_id == user_id).all()
+    
+    # ถ้าไม่มีบทบาทและไม่มีสิทธิ์เฉพาะบุคคล
+    if not user_roles and not user_permissions:
+        logger.info(f"User {user_id} has no roles and no specific permissions for {resource_path}")
+        return None
+    
+    # ดึงสิทธิ์จากบทบาท
+    if user_roles:
+        role_ids = [ur.role_id for ur in user_roles]
+        
+        role_permissions = db.query(Permission).filter(
+            Permission.role_id.in_(role_ids),
+            Permission.resource_id == resource.id
+        ).all()
+        
+        # รวมสิทธิ์จากบทบาท
+        for perm in role_permissions:
+            combined_permissions["can_create"] |= perm.can_create
+            combined_permissions["can_read"] |= perm.can_read
+            combined_permissions["can_update"] |= perm.can_update
+            combined_permissions["can_delete"] |= perm.can_delete
+    
+    # เพิ่มสิทธิ์เฉพาะบุคคล (ที่ไม่ override)
+    for perm in user_permissions:
         combined_permissions["can_create"] |= perm.can_create
         combined_permissions["can_read"] |= perm.can_read
         combined_permissions["can_update"] |= perm.can_update
         combined_permissions["can_delete"] |= perm.can_delete
     
+    logger.info(f"Combined permissions for user {user_id} on resource {resource_path}: {combined_permissions}")
     return combined_permissions
 
 def check_permission(db: Session, user_id: UUID, resource_path: str, action: str) -> bool:
@@ -73,7 +107,10 @@ def check_permission(db: Session, user_id: UUID, resource_path: str, action: str
         "delete": "can_delete"
     }
     
-    return permissions.get(permission_map.get(action, ""), False)
+    has_permission = permissions.get(permission_map.get(action, ""), False)
+    logger.info(f"Permission check for user {user_id} on {resource_path}, action {action}: {has_permission}")
+    
+    return has_permission
 
 def create_role(db: Session, role_data):
     """สร้างบทบาทใหม่"""
@@ -88,7 +125,7 @@ def create_role(db: Session, role_data):
 
 def get_roles(db: Session, skip: int = 0, limit: int = 100):
     """ดึงข้อมูลบทบาททั้งหมด"""
-    return db.query(Role).offset(skip).limit(limit).all()
+    return db.query(Role).order_by(Role.name).offset(skip).limit(limit).all()
 
 def update_role(db: Session, role_id: UUID, role_data):
     """อัปเดตข้อมูลบทบาท"""
@@ -127,7 +164,7 @@ def create_resource(db: Session, resource_data):
 
 def get_resources(db: Session, skip: int = 0, limit: int = 100):
     """ดึงข้อมูลทรัพยากรทั้งหมด"""
-    return db.query(Resource).offset(skip).limit(limit).all()
+    return db.query(Resource).order_by(Resource.name).offset(skip).limit(limit).all()
 
 def update_resource(db: Session, resource_id: UUID, resource_data):
     """อัปเดตข้อมูลทรัพยากร"""
@@ -154,20 +191,30 @@ def delete_resource(db: Session, resource_id: UUID):
 
 def create_permission(db: Session, permission_data):
     """สร้างสิทธิ์ใหม่"""
+    # ตรวจสอบว่ามีการระบุ role_id หรือ user_id อย่างน้อย 1 อย่าง
+    if permission_data.role_id is None and permission_data.user_id is None:
+        raise ValueError("Permission must be associated with either a role or a user")
+    
+    # ตรวจสอบว่าถ้ามีทั้ง role_id และ user_id ให้เตือน
+    if permission_data.role_id is not None and permission_data.user_id is not None:
+        raise ValueError("Permission must be associated with either a role or a user, not both")
+    
     permission = Permission(
         role_id=permission_data.role_id,
+        user_id=permission_data.user_id,
         resource_id=permission_data.resource_id,
         can_create=permission_data.can_create,
         can_read=permission_data.can_read,
         can_update=permission_data.can_update,
-        can_delete=permission_data.can_delete
+        can_delete=permission_data.can_delete,
+        override_role=permission_data.override_role
     )
     db.add(permission)
     db.commit()
     db.refresh(permission)
     return permission
 
-def get_permissions(db: Session, role_id: UUID = None, resource_id: UUID = None):
+def get_permissions(db: Session, role_id: UUID = None, resource_id: UUID = None, user_id: UUID = None):
     """ดึงข้อมูลสิทธิ์ตามเงื่อนไข"""
     query = db.query(Permission)
     
@@ -177,7 +224,10 @@ def get_permissions(db: Session, role_id: UUID = None, resource_id: UUID = None)
     if resource_id:
         query = query.filter(Permission.resource_id == resource_id)
     
-    return query.all()
+    if user_id:
+        query = query.filter(Permission.user_id == user_id)
+    
+    return query.order_by(Permission.id).all()
 
 def update_permission(db: Session, permission_id: UUID, permission_data):
     """อัปเดตข้อมูลสิทธิ์"""
