@@ -18,9 +18,11 @@ class Permission(Base):
     can_read = Column(Boolean, default=False)
     can_update = Column(Boolean, default=False)
     can_delete = Column(Boolean, default=False)
+    override_role = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # ความสัมพันธ์กับตาราง roles และ resources
     role = relationship("Role", back_populates="permissions")
     resource = relationship("Resource", back_populates="permissions")
+    user = relationship("User", backref="permissions")
