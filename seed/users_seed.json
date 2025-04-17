@@ -46,7 +46,7 @@
     },
     {
       "citizen_id": "1234567890126",
-      "title_id": 1,
+      "title_id": 2,
       "prefix_other": "",
       "email": "supervisor@example.com",
       "password": "password",
