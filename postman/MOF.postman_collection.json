@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "ac52639c-0968-452e-a37b-7d5c9bcbd928",
+		"_postman_id": "23f2972a-e94d-49ce-93fa-fbbf43114f1d",
 		"name": "MOF",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "2230736"
@@ -212,7 +212,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"citizen_id\": \"1234567890124\",\r\n    \"password\": \"password\"\r\n}",
+									"raw": "{\r\n    \"citizen_id\": \"1234567890122\",\r\n    \"password\": \"password\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -991,7 +991,7 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions?role_id={{role_id}}",
+											"raw": "{{API}}{{PREFIX}}/permissions?role_id=f4905eee-e108-4e25-b0e2-9c38e36c47a2",
 											"host": [
 												"{{API}}{{PREFIX}}"
 											],
@@ -1001,7 +1001,7 @@
 											"query": [
 												{
 													"key": "role_id",
-													"value": "{{role_id}}"
+													"value": "f4905eee-e108-4e25-b0e2-9c38e36c47a2"
 												}
 											]
 										}
@@ -1192,7 +1192,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n    \"user_id\": \"{{user_id}}\",\r\n    \"role_id\": \"{{role_id}}\"\r\n}",
+											"raw": "{\r\n    \"user_id\": \"e0aeab39-acc9-447b-bb8c-21793604d8df\",\r\n    \"role_id\": \"142d6a47-cbaf-4f5c-a2f6-c48710475d7d\"\r\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -1265,14 +1265,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/user-roles/{{user_id}}",
+											"raw": "{{API}}{{PREFIX}}/permissions/user-roles/e0aeab39-acc9-447b-bb8c-21793604d8df",
 											"host": [
 												"{{API}}{{PREFIX}}"
 											],
 											"path": [
 												"permissions",
 												"user-roles",
-												"{{user_id}}"
+												"e0aeab39-acc9-447b-bb8c-21793604d8df"
 											]
 										}
 									},
@@ -1281,33 +1281,6 @@
 							]
 						}
 					]
-				},
-				{
-					"name": "Auth",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n    \"auth_code\": \"MWVmMzEwZjMtODkwNC00ODFiLTllY2QtN2RlNDQzYWMxNWVhIzdiYzYyODYwLTNjODMtNDE4Yi04OGU5LTBlZTk4MjVhMzRlOA\",\r\n    \"redirect_uri\": \"https://ff3p4flc-3000.asse.devtunnels.ms/callback\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{API}}{{PREFIX}}/thaid/auth",
-							"host": [
-								"{{API}}{{PREFIX}}"
-							],
-							"path": [
-								"thaid",
-								"auth"
-							]
-						}
-					},
-					"response": []
 				}
 			]
 		}
