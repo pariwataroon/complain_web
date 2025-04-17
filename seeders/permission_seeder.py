@@ -80,7 +80,8 @@ class PermissionSeeder(BaseSeeder):
                         "can_create": perm_data.get("can_create", False),
                         "can_read": perm_data.get("can_read", False),
                         "can_update": perm_data.get("can_update", False),
-                        "can_delete": perm_data.get("can_delete", False)
+                        "can_delete": perm_data.get("can_delete", False),
+                        "override_role": perm_data.get("override_role", False)  # เพิ่มฟิลด์ override_role
                     }
                     
                     # กรณีที่เป็น role-based permission
