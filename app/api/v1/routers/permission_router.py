@@ -240,6 +240,83 @@ async def read_permissions(
     except Exception as e:
         print(f"Error fetching permissions: {str(e)}")
         return format_response("5000", {"error": "Error fetching permissions"})
+    
+
+# เพิ่ม endpoint ใหม่เพื่อแสดงข้อมูลสิทธิ์ทั้งหมดของทุก resource
+@router.get("/resources-permissions", response_model=FormatResponseModel)
+async def get_all_resources_with_permissions(
+    skip: int = 0, 
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_access"))
+):
+    """
+    ดึงข้อมูลทรัพยากรทั้งหมดพร้อมรายละเอียดสิทธิ์ - ต้องมีสิทธิ์อ่านใน setting_access
+    
+    แสดงรายละเอียดว่าแต่ละทรัพยากรมี role และ user ใดบ้างที่มีสิทธิ์เข้าถึง
+    """
+    try:
+        # ดึงข้อมูล resources ทั้งหมด
+        resources = db.query(Resource).order_by(Resource.id).offset(skip).limit(limit).all()
+        
+        result = []
+        
+        for resource in resources:
+            resource_data = ResourceResponse.model_validate(resource).model_dump()
+            
+            # ดึงข้อมูล role ที่มีสิทธิ์กับ resource นี้
+            role_permissions = []
+            user_permissions = []
+            
+            permissions = db.query(Permission).filter(Permission.resource_id == resource.id).all()
+            
+            for permission in permissions:
+                if permission.role_id:
+                    # กรณีเป็น role-based permission
+                    role = db.query(Role).filter(Role.id == permission.role_id).first()
+                    if role:
+                        role_info = {
+                            "role_id": str(role.id),
+                            "role_name": role.name,
+                            "can_create": permission.can_create,
+                            "can_read": permission.can_read,
+                            "can_update": permission.can_update,
+                            "can_delete": permission.can_delete
+                        }
+                        role_permissions.append(role_info)
+                
+                elif permission.user_id:
+                    # กรณีเป็น user-based permission
+                    from models.user import User
+                    user = db.query(User).filter(User.id == permission.user_id).first()
+                    if user:
+                        user_info = {
+                            "user_id": str(user.id),
+                            "full_name": f"{user.first_name} {user.last_name}",
+                            "email": user.email,
+                            "can_create": permission.can_create,
+                            "can_read": permission.can_read,
+                            "can_update": permission.can_update,
+                            "can_delete": permission.can_delete,
+                            "override_role": permission.override_role
+                        }
+                        user_permissions.append(user_info)
+            
+            # เพิ่มข้อมูลสิทธิ์เข้าไปใน resource data
+            resource_data["role_permissions"] = role_permissions
+            resource_data["user_permissions"] = user_permissions
+            resource_data["total_roles"] = len(role_permissions)
+            resource_data["total_users"] = len(user_permissions)
+            
+            result.append(resource_data)
+        
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error fetching resources with permissions: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return format_response("5000", {"error": "Error fetching resources with permissions"})
+
 
 @router.get("/{permission_id}", response_model=FormatResponseModel)
 async def read_permission(
@@ -368,3 +445,209 @@ async def get_combined_permissions(
     except Exception as e:
         print(f"Error getting combined permissions: {str(e)}")
         return format_response("5000", {"error": "Error getting combined permissions"})
+
+
+# เพิ่ม endpoint สำหรับดูรายละเอียด permissions ของ resource ที่ระบุ
+@router.get("/resources/{resource_id}/permissions", response_model=FormatResponseModel)
+async def get_resource_permissions(
+    resource_id: UUID, 
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_access"))
+):
+    """
+    ดึงข้อมูลสิทธิ์ทั้งหมดของทรัพยากรที่ระบุ - ต้องมีสิทธิ์อ่านใน setting_access
+    
+    แสดงรายละเอียดว่าทรัพยากรนี้มีการกำหนดสิทธิ์ให้กับ role และ user ใดบ้าง
+    """
+    try:
+        # ตรวจสอบว่า resource นี้มีอยู่หรือไม่
+        resource = db.query(Resource).filter(Resource.id == resource_id).first()
+        if not resource:
+            return format_response("4040", {"error": f"Resource with ID {resource_id} not found"})
+        
+        # ดึงข้อมูล permission ทั้งหมดที่เกี่ยวข้องกับ resource นี้
+        permissions = db.query(Permission).filter(Permission.resource_id == resource_id).all()
+        
+        # แยกเป็น role-based permissions และ user-based permissions
+        role_permissions = []
+        user_permissions = []
+        
+        for permission in permissions:
+            permission_data = PermissionResponse.model_validate(permission).model_dump()
+            
+            if permission.role_id:
+                # ดึงข้อมูล role
+                role = db.query(Role).filter(Role.id == permission.role_id).first()
+                if role:
+                    permission_data["role_name"] = role.name
+                    permission_data["role_description"] = role.description
+                    
+                    # ดึงจำนวนผู้ใช้ที่มีบทบาทนี้
+                    from models.user_role import UserRole
+                    user_count = db.query(UserRole).filter(UserRole.role_id == role.id).count()
+                    permission_data["user_count"] = user_count
+                    
+                    role_permissions.append(permission_data)
+            
+            elif permission.user_id:
+                # ดึงข้อมูล user
+                from models.user import User
+                user = db.query(User).filter(User.id == permission.user_id).first()
+                if user:
+                    permission_data["user_full_name"] = f"{user.first_name} {user.last_name}"
+                    permission_data["user_email"] = user.email
+                    user_permissions.append(permission_data)
+        
+        # สร้างข้อมูลผลลัพธ์
+        result = {
+            "resource": ResourceResponse.model_validate(resource).model_dump(),
+            "role_permissions": role_permissions,
+            "user_permissions": user_permissions,
+            "total_role_permissions": len(role_permissions),
+            "total_user_permissions": len(user_permissions)
+        }
+        
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error fetching resource permissions: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return format_response("5000", {"error": "Error fetching resource permissions"})
+
+
+# เพิ่ม endpoint สำหรับค้นหา resource ตามชื่อหรือคำอธิบาย
+@router.get("/resources/search", response_model=FormatResponseModel)
+async def search_resources(
+    query: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_access"))
+):
+    """
+    ค้นหาทรัพยากรตามชื่อหรือคำอธิบาย - ต้องมีสิทธิ์อ่านใน setting_access
+    """
+    try:
+        # ค้นหา resources ที่ชื่อหรือคำอธิบายมีคำที่ต้องการค้นหา
+        from sqlalchemy import or_
+        resources = db.query(Resource).filter(
+            or_(
+                Resource.name.ilike(f"%{query}%"),
+                Resource.description.ilike(f"%{query}%"),
+                Resource.path.ilike(f"%{query}%")
+            )
+        ).all()
+        
+        result = [ResourceResponse.model_validate(resource).model_dump() for resource in resources]
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error searching resources: {str(e)}")
+        return format_response("5000", {"error": "Error searching resources"})
+
+
+# เพิ่ม endpoint ใหม่สำหรับดูข้อมูลผู้ใช้ที่มีสิทธิ์เข้าถึง resource ที่ระบุ
+@router.get("/resources/{resource_id}/users", response_model=FormatResponseModel)
+async def get_users_with_access_to_resource(
+    resource_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_access"))
+):
+    """
+    ดึงข้อมูลผู้ใช้ทั้งหมดที่มีสิทธิ์เข้าถึงทรัพยากรที่ระบุ - ต้องมีสิทธิ์อ่านใน setting_access
+    
+    รวมทั้งผู้ใช้ที่ได้รับสิทธิ์โดยตรงและผู้ใช้ที่ได้รับสิทธิ์ผ่านบทบาท
+    """
+    try:
+        # ตรวจสอบว่า resource นี้มีอยู่หรือไม่
+        resource = db.query(Resource).filter(Resource.id == resource_id).first()
+        if not resource:
+            return format_response("4040", {"error": f"Resource with ID {resource_id} not found"})
+        
+        # ดึงข้อมูลผู้ใช้ที่มีสิทธิ์เข้าถึง resource โดยตรง
+        from models.user import User
+        direct_user_ids = db.query(Permission.user_id).filter(
+            Permission.resource_id == resource_id,
+            Permission.user_id != None
+        ).distinct().all()
+        direct_user_ids = [user_id[0] for user_id in direct_user_ids]
+        
+        users_with_direct_access = []
+        if direct_user_ids:
+            direct_users = db.query(User).filter(User.id.in_(direct_user_ids)).all()
+            for user in direct_users:
+                # ดึงสิทธิ์ของผู้ใช้สำหรับ resource นี้
+                permission = db.query(Permission).filter(
+                    Permission.resource_id == resource_id,
+                    Permission.user_id == user.id
+                ).first()
+                
+                user_data = {
+                    "id": str(user.id),
+                    "full_name": f"{user.first_name} {user.last_name}",
+                    "email": user.email,
+                    "access_type": "direct",
+                    "can_create": permission.can_create if permission else False,
+                    "can_read": permission.can_read if permission else False,
+                    "can_update": permission.can_update if permission else False,
+                    "can_delete": permission.can_delete if permission else False,
+                    "override_role": permission.override_role if permission else False
+                }
+                users_with_direct_access.append(user_data)
+        
+        # ดึงข้อมูลผู้ใช้ที่มีสิทธิ์เข้าถึง resource ผ่านบทบาท
+        from models.user_role import UserRole
+        
+        # ดึง role_ids ที่มีสิทธิ์เข้าถึง resource นี้
+        role_ids = db.query(Permission.role_id).filter(
+            Permission.resource_id == resource_id,
+            Permission.role_id != None
+        ).distinct().all()
+        role_ids = [role_id[0] for role_id in role_ids]
+        
+        users_with_role_access = []
+        if role_ids:
+            # ดึงข้อมูลผู้ใช้ที่มี role เหล่านี้
+            from sqlalchemy.orm import joinedload
+            user_roles = db.query(UserRole).filter(UserRole.role_id.in_(role_ids)).options(
+                joinedload(UserRole.user),
+                joinedload(UserRole.role)
+            ).all()
+            
+            for user_role in user_roles:
+                if user_role.user and user_role.role:
+                    # ข้ามผู้ใช้ที่มีสิทธิ์โดยตรงอยู่แล้ว
+                    if user_role.user_id in direct_user_ids:
+                        continue
+                        
+                    # ดึงสิทธิ์ของ role สำหรับ resource นี้
+                    permission = db.query(Permission).filter(
+                        Permission.resource_id == resource_id,
+                        Permission.role_id == user_role.role_id
+                    ).first()
+                    
+                    user_data = {
+                        "id": str(user_role.user.id),
+                        "full_name": f"{user_role.user.first_name} {user_role.user.last_name}",
+                        "email": user_role.user.email,
+                        "access_type": "role",
+                        "role_name": user_role.role.name,
+                        "role_id": str(user_role.role.id),
+                        "can_create": permission.can_create if permission else False,
+                        "can_read": permission.can_read if permission else False,
+                        "can_update": permission.can_update if permission else False,
+                        "can_delete": permission.can_delete if permission else False
+                    }
+                    users_with_role_access.append(user_data)
+        
+        # สร้างข้อมูลผลลัพธ์
+        result = {
+            "resource": ResourceResponse.model_validate(resource).model_dump(),
+            "users_with_direct_access": users_with_direct_access,
+            "users_with_role_access": users_with_role_access,
+            "total_users": len(users_with_direct_access) + len(users_with_role_access)
+        }
+        
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error fetching users with access to resource: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return format_response("5000", {"error": "Error fetching users with access to resource"})

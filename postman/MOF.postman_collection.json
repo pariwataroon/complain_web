@@ -942,6 +942,129 @@
 										}
 									},
 									"response": []
+								},
+								{
+									"name": "Get Resource Permissions",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}/permissions",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"resources",
+												"{{resource_id}}",
+												"permissions"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Get All Resources with Permissions",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/resources-permissions",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"resources-permissions"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Search Resources",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/resources/search?query=user",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"resources",
+												"search"
+											],
+											"query": [
+												{
+													"key": "query",
+													"value": "user"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Get Users with Access to Resource",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}/users",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"resources",
+												"{{resource_id}}",
+												"users"
+											]
+										}
+									},
+									"response": []
 								}
 							]
 						},
