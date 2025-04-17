@@ -44,7 +44,7 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).options(joinedload(User.title)).order_by(User.id).offset(skip).limit(limit).all()
 
 
-def create_user(db: Session, user: UserCreate):
+def create_user(db: Session, user: UserCreate, roles: list = None):
     try:
         # Check if user already exists
         existing_email = get_user_by_email(db, user.email)
@@ -70,6 +70,7 @@ def create_user(db: Session, user: UserCreate):
             first_name=user.first_name,
             last_name=user.last_name,
             phone=user.phone if hasattr(user, 'phone') else None,
+            address=user.address if hasattr(user, 'address') else None,
             is_active=True
         )
 
@@ -91,18 +92,31 @@ def create_user(db: Session, user: UserCreate):
         db.commit()
         db.refresh(db_user)
         
-        # กำหนดบทบาทเริ่มต้นให้ผู้ใช้ใหม่ (ในที่นี้คือบทบาท "people")
+        # กำหนดบทบาทตามที่ระบุ หรือใช้บทบาทเริ่มต้น
         from models.role import Role
-        default_role = db.query(Role).filter(Role.name == "people").first()
         
-        if default_role:
-            # สร้างความสัมพันธ์ระหว่างผู้ใช้กับบทบาท
+        roles_to_assign = []
+        
+        # ตรวจสอบว่ามีการระบุบทบาทมาหรือไม่
+        if roles and len(roles) > 0:
+            # ดึงบทบาทตามที่ระบุ
+            roles_to_assign = db.query(Role).filter(Role.name.in_(roles)).all()
+        
+        # ถ้าไม่มีบทบาทที่ระบุหรือไม่พบบทบาทที่ระบุ ใช้บทบาทเริ่มต้น "people"
+        if not roles_to_assign:
+            default_role = db.query(Role).filter(Role.name == "people").first()
+            if default_role:
+                roles_to_assign = [default_role]
+        
+        # เพิ่มบทบาทให้กับผู้ใช้
+        for role in roles_to_assign:
             new_user_role = UserRole(
                 user_id=db_user.id,
-                role_id=default_role.id
+                role_id=role.id
             )
             db.add(new_user_role)
-            db.commit()
+        
+        db.commit()
         
         # รับข้อมูลผู้ใช้พร้อมบทบาทเพื่อส่งกลับ
         user_with_roles = get_user_with_roles_and_titles(db, db_user.id)
