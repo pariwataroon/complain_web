@@ -13,6 +13,7 @@ from seeders.role_seeder import RoleSeeder
 from seeders.resource_seeder import ResourceSeeder
 from seeders.permission_seeder import PermissionSeeder
 from seeders.user_role_seeder import UserRoleSeeder
+from seeders.time_setting_seeder import TimeSettingSeeder
 
 # เพิ่ม path เพื่อป้องกัน import error
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -37,7 +38,8 @@ def check_and_seed_tables():
             # ต้อง seed roles และ resources ก่อน permissions
             {"name": "permissions", "seeder": PermissionSeeder(), "table_prefix": ""},
             # ต้อง seed users และ roles ก่อน user_roles
-            {"name": "user_roles", "seeder": UserRoleSeeder(), "table_prefix": ""}
+            {"name": "user_roles", "seeder": UserRoleSeeder(), "table_prefix": ""},
+            {"name": "time_settings", "seeder": TimeSettingSeeder(), "table_prefix": ""},
         ]
 
         # วนลูปตรวจสอบแต่ละตาราง โดยเรียกตามลำดับที่กำหนดไว้ในลิสต์

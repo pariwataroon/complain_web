@@ -1,0 +1,36 @@
+{
+  "time_settings": [
+    {
+      "key": "new_complaint_days",
+      "name": "กำหนดระยะเวลาเรื่องร้องเรียนใหม่ / เรื่องร้องเรียนเพิ่มเติม",
+      "value": 3,
+      "description": "ระยะเวลาที่เรื่องร้องเรียนจะถือว่าเป็นเรื่องใหม่",
+      "icon": "document-new",
+      "is_active": true
+    },
+    {
+      "key": "complaint_response_days",
+      "name": "กำหนดระยะเวลาส่งเอกสารเพิ่มเติมจากผู้ร้องทุกข์",
+      "value": 15,
+      "description": "ระยะเวลาที่ผู้ร้องทุกข์ต้องส่งเอกสารเพิ่มเติม",
+      "icon": "document-upload",
+      "is_active": true
+    },
+    {
+      "key": "department_response_days",
+      "name": "กำหนดระยะเวลาหน่วยงานในสังกัดรายงานผล",
+      "value": 30,
+      "description": "ระยะเวลาที่หน่วยงานต้องตอบสนองต่อเรื่องร้องเรียน",
+      "icon": "department",
+      "is_active": true
+    },
+    {
+      "key": "review_response_days",
+      "name": "กำหนดระยะเวลารายงานผลการพิจารณาตอบกลับจากหน่วยงาน",
+      "value": 7,
+      "description": "ระยะเวลาที่ถือว่าการตอบสนองล่าช้า",
+      "icon": "time-warning",
+      "is_active": true
+    }
+  ]
+}
