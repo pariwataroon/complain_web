@@ -1,120 +1,16 @@
 {
   "permissions": [
     {
-      "role_name": "admin",
-      "resource_name": "users",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
-      "role_name": "admin",
-      "resource_name": "user_detail",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
-      "role_name": "admin",
-      "resource_name": "titles",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
-      "role_name": "admin",
-      "resource_name": "roles",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
-      "role_name": "admin",
-      "resource_name": "resources",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
-      "role_name": "admin",
-      "resource_name": "user_roles",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
-      "role_name": "admin",
-      "resource_name": "user_roles_detail",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
-      "role_name": "admin",
-      "resource_name": "auth",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
-      "role_name": "admin",
-      "resource_name": "thaid_login",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
-      "role_name": "admin",
-      "resource_name": "thaid_auth",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
-      "role_name": "admin",
-      "resource_name": "permissions",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
-      "role_name": "admin",
-      "resource_name": "complaints",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
-      "role_name": "admin",
-      "resource_name": "reports",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true
-    },
-    {
       "role_name": "people",
-      "resource_name": "users",
-      "can_create": false,
-      "can_read": false,
+      "resource_name": "login",
+      "can_create": true,
+      "can_read": true,
       "can_update": false,
       "can_delete": false
     },
     {
       "role_name": "people",
-      "resource_name": "user_detail",
+      "resource_name": "user_profile",
       "can_create": false,
       "can_read": true,
       "can_update": true,
@@ -122,7 +18,7 @@
     },
     {
       "role_name": "people",
-      "resource_name": "titles",
+      "resource_name": "search_complaints",
       "can_create": false,
       "can_read": true,
       "can_update": false,
@@ -130,279 +26,231 @@
     },
     {
       "role_name": "people",
-      "resource_name": "roles",
-      "can_create": false,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "people",
-      "resource_name": "resources",
-      "can_create": false,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "people",
-      "resource_name": "user_roles",
-      "can_create": false,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "people",
-      "resource_name": "user_roles_detail",
-      "can_create": false,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "people",
-      "resource_name": "auth",
+      "resource_name": "website_complaints",
       "can_create": true,
-      "can_read": false,
+      "can_read": true,
       "can_update": false,
       "can_delete": false
     },
     {
-      "role_name": "people",
-      "resource_name": "thaid_login",
+      "role_name": "admin",
+      "resource_name": "dashboard",
       "can_create": true,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
     },
     {
-      "role_name": "people",
-      "resource_name": "thaid_auth",
+      "role_name": "admin",
+      "resource_name": "stacked_line_chart",
       "can_create": true,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
     },
     {
-      "role_name": "people",
-      "resource_name": "permissions",
+      "role_name": "admin",
+      "resource_name": "account_box",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "setting_times",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "setting_users",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "setting_access",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "setting_department",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "setting_holidays",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "search_complaints",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "website_complaints",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "opm1111_complaints",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "department_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "complaints_list",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "anonymous_complaints",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "status_tracking_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "department_summary_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "new_complaints_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "annual_inspector_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "pending_tracking_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "inspector_management_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "annual_fiscal_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "staff_notification_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "login",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin",
+      "resource_name": "user_profile",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true
+    },
+    {
+      "role_name": "admin_home",
+      "resource_name": "dashboard",
       "can_create": false,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "people",
-      "resource_name": "complaints",
-      "can_create": true,
       "can_read": true,
       "can_update": true,
       "can_delete": false
     },
     {
-      "role_name": "people",
-      "resource_name": "reports",
-      "can_create": false,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "supervisor",
-      "resource_name": "users",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "supervisor",
-      "resource_name": "user_detail",
+      "role_name": "admin_home",
+      "resource_name": "stacked_line_chart",
       "can_create": false,
       "can_read": true,
       "can_update": true,
       "can_delete": false
     },
     {
-      "role_name": "supervisor",
-      "resource_name": "titles",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "supervisor",
-      "resource_name": "roles",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "supervisor",
-      "resource_name": "resources",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "supervisor",
-      "resource_name": "user_roles",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "supervisor",
-      "resource_name": "user_roles_detail",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "supervisor",
-      "resource_name": "auth",
-      "can_create": true,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "supervisor",
-      "resource_name": "thaid_login",
-      "can_create": true,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "supervisor",
-      "resource_name": "thaid_auth",
-      "can_create": true,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "supervisor",
-      "resource_name": "permissions",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "supervisor",
-      "resource_name": "complaints",
-      "can_create": false,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": false
-    },
-    {
-      "role_name": "supervisor",
-      "resource_name": "reports",
+      "role_name": "admin_home",
+      "resource_name": "login",
       "can_create": true,
       "can_read": true,
-      "can_update": true,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff",
-      "resource_name": "users",
-      "can_create": false,
-      "can_read": true,
       "can_update": false,
       "can_delete": false
     },
     {
-      "role_name": "staff",
-      "resource_name": "user_detail",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff",
-      "resource_name": "titles",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff",
-      "resource_name": "roles",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff",
-      "resource_name": "resources",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff",
-      "resource_name": "user_roles",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff",
-      "resource_name": "user_roles_detail",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff",
-      "resource_name": "auth",
-      "can_create": true,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff",
-      "resource_name": "thaid_login",
-      "can_create": true,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff",
-      "resource_name": "thaid_auth",
-      "can_create": true,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff",
-      "resource_name": "permissions",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff",
-      "resource_name": "complaints",
+      "role_name": "admin_home",
+      "resource_name": "user_profile",
       "can_create": false,
       "can_read": true,
       "can_update": true,
@@ -410,112 +258,264 @@
     },
     {
       "role_name": "staff",
-      "resource_name": "reports",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff_ed",
-      "resource_name": "users",
+      "resource_name": "dashboard",
       "can_create": false,
       "can_read": true,
       "can_update": false,
       "can_delete": false
     },
     {
-      "role_name": "staff_ed",
-      "resource_name": "user_detail",
-      "can_create": false,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff_ed",
-      "resource_name": "titles",
+      "role_name": "staff",
+      "resource_name": "stacked_line_chart",
       "can_create": false,
       "can_read": true,
       "can_update": false,
       "can_delete": false
     },
     {
-      "role_name": "staff_ed",
-      "resource_name": "roles",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff_ed",
-      "resource_name": "resources",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff_ed",
-      "resource_name": "user_roles",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff_ed",
-      "resource_name": "user_roles_detail",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff_ed",
-      "resource_name": "auth",
-      "can_create": true,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff_ed",
-      "resource_name": "thaid_login",
-      "can_create": true,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff_ed",
-      "resource_name": "thaid_auth",
-      "can_create": true,
-      "can_read": false,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff_ed",
-      "resource_name": "permissions",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false
-    },
-    {
-      "role_name": "staff_ed",
-      "resource_name": "complaints",
+      "role_name": "staff",
+      "resource_name": "search_complaints",
       "can_create": false,
       "can_read": true,
       "can_update": true,
       "can_delete": false
     },
     {
-      "role_name": "staff_ed",
-      "resource_name": "reports",
+      "role_name": "staff",
+      "resource_name": "website_complaints",
       "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "staff",
+      "resource_name": "opm1111_complaints",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "staff",
+      "resource_name": "department_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "staff",
+      "resource_name": "complaints_list",
+      "can_create": false,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "staff",
+      "resource_name": "anonymous_complaints",
+      "can_create": false,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "staff",
+      "resource_name": "status_tracking_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "staff",
+      "resource_name": "department_summary_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "staff",
+      "resource_name": "new_complaints_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "staff",
+      "resource_name": "login",
+      "can_create": true,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "staff",
+      "resource_name": "user_profile",
+      "can_create": false,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "dashboard",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "stacked_line_chart",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "search_complaints",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "complaints_list",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "status_tracking_reports",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "department_summary_reports",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "new_complaints_reports",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "annual_inspector_reports",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "pending_tracking_reports",
+      "can_create": false,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "inspector_management_reports",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "annual_fiscal_reports",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "login",
+      "can_create": true,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "supervisor",
+      "resource_name": "user_profile",
+      "can_create": false,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "department",
+      "resource_name": "dashboard",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "department",
+      "resource_name": "department_reports",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false
+    },
+    {
+      "role_name": "department",
+      "resource_name": "search_complaints",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "department",
+      "resource_name": "status_tracking_reports",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "department",
+      "resource_name": "department_summary_reports",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "department",
+      "resource_name": "login",
+      "can_create": true,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false
+    },
+    {
+      "role_name": "department",
+      "resource_name": "user_profile",
+      "can_create": false,
       "can_read": true,
       "can_update": true,
       "can_delete": false
