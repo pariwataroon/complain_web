@@ -9,6 +9,7 @@ class UserBase(BaseModel):
     first_name: str
     last_name: str
     phone: Optional[str] = None
+    address: Optional[str] = None
 
 class UserLogin(BaseModel):
     citizen_id: str
@@ -24,7 +25,7 @@ class UserCreate(UserBase):
         if not v or len(v) != 13:
             raise ValueError('Citizen ID must be 13 digits')
         return v
-
+    
     @validator('phone')
     def validate_phone(cls, v):
         if v and (len(v) < 9 or len(v) > 10):

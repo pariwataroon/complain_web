@@ -26,6 +26,7 @@ class User(Base):
     first_name = Column(NVARCHAR(100))
     last_name = Column(NVARCHAR(100))
     phone = Column(String(10))
+    address = Column(NVARCHAR(1024))
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
