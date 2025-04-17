@@ -1,0 +1,70 @@
+.container {
+  background-color: #eaf5ff;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.tabNav {
+  position: relative;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+}
+
+.tabNav::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background-color: var(--underline-color);
+  z-index: 0;
+}
+
+.tab {
+  position: relative;
+  z-index: 1;
+  padding: 12px 24px;
+  font-size: 1rem;
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+
+  &:first-child {
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+  }
+  &:last-child {
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+  }
+}
+
+// Permanent tab background colors
+.tab0 {
+  background-color: #0b1f8f;
+}
+.tab1 {
+  background-color: #3fa9f5;
+}
+.tab2 {
+  background-color: #edc458;
+}
+
+.formContainer {
+  background-color: #fff;
+  border-radius: 8px;
+  min-height: 200px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.formContainer2 {
+  background-color: #fff;
+  border-radius: 8px;
+  min-height: 200px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 10px;
+}

@@ -1,224 +1,106 @@
 import React, { useState } from "react";
 import NavbarMain from "@services/navbarMain/navbarMain";
-import {
-  Container,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Box,
-  Tab,
-  Tabs,
-  Stepper,
-  Step,
-  StepLabel,
-} from "@mui/material";
+import { Container, Box } from "@mui/material";
+import ButtonService from "@services/ButtonService/ButtonService";
+import StepperComponent from "./StepperComponent";
+import Tab1 from "./Tabs/tab1";
+import Tab2 from "./Tabs/tab2";
+import Tab3 from "./Tabs/tab3";
+import Tab4 from "./Tabs/tab4";
 
-const ComplaintComponent = () => {
-  const [tabValue, setTabValue] = useState(0);
+// Components per step, including Tab4 (no stepper on 4th)
+const processComponents = [Tab1, Tab2, Tab3, Tab4];
+// Step labels for the first three steps
+const stepLabels = ["กระบวนการทั่วไป", "กระบวนการพิเศษ", "ขั้นตอนราชการ"];
+
+function ComplaintComponent() {
   const [activeStep, setActiveStep] = useState(0);
+  const StepComponent = processComponents[activeStep];
 
-  const steps = [
-    "ข้อมูลผู้ร้องทุกข์",
-    "ข้อมูลผู้ถูกร้องทุกข์",
-    "รายละเอียดเรื่องที่ร้องทุกข์",
-  ];
-
-  // Stepper section
   const handleNext = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    setActiveStep((prev) => Math.min(prev + 1, processComponents.length - 1));
   };
 
   const handleBack = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+    setActiveStep((prev) => Math.max(prev - 1, 0));
   };
 
-  const handleReset = () => {
-    setActiveStep(0);
+  const handleSubmit = () => {
+    // TODO: implement submit logic
+    console.log("Submitting complaint...");
   };
 
-  // Form sections
-  const ComplainantInfoSection = ({ isLegalEntity = false }) => (
-    <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        {isLegalEntity ? "ข้อมูลนิติบุคคล" : "ข้อมูลผู้ร้องทุกข์"}
-      </Typography>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <TextField
-          label={isLegalEntity ? "ชื่อนิติบุคคล" : "ชื่อ - นามสกุล"}
-          fullWidth
-          required
-          variant="outlined"
-        />
-        <TextField
-          label="หมายเลขโทรศัพท์"
-          fullWidth
-          required
-          type="tel"
-          variant="outlined"
-        />
-        <TextField
-          label="อีเมล"
-          fullWidth
-          required
-          type="email"
-          variant="outlined"
-        />
-      </Box>
-    </Paper>
-  );
-
-  const AttorneyInfoSection = ({ isLegalEntity = false }) => (
-    <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        {isLegalEntity
-          ? "ข้อมูลผู้รับมอบอำนาจ"
-          : "ข้อมูลผู้รับมอบอำนาจร้องทุกข์"}
-      </Typography>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <TextField
-          label={isLegalEntity ? "ชื่อผู้รับมอบอำนาจ" : "ชื่อ - นามสกุล"}
-          fullWidth
-          required
-          variant="outlined"
-        />
-        <TextField
-          label="หมายเลขโทรศัพท์"
-          fullWidth
-          required
-          type="tel"
-          variant="outlined"
-        />
-        <TextField
-          label="อีเมล"
-          fullWidth
-          required
-          type="email"
-          variant="outlined"
-        />
-      </Box>
-    </Paper>
-  );
-
-  const ContactSection = () => (
-    <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        ที่อยู่ที่สามารถติดต่อได้
-      </Typography>
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
-        <TextField label="ตำบล/แขวง" fullWidth required variant="outlined" />
-        <TextField label="อำเภอ/เขต" fullWidth required variant="outlined" />
-        <TextField label="จังหวัด" fullWidth required variant="outlined" />
-        <TextField
-          label="รหัสไปรษณีย์"
-          fullWidth
-          required
-          type="number"
-          variant="outlined"
-        />
-      </Box>
-    </Paper>
-  );
+  // show stepper/navigation for first 3 steps only
+  const showNavigation = activeStep < stepLabels.length;
 
   return (
-    <div>
+    <>
       <NavbarMain />
-      <Container maxWidth="md" sx={{ my: 4 }}>
-        {/* Tabs for individual and legal entity */}
-        <Box sx={{ mb: 4 }}>
-          <Tabs
-            value={tabValue}
-            onChange={(event, newTabValue) => setTabValue(newTabValue)}
-            indicatorColor="primary"
-            textColor="primary"
-            centered
-          >
-            <Tab label="บุคคลทั่วไป" />
-            <Tab label="นิติบุคคล" />
-          </Tabs>
-        </Box>
-
-        {/* Container for stepper and form */}
-        <Box sx={{ display: "flex", gap: 3 }}>
-          {/* Stepper - on the left side */}
-          <Box sx={{ flex: 1, minWidth: 200 }}>
-            <Stepper
-              activeStep={activeStep}
-              alternativeLabel
-              orientation="vertical"
-              sx={{
-                width: "100%",
-                "& .MuiStepConnector-root": {
-                  borderColor: "#2499FF", // Connector line color
-                },
-                "& .MuiStepIcon-root": {
-                  border: "2px solid #2499FF", // Border around step number
-                  color: "#fff", // Text color inside step circle
-                  backgroundColor: "#D9E5FF", // Default step circle color
-                },
-                "& .MuiStepIcon-active": {
-                  backgroundColor: "#2499FF", // Active step circle color
-                  color: "#fff", // Active step number color
-                },
-                "& .MuiStepIcon-completed": {
-                  backgroundColor: "#FFD700", // Completed step circle color
-                  color: "#fff", // Completed step number color
-                },
-              }}
-            >
-              {steps.map((label, index) => (
-                <Step key={index}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-          </Box>
-
-          {/* Form - on the right side */}
-          <Box sx={{ flex: 3, minWidth: 400 }}>
-            {/* Form Sections Based on Active Step */}
-            {activeStep === 0 && (
-              <>
-                <ComplainantInfoSection isLegalEntity={tabValue === 1} />
-                <ContactSection />
-              </>
-            )}
-            {activeStep === 1 && (
-              <>
-                <AttorneyInfoSection isLegalEntity={tabValue === 1} />
-                <ContactSection />
-              </>
-            )}
-            {activeStep === 2 && (
-              <>
-                <ComplainantInfoSection isLegalEntity={tabValue === 1} />
-                <ContactSection />
-              </>
+      <Box sx={{ backgroundColor: "#eaf5ff", minHeight: "100vh", py: 4 }}>
+        <Container maxWidth="lg">
+          <Box sx={{ display: "flex", gap: 4 }}>
+            {showNavigation && (
+              <Box sx={{ width: 200 }}>
+                <StepperComponent
+                  steps={stepLabels}
+                  activeStep={activeStep}
+                  setActiveStep={setActiveStep}
+                />
+              </Box>
             )}
 
-            {/* Navigation Buttons */}
-            <Box sx={{ textAlign: "center", mt: 4 }}>
-              <Button
-                onClick={handleBack}
-                variant="outlined"
-                disabled={activeStep === 0}
-                sx={{ mr: 2 }}
-              >
-                ย้อนกลับ
-              </Button>
-              <Button
-                onClick={handleNext}
-                variant="contained"
-                sx={{ bgcolor: "#2499FF", "&:hover": { opacity: 0.9 } }}
-              >
-                {activeStep === steps.length - 1 ? "เสร็จสิ้น" : "ถัดไป"}
-              </Button>
+            <Box sx={{ flex: 1 }}>
+              {/* Render the current tab component, passing navigation props on Tab4 */}
+              {activeStep < 3 ? (
+                <StepComponent activeStep={activeStep} />
+              ) : (
+                <StepComponent onBack={handleBack} onSubmit={handleSubmit} />
+              )}
+
+              {showNavigation && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    mt: 4,
+                    gap: 2,
+                    width: "fit-content",
+                    mx: "auto",
+                  }}
+                >
+                  {activeStep > 0 && (
+                    <ButtonService
+                      label="ย้อนกลับ"
+                      variant="outlined"
+                      onClick={handleBack}
+                      color="#EDC458"
+                      sx={{ width: "auto" }}
+                    />
+                  )}
+                  <ButtonService
+                    label={
+                      activeStep === processComponents.length - 1
+                        ? "เสร็จสิ้น"
+                        : "ถัดไป"
+                    }
+                    variant="contained"
+                    onClick={
+                      activeStep === stepLabels.length
+                        ? handleSubmit
+                        : handleNext
+                    }
+                    color="#EDC458"
+                    disabled={activeStep === stepLabels.length}
+                    sx={{ width: "auto" }}
+                  />
+                </Box>
+              )}
             </Box>
           </Box>
-        </Box>
-      </Container>
-    </div>
+        </Container>
+      </Box>
+    </>
   );
-};
+}
 
 export default ComplaintComponent;
