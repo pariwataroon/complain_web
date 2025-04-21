@@ -16,18 +16,35 @@ import {
   Description,
   StackedLineChart,
   AccountBox,
+  Badge,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import styles from "./Sidebar.module.scss";
-
+import NotificationsIcon from "@mui/icons-material/Notifications";
 const submenuItems = {
   setting: [
     { label: "กำหนดการใช้งานทั่วไป", type: "header" },
     { label: "กำหนดระยะเวลา", type: "item", to: "/admin/settinggeneral/times" },
-    { label: "กำหนดผู้ใช้งาน", type: "item", to: "/admin/settinggeneral/users" },
-    { label: "กำหนดสิทธิ์การเข้าถึง", type: "item", to: "/admin/settinggeneral/access" },
-    { label: "กำหนดหน่วยงานในสังกัด", type: "item", to: "/admin/settinggeneral/department" },
-    { label: "กำหนดวันหยุด", type: "item", to: "/admin/settinggeneral/holidays" },
+    {
+      label: "กำหนดผู้ใช้งาน",
+      type: "item",
+      to: "/admin/settinggeneral/users",
+    },
+    {
+      label: "กำหนดสิทธิ์การเข้าถึง",
+      type: "item",
+      to: "/admin/settinggeneral/access",
+    },
+    {
+      label: "กำหนดหน่วยงานในสังกัด",
+      type: "item",
+      to: "/admin/settinggeneral/department",
+    },
+    {
+      label: "กำหนดวันหยุด",
+      type: "item",
+      to: "/admin/settinggeneral/holidays",
+    },
   ],
   edit: [
     { label: "รับเข้าข้อมูล", type: "header" },
@@ -62,7 +79,7 @@ const submenuItems = {
       to: "/admin/document/pending",
     },
     {
-      label: "รายงานสรุปเรื่องเข้าขใหม่และร้องเพิ่มทั้งหมด",
+      label: "รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่มทั้งหมด",
       type: "item",
       to: "/admin/document/pending",
     },
@@ -71,7 +88,11 @@ const submenuItems = {
       type: "item",
       to: "/admin/document/pending",
     },
-    { label: "รายงานการติดตามงานค้าง", type: "item", to: "/admin/document/pending" },
+    {
+      label: "รายงานการติดตามงานค้าง",
+      type: "item",
+      to: "/admin/document/pending",
+    },
     {
       label: "รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ",
       type: "item",
@@ -95,6 +116,7 @@ export default function Sidebar() {
   const [hoverMenu, setHoverMenu] = useState(null);
   const [openSubmenu, setOpenSubmenu] = useState(null);
   const router = useRouter();
+  const [invisible, setInvisible] = useState(true); // ตัวอย่างการใช้ invisible
 
   // ปิดเมนูเมื่อคลิกที่ส่วนอื่นๆ ของหน้าจอ
   useEffect(() => {
@@ -228,7 +250,25 @@ export default function Sidebar() {
       </List>
 
       <Box className={styles.bottom}>
+        {" "}
+        <IconButton className={styles.notificationIcon}>
+          <NotificationsIcon />
+          {/* จุดแจ้งเตือนสีแดง */}
+          <div
+            style={{
+              position: "absolute",
+              top: "8px",
+              right: "8px",
+              width: "8px",
+              height: "8px",
+              backgroundColor: "#ff0000",
+              borderRadius: "50%",
+              zIndex: 1,
+            }}
+          />
+        </IconButton>
         <Avatar src="/user-icon.png" className={styles.avatar} />
+        {/* ใช้ Badge กับไอคอนกระดิ่ง */}
         <IconButton className={styles.collapse}>
           <ChevronLeft />
         </IconButton>

@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Unstable_Grid2";
 import { Paper, Typography } from "@mui/material";
-
+import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
 import ButtonService from "@services/ButtonService/ButtonService";
+import CloseIcon from "@mui/icons-material/Close";
 
 const SetPeriodComponent = () => {
   // Breadcrumbs
@@ -183,24 +184,44 @@ const SetPeriodComponent = () => {
               flexDirection: { xs: "column", sm: "row" },
               justifyContent: "center",
               alignItems: "center",
-              marginTop: 2,
+              marginTop: 4,
               gap: 2,
             }}
           >
             <ButtonService
-              variant="outlined"
               label="ล้าง"
-              color="#50ADFF"
-              iconLeft="×"
-              onClick={() => console.log("ล้าง clicked")}
+              variant="outlined"
+              iconLeft={<CloseIcon />}
+              onClick={[]} // ใส่ฟังก์ชันที่ต้องการจะทำเมื่อคลิก
+              sx={{
+                backgroundColor: "#ffffff",
+                color: "#50ADFF",
+                borderRadius: "15px",
+                width: "18%",
+                height: "55px",
+                fontSize: "24px",
+                "&:hover": {
+                  backgroundColor: "#1E88E5",
+                },
+              }}
             />
 
             <ButtonService
-              variant="contained"
               label="บันทึก"
-              color="#0088FF"
-              iconRight="✓"
-              onClick={() => console.log("บันทึก clicked")}
+              variant="contained"
+              iconRight={<CheckOutlinedIcon />}
+              onClick={[]} // ใส่ฟังก์ชันที่ต้องการจะทำเมื่อคลิก
+              sx={{
+                backgroundColor: "#2196F3",
+                color: "#FFF",
+                borderRadius: "15px",
+                width: "18%",
+                height: "55px",
+                fontSize: "24px",
+                "&:hover": {
+                  backgroundColor: "#1E88E5",
+                },
+              }}
             />
           </Box>
         </Box>

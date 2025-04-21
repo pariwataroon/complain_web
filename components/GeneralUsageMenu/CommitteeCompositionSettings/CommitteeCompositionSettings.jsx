@@ -169,6 +169,17 @@ const CommitteeCompositionSettings = () => {
                   label="เพิ่มหน่วยงาน"
                   color="#2499FF"
                   iconRight={<AddIcon />}
+                  sx={{
+                    backgroundColor: "#2196F3",
+                    color: "#FFF",
+                    borderRadius: "15px",
+                    width: "30%",
+                    height: "55px",
+                    fontSize: "24px",
+                    "&:hover": {
+                      backgroundColor: "#1E88E5",
+                    },
+                  }}
                 />
               </Box>
             </Grid>
