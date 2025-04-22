@@ -300,6 +300,17 @@ export default function UserManagementUI() {
               label="ค้นหา"
               color="#0088FF"
               iconRight={<Search />}
+              sx={{
+                backgroundColor: "#2196F3",
+                color: "#FFF",
+                borderRadius: "15px",
+                width: "100%",
+                height: "42px",
+                fontSize: "20px",
+                "&:hover": {
+                  backgroundColor: "#1E88E5",
+                },
+              }}
             />
           </Box>
         </Grid>

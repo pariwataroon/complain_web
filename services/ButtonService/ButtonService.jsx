@@ -18,12 +18,12 @@ const ButtonService = ({
   const [isActive, setIsActive] = useState(false);
 
   const customColors = {
-    "ย้อนกลับ": {
+    ย้อนกลับ: {
       background: "#FEFAEF",
       text: "#F1D079",
       hover: "#f7f0d8",
     },
-    "ถัดไป": {
+    ถัดไป: {
       background: "#EDC458",
       text: "#FFFFFF",
       hover: "#e0b849",
@@ -63,20 +63,16 @@ const ButtonService = ({
   const hoverStyle =
     isHovered && !isActive
       ? {
-        transform: "translateY(-3px)",
-        boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-        backgroundColor:
-          variant === "contained" && isCustom
-            ? customColors[color].hover
-            : undefined,
-      }
+          transform: "translateY(-3px)",
+          boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
+        }
       : { transform: "translateY(0)" };
 
   const activeStyle = isActive
     ? {
-      transform: "translateY(3px)",
-      boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.15)",
-    }
+        transform: "translateY(3px)",
+        boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.15)",
+      }
     : {};
 
   const combinedTransformStyle = isActive ? activeStyle : hoverStyle;
