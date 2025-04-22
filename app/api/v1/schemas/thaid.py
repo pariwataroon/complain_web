@@ -12,6 +12,7 @@ class ThaiIDTokenResponse(BaseModel):
     scope: str
     pid: str
     address: ThaiIDAddress
+    address_other: Optional[str] = ThaiIDAddress
     given_name: str
     family_name: str
     gender: str

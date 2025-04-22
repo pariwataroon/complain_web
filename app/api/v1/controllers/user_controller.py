@@ -71,6 +71,7 @@ def create_user(db: Session, user: UserCreate, roles: list = None):
             last_name=user.last_name,
             phone=user.phone if hasattr(user, 'phone') else None,
             address=user.address if hasattr(user, 'address') else None,
+            address_other=user.address_other if hasattr(user, 'address_other') else None,
             is_active=True
         )
 
@@ -309,6 +310,7 @@ def get_user_with_roles_and_titles(db: Session, user_id: UUID):
         "last_name": user.last_name,
         "phone": user.phone or "",
         "address": user.address or "",
+        "address_other": user.address_other or "",
         "title_id": user.title_id,
         "prefix_other": user.prefix_other or "",
         "is_active": user.is_active,

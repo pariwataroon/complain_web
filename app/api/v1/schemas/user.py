@@ -10,6 +10,7 @@ class UserBase(BaseModel):
     last_name: str
     phone: Optional[str] = None
     address: Optional[str] = None
+    address_other: Optional[str] = None
 
 class UserLogin(BaseModel):
     citizen_id: str
@@ -52,6 +53,7 @@ class UserInDB(BaseModel):
     last_name: str
     phone: Optional[str] = None
     address: Optional[str] = None
+    address_other: Optional[str] = None
     title_id: int
     prefix_other: Optional[str] = None
     is_active: bool
