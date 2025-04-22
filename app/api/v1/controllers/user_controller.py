@@ -2,6 +2,7 @@ import bcrypt
 from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 
 from app.api.v1.schemas.user import UserCreate, UserUpdate
 from lib.logger import get_logger
@@ -464,44 +465,51 @@ def get_users_count_by_roles(db: Session):
     
     return role_counts
 
-def get_detailed_users_by_roles(db: Session):
-    """
-    Get detailed user data grouped by their roles
-    
-    Args:
-        db: Database session
-        
-    Returns:
-        List of roles with complete user details for each role
-    """
+def get_detailed_users_by_roles(db: Session, role_id: UUID = None, skip: int = 0, limit: int = 100):
     from models.role import Role
     
-    # Query all active roles
-    roles = db.query(Role).filter(Role.is_active == True).all()
+    # สร้าง query พื้นฐานสำหรับ roles
+    roles_query = db.query(Role).filter(Role.is_active == True)
+    
+    # ถ้าระบุ role_id เฉพาะ ให้ใช้เฉพาะ role นั้น
+    if role_id:
+        roles_query = roles_query.filter(Role.id == role_id)
+    
+    # จำกัดจำนวน roles ที่จะโหลดในครั้งเดียว (เช่น แค่ 5 roles ต่อครั้ง)
+    roles = roles_query.limit(5).all()
     
     result = []
     for role in roles:
-        # Query users with this role
+        # ใช้ count แยกต่างหากเพื่อประสิทธิภาพ
+        total_users_count = (
+            db.query(func.count(User.id))
+            .join(UserRole, UserRole.user_id == User.id)
+            .filter(UserRole.role_id == role.id)
+            .scalar()
+        )
+        
+        # ดึงเฉพาะข้อมูลที่จำเป็นโดยไม่ใช้ joinedload มากเกินไป
         users_with_role = (
             db.query(User)
             .join(UserRole, UserRole.user_id == User.id)
             .filter(UserRole.role_id == role.id)
-            .options(
-                joinedload(User.title),
-            )
+            .options(joinedload(User.title))
+            .order_by(User.created_at.desc())
+            .offset(skip)
+            .limit(limit)
             .all()
         )
         
-        # Format user data for this role
+        # Format user data (ตัดข้อมูลที่ไม่จำเป็นออกไปในขั้นตอนนี้)
         users_data = []
         for user in users_with_role:
-            # Basic user data
+            # สร้างเฉพาะข้อมูลที่จำเป็น
             user_data = {
                 "id": user.id,
                 "email": user.email,
                 "citizen_id": user.citizen_id,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
+                # "first_name": user.first_name,
+                # "last_name": user.last_name,
                 "phone": user.phone or "",
                 "title_id": user.title_id,
                 "prefix_other": user.prefix_other or "",
@@ -510,10 +518,13 @@ def get_detailed_users_by_roles(db: Session):
                 "is_active": user.is_active,
                 "created_at": user.created_at,
                 "updated_at": user.updated_at,
-                "full_name": f"{user.first_name} {user.last_name}"
+                "full_name": f"{user.first_name} {user.last_name}",
+                "is_active": user.is_active,
+                "created_at": user.created_at,
+                "updated_at": user.updated_at
             }
-
-            # Get title name - prioritize prefix_other for "Other" titles
+            
+            # Get title name ในรูปแบบที่เรียบง่าย
             if user.title_id == 1 and user.prefix_other:
                 title_name = user.prefix_other
             elif user.title:
@@ -523,14 +534,20 @@ def get_detailed_users_by_roles(db: Session):
 
             user_data["title_name"] = title_name
             user_data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
+            
             users_data.append(user_data)
         
-        # Create role entry with user count and detailed user data
+        # เพิ่ม role entry แบบกระชับ
         role_entry = {
             "role_id": role.id,
             "role_name": role.name,
             "role_description": role.description,
-            "user_count": len(users_data),
+            "total_user_count": total_users_count,
+            "displayed_user_count": len(users_data),
+            "pagination": {
+                "skip": skip,
+                "limit": limit
+            },
             "users": users_data
         }
         

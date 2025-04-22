@@ -28,7 +28,6 @@ async def read_users(
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("setting_users"))
 ):
-    """ดึงข้อมูลผู้ใช้ทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_users"""
     users = get_users_with_titles(db, skip=skip, limit=limit)
     return format_response("0000", users)
 
@@ -39,7 +38,6 @@ async def read_user(
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
-    """ดึงข้อมูลผู้ใช้ตาม ID - ตัวเองดูได้ หรือต้องมีสิทธิ์ setting_users"""
     print(f"Fetching user with ID: {user_id}")
     
     # ตรวจสอบว่าเป็นข้อมูลของตัวเองหรือไม่
@@ -75,12 +73,6 @@ async def create_new_user(
     db: Session = Depends(get_db),
     current_user: str = Depends(can_create("setting_users"))
 ):
-    """
-    สร้างผู้ใช้ใหม่โดยผู้ดูแลระบบ - ต้องมีสิทธิ์สร้างใน setting_users
-    
-    สามารถระบุบทบาทได้ผ่าน query parameter roles เช่น ?roles=admin&roles=staff
-    หากไม่ระบุบทบาท จะได้รับบทบาท "staff" เป็นค่าเริ่มต้น
-    """
     try:
         # ถ้าไม่ได้ระบุบทบาทมา ให้ใช้ staff เป็นค่าเริ่มต้น
         if not roles:
@@ -96,7 +88,6 @@ async def create_new_user(
 
 @router.post("/register", response_model=FormatResponseModel)
 async def register_new_user(user: UserCreate, db: Session = Depends(get_db)):
-    """สมัครสมาชิกใหม่ - ไม่จำเป็นต้องมีสิทธิ์พิเศษ (สำหรับประชาชนทั่วไป)"""
     try:
         db_user = create_user(db, user, ["people"])
         result = UserResponse.model_validate(db_user).model_dump()
@@ -112,9 +103,6 @@ async def update_existing_user(
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
-    """
-    อัปเดตข้อมูลผู้ใช้ - ตัวเองแก้ไขได้ หรือต้องมีสิทธิ์ setting_users
-    """
     # ตรวจสอบว่าเป็นข้อมูลของตัวเองหรือไม่
     is_own_profile = str(user_id) == current_user
     
@@ -147,7 +135,6 @@ async def delete_existing_user(
     db: Session = Depends(get_db),
     current_user: str = Depends(can_delete("setting_users"))
 ):
-    """ลบผู้ใช้ - ต้องมีสิทธิ์ลบใน setting_users"""
     success = delete_user(db, user_id)
     if not success:
         raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")
@@ -156,7 +143,6 @@ async def delete_existing_user(
 
 @router.get("/title/details", response_model=FormatResponseModel)
 async def get_titles_midleware(db: Session = Depends(get_db)):
-    """ดึงข้อมูลคำนำหน้า - ไม่จำเป็นต้องมีสิทธิ์พิเศษ"""
     # ไม่ต้องตรวจสอบสิทธิ์สำหรับ endpoint นี้
     data = get_titles(db)
     titles = [TitleResponse.model_validate(title).model_dump() for title in data]
@@ -170,12 +156,6 @@ async def search_users_by_role_endpoint(
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("setting_users"))
 ):
-    """
-    ค้นหาผู้ใช้ตามบทบาท (role) - ต้องมีสิทธิ์อ่านใน setting_users
-    
-    สามารถระบุบทบาทที่ต้องการค้นหาหรือไม่ระบุก็ได้ (ถ้าไม่ระบุจะแสดงผู้ใช้ทั้งหมด)
-    รองรับการแบ่งหน้าด้วย skip และ limit
-    """
     from app.api.v1.controllers.user_controller import search_users_by_role
     
     users = search_users_by_role(db, role_name=role_name, skip=skip, limit=limit)
@@ -187,11 +167,6 @@ async def get_user_counts_by_role(
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("setting_users"))
 ):
-    """
-    ดึงข้อมูลสถิติจำนวนผู้ใช้แยกตามบทบาท - ต้องมีสิทธิ์อ่านใน setting_users
-    
-    คืนค่าเป็นรายการของบทบาทพร้อมจำนวนผู้ใช้ในแต่ละบทบาท
-    """
     from app.api.v1.controllers.user_controller import get_users_count_by_roles
     
     role_stats = get_users_count_by_roles(db)
@@ -199,15 +174,12 @@ async def get_user_counts_by_role(
 
 @router.get("/detailed-stats/by-role", response_model=FormatResponseModel)
 async def get_detailed_users_by_roles_endpoint(
+    skip: int = 0,
+    limit: int = 100,
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("setting_users"))
 ):
-    """
-    ดึงข้อมูลผู้ใช้ทั้งหมดแยกตามบทบาท - ต้องมีสิทธิ์อ่านใน setting_users
-    
-    คืนค่าเป็นรายการของบทบาทพร้อมรายละเอียดผู้ใช้ทั้งหมดในแต่ละบทบาท
-    """
     from app.api.v1.controllers.user_controller import get_detailed_users_by_roles
     
-    detailed_data = get_detailed_users_by_roles(db)
+    detailed_data = get_detailed_users_by_roles(db, skip=skip, limit=limit)
     return format_response("0000", detailed_data)
