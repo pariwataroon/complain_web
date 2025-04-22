@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "ced16cae-01fd-4628-816e-8832e221c1b2",
+		"_postman_id": "953348a7-0166-489f-8bb8-fd37891b5ae7",
 		"name": "MOF",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "2230736"
@@ -204,7 +204,7 @@
 									}
 								}
 							],
-								"request": {
+							"request": {
 								"auth": {
 									"type": "noauth"
 								},
@@ -478,6 +478,129 @@
 									"path": [
 										"users",
 										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "users/search/by-role",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/users/search/by-role",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"users",
+										"search",
+										"by-role"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "users/stats/by-role",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/users/stats/by-role",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"users",
+										"stats",
+										"by-role"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "users/detailed-stats/by-role",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/users/detailed-stats/by-role",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"users",
+										"detailed-stats",
+										"by-role"
 									]
 								}
 							},
