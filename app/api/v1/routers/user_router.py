@@ -161,3 +161,53 @@ async def get_titles_midleware(db: Session = Depends(get_db)):
     data = get_titles(db)
     titles = [TitleResponse.model_validate(title).model_dump() for title in data]
     return format_response("0000", titles)
+
+@router.get("/search/by-role", response_model=FormatResponseModel)
+async def search_users_by_role_endpoint(
+    role_name: Optional[str] = None,
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_users"))
+):
+    """
+    ค้นหาผู้ใช้ตามบทบาท (role) - ต้องมีสิทธิ์อ่านใน setting_users
+    
+    สามารถระบุบทบาทที่ต้องการค้นหาหรือไม่ระบุก็ได้ (ถ้าไม่ระบุจะแสดงผู้ใช้ทั้งหมด)
+    รองรับการแบ่งหน้าด้วย skip และ limit
+    """
+    from app.api.v1.controllers.user_controller import search_users_by_role
+    
+    users = search_users_by_role(db, role_name=role_name, skip=skip, limit=limit)
+    return format_response("0000", users)
+
+
+@router.get("/stats/by-role", response_model=FormatResponseModel)
+async def get_user_counts_by_role(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_users"))
+):
+    """
+    ดึงข้อมูลสถิติจำนวนผู้ใช้แยกตามบทบาท - ต้องมีสิทธิ์อ่านใน setting_users
+    
+    คืนค่าเป็นรายการของบทบาทพร้อมจำนวนผู้ใช้ในแต่ละบทบาท
+    """
+    from app.api.v1.controllers.user_controller import get_users_count_by_roles
+    
+    role_stats = get_users_count_by_roles(db)
+    return format_response("0000", role_stats)
+
+@router.get("/detailed-stats/by-role", response_model=FormatResponseModel)
+async def get_detailed_users_by_roles_endpoint(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_users"))
+):
+    """
+    ดึงข้อมูลผู้ใช้ทั้งหมดแยกตามบทบาท - ต้องมีสิทธิ์อ่านใน setting_users
+    
+    คืนค่าเป็นรายการของบทบาทพร้อมรายละเอียดผู้ใช้ทั้งหมดในแต่ละบทบาท
+    """
+    from app.api.v1.controllers.user_controller import get_detailed_users_by_roles
+    
+    detailed_data = get_detailed_users_by_roles(db)
+    return format_response("0000", detailed_data)

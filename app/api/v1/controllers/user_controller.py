@@ -212,6 +212,8 @@ def get_users_with_titles(db: Session, skip: int = 0, limit: int = 100):
             "phone": user.phone,
             "title_id": user.title_id,
             "prefix_other": user.prefix_other,
+            "address": user.address or "",
+            "address_other": user.address_other or "",
             "is_active": user.is_active,
             "created_at": user.created_at,
             "updated_at": user.updated_at,
@@ -254,6 +256,8 @@ def get_users_with_roles_and_titles(db: Session, skip: int = 0, limit: int = 100
             "phone": user.phone,
             "title_id": user.title_id,
             "prefix_other": user.prefix_other,
+            "address": user.address or "",
+            "address_other": user.address_other or "",
             "is_active": user.is_active,
             "created_at": user.created_at,
             "updated_at": user.updated_at,
@@ -345,3 +349,191 @@ def get_user_with_roles_and_titles(db: Session, user_id: UUID):
     user_data["roles"] = user_roles
 
     return user_data
+
+def search_users_by_role(db: Session, role_name: str = None, skip: int = 0, limit: int = 100):
+    """
+    Search users by role with pagination support
+    
+    Args:
+        db: Database session
+        role_name: Role name to filter by (optional)
+        skip: Number of records to skip (for pagination)
+        limit: Maximum number of records to return
+        
+    Returns:
+        List of users with their roles and titles
+    """
+    from models.role import Role
+    
+    # Base query with all necessary joins
+    query = db.query(User).options(
+        joinedload(User.title),
+        joinedload(User.roles).joinedload(UserRole.role)
+    )
+    
+    # If role_name is provided, filter users by that role
+    if role_name:
+        query = query.join(User.roles).join(UserRole.role).filter(Role.name == role_name)
+    
+    # Apply pagination and get results
+    users = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
+    
+    result = []
+    for user in users:
+        # Build user data dictionary
+        user_data = {
+            "id": user.id,
+            "email": user.email,
+            "citizen_id": user.citizen_id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone": user.phone or "",
+            "title_id": user.title_id,
+            "prefix_other": user.prefix_other or "",
+            "address": user.address or "",
+            "address_other": user.address_other or "",
+            "is_active": user.is_active,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
+            "full_name": f"{user.first_name} {user.last_name}"
+        }
+
+        # Get title name - prioritize prefix_other for "Other" titles
+        if user.title_id == 1 and user.prefix_other:
+            title_name = user.prefix_other
+        elif user.title:
+            title_name = user.title.title_name
+        else:
+            title_name = None
+
+        user_data["title_name"] = title_name
+        user_data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
+
+        # Add user roles information
+        user_roles = []
+        for user_role in user.roles:
+            if user_role.role:
+                role_info = {
+                    "role_id": user_role.role.id,
+                    "role_name": user_role.role.name,
+                    "role_description": user_role.role.description,
+                    "is_active": user_role.role.is_active
+                }
+                user_roles.append(role_info)
+        
+        user_data["roles"] = user_roles
+        result.append(user_data)
+
+    return result
+
+def get_users_count_by_roles(db: Session):
+    """
+    Get count of users grouped by their roles
+    
+    Args:
+        db: Database session
+        
+    Returns:
+        List of role names with their user counts
+    """
+    from sqlalchemy import func, distinct
+    from models.role import Role
+    
+    # Query to count users by role
+    result = (
+        db.query(
+            Role.name.label('role_name'), 
+            Role.description.label('role_description'),
+            func.count(distinct(User.id)).label('user_count')
+        )
+        .join(UserRole, UserRole.role_id == Role.id)
+        .join(User, User.id == UserRole.user_id)
+        .group_by(Role.name, Role.description)
+        .all()
+    )
+    
+    # Format the results
+    role_counts = [
+        {
+            "role_name": item.role_name,
+            "role_description": item.role_description,
+            "user_count": item.user_count
+        }
+        for item in result
+    ]
+    
+    return role_counts
+
+def get_detailed_users_by_roles(db: Session):
+    """
+    Get detailed user data grouped by their roles
+    
+    Args:
+        db: Database session
+        
+    Returns:
+        List of roles with complete user details for each role
+    """
+    from models.role import Role
+    
+    # Query all active roles
+    roles = db.query(Role).filter(Role.is_active == True).all()
+    
+    result = []
+    for role in roles:
+        # Query users with this role
+        users_with_role = (
+            db.query(User)
+            .join(UserRole, UserRole.user_id == User.id)
+            .filter(UserRole.role_id == role.id)
+            .options(
+                joinedload(User.title),
+            )
+            .all()
+        )
+        
+        # Format user data for this role
+        users_data = []
+        for user in users_with_role:
+            # Basic user data
+            user_data = {
+                "id": user.id,
+                "email": user.email,
+                "citizen_id": user.citizen_id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "phone": user.phone or "",
+                "title_id": user.title_id,
+                "prefix_other": user.prefix_other or "",
+                "address": user.address or "",
+                "address_other": user.address_other or "",
+                "is_active": user.is_active,
+                "created_at": user.created_at,
+                "updated_at": user.updated_at,
+                "full_name": f"{user.first_name} {user.last_name}"
+            }
+
+            # Get title name - prioritize prefix_other for "Other" titles
+            if user.title_id == 1 and user.prefix_other:
+                title_name = user.prefix_other
+            elif user.title:
+                title_name = user.title.title_name
+            else:
+                title_name = None
+
+            user_data["title_name"] = title_name
+            user_data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
+            users_data.append(user_data)
+        
+        # Create role entry with user count and detailed user data
+        role_entry = {
+            "role_id": role.id,
+            "role_name": role.name,
+            "role_description": role.description,
+            "user_count": len(users_data),
+            "users": users_data
+        }
+        
+        result.append(role_entry)
+    
+    return result
