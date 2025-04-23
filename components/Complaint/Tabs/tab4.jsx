@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -12,8 +12,10 @@ const Tab4 = ({
   stepKey,
   updateStepData,
   onAccepted = () => { },
+  formData = {},
 }) => {
-  const [accepted, setAccepted] = useState(false);
+  const defaultAccepted = formData?.step4?.general?.accepted || false;
+  const [accepted, setAccepted] = useState(defaultAccepted);
 
   const handleCheckChange = (e) => {
     const value = e.target.checked;
@@ -23,6 +25,9 @@ const Tab4 = ({
     updateStepData(stepKey, "general", { accepted: value });
   };
 
+  useEffect(() => {
+    setAccepted(defaultAccepted);
+  }, [defaultAccepted]);
 
   return (
     <Box>
@@ -76,7 +81,7 @@ const Tab4 = ({
               ผู้ร้องเรียนต้องระบุเรื่องอันเป็นเหตุให้ต้องร้องเรียน/ร้องทุกข์ พร้อมทั้งข้อเท็จจริง หรือพฤติการณ์ของเรื่องที่ร้องเรียน/ร้องทุกข์
               <br />
               ได้อย่างชัดเจนว่า ได้รับความเดือดร้อนหรือเสียหายอย่างไร ต้องการให้แก้ไข ดำเนินการอย่างไร
-              หรือชี้ช่องทางเบาะแสเกี่ยวกับพฤติกรรมของเจ้าหน้าที่ หน่วยงาน ได้ชัดแจ้งเพียงพอที่สามารถดำเนินการ สืบสวน สอบสวนได้
+              หรือชี้ช่องทางเบาะแสเกี่ยวกับพฤติกรรมของเจ้าหน้าที่ หน่วยงาน <br/>ได้ชัดแจ้งเพียงพอที่สามารถดำเนินการ สืบสวน สอบสวนได้
             </Typography>
           </li>
           <li>

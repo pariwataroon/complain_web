@@ -9,8 +9,8 @@ import {
 
 export default function useComplaintForm() {
   const [formData, setFormData] = useState({
-    step1: { tab: "general", general: {}, individual: {} },
-    step2: { tab: "individual", individual: {}, corporate: {}, government: {} },
+    step1: {},
+    step2: {},
     step3: {},
     step4: {},
   });
@@ -22,7 +22,6 @@ export default function useComplaintForm() {
       [stepKey]: {
         ...prev[stepKey],
         [tabKey]: data,
-        tab: tabKey,
       },
     }));
   };

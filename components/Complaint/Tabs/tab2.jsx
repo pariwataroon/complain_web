@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import styles from "./TabNav.module.scss";
 import ComplaintPersonalForm from "@services/ComplaintPersonal/ComplaintPersonalForm";
+import ComplaintCustomerForm from "@services/ComplaintCustomer/ComplaintCustomerForm";
+import ComplaintMinistryForm from "@services/ComplaintMinistry/ComplaintMinistryForm";
 
 const tabs = ["บุคคลทั่วไป", "นิติบุคคล", "หน่วยงานของรัฐ"];
 const underlineColors = ["#0B1F8F", "#3FA9F5", "#EDC458"];
@@ -55,7 +57,7 @@ const Tab2 = ({ stepKey, tabData, updateStepData }) => {
       {/* นิติบุคคล */}
       {active === 1 && (
         <div className={styles.formContainer}>
-          <ComplaintPersonalForm
+          <ComplaintCustomerForm
             data={tabData.corporate || {}}
             onChange={handleChange("corporate")}
             title="ข้อมูลผู้ถูกร้องทุกข์"
@@ -66,7 +68,7 @@ const Tab2 = ({ stepKey, tabData, updateStepData }) => {
       {/* หน่วยงานของรัฐ */}
       {active === 2 && (
         <div className={styles.formContainer}>
-          <ComplaintPersonalForm
+          <ComplaintMinistryForm
             data={tabData.government || {}}
             onChange={handleChange("government")}
             title="ข้อมูลหน่วยงานของรัฐที่ถูกร้องทุกข์"

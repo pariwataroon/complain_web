@@ -10,9 +10,7 @@ import InputTextarea from "@services/InputTextarea/InputTextarea";
 const Tab3 = ({ stepKey, tabData, updateStepData }) => {
   const [form, setForm] = useState({});
 
-  useEffect(() => {
-    setForm(tabData || {});
-  }, []);
+  
 
   const handleChange = (field) => (valueOrEvent) => {
     const value = valueOrEvent?.target?.value ?? valueOrEvent;
@@ -20,6 +18,21 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
     setForm(updated);
     updateStepData(stepKey, "general", updated);
   };
+
+  useEffect(() => {
+    setForm(tabData || {});
+  }, []);
+
+  useEffect(() => {
+    const defaultChannel = "เว็บไซต์แจ้งเรื่องราวร้องทุกข์";
+    const initial = {
+      channel: defaultChannel,
+      ...(tabData || {}),
+    };
+    setForm(initial);
+    updateStepData(stepKey, "general", initial);
+  }, []);
+
 
   return (
     <div className={styles.container}>
@@ -30,9 +43,9 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
             <Grid item xs={12} sm={6}>
               <InputText
                 label="ช่องทางร้องทุกข์"
-                value="เว็บไซต์แจ้งเรื่องราวร้องทุกข์"
+                value={form.channel || ""}
                 name="channel"
-                disabled
+                InputProps={{ readOnly: true }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -73,7 +86,10 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 label="เอกสารประกอบการร้องเรียน"
                 name="attachment"
                 onChange={(file) => handleChange("attachment")(file)}
-                helperText="หมายเหตุ : หลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล"
+                helperText="หมายเหตุ : หลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล และไม่เกิน 10 MB"
+                accept=".pdf, .doc, .docx, .jpg, .jpeg, .png"
+                maxFiles={3}
+                maxSizeMB={10}
               />
             </Grid>
           </Grid>

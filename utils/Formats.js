@@ -1,3 +1,12 @@
+import dayjs from "dayjs";
+import "dayjs/locale/th";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.locale("th");
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 export function formatCitizenId(value) {
   const onlyNums = value.replace(/\D/g, "").slice(0, 13);
   const parts = [
@@ -31,3 +40,13 @@ export const handlePhoneChange = (e, setPhoneDisplay, setValue) => {
   setPhoneDisplay(formatted);
   setValue("phone", rawValue);
 };
+
+export function formatThaiDate(date = new Date()) {
+  const d = dayjs(date);
+  return `${d.format("D MMM")} ${d.year() + 543}`;
+}
+
+export function formatThaiDateTime(date = new Date()) {
+  const d = dayjs(date).tz("Asia/Bangkok");
+  return `${d.format("D MMM")} ${d.year() + 543} เวลา ${d.format("HH:mm")} น.`;
+}

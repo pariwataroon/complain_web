@@ -1,15 +1,19 @@
 import React, { useState } from "react";
 import NavbarMain from "@services/navbarMain/navbarMain";
 import { Container, Box } from "@mui/material";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import CheckIcon from "@mui/icons-material/Check";
+import UploadOutlinedIcon from "@mui/icons-material/UploadOutlined";
 import ButtonService from "@services/ButtonService/ButtonService";
 import StepperComponent from "./StepperComponent";
 import Tab1 from "./Tabs/tab1";
 import Tab2 from "./Tabs/tab2";
 import Tab3 from "./Tabs/tab3";
 import Tab4 from "./Tabs/tab4";
+import Tab5 from "./Tabs/tab5";
 import useComplaintForm from "@hooks/user/complaint/useComplaintForm";
 
-const processComponents = [Tab1, Tab2, Tab3, Tab4];
+const processComponents = [Tab1, Tab2, Tab3, Tab4, Tab5];
 const stepLabels = ["ข้อมูลผู้ร้องทุกข์", "ข้อมูลผู้ถูกร้องทุกข์", "รายละเอียดเรื่องร้องทุกข์"];
 
 export default function ComplaintComponent() {
@@ -48,6 +52,7 @@ export default function ComplaintComponent() {
       <Box sx={{ backgroundColor: "#eaf5ff", minHeight: "100vh", py: 4 }}>
         <Container maxWidth="lg">
           <Box sx={{ display: "flex", gap: 4 }}>
+            {activeStep >= 0 && activeStep < 3 && (
             <Box sx={{ width: 200 }}>
               <StepperComponent
                 steps={stepLabels}
@@ -55,37 +60,76 @@ export default function ComplaintComponent() {
                 setActiveStep={setActiveStep}
               />
             </Box>
-
+            )}
             <Box sx={{ flex: 1 }}>
               <StepComponent
                 stepKey={`step${activeStep + 1}`}
                 tabData={getStepTabData(`step${activeStep + 1}`, "general")}
                 updateStepData={updateStepData}
                 onAccepted={setAcceptSubmit}
+                formData={getFormData()}
               />
 
               <Box sx={{ display: "flex", justifyContent: "center", mt: 4, gap: 2 }}>
-                {activeStep > 0 && (
-                  <ButtonService
-                    label="ย้อนกลับ"
-                    color="ย้อนกลับ"
-                    variant="contained"
-                    onClick={handleBack}
-                  />
+                {activeStep === 4 ? (
+                  <>
+                    <ButtonService
+                      label="แก้ไข"
+                      color="แก้ไข"
+                      variant="outlined"
+                      onClick={handleBack}
+                      iconLeft={<EditOutlinedIcon />}
+                    />
+                    <ButtonService
+                      label="ยืนยัน"
+                      color="ยืนยัน"
+                      variant="contained"
+                      onClick={handleSubmit}
+                      disabled={!acceptSubmit}
+                      iconRight={<CheckIcon />}
+                    />
+                    <ButtonService
+                      label="ส่งออก"
+                      color="ส่งออก"
+                      variant="outlined"
+                      // onClick={() => window.print()}
+                      iconRight={<UploadOutlinedIcon />}
+                    />
+                  </>
+                ) : (
+                  <>
+                    {activeStep > 0 && (
+                      <ButtonService
+                        label="ย้อนกลับ"
+                        color="ย้อนกลับ"
+                        variant="contained"
+                        onClick={handleBack}
+                      />
+                    )}
+                      <ButtonService
+                        label={
+                          activeStep === 3
+                            ? "ส่งเรื่องร้องทุกข์"
+                            : "ถัดไป"
+                        }
+                        color="ถัดไป"
+                        variant="contained"
+                        onClick={
+                          activeStep === 3
+                            ? () => {
+                              if (!acceptSubmit) {
+                                alert("กรุณายอมรับเงื่อนไขก่อนส่งเรื่องร้องทุกข์");
+                                return;
+                              }
+                              handleNext();
+                            }
+                            : handleNext
+                        }
+                        disabled={activeStep === 3 && !acceptSubmit}
+                      />
+
+                  </>
                 )}
-                <ButtonService
-                  label={activeStep === processComponents.length - 1 ? "ส่งเรื่องร้องทุกข์" : "ถัดไป"}
-                  color="ถัดไป"
-                  variant="contained"
-                  onClick={
-                    activeStep === processComponents.length - 1
-                      ? handleSubmit
-                      : handleNext
-                  }
-                  disabled={
-                    activeStep === processComponents.length - 1 && !acceptSubmit
-                  }
-                />
               </Box>
             </Box>
           </Box>

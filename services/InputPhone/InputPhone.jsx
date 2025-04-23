@@ -52,6 +52,7 @@ const InputPhone = ({
                 }}
                 sx={{
                     "& .MuiOutlinedInput-root": {
+                        height: "40px",
                         borderRadius: "10px",
                     },
                     "& fieldset": {

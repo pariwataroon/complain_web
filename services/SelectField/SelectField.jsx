@@ -14,6 +14,7 @@ const SelectField = ({ label, value, onChange, options = [], name }) => (
             variant="outlined"
             InputProps={{
                 sx: {
+                    height: "40px",
                     borderRadius: "10px",
                     color: "#1120A3",
                     "& fieldset": {

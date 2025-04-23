@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Box, TextField, Typography } from "@mui/material";
 import styles from "./IDCardInput.module.scss";
 
 const IDCardInput = ({ value = "", onChange }) => {
@@ -12,7 +11,7 @@ const IDCardInput = ({ value = "", onChange }) => {
         }
     }, [value]);
 
-    const handleInputChange = (e, index) => {
+    const handleChange = (e, index) => {
         const val = e.target.value.replace(/\D/g, "").slice(0, 1);
         const updated = [...digits];
         updated[index] = val;
@@ -33,33 +32,27 @@ const IDCardInput = ({ value = "", onChange }) => {
     const hyphenIndexSet = new Set([0, 4, 9, 11]);
 
     return (
-        <Box className={styles.container}>
-            <Typography variant="body2" className={styles.label}>
-                เลขประจำตัวประชาชน
-            </Typography>
-            <Box className={styles.inputGroup}>
+        <div className={styles.container}>
+            <label className={styles.label}>เลขประจำตัวประชาชน</label>
+            <div className={styles.inputGroup}>
                 {digits.map((digit, idx) => (
                     <React.Fragment key={idx}>
-                        <TextField
-                            inputRef={(el) => (inputsRef.current[idx] = el)}
+                        <input
+                            type="text"
+                            maxLength="1"
                             value={digit}
-                            onChange={(e) => handleInputChange(e, idx)}
+                            onChange={(e) => handleChange(e, idx)}
                             onKeyDown={(e) => handleKeyDown(e, idx)}
+                            ref={(el) => (inputsRef.current[idx] = el)}
                             className={styles.inputBox}
-                            inputProps={{
-                                maxLength: 1,
-                                style: { textAlign: "center", fontWeight: "bold", fontSize: "18px" },
-                            }}
                         />
                         {hyphenIndexSet.has(idx) && (
-                            <Box component="span" className={styles.hyphen}>
-                                -
-                            </Box>
+                            <span className={styles.hyphen}>-</span>
                         )}
                     </React.Fragment>
                 ))}
-            </Box>
-        </Box>
+            </div>
+        </div>
     );
 };
 

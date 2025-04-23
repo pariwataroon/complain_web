@@ -45,11 +45,14 @@
 }
 
 .chatContent {
+  max-height: 200px;
+  overflow-y: scroll;
   font-family: "Arial", sans-serif;
   color: #333;
   font-size: 14px;
   line-height: 1.5;
   margin-bottom: 20px;
+  padding-right: 10px;
 }
 
 .chatBox textarea {
@@ -79,6 +82,25 @@
   background-color: #f1b22b;
 }
 
+.scrollTopButton {
+  position: fixed;
+  right: 20px;
+  bottom: 180px;
+  width: 60px;
+  height: 60px;
+  background-color: #f4c542;
+  color: white;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1001;
+  transition: opacity 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
 /* Responsive Styles */
 @media (max-width: 768px) {
   /* ลดขนาดไอคอนสำหรับหน้าจอที่เล็กลง */
@@ -103,6 +125,12 @@
   .sendButton {
     padding: 12px;
     font-size: 14px; /* ลดขนาดปุ่ม */
+  }
+
+  .scrollTopButton {
+    width: 50px;
+    height: 50px;
+    bottom: 150px;
   }
 }
 
@@ -134,5 +162,11 @@
 
   .chatBox textarea {
     height: 70px;
+  }
+
+  .scrollTopButton {
+    width: 45px;
+    height: 45px;
+    bottom: 140px;
   }
 }

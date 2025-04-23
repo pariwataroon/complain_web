@@ -26,7 +26,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
             <Grid container spacing={2}>
                 <Grid item xs={12}>
                     <IDCardInput
-                        value={data.idCard || ""}
+                        value={data.idCard}
                         onChange={(val) => onChange("idCard", val)}
                     />
                 </Grid>

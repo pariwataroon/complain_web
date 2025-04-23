@@ -28,7 +28,24 @@ const ButtonService = ({
       text: "#FFFFFF",
       hover: "#e0b849",
     },
+    แก้ไข: {
+      background: "#EAF5FF",
+      text: "#2499FF",
+      hover: "#d5ebff",
+    },
+    ยืนยัน: {
+      background: "#2499FF",
+      text: "#FFFFFF",
+      hover: "#1786e0",
+    },
+    ส่งออก: {
+      background: "#EAF5FF",
+      text: "#2499FF",
+      hover: "#d5ebff",
+    },
   };
+
+
 
   const isCustom = color in customColors;
 
