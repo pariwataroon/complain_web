@@ -30,6 +30,8 @@ class ResourceBase(BaseModel):
     name: str
     path: str
     description: Optional[str] = None
+    group_id: Optional[UUID] = None
+    order_index: int = 0
 
 class ResourceCreate(ResourceBase):
     pass
@@ -39,6 +41,8 @@ class ResourceUpdate(BaseModel):
     path: Optional[str] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
+    group_id: Optional[UUID] = None
+    order_index: Optional[int] = None
 
 class ResourceResponse(ResourceBase):
     id: UUID
@@ -95,3 +99,8 @@ class PermissionResponse(BaseModel):
 class UserRoleCreate(BaseModel):
     user_id: UUID
     role_id: UUID
+
+# =================== User-Role Assignment Order Index Update Schema ===================
+class ResourceOrderUpdate(BaseModel):
+    id: UUID
+    order_index: int

@@ -3,31 +3,37 @@
     {
       "name": "people",
       "description": "กลุ่มที่ 1 : ประชาชน",
+      "order_index": 1,
       "is_active": true
     },
     {
       "name": "admin",
       "description": "กลุ่มที่ 2 : ผู้ดูแลระบบ (แอดมิน)",
+      "order_index": 2,
       "is_active": true
     },
     {
       "name": "admin_home",
       "description": "กลุ่มที่ 3 : ผู้ดูแลหน้าหลัก (แอดมิน Home page)",
+      "order_index": 3,
       "is_active": true
     },
     {
       "name": "staff",
       "description": "กลุ่มที่ 4 : เจ้าหน้าที่ สรร.",
+      "order_index": 4,
       "is_active": true
     },
     {
       "name": "supervisor",
       "description": "กลุ่มที่ 5 : ผู้บริหาร / ผู้สั่งงาน",
+      "order_index": 5,
       "is_active": true
     },
     {
       "name": "department",
       "description": "กลุ่มที่ 6 : หน่วยงานในสังกัด",
+      "order_index": 6,
       "is_active": true
     }
   ]

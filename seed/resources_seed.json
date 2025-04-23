@@ -1,147 +1,155 @@
 {
   "resources": [
     {
-      "name": "dashboard",
-      "path": "/api/v1/admin/dashboard",
-      "description": "แดชบอร์ดสรุปภาพรวมระบบ",
-      "is_active": true
-    },
-    {
-      "name": "stacked_line_chart",
-      "path": "/api/v1/admin/StackedLineChart",
-      "description": "ข้อมูลกราฟแบบแสดงผลเป็นเส้น",
-      "is_active": true
-    },
-    {
-      "name": "account_box",
-      "path": "/api/v1/admin/AccountBox",
-      "description": "ข้อมูลบัญชีผู้ใช้งาน",
-      "is_active": true
-    },
-    {
       "name": "setting_times",
-      "path": "/api/v1/admin/settinggeneral/times",
-      "description": "กำหนดระยะเวลาในระบบ",
+      "path": "/admin/settinggeneral/times",
+      "description": "กำหนดระยะเวลา",
+      "group_name": "setting",
+      "order_index": 1,
       "is_active": true
     },
     {
       "name": "setting_users",
-      "path": "/api/v1/admin/settinggeneral/users",
-      "description": "กำหนดผู้ใช้งานในระบบ",
+      "path": "/admin/settinggeneral/users",
+      "description": "กำหนดผู้ใช้งาน",
+      "group_name": "setting",
+      "order_index": 2,
       "is_active": true
     },
     {
       "name": "setting_access",
-      "path": "/api/v1/admin/settinggeneral/access",
-      "description": "กำหนดสิทธิ์การเข้าถึงในระบบ",
+      "path": "/admin/settinggeneral/access",
+      "description": "กำหนดสิทธิ์การเข้าถึง",
+      "group_name": "setting",
+      "order_index": 3,
       "is_active": true
     },
     {
       "name": "setting_department",
-      "path": "/api/v1/admin/settinggeneral/department",
+      "path": "/admin/settinggeneral/department",
       "description": "กำหนดหน่วยงานในสังกัด",
+      "group_name": "setting",
+      "order_index": 4,
       "is_active": true
     },
     {
       "name": "setting_holidays",
-      "path": "/api/v1/admin/settinggeneral/holidays",
-      "description": "กำหนดวันหยุดในระบบ",
+      "path": "/admin/settinggeneral/holidays",
+      "description": "กำหนดวันหยุด",
+      "group_name": "setting",
+      "order_index": 5,
       "is_active": true
     },
     {
       "name": "search_complaints",
-      "path": "/api/v1/admin/edit/search",
+      "path": "/admin/edit/search",
       "description": "สืบค้นเรื่องร้องเรียน",
+      "group_name": "edit",
+      "order_index": 1,
       "is_active": true
     },
     {
       "name": "website_complaints",
-      "path": "/api/v1/admin/edit/website-complaints",
+      "path": "/admin/edit/website-complaints",
       "description": "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์",
+      "group_name": "edit",
+      "order_index": 2,
       "is_active": true
     },
     {
       "name": "opm1111_complaints",
-      "path": "/api/v1/admin/edit/opm1111",
+      "path": "/admin/edit/opm1111",
       "description": "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ OPM1111",
+      "group_name": "edit",
+      "order_index": 3,
       "is_active": true
     },
     {
       "name": "department_reports",
-      "path": "/api/v1/admin/edit/report",
+      "path": "/admin/edit/report",
       "description": "รับเรื่องรายงานผลการพิจารณาจากหน่วยงาน",
+      "group_name": "edit",
+      "order_index": 4,
       "is_active": true
     },
     {
       "name": "complaints_list",
-      "path": "/api/v1/admin/box/list",
+      "path": "/admin/box/list",
       "description": "คลังเรื่องราวร้องทุกข์",
+      "group_name": "box",
+      "order_index": 1,
       "is_active": true
     },
     {
       "name": "anonymous_complaints",
-      "path": "/api/v1/admin/box/new",
+      "path": "/admin/box/new",
       "description": "คลังบัตรสนเท่ห์",
+      "group_name": "box",
+      "order_index": 2,
       "is_active": true
     },
     {
       "name": "status_tracking_reports",
-      "path": "/api/v1/admin/document/pending",
+      "path": "/admin/document/status-tracking-report",
       "description": "รายงานติดตามสถานะ",
+      "group_name": "document",
+      "order_index": 1,
       "is_active": true
     },
     {
       "name": "department_summary_reports",
-      "path": "/api/v1/admin/document/department-summary",
+      "path": "/admin/document/agency-complaint-summary",
       "description": "รายงานสรุปเรื่องร้องเรียนของหน่วยงาน",
+      "group_name": "document",
+      "order_index": 2,
       "is_active": true
     },
     {
       "name": "new_complaints_reports",
-      "path": "/api/v1/admin/document/new-complaints",
-      "description": "รายงานสรุปเรื่องเข้าขใหม่และร้องเพิ่มทั้งหมด",
+      "path": "/admin/document/new-additional-complaints-summary",
+      "description": "รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่มทั้งหมด",
+      "group_name": "document",
+      "order_index": 3,
       "is_active": true
     },
     {
       "name": "annual_inspector_reports",
-      "path": "/api/v1/admin/document/annual-inspector",
+      "path": "/admin/document/annual-inspector-complaints-summary",
       "description": "รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ",
+      "group_name": "document",
+      "order_index": 4,
       "is_active": true
     },
     {
       "name": "pending_tracking_reports",
-      "path": "/api/v1/admin/document/tracking",
+      "path": "/admin/document/pending-work-follow-up",
       "description": "รายงานการติดตามงานค้าง",
+      "group_name": "document",
+      "order_index": 5,
       "is_active": true
     },
     {
       "name": "inspector_management_reports",
-      "path": "/api/v1/admin/document/inspector-management",
+      "path": "/admin/document/inspector-complaint-management",
       "description": "รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ",
+      "group_name": "document",
+      "order_index": 6,
       "is_active": true
     },
     {
       "name": "annual_fiscal_reports",
-      "path": "/api/v1/admin/document/annual-fiscal",
+      "path": "/admin/document/annual-complaint-summary",
       "description": "รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ",
+      "group_name": "document",
+      "order_index": 7,
       "is_active": true
     },
     {
       "name": "staff_notification_reports",
-      "path": "/api/v1/admin/document/staff-notifications",
+      "path": "/admin/document/staff-notification",
       "description": "รายงานการแจ้งเตือนเจ้าหน้าที่",
-      "is_active": true
-    },
-    {
-      "name": "login",
-      "path": "/api/v1/auth/login",
-      "description": "การเข้าสู่ระบบ",
-      "is_active": true
-    },
-    {
-      "name": "user_profile",
-      "path": "/api/v1/users/profile",
-      "description": "ข้อมูลโปรไฟล์ผู้ใช้งาน",
+      "group_name": "document",
+      "order_index": 8,
       "is_active": true
     }
   ]

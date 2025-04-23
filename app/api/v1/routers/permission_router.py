@@ -10,13 +10,13 @@ from app.api.v1.schemas.permission import (
     RoleCreate, RoleResponse, RoleUpdate,
     ResourceCreate, ResourceResponse, ResourceUpdate,
     PermissionCreate, PermissionResponse, PermissionUpdate, 
-    UserRoleCreate
+    UserRoleCreate, ResourceOrderUpdate
 )
 from app.api.v1.controllers.permission_controller import (
     create_role, get_roles, update_role, delete_role,
     create_resource, get_resources, update_resource, delete_resource,
     create_permission, get_permissions, update_permission, delete_permission,
-    assign_role_to_user, remove_role_from_user, get_user_roles
+    assign_role_to_user, remove_role_from_user, get_user_roles, get_resource_by_id
 )
 from models.role import Role
 from models.resource import Resource
@@ -254,62 +254,12 @@ async def get_all_resources_with_permissions(
     ดึงข้อมูลทรัพยากรทั้งหมดพร้อมรายละเอียดสิทธิ์ - ต้องมีสิทธิ์อ่านใน setting_access
     
     แสดงรายละเอียดว่าแต่ละทรัพยากรมี role และ user ใดบ้างที่มีสิทธิ์เข้าถึง
+    พร้อมสถานะการตรวจสอบ (tracking) สำหรับทุกบทบาท
     """
     try:
-        # ดึงข้อมูล resources ทั้งหมด
-        resources = db.query(Resource).order_by(Resource.id).offset(skip).limit(limit).all()
-        
-        result = []
-        
-        for resource in resources:
-            resource_data = ResourceResponse.model_validate(resource).model_dump()
-            
-            # ดึงข้อมูล role ที่มีสิทธิ์กับ resource นี้
-            role_permissions = []
-            user_permissions = []
-            
-            permissions = db.query(Permission).filter(Permission.resource_id == resource.id).all()
-            
-            for permission in permissions:
-                if permission.role_id:
-                    # กรณีเป็น role-based permission
-                    role = db.query(Role).filter(Role.id == permission.role_id).first()
-                    if role:
-                        role_info = {
-                            "role_id": str(role.id),
-                            "role_name": role.name,
-                            "can_create": permission.can_create,
-                            "can_read": permission.can_read,
-                            "can_update": permission.can_update,
-                            "can_delete": permission.can_delete
-                        }
-                        role_permissions.append(role_info)
-                
-                elif permission.user_id:
-                    # กรณีเป็น user-based permission
-                    from models.user import User
-                    user = db.query(User).filter(User.id == permission.user_id).first()
-                    if user:
-                        user_info = {
-                            "user_id": str(user.id),
-                            "full_name": f"{user.first_name} {user.last_name}",
-                            "email": user.email,
-                            "can_create": permission.can_create,
-                            "can_read": permission.can_read,
-                            "can_update": permission.can_update,
-                            "can_delete": permission.can_delete,
-                            "override_role": permission.override_role
-                        }
-                        user_permissions.append(user_info)
-            
-            # เพิ่มข้อมูลสิทธิ์เข้าไปใน resource data
-            resource_data["role_permissions"] = role_permissions
-            resource_data["user_permissions"] = user_permissions
-            resource_data["total_roles"] = len(role_permissions)
-            resource_data["total_users"] = len(user_permissions)
-            
-            result.append(resource_data)
-        
+        # เรียกใช้ฟังก์ชันที่ปรับปรุงใหม่
+        from app.api.v1.controllers.permission_controller import get_all_resources_with_permissions_by_roles
+        result = get_all_resources_with_permissions_by_roles(db, skip=skip, limit=limit)
         return format_response("0000", result)
     except Exception as e:
         print(f"Error fetching resources with permissions: {str(e)}")
@@ -651,3 +601,25 @@ async def get_users_with_access_to_resource(
         import traceback
         traceback.print_exc()
         return format_response("5000", {"error": "Error fetching users with access to resource"})
+    
+@router.put("/order", response_model=FormatResponseModel)
+async def update_resources_order(
+    resources: List[ResourceOrderUpdate],
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("setting_access"))
+):
+    """อัปเดตลำดับการแสดงผลของทรัพยากร"""
+    result = []
+    
+    for item in resources:
+        resource = get_resource_by_id(db, resource_id=item.id)
+        if not resource:
+            continue
+            
+        update_data = {"order_index": item.order_index}
+        updated_resource = update_resource(db, resource_id=item.id, resource_data=update_data)
+        
+        if updated_resource:
+            result.append({"id": updated_resource.id, "order_index": updated_resource.order_index})
+    
+    return format_response("0002", result)

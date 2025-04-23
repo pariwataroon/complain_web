@@ -9,6 +9,8 @@ from models.resource import Resource
 from models.user_role import UserRole
 from lib.logger import get_logger
 
+from app.api.v1.schemas.permission import (ResourceResponse)
+
 logger = get_logger("permission_controller")
 
 def get_user_permissions(db: Session, user_id: UUID, resource_path: str) -> Optional[dict]:
@@ -125,7 +127,7 @@ def create_role(db: Session, role_data):
 
 def get_roles(db: Session, skip: int = 0, limit: int = 100):
     """ดึงข้อมูลบทบาททั้งหมด"""
-    return db.query(Role).order_by(Role.name).offset(skip).limit(limit).all()
+    return db.query(Role).order_by(Role.order_index).offset(skip).limit(limit).all()
 
 def update_role(db: Session, role_id: UUID, role_data):
     """อัปเดตข้อมูลบทบาท"""
@@ -155,7 +157,9 @@ def create_resource(db: Session, resource_data):
     resource = Resource(
         name=resource_data.name,
         path=resource_data.path,
-        description=resource_data.description
+        description=resource_data.description,
+        group_id=resource_data.group_id,
+        order_index=resource_data.order_index,
     )
     db.add(resource)
     db.commit()
@@ -163,8 +167,59 @@ def create_resource(db: Session, resource_data):
     return resource
 
 def get_resources(db: Session, skip: int = 0, limit: int = 100):
-    """ดึงข้อมูลทรัพยากรทั้งหมด"""
-    return db.query(Resource).order_by(Resource.name).offset(skip).limit(limit).all()
+    """Get all resources"""
+    return db.query(Resource).filter(
+        Resource.is_active == True
+    ).order_by(Resource.order_index).offset(skip).limit(limit).all()
+
+def get_resources_by_group(db: Session, skip: int = 0, limit: int = 100):
+    """Get resources grouped by resource_group"""
+    from models.resource_groups import ResourceGroup
+    
+    # Get all active resource groups ordered by order_index
+    groups = db.query(ResourceGroup).filter(
+        ResourceGroup.is_active == True
+    ).order_by(ResourceGroup.order_index).all()
+    
+    result = []
+    for group in groups:
+        # Get resources for this group, ordered by order_index
+        resources = db.query(Resource).filter(
+            Resource.group_id == group.id,
+            Resource.is_active == True
+        ).order_by(Resource.order_index).all()
+        
+        if resources:
+            group_data = {
+                "group_id": group.id,
+                "group_name": group.name,
+                "display_name": group.display_name,
+                "resources": resources
+            }
+            result.append(group_data)
+    
+    return result
+
+def get_resources_by_group_name(db: Session, group_name: str, skip: int = 0, limit: int = 100):
+    """Get resources by group name"""
+    from models.resource_groups import ResourceGroup
+    
+    # Find the group by name
+    group = db.query(ResourceGroup).filter(
+        ResourceGroup.name == group_name,
+        ResourceGroup.is_active == True
+    ).first()
+    
+    if not group:
+        return []
+    
+    # Get resources for this group, ordered by order_index
+    resources = db.query(Resource).filter(
+        Resource.group_id == group.id,
+        Resource.is_active == True
+    ).order_by(Resource.order_index).offset(skip).limit(limit).all()
+    
+    return resources
 
 def update_resource(db: Session, resource_id: UUID, resource_data):
     """อัปเดตข้อมูลทรัพยากร"""
@@ -291,7 +346,7 @@ def get_user_roles(db: Session, user_id: UUID):
         return []
     
     role_ids = [ur.role_id for ur in user_roles]
-    roles = db.query(Role).filter(Role.id.in_(role_ids)).all()
+    roles = db.query(Role).filter(Role.id.in_(role_ids)).order_by(Role.order_index).all()
     
     return roles
 
@@ -413,3 +468,149 @@ def get_all_user_permissions(db: Session, user_id: UUID):
         results[resource.name] = final_permission
     
     return results
+
+def get_resource_by_id(db: Session, resource_id: UUID):
+    """ดึงข้อมูลทรัพยากรตาม ID"""
+    return db.query(Resource).filter(
+        Resource.id == resource_id,
+        Resource.is_active == True
+    ).first()
+
+def update_resource_order_batch(db: Session, order_data: List[Dict[str, any]]) -> List[Resource]:
+    """Update order_index for multiple resources in batch"""
+    results = []
+    
+    for item in order_data:
+        resource_id = item.get("id")
+        order_index = item.get("order_index")
+        
+        if not resource_id or order_index is None:
+            continue
+            
+        resource = db.query(Resource).filter(Resource.id == resource_id).first()
+        if not resource:
+            continue
+            
+        resource.order_index = order_index
+        results.append(resource)
+    
+    db.commit()
+    return results
+
+def get_all_resources_with_permissions_by_roles(db: Session, skip: int = 0, limit: int = 100):
+    """
+    ดึงข้อมูลทรัพยากรทั้งหมดพร้อมสิทธิ์ของแต่ละบทบาท
+    และจัดกลุ่มตาม resource_group
+    
+    Returns:
+        - ข้อมูลทรัพยากรพร้อมรายละเอียดสิทธิ์ของแต่ละบทบาท (role)
+        - ข้อมูลการติดตาม (tracking) ว่ามีบทบาทใดไม่ถูกกำหนดสิทธิ์
+        - จัดกลุ่มตาม resource_group
+    """
+    # ดึงข้อมูล resource_groups ทั้งหมด
+    from models.resource_groups import ResourceGroup
+    resource_groups = db.query(ResourceGroup).filter(
+        ResourceGroup.is_active == True
+    ).order_by(ResourceGroup.order_index).all()
+    
+    # ดึงข้อมูล roles ทั้งหมด
+    roles = db.query(Role).order_by(Role.order_index).all()
+    
+    result = []
+    
+    # สร้าง list เพื่อเก็บผลลัพธ์แยกตาม resource_group
+    for group in resource_groups:
+        # ดึงข้อมูล resources ทั้งหมดในกลุ่มนี้
+        resources = db.query(Resource).filter(
+            Resource.group_id == group.id,
+            Resource.is_active == True
+        ).order_by(Resource.order_index).offset(skip).limit(limit).all()
+        
+        if not resources:
+            continue
+            
+        resources_data = []
+        
+        for resource in resources:
+            resource_data = ResourceResponse.model_validate(resource).model_dump()
+            
+            # ตรวจสอบสิทธิ์สำหรับแต่ละบทบาท
+            roles_tracking = {}
+            
+            # เริ่มด้วยการตั้งค่าเริ่มต้นให้ tracking ของทุกบทบาทเป็น False
+            for role in roles:
+                roles_tracking[role.name] = {
+                    "role_id": str(role.id),
+                    "role_name": role.name,
+                    "found": False,
+                    "can_create": False,
+                    "can_read": False,
+                    "can_update": False,
+                    "can_delete": False
+                }
+            
+            # ดึงข้อมูลสิทธิ์ทั้งหมดของ resource นี้
+            permissions = db.query(Permission).filter(Permission.resource_id == resource.id).all()
+            
+            role_permission_count = 0
+            for permission in permissions:
+                if permission.role_id:
+                    # กรณีเป็น role-based permission
+                    role = db.query(Role).filter(Role.id == permission.role_id).first()
+                    if role:
+                        # ปรับปรุง tracking ให้เป็น True
+                        if role.name in roles_tracking:
+                            roles_tracking[role.name]["found"] = True
+                            roles_tracking[role.name]["can_create"] = permission.can_create
+                            roles_tracking[role.name]["can_read"] = permission.can_read
+                            roles_tracking[role.name]["can_update"] = permission.can_update
+                            roles_tracking[role.name]["can_delete"] = permission.can_delete
+                            role_permission_count += 1
+            
+            # ดึงข้อมูลสิทธิ์เฉพาะบุคคล
+            user_permissions = []
+            for permission in permissions:
+                if permission.user_id:
+                    # กรณีเป็น user-based permission
+                    from models.user import User
+                    user = db.query(User).filter(User.id == permission.user_id).first()
+                    if user:
+                        user_info = {
+                            "user_id": str(user.id),
+                            "full_name": f"{user.first_name} {user.last_name if user.last_name else ''}",
+                            "email": user.email,
+                            "can_create": permission.can_create,
+                            "can_read": permission.can_read,
+                            "can_update": permission.can_update,
+                            "can_delete": permission.can_delete,
+                            "override_role": permission.override_role
+                        }
+                        user_permissions.append(user_info)
+            
+            # แปลง roles_tracking จาก dict เป็น list
+            roles_tracking_list = list(roles_tracking.values())
+            
+            # เพิ่มข้อมูลสิทธิ์เข้าไปใน resource data
+            resource_data["user_permissions"] = user_permissions
+            resource_data["roles_tracking"] = roles_tracking_list
+            resource_data["total_roles_with_permissions"] = role_permission_count  
+            resource_data["total_roles_missing"] = len([r for r in roles_tracking_list if not r["found"]])
+            resource_data["total_users"] = len(user_permissions)
+            
+            # เพิ่ม resource นี้เข้าไปในรายการ resources ของกลุ่ม
+            resources_data.append(resource_data)
+        
+        # สร้าง group data พร้อมรายการ resources
+        group_data = {
+            "group_id": str(group.id),
+            "group_name": group.name,
+            "display_name": group.display_name,
+            "order_index": group.order_index,
+            "resources": resources_data,
+            "total_resources": len(resources_data)
+        }
+        
+        # เพิ่ม group นี้เข้าไปในผลลัพธ์
+        result.append(group_data)
+    
+    return result

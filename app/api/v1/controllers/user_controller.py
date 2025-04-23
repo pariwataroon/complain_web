@@ -102,7 +102,7 @@ def create_user(db: Session, user: UserCreate, roles: list = None):
         # ตรวจสอบว่ามีการระบุบทบาทมาหรือไม่
         if roles and len(roles) > 0:
             # ดึงบทบาทตามที่ระบุ
-            roles_to_assign = db.query(Role).filter(Role.name.in_(roles)).all()
+            roles_to_assign = db.query(Role).filter(Role.name.in_(roles)).order_by(Role.order_index).all()
         
         # ถ้าไม่มีบทบาทที่ระบุหรือไม่พบบทบาทที่ระบุ ใช้บทบาทเริ่มต้น "people"
         if not roles_to_assign:
@@ -469,7 +469,7 @@ def get_detailed_users_by_roles(db: Session, role_id: UUID = None, skip: int = 0
     from models.role import Role
     
     # สร้าง query พื้นฐานสำหรับ roles
-    roles_query = db.query(Role).filter(Role.is_active == True)
+    roles_query = db.query(Role).filter(Role.is_active == True).order_by(Role.order_index)
     
     # ถ้าระบุ role_id เฉพาะ ให้ใช้เฉพาะ role นั้น
     if role_id:

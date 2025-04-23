@@ -1,0 +1,46 @@
+{
+  "resource_groups": [
+    {
+      "name": "homepage",
+      "display_name": "หน้าแรก",
+      "description": "หน้าแรกของระบบ",
+      "order_index": 1,
+      "is_active": true
+    },
+    {
+      "name": "dashboard",
+      "display_name": "แดชบอร์ด",
+      "description": "แดชบอร์ดสรุปภาพรวมระบบ",
+      "order_index": 2,
+      "is_active": true
+    },
+    {
+      "name": "setting",
+      "display_name": "กำหนดการใช้งานทั่วไป",
+      "description": "การตั้งค่าและกำหนดการใช้งานทั่วไปในระบบ",
+      "order_index": 3,
+      "is_active": true
+    },
+    {
+      "name": "edit",
+      "display_name": "รับเข้าข้อมูล",
+      "description": "เมนูรับเข้าข้อมูลและจัดการเรื่องร้องเรียน",
+      "order_index": 4,
+      "is_active": true
+    },
+    {
+      "name": "box",
+      "display_name": "คลังเอกสาร",
+      "description": "คลังจัดเก็บเอกสารและเรื่องร้องเรียน",
+      "order_index": 5,
+      "is_active": true
+    },
+    {
+      "name": "document",
+      "display_name": "รายงาน",
+      "description": "รายงานและสถิติต่างๆ ในระบบ",
+      "order_index": 6,
+      "is_active": true
+    }
+  ]
+}

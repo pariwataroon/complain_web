@@ -1,7 +1,6 @@
 import uuid
 
-from sqlalchemy import (NVARCHAR, Boolean, Column, DateTime, ForeignKey,
-                        Integer, String)
+from sqlalchemy import (NVARCHAR, Boolean, Column, DateTime, ForeignKey, Integer)
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -13,7 +12,7 @@ class User(Base):
     __tablename__ = "comp_users"
 
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4, index=True)
-    citizen_id = Column(String(13), unique=True, index=True, nullable=False)
+    citizen_id = Column(NVARCHAR(13), unique=True, index=True, nullable=False)
 
     # Foreign key อ้างอิงไปยัง title_id ของตาราง titles
     title_id = Column(Integer, ForeignKey("comp_titles.title_id"), nullable=True)
@@ -21,11 +20,11 @@ class User(Base):
     # คงเก็บ prefix_other ไว้สำหรับกรณีที่เลือก "อื่น ๆ"
     prefix_other = Column(NVARCHAR(100), nullable=True)
 
-    email = Column(String(100), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(100), nullable=False)
+    email = Column(NVARCHAR(100), unique=True, index=True, nullable=False)
+    hashed_password = Column(NVARCHAR(100), nullable=False)
     first_name = Column(NVARCHAR(100))
     last_name = Column(NVARCHAR(100))
-    phone = Column(String(10))
+    phone = Column(NVARCHAR(10))
     address = Column(NVARCHAR(1024))
     address_other = Column(NVARCHAR(1024))
     is_active = Column(Boolean, default=True)

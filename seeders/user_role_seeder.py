@@ -48,7 +48,7 @@ class UserRoleSeeder(BaseSeeder):
 
                 # สร้าง dictionaries เพื่อ lookup user และ role จากชื่อ
                 users = {user.citizen_id: user for user in self.db.query(User).all()}
-                roles = {role.name: role for role in self.db.query(Role).all()}
+                roles = {role.name: role for role in self.db.query(Role).order_by(Role.order_index).all()}
                 
                 logger.info(f"Found {len(users)} users in DB: {list(users.keys())[:5]}...")
                 logger.info(f"Found {len(roles)} roles in DB: {list(roles.keys())}")

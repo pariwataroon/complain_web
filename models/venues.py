@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, DateTime, Boolean, NVARCHAR, ForeignKey, Integer
+from sqlalchemy import Column, DateTime, Boolean, NVARCHAR, ForeignKey, Integer
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -13,9 +13,9 @@ class Venue(Base):
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
     name = Column(NVARCHAR(200), nullable=False)
     short_name = Column(NVARCHAR(50), nullable=True)
-    code = Column(String(20), nullable=True)  # รหัสสถานที่
-    abbreviation = Column(String(20), nullable=True)  # ตัวย่อ (BAM, IAM, SAM)
-    color_code = Column(String(10), nullable=True)  # รหัสสี HTML (เช่น #8D3AF6)
+    code = Column(NVARCHAR(20), nullable=True)  # รหัสสถานที่
+    abbreviation = Column(NVARCHAR(20), nullable=True)  # ตัวย่อ (BAM, IAM, SAM)
+    color_code = Column(NVARCHAR(10), nullable=True)  # รหัสสี HTML (เช่น #8D3AF6)
     
     # ความสัมพันธ์กับ Department ถ้าสถานที่นี้เกี่ยวข้องกับหน่วยงาน
     department_id = Column(UNIQUEIDENTIFIER, ForeignKey("departments.id"), nullable=False)

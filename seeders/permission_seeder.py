@@ -41,7 +41,7 @@ class PermissionSeeder(BaseSeeder):
                     return False
 
                 # สร้าง dictionaries เพื่อ lookup role และ resource จากชื่อ
-                roles = {role.name: role for role in self.db.query(Role).all()}
+                roles = {role.name: role for role in self.db.query(Role).order_by(Role.order_index).all()}
                 resources = {resource.name: resource for resource in self.db.query(Resource).all()}
                 
                 # สร้าง dictionary เพื่อ lookup user จาก citizen_id
