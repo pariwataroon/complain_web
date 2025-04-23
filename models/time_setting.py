@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, func, Unicode
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, func, NVARCHAR
 from uuid import uuid4
 
 from config.database import Base
@@ -11,10 +11,10 @@ class TimeSetting(Base):
     # กำหนดค่าสูงสุดสำหรับ key (ไม่ใช้ max)
     key = Column(String(100), unique=True, nullable=False)
     # กำหนดค่าสูงสุดสำหรับ name
-    name = Column(Unicode(255), nullable=False)
+    name = Column(NVARCHAR(255), nullable=False)
     value = Column(Integer, nullable=False)
     # กำหนดค่าสูงสุดสำหรับ description หรือใช้ Text ถ้าต้องการขนาดใหญ่มาก
-    description = Column(Unicode(1000), nullable=True)
+    description = Column(NVARCHAR(1000), nullable=True)
     # กำหนดค่าสูงสุดสำหรับ icon
     icon = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
