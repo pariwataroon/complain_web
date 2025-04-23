@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   List,
@@ -6,6 +6,8 @@ import {
   ListItemIcon,
   Avatar,
   IconButton,
+  Paper,
+  Typography,
 } from "@mui/material";
 import {
   Settings,
@@ -21,6 +23,7 @@ import {
 import { useRouter } from "next/router";
 import styles from "./Sidebar.module.scss";
 import NotificationsIcon from "@mui/icons-material/Notifications";
+
 const submenuItems = {
   setting: [
     { label: "กำหนดการใช้งานทั่วไป", type: "header" },
@@ -111,12 +114,77 @@ const submenuItems = {
   ],
 };
 
+const mockNotifications = [
+  {
+    id: 1,
+    title: "มีเรื่องร้องเรียนใหม่",
+    description: "#REF12345",
+    timestamp: "เมื่อ 2 นาทีที่แล้ว",
+  },
+  {
+    id: 2,
+    title: "มีการตอบกลับเรื่องร้องเรียน",
+    description: "#REF98765",
+    timestamp: "เมื่อ 3 ชั่วโมงที่แล้ว",
+  },
+  {
+    id: 3,
+    title: "ครบกำหนดการตอบกลับ",
+    description: "#REF56789",
+    timestamp: "เมื่อ 1 วันที่แล้ว",
+  },
+  {
+    id: 4,
+    title: "อัปเดตสถานะเรื่องร้องเรียน",
+    description: "#REF11223",
+    timestamp: "เมื่อ 15 นาทีที่แล้ว",
+  },
+  {
+    id: 5,
+    title: "แจ้งเตือนระบบ",
+    description: "ระบบจะปิดปรับปรุงใน 1 ชม.",
+    timestamp: "เมื่อ 40 นาทีที่แล้ว",
+  },
+  {
+    id: 6,
+    title: "มีการแก้ไขข้อมูลเรื่องร้องเรียน",
+    description: "#REF44556",
+    timestamp: "เมื่อ 5 ชั่วโมงที่แล้ว",
+  },
+  {
+    id: 7,
+    title: "เรื่องร้องเรียนถูกมอบหมาย",
+    description: "#REF77889",
+    timestamp: "เมื่อ 2 วันที่แล้ว",
+  },
+  {
+    id: 8,
+    title: "แจ้งเตือนความล่าช้า",
+    description: "#REF99001",
+    timestamp: "เมื่อ 6 ชั่วโมงที่แล้ว",
+  },
+  {
+    id: 9,
+    title: "มีการเพิ่มความคิดเห็นใหม่",
+    description: "#REF33221",
+    timestamp: "เมื่อ 25 นาทีที่แล้ว",
+  },
+  {
+    id: 10,
+    title: "สรุปการทำงานประจำสัปดาห์",
+    description: "ดูรายงานสรุป",
+    timestamp: "เมื่อ 2 สัปดาห์ที่แล้ว",
+  },
+];
 export default function Sidebar() {
   const [activeMenu, setActiveMenu] = useState("setting");
   const [hoverMenu, setHoverMenu] = useState(null);
   const [openSubmenu, setOpenSubmenu] = useState(null);
   const router = useRouter();
-  const [invisible, setInvisible] = useState(true); // ตัวอย่างการใช้ invisible
+  const [invisible, setInvisible] = useState(false); // ตั้งเป็น false เพื่อแสดงว่ามีการแจ้งเตือน
+  const [showNotifications, setShowNotifications] = useState(false); // เพิ่ม state สำหรับการแสดง notification box
+  const notificationRef = useRef(null);
+  const notificationIconRef = useRef(null);
 
   // ปิดเมนูเมื่อคลิกที่ส่วนอื่นๆ ของหน้าจอ
   useEffect(() => {
@@ -127,6 +195,15 @@ export default function Sidebar() {
       ) {
         setOpenSubmenu(null); // ปิดเมนูถ้าคลิกที่นอกเมนู
       }
+
+      // ปิด notification box เมื่อคลิกที่นอกกล่อง
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target) &&
+        !event.target.closest(".notifications-icon")
+      ) {
+        setShowNotifications(false);
+      }
     };
 
     document.addEventListener("click", handleClickOutside);
@@ -135,6 +212,11 @@ export default function Sidebar() {
       document.removeEventListener("click", handleClickOutside);
     };
   }, []);
+
+  const handleNotificationClick = () => {
+    setShowNotifications(!showNotifications);
+    setInvisible(true); // เมื่อกดที่ไอคอนแจ้งเตือน จะเคลียร์จุดแจ้งเตือนแดง
+  };
 
   const renderMenuItem = (key, IconComponent) => (
     <Box
@@ -250,25 +332,76 @@ export default function Sidebar() {
       </List>
 
       <Box className={styles.bottom}>
-        {" "}
-        <IconButton className={styles.notificationIcon}>
-          <NotificationsIcon />
-          {/* จุดแจ้งเตือนสีแดง */}
-          <div
-            style={{
-              position: "absolute",
-              top: "8px",
-              right: "8px",
-              width: "8px",
-              height: "8px",
-              backgroundColor: "#ff0000",
-              borderRadius: "50%",
-              zIndex: 1,
-            }}
-          />
-        </IconButton>
+        <Box sx={{ position: "relative" }}>
+          <IconButton
+            className={`${styles.notificationIcon} notifications-icon`}
+            onClick={handleNotificationClick}
+            ref={notificationIconRef}
+          >
+            <NotificationsIcon />
+            {/* จุดแจ้งเตือนสีแดง */}
+            {!invisible && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "8px",
+                  right: "8px",
+                  width: "8px",
+                  height: "8px",
+                  backgroundColor: "#ff0000",
+                  borderRadius: "50%",
+                  zIndex: 1,
+                }}
+              />
+            )}
+          </IconButton>
+
+          {/* Notification Box - ตำแหน่งข้าง icon แจ้งเตือน */}
+          {showNotifications && (
+            <Paper
+              ref={notificationRef}
+              className={styles.notificationBox}
+              style={{
+                position: "absolute",
+                bottom: "0",
+                left: "61px",
+                width: "300px",
+                maxHeight: "400px",
+                overflowY: "auto",
+                padding: "16px",
+                zIndex: 1000,
+                boxShadow: "0 3px 10px rgba(0, 0, 0, 0.2)",
+                border: "2px solid #91cbff",
+              }}
+            >
+              <Typography variant="h6" style={{ marginBottom: "10px" }}>
+                การแจ้งเตือน <NotificationsIcon sx={{ marginBottom: "-5px" }} />
+              </Typography>
+              <hr />
+              {mockNotifications.map((notification, index) => (
+                <React.Fragment key={notification.id}>
+                  <Box sx={{ mt: 2 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ mb: 1, fontWeight: "bold" }}
+                    >
+                      {notification.title}: {notification.description}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "text.secondary", mb: 2 }}
+                    >
+                      {notification.timestamp}
+                    </Typography>
+                  </Box>
+                  {index < mockNotifications.length - 1 && <hr />}
+                </React.Fragment>
+              ))}
+            </Paper>
+          )}
+        </Box>
+
         <Avatar src="/user-icon.png" className={styles.avatar} />
-        {/* ใช้ Badge กับไอคอนกระดิ่ง */}
         <IconButton className={styles.collapse}>
           <ChevronLeft />
         </IconButton>
