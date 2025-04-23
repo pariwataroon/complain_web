@@ -326,6 +326,73 @@ const SetRole = () => {
     },
   ];
 
+  // First, add these new state variables at the beginning of your component
+  const [openUserModal, setOpenUserModal] = useState(false);
+  const [openDeleteUserModal, setOpenDeleteUserModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [newUser, setNewUser] = useState({
+    name: "",
+    group: "2", // Default group ID
+  });
+
+  // Add state for individual users
+  const [users, setUsers] = useState([
+    {
+      id: 1,
+      name: "นางสาวสุภัสร โชติพรรณ",
+      groupId: "2",
+      groupName: "ผู้ดูแลระบบ (แอดมิน)",
+      selected: true,
+    },
+    // You can add more default users here
+  ]);
+
+  // Handle modal open/close for user operations
+  const handleOpenUserModal = () => setOpenUserModal(true);
+  const handleCloseUserModal = () => setOpenUserModal(false);
+
+  // Handler for adding a new user
+  const handleAddUser = () => {
+    const groupObject = groups.find(
+      (group) => group.id === parseInt(newUser.group)
+    );
+    const newUserObject = {
+      id: users.length > 0 ? Math.max(...users.map((user) => user.id)) + 1 : 1,
+      name: newUser.name,
+      groupId: newUser.group,
+      groupName: groupObject ? groupObject.name : "",
+      selected: false,
+    };
+
+    setUsers([...users, newUserObject]);
+    setNewUser({ name: "", group: "2" }); // Reset fields
+    handleCloseUserModal();
+  };
+
+  // Handler for user checkbox changes
+  const handleUserChange = (userId) => {
+    setUsers(
+      users.map((user) =>
+        user.id === userId ? { ...user, selected: !user.selected } : user
+      )
+    );
+  };
+
+  // Handle user deletion
+  const handleUserDelete = (userId) => {
+    setUserToDelete(userId);
+    setOpenDeleteUserModal(true);
+  };
+
+  const cancelUserDelete = () => {
+    setOpenDeleteUserModal(false);
+  };
+
+  const confirmUserDelete = () => {
+    setUsers(users.filter((user) => user.id !== userToDelete));
+    setOpenDeleteUserModal(false);
+  };
+
   return (
     <Box>
       <Grid container spacing={2}>
@@ -501,7 +568,6 @@ const SetRole = () => {
             >
               ข้อมูลเมนู
             </Typography>
-
             {/* Main Menu Dropdown Section */}
             <Box sx={{ mb: 2 }}>
               <Typography component="span" sx={{ color: "#304FFE", mb: 1 }}>
@@ -522,7 +588,6 @@ const SetRole = () => {
                 name="mainMenu"
               />
             </Box>
-
             {/* Sub Menu Dropdown Section */}
             <Box sx={{ mb: 4 }}>
               <Typography component="span" sx={{ color: "#304FFE", mb: 1 }}>
@@ -550,7 +615,6 @@ const SetRole = () => {
                 name="subMenu"
               />
             </Box>
-
             {/* User Group Rights Section */}
             <Typography
               component="span"
@@ -564,8 +628,7 @@ const SetRole = () => {
             >
               กำหนดสิทธิ์กลุ่มผู้ใช้งาน
             </Typography>
-
-            {/* Checkboxes for user groups */}
+            {/* กำหนดสิทธิ์กลุ่มผู้ใช้งาน section - แก้ไขให้แสดง icon ลบเฉพาะกลุ่มที่ id >= 7 */}
             <Box
               sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 2 }}
             >
@@ -594,15 +657,17 @@ const SetRole = () => {
                     label={`กลุ่มที่ ${group.id} : ${group.name}`}
                     sx={{ color: "#304FFE" }}
                   />
-                  {/* Trash Icon for Deleting */}
-                  <IconButton
-                    onClick={() => handleGroupDelete(group.id)}
-                    sx={{
-                      color: "red",
-                    }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                  {/* แสดงไอคอนลบเฉพาะกลุ่มที่มี id ตั้งแต่ 7 เป็นต้นไป */}
+                  {group.id >= 7 && (
+                    <IconButton
+                      onClick={() => handleGroupDelete(group.id)}
+                      sx={{
+                        color: "red",
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  )}
                 </Box>
               ))}
 
@@ -624,7 +689,6 @@ const SetRole = () => {
               </Box>
             </Box>
 
-            {/* Individual rights section */}
             <Typography
               component="span"
               variant="h6"
@@ -637,24 +701,46 @@ const SetRole = () => {
             >
               กำหนดสิทธิ์รายบุคคล
             </Typography>
-
             <Box
               sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 3 }}
             >
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    sx={{
-                      color: "#304FFE",
-                      "&.Mui-checked": {
-                        color: "#304FFE",
-                      },
-                    }}
+              {/* รายการบุคคลพร้อมปุ่มลบ */}
+              {users.map((user) => (
+                <Box
+                  key={user.id}
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={user.selected}
+                        onChange={() => handleUserChange(user.id)}
+                        sx={{
+                          color: "#304FFE",
+                          "&.Mui-checked": {
+                            color: "#304FFE",
+                          },
+                        }}
+                      />
+                    }
+                    label={`${user.name} (กลุ่มที่ ${user.groupId} : ${user.groupName})`}
+                    sx={{ color: "#304FFE" }}
                   />
-                }
-                label="นางสาวสุภัสร โชติพรรณ (กลุ่มที่ 2 : ผู้ดูแลระบบ (แอดมิน))"
-                sx={{ color: "#304FFE" }}
-              />
+                  {/* ปุ่มลบสำหรับรายการบุคคล */}
+                  <IconButton
+                    onClick={() => handleUserDelete(user.id)}
+                    sx={{
+                      color: "red",
+                    }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              ))}
 
               {/* Add user button */}
               <Box
@@ -665,12 +751,224 @@ const SetRole = () => {
                   cursor: "pointer",
                   ml: 1,
                 }}
+                onClick={handleOpenUserModal}
               >
                 <AddIcon fontSize="small" sx={{ mr: 0.5 }} />
                 <Typography component="span">เพิ่มบุคคล</Typography>
               </Box>
             </Box>
+            {/* Add User Modal */}
+            <Dialog
+              open={openUserModal}
+              onClose={handleCloseUserModal}
+              PaperProps={{
+                sx: {
+                  width: "600px",
+                  borderRadius: "12px",
+                  padding: "10px",
+                },
+              }}
+            >
+              <DialogTitle
+                sx={{
+                  textAlign: "center",
+                  color: "#1120A3",
+                  fontWeight: "bold",
+                  fontSize: "1.2rem",
+                  pb: 1,
+                }}
+              >
+                เพิ่มสิทธิ์รายบุคคล
+                <IconButton
+                  aria-label="close"
+                  onClick={handleCloseUserModal}
+                  sx={{
+                    position: "absolute",
+                    right: 12,
+                    top: 12,
+                    color: "grey.500",
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              </DialogTitle>
+              <DialogContent sx={{ py: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                  <Typography
+                    component="span"
+                    sx={{
+                      mr: 2,
+                      color: "#1120A3",
+                      width: "60px",
+                      flexShrink: 0,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    ชื่อ :
+                  </Typography>
+                  <TextfieldService
+                    value={newUser.name}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, name: e.target.value })
+                    }
+                    placeholder="ชื่อ-นามสกุล"
+                    sx={{
+                      ".MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                      },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <Typography
+                    component="span"
+                    sx={{
+                      mr: 2,
+                      color: "#1120A3",
+                      width: "60px",
+                      flexShrink: 0,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    กลุ่ม :
+                  </Typography>
+                  <SelectMenuService
+                    options={groups.map((group) => ({
+                      value: group.id.toString(),
+                      label: `กลุ่มที่ ${group.id} : ${group.name}`,
+                    }))}
+                    handleChange={(e) =>
+                      setNewUser({ ...newUser, group: e.target.value })
+                    }
+                    value={newUser.group}
+                    width="100%"
+                    name="userGroup"
+                  />
+                </Box>
+              </DialogContent>
+              <DialogActions sx={{ justifyContent: "center", pb: 3, px: 3 }}>
+                <ButtonService
+                  label="ยกเลิก"
+                  variant="outlined"
+                  onClick={handleCloseUserModal}
+                  color="#50ADFF"
+                  iconLeft={<CloseIcon />}
+                  sx={{
+                    width: "195px",
+                    height: "47.588932037353516px",
+                    borderRadius: "15px",
+                    fontSize: "20px",
+                    "&:hover": {
+                      backgroundColor: "#D0E8FC",
+                    },
+                  }}
+                />
+                <ButtonService
+                  label="ยืนยัน"
+                  variant="contained"
+                  onClick={handleAddUser}
+                  color="#2196F3"
+                  iconRight={<CheckOutlinedIcon />}
+                  sx={{
+                    width: "195px",
+                    height: "47.588932037353516px",
+                    borderRadius: "15px",
+                    fontSize: "20px",
+                    "&:hover": {
+                      backgroundColor: "#1E88E5",
+                    },
+                  }}
+                />
+              </DialogActions>
+            </Dialog>
+            {/* Delete User Modal */}
+            <Dialog
+              open={openDeleteUserModal}
+              onClose={cancelUserDelete}
+              PaperProps={{
+                sx: {
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  padding: "0 60px",
+                },
+              }}
+            >
+              <DialogTitle
+                sx={{
+                  textAlign: "center",
+                  color: "#932626",
+                  backgroundColor: "#F5F7FF",
+                  fontWeight: "bold",
+                }}
+              >
+                ลบสิทธิ์รายบุคคล
+              </DialogTitle>
 
+              <DialogContent>
+                <Typography
+                  sx={{
+                    color: "#932626",
+                    textAlign: "center",
+                    fontWeight: "bold",
+                  }}
+                >
+                  การลบสิทธิ์รายบุคคลจะทำให้ผู้ใช้นี้ไม่สามารถเข้าถึงได้
+                </Typography>
+                <Typography
+                  sx={{
+                    color: "#932626",
+                    textAlign: "center",
+                    py: 2,
+                    fontWeight: "bold",
+                  }}
+                >
+                  ยืนยันการลบสิทธิ์รายบุคคลหรือไม่?
+                </Typography>
+              </DialogContent>
+
+              <DialogActions
+                sx={{
+                  justifyContent: "center",
+                  padding: 2,
+                  backgroundColor: "#F8F9FF",
+                  gap: 2,
+                }}
+              >
+                <ButtonService
+                  label="ยกเลิก"
+                  variant="outlined"
+                  onClick={cancelUserDelete}
+                  color="#DF615D"
+                  iconLeft={<CloseOutlinedIcon />}
+                  sx={{
+                    width: "32%",
+                    height: "56px",
+                    borderRadius: "15px",
+                    fontSize: "20px",
+                    "&:hover": {
+                      backgroundColor: "#D0E8FC",
+                      boxShadow: "none",
+                    },
+                  }}
+                />
+                <ButtonService
+                  label="ยืนยัน"
+                  variant="contained"
+                  onClick={confirmUserDelete}
+                  iconRight={<CheckOutlinedIcon />}
+                  color="#D52C27"
+                  sx={{
+                    width: "32%",
+                    height: "56px",
+                    borderRadius: "15px",
+                    fontSize: "20px",
+                    "&:hover": {
+                      backgroundColor: "#D50000",
+                    },
+                  }}
+                />
+              </DialogActions>
+            </Dialog>
             {/* Action buttons */}
             <Box
               sx={{ display: "flex", justifyContent: "center", mt: 2, gap: 2 }}
