@@ -41,6 +41,20 @@
       "description": "รายงานและสถิติต่างๆ ในระบบ",
       "order_index": 6,
       "is_active": true
+    },
+    {
+      "name": "stacked_line_chart",
+      "display_name": "ติดตามผลการดำเนินการ",
+      "description": "ติดตามผลการดำเนินการในระบบ",
+      "order_index": 7,
+      "is_active": true
+    },
+    {
+      "name": "account_box",
+      "display_name": "สถิติการทำงานของเจ้าหน้าที่",
+      "description": "สถิติการทำงานของเจ้าหน้าที่ในระบบ",
+      "order_index": 8,
+      "is_active": true
     }
   ]
 }

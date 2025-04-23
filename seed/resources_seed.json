@@ -1,6 +1,38 @@
 {
   "resources": [
     {
+      "name": "homepage",
+      "path": "/admin/homepage",
+      "description": "หน้าแรกระบบ",
+      "group_name": "homepage",
+      "order_index": 1,
+      "is_active": true
+    },
+    {
+      "name": "dashboard",
+      "path": "/admin/dashboard",
+      "description": "หน้าหลัก",
+      "group_name": "dashboard",
+      "order_index": 1,
+      "is_active": true
+    },
+    {
+      "name": "stacked_line_chart",
+      "path": "/admin/StackedLineChart",
+      "description": "ติดตามผลการดำเนินการ",
+      "group_name": "stacked_line_chart",
+      "order_index": 1,
+      "is_active": true
+    },
+    {
+      "name": "account_box",
+      "path": "/admin/AccountBox",
+      "description": "สถิติการทำงานของเจ้าหน้าที่",
+      "group_name": "account_box",
+      "order_index": 1,
+      "is_active": true
+    },
+    {
       "name": "setting_times",
       "path": "/admin/settinggeneral/times",
       "description": "กำหนดระยะเวลา",
