@@ -14,6 +14,10 @@ from seeders.resource_seeder import ResourceSeeder
 from seeders.permission_seeder import PermissionSeeder
 from seeders.user_role_seeder import UserRoleSeeder
 from seeders.time_setting_seeder import TimeSettingSeeder
+from seeders.positions_seeder import PositionSeeder
+from seeders.user_position_seeder import UserPositionSeeder
+from seeders.department_groups_seeder import DepartmentGroupSeeder
+from seeders.department_seeder import DepartmentSeeder
 
 # เพิ่ม path เพื่อป้องกัน import error
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -40,6 +44,10 @@ def check_and_seed_tables():
             # ต้อง seed users และ roles ก่อน user_roles
             {"name": "user_roles", "seeder": UserRoleSeeder(), "table_prefix": ""},
             {"name": "time_settings", "seeder": TimeSettingSeeder(), "table_prefix": ""},
+            {"name": "positions", "seeder": PositionSeeder(), "table_prefix": ""},
+            {"name": "user_positions", "seeder": UserPositionSeeder(), "table_prefix": ""},
+            {"name": "department_groups", "seeder": DepartmentGroupSeeder(), "table_prefix": ""},
+            {"name": "departments", "seeder": DepartmentSeeder(), "table_prefix": ""},
         ]
 
         # วนลูปตรวจสอบแต่ละตาราง โดยเรียกตามลำดับที่กำหนดไว้ในลิสต์
@@ -118,6 +126,16 @@ def init_database():
         logger.info("Running UserRoleSeeder directly...")
         user_role_seeder = UserRoleSeeder()
         user_role_seeder.seed()
+
+        from seeders.user_position_seeder import UserPositionSeeder
+        logger.info("Running UserPositionSeeder directly...")
+        user_position_seeder = UserPositionSeeder()
+        user_position_seeder.seed()
+        
+        from seeders.department_seeder import DepartmentSeeder
+        logger.info("Running DepartmentSeeder directly...")
+        department_seeder = DepartmentSeeder()
+        department_seeder.seed()
 
         return True
 

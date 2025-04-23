@@ -39,3 +39,6 @@ class User(Base):
 
     # เพิ่มความสัมพันธ์กับ UserRole
     roles = relationship("UserRole", back_populates="user")
+    
+    # เพิ่มความสัมพันธ์กับตำแหน่ง
+    positions = relationship("UserPosition", back_populates="user")

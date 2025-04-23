@@ -1,7 +1,9 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, validator
+
+from app.api.v1.schemas.user_position import UserPosition
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -20,6 +22,8 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
     title_id: int
     prefix_other: Optional[str] = None
+    position_id: Optional[UUID] = None  # เพิ่มตำแหน่งเริ่มต้น
+    department_name: Optional[str] = None  # เพิ่มหน่วยงาน
 
     @validator('citizen_id')
     def validate_citizen_id(cls, v):
@@ -37,7 +41,7 @@ class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
-    title_id: int
+    title_id: Optional[int] = None
     prefix_other: Optional[str] = None
     is_active: Optional[bool] = None
     password: Optional[str] = Field(None, min_length=8)
@@ -64,7 +68,7 @@ class UserInDB(BaseModel):
         from_attributes = True
 
 class UserResponse(UserInDB):
-    pass
+    positions: Optional[List[UserPosition]] = None  # เพิ่มข้อมูลตำแหน่ง
 
 class TitleSchema(BaseModel):
     title_id: int
