@@ -75,41 +75,41 @@ const submenuItems = {
   ],
   document: [
     { label: "รายงาน", type: "header" },
-    { label: "รายงานติดตามสถานะ", type: "item", to: "/admin/document/pending" },
+    { label: "รายงานติดตามสถานะ", type: "item", to: "/admin/document/status-tracking-report" },
     {
       label: "รายงานสรุปเรื่องร้องเรียนของหน่วยงาน",
       type: "item",
-      to: "/admin/document/pending",
+      to: "/admin/document/agency-complaint-summary",
     },
     {
       label: "รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่มทั้งหมด",
       type: "item",
-      to: "/admin/document/pending",
+      to: "/admin/document/new-additional-complaints-summary",
     },
     {
       label: "รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ",
       type: "item",
-      to: "/admin/document/pending",
+      to: "/admin/document/annual-inspector-complaints-summary",
     },
     {
       label: "รายงานการติดตามงานค้าง",
       type: "item",
-      to: "/admin/document/pending",
+      to: "/admin/document/pending-work-follow-up",
     },
     {
       label: "รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ",
       type: "item",
-      to: "/admin/document/pending",
+      to: "/admin/document/inspector-complaint-management",
     },
     {
       label: "รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ",
       type: "item",
-      to: "/admin/document/pending",
+      to: "/admin/document/annual-complaint-summary",
     },
     {
       label: "รายงานการแจ้งเตือนเจ้าหน้าที่",
       type: "item",
-      to: "/admin/document/pending",
+      to: "/admin/document/staff-notification",
     },
   ],
 };
