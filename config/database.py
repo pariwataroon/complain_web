@@ -26,6 +26,9 @@ try:
         pool_pre_ping=True,  # Check connection before using it
         pool_recycle=3600,   # Recycle connections after 1 hour
         echo=False,          # Set to True for SQL query logging
+        pool_size=20,        # Set the pool size to 5 connections
+        max_overflow=20,    # Allow up to 10 additional connections beyond the pool size
+        pool_timeout=60,        # เพิ่มเวลา timeout จาก 30 วินาที เป็น 60 วินาที
         connect_args={
             "TrustServerCertificate": "yes",
             "Encrypt": "yes",
