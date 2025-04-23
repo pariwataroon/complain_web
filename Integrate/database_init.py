@@ -80,14 +80,14 @@ def init_database():
     DB_PASSWORD_ENCODE = urllib.parse.quote_plus(DB_PASSWORD)
 
     # เพิ่ม charset=UTF8 ใน connection string
-    conn_string = f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD_ENCODE}@{DB_HOST}:{DB_PORT}/{DB_NAME}?driver=ODBC+Driver+17+for+SQL+Server&charset=UTF8"
+    conn_string = f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD_ENCODE}@{DB_HOST}:{DB_PORT}/{DB_NAME}?driver=ODBC+Driver+18+for+SQL+Server&charset=UTF8"
     
     logger.info(
         f"Connection string (without password): {conn_string.replace(DB_PASSWORD_ENCODE, '****')}")
 
     try:
         # 1. เชื่อมต่อกับฐานข้อมูล master
-        master_url = f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD_ENCODE}@{DB_HOST}:{DB_PORT}/master?driver=ODBC+Driver+17+for+SQL+Server&charset=UTF8"
+        master_url = f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD_ENCODE}@{DB_HOST}:{DB_PORT}/master?driver=ODBC+Driver+18+for+SQL+Server&charset=UTF8"
         engine_master = create_engine(
             master_url,
             connect_args={
