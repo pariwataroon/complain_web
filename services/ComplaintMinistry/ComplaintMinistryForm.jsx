@@ -24,14 +24,14 @@ const ComplaintMinistryForm = ({ data = {}, onChange, title = "ข้อมู�
         <Box>
             <Typography className={styles.title}>{title}</Typography>
             <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12} sm={12}>
                     <IDCardInput
                         value={data.idCard || ""}
                         onChange={(val) => onChange("idCard", val)}
                     />
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12} sm={12}>
                     <InputText
                         label="หน่วยงาน"
                         value={data.agencyName}
