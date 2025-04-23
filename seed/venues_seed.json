@@ -1,0 +1,125 @@
+{
+  "venues": [
+    {
+      "name": "บริษัท บริหารสินทรัพย์กรุงเทพพาณิชย์ จำกัด",
+      "short_name": "บสก.",
+      "code": "BAM",
+      "abbreviation": "BAM",
+      "color_code": "#8D3AF6",
+      "department_name": "ธนาคารแห่งประเทศไทย",
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 1,
+      "is_active": true
+    },
+    {
+      "name": "บริษัท บริหารสินทรัพย์สุขุมวิท จำกัด",
+      "short_name": "บสส.",
+      "code": "SAM",
+      "abbreviation": "บสส. / SAM",
+      "color_code": "#EA33F7",
+      "department_name": "ธนาคารแห่งประเทศไทย",
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 2,
+      "is_active": true
+    },
+    {
+      "name": "บริษัท บริหารสินทรัพย์ เจ จำกัด",
+      "short_name": "บสจ.",
+      "code": "JAM",
+      "abbreviation": "JAM",
+      "color_code": "#EA3368",
+      "department_name": "ธนาคารแห่งประเทศไทย",
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 3,
+      "is_active": true
+    },
+    {
+      "name": "บริษัท บริหารสินทรัพย์ ธนาคารอิสลามแห่งประเทศไทย จำกัด",
+      "short_name": "บสอ.",
+      "code": "IAM",
+      "abbreviation": "IAM",
+      "color_code": "#ED7D2D",
+      "department_name": "ธนาคารแห่งประเทศไทย",
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 4,
+      "is_active": true
+    },
+    {
+      "name": "กรมธนารักษ์",
+      "short_name": "ธร.",
+      "code": "TRD",
+      "abbreviation": null,
+      "color_code": null,
+      "department_name": "กระทรวงการคลัง",
+      "group_name": "ส่วนราชการ",
+      "order_index": 1,
+      "is_active": true
+    },
+    {
+      "name": "กรมบัญชีกลาง",
+      "short_name": "บก.",
+      "code": "CGD",
+      "abbreviation": null,
+      "color_code": null,
+      "department_name": "กระทรวงการคลัง",
+      "group_name": "ส่วนราชการ",
+      "order_index": 2,
+      "is_active": true
+    },
+    {
+      "name": "กรมศุลกากร",
+      "short_name": "ศก.",
+      "code": "CUS",
+      "abbreviation": null,
+      "color_code": null,
+      "department_name": "กระทรวงการคลัง",
+      "group_name": "ส่วนราชการ",
+      "order_index": 3,
+      "is_active": true
+    },
+    {
+      "name": "กรมสรรพากร",
+      "short_name": "สก.",
+      "code": "RD",
+      "abbreviation": null,
+      "color_code": null,
+      "department_name": "กระทรวงการคลัง",
+      "group_name": "ส่วนราชการ",
+      "order_index": 4,
+      "is_active": true
+    },
+    {
+      "name": "กรมสรรพสามิต",
+      "short_name": "สส.",
+      "code": "ED",
+      "abbreviation": null,
+      "color_code": null,
+      "department_name": "กระทรวงการคลัง",
+      "group_name": "ส่วนราชการ",
+      "order_index": 5,
+      "is_active": true
+    },
+    {
+      "name": "ธนาคารแห่งประเทศไทย",
+      "short_name": "ธปท.",
+      "code": "BOT",
+      "abbreviation": null,
+      "color_code": null,
+      "department_name": "กระทรวงการคลัง",
+      "group_name": "อื่น ๆ",
+      "order_index": 1,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานความร่วมมือพัฒนาเศรษฐกิจกับประเทศเพื่อนบ้าน",
+      "short_name": "สพพ.",
+      "code": "NEDA",
+      "abbreviation": null,
+      "color_code": null,
+      "department_name": "กระทรวงการคลัง",
+      "group_name": "อื่น ๆ",
+      "order_index": 2,
+      "is_active": true
+    }
+  ]
+}

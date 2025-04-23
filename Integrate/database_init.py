@@ -18,6 +18,7 @@ from seeders.positions_seeder import PositionSeeder
 from seeders.user_position_seeder import UserPositionSeeder
 from seeders.department_groups_seeder import DepartmentGroupSeeder
 from seeders.department_seeder import DepartmentSeeder
+from seeders.venues_seeder import VenueSeeder
 
 # เพิ่ม path เพื่อป้องกัน import error
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -48,6 +49,7 @@ def check_and_seed_tables():
             {"name": "user_positions", "seeder": UserPositionSeeder(), "table_prefix": ""},
             {"name": "department_groups", "seeder": DepartmentGroupSeeder(), "table_prefix": ""},
             {"name": "departments", "seeder": DepartmentSeeder(), "table_prefix": ""},
+            {"name": "venues", "seeder": VenueSeeder(), "table_prefix": ""},
         ]
 
         # วนลูปตรวจสอบแต่ละตาราง โดยเรียกตามลำดับที่กำหนดไว้ในลิสต์
@@ -136,6 +138,11 @@ def init_database():
         logger.info("Running DepartmentSeeder directly...")
         department_seeder = DepartmentSeeder()
         department_seeder.seed()
+
+        from seeders.venues_seeder import VenueSeeder
+        logger.info("Running VenueSeeder directly...")
+        venue_seeder = VenueSeeder()
+        venue_seeder.seed()
 
         return True
 
