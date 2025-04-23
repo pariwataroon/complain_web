@@ -560,6 +560,7 @@ def get_all_resources_with_permissions_by_roles(db: Session, skip: int = 0, limi
                     if role:
                         # ปรับปรุง tracking ให้เป็น True
                         if role.name in roles_tracking:
+                            roles_tracking[role.name]["permission_id"] = str(permission.id)
                             roles_tracking[role.name]["found"] = True
                             roles_tracking[role.name]["can_create"] = permission.can_create
                             roles_tracking[role.name]["can_read"] = permission.can_read
