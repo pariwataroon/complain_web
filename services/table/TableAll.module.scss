@@ -1,0 +1,56 @@
+.headerBar {
+    background: linear-gradient(to right, #1223A5, #2499FF);
+    height: 50px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    color: white;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.tableWrapper {
+    background-color: white;
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    margin-top: 16px;
+}
+
+.tableWrapper thead tr {
+    background-color: #E8E9F6 !important;
+}
+
+.MuiTableCell-head {
+    font-weight: 600;
+    color: #1120A3;
+    font-size: 14px;
+    border-bottom: 1px solid #D9DBE9;
+}
+
+.MuiTableCell-root {
+    font-size: 14px;
+    color: #333;
+    padding: 14px 12px;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.filterRow {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+
+    >div {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+}

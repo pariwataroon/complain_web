@@ -1,18 +1,35 @@
 import React from "react";
-import { TextField } from "@mui/material";
+import { TextField, InputLabel, FormControl, Typography } from "@mui/material";
 import FormLabel from "@services/FormLabel/FormLabel";
 
-const InputText = ({ label, value, onChange, name, InputProps = {}, ...props }) => {
+const InputText = ({
+    label,           // แบบด้านนอก
+    inputLabel,      // แบบใน TextField
+    value,
+    onChange,
+    name,
+    InputProps = {},
+    ...props
+}) => {
     const isReadOnly = InputProps?.readOnly;
 
     return (
-        <>
-            <FormLabel>{label}</FormLabel>
+        <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+            {label && (
+                <Typography
+                    variant="subtitle2"
+                    sx={{ color: "#1120A3", fontWeight: 600, mb: 1 }}
+                >
+                    {label}
+                </Typography>
+            )}
+
             <TextField
                 fullWidth
                 variant="outlined"
                 value={value}
                 name={name}
+                label={!label ? inputLabel : undefined}
                 onChange={onChange}
                 InputProps={{
                     ...InputProps,
@@ -35,7 +52,7 @@ const InputText = ({ label, value, onChange, name, InputProps = {}, ...props }) 
                 }}
                 {...props}
             />
-        </>
+        </FormControl>
     );
 };
 

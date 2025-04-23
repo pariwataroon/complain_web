@@ -46,6 +46,7 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 value={form.channel || ""}
                 name="channel"
                 InputProps={{ readOnly: true }}
+                required
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -55,6 +56,7 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 name="complaintType"
                 options={["การทุจริต", "บริการไม่เหมาะสม", "อื่นๆ"]}
                 onChange={handleChange("complaintType")}
+                required
               />
             </Grid>
             <Grid item xs={12}>
@@ -63,6 +65,7 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 name="subject"
                 value={form.subject || ""}
                 onChange={handleChange("subject")}
+                required
               />
             </Grid>
             <Grid item xs={12}>
@@ -71,6 +74,7 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 name="incidentDate"
                 value={form.incidentDate || ""}
                 onChange={handleChange("incidentDate")}
+                required
               />
             </Grid>
             <Grid item xs={12}>
@@ -79,6 +83,7 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 name="description"
                 value={form.description || ""}
                 onChange={handleChange("description")}
+                required
               />
             </Grid>
             <Grid item xs={12}>
@@ -89,7 +94,7 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 helperText="หมายเหตุ : หลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล และไม่เกิน 10 MB"
                 accept=".pdf, .doc, .docx, .jpg, .jpeg, .png"
                 maxFiles={3}
-                maxSizeMB={10}
+                maxSizeMB={10}               
               />
             </Grid>
           </Grid>

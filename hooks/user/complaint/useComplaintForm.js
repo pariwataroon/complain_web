@@ -5,6 +5,7 @@ import {
   alertError,
   showLoading,
   closeAlert,
+  showConfirm,
 } from "@utils/Alerts";
 
 export default function useComplaintForm() {
@@ -42,6 +43,22 @@ export default function useComplaintForm() {
       details,
       confirmation,
     };
+
+    const isConfirmed = await showConfirm(
+      "แจ้งเรื่องร้องทุกข์",
+      `
+        <div style="text-align: center; line-height: 1.8;">
+          ข้อเท็จจริงที่ได้ยื่นเรื่องราวร้องทุกข์ต่อกระทรวงการคลังต้องเป็นเรื่องที่เกิดขึ้นจริงทั้งหมด<br />
+          โดยผู้ร้องต้องรับผิดชอบต่อข้อเท็จจริงดังกล่าวข้างต้นทุกประการผู้ใดนำความเท็จมาร้องเรียน<br />
+          ซึ่งทำให้ผู้อื่นได้รับความเสียหายผู้นั้นอาจต้องรับผิดตามประมวลกฎหมายอาญา<br />
+          <strong style="color:#0B73E5;">ยืนยันการแจ้งเรื่องร้องทุกข์หรือไม่?</strong>
+        </div>
+      `,
+      "ยืนยัน",
+      "ยกเลิก",
+      800
+    );
+    if (!isConfirmed) return;
 
     try {
       showLoading("กำลังส่งข้อมูล...");

@@ -8,15 +8,27 @@ const underlineColors = ["#0B1F8F", "#3FA9F5"];
 const Tab1 = ({ stepKey, tabData, updateStepData }) => {
   const [active, setActive] = useState(0);
 
-  const handleChange = (type) => (name, value) => {
+  const handleUpdate = (type) => (name, value) => {
     const prev = tabData[type] || {};
-    const updatedData = {
-      ...tabData,
-      [type]: {
-        ...prev,
-        [name]: value,
-      },
+    const updated = {
+      ...prev,
+      [name]: value,
     };
+
+    let updatedData = {};
+
+    if (active === 0) {
+      updatedData = {
+        general: type === "general" ? updated : tabData.general || {},
+        delegate: type === "delegate" ? updated : tabData.delegate || {},
+      };
+    } else {
+      updatedData = {
+        corporate: type === "corporate" ? updated : tabData.corporate || {},
+        signer: type === "signer" ? updated : tabData.signer || {},
+      };
+    }
+
     updateStepData(stepKey, "general", updatedData);
   };
 
@@ -43,22 +55,17 @@ const Tab1 = ({ stepKey, tabData, updateStepData }) => {
         <>
           <div className={styles.formContainer}>
             <ComplaintPersonalForm
-              data={tabData.general}
-              onChange={(name, value) => {
-                const updated = { ...tabData.general, [name]: value };
-                updateStepData(stepKey, "general", {
-                  ...tabData,
-                  general: updated,
-                });
-              }}
+              data={tabData.general || {}}
+              onChange={handleUpdate("general")}
+              required
             />
-
           </div>
           <div className={styles.formContainer2}>
             <ComplaintPersonalForm
               data={tabData.delegate || {}}
-              onChange={handleChange("delegate")}
+              onChange={handleUpdate("delegate")}
               title="ข้อมูลผู้รับมอบอำนาจร้องทุกข์"
+              required
             />
           </div>
         </>
@@ -69,15 +76,17 @@ const Tab1 = ({ stepKey, tabData, updateStepData }) => {
           <div className={styles.formContainer}>
             <ComplaintPersonalForm
               data={tabData.corporate || {}}
-              onChange={handleChange("corporate")}
+              onChange={handleUpdate("corporate")}
               title="ข้อมูลผู้ร้องทุกข์"
+              required
             />
           </div>
           <div className={styles.formContainer2}>
             <ComplaintPersonalForm
               data={tabData.signer || {}}
-              onChange={handleChange("signer")}
+              onChange={handleUpdate("signer")}
               title="ข้อมูลผู้มีอำนาจลงนาม"
+              required
             />
           </div>
         </>

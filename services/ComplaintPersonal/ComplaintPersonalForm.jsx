@@ -28,6 +28,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                     <IDCardInput
                         value={data.idCard}
                         onChange={(val) => onChange("idCard", val)}
+                        required
                     />
                 </Grid>
 
@@ -36,6 +37,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                         label="ชื่อ - นามสกุล"
                         value={data.name}
                         onChange={handleChange("name")}
+                        required
                     />
                 </Grid>
 
@@ -44,6 +46,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                         label="ที่อยู่ที่สามารถติดต่อได้"
                         value={data.address}
                         onChange={handleChange("address")}
+                        required
                     />
                 </Grid>
 
@@ -52,6 +55,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                         label="หมายเลขโทรศัพท์"
                         value={data.phone}
                         onChange={handleChange("phone")}
+                        required
                     />
                 </Grid>
 
@@ -61,6 +65,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                         value={data.subdistricts}
                         onChange={handleChange("subdistricts")}
                         options={subdistricts}
+                        required
                     />
                 </Grid>
 
@@ -70,6 +75,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                         value={data.districts}
                         onChange={handleChange("districts")}
                         options={districts}
+                        required
                     />
                 </Grid>
 
@@ -78,6 +84,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                         label="อีเมล"
                         value={data.email}
                         onChange={handleChange("email")}
+                        required
                     />
                 </Grid>
 
@@ -87,6 +94,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                         value={data.province}
                         onChange={handleChange("province")}
                         options={provinces}
+                        required
                     />
                 </Grid>
 
@@ -95,6 +103,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                         label="รหัสไปรษณีย์"
                         value={data.zipcode}
                         onChange={handleChange("zipcode")}
+                        required
                     />
                 </Grid>
             </Grid>

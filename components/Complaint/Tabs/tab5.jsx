@@ -9,7 +9,8 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ImageIcon from "@mui/icons-material/Image"; 
 import Image from "next/image";
-import { formatThaiDate, formatThaiDateTime } from "@utils/Formats";
+import {
+  formatThaiDate, formatThaiDateTime, formatPhoneNumber_null, formatCitizenId_null } from "@utils/Formats";
 
 const Tab5 = ({
   stepKey,
@@ -28,7 +29,11 @@ const Tab5 = ({
 
   const complainant = step1.general?.general || {};
   const delegate = step1.general?.delegate || {};
+  const corporate = step1.general?.corporate || {};
+  const signer = step1.general?.signer || {};
   const respondent = step2.general?.individual || {};
+  const corporateS2 = step2.general?.corporate || {};
+  const government = step2.general?.government || {};
   const complaint = step3.general || {};
   const files = complaint.attachment || [];
 
@@ -120,15 +125,15 @@ const Tab5 = ({
           ข้อมูลผู้ร้องทุกข์
         </Typography>
         <Grid container spacing={2} mb={3}>
-          <InfoItem label="หมายเลขประจำตัวประชาชน" value={complainant.name} />
-          <InfoItem label="ชื่อ - นามสกุล" value={complainant.name} />
-          <InfoItem label="ที่อยู่ที่ติดต่อได้" value={complainant.name} />
-          <InfoItem label="ตำบล/แขวง" value={complainant.representative} />
-          <InfoItem label="อำเภอ/เขต" value={complainant.representative} />
-          <InfoItem label="จังหวัด" value={complainant.representative} />
-          <InfoItem label="รหัสไปรษณีย์" value={complainant.representative} />
-          <InfoItem label="อีเมล์" value={complainant.representative} />
-          <InfoItem label="หมายเลขโทรศัพท์" value={complainant.representative} />
+          <InfoItem label="หมายเลขประจำตัวประชาชน" value={formatCitizenId_null(complainant.idCard || corporate.idCard)} />
+          <InfoItem label="ชื่อ - นามสกุล" value={complainant.name || corporate.name} />
+          <InfoItem label="ที่อยู่ที่ติดต่อได้" value={complainant.address || corporate.address} />
+          <InfoItem label="ตำบล/แขวง" value={complainant.subdistricts || corporate.subdistricts} />
+          <InfoItem label="อำเภอ/เขต" value={complainant.districts || corporate.districts} />
+          <InfoItem label="จังหวัด" value={complainant.province || corporate.province} />
+          <InfoItem label="รหัสไปรษณีย์" value={complainant.zipcode || corporate.zipcode} />
+          <InfoItem label="อีเมล์" value={complainant.email || corporate.email} />
+          <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(complainant.phone || corporate.phone)} />
         </Grid>
 
         {/* ผู้รับมอบอำนาจร้องเรียน */}
@@ -136,15 +141,15 @@ const Tab5 = ({
           ผู้รับมอบอำนาจร้องเรียน
         </Typography>
         <Grid container spacing={2} mb={3}>
-          <InfoItem label="หมายเลขประจำตัวประชาชน" value={delegate.name} />
-          <InfoItem label="ชื่อ - นามสกุล" value={delegate.name} />
-          <InfoItem label="ที่อยู่ที่ติดต่อได้" value={delegate.name} />
-          <InfoItem label="ตำบล/แขวง" value={delegate.representative} />
-          <InfoItem label="อำเภอ/เขต" value={delegate.representative} />
-          <InfoItem label="จังหวัด" value={delegate.representative} />
-          <InfoItem label="รหัสไปรษณีย์" value={delegate.representative} />
-          <InfoItem label="อีเมล์" value={delegate.representative} />
-          <InfoItem label="หมายเลขโทรศัพท์" value={delegate.representative} />
+          <InfoItem label="หมายเลขประจำตัวประชาชน" value={formatCitizenId_null(delegate.idCard || signer.idCard)} />
+          <InfoItem label="ชื่อ - นามสกุล" value={delegate.name || signer.name} />
+          <InfoItem label="ที่อยู่ที่ติดต่อได้" value={delegate.address || signer.address} />
+          <InfoItem label="ตำบล/แขวง" value={delegate.subdistricts || signer.subdistricts} />
+          <InfoItem label="อำเภอ/เขต" value={delegate.districts || signer.districts} />
+          <InfoItem label="จังหวัด" value={delegate.province || signer.province} />
+          <InfoItem label="รหัสไปรษณีย์" value={delegate.zipcode || signer.zipcode} />
+          <InfoItem label="อีเมล์" value={delegate.email || signer.email} />
+          <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(delegate.phone || signer.phone)} />
         </Grid>
 
         <Box
@@ -162,15 +167,15 @@ const Tab5 = ({
           ข้อมูลผู้ถูกร้อง (ข้อมูลจากผู้ร้องทุกข์)
         </Typography>
         <Grid container spacing={2} mb={3}>
-          <InfoItem label="หมายเลขประจำตัวประชาชน" value={respondent.name} />
-          <InfoItem label="ชื่อ - นามสกุล" value={respondent.name} />
-          <InfoItem label="ที่อยู่ที่ติดต่อได้" value={respondent.name} />
-          <InfoItem label="ตำบล/แขวง" value={respondent.representative} />
-          <InfoItem label="อำเภอ/เขต" value={respondent.representative} />
-          <InfoItem label="จังหวัด" value={respondent.representative} />
-          <InfoItem label="รหัสไปรษณีย์" value={respondent.representative} />
-          <InfoItem label="อีเมล์" value={respondent.representative} />
-          <InfoItem label="หมายเลขโทรศัพท์" value={respondent.representative} />
+          <InfoItem label="หมายเลขประจำตัวประชาชน" value={formatCitizenId_null(respondent.idCard || corporateS2.idCard || government.idCard)} />
+          <InfoItem label="ชื่อ - นามสกุล" value={respondent.name || corporateS2.name || government.name } />
+          <InfoItem label="ที่อยู่ที่ติดต่อได้" value={respondent.address || corporateS2.address || government.address } />
+          <InfoItem label="ตำบล/แขวง" value={respondent.subdistricts || corporateS2.subdistricts || government.subdistricts } />
+          <InfoItem label="อำเภอ/เขต" value={respondent.districts || corporateS2.districts || government.districts } />
+          <InfoItem label="จังหวัด" value={respondent.province || corporateS2.province || government.province } />
+          <InfoItem label="รหัสไปรษณีย์" value={respondent.zipcode || corporateS2.zipcode || government.zipcode } />
+          <InfoItem label="อีเมล์" value={respondent.email || corporateS2.email || government.email } />
+          <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone || corporateS2.phone || government.phone)} />
         </Grid>
 
         <Box

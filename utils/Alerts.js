@@ -1,32 +1,44 @@
 import Swal from 'sweetalert2';
 
-export const showAlert = (type = "info", title = "แจ้งเตือน", text = "") => {
+export const showAlert = (type = "info", title = "แจ้งเตือน", text = "", isHtml = false) => {
   return Swal.fire({
     icon: type,
     title,
-    text,
-    confirmButtonColor: '#3085d6',
-    confirmButtonText: 'ตกลง',
+    ...(isHtml ? { html: text } : { text }),
+    confirmButtonColor: "#3085d6",
+    confirmButtonText: "ตกลง",
   });
 };
 
+
 export const showConfirm = (
   title = "คุณแน่ใจหรือไม่?",
-  text = "",
+  content = "",
   confirmText = "ใช่",
-  cancelText = "ยกเลิก"
+  cancelText = "ยกเลิก",
+  width = undefined
 ) => {
-  return Swal.fire({
-    icon: 'question',
+  const isHtml = /<\/?[a-z][\s\S]*>/i.test(content);
+
+  const options = {
+    icon: "question",
     title,
-    text,
+    ...(isHtml ? { html: content } : { text: content }),
     showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
     confirmButtonText: confirmText,
     cancelButtonText: cancelText,
-  }).then((result) => result.isConfirmed);
+  };
+
+  if (width) {
+    options.width = width;
+  }
+
+  return Swal.fire(options).then((result) => result.isConfirmed);
 };
+
+
 
 export const showLoading = (title = "กำลังโหลด...") => {
   Swal.fire({

@@ -8,6 +8,10 @@ const Homepage1 = () => {
   const handleComplaintClick = () => {
     router.push("/complaint");
   };
+
+  const handleFollowUpClick = () => {
+    router.push("/followup");
+  };
   return (
     <div style={{ position: "relative", minHeight: "90vh", width: "100%" }}>
       <div
@@ -92,7 +96,7 @@ const Homepage1 = () => {
         }}
       >
         <button className={styles.button} onClick={handleComplaintClick}>แจ้งเรื่องร้องทุกข์</button>
-        <button className={styles.buttonwhit}>ติดตามผล</button>
+        <button className={styles.buttonwhit} onClick={handleFollowUpClick}>ติดตามผล</button>
       </div>
     </div>
   );

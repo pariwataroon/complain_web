@@ -17,8 +17,8 @@ const Tab2 = ({ stepKey, tabData, updateStepData }) => {
     };
 
     const updatedData = {
-      ...tabData,
       [type]: updatedTypeData,
+      activeType: type,
     };
 
     updateStepData(stepKey, "general", updatedData);
@@ -50,6 +50,7 @@ const Tab2 = ({ stepKey, tabData, updateStepData }) => {
             data={tabData.individual || {}}
             onChange={handleChange("individual")}
             title="ข้อมูลผู้ถูกร้องทุกข์"
+            required
           />
         </div>
       )}
@@ -61,6 +62,7 @@ const Tab2 = ({ stepKey, tabData, updateStepData }) => {
             data={tabData.corporate || {}}
             onChange={handleChange("corporate")}
             title="ข้อมูลผู้ถูกร้องทุกข์"
+            required
           />
         </div>
       )}
@@ -72,6 +74,7 @@ const Tab2 = ({ stepKey, tabData, updateStepData }) => {
             data={tabData.government || {}}
             onChange={handleChange("government")}
             title="ข้อมูลหน่วยงานของรัฐที่ถูกร้องทุกข์"
+            required
           />
         </div>
       )}

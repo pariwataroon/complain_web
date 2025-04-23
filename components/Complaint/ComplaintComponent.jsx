@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import NavbarMain from "@services/navbarMain/navbarMain";
 import { Container, Box } from "@mui/material";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
@@ -12,6 +12,7 @@ import Tab3 from "./Tabs/tab3";
 import Tab4 from "./Tabs/tab4";
 import Tab5 from "./Tabs/tab5";
 import useComplaintForm from "@hooks/user/complaint/useComplaintForm";
+import { exportElementToPDF } from "@utils/exportPDF";
 
 const processComponents = [Tab1, Tab2, Tab3, Tab4, Tab5];
 const stepLabels = ["ข้อมูลผู้ร้องทุกข์", "ข้อมูลผู้ถูกร้องทุกข์", "รายละเอียดเรื่องร้องทุกข์"];
@@ -20,6 +21,8 @@ export default function ComplaintComponent() {
   const [activeStep, setActiveStep] = useState(0);
   const [acceptSubmit, setAcceptSubmit] = useState(false);
   const StepComponent = processComponents[activeStep];
+  const pdfRef = useRef();
+
   const {
     formData,
     updateStepData,
@@ -32,7 +35,7 @@ export default function ComplaintComponent() {
     const currentStepKey = `step${activeStep + 1}`;
     const currentTabData = getStepTabData(currentStepKey, "general");
 
-    console.log(`📦 Data in ${currentStepKey}:`, currentTabData);
+    // console.log(`📦 Data in ${currentStepKey}:`, currentTabData);
 
     setActiveStep((prev) => Math.min(prev + 1, processComponents.length - 1));
   };
@@ -62,13 +65,25 @@ export default function ComplaintComponent() {
             </Box>
             )}
             <Box sx={{ flex: 1 }}>
-              <StepComponent
-                stepKey={`step${activeStep + 1}`}
-                tabData={getStepTabData(`step${activeStep + 1}`, "general")}
-                updateStepData={updateStepData}
-                onAccepted={setAcceptSubmit}
-                formData={getFormData()}
-              />
+              {activeStep === 4 ? (
+                <div ref={pdfRef}>
+                  <Tab5
+                    stepKey={`step${activeStep + 1}`}
+                    tabData={getStepTabData(`step${activeStep + 1}`, "general")}
+                    updateStepData={updateStepData}
+                    onAccepted={setAcceptSubmit}
+                    formData={getFormData()}
+                  />
+                </div>
+              ) : (
+                <StepComponent
+                  stepKey={`step${activeStep + 1}`}
+                  tabData={getStepTabData(`step${activeStep + 1}`, "general")}
+                  updateStepData={updateStepData}
+                  onAccepted={setAcceptSubmit}
+                  formData={getFormData()}
+                />
+              )}
 
               <Box sx={{ display: "flex", justifyContent: "center", mt: 4, gap: 2 }}>
                 {activeStep === 4 ? (
@@ -92,7 +107,7 @@ export default function ComplaintComponent() {
                       label="ส่งออก"
                       color="ส่งออก"
                       variant="outlined"
-                      // onClick={() => window.print()}
+                      onClick={() => exportElementToPDF(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
                       iconRight={<UploadOutlinedIcon />}
                     />
                   </>
