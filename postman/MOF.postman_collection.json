@@ -1958,7 +1958,258 @@
 						}
 					],
 					"description": "API สำหรับจัดการการตั้งค่าระยะเวลาต่างๆ ในระบบ"
-				}
+				},{
+					"name": "VENUES",
+					"item": [
+					  {
+						"name": "Get All Venues",
+						"request": {
+						  "auth": {
+							"type": "bearer",
+							"bearer": [
+							  {
+								"key": "token",
+								"value": "{{access_token}}",
+								"type": "string"
+							  }
+							]
+						  },
+						  "method": "GET",
+						  "header": [],
+						  "url": {
+							"raw": "{{API}}{{PREFIX}}/venues",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["venues"]
+						  },
+						  "description": "ดึงรายการสถานที่ทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_venues"
+						},
+						"response": []
+					  },
+					  {
+						"name": "Get Venues Grouped",
+						"request": {
+						  "auth": {
+							"type": "bearer",
+							"bearer": [
+							  {
+								"key": "token",
+								"value": "{{access_token}}",
+								"type": "string"
+							  }
+							]
+						  },
+						  "method": "GET",
+						  "header": [],
+						  "url": {
+							"raw": "{{API}}{{PREFIX}}/venues/grouped",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["venues", "grouped"]
+						  },
+						  "description": "ดึงข้อมูลสถานที่แบ่งตามกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_venues"
+						},
+						"response": []
+					  },
+					  {
+						"name": "Get Venue by ID",
+						"request": {
+						  "auth": {
+							"type": "bearer",
+							"bearer": [
+							  {
+								"key": "token",
+								"value": "{{access_token}}",
+								"type": "string"
+							  }
+							]
+						  },
+						  "method": "GET",
+						  "header": [],
+						  "url": {
+							"raw": "{{API}}{{PREFIX}}/venues/{{venue_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["venues", "{{venue_id}}"]
+						  },
+						  "description": "ดึงข้อมูลสถานที่ตาม ID - ต้องมีสิทธิ์อ่านใน setting_venues"
+						},
+						"response": []
+					  },
+					  {
+						"name": "Search Venues by Department",
+						"request": {
+						  "auth": {
+							"type": "bearer",
+							"bearer": [
+							  {
+								"key": "token",
+								"value": "{{access_token}}",
+								"type": "string"
+							  }
+							]
+						  },
+						  "method": "GET",
+						  "header": [],
+						  "url": {
+							"raw": "{{API}}{{PREFIX}}/venues/search/by-department?department_id={{department_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["venues", "search", "by-department"],
+							"query": [
+							  {
+								"key": "department_id",
+								"value": "{{department_id}}"
+							  }
+							]
+						  },
+						  "description": "ค้นหาสถานที่ตามหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_venues"
+						},
+						"response": []
+					  },
+					  {
+						"name": "Search Venues by Name",
+						"request": {
+						  "auth": {
+							"type": "bearer",
+							"bearer": [
+							  {
+								"key": "token",
+								"value": "{{access_token}}",
+								"type": "string"
+							  }
+							]
+						  },
+						  "method": "GET",
+						  "header": [],
+						  "url": {
+							"raw": "{{API}}{{PREFIX}}/venues/search/by-name?search_term=ห้องประชุม",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["venues", "search", "by-name"],
+							"query": [
+							  {
+								"key": "search_term",
+								"value": "ห้องประชุม"
+							  }
+							]
+						  },
+						  "description": "ค้นหาสถานที่ตามชื่อ รหัส หรือตัวย่อ - ต้องมีสิทธิ์อ่านใน setting_venues"
+						},
+						"response": []
+					  },
+					  {
+						"name": "Create Venue",
+						"request": {
+						  "auth": {
+							"type": "bearer",
+							"bearer": [
+							  {
+								"key": "token",
+								"value": "{{access_token}}",
+								"type": "string"
+							  }
+							]
+						  },
+						  "method": "POST",
+						  "header": [],
+						  "body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"ห้องประชุมทดสอบ\",\n    \"code\": \"TEST-001\",\n    \"short_name\": \"ทดสอบ\",\n    \"description\": \"ห้องประชุมสำหรับการทดสอบ\",\n    \"capacity\": 50,\n    \"venue_group_id\": \"{{venue_group_id}}\",\n    \"department_id\": \"{{department_id}}\",\n    \"floor\": \"1\",\n    \"building\": \"อาคารทดสอบ\",\n    \"has_projector\": true,\n    \"has_microphone\": true,\n    \"has_computer\": true,\n    \"is_active\": true\n}",
+							"options": {
+							  "raw": {
+								"language": "json"
+							  }
+							}
+						  },
+						  "url": {
+							"raw": "{{API}}{{PREFIX}}/venues",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["venues"]
+						  },
+						  "description": "สร้างสถานที่ใหม่ - ต้องมีสิทธิ์สร้างใน setting_venues"
+						},
+						"response": []
+					  },
+					  {
+						"name": "Update Venue",
+						"request": {
+						  "auth": {
+							"type": "bearer",
+							"bearer": [
+							  {
+								"key": "token",
+								"value": "{{access_token}}",
+								"type": "string"
+							  }
+							]
+						  },
+						  "method": "PUT",
+						  "header": [],
+						  "body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"ห้องประชุมทดสอบ (อัปเดต)\",\n    \"description\": \"ห้องประชุมสำหรับการทดสอบที่ปรับปรุงแล้ว\",\n    \"capacity\": 75,\n    \"has_projector\": true,\n    \"has_microphone\": true,\n    \"has_computer\": false,\n    \"is_active\": true\n}",
+							"options": {
+							  "raw": {
+								"language": "json"
+							  }
+							}
+						  },
+						  "url": {
+							"raw": "{{API}}{{PREFIX}}/venues/{{venue_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["venues", "{{venue_id}}"]
+						  },
+						  "description": "อัปเดตข้อมูลสถานที่ - ต้องมีสิทธิ์แก้ไขใน setting_venues"
+						},
+						"response": []
+					  },
+					  {
+						"name": "Delete Venue",
+						"request": {
+						  "auth": {
+							"type": "bearer",
+							"bearer": [
+							  {
+								"key": "token",
+								"value": "{{access_token}}",
+								"type": "string"
+							  }
+							]
+						  },
+						  "method": "DELETE",
+						  "header": [],
+						  "url": {
+							"raw": "{{API}}{{PREFIX}}/venues/{{venue_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["venues", "{{venue_id}}"]
+						  },
+						  "description": "ลบสถานที่ (soft delete) - ต้องมีสิทธิ์ลบใน setting_venues"
+						},
+						"response": []
+					  },
+					  {
+						"name": "Get Venues Stats",
+						"request": {
+						  "auth": {
+							"type": "bearer",
+							"bearer": [
+							  {
+								"key": "token",
+								"value": "{{access_token}}",
+								"type": "string"
+							  }
+							]
+						  },
+						  "method": "GET",
+						  "header": [],
+						  "url": {
+							"raw": "{{API}}{{PREFIX}}/venues/stats/overview",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["venues", "stats", "overview"]
+						  },
+						  "description": "ดึงข้อมูลสถิติสำหรับสถานที่ - ต้องมีสิทธิ์อ่านใน setting_venues"
+						},
+						"response": []
+					  }
+					],
+					"description": "API สำหรับจัดการข้อมูลสถานที่"
+				  }
 			]
 		}
 	],
