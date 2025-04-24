@@ -18,6 +18,7 @@ from app.api.v1.controllers.permission_controller import (
     create_permission, get_permissions, update_permission, delete_permission,
     assign_role_to_user, remove_role_from_user, get_user_roles, get_resource_by_id
 )
+from app.api.v1.routers.user_permission_router import router as user_permission_router
 from models.role import Role
 from models.resource import Resource
 from models.permission import Permission
@@ -26,6 +27,8 @@ router = APIRouter(
     prefix="/permissions",
     tags=["permissions"],
 )
+
+router.include_router(user_permission_router, prefix="/user-permissions")
 
 # =================== Role Endpoints ===================
 @router.post("/roles", response_model=FormatResponseModel)
