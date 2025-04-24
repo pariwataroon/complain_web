@@ -35,6 +35,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                 <Grid item xs={12} sm={6}>
                     <InputText
                         label="ชื่อ - นามสกุล"
+                        placeholder="ชื่อ - นามสกุล"
                         value={data.name}
                         onChange={handleChange("name")}
                         required
@@ -44,6 +45,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                 <Grid item xs={12} sm={6}>
                     <InputText
                         label="ที่อยู่ที่สามารถติดต่อได้"
+                        placeholder="ที่อยู่ที่สามารถติดต่อได้"
                         value={data.address}
                         onChange={handleChange("address")}
                         required
@@ -53,6 +55,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                 <Grid item xs={12} sm={6}>
                     <InputPhone
                         label="หมายเลขโทรศัพท์"
+                        placeholder="หมายเลขโทรศัพท์"
                         value={data.phone}
                         onChange={handleChange("phone")}
                         required
@@ -82,6 +85,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                 <Grid item xs={12} sm={6}>
                     <InputText
                         label="อีเมล"
+                        placeholder="อีเมล"
                         value={data.email}
                         onChange={handleChange("email")}
                         required
@@ -101,6 +105,7 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
                 <Grid item xs={12} sm={3}>
                     <InputZipcode
                         label="รหัสไปรษณีย์"
+                        placeholder="รหัสไปรษณีย์"
                         value={data.zipcode}
                         onChange={handleChange("zipcode")}
                         required

@@ -65,14 +65,14 @@ export default function useComplaintForm() {
       const res = await axios.post("/complaints", payload);
       closeAlert();
       alertSuccess("ส่งเรื่องสำเร็จ", "ระบบได้รับข้อมูลของคุณแล้ว");
-      console.log("✅ ส่งข้อมูลสำเร็จ:", res.data);
+      console.log("ส่งข้อมูลสำเร็จ:", res.data);
     } catch (error) {
       closeAlert();
       alertError(
         "เกิดข้อผิดพลาด",
         error?.response?.data?.message || "ไม่สามารถส่งเรื่องได้"
       );
-      console.error("❌ ส่งข้อมูลไม่สำเร็จ:", error);
+      console.error("ส่งข้อมูลไม่สำเร็จ:", error);
     }
   };
 

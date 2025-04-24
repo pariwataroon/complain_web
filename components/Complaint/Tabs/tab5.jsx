@@ -7,10 +7,11 @@ import {
 } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
-import ImageIcon from "@mui/icons-material/Image"; 
+import ImageIcon from "@mui/icons-material/Image";
 import Image from "next/image";
 import {
-  formatThaiDate, formatThaiDateTime, formatPhoneNumber_null, formatCitizenId_null } from "@utils/Formats";
+  formatThaiDate, formatThaiDateTime, formatPhoneNumber_null, formatCitizenId_null
+} from "@utils/Formats";
 
 const Tab5 = ({
   stepKey,
@@ -38,7 +39,7 @@ const Tab5 = ({
   const files = complaint.attachment || [];
 
   console.log({ formData });
-  
+
   const InfoItem = ({ label, value }) => (
     <Grid item xs={12} sm={6}>
       <Typography fontSize={16}>
@@ -82,7 +83,7 @@ const Tab5 = ({
       />
       <Paper sx={{ mt: -1, p: 4, borderRadius: 2 }}>
         {/* Title */}
-        
+
         <Box display="flex" alignItems="center" mb={3}>
           <Image
             src="/logo_blue.png"
@@ -91,7 +92,7 @@ const Tab5 = ({
             height={100}
             style={{ objectFit: "contain" }}
           />
-          <Typography variant="h6" fontWeight="bold"  ml={2}>
+          <Typography variant="h6" fontWeight="bold" ml={2}>
             แบบรับคำร้องเรียน / ร้องทุกข์กระทรวงการคลัง
           </Typography>
         </Box>
@@ -121,7 +122,7 @@ const Tab5 = ({
         />
 
         {/* ผู้ร้อง */}
-        <Typography variant="subtitle1" fontWeight="bold" fontSize={20}  gutterBottom>
+        <Typography variant="subtitle1" fontWeight="bold" fontSize={20} gutterBottom>
           ข้อมูลผู้ร้องทุกข์
         </Typography>
         <Grid container spacing={2} mb={3}>
@@ -168,13 +169,13 @@ const Tab5 = ({
         </Typography>
         <Grid container spacing={2} mb={3}>
           <InfoItem label="หมายเลขประจำตัวประชาชน" value={formatCitizenId_null(respondent.idCard || corporateS2.idCard || government.idCard)} />
-          <InfoItem label="ชื่อ - นามสกุล" value={respondent.name || corporateS2.name || government.name } />
-          <InfoItem label="ที่อยู่ที่ติดต่อได้" value={respondent.address || corporateS2.address || government.address } />
-          <InfoItem label="ตำบล/แขวง" value={respondent.subdistricts || corporateS2.subdistricts || government.subdistricts } />
-          <InfoItem label="อำเภอ/เขต" value={respondent.districts || corporateS2.districts || government.districts } />
-          <InfoItem label="จังหวัด" value={respondent.province || corporateS2.province || government.province } />
-          <InfoItem label="รหัสไปรษณีย์" value={respondent.zipcode || corporateS2.zipcode || government.zipcode } />
-          <InfoItem label="อีเมล์" value={respondent.email || corporateS2.email || government.email } />
+          <InfoItem label="ชื่อ - นามสกุล" value={respondent.name || corporateS2.name || government.name} />
+          <InfoItem label="ที่อยู่ที่ติดต่อได้" value={respondent.address || corporateS2.address || government.address} />
+          <InfoItem label="ตำบล/แขวง" value={respondent.subdistricts || corporateS2.subdistricts || government.subdistricts} />
+          <InfoItem label="อำเภอ/เขต" value={respondent.districts || corporateS2.districts || government.districts} />
+          <InfoItem label="จังหวัด" value={respondent.province || corporateS2.province || government.province} />
+          <InfoItem label="รหัสไปรษณีย์" value={respondent.zipcode || corporateS2.zipcode || government.zipcode} />
+          <InfoItem label="อีเมล์" value={respondent.email || corporateS2.email || government.email} />
           <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone || corporateS2.phone || government.phone)} />
         </Grid>
 
@@ -203,7 +204,7 @@ const Tab5 = ({
         </Grid>
 
         {/* ไฟล์แนบ */}
-        <Typography variant="subtitle1" fontWeight="bold"  gutterBottom>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
           เอกสารประกอบการร้องทุกข์
         </Typography>
         <Box mb={3}>
@@ -253,12 +254,12 @@ const Tab5 = ({
           <InfoItem
             label="วันที่"
             value={formatThaiDate()}
-          />          
+          />
           <InfoItem
             label="วันที่"
             value={formatThaiDate()}
           />
-         
+
         </Grid>
       </Paper>
     </Box>

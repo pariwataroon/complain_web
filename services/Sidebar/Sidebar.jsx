@@ -67,6 +67,36 @@ const submenuItems = {
       type: "item",
       to: "/admin/edit/report",
     },
+    {
+      label: "เรื่องร้องเรียนที่ได้รับมอบหมาย",
+      type: "item",
+      to: "/admin/edit/assigned-complaints",
+    },
+    {
+      label: "บัตรสนเท่ห์ที่ได้รับมอบหมาย",
+      type: "item",
+      to: "/admin/edit/assigned-anonymous",
+    },
+    {
+      label: "แบบรายงานส่งหน่วยงานที่เกี่ยวข้อง",
+      type: "item",
+      to: "/admin/edit/forward-to-agency",
+    },
+    {
+      label: "แบบรายงานแจ้งผู้ร้องเรียนหรือส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น",
+      type: "item",
+      to: "/admin/edit/initial-notification-to-complainant-or-agency",
+    },
+    {
+      label: "แบบรายงานขอทราบผลการพิจารณาหรือผลความคืบหน้า",
+      type: "item",
+      to: "/admin/edit/request-result-or-progress",
+    },
+    {
+      label: "แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ",
+      type: "item",
+      to: "/admin/edit/inform-related-parties",
+    },
   ],
   box: [
     { label: "คลังเอกสาร", type: "header" },
@@ -77,6 +107,7 @@ const submenuItems = {
     { label: "จัดการข้อมูล", type: "header" },
     { label: "กำหนดคำถาม Chat Bot", type: "item", to: "/admin/homepage/chatbot" },
     { label: "กำหนดข่าวสาร", type: "item", to: "/admin/homepage/new" },
+    { label: "รายงานคำถามจากผู้ร้อง", type: "item", to: "/admin/homepage/complainant-questions" },
   ],
   document: [
     { label: "รายงาน", type: "header" },
@@ -186,22 +217,21 @@ export default function Sidebar() {
   const [hoverMenu, setHoverMenu] = useState(null);
   const [openSubmenu, setOpenSubmenu] = useState(null);
   const router = useRouter();
-  const [invisible, setInvisible] = useState(false); // ตั้งเป็น false เพื่อแสดงว่ามีการแจ้งเตือน
-  const [showNotifications, setShowNotifications] = useState(false); // เพิ่ม state สำหรับการแสดง notification box
+  const [invisible, setInvisible] = useState(false); 
+  const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
   const notificationIconRef = useRef(null);
 
-  // ปิดเมนูเมื่อคลิกที่ส่วนอื่นๆ ของหน้าจอ
+  
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
         !event.target.closest(".submenu") &&
         !event.target.closest(".MuiListItemButton-root")
       ) {
-        setOpenSubmenu(null); // ปิดเมนูถ้าคลิกที่นอกเมนู
+        setOpenSubmenu(null); 
       }
 
-      // ปิด notification box เมื่อคลิกที่นอกกล่อง
       if (
         notificationRef.current &&
         !notificationRef.current.contains(event.target) &&
@@ -220,7 +250,7 @@ export default function Sidebar() {
 
   const handleNotificationClick = () => {
     setShowNotifications(!showNotifications);
-    setInvisible(true); // เมื่อกดที่ไอคอนแจ้งเตือน จะเคลียร์จุดแจ้งเตือนแดง
+    setInvisible(true);
   };
 
   const renderMenuItem = (key, IconComponent) => (

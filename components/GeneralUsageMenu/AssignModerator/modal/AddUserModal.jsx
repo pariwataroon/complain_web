@@ -11,6 +11,11 @@ import {
 import TextfieldService from "@services/TextfieldService/TextfieldService";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import useCRUDFormUsers from "@hooks/admin/setting/useCRUDFormUsers";
+import ComplaintPersonalForm from "@services/ComplaintPersonal/ComplaintPersonalForm";
+import InputText from "@services/InputText/InputText";
+import SelectField from "@services/SelectField/SelectField";
+
+
 
 const AddUserModal = ({ open, onClose }) => {
   const { register, handleSubmit, setValue, errors, onSubmit, isSubmitting } = useCRUDFormUsers();
@@ -47,57 +52,47 @@ const AddUserModal = ({ open, onClose }) => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <Grid container spacing={2}>
             {/* Row 1: Username, Password, Profile Image */}
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <Typography variant="body2" color="#1120A3" sx={{ fontWeight: "bold" }}>
                 Username
               </Typography>
               <TextfieldService
                 fullWidth
-                placeholder="Username"
-                {...register("username", { required: "Username is required" })}
+                placeholder="กรุณากรอกชื่อผู้ใช้งาน"
+                {...register("username", { required: "กรุณากรอกชื่อผู้ใช้งาน" })}
               />
               {errors.username && <Typography color="error">{errors.username.message}</Typography>}
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <Typography variant="body2" color="#1120A3" sx={{ fontWeight: "bold" }}>
                 Password
               </Typography>
               <TextfieldService
                 fullWidth
-                placeholder="Password"
+                placeholder="กรุณากรอกรหัสผ่าน"
                 type="password"
-                {...register("password", { required: "Password is required" })}
+                {...register("password", { required: "กรุณากรอกรหัสผ่าน" })}              
               />
               {errors.password && <Typography color="error">{errors.password.message}</Typography>}
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={4}>
               <Typography variant="body2" color="#1120A3" sx={{ fontWeight: "bold" }}>
-                รูปโปรไฟล์
-              </Typography>
-              <Button variant="outlined" fullWidth>
-                เพิ่มรูปภาพ
-              </Button>
-            </Grid>
-
-            {/* Row 2: Full Name, Group, ID Card */}
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="#1120A3" sx={{ fontWeight: "bold" }}>
-                ชื่อ - นามสกุล
+                ชื่อผู้ใช้งาน
               </Typography>
               <TextfieldService
                 fullWidth
-                placeholder="ชื่อ - นามสกุล"
-                {...register("fullName", { required: "Full name is required" })}
+                placeholder="กรุณากรอกชื่อผู้ใช้งาน"
+                {...register("full_name", { required: "กรุณากรอกชื่อผู้ใช้งาน" })}
               />
-              {errors.fullName && <Typography color="error">{errors.fullName.message}</Typography>}
+              {errors.full_name && <Typography color="error">{errors.full_name.message}</Typography>}
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <Typography variant="body2" color="#1120A3" sx={{ fontWeight: "bold" }}>
                 กลุ่มสิทธิ์
               </Typography>
               <SelectMenuService
                 placeholder="กลุ่มผู้ใช้งาน"
-                {...register("group", { required: "Group is required" })}
+                {...register("group", { required: "กรุณาเลือกกลุ่มผู้ใช้งาน" })}
                 options={[
                   { value: "admin", label: "ผู้ดูแลระบบ" },
                   { value: "public", label: "ประชาชน" },
@@ -106,78 +101,74 @@ const AddUserModal = ({ open, onClose }) => {
               />
               {errors.group && <Typography color="error">{errors.group.message}</Typography>}
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={4}>
               <Typography variant="body2" color="#1120A3" sx={{ fontWeight: "bold" }}>
-                เลขบัตรประชาชน
+                ตำแหน่ง
               </Typography>
               <TextfieldService
                 fullWidth
-                placeholder="เลขบัตรประชาชน"
-                {...register("idCard", { required: "ID Card is required" })}
+                placeholder="ตำแหน่ง"
+                {...register("role", { required: "กรุณากรอกตำแหน่ง" })}
               />
-              {errors.idCard && <Typography color="error">{errors.idCard.message}</Typography>}
+              {errors.role && <Typography color="error">{errors.role.message}</Typography>}
+            </Grid>
+            <Grid item xs={4} sm={4}>
+              <Typography variant="body2" color="#1120A3" sx={{ fontWeight: "bold" }}>
+                รูปโปรไฟล์
+              </Typography>
+              <Button variant="outlined" fullWidth>
+                เพิ่มรูปภาพ
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6} md={8}>
+              <ComplaintPersonalForm
+                title="ข้อมูลผู้ใช้เพิ่มเติม"
+                required
+              />
+            </Grid>
+              <Grid item xs={12} sm={6} md={4} sx={{ paddingTop: "20px", marginTop: "130px" }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <InputText
+                    label="ที่อยู่ที่สามารถติดต่อได้"
+                    placeholder="ที่อยู่ที่สามารถติดต่อได้"
+                    required
+                    {...register("address", { required: "กรุณากรอกที่อยู่ที่สามารถติดต่อได้" })}
+                  />
+                  {errors.address && <Typography color="error">{errors.address.message}</Typography>}
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <SelectField
+                    label="ตำบล/แขวง"
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <SelectField
+                    label="อำเภอ/เขต"
+                    required
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <SelectField
+                    label="จังหวัด"
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <InputText
+                    label="รหัสไปรษณีย์"
+                    placeholder="รหัสไปรษณีย์"
+                    required
+                    {...register("postal_code ", { required: "กรุณากรอกรหัสไปรษณีย์" })}
+                  />
+                  {errors.postal_code && <Typography color="error">{errors.postal_code.message}</Typography>}
+                </Grid>
+              </Grid>
             </Grid>
 
-            {/* Row 3: Phone, Email, Address */}
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="#1120A3" sx={{ fontWeight: "bold" }}>
-                หมายเลขโทรศัพท์
-              </Typography>
-              <TextfieldService
-                fullWidth
-                placeholder="หมายเลขโทรศัพท์"
-                {...register("phone", { required: "Phone number is required" })}
-              />
-              {errors.phone && <Typography color="error">{errors.phone.message}</Typography>}
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="#1120A3" sx={{ fontWeight: "bold" }}>
-                อีเมล
-              </Typography>
-              <TextfieldService
-                fullWidth
-                placeholder="อีเมล"
-                {...register("email", { required: "Email is required" })}
-              />
-              {errors.email && <Typography color="error">{errors.email.message}</Typography>}
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="body2" color="#1120A3" sx={{ fontWeight: "bold" }}>
-                ที่อยู่
-              </Typography>
-              <TextfieldService
-                fullWidth
-                placeholder="ที่อยู่"
-                {...register("address", { required: "Address is required" })}
-              />
-              {errors.address && <Typography color="error">{errors.address.message}</Typography>}
-            </Grid>
-
-            {/* Row 4: District, Zipcode */}
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="#1120A3" sx={{ fontWeight: "bold" }}>
-                อำเภอ/เขต
-              </Typography>
-              <TextfieldService
-                fullWidth
-                placeholder="อำเภอ/เขต"
-                {...register("district", { required: "District is required" })}
-              />
-              {errors.district && <Typography color="error">{errors.district.message}</Typography>}
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="#1120A3" sx={{ fontWeight: "bold" }}>
-                รหัสไปรษณีย์
-              </Typography>
-              <TextfieldService
-                fullWidth
-                placeholder="รหัสไปรษณีย์"
-                {...register("zipcode", { required: "Zipcode is required" })}
-              />
-              {errors.zipcode && <Typography color="error">{errors.zipcode.message}</Typography>}
-            </Grid>
-
-            {/* Action Buttons */}
             <Grid item xs={12} sm={6}>
               <Button
                 variant="outlined"

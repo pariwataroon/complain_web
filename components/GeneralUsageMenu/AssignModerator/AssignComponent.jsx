@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styles from "./UserManagement.module.scss";
 import { Box, Typography, Grid, IconButton } from "@mui/material";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
@@ -6,11 +6,11 @@ import TextfieldService from "@services/TextfieldService/TextfieldService";
 import ButtonService from "@services/ButtonService/ButtonService";
 import { Search } from "@mui/icons-material";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
 import AddCircleOutlineOutlinedIcon from "@mui/icons-material/AddCircleOutlineOutlined";
 import RemoveCircleOutlineOutlinedIcon from "@mui/icons-material/RemoveCircleOutlineOutlined";
 import AddUserModal from "./modal/AddUserModal";
-import AddIcon from "@mui/icons-material/Add";
+import { GetDetailedStatsbyRole } from "@pages/api/settinggeneral/users";
+import { formatThaiDateTime, formatPhoneNumber_null, formatCitizenId_null } from "@utils/Formats";
 
 const mockData = {
   admin: [
@@ -114,6 +114,27 @@ const breadcrumbItems = [
 ];
 
 export default function UserManagementUI() {
+  const [stats, setStats] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await GetDetailedStatsbyRole();
+        console.log({ data });
+        setStats(data);
+      } catch (err) {
+        console.error("โหลดข้อมูลไม่สำเร็จ:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+
   const [expandedSections, setExpandedSections] = useState(
     sections.map((section) => section.expanded)
   );
@@ -155,6 +176,19 @@ export default function UserManagementUI() {
     { value: "agency", label: "หน่วยงานในสังกัด" },
     { value: "officer", label: "เจ้าหน้าที่" },
   ];
+
+  const roleNameMap = {
+    admin: "ผู้ดูแลระบบ",
+    people: "ประชาชน",
+    admin_home: "ผู้ดูแลหน้าหลัก",
+    executive: "ผู้บริหาร",
+    agency: "หน่วยงานในสังกัด",
+    officer: "เจ้าหน้าที่",
+    staff: "เจ้าหน้าที่ สรร.",
+    supervisor: "ผู้บริหาร / ผู้สั่งงาน",
+    department: "หน่วยงานในสังกัด",
+  };
+
 
   // Handle change event
   const handlePermissionChange = (event) => {
@@ -330,186 +364,88 @@ export default function UserManagementUI() {
             <div className={styles.headerCell}>ตำแหน่ง</div>
           </div>
 
-          {/* Section Groups */}
-          {sections.map((section, sectionIndex) => (
-            <div key={sectionIndex} className={styles.section}>
-              {/* Section Header */}
+          {Array.isArray(stats?.res_data) && stats.res_data.map((section, idx) => (
+            <div key={idx} className={styles.section}>
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionTitle}>
-                  <div
-                    onClick={() => toggleSection(sectionIndex)}
-                    className={`${styles.iconWrapper} ${
-                      expandedSections[sectionIndex] ? styles.iconRotate : ""
-                    }`}
-                  >
-                    {expandedSections[sectionIndex] ? (
-                      <RemoveCircleOutlineOutlinedIcon />
-                    ) : (
-                      <AddCircleOutlineOutlinedIcon />
-                    )}
+                  <div onClick={() => toggleSection(idx)} className={`${styles.iconWrapper} ${expandedSections[idx] ? styles.iconRotate : ""}`}>
+                    {expandedSections[idx] ? <RemoveCircleOutlineOutlinedIcon /> : <AddCircleOutlineOutlinedIcon />}
                   </div>
-                  <span>{section.title}</span>
+                  <span>{section.role_description}</span>
                 </div>
-                <IconButton
-                  className={styles.addButton}
-                  onClick={handleOpenModal}
-                >
-                  <img
-                    src="/icons/Add.png"
-                    alt="Add"
-                    style={{ width: "24px", height: "24px" }}
-                  />
+                <IconButton className={styles.addButton} onClick={handleOpenModal}>
+                  <img src="/icons/Add.png" alt="Add" style={{ width: 24, height: 24 }} />
                 </IconButton>
-                <AddUserModal
-                  className={styles.addButton}
-                  open={openModal}
-                  onClose={handleCloseModal}
-                />
+                <AddUserModal open={openModal} onClose={handleCloseModal} />
               </div>
 
-              {/* User Rows - Only show if section is expanded */}
-              {expandedSections[sectionIndex] &&
-                (section.users.length === 0 ? (
-                  <Box
-                    sx={{
-                      padding: 3,
-                      borderRadius: 5,
-                      border: "2px dashed #F1D079",
-                      textAlign: "center",
-                      marginTop: 2,
-                    }}
-                  >
-                    <Typography variant="h6" color="#1120A3">
-                      ไม่มีข้อมูล
-                    </Typography>
-                  </Box>
-                ) : (
-                  section.users.map((user, userIdx) => (
-                    <div key={userIdx} className={styles.userRow}>
-                      <div className={styles.userContainer}>
-                        <div className={styles.userInfo}>
-                          <div className={styles.userCell}>
-                            {user.permission}
-                          </div>
-                          <div className={styles.userCell}>{user.username}</div>
-                          <div className={styles.userCell}>
-                            {user.displayName}
-                          </div>
-                          <div className={styles.roleActions}>
-                            <div className={styles.role}>{user.roleName}</div>
-                            <div className={styles.actionButtons}>
-                              <button className={styles.actionButton}>✓</button>
-                              <button className={styles.actionButton}>✎</button>
-                              <button className={styles.actionButton}>×</button>
-                            </div>
+              {expandedSections[idx] && (section.users.length === 0 ? (
+                <Box sx={{ padding: 3, borderRadius: 5, border: "2px dashed #F1D079", textAlign: "center", marginTop: 2 }}>
+                  <Typography variant="h6" color="#1120A3">ไม่มีข้อมูล</Typography>
+                </Box>
+              ) : (
+                section.users.map((user, userIdx) => (
+                  <div key={user.id} className={styles.userRow}>
+                    <div className={styles.userContainer}>
+                      <div className={styles.userInfo}>
+                        <div className={styles.userCell}>{section.role_name}</div>
+                        <div className={styles.userCell}>{section.role_name}</div>
+                        <div className={styles.userCell}>{user.full_name}</div>
+                        <div className={styles.roleActions}>
+                          <div className={styles.role}>{roleNameMap[section.role_name]}</div>
+                          <div className={styles.actionButtons}>
+                            <button className={styles.actionButton}>✓</button>
+                            <button className={styles.actionButton}>✎</button>
+                            <button className={styles.actionButton}>×</button>
                           </div>
                         </div>
+                      </div>
 
-                        {/* Expanded User Details */}
-                        {user.expanded && user.details && (
-                          <div className={styles.userDetails}>
-                            <div className={styles.detailsColumn}>
-                              <div className={styles.detailRow}>
-                                <span className={styles.detailLabel}>
-                                  Password :
-                                </span>
-                                <span className={styles.detailValue}>
-                                  <span
-                                    style={{
-                                      border: "none",
-                                      background: "transparent",
-                                    }}
-                                  >
-                                    {userPasswordVisibility[sectionIndex][
-                                      userIdx
-                                    ]
-                                      ? user.details.password
-                                      : "************"}
-                                  </span>
-                                  <IconButton
-                                    onClick={() =>
-                                      togglePasswordVisibility(
-                                        sectionIndex,
-                                        userIdx
-                                      )
-                                    }
-                                    sx={{ padding: 0, margin: 0 }}
-                                  >
-                                    {userPasswordVisibility[sectionIndex][
-                                      userIdx
-                                    ] ? (
-                                      <VisibilityOff />
-                                    ) : (
-                                      <Visibility />
-                                    )}
-                                  </IconButton>
-                                </span>
-                              </div>
-                              <div className={styles.detailRow}>
-                                <span className={styles.detailLabel}>
-                                  ชื่อ - นามสกุล :
-                                </span>
-                                <span className={styles.detailValue}>
-                                  {user.details.fullName}
-                                </span>
-                              </div>
-                              <div className={styles.detailRow}>
-                                <span className={styles.detailLabel}>
-                                  เลขบัตรประชาชน :
-                                </span>
-                                <span className={styles.detailValue}>
-                                  {user.details.idCard}
-                                </span>
-                              </div>
-                              <div className={styles.detailRow}>
-                                <span className={styles.detailLabel}>
-                                  อีเมล :
-                                </span>
-                                <span className={styles.detailValue}>
-                                  {user.details.email}
-                                </span>
-                              </div>
-                              <div className={styles.detailRow}>
-                                <span className={styles.detailLabel}>
-                                  หมายเลขโทรศัพท์ :
-                                </span>
-                                <span className={styles.detailValue}>
-                                  {user.details.phone}
-                                </span>
-                              </div>
-                            </div>
-                            <div className={styles.detailsColumn}>
-                              <div className={styles.detailRow}>
-                                <span className={styles.detailLabel}>
-                                  ที่อยู่ตามบัตรประชาชน :
-                                </span>
-                                <span className={styles.detailValue}>
-                                  {user.details.addressCard}
-                                </span>
-                              </div>
-                              <div className={styles.detailRow}>
-                                <span className={styles.detailLabel}>
-                                  ที่อยู่ที่ติดต่อได้ :
-                                </span>
-                                <span className={styles.detailValue}>
-                                  {user.details.addressContact}
-                                </span>
-                              </div>
-                              <div className={styles.detailRow}>
-                                <span className={styles.detailLabel}>
-                                  แก้ไขครั้งล่าสุด :
-                                </span>
-                                <span className={styles.detailValue}>
-                                  {user.details.lastUpdated}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                      <div className={styles.userDetails}>
+                        <div className={styles.detailsColumn}>
+                          {/* <div className={styles.detailRow}>
+                            <span className={styles.detailLabel}>รหัสผ่าน:</span>
+                            <span className={styles.detailValue}>
+                              <span
+                                style={{
+                                  border: "none",
+                                  background: "transparent",
+                                }}
+                              >
+                                {userPasswordVisibility[sectionIndex][userIdx]
+                                  ? user.details.password
+                                  : "************"}
+                              </span>
+                              <IconButton
+                                onClick={() => togglePasswordVisibility(sectionIndex, userIdx)}
+                                sx={{ padding: 0, margin: 0 }}
+                              >
+                                {userPasswordVisibility[sectionIndex][userIdx] ? (
+                                  <VisibilityOff />
+                                ) : (
+                                  <Visibility />
+                                )}
+                              </IconButton>
+                            </span>
+                          </div> */}
+
+                          <div className={styles.detailRow}><span className={styles.detailLabel}>Password:</span> #</div>
+                          <div className={styles.detailRow}><span className={styles.detailLabel}>ชื่อ - นามสกุล:</span> {user.full_name_with_title}</div>
+                          <div className={styles.detailRow}><span className={styles.detailLabel}>เลขบัตรประชาชน:</span> {formatCitizenId_null(user.citizen_id)}</div>
+                          <div className={styles.detailRow}><span className={styles.detailLabel}>อีเมล:</span> {user.email}</div>
+                          <div className={styles.detailRow}><span className={styles.detailLabel}>หมายเลขโทรศัพท์:</span> {formatPhoneNumber_null(user.phone)}</div>
+                        </div>
+                        <div className={styles.detailsColumn}>
+                          <div className={styles.detailRow}><span className={styles.detailLabel}>ที่อยู่ตามบัตรประชาชน:</span> #</div>
+
+                          <div className={styles.detailRow}><span className={styles.detailLabel}>ที่อยู่ที่ติดต่อได้:</span> #</div>
+                          <div className={styles.detailRow}><span className={styles.detailLabel}>แก้ไขครั้งล่าสุด:</span> {formatThaiDateTime(user.updated_at)}</div>
+                        </div>
                       </div>
                     </div>
-                  ))
-                ))}
+                  </div>
+                ))
+              ))}
             </div>
           ))}
         </div>
