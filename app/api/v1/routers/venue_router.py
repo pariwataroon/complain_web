@@ -152,7 +152,7 @@ async def get_venues_stats_endpoint(
 async def update_venue_order_batch_endpoint(
     order_data: List[Dict[str, Any]] = Body(...),
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("setting_venues"))
+    current_user: str = Depends(can_update("setting_department"))
 ):
     """อัปเดตลำดับของสถานที่หลายรายการพร้อมกัน"""
     updated_venues = update_venue_order_batch(db, order_data)
