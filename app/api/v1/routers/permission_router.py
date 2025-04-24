@@ -231,6 +231,8 @@ async def create_new_permission(
 ):
     """สร้างสิทธิ์ใหม่ (รองรับทั้ง role-based และ user-based) - ต้องมีสิทธิ์สร้างใน setting_access"""
     try:
+        print(f"Attempting to create permission with data: {permission.model_dump()}")
+        
         # ตรวจสอบว่าข้อมูลถูกต้องหรือไม่
         if permission.role_id is None and permission.user_id is None:
             return format_response("4000", {"error": "Permission must be associated with either a role or a user"})
@@ -242,10 +244,22 @@ async def create_new_permission(
         result = PermissionResponse.model_validate(db_permission).model_dump()
         return format_response("0001", result)
     except ValueError as e:
+        print(f"Validation error creating permission: {str(e)}")
         return format_response("4000", {"error": str(e)})
     except Exception as e:
+        import traceback
         print(f"Error creating permission: {str(e)}")
-        return format_response("5000", {"error": "Error creating permission"})
+        traceback.print_exc()
+        # ส่งข้อความ error กลับไปให้ client เพื่อช่วยในการ debug
+        error_message = f"Error creating permission: {str(e)}"
+        if "FK__permissio__role" in str(e):
+            error_message = f"The role ID does not exist in the database: {permission.role_id}"
+        elif "FK__permissio__user" in str(e):
+            error_message = f"The user ID does not exist in the database: {permission.user_id}"
+        elif "FK__permissio__resource" in str(e):
+            error_message = f"The resource ID does not exist in the database: {permission.resource_id}"
+            
+        return format_response("5000", {"error": error_message})
 
 @router.get("/list", response_model=FormatResponseModel)
 async def read_permissions(

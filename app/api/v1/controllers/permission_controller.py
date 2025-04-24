@@ -1,3 +1,4 @@
+import uuid
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
 from uuid import UUID
@@ -9,7 +10,7 @@ from models.resource import Resource
 from models.user_role import UserRole
 from lib.logger import get_logger
 
-from app.api.v1.schemas.permission import (ResourceResponse)
+from app.api.v1.schemas.permission import (ResourceResponse, PermissionCreate)
 
 logger = get_logger("permission_controller")
 
@@ -275,30 +276,68 @@ def delete_resource(db: Session, resource_id: UUID):
     db.commit()
     return True
 
-def create_permission(db: Session, permission_data):
-    """สร้างสิทธิ์ใหม่"""
-    # ตรวจสอบว่ามีการระบุ role_id หรือ user_id อย่างน้อย 1 อย่าง
-    if permission_data.role_id is None and permission_data.user_id is None:
-        raise ValueError("Permission must be associated with either a role or a user")
-    
-    # ตรวจสอบว่าถ้ามีทั้ง role_id และ user_id ให้เตือน
-    if permission_data.role_id is not None and permission_data.user_id is not None:
-        raise ValueError("Permission must be associated with either a role or a user, not both")
-    
-    permission = Permission(
-        role_id=permission_data.role_id,
-        user_id=permission_data.user_id,
-        resource_id=permission_data.resource_id,
-        can_create=permission_data.can_create,
-        can_read=permission_data.can_read,
-        can_update=permission_data.can_update,
-        can_delete=permission_data.can_delete,
-        override_role=permission_data.override_role
-    )
-    db.add(permission)
-    db.commit()
-    db.refresh(permission)
-    return permission
+def create_permission(db: Session, permission: PermissionCreate):
+    try:
+        # เพิ่มการตรวจสอบว่า role_id มีอยู่จริงในฐานข้อมูลหรือไม่
+        if permission.role_id:
+            role = db.query(Role).filter(Role.id == permission.role_id).first()
+            if not role:
+                raise ValueError(f"Role with ID {permission.role_id} not found")
+            
+            # ตรวจสอบว่ามี permission สำหรับ role และ resource นี้อยู่แล้วหรือไม่
+            existing_permission = db.query(Permission).filter(
+                Permission.role_id == permission.role_id,
+                Permission.resource_id == permission.resource_id
+            ).first()
+            
+            if existing_permission:
+                raise ValueError(f"Permission for role {permission.role_id} and resource {permission.resource_id} already exists")
+                
+        # เพิ่มการตรวจสอบว่า user_id มีอยู่จริงในฐานข้อมูลหรือไม่
+        if permission.user_id:
+            from models.user import User
+            user = db.query(User).filter(User.id == permission.user_id).first()
+            if not user:
+                raise ValueError(f"User with ID {permission.user_id} not found")
+            
+            # ตรวจสอบว่ามี permission สำหรับ user และ resource นี้อยู่แล้วหรือไม่
+            existing_permission = db.query(Permission).filter(
+                Permission.user_id == permission.user_id,
+                Permission.resource_id == permission.resource_id
+            ).first()
+            
+            if existing_permission:
+                raise ValueError(f"Permission for user {permission.user_id} and resource {permission.resource_id} already exists")
+                
+        # เพิ่มการตรวจสอบว่า resource_id มีอยู่จริงในฐานข้อมูลหรือไม่
+        resource = db.query(Resource).filter(Resource.id == permission.resource_id).first()
+        if not resource:
+            raise ValueError(f"Resource with ID {permission.resource_id} not found")
+            
+        # สร้าง permission ใหม่
+        new_permission = Permission(
+            id=uuid.uuid4(),
+            role_id=permission.role_id,
+            user_id=permission.user_id,
+            resource_id=permission.resource_id,
+            can_create=permission.can_create,
+            can_read=permission.can_read,
+            can_update=permission.can_update,
+            can_delete=permission.can_delete,
+            override_role=permission.override_role
+        )
+        
+        db.add(new_permission)
+        db.commit()
+        db.refresh(new_permission)
+        
+        return new_permission
+    except Exception as e:
+        db.rollback()
+        import traceback
+        print(f"Error in create_permission: {str(e)}")
+        traceback.print_exc()
+        raise
 
 def get_permissions(db: Session, role_id: UUID = None, resource_id: UUID = None, user_id: UUID = None):
     """ดึงข้อมูลสิทธิ์ตามเงื่อนไข"""
