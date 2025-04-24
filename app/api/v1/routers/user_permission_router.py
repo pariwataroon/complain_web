@@ -7,53 +7,47 @@ from app.api.middleware.permission_middleware import can_create, can_read, can_u
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
 from app.api.v1.controllers.user_permission_controller import (
-    create_user_permission,
     get_user_permissions_by_user,
     delete_user_permission,
     get_resource_user_permissions
 )
+from app.api.v1.controllers.permission_controller import (create_permission)
+from app.api.v1.schemas.permission import PermissionCreate
 
 router = APIRouter(
-    # prefix="/user-permissions",
     tags=["user-permissions"],
 )
 
-@router.post("/", response_model=FormatResponseModel)
-async def create_user_permission_endpoint(
-    permission_data: Dict,
+@router.post("/create", response_model=FormatResponseModel)
+async def create_user_permission_endpoint(  # เปลี่ยนชื่อฟังก์ชันเพื่อหลีกเลี่ยงการซ้ำซ้อน
+    data: PermissionCreate,
     db: Session = Depends(get_db),
     current_user: str = Depends(can_create("setting_access"))
 ):
-    """
-    เพิ่มหรืออัปเดตสิทธิ์เฉพาะให้กับผู้ใช้รายบุคคล
-    
-    ตัวอย่าง body:
-    {
-        "user_id": "69bcfed5-5af5-4340-a653-672a43b82567",
-        "resource_id": "00dd62d0-4964-440c-b9c7-30ce6526bc46",
-        "can_create": true,
-        "can_read": true,
-        "can_update": false, 
-        "can_delete": false,
-        "override_role": true
-    }
-    """
+    """สร้างสิทธิ์เฉพาะสำหรับผู้ใช้ - ต้องมีสิทธิ์สร้างใน setting_access"""
     try:
-        user_id = permission_data.get("user_id")
-        resource_id = permission_data.get("resource_id")
+        # ตรวจสอบว่าข้อมูลถูกต้องหรือไม่
+        if not data.user_id:
+            return format_response("4000", {"error": "user_id is required for user-permission"})
         
-        if not user_id or not resource_id:
-            return format_response("4000", {"error": "Both user_id and resource_id are required"})
+        # สร้างสิทธิ์เฉพาะสำหรับผู้ใช้
+        db_permission = create_permission(db, data)
         
-        result = create_user_permission(db, user_id, resource_id, permission_data)
-        if not result:
-            return format_response("4040", {"error": "Failed to create/update user permission"})
-            
-        return format_response("0000", result)
+        # แปลงข้อมูลเพื่อส่งกลับ
+        from app.api.v1.schemas.permission import PermissionResponse
+        result = PermissionResponse.model_validate(db_permission).model_dump()
+        
+        return format_response("0001", result)
+    except ValueError as e:
+        return format_response("4000", {"error": str(e)})
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return format_response("5000", {"error": f"Error creating/updating user permission: {str(e)}"})
+        error_message = "Error creating user permission"
+        if "FK__permissio__user" in str(e):
+            error_message = f"The user ID does not exist in the database: {data.user_id}"
+        elif "FK__permissio__resource" in str(e):
+            error_message = f"The resource ID does not exist in the database: {data.resource_id}"
+        
+        return format_response("5000", {"error": error_message})
 
 
 @router.get("/user/{user_id}", response_model=FormatResponseModel)
