@@ -223,7 +223,7 @@ async def delete_existing_resource(
         return format_response("5000", {"error": "Error deleting resource"})
 
 # =================== Permission Endpoints ===================
-@router.post("/", response_model=FormatResponseModel)
+@router.post("/create", response_model=FormatResponseModel)
 async def create_new_permission(
     permission: PermissionCreate, 
     db: Session = Depends(get_db),
@@ -247,7 +247,7 @@ async def create_new_permission(
         print(f"Error creating permission: {str(e)}")
         return format_response("5000", {"error": "Error creating permission"})
 
-@router.get("/", response_model=FormatResponseModel)
+@router.get("/list", response_model=FormatResponseModel)
 async def read_permissions(
     role_id: Optional[UUID] = None, 
     resource_id: Optional[UUID] = None,
