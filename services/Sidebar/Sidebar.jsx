@@ -73,6 +73,11 @@ const submenuItems = {
     { label: "คลังเรื่องราวร้องทุกข์", type: "item", to: "/admin/box/list" },
     { label: "คลังบัตรสนเท่ห์", type: "item", to: "/admin/box/new" },
   ],
+  homepage: [
+    { label: "จัดการข้อมูล", type: "header" },
+    { label: "กำหนดคำถาม Chat Bot", type: "item", to: "/admin/homepage/chatbot" },
+    { label: "กำหนดข่าวสาร", type: "item", to: "/admin/homepage/new" },
+  ],
   document: [
     { label: "รายงาน", type: "header" },
     { label: "รายงานติดตามสถานะ", type: "item", to: "/admin/document/status-tracking-report" },
@@ -291,9 +296,12 @@ export default function Sidebar() {
           </ListItemButton>
         </Box>
 
+
+
         {/* เมนูอื่นๆ */}
         {renderMenuItem("setting", Settings)}
         {renderMenuItem("edit", Edit)}
+        {renderMenuItem("homepage", Settings)}
         {renderMenuItem("box", Inventory2)}
         {renderMenuItem("document", Description)}
 
