@@ -14,7 +14,7 @@ from app.api.v1.schemas.permission import (
 )
 from app.api.v1.controllers.permission_controller import (
     create_role, get_roles, update_role, delete_role,
-    create_resource, get_resources, update_resource, delete_resource,
+    create_resource, get_resources, get_resources_by_group, update_resource, delete_resource,
     create_permission, get_permissions, update_permission, delete_permission,
     assign_role_to_user, remove_role_from_user, get_user_roles, get_resource_by_id
 )
@@ -147,6 +147,26 @@ async def read_resources(
     except Exception as e:
         print(f"Error fetching resources: {str(e)}")
         return format_response("5000", {"error": "Error fetching resources"})
+
+@router.get("/resources-bygroup", response_model=FormatResponseModel)
+async def read_resources_by_group(
+    group_id: Optional[UUID] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_access"))
+):
+    """ดึงข้อมูลทรัพยากรตามกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_access"""
+    try:
+        # ฟังก์ชัน get_resources_by_group คืนค่าเป็นลิสต์ของกลุ่มที่มีทรัพยากรอยู่แล้ว
+        # แต่ละกลุ่มมี resources ที่ผ่านการแปลงเป็น dict ด้วย ResourceResponse แล้ว
+        result = get_resources_by_group(db, group_id=group_id, skip=skip, limit=limit)
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error fetching resources by group: {str(e)}")
+        import traceback
+        traceback.print_exc()  # เพิ่ม traceback เพื่อให้เห็นข้อผิดพลาดทั้งหมด
+        return format_response("5000", {"error": "Error fetching resources by group"})
 
 @router.get("/resources/{resource_id}", response_model=FormatResponseModel)
 async def read_resource(

@@ -172,14 +172,21 @@ def get_resources(db: Session, skip: int = 0, limit: int = 100):
         Resource.is_active == True
     ).order_by(Resource.order_index).offset(skip).limit(limit).all()
 
-def get_resources_by_group(db: Session, skip: int = 0, limit: int = 100):
+def get_resources_by_group(db: Session, group_id: Optional[UUID] = None, skip: int = 0, limit: int = 100):
     """Get resources grouped by resource_group"""
     from models.resource_groups import ResourceGroup
+    from app.api.v1.schemas.permission import ResourceResponse
     
     # Get all active resource groups ordered by order_index
-    groups = db.query(ResourceGroup).filter(
+    groups_query = db.query(ResourceGroup).filter(
         ResourceGroup.is_active == True
-    ).order_by(ResourceGroup.order_index).all()
+    )
+    
+    # Filter by group_id if provided
+    if group_id:
+        groups_query = groups_query.filter(ResourceGroup.id == group_id)
+    
+    groups = groups_query.order_by(ResourceGroup.order_index).all()
     
     result = []
     for group in groups:
@@ -190,11 +197,16 @@ def get_resources_by_group(db: Session, skip: int = 0, limit: int = 100):
         ).order_by(Resource.order_index).all()
         
         if resources:
+            # แปลง SQLAlchemy objects เป็น Pydantic models และแปลงเป็น dictionaries
+            resource_dicts = [ResourceResponse.model_validate(resource).model_dump() for resource in resources]
+            
             group_data = {
-                "group_id": group.id,
+                "group_id": str(group.id),  # แปลง UUID เป็น string
                 "group_name": group.name,
                 "display_name": group.display_name,
-                "resources": resources
+                "order_index": group.order_index,
+                "resources": resource_dicts,
+                "total_resources": len(resource_dicts)
             }
             result.append(group_data)
     
@@ -203,6 +215,7 @@ def get_resources_by_group(db: Session, skip: int = 0, limit: int = 100):
 def get_resources_by_group_name(db: Session, group_name: str, skip: int = 0, limit: int = 100):
     """Get resources by group name"""
     from models.resource_groups import ResourceGroup
+    from app.api.v1.schemas.permission import ResourceResponse
     
     # Find the group by name
     group = db.query(ResourceGroup).filter(
@@ -211,7 +224,13 @@ def get_resources_by_group_name(db: Session, group_name: str, skip: int = 0, lim
     ).first()
     
     if not group:
-        return []
+        return {
+            "group_id": None,
+            "group_name": None,
+            "display_name": None,
+            "resources": [],
+            "total_resources": 0
+        }
     
     # Get resources for this group, ordered by order_index
     resources = db.query(Resource).filter(
@@ -219,7 +238,19 @@ def get_resources_by_group_name(db: Session, group_name: str, skip: int = 0, lim
         Resource.is_active == True
     ).order_by(Resource.order_index).offset(skip).limit(limit).all()
     
-    return resources
+    # แปลง SQLAlchemy objects เป็น Pydantic models และแปลงเป็น dictionaries
+    resource_dicts = [ResourceResponse.model_validate(resource).model_dump() for resource in resources]
+    
+    result = {
+        "group_id": str(group.id),
+        "group_name": group.name,
+        "display_name": group.display_name,
+        "order_index": group.order_index,
+        "resources": resource_dicts,
+        "total_resources": len(resource_dicts)
+    }
+    
+    return result
 
 def update_resource(db: Session, resource_id: UUID, resource_data):
     """อัปเดตข้อมูลทรัพยากร"""
