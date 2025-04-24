@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Grid,
@@ -16,7 +16,6 @@ import {
   DialogActions,
 } from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import HomeIcon from "@mui/icons-material/Home";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
@@ -28,19 +27,36 @@ import TextfieldService from "@services/TextfieldService/TextfieldService";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
-import Diversity3OutlinedIcon from "@mui/icons-material/Diversity3Outlined";
-import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
-import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
-import HourglassEmptyOutlinedIcon from "@mui/icons-material/HourglassEmptyOutlined";
-import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
-import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
-import PortraitOutlinedIcon from "@mui/icons-material/PortraitOutlined";
-import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
-import DriveFileRenameOutlineOutlinedIcon from "@mui/icons-material/DriveFileRenameOutlineOutlined";
-import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
-import InsertChartOutlinedIcon from "@mui/icons-material/InsertChartOutlined";
-import MoveToInboxOutlinedIcon from "@mui/icons-material/MoveToInboxOutlined";
-import { getRoles } from "@pages/api/role/role";
+import {
+  Diversity3Outlined as IcHome,
+  DashboardOutlined as IcDash,
+  TuneOutlined as IcTune,
+  DriveFileRenameOutlineOutlined as IcEdit,
+  MoveToInboxOutlined as IcBox,
+  InsertChartOutlined as IcDoc,
+  ArticleOutlined as IcDefault,
+  AssessmentOutlined as IcReport,
+  PersonOutlineOutlined as IcUser,
+  SettingsOutlined as IcSetting,
+  FeedbackOutlined as IcComplaint,
+  FolderOutlined as IcFolder,
+  SearchOutlined as IcSearch,
+  ChatBubbleOutlineOutlined as IcChat,
+  NewspaperOutlined as IcNews,
+  AddCircleOutline as IcToggle,
+} from "@mui/icons-material";
+import { alertSuccess, alertWarning } from "@utils/Alerts";
+import {
+  getMenuPermission,
+  deletePermission,
+  createPermission,
+  getUserStatsByRole,
+  createRole,
+  deleteRole,
+  createUserPermission,
+  deleteUserPermission,
+  getUsersByRole,
+} from "@pages/api/role/role";
 
 const rotateOpen = keyframes`
   from {
@@ -60,180 +76,34 @@ const rotateClose = keyframes`
   }
 `;
 
+const breadcrumbItems = [
+  {
+    label: "เมนูการใช้งานทั่วไป",
+    icon: (
+      <img
+        src="/icons/settingico.png"
+        alt="Settings Icon"
+        style={{ width: "24px", height: "24px", marginBottom: "-8px" }}
+      />
+    ),
+  },
+  {
+    label: "กำหนดสิทธิ์การเข้าถึง",
+  },
+];
 const SetRole = () => {
   // Modal state
   const [openModal, setOpenModal] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("ผู้ร่วมแอดมิน");
+  const [newGroupName, setNewGroupName] = useState(""); // สำหรับชื่อกลุ่ม
+  const [newGroupDescription, setNewGroupDescription] = useState(""); // สำหรับคำอธิบายกลุ่ม
+
   const [openDeleteModal, setOpenDeleteModal] = useState(false); // Added this state
   const [groupToDelete, setGroupToDelete] = useState(null);
   // Handle modal open/close
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
 
-  const [sections, setSections] = useState([
-    {
-      id: 1,
-      title: "Home page",
-      icon: <Diversity3OutlinedIcon />,
-      items: [],
-      open: false,
-    },
-    {
-      id: 2,
-      title: "Dashboard",
-      icon: <DashboardOutlinedIcon />,
-      items: [],
-      open: false,
-    },
-    {
-      id: 3,
-      title: "กำหนดการใช้งานทั่วไป",
-      icon: <TuneOutlinedIcon />,
-      items: [
-        { name: "กำหนดระยะเวลา", icon: <HourglassEmptyOutlinedIcon /> },
-        { name: "กำหนดผู้ใช้งาน", icon: <PersonOutlineOutlinedIcon /> },
-        { name: "กำหนดสิทธิ์การเข้าถึง", icon: <MenuOutlinedIcon /> },
-        { name: "กำหนดหน่วยงานในสังกัด", icon: <PortraitOutlinedIcon /> },
-        { name: "กำหนดวันหยุด", icon: <CalendarMonthOutlinedIcon /> },
-      ],
-      open: false,
-    },
-    {
-      id: 4,
-      title: "จัดการข้อมูลในระบบ",
-      icon: <DriveFileRenameOutlineOutlinedIcon />,
-      items: [
-        { name: "สืบค้นเรื่องร้องเรียน", icon: <ArticleOutlinedIcon /> },
-        {
-          name: "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์",
-          icon: <ArticleOutlinedIcon />,
-        },
-        { name: "จัดการเรื่องร้องเรียน", icon: <ArticleOutlinedIcon /> },
-        {
-          name: "แบบรับเรื่องรายงานผลการพิจารณาจากหน่วยงาน",
-          icon: <ArticleOutlinedIcon />,
-        },
-        {
-          name: "ส่งออกขอทราบผลการพิจารณา/ผลความคืบหน้า ",
-          icon: <ArticleOutlinedIcon />,
-        },
-      ],
-      open: false,
-    },
-    {
-      id: 5,
-      title: "คลังเอกสาร",
-      icon: <MoveToInboxOutlinedIcon />,
-      items: [
-        { name: "คลังเรื่องราวร้องทุกข์", icon: <MoveToInboxOutlinedIcon /> },
-        { name: "คลังบัตรสนเท่ห์", icon: <MoveToInboxOutlinedIcon /> },
-      ],
-      open: false,
-    },
-    {
-      id: 6,
-      title: "รายงาน",
-      icon: <InsertChartOutlinedIcon />,
-      items: [
-        { name: "รายงานติดตามสถานะ", icon: <InsertChartOutlinedIcon /> },
-        {
-          name: "รายงานสรุปเรื่องร้องเรียนของหน่วยงานในสังกัด",
-          icon: <InsertChartOutlinedIcon />,
-        },
-        {
-          name: "รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่มทั้งหมด",
-          icon: <InsertChartOutlinedIcon />,
-        },
-        {
-          name: "รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ",
-          icon: <InsertChartOutlinedIcon />,
-        },
-        {
-          name: "รายงานการติดตามงานค้าง",
-          icon: <InsertChartOutlinedIcon />,
-        },
-        {
-          name: "รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ",
-          icon: <InsertChartOutlinedIcon />,
-        },
-        {
-          name: "รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ",
-          icon: <InsertChartOutlinedIcon />,
-        },
-        {
-          name: "รายงานการแจ้งเตือนเจ้าหน้าที่",
-          icon: <InsertChartOutlinedIcon />,
-        },
-      ],
-      open: false,
-    },
-    // {
-    //   id: 7,
-    //   title: "การจัดการผู้ใช้",
-    //   icon: <HomeIcon />,
-    //   items: [
-    //     { name: "เพิ่มผู้ใช้ใหม่", icon: <Diversity3OutlinedIcon /> },
-    //     { name: "แก้ไขข้อมูลผู้ใช้", icon: <Diversity3OutlinedIcon /> },
-    //     { name: "ลบผู้ใช้", icon: <Diversity3OutlinedIcon /> },
-    //     { name: "ดูประวัติการใช้งาน", icon: <Diversity3OutlinedIcon /> },
-    //     { name: "ดูสิทธิ์การเข้าถึง", icon: <Diversity3OutlinedIcon /> },
-    //   ],
-    //   open: false,
-    // },
-    // {
-    //   id: 8,
-    //   title: "การจัดการสิทธิ์",
-    //   icon: <HomeIcon />,
-    //   items: [
-    //     { name: "เพิ่มสิทธิ์ผู้ใช้", icon: <Diversity3OutlinedIcon /> },
-    //     { name: "แก้ไขสิทธิ์ผู้ใช้", icon: <Diversity3OutlinedIcon /> },
-    //     { name: "ลบสิทธิ์ผู้ใช้", icon: <Diversity3OutlinedIcon /> },
-    //     { name: "ดูสิทธิ์การเข้าถึง", icon: <Diversity3OutlinedIcon /> },
-    //     {
-    //       name: "จัดการการอนุญาตการเข้าถึงระบบ",
-    //       icon: <Diversity3OutlinedIcon />,
-    //     },
-    //   ],
-    //   open: false,
-    // },
-    // {
-    //   id: 9,
-    //   title: "ตั้งค่าระบบ",
-    //   icon: <HomeIcon />,
-    //   items: [
-    //     { name: "ตั้งค่าผู้ดูแลระบบ", icon: <Diversity3OutlinedIcon /> },
-    //     { name: "ตั้งค่าระบบการแจ้งเตือน", icon: <Diversity3OutlinedIcon /> },
-    //     { name: "ตั้งค่าภาษา", icon: <Diversity3OutlinedIcon /> },
-    //     { name: "ตั้งค่าการสำรองข้อมูล", icon: <Diversity3OutlinedIcon /> },
-    //     { name: "ตั้งค่าความปลอดภัย", icon: <Diversity3OutlinedIcon /> },
-    //   ],
-    //   open: false,
-    // },
-    // {
-    //   id: 10,
-    //   title: "รายงานสรุปการดำเนินการ",
-    //   icon: <HomeIcon />,
-    //   items: [
-    //     {
-    //       name: "รายงานการดำเนินการประจำวัน",
-    //       icon: <Diversity3OutlinedIcon />,
-    //     },
-    //     {
-    //       name: "รายงานการดำเนินการประจำเดือน",
-    //       icon: <Diversity3OutlinedIcon />,
-    //     },
-    //     { name: "รายงานการดำเนินการประจำปี", icon: <Diversity3OutlinedIcon /> },
-    //     { name: "รายงานกิจกรรมพิเศษ", icon: <Diversity3OutlinedIcon /> },
-    //   ],
-    //   open: false,
-    // },
-  ]);
-
   // State for selected menu and submenu
-  const [selectedMenu, setSelectedMenu] = useState({
-    mainMenu: "กำหนดการใช้งานทั่วไป",
-    subMenu: "กำหนดเวลาการใช้งาน",
-  });
 
   // ฟังก์ชันในการสลับสถานะการเปิด/ปิด
   const handleToggle = (id) => {
@@ -243,52 +113,51 @@ const SetRole = () => {
     setSections(newSections);
   };
 
-  const handleMenuItemClick = (sectionTitle, item) => {
-    setSelectedMenu({
-      mainMenu: sectionTitle,
-      subMenu: item.name, // ส่งแค่ name ของ item, ไม่ใช่ item ทั้งตัว
-    });
+  const handleAddGroup = async () => {
+    try {
+      // เรียกใช้งาน createRole เพื่อสร้างกลุ่มใหม่
+      const response = await createRole({
+        name: newGroupName,
+        description: newGroupDescription, // เพิ่มคำอธิบายกลุ่ม
+      });
+
+      console.log("Role created successfully:", response.res_code);
+
+      // ตรวจสอบว่า response มี res_code เป็น 5000 หรือไม่
+      if (response.res_code && response.res_code === "5000") {
+        handleCloseModal(); // Close the modal
+        alertWarning("มีชื่อซ้ำในระบบ กรุณาเปลี่ยนชื่อกลุ่ม").then(() => {
+          setNewGroupName("");
+          setNewGroupDescription("");
+          handleOpenModal(); // Reopen the modal after the alert is closed
+        });
+        return;
+      }
+
+      // เพิ่มกลุ่มที่สร้างลงในรายการ groups
+      setGroups([
+        ...groups,
+        {
+          id: nextGroupNumber, // nextGroupNumber ต้องมีการคำนวณหรืออัปเดต
+          name: newGroupName,
+          selected: false,
+        },
+      ]);
+
+      // รีเซ็ตชื่อกลุ่มใหม่และคำอธิบาย
+      setNewGroupName("");
+      setNewGroupDescription("");
+      handleCloseModal(); // ปิด Modal หลังจากสร้างกลุ่มเสร็จ
+
+      alertSuccess("กลุ่มสร้างสำเร็จ");
+    } catch (error) {
+      console.error("Failed to create role:", error);
+      alertWarning("เกิดข้อผิดพลาดในการสร้างกลุ่ม");
+    }
   };
 
-  // Groups state with dynamic structure
-  const [groups, setGroups] = useState([
-    { id: 1, name: "ประชาชน", selected: false },
-    { id: 2, name: "ผู้ดูแลระบบ (แอดมิน)", selected: true },
-    { id: 3, name: "ผู้ดูแลหน้าหลัก (แอดมิน Home page)", selected: true },
-    { id: 4, name: "เจ้าหน้าที่ สสส.", selected: false },
-    { id: 5, name: "ผู้รับเรื่อง / ผู้สำรวจ", selected: false },
-    { id: 6, name: "หน่วยงานในสังกัด", selected: false },
-    { id: 7, name: "ผู้ร่วมแอดมิน", selected: true },
-  ]);
-
-  // Calculate next group number dynamically
-  const nextGroupNumber =
-    groups.length > 0 ? Math.max(...groups.map((group) => group.id)) + 1 : 1;
-
-  // Handler for checkbox changes
-  const handleGroupChange = (groupId) => {
-    setGroups(
-      groups.map((group) =>
-        group.id === groupId ? { ...group, selected: !group.selected } : group
-      )
-    );
-  };
-
-  // Handler for adding a new group
-  const handleAddGroup = () => {
-    // Add new group with next sequential ID
-    const newGroup = {
-      id: nextGroupNumber,
-      name: newGroupName,
-      selected: false,
-    };
-    setGroups([...groups, newGroup]);
-    setNewGroupName(""); // Reset field
-    handleCloseModal();
-  };
-
-  const handleGroupDelete = (groupId) => {
-    setGroupToDelete(groupId); // Set the group to be deleted
+  const handleGroupDelete = (roleId) => {
+    setGroupToDelete(roleId); // Store the role_id of the group to be deleted
     setOpenDeleteModal(true); // Open the delete modal
   };
 
@@ -296,79 +165,39 @@ const SetRole = () => {
     setOpenDeleteModal(false); // Close the modal without deleting
   };
 
-  const confirmDelete = () => {
-    // Remove the group from the list
-    setGroups(groups.filter((group) => group.id !== groupToDelete));
-    setOpenDeleteModal(false); // Close the modal after confirming delete
-  };
+  const confirmDelete = async () => {
+    try {
+      const response = await deleteRole(groupToDelete);
 
-  const breadcrumbItems = [
-    {
-      label: "เมนูการใช้งานทั่วไป",
-      icon: (
-        <img
-          src="/icons/settingico.png"
-          alt="Settings Icon"
-          style={{ width: "24px", height: "24px", marginBottom: "-8px" }}
-        />
-      ),
-    },
-    {
-      label: "กำหนดสิทธิ์การเข้าถึง",
-    },
-  ];
+      console.log("Response from deleteRole:", response);
+
+      setGroups(groups.filter((group) => group.id !== groupToDelete));
+
+      console.log("Updated groups list after deletion:", groups);
+
+      const { res_data } = await getMenuPermission();
+      setMenuData(res_data);
+      setSections(buildSections(res_data));
+
+      setOpenDeleteModal(false);
+
+      console.log("Delete modal closed.");
+
+      alertSuccess("ลบกลุ่มสิทธิ์สำเร็จ");
+    } catch (error) {
+      console.error("Error while deleting role:", error);
+      alertWarning("เกิดข้อผิดพลาดในการลบกลุ่ม");
+    }
+  };
 
   // First, add these new state variables at the beginning of your component
   const [openUserModal, setOpenUserModal] = useState(false);
   const [openDeleteUserModal, setOpenDeleteUserModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
-  const [newUser, setNewUser] = useState({
-    name: "",
-    group: "2", // Default group ID
-  });
-
-  // Add state for individual users
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: "นางสาวสุภัสร โชติพรรณ",
-      groupId: "2",
-      groupName: "ผู้ดูแลระบบ (แอดมิน)",
-      selected: true,
-    },
-    // You can add more default users here
-  ]);
 
   // Handle modal open/close for user operations
   const handleOpenUserModal = () => setOpenUserModal(true);
   const handleCloseUserModal = () => setOpenUserModal(false);
-
-  // Handler for adding a new user
-  const handleAddUser = () => {
-    const groupObject = groups.find(
-      (group) => group.id === parseInt(newUser.group)
-    );
-    const newUserObject = {
-      id: users.length > 0 ? Math.max(...users.map((user) => user.id)) + 1 : 1,
-      name: newUser.name,
-      groupId: newUser.group,
-      groupName: groupObject ? groupObject.name : "",
-      selected: false,
-    };
-
-    setUsers([...users, newUserObject]);
-    setNewUser({ name: "", group: "2" }); // Reset fields
-    handleCloseUserModal();
-  };
-
-  // Handler for user checkbox changes
-  const handleUserChange = (userId) => {
-    setUsers(
-      users.map((user) =>
-        user.id === userId ? { ...user, selected: !user.selected } : user
-      )
-    );
-  };
 
   // Handle user deletion
   const handleUserDelete = (userId) => {
@@ -385,25 +214,354 @@ const SetRole = () => {
     setOpenDeleteUserModal(false);
   };
 
-  const [roles, setRoles] = useState([]);
-  const [loading, setLoading] = useState(false);
+  /* ---------- state ---------- */
+  const [menuData, setMenuData] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [groups, setGroups] = useState([]); // roles_tracking
+  const [users, setUsers] = useState([]); // user_permissions
 
-  const fetchRoles = async () => {
-    setLoading(true);
+  const [selectedMenu, setSelectedMenu] = useState({
+    mainMenu: "",
+    resourceId: "",
+    subMenuName: "",
+  });
+
+  const nextGroupNumber = useMemo(
+    () => (groups.length ? Math.max(...groups.map((g) => g.id)) + 1 : 1),
+    [groups]
+  );
+
+  /* ---------- click sub-menu ---------- */
+  const handleMenuItemClick = (sectionTitle, item) => {
+    setSelectedMenu({
+      mainMenu: sectionTitle,
+      resourceId: item.id,
+      subMenuName: item.label,
+    });
+  };
+
+  const [userlist, setUserlist] = useState([]);
+  const [groupOptions, setGroupOptions] = useState([]); // State สำหรับเก็บกลุ่ม
+  const [userOptions, setUserOptions] = useState([]); // State สำหรับเก็บผู้ใช้
+  const [newUser, setNewUser] = useState({ group: "", userId: "" }); // State สำหรับเก็บข้อมูลของผู้ใช้ใหม่
+
+  // ฟังก์ชั่นดึงข้อมูลกลุ่มและผู้ใช้จาก API
+  const fetchUsersAndGroups = async () => {
     try {
-      const rolesData = await getRoles(); // เรียกใช้งานฟังก์ชัน getRoles
-      setRoles(rolesData); // ตั้งค่าข้อมูล roles
-      console.log("Roles data:", rolesData); // ล็อกข้อมูล
-    } catch (error) {
-      console.error("Error fetching roles:", error);
-    } finally {
-      setLoading(false);
+      const response = await getUsersByRole(); // ดึงข้อมูลจาก API
+      const groups = response.res_data.map((group) => ({
+        value: group.role_id, // role_id เป็น value ของกลุ่ม
+        label: group.role_description, // role_description เป็น label
+      }));
+
+      // อัปเดตกลุ่ม options
+      setGroupOptions(groups);
+
+      // ฟิลเตอร์ผู้ใช้จากแต่ละกลุ่ม
+      const users = response.res_data.flatMap((group) =>
+        group.users.map((user) => ({
+          value: user.id, // ใช้ user id
+          label: user.full_name, // ใช้ full_name ของผู้ใช้
+          role_id: group.role_id, // เชื่อมโยง user กับ role_id ของกลุ่ม
+        }))
+      );
+
+      setUserlist(users); // อัปเดต user list
+    } catch (err) {
+      console.error("Error fetching users and groups:", err);
     }
   };
 
+  // เรียกใช้ fetchUsersAndGroups เมื่อ component โหลด
   useEffect(() => {
-    fetchRoles(); // เรียกใช้ฟังก์ชัน fetchRoles เมื่อ component ถูก mount
+    fetchUsersAndGroups();
   }, []);
+
+  // เมื่อเลือกกลุ่ม จะทำการกรองผู้ใช้ที่เกี่ยวข้องกับกลุ่มนั้น
+  const handleGroupUserChange = (e) => {
+    const selectedGroup = e.target.value;
+    setNewUser({ ...newUser, group: selectedGroup, userId: "" });
+
+    // กรองผู้ใช้ที่มี role_id ตรงกับกลุ่มที่เลือก
+    const filteredUsers = userlist.filter(
+      (user) => user.role_id === selectedGroup
+    );
+    setUserOptions(filteredUsers); // อัปเดต user options ที่แสดงตามกลุ่มที่เลือก
+  };
+
+  const handleSaveUserPermission = async () => {
+    try {
+      const { group, userId } = newUser; // ดึงข้อมูลกลุ่มและผู้ใช้ที่เลือก
+
+      if (!group || !userId) {
+        handleCloseUserModal(); // ปิด Modal ก่อนที่จะแสดง alert
+        alertWarning("กรุณาเลือกกลุ่มและผู้ใช้ก่อนบันทึก").then(() => {
+          handleOpenUserModal(); // เปิด Modal ใหม่หลังจากที่ alert ปิด
+        });
+        return;
+      }
+
+      // สร้างสิทธิ์ให้กับผู้ใช้
+      const response = await createUserPermission({
+        user_id: userId, // ส่ง userId ที่เลือก
+        role_id: group, // ส่ง group ที่เลือก
+        resource_id: selectedMenu.resourceId, // ส่ง resourceId ที่เลือกจากเมนู
+        can_create: true, // ค่าตัวอย่าง, ปรับตามความต้องการ
+        can_read: true,
+        can_update: true,
+        can_delete: true,
+        override_role: true, // ค่าตัวอย่าง, ปรับตามความต้องการ
+      });
+
+      if (response.res_code === "0000") {
+        alertSuccess("บันทึกสิทธิ์รายบุคคลสำเร็จ"); // แสดงข้อความสำเร็จ
+        handleCloseUserModal(); // ปิด Modal
+      } else {
+        alertWarning(response.res_message || "เกิดข้อผิดพลาดในการบันทึก");
+      }
+    } catch (error) {
+      console.error("Error creating user permission:", error);
+      alertWarning("เกิดข้อผิดพลาดในการบันทึกสิทธิ์รายบุคคล");
+    }
+  };
+
+  const [pendingDeletes, setPendingDeletes] = useState([]); // State for pending deletes
+  const [pendingCreates, setPendingCreates] = useState([]); // State for pending creates
+
+  const handleGroupChange = (groupId) => {
+    setGroups((prev) =>
+      prev.map((group) => {
+        if (group.id === groupId) {
+          const updatedGroup = { ...group, selected: !group.selected }; // Toggle selected state
+
+          // หาก group ไม่มี permission_id หรือ permission_id เป็นค่าว่าง
+          if (
+            updatedGroup.permission_id === "" ||
+            updatedGroup.permission_id == null
+          ) {
+            console.log(
+              "permission_id is empty or null, will create new permission."
+            );
+
+            // ถ้าไม่มี permission_id ให้เพิ่ม group.id ลงใน pendingCreates แต่ไม่ซ้ำ
+            setPendingCreates((prevCreates) => {
+              if (!prevCreates.includes(group.id)) {
+                return [...prevCreates, group.id];
+              }
+              return prevCreates;
+            });
+
+            // ลบ group.id ออกจาก pendingDeletes
+            setPendingDeletes((prevDeletes) =>
+              prevDeletes.filter((id) => id !== group.id)
+            );
+          } else {
+            console.log("permission_id exists, will delete permission.");
+
+            // ถ้ามี permission_id ให้เพิ่ม group.id ลงใน pendingDeletes แต่ไม่ซ้ำ
+            setPendingDeletes((prevDeletes) => {
+              if (!prevDeletes.includes(group.id)) {
+                return [...prevDeletes, group.id];
+              }
+              return prevDeletes;
+            });
+
+            // ลบ group.id ออกจาก pendingCreates
+            setPendingCreates((prevCreates) =>
+              prevCreates.filter((id) => id !== group.id)
+            );
+          }
+
+          return updatedGroup;
+        }
+        return group;
+      })
+    );
+  };
+
+  // Handle save function
+  const handleSave = async () => {
+    try {
+      // ตรวจสอบว่า selectedMenu.resourceId มีค่าหรือไม่
+      const resourceId = selectedMenu.resourceId;
+      if (!resourceId) {
+        console.error("resourceId is not selected.");
+        return; // ถ้า resourceId ไม่มีค่า จะไม่ทำการบันทึก
+      }
+
+      // ลบสิทธิ์ทั้งหมดใน pendingDeletes
+      if (pendingDeletes.length) {
+        console.log("Deleting permissions:", pendingDeletes);
+        await Promise.all(
+          pendingDeletes.map(async (id) => {
+            const group = groups.find((group) => group.id === id);
+            if (group && group.permission_id) {
+              console.log(
+                `Calling deletePermission for ID: ${group.permission_id}`
+              );
+              await deletePermission(group.permission_id); // เรียกใช้ deletePermission API
+            }
+          })
+        );
+      }
+
+      // สร้างสิทธิ์ทั้งหมดใน pendingCreates
+      if (pendingCreates.length) {
+        console.log("Creating permissions:", pendingCreates);
+        await Promise.all(
+          pendingCreates.map(async (id) => {
+            const group = groups.find((group) => group.id === id);
+            if (group && group.role_id && group.selected) {
+              console.log(
+                `Calling createPermission for role_id: ${group.role_id}, resource_id: ${resourceId}`
+              );
+              await createPermission({
+                role_id: group.role_id,
+                resource_id: resourceId,
+              });
+            }
+          })
+        );
+      }
+
+      // เคลียร์รายการที่ต้องลบและต้องสร้างหลังจากบันทึกเสร็จ
+      setPendingDeletes([]);
+      setPendingCreates([]);
+
+      // รีเฟรชข้อมูลจาก getMenuPermission
+      const { res_data } = await getMenuPermission();
+      setMenuData(res_data);
+      setSections(buildSections(res_data));
+
+      alertSuccess("บันทึกสำเร็จ");
+    } catch (error) {
+      console.error("Error during save process:", error);
+      alertWarning("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
+  };
+
+  /* ---------- first load ---------- */
+  useEffect(() => {
+    (async () => {
+      const { res_data } = await getMenuPermission();
+      setMenuData(res_data);
+      setSections(buildSections(res_data));
+
+      const g0 = res_data[0];
+      const r0 = g0?.resources?.[0];
+      setSelectedMenu({
+        mainMenu: g0?.display_name ?? "",
+        resourceId: r0?.id ?? "",
+        subMenuName: r0?.description || r0?.name || "",
+      });
+    })();
+  }, []);
+
+  /* ---------- when menu changes ---------- */
+  useEffect(() => {
+    if (!selectedMenu.resourceId) {
+      setGroups([]);
+      setUsers([]);
+      return;
+    }
+
+    const grp = menuData.find((g) => g.display_name === selectedMenu.mainMenu);
+    const res = grp?.resources?.find((r) => r.id === selectedMenu.resourceId);
+
+    if (!res) {
+      setGroups([]);
+      setUsers([]);
+      return;
+    }
+
+    /* roles_tracking → groups */
+    setGroups(
+      (res.roles_tracking ?? []).map((role, i) => ({
+        id: i + 1,
+        role_id: role.role_id,
+        name: role.role_description ?? role.role_name,
+        permission_id: role.permission_id || null,
+        selected: role.found,
+        permissions: {
+          create: role.can_create,
+          read: role.can_read,
+          update: role.can_update,
+          delete: role.can_delete,
+        },
+      }))
+    );
+
+    /* user_permissions → users */
+    setUsers(
+      (res.user_permissions ?? []).map((u, i) => ({
+        id: i + 1,
+        user_id: u.user_id,
+        name: u.full_name,
+        selected: u.can_read || u.override_role,
+        groupId: u.roles?.[0]?.role_id || "",
+        groupName: u.roles?.[0]?.role_description || "",
+        permissions: {
+          create: u.can_create,
+          read: u.can_read,
+          update: u.can_update,
+          delete: u.can_delete,
+          override: u.override_role,
+        },
+      }))
+    );
+  }, [selectedMenu, menuData]);
+
+  /* ---------- helper : buildSections ---------- */
+  const buildSections = (data) =>
+    data.map((group, gi) => {
+      /* group icon */
+      const gIcon = {
+        homepage: <IcHome />,
+        dashboard: <IcDash />,
+        setting: <IcTune />,
+        edit: <IcEdit />,
+        box: <IcBox />,
+        document: <IcDoc />,
+        stacked_line_chart: <IcDefault />,
+        account_box: <IcDefault />,
+      }[group.group_name] || <IcDefault />;
+
+      /* sub-menu items */
+      const items = (group.resources ?? []).map((res) => {
+        const key = (res.name || "").toLowerCase();
+        const iIcon = key.includes("report") ? (
+          <IcReport />
+        ) : key.includes("user") ? (
+          <IcUser />
+        ) : key.includes("setting") ? (
+          <IcSetting />
+        ) : key.includes("complaint") ? (
+          <IcComplaint />
+        ) : key.includes("document") ? (
+          <IcFolder />
+        ) : key.includes("search") ? (
+          <IcSearch />
+        ) : key.includes("chat") ? (
+          <IcChat />
+        ) : key.includes("news") ? (
+          <IcNews />
+        ) : (
+          <IcDefault />
+        );
+
+        const display = res.description?.trim() || res.name?.trim();
+        return { id: res.id, label: display, name: display, icon: iIcon };
+      });
+
+      return {
+        id: gi + 1,
+        title: group.display_name,
+        icon: gIcon,
+        items,
+        open: false,
+      };
+    });
+
   return (
     <Box>
       <Grid container spacing={2}>
@@ -483,10 +641,10 @@ const SetRole = () => {
                         opacity: 0.8,
                       },
                     }}
-                    onClick={() =>
-                      section.items.length > 0 &&
-                      handleMenuItemClick(section.title, section.items[0].name)
-                    }
+                    onClick={() => {
+                      if (!section.items.length) return; // เปลี่ยน sec → section
+                      handleMenuItemClick(section.title, section.items[0]); // sec → section
+                    }}
                   >
                     {/* ไอคอนของ title */}
                     <Box
@@ -524,7 +682,7 @@ const SetRole = () => {
                         alignItems: "center",
                         color:
                           selectedMenu.mainMenu === section.title &&
-                          selectedMenu.subMenu === item.name
+                          selectedMenu.subMenuName === item.label
                             ? "#FFFFFF"
                             : "#1120A3",
                         cursor: "pointer",
@@ -533,13 +691,13 @@ const SetRole = () => {
                         fontSize: "18px",
                         fontWeight: "bold",
                       }}
-                      onClick={() => handleMenuItemClick(section.title, item)} // ส่ง item ไปให้ handleMenuItemClick
+                      onClick={() => handleMenuItemClick(section.title, item)}
                     >
                       <Box
                         sx={{
                           color:
                             selectedMenu.mainMenu === section.title &&
-                            selectedMenu.subMenu === item.name
+                            selectedMenu.subMenuName === item.label
                               ? "#FFFFFF"
                               : "#1120A3",
                           mr: 1,
@@ -599,33 +757,39 @@ const SetRole = () => {
                 name="mainMenu"
               />
             </Box>
-            {/* Sub Menu Dropdown Section */}
+            {/* Sub-Menu Dropdown */}
             <Box sx={{ mb: 4 }}>
               <Typography component="span" sx={{ color: "#304FFE", mb: 1 }}>
                 เมนูย่อย
               </Typography>
 
-              {/* ใช้ SelectMenuService แทน TextField */}
+              {/* SelectMenuService ใช้รายการ item ที่ตรงกับ mainMenu */}
               <SelectMenuService
                 options={
-                  // แก้ไขตรงนี้โดยดึงค่า name จาก item
                   (
-                    sections.find(
-                      (section) => section.title === selectedMenu.mainMenu
-                    )?.items || []
-                  ).map((item) => ({
-                    value: item.name, // ใช้ชื่อเป็นค่า value
-                    label: item.name, // ใช้ชื่อเป็น label
-                  }))
+                    sections.find((s) => s.title === selectedMenu.mainMenu)
+                      ?.items || []
+                  ).map((it) => ({ value: it.id, label: it.label })) // ⭐ value=id
                 }
-                handleChange={(e) =>
-                  setSelectedMenu({ ...selectedMenu, subMenu: e.target.value })
-                }
-                value={selectedMenu.subMenu}
+                /* เมื่อผู้ใช้เลือกจาก dropdown */
+                handleChange={(e) => {
+                  const sec = sections.find(
+                    (s) => s.title === selectedMenu.mainMenu
+                  );
+                  const it = sec?.items.find((i) => i.id === e.target.value);
+                  if (!it) return;
+                  setSelectedMenu({
+                    mainMenu: sec.title,
+                    resourceId: it.id, // ⭐ อัปเดตเหมือนคลิกซ้าย
+                    subMenuName: it.label,
+                  });
+                }}
+                value={selectedMenu.resourceId} // ⭐ ผูกด้วย id
                 width="100%"
                 name="subMenu"
               />
             </Box>
+
             {/* User Group Rights Section */}
             <Typography
               component="span"
@@ -665,13 +829,13 @@ const SetRole = () => {
                         }}
                       />
                     }
-                    label={`กลุ่มที่ ${group.id} : ${group.name}`}
+                    label={`${group.name}`}
                     sx={{ color: "#304FFE" }}
                   />
                   {/* แสดงไอคอนลบเฉพาะกลุ่มที่มี id ตั้งแต่ 7 เป็นต้นไป */}
                   {group.id >= 7 && (
                     <IconButton
-                      onClick={() => handleGroupDelete(group.id)}
+                      onClick={() => handleGroupDelete(group.role_id)} // Pass the group.id to the delete handler
                       sx={{
                         color: "red",
                       }}
@@ -725,28 +889,20 @@ const SetRole = () => {
                     alignItems: "center",
                   }}
                 >
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={user.selected}
-                        onChange={() => handleUserChange(user.id)}
-                        sx={{
-                          color: "#304FFE",
-                          "&.Mui-checked": {
-                            color: "#304FFE",
-                          },
-                        }}
-                      />
-                    }
-                    label={`${user.name} (กลุ่มที่ ${user.groupId} : ${user.groupName})`}
-                    sx={{ color: "#304FFE" }}
-                  />
+                  <Typography
+                    sx={{
+                      color: "#304FFE",
+                      fontSize: "16px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {user.name} ({user.groupName})
+                  </Typography>
+
                   {/* ปุ่มลบสำหรับรายการบุคคล */}
                   <IconButton
                     onClick={() => handleUserDelete(user.id)}
-                    sx={{
-                      color: "red",
-                    }}
+                    sx={{ color: "red" }}
                   >
                     <DeleteIcon />
                   </IconButton>
@@ -765,19 +921,16 @@ const SetRole = () => {
                 onClick={handleOpenUserModal}
               >
                 <AddIcon fontSize="small" sx={{ mr: 0.5 }} />
-                <Typography component="span">เพิ่มบุคคล</Typography>
+                <Typography component="span">เพิ่มสิทธิ์รายบุคคล</Typography>
               </Box>
             </Box>
+
             {/* Add User Modal */}
             <Dialog
               open={openUserModal}
               onClose={handleCloseUserModal}
               PaperProps={{
-                sx: {
-                  width: "600px",
-                  borderRadius: "12px",
-                  padding: "10px",
-                },
+                sx: { width: "600px", borderRadius: "12px", padding: "10px" },
               }}
             >
               <DialogTitle
@@ -804,56 +957,49 @@ const SetRole = () => {
                 </IconButton>
               </DialogTitle>
               <DialogContent sx={{ py: 2 }}>
-                <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-                  <Typography
-                    component="span"
-                    sx={{
-                      mr: 2,
-                      color: "#1120A3",
-                      width: "60px",
-                      flexShrink: 0,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    ชื่อ :
-                  </Typography>
-                  <TextfieldService
-                    value={newUser.name}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, name: e.target.value })
-                    }
-                    placeholder="ชื่อ-นามสกุล"
-                    sx={{
-                      ".MuiOutlinedInput-root": {
-                        borderRadius: 2,
-                      },
-                    }}
-                  />
-                </Box>
+                {/* 1. Select Group */}
                 <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <Typography
                     component="span"
                     sx={{
                       mr: 2,
-                      color: "#1120A3",
-                      width: "60px",
-                      flexShrink: 0,
+                      width: 60,
                       fontWeight: "bold",
+                      color: "#1120A3",
                     }}
                   >
                     กลุ่ม :
                   </Typography>
                   <SelectMenuService
-                    options={groups.map((group) => ({
-                      value: group.id.toString(),
-                      label: `กลุ่มที่ ${group.id} : ${group.name}`,
-                    }))}
-                    handleChange={(e) =>
-                      setNewUser({ ...newUser, group: e.target.value })
-                    }
+                    options={groupOptions} // ใช้ข้อมูลกลุ่มที่ได้จาก fetch
+                    handleChange={handleGroupUserChange}
                     value={newUser.group}
                     width="100%"
                     name="userGroup"
+                  />
+                </Box>
+
+                {/* 2. Select User (based on group selection) */}
+                <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                  <Typography
+                    component="span"
+                    sx={{
+                      mr: 2,
+                      width: 60,
+                      fontWeight: "bold",
+                      color: "#1120A3",
+                    }}
+                  >
+                    ชื่อ :
+                  </Typography>
+                  <SelectMenuService
+                    options={userOptions} // ผู้ใช้ที่กรองตามกลุ่ม
+                    handleChange={(e) =>
+                      setNewUser({ ...newUser, userId: e.target.value })
+                    }
+                    value={newUser.userId}
+                    width="100%"
+                    name="userName"
                   />
                 </Box>
               </DialogContent>
@@ -869,15 +1015,13 @@ const SetRole = () => {
                     height: "47.588932037353516px",
                     borderRadius: "15px",
                     fontSize: "20px",
-                    "&:hover": {
-                      backgroundColor: "#D0E8FC",
-                    },
+                    "&:hover": { backgroundColor: "#D0E8FC" },
                   }}
                 />
                 <ButtonService
-                  label="ยืนยัน"
+                  label="บันทึก"
                   variant="contained"
-                  onClick={handleAddUser}
+                  onClick={handleSaveUserPermission}
                   color="#2196F3"
                   iconRight={<CheckOutlinedIcon />}
                   sx={{
@@ -885,13 +1029,12 @@ const SetRole = () => {
                     height: "47.588932037353516px",
                     borderRadius: "15px",
                     fontSize: "20px",
-                    "&:hover": {
-                      backgroundColor: "#1E88E5",
-                    },
+                    "&:hover": { backgroundColor: "#1E88E5" },
                   }}
                 />
               </DialogActions>
             </Dialog>
+
             {/* Delete User Modal */}
             <Dialog
               open={openDeleteUserModal}
@@ -1009,7 +1152,7 @@ const SetRole = () => {
                 label="บันทึก"
                 variant="contained"
                 iconRight={<CheckOutlinedIcon />}
-                onClick={[]} // ใส่ฟังก์ชันที่ต้องการจะทำเมื่อคลิก
+                onClick={handleSave}
                 sx={{
                   backgroundColor: "#2196F3",
                   color: "#FFF",
@@ -1017,9 +1160,7 @@ const SetRole = () => {
                   width: "23%",
                   height: "55px",
                   fontSize: "24px",
-                  "&:hover": {
-                    backgroundColor: "#1E88E5",
-                  },
+                  "&:hover": { backgroundColor: "#1E88E5" },
                 }}
               />
             </Box>
@@ -1123,7 +1264,7 @@ const SetRole = () => {
         onClose={handleCloseModal}
         PaperProps={{
           sx: {
-            width: "400px",
+            width: "500px",
             borderRadius: "12px",
             padding: "10px",
           },
@@ -1164,13 +1305,39 @@ const SetRole = () => {
                 fontWeight: "bold",
               }}
             >
-              กลุ่มที่ {nextGroupNumber} :
+              กลุ่มที่ {nextGroupNumber}
             </Typography>
-            {/* ใช้ TextfieldService แทน TextField */}
+            {/* ใช้ TextfieldService แทน TextField สำหรับ Name */}
             <TextfieldService
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
-              placeholder="ชื่อกลุ่ม"
+              placeholder="ชื่อกลุ่มภาษาอังกฤษ"
+              sx={{
+                ".MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+            <Typography
+              component="span"
+              sx={{
+                mr: 2,
+                color: "#1120A3",
+                width: "80px",
+                flexShrink: 0,
+                fontWeight: "bold",
+              }}
+            >
+              กลุ่มที่ {nextGroupNumber}
+            </Typography>
+            {/* ใช้ TextfieldService แทน TextField สำหรับ Description */}
+            <TextfieldService
+              value={newGroupDescription}
+              onChange={(e) => setNewGroupDescription(e.target.value)}
+              placeholder="ชื่อกลุ่มภาษาไทย"
               sx={{
                 ".MuiOutlinedInput-root": {
                   borderRadius: 2,
@@ -1204,13 +1371,17 @@ const SetRole = () => {
             onClick={handleAddGroup}
             color="#2196F3"
             iconRight={<CheckOutlinedIcon />}
+            disabled={!newGroupName || !newGroupDescription} // ตรวจสอบว่ามีชื่อกลุ่มและคำอธิบายหรือไม่
             sx={{
               width: "195px",
               height: "47.588932037353516px",
               borderRadius: "15px",
               fontSize: "20px",
+              backgroundColor:
+                !newGroupName || !newGroupDescription ? "#B0BEC5" : "#2196F3", // กำหนดสีพื้นหลังสีเทาเมื่อ disabled
               "&:hover": {
-                backgroundColor: "#1E88E5", // สีเมื่อ hover
+                backgroundColor:
+                  !newGroupName || !newGroupDescription ? "#B0BEC5" : "#1E88E5", // เปลี่ยนสีเมื่อ hover
               },
             }}
           />
