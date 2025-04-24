@@ -1,157 +1,94 @@
 {
-    "departments": [
-      {
-        "name": "กระทรวงการคลัง",
-        "short_name": "กค.",
-        "code": "MOF",
-        "parent_name": null,
-        "group_name": null,
-        "order_index": 0,
-        "is_active": true
-      },
-      {
-        "name": "สำนักงานปลัดกระทรวงการคลัง",
-        "short_name": "สป.กค.",
-        "code": "MOF-PS",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "ส่วนราชการ",
-        "order_index": 1,
-        "is_active": true
-      },
-      {
-        "name": "กรมธนารักษ์",
-        "short_name": "ธร.",
-        "code": "TRD",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "ส่วนราชการ",
-        "order_index": 2,
-        "is_active": true
-      },
-      {
-        "name": "กรมบัญชีกลาง",
-        "short_name": "บก.",
-        "code": "CGD",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "ส่วนราชการ",
-        "order_index": 3,
-        "is_active": true
-      },
-      {
-        "name": "กรมศุลกากร",
-        "short_name": "ศก.",
-        "code": "CUS",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "ส่วนราชการ",
-        "order_index": 4,
-        "is_active": true
-      },
-      {
-        "name": "กรมสรรพากร",
-        "short_name": "สก.",
-        "code": "RD",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "ส่วนราชการ",
-        "order_index": 5,
-        "is_active": true
-      },
-      {
-        "name": "กรมสรรพสามิต",
-        "short_name": "สส.",
-        "code": "ED",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "ส่วนราชการ",
-        "order_index": 6,
-        "is_active": true
-      },
-      {
-        "name": "สำนักงานเศรษฐกิจการคลัง",
-        "short_name": "สศค.",
-        "code": "FPO",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "ส่วนราชการ",
-        "order_index": 7,
-        "is_active": true
-      },
-      {
-        "name": "สำนักงานบริหารหนี้สาธารณะ",
-        "short_name": "สบน.",
-        "code": "PDMO",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "ส่วนราชการ",
-        "order_index": 8,
-        "is_active": true
-      },
-      {
-        "name": "สำนักงานคณะกรรมการนโยบายรัฐวิสาหกิจ",
-        "short_name": "สคร.",
-        "code": "SEPO",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "ส่วนราชการ",
-        "order_index": 9,
-        "is_active": true
-      },
-      {
-        "name": "ธนาคารกรุงไทย จำกัด (มหาชน)",
-        "short_name": "กรุงไทย",
-        "code": "KTB",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "รัฐวิสาหกิจ",
-        "order_index": 1,
-        "is_active": true
-      },
-      {
-        "name": "ธนาคารออมสิน",
-        "short_name": "ออมสิน",
-        "code": "GSB",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "รัฐวิสาหกิจ",
-        "order_index": 2,
-        "is_active": true
-      },
-      {
-        "name": "ธนาคารอาคารสงเคราะห์",
-        "short_name": "ธอส.",
-        "code": "GHB",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "รัฐวิสาหกิจ",
-        "order_index": 3,
-        "is_active": true
-      },
-      {
-        "name": "ธนาคารเพื่อการเกษตรและสหกรณ์การเกษตร",
-        "short_name": "ธ.ก.ส.",
-        "code": "BAAC",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "รัฐวิสาหกิจ",
-        "order_index": 4,
-        "is_active": true
-      },
-      {
-        "name": "ธนาคารอิสลามแห่งประเทศไทย",
-        "short_name": "ธอท.",
-        "code": "IBank",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "รัฐวิสาหกิจ",
-        "order_index": 5,
-        "is_active": true
-      },
-      {
-        "name": "ธนาคารแห่งประเทศไทย",
-        "short_name": "ธปท.",
-        "code": "BOT",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "อื่น ๆ",
-        "order_index": 1,
-        "is_active": true
-      },
-      {
-        "name": "สำนักงานความร่วมมือพัฒนาเศรษฐกิจกับประเทศเพื่อนบ้าน",
-        "short_name": "สพพ.",
-        "code": "NEDA",
-        "parent_name": "กระทรวงการคลัง",
-        "group_name": "อื่น ๆ",
-        "order_index": 2,
-        "is_active": true
-      }
-    ]
-  }
+  "departments": [
+    {
+      "name": "ธนาคารแห่งประเทศไทย",
+      "short_name": "ธปท.",
+      "code": "BOT",
+      "parent_name": null,
+      "group_name": "อื่น ๆ",
+      "order_index": 1,
+      "is_active": true
+    },
+    {
+      "name": "กรมธนารักษ์",
+      "short_name": "ธร.",
+      "code": "TRD",
+      "parent_name": null,
+      "group_name": "ส่วนราชการ",
+      "order_index": 2,
+      "is_active": true
+    },
+    {
+      "name": "กรมบัญชีกลาง",
+      "short_name": "บก.",
+      "code": "CGD",
+      "parent_name": null,
+      "group_name": "ส่วนราชการ",
+      "order_index": 3,
+      "is_active": true
+    },
+    {
+      "name": "กรมศุลกากร",
+      "short_name": "ศก.",
+      "code": "CUS",
+      "parent_name": null,
+      "group_name": "ส่วนราชการ",
+      "order_index": 4,
+      "is_active": true
+    },
+    {
+      "name": "กรมสรรพสามิต",
+      "short_name": "สส.",
+      "code": "ED",
+      "parent_name": null,
+      "group_name": "ส่วนราชการ",
+      "order_index": 5,
+      "is_active": true
+    },
+    {
+      "name": "กรมสรรพากร",
+      "short_name": "สก.",
+      "code": "RD",
+      "parent_name": null,
+      "group_name": "ส่วนราชการ",
+      "order_index": 6,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานคณะกรรมการนโยบายรัฐวิสาหกิจ",
+      "short_name": "สคร.",
+      "code": "SEPO",
+      "parent_name": null,
+      "group_name": "ส่วนราชการ",
+      "order_index": 7,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานบริหารหนี้สาธารณะ",
+      "short_name": "สบน.",
+      "code": "PDMO",
+      "parent_name": null,
+      "group_name": "ส่วนราชการ",
+      "order_index": 8,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานเศรษฐกิจการคลัง",
+      "short_name": "สศค.",
+      "code": "FPO",
+      "parent_name": null,
+      "group_name": "ส่วนราชการ",
+      "order_index": 9,
+      "is_active": true
+    },
+    {
+      "name": "ธนาคารออมสิน",
+      "short_name": "ออมสิน",
+      "code": "GSB",
+      "parent_name": null,
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 10,
+      "is_active": true
+    }
+  ]
+}

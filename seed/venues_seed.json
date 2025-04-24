@@ -2,7 +2,7 @@
   "venues": [
     {
       "name": "บริษัท บริหารสินทรัพย์กรุงเทพพาณิชย์ จำกัด",
-      "short_name": "บสก.",
+      "short_name": "BAM",
       "code": "BAM",
       "abbreviation": "BAM",
       "color_code": "#8D3AF6",
@@ -13,7 +13,7 @@
     },
     {
       "name": "บริษัท บริหารสินทรัพย์สุขุมวิท จำกัด",
-      "short_name": "บสส.",
+      "short_name": "บสส. / SAM",
       "code": "SAM",
       "abbreviation": "บสส. / SAM",
       "color_code": "#EA33F7",
@@ -24,7 +24,7 @@
     },
     {
       "name": "บริษัท บริหารสินทรัพย์ เจ จำกัด",
-      "short_name": "บสจ.",
+      "short_name": "JAM",
       "code": "JAM",
       "abbreviation": "JAM",
       "color_code": "#EA3368",
@@ -35,7 +35,7 @@
     },
     {
       "name": "บริษัท บริหารสินทรัพย์ ธนาคารอิสลามแห่งประเทศไทย จำกัด",
-      "short_name": "บสอ.",
+      "short_name": "IAM",
       "code": "IAM",
       "abbreviation": "IAM",
       "color_code": "#ED7D2D",
