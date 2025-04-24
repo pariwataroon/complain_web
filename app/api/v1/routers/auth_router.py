@@ -57,7 +57,6 @@ async def get_current_user_profile(
     try:
         # แปลง current_user จาก string เป็น UUID
         user_id = UUID(current_user)
-        print(f"Fetching profile for user ID: {user_id}")
         
         # ดึงข้อมูลผู้ใช้พร้อมบทบาทและคำนำหน้า
         user_data = user_controller.get_user_with_roles_and_titles(db, user_id)
