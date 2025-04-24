@@ -1984,7 +1984,7 @@
 								"venues"
 							]
 						},
-						"description": "ดึงรายการสถานที่ทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_venues"
+						"description": "ดึงรายการสถานที่ทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_department"
 					},
 					"response": []
 				},
@@ -2013,7 +2013,36 @@
 								"grouped"
 							]
 						},
-						"description": "ดึงข้อมูลสถานที่แบ่งตามกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_venues"
+						"description": "ดึงข้อมูลสถานที่แบ่งตามกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venues Grouped Department",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/venues/grouped/department",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"venues",
+								"grouped"
+							]
+						},
+						"description": "ดึงข้อมูลสถานที่แบ่งตามหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_department"
 					},
 					"response": []
 				},
@@ -2042,7 +2071,7 @@
 								"{{venue_id}}"
 							]
 						},
-						"description": "ดึงข้อมูลสถานที่ตาม ID - ต้องมีสิทธิ์อ่านใน setting_venues"
+						"description": "ดึงข้อมูลสถานที่ตาม ID - ต้องมีสิทธิ์อ่านใน setting_department"
 					},
 					"response": []
 				},
@@ -2078,7 +2107,7 @@
 								}
 							]
 						},
-						"description": "ค้นหาสถานที่ตามหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_venues"
+						"description": "ค้นหาสถานที่ตามหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_department"
 					},
 					"response": []
 				},
@@ -2114,7 +2143,7 @@
 								}
 							]
 						},
-						"description": "ค้นหาสถานที่ตามชื่อ รหัส หรือตัวย่อ - ต้องมีสิทธิ์อ่านใน setting_venues"
+						"description": "ค้นหาสถานที่ตามชื่อ รหัส หรือตัวย่อ - ต้องมีสิทธิ์อ่านใน setting_department"
 					},
 					"response": []
 				},
@@ -2151,7 +2180,7 @@
 								"venues"
 							]
 						},
-						"description": "สร้างสถานที่ใหม่ - ต้องมีสิทธิ์สร้างใน setting_venues"
+						"description": "สร้างสถานที่ใหม่ - ต้องมีสิทธิ์สร้างใน setting_department"
 					},
 					"response": []
 				},
@@ -2189,7 +2218,7 @@
 								"{{venue_id}}"
 							]
 						},
-						"description": "อัปเดตข้อมูลสถานที่ - ต้องมีสิทธิ์แก้ไขใน setting_venues"
+						"description": "อัปเดตข้อมูลสถานที่ - ต้องมีสิทธิ์แก้ไขใน setting_department"
 					},
 					"response": []
 				},
@@ -2218,7 +2247,7 @@
 								"{{venue_id}}"
 							]
 						},
-						"description": "ลบสถานที่ (soft delete) - ต้องมีสิทธิ์ลบใน setting_venues"
+						"description": "ลบสถานที่ (soft delete) - ต้องมีสิทธิ์ลบใน setting_department"
 					},
 					"response": []
 				},
@@ -2248,7 +2277,7 @@
 								"overview"
 							]
 						},
-						"description": "ดึงข้อมูลสถิติสำหรับสถานที่ - ต้องมีสิทธิ์อ่านใน setting_venues"
+						"description": "ดึงข้อมูลสถิติสำหรับสถานที่ - ต้องมีสิทธิ์อ่านใน setting_department"
 					},
 					"response": []
 				}
