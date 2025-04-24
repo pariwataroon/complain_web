@@ -1,11 +1,19 @@
 {
   "resources": [
     {
-      "name": "homepage",
-      "path": "/admin/homepage",
-      "description": "หน้าแรกระบบ",
+      "name": "homepage_chatbot",
+      "path": "/admin/homepage/chatbot",
+      "description": "กำหนดคำถาม Chat Bot",
       "group_name": "homepage",
       "order_index": 1,
+      "is_active": true
+    },
+    {
+      "name": "homepage_news",
+      "path": "/admin/homepage/news",
+      "description": "กำหนดข่าวสาร",
+      "group_name": "homepage",
+      "order_index": 2,
       "is_active": true
     },
     {
