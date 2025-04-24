@@ -1306,12 +1306,13 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions",
+											"raw": "{{API}}{{PREFIX}}/permissions/list",
 											"host": [
 												"{{API}}{{PREFIX}}"
 											],
 											"path": [
-												"permissions"
+												"permissions",
+												"list"
 											]
 										}
 									},
@@ -1408,12 +1409,13 @@
 											}
 										},
 										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions",
+											"raw": "{{API}}{{PREFIX}}/permissions/create",
 											"host": [
 												"{{API}}{{PREFIX}}"
 											],
 											"path": [
-												"permissions"
+												"permissions",
+												"create"
 											]
 										}
 									},
