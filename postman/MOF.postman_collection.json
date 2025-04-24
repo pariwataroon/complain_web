@@ -1,169 +1,1282 @@
 {
 	"info": {
-		"_postman_id": "2bdb179c-736e-4252-a24c-13bd72eab8d6",
+		"_postman_id": "1a1f1b65-4084-49c7-838f-213ed1e335f7",
 		"name": "MOF",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "2230736"
 	},
 	"item": [
 		{
-			"name": "ThaID",
+			"name": "ThaID_SandBox_MOF",
 			"item": [
 				{
-					"name": "ThaID_SandBox_MOF",
-					"item": [
-						{
-							"name": "Auth",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "https://imauthsbx.bora.dopa.go.th/api/v2/oauth2/auth/?response_type=code&client_id=M2NlTDRmT1JrMVdJdGRtbHR0OVJOMHdlQVJjbEo4eFo&redirect_uri=https://ff3p4flc-3000.asse.devtunnels.ms/callback&scope=pid name&state=login",
-									"protocol": "https",
-									"host": [
-										"imauthsbx",
-										"bora",
-										"dopa",
-										"go",
-										"th"
-									],
-									"path": [
-										"api",
-										"v2",
-										"oauth2",
-										"auth",
-										""
-									],
-									"query": [
-										{
-											"key": "response_type",
-											"value": "code"
-										},
-										{
-											"key": "client_id",
-											"value": "M2NlTDRmT1JrMVdJdGRtbHR0OVJOMHdlQVJjbEo4eFo"
-										},
-										{
-											"key": "redirect_uri",
-											"value": "https://ff3p4flc-3000.asse.devtunnels.ms/callback"
-										},
-										{
-											"key": "scope",
-											"value": "pid name"
-										},
-										{
-											"key": "state",
-											"value": "login"
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Access Token",
-							"request": {
-								"auth": {
-									"type": "basic",
-									"basic": [
-										{
-											"key": "password",
-											"value": "bUp0N0kzalTPaTUxSFBQN1J0M1p2VUU1RTdsM3dwQVdpaFRMN3Iyeg",
-											"type": "string"
-										},
-										{
-											"key": "username",
-											"value": "M2NlTDRmT1JrMVdJdGRtbHR0OVJOMHdlQVJjbEo4eFo",
-											"type": "string"
-										}
-									]
+					"name": "Auth",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://imauthsbx.bora.dopa.go.th/api/v2/oauth2/auth/?response_type=code&client_id=M2NlTDRmT1JrMVdJdGRtbHR0OVJOMHdlQVJjbEo4eFo&redirect_uri=https://ff3p4flc-3000.asse.devtunnels.ms/callback&scope=pid name&state=login",
+							"protocol": "https",
+							"host": [
+								"imauthsbx",
+								"bora",
+								"dopa",
+								"go",
+								"th"
+							],
+							"path": [
+								"api",
+								"v2",
+								"oauth2",
+								"auth",
+								""
+							],
+							"query": [
+								{
+									"key": "response_type",
+									"value": "code"
 								},
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/x-www-form-urlencoded",
-										"type": "text"
-									},
-									{
-										"key": "Authorization",
-										"value": "Basic TTJObFREUm1UMUpyTVZkSmRHUnRiSFIwT1ZKT01IZGxRVkpqYkVvNGVGbzpiVXAwTjBremFsUlBhVFV4U0ZCUU4xSjBNMXAyVlVVMVJUZHNNM2R3UVZkcGFGUk1OM0l5ZWc=",
-										"type": "text"
-									}
+								{
+									"key": "client_id",
+									"value": "M2NlTDRmT1JrMVdJdGRtbHR0OVJOMHdlQVJjbEo4eFo"
+								},
+								{
+									"key": "redirect_uri",
+									"value": "https://ff3p4flc-3000.asse.devtunnels.ms/callback"
+								},
+								{
+									"key": "scope",
+									"value": "pid name"
+								},
+								{
+									"key": "state",
+									"value": "login"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Access Token",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "bUp0N0kzalTPaTUxSFBQN1J0M1p2VUU1RTdsM3dwQVdpaFRMN3Iyeg",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "M2NlTDRmT1JrMVdJdGRtbHR0OVJOMHdlQVJjbEo4eFo",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Basic TTJObFREUm1UMUpyTVZkSmRHUnRiSFIwT1ZKT01IZGxRVkpqYkVvNGVGbzpiVXAwTjBremFsUlBhVFV4U0ZCUU4xSjBNMXAyVlVVMVJUZHNNM2R3UVZkcGFGUk1OM0l5ZWc=",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "authorization_code",
+									"type": "text"
+								},
+								{
+									"key": "code",
+									"value": "NGRlODk4MzQtZmJjYy00MjQwLWJkNDItNTU0Y2JlMjc2OTgxI2ZjZmE5NzUzLTIyOTAtNDMwNi04MDc2LTMyOGVmZWRkYzA2YQ",
+									"type": "text"
+								},
+								{
+									"key": "redirect_uri",
+									"value": "https://ff3p4flc-3000.asse.devtunnels.ms/callback",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "https://imauthsbx.bora.dopa.go.th/api/v2/oauth2/token/",
+							"protocol": "https",
+							"host": [
+								"imauthsbx",
+								"bora",
+								"dopa",
+								"go",
+								"th"
+							],
+							"path": [
+								"api",
+								"v2",
+								"oauth2",
+								"token",
+								""
+							],
+							"query": [
+								{
+									"key": "client_id",
+									"value": "U1lyOFJ6Q1prYVJkUUlYSGR3TjAzRGJNb21uUVd0cTI",
+									"disabled": true
+								},
+								{
+									"key": "redirect_uri",
+									"value": "https://ff3p4flc-3000.asse.devtunnels.ms/callback",
+									"disabled": true
+								},
+								{
+									"key": "scope",
+									"value": "pid",
+									"disabled": true
+								},
+								{
+									"key": "state",
+									"value": "login",
+									"disabled": true
+								},
+								{
+									"key": "grant_type",
+									"value": "authorization_code",
+									"disabled": true
+								},
+								{
+									"key": "code",
+									"value": "ZDlkZDI4OTAtYTBkZi00NTM3LTk1MTItYTc2Y2JjNzMwM2ZmIzM5YmZlNmI2LTI1N2ItNGRiOC1iZDc0LTIxYjU5ZTNiMDY4MQ",
+									"disabled": true
+								},
+								{
+									"key": "response_type",
+									"value": "code",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "AUTH",
+			"item": [
+				{
+					"name": "auth/login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// ดึงข้อมูลจาก response\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"// ตรวจสอบว่า login สำเร็จและมี token\r",
+									"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
+									"    // บันทึก access_token ลงใน Collection Variables\r",
+									"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
+									"    \r",
+									"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
+									"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
+									"    \r",
+									"    console.log(\"Token saved to collection variables!\");\r",
+									"}"
 								],
-								"body": {
-									"mode": "urlencoded",
-									"urlencoded": [
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"citizen_id\": \"1234567890122\",\r\n    \"password\": \"password\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/auth/login",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "auth/me",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// ดึงข้อมูลจาก response\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"// ตรวจสอบว่า login สำเร็จและมี token\r",
+									"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
+									"    // บันทึก access_token ลงใน Collection Variables\r",
+									"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
+									"    \r",
+									"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
+									"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
+									"    \r",
+									"    console.log(\"Token saved to collection variables!\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/auth/me",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "thaid/auth",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// ดึงข้อมูลจาก response\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"// ตรวจสอบว่า login สำเร็จและมี token\r",
+									"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
+									"    // บันทึก access_token ลงใน Collection Variables\r",
+									"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
+									"    \r",
+									"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
+									"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
+									"    \r",
+									"    console.log(\"Token saved to collection variables!\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"auth_code\": \"NWI2M2EwZDYtNTdjNC00NDZjLWIzMzAtMjdiNmMzYzkwOWRhIzQ1MGYyMDAzLTdhN2ItNDU2Yi1iNzg2LThhYzRkYjg2MDJiZQ\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/thaid/auth",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"thaid",
+								"auth"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "thaid/login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// ดึงข้อมูลจาก response\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"// ตรวจสอบว่า login สำเร็จและมี token\r",
+									"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
+									"    // บันทึก access_token ลงใน Collection Variables\r",
+									"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
+									"    \r",
+									"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
+									"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
+									"    \r",
+									"    console.log(\"Token saved to collection variables!\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"expires_in\": 1744111684,\r\n    \"access_token\": \"eyJhbGci...\",\r\n    \"refresh_token\": \"eyJhbGci...\",\r\n    \"token_type\": \"Bearer\",\r\n    \"scope\": \"pid given_name address family_name gender title house_address\",\r\n    \"pid\": \"1101500940655\",\r\n    \"address\": {\r\n        \"formatted\": \"123/456 ต.บึงทองหลาง อ.ลำลูกกา จ.ปทุมธานี\"\r\n    },\r\n    \"given_name\": \"ชื่อตัว\",\r\n    \"family_name\": \"ชื่อสกุล\",\r\n    \"gender\": \"male\",\r\n    \"titleTh\": \"นาย\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/thaid/login",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"thaid",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "USERS",
+			"item": [
+				{
+					"name": "users/title/details",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/title/details",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								"title",
+								"details"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "users/",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "users/search/by-role",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/search/by-role",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								"search",
+								"by-role"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "users/stats/by-role",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/stats/by-role",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								"stats",
+								"by-role"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "users/detailed-stats/by-role",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/detailed-stats/by-role",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								"detailed-stats",
+								"by-role"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "users/UUID",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/72c03e14-c470-4079-9ddf-d2af6d1b523a",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								"72c03e14-c470-4079-9ddf-d2af6d1b523a"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "users/",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"citizen_id\": \"1234567980139\",\r\n    \"title_id\": 3,\r\n    \"first_name\": \"as11\",\r\n    \"last_name\": \"afsa1\",\r\n    \"email\": \"buddyibeam89@gmail.com\",\r\n    \"phone\": \"0864703371\",\r\n    \"password\": \"test123!Z\",\r\n    \"prefix_other\": \"test\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "users/ People / register",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"citizen_id\": \"1234567980142\",\r\n    \"title_id\": 3,\r\n    \"first_name\": \"as11\",\r\n    \"last_name\": \"afsa1\",\r\n    \"email\": \"buddyibeam42@gmail.com\",\r\n    \"phone\": \"0864703371\",\r\n    \"password\": \"test123!Z\",\r\n    \"prefix_other\": \"test\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/register",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "users/UUID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"title_id\": 3,\r\n    \"first_name\": \"as11\",\r\n    \"last_name\": \"afsa1\",\r\n    \"phone\": \"0864703371\",\r\n    \"password\": \"test123!Z\",\r\n    \"is_active\": true,\r\n    \"prefix_other\": \"\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/46734501-357f-4227-b427-b25824cfc21e",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								"46734501-357f-4227-b427-b25824cfc21e"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "users/UUID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/9F28F7E6-CF32-4B9D-852A-D95C9437CD97",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								"9F28F7E6-CF32-4B9D-852A-D95C9437CD97"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "PERMISSIONS",
+			"item": [
+				{
+					"name": "Role Endpoints",
+					"item": [
+						{
+							"name": "Get All Roles",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
 										{
-											"key": "grant_type",
-											"value": "authorization_code",
-											"type": "text"
-										},
-										{
-											"key": "code",
-											"value": "NGRlODk4MzQtZmJjYy00MjQwLWJkNDItNTU0Y2JlMjc2OTgxI2ZjZmE5NzUzLTIyOTAtNDMwNi04MDc2LTMyOGVmZWRkYzA2YQ",
-											"type": "text"
-										},
-										{
-											"key": "redirect_uri",
-											"value": "https://ff3p4flc-3000.asse.devtunnels.ms/callback",
-											"type": "text"
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
 										}
 									]
 								},
+								"method": "GET",
+								"header": [],
 								"url": {
-									"raw": "https://imauthsbx.bora.dopa.go.th/api/v2/oauth2/token/",
-									"protocol": "https",
+									"raw": "{{API}}{{PREFIX}}/permissions/roles",
 									"host": [
-										"imauthsbx",
-										"bora",
-										"dopa",
-										"go",
-										"th"
+										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"api",
-										"v2",
-										"oauth2",
-										"token",
-										""
+										"permissions",
+										"roles"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Role",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"name\": \"test-role\",\r\n    \"description\": \"A test role\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/roles",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"roles"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Role by ID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/roles/{{role_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"roles",
+										"{{role_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Role",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"name\": \"updated-role\",\r\n    \"description\": \"Updated description\",\r\n    \"is_active\": true\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/roles/{{role_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"roles",
+										"{{role_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Role",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/roles/{{role_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"roles",
+										"{{role_id}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Resource Endpoints",
+					"item": [
+						{
+							"name": "Get All Resources",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/resources",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"resources"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Resources By Group",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/resources-bygroup",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"resources-bygroup"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Resource",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"name\": \"Test Resource\",\r\n    \"path\": \"/api/v1/test-resource\",\r\n    \"description\": \"A test resource\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/resources",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"resources"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Resource by ID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"resources",
+										"{{resource_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Resource",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"name\": \"Updated Resource\",\r\n    \"path\": \"/api/v1/updated-resource\",\r\n    \"description\": \"Updated description\",\r\n    \"is_active\": true\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"resources",
+										"{{resource_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Resource",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"resources",
+										"{{resource_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Resource Permissions",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}/permissions",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"resources",
+										"{{resource_id}}",
+										"permissions"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Resources with Permissions",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/resources-permissions",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"resources-permissions"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Search Resources",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/resources/search?query=user",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"resources",
+										"search"
 									],
 									"query": [
 										{
-											"key": "client_id",
-											"value": "U1lyOFJ6Q1prYVJkUUlYSGR3TjAzRGJNb21uUVd0cTI",
-											"disabled": true
-										},
-										{
-											"key": "redirect_uri",
-											"value": "https://ff3p4flc-3000.asse.devtunnels.ms/callback",
-											"disabled": true
-										},
-										{
-											"key": "scope",
-											"value": "pid",
-											"disabled": true
-										},
-										{
-											"key": "state",
-											"value": "login",
-											"disabled": true
-										},
-										{
-											"key": "grant_type",
-											"value": "authorization_code",
-											"disabled": true
-										},
-										{
-											"key": "code",
-											"value": "ZDlkZDI4OTAtYTBkZi00NTM3LTk1MTItYTc2Y2JjNzMwM2ZmIzM5YmZlNmI2LTI1N2ItNGRiOC1iZDc0LTIxYjU5ZTNiMDY4MQ",
-											"disabled": true
-										},
-										{
-											"key": "response_type",
-											"value": "code",
-											"disabled": true
+											"key": "query",
+											"value": "user"
 										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Users with Access to Resource",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}/users",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"resources",
+										"{{resource_id}}",
+										"users"
 									]
 								}
 							},
@@ -172,99 +1285,10 @@
 					]
 				},
 				{
-					"name": "AUTH",
+					"name": "Permission Endpoints",
 					"item": [
 						{
-							"name": "auth/login",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200\", function () {\r",
-											"    pm.response.to.have.status(200);\r",
-											"});\r",
-											"\r",
-											"// ดึงข้อมูลจาก response\r",
-											"var jsonData = pm.response.json();\r",
-											"\r",
-											"// ตรวจสอบว่า login สำเร็จและมี token\r",
-											"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
-											"    // บันทึก access_token ลงใน Collection Variables\r",
-											"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
-											"    \r",
-											"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
-											"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
-											"    \r",
-											"    console.log(\"Token saved to collection variables!\");\r",
-											"}"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "noauth"
-								},
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n    \"citizen_id\": \"1234567890122\",\r\n    \"password\": \"password\"\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{API}}{{PREFIX}}/auth/login",
-									"host": [
-										"{{API}}{{PREFIX}}"
-									],
-									"path": [
-										"auth",
-										"login"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "auth/me",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200\", function () {\r",
-											"    pm.response.to.have.status(200);\r",
-											"});\r",
-											"\r",
-											"// ดึงข้อมูลจาก response\r",
-											"var jsonData = pm.response.json();\r",
-											"\r",
-											"// ตรวจสอบว่า login สำเร็จและมี token\r",
-											"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
-											"    // บันทึก access_token ลงใน Collection Variables\r",
-											"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
-											"    \r",
-											"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
-											"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
-											"    \r",
-											"    console.log(\"Token saved to collection variables!\");\r",
-											"}"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
+							"name": "Get All Permissions",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -278,176 +1302,21 @@
 								},
 								"method": "GET",
 								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/auth/me",
+									"raw": "{{API}}{{PREFIX}}/permissions/list",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"auth",
-										"me"
+										"permissions",
+										"list"
 									]
 								}
 							},
 							"response": []
 						},
 						{
-							"name": "thaid/auth",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200\", function () {\r",
-											"    pm.response.to.have.status(200);\r",
-											"});\r",
-											"\r",
-											"// ดึงข้อมูลจาก response\r",
-											"var jsonData = pm.response.json();\r",
-											"\r",
-											"// ตรวจสอบว่า login สำเร็จและมี token\r",
-											"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
-											"    // บันทึก access_token ลงใน Collection Variables\r",
-											"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
-											"    \r",
-											"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
-											"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
-											"    \r",
-											"    console.log(\"Token saved to collection variables!\");\r",
-											"}"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "noauth"
-								},
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n    \"auth_code\": \"NWI2M2EwZDYtNTdjNC00NDZjLWIzMzAtMjdiNmMzYzkwOWRhIzQ1MGYyMDAzLTdhN2ItNDU2Yi1iNzg2LThhYzRkYjg2MDJiZQ\"\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{API}}{{PREFIX}}/thaid/auth",
-									"host": [
-										"{{API}}{{PREFIX}}"
-									],
-									"path": [
-										"thaid",
-										"auth"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "thaid/login",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code is 200\", function () {\r",
-											"    pm.response.to.have.status(200);\r",
-											"});\r",
-											"\r",
-											"// ดึงข้อมูลจาก response\r",
-											"var jsonData = pm.response.json();\r",
-											"\r",
-											"// ตรวจสอบว่า login สำเร็จและมี token\r",
-											"if (jsonData.res_code === \"0000\" && jsonData.res_data.access_token) {\r",
-											"    // บันทึก access_token ลงใน Collection Variables\r",
-											"    pm.collectionVariables.set(\"access_token\", jsonData.res_data.access_token);\r",
-											"    \r",
-											"    // บันทึก refresh_token เผื่อต้องใช้ในอนาคต\r",
-											"    pm.collectionVariables.set(\"refresh_token\", jsonData.res_data.refresh_token);\r",
-											"    \r",
-											"    console.log(\"Token saved to collection variables!\");\r",
-											"}"
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "noauth"
-								},
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n    \"expires_in\": 1744111684,\r\n    \"access_token\": \"eyJhbGci...\",\r\n    \"refresh_token\": \"eyJhbGci...\",\r\n    \"token_type\": \"Bearer\",\r\n    \"scope\": \"pid given_name address family_name gender title house_address\",\r\n    \"pid\": \"1101500940655\",\r\n    \"address\": {\r\n        \"formatted\": \"123/456 ต.บึงทองหลาง อ.ลำลูกกา จ.ปทุมธานี\"\r\n    },\r\n    \"given_name\": \"ชื่อตัว\",\r\n    \"family_name\": \"ชื่อสกุล\",\r\n    \"gender\": \"male\",\r\n    \"titleTh\": \"นาย\"\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{API}}{{PREFIX}}/thaid/login",
-									"host": [
-										"{{API}}{{PREFIX}}"
-									],
-									"path": [
-										"thaid",
-										"login"
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "USERS",
-					"item": [
-						{
-							"name": "users/title/details",
-							"request": {
-								"auth": {
-									"type": "noauth"
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{API}}{{PREFIX}}/users/title/details",
-									"host": [
-										"{{API}}{{PREFIX}}"
-									],
-									"path": [
-										"users",
-										"title",
-										"details"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "users/",
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
+							"name": "Get Permissions by Role",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -461,33 +1330,26 @@
 								},
 								"method": "GET",
 								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/users/",
+									"raw": "{{API}}{{PREFIX}}/permissions?role_id=f4905eee-e108-4e25-b0e2-9c38e36c47a2",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"users",
-										""
+										"permissions"
+									],
+									"query": [
+										{
+											"key": "role_id",
+											"value": "f4905eee-e108-4e25-b0e2-9c38e36c47a2"
+										}
 									]
 								}
 							},
 							"response": []
 						},
 						{
-							"name": "users/search/by-role",
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
+							"name": "Get Permissions by Resource",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -501,153 +1363,26 @@
 								},
 								"method": "GET",
 								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/users/search/by-role",
+									"raw": "{{API}}{{PREFIX}}/permissions?resource_id={{resource_id}}",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"users",
-										"search",
-										"by-role"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "users/stats/by-role",
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
+										"permissions"
+									],
+									"query": [
 										{
-											"key": "token",
-											"value": "{{access_token}}",
-											"type": "string"
+											"key": "resource_id",
+											"value": "{{resource_id}}"
 										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{API}}{{PREFIX}}/users/stats/by-role",
-									"host": [
-										"{{API}}{{PREFIX}}"
-									],
-									"path": [
-										"users",
-										"stats",
-										"by-role"
 									]
 								}
 							},
 							"response": []
 						},
 						{
-							"name": "users/detailed-stats/by-role",
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{access_token}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{API}}{{PREFIX}}/users/detailed-stats/by-role",
-									"host": [
-										"{{API}}{{PREFIX}}"
-									],
-									"path": [
-										"users",
-										"detailed-stats",
-										"by-role"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "users/UUID",
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{access_token}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{API}}{{PREFIX}}/users/72c03e14-c470-4079-9ddf-d2af6d1b523a",
-									"host": [
-										"{{API}}{{PREFIX}}"
-									],
-									"path": [
-										"users",
-										"72c03e14-c470-4079-9ddf-d2af6d1b523a"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "users/",
+							"name": "Create Permission",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -663,7 +1398,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"citizen_id\": \"1234567980139\",\r\n    \"title_id\": 3,\r\n    \"first_name\": \"as11\",\r\n    \"last_name\": \"afsa1\",\r\n    \"email\": \"buddyibeam89@gmail.com\",\r\n    \"phone\": \"0864703371\",\r\n    \"password\": \"test123!Z\",\r\n    \"prefix_other\": \"test\"\r\n}\r\n",
+									"raw": "{\r\n    \"role_id\": \"{{role_id}}\",\r\n    \"resource_id\": \"{{resource_id}}\",\r\n    \"can_create\": true,\r\n    \"can_read\": true,\r\n    \"can_update\": false,\r\n    \"can_delete\": false\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -671,62 +1406,48 @@
 									}
 								},
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/users/",
+									"raw": "{{API}}{{PREFIX}}/permissions/create",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"users",
-										""
+										"permissions",
+										"create"
 									]
 								}
 							},
 							"response": []
 						},
 						{
-							"name": "users/ People / register",
+							"name": "Get Permission by ID",
 							"request": {
 								"auth": {
-									"type": "noauth"
-								},
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n    \"citizen_id\": \"1234567980142\",\r\n    \"title_id\": 3,\r\n    \"first_name\": \"as11\",\r\n    \"last_name\": \"afsa1\",\r\n    \"email\": \"buddyibeam42@gmail.com\",\r\n    \"phone\": \"0864703371\",\r\n    \"password\": \"test123!Z\",\r\n    \"prefix_other\": \"test\"\r\n}\r\n",
-									"options": {
-										"raw": {
-											"language": "json"
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
 										}
-									}
+									]
 								},
+								"method": "GET",
+								"header": [],
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/users/register",
+									"raw": "{{API}}{{PREFIX}}/permissions/{{permission_id}}",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"users",
-										"register"
+										"permissions",
+										"{{permission_id}}"
 									]
 								}
 							},
 							"response": []
 						},
 						{
-							"name": "users/UUID",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
+							"name": "Update Permission",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -742,7 +1463,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"title_id\": 3,\r\n    \"first_name\": \"as11\",\r\n    \"last_name\": \"afsa1\",\r\n    \"phone\": \"0864703371\",\r\n    \"password\": \"test123!Z\",\r\n    \"is_active\": true,\r\n    \"prefix_other\": \"\"\r\n}",
+									"raw": "{\r\n    \"can_create\": true,\r\n    \"can_read\": true,\r\n    \"can_update\": true,\r\n    \"can_delete\": false\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -750,20 +1471,20 @@
 									}
 								},
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/users/46734501-357f-4227-b427-b25824cfc21e",
+									"raw": "{{API}}{{PREFIX}}/permissions/{{permission_id}}",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"users",
-										"46734501-357f-4227-b427-b25824cfc21e"
+										"permissions",
+										"{{permission_id}}"
 									]
 								}
 							},
 							"response": []
 						},
 						{
-							"name": "users/UUID",
+							"name": "Delete Permission",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -777,23 +1498,14 @@
 								},
 								"method": "DELETE",
 								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/users/9F28F7E6-CF32-4B9D-852A-D95C9437CD97",
+									"raw": "{{API}}{{PREFIX}}/permissions/{{permission_id}}",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"users",
-										"9F28F7E6-CF32-4B9D-852A-D95C9437CD97"
+										"permissions",
+										"{{permission_id}}"
 									]
 								}
 							},
@@ -802,1058 +1514,10 @@
 					]
 				},
 				{
-					"name": "PERMISSIONS",
+					"name": "User-Role Assignment Endpoints",
 					"item": [
 						{
-							"name": "Role Endpoints",
-							"item": [
-								{
-									"name": "Get All Roles",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/roles",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"roles"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Create Role",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "POST",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\r\n    \"name\": \"test-role\",\r\n    \"description\": \"A test role\"\r\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/roles",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"roles"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Get Role by ID",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/roles/{{role_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"roles",
-												"{{role_id}}"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Update Role",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "PUT",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\r\n    \"name\": \"updated-role\",\r\n    \"description\": \"Updated description\",\r\n    \"is_active\": true\r\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/roles/{{role_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"roles",
-												"{{role_id}}"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Delete Role",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "DELETE",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/roles/{{role_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"roles",
-												"{{role_id}}"
-											]
-										}
-									},
-									"response": []
-								}
-							]
-						},
-						{
-							"name": "Resource Endpoints",
-							"item": [
-								{
-									"name": "Get All Resources",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/resources",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"resources"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Get All Resources By Group",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/resources-bygroup",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"resources-bygroup"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Create Resource",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "POST",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\r\n    \"name\": \"Test Resource\",\r\n    \"path\": \"/api/v1/test-resource\",\r\n    \"description\": \"A test resource\"\r\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/resources",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"resources"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Get Resource by ID",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"resources",
-												"{{resource_id}}"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Update Resource",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "PUT",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\r\n    \"name\": \"Updated Resource\",\r\n    \"path\": \"/api/v1/updated-resource\",\r\n    \"description\": \"Updated description\",\r\n    \"is_active\": true\r\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"resources",
-												"{{resource_id}}"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Delete Resource",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "DELETE",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"resources",
-												"{{resource_id}}"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Get Resource Permissions",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}/permissions",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"resources",
-												"{{resource_id}}",
-												"permissions"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Get All Resources with Permissions",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/resources-permissions",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"resources-permissions"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Search Resources",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/resources/search?query=user",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"resources",
-												"search"
-											],
-											"query": [
-												{
-													"key": "query",
-													"value": "user"
-												}
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Get Users with Access to Resource",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/resources/{{resource_id}}/users",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"resources",
-												"{{resource_id}}",
-												"users"
-											]
-										}
-									},
-									"response": []
-								}
-							]
-						},
-						{
-							"name": "Permission Endpoints",
-							"item": [
-								{
-									"name": "Get All Permissions",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/list",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"list"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Get Permissions by Role",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions?role_id=f4905eee-e108-4e25-b0e2-9c38e36c47a2",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions"
-											],
-											"query": [
-												{
-													"key": "role_id",
-													"value": "f4905eee-e108-4e25-b0e2-9c38e36c47a2"
-												}
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Get Permissions by Resource",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions?resource_id={{resource_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions"
-											],
-											"query": [
-												{
-													"key": "resource_id",
-													"value": "{{resource_id}}"
-												}
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Create Permission",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "POST",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\r\n    \"role_id\": \"{{role_id}}\",\r\n    \"resource_id\": \"{{resource_id}}\",\r\n    \"can_create\": true,\r\n    \"can_read\": true,\r\n    \"can_update\": false,\r\n    \"can_delete\": false\r\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/create",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"create"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Get Permission by ID",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/{{permission_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"{{permission_id}}"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Update Permission",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "PUT",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\r\n    \"can_create\": true,\r\n    \"can_read\": true,\r\n    \"can_update\": true,\r\n    \"can_delete\": false\r\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/{{permission_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"{{permission_id}}"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Delete Permission",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "DELETE",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/{{permission_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"{{permission_id}}"
-											]
-										}
-									},
-									"response": []
-								}
-							]
-						},
-						{
-							"name": "User-Role Assignment Endpoints",
-							"item": [
-								{
-									"name": "Assign Role to User",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "POST",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\r\n    \"user_id\": \"e0aeab39-acc9-447b-bb8c-21793604d8df\",\r\n    \"role_id\": \"142d6a47-cbaf-4f5c-a2f6-c48710475d7d\"\r\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/user-roles",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"user-roles"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Remove Role from User",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "DELETE",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\r\n    \"user_id\": \"{{user_id}}\",\r\n    \"role_id\": \"{{role_id}}\"\r\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/user-roles",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"user-roles"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "Get User Roles",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/user-roles/e0aeab39-acc9-447b-bb8c-21793604d8df",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"user-roles",
-												"e0aeab39-acc9-447b-bb8c-21793604d8df"
-											]
-										}
-									},
-									"response": []
-								}
-							]
-						},
-						{
-							"name": "User Permission Endpoints",
-							"item": [
-								{
-									"name": "Create/Update User Permission",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "POST",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\r\n    \"user_id\": \"e0aeab39-acc9-447b-bb8c-21793604d8df\",\r\n    \"resource_id\": \"00dd62d0-4964-440c-b9c7-30ce6526bc46\",\r\n    \"can_create\": true,\r\n    \"can_read\": true,\r\n    \"can_update\": false,\r\n    \"can_delete\": false,\r\n    \"override_role\": true\r\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/user-permissions",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"user-permissions"
-											]
-										},
-										"description": "เพิ่มหรืออัปเดตสิทธิ์เฉพาะให้กับผู้ใช้รายบุคคล"
-									},
-									"response": []
-								},
-								{
-									"name": "Get User Permissions by User ID",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/user/{{user_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"user-permissions",
-												"user",
-												"{{user_id}}"
-											]
-										},
-										"description": "ดึงข้อมูลสิทธิ์เฉพาะทั้งหมดของผู้ใช้รายบุคคล"
-									},
-									"response": []
-								},
-								{
-									"name": "Delete User Permission",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "DELETE",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/{{permission_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"user-permissions",
-												"{{permission_id}}"
-											]
-										},
-										"description": "ลบสิทธิ์เฉพาะของผู้ใช้รายบุคคล"
-									},
-									"response": []
-								},
-								{
-									"name": "Get Resource User Permissions",
-									"request": {
-										"auth": {
-											"type": "bearer",
-											"bearer": [
-												{
-													"key": "token",
-													"value": "{{access_token}}",
-													"type": "string"
-												}
-											]
-										},
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/resource/{{resource_id}}",
-											"host": [
-												"{{API}}{{PREFIX}}"
-											],
-											"path": [
-												"permissions",
-												"user-permissions",
-												"resource",
-												"{{resource_id}}"
-											]
-										},
-										"description": "ดึงข้อมูลสิทธิ์เฉพาะของผู้ใช้ทั้งหมดสำหรับทรัพยากรที่ระบุ"
-									},
-									"response": []
-								}
-							],
-							"description": "API สำหรับจัดการสิทธิ์เฉพาะของผู้ใช้รายบุคคล"
-						}
-					]
-				},
-				{
-					"name": "TIME SETTINGS",
-					"item": [
-						{
-							"name": "Get All Time Settings",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{access_token}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{API}}{{PREFIX}}/time-settings",
-									"host": [
-										"{{API}}{{PREFIX}}"
-									],
-									"path": [
-										"time-settings"
-									]
-								},
-								"description": "ดึงข้อมูลการตั้งค่าระยะเวลาทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_times"
-							},
-							"response": []
-						},
-						{
-							"name": "Get Time Setting by ID",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{access_token}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{API}}{{PREFIX}}/time-settings/{{time_setting_id}}",
-									"host": [
-										"{{API}}{{PREFIX}}"
-									],
-									"path": [
-										"time-settings",
-										"{{time_setting_id}}"
-									]
-								},
-								"description": "ดึงข้อมูลการตั้งค่าระยะเวลาตาม ID - ต้องมีสิทธิ์อ่านใน setting_times"
-							},
-							"response": []
-						},
-						{
-							"name": "Get Time Setting by Key",
-							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{access_token}}",
-											"type": "string"
-										}
-									]
-								},
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{API}}{{PREFIX}}/time-settings/key/{{time_setting_key}}",
-									"host": [
-										"{{API}}{{PREFIX}}"
-									],
-									"path": [
-										"time-settings",
-										"key",
-										"{{time_setting_key}}"
-									]
-								},
-								"description": "ดึงข้อมูลการตั้งค่าระยะเวลาตาม key - ต้องมีสิทธิ์อ่านใน setting_times"
-							},
-							"response": []
-						},
-						{
-							"name": "Create Time Setting",
+							"name": "Assign Role to User",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -1869,7 +1533,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"key\": \"custom_period_days\",\r\n    \"name\": \"กำหนดระยะเวลาตามแต่กำหนด\",\r\n    \"value\": 10,\r\n    \"description\": \"ระยะเวลาที่สามารถกำหนดเองได้\",\r\n    \"icon\": \"calendar-custom\",\r\n    \"is_active\": true\r\n}",
+									"raw": "{\r\n    \"user_id\": \"e0aeab39-acc9-447b-bb8c-21793604d8df\",\r\n    \"role_id\": \"142d6a47-cbaf-4f5c-a2f6-c48710475d7d\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -1877,20 +1541,20 @@
 									}
 								},
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/time-settings",
+									"raw": "{{API}}{{PREFIX}}/permissions/user-roles",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"time-settings"
+										"permissions",
+										"user-roles"
 									]
-								},
-								"description": "สร้างการตั้งค่าระยะเวลาใหม่ - ต้องมีสิทธิ์สร้างใน setting_times"
+								}
 							},
 							"response": []
 						},
 						{
-							"name": "Update Time Setting",
+							"name": "Remove Role from User",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -1902,11 +1566,11 @@
 										}
 									]
 								},
-								"method": "PUT",
+								"method": "DELETE",
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"name\": \"กำหนดระยะเวลาที่อัปเดต\",\r\n    \"value\": 15,\r\n    \"description\": \"คำอธิบายที่อัปเดต\",\r\n    \"icon\": \"calendar-update\",\r\n    \"is_active\": true\r\n}",
+									"raw": "{\r\n    \"user_id\": \"{{user_id}}\",\r\n    \"role_id\": \"{{role_id}}\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -1914,21 +1578,124 @@
 									}
 								},
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/time-settings/{{time_setting_id}}",
+									"raw": "{{API}}{{PREFIX}}/permissions/user-roles",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"time-settings",
-										"{{time_setting_id}}"
+										"permissions",
+										"user-roles"
 									]
-								},
-								"description": "อัปเดตข้อมูลการตั้งค่าระยะเวลา - ต้องมีสิทธิ์แก้ไขใน setting_times"
+								}
 							},
 							"response": []
 						},
 						{
-							"name": "Delete Time Setting",
+							"name": "Get User Roles",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/user-roles/e0aeab39-acc9-447b-bb8c-21793604d8df",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"user-roles",
+										"e0aeab39-acc9-447b-bb8c-21793604d8df"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "User Permission Endpoints",
+					"item": [
+						{
+							"name": "Create/Update User Permission",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"user_id\": \"27265df3-ff09-4675-8498-9faeddb72fde\",\r\n    \"resource_id\": \"92dad4aa-ad6a-469c-9cac-537b341c6731\",\r\n    \"can_create\": true,\r\n    \"can_read\": true,\r\n    \"can_update\": false,\r\n    \"can_delete\": false,\r\n    \"override_role\": true\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/create",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"user-permissions",
+										"create"
+									]
+								},
+								"description": "เพิ่มหรืออัปเดตสิทธิ์เฉพาะให้กับผู้ใช้รายบุคคล"
+							},
+							"response": []
+						},
+						{
+							"name": "Get User Permissions by User ID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/user/{{user_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"user-permissions",
+										"user",
+										"{{user_id}}"
+									]
+								},
+								"description": "ดึงข้อมูลสิทธิ์เฉพาะทั้งหมดของผู้ใช้รายบุคคล"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete User Permission",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -1943,274 +1710,550 @@
 								"method": "DELETE",
 								"header": [],
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/time-settings/{{time_setting_id}}",
+									"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/{{permission_id}}",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"time-settings",
-										"{{time_setting_id}}"
+										"permissions",
+										"user-permissions",
+										"{{permission_id}}"
 									]
 								},
-								"description": "ลบการตั้งค่าระยะเวลา - ต้องมีสิทธิ์ลบใน setting_times"
+								"description": "ลบสิทธิ์เฉพาะของผู้ใช้รายบุคคล"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Resource User Permissions",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/resource/{{resource_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"user-permissions",
+										"resource",
+										"{{resource_id}}"
+									]
+								},
+								"description": "ดึงข้อมูลสิทธิ์เฉพาะของผู้ใช้ทั้งหมดสำหรับทรัพยากรที่ระบุ"
 							},
 							"response": []
 						}
 					],
-					"description": "API สำหรับจัดการการตั้งค่าระยะเวลาต่างๆ ในระบบ"
-				},{
-					"name": "VENUES",
-					"item": [
-					  {
-						"name": "Get All Venues",
-						"request": {
-						  "auth": {
+					"description": "API สำหรับจัดการสิทธิ์เฉพาะของผู้ใช้รายบุคคล"
+				}
+			]
+		},
+		{
+			"name": "TIME SETTINGS",
+			"item": [
+				{
+					"name": "Get All Time Settings",
+					"request": {
+						"auth": {
 							"type": "bearer",
 							"bearer": [
-							  {
-								"key": "token",
-								"value": "{{access_token}}",
-								"type": "string"
-							  }
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
 							]
-						  },
-						  "method": "GET",
-						  "header": [],
-						  "url": {
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/time-settings",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"time-settings"
+							]
+						},
+						"description": "ดึงข้อมูลการตั้งค่าระยะเวลาทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_times"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Time Setting by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/time-settings/{{time_setting_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"time-settings",
+								"{{time_setting_id}}"
+							]
+						},
+						"description": "ดึงข้อมูลการตั้งค่าระยะเวลาตาม ID - ต้องมีสิทธิ์อ่านใน setting_times"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Time Setting by Key",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/time-settings/key/{{time_setting_key}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"time-settings",
+								"key",
+								"{{time_setting_key}}"
+							]
+						},
+						"description": "ดึงข้อมูลการตั้งค่าระยะเวลาตาม key - ต้องมีสิทธิ์อ่านใน setting_times"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Time Setting",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"key\": \"custom_period_days\",\r\n    \"name\": \"กำหนดระยะเวลาตามแต่กำหนด\",\r\n    \"value\": 10,\r\n    \"description\": \"ระยะเวลาที่สามารถกำหนดเองได้\",\r\n    \"icon\": \"calendar-custom\",\r\n    \"is_active\": true\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/time-settings",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"time-settings"
+							]
+						},
+						"description": "สร้างการตั้งค่าระยะเวลาใหม่ - ต้องมีสิทธิ์สร้างใน setting_times"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Time Setting",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\": \"กำหนดระยะเวลาที่อัปเดต\",\r\n    \"value\": 15,\r\n    \"description\": \"คำอธิบายที่อัปเดต\",\r\n    \"icon\": \"calendar-update\",\r\n    \"is_active\": true\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/time-settings/{{time_setting_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"time-settings",
+								"{{time_setting_id}}"
+							]
+						},
+						"description": "อัปเดตข้อมูลการตั้งค่าระยะเวลา - ต้องมีสิทธิ์แก้ไขใน setting_times"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Time Setting",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/time-settings/{{time_setting_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"time-settings",
+								"{{time_setting_id}}"
+							]
+						},
+						"description": "ลบการตั้งค่าระยะเวลา - ต้องมีสิทธิ์ลบใน setting_times"
+					},
+					"response": []
+				}
+			],
+			"description": "API สำหรับจัดการการตั้งค่าระยะเวลาต่างๆ ในระบบ"
+		},
+		{
+			"name": "VENUES",
+			"item": [
+				{
+					"name": "Get All Venues",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
 							"raw": "{{API}}{{PREFIX}}/venues",
-							"host": ["{{API}}{{PREFIX}}"],
-							"path": ["venues"]
-						  },
-						  "description": "ดึงรายการสถานที่ทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_venues"
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"venues"
+							]
 						},
-						"response": []
-					  },
-					  {
-						"name": "Get Venues Grouped",
-						"request": {
-						  "auth": {
+						"description": "ดึงรายการสถานที่ทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_venues"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venues Grouped",
+					"request": {
+						"auth": {
 							"type": "bearer",
 							"bearer": [
-							  {
-								"key": "token",
-								"value": "{{access_token}}",
-								"type": "string"
-							  }
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
 							]
-						  },
-						  "method": "GET",
-						  "header": [],
-						  "url": {
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
 							"raw": "{{API}}{{PREFIX}}/venues/grouped",
-							"host": ["{{API}}{{PREFIX}}"],
-							"path": ["venues", "grouped"]
-						  },
-						  "description": "ดึงข้อมูลสถานที่แบ่งตามกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_venues"
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"venues",
+								"grouped"
+							]
 						},
-						"response": []
-					  },
-					  {
-						"name": "Get Venue by ID",
-						"request": {
-						  "auth": {
+						"description": "ดึงข้อมูลสถานที่แบ่งตามกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_venues"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venue by ID",
+					"request": {
+						"auth": {
 							"type": "bearer",
 							"bearer": [
-							  {
-								"key": "token",
-								"value": "{{access_token}}",
-								"type": "string"
-							  }
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
 							]
-						  },
-						  "method": "GET",
-						  "header": [],
-						  "url": {
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
 							"raw": "{{API}}{{PREFIX}}/venues/{{venue_id}}",
-							"host": ["{{API}}{{PREFIX}}"],
-							"path": ["venues", "{{venue_id}}"]
-						  },
-						  "description": "ดึงข้อมูลสถานที่ตาม ID - ต้องมีสิทธิ์อ่านใน setting_venues"
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"venues",
+								"{{venue_id}}"
+							]
 						},
-						"response": []
-					  },
-					  {
-						"name": "Search Venues by Department",
-						"request": {
-						  "auth": {
+						"description": "ดึงข้อมูลสถานที่ตาม ID - ต้องมีสิทธิ์อ่านใน setting_venues"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Venues by Department",
+					"request": {
+						"auth": {
 							"type": "bearer",
 							"bearer": [
-							  {
-								"key": "token",
-								"value": "{{access_token}}",
-								"type": "string"
-							  }
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
 							]
-						  },
-						  "method": "GET",
-						  "header": [],
-						  "url": {
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
 							"raw": "{{API}}{{PREFIX}}/venues/search/by-department?department_id={{department_id}}",
-							"host": ["{{API}}{{PREFIX}}"],
-							"path": ["venues", "search", "by-department"],
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"venues",
+								"search",
+								"by-department"
+							],
 							"query": [
-							  {
-								"key": "department_id",
-								"value": "{{department_id}}"
-							  }
+								{
+									"key": "department_id",
+									"value": "{{department_id}}"
+								}
 							]
-						  },
-						  "description": "ค้นหาสถานที่ตามหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_venues"
 						},
-						"response": []
-					  },
-					  {
-						"name": "Search Venues by Name",
-						"request": {
-						  "auth": {
+						"description": "ค้นหาสถานที่ตามหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_venues"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Venues by Name",
+					"request": {
+						"auth": {
 							"type": "bearer",
 							"bearer": [
-							  {
-								"key": "token",
-								"value": "{{access_token}}",
-								"type": "string"
-							  }
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
 							]
-						  },
-						  "method": "GET",
-						  "header": [],
-						  "url": {
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
 							"raw": "{{API}}{{PREFIX}}/venues/search/by-name?search_term=ห้องประชุม",
-							"host": ["{{API}}{{PREFIX}}"],
-							"path": ["venues", "search", "by-name"],
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"venues",
+								"search",
+								"by-name"
+							],
 							"query": [
-							  {
-								"key": "search_term",
-								"value": "ห้องประชุม"
-							  }
+								{
+									"key": "search_term",
+									"value": "ห้องประชุม"
+								}
 							]
-						  },
-						  "description": "ค้นหาสถานที่ตามชื่อ รหัส หรือตัวย่อ - ต้องมีสิทธิ์อ่านใน setting_venues"
 						},
-						"response": []
-					  },
-					  {
-						"name": "Create Venue",
-						"request": {
-						  "auth": {
+						"description": "ค้นหาสถานที่ตามชื่อ รหัส หรือตัวย่อ - ต้องมีสิทธิ์อ่านใน setting_venues"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Venue",
+					"request": {
+						"auth": {
 							"type": "bearer",
 							"bearer": [
-							  {
-								"key": "token",
-								"value": "{{access_token}}",
-								"type": "string"
-							  }
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
 							]
-						  },
-						  "method": "POST",
-						  "header": [],
-						  "body": {
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"name\": \"ห้องประชุมทดสอบ\",\n    \"code\": \"TEST-001\",\n    \"short_name\": \"ทดสอบ\",\n    \"description\": \"ห้องประชุมสำหรับการทดสอบ\",\n    \"capacity\": 50,\n    \"venue_group_id\": \"{{venue_group_id}}\",\n    \"department_id\": \"{{department_id}}\",\n    \"floor\": \"1\",\n    \"building\": \"อาคารทดสอบ\",\n    \"has_projector\": true,\n    \"has_microphone\": true,\n    \"has_computer\": true,\n    \"is_active\": true\n}",
 							"options": {
-							  "raw": {
-								"language": "json"
-							  }
+								"raw": {
+									"language": "json"
+								}
 							}
-						  },
-						  "url": {
-							"raw": "{{API}}{{PREFIX}}/venues",
-							"host": ["{{API}}{{PREFIX}}"],
-							"path": ["venues"]
-						  },
-						  "description": "สร้างสถานที่ใหม่ - ต้องมีสิทธิ์สร้างใน setting_venues"
 						},
-						"response": []
-					  },
-					  {
-						"name": "Update Venue",
-						"request": {
-						  "auth": {
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/venues",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"venues"
+							]
+						},
+						"description": "สร้างสถานที่ใหม่ - ต้องมีสิทธิ์สร้างใน setting_venues"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Venue",
+					"request": {
+						"auth": {
 							"type": "bearer",
 							"bearer": [
-							  {
-								"key": "token",
-								"value": "{{access_token}}",
-								"type": "string"
-							  }
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
 							]
-						  },
-						  "method": "PUT",
-						  "header": [],
-						  "body": {
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"name\": \"ห้องประชุมทดสอบ (อัปเดต)\",\n    \"description\": \"ห้องประชุมสำหรับการทดสอบที่ปรับปรุงแล้ว\",\n    \"capacity\": 75,\n    \"has_projector\": true,\n    \"has_microphone\": true,\n    \"has_computer\": false,\n    \"is_active\": true\n}",
 							"options": {
-							  "raw": {
-								"language": "json"
-							  }
+								"raw": {
+									"language": "json"
+								}
 							}
-						  },
-						  "url": {
-							"raw": "{{API}}{{PREFIX}}/venues/{{venue_id}}",
-							"host": ["{{API}}{{PREFIX}}"],
-							"path": ["venues", "{{venue_id}}"]
-						  },
-						  "description": "อัปเดตข้อมูลสถานที่ - ต้องมีสิทธิ์แก้ไขใน setting_venues"
 						},
-						"response": []
-					  },
-					  {
-						"name": "Delete Venue",
-						"request": {
-						  "auth": {
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/venues/{{venue_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"venues",
+								"{{venue_id}}"
+							]
+						},
+						"description": "อัปเดตข้อมูลสถานที่ - ต้องมีสิทธิ์แก้ไขใน setting_venues"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Venue",
+					"request": {
+						"auth": {
 							"type": "bearer",
 							"bearer": [
-							  {
-								"key": "token",
-								"value": "{{access_token}}",
-								"type": "string"
-							  }
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
 							]
-						  },
-						  "method": "DELETE",
-						  "header": [],
-						  "url": {
-							"raw": "{{API}}{{PREFIX}}/venues/{{venue_id}}",
-							"host": ["{{API}}{{PREFIX}}"],
-							"path": ["venues", "{{venue_id}}"]
-						  },
-						  "description": "ลบสถานที่ (soft delete) - ต้องมีสิทธิ์ลบใน setting_venues"
 						},
-						"response": []
-					  },
-					  {
-						"name": "Get Venues Stats",
-						"request": {
-						  "auth": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/venues/{{venue_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"venues",
+								"{{venue_id}}"
+							]
+						},
+						"description": "ลบสถานที่ (soft delete) - ต้องมีสิทธิ์ลบใน setting_venues"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Venues Stats",
+					"request": {
+						"auth": {
 							"type": "bearer",
 							"bearer": [
-							  {
-								"key": "token",
-								"value": "{{access_token}}",
-								"type": "string"
-							  }
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
 							]
-						  },
-						  "method": "GET",
-						  "header": [],
-						  "url": {
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
 							"raw": "{{API}}{{PREFIX}}/venues/stats/overview",
-							"host": ["{{API}}{{PREFIX}}"],
-							"path": ["venues", "stats", "overview"]
-						  },
-						  "description": "ดึงข้อมูลสถิติสำหรับสถานที่ - ต้องมีสิทธิ์อ่านใน setting_venues"
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"venues",
+								"stats",
+								"overview"
+							]
 						},
-						"response": []
-					  }
-					],
-					"description": "API สำหรับจัดการข้อมูลสถานที่"
-				  }
-			]
+						"description": "ดึงข้อมูลสถิติสำหรับสถานที่ - ต้องมีสิทธิ์อ่านใน setting_venues"
+					},
+					"response": []
+				}
+			],
+			"description": "API สำหรับจัดการข้อมูลสถานที่"
 		}
 	],
 	"event": [
@@ -2238,7 +2281,7 @@
 	"variable": [
 		{
 			"key": "API",
-			"value": "https://compdev.minertatech.com",
+			"value": "localhost:8000",
 			"type": "string"
 		},
 		{
