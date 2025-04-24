@@ -1,38 +1,22 @@
-from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Union, Dict, Any
 from uuid import UUID
-from pydantic import BaseModel
+from datetime import datetime
+from pydantic import BaseModel, Field
 
+from app.api.v1.schemas.department_groups import DepartmentGroup
 
-class DepartmentGroupBase(BaseModel):
-    name: str
-    description: Optional[str] = None
-    order_index: int = 0
-    is_active: bool = True
-
-
-class DepartmentGroup(DepartmentGroupBase):
-    id: UUID
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
+# Pydantic models
 class DepartmentBase(BaseModel):
     name: str
     short_name: Optional[str] = None
     code: Optional[str] = None
     parent_id: Optional[UUID] = None
     group_id: Optional[UUID] = None
-    order_index: int = 0
-    is_active: bool = True
-
+    order_index: Optional[int] = 0
+    is_active: Optional[bool] = True
 
 class DepartmentCreate(DepartmentBase):
     pass
-
 
 class DepartmentUpdate(BaseModel):
     name: Optional[str] = None
@@ -43,32 +27,27 @@ class DepartmentUpdate(BaseModel):
     order_index: Optional[int] = None
     is_active: Optional[bool] = None
 
-
 class Department(DepartmentBase):
     id: UUID
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    parent: Optional['Department'] = None
+    children: Optional[List['Department']] = None
     group: Optional[DepartmentGroup] = None
-
+    
     class Config:
+        orm_mode = True
         from_attributes = True
-        
-        # แก้ไขปัญหา circular import
-        populate_by_name = True
 
+# Recursive model references
+Department.model_rebuild()
 
-# สำหรับแสดงเป็นลำดับชั้น
-class DepartmentWithChildren(Department):
-    children: Optional[List["DepartmentWithChildren"]] = None
+class DepartmentWithVenues(Department):
+    venues: List[Dict[str, Any]] = []
+    total_venues: int = 0
 
-
-# สำหรับข้อมูลแบบรายการ
-class DepartmentList(BaseModel):
-    departments: List[Department]
-
-
-# สำหรับแสดงข้อมูลตามกลุ่ม
-class DepartmentGroupWithItems(BaseModel):
+class DepartmentGroup(BaseModel):
     group_id: UUID
     group_name: str
-    departments: List[Department]
+    departments: List[Department] = []
+    total_departments: int = 0
