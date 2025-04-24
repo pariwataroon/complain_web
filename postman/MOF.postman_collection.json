@@ -1593,6 +1593,142 @@
 									"response": []
 								}
 							]
+						},
+						{
+							"name": "User Permission Endpoints",
+							"item": [
+							  {
+								"name": "Create/Update User Permission",
+								"request": {
+								  "auth": {
+									"type": "bearer",
+									"bearer": [
+									  {
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									  }
+									]
+								  },
+								  "method": "POST",
+								  "header": [],
+								  "body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"user_id\": \"e0aeab39-acc9-447b-bb8c-21793604d8df\",\r\n    \"resource_id\": \"00dd62d0-4964-440c-b9c7-30ce6526bc46\",\r\n    \"can_create\": true,\r\n    \"can_read\": true,\r\n    \"can_update\": false,\r\n    \"can_delete\": false,\r\n    \"override_role\": true\r\n}",
+									"options": {
+									  "raw": {
+										"language": "json"
+									  }
+									}
+								  },
+								  "url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/user-permissions",
+									"host": [
+									  "{{API}}{{PREFIX}}"
+									],
+									"path": [
+									  "permissions",
+									  "user-permissions"
+									]
+								  },
+								  "description": "เพิ่มหรืออัปเดตสิทธิ์เฉพาะให้กับผู้ใช้รายบุคคล"
+								},
+								"response": []
+							  },
+							  {
+								"name": "Get User Permissions by User ID",
+								"request": {
+								  "auth": {
+									"type": "bearer",
+									"bearer": [
+									  {
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									  }
+									]
+								  },
+								  "method": "GET",
+								  "header": [],
+								  "url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/user/{{user_id}}",
+									"host": [
+									  "{{API}}{{PREFIX}}"
+									],
+									"path": [
+									  "permissions",
+									  "user-permissions",
+									  "user",
+									  "{{user_id}}"
+									]
+								  },
+								  "description": "ดึงข้อมูลสิทธิ์เฉพาะทั้งหมดของผู้ใช้รายบุคคล"
+								},
+								"response": []
+							  },
+							  {
+								"name": "Delete User Permission",
+								"request": {
+								  "auth": {
+									"type": "bearer",
+									"bearer": [
+									  {
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									  }
+									]
+								  },
+								  "method": "DELETE",
+								  "header": [],
+								  "url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/{{permission_id}}",
+									"host": [
+									  "{{API}}{{PREFIX}}"
+									],
+									"path": [
+									  "permissions",
+									  "user-permissions",
+									  "{{permission_id}}"
+									]
+								  },
+								  "description": "ลบสิทธิ์เฉพาะของผู้ใช้รายบุคคล"
+								},
+								"response": []
+							  },
+							  {
+								"name": "Get Resource User Permissions",
+								"request": {
+								  "auth": {
+									"type": "bearer",
+									"bearer": [
+									  {
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									  }
+									]
+								  },
+								  "method": "GET",
+								  "header": [],
+								  "url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/resource/{{resource_id}}",
+									"host": [
+									  "{{API}}{{PREFIX}}"
+									],
+									"path": [
+									  "permissions",
+									  "user-permissions",
+									  "resource",
+									  "{{resource_id}}"
+									]
+								  },
+								  "description": "ดึงข้อมูลสิทธิ์เฉพาะของผู้ใช้ทั้งหมดสำหรับทรัพยากรที่ระบุ"
+								},
+								"response": []
+							  }
+							],
+							"description": "API สำหรับจัดการสิทธิ์เฉพาะของผู้ใช้รายบุคคล"
 						}
 					]
 				},
@@ -1821,7 +1957,7 @@
 	"variable": [
 		{
 			"key": "API",
-			"value": "https://dqkq9gn1-8000.asse.devtunnels.ms",
+			"value": "https://compdev.minertatech.com",
 			"type": "string"
 		},
 		{
