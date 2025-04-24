@@ -475,8 +475,8 @@ def get_detailed_users_by_roles(db: Session, role_id: UUID = None, skip: int = 0
     if role_id:
         roles_query = roles_query.filter(Role.id == role_id)
     
-    # จำกัดจำนวน roles ที่จะโหลดในครั้งเดียว (เช่น แค่ 5 roles ต่อครั้ง)
-    roles = roles_query.limit(5).all()
+    # ดึงทุก role ที่มีในระบบ (ไม่จำกัดจำนวน) - เอา limit ออก
+    roles = roles_query.all()
     
     result = []
     for role in roles:
@@ -488,56 +488,53 @@ def get_detailed_users_by_roles(db: Session, role_id: UUID = None, skip: int = 0
             .scalar()
         )
         
-        # ดึงเฉพาะข้อมูลที่จำเป็นโดยไม่ใช้ joinedload มากเกินไป
-        users_with_role = (
-            db.query(User)
-            .join(UserRole, UserRole.user_id == User.id)
-            .filter(UserRole.role_id == role.id)
-            .options(joinedload(User.title))
-            .order_by(User.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
-        
-        # Format user data (ตัดข้อมูลที่ไม่จำเป็นออกไปในขั้นตอนนี้)
+        # ดึงข้อมูล users ถ้ามีใน role นี้
         users_data = []
-        for user in users_with_role:
-            # สร้างเฉพาะข้อมูลที่จำเป็น
-            user_data = {
-                "id": user.id,
-                "email": user.email,
-                "citizen_id": user.citizen_id,
-                # "first_name": user.first_name,
-                # "last_name": user.last_name,
-                "phone": user.phone or "",
-                "title_id": user.title_id,
-                "prefix_other": user.prefix_other or "",
-                "address": user.address or "",
-                "address_other": user.address_other or "",
-                "is_active": user.is_active,
-                "created_at": user.created_at,
-                "updated_at": user.updated_at,
-                "full_name": f"{user.first_name} {user.last_name}",
-                "is_active": user.is_active,
-                "created_at": user.created_at,
-                "updated_at": user.updated_at
-            }
+        if total_users_count > 0:
+            # ดึงเฉพาะข้อมูลที่จำเป็นโดยไม่ใช้ joinedload มากเกินไป
+            users_with_role = (
+                db.query(User)
+                .join(UserRole, UserRole.user_id == User.id)
+                .filter(UserRole.role_id == role.id)
+                .options(joinedload(User.title))
+                .order_by(User.created_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
             
-            # Get title name ในรูปแบบที่เรียบง่าย
-            if user.title_id == 1 and user.prefix_other:
-                title_name = user.prefix_other
-            elif user.title:
-                title_name = user.title.title_name
-            else:
-                title_name = None
+            # Format user data (ตัดข้อมูลที่ไม่จำเป็นออกไปในขั้นตอนนี้)
+            for user in users_with_role:
+                # สร้างเฉพาะข้อมูลที่จำเป็น
+                user_data = {
+                    "id": user.id,
+                    "email": user.email,
+                    "citizen_id": user.citizen_id,
+                    "phone": user.phone or "",
+                    "title_id": user.title_id,
+                    "prefix_other": user.prefix_other or "",
+                    "address": user.address or "",
+                    "address_other": user.address_other or "",
+                    "is_active": user.is_active,
+                    "created_at": user.created_at,
+                    "updated_at": user.updated_at,
+                    "full_name": f"{user.first_name} {user.last_name}",
+                }
+                
+                # Get title name ในรูปแบบที่เรียบง่าย
+                if user.title_id == 1 and user.prefix_other:
+                    title_name = user.prefix_other
+                elif user.title:
+                    title_name = user.title.title_name
+                else:
+                    title_name = None
 
-            user_data["title_name"] = title_name
-            user_data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
-            
-            users_data.append(user_data)
+                user_data["title_name"] = title_name
+                user_data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
+                
+                users_data.append(user_data)
         
-        # เพิ่ม role entry แบบกระชับ
+        # เพิ่ม role entry แบบกระชับ (แม้ไม่มี user ก็สร้าง entry)
         role_entry = {
             "role_id": role.id,
             "role_name": role.name,
