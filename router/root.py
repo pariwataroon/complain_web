@@ -6,6 +6,7 @@ from app.api.v1.routers.user_router import router as user_router_v1
 from app.api.v1.routers.thaid_router import router as thaid_router_v1
 from app.api.v1.routers.permission_router import router as permission_router_v1
 from app.api.v1.routers.time_setting_router import router as time_setting_router_v1
+from app.api.v1.routers.venue_router import router as venue_router_v1
 from config.dotenv import PREFIX
 
 # สร้างตัวแปรสำหรับ prefixes แต่ละเวอร์ชัน
@@ -22,6 +23,7 @@ v1_router.include_router(auth_router_v1)
 v1_router.include_router(thaid_router_v1)
 v1_router.include_router(permission_router_v1)
 v1_router.include_router(time_setting_router_v1)
+v1_router.include_router(venue_router_v1)
 
 # เมื่อมี router เวอร์ชัน 2 ในอนาคต จะเพิ่มได้ง่ายๆ
 # from router.v2.user import router as user_router_v2
