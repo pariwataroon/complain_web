@@ -116,11 +116,18 @@ def check_permission(db: Session, user_id: UUID, resource_path: str, action: str
     return has_permission
 
 def create_role(db: Session, role_data):
-    """สร้างบทบาทใหม่"""
+    """สร้างบทบาทใหม่ พร้อมกำหนด order_index ให้เป็นลำดับสุดท้ายเสมอ"""
+    
+    # ค้นหาค่า order_index ที่มากที่สุดในปัจจุบัน
+    max_order = db.query(db.func.max(Role.order_index)).scalar() or 0
+    
+    # สร้าง role ใหม่ และกำหนด order_index ให้มากกว่าค่าที่มากที่สุด
     role = Role(
         name=role_data.name,
-        description=role_data.description
+        description=role_data.description,
+        order_index=max_order + 10  # เพิ่มทีละ 10 เพื่อให้มีช่องว่างสำหรับการเรียงลำดับในภายหลัง
     )
+    
     db.add(role)
     db.commit()
     db.refresh(role)
