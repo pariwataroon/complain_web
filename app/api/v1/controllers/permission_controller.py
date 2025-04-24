@@ -334,9 +334,6 @@ def create_permission(db: Session, permission: PermissionCreate):
         return new_permission
     except Exception as e:
         db.rollback()
-        import traceback
-        print(f"Error in create_permission: {str(e)}")
-        traceback.print_exc()
         raise
 
 def get_permissions(db: Session, role_id: UUID = None, resource_id: UUID = None, user_id: UUID = None):
