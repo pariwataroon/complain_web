@@ -2632,7 +2632,532 @@
 				}
 			],
 			"description": "API สำหรับจัดการข้อมูลตำแหน่งและการกำหนดตำแหน่งให้กับผู้ใช้"
-		}
+		},
+		{
+			"name": "DEPARTMENTS",
+			"item": [
+			  {
+				"name": "Get All Departments",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "GET",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/departments",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "departments"
+					]
+				  },
+				  "description": "ดึงรายการหน่วยงานทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Get Departments Grouped",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "GET",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/departments/grouped",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "departments",
+					  "grouped"
+					]
+				  },
+				  "description": "ดึงข้อมูลหน่วยงานแบ่งตามกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Get Departments with Venues",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "GET",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/departments/with-venues",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "departments",
+					  "with-venues"
+					]
+				  },
+				  "description": "ดึงข้อมูลหน่วยงานพร้อมสถานที่ - ต้องมีสิทธิ์อ่านใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Get Department by ID",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "GET",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/departments/{{department_id}}",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "departments",
+					  "{{department_id}}"
+					]
+				  },
+				  "description": "ดึงข้อมูลหน่วยงานตาม ID - ต้องมีสิทธิ์อ่านใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Search Departments by Name",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "GET",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/departments/search/by-name?search_term=กระทรวง",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "departments",
+					  "search",
+					  "by-name"
+					],
+					"query": [
+					  {
+						"key": "search_term",
+						"value": "กระทรวง"
+					  }
+					]
+				  },
+				  "description": "ค้นหาหน่วยงานตามชื่อ รหัส หรือตัวย่อ - ต้องมีสิทธิ์อ่านใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Create Department",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "POST",
+				  "header": [],
+				  "body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"หน่วยงานทดสอบ\",\n    \"short_name\": \"นง.ทส\",\n    \"code\": \"TEST\",\n    \"parent_id\": null,\n    \"group_id\": \"{{department_group_id}}\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
+					"options": {
+					  "raw": {
+						"language": "json"
+					  }
+					}
+				  },
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/departments",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "departments"
+					]
+				  },
+				  "description": "สร้างหน่วยงานใหม่ - ต้องมีสิทธิ์สร้างใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Update Department",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "PUT",
+				  "header": [],
+				  "body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"หน่วยงานทดสอบ (แก้ไข)\",\n    \"short_name\": \"นง.ทส.ก\",\n    \"code\": \"TEST-UPD\",\n    \"parent_id\": null,\n    \"group_id\": \"{{department_group_id}}\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
+					"options": {
+					  "raw": {
+						"language": "json"
+					  }
+					}
+				  },
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/departments/{{department_id}}",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "departments",
+					  "{{department_id}}"
+					]
+				  },
+				  "description": "อัปเดตข้อมูลหน่วยงาน - ต้องมีสิทธิ์แก้ไขใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Delete Department",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "DELETE",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/departments/{{department_id}}",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "departments",
+					  "{{department_id}}"
+					]
+				  },
+				  "description": "ลบหน่วยงาน (soft delete) - ต้องมีสิทธิ์ลบใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Get Departments Stats",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "GET",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/departments/stats/overview",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "departments",
+					  "stats",
+					  "overview"
+					]
+				  },
+				  "description": "ดึงข้อมูลสถิติสำหรับหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Batch Update Department Order",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "POST",
+				  "header": [],
+				  "body": {
+					"mode": "raw",
+					"raw": "[\n    {\n        \"id\": \"{{department_id_1}}\",\n        \"order_index\": 10\n    },\n    {\n        \"id\": \"{{department_id_2}}\",\n        \"order_index\": 20\n    },\n    {\n        \"id\": \"{{department_id_3}}\",\n        \"order_index\": 30\n    }\n]",
+					"options": {
+					  "raw": {
+						"language": "json"
+					  }
+					}
+				  },
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/departments/batch-update-order",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "departments",
+					  "batch-update-order"
+					]
+				  },
+				  "description": "อัปเดตลำดับของหน่วยงานหลายรายการพร้อมกัน - ต้องมีสิทธิ์แก้ไขใน setting_department"
+				},
+				"response": []
+			  }
+			],
+			"description": "API สำหรับจัดการข้อมูลหน่วยงาน"
+		  },
+		  {
+			"name": "DEPARTMENT GROUPS",
+			"item": [
+			  {
+				"name": "Get All Department Groups",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "GET",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/department-groups",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "department-groups"
+					]
+				  },
+				  "description": "ดึงรายการกลุ่มหน่วยงานทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Get Department Groups with Departments",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "GET",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/department-groups/with-departments",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "department-groups",
+					  "with-departments"
+					]
+				  },
+				  "description": "ดึงรายการกลุ่มหน่วยงานพร้อมหน่วยงานที่อยู่ในกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Get Department Group by ID",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "GET",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "department-groups",
+					  "{{group_id}}"
+					]
+				  },
+				  "description": "ดึงข้อมูลกลุ่มหน่วยงานตาม ID - ต้องมีสิทธิ์อ่านใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Create Department Group",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "POST",
+				  "header": [],
+				  "body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"กลุ่มหน่วยงานทดสอบ\",\n    \"description\": \"คำอธิบายกลุ่มหน่วยงานทดสอบ\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
+					"options": {
+					  "raw": {
+						"language": "json"
+					  }
+					}
+				  },
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/department-groups",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "department-groups"
+					]
+				  },
+				  "description": "สร้างกลุ่มหน่วยงานใหม่ - ต้องมีสิทธิ์สร้างใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Update Department Group",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "PUT",
+				  "header": [],
+				  "body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"กลุ่มหน่วยงานทดสอบ (แก้ไข)\",\n    \"description\": \"คำอธิบายกลุ่มหน่วยงานทดสอบที่แก้ไขแล้ว\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
+					"options": {
+					  "raw": {
+						"language": "json"
+					  }
+					}
+				  },
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "department-groups",
+					  "{{group_id}}"
+					]
+				  },
+				  "description": "อัปเดตข้อมูลกลุ่มหน่วยงาน - ต้องมีสิทธิ์แก้ไขใน setting_department"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Delete Department Group",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "DELETE",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "department-groups",
+					  "{{group_id}}"
+					]
+				  },
+				  "description": "ลบกลุ่มหน่วยงาน (soft delete) - ต้องมีสิทธิ์ลบใน setting_department"
+				},
+				"response": []
+			  }
+			],
+			"description": "API สำหรับจัดการข้อมูลกลุ่มหน่วยงาน"
+		  }
 	],
 	"event": [
 		{
