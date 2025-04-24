@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Grid,
@@ -40,6 +40,8 @@ import DriveFileRenameOutlineOutlinedIcon from "@mui/icons-material/DriveFileRen
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import InsertChartOutlinedIcon from "@mui/icons-material/InsertChartOutlined";
 import MoveToInboxOutlinedIcon from "@mui/icons-material/MoveToInboxOutlined";
+import { getRoles } from "@pages/api/role/role";
+
 const rotateOpen = keyframes`
   from {
     transform: rotate(0deg);
@@ -73,24 +75,14 @@ const SetRole = () => {
       id: 1,
       title: "Home page",
       icon: <Diversity3OutlinedIcon />,
-      items: [
-        { name: "หน้าหลัก", icon: <Diversity3OutlinedIcon /> },
-        { name: "ข้อมูลทั่วไป", icon: <Diversity3OutlinedIcon /> },
-        { name: "ข่าวสาร", icon: <Diversity3OutlinedIcon /> },
-        { name: "ติดต่อเรา", icon: <Diversity3OutlinedIcon /> },
-      ],
+      items: [],
       open: false,
     },
     {
       id: 2,
       title: "Dashboard",
       icon: <DashboardOutlinedIcon />,
-      items: [
-        { name: "สรุปการใช้งาน", icon: <DashboardOutlinedIcon /> },
-        { name: "การแสดงผลรายงาน", icon: <DashboardOutlinedIcon /> },
-        { name: "ตัวชี้วัด", icon: <DashboardOutlinedIcon /> },
-        { name: "ข้อมูลสำคัญ", icon: <DashboardOutlinedIcon /> },
-      ],
+      items: [],
       open: false,
     },
     {
@@ -393,6 +385,25 @@ const SetRole = () => {
     setOpenDeleteUserModal(false);
   };
 
+  const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchRoles = async () => {
+    setLoading(true);
+    try {
+      const rolesData = await getRoles(); // เรียกใช้งานฟังก์ชัน getRoles
+      setRoles(rolesData); // ตั้งค่าข้อมูล roles
+      console.log("Roles data:", rolesData); // ล็อกข้อมูล
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRoles(); // เรียกใช้ฟังก์ชัน fetchRoles เมื่อ component ถูก mount
+  }, []);
   return (
     <Box>
       <Grid container spacing={2}>
