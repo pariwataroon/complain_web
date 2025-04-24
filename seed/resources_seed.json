@@ -17,6 +17,14 @@
       "is_active": true
     },
     {
+      "name": "homepage_complainant_questions",
+      "path": "/admin/homepage/complainant-questions",
+      "description": "รายงานคำถามจากผู้ร้อง",
+      "group_name": "homepage",
+      "order_index": 3,
+      "is_active": true
+    },
+    {
       "name": "dashboard",
       "path": "/admin/dashboard",
       "description": "หน้าหลัก",
@@ -110,6 +118,54 @@
       "description": "รับเรื่องรายงานผลการพิจารณาจากหน่วยงาน",
       "group_name": "edit",
       "order_index": 4,
+      "is_active": true
+    },
+    {
+      "name": "assigned_complaints",
+      "path": "/admin/edit/assigned-complaints",
+      "description": "เรื่องร้องเรียนที่ได้รับมอบหมาย",
+      "group_name": "edit",
+      "order_index": 5,
+      "is_active": true
+    },
+    {
+      "name": "assigned_anonymous",
+      "path": "/admin/edit/assigned-anonymous",
+      "description": "บัตรสนเท่ห์ที่ได้รับมอบหมาย",
+      "group_name": "edit",
+      "order_index": 6,
+      "is_active": true
+    },
+    {
+      "name": "forward_to_agency",
+      "path": "/admin/edit/forward-to-agency",
+      "description": "แบบรายงานส่งหน่วยงานที่เกี่ยวข้อง",
+      "group_name": "edit",
+      "order_index": 7,
+      "is_active": true
+    },
+    {
+      "name": "initial_notification",
+      "path": "/admin/edit/initial-notification-to-complainant-or-agency",
+      "description": "แบบรายงานแจ้งผู้ร้องเรียนหรือส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น",
+      "group_name": "edit",
+      "order_index": 8,
+      "is_active": true
+    },
+    {
+      "name": "request_result_progress",
+      "path": "/admin/edit/request-result-or-progress",
+      "description": "แบบรายงานขอทราบผลการพิจารณาหรือผลความคืบหน้า",
+      "group_name": "edit",
+      "order_index": 9,
+      "is_active": true
+    },
+    {
+      "name": "inform_related_parties",
+      "path": "/admin/edit/inform-related-parties",
+      "description": "แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ",
+      "group_name": "edit",
+      "order_index": 10,
       "is_active": true
     },
     {

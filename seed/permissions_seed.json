@@ -679,6 +679,246 @@
       "can_update": true,
       "can_delete": true,
       "override_role": true
+    },
+    {
+      "role_name": "people",
+      "user_citizen_id": null,
+      "resource_name": "homepage_complainant_questions",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "admin",
+      "user_citizen_id": null,
+      "resource_name": "homepage_complainant_questions",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true,
+      "override_role": false
+    },
+    {
+      "role_name": "admin_home",
+      "user_citizen_id": null,
+      "resource_name": "homepage_complainant_questions",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "staff",
+      "user_citizen_id": null,
+      "resource_name": "homepage_complainant_questions",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "supervisor",
+      "user_citizen_id": null,
+      "resource_name": "homepage_complainant_questions",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "department",
+      "user_citizen_id": null,
+      "resource_name": "homepage_complainant_questions",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "admin",
+      "user_citizen_id": null,
+      "resource_name": "assigned_complaints",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true,
+      "override_role": false
+    },
+    {
+      "role_name": "staff",
+      "user_citizen_id": null,
+      "resource_name": "assigned_complaints",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "supervisor",
+      "user_citizen_id": null,
+      "resource_name": "assigned_complaints",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "admin",
+      "user_citizen_id": null,
+      "resource_name": "assigned_anonymous",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true,
+      "override_role": false
+    },
+    {
+      "role_name": "staff",
+      "user_citizen_id": null,
+      "resource_name": "assigned_anonymous",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "supervisor",
+      "user_citizen_id": null,
+      "resource_name": "assigned_anonymous",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "admin",
+      "user_citizen_id": null,
+      "resource_name": "forward_to_agency",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true,
+      "override_role": false
+    },
+    {
+      "role_name": "staff",
+      "user_citizen_id": null,
+      "resource_name": "forward_to_agency",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "supervisor",
+      "user_citizen_id": null,
+      "resource_name": "forward_to_agency",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "admin",
+      "user_citizen_id": null,
+      "resource_name": "initial_notification",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true,
+      "override_role": false
+    },
+    {
+      "role_name": "staff",
+      "user_citizen_id": null,
+      "resource_name": "initial_notification",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "supervisor",
+      "user_citizen_id": null,
+      "resource_name": "initial_notification",
+      "can_create": false,
+      "can_read": true, 
+      "can_update": false,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "admin",
+      "user_citizen_id": null,
+      "resource_name": "request_result_progress",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true,
+      "override_role": false
+    },
+    {
+      "role_name": "staff",
+      "user_citizen_id": null,
+      "resource_name": "request_result_progress",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "supervisor",
+      "user_citizen_id": null,
+      "resource_name": "request_result_progress",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "admin",
+      "user_citizen_id": null,
+      "resource_name": "inform_related_parties",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true,
+      "override_role": false
+    },
+    {
+      "role_name": "staff",
+      "user_citizen_id": null,
+      "resource_name": "inform_related_parties",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "supervisor",
+      "user_citizen_id": null,
+      "resource_name": "inform_related_parties",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false,
+      "override_role": false
     }
   ]
 }
