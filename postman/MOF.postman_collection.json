@@ -2254,6 +2254,384 @@
 				}
 			],
 			"description": "API สำหรับจัดการข้อมูลสถานที่"
+		},
+		{
+			"name": "POSITIONS",
+			"item": [
+				{
+					"name": "Get All Positions",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/positions",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"positions"
+							]
+						},
+						"description": "ดึงข้อมูลตำแหน่งทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_positions"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Position by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/positions/{{position_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"positions",
+								"{{position_id}}"
+							]
+						},
+						"description": "ดึงข้อมูลตำแหน่งตาม ID - ต้องมีสิทธิ์อ่านใน setting_positions"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Positions by Name",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/positions/search/by-name?search_term=ผู้อำนวยการ",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"positions",
+								"search",
+								"by-name"
+							],
+							"query": [
+								{
+									"key": "search_term",
+									"value": "ผู้อำนวยการ"
+								}
+							]
+						},
+						"description": "ค้นหาตำแหน่งตามชื่อหรือคำอธิบาย - ต้องมีสิทธิ์อ่านใน setting_positions"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Position",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"นักวิชาการคอมพิวเตอร์\",\n    \"description\": \"นักวิชาการคอมพิวเตอร์\",\n    \"level\": \"ชำนาญการ\",\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/positions",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"positions"
+							]
+						},
+						"description": "สร้างตำแหน่งใหม่ - ต้องมีสิทธิ์สร้างใน setting_positions"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Position",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"นักวิชาการคอมพิวเตอร์\",\n    \"description\": \"นักวิชาการคอมพิวเตอร์ ปฏิบัติการ\",\n    \"level\": \"ปฏิบัติการ\",\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/positions/{{position_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"positions",
+								"{{position_id}}"
+							]
+						},
+						"description": "อัปเดตข้อมูลตำแหน่ง - ต้องมีสิทธิ์แก้ไขใน setting_positions"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Position",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/positions/{{position_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"positions",
+								"{{position_id}}"
+							]
+						},
+						"description": "ลบตำแหน่ง (soft delete) - ต้องมีสิทธิ์ลบใน setting_positions"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Positions",
+					"item": [
+						{
+							"name": "Get User Positions",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/positions/user/{{user_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"positions",
+										"user",
+										"{{user_id}}"
+									]
+								},
+								"description": "ดึงข้อมูลตำแหน่งทั้งหมดของผู้ใช้ - ต้องมีสิทธิ์อ่านใน setting_users"
+							},
+							"response": []
+						},
+						{
+							"name": "Get User Primary Position",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/positions/user/{{user_id}}/primary",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"positions",
+										"user",
+										"{{user_id}}",
+										"primary"
+									]
+								},
+								"description": "ดึงข้อมูลตำแหน่งหลักของผู้ใช้ - ต้องมีสิทธิ์อ่านใน setting_users"
+							},
+							"response": []
+						},
+						{
+							"name": "Assign Position to User",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"user_id\": \"{{user_id}}\",\n    \"position_id\": \"{{position_id}}\",\n    \"is_primary\": true,\n    \"start_date\": \"2023-05-01T00:00:00Z\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/positions/user/assign",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"positions",
+										"user",
+										"assign"
+									]
+								},
+								"description": "กำหนดตำแหน่งให้กับผู้ใช้ - ต้องมีสิทธิ์แก้ไขใน setting_users"
+							},
+							"response": []
+						},
+						{
+							"name": "Update User Position",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"is_primary\": true,\n    \"start_date\": \"2023-06-01T00:00:00Z\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/positions/user/{{user_position_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"positions",
+										"user",
+										"{{user_position_id}}"
+									]
+								},
+								"description": "อัปเดตข้อมูลตำแหน่งของผู้ใช้ - ต้องมีสิทธิ์แก้ไขใน setting_users"
+							},
+							"response": []
+						},
+						{
+							"name": "Remove Position from User",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/positions/user/{{user_position_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"positions",
+										"user",
+										"{{user_position_id}}"
+									]
+								},
+								"description": "ลบตำแหน่งออกจากผู้ใช้ (กำหนดวันสิ้นสุด) - ต้องมีสิทธิ์แก้ไขใน setting_users"
+							},
+							"response": []
+						}
+					],
+					"description": "API สำหรับจัดการตำแหน่งของผู้ใช้"
+				}
+			],
+			"description": "API สำหรับจัดการข้อมูลตำแหน่งและการกำหนดตำแหน่งให้กับผู้ใช้"
 		}
 	],
 	"event": [
