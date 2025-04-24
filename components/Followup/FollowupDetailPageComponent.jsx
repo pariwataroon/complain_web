@@ -1,50 +1,129 @@
 import React from "react";
-import { useRouter } from "next/router";
-import { Box, Container, Typography } from "@mui/material";
 import NavbarMain from "@services/navbarMain/navbarMain";
-import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
+import { Box, Container, Typography, Stepper, Step, StepLabel } from "@mui/material";
+import { CheckCircle, HelpOutline, AccessTime, HourglassEmpty } from "@mui/icons-material";
+import styles from "./FollowupDetailPage.module.scss";
+import Tab5 from "@components/Complaint/Tabs/tab5";
 
 export default function FollowupDetailPage() {
-  const router = useRouter();
-  const { id } = router.query;
-    
-  const breadcrumbItems = [
-    {
-      label: "เมนูติดตามผลการดำเนินการ",
-      icon: (
-        <img
-          src="/icons/docticon.png"
-          alt="icon"
-          style={{ width: "24px", height: "24px", marginBottom: "-8px" }}
-        />
-      ),
-    },
-    {
-      label: `รายละเอียด #${id}`,
-    },
-  ];
+    const steps = [
+        {
+            label: "ส่งหน่วยงาน",
+            icon: <CheckCircle sx={{ fontSize: 60, color: "#2499FF" }} />,
+            description: [
+                "กรมธนารักษ์ (15 ม.ค. 2568)",
+                "สำนักงานเศรษฐกิจการคลัง (16 ม.ค. 2568)",
+            ],
+            active: true,
+        },
+        {
+            label: "อยู่ระหว่างดำเนินการ",
+            icon: <CheckCircle sx={{ fontSize: 60, color: "#2499FF" }} />,
+            description: [
+                "กรมธนารักษ์",
+                "สำนักงานเศรษฐกิจการคลัง",
+            ],
+            active: false,
+        },
+        {
+            label: "ติดตามผลการพิจารณาจากหน่วยงาน",
+            icon: <HelpOutline sx={{ fontSize: 60, color: "#C4C4C4" }} />,
+            description: [],
+            active: false,
+        },
+        {
+            label: "การดำเนินการเสร็จสิ้น",
+            icon: <HourglassEmpty sx={{ fontSize: 60, color: "#EDC458" }} />,
+            description: [
+                "กรมธนารักษ์ แจ้งผู้ร้อง",
+                "ครั้งที่ 1 (1 มี.ค. 2568)",
+                "สำนักงานเศรษฐกิจการคลัง แจ้งผู้ร้อง",
+                "ครั้งที่ 1 (3 มี.ค. 2568)",
+            ],
+            active: false,
+        },
+    ];
+
+    return (
+        <>
+            <NavbarMain />
+            <Container maxWidth="xl">
+                <Box className={styles.detailContainer}>
+                    <Typography className={styles.title}>ติดตามผลการดำเนินการ</Typography>
+
+                    <Box className={styles.headerBarBlud}></Box>
+                    <Box className={styles.headerBarBludGold}>
+                        <Typography>เจ้าหน้าที่ผู้รับผิดชอบ : นาย เป็นสุข จุ๊กกรู๊ว</Typography>
+                    </Box>
+
+                    <Box className={styles.headerBarLightBlue}>
+                        <Box display="flex" justifyContent="space-between" width="100%">
+                            <Typography sx={{ color: "#1120A3" }}>
+                                เรื่อง: พฤติกรรมเจ้าหน้าที่กรมธนารักษ์ไม่เหมาะสม
+                            </Typography>
+                            <Typography sx={{ color: "#1120A3" }}>
+                                วันที่รับเรื่อง : 15 ธ.ค. 2567
+                            </Typography>
+                        </Box>
+                    </Box>
 
 
-  return (
-    <>
-      <NavbarMain />
-      <Box sx={{ py: 4 }}>
-        <Container maxWidth="lg">
-          <BreadcrumbsService items={breadcrumbItems} />
+                    {/* MUI Stepper with Alternative Label */}
+                    <Stepper
+                        activeStep={1}
+                        alternativeLabel
+                        sx={{
+                            marginTop: '40px',
+                            '& .MuiStepConnector-line': {
+                                borderWidth: '3px',
+                                maxWidth: 'calc(100% - 40px)',
+                                marginLeft: 'auto',
+                                marginRight: 'auto',
+                            },
+                            '& .Mui-active .MuiStepConnector-line': {
+                                borderColor: '#2499FF',
+                            },
+                            '& .Mui-completed .MuiStepConnector-line': {
+                                borderColor: '#4CAF50',
+                            },
+                        }}
+                    >
+                        {steps.map((step, index) => (
+                            <Step key={index}>
+                                <StepLabel
+                                    icon={step.icon}
+                                    sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        textAlign: 'center',
 
-          <Box sx={{ mt: 4 }}>
-            <Typography variant="h5" fontWeight="bold" gutterBottom>
-              รายละเอียดการติดตาม ID: {id}
-            </Typography>
+                                    }}
+                                >
+                                    <Typography className={styles.stepLabel}>{step.label}</Typography>
+                                    {step.description.length > 0 && (
+                                        <ul className={styles.stepDescription}>
+                                            {step.description.map((line, i) => (
+                                                <li key={i}>{line}</li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </StepLabel>
+                            </Step>
+                        ))}
+                    </Stepper>
 
-            <Typography sx={{ color: "#555" }}>
-              (แสดงข้อมูลเพิ่มเติมของเรื่องร้องทุกข์ตาม ID นี้
-              เช่นรายละเอียดเพิ่มเติมของการร้องเรียน, สถานะล่าสุด,
-              หรือแนบไฟล์ต่าง ๆ)
-            </Typography>
-          </Box>
-        </Container>
-      </Box>
-    </>
-  );
+                    <Box className={styles.headerBarLightBlue}>
+                        <Typography sx={{ color: "#1120A3" }}>
+                            แบบรับคำร้องเรียน / เรียนทุกข์กระทรวงการคลัง
+                        </Typography>
+                    </Box>
+                    
+                    <Tab5 />
+                    
+                </Box>
+            </Container>
+        </>
+    );
 }

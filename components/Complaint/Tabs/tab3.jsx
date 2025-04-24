@@ -91,7 +91,7 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 label="เอกสารประกอบการร้องเรียน"
                 name="attachment"
                 onChange={(file) => handleChange("attachment")(file)}
-                helperText="หมายเหตุ : หลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล และไม่เกิน 10 MB"
+                helperText="หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์นามสกุล .pdf, .doc, .docx, .jpg, .jpeg, .png  และไม่เกิน 10 MB"
                 accept=".pdf, .doc, .docx, .jpg, .jpeg, .png"
                 maxFiles={3}
                 maxSizeMB={10}               

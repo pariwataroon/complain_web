@@ -1,6 +1,5 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
 import SetRole from "@components/GeneralUsageMenu/SetRole/SetRole";
-
 const Access = () => {
   return (
     <div>
