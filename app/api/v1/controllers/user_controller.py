@@ -9,6 +9,7 @@ from lib.logger import get_logger
 from models.title import Title
 from models.user import User
 from models.user_role import UserRole
+from models.user_positions import UserPosition
 
 logger = get_logger("user_repository", console_output=False)
 
@@ -238,11 +239,12 @@ def get_users_with_titles(db: Session, skip: int = 0, limit: int = 100):
 
 
 def get_users_with_roles_and_titles(db: Session, skip: int = 0, limit: int = 100):
-    """Get users with their titles and roles in a simple, efficient way"""
-    # ใช้ joinedload เพื่อโหลดข้อมูล title และ roles พร้อมกับข้อมูลผู้ใช้
+    """Get users with their titles, roles and positions"""
+    # ใช้ joinedload เพื่อโหลดข้อมูล title, roles และ positions พร้อมกับข้อมูลผู้ใช้
     users = db.query(User).options(
         joinedload(User.title),
-        joinedload(User.roles).joinedload(UserRole.role)
+        joinedload(User.roles).joinedload(UserRole.role),
+        joinedload(User.positions).joinedload(UserPosition.position)
     ).order_by(User.id).offset(skip).limit(limit).all()
     
     result = []
@@ -289,6 +291,39 @@ def get_users_with_roles_and_titles(db: Session, skip: int = 0, limit: int = 100
                 user_roles.append(role_info)
         
         user_data["roles"] = user_roles
+        
+        # เพิ่มข้อมูลตำแหน่งของผู้ใช้
+        user_positions = []
+        primary_position = None
+        
+        for user_position in user.positions:
+            if user_position.position and (not user_position.end_date):  # แสดงเฉพาะตำแหน่งที่ยังไม่สิ้นสุด
+                position_info = {
+                    "id": user_position.id,
+                    "position_id": user_position.position.id,
+                    "position_name": user_position.position.name,
+                    "position_level": user_position.position.level,
+                    "position_description": user_position.position.description,
+                    "is_primary": user_position.is_primary,
+                    "start_date": user_position.start_date,
+                    "end_date": user_position.end_date
+                }
+                user_positions.append(position_info)
+                
+                # เก็บข้อมูลตำแหน่งหลัก
+                if user_position.is_primary:
+                    primary_position = position_info
+        
+        user_data["positions"] = user_positions
+        user_data["primary_position"] = primary_position
+        
+        # เพิ่มข้อมูลแบบย่อสำหรับตำแหน่งหลักใน full_name
+        if primary_position:
+            user_data["full_name_with_position"] = f"{user_data['full_name_with_title']} - {primary_position['position_name']}"
+            if primary_position['position_level']:
+                user_data["full_name_with_position"] += f" ({primary_position['position_level']})"
+        else:
+            user_data["full_name_with_position"] = user_data["full_name_with_title"]
 
         result.append(user_data)
 
@@ -296,11 +331,12 @@ def get_users_with_roles_and_titles(db: Session, skip: int = 0, limit: int = 100
 
 
 def get_user_with_roles_and_titles(db: Session, user_id: UUID):
-    """Get a specific user with their titles and roles"""
-    # ใช้ joinedload เพื่อโหลดข้อมูล title และ roles พร้อมกับข้อมูลผู้ใช้
+    """Get a specific user with their titles, roles and positions"""
+    # ใช้ joinedload เพื่อโหลดข้อมูล title, roles และ positions พร้อมกับข้อมูลผู้ใช้
     user = db.query(User).options(
         joinedload(User.title),
-        joinedload(User.roles).joinedload(UserRole.role)
+        joinedload(User.roles).joinedload(UserRole.role),
+        joinedload(User.positions).joinedload(UserPosition.position)
     ).filter(User.id == user_id).first()
     
     if not user:
@@ -348,6 +384,39 @@ def get_user_with_roles_and_titles(db: Session, user_id: UUID):
             user_roles.append(role_info)
     
     user_data["roles"] = user_roles
+    
+    # เพิ่มข้อมูลตำแหน่งของผู้ใช้
+    user_positions = []
+    primary_position = None
+    
+    for user_position in user.positions:
+        if user_position.position and (not user_position.end_date):  # แสดงเฉพาะตำแหน่งที่ยังไม่สิ้นสุด
+            position_info = {
+                "id": user_position.id,
+                "position_id": user_position.position.id,
+                "position_name": user_position.position.name,
+                "position_level": user_position.position.level,
+                "position_description": user_position.position.description,
+                "is_primary": user_position.is_primary,
+                "start_date": user_position.start_date,
+                "end_date": user_position.end_date
+            }
+            user_positions.append(position_info)
+            
+            # เก็บข้อมูลตำแหน่งหลัก
+            if user_position.is_primary:
+                primary_position = position_info
+    
+    user_data["positions"] = user_positions
+    user_data["primary_position"] = primary_position
+    
+    # เพิ่มข้อมูลแบบย่อสำหรับตำแหน่งหลักใน full_name
+    if primary_position:
+        user_data["full_name_with_position"] = f"{user_data['full_name_with_title']} - {primary_position['position_name']}"
+        if primary_position['position_level']:
+            user_data["full_name_with_position"] += f" ({primary_position['position_level']})"
+    else:
+        user_data["full_name_with_position"] = user_data["full_name_with_title"]
 
     return user_data
 

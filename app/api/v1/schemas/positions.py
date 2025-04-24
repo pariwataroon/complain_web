@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class PositionBase(BaseModel):
     name: str
@@ -26,8 +26,26 @@ class Position(PositionBase):
     class Config:
         from_attributes = True
 
-class PositionResponse(Position):
+class UserPositionBase(BaseModel):
+    user_id: UUID
+    position_id: UUID
+    is_primary: bool = False
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+class UserPositionCreate(UserPositionBase):
     pass
 
-class PositionList(BaseModel):
-    positions: List[Position]
+class UserPositionUpdate(BaseModel):
+    is_primary: Optional[bool] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+class UserPosition(UserPositionBase):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+    position: Optional[Position] = None
+
+    class Config:
+        from_attributes = True
