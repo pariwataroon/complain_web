@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "953348a7-0166-489f-8bb8-fd37891b5ae7",
+		"_postman_id": "2bdb179c-736e-4252-a24c-13bd72eab8d6",
 		"name": "MOF",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "2230736"
@@ -1002,6 +1002,34 @@
 									"response": []
 								},
 								{
+									"name": "Get All Resources By Group",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/resources-bygroup",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"resources-bygroup"
+											]
+										}
+									},
+									"response": []
+								},
+								{
 									"name": "Create Resource",
 									"request": {
 										"auth": {
@@ -1597,136 +1625,136 @@
 						{
 							"name": "User Permission Endpoints",
 							"item": [
-							  {
-								"name": "Create/Update User Permission",
-								"request": {
-								  "auth": {
-									"type": "bearer",
-									"bearer": [
-									  {
-										"key": "token",
-										"value": "{{access_token}}",
-										"type": "string"
-									  }
-									]
-								  },
-								  "method": "POST",
-								  "header": [],
-								  "body": {
-									"mode": "raw",
-									"raw": "{\r\n    \"user_id\": \"e0aeab39-acc9-447b-bb8c-21793604d8df\",\r\n    \"resource_id\": \"00dd62d0-4964-440c-b9c7-30ce6526bc46\",\r\n    \"can_create\": true,\r\n    \"can_read\": true,\r\n    \"can_update\": false,\r\n    \"can_delete\": false,\r\n    \"override_role\": true\r\n}",
-									"options": {
-									  "raw": {
-										"language": "json"
-									  }
-									}
-								  },
-								  "url": {
-									"raw": "{{API}}{{PREFIX}}/permissions/user-permissions",
-									"host": [
-									  "{{API}}{{PREFIX}}"
-									],
-									"path": [
-									  "permissions",
-									  "user-permissions"
-									]
-								  },
-								  "description": "เพิ่มหรืออัปเดตสิทธิ์เฉพาะให้กับผู้ใช้รายบุคคล"
+								{
+									"name": "Create/Update User Permission",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"user_id\": \"e0aeab39-acc9-447b-bb8c-21793604d8df\",\r\n    \"resource_id\": \"00dd62d0-4964-440c-b9c7-30ce6526bc46\",\r\n    \"can_create\": true,\r\n    \"can_read\": true,\r\n    \"can_update\": false,\r\n    \"can_delete\": false,\r\n    \"override_role\": true\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/user-permissions",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"user-permissions"
+											]
+										},
+										"description": "เพิ่มหรืออัปเดตสิทธิ์เฉพาะให้กับผู้ใช้รายบุคคล"
+									},
+									"response": []
 								},
-								"response": []
-							  },
-							  {
-								"name": "Get User Permissions by User ID",
-								"request": {
-								  "auth": {
-									"type": "bearer",
-									"bearer": [
-									  {
-										"key": "token",
-										"value": "{{access_token}}",
-										"type": "string"
-									  }
-									]
-								  },
-								  "method": "GET",
-								  "header": [],
-								  "url": {
-									"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/user/{{user_id}}",
-									"host": [
-									  "{{API}}{{PREFIX}}"
-									],
-									"path": [
-									  "permissions",
-									  "user-permissions",
-									  "user",
-									  "{{user_id}}"
-									]
-								  },
-								  "description": "ดึงข้อมูลสิทธิ์เฉพาะทั้งหมดของผู้ใช้รายบุคคล"
+								{
+									"name": "Get User Permissions by User ID",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/user/{{user_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"user-permissions",
+												"user",
+												"{{user_id}}"
+											]
+										},
+										"description": "ดึงข้อมูลสิทธิ์เฉพาะทั้งหมดของผู้ใช้รายบุคคล"
+									},
+									"response": []
 								},
-								"response": []
-							  },
-							  {
-								"name": "Delete User Permission",
-								"request": {
-								  "auth": {
-									"type": "bearer",
-									"bearer": [
-									  {
-										"key": "token",
-										"value": "{{access_token}}",
-										"type": "string"
-									  }
-									]
-								  },
-								  "method": "DELETE",
-								  "header": [],
-								  "url": {
-									"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/{{permission_id}}",
-									"host": [
-									  "{{API}}{{PREFIX}}"
-									],
-									"path": [
-									  "permissions",
-									  "user-permissions",
-									  "{{permission_id}}"
-									]
-								  },
-								  "description": "ลบสิทธิ์เฉพาะของผู้ใช้รายบุคคล"
+								{
+									"name": "Delete User Permission",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/{{permission_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"user-permissions",
+												"{{permission_id}}"
+											]
+										},
+										"description": "ลบสิทธิ์เฉพาะของผู้ใช้รายบุคคล"
+									},
+									"response": []
 								},
-								"response": []
-							  },
-							  {
-								"name": "Get Resource User Permissions",
-								"request": {
-								  "auth": {
-									"type": "bearer",
-									"bearer": [
-									  {
-										"key": "token",
-										"value": "{{access_token}}",
-										"type": "string"
-									  }
-									]
-								  },
-								  "method": "GET",
-								  "header": [],
-								  "url": {
-									"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/resource/{{resource_id}}",
-									"host": [
-									  "{{API}}{{PREFIX}}"
-									],
-									"path": [
-									  "permissions",
-									  "user-permissions",
-									  "resource",
-									  "{{resource_id}}"
-									]
-								  },
-								  "description": "ดึงข้อมูลสิทธิ์เฉพาะของผู้ใช้ทั้งหมดสำหรับทรัพยากรที่ระบุ"
-								},
-								"response": []
-							  }
+								{
+									"name": "Get Resource User Permissions",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{API}}{{PREFIX}}/permissions/user-permissions/resource/{{resource_id}}",
+											"host": [
+												"{{API}}{{PREFIX}}"
+											],
+											"path": [
+												"permissions",
+												"user-permissions",
+												"resource",
+												"{{resource_id}}"
+											]
+										},
+										"description": "ดึงข้อมูลสิทธิ์เฉพาะของผู้ใช้ทั้งหมดสำหรับทรัพยากรที่ระบุ"
+									},
+									"response": []
+								}
 							],
 							"description": "API สำหรับจัดการสิทธิ์เฉพาะของผู้ใช้รายบุคคล"
 						}
