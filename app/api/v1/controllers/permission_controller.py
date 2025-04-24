@@ -542,6 +542,8 @@ def get_all_resources_with_permissions_by_roles(db: Session, skip: int = 0, limi
                 roles_tracking[role.name] = {
                     "role_id": str(role.id),
                     "role_name": role.name,
+                    "permission_id": "",
+                    "role_description": role.description, 
                     "found": False,
                     "can_create": False,
                     "can_read": False,
@@ -574,12 +576,30 @@ def get_all_resources_with_permissions_by_roles(db: Session, skip: int = 0, limi
                 if permission.user_id:
                     # กรณีเป็น user-based permission
                     from models.user import User
+                    from models.user_role import UserRole
+                    
                     user = db.query(User).filter(User.id == permission.user_id).first()
                     if user:
+                        # ดึงข้อมูลบทบาทของผู้ใช้
+                        user_roles = db.query(UserRole).filter(UserRole.user_id == user.id).all()
+                        role_ids = [ur.role_id for ur in user_roles]
+                        user_roles_data = db.query(Role).filter(Role.id.in_(role_ids)).all() if role_ids else []
+                        
+                        # สร้างข้อมูลรายละเอียดบทบาท
+                        roles_info = []
+                        for role in user_roles_data:
+                            roles_info.append({
+                                "role_id": str(role.id),
+                                "role_name": role.name,
+                                "role_description": role.description
+                            })
+
                         user_info = {
                             "user_id": str(user.id),
                             "full_name": f"{user.first_name} {user.last_name if user.last_name else ''}",
                             "email": user.email,
+                            "roles": roles_info,  # เพิ่มข้อมูลบทบาทของผู้ใช้
+                            "permission_id": str(permission.id),  # เพิ่ม id ของสิทธิ์เพื่อให้สามารถอ้างอิงได้
                             "can_create": permission.can_create,
                             "can_read": permission.can_read,
                             "can_update": permission.can_update,
