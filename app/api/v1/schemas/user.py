@@ -93,3 +93,7 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     email: Optional[str] = None
     user_id: Optional[int] = None
+
+class ResendVerificationEmail(BaseModel):
+    """Schema สำหรับการร้องขอส่งอีเมลยืนยันใหม่"""
+    email: EmailStr

@@ -15,12 +15,23 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def authenticate_user(db: Session, citizen_id: str, password: str):
+    """ตรวจสอบการเข้าสู่ระบบด้วย citizen_id และ password"""
     user = user_controller.get_user_by_pid(db, citizen_id)
+    
+    # กรณีไม่พบผู้ใช้
     if not user:
-        return False
+        return None, "invalid_credentials"
+    
+    # กรณีรหัสผ่านไม่ถูกต้อง
     if not verify_password(password, user.hashed_password):
-        return False
-    return user
+        return None, "invalid_credentials"
+    
+    # กรณีผู้ใช้ยังไม่ได้ยืนยันอีเมล
+    if not user.is_active:
+        return None, "email_not_verified"
+    
+    # กรณีเข้าสู่ระบบสำเร็จ
+    return user, None
 
 
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=90)):

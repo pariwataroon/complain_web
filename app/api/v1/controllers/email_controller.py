@@ -1,5 +1,6 @@
 import secrets
 import uuid
+import os
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from models.verification_token import VerificationToken
@@ -7,6 +8,8 @@ from lib.logger import get_logger
 from app.api.v1.controllers.notification_controller import notify_admin_new_user
 
 logger = get_logger("email_controller", console_output=False)
+
+VERIFY_PATH = os.environ.get("VERIFY_PATH", "http://localhost:8000/api/v1/auth")
 
 def generate_verification_token(db: Session, user_id: uuid.UUID, expires_hours: int = 24):
     """
@@ -112,3 +115,51 @@ def verify_email(db: Session, token: str):
     db.commit()
     
     return verification.user_id
+
+def resend_verification_email(db: Session, email: str):
+    """
+    ส่งอีเมลยืนยันใหม่สำหรับผู้ใช้ที่ยังไม่ได้ยืนยันอีเมล
+    
+    Args:
+        db: Database session
+        email: อีเมลของผู้ใช้ที่ต้องการส่งลิงก์ยืนยันใหม่
+        verify_path: Base URL สำหรับการยืนยันอีเมล (เช่น http://localhost:8000/api/v1/auth)
+        
+    Returns:
+        tuple: (success, message, error_code) 
+            - success: True หากสำเร็จ, False หากมีข้อผิดพลาด
+            - message: ข้อความแสดงสถานะหรือข้อผิดพลาด
+            - error_code: รหัสข้อผิดพลาด (ถ้ามี)
+    """
+    try:
+        # ตรวจสอบว่ามีผู้ใช้ตามอีเมลนี้หรือไม่
+        from models.user import User
+        user = db.query(User).filter(User.email == email).first()
+        
+        if not user:
+            # ไม่พบผู้ใช้ แต่ไม่ควรบอกผู้ใช้ตรงๆ (เพื่อความปลอดภัย)
+            return True, "If your email is registered, a verification link has been sent.", None
+            
+        # ตรวจสอบว่าผู้ใช้ยืนยันอีเมลแล้วหรือยัง
+        if user.is_active:
+            return False, "Your email has already been verified. You can log in now.", "4000"
+            
+        # สร้าง token ใหม่
+        token = generate_verification_token(db, user.id)
+        
+        # สร้าง verification URL
+        verification_url = f"{VERIFY_PATH}/verify-email?token={token}"
+        
+        # ส่งอีเมลยืนยัน
+        user_full_name = f"{user.first_name} {user.last_name}"
+        email_sent = send_verification_email(user.email, user_full_name, verification_url)
+        
+        if not email_sent:
+            logger.error(f"Failed to send verification email to {email}")
+            return False, "Failed to send verification email. Please try again later.", "5000"
+        
+        return True, "Verification email has been sent. Please check your inbox.", None
+    except Exception as e:
+        logger.error(f"Error resending verification email: {str(e)}")
+        # เราไม่ต้องการให้ผู้ไม่หวังดีทราบว่าเกิดข้อผิดพลาด
+        return True, "If your email is registered, a verification link has been sent.", None

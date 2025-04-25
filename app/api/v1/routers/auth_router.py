@@ -21,9 +21,17 @@ router = APIRouter(
 
 @router.post("/login", response_model=format_data.FormatResponseModel)
 async def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
-    db_user = auth_controller.authenticate_user(db, user.citizen_id, user.password)
+    result = auth_controller.authenticate_user(db, user.citizen_id, user.password)
+    db_user, error_type = result
+
     if not db_user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        if error_type == "email_not_verified":
+            return format_data.format_response("4010", {
+                "error": "Email not verified", 
+                "message": "โปรดยืนยันอีเมลของคุณก่อนเข้าสู่ระบบ ตรวจสอบกล่องจดหมายของคุณสำหรับลิงก์ยืนยัน"
+            })
+        else:  # invalid_credentials
+            return format_data.format_response("4010", {"error": "Invalid credentials"})
     
     # ดึงข้อมูลผู้ใช้พร้อมบทบาท
     user_with_roles = user_controller.get_user_with_roles_and_titles(db, db_user.id)
@@ -104,3 +112,26 @@ async def verify_email_endpoint(
     except Exception as e:
         # กรณีเกิด error ให้ redirect ไปยังหน้า login พร้อมแสดง error message
         return RedirectResponse(f"{LOGIN_URL}?error=verification_failed", status_code=302)
+
+@router.post("/resend-verification", response_model=format_data.FormatResponseModel)
+async def resend_verification_endpoint(
+    request: schemas.ResendVerificationEmail,
+    db: Session = Depends(get_db)
+):
+    """ส่งอีเมลยืนยันใหม่ในกรณีที่อีเมลเดิมหมดอายุหรือได้รับไม่ถึง"""
+    from app.api.v1.controllers.email_controller import resend_verification_email
+    
+    success, message, error_code = resend_verification_email(
+        db=db, 
+        email=request.email
+    )
+    
+    if not success and error_code:
+        return format_data.format_response(error_code, {
+            "error": "Email already verified",
+            "message": message
+        })
+    
+    return format_data.format_response("0000", {
+        "message": message
+    })
