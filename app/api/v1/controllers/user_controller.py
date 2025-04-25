@@ -1,4 +1,5 @@
 import bcrypt
+import os
 from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
@@ -13,6 +14,7 @@ from models.user_positions import UserPosition
 
 logger = get_logger("user_repository", console_output=False)
 
+VERIFY_PATH = os.environ.get("VERIFY_PATH", "http://localhost:8000/api/v1/auth")
 
 class DuplicateKeyError(Exception):
     pass
@@ -65,6 +67,7 @@ def create_user(db: Session, user: UserCreate, roles: list = None):
         hashed_password = get_password_hash(user.password)
 
         # สร้าง user object พร้อมข้อมูลใหม่
+        # ตั้งค่า is_active เป็น False จนกว่าจะยืนยันอีเมล
         db_user = User(
             citizen_id=user.citizen_id,
             email=user.email,
@@ -74,7 +77,7 @@ def create_user(db: Session, user: UserCreate, roles: list = None):
             phone=user.phone if hasattr(user, 'phone') else None,
             address=user.address if hasattr(user, 'address') else None,
             address_other=user.address_other if hasattr(user, 'address_other') else None,
-            is_active=True
+            is_active=False  # ตั้งค่าเริ่มต้นเป็น inactive
         )
 
         # จัดการเรื่องคำนำหน้า
@@ -120,6 +123,20 @@ def create_user(db: Session, user: UserCreate, roles: list = None):
             db.add(new_user_role)
         
         db.commit()
+        
+        # สร้าง verification token และส่งอีเมลยืนยัน
+        if VERIFY_PATH:
+            from app.api.v1.controllers.email_controller import generate_verification_token, send_verification_email
+            
+            # สร้าง token
+            token = generate_verification_token(db, db_user.id)
+            
+            # สร้าง verification URL
+            verification_url = f"{VERIFY_PATH}/verify-email?token={token}"
+            
+            # ส่งอีเมลยืนยัน
+            user_full_name = f"{db_user.first_name} {db_user.last_name}"
+            send_verification_email(db_user.email, user_full_name, verification_url)
         
         # รับข้อมูลผู้ใช้พร้อมบทบาทเพื่อส่งกลับ
         user_with_roles = get_user_with_roles_and_titles(db, db_user.id)

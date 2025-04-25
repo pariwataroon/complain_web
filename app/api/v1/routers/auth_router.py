@@ -78,3 +78,21 @@ async def get_current_user_profile(
         import traceback
         traceback.print_exc()
         return format_data.format_response("5000", {"error": "Error fetching user profile"})
+
+@router.get("/verify-email", response_model=format_data.FormatResponseModel)
+async def verify_email_endpoint(
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """ยืนยันอีเมลโดยใช้ token ที่ส่งไปยังอีเมลของผู้ใช้"""
+    try:
+        from app.api.v1.controllers.email_controller import verify_email
+        
+        user_id = verify_email(db, token)
+        
+        if not user_id:
+            return format_data.format_response("4000", {"error": "Invalid or expired verification token"})
+        
+        return format_data.format_response("0000", {"message": "Email verified successfully"})
+    except Exception as e:
+        return format_data.format_response("5000", {"error": str(e)})
