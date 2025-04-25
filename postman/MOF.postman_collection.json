@@ -2990,203 +2990,315 @@
 			  }
 			],
 			"description": "API สำหรับจัดการข้อมูลหน่วยงาน"
-		  },
-		  {
-			"name": "DEPARTMENT GROUPS",
-			"item": [
-			  {
-				"name": "Get All Department Groups",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "GET",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/department-groups",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "department-groups"
-					]
-				  },
-				  "description": "ดึงรายการกลุ่มหน่วยงานทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_department"
-				},
-				"response": []
-			  },
-			  {
-				"name": "Get Department Groups with Departments",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "GET",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/department-groups/with-departments",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "department-groups",
-					  "with-departments"
-					]
-				  },
-				  "description": "ดึงรายการกลุ่มหน่วยงานพร้อมหน่วยงานที่อยู่ในกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_department"
-				},
-				"response": []
-			  },
-			  {
-				"name": "Get Department Group by ID",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "GET",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "department-groups",
-					  "{{group_id}}"
-					]
-				  },
-				  "description": "ดึงข้อมูลกลุ่มหน่วยงานตาม ID - ต้องมีสิทธิ์อ่านใน setting_department"
-				},
-				"response": []
-			  },
-			  {
-				"name": "Create Department Group",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "POST",
-				  "header": [],
-				  "body": {
-					"mode": "raw",
-					"raw": "{\n    \"name\": \"กลุ่มหน่วยงานทดสอบ\",\n    \"description\": \"คำอธิบายกลุ่มหน่วยงานทดสอบ\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
-					"options": {
-					  "raw": {
-						"language": "json"
-					  }
+		},
+		{
+		"name": "DEPARTMENT GROUPS",
+		"item": [
+			{
+			"name": "Get All Department Groups",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
 					}
-				  },
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/department-groups",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "department-groups"
-					]
-				  },
-				  "description": "สร้างกลุ่มหน่วยงานใหม่ - ต้องมีสิทธิ์สร้างใน setting_department"
+				]
 				},
-				"response": []
-			  },
-			  {
-				"name": "Update Department Group",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "PUT",
-				  "header": [],
-				  "body": {
-					"mode": "raw",
-					"raw": "{\n    \"name\": \"กลุ่มหน่วยงานทดสอบ (แก้ไข)\",\n    \"description\": \"คำอธิบายกลุ่มหน่วยงานทดสอบที่แก้ไขแล้ว\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
-					"options": {
-					  "raw": {
-						"language": "json"
-					  }
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/department-groups",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"department-groups"
+				]
+				},
+				"description": "ดึงรายการกลุ่มหน่วยงานทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_department"
+			},
+			"response": []
+			},
+			{
+			"name": "Get Department Groups with Departments",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
 					}
-				  },
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "department-groups",
-					  "{{group_id}}"
-					]
-				  },
-				  "description": "อัปเดตข้อมูลกลุ่มหน่วยงาน - ต้องมีสิทธิ์แก้ไขใน setting_department"
+				]
 				},
-				"response": []
-			  },
-			  {
-				"name": "Delete Department Group",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "DELETE",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "department-groups",
-					  "{{group_id}}"
-					]
-				  },
-				  "description": "ลบกลุ่มหน่วยงาน (soft delete) - ต้องมีสิทธิ์ลบใน setting_department"
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/department-groups/with-departments",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"department-groups",
+					"with-departments"
+				]
 				},
-				"response": []
-			  }
-			],
-			"description": "API สำหรับจัดการข้อมูลกลุ่มหน่วยงาน"
-		  }
+				"description": "ดึงรายการกลุ่มหน่วยงานพร้อมหน่วยงานที่อยู่ในกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_department"
+			},
+			"response": []
+			},
+			{
+			"name": "Get Department Group by ID",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"department-groups",
+					"{{group_id}}"
+				]
+				},
+				"description": "ดึงข้อมูลกลุ่มหน่วยงานตาม ID - ต้องมีสิทธิ์อ่านใน setting_department"
+			},
+			"response": []
+			},
+			{
+			"name": "Create Department Group",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "{\n    \"name\": \"กลุ่มหน่วยงานทดสอบ\",\n    \"description\": \"คำอธิบายกลุ่มหน่วยงานทดสอบ\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/department-groups",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"department-groups"
+				]
+				},
+				"description": "สร้างกลุ่มหน่วยงานใหม่ - ต้องมีสิทธิ์สร้างใน setting_department"
+			},
+			"response": []
+			},
+			{
+			"name": "Update Department Group",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "PUT",
+				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "{\n    \"name\": \"กลุ่มหน่วยงานทดสอบ (แก้ไข)\",\n    \"description\": \"คำอธิบายกลุ่มหน่วยงานทดสอบที่แก้ไขแล้ว\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"department-groups",
+					"{{group_id}}"
+				]
+				},
+				"description": "อัปเดตข้อมูลกลุ่มหน่วยงาน - ต้องมีสิทธิ์แก้ไขใน setting_department"
+			},
+			"response": []
+			},
+			{
+			"name": "Delete Department Group",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "DELETE",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"department-groups",
+					"{{group_id}}"
+				]
+				},
+				"description": "ลบกลุ่มหน่วยงาน (soft delete) - ต้องมีสิทธิ์ลบใน setting_department"
+			},
+			"response": []
+			}
+		],
+		"description": "API สำหรับจัดการข้อมูลกลุ่มหน่วยงาน"
+		},
+		{
+            "name": "Notifications",
+            "item": [
+                {
+                    "name": "Create Notification",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+									"key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"New User Registration\",\n    \"message\": \"A new user has registered in the system.\",\n    \"role_seeking_group\": \"admin\",\n    \"redirect_url\": \"/users/123e4567-e89b-12d3-a456-426614174000\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/notifications",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "notifications"
+                            ]
+                        },
+                        "description": "สร้างการแจ้งเตือนใหม่"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Notifications by Role",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/notifications?role=admin",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "notifications"
+                            ],
+                            "query": [
+                                {
+                                    "key": "role",
+                                    "value": "admin"
+                                }
+                            ]
+                        },
+                        "description": "ดึงการแจ้งเตือนตามบทบาท (role)"
+                    },
+                    "response": []
+                },
+				{
+					"name": "Mark Notification as Seen",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "PUT",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/notifications/123e4567-e89b-12d3-a456-426614174001/seen",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "notifications",
+						  "123e4567-e89b-12d3-a456-426614174001",
+						  "seen"
+						]
+					  },
+					  "description": "ทำเครื่องหมายว่าแจ้งเตือนนี้ถูกเห็นแล้วโดยผู้ใช้ที่กำลัง login"
+					},
+					"response": []
+				  }
+            ]
+        }
 	],
 	"event": [
 		{
