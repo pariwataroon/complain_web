@@ -8,6 +8,7 @@ from config.database import Base, engine, get_db
 from config.dotenv import DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
 from lib.logger import get_logger
 from seeders.title_seeder import TitleSeeder
+from seeders.comp_verification_tokens_seeder import VerificationTokenSeeder
 from seeders.user_seeder import UserSeeder
 from seeders.role_seeder import RoleSeeder
 from seeders.resource_groups_seeder import ResourceGroupSeeder
@@ -20,6 +21,7 @@ from seeders.user_position_seeder import UserPositionSeeder
 from seeders.department_groups_seeder import DepartmentGroupSeeder
 from seeders.department_seeder import DepartmentSeeder
 from seeders.venues_seeder import VenueSeeder
+from seeders.notification_seeder import NotificationSeeder
 
 # เพิ่ม path เพื่อป้องกัน import error
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -38,6 +40,7 @@ def check_and_seed_tables():
         # กำหนดลำดับที่ชัดเจน
         seeders = [
             {"name": "titles", "seeder": TitleSeeder(), "table_prefix": "comp_"},
+            {"name": "verification_tokens", "seeder": VerificationTokenSeeder(), "table_prefix": ""},
             {"name": "users", "seeder": UserSeeder(), "table_prefix": "comp_"},
             {"name": "roles", "seeder": RoleSeeder(), "table_prefix": ""},
             {"name": "resource_groups", "seeder": ResourceGroupSeeder(), "table_prefix": ""},
@@ -52,6 +55,7 @@ def check_and_seed_tables():
             {"name": "department_groups", "seeder": DepartmentGroupSeeder(), "table_prefix": ""},
             {"name": "departments", "seeder": DepartmentSeeder(), "table_prefix": ""},
             {"name": "venues", "seeder": VenueSeeder(), "table_prefix": ""},
+            {"name": "notifications", "seeder": NotificationSeeder(), "table_prefix": ""},
         ]
 
         # วนลูปตรวจสอบแต่ละตาราง โดยเรียกตามลำดับที่กำหนดไว้ในลิสต์
