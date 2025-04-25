@@ -120,7 +120,7 @@ const createUserPermission = async ({
     };
 
     const { data } = await axiosInstance.post(
-      "/permissions/user-permissions",
+      "/permissions/user-permissions/create",
       payload
     );
     return data;

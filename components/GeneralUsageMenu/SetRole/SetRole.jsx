@@ -199,18 +199,59 @@ const SetRole = () => {
   const handleOpenUserModal = () => setOpenUserModal(true);
   const handleCloseUserModal = () => setOpenUserModal(false);
 
-  // Handle user deletion
   const handleUserDelete = (userId) => {
-    setUserToDelete(userId);
+    // ค้นหาผู้ใช้ที่ต้องการลบจาก users
+    const user = users.find((u) => u.id === userId);
+    console.log("userdelete", user);
+
+    if (!user) {
+      alertWarning("ไม่พบผู้ใช้ในระบบ");
+      return;
+    }
+
+    // ตรวจสอบว่า user.permission_id มีข้อมูลหรือไม่
+    if (!user.permission_id) {
+      alertWarning("ข้อมูลสิทธิ์ของผู้ใช้ไม่ถูกต้อง");
+      return;
+    }
+
+    const permissionId = user.permission_id; // ดึง permission_id โดยตรงจาก user
+
+    // เก็บ userId และ permissionId สำหรับการลบใน confirmUserDelete
+    setUserToDelete({
+      userId,
+      permissionId,
+    });
+
+    // เปิด modal การยืนยันการลบ
     setOpenDeleteUserModal(true);
   };
 
-  const cancelUserDelete = () => {
+  const confirmUserDelete = () => {
+    const { userId, permissionId } = userToDelete;
+
+    // เรียกใช้ deleteUserPermission เพื่อทำการลบ
+    deleteUserPermission(permissionId)
+      .then((response) => {
+        if (response.res_code === "0000") {
+          alertSuccess("ลบสิทธิ์ผู้ใช้สำเร็จ");
+
+          // ลบผู้ใช้จาก state ของ users
+          setUsers(users.filter((user) => user.id !== userId));
+        } else {
+          alertWarning("เกิดข้อผิดพลาดในการลบสิทธิ์ผู้ใช้");
+        }
+      })
+      .catch((error) => {
+        console.error("Error deleting user permission:", error);
+        alertWarning("เกิดข้อผิดพลาดในการลบสิทธิ์ผู้ใช้");
+      });
+
+    // ปิด modal
     setOpenDeleteUserModal(false);
   };
 
-  const confirmUserDelete = () => {
-    setUsers(users.filter((user) => user.id !== userToDelete));
+  const cancelUserDelete = () => {
     setOpenDeleteUserModal(false);
   };
 
@@ -219,7 +260,7 @@ const SetRole = () => {
   const [sections, setSections] = useState([]);
   const [groups, setGroups] = useState([]); // roles_tracking
   const [users, setUsers] = useState([]); // user_permissions
-
+  console.log("users", users);
   const [selectedMenu, setSelectedMenu] = useState({
     mainMenu: "",
     resourceId: "",
@@ -304,7 +345,6 @@ const SetRole = () => {
       // สร้างสิทธิ์ให้กับผู้ใช้
       const response = await createUserPermission({
         user_id: userId, // ส่ง userId ที่เลือก
-        role_id: group, // ส่ง group ที่เลือก
         resource_id: selectedMenu.resourceId, // ส่ง resourceId ที่เลือกจากเมนู
         can_create: true, // ค่าตัวอย่าง, ปรับตามความต้องการ
         can_read: true,
@@ -313,8 +353,14 @@ const SetRole = () => {
         override_role: true, // ค่าตัวอย่าง, ปรับตามความต้องการ
       });
 
-      if (response.res_code === "0000") {
+      if (response.res_code === "0001") {
+        // รีเฟรชข้อมูลจาก getMenuPermission
+        const { res_data } = await getMenuPermission();
+        setMenuData(res_data);
+        setSections(buildSections(res_data));
+
         alertSuccess("บันทึกสิทธิ์รายบุคคลสำเร็จ"); // แสดงข้อความสำเร็จ
+        setNewUser({ group: "", userId: "" });
         handleCloseUserModal(); // ปิด Modal
       } else {
         alertWarning(response.res_message || "เกิดข้อผิดพลาดในการบันทึก");
@@ -500,6 +546,7 @@ const SetRole = () => {
         selected: u.can_read || u.override_role,
         groupId: u.roles?.[0]?.role_id || "",
         groupName: u.roles?.[0]?.role_description || "",
+        permission_id: u.permission_id || "",
         permissions: {
           create: u.can_create,
           read: u.can_read,
