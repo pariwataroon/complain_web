@@ -1,4 +1,6 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 import app.api.v1.controllers.auth_controller as auth_controller
@@ -8,6 +10,9 @@ import lib.format_data as format_data
 from config.database import get_db
 from app.api.middleware.jwt_verify import verify_token
 from uuid import UUID
+
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+LOGIN_URL = f"{FRONTEND_URL}/login"
 
 router = APIRouter(
     prefix="/auth",
@@ -79,20 +84,23 @@ async def get_current_user_profile(
         traceback.print_exc()
         return format_data.format_response("5000", {"error": "Error fetching user profile"})
 
-@router.get("/verify-email", response_model=format_data.FormatResponseModel)
+@router.get("/verify-email")
 async def verify_email_endpoint(
     token: str,
     db: Session = Depends(get_db)
 ):
-    """ยืนยันอีเมลโดยใช้ token ที่ส่งไปยังอีเมลของผู้ใช้"""
+    """ยืนยันอีเมลโดยใช้ token ที่ส่งไปยังอีเมลของผู้ใช้ และ redirect ไปยังหน้า login"""
     try:
         from app.api.v1.controllers.email_controller import verify_email
         
         user_id = verify_email(db, token)
         
         if not user_id:
-            return format_data.format_response("4000", {"error": "Invalid or expired verification token"})
+            # ถ้า token ไม่ถูกต้อง ให้ redirect ไปยังหน้า login พร้อมแสดง error message
+            return RedirectResponse(f"{LOGIN_URL}?error=invalid_token", status_code=302)
         
-        return format_data.format_response("0000", {"message": "Email verified successfully"})
+        # ถ้ายืนยันสำเร็จ ให้ redirect ไปยังหน้า login พร้อมแสดง success message
+        return RedirectResponse(f"{LOGIN_URL}?verified=true", status_code=302)
     except Exception as e:
-        return format_data.format_response("5000", {"error": str(e)})
+        # กรณีเกิด error ให้ redirect ไปยังหน้า login พร้อมแสดง error message
+        return RedirectResponse(f"{LOGIN_URL}?error=verification_failed", status_code=302)
