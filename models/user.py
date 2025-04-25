@@ -43,4 +43,7 @@ class User(Base):
     # เพิ่มความสัมพันธ์กับตำแหน่ง
     positions = relationship("UserPosition", back_populates="user")
 
+    # เพิ่มความสัมพันธ์กับการแจ้งเตือนที่ผู้ใช้ได้เห็น
     seen_notifications = relationship("Notification", secondary=notification_seen_table, back_populates="seen_by_users")
+    # เพิ่มความสัมพันธ์กับ VerificationToken
+    verification_tokens = relationship("VerificationToken", back_populates="user", cascade="all, delete-orphan")
