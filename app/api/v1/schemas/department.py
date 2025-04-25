@@ -36,7 +36,6 @@ class Department(DepartmentBase):
     group: Optional[DepartmentGroup] = None
     
     class Config:
-        orm_mode = True
         from_attributes = True
 
 # Recursive model references

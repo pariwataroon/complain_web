@@ -25,7 +25,6 @@ class DepartmentGroup(DepartmentGroupBase):
     updated_at: Optional[datetime] = None
     
     class Config:
-        orm_mode = True
         from_attributes = True
 
 class DepartmentGroupWithDepartments(DepartmentGroup):
