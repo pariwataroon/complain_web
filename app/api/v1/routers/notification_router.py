@@ -20,18 +20,18 @@ router = APIRouter(
     tags=["notifications"],
 )
 
-@router.post("/", response_model=FormatResponseModel)
-async def create_new_notification(
-    notification: NotificationCreate,
-    db: Session = Depends(get_db),
-    current_user: str = Depends(can_create("initial_notification"))
-):
-    """สร้างการแจ้งเตือนใหม่"""
-    try:
-        result = create_notification(db, notification)
-        return format_response("0001", result)
-    except Exception as e:
-        return format_response("5000", {"error": str(e)})
+# @router.post("/", response_model=FormatResponseModel)
+# async def create_new_notification(
+#     notification: NotificationCreate,
+#     db: Session = Depends(get_db),
+#     current_user: str = Depends(can_create("initial_notification"))
+# ):
+#     """สร้างการแจ้งเตือนใหม่"""
+#     try:
+#         result = create_notification(db, notification)
+#         return format_response("0001", result)
+#     except Exception as e:
+#         return format_response("5000", {"error": str(e)})
 
 @router.get("/", response_model=FormatResponseModel)
 async def get_notifications(
