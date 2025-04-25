@@ -6,6 +6,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from config.database import Base
+from models.association_tables import notification_seen_table
 
 
 class User(Base):
@@ -41,3 +42,5 @@ class User(Base):
     
     # เพิ่มความสัมพันธ์กับตำแหน่ง
     positions = relationship("UserPosition", back_populates="user")
+
+    seen_notifications = relationship("Notification", secondary=notification_seen_table, back_populates="seen_by_users")

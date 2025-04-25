@@ -1,0 +1,16 @@
+{
+  "notifications": [
+    {
+      "title": "แจ้งเตือนสำหรับทุกคน",
+      "message": "ระบบจะปิดปรับปรุงวันเสาร์ที่ 27 เม.ย.",
+      "role_seeking_group": "admin,staff,supervisor", 
+      "redirect_url": "/maintenance-info"
+    },
+    {
+      "title": "แจ้งเตือนสำหรับผู้ดูแลระบบ",  
+      "message": "กรุณาตรวจสอบการตั้งค่าระบบใหม่",
+      "role_seeking_group": "admin",
+      "redirect_url": "/admin/settings"
+    }
+  ]
+}
