@@ -412,6 +412,37 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "auth/resend-verification",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"example@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/auth/resend-verification",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"auth",
+								"resend-verification"
+							]
+						},
+						"description": "ส่งอีเมลยืนยันใหม่ในกรณีที่อีเมลเดิมหมดอายุหรือได้รับไม่ถึง"
+					},
+					"response": []
 				}
 			]
 		},
@@ -3325,7 +3356,7 @@
 	"variable": [
 		{
 			"key": "API",
-			"value": "localhost:8000",
+			"value": "https://compdev.minertatech.com",
 			"type": "string"
 		},
 		{
