@@ -156,3 +156,28 @@ def format_notification_data(notification, current_user_id=None):
     # ไม่ส่งข้อมูล seen_by_users กลับไป
     
     return notification_data
+
+def notify_admin_new_user(db: Session, user):
+    """
+    สร้างการแจ้งเตือนสำหรับ admin เมื่อมีผู้ใช้ใหม่ลงทะเบียนสำเร็จ
+    
+    Args:
+        db: Database session
+        user: User object ของผู้ใช้ที่ลงทะเบียน
+    """
+    try:
+        # สร้างข้อมูลการแจ้งเตือน
+        notification_data = NotificationCreate(
+            title="มีผู้ใช้ลงทะเบียนใหม่",
+            message=f"ผู้ใช้ {user.first_name} {user.last_name} ได้ลงทะเบียนและยืนยันอีเมลเรียบร้อยแล้ว",
+            role_seeking_group="admin",
+            redirect_url=f"/users/{user.id}"
+        )
+        
+        # สร้างการแจ้งเตือนในระบบ
+        create_notification(db, notification_data)
+        logger.info(f"Admin notification created for new user: {user.id}")
+        return True
+    except Exception as e:
+        logger.error(f"Error creating admin notification: {str(e)}")
+        return False
