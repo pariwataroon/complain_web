@@ -11,8 +11,8 @@ class ThaiIDTokenResponse(BaseModel):
     token_type: str
     scope: str
     pid: str
-    address: ThaiIDAddress
-    address_other: Optional[str] = ThaiIDAddress
+    address: Optional[ThaiIDAddress] = None
+    address_other: Optional[ThaiIDAddress] = None
     given_name: str
     family_name: str
     gender: str
@@ -23,6 +23,5 @@ class ThaiIDLoginResponse(BaseModel):
     access_token: str
     refresh_token: str
 
-# เพิ่ม Schema ใหม่
 class ThaiIDAuthCode(BaseModel):
     auth_code: str

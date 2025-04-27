@@ -5,6 +5,8 @@ from requests.exceptions import RequestException
 
 import app.api.v1.controllers.user_controller as user_controller
 import app.api.v1.controllers.auth_controller as auth_controller
+# เพิ่มการนำเข้า notification_controller
+import app.api.v1.controllers.notification_controller as notification_controller
 from app.api.v1.schemas.thaid import ThaiIDTokenResponse
 from app.api.v1.schemas.user import UserCreate
 from config.dotenv import THAID_CLIENT_ID, THAID_CLIENT_SECRET, THAID_REQUEST_URI, THAID_REDIRECT_URI
@@ -83,7 +85,6 @@ def get_or_create_user_from_thaid(db: Session, thaid_data: ThaiIDTokenResponse):
         random_password = secrets.token_urlsafe(12)
         
         # แปลงค่า title จาก titleTh เป็น title_id (ตามที่กำหนดในระบบของคุณ)
-        # ในที่นี้สมมติว่ามีฟังก์ชัน get_title_id_from_name สำหรับแปลงค่า
         title_id = get_title_id_from_name(db, thaid_data.titleTh)
         
         new_user = UserCreate(
@@ -94,12 +95,25 @@ def get_or_create_user_from_thaid(db: Session, thaid_data: ThaiIDTokenResponse):
             password=random_password,
             title_id=title_id,
             address=thaid_data.address.formatted if thaid_data.address else "",
-            address_other=thaid_data.address_other.formatted if thaid_data.address_other else "",
+            address_other=thaid_data.address_other.formatted if hasattr(thaid_data, 'address_other') and thaid_data.address_other else "",
             prefix_other=None if title_id != 1 else thaid_data.titleTh  # ถ้า title_id เป็น 1 (อื่นๆ) ให้เก็บ titleTh
         )
         
         # สร้างผู้ใช้ใหม่
         existing_user = user_controller.create_user(db, new_user)
+        
+        # เพิ่มการส่ง notification เมื่อมีการลงทะเบียนใหม่ผ่าน ThaiID
+        try:
+            notification_controller.create_notification(
+                db=db,
+                title="มีการลงทะเบียนผู้ใช้ใหม่ผ่าน ThaiID",
+                message=f"ผู้ใช้ {thaid_data.given_name} {thaid_data.family_name} ได้ลงทะเบียนผ่าน ThaiID",
+                role_seeking_group="admin",  # ส่งให้แอดมินทุกคน
+                redirect_url=f"/users/{existing_user['id'] if isinstance(existing_user, dict) else existing_user.id}"
+            )
+        except Exception as e:
+            # ถ้าส่ง notification ไม่สำเร็จ ให้บันทึกข้อผิดพลาดแต่ไม่ทำให้กระบวนการทั้งหมดล้มเหลว
+            print(f"Error sending notification: {str(e)}")
     
     # ดึงข้อมูล roles ของผู้ใช้
     roles = []
@@ -152,14 +166,6 @@ def get_title_id_from_name(db: Session, title_name: str):
 def process_thaid_auth_code(db: Session, auth_code: str):
     """
     ดำเนินการตรวจสอบ auth_code กับ DOPA API และสร้างหรือค้นหาผู้ใช้
-    
-    Args:
-        db: Session ฐานข้อมูล
-        auth_code: รหัสจาก Thai Digital ID
-        redirect_uri: URI ที่ใช้สำหรับการ redirect
-        
-    Returns:
-        dict: ข้อมูลผู้ใช้และ token หรือ None ถ้าไม่สำเร็จ
     """
     # ตรวจสอบ auth_code โดยส่งคำขอไปยัง DOPA API
     thaid_data = validate_thaid_token(auth_code, THAID_REDIRECT_URI)
@@ -170,6 +176,17 @@ def process_thaid_auth_code(db: Session, auth_code: str):
     # แปลงข้อมูลให้เป็นรูปแบบที่เข้ากับ ThaiIDTokenResponse
     from app.api.v1.schemas.thaid import ThaiIDTokenResponse, ThaiIDAddress
     
+    # สร้าง address objects อย่างปลอดภัย
+    address = None
+    if "address" in thaid_data and isinstance(thaid_data["address"], dict) and "formatted" in thaid_data["address"]:
+        address = ThaiIDAddress(formatted=thaid_data["address"]["formatted"])
+    else:
+        address = ThaiIDAddress(formatted="")
+        
+    address_other = None
+    if "address_other" in thaid_data and isinstance(thaid_data["address_other"], dict) and "formatted" in thaid_data["address_other"]:
+        address_other = ThaiIDAddress(formatted=thaid_data["address_other"]["formatted"])
+    
     # สร้าง ThaiIDTokenResponse จากข้อมูลที่ได้รับ
     token_response = ThaiIDTokenResponse(
         expires_in=thaid_data.get("expires_in"),
@@ -177,13 +194,13 @@ def process_thaid_auth_code(db: Session, auth_code: str):
         refresh_token=thaid_data.get("refresh_token"),
         token_type=thaid_data.get("token_type"),
         scope=thaid_data.get("scope"),
-        pid=thaid_data.get("pid"),
-        address=ThaiIDAddress(formatted=thaid_data.get("address", {}).get("formatted", "")),
-        address_other=ThaiIDAddress(formatted=thaid_data.get("address_other", {}).get("formatted", "")),
-        given_name=thaid_data.get("given_name"),
-        family_name=thaid_data.get("family_name"),
-        gender=thaid_data.get("gender"),
-        titleTh=thaid_data.get("titleTh")
+        pid=thaid_data.get("pid", ""),
+        address=address,
+        address_other=address_other,
+        given_name=thaid_data.get("given_name", ""),
+        family_name=thaid_data.get("family_name", ""),
+        gender=thaid_data.get("gender", ""),
+        titleTh=thaid_data.get("titleTh", "")
     )
     
     # ค้นหาหรือสร้างผู้ใช้ใหม่
