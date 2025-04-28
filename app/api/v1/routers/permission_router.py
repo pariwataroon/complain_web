@@ -18,6 +18,7 @@ from app.api.v1.controllers.permission_controller import (
     create_permission, get_permissions, update_permission, delete_permission,
     assign_role_to_user, remove_role_from_user, get_user_roles, get_resource_by_id
 )
+from app.api.middleware.jwt_verify import verify_token
 from app.api.v1.routers.user_permission_router import router as user_permission_router
 from models.role import Role
 from models.resource import Resource
@@ -29,6 +30,58 @@ router = APIRouter(
 )
 
 router.include_router(user_permission_router, prefix="/user-permissions")
+
+
+# =================== user-resources =======================
+@router.get("/user-resources/bygroup", response_model=FormatResponseModel)
+async def get_my_resources_by_group(
+    group_id: Optional[UUID] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """
+    ดึงข้อมูล resources-bygroup เฉพาะที่ตรงกับ roles ของ user ที่ login
+    """
+    try:
+        # current_user อาจเป็น str หรือ dict หรือ User แล้วแต่ verify_token
+        user_id = getattr(current_user, "id", None) if hasattr(current_user, "id") else current_user
+        if not user_id:
+            return format_response("4010", {"error": "Invalid user"})
+
+        # ดึง roles ของ user
+        roles = get_user_roles(db, user_id)
+        role_ids = [role.id for role in roles]
+
+        # ดึง resources-bygroup ทั้งหมด
+        all_groups = get_resources_by_group(db, group_id=group_id, skip=skip, limit=limit)
+
+        # กรอง resources ที่ user มีสิทธิ์ (ผ่าน role)
+        for group in all_groups:
+            filtered_resources = []
+            for resource in group["resources"]:
+                # ตรวจสอบสิทธิ์ผ่าน permission table ว่า role user มีสิทธิ์ read resource นี้หรือไม่
+                from models.permission import Permission
+                perms = db.query(Permission).filter(
+                    Permission.resource_id == resource["id"],
+                    Permission.role_id.in_(role_ids),
+                    Permission.can_read == True
+                ).all()
+                if perms:
+                    filtered_resources.append(resource)
+            group["resources"] = filtered_resources
+            group["total_resources"] = len(filtered_resources)
+
+        # ลบ group ที่ไม่มี resource เหลือ
+        result = [g for g in all_groups if g["resources"]]
+
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error fetching user resources by group: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return format_response("5000", {"error": "Error fetching user resources by group"})
 
 # =================== Role Endpoints ===================
 @router.post("/roles", response_model=FormatResponseModel)
