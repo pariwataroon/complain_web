@@ -18,13 +18,18 @@ import {
   Description,
   StackedLineChart,
   AccountBox,
-  Badge,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import styles from "./Sidebar.module.scss";
 import NotificationsIcon from "@mui/icons-material/Notifications";
+import {
+  getNotifications,
+  markNotificationAsSeen,
+} from "@pages/api/notifications/notifications";
 
+/* ───────── submenu config ───────── */
 const submenuItems = {
+  /* (เนื้อหาเต็มตามเดิม — ยกมาให้ครบ) */
   setting: [
     { label: "กำหนดการใช้งานทั่วไป", type: "header" },
     { label: "กำหนดระยะเวลา", type: "item", to: "/admin/settinggeneral/times" },
@@ -83,7 +88,8 @@ const submenuItems = {
       to: "/admin/edit/forward-to-agency",
     },
     {
-      label: "แบบรายงานแจ้งผู้ร้องเรียนหรือส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น",
+      label:
+        "แบบรายงานแจ้งผู้ร้องเรียนหรือส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น",
       type: "item",
       to: "/admin/edit/initial-notification-to-complainant-or-agency",
     },
@@ -105,13 +111,25 @@ const submenuItems = {
   ],
   homepage: [
     { label: "จัดการข้อมูล", type: "header" },
-    { label: "กำหนดคำถาม Chat Bot", type: "item", to: "/admin/homepage/chatbot" },
+    {
+      label: "กำหนดคำถาม Chat Bot",
+      type: "item",
+      to: "/admin/homepage/chatbot",
+    },
     { label: "กำหนดข่าวสาร", type: "item", to: "/admin/homepage/new" },
-    { label: "รายงานคำถามจากผู้ร้อง", type: "item", to: "/admin/homepage/complainant-questions" },
+    {
+      label: "รายงานคำถามจากผู้ร้อง",
+      type: "item",
+      to: "/admin/homepage/complainant-questions",
+    },
   ],
   document: [
     { label: "รายงาน", type: "header" },
-    { label: "รายงานติดตามสถานะ", type: "item", to: "/admin/document/status-tracking-report" },
+    {
+      label: "รายงานติดตามสถานะ",
+      type: "item",
+      to: "/admin/document/status-tracking-report",
+    },
     {
       label: "รายงานสรุปเรื่องร้องเรียนของหน่วยงาน",
       type: "item",
@@ -150,130 +168,128 @@ const submenuItems = {
   ],
 };
 
-const mockNotifications = [
+/* ───────── fallback ───────── */
+const fallbackNotifications = [
   {
-    id: 1,
-    title: "มีเรื่องร้องเรียนใหม่",
-    description: "#REF12345",
-    timestamp: "เมื่อ 2 นาทีที่แล้ว",
-  },
-  {
-    id: 2,
-    title: "มีการตอบกลับเรื่องร้องเรียน",
-    description: "#REF98765",
-    timestamp: "เมื่อ 3 ชั่วโมงที่แล้ว",
-  },
-  {
-    id: 3,
-    title: "ครบกำหนดการตอบกลับ",
-    description: "#REF56789",
-    timestamp: "เมื่อ 1 วันที่แล้ว",
-  },
-  {
-    id: 4,
-    title: "อัปเดตสถานะเรื่องร้องเรียน",
-    description: "#REF11223",
-    timestamp: "เมื่อ 15 นาทีที่แล้ว",
-  },
-  {
-    id: 5,
-    title: "แจ้งเตือนระบบ",
-    description: "ระบบจะปิดปรับปรุงใน 1 ชม.",
-    timestamp: "เมื่อ 40 นาทีที่แล้ว",
-  },
-  {
-    id: 6,
-    title: "มีการแก้ไขข้อมูลเรื่องร้องเรียน",
-    description: "#REF44556",
-    timestamp: "เมื่อ 5 ชั่วโมงที่แล้ว",
-  },
-  {
-    id: 7,
-    title: "เรื่องร้องเรียนถูกมอบหมาย",
-    description: "#REF77889",
-    timestamp: "เมื่อ 2 วันที่แล้ว",
-  },
-  {
-    id: 8,
-    title: "แจ้งเตือนความล่าช้า",
-    description: "#REF99001",
-    timestamp: "เมื่อ 6 ชั่วโมงที่แล้ว",
-  },
-  {
-    id: 9,
-    title: "มีการเพิ่มความคิดเห็นใหม่",
-    description: "#REF33221",
-    timestamp: "เมื่อ 25 นาทีที่แล้ว",
-  },
-  {
-    id: 10,
-    title: "สรุปการทำงานประจำสัปดาห์",
-    description: "ดูรายงานสรุป",
-    timestamp: "เมื่อ 2 สัปดาห์ที่แล้ว",
+    id: 0,
+    title: "ไม่พบข้อมูลการแจ้งเตือน",
+    message: "--",
+    created_at: new Date().toISOString(),
+    is_read: true,
   },
 ];
+
+/* Bangkok offset (UTC → UTC+7) */
+const BKK_MS = 7 * 60 * 60 * 1000;
+
+/* เวลา (UTC) → แปลงเป็นเวลาประเทศไทย แล้วหาค่าผ่านไปเท่าไร */
+const getElapsed = (isoUtc) => {
+  // แปลงเวลาที่ได้รับ (อยู่ใน UTC) ให้เป็นเวลาไทย (+7 ชม.)
+  const then = new Date(isoUtc).getTime() + BKK_MS;
+
+  // เวลาปัจจุบันของเครื่อง (เชื่อว่าเป็นเวลาไทยอยู่แล้ว) *ไม่ต้อง* บวก 7
+  const now = Date.now();
+
+  const diff = now - then;
+
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days} วัน ${hours % 24} ชม.`;
+  if (hours > 0) return `${hours} ชม. ${minutes % 60} นาที`;
+  return `${minutes} นาที`;
+};
+
 export default function Sidebar() {
-  const [activeMenu, setActiveMenu] = useState("setting");
-  const [hoverMenu, setHoverMenu] = useState(null);
-  const [openSubmenu, setOpenSubmenu] = useState(null);
   const router = useRouter();
-  const [invisible, setInvisible] = useState(false); 
-  const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
-  const notificationIconRef = useRef(null);
 
-  
+  const [activeMenu, setActiveMenu] = useState("setting");
+  const [openSubmenu, setOpenSubmenu] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  /* ───────── fetch notifs ───────── */
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        !event.target.closest(".submenu") &&
-        !event.target.closest(".MuiListItemButton-root")
-      ) {
-        setOpenSubmenu(null); 
+    (async () => {
+      try {
+        const res = await getNotifications();
+        const data = res?.res_data;
+        setNotifications(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("⚠️ ดึงข้อมูลการแจ้งเตือนล้มเหลว", err);
+        setNotifications([]);
       }
-
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target) &&
-        !event.target.closest(".notifications-icon")
-      ) {
-        setShowNotifications(false);
-      }
-    };
-
-    document.addEventListener("click", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("click", handleClickOutside);
-    };
+    })();
   }, []);
 
-  const handleNotificationClick = () => {
-    setShowNotifications(!showNotifications);
-    setInvisible(true);
+  /* ───────── click-outside ───────── */
+  useEffect(() => {
+    const clickAway = (e) => {
+      if (
+        !e.target.closest(`.${styles.submenu}`) &&
+        !e.target.closest(".MuiListItemButton-root")
+      )
+        setOpenSubmenu(null);
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(e.target) &&
+        !e.target.closest(".notifications-icon")
+      )
+        setShowNotifications(false);
+    };
+    document.addEventListener("click", clickAway);
+    return () => document.removeEventListener("click", clickAway);
+  }, []);
+
+  /* ───────── handlers ───────── */
+  const toggleBell = () => setShowNotifications((p) => !p);
+
+  const handleNotificationRedirect = async (url, id) => {
+    try {
+      await markNotificationAsSeen(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      );
+    } catch (err) {
+      console.error(`Error marking ${id} seen:`, err);
+    }
+    if (url) {
+      router.push(url);
+      setShowNotifications(false);
+    }
   };
 
-  const renderMenuItem = (key, IconComponent) => (
-    <Box
-      key={key}
-      className={styles.hoverTarget}
-      onMouseEnter={() => setHoverMenu(null)}
-    >
+  const markAllRead = async () => {
+    const unread = notifications.filter((n) => !n.is_read);
+    if (!unread.length) return;
+    try {
+      await Promise.all(unread.map((n) => markNotificationAsSeen(n.id)));
+      setNotifications((p) => p.map((n) => ({ ...n, is_read: true })));
+    } catch (err) {
+      console.error("Error marking all as read:", err);
+    }
+  };
+
+  /* ───────── safe array guards ───────── */
+  const notifArr = Array.isArray(notifications) ? notifications : [];
+  const unreadExists = notifArr.some((n) => !n.is_read);
+  const listToShow = notifArr.length ? notifArr : fallbackNotifications;
+
+  /* ───────── nav render helpers ───────── */
+  const renderMenuItem = (key, IconC) => (
+    <Box key={key} onMouseEnter={() => setOpenSubmenu(null)}>
       <ListItemButton
         onClick={() => {
-          if (openSubmenu === key) {
-            setOpenSubmenu(null);
-            return;
-          }
-          setOpenSubmenu(key);
+          setOpenSubmenu(openSubmenu === key ? null : key);
           setActiveMenu(key);
         }}
       >
         <ListItemIcon className={activeMenu === key ? styles.activeIcon : ""}>
-          <IconComponent />
+          <IconC />
         </ListItemIcon>
       </ListItemButton>
-
       {submenuItems[key] && (
         <Box
           className={`${styles.submenu} ${
@@ -281,8 +297,8 @@ export default function Sidebar() {
           }`}
         >
           <ul>
-            {submenuItems[key].map((item, index) => (
-              <React.Fragment key={index}>
+            {submenuItems[key].map((item, i) => (
+              <React.Fragment key={i}>
                 <li className={item.type === "header" ? styles.headerItem : ""}>
                   {item.type === "header" ? (
                     <span className={styles.headerText}>{item.label}</span>
@@ -295,7 +311,7 @@ export default function Sidebar() {
                     </span>
                   )}
                 </li>
-                {index < submenuItems[key].length - 1 && <hr />}
+                {i < submenuItems[key].length - 1 && <hr />}
               </React.Fragment>
             ))}
           </ul>
@@ -304,143 +320,171 @@ export default function Sidebar() {
     </Box>
   );
 
+  const navItem = (name, IconC, path) => (
+    <Box key={name}>
+      <ListItemButton
+        onClick={() => {
+          setActiveMenu(name);
+          router.push(path);
+        }}
+      >
+        <ListItemIcon className={activeMenu === name ? styles.activeIcon : ""}>
+          <IconC />
+        </ListItemIcon>
+      </ListItemButton>
+    </Box>
+  );
+
+  /* ───────── JSX ───────── */
   return (
     <Box className={styles.sidebar}>
+      {/* Logo */}
       <Box className={styles.logo}>
         <img src="/Logo_Gold.png" alt="กระทรวงการคลัง" />
       </Box>
 
+      {/* Main nav */}
       <List className={styles.navList}>
-        <Box>
-          <ListItemButton
-            onClick={() => {
-              setActiveMenu("Dashboard");
-              router.push("/admin/dashboard");
-            }}
-          >
-            <ListItemIcon
-              className={activeMenu === "Dashboard" ? styles.activeIcon : ""}
-            >
-              <Dashboard />
-            </ListItemIcon>
-          </ListItemButton>
-        </Box>
-
-
-
-        {/* เมนูอื่นๆ */}
+        {navItem("Dashboard", Dashboard, "/admin/dashboard")}
         {renderMenuItem("setting", Settings)}
         {renderMenuItem("edit", Edit)}
         {renderMenuItem("homepage", Settings)}
         {renderMenuItem("box", Inventory2)}
         {renderMenuItem("document", Description)}
-
-        {/* เมนูที่ไม่มี submenu */}
-        <Box>
-          <ListItemButton
-            onClick={() => {
-              setActiveMenu("StackedLineChart");
-              router.push("/admin/StackedLineChart");
-            }}
-          >
-            <ListItemIcon
-              className={
-                activeMenu === "StackedLineChart" ? styles.activeIcon : ""
-              }
-            >
-              <StackedLineChart />
-            </ListItemIcon>
-          </ListItemButton>
-        </Box>
-
-        <Box>
-          <ListItemButton
-            onClick={() => {
-              setActiveMenu("AccountBox");
-              router.push("/admin/AccountBox");
-            }}
-          >
-            <ListItemIcon
-              className={activeMenu === "AccountBox" ? styles.activeIcon : ""}
-            >
-              <AccountBox />
-            </ListItemIcon>
-          </ListItemButton>
-        </Box>
+        {navItem(
+          "StackedLineChart",
+          StackedLineChart,
+          "/admin/StackedLineChart"
+        )}
+        {navItem("AccountBox", AccountBox, "/admin/AccountBox")}
       </List>
 
+      {/* Footer */}
       <Box className={styles.bottom}>
+        {/* Bell */}
         <Box sx={{ position: "relative" }}>
           <IconButton
             className={`${styles.notificationIcon} notifications-icon`}
-            onClick={handleNotificationClick}
-            ref={notificationIconRef}
+            onClick={toggleBell}
           >
             <NotificationsIcon />
-            {/* จุดแจ้งเตือนสีแดง */}
-            {!invisible && (
-              <div
+            {unreadExists && (
+              <span
                 style={{
                   position: "absolute",
-                  top: "8px",
-                  right: "8px",
-                  width: "8px",
-                  height: "8px",
+                  top: 8,
+                  right: 8,
+                  width: 8,
+                  height: 8,
+                  minWidth: 8,
+                  minHeight: 8,
+                  flexShrink: 0,
                   backgroundColor: "#ff0000",
                   borderRadius: "50%",
-                  zIndex: 1,
                 }}
               />
             )}
           </IconButton>
 
-          {/* Notification Box - ตำแหน่งข้าง icon แจ้งเตือน */}
           {showNotifications && (
             <Paper
               ref={notificationRef}
               className={styles.notificationBox}
-              style={{
+              sx={{
                 position: "absolute",
-                bottom: "0",
-                left: "61px",
-                width: "300px",
-                maxHeight: "400px",
+                bottom: 0,
+                left: 61,
+                width: 300,
+                maxHeight: 400,
                 overflowY: "auto",
-                padding: "16px",
+                p: 2,
                 zIndex: 1000,
-                boxShadow: "0 3px 10px rgba(0, 0, 0, 0.2)",
-                border: "2px solid #91cbff",
+                boxShadow: "0 3px 10px rgba(0,0,0,0.2)",
+                border: "4px solid #91cbff",
+                borderRadius: "10px",
               }}
             >
-              <Typography variant="h6" style={{ marginBottom: "10px" }}>
-                การแจ้งเตือน <NotificationsIcon sx={{ marginBottom: "-5px" }} />
-              </Typography>
+              {/* Header */}
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
+                <Typography variant="h6">
+                  การแจ้งเตือน <NotificationsIcon sx={{ mb: -0.5 }} />
+                </Typography>
+                {unreadExists && (
+                  <Typography
+                    variant="body2"
+                    sx={{ cursor: "pointer", color: "primary.main" }}
+                    onClick={markAllRead}
+                  >
+                    อ่านทั้งหมด
+                  </Typography>
+                )}
+              </Box>
               <hr />
-              {mockNotifications.map((notification, index) => (
-                <React.Fragment key={notification.id}>
-                  <Box sx={{ mt: 2 }}>
-                    <Typography
-                      variant="body2"
-                      sx={{ mb: 1, fontWeight: "bold" }}
-                    >
-                      {notification.title}: {notification.description}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{ color: "text.secondary", mb: 2 }}
-                    >
-                      {notification.timestamp}
-                    </Typography>
+
+              {/* List */}
+              {listToShow.map((n, i) => (
+                <React.Fragment key={n.id ?? i}>
+                  <Box
+                    sx={{
+                      mt: 2,
+                      cursor: n.redirect_url ? "pointer" : "default",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                    onClick={() =>
+                      handleNotificationRedirect(n.redirect_url, n.id)
+                    }
+                  >
+                    {!n.is_read && (
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: 8,
+                          height: 8,
+                          minWidth: 8,
+                          minHeight: 8,
+                          flexShrink: 0,
+                          backgroundColor: "#ff0000",
+                          borderRadius: "50%",
+                          marginRight: 8,
+                        }}
+                      />
+                    )}
+                    <Box>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: "bold", mb: 1 }}
+                      >
+                        {n.title}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        {n.message}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {getElapsed(n.created_at)}
+                      </Typography>
+                    </Box>
                   </Box>
-                  {index < mockNotifications.length - 1 && <hr />}
+                  {i < listToShow.length - 1 && <hr />}
                 </React.Fragment>
               ))}
             </Paper>
           )}
         </Box>
 
+        {/* Avatar & collapse */}
         <Avatar src="/user-icon.png" className={styles.avatar} />
-        <IconButton className={styles.collapse}>
+        <IconButton
+          className={styles.collapse}
+          onClick={() => setOpenSubmenu(null)}
+        >
           <ChevronLeft />
         </IconButton>
       </Box>
