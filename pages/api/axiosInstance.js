@@ -1,5 +1,6 @@
 import axios from "axios";
 import Cookies from "js-cookie";
+import { alertWarning } from "@utils/Alerts"; 
 
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
@@ -32,8 +33,19 @@ axiosInstance.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
+  async (error) => {
     if (error.response && error.response.status === 401) {
+      if (typeof window !== "undefined") {
+        await alertWarning(
+          "หมดเวลา",
+          "Session ของคุณหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง"
+        );
+        Cookies.remove("access_token");
+        Cookies.remove("refresh_token");
+        Cookies.remove("info");
+        window.location.href = "/login";
+      }
+      return;
     }
     return Promise.reject(error);
   }

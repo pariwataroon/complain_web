@@ -1,10 +1,9 @@
-import SetPeriodComponent from "@components/GeneralUsageMenu/SetPeriod/SetPeriodComponent";
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
 
-const SetPeriod = () => {
-  return <SetPeriodComponent />;
+const Dashboard = () => {
+  return <div>dashboard</div>;
 };
 
-SetPeriod.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
+Dashboard.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
 
-export default SetPeriod;
+export default Dashboard;

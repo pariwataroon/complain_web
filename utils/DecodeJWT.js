@@ -1,5 +1,4 @@
 export function DecodeJWT(token) {
-  console.log("token", token);
   const [header, payload, signature] = token.split(".");
 
   function base64UrlDecode(str) {

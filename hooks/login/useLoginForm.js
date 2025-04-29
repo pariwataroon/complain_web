@@ -17,8 +17,6 @@ export const useLoginForm = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
-    console.log("Login Data:", data);
-
     try {
       const { citizen_id, password } = data;
       const response = await loginCard({ citizen_id, password });
@@ -32,7 +30,7 @@ export const useLoginForm = () => {
       } else {
         alertError(
           "เข้าสู่ระบบไม่สำเร็จ",
-          response.res_message || "กรุณาตรวจสอบข้อมูลอีกครั้ง"
+          "กรุณาตรวจสอบข้อมูลอีกครั้ง"
         );
       }
     } catch (error) {

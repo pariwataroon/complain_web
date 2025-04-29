@@ -202,7 +202,6 @@ const SetRole = () => {
   const handleUserDelete = (userId) => {
     // ค้นหาผู้ใช้ที่ต้องการลบจาก users
     const user = users.find((u) => u.id === userId);
-    console.log("userdelete", user);
 
     if (!user) {
       alertWarning("ไม่พบผู้ใช้ในระบบ");
@@ -260,7 +259,6 @@ const SetRole = () => {
   const [sections, setSections] = useState([]);
   const [groups, setGroups] = useState([]); // roles_tracking
   const [users, setUsers] = useState([]); // user_permissions
-  console.log("users", users);
   const [selectedMenu, setSelectedMenu] = useState({
     mainMenu: "",
     resourceId: "",

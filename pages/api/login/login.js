@@ -10,15 +10,16 @@ const loginThaID = async (authCode) => {
     const response = await axiosInstance.post("/thaid/auth", data);
 
     if (response && response.data) {
-      console.log("Login successful:", response.data);
 
       const { access_token, refresh_token } = response.data.res_data;
-      const decoded = DecodeJWT(access_token);
-      const info = decoded?.payload || {};
+      if (access_token && refresh_token) {
+        const decoded = DecodeJWT(access_token);
+        const info = decoded?.payload || {};
 
-      Cookies.set("access_token", access_token, { expires: 7, path: "/" });
-      Cookies.set("refresh_token", refresh_token, { expires: 7, path: "/" });
-      Cookies.set("info", JSON.stringify(info), { expires: 7, path: "/" });
+        Cookies.set("access_token", access_token, { expires: 7, path: "/" });
+        Cookies.set("refresh_token", refresh_token, { expires: 7, path: "/" });
+        Cookies.set("info", JSON.stringify(info), { expires: 7, path: "/" });
+      }
 
       return response.data;
     }
@@ -33,15 +34,16 @@ const loginCard = async (authCode) => {
     const response = await axiosInstance.post("/auth/login", authCode);
 
     if (response && response.data) {
-      console.log("Login successful:", response.data);
 
       const { access_token, refresh_token } = response.data.res_data;
-      const decoded = DecodeJWT(access_token);
-      const info = decoded?.payload || {};
+      if (access_token && refresh_token) {
+        const decoded = DecodeJWT(access_token);
+        const info = decoded?.payload || {};
 
-      Cookies.set("access_token", access_token, { expires: 7, path: "/" });
-      Cookies.set("refresh_token", refresh_token, { expires: 7, path: "/" });
-      Cookies.set("info", JSON.stringify(info), { expires: 7, path: "/" });
+        Cookies.set("access_token", access_token, { expires: 7, path: "/" });
+        Cookies.set("refresh_token", refresh_token, { expires: 7, path: "/" });
+        Cookies.set("info", JSON.stringify(info), { expires: 7, path: "/" });
+      }
 
       return response.data;
     }
@@ -50,5 +52,6 @@ const loginCard = async (authCode) => {
     throw error;
   }
 };
+
 
 export { loginThaID, loginCard };
