@@ -1,6 +1,6 @@
 import React from "react";
 import { useRouter } from "next/router";
-import { Box, Table, TableHead, TableRow, TableCell, TableBody, Container } from "@mui/material";
+import { Box, Table, TableHead, TableRow, TableCell, TableBody, Container, TablePagination } from "@mui/material";
 import styles from "./TableAll.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
@@ -16,11 +16,24 @@ const TableAll = ({
     navigateTo = "",
 }) => {
     const router = useRouter();
+    const [page, setPage] = React.useState(0);
+    const [rowsPerPage, setRowsPerPage] = React.useState(10);
+
+    const handlePageChange = (_, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleRowsPerPageChange = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
+
     const filteredData = data.filter(
         (item) =>
             item.subject.includes(search) &&
             (statusFilter ? item.status === statusFilter : true)
     );
+
     const handleRowClick = (item) => {
         if (navigateTo) {
             router.push(`${navigateTo}/${item.id}`);
@@ -69,31 +82,42 @@ const TableAll = ({
                     </TableHead>
 
                     <TableBody>
-                        {filteredData.map((item, index) => (
-                            <TableRow
-                                key={item.id}
-                                onClick={() => handleRowClick(item)}
-                                sx={{
-                                    cursor: "pointer",
-                                    "&:hover": {
-                                        backgroundColor: "#f5f7ff",
-                                    },
-                                }}
-                            >
-                                <TableCell align="center" sx={{ fontWeight: 600, color: "#1120A3" }}>
-                                    {index + 1}
-                                </TableCell>
-                                <TableCell>{item.date}</TableCell>
-                                <TableCell className={styles.ellipsisCell}>{item.subject}</TableCell>
-                                <TableCell className={styles.ellipsisCell}>{item.type}</TableCell>
-                                <TableCell>{item.department}</TableCell>
-                                <TableCell>{item.sentDate}</TableCell>
-                                <TableCell>{item.status}</TableCell>
-                            </TableRow>
-                        ))}
+                        {filteredData
+                            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                            .map((item, index) => (
+                                <TableRow
+                                    key={item.id}
+                                    onClick={() => handleRowClick(item)}
+                                    sx={{
+                                        cursor: "pointer",
+                                        "&:hover": { backgroundColor: "#f5f7ff" },
+                                    }}
+                                >
+                                    <TableCell align="center" sx={{ fontWeight: 600, color: "#1120A3" }}>
+                                        {page * rowsPerPage + index + 1}
+                                    </TableCell>
+                                    <TableCell>{item.date}</TableCell>
+                                    <TableCell className={styles.ellipsisCell}>{item.subject}</TableCell>
+                                    <TableCell className={styles.ellipsisCell}>{item.type}</TableCell>
+                                    <TableCell>{item.department}</TableCell>
+                                    <TableCell>{item.sentDate}</TableCell>
+                                    <TableCell>{item.status}</TableCell>
+                                </TableRow>
+                            ))}
+
                     </TableBody>
 
                 </Table>
+                <TablePagination
+                    component="div"
+                    rowsPerPageOptions={[5, 10, 25]}
+                    count={filteredData.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    sx={{ borderTop: "1px solid #eee" }}
+                />
             </Box>
         </Container>
     );

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableList from "@services/TableList/TableList";
 import { useRouter } from "next/router";
-/* breadcrumb */
+
 const breadcrumbItems = [
   {
     label: "รับเข้าข้อมูล",
@@ -17,7 +17,6 @@ const breadcrumbItems = [
   { label: "สืบค้นเรื่องร้องเรียน" },
 ];
 
-/* mock data (11 แถว) */
 const mockComplaints = [
   {
     id: 1,
@@ -136,7 +135,6 @@ const SearchComplaints = () => {
   const router = useRouter();
   const handleNavigateTo = () =>
     router.push("/admin/edit/search/Filteromplaints");
-  /* รับค่า filter จาก TableList แล้วคัดกรอง */
   const handleSearch = (filters) => {
     const { claimantName, citizenId, subject, docNo, agency } = filters;
 
@@ -161,7 +159,7 @@ const SearchComplaints = () => {
         title="สืบค้นเรื่องร้องเรียน"
         navigateTo="/admin/edit/search"
         agencyOptions={agencyOptions}
-        onSearch={handleSearch} /* ← ส่ง handleSearch */
+        onSearch={handleSearch}
         handleNavigateTo={handleNavigateTo}
       />
     </>

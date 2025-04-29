@@ -115,8 +115,8 @@ export default function Sidebar() {
           };
         });
 
-       
-          
+
+
         setMenuData(filteredMenu);
       } catch (err) {
         console.error(err);
@@ -174,7 +174,13 @@ export default function Sidebar() {
                     ) : (
                       <span
                         className={styles.linkText}
-                        onClick={() => router.push(item.to)}
+                        onClick={() => {
+                          const target = item.to || item.path;
+                          if (target) {
+                            router.push(target);
+                          }
+                        }}
+
                       >
                         {item.display_name || item.label}
                       </span>
@@ -204,7 +210,7 @@ export default function Sidebar() {
       <List className={styles.navList}>
         {menuData.map((group) => {
           const IconC = groupIcons[group.group_name] || Settings;
-          
+
           const submenu = [
             { type: "header", label: headerTextMap[group.group_name] || group.display_name },
             ...group.resources,

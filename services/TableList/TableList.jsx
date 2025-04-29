@@ -1,10 +1,3 @@
-/**
- * services/TableList/TableList.jsx
- * – แถบค้นหาแถวเดียว, ส่ง filters กลับผ่าน onSearch,
- *   Container มี shadow, tableWrapper ไม่มี shadow, padding ครบ,
- *   และเพิ่ม TablePagination ใต้ตาราง
- */
-
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
@@ -24,13 +17,14 @@ import styles from "./TableList.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
+import SearchOffIcon from '@mui/icons-material/SearchOff';
 
 const TableList = ({
   data = [],
   title = "",
   navigateTo = "",
   agencyOptions = [],
-  onSearch = () => {},
+  onSearch = () => { },
   handleNavigateTo,
 }) => {
   const router = useRouter();
@@ -62,14 +56,23 @@ const TableList = ({
   };
 
   const handleSearchClick = () => {
-    onSearch(filters); // ส่ง filters กลับไป parent
-    document
-      ?.getElementById("table-results")
-      ?.scrollIntoView({ behavior: "smooth" });
+    onSearch(filters);
   };
 
-  const handleRowClick = (item) =>
-    navigateTo && router.push(`${navigateTo}/${item.id}`);
+  const handleClearSearch = () => {
+    const cleared = {
+      claimantName: "",
+      citizenId: "",
+      subject: "",
+      docNo: "",
+      agency: "",
+    };
+    setFilters(cleared);
+    setPage(0);
+    onSearch(cleared);
+  };
+
+  const handleRowClick = (item) => navigateTo && router.push(`${navigateTo}/${item.id}`);
 
   return (
     <Container
@@ -83,7 +86,6 @@ const TableList = ({
     >
       <Box className={styles.headerBar}>{title}</Box>
 
-      {/* search bar */}
       <Box
         display="flex"
         justifyContent="space-between"
@@ -140,6 +142,17 @@ const TableList = ({
             }}
           >
             <SearchIcon />
+          </IconButton>
+          <IconButton
+            onClick={handleClearSearch}
+            sx={{
+              bgcolor: "#1120A3",
+              color: "#fff",
+              "&:hover": { bgcolor: "#0b1580" },
+              flexShrink: 0,
+            }}
+          >
+            <SearchOffIcon />
           </IconButton>
 
           <Button

@@ -1,7 +1,7 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
 import ComplaintDetail from "@components/ReceiveData/SearchComplaints/ComplaintDetail";
 
-const Search = () => {
+const SearchID = () => {
   return (
     <div>
       <ComplaintDetail />
@@ -9,6 +9,6 @@ const Search = () => {
   );
 };
 
-Search.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
+SearchID.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
 
-export default Search;
+export default SearchID;

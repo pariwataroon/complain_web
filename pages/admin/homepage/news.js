@@ -1,10 +1,10 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
 
 
-const Opm1111 = () => {
+const News = () => {
   return <div>กำหนดข่าวสาร</div>;
 };
 
-Opm1111.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
+News.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
 
-export default Opm1111;
+export default News;
