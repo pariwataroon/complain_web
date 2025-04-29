@@ -144,6 +144,21 @@ const getUsersByRole = async (role_id) => {
     throw err;
   }
 };
+
+/* ========== GET ALL USERS BY GROUP ========== */
+
+const getUsersByGroup = async (role_id) => {
+  try {
+    const { data } = await axiosInstance.get(
+      "/permissions/user-resources/bygroup"
+    );
+    return data;
+  } catch (err) {
+    console.error("Error fetching user-resources bygroup:", err);
+    throw err;
+  }
+};
+
 export {
   getMenuPermission,
   getUserStatsByRole,
@@ -154,4 +169,5 @@ export {
   createUserPermission,
   deleteUserPermission,
   getUsersByRole,
+  getUsersByGroup,
 };

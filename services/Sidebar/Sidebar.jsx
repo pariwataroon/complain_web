@@ -24,7 +24,7 @@ import styles from "./Sidebar.module.scss";
 import stylesNoti from "./SidebarNoti.module.scss";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import {
-  getMenuPermission,
+  getUsersByGroup,
 } from "@pages/api/role/role";
 import {
   getNotifications,
@@ -89,7 +89,7 @@ export default function Sidebar() {
     (async () => {
       showLoading("กำลังโหลดเมนู...");
       try {
-        const data = await getMenuPermission();
+        const data = await getUsersByGroup();
         if (!data?.res_data) {
           await alertError("ผิดพลาด", "ไม่พบข้อมูลเมนู");
           return;
@@ -98,19 +98,23 @@ export default function Sidebar() {
         const info = Cookies.get("info");
         const userRoles = info ? JSON.parse(info).roles : [];
 
-        const filteredMenu = data.res_data
-          .map((group) => {
-            const resources = group.resources.filter((resource) =>
-              resource.roles_tracking.some(
-                (roleTrack) => userRoles.includes(roleTrack.role_name) && roleTrack.can_read
-              )
-            );
-            if (resources.length > 0) {
-              return { ...group, resources };
-            }
-            return null;
-          })
-          .filter(Boolean);
+        const filteredMenu = data.res_data.map((group) => {
+          const resources = group.resources || [];
+
+          return {
+            group_id: group.group_id,
+            group_name: group.group_name,
+            display_name: group.display_name,
+            order_index: group.order_index,
+            resources: resources.map((res) => ({
+              label: res.description,
+              display_name: res.display_name ?? res.description,
+              path: res.path,
+              type: "item"
+            })),
+          };
+        });
+
        
           
         setMenuData(filteredMenu);
@@ -200,16 +204,12 @@ export default function Sidebar() {
       <List className={styles.navList}>
         {menuData.map((group) => {
           const IconC = groupIcons[group.group_name] || Settings;
-
+          
           const submenu = [
-            { type: "header", label: headerTextMap[group.group_name] || "" },
-            ...group.resources.map((res) => ({
-              type: "item",
-              label: res.description,
-              display_name: res.display_name,
-              to: res.path,
-            })),
+            { type: "header", label: headerTextMap[group.group_name] || group.display_name },
+            ...group.resources,
           ];
+
 
           if (group.resources.length === 1) {
             const singleResource = group.resources[0];
