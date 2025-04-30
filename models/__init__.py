@@ -6,6 +6,20 @@ from .user_role import UserRole
 from .user import User
 from .token import Token
 from .title import Title
+from .association_tables import *
+from .department_groups import DepartmentGroup
+from .departments import Department
+from .notification import Notification
+from .position import Position
+from .resource_groups import ResourceGroup
+from .time_setting import TimeSetting
+from .user_positions import UserPosition
+from .venues import Venue
+from .verification_token import VerificationToken
 
 # ระบุโมเดลที่สามารถนำเข้าเมื่อใช้ from models import *
-__all__ = ['Permission', 'Resource', 'Role', 'UserRole', 'User', 'Token', 'Title']
+__all__ = [
+    'Permission', 'Resource', 'Role', 'UserRole', 'User', 'Token', 'Title',
+    'DepartmentGroup', 'Department', 'Notification', 'Position', 
+    'ResourceGroup', 'TimeSetting', 'UserPosition', 'Venue', 'VerificationToken'
+]
