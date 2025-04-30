@@ -3219,7 +3219,7 @@
 		"description": "API สำหรับจัดการข้อมูลกลุ่มหน่วยงาน"
 		},
 		{
-            "name": "Notifications",
+            "name": "NOTIFICATIONS",
             "item": [
                 {
                     "name": "Create Notification",
