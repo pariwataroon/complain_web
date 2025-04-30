@@ -22,6 +22,10 @@ from seeders.department_groups_seeder import DepartmentGroupSeeder
 from seeders.department_seeder import DepartmentSeeder
 from seeders.venues_seeder import VenueSeeder
 from seeders.notification_seeder import NotificationSeeder
+from seeders.comp_geographies_seeder import GeographySeeder
+from seeders.comp_provinces_seeder import ProvinceSeeder
+from seeders.comp_amphures_seeder import AmphureSeeder
+from seeders.comp_districts_seeder import DistrictSeeder
 
 # เพิ่ม path เพื่อป้องกัน import error
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -56,6 +60,10 @@ def check_and_seed_tables():
             {"name": "departments", "seeder": DepartmentSeeder(), "table_prefix": ""},
             {"name": "venues", "seeder": VenueSeeder(), "table_prefix": ""},
             {"name": "notifications", "seeder": NotificationSeeder(), "table_prefix": ""},
+            {"name": "geographies", "seeder": GeographySeeder(), "table_prefix": "comp_"},
+            {"name": "provinces", "seeder": ProvinceSeeder(), "table_prefix": "comp_"},
+            {"name": "amphures", "seeder": AmphureSeeder(), "table_prefix": "comp_"},
+            {"name": "districts", "seeder": DistrictSeeder(), "table_prefix": "comp_"},
         ]
 
         # วนลูปตรวจสอบแต่ละตาราง โดยเรียกตามลำดับที่กำหนดไว้ในลิสต์
