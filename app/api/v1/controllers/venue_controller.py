@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func 
 from typing import List, Optional, Union, Dict, Any
 from uuid import UUID
 from fastapi import HTTPException
@@ -175,23 +176,26 @@ def create_venue(db: Session, venue_data: dict) -> Dict[str, Any]:
     group_filter = {}
     if "group_name" in venue_data and venue_data["group_name"]:
         group_filter["group_name"] = venue_data["group_name"]
-    
-    max_order = db.query(db.func.max(Venue.order_index)).filter_by(**group_filter).scalar() or 0
-    
+
+    # แก้จาก db.func.max เป็น func.max
+    max_order = db.query(func.max(Venue.order_index)).filter_by(**group_filter).scalar() or 0
+    print(f"Max order index for group {group_filter}: {max_order}")
     # กำหนดค่า order_index อัตโนมัติถ้าไม่ได้ระบุ
     if "order_index" not in venue_data or venue_data["order_index"] is None:
         venue_data["order_index"] = max_order + 10
     
     # Create venue
-    db_venue = Venue(**venue_data)
+    db_venue = Venue()
+    for key, value in venue_data.items():
+        setattr(db_venue, key, value)
+    db_venue.order_index = venue_data["order_index"]
+    print(f"Creating venue with order index: {db_venue}")
     db.add(db_venue)
     db.commit()
     db.refresh(db_venue)
     
     # Load department data
     db.refresh(db_venue, ['department'])
-    
-    logger.info(f"Created venue: {db_venue.name} with ID {db_venue.id}")
     
     return VenueSchema.model_validate(db_venue).model_dump()
 
@@ -254,7 +258,7 @@ def get_venues_stats(db: Session) -> Dict[str, Any]:
     # จำนวนสถานที่แยกตามกลุ่ม
     group_stats = db.query(
         Venue.group_name,
-        db.func.count(Venue.id).label('count')
+        func.count(Venue.id).label('count')  # แก้จาก db.func.count เป็น func.count
     ).filter(
         Venue.is_active == True,
         Venue.group_name != None
@@ -267,7 +271,7 @@ def get_venues_stats(db: Session) -> Dict[str, Any]:
     # จำนวนสถานที่แยกตามหน่วยงานหลัก
     dept_stats = db.query(
         Department.name,
-        db.func.count(Venue.id).label('count')
+        func.count(Venue.id).label('count')  # แก้จาก db.func.count เป็น func.count
     ).join(
         Department,
         Department.id == Venue.department_id
