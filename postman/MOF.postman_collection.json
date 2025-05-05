@@ -3329,7 +3329,872 @@
 					"response": []
 				  }
             ]
-        }
+        },
+		{
+			"name": "GEOGRAPHY",
+			"item": [
+			  {
+				"name": "Regions Endpoints",
+				"item": [
+				  {
+					"name": "Get All Regions",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/regions",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "regions"
+						]
+					  },
+					  "description": "ดึงรายการภูมิภาคทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Get Region by ID",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/regions/{{region_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "regions",
+						  "{{region_id}}"
+						]
+					  },
+					  "description": "ดึงข้อมูลภูมิภาคตาม ID - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Create Region",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "POST",
+					  "header": [],
+					  "body": {
+						"mode": "raw",
+						"raw": "{\n    \"name\": \"ภูมิภาคใหม่\"\n}",
+						"options": {
+						  "raw": {
+							"language": "json"
+						  }
+						}
+					  },
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/regions",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "regions"
+						]
+					  },
+					  "description": "สร้างภูมิภาคใหม่ - ต้องมีสิทธิ์สร้างใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Update Region",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "PUT",
+					  "header": [],
+					  "body": {
+						"mode": "raw",
+						"raw": "{\n    \"name\": \"ภูมิภาคที่แก้ไข\"\n}",
+						"options": {
+						  "raw": {
+							"language": "json"
+						  }
+						}
+					  },
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/regions/{{region_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "regions",
+						  "{{region_id}}"
+						]
+					  },
+					  "description": "แก้ไขข้อมูลภูมิภาค - ต้องมีสิทธิ์แก้ไขใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Delete Region",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "DELETE",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/regions/{{region_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "regions",
+						  "{{region_id}}"
+						]
+					  },
+					  "description": "ลบภูมิภาค - ต้องมีสิทธิ์ลบใน setting_geography"
+					},
+					"response": []
+				  }
+				],
+				"description": "API จัดการข้อมูลภูมิภาค"
+			  },
+			  {
+				"name": "Provinces Endpoints",
+				"item": [
+				  {
+					"name": "Get All Provinces",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/provinces",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "provinces"
+						]
+					  },
+					  "description": "ดึงรายการจังหวัดทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Get Provinces by Geography",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/provinces?geography_id={{region_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "provinces"
+						],
+						"query": [
+						  {
+							"key": "geography_id",
+							"value": "{{region_id}}"
+						  }
+						]
+					  },
+					  "description": "ดึงรายการจังหวัดตามภูมิภาค - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Get Province by ID",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/provinces/{{province_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "provinces",
+						  "{{province_id}}"
+						]
+					  },
+					  "description": "ดึงข้อมูลจังหวัดตาม ID - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Create Province",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "POST",
+					  "header": [],
+					  "body": {
+						"mode": "raw",
+						"raw": "{\n    \"code\": \"99\",\n    \"name_th\": \"จังหวัดทดสอบ\",\n    \"name_en\": \"Test Province\",\n    \"geography_id\": 1\n}",
+						"options": {
+						  "raw": {
+							"language": "json"
+						  }
+						}
+					  },
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/provinces",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "provinces"
+						]
+					  },
+					  "description": "สร้างจังหวัดใหม่ - ต้องมีสิทธิ์สร้างใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Update Province",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "PUT",
+					  "header": [],
+					  "body": {
+						"mode": "raw",
+						"raw": "{\n    \"name_th\": \"จังหวัดทดสอบ (แก้ไข)\",\n    \"name_en\": \"Test Province (Modified)\",\n    \"geography_id\": 2\n}",
+						"options": {
+						  "raw": {
+							"language": "json"
+						  }
+						}
+					  },
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/provinces/{{province_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "provinces",
+						  "{{province_id}}"
+						]
+					  },
+					  "description": "แก้ไขข้อมูลจังหวัด - ต้องมีสิทธิ์แก้ไขใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Delete Province",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "DELETE",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/provinces/{{province_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "provinces",
+						  "{{province_id}}"
+						]
+					  },
+					  "description": "ลบจังหวัด - ต้องมีสิทธิ์ลบใน setting_geography"
+					},
+					"response": []
+				  }
+				],
+				"description": "API จัดการข้อมูลจังหวัด"
+			  },
+			  {
+				"name": "Amphures Endpoints",
+				"item": [
+				  {
+					"name": "Get All Amphures",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/amphures",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "amphures"
+						]
+					  },
+					  "description": "ดึงรายการอำเภอทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Get Amphures by Province",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/amphures?province_id={{province_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "amphures"
+						],
+						"query": [
+						  {
+							"key": "province_id",
+							"value": "{{province_id}}"
+						  }
+						]
+					  },
+					  "description": "ดึงรายการอำเภอตามจังหวัด - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Get Amphure by ID",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/amphures/{{amphure_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "amphures",
+						  "{{amphure_id}}"
+						]
+					  },
+					  "description": "ดึงข้อมูลอำเภอตาม ID - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Create Amphure",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "POST",
+					  "header": [],
+					  "body": {
+						"mode": "raw",
+						"raw": "{\n    \"code\": \"9999\",\n    \"name_th\": \"อำเภอทดสอบ\",\n    \"name_en\": \"Test Amphure\",\n    \"province_id\": 1\n}",
+						"options": {
+						  "raw": {
+							"language": "json"
+						  }
+						}
+					  },
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/amphures",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "amphures"
+						]
+					  },
+					  "description": "สร้างอำเภอใหม่ - ต้องมีสิทธิ์สร้างใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Update Amphure",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "PUT",
+					  "header": [],
+					  "body": {
+						"mode": "raw",
+						"raw": "{\n    \"name_th\": \"อำเภอทดสอบ (แก้ไข)\",\n    \"name_en\": \"Test Amphure (Modified)\",\n    \"province_id\": 2\n}",
+						"options": {
+						  "raw": {
+							"language": "json"
+						  }
+						}
+					  },
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/amphures/{{amphure_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "amphures",
+						  "{{amphure_id}}"
+						]
+					  },
+					  "description": "แก้ไขข้อมูลอำเภอ - ต้องมีสิทธิ์แก้ไขใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Delete Amphure",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "DELETE",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/amphures/{{amphure_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "amphures",
+						  "{{amphure_id}}"
+						]
+					  },
+					  "description": "ลบอำเภอ - ต้องมีสิทธิ์ลบใน setting_geography"
+					},
+					"response": []
+				  }
+				],
+				"description": "API จัดการข้อมูลอำเภอ"
+			  },
+			  {
+				"name": "Districts Endpoints",
+				"item": [
+				  {
+					"name": "Get All Districts",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/districts",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "districts"
+						]
+					  },
+					  "description": "ดึงรายการตำบลทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Get Districts by Amphure",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/districts?amphure_id={{amphure_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "districts"
+						],
+						"query": [
+						  {
+							"key": "amphure_id",
+							"value": "{{amphure_id}}"
+						  }
+						]
+					  },
+					  "description": "ดึงรายการตำบลตามอำเภอ - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Get District by ID",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/districts/{{district_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "districts",
+						  "{{district_id}}"
+						]
+					  },
+					  "description": "ดึงข้อมูลตำบลตาม ID - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Create District",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "POST",
+					  "header": [],
+					  "body": {
+						"mode": "raw",
+						"raw": "{\n    \"id\": \"999999\",\n    \"zip_code\": 99999,\n    \"name_th\": \"ตำบลทดสอบ\",\n    \"name_en\": \"Test District\",\n    \"amphure_id\": 1\n}",
+						"options": {
+						  "raw": {
+							"language": "json"
+						  }
+						}
+					  },
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/districts",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "districts"
+						]
+					  },
+					  "description": "สร้างตำบลใหม่ - ต้องมีสิทธิ์สร้างใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Update District",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "PUT",
+					  "header": [],
+					  "body": {
+						"mode": "raw",
+						"raw": "{\n    \"zip_code\": 99999,\n    \"name_th\": \"ตำบลทดสอบ (แก้ไข)\",\n    \"name_en\": \"Test District (Modified)\",\n    \"amphure_id\": 2\n}",
+						"options": {
+						  "raw": {
+							"language": "json"
+						  }
+						}
+					  },
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/districts/{{district_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "districts",
+						  "{{district_id}}"
+						]
+					  },
+					  "description": "แก้ไขข้อมูลตำบล - ต้องมีสิทธิ์แก้ไขใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Delete District",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "DELETE",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/districts/{{district_id}}",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "districts",
+						  "{{district_id}}"
+						]
+					  },
+					  "description": "ลบตำบล - ต้องมีสิทธิ์ลบใน setting_geography"
+					},
+					"response": []
+				  }
+				],
+				"description": "API จัดการข้อมูลตำบล"
+			  },
+			  {
+				"name": "Utility Endpoints",
+				"item": [
+				  {
+					"name": "Get Geography Statistics",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/stats",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "stats"
+						]
+					  },
+					  "description": "ดึงข้อมูลสถิติของข้อมูลภูมิศาสตร์ - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  },
+				  {
+					"name": "Search by Zipcode",
+					"request": {
+					  "auth": {
+						"type": "bearer",
+						"bearer": [
+						  {
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						  }
+						]
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/geography/search/by-zipcode/10400",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "geography",
+						  "search",
+						  "by-zipcode",
+						  "10400"
+						]
+					  },
+					  "description": "ค้นหาสถานที่ตามรหัสไปรษณีย์ - ต้องมีสิทธิ์อ่านใน setting_geography"
+					},
+					"response": []
+				  }
+				],
+				"description": "API สำหรับดึงข้อมูลสถิติและค้นหาข้อมูล"
+			  }
+			],
+			"description": "API สำหรับจัดการข้อมูลภูมิศาสตร์ (ภูมิภาค, จังหวัด, อำเภอ, ตำบล)"
+		}
 	],
 	"event": [
 		{
