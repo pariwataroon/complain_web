@@ -18,7 +18,6 @@ class Geography(GeographyBase):
     id: int
 
     class Config:
-        orm_mode = True
         from_attributes = True
 
 
@@ -44,7 +43,6 @@ class Province(ProvinceBase):
     id: int
 
     class Config:
-        orm_mode = True
         from_attributes = True
 
 
@@ -70,7 +68,6 @@ class Amphure(AmphureBase):
     id: int
 
     class Config:
-        orm_mode = True
         from_attributes = True
 
 
@@ -95,7 +92,6 @@ class DistrictUpdate(DistrictBase):
 
 class District(DistrictBase):
     class Config:
-        orm_mode = True
         from_attributes = True
 
 
