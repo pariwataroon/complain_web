@@ -443,7 +443,97 @@
 						"description": "ส่งอีเมลยืนยันใหม่ในกรณีที่อีเมลเดิมหมดอายุหรือได้รับไม่ถึง"
 					},
 					"response": []
-				}
+				},
+				{
+					"name": "auth/forgot-password",
+					"request": {
+					  "auth": {
+						"type": "noauth"
+					  },
+					  "method": "POST",
+					  "header": [],
+					  "body": {
+						"mode": "raw",
+						"raw": "{\n    \"email\": \"user@example.com\"\n}",
+						"options": {
+						  "raw": {
+							"language": "json"
+						  }
+						}
+					  },
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/auth/forgot-password",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "auth",
+						  "forgot-password"
+						]
+					  },
+					  "description": "ส่งอีเมลลิงก์รีเซ็ตรหัสผ่านให้กับผู้ใช้ เมื่ออีเมลตรงกับผู้ใช้ในระบบ จะส่งลิงก์รีเซ็ตรหัสผ่านที่มีอายุ 15 นาที"
+					},
+					"response": []
+				  },
+				  {
+					"name": "auth/reset-password",
+					"request": {
+					  "auth": {
+						"type": "noauth"
+					  },
+					  "method": "POST",
+					  "header": [],
+					  "body": {
+						"mode": "raw",
+						"raw": "{\n    \"token\": \"your_reset_token_here\",\n    \"new_password\": \"newSecurePassword123!\"\n}",
+						"options": {
+						  "raw": {
+							"language": "json"
+						  }
+						}
+					  },
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/auth/reset-password",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "auth",
+						  "reset-password"
+						]
+					  },
+					  "description": "รีเซ็ตรหัสผ่านโดยใช้ token ที่ได้รับจากอีเมล token มีอายุ 15 นาทีและใช้งานได้เพียงครั้งเดียว"
+					},
+					"response": []
+				  },
+				  {
+					"name": "auth/verify-reset-token",
+					"request": {
+					  "auth": {
+						"type": "noauth"
+					  },
+					  "method": "GET",
+					  "header": [],
+					  "url": {
+						"raw": "{{API}}{{PREFIX}}/auth/verify-reset-token?token=your_reset_token_here",
+						"host": [
+						  "{{API}}{{PREFIX}}"
+						],
+						"path": [
+						  "auth",
+						  "verify-reset-token"
+						],
+						"query": [
+						  {
+							"key": "token",
+							"value": "your_reset_token_here"
+						  }
+						]
+					  },
+					  "description": "ตรวจสอบความถูกต้องของ token รีเซ็ตรหัสผ่าน เพื่อให้ frontend สามารถตรวจสอบก่อนแสดงฟอร์มรีเซ็ตรหัสผ่านได้"
+					},
+					"response": []
+				  }
 			]
 		},
 		{
