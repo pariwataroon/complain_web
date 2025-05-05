@@ -41,7 +41,6 @@ export function formatPhoneNumber_null(value) {
   return `${onlyNums.slice(0, 3)}-${onlyNums.slice(3, 6)}-${onlyNums.slice(6)}`;
 }
 
-
 export function formatPhoneNumber(value) {
   const onlyNums = value.replace(/\D/g, "").slice(0, 10);
   if (onlyNums.length <= 3) return onlyNums;
@@ -97,11 +96,29 @@ export function formatElapsedThaiTime(createdAt) {
 }
 
 export function formatThaiDateRange(start, end) {
-  return `ตั้งแต่วันที่ ${formatThaiDate(start)} - ${formatThaiDate(end)}`;
+  const startD = dayjs(start);
+  const endD = dayjs(end);
+  const startDay = startD.format("D");
+  const endDay = endD.format("D");
+  const startMonth = startD.format("MMMM");
+  const endMonth = endD.format("MMMM");
+  const thaiYear = endD.year() + 543;
+
+  if (startD.month() === endD.month()) {
+    return `ตั้งแต่วันที่ ${startDay} - ${endDay} ${startMonth} ${thaiYear}`;
+  } else {
+    return `ตั้งแต่วันที่ ${startDay} ${startMonth} - ${endDay} ${endMonth} ${thaiYear}`;
+  }
 }
 
 export function formatDateWithThaiYear(date) {
   const d = dayjs(date);
   const year = d.year() + 543;
   return `${d.format("D MMM")} ${year}`;
+}
+
+export function formatThaiBuddhistYear(date) {
+  const d = dayjs(date);
+  const thaiYear = d.year() + 543;
+  return `${d.format("D MMM")} ${thaiYear}`;
 }

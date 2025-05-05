@@ -1,0 +1,129 @@
+/* ==== กล่องหลัก ==== */
+.dailyStats {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+    position: relative;
+}
+
+/* ==== กล่องเลือกวันที่ ==== */
+.dateGroup {
+    position: absolute;
+    right: 24px;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* label + กล่อง */
+.inputLabel {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #1120a3;
+
+    span {
+        /* “ตั้งแต่ / ถึง” */
+        min-width: 40px;
+        text-align: right;
+    }
+}
+
+/* กล่องอินพุต */
+.inputBox {
+    width: 160px;
+    padding: 8px 40px 8px 14px;
+    border: 2px solid #878fd0;
+    border-radius: 12px;
+    cursor: pointer;
+    background: #fff;
+    position: relative;
+}
+
+.dateText {
+    font-size: 14px;
+    color: #5b6fc6;
+    pointer-events: none;
+}
+
+.icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: #5b6fc6;
+    pointer-events: none;
+}
+
+/* ==== Header center ==== */
+.header {
+    text-align: center;
+    margin-top: 32px;
+}
+
+.main {
+    color: #1120a3;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 4px;
+}
+
+.sub {
+    color: #1120a3;
+    font-size: 16px;
+    margin: 0;
+}
+
+.chart {
+    margin-top: 32px;
+}
+
+.tooltip {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .1);
+}
+
+.tooltipLabel {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.tooltipValue {
+    color: #1120a3;
+}
+
+.MuiPickersPopper-root {
+    z-index: 1300 !important;
+}
+
+.MuiPickersCalendarHeader-label {
+    font-weight: 600;
+    color: #1120a3;
+}
+
+.MuiPickersDay-root {
+    font-family: 'Sarabun', sans-serif;
+    border-radius: 8px;
+
+    &:hover {
+        background: #e4e9fb;
+    }
+
+    &.Mui-selected {
+        background: #3f51b5;
+        color: #fff;
+    }
+
+    &.MuiPickersDay-today {
+        border: 1px dashed #3f51b5;
+    }
+}
