@@ -7,7 +7,7 @@ export default function ThaIDPage() {
   const router = useRouter();
   const [countdown, setCountdown] = useState(10);
   const [state, setState] = useState("login");
-  
+
   const handleRegisterClick = () => {
     router.push({
       pathname: "/register",
@@ -18,7 +18,7 @@ export default function ThaIDPage() {
   const handleBackToLogin = () => {
     router.push("/login");
   };
-
+  //! PRODUCTION
   // useEffect(() => {
   //   const timer = setInterval(() => {
   //     setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
@@ -44,14 +44,14 @@ export default function ThaIDPage() {
     }
 
     const timer = setInterval(() => {
-      setCountdown(prev => prev - 1);
+      setCountdown((prev) => prev - 1);
     }, 1000);
 
     return () => clearInterval(timer);
   }, [countdown]);
 
   const handleRedirect = () => {
-    const baseUrl = "https://imauthsbx.bora.dopa.go.th/api/v2/oauth2/auth/";
+    const baseUrl = process.env.NEXT_PUBLIC_LOCALE;
     const params = new URLSearchParams({
       response_type: "code",
       client_id: process.env.NEXT_PUBLIC_CLIENT_ID,
@@ -59,7 +59,7 @@ export default function ThaIDPage() {
       state: state || "login",
     });
     console.log({ params });
-    
+
     const redirectUrl = `${baseUrl}?${params.toString()}&scope=pid given_name address family_name gender title house_address`;
     window.location.href = redirectUrl;
   };

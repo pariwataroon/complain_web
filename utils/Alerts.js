@@ -55,8 +55,8 @@ export const closeAlert = () => {
   Swal.close();
 };
 
-export const alertSuccess = (title, text) => showAlert("success", title, text);
-export const alertError = (title, text) => showAlert("error", title, text);
-export const alertWarning = (title, text) => showAlert("warning", title, text);
-export const alertInfo = (title, text) => showAlert("info", title, text);
-export const alertQuestion = (title, text) => showAlert("question", title, text);
+export const alertSuccess = (title, text, isHtml = false) => showAlert("success", title, text, isHtml);
+export const alertError = (title, text, isHtml = false) => showAlert("error", title, text, isHtml);
+export const alertWarning = (title, text, isHtml = false) => showAlert("warning", title, text, isHtml);
+export const alertInfo = (title, text, isHtml = false) => showAlert("info", title, text, isHtml);
+export const alertQuestion = (title, text, isHtml = false) => showAlert("question", title, text, isHtml);

@@ -2,10 +2,12 @@ import dayjs from "dayjs";
 import "dayjs/locale/th";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import buddhistEra from "dayjs/plugin/buddhistEra";
 
 dayjs.locale("th");
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(buddhistEra);
 
 export function formatCitizenId(value) {
   const onlyNums = value.replace(/\D/g, "").slice(0, 13);
@@ -92,4 +94,14 @@ export function formatElapsedThaiTime(createdAt) {
     return `${hours} ชม. ${minutes} นาที`;
   }
   return `${minutes} นาที`;
+}
+
+export function formatThaiDateRange(start, end) {
+  return `ตั้งแต่วันที่ ${formatThaiDate(start)} - ${formatThaiDate(end)}`;
+}
+
+export function formatDateWithThaiYear(date) {
+  const d = dayjs(date);
+  const year = d.year() + 543;
+  return `${d.format("D MMM")} ${year}`;
 }

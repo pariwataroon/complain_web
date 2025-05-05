@@ -3,13 +3,13 @@ import { useRouter } from "next/router";
 import { useForgetForm } from "@hooks/login/forget/useForgetForm";
 import { IconButton } from "@mui/material";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
-import { alertSuccess, alertError } from "@utils/Alerts"; // นำเข้า alertUtils
+import { alertSuccess, alertError } from "@utils/Alerts";
 import styles from "./ForgetPage.module.scss";
 
 export default function ForgetPage() {
   const router = useRouter();
-  const [countdown, setCountdown] = useState(0);  // จำนวนเวลาถอยหลัง
-  const [submitted, setSubmitted] = useState(false);  // เช็คว่ามีการ submit แล้ว
+  const [countdown, setCountdown] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
 
   const { register, handleSubmit, errors, onSubmit, handleResend } = useForgetForm();
 
@@ -24,7 +24,7 @@ export default function ForgetPage() {
     } else {
       handleResend();
     }
-    setCountdown(10);  // ตั้งเวลาถอยหลัง
+    setCountdown(10);
   };
 
   useEffect(() => {
@@ -35,14 +35,12 @@ export default function ForgetPage() {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  // ฟังก์ชันเพื่อแสดง alert หลัง submit
   const handleSubmitWithAlert = (data) => {
     onSubmit(data);
     alertSuccess("ส่งอีเมลรีเซ็ตรหัสผ่านสำเร็จ", "กรุณาตรวจสอบอีเมลของคุณ");
 
-    // ทำให้ปุ่มถูกล็อกหลังจากที่ผู้ใช้กดยืนยัน
     setSubmitted(true);
-    setCountdown(10);  // ตั้งเวลาถอยหลังอีกครั้ง
+    setCountdown(10);
   };
 
   return (

@@ -3,9 +3,7 @@ import SearchComplaints from "@components/ReceiveData/SearchComplaints/SearchCom
 
 const Search = () => {
   return (
-    <div>
       <SearchComplaints />
-    </div>
   );
 };
 
