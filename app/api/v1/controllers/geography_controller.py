@@ -324,3 +324,71 @@ def get_locations_by_zipcode(db: Session, zipcode: int):
         })
     
     return results
+
+def get_locations_by_province_name(db: Session, name: str):
+    """ค้นหาตำแหน่งที่ตั้งตามชื่อจังหวัด (ภาษาไทยหรืออังกฤษ)"""
+    # ค้นหาจังหวัดที่มีชื่อตรงหรือคล้ายคลึงกับที่ให้มา
+    provinces = db.query(Province).filter(
+        (Province.name_th.ilike(f"%{name}%")) | 
+        (Province.name_en.ilike(f"%{name}%"))
+    ).order_by(Province.name_th).all()
+    
+    results = []
+    for province in provinces:
+        # สร้างข้อมูลการตอบกลับ
+        results.append({
+            "province": model_to_dict(province),
+            "amphures_count": db.query(func.count(Amphure.id)).filter(Amphure.province_id == province.id).scalar(),
+            "districts_count": db.query(func.count(District.id)).filter(
+                District.amphure_id.in_(
+                    db.query(Amphure.id).filter(Amphure.province_id == province.id)
+                )
+            ).scalar()
+        })
+    
+    return results
+
+def get_locations_by_amphure_name(db: Session, name: str):
+    """ค้นหาตำแหน่งที่ตั้งตามชื่ออำเภอ (ภาษาไทยหรืออังกฤษ)"""
+    # ค้นหาอำเภอที่มีชื่อตรงหรือคล้ายคลึงกับที่ให้มา
+    amphures = db.query(Amphure).filter(
+        (Amphure.name_th.ilike(f"%{name}%")) | 
+        (Amphure.name_en.ilike(f"%{name}%"))
+    ).order_by(Amphure.name_th).all()
+    
+    results = []
+    for amphure in amphures:
+        province = db.query(Province).filter(Province.id == amphure.province_id).first()
+        
+        # สร้างข้อมูลการตอบกลับ
+        results.append({
+            "amphure": model_to_dict(amphure),
+            "province": model_to_dict(province) if province else None,
+            "districts_count": db.query(func.count(District.id)).filter(District.amphure_id == amphure.id).scalar()
+        })
+    
+    return results
+
+def get_locations_by_district_name(db: Session, name: str):
+    """ค้นหาตำแหน่งที่ตั้งตามชื่อตำบล (ภาษาไทยหรืออังกฤษ)"""
+    # ค้นหาตำบลที่มีชื่อตรงหรือคล้ายคลึงกับที่ให้มา
+    districts = db.query(District).filter(
+        (District.name_th.ilike(f"%{name}%")) | 
+        (District.name_en.ilike(f"%{name}%"))
+    ).order_by(District.name_th).all()
+    
+    results = []
+    for district in districts:
+        amphure = db.query(Amphure).filter(Amphure.id == district.amphure_id).first()
+        province = None
+        if amphure:
+            province = db.query(Province).filter(Province.id == amphure.province_id).first()
+        
+        # สร้างข้อมูลการตอบกลับ
+        results.append({
+            "district": model_to_dict(district),
+            "amphure": model_to_dict(amphure) if amphure else None,
+            "province": model_to_dict(province) if province else None
+        })
+    
+    return results

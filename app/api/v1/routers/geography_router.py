@@ -8,7 +8,8 @@ from app.api.v1.controllers.geography_controller import (
     get_provinces, get_province_by_id, get_provinces_by_geography, create_province, update_province, delete_province,
     get_amphures, get_amphure_by_id, get_amphures_by_province, create_amphure, update_amphure, delete_amphure,
     get_districts, get_district_by_id, get_districts_by_amphure, create_district, update_district, delete_district,
-    get_geography_stats, get_locations_by_zipcode
+    get_geography_stats, get_locations_by_zipcode, get_locations_by_province_name,
+    get_locations_by_amphure_name, get_locations_by_district_name
 )
 from app.api.middleware.jwt_verify import verify_token
 from app.api.v1.schemas.geography import (
@@ -347,4 +348,37 @@ async def search_by_zipcode_endpoint(
 ):
     """ค้นหาสถานที่ตามรหัสไปรษณีย์"""
     locations = get_locations_by_zipcode(db, zipcode)
+    return format_response("0000", locations)
+
+# เพิ่ม route สำหรับค้นหาตามชื่อจังหวัด
+@router.get("/search/by-province/{name}", response_model=FormatResponseModel)
+async def search_by_province_name(
+    name: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ค้นหาข้อมูลจังหวัดตามชื่อ (ภาษาไทยหรืออังกฤษ) - รองรับการค้นหาแบบบางส่วนของชื่อ"""
+    locations = get_locations_by_province_name(db, name)
+    return format_response("0000", locations)
+
+# เพิ่ม route สำหรับค้นหาตามชื่ออำเภอ
+@router.get("/search/by-amphure/{name}", response_model=FormatResponseModel)
+async def search_by_amphure_name(
+    name: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ค้นหาข้อมูลอำเภอตามชื่อ (ภาษาไทยหรืออังกฤษ) - รองรับการค้นหาแบบบางส่วนของชื่อ"""
+    locations = get_locations_by_amphure_name(db, name)
+    return format_response("0000", locations)
+
+# เพิ่ม route สำหรับค้นหาตามชื่อตำบล
+@router.get("/search/by-district/{name}", response_model=FormatResponseModel)
+async def search_by_district_name(
+    name: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ค้นหาข้อมูลตำบลตามชื่อ (ภาษาไทยหรืออังกฤษ) - รองรับการค้นหาแบบบางส่วนของชื่อ"""
+    locations = get_locations_by_district_name(db, name)
     return format_response("0000", locations)
