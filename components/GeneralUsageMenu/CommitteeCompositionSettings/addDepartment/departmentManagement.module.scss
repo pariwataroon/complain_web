@@ -1,0 +1,156 @@
+/* --------------------------------------------------
+   User Management  – Fixed minimum width (1000 px) with horizontal scroll
+   -------------------------------------------------- */
+
+/* Wrapper to enable horizontal scrolling when viewport < 1000 px */
+.userManagementWrapper {
+  width: 100%;
+  overflow-x: auto; /* show scrollbar only when needed */
+}
+
+/* Inside wrapper — the grid itself must never shrink below 1000 px */
+.userManagement {
+  min-width: 1000px; /* ✅ never go below this width */
+  width: 100%; /* stretch when viewport ≥ 1000px */
+}
+
+/* =================  Header  ================= */
+.headerRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 0.5fr;
+  background-color: #2499ff;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.headerCell {
+  padding: 4px 0;
+}
+
+/* =================  Sections  =============== */
+.section {
+  margin-bottom: 8px;
+}
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #91cbff;
+  color: #1120a3;
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border: 2px solid #2499ff;
+}
+.sectionTitle {
+  display: flex;
+  align-items: center;
+}
+.circleIcon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+.addButton {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.addButton img {
+  width: 24px;
+  height: 24px;
+}
+
+/* =================  Rows & Containers  =============== */
+.userRow {
+  margin: 0 0 8px 0;
+  display: grid;
+  grid-template-columns: 19% 81%;
+}
+
+.userContainer {
+  grid-column: 2 / span 1;
+  border: 1px solid #ffd700;
+  border-radius: 8px;
+  background-color: #fff;
+  overflow: hidden;
+}
+
+.userInfo {
+  display: grid;
+  grid-template-columns: 21% 22.5% 22.5% 22.5% 11.5%;
+  padding: 8px 16px;
+}
+
+.userCell {
+  padding: 4px 0;
+}
+
+/* =================  Actions & Details  =============== */
+.roleActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.role {
+  font-size: 14px;
+}
+.actionButtons {
+  display: flex;
+  gap: 4px;
+}
+.actionButton {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 2px solid;
+  background-color: #f9f9f9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: row;
+  border-top: 1px solid #ffd700;
+  padding: 8px;
+}
+.detailsColumn {
+  flex: 1;
+  padding: 8px;
+}
+.detailRow {
+  display: flex;
+  margin-bottom: 8px;
+}
+.detailLabel {
+  color: #3366cc;
+  font-weight: 700;
+  margin-right: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.detailValue {
+  font-size: 14px;
+  word-break: break-word;
+}
+
+/* =================  Icons  =============== */
+.iconWrapper {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 8px;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
+.iconRotate {
+  transform: rotate(180deg);
+}

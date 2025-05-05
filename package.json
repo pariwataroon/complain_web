@@ -26,6 +26,7 @@
     "next": "latest",
     "next-transpile-modules": "^10.0.1",
     "react": "latest",
+    "react-color": "^2.19.3",
     "react-dom": "latest",
     "react-hook-form": "^7.0.0",
     "recharts": "^2.15.3",

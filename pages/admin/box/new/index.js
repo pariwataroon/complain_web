@@ -1,8 +1,12 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import AnonymousLetterRepository from "@components/Box/AnonymousLetterRepository/AnonymousLetterRepository";
 
 const New = () => {
-  return <div>คลังบัตรสนเท่ห์</div>;
+  return (
+    <div>
+      <AnonymousLetterRepository />
+    </div>
+  );
 };
 
 New.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;

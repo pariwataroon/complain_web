@@ -1,8 +1,12 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import ComplaintArchives from "@components/Box/ComplaintArchives/ComplaintArchives";
 
 const List = () => {
-  return <div>คลังเรื่องราวร้องทุกข์</div>;
+  return (
+    <div>
+      <ComplaintArchives />
+    </div>
+  );
 };
 
 List.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
