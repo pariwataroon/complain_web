@@ -97,3 +97,10 @@ class TokenData(BaseModel):
 class ResendVerificationEmail(BaseModel):
     """Schema สำหรับการร้องขอส่งอีเมลยืนยันใหม่"""
     email: EmailStr
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+    
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str

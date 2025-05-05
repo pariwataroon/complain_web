@@ -135,3 +135,45 @@ async def resend_verification_endpoint(
     return format_data.format_response("0000", {
         "message": message
     })
+
+@router.post("/forgot-password", response_model=format_data.FormatResponseModel)
+async def forgot_password_endpoint(request: schemas.ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """ส่งอีเมลลิงก์รีเซ็ตรหัสผ่านให้กับผู้ใช้"""
+    from app.api.v1.controllers.email_controller import send_password_reset_email
+    
+    success, message = send_password_reset_email(db, request.email)
+    
+    if not success:
+        return format_data.format_response("5000", {"error": message})
+    
+    return format_data.format_response("0000", {"message": message})
+
+@router.post("/reset-password", response_model=format_data.FormatResponseModel)
+async def reset_password_endpoint(request: schemas.ResetPasswordRequest, db: Session = Depends(get_db)):
+    """รีเซ็ตรหัสผ่านโดยใช้ token"""
+    from app.api.v1.controllers.email_controller import reset_password_with_token
+    
+    success, message = reset_password_with_token(db, request.token, request.new_password)
+    
+    if not success:
+        return format_data.format_response("4000", {"error": message})
+    
+    return format_data.format_response("0000", {"message": message})
+
+@router.get("/verify-reset-token", response_model=format_data.FormatResponseModel)
+async def verify_reset_token_endpoint(token: str, db: Session = Depends(get_db)):
+    """ตรวจสอบว่า token รีเซ็ตรหัสผ่านยังใช้งานได้หรือไม่"""
+    from app.api.v1.controllers.email_controller import verify_reset_token
+    
+    user_id = verify_reset_token(db, token)
+    
+    if not user_id:
+        return format_data.format_response("4000", {
+            "valid": False,
+            "message": "Token ไม่ถูกต้องหรือหมดอายุแล้ว (token มีอายุ 15 นาที)"
+        })
+    
+    return format_data.format_response("0000", {
+        "valid": True,
+        "message": "Token ถูกต้องและยังไม่หมดอายุ"
+    })
