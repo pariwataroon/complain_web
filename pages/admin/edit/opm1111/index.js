@@ -1,8 +1,12 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import Opm1111Components from "@components/ReceiveData/Opm1111/opm1111";
 
 const Opm1111 = () => {
-  return <div>เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ OPM1111</div>;
+  return (
+    <div>
+      <Opm1111Components />
+    </div>
+  );
 };
 
 Opm1111.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;

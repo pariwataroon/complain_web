@@ -1,7 +1,11 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import AccountBoxComponents from "@components/AccountBox/AccountBoxComponents";
 const AccountBox = () => {
-  return <div>สถิติการทำงานของเจ้าหน้าที่</div>;
+  return (
+    <div>
+      <AccountBoxComponents />
+    </div>
+  );
 };
 
 AccountBox.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
