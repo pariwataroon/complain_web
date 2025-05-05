@@ -1,10 +1,17 @@
-import SetPeriodComponent from "@components/GeneralUsageMenu/SetPeriod/SetPeriodComponent";
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
 
-const SetPeriod = () => {
-  return <SetPeriodComponent />;
+const Admin = () => {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/admin/dashboard");
+  }, [router]);
+
+  return null;
 };
 
-SetPeriod.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
+Admin.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
 
-export default SetPeriod;
+export default Admin;

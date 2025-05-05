@@ -1,4 +1,7 @@
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/router";
+import { registerCard } from "@pages/api/register/register";
+import { showAlert, alertSuccess, alertError, alertInfo } from "@utils/Alerts";
 
 export const useForgetForm = () => {
   const {

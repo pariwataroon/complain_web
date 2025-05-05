@@ -23,19 +23,14 @@ import { useRouter } from "next/router";
 import styles from "./Sidebar.module.scss";
 import stylesNoti from "./SidebarNoti.module.scss";
 import NotificationsIcon from "@mui/icons-material/Notifications";
-import {
-  getUsersByGroup,
-} from "@pages/api/role/role";
+import { getUsersByGroup } from "@pages/api/role/role";
 import {
   getNotifications,
   markNotificationAsSeen,
 } from "@pages/api/notifications/notifications";
 import { showLoading, closeAlert, alertError } from "@utils/Alerts";
-import {
-  formatElapsedThaiTime
-} from "@utils/Formats";
+import { formatElapsedThaiTime } from "@utils/Formats";
 import Cookies from "js-cookie";
-
 
 export default function Sidebar() {
   const router = useRouter();
@@ -43,11 +38,11 @@ export default function Sidebar() {
 
   const [activeMenu, setActiveMenu] = useState("");
   const [openSubmenu, setOpenSubmenu] = useState(null);
-  const [submenuTop, setSubmenuTop] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showNotificationBell, setShowNotificationBell] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [menuData, setMenuData] = useState([]);
-
+  const sidebarRef = useRef(null);
   const notifArr = Array.isArray(notifications) ? notifications : [];
   const unreadExists = notifArr.some((n) => !n.is_read);
 
@@ -71,8 +66,17 @@ export default function Sidebar() {
     document: "รายงาน",
   };
 
-
   useEffect(() => {
+    const info = Cookies.get("info");
+    let roles = [];
+    try {
+      roles = info ? JSON.parse(info).roles : [];
+    } catch (err) {
+      console.error("Cookie parsing failed", err);
+    }
+
+    if (roles.includes("admin_home")) return;
+
     (async () => {
       try {
         const res = await getNotifications();
@@ -98,6 +102,19 @@ export default function Sidebar() {
         const info = Cookies.get("info");
         const userRoles = info ? JSON.parse(info).roles : [];
 
+        if (userRoles.includes("admin_home")) {
+          setShowNotificationBell(false);
+        } else {
+          try {
+            const notiRes = await getNotifications();
+            const notiData = notiRes?.res_data;
+            setNotifications(Array.isArray(notiData) ? notiData : []);
+          } catch (notiErr) {
+            console.error("ดึงข้อมูลการแจ้งเตือนล้มเหลว", notiErr);
+            setNotifications([]);
+          }
+        }
+
         const filteredMenu = data.res_data.map((group) => {
           const resources = group.resources || [];
 
@@ -110,12 +127,10 @@ export default function Sidebar() {
               label: res.description,
               display_name: res.display_name ?? res.description,
               path: res.path,
-              type: "item"
+              type: "item",
             })),
           };
         });
-
-
 
         setMenuData(filteredMenu);
       } catch (err) {
@@ -132,24 +147,20 @@ export default function Sidebar() {
     })();
   }, []);
 
-
   if (!menuData.length) {
     return null;
   }
 
   const renderMenuItem = (key, IconC, submenu = []) => {
     return (
-      <Box key={key} onMouseEnter={() => setOpenSubmenu(null)}>
+      <Box key={key} onMouseEnter={() => setOpenSubmenu(null)} style={{ position: "relative" }}>
         <ListItemButton
-          onClick={(e) => {
-            setOpenSubmenu(openSubmenu === key ? null : key);
-            setActiveMenu(key);
-            const rect = e.currentTarget.getBoundingClientRect();
-            const buttonHeight = rect.height;
-            const submenuHeight = 320;
-            const offset = submenuHeight / 2 - buttonHeight / 2;
-            setSubmenuTop(rect.top - offset);
-          }}
+        onClick={(e) => {
+          setOpenSubmenu(openSubmenu === key ? null : key);
+          setActiveMenu(key);
+          const sidebarRect = sidebarRef.current.getBoundingClientRect();
+          const submenuHeight = 320;
+        }}
         >
           <ListItemIcon className={activeMenu === key ? styles.activeIcon : ""}>
             <IconC />
@@ -158,15 +169,17 @@ export default function Sidebar() {
 
         {submenu.length > 0 && openSubmenu === key && (
           <Box
-            className={`${styles.submenu} ${openSubmenu === key ? styles.submenuVisible : ""}`}
-            style={{ top: submenuTop, left: "80px" }}
+          className={`${styles.submenu} ${openSubmenu === key ? styles.submenuVisible : ""}`}
+          style={{ left: "80px" }}  
             onMouseEnter={() => setOpenSubmenu(key)}
             onMouseLeave={() => setOpenSubmenu(null)}
           >
             <ul>
               {submenu.map((item, i) => (
                 <React.Fragment key={i}>
-                  <li className={item.type === "header" ? styles.headerItem : ""}>
+                  <li
+                    className={item.type === "header" ? styles.headerItem : ""}
+                  >
                     {item.type === "header" ? (
                       <span className={styles.headerText}>
                         {item.display_name || item.label}
@@ -180,7 +193,6 @@ export default function Sidebar() {
                             router.push(target);
                           }
                         }}
-
                       >
                         {item.display_name || item.label}
                       </span>
@@ -196,11 +208,8 @@ export default function Sidebar() {
     );
   };
 
-
-
-
   return (
-    <Box className={styles.sidebar}>
+    <Box className={styles.sidebar} ref={sidebarRef}>
       {/* Logo */}
       <Box className={styles.logo}>
         <img src="/Logo_Gold.png" alt="กระทรวงการคลัง" />
@@ -212,10 +221,12 @@ export default function Sidebar() {
           const IconC = groupIcons[group.group_name] || Settings;
 
           const submenu = [
-            { type: "header", label: headerTextMap[group.group_name] || group.display_name },
+            {
+              type: "header",
+              label: headerTextMap[group.group_name] || group.display_name,
+            },
             ...group.resources,
           ];
-
 
           if (group.resources.length === 1) {
             const singleResource = group.resources[0];
@@ -227,7 +238,11 @@ export default function Sidebar() {
                     router.push(singleResource.path);
                   }}
                 >
-                  <ListItemIcon className={activeMenu === group.group_name ? styles.activeIcon : ""}>
+                  <ListItemIcon
+                    className={
+                      activeMenu === group.group_name ? styles.activeIcon : ""
+                    }
+                  >
                     <IconC />
                   </ListItemIcon>
                 </ListItemButton>
@@ -239,100 +254,117 @@ export default function Sidebar() {
         })}
       </List>
 
-
       {/* Footer */}
       <Box className={styles.bottom}>
         {/* Bell */}
-        <Box sx={{ position: "relative" }}>
-          <IconButton
-            className={`${styles.notificationIcon} notifications-icon`}
-            onClick={toggleBell}
-            sx={{ position: "relative" }}
-          >
-            <NotificationsIcon />
-            {unreadExists && (
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: 2,
-                  right: 2,
-                  width: 10,
-                  height: 10,
-                  backgroundColor: "#ff3b30",
-                  borderRadius: "50%",
-                  border: "2px solid white",
-                  zIndex: 1,
-                }}
-              />
-            )}
-          </IconButton>
-
-          {showNotifications && (
-            <Paper
-              ref={notificationRef}
-              className={`${stylesNoti.notificationBox} ${stylesNoti.show}`}
+        {showNotificationBell && (
+          <Box sx={{ position: "relative" }}>
+            <IconButton
+              className={`${styles.notificationIcon} notifications-icon`}
+              onClick={toggleBell}
+              sx={{ position: "relative" }}
             >
-              {/* Header */}
-              <Box className={stylesNoti.notifHeader}>
-                <Typography variant="h6">
-                  การแจ้งเตือน
-                </Typography>
-                {unreadExists && (
-                  <Typography
-                    variant="body2"
-                    sx={{ cursor: "pointer", color: "#1976d2", fontWeight: "bold" }}
-                    onClick={async () => {
-                      try {
-                        const unread = notifications.filter((n) => !n.is_read);
-                        if (!unread.length) return;
-                        await Promise.all(unread.map((n) => markNotificationAsSeen(n.id)));
-                        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-                      } catch (err) {
-                        console.error("Error marking all as read:", err);
-                      }
-                    }}
-                  >
-                    อ่านทั้งหมด
-                  </Typography>
-                )}
-              </Box>
+              <NotificationsIcon />
+              {unreadExists && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: 2,
+                    right: 2,
+                    width: 10,
+                    height: 10,
+                    backgroundColor: "#ff3b30",
+                    borderRadius: "50%",
+                    border: "2px solid white",
+                    zIndex: 1,
+                  }}
+                />
+              )}
+            </IconButton>
 
-              <hr style={{ margin: "8px 0", borderColor: "#d1d5db" }} />
-
-              {/* Notifications List */}
-              {notifications.length > 0 ? (
-                notifications.map((n, i) => (
-                  <React.Fragment key={n.id ?? i}>
-                    <Box
-                      className={stylesNoti.notifItem}
-                      onClick={() => {
-                        if (n.redirect_url) {
-                          router.push(n.redirect_url);
-                          setShowNotifications(false);
+            {showNotifications && (
+              <Paper
+                ref={notificationRef}
+                className={`${stylesNoti.notificationBox} ${stylesNoti.show}`}
+              >
+                {/* Header */}
+                <Box className={stylesNoti.notifHeader}>
+                  <Typography variant="h6">การแจ้งเตือน</Typography>
+                  {unreadExists && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        cursor: "pointer",
+                        color: "#1976d2",
+                        fontWeight: "bold",
+                      }}
+                      onClick={async () => {
+                        try {
+                          const unread = notifications.filter(
+                            (n) => !n.is_read
+                          );
+                          if (!unread.length) return;
+                          await Promise.all(
+                            unread.map((n) => markNotificationAsSeen(n.id))
+                          );
+                          setNotifications((prev) =>
+                            prev.map((n) => ({ ...n, is_read: true }))
+                          );
+                        } catch (err) {
+                          console.error("Error marking all as read:", err);
                         }
                       }}
                     >
-                      {!n.is_read && <Box className={stylesNoti.notifDot} />}
-                      <Box className={stylesNoti.notifContent}>
-                        <div className={stylesNoti.notifTitle}>{n.title}</div>
-                        <div className={stylesNoti.notifMessage}>{n.message}</div>
-                        <div className={stylesNoti.notifTime}>
-                          {formatElapsedThaiTime(n.created_at)}
-                        </div>
-                      </Box>
-                    </Box>
-                    {i < notifications.length - 1 && <hr style={{ margin: "8px 0", borderColor: "#e0e0e0" }} />}
-                  </React.Fragment>
-                ))
-              ) : (
-                <Typography variant="body2" sx={{ mt: 2, textAlign: "center", color: "#aaa" }}>
-                  ไม่พบข้อมูลการแจ้งเตือน
-                </Typography>
-              )}
-            </Paper>
-          )}
-        </Box>
+                      อ่านทั้งหมด
+                    </Typography>
+                  )}
+                </Box>
 
+                <hr style={{ margin: "8px 0", borderColor: "#d1d5db" }} />
+
+                {/* Notifications List */}
+                {notifications.length > 0 ? (
+                  notifications.map((n, i) => (
+                    <React.Fragment key={n.id ?? i}>
+                      <Box
+                        className={stylesNoti.notifItem}
+                        onClick={() => {
+                          if (n.redirect_url) {
+                            router.push(n.redirect_url);
+                            setShowNotifications(false);
+                          }
+                        }}
+                      >
+                        {!n.is_read && <Box className={stylesNoti.notifDot} />}
+                        <Box className={stylesNoti.notifContent}>
+                          <div className={stylesNoti.notifTitle}>{n.title}</div>
+                          <div className={stylesNoti.notifMessage}>
+                            {n.message}
+                          </div>
+                          <div className={stylesNoti.notifTime}>
+                            {formatElapsedThaiTime(n.created_at)}
+                          </div>
+                        </Box>
+                      </Box>
+                      {i < notifications.length - 1 && (
+                        <hr
+                          style={{ margin: "8px 0", borderColor: "#e0e0e0" }}
+                        />
+                      )}
+                    </React.Fragment>
+                  ))
+                ) : (
+                  <Typography
+                    variant="body2"
+                    sx={{ mt: 2, textAlign: "center", color: "#aaa" }}
+                  >
+                    ไม่พบข้อมูลการแจ้งเตือน
+                  </Typography>
+                )}
+              </Paper>
+            )}
+          </Box>
+        )}
         {/* Avatar & collapse */}
         <Avatar src="/user-icon.png" className={styles.avatar} />
         <IconButton
@@ -343,6 +375,5 @@ export default function Sidebar() {
         </IconButton>
       </Box>
     </Box>
-
   );
 }

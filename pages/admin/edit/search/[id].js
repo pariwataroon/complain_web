@@ -3,9 +3,7 @@ import ComplaintDetail from "@components/ReceiveData/SearchComplaints/ComplaintD
 
 const SearchID = () => {
   return (
-    <div>
       <ComplaintDetail />
-    </div>
   );
 };
 

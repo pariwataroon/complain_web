@@ -3,9 +3,7 @@ import Filteromplaints from "@components/ReceiveData/Filteromplaints/Filterompla
 
 const Search = () => {
   return (
-    <div>
       <Filteromplaints />
-    </div>
   );
 };
 
