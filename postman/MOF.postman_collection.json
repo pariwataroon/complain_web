@@ -2285,7 +2285,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"ห้องประชุมทดสอบ\",\n    \"code\": \"TEST-001\",\n    \"short_name\": \"ทดสอบ\",\n    \"description\": \"ห้องประชุมสำหรับการทดสอบ\",\n    \"capacity\": 50,\n    \"venue_group_id\": \"{{venue_group_id}}\",\n    \"department_id\": \"{{department_id}}\",\n    \"floor\": \"1\",\n    \"building\": \"อาคารทดสอบ\",\n    \"has_projector\": true,\n    \"has_microphone\": true,\n    \"has_computer\": true,\n    \"is_active\": true\n}",
+							"raw": "{\n    \"name\": \"ห้องประชุมทดสอบ00\",\n    \"code\": \"TEST-00\",\n    \"abbreviation\": \"00\",\n    \"color_code\": \"TTTT00\",\n    \"short_name\": \"ทดสอบ00\",\n    \"group_name\": \"{{group_name}}\",\n    \"department_id\": \"{{department_id}}\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
