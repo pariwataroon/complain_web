@@ -121,7 +121,8 @@ const CommitteeCompositionSettings = () => {
         border: "2px solid #2499FF",
         boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
         mb: 2,
-        height: "auto", // Allow height to adjust based on content
+        height: "auto",
+        backgroundColor: "white",
       }}
     >
       {/* Vertical sidebar */}

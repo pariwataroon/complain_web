@@ -23,7 +23,8 @@ const breadcrumbItems = [
 /* -------------------------------------------------------------------------- */
 /*  mock data (ให้ตรงกับคอลัมน์ใน TableListWebComplaints)                    */
 /* -------------------------------------------------------------------------- */
-const mockComplaints = [
+
+export const mockComplaints = [
   {
     id: 1,
     receiveDate: "30 ม.ค. 2568",
@@ -34,7 +35,7 @@ const mockComplaints = [
     subIssueType: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
     responsibleOfficer: "นายกานต์ วรากร",
     status: "กำลังดำเนินการ",
-    remark: "อยู่ระหว่างการชี้แจง",
+    note: "อยู่ระหว่างการชี้แจง",
   },
   {
     id: 2,
@@ -46,7 +47,7 @@ const mockComplaints = [
     subIssueType: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
     responsibleOfficer: "นางกานต์รวี วรานี",
     status: "ยุติ",
-    remark: "จบ",
+    note: "จบ",
   },
   {
     id: 3,
@@ -58,7 +59,7 @@ const mockComplaints = [
     subIssueType: "หนี้นอกระบบ",
     responsibleOfficer: "นางกานต์รวี วรานี",
     status: "กำลังดำเนินการ",
-    remark: "รอหน่วยงานตอบกลับ",
+    note: "รอหน่วยงานตอบกลับ",
   },
   {
     id: 4,
@@ -66,11 +67,11 @@ const mockComplaints = [
     agency: "สำนักงานเลขาธิการนายกรัฐมนตรี",
     claimantName: "กิตติพงศ์ วัฒนากร",
     issue: "แก้ไขไฟฟ้ารอบบริษัท ย้อนปังแสงสว่าง",
-    issueType: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
+    issueType: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
     subIssueType: "โครงการสาธารณูปโภคพื้นฐาน",
     responsibleOfficer: "นายปิยภา ภูมิศา",
     status: "กำลังดำเนินการ",
-    remark: "รอหน่วยงานตอบกลับ",
+    note: "รอหน่วยงานตอบกลับ",
   },
   {
     id: 5,
@@ -78,11 +79,11 @@ const mockComplaints = [
     agency: "สำนักงานเลขาธิการนายกรัฐมนตรี",
     claimantName: "กิตติพงศ์ วัฒนากร",
     issue: "แก้ไขปัญหาการลงทะเบียนโครงการรัฐ",
-    issueType: "นโยบายรัฐฯ ด้านสวัสดิการ",
+    issueType: "นโยบายรัฐฯ ด้านสวัสดิการ",
     subIssueType: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
     responsibleOfficer: "นายปิยภา ภูมิศา",
     status: "กำลังดำเนินการ",
-    remark: "รอหน่วยงานตอบกลับ",
+    note: "รอหน่วยงานตอบกลับ",
   },
   {
     id: 6,
@@ -94,7 +95,7 @@ const mockComplaints = [
     subIssueType: "-",
     responsibleOfficer: "นายกานต์ วรากร",
     status: "ยุติ",
-    remark: "อยู่ระหว่างการชี้แจง",
+    note: "อยู่ระหว่างการชี้แจง",
   },
   {
     id: 7,
@@ -106,7 +107,7 @@ const mockComplaints = [
     subIssueType: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
     responsibleOfficer: "นางกานต์รวี วรานี",
     status: "กำลังดำเนินการ",
-    remark: "อยู่ระหว่างการชี้แจง",
+    note: "อยู่ระหว่างการชี้แจง",
   },
   {
     id: 8,
@@ -118,7 +119,7 @@ const mockComplaints = [
     subIssueType: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
     responsibleOfficer: "นายปิยภา ภูมิศา",
     status: "กำลังดำเนินการ",
-    remark: "รอหน่วยงานตอบกลับ",
+    note: "รอหน่วยงานตอบกลับ",
   },
   {
     id: 9,
@@ -130,7 +131,7 @@ const mockComplaints = [
     subIssueType: "หนี้และสภาพหนี้ระบบ",
     responsibleOfficer: "นายกานต์ วรากร",
     status: "ยุติ",
-    remark: "จบ",
+    note: "จบ",
   },
   {
     id: 10,
@@ -138,11 +139,11 @@ const mockComplaints = [
     agency: "สำนักงานเลขาธิการนายกรัฐมนตรี",
     claimantName: "กิตติพงศ์ วัฒนากร",
     issue: "แก้ไขปัญหาการลงทะเบียนโครงการรัฐ",
-    issueType: "นโยบายรัฐฯ ด้านสวัสดิการ",
+    issueType: "นโยบายรัฐฯ ด้านสวัสดิการ",
     subIssueType: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
     responsibleOfficer: "นายปิยภา ภูมิศา",
     status: "กำลังดำเนินการ",
-    remark: "รอหน่วยงานตอบกลับ",
+    note: "รอหน่วยงานตอบกลับ",
   },
   {
     id: 11,
@@ -154,7 +155,7 @@ const mockComplaints = [
     subIssueType: "-",
     responsibleOfficer: "นายกานต์ วรากร",
     status: "ยุติ",
-    remark: "จบ",
+    note: "จบ",
   },
   {
     id: 12,
@@ -166,7 +167,7 @@ const mockComplaints = [
     subIssueType: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
     responsibleOfficer: "นางกานต์รวี วรานี",
     status: "กำลังดำเนินการ",
-    remark: "อยู่ระหว่างการชี้แจง",
+    note: "อยู่ระหว่างการชี้แจง",
   },
   {
     id: 13,
@@ -178,7 +179,7 @@ const mockComplaints = [
     subIssueType: "-",
     responsibleOfficer: "นายกานต์ วรากร",
     status: "ยุติ",
-    remark: "จบ",
+    note: "จบ",
   },
 ];
 

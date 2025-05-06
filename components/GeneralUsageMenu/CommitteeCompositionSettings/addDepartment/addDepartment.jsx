@@ -13,6 +13,7 @@ import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import { SketchPicker } from "react-color";
 import TextfieldService from "@services/TextfieldService/TextfieldService";
+import { GetDetailDepartment } from "@pages/api/settinggeneral/department/department";
 
 /* -------------------------------------------------------------------------- */
 /*  static data                                                               */
@@ -170,7 +171,7 @@ const departmentData = {
 /* -------------------------------------------------------------------------- */
 const DepartmentManagement = () => {
   /* ---------------------------------- state --------------------------------- */
-  const [stats, setStats] = useState(departmentData);
+
   const [expandedSections, setExpandedSections] = useState({ 0: true });
   const [addSectionIdx, setAddSectionIdx] = useState(null); // section index for Add modal
   const [editUser, setEditUser] = useState(null); // user object for Edit modal
@@ -183,6 +184,41 @@ const DepartmentManagement = () => {
     sub_department: "",
     other: "",
   });
+
+  const [stats, setStats] = useState({ res_data: [] });
+
+  /* ------------------------------- useEffect -------------------------------- */
+  useEffect(() => {
+    const fetchDepartmentDetails = async () => {
+      try {
+        const response = await GetDetailDepartment(); // Fetch department details
+        console.log("API response:", response);
+
+        // Mapping API response to match the structure of departmentData
+        const mappedData = response.res_data.map((department) => {
+          return {
+            role_name: department.department_code.toLowerCase(), // Use department code as role name
+            role_description: department.department_name, // Use department name as description
+            users: department.venue_groups.flatMap((group) =>
+              group.venues.map((venue) => ({
+                id: venue.id,
+                main_department: venue.name,
+                sub_department: venue.short_name || "-", // Default "-" if no sub-department
+                color_code: venue.color_code,
+              }))
+            ),
+          };
+        });
+
+        console.log("Mapped Data:", mappedData);
+        setStats({ res_data: mappedData }); // Set the mapped data into the state
+      } catch (error) {
+        console.error("Error fetching department details:", error);
+      }
+    };
+
+    fetchDepartmentDetails();
+  }, []); // Empty dependency array to fetch on mount
 
   /* ---------------------------------- data ---------------------------------- */
   const governmentOptions = [
