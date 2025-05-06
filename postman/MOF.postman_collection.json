@@ -474,66 +474,97 @@
 					  "description": "ส่งอีเมลลิงก์รีเซ็ตรหัสผ่านให้กับผู้ใช้ เมื่ออีเมลตรงกับผู้ใช้ในระบบ จะส่งลิงก์รีเซ็ตรหัสผ่านที่มีอายุ 15 นาที"
 					},
 					"response": []
-				  },
-				  {
-					"name": "auth/reset-password",
-					"request": {
-					  "auth": {
-						"type": "noauth"
-					  },
-					  "method": "POST",
-					  "header": [],
-					  "body": {
-						"mode": "raw",
-						"raw": "{\n    \"token\": \"your_reset_token_here\",\n    \"new_password\": \"newSecurePassword123!\"\n}",
-						"options": {
-						  "raw": {
-							"language": "json"
-						  }
+				},
+				{
+				"name": "auth/reset-password",
+				"request": {
+					"auth": {
+					"type": "noauth"
+					},
+					"method": "POST",
+					"header": [],
+					"body": {
+					"mode": "raw",
+					"raw": "{\n    \"token\": \"your_reset_token_here\",\n    \"new_password\": \"newSecurePassword123!\"\n}",
+					"options": {
+						"raw": {
+						"language": "json"
 						}
-					  },
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/auth/reset-password",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "auth",
-						  "reset-password"
-						]
-					  },
-					  "description": "รีเซ็ตรหัสผ่านโดยใช้ token ที่ได้รับจากอีเมล token มีอายุ 15 นาทีและใช้งานได้เพียงครั้งเดียว"
+					}
 					},
-					"response": []
-				  },
-				  {
-					"name": "auth/verify-reset-token",
-					"request": {
-					  "auth": {
-						"type": "noauth"
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/auth/verify-reset-token?token=your_reset_token_here",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "auth",
-						  "verify-reset-token"
-						],
-						"query": [
-						  {
-							"key": "token",
-							"value": "your_reset_token_here"
-						  }
-						]
-					  },
-					  "description": "ตรวจสอบความถูกต้องของ token รีเซ็ตรหัสผ่าน เพื่อให้ frontend สามารถตรวจสอบก่อนแสดงฟอร์มรีเซ็ตรหัสผ่านได้"
+					"url": {
+					"raw": "{{API}}{{PREFIX}}/auth/reset-password",
+					"host": [
+						"{{API}}{{PREFIX}}"
+					],
+					"path": [
+						"auth",
+						"reset-password"
+					]
 					},
-					"response": []
-				  }
+					"description": "รีเซ็ตรหัสผ่านโดยใช้ token ที่ได้รับจากอีเมล token มีอายุ 15 นาทีและใช้งานได้เพียงครั้งเดียว"
+				},
+				"response": []
+				},
+				{
+				"name": "auth/verify-reset-token",
+				"request": {
+					"auth": {
+					"type": "noauth"
+					},
+					"method": "GET",
+					"header": [],
+					"url": {
+					"raw": "{{API}}{{PREFIX}}/auth/verify-reset-token?token=your_reset_token_here",
+					"host": [
+						"{{API}}{{PREFIX}}"
+					],
+					"path": [
+						"auth",
+						"verify-reset-token"
+					],
+					"query": [
+						{
+						"key": "token",
+						"value": "your_reset_token_here"
+						}
+					]
+					},
+					"description": "ตรวจสอบความถูกต้องของ token รีเซ็ตรหัสผ่าน เพื่อให้ frontend สามารถตรวจสอบก่อนแสดงฟอร์มรีเซ็ตรหัสผ่านได้"
+				},
+				"response": []
+				},
+				{
+				"name": "Verify Employee with ThaiID",
+				"request": {
+					"auth": {
+					"type": "noauth"
+					},
+					"method": "POST",
+					"header": [],
+					"body": {
+					"mode": "raw",
+					"raw": "{\n    \"citizen_id\": \"1234567890123\",\n    \"project_api_key\": \"comp_mof_a1b2c3d4e5f6g7h8i9j0\"\n}",
+					"options": {
+						"raw": {
+						"language": "json"
+						}
+					}
+					},
+					"url": {
+					"raw": "{{API}}{{PREFIX}}/auth/verify-employee",
+					"host": [
+						"{{API}}{{PREFIX}}"
+					],
+					"path": [
+						"auth",
+						"verify-employee"
+					]
+					},
+					"description": "ตรวจสอบว่าผู้ใช้ที่เข้าสู่ระบบด้วย ThaiID จากระบบอื่นเป็นพนักงาน/เจ้าหน้าที่ในระบบนี้หรือไม่ - ต้องใช้ API Key ของโปรเจคที่ได้รับอนุญาต"
+				},
+				"response": []
+				}
 			]
 		},
 		{
@@ -2077,6 +2108,203 @@
 				}
 			],
 			"description": "API สำหรับจัดการการตั้งค่าระยะเวลาต่างๆ ในระบบ"
+		},
+		{
+			"name": "PROJECT API KEYS",
+			"item": [
+			  {
+				"name": "Get All Project API Keys",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "GET",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/project-api-keys",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "project-api-keys"
+					]
+				  },
+				  "description": "ดึงรายการ API Key ทั้งหมดในระบบ - ต้องมีสิทธิ์อ่านใน setting_access"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Create Project API Key",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "POST",
+				  "header": [],
+				  "body": {
+					"mode": "raw",
+					"raw": "{\n    \"project_name\": \"โครงการทดสอบ\",\n    \"description\": \"API Key สำหรับการทดสอบการเชื่อมต่อ\",\n    \"is_active\": true\n}",
+					"options": {
+					  "raw": {
+						"language": "json"
+					  }
+					}
+				  },
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/project-api-keys",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "project-api-keys"
+					]
+				  },
+				  "description": "สร้าง API Key ใหม่สำหรับโปรเจค - ต้องมีสิทธิ์สร้างใน setting_access"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Get Project API Key by ID",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "GET",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/project-api-keys/{{api_key_id}}",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "project-api-keys",
+					  "{{api_key_id}}"
+					]
+				  },
+				  "description": "ดึงข้อมูล API Key ตาม ID - ต้องมีสิทธิ์อ่านใน setting_access"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Update Project API Key",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "PUT",
+				  "header": [],
+				  "body": {
+					"mode": "raw",
+					"raw": "{\n    \"project_name\": \"โครงการทดสอบ (อัพเดต)\",\n    \"description\": \"API Key สำหรับการทดสอบการเชื่อมต่อ (อัพเดต)\",\n    \"is_active\": true\n}",
+					"options": {
+					  "raw": {
+						"language": "json"
+					  }
+					}
+				  },
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/project-api-keys/{{api_key_id}}",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "project-api-keys",
+					  "{{api_key_id}}"
+					]
+				  },
+				  "description": "อัปเดตข้อมูล API Key - ต้องมีสิทธิ์แก้ไขใน setting_access"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Delete Project API Key",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "DELETE",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/project-api-keys/{{api_key_id}}",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "project-api-keys",
+					  "{{api_key_id}}"
+					]
+				  },
+				  "description": "ลบ API Key - ต้องมีสิทธิ์ลบใน setting_access"
+				},
+				"response": []
+			  },
+			  {
+				"name": "Regenerate Project API Key",
+				"request": {
+				  "auth": {
+					"type": "bearer",
+					"bearer": [
+					  {
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					  }
+					]
+				  },
+				  "method": "POST",
+				  "header": [],
+				  "url": {
+					"raw": "{{API}}{{PREFIX}}/project-api-keys/{{api_key_id}}/regenerate",
+					"host": [
+					  "{{API}}{{PREFIX}}"
+					],
+					"path": [
+					  "project-api-keys",
+					  "{{api_key_id}}",
+					  "regenerate"
+					]
+				  },
+				  "description": "สร้าง API Key ใหม่สำหรับโปรเจคที่มีอยู่แล้ว - ต้องมีสิทธิ์แก้ไขใน setting_access"
+				},
+				"response": []
+			  }
+			],
+			"description": "API สำหรับจัดการ Project API Key ที่ใช้ในการยืนยันตัวตนระหว่างโปรเจค"
 		},
 		{
 			"name": "VENUES",
