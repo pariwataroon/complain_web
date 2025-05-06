@@ -20,11 +20,12 @@ from .comp_geographies import Geography
 from .comp_provinces import Province
 from .comp_amphures import Amphure
 from .comp_districts import District
+from .project_api_key import ProjectApiKey
 
 # ระบุโมเดลที่สามารถนำเข้าเมื่อใช้ from models import *
 __all__ = [
     'Permission', 'Resource', 'Role', 'UserRole', 'User', 'Token', 'Title',
     'DepartmentGroup', 'Department', 'Notification', 'Position', 
     'ResourceGroup', 'TimeSetting', 'UserPosition', 'Venue', 'VerificationToken',
-    'Geography', 'Province', 'Amphure', 'District',
+    'Geography', 'Province', 'Amphure', 'District', 'ProjectApiKey',
 ]

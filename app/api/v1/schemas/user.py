@@ -104,3 +104,16 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
+
+class VerifyEmployeeRequest(BaseModel):
+    """Schema for verifying if a user is an employee based on their citizen ID"""
+    citizen_id: str
+    project_api_key: str
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "citizen_id": "1234567890123",
+                "project_api_key": "comp_mof_1a2b3c4d5e6f7g8h9i0j"
+            }
+        }

@@ -11,7 +11,8 @@ from app.api.v1.routers.position_router import router as position_router
 from app.api.v1.routers.department_group_router import router as department_group_router_v1
 from app.api.v1.routers.department_router import router as department_router_v1
 from app.api.v1.routers.notification_router import router as notification_router_v1
-from app.api.v1.routers.geography_router import router as geography_router_v1  # เพิ่มส่วนนี้
+from app.api.v1.routers.geography_router import router as geography_router_v1
+from app.api.v1.routers.project_api_key_router import router as project_api_key_router_v1
 from config.dotenv import PREFIX
 
 # สร้างตัวแปรสำหรับ prefixes แต่ละเวอร์ชัน
@@ -33,7 +34,8 @@ v1_router.include_router(position_router)
 v1_router.include_router(department_group_router_v1)
 v1_router.include_router(department_router_v1)
 v1_router.include_router(notification_router_v1)
-v1_router.include_router(geography_router_v1)  # เพิ่มส่วนนี้
+v1_router.include_router(geography_router_v1)
+v1_router.include_router(project_api_key_router_v1)
 
 # เมื่อมี router เวอร์ชัน 2 ในอนาคต จะเพิ่มได้ง่ายๆ
 # from router.v2.user import router as user_router_v2
