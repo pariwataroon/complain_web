@@ -170,7 +170,7 @@ async def verify_reset_token_endpoint(token: str, db: Session = Depends(get_db))
     if not user_id:
         return format_data.format_response("4000", {
             "valid": False,
-            "message": "Token ไม่ถูกต้องหรือหมดอายุแล้ว (token มีอายุ 15 นาที)"
+            "message": "Token ไม่ถูกต้องหรือหมดอายุแล้ว (token มีอายุ 30 นาที)"
         })
     
     return format_data.format_response("0000", {

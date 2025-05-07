@@ -1,6 +1,7 @@
 import secrets
 import uuid
 import os
+import threading
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from models.verification_token import VerificationToken
@@ -13,14 +14,14 @@ VERIFY_PATH = os.environ.get("VERIFY_PATH", "http://localhost:8000/api/v1/auth")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 RESET_PASSWORD_URL = f"{FRONTEND_URL}/reset-password"
 
-def generate_verification_token(db: Session, user_id: uuid.UUID, expires_minutes: int = 15):
+def generate_verification_token(db: Session, user_id: uuid.UUID, expires_minutes: int = 30):
     """
     สร้าง token สำหรับการยืนยันอีเมล
     
     Args:
         db: Database session
         user_id: ID ของผู้ใช้
-        expires_minutes: จำนวนนาทีที่ token มีอายุ (เริ่มต้น 15 นาที)
+        expires_minutes: จำนวนนาทีที่ token มีอายุ (เริ่มต้น 30 นาที)
         
     Returns:
         token: Token สำหรับการยืนยันอีเมล
@@ -43,9 +44,9 @@ def generate_verification_token(db: Session, user_id: uuid.UUID, expires_minutes
     
     return token
 
-def send_verification_email(user_email: str, user_name: str, verification_url: str):
+def send_verification_email_async(user_email: str, user_name: str, verification_url: str):
     """
-    ส่งอีเมลยืนยันไปยังผู้ใช้
+    ส่งอีเมลยืนยันไปยังผู้ใช้แบบ asynchronous
     
     Args:
         user_email: อีเมลของผู้ใช้
@@ -55,26 +56,44 @@ def send_verification_email(user_email: str, user_name: str, verification_url: s
     try:
         from lib.email_service import send_email
         
-        subject = "ยืนยันการลงทะเบียนสมาชิก"
+        subject = "ยืนยันการลงทะเบียนสมาชิก ระบบบริหารจัดการเรื่องราวร้องทุกข์"
         message = f"""
-        เรียน {user_name},
+        เรียน คุณ {user_name},
         
         ขอบคุณสำหรับการลงทะเบียนเป็นสมาชิก กรุณาคลิกที่ลิงก์ด้านล่างเพื่อยืนยันอีเมลของคุณ:
         
         {verification_url}
         
-        ลิงก์นี้จะมีอายุ 15 นาทีเท่านั้น กรุณาดำเนินการโดยเร็ว
+        ลิงก์นี้จะมีอายุ 30 นาที หากเลยกำหนดเวลา ท่านจะต้องทำการลงทะเบียนใหม่
         
         ขอแสดงความนับถือ,
-        ทีมงานระบบ
+        สำนักงานปลัดกระทรวงการคลัง
         """
         
         send_email(user_email, subject, message)
         logger.info(f"Verification email sent to {user_email}")
-        return True
     except Exception as e:
         logger.error(f"Error sending verification email: {str(e)}")
-        return False
+
+def send_verification_email(user_email: str, user_name: str, verification_url: str):
+    """
+    ส่งอีเมลยืนยันไปยังผู้ใช้โดยไม่รอกระบวนการส่งเสร็จสิ้น
+    
+    Args:
+        user_email: อีเมลของผู้ใช้
+        user_name: ชื่อของผู้ใช้
+        verification_url: URL สำหรับการยืนยัน
+    """
+    # สร้าง thread ใหม่เพื่อส่ง email แยกต่างหาก
+    thread = threading.Thread(
+        target=send_verification_email_async,
+        args=(user_email, user_name, verification_url)
+    )
+    thread.daemon = True  # ให้ thread จบเมื่อโปรแกรมหลักจบ
+    thread.start()
+    
+    # ส่งคืนค่าทันทีไม่รอการส่ง email เสร็จสิ้น
+    return True
 
 def verify_email(db: Session, token: str):
     """
@@ -123,7 +142,6 @@ def resend_verification_email(db: Session, email: str):
     Args:
         db: Database session
         email: อีเมลของผู้ใช้ที่ต้องการส่งลิงก์ยืนยันใหม่
-        verify_path: Base URL สำหรับการยืนยันอีเมล (เช่น http://localhost:8000/api/v1/auth)
         
     Returns:
         tuple: (success, message, error_code) 
@@ -150,28 +168,41 @@ def resend_verification_email(db: Session, email: str):
         # สร้าง verification URL
         verification_url = f"{VERIFY_PATH}/verify-email?token={token}"
         
-        # ส่งอีเมลยืนยัน
+        # ส่งอีเมลยืนยัน (ไม่รอการส่งเสร็จสิ้น)
         user_full_name = f"{user.first_name} {user.last_name}"
-        email_sent = send_verification_email(user.email, user_full_name, verification_url)
+        send_verification_email(user.email, user_full_name, verification_url)
         
-        if not email_sent:
-            logger.error(f"Failed to send verification email to {email}")
-            return False, "Failed to send verification email. Please try again later.", "5000"
-        
+        # ส่งคืนผลลัพธ์ทันทีโดยไม่สนใจว่าการส่ง email สำเร็จหรือไม่
         return True, "Verification email has been sent. Please check your inbox.", None
     except Exception as e:
         logger.error(f"Error resending verification email: {str(e)}")
         # เราไม่ต้องการให้ผู้ไม่หวังดีทราบว่าเกิดข้อผิดพลาด
         return True, "If your email is registered, a verification link has been sent.", None
+
+def send_password_reset_email_async(user_email: str, subject: str, message: str):
+    """
+    ส่งอีเมลรีเซ็ตรหัสผ่านแบบ asynchronous
     
-def generate_password_reset_token(db: Session, user_id: uuid.UUID, expires_minutes: int = 15):
+    Args:
+        user_email: อีเมลของผู้ใช้
+        subject: หัวข้ออีเมล
+        message: เนื้อหาอีเมล
+    """
+    try:
+        from lib.email_service import send_email
+        send_email(user_email, subject, message)
+        logger.info(f"Password reset email sent to {user_email}")
+    except Exception as e:
+        logger.error(f"Error sending password reset email: {str(e)}")
+    
+def generate_password_reset_token(db: Session, user_id: uuid.UUID, expires_minutes: int = 30):
     """
     สร้าง token สำหรับการรีเซ็ตรหัสผ่าน
     
     Args:
         db: Database session
         user_id: ID ของผู้ใช้
-        expires_minutes: จำนวนนาทีที่ token มีอายุ (เริ่มต้น 15 นาที)
+        expires_minutes: จำนวนนาทีที่ token มีอายุ (เริ่มต้น 30 นาที)
         
     Returns:
         token: Token สำหรับการรีเซ็ตรหัสผ่าน
@@ -215,16 +246,13 @@ def send_password_reset_email(db: Session, email: str):
             logger.info(f"Password reset requested for non-existent email: {email}")
             return True, "หากอีเมลนี้ลงทะเบียนในระบบ เราได้ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลดังกล่าวแล้ว"
         
-        # สร้าง token สำหรับการรีเซ็ตรหัสผ่าน (อายุ 15 นาที)
+        # สร้าง token สำหรับการรีเซ็ตรหัสผ่าน (อายุ 30 นาที)
         token = generate_password_reset_token(db, user.id)
         
         # สร้าง URL สำหรับการรีเซ็ตรหัสผ่าน
         reset_url = f"{RESET_PASSWORD_URL}?token={token}"
         
-        # ส่งอีเมล
-        from lib.email_service import send_email
-        
-        subject = "รีเซ็ตรหัสผ่าน"
+        subject = "รีเซ็ตรหัสผ่าน ระบบบริหารจัดการเรื่องราวร้องทุกข์"
         message = f"""
         เรียน {user.first_name} {user.last_name},
         
@@ -232,20 +260,25 @@ def send_password_reset_email(db: Session, email: str):
         
         {reset_url}
         
-        ลิงก์นี้จะมีอายุ 15 นาทีเท่านั้นและใช้งานได้เพียงครั้งเดียว กรุณาดำเนินการโดยเร็ว
+        ลิงก์นี้จะมีอายุ 30 นาทีเท่านั้นและใช้งานได้เพียงครั้งเดียว กรุณาดำเนินการโดยเร็ว
         
         หากคุณไม่ได้เป็นผู้ขอรีเซ็ตรหัสผ่าน กรุณาเพิกเฉยอีเมลนี้
         
         ขอแสดงความนับถือ,
-        ทีมงานระบบ
+        สำนักงานปลัดกระทรวงการคลัง
         """
         
-        send_email(user.email, subject, message)
-        logger.info(f"Password reset email sent to {user.email}")
+        # ส่งอีเมลแบบ asynchronous
+        thread = threading.Thread(
+            target=send_password_reset_email_async,
+            args=(user.email, subject, message)
+        )
+        thread.daemon = True
+        thread.start()
         
         return True, "หากอีเมลนี้ลงทะเบียนในระบบ เราได้ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลดังกล่าวแล้ว"
     except Exception as e:
-        logger.error(f"Error sending password reset email: {str(e)}")
+        logger.error(f"Error preparing password reset email: {str(e)}")
         return False, "เกิดข้อผิดพลาดในการส่งอีเมล กรุณาลองอีกครั้งในภายหลัง"
 
 def verify_reset_token(db: Session, token: str):
@@ -289,7 +322,7 @@ def reset_password_with_token(db: Session, token: str, new_password: str):
         user_id = verify_reset_token(db, token)
         
         if not user_id:
-            return False, "ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้องหรือหมดอายุแล้ว (มีอายุ 15 นาที) กรุณาขอลิงก์ใหม่"
+            return False, "ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้องหรือหมดอายุแล้ว (มีอายุ 30 นาที) กรุณาขอลิงก์ใหม่"
         
         # ดึงข้อมูลผู้ใช้
         from models.user import User
