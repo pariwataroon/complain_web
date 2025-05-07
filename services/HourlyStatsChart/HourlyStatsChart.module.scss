@@ -83,14 +83,6 @@
   pointer-events: none;
 }
 
-.hiddenInput {
-  opacity: 0;
-  width: 0;
-  height: 0;
-  position: absolute;
-  pointer-events: none;
-}
-
 .chartContainer {
   margin-top: 32px;
   display: flex;
@@ -128,5 +120,18 @@
 
   .tooltipValue {
     color: #1120a3;
+  }
+}
+
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .inputBox {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
   }
 }
