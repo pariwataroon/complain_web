@@ -1,9 +1,12 @@
 import React from "react";
 import { styled } from "@mui/material/styles";
-import { FormControl, Select, MenuItem } from "@mui/material";
+import { Box, FormControl, Select, MenuItem, IconButton } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 
-// กำหนด StyledSelect สำหรับปรับสไตล์ของ Select
-const StyledSelect = styled(Select)(({ theme }) => ({
+/* -------------------------------------------------------------------------- */
+/*  styled components                                                         */
+/* -------------------------------------------------------------------------- */
+const StyledSelect = styled(Select)({
   height: "40px",
   color: "#1D40F8",
   "& .MuiOutlinedInput-notchedOutline": {
@@ -16,66 +19,98 @@ const StyledSelect = styled(Select)(({ theme }) => ({
   "& .MuiSvgIcon-root": {
     color: "#1D40F8",
   },
-  // ปรับสไตล์ให้ข้อความภายในเลือกมีความสูง 40px
   "& .MuiSelect-select": {
-    paddingTop: "0px",
-    paddingBottom: "0px",
+    paddingTop: 0,
+    paddingBottom: 0,
     height: "40px",
     display: "flex",
     alignItems: "center",
   },
-}));
+});
 
-// กำหนด StyledMenuItem เพื่อลด padding และทำให้ความสูงของรายการลดลง
-const StyledMenuItem = styled(MenuItem)(() => ({
+const StyledMenuItem = styled(MenuItem)({
   paddingTop: 4,
   paddingBottom: 4,
   fontSize: 14,
   minHeight: "unset",
-}));
+});
 
-// กำหนด menuProps สำหรับควบคุมความสูงของ Dropdown
+/* -------------------------------------------------------------------------- */
+/*  dropdown max‑height                                                       */
+/* -------------------------------------------------------------------------- */
 const ITEM_HEIGHT = 36;
 const ITEM_PADDING_TOP = 8;
 const menuProps = {
   PaperProps: {
-    style: {
-      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP, // ตัวอย่าง: แสดงได้ 4.5 รายการแล้วเลื่อนสกอลล์
-    },
+    style: { maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP },
   },
 };
 
+/* -------------------------------------------------------------------------- */
+/*  SelectMenuService                                                         */
+/* -------------------------------------------------------------------------- */
 /**
- * SelectMenuService - บริการเลือกสรร
- * รับ props: options, handleChange, value, width, name
+ * @param {Object[]}  options       [{ label, value }]
+ * @param {Function}  handleChange  (event) => void
+ * @param {string}    value
+ * @param {string}    width         css width (default auto)
+ * @param {string}    name          input name
  */
-const SelectMenuService = ({ options, handleChange, value, width, name }) => {
+const SelectMenuService = ({
+  options = [],
+  handleChange,
+  value = "",
+  width,
+  name,
+}) => {
+  /* -------------------------- clear current value ------------------------- */
+  const handleClear = () => {
+    // ส่ง event จำลองให้ parent รับเหมือน onChange ปกติ
+    handleChange({ target: { name, value: "" } });
+  };
+
   return (
-    <FormControl variant="outlined" sx={{ width: width || "auto" }}>
-      {/* เอา InputLabel ออกเพื่อไม่ให้ “ตัวเลือก” ลอยอยู่ด้านบน */}
-      <StyledSelect
-        value={value}
-        onChange={handleChange}
-        displayEmpty
-        MenuProps={menuProps}
-        name={name} // Add the name prop to the StyledSelect
-        renderValue={(selected) => {
-          // ถ้าไม่เลือกอะไรเลย ให้ขึ้นเป็นข้อความ placeholder
-          if (selected === "") {
-            return <span style={{ color: "#999" }}>-- เลือกตัวเลือก --</span>;
+    <Box sx={{ position: "relative", width: width || "auto" }}>
+      <FormControl variant="outlined" sx={{ width: "100%" }}>
+        <StyledSelect
+          value={value}
+          onChange={handleChange}
+          displayEmpty
+          MenuProps={menuProps}
+          name={name}
+          renderValue={(selected) =>
+            selected === "" ? (
+              <span style={{ color: "#999" }}>-- เลือกตัวเลือก --</span>
+            ) : (
+              options.find((o) => o.value === selected)?.label || ""
+            )
           }
-          return (
-            options.find((option) => option.value === selected)?.label || ""
-          );
-        }}
-      >
-        {options.map((option, index) => (
-          <StyledMenuItem key={index} value={option.value}>
-            {option.label}
-          </StyledMenuItem>
-        ))}
-      </StyledSelect>
-    </FormControl>
+        >
+          {options.map((option, idx) => (
+            <StyledMenuItem key={idx} value={option.value}>
+              {option.label}
+            </StyledMenuItem>
+          ))}
+        </StyledSelect>
+      </FormControl>
+
+      {/* clear icon (show only when value is not empty) */}
+      {value && (
+        <IconButton
+          size="small"
+          onClick={handleClear}
+          sx={{
+            position: "absolute",
+            right: 30,
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "#1D40F8",
+          }}
+        >
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      )}
+    </Box>
   );
 };
 

@@ -13,8 +13,13 @@ import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import { SketchPicker } from "react-color";
 import TextfieldService from "@services/TextfieldService/TextfieldService";
-import { GetDetailDepartment } from "@pages/api/settinggeneral/department/department";
-
+import {
+  GetDetailDepartment,
+  CreateVenue,
+  DeleteVenue,
+  UpdateVenue,
+} from "@pages/api/settinggeneral/department/department";
+import { alertSuccess, showConfirm, alertError } from "@utils/Alerts";
 /* -------------------------------------------------------------------------- */
 /*  static data                                                               */
 /* -------------------------------------------------------------------------- */
@@ -35,137 +40,6 @@ const breadcrumbItems = [
   },
 ];
 
-const departmentData = {
-  res_data: [
-    {
-      role_name: "bank",
-      role_description: "ธนาคารแห่งประเทศไทย",
-      users: [
-        {
-          id: 1,
-          main_department: "บริษัท บริหารสินทรัพย์สุขุมวิท จำกัด",
-          sub_department: "บสก. / SAM",
-          color_code: "#EA33F7",
-        },
-        {
-          id: 2,
-          main_department: "บริษัท บริหารสินทรัพย์กรุงเทพพาณิชย์ จำกัด",
-          sub_department: "",
-          color_code: "#8D3AF6",
-        },
-      ],
-    },
-    {
-      role_name: "conservation",
-      role_description: "กรมอุทยานฯ",
-      users: [
-        {
-          id: 3,
-          main_department: "สำนักอนุรักษ์สัตว์ป่า",
-          sub_department: "ฝ่ายภาคกลาง",
-          color_code: "#22C55E",
-        },
-      ],
-    },
-    {
-      role_name: "centralAccounting",
-      role_description: "กรมบัญชีกลาง",
-      users: [
-        {
-          id: 4,
-          main_department: "กองบริหารการคลัง",
-          sub_department: "ฝ่ายงบประมาณ",
-          color_code: "#3B82F6",
-        },
-      ],
-    },
-    {
-      role_name: "customs",
-      role_description: "กรมศุลกากร",
-      users: [
-        {
-          id: 5,
-          main_department: "สำนักงานศุลกากรท่าเรือกรุงเทพ",
-          sub_department: "ฝ่ายตรวจปล่อย",
-          color_code: "#EC4899",
-        },
-      ],
-    },
-    {
-      role_name: "excise",
-      role_description: "กรมสรรพสามิต",
-      users: [
-        {
-          id: 6,
-          main_department: "สรรพสามิตพื้นที่กรุงเทพฯ",
-          sub_department: "ฝ่ายควบคุมเครื่องดื่ม",
-          color_code: "#F59E0B",
-        },
-      ],
-    },
-    {
-      role_name: "revenue",
-      role_description: "กรมสรรพากร",
-      users: [
-        {
-          id: 7,
-          main_department: "สำนักงานสรรพากรพื้นที่กรุงเทพมหานคร",
-          sub_department: "ฝ่ายตรวจสอบ",
-          color_code: "#10B981",
-        },
-      ],
-    },
-    {
-      role_name: "sepo",
-      role_description: "สำนักงานคณะกรรมการนโยบายรัฐวิสาหกิจ",
-      users: [
-        {
-          id: 8,
-          main_department: "ฝ่ายกำกับดูแลรัฐวิสาหกิจ",
-          sub_department: "ส่วนวิเคราะห์ผล",
-          color_code: "#6366F1",
-        },
-      ],
-    },
-    {
-      role_name: "pdmo",
-      role_description: "สำนักงานบริหารหนี้สาธารณะ",
-      users: [
-        {
-          id: 9,
-          main_department: "กองบริหารหนี้ภาครัฐ",
-          sub_department: "ฝ่ายแผนงาน",
-          color_code: "#8B5CF6",
-        },
-      ],
-    },
-    {
-      role_name: "fpo",
-      role_description: "สำนักงานเศรษฐกิจการคลัง",
-      users: [
-        {
-          id: 10,
-          main_department: "กลุ่มยุทธศาสตร์เศรษฐกิจ",
-          sub_department: "ฝ่ายวิจัย",
-          color_code: "#EF4444",
-        },
-      ],
-    },
-    {
-      role_name: "gsb",
-      role_description: "ธนาคารออมสิน",
-      users: [
-        {
-          id: 11,
-          main_department: "ฝ่ายสินเชื่อรายย่อย",
-          sub_department: "แผนกภาคใต้",
-          color_code: "#F472B6",
-        },
-      ],
-    },
-  ],
-};
-
 /* -------------------------------------------------------------------------- */
 /*  component                                                                  */
 /* -------------------------------------------------------------------------- */
@@ -181,61 +55,92 @@ const DepartmentManagement = () => {
   const [formData, setFormData] = useState({
     government: "",
     stateEnterprise: "",
-    sub_department: "",
     other: "",
   });
 
+  /* ------------------------------ state ----------------------------------- */
   const [stats, setStats] = useState({ res_data: [] });
+  const [filteredStats, setFilteredStats] = useState({ res_data: [] });
+  const [stateEnterpriseOptions, setStateEnterpriseOptions] = useState([]);
+  const [governmentOptions, setGovernmentOptions] = useState([]);
+  const [otherOptions, setOtherOptions] = useState([]);
+
+  /* ------------------------------- useEffect -------------------------------- */
+  const fetchDepartmentDetails = async () => {
+    try {
+      const response = await GetDetailDepartment();
+
+      /* ---------- 1. ดึง venues เฉพาะกลุ่ม "รัฐวิสาหกิจ" ---------- */
+      const wisetakitVenues = response.res_data.flatMap((dept) =>
+        dept.venue_groups
+          .filter((g) => g.group_name === "รัฐวิสาหกิจ")
+          .flatMap((g) => g.venues)
+      );
+
+      /* ---------- 2. สร้าง options แล้วเก็บใน state ใหม่ ---------- */
+      const wisetakitOptions = wisetakitVenues.map((v) => ({
+        label: v.name, // หรือ v.short_name แล้วแต่ต้องการแสดง
+        value: v.id, // จะใช้ code / abbreviation ก็เปลี่ยนตรงนี้
+      }));
+      setStateEnterpriseOptions(wisetakitOptions);
+
+      /* ---------- 1. ดึง venues เฉพาะกลุ่ม "ส่วนราชการ" ---------- */
+      const GovVenues = response.res_data.flatMap((dept) =>
+        dept.venue_groups
+          .filter((g) => g.group_name === "ส่วนราชการ")
+          .flatMap((g) => g.venues)
+      );
+
+      /* ---------- 2. สร้าง options แล้วเก็บใน state ใหม่ ---------- */
+      const govOptions = GovVenues.map((v) => ({
+        label: v.name, // หรือ v.short_name แล้วแต่ต้องการแสดง
+        value: v.id, // จะใช้ code / abbreviation ก็เปลี่ยนตรงนี้
+      }));
+      setGovernmentOptions(govOptions);
+
+      /* ---------- 1. ดึง venues เฉพาะกลุ่ม "ส่วนราชการ" ---------- */
+      const OtherVenues = response.res_data.flatMap((dept) =>
+        dept.venue_groups
+          .filter((g) => g.group_name === "อื่นๆ")
+          .flatMap((g) => g.venues)
+      );
+
+      /* ---------- 2. สร้าง options แล้วเก็บใน state ใหม่ ---------- */
+      const otherOpts = OtherVenues.map((v) => ({
+        label: v.name, // หรือ v.short_name แล้วแต่ต้องการแสดง
+        value: v.id, // จะใช้ code / abbreviation ก็เปลี่ยนตรงนี้
+      }));
+      setOtherOptions(otherOpts);
+
+      /* ---------- 3. map ข้อมูลเดิมไว้ใช้งานหน้าตาราง ---------- */
+      const mappedData = response.res_data.map((department) => ({
+        department_id: department.department_id || department.id,
+        role_name: department.department_code.toLowerCase(),
+        role_description: department.department_name,
+        users: department.venue_groups.flatMap((group) =>
+          group.venues.map((venue) => ({
+            id: venue.id,
+            main_department: venue.name,
+            sub_department: venue.short_name || "-",
+            color_code: venue.color_code,
+            group_name: group.group_name,
+          }))
+        ),
+      }));
+
+      setStats({ res_data: mappedData });
+      setFilteredStats({ res_data: mappedData });
+    } catch (err) {
+      console.error("Error fetching department details:", err);
+    }
+  };
 
   /* ------------------------------- useEffect -------------------------------- */
   useEffect(() => {
-    const fetchDepartmentDetails = async () => {
-      try {
-        const response = await GetDetailDepartment(); // Fetch department details
-        console.log("API response:", response);
-
-        // Mapping API response to match the structure of departmentData
-        const mappedData = response.res_data.map((department) => {
-          return {
-            role_name: department.department_code.toLowerCase(), // Use department code as role name
-            role_description: department.department_name, // Use department name as description
-            users: department.venue_groups.flatMap((group) =>
-              group.venues.map((venue) => ({
-                id: venue.id,
-                main_department: venue.name,
-                sub_department: venue.short_name || "-", // Default "-" if no sub-department
-                color_code: venue.color_code,
-              }))
-            ),
-          };
-        });
-
-        console.log("Mapped Data:", mappedData);
-        setStats({ res_data: mappedData }); // Set the mapped data into the state
-      } catch (error) {
-        console.error("Error fetching department details:", error);
-      }
-    };
-
     fetchDepartmentDetails();
-  }, []); // Empty dependency array to fetch on mount
+  }, []);
 
   /* ---------------------------------- data ---------------------------------- */
-  const governmentOptions = [
-    { label: "ตำแหน่ง 1", value: "ตำแหน่ง 1" },
-    { label: "ตำแหน่ง 2", value: "ตำแหน่ง 2" },
-    { label: "ตำแหน่ง 3", value: "ตำแหน่ง 3" },
-  ];
-  const stateEnterpriseOptions = [
-    { label: "รัฐวิสาหกิจ 1", value: "รัฐวิสาหกิจ 1" },
-    { label: "รัฐวิสาหกิจ 2", value: "รัฐวิสาหกิจ 2" },
-    { label: "รัฐวิสาหกิจ 3", value: "รัฐวิสาหกิจ 3" },
-  ];
-  const otherOptions = [
-    { label: "อื่นๆ 1", value: "อื่นๆ 1" },
-    { label: "อื่นๆ 2", value: "อื่นๆ 2" },
-    { label: "อื่นๆ 3", value: "อื่นๆ 3" },
-  ];
 
   /* ------------------------------- id helpers ------------------------------- */
   const getNextId = () => {
@@ -244,17 +149,42 @@ const DepartmentManagement = () => {
   };
 
   /* -------------------------------- handlers -------------------------------- */
-  const handleInputChange = (event, value, name) => {
-    if (event?.target) {
-      const { name: eventName, value: eventValue } = event.target;
-      setFormData((prev) => ({ ...prev, [eventName]: eventValue }));
-    } else if (name) {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
+  const handleInputChange = (name, value) => {
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      console.log("SelectMenu change →", updated);
+      return updated;
+    });
   };
 
   const handleSearch = () => {
-    console.log("ค้นหา:", formData);
+    const { government, stateEnterprise, other } = formData;
+
+    // ไม่มีเงื่อนไข → แสดงทั้งหมด
+    if (!government && !stateEnterprise && !other) {
+      setFilteredStats(stats);
+      return;
+    }
+
+    // กรองแต่ละ section แล้วรวมใหม่
+    const filteredSections = stats.res_data
+      .map((section) => {
+        // เงื่อนไขของ section (government)
+        if (government && section.role_description !== government) return null;
+
+        // เงื่อนไขของ user ภายใน (stateEnterprise / other)
+        const filteredUsers = section.users.filter((user) => {
+          const matchStateEnt = !stateEnterprise || user.id === stateEnterprise;
+          const matchOther = !other || user.sub_department === other;
+          return matchStateEnt && matchOther;
+        });
+
+        if (filteredUsers.length === 0) return null;
+        return { ...section, users: filteredUsers };
+      })
+      .filter(Boolean);
+
+    setFilteredStats({ res_data: filteredSections });
   };
 
   const toggleSection = (idx) => {
@@ -293,21 +223,47 @@ const DepartmentManagement = () => {
       setColorCode((e.target.value || "").toUpperCase());
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
+      // สร้าง obj สำหรับ UI
       const newUser = {
         id: getNextId(),
         main_department: mainDepartment,
         sub_department: subDepartment,
         color_code: colorCode,
+        group_name: stats.res_data[sectionIdx]?.users[0]?.group_name || "อื่นๆ", // default
       };
 
-      setStats((prevState) => {
-        const updatedData = prevState.res_data.map((section, idx) => {
-          if (idx !== sectionIdx) return section;
-          return { ...section, users: [...section.users, newUser] };
-        });
-        return { ...prevState, res_data: updatedData };
+      // อัปเดต state ก่อน
+      setStats((prev) => {
+        const updated = prev.res_data.map((sec, i) =>
+          i === sectionIdx ? { ...sec, users: [...sec.users, newUser] } : sec
+        );
+        return { ...prev, res_data: updated };
       });
+
+      // เตรียม payload ส่ง API
+      try {
+        const section = stats.res_data[sectionIdx];
+        const payload = {
+          name: mainDepartment,
+          code: subDepartment || mainDepartment.substring(0, 5).toUpperCase(),
+          abbreviation: subDepartment,
+          color_code: colorCode,
+          short_name: subDepartment,
+          group_name: newUser.group_name,
+          department_id: section?.department_id,
+        };
+        await CreateVenue(payload);
+
+        // Fetch updated department details after creating the new venue
+        fetchDepartmentDetails();
+
+        // Show success alert
+        alertSuccess("สำเร็จ!", "เพิ่มหน่วยงานใหม่เรียบร้อยแล้ว");
+      } catch (err) {
+        console.error("CreateVenue error:", err);
+        alertError("เกิดข้อผิดพลาด", "ไม่สามารถเพิ่มหน่วยงานได้ กรุณาลองใหม่");
+      }
 
       onClose();
     };
@@ -457,13 +413,48 @@ const DepartmentManagement = () => {
       setSelectedColor((e.target.value || "").toUpperCase());
     };
 
-    const handleSave = () => {
-      onSave({
+    const handleSave = async () => {
+      const updatedUser = {
         ...user,
         main_department: selectedDepartment,
         sub_department: selectedSubDepartment,
         color_code: selectedColor,
-      });
+      };
+
+      // Call the UpdateVenue function to update the venue on the server
+      try {
+        const payload = {
+          name: selectedDepartment,
+          code:
+            selectedSubDepartment ||
+            selectedDepartment.substring(0, 5).toUpperCase(),
+          abbreviation: selectedSubDepartment,
+          color_code: selectedColor,
+          short_name: selectedSubDepartment,
+          group_name: user.group_name, // Assuming we want to keep the same group name
+          department_id: user.department_id,
+        };
+
+        // Trigger the API call to update the venue
+        await UpdateVenue(user.id, payload);
+
+        // After successful update, update the local state as well
+        onSave(updatedUser);
+
+        // Fetch the department details again after the update is successful
+        await fetchDepartmentDetails(); // Fetch updated details after successful update
+
+        // Show success alert
+        alertSuccess("สำเร็จ!", "ข้อมูลหน่วยงานถูกอัปเดตเรียบร้อย");
+
+        onClose();
+      } catch (err) {
+        console.error("Error updating venue:", err);
+        alertError(
+          "เกิดข้อผิดพลาด",
+          "ไม่สามารถอัปเดตข้อมูลหน่วยงานได้ กรุณาลองใหม่"
+        );
+      }
     };
 
     if (!user) return null;
@@ -576,15 +567,31 @@ const DepartmentManagement = () => {
   const DeleteUserModal = ({ open, onClose, user }) => {
     if (!user) return null;
 
-    const handleDelete = (user) => {
-      setStats((prevState) => {
-        const updatedData = prevState.res_data.map((section) => {
-          const updatedUsers = section.users.filter((u) => u.id !== user.id);
-          return { ...section, users: updatedUsers };
+    const handleDelete = async (user) => {
+      try {
+        // Call DeleteVenue function directly when the user clicks "ตกลง"
+        await DeleteVenue(user.id); // Pass user.id to delete the venue
+
+        // Remove user from the state after successful deletion
+        setStats((prevState) => {
+          const updatedData = prevState.res_data.map((section) => {
+            const updatedUsers = section.users.filter((u) => u.id !== user.id);
+            return { ...section, users: updatedUsers };
+          });
+          return { ...prevState, res_data: updatedData };
         });
-        return { ...prevState, res_data: updatedData };
-      });
-      setDeleteUser(null);
+
+        // Fetch updated department details after successful deletion
+        fetchDepartmentDetails();
+
+        // Show success alert after deletion
+        alertSuccess("สำเร็จ!", "ลบหน่วยงานเรียบร้อยแล้ว");
+
+        setDeleteUser(null);
+      } catch (err) {
+        console.error("Error deleting venue:", err);
+        alertError("เกิดข้อผิดพลาด", "ไม่สามารถลบหน่วยงานได้ กรุณาลองใหม่");
+      }
     };
 
     return (
@@ -632,7 +639,7 @@ const DepartmentManagement = () => {
             <ButtonService
               label="ยืนยัน"
               variant="contained"
-              onClick={() => handleDelete(user)}
+              onClick={() => handleDelete(user)} // Directly delete without confirmation
               iconRight={<CheckOutlinedIcon />}
               color="#D52C27"
               sx={{
@@ -692,7 +699,9 @@ const DepartmentManagement = () => {
             <SelectMenuService
               options={field.options}
               value={formData[field.name]}
-              onChange={(e, v) => handleInputChange(e, v, field.name)}
+              handleChange={(e) =>
+                handleInputChange(field.name, e.target.value)
+              }
               name={field.name}
               width="100%"
               placeholder={`เลือก${field.label}`}
@@ -718,7 +727,6 @@ const DepartmentManagement = () => {
           />
         </Box>
       </Box>
-
       {/* -------------------------------------------------------------------- */}
       {/*  list                                                                */}
       {/* -------------------------------------------------------------------- */}
@@ -736,7 +744,7 @@ const DepartmentManagement = () => {
             </div>
 
             {/* sections */}
-            {stats.res_data.map((section, idx) => (
+            {filteredStats.res_data.map((section, idx) => (
               <div key={idx} className={styles.section}>
                 {/* section header */}
                 <div className={styles.sectionHeader}>
