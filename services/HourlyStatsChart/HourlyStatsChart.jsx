@@ -4,16 +4,7 @@ import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import { formatThaiBuddhistYear } from "@utils/Formats";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import styles from "./HourlyStatsChart.module.scss";
 
 const chartData = [
@@ -30,43 +21,63 @@ const HourlyStatsChart = () => {
 
   return (
     <Box
-      sx={{ background: "#fff", borderRadius: 2, p: 2, boxShadow: 1 }}
+      sx={{
+        background: "#fff",
+        borderRadius: 2,
+        p: 2,
+        boxShadow: 1,
+        width: "100%",
+        maxWidth: "900px",
+        margin: "0 auto",
+        position: "relative",
+      }}
       className={styles.hourlyStats}
     >
       <div className={styles.header}>
-        <div className={styles.leftSide}>
-          <Typography variant="h6" fontWeight="bold" className={styles.main}>
-            สถิติการเข้าชมเว็บไซต์รายชั่วโมง
-          </Typography>
-          <Typography variant="subtitle1" className={styles.sub}>
-            ณ วันที่ {formatThaiBuddhistYear(date)}
-          </Typography>
-        </div>
-        <div className={styles.rightSide}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <div className={styles.dateGroup}>
-              <div className={styles.dateRow}>
-                <span className={styles.rowLabel}>วันที่</span>
-                <DatePicker
-                  value={date}
-                  onChange={(newDate) => setDate(newDate)}
-                  renderInput={({ inputRef }) => (
-                    <div
-                      className={styles.inputBox}
-                      onClick={() => inputRef?.current?.focus()}
-                      ref={inputRef}
-                    >
-                      <span className={styles.dateText}>
-                        {formatThaiBuddhistYear(date)}
-                      </span>
-                      <CalendarMonthIcon className={styles.icon} />
-                    </div>
-                  )}
-                />
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: ["column", "row"],
+            justifyContent: "space-between",
+            alignItems: ["center", "flex-start"],
+            gap: 2,
+          }}
+        >
+          <Box>
+            <Typography variant="h6" fontWeight="bold" className={styles.main}>
+              สถิติการเข้าชมเว็บไซต์รายชั่วโมง
+            </Typography>
+            <Typography variant="subtitle1" className={styles.sub}>
+              ณ วันที่ {formatThaiBuddhistYear(date)}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <div className={styles.dateGroup}>
+                <div className={styles.dateRow}>
+                  <span className={styles.rowLabel}>วันที่</span>
+                  <DatePicker
+                    value={date}
+                    onChange={(newDate) => setDate(newDate)}
+                    renderInput={({ inputRef }) => (
+                      <div
+                        className={styles.inputBox}
+                        onClick={() => inputRef?.current?.focus()}
+                        ref={inputRef}
+                      >
+                        <span className={styles.dateText}>
+                          {formatThaiBuddhistYear(date)}
+                        </span>
+                        <CalendarMonthIcon className={styles.icon} />
+                      </div>
+                    )}
+                  />
+                </div>
               </div>
-            </div>
-          </LocalizationProvider>
-        </div>
+            </LocalizationProvider>
+          </Box>
+        </Box>
       </div>
 
       {/* Chart area */}

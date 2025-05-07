@@ -21,12 +21,12 @@ const DashboardComponents_Home = () => {
   ];
 
   return (
-    <Box sx={{ minHeight: "100vh", py: 4 }}>
+    <Box sx={{ minHeight: "100vh", py: 1 }}>
       <BreadcrumbsService items={breadcrumbItems} />
       {/* ซ้ายบน */}
       <Container maxWidth={false} disableGutters>
         {/* แถวบน */}
-        <Box display="flex" gap={3} mb={12} mt={2} flexWrap="wrap">
+        <Box display="flex" gap={3} mb={6} mt={2} flexWrap="wrap">
           <Box flex={1} minWidth="300px">
             <DailyStatsChart />
           </Box>
@@ -36,7 +36,7 @@ const DashboardComponents_Home = () => {
         </Box>
 
         {/* แถวล่าง */}
-        <Box display="flex" gap={3} mb={3} mt={2} flexWrap="wrap">
+        <Box display="flex" gap={3} mb={6} mt={2} flexWrap="wrap">
           <Box flex={1} minWidth="300px">
             <PopularNewsStats />
           </Box>

@@ -15,7 +15,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { th } from "date-fns/locale";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import { formatThaiBuddhistYear, formatThaiDateRange } from "@utils/Formats";
-import { Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 
 const chartData = [
   { date: "1 ม.ค.", value: 7, color: "#0a2cbd" },

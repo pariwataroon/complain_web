@@ -18,7 +18,6 @@ export const useRegisterForm = () => {
   const onSubmit = async (data) => {
     try {
       const response = await registerCard(data);
-
       if (response) {
         if (response.res_code === "0001") {
           await alertSuccess(
@@ -36,8 +35,8 @@ export const useRegisterForm = () => {
           );
         } else if (response.res_code === "4090") {
           await alertInfo(
-            'อีเมล์นี้มีการใช้งานแล้ว',
-            `อีเมลนี้มีการลงทะเบียนแล้ว<br>หากลืมรหัสผ่านโปรดคลิก <a href="/register?method=Forget_CardID">ลืมรหัสผ่าน</a>`,
+            'อีเมล์หรือรหัสบัตรประชาชน<br>มีการใช้งานแล้ว',
+            `หากลืมรหัสผ่านโปรดคลิก <a href="/register?method=Forget_CardID">ลืมรหัสผ่าน</a>`,
             true
           );
         } else {
