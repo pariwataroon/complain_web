@@ -1,3 +1,4 @@
+import time
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
@@ -8,6 +9,9 @@ from models.association_tables import notification_seen_table
 from app.api.v1.schemas.notification import NotificationCreate, NotificationResponse
 from datetime import datetime
 from lib.logger import get_logger
+
+_recent_admin_notifications = {}
+_NOTIFICATION_THROTTLE_SECONDS = 300  # 5 นาที
 
 logger = get_logger("notification_controller", console_output=False)
 
@@ -157,6 +161,20 @@ def format_notification_data(notification, current_user_id=None):
     
     return notification_data
 
+def should_notify_admin(user_id):
+    """ตรวจสอบว่าควรแจ้งเตือน admin เกี่ยวกับผู้ใช้นี้หรือไม่"""
+    current_time = time.time()
+    
+    if str(user_id) in _recent_admin_notifications:
+        last_sent = _recent_admin_notifications[str(user_id)]
+        if current_time - last_sent < _NOTIFICATION_THROTTLE_SECONDS:
+            logger.info(f"Admin notification throttled: {user_id} (sent {current_time - last_sent:.1f}s ago)")
+            return False
+    
+    # อัพเดตเวลาส่งล่าสุด
+    _recent_admin_notifications[str(user_id)] = current_time
+    return True
+
 def notify_admin_new_user(db: Session, user):
     """
     สร้างการแจ้งเตือนสำหรับ admin เมื่อมีผู้ใช้ใหม่ลงทะเบียนสำเร็จ
@@ -165,6 +183,10 @@ def notify_admin_new_user(db: Session, user):
         db: Database session
         user: User object ของผู้ใช้ที่ลงทะเบียน
     """
+    if not should_notify_admin(user.id):
+        logger.info(f"Skipping duplicate admin notification for user {user.id}")
+        return False
+    
     try:
         # สร้างข้อมูลการแจ้งเตือน
         notification_data = NotificationCreate(

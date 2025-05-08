@@ -33,6 +33,20 @@ def generate_verification_token(db: Session, user_id: uuid.UUID, expires_minutes
     Returns:
         token: Token สำหรับการยืนยันอีเมล
     """
+    # ตรวจสอบว่ามี token ที่ยังไม่หมดอายุหรือไม่
+    existing = db.query(VerificationToken).filter(
+        VerificationToken.user_id == user_id,
+        VerificationToken.token_type == "email_verification",
+        VerificationToken.is_used == False,
+        VerificationToken.expires_at > datetime.utcnow()
+    ).first()
+    
+    # ถ้ายังมี token เดิมที่ใช้ได้ ก็ใช้อันเดิม
+    if existing:
+        logger.info(f"Using existing verification token for user {user_id}")
+        return existing.token
+        
+    # สร้าง token ใหม่
     token = secrets.token_urlsafe(32)
     expires_at = datetime.utcnow() + timedelta(minutes=expires_minutes)
     
@@ -168,7 +182,11 @@ def verify_email(db: Session, token: str):
     if user:
         user.is_active = True
         # ส่งการแจ้งเตือนถึง admin เมื่อมีผู้ใช้ยืนยันอีเมลสำเร็จ
-        notify_admin_new_user(db, user)
+        notification_sent = notify_admin_new_user(db, user)
+        if notification_sent:
+            logger.info(f"Admin notification sent for user {user.id}")
+        else:
+            logger.warning(f"Failed to send admin notification for user {user.id}")
         
     db.commit()
     
@@ -246,6 +264,19 @@ def generate_password_reset_token(db: Session, user_id: uuid.UUID, expires_minut
     Returns:
         token: Token สำหรับการรีเซ็ตรหัสผ่าน
     """
+    # ตรวจสอบว่ามี token ที่ยังไม่หมดอายุหรือไม่
+    existing = db.query(VerificationToken).filter(
+        VerificationToken.user_id == user_id,
+        VerificationToken.token_type == "password_reset",
+        VerificationToken.is_used == False,
+        VerificationToken.expires_at > datetime.utcnow()
+    ).first()
+    
+    # ถ้ายังมี token เดิมที่ใช้ได้ ก็ใช้อันเดิม
+    if existing:
+        logger.info(f"Using existing password reset token for user {user_id}")
+        return existing.token
+
     token = secrets.token_urlsafe(32)
     expires_at = datetime.utcnow() + timedelta(minutes=expires_minutes)
     
