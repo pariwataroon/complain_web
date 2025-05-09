@@ -21,6 +21,8 @@ from .comp_provinces import Province
 from .comp_amphures import Amphure
 from .comp_districts import District
 from .project_api_key import ProjectApiKey
+from .signature_positions import SignaturePosition, SignatureAuthority
+
 
 # ระบุโมเดลที่สามารถนำเข้าเมื่อใช้ from models import *
 __all__ = [
@@ -28,4 +30,5 @@ __all__ = [
     'DepartmentGroup', 'Department', 'Notification', 'Position', 
     'ResourceGroup', 'TimeSetting', 'UserPosition', 'Venue', 'VerificationToken',
     'Geography', 'Province', 'Amphure', 'District', 'ProjectApiKey',
+    'SignaturePosition', 'SignatureAuthority'
 ]

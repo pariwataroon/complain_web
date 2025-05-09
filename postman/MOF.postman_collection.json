@@ -3537,6 +3537,341 @@
 		"description": "API สำหรับจัดการข้อมูลกลุ่มหน่วยงาน"
 		},
 		{
+		"name": "SIGNATURE POSITIONS",
+		"item": [
+			{
+			"name": "Get All Signature Positions",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions"
+				]
+				},
+				"description": "ดึงรายการตำแหน่งผู้มีอำนาจลงนามทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_users"
+			},
+			"response": []
+			},
+			{
+			"name": "Get Available Positions",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions/available-positions",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions",
+					"available-positions"
+				]
+				},
+				"description": "ดึงรายการตำแหน่งทั่วไปที่สามารถใช้อ้างอิงได้ - ต้องมีสิทธิ์อ่านใน setting_users"
+			},
+			"response": []
+			},
+			{
+			"name": "Get Signature Positions by Department",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions/department/{{department_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions",
+					"department",
+					"{{department_id}}"
+				]
+				},
+				"description": "ดึงรายการตำแหน่งผู้มีอำนาจลงนามตามหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_users"
+			},
+			"response": []
+			},
+			{
+			"name": "Get Signature Position by ID",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions/{{signature_position_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions",
+					"{{signature_position_id}}"
+				]
+				},
+				"description": "ดึงข้อมูลตำแหน่งผู้มีอำนาจลงนามตาม ID - ต้องมีสิทธิ์อ่านใน setting_users"
+			},
+			"response": []
+			},
+			{
+			"name": "Create Signature Position",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "{\n    \"title\": \"ผู้อำนวยการสำนัก\",\n    \"position_id\": \"{{position_id}}\",\n    \"department_id\": \"{{department_id}}\",\n    \"description\": \"ผู้มีอำนาจลงนามของสำนัก\",\n    \"is_active\": true,\n    \"order_index\": 10\n}",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions"
+				]
+				},
+				"description": "สร้างตำแหน่งผู้มีอำนาจลงนามใหม่ - ต้องมีสิทธิ์สร้างใน setting_users"
+			},
+			"response": []
+			},
+			{
+			"name": "Assign Signature Authority",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "{\n    \"user_id\": \"{{user_id}}\",\n    \"position_id\": \"{{signature_position_id}}\",\n    \"is_active\": true,\n    \"start_date\": \"2025-05-01T00:00:00Z\",\n    \"end_date\": null\n}",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions/assign-authority",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions",
+					"assign-authority"
+				]
+				},
+				"description": "กำหนดสิทธิการลงนามให้กับผู้ใช้ - ต้องมีสิทธิ์สร้างใน setting_users"
+			},
+			"response": []
+			},
+			{
+			"name": "Update Signature Position",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "PUT",
+				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "{\n    \"title\": \"ผู้อำนวยการสำนัก (ปรับปรุง)\",\n    \"position_id\": \"{{position_id}}\",\n    \"description\": \"ผู้มีอำนาจลงนามของสำนัก (แก้ไข)\",\n    \"is_active\": true,\n    \"order_index\": 20\n}",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions/{{signature_position_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions",
+					"{{signature_position_id}}"
+				]
+				},
+				"description": "อัปเดตข้อมูลตำแหน่งผู้มีอำนาจลงนาม - ต้องมีสิทธิ์แก้ไขใน setting_users"
+			},
+			"response": []
+			},
+			{
+			"name": "Delete Signature Position",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "DELETE",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions/{{signature_position_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions",
+					"{{signature_position_id}}"
+				]
+				},
+				"description": "ลบตำแหน่งผู้มีอำนาจลงนาม (soft delete) - ต้องมีสิทธิ์ลบใน setting_users"
+			},
+			"response": []
+			},
+			{
+			"name": "Get User's Signature Authorities",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions/authorities/user/{{user_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions",
+					"authorities",
+					"user",
+					"{{user_id}}"
+				]
+				},
+				"description": "ดึงรายการตำแหน่งผู้มีอำนาจลงนามทั้งหมดของผู้ใช้ - ต้องมีสิทธิ์อ่านใน setting_users"
+			},
+			"response": []
+			},
+			{
+			"name": "Revoke Signature Authority",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "PUT",
+				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "{\n    \"is_active\": false,\n    \"end_date\": \"2025-06-01T00:00:00Z\"\n}",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions/authorities/{{authority_id}}/revoke",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions",
+					"authorities",
+					"{{authority_id}}",
+					"revoke"
+				]
+				},
+				"description": "เพิกถอนสิทธิการลงนามของผู้ใช้ - ต้องมีสิทธิ์แก้ไขใน setting_users"
+			},
+			"response": []
+			}
+		],
+		"description": "API สำหรับจัดการตำแหน่งผู้มีอำนาจลงนามเอกสาร"
+		},
+		{
             "name": "NOTIFICATIONS",
             "item": [
                 {
