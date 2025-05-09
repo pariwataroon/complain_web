@@ -442,3 +442,145 @@ def assign_signature_authority(db: Session, authority_data: dict):
         db.rollback()
         logger.error(f"Error assigning signature authority: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to assign signature authority: {str(e)}")
+
+def get_available_users(db: Session, skip: int = 0, limit: int = 100):
+    """รับรายการผู้ใช้ที่สามารถกำหนดเป็นผู้มีอำนาจลงนามได้"""
+    try:
+        # ดึงข้อมูลผู้ใช้ที่สถานะยังใช้งานอยู่
+        users = db.query(User).filter(
+            User.is_active == True
+        ).order_by(User.first_name, User.last_name).offset(skip).limit(limit).all()
+        
+        result = []
+        for user in users:
+            # ดึงข้อมูลตำแหน่งและหน่วยงานเพิ่มเติมถ้ามี
+            position_name = None
+            department_name = None
+            
+            # ถ้ามีการเก็บข้อมูล position และ department ใน user ให้ดึงมาด้วย
+            # อาจต้องปรับตามโครงสร้างข้อมูลจริงของระบบ
+            if hasattr(user, "position") and user.position:
+                position_name = user.position.name
+                
+            if hasattr(user, "department") and user.department:
+                department_name = user.department.name
+                
+            result.append({
+                "id": user.id,
+                "name": f"{user.first_name} {user.last_name}",
+                "email": user.email,
+                "position": position_name,
+                "department": department_name
+            })
+        
+        return result
+    except Exception as e:
+        logger.error(f"Error fetching available users: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch available users: {str(e)}")
+
+def get_available_departments(db: Session, skip: int = 0, limit: int = 100):
+    """รับรายการหน่วยงานที่สามารถกำหนดตำแหน่งผู้มีอำนาจลงนามได้"""
+    try:
+        departments = db.query(Department).filter(
+            Department.is_active == True
+        ).order_by(Department.name).offset(skip).limit(limit).all()
+        
+        result = []
+        for dept in departments:
+            dept_dict = {
+                "id": dept.id,
+                "name": dept.name
+            }
+            
+            # เพิ่มข้อมูลเสริมถ้ามี
+            if hasattr(dept, "code"):
+                dept_dict["code"] = dept.code
+                
+            if hasattr(dept, "type"):
+                dept_dict["type"] = dept.type
+                
+            result.append(dept_dict)
+        
+        return result
+    except Exception as e:
+        logger.error(f"Error fetching available departments: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch available departments: {str(e)}")
+
+def get_positions_with_authorities(db: Session, department_id: Optional[UUID] = None, skip: int = 0, limit: int = 100):
+    """รับรายการตำแหน่งผู้มีอำนาจลงนามพร้อมข้อมูลผู้ลงนาม"""
+    try:
+        # ตรวจสอบ department_id ถ้ามีการระบุ
+        if department_id:
+            if not isinstance(department_id, UUID):
+                try:
+                    department_id = UUID(str(department_id))
+                except ValueError:
+                    logger.error(f"Invalid department ID format: {department_id}")
+                    raise HTTPException(status_code=400, detail="Invalid department ID format")
+            
+            department = db.query(Department).filter(
+                Department.id == department_id,
+                Department.is_active == True
+            ).first()
+            
+            if not department:
+                logger.error(f"Department with ID {department_id} not found")
+                raise HTTPException(status_code=404, detail=f"Department with ID {department_id} not found")
+        
+        # สร้าง query พื้นฐาน
+        query = db.query(SignaturePosition).filter(
+            SignaturePosition.is_active == True
+        )
+        
+        # กรองตามหน่วยงานถ้ามีการระบุ
+        if department_id:
+            query = query.filter(SignaturePosition.department_id == department_id)
+        
+        # ดึงข้อมูลพร้อม join ตาราง
+        positions = query.order_by(
+            SignaturePosition.department_id,
+            SignaturePosition.order_index
+        ).options(
+            joinedload(SignaturePosition.department),
+            joinedload(SignaturePosition.position),
+            joinedload(SignaturePosition.authorities).joinedload(SignatureAuthority.user)
+        ).offset(skip).limit(limit).all()
+        
+        # จัดเตรียมข้อมูลในรูปแบบที่เหมาะกับ UI
+        result = []
+        for position in positions:
+            position_dict = {
+                "id": position.id,
+                "title": position.title,
+                "description": position.description,
+                "order_index": position.order_index,
+                "department_id": position.department_id,
+                "department_name": position.department.name if position.department else None,
+                "position_id": position.position_id,
+                "position_name": position.position.name if position.position else None,
+                "is_active": position.is_active,
+                "authorities": []
+            }
+            
+            # เพิ่มข้อมูลผู้มีอำนาจลงนาม
+            for auth in position.authorities:
+                if auth.is_active:
+                    auth_dict = {
+                        "id": auth.id,
+                        "user_id": auth.user_id,
+                        "user_name": f"{auth.user.first_name} {auth.user.last_name}" if auth.user else None,
+                        "start_date": auth.start_date,
+                        "end_date": auth.end_date,
+                        "is_active": auth.is_active
+                    }
+                    position_dict["authorities"].append(auth_dict)
+            
+            result.append(position_dict)
+        
+        return result
+    except HTTPException as e:
+        # ส่งต่อ HTTPException ที่เกิดขึ้น
+        raise e
+    except Exception as e:
+        logger.error(f"Error fetching positions with authorities: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch positions with authorities: {str(e)}")
