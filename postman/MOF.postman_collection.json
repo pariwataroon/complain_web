@@ -3568,7 +3568,7 @@
 			"response": []
 			},
 			{
-			"name": "Get Available Positions",
+			"name": "Get Positions with Authorities",
 			"request": {
 				"auth": {
 				"type": "bearer",
@@ -3583,16 +3583,90 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-				"raw": "{{API}}{{PREFIX}}/signature-positions/available-positions",
+				"raw": "{{API}}{{PREFIX}}/signature-positions/list-positions-with-authorities?department_id={{department_id}}",
 				"host": [
 					"{{API}}{{PREFIX}}"
 				],
 				"path": [
 					"signature-positions",
-					"available-positions"
+					"list-positions-with-authorities"
+				],
+				"query": [
+					{
+					"key": "department_id",
+					"value": "{{department_id}}"
+					}
 				]
 				},
-				"description": "ดึงรายการตำแหน่งทั่วไปที่สามารถใช้อ้างอิงได้ - ต้องมีสิทธิ์อ่านใน setting_users"
+				"description": "ดึงรายการตำแหน่งผู้มีอำนาจลงนามพร้อมข้อมูลผู้ลงนาม"
+			},
+			"response": []
+			},
+			{
+			"name": "Get Available Users",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions/available-users?position_id={{position_id}}&department_id={{department_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions",
+					"available-users"
+				],
+				"query": [
+					{
+					"key": "position_id",
+					"value": "{{position_id}}"
+					},
+					{
+					"key": "department_id",
+					"value": "{{department_id}}"
+					}
+				]
+				},
+				"description": "ดึงรายการผู้ใช้ที่สามารถกำหนดเป็นผู้มีอำนาจลงนามได้ (กรองตามตำแหน่งหรือหน่วยงานได้)"
+			},
+			"response": []
+			},
+			{
+			"name": "Get Available Departments",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions/available-departments",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions",
+					"available-departments"
+				]
+				},
+				"description": "ดึงรายการหน่วยงานที่สามารถกำหนดตำแหน่งผู้มีอำนาจลงนามได้"
 			},
 			"response": []
 			},
@@ -3623,35 +3697,6 @@
 				]
 				},
 				"description": "ดึงรายการตำแหน่งผู้มีอำนาจลงนามตามหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_users"
-			},
-			"response": []
-			},
-			{
-			"name": "Get Signature Position by ID",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/signature-positions/{{signature_position_id}}",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"signature-positions",
-					"{{signature_position_id}}"
-				]
-				},
-				"description": "ดึงข้อมูลตำแหน่งผู้มีอำนาจลงนามตาม ID - ต้องมีสิทธิ์อ่านใน setting_users"
 			},
 			"response": []
 			},
@@ -3731,6 +3776,35 @@
 			"response": []
 			},
 			{
+			"name": "Get Signature Position by ID",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/signature-positions/{{signature_position_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"signature-positions",
+					"{{signature_position_id}}"
+				]
+				},
+				"description": "ดึงข้อมูลตำแหน่งผู้มีอำนาจลงนามตาม ID - ต้องมีสิทธิ์อ่านใน setting_users"
+			},
+			"response": []
+			},
+			{
 			"name": "Update Signature Position",
 			"request": {
 				"auth": {
@@ -3794,77 +3868,6 @@
 				]
 				},
 				"description": "ลบตำแหน่งผู้มีอำนาจลงนาม (soft delete) - ต้องมีสิทธิ์ลบใน setting_users"
-			},
-			"response": []
-			},
-			{
-			"name": "Get User's Signature Authorities",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/signature-positions/authorities/user/{{user_id}}",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"signature-positions",
-					"authorities",
-					"user",
-					"{{user_id}}"
-				]
-				},
-				"description": "ดึงรายการตำแหน่งผู้มีอำนาจลงนามทั้งหมดของผู้ใช้ - ต้องมีสิทธิ์อ่านใน setting_users"
-			},
-			"response": []
-			},
-			{
-			"name": "Revoke Signature Authority",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "PUT",
-				"header": [],
-				"body": {
-				"mode": "raw",
-				"raw": "{\n    \"is_active\": false,\n    \"end_date\": \"2025-06-01T00:00:00Z\"\n}",
-				"options": {
-					"raw": {
-					"language": "json"
-					}
-				}
-				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/signature-positions/authorities/{{authority_id}}/revoke",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"signature-positions",
-					"authorities",
-					"{{authority_id}}",
-					"revoke"
-				]
-				},
-				"description": "เพิกถอนสิทธิการลงนามของผู้ใช้ - ต้องมีสิทธิ์แก้ไขใน setting_users"
 			},
 			"response": []
 			}
