@@ -35,27 +35,34 @@ class SignaturePosition(SignaturePositionBase):
 
 class SignatureAuthorityBase(BaseModel):
     user_id: UUID
-    position_id: UUID
+    department_id: UUID
     is_active: Optional[bool] = True
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 
-class SignatureAuthorityCreate(SignatureAuthorityBase):
-    pass
+class SignatureAuthorityCreate(BaseModel):
+    user_id: UUID
+    department_id: UUID
+    is_active: bool = True
+    start_date: datetime
+    end_date: Optional[datetime] = None
 
 class SignatureAuthorityUpdate(BaseModel):
     user_id: Optional[UUID] = None
-    position_id: Optional[UUID] = None
+    department_id: Optional[UUID] = None
     is_active: Optional[bool] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 
-class SignatureAuthority(SignatureAuthorityBase):
-    id: UUID
+class SignatureAuthority(BaseModel):
+    id: Optional[UUID] = None
+    user_id: UUID
+    department_id: UUID
+    is_active: bool = True
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    user_name: Optional[str] = None
-    position_title: Optional[str] = None
     
     class Config:
         from_attributes = True
