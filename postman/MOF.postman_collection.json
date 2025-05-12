@@ -4822,6 +4822,220 @@
 			  }
 			],
 			"description": "API สำหรับจัดการข้อมูลภูมิศาสตร์ (ภูมิภาค, จังหวัด, อำเภอ, ตำบล)"
+		},
+		{
+		"name": "COMPLAINTS",
+		"item": [
+			{
+			"name": "Create New Complaint",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "{\r\n  \"step1\": {\r\n    \"general\": {\r\n      \"general\": {\r\n        \"idCard\": \"4324354345345\",\r\n        \"name\": \"พี่ฝันทั่วไป ข้อมูลผู้ร้องทุกข์\",\r\n        \"address\": \"ติดต่อ\",\r\n        \"phone\": \"0457676767\",\r\n        \"subdistricts\": \"ตำบล/แขวง A\",\r\n        \"districts\": \"อำเภอ/เขต B\",\r\n        \"email\": \"test@gmail.com\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"zipcode\": \"54676\"\r\n      },\r\n      \"delegate\": {\r\n        \"idCard\": \"1423453753753\",\r\n        \"name\": \"พี่ฝันทั่วไป ข้อมูลผู้รับมอบอำนาจร้องทุกข์\",\r\n        \"address\": \"ติดต่อ\",\r\n        \"phone\": \"0745375037\",\r\n        \"email\": \"test@gmail.com\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"subdistricts\": \"ตำบล/แขวง A\",\r\n        \"districts\": \"อำเภอ/เขต A\",\r\n        \"zipcode\": \"54676\"\r\n      }\r\n    }\r\n  },\r\n  \"step2\": {\r\n    \"general\": {\r\n      \"individual\": {\r\n        \"idCard\": \"1453473753753\",\r\n        \"name\": \"พี่ฝันบุคคลทั่วไป ข้อมูลผู้ถูกร้องทุกข์\",\r\n        \"email\": \"test@gmail.com\",\r\n        \"address\": \"ฟหกด\",\r\n        \"phone\": \"0456767676\",\r\n        \"subdistricts\": \"ตำบล/แขวง A\",\r\n        \"districts\": \"อำเภอ/เขต B\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"zipcode\": \"54676\"\r\n      }\r\n    }\r\n  },\r\n  \"step3\": {\r\n    \"general\": {\r\n      \"incidentDate\": \"2025-04-21T18:05:00.000Z\",\r\n      \"complaintType\": \"การทุจริต\",\r\n      \"subject\": \"ฝันฝันขโมยยางลบของผม\",\r\n      \"description\": \"กินยางลบผมไปทำไม\",\r\n      \"attachment\": []\r\n    }\r\n  },\r\n  \"step4\": {\r\n    \"general\": {\r\n      \"accepted\": true\r\n    }\r\n  }\r\n}",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/complaints",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"complaints"
+				]
+				},
+				"description": "สร้างเรื่องร้องทุกข์ใหม่"
+			},
+			"response": []
+			},
+			{
+			"name": "Get Complaints List",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/complaints?skip=0&limit=10",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"complaints"
+				],
+				"query": [
+					{
+					"key": "skip",
+					"value": "0"
+					},
+					{
+					"key": "limit",
+					"value": "10"
+					}
+				]
+				},
+				"description": "ดึงรายการเรื่องร้องทุกข์ทั้งหมด พร้อมการแบ่งหน้า"
+			},
+			"response": []
+			},
+			{
+			"name": "Get Complaint Details",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"complaints",
+					"{{complaint_id}}"
+				]
+				},
+				"description": "ดึงรายละเอียดของเรื่องร้องทุกข์ตาม ID"
+			},
+			"response": []
+			},
+			{
+			"name": "Update Complaint Status",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "PATCH",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/status?status=กำลังดำเนินการ",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"complaints",
+					"{{complaint_id}}",
+					"status"
+				],
+				"query": [
+					{
+					"key": "status",
+					"value": "กำลังดำเนินการ"
+					}
+				]
+				},
+				"description": "อัพเดตสถานะของเรื่องร้องทุกข์"
+			},
+			"response": []
+			},
+			{
+			"name": "Delete Complaint",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "DELETE",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"complaints",
+					"{{complaint_id}}"
+				]
+				},
+				"description": "ลบเรื่องร้องทุกข์ (ต้องมีสิทธิ์ลบใน complaints)"
+			},
+			"response": []
+			},
+			{
+			"name": "Upload Attachment",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+				"mode": "formdata",
+				"formdata": [
+					{
+					"key": "file",
+					"type": "file",
+					"src": "/path/to/your/file.pdf"
+					}
+				]
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/complaints/upload-attachment",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"complaints",
+					"upload-attachment"
+				]
+				},
+				"description": "อัพโหลดไฟล์แนบสำหรับเรื่องร้องทุกข์"
+			},
+			"response": []
+			}
+		],
+		"description": "API สำหรับจัดการเรื่องร้องทุกข์"
 		}
 	],
 	"event": [
