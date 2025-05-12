@@ -4827,7 +4827,7 @@
 		"name": "COMPLAINTS",
 		"item": [
 			{
-			"name": "Create New Complaint",
+			"name": "Create Complaint",
 			"request": {
 				"auth": {
 				"type": "bearer",
@@ -4843,7 +4843,7 @@
 				"header": [],
 				"body": {
 				"mode": "raw",
-				"raw": "{\r\n  \"step1\": {\r\n    \"general\": {\r\n      \"general\": {\r\n        \"idCard\": \"4324354345345\",\r\n        \"name\": \"พี่ฝันทั่วไป ข้อมูลผู้ร้องทุกข์\",\r\n        \"address\": \"ติดต่อ\",\r\n        \"phone\": \"0457676767\",\r\n        \"subdistricts\": \"ตำบล/แขวง A\",\r\n        \"districts\": \"อำเภอ/เขต B\",\r\n        \"email\": \"test@gmail.com\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"zipcode\": \"54676\"\r\n      },\r\n      \"delegate\": {\r\n        \"idCard\": \"1423453753753\",\r\n        \"name\": \"พี่ฝันทั่วไป ข้อมูลผู้รับมอบอำนาจร้องทุกข์\",\r\n        \"address\": \"ติดต่อ\",\r\n        \"phone\": \"0745375037\",\r\n        \"email\": \"test@gmail.com\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"subdistricts\": \"ตำบล/แขวง A\",\r\n        \"districts\": \"อำเภอ/เขต A\",\r\n        \"zipcode\": \"54676\"\r\n      }\r\n    }\r\n  },\r\n  \"step2\": {\r\n    \"general\": {\r\n      \"individual\": {\r\n        \"idCard\": \"1453473753753\",\r\n        \"name\": \"พี่ฝันบุคคลทั่วไป ข้อมูลผู้ถูกร้องทุกข์\",\r\n        \"email\": \"test@gmail.com\",\r\n        \"address\": \"ฟหกด\",\r\n        \"phone\": \"0456767676\",\r\n        \"subdistricts\": \"ตำบล/แขวง A\",\r\n        \"districts\": \"อำเภอ/เขต B\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"zipcode\": \"54676\"\r\n      }\r\n    }\r\n  },\r\n  \"step3\": {\r\n    \"general\": {\r\n      \"incidentDate\": \"2025-04-21T18:05:00.000Z\",\r\n      \"complaintType\": \"การทุจริต\",\r\n      \"subject\": \"ฝันฝันขโมยยางลบของผม\",\r\n      \"description\": \"กินยางลบผมไปทำไม\",\r\n      \"attachment\": []\r\n    }\r\n  },\r\n  \"step4\": {\r\n    \"general\": {\r\n      \"accepted\": true\r\n    }\r\n  }\r\n}",
+				"raw": "{\r\n  \"step1\": {\r\n    \"general\": {\r\n      \"general\": {\r\n        \"idCard\": \"1234567890123\",\r\n        \"name\": \"ผู้ร้องทุกข์ทดสอบ\",\r\n        \"address\": \"123 ถนนทดสอบ\",\r\n        \"phone\": \"0812345678\",\r\n        \"subdistricts\": \"ตำบลทดสอบ\",\r\n        \"districts\": \"อำเภอทดสอบ\",\r\n        \"email\": \"test@example.com\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"zipcode\": \"10100\"\r\n      },\r\n      \"delegate\": {\r\n        \"idCard\": \"9876543210987\",\r\n        \"name\": \"ผู้รับมอบอำนาจทดสอบ\",\r\n        \"address\": \"456 ถนนทดสอบ\",\r\n        \"phone\": \"0898765432\",\r\n        \"email\": \"delegate@example.com\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"subdistricts\": \"ตำบลทดสอบ 2\",\r\n        \"districts\": \"อำเภอทดสอบ 2\",\r\n        \"zipcode\": \"10110\"\r\n      }\r\n    }\r\n  },\r\n  \"step2\": {\r\n    \"general\": {\r\n      \"individual\": {\r\n        \"idCard\": \"1122334455667\",\r\n        \"name\": \"ผู้ถูกร้องทุกข์ทดสอบ\",\r\n        \"email\": \"respondent@example.com\",\r\n        \"address\": \"789 ถนนทดสอบ\",\r\n        \"phone\": \"0823456789\",\r\n        \"subdistricts\": \"ตำบลทดสอบ 3\",\r\n        \"districts\": \"อำเภอทดสอบ 3\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"zipcode\": \"10120\"\r\n      }\r\n    }\r\n  },\r\n  \"step3\": {\r\n    \"general\": {\r\n      \"incidentDate\": \"2023-10-15T14:30:00.000Z\",\r\n      \"complaintType\": \"การทุจริต\",\r\n      \"subject\": \"เรื่องร้องเรียนทดสอบ\",\r\n      \"description\": \"รายละเอียดเรื่องร้องเรียนทดสอบ เพื่อการทดสอบระบบ\",\r\n      \"attachment\": []\r\n    }\r\n  },\r\n  \"step4\": {\r\n    \"general\": {\r\n      \"accepted\": true\r\n    }\r\n  }\r\n}",
 				"options": {
 					"raw": {
 					"language": "json"
@@ -4859,12 +4859,11 @@
 					"complaints"
 				]
 				},
-				"description": "สร้างเรื่องร้องทุกข์ใหม่"
-			},
-			"response": []
+				"description": "Create a new complaint using the nested structure with 4 steps"
+			}
 			},
 			{
-			"name": "Get Complaints List",
+			"name": "Get All Complaints",
 			"request": {
 				"auth": {
 				"type": "bearer",
@@ -4879,7 +4878,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints?skip=0&limit=10",
+				"raw": "{{API}}{{PREFIX}}/complaints?skip=0&limit=10&status=SUBMITTED",
 				"host": [
 					"{{API}}{{PREFIX}}"
 				],
@@ -4894,15 +4893,19 @@
 					{
 					"key": "limit",
 					"value": "10"
+					},
+					{
+					"key": "status",
+					"value": "SUBMITTED",
+					"description": "Optional filter by status"
 					}
 				]
 				},
-				"description": "ดึงรายการเรื่องร้องทุกข์ทั้งหมด พร้อมการแบ่งหน้า"
-			},
-			"response": []
+				"description": "Get a list of complaints with pagination and optional status filtering"
+			}
 			},
 			{
-			"name": "Get Complaint Details",
+			"name": "Get Complaint by ID",
 			"request": {
 				"auth": {
 				"type": "bearer",
@@ -4926,9 +4929,8 @@
 					"{{complaint_id}}"
 				]
 				},
-				"description": "ดึงรายละเอียดของเรื่องร้องทุกข์ตาม ID"
-			},
-			"response": []
+				"description": "Get detailed information about a specific complaint by ID"
+			}
 			},
 			{
 			"name": "Update Complaint Status",
@@ -4945,8 +4947,17 @@
 				},
 				"method": "PATCH",
 				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "{\n    \"status\": \"IN_PROCESS\",\n    \"notes\": \"เริ่มการดำเนินการตรวจสอบข้อเท็จจริง\"\n}",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
 				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/status?status=กำลังดำเนินการ",
+				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/status",
 				"host": [
 					"{{API}}{{PREFIX}}"
 				],
@@ -4954,17 +4965,86 @@
 					"complaints",
 					"{{complaint_id}}",
 					"status"
-				],
-				"query": [
+				]
+				},
+				"description": "Update the status of a complaint"
+			}
+			},
+			{
+			"name": "Assign Complaint",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
 					{
-					"key": "status",
-					"value": "กำลังดำเนินการ"
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
 					}
 				]
 				},
-				"description": "อัพเดตสถานะของเรื่องร้องทุกข์"
+				"method": "PATCH",
+				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "\"กรมสรรพากร\"",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/assign",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"complaints",
+					"{{complaint_id}}",
+					"assign"
+				]
+				},
+				"description": "Assign a complaint to an agency"
+			}
 			},
-			"response": []
+			{
+			"name": "Add Resolution",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "PATCH",
+				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "\"ได้ดำเนินการตรวจสอบข้อเท็จจริงแล้ว พบว่า... และได้ดำเนินการแก้ไขโดย...\"",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/resolution",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"complaints",
+					"{{complaint_id}}",
+					"resolution"
+				]
+				},
+				"description": "Add resolution details to a complaint"
+			}
 			},
 			{
 			"name": "Delete Complaint",
@@ -4991,9 +5071,8 @@
 					"{{complaint_id}}"
 				]
 				},
-				"description": "ลบเรื่องร้องทุกข์ (ต้องมีสิทธิ์ลบใน complaints)"
-			},
-			"response": []
+				"description": "Delete a complaint (requires delete permission on 'complaints')"
+			}
 			},
 			{
 			"name": "Upload Attachment",
@@ -5030,12 +5109,237 @@
 					"upload-attachment"
 				]
 				},
-				"description": "อัพโหลดไฟล์แนบสำหรับเรื่องร้องทุกข์"
+				"description": "Upload an attachment file for a complaint"
+			}
 			},
-			"response": []
+			{
+			"name": "Add Attachment to Complaint",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+				"mode": "formdata",
+				"formdata": [
+					{
+					"key": "file",
+					"type": "file",
+					"src": "/path/to/your/file.pdf"
+					}
+				]
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/attachments",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"complaints",
+					"{{complaint_id}}",
+					"attachments"
+				]
+				},
+				"description": "Add an attachment to a specific complaint"
+			}
 			}
 		],
-		"description": "API สำหรับจัดการเรื่องร้องทุกข์"
+		"description": "API endpoints for managing complaints"
+		},
+		{
+		"name": "FILE MANAGEMENT",
+		"item": [
+			{
+			"name": "Get Storage Usage",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/file-management/usage",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"file-management",
+					"usage"
+				]
+				},
+				"description": "Get storage usage statistics (admin permission required)"
+			}
+			},
+			{
+			"name": "Cleanup Files",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "{\n    \"folder\": \"complaints\"\n}",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/file-management/cleanup",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"file-management",
+					"cleanup"
+				]
+				},
+				"description": "Manually run file cleanup process (admin permission required)"
+			}
+			},
+			{
+			"name": "List Files by Date",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/file-management/list-by-date?start_date=2023-10-01&end_date=2023-10-31&folder=complaints",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"file-management",
+					"list-by-date"
+				],
+				"query": [
+					{
+					"key": "start_date",
+					"value": "2023-10-01"
+					},
+					{
+					"key": "end_date",
+					"value": "2023-10-31"
+					},
+					{
+					"key": "folder",
+					"value": "complaints"
+					}
+				]
+				},
+				"description": "List files within a specific date range (admin permission required)"
+			}
+			},
+			{
+			"name": "Move Storage",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "{\n    \"new_location\": \"/path/to/new/storage\"\n}",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/file-management/move-storage",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"file-management",
+					"move-storage"
+				]
+				},
+				"description": "Move all uploaded files to a new storage location (admin permission required)"
+			}
+			},
+			{
+			"name": "Update Retention Policy",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+				"mode": "raw",
+				"raw": "{\n    \"days\": 90\n}",
+				"options": {
+					"raw": {
+					"language": "json"
+					}
+				}
+				},
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/file-management/update-retention",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"file-management",
+					"update-retention"
+				]
+				},
+				"description": "Update the global file retention policy (admin permission required)"
+			}
+			}
+		],
+		"description": "API endpoints for managing file storage"
 		}
 	],
 	"event": [
