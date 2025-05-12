@@ -33,19 +33,26 @@ async def create_new_complaint(
         step1 = request_data.get("step1", {}).get("general", {})
         general_data = step1.get("general", {})
         delegate_data = step1.get("delegate", {})
+        corporate_data = step1.get("corporate", {})
+        signer_data = step1.get("signer", {})
+        
+        # Determine complainant type
+        complainant_type = "general"
+        if corporate_data and any(corporate_data.values()):
+            complainant_type = "corporate"
         
         # Step 2: Respondent data
         step2 = request_data.get("step2", {}).get("general", {})
         # Determine respondent type (individual, corporate, government)
         respondent_type = "individual"
         respondent_data = {}
-        if "individual" in step2:
+        if "individual" in step2 and step2.get("individual") and any(step2.get("individual", {}).values()):
             respondent_type = "individual"
             respondent_data = step2.get("individual", {})
-        elif "corporate" in step2:
+        elif "corporate" in step2 and step2.get("corporate") and any(step2.get("corporate", {}).values()):
             respondent_type = "corporate"
             respondent_data = step2.get("corporate", {})
-        elif "government" in step2:
+        elif "government" in step2 and step2.get("government") and any(step2.get("government", {}).values()):
             respondent_type = "government"
             respondent_data = step2.get("government", {})
         
@@ -59,9 +66,12 @@ async def create_new_complaint(
         complaint_data = {
             "subject": step3.get("subject", ""),
             "description": step3.get("description", ""),
+            "complainant_type": complainant_type,
             "complainant_data": {
                 "general": general_data,
-                "delegate": delegate_data if delegate_data else None
+                "corporate": corporate_data,
+                "delegate": delegate_data if delegate_data and any(delegate_data.values()) else None,
+                "signer": signer_data if signer_data and any(signer_data.values()) else None
             },
             "respondent_data": {
                 respondent_type: respondent_data

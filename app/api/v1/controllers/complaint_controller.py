@@ -23,10 +23,26 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
     incident_data = complaint_data.get("incident_data", {})
     accepted = complaint_data.get("accepted", True)
     
-    # Extract complainant type
-    complainant_type = "general"
-    if "corporate" in complainant_data:
-        complainant_type = "corporate"
+    # Extract complainant type (explicitly provided or detect from data structure)
+    complainant_type = complaint_data.get("complainant_type", "general")
+    
+    # If complainant_type is not explicitly provided, try to detect it
+    if "complainant_type" not in complaint_data:
+        # Detect if we're dealing with corporate data
+        if step1_data := complaint_data.get("step1", {}):
+            if "corporate" in step1_data and step1_data.get("corporate"):
+                complainant_type = "corporate"
+        elif "corporate" in complainant_data and complainant_data.get("corporate"):
+            complainant_type = "corporate"
+    
+    # Extract the actual complainant data based on type
+    if complainant_type == "corporate":
+        actual_complainant_data = complainant_data.get("corporate", {})
+        # If we have a signer, include it in the corporate data
+        if "signer" in complainant_data and complainant_data.get("signer"):
+            actual_complainant_data["signer"] = complainant_data.get("signer")
+    else:
+        actual_complainant_data = complainant_data.get("general", {})
     
     # Extract respondent type
     respondent_type = ""
@@ -50,7 +66,7 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
         subject=subject,
         description=description,
         status=ComplaintStatus.SUBMITTED,  # Initial status using enum
-        complainant_data=complainant_data.get("general", {}),
+        complainant_data=actual_complainant_data,
         delegate_data=complainant_data.get("delegate"),
         complainant_type=complainant_type,
         respondent_data=respondent_data.get(respondent_type, {}),
