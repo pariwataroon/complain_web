@@ -43,7 +43,7 @@ const TableListFollowing = ({
   const [filters, setFilters] = useState({
     claimantName: "", // ชื่อผู้ร้อง
     agency: "", // หน่วยงานที่เกี่ยวข้อง
-    ssoNo: "", // เลขสสร.
+    ssoNo: "", // เลขสรร.
     status: "", // สถานะการดำเนินการ
   });
 
@@ -133,7 +133,7 @@ const TableListFollowing = ({
             onChange={handleChange("agency")}
           />
           <InputText
-            label="เลขสสร."
+            label="เลขสรร."
             value={filters.ssoNo}
             onChange={handleChange("ssoNo")}
           />
@@ -194,7 +194,7 @@ const TableListFollowing = ({
               </TableCell>
               <TableCell sx={{ width: 200 }}>ชื่อสกุลผู้ร้อง</TableCell>
               <TableCell sx={{ width: 180 }}>หน่วยงานที่เกี่ยวข้อง</TableCell>
-              <TableCell sx={{ width: 300 }}>เลขสสร.</TableCell>
+              <TableCell sx={{ width: 300 }}>เลขสรร.</TableCell>
               <TableCell sx={{ width: 180 }}>เรื่อง</TableCell>
               <TableCell sx={{ width: 160 }}>ประเภทเรื่อง</TableCell>
               <TableCell sx={{ width: 160 }}>วันที่รับเรื่อง</TableCell>

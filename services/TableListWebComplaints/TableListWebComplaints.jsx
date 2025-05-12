@@ -1,3 +1,4 @@
+// components/ReceiveData/Opm1111/TableListWebComplaints.jsx
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
@@ -10,7 +11,6 @@ import {
   TablePagination,
   Container,
   IconButton,
-  Button,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import styles from "./TableListWebComplaints.module.scss";
@@ -23,7 +23,9 @@ const TableListWebComplaints = ({
   data = [],
   title = "",
   navigateTo = "",
-  agencyOptions = [],
+  agencyOptions = [], // [{ value, label }]
+  issueTypeOptions = [], // [{ value, label }]
+  issueSubTypeOptions = [],
   onSearch = () => {},
   handleNavigateTo,
 }) => {
@@ -35,9 +37,10 @@ const TableListWebComplaints = ({
   const [filters, setFilters] = useState({
     claimantName: "", // ชื่อผู้ร้อง
     issueType: "", // ประเภทเรื่อง
+    issueSubType: "",
     subject: "", // ชื่อเรื่อง
     accusedName: "", // ชื่อผู้ถูกร้อง
-    ssoNo: "", // เลขที่ สสร
+    ssoNo: "", // เลขที่ สรร
   });
   const handleChange = (field) => (e) =>
     setFilters({ ...filters, [field]: e?.target ? e.target.value : e });
@@ -70,6 +73,7 @@ const TableListWebComplaints = ({
     const cleared = {
       claimantName: "",
       issueType: "",
+      issueSubType: "",
       subject: "",
       accusedName: "",
       ssoNo: "",
@@ -100,9 +104,7 @@ const TableListWebComplaints = ({
     >
       <Box className={styles.headerBar}>{title}</Box>
 
-      {/* ------------------------------------------------------------------ */}
-      {/*  search bar                                                       */}
-      {/* ------------------------------------------------------------------ */}
+      {/* search bar */}
       <Box
         display="flex"
         justifyContent="space-between"
@@ -127,10 +129,22 @@ const TableListWebComplaints = ({
             value={filters.claimantName}
             onChange={handleChange("claimantName")}
           />
-          <InputText
+          <SelectField
             label="ประเภทเรื่อง"
+            options={issueTypeOptions}
             value={filters.issueType}
             onChange={handleChange("issueType")}
+          />
+          <SelectField
+            label="ประเภทเรื่องย่อย"
+            options={issueSubTypeOptions}
+            value={filters.issueSubType}
+            onChange={handleChange("issueSubType")}
+          />
+          <InputText
+            label="เลขที่ สรร"
+            value={filters.ssoNo}
+            onChange={handleChange("ssoNo")}
           />
           <InputText
             label="ชื่อเรื่อง"
@@ -142,11 +156,6 @@ const TableListWebComplaints = ({
             options={agencyOptions}
             value={filters.accusedName}
             onChange={handleChange("accusedName")}
-          />
-          <InputText
-            label="เลขที่ สสร"
-            value={filters.ssoNo}
-            onChange={handleChange("ssoNo")}
           />
 
           <IconButton
@@ -173,18 +182,14 @@ const TableListWebComplaints = ({
           </IconButton>
         </Box>
 
-        {/* ---------------------------------------------------------------- */}
-        {/*  export buttons                                                 */}
-        {/* ---------------------------------------------------------------- */}
+        {/* export buttons */}
         <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
           <ExportButton label="Export PDF" />
           <ExportButton label="Export Excel" />
         </Box>
       </Box>
 
-      {/* ------------------------------------------------------------------ */}
-      {/*  table                                                             */}
-      {/* ------------------------------------------------------------------ */}
+      {/* table */}
       <Box
         className={styles.tableWrapper}
         id="table-results"
@@ -200,10 +205,9 @@ const TableListWebComplaints = ({
               <TableCell sx={{ width: 180 }}>ประเภทเรื่อง</TableCell>
               <TableCell sx={{ width: 300 }}>ชื่อเรื่อง</TableCell>
               <TableCell sx={{ width: 180 }}>ชื่อผู้ถูกร้อง</TableCell>
-              <TableCell sx={{ width: 160 }}>เลขที่ สสร</TableCell>
+              <TableCell sx={{ width: 160 }}>เลขที่ สรร</TableCell>
             </TableRow>
           </TableHead>
-
           <TableBody>
             {pagedData.map((item, idx) => (
               <TableRow
@@ -220,19 +224,18 @@ const TableListWebComplaints = ({
                 >
                   {page * rowsPerPage + idx + 1}
                 </TableCell>
-                <TableCell>{item?.claimantName ?? "-"}</TableCell>
-                <TableCell>{item?.issueType ?? "-"}</TableCell>
+                <TableCell>{item.claimantName || "-"}</TableCell>
+                <TableCell>{item.issueType || "-"}</TableCell>
                 <TableCell className={styles.ellipsisCell}>
-                  {item?.subject ?? "-"}
+                  {item.subject || "-"}
                 </TableCell>
-                <TableCell>{item?.accusedName ?? "-"}</TableCell>
-                <TableCell>{item?.ssoNo ?? "-"}</TableCell>
+                <TableCell>{item.accusedName || "-"}</TableCell>
+                <TableCell>{item.ssoNo || "-"}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
 
-        {/* pagination */}
         <TablePagination
           component="div"
           rowsPerPageOptions={[5, 10, 25]}
