@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from uuid import UUID
+from models.comp_complaint import ComplaintStatus
 
 class ComplaintCreate(BaseModel):
     # Direct fields instead of nested structure
@@ -54,25 +55,42 @@ class ComplaintListItem(BaseModel):
     complaint_number: str
     subject: str
     created_at: datetime
-    status: str
+    status: ComplaintStatus
+    complaint_type: Optional[str] = None
     complainant_name: str
+    respondent_name: Optional[str] = None
     
     class Config:
         from_attributes = True
+
+class AttachmentInfo(BaseModel):
+    fileName: str
+    fileSize: int
+    fileUrl: str
+    fileType: Optional[str] = None
 
 class ComplaintResponse(BaseModel):
     id: UUID
     complaint_number: str
     subject: str
     description: str
-    status: str
+    status: ComplaintStatus
     created_at: datetime
     updated_at: Optional[datetime] = None
+    assigned_to: Optional[str] = None
+    assigned_date: Optional[datetime] = None
+    resolution_summary: Optional[str] = None
+    resolved_date: Optional[datetime] = None
     
-    # Complainant information
-    complainant_data: Dict[str, Any]
-    respondent_data: Dict[str, Any]
-    incident_data: Dict[str, Any]
+    # Structured data
+    step1: Dict[str, Any]
+    step2: Dict[str, Any]
+    step3: Dict[str, Any]
+    step4: Dict[str, Any]
     
     class Config:
         from_attributes = True
+
+class StatusUpdateRequest(BaseModel):
+    status: ComplaintStatus
+    notes: Optional[str] = None

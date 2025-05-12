@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List, Dict, Any, Optional
 
-from models.comp_complaint import Complaint
+from models.comp_complaint import Complaint, ComplaintStatus, ComplaintStatusHistory
 from app.api.v1.schemas.complaint import ComplaintListItem
 
 def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optional[UUID] = None) -> Complaint:
@@ -49,7 +49,7 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
         complaint_number=complaint_number,
         subject=subject,
         description=description,
-        status="รับเรื่องแล้ว",  # Initial status
+        status=ComplaintStatus.SUBMITTED,  # Initial status using enum
         complainant_data=complainant_data.get("general", {}),
         delegate_data=complainant_data.get("delegate"),
         complainant_type=complainant_type,
@@ -65,16 +65,27 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
     db.commit()
     db.refresh(new_complaint)
     
+    # Add initial status history entry
+    status_history = ComplaintStatusHistory(
+        complaint_id=new_complaint.id,
+        status=ComplaintStatus.SUBMITTED,
+        notes="Complaint submitted",
+        changed_by=user_id
+    )
+    
+    db.add(status_history)
+    db.commit()
+    
     return new_complaint
 
 def generate_complaint_number(db: Session) -> str:
     """Generate a unique complaint number"""
-    today = datetime.now()  # Fix: Use datetime directly, not datetime.datetime
+    today = datetime.now()
     date_part = today.strftime("%Y%m%d")
     
     # Get the count of complaints created today to generate a sequential number
-    today_start = datetime.combine(today.date(), datetime.min.time())  # Fix: Use datetime directly
-    today_end = datetime.combine(today.date(), datetime.max.time())    # Fix: Use datetime directly
+    today_start = datetime.combine(today.date(), datetime.min.time())
+    today_end = datetime.combine(today.date(), datetime.max.time())
     
     today_count = db.query(Complaint).filter(
         Complaint.created_at.between(today_start, today_end)
@@ -83,9 +94,17 @@ def generate_complaint_number(db: Session) -> str:
     sequence = str(today_count + 1).zfill(5)
     return f"CMPL-{date_part}-{sequence}"
 
-def get_complaints(db: Session, skip: int = 0, limit: int = 100):
+def get_complaints(db: Session, skip: int = 0, limit: int = 100, status: Optional[str] = None):
     """Get list of complaints with pagination"""
-    complaints = db.query(Complaint).order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
+    query = db.query(Complaint)
+    
+    if status:
+        query = query.filter(Complaint.status == status)
+    
+    # Add ORDER BY clause to fix MSSQL pagination issue
+    query = query.order_by(Complaint.created_at.desc())
+
+    complaints = query.offset(skip).limit(limit).all()
     
     result = []
     for complaint in complaints:
@@ -136,6 +155,18 @@ def get_complaint(db: Session, complaint_id: uuid.UUID):
             "fileType": attachment.file_type
         })
     
+    # Get status history
+    status_history = []
+    for history in db.query(ComplaintStatusHistory).filter(
+        ComplaintStatusHistory.complaint_id == complaint_id
+    ).order_by(ComplaintStatusHistory.changed_at).all():
+        status_history.append({
+            "status": history.status,
+            "notes": history.notes,
+            "changed_at": history.changed_at,
+            "changed_by": history.changed_by
+        })
+    
     # Reconstruct the response based on the schema
     step1_data = {"general": {}, "delegate": None, "corporate": {}, "signer": None}
     step2_data = {"individual": None, "corporate": None, "government": None}
@@ -179,22 +210,41 @@ def get_complaint(db: Session, complaint_id: uuid.UUID):
             "accepted": complaint.terms_accepted
         },
         "status": complaint.status,
+        "status_history": status_history,
         "created_at": complaint.created_at,
-        "updated_at": complaint.updated_at
+        "updated_at": complaint.updated_at,
+        "assigned_to": complaint.assigned_to,
+        "assigned_date": complaint.assigned_date,
+        "resolution_summary": complaint.resolution_summary,
+        "resolved_date": complaint.resolved_date
     }
     
     return response_data
 
-def update_complaint_status(db: Session, complaint_id: uuid.UUID, new_status: str):
+def update_complaint_status(db: Session, complaint_id: uuid.UUID, new_status: ComplaintStatus, notes: Optional[str] = None, user_id: Optional[UUID] = None):
     """Update the status of a complaint"""
     complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
     
     if not complaint:
         return None
     
+    # Update complaint status
     complaint.status = new_status
     complaint.updated_at = datetime.now()
     
+    # If status is completed, set resolved date
+    if new_status == ComplaintStatus.COMPLETED:
+        complaint.resolved_date = datetime.now()
+    
+    # Add status history entry
+    status_history = ComplaintStatusHistory(
+        complaint_id=complaint_id,
+        status=new_status,
+        notes=notes,
+        changed_by=user_id
+    )
+    
+    db.add(status_history)
     db.commit()
     db.refresh(complaint)
     
