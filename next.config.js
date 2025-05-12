@@ -5,7 +5,6 @@ const withTM = require("next-transpile-modules")([
   "@mui/x-date-pickers",
 ]);
 
-/** @type {import('next').NextConfig} */
 const isDev = process.env.NEXT_PUBLIC_ENV_MODE === "development";
 
 const getEnv = (key) => {

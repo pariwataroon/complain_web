@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
     MenuItem,
     TextField,
@@ -6,16 +6,72 @@ import {
     InputLabel,
     Typography,
 } from "@mui/material";
+import { GetProvincesSelect, GetAmphuresSelect, GetDistrictsSelect, GetZipcodeSelect } from "@pages/api/allselect/allselect";
 
 const SelectField = ({
     label,
     inputLabel,
     value,
     onChange,
-    options = [],
     name,
+    districtCode,
+    amphureCode,
+    provinceCode,
+    zipcodeCode,
+    options: externalOptions = [],
+    optionMapper = null
 }) => {
-    const labelId = `${name}-label`;
+    const [options, setOptions] = useState([]);
+
+    useEffect(() => {
+        const fetchOptions = async () => {
+            if (
+                (label === "อำเภอ/เขต" && !provinceCode) ||
+                (label === "ตำบล/แขวง" && !amphureCode) ||
+                (label === "รหัสไปรษณีย์" && !amphureCode)
+            ) {
+                return;
+            }
+
+            if (externalOptions && externalOptions.length > 0) {
+                setOptions(externalOptions);
+                return;
+            }
+
+            try {
+                let response = null;
+
+                if (label === "จังหวัด") {
+                    response = await GetProvincesSelect();
+                } else if (label === "อำเภอ/เขต") {
+                    response = await GetAmphuresSelect(provinceCode);
+                } else if (label === "ตำบล/แขวง") {
+                    response = await GetDistrictsSelect(amphureCode);
+                } else if (label === "รหัสไปรษณีย์") {
+                    const districts = await GetDistrictsSelect(amphureCode);
+                    const zipMap = new Map();
+                    districts.forEach((item) => {
+                        if (item.zip_code && !zipMap.has(item.zip_code)) {
+                            zipMap.set(item.zip_code, item);
+                        }
+                    });
+                    response = Array.from(zipMap.values());
+                }
+
+
+
+                if (!Array.isArray(response)) throw new Error("Response is not array");
+                const mapped = optionMapper ? response.map(optionMapper) : response;
+                setOptions(mapped);
+            } catch (error) {
+                console.error("Failed to fetch or map options:", error);
+                setOptions([]);
+            }
+        };
+
+        fetchOptions();
+    }, [label, districtCode, amphureCode, provinceCode]);
+
 
     return (
         <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
@@ -31,8 +87,13 @@ const SelectField = ({
             <TextField
                 select
                 name={name}
-                value={value}
-                onChange={onChange}
+                value={typeof value === "object" ? value?.value ?? "" : value}
+                onChange={(e) => {
+                    const selected = options.find((opt) =>
+                        typeof opt === "object" ? opt.value === e.target.value : opt === e.target.value
+                    );
+                    onChange({ target: { name, value: selected ?? e.target.value } });
+                }}
                 label={!label ? inputLabel : undefined}
                 InputProps={{
                     sx: {
@@ -45,14 +106,23 @@ const SelectField = ({
                     },
                 }}
             >
-                {options.map((opt, idx) => (
-                    <MenuItem key={idx} value={opt}>
-                        {opt}
-                    </MenuItem>
-                ))}
+                {Array.isArray(options) &&
+                    options.map((opt, idx) => {
+                        const isPrimitive = typeof opt !== "object";
+                        const optionValue = isPrimitive ? opt : opt.value;
+                        const optionLabel = isPrimitive ? String(opt) : String(opt.label);
+
+                        return (
+                            <MenuItem key={idx} value={optionValue}>
+                                {optionLabel}
+                            </MenuItem>
+                        );
+                    })}
+
             </TextField>
         </FormControl>
     );
 };
+
 
 export default SelectField;
