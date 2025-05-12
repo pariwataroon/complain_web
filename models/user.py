@@ -47,3 +47,5 @@ class User(Base):
     seen_notifications = relationship("Notification", secondary=notification_seen_table, back_populates="seen_by_users")
     # เพิ่มความสัมพันธ์กับ VerificationToken
     verification_tokens = relationship("VerificationToken", back_populates="user", cascade="all, delete-orphan")
+
+    complaints = relationship("Complaint", back_populates="creator")

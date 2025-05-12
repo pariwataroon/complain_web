@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, DateTime, Boolean, NVARCHAR, Integer
+from sqlalchemy import Column, DateTime, Boolean, NVARCHAR, Integer
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
