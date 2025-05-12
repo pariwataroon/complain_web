@@ -46,10 +46,13 @@ const Tab5 = ({
         <Box component="span" fontWeight="bold">
           {label}:
         </Box>{" "}
-        {value || "-"}
+        {typeof value === "object"
+          ? value?.label || "-"
+          : value || "-"}
       </Typography>
     </Grid>
   );
+  
 
   const getFileIcon = (ext) => {
     switch (ext.toLowerCase()) {
@@ -129,9 +132,9 @@ const Tab5 = ({
           <InfoItem label="หมายเลขประจำตัวประชาชน" value={formatCitizenId_null(complainant.idCard || corporate.idCard)} />
           <InfoItem label="ชื่อ - นามสกุล" value={complainant.name || corporate.name} />
           <InfoItem label="ที่อยู่ที่ติดต่อได้" value={complainant.address || corporate.address} />
-          <InfoItem label="ตำบล/แขวง" value={complainant.subdistricts || corporate.subdistricts} />
-          <InfoItem label="อำเภอ/เขต" value={complainant.districts || corporate.districts} />
-          <InfoItem label="จังหวัด" value={complainant.province || corporate.province} />
+          <InfoItem label="ตำบล/แขวง" value={complainant.label || corporate.label} />
+          <InfoItem label="อำเภอ/เขต" value={complainant.label || corporate.label} />
+          <InfoItem label="จังหวัด" value={complainant.label || corporate.label} />
           <InfoItem label="รหัสไปรษณีย์" value={complainant.zipcode || corporate.zipcode} />
           <InfoItem label="อีเมล์" value={complainant.email || corporate.email} />
           <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(complainant.phone || corporate.phone)} />
@@ -145,9 +148,9 @@ const Tab5 = ({
           <InfoItem label="หมายเลขประจำตัวประชาชน" value={formatCitizenId_null(delegate.idCard || signer.idCard)} />
           <InfoItem label="ชื่อ - นามสกุล" value={delegate.name || signer.name} />
           <InfoItem label="ที่อยู่ที่ติดต่อได้" value={delegate.address || signer.address} />
-          <InfoItem label="ตำบล/แขวง" value={delegate.subdistricts || signer.subdistricts} />
-          <InfoItem label="อำเภอ/เขต" value={delegate.districts || signer.districts} />
-          <InfoItem label="จังหวัด" value={delegate.province || signer.province} />
+          <InfoItem label="ตำบล/แขวง" value={delegate.label || signer.label} />
+          <InfoItem label="อำเภอ/เขต" value={delegate.label || signer.label} />
+          <InfoItem label="จังหวัด" value={delegate.label || signer.label} />
           <InfoItem label="รหัสไปรษณีย์" value={delegate.zipcode || signer.zipcode} />
           <InfoItem label="อีเมล์" value={delegate.email || signer.email} />
           <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(delegate.phone || signer.phone)} />
@@ -171,9 +174,9 @@ const Tab5 = ({
           <InfoItem label="หมายเลขประจำตัวประชาชน" value={formatCitizenId_null(respondent.idCard || corporateS2.idCard || government.idCard)} />
           <InfoItem label="ชื่อ - นามสกุล" value={respondent.name || corporateS2.name || government.name} />
           <InfoItem label="ที่อยู่ที่ติดต่อได้" value={respondent.address || corporateS2.address || government.address} />
-          <InfoItem label="ตำบล/แขวง" value={respondent.subdistricts || corporateS2.subdistricts || government.subdistricts} />
-          <InfoItem label="อำเภอ/เขต" value={respondent.districts || corporateS2.districts || government.districts} />
-          <InfoItem label="จังหวัด" value={respondent.province || corporateS2.province || government.province} />
+          <InfoItem label="ตำบล/แขวง" value={respondent.label || corporateS2.label || government.label} />
+          <InfoItem label="อำเภอ/เขต" value={respondent.label || corporateS2.label || government.label} />
+          <InfoItem label="จังหวัด" value={respondent.label || corporateS2.label || government.label} />
           <InfoItem label="รหัสไปรษณีย์" value={respondent.zipcode || corporateS2.zipcode || government.zipcode} />
           <InfoItem label="อีเมล์" value={respondent.email || corporateS2.email || government.email} />
           <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone || corporateS2.phone || government.phone)} />

@@ -1,48 +1,128 @@
-import React from "react";
-import { MenuItem, TextField, FormControl, Typography } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import {
+    MenuItem,
+    TextField,
+    FormControl,
+    InputLabel,
+    Typography,
+} from "@mui/material";
+import { GetProvincesSelect, GetAmphuresSelect, GetDistrictsSelect, GetZipcodeSelect } from "@pages/api/allselect/allselect";
 
 const SelectField = ({
-  label,
-  value,
-  onChange,
-  options = [], // คาดเป็น [{value, label}, ...]
-  name,
+    label,
+    inputLabel,
+    value,
+    onChange,
+    name,
+    districtCode,
+    amphureCode,
+    provinceCode,
+    zipcodeCode,
+    options: externalOptions = [],
+    optionMapper = null
 }) => {
-  return (
-    <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
-      {label && (
-        <Typography
-          variant="subtitle2"
-          sx={{ color: "#1120A3", fontWeight: 600, mb: 1 }}
-        >
-          {label}
-        </Typography>
-      )}
+    const [options, setOptions] = useState([]);
 
-      <TextField
-        select
-        name={name}
-        value={value}
-        onChange={onChange}
-        InputProps={{
-          sx: {
-            height: "40px",
-            borderRadius: "10px",
-            color: "#1120A3",
-            "& fieldset": {
-              borderColor: "#1120A3",
-            },
-          },
-        }}
-      >
-        {options.map((opt) => (
-          <MenuItem key={opt.value} value={opt.value}>
-            {opt.label}
-          </MenuItem>
-        ))}
-      </TextField>
-    </FormControl>
-  );
+    useEffect(() => {
+        const fetchOptions = async () => {
+            if (
+                (label === "อำเภอ/เขต" && !provinceCode) ||
+                (label === "ตำบล/แขวง" && !amphureCode) ||
+                (label === "รหัสไปรษณีย์" && !amphureCode)
+            ) {
+                return;
+            }
+
+            if (externalOptions && externalOptions.length > 0) {
+                setOptions(externalOptions);
+                return;
+            }
+
+            try {
+                let response = null;
+
+                if (label === "จังหวัด") {
+                    response = await GetProvincesSelect();
+                } else if (label === "อำเภอ/เขต") {
+                    response = await GetAmphuresSelect(provinceCode);
+                } else if (label === "ตำบล/แขวง") {
+                    response = await GetDistrictsSelect(amphureCode);
+                } else if (label === "รหัสไปรษณีย์") {
+                    const districts = await GetDistrictsSelect(amphureCode);
+                    const zipMap = new Map();
+                    districts.forEach((item) => {
+                        if (item.zip_code && !zipMap.has(item.zip_code)) {
+                            zipMap.set(item.zip_code, item);
+                        }
+                    });
+                    response = Array.from(zipMap.values());
+                }
+
+
+
+                if (!Array.isArray(response)) throw new Error("Response is not array");
+                const mapped = optionMapper ? response.map(optionMapper) : response;
+                setOptions(mapped);
+            } catch (error) {
+                console.error("Failed to fetch or map options:", error);
+                setOptions([]);
+            }
+        };
+
+        fetchOptions();
+    }, [label, districtCode, amphureCode, provinceCode]);
+
+
+    return (
+        <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+            {label && (
+                <Typography
+                    variant="subtitle2"
+                    sx={{ color: "#1120A3", fontWeight: 600, mb: 1 }}
+                >
+                    {label}
+                </Typography>
+            )}
+
+            <TextField
+                select
+                name={name}
+                value={typeof value === "object" ? value?.value ?? "" : value}
+                onChange={(e) => {
+                    const selected = options.find((opt) =>
+                        typeof opt === "object" ? opt.value === e.target.value : opt === e.target.value
+                    );
+                    onChange({ target: { name, value: selected ?? e.target.value } });
+                }}
+                label={!label ? inputLabel : undefined}
+                InputProps={{
+                    sx: {
+                        height: "40px",
+                        borderRadius: "10px",
+                        color: "#1120A3",
+                        "& fieldset": {
+                            borderColor: "#1120A3",
+                        },
+                    },
+                }}
+            >
+                {Array.isArray(options) &&
+                    options.map((opt, idx) => {
+                        const isPrimitive = typeof opt !== "object";
+                        const optionValue = isPrimitive ? opt : opt.value;
+                        const optionLabel = isPrimitive ? String(opt) : String(opt.label);
+
+                        return (
+                            <MenuItem key={idx} value={optionValue}>
+                                {optionLabel}
+                            </MenuItem>
+                        );
+                    })}
+
+            </TextField>
+        </FormControl>
+    );
 };
+
 
 export default SelectField;
