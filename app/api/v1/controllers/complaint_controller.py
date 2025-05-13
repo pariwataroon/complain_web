@@ -512,25 +512,43 @@ def get_complaints(db: Session, skip: int = 0, limit: int = 100, status: Optiona
     
     result = []
     for complaint in complaints:
-        # แยกข้อมูลสำหรับแสดงในรายการ
-        list_item = create_complaint_list_item(complaint)
-        result.append(list_item)
+        try:
+            # แยกข้อมูลสำหรับแสดงในรายการ
+            list_item = create_complaint_list_item(complaint)
+            result.append(list_item)
+        except Exception as e:
+            # ถ้าเกิด error กับ complaint ใดๆ ให้ข้ามไปและ log error
+            print(f"Error processing complaint {complaint.id}: {str(e)}")
+            continue
     
     return result
 
+def ensure_dict(data):
+    """ตรวจสอบให้แน่ใจว่าข้อมูลเป็น dictionary"""
+    if isinstance(data, str):
+        try:
+            return json.loads(data)
+        except json.JSONDecodeError:
+            return {}
+    elif isinstance(data, dict):
+        return data
+    return {}
+
 def create_complaint_list_item(complaint: Complaint) -> ComplaintListItem:
     """สร้างข้อมูลแบบย่อสำหรับแสดงในรายการ"""
-    # ดึงชื่อผู้ร้องเรียน
-    complainant_name = complaint.complainant_data.get("name", "")
+    # ดึงชื่อผู้ร้องเรียนโดยใช้ ensure_dict
+    complainant_data = ensure_dict(complaint.complainant_data)
+    complainant_name = complainant_data.get("name", "")
     
     # ดึงชื่อผู้ถูกร้องเรียนตามประเภท
+    respondent_data = ensure_dict(complaint.respondent_data)
     respondent_name = ""
     if complaint.respondent_type == RespondentType.INDIVIDUAL:
-        respondent_name = complaint.respondent_data.get("name", "")
+        respondent_name = respondent_data.get("name", "")
     elif complaint.respondent_type == RespondentType.CORPORATE:
-        respondent_name = complaint.respondent_data.get("companyName", complaint.respondent_data.get("name", ""))
+        respondent_name = respondent_data.get("companyName", respondent_data.get("name", ""))
     elif complaint.respondent_type == RespondentType.GOVERNMENT:
-        respondent_name = complaint.respondent_data.get("agencyName", complaint.respondent_data.get("name", ""))
+        respondent_name = respondent_data.get("agencyName", respondent_data.get("name", ""))
     
     return ComplaintListItem(
         id=complaint.id,
