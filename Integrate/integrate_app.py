@@ -32,30 +32,27 @@ def swagger_auth(credentials: HTTPBasicCredentials = Depends(security)):
     return credentials.username
 
 def create_application() -> FastAPI:
-    # กำหนด dependencies สำหรับ docs เฉพาะเมื่ออยู่ใน production mode
-    docs_kwargs = {}
+    # ในโหมด production เราไม่กำหนด docs_url, redoc_url, และ openapi_url โดยตรง
+    # แต่จะกำหนดหลังจากสร้าง app และผูกกับ route ที่มี authentication
     if ENVIRONMENT == "production":
-        docs_kwargs = {
-            "docs_url": "/docs",
-            "redoc_url": "/redoc",
-            "openapi_url": "/openapi.json",
-            "swagger_ui_oauth2_redirect_url": "/docs/oauth2-redirect",
-            "swagger_ui_parameters": {"defaultModelsExpandDepth": -1},
-            "dependencies": [Depends(swagger_auth)]
-        }
+        app = FastAPI(
+            title=PROJECT_NAME,
+            description=f"{PROJECT_NAME} Documentation",
+            version="1.0.0",
+            # ปิดการแสดง documentation โดยตรง
+            docs_url=None,
+            redoc_url=None,
+            openapi_url=None
+        )
     else:
-        docs_kwargs = {
-            "docs_url": "/docs",
-            "redoc_url": "/redoc",
-            "openapi_url": "/openapi.json"
-        }
-    
-    app = FastAPI(
-        title=PROJECT_NAME,
-        description=f"{PROJECT_NAME} Documentation",
-        version="1.0.0",
-        **docs_kwargs
-    )
+        app = FastAPI(
+            title=PROJECT_NAME,
+            description=f"{PROJECT_NAME} Documentation",
+            version="1.0.0",
+            docs_url="/docs",
+            redoc_url="/redoc",
+            openapi_url="/openapi.json"
+        )
     
     # Setup logging middleware
     setup_logging_middleware(app)
@@ -65,6 +62,46 @@ def create_application() -> FastAPI:
     
     # Clean old logs on application startup
     HourlyRotatingFileHandler().clean_old_logs()
+    
+    # ในโหมด production เราจะกำหนด route สำหรับ documentation ที่มีการป้องกัน
+    if ENVIRONMENT == "production":
+        from fastapi.openapi.docs import (
+            get_swagger_ui_html,
+            get_redoc_html
+        )
+        from fastapi.openapi.utils import get_openapi
+        
+        @app.get("/docs", include_in_schema=False)
+        async def get_swagger_ui(credentials: HTTPBasicCredentials = Depends(swagger_auth)):
+            return get_swagger_ui_html(
+                openapi_url="/openapi.json",
+                title=f"{PROJECT_NAME} - Swagger UI",
+                oauth2_redirect_url="/docs/oauth2-redirect",
+                swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
+                swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
+            )
+        
+        @app.get("/redoc", include_in_schema=False)
+        async def get_redoc(credentials: HTTPBasicCredentials = Depends(swagger_auth)):
+            return get_redoc_html(
+                openapi_url="/openapi.json",
+                title=f"{PROJECT_NAME} - ReDoc",
+                redoc_js_url="https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js",
+            )
+        
+        @app.get("/openapi.json", include_in_schema=False)
+        async def get_openapi_json(credentials: HTTPBasicCredentials = Depends(swagger_auth)):
+            return get_openapi(
+                title=app.title,
+                version=app.version,
+                description=app.description,
+                routes=app.routes
+            )
+        
+        @app.get("/docs/oauth2-redirect", include_in_schema=False)
+        async def get_oauth2_redirect(credentials: HTTPBasicCredentials = Depends(swagger_auth)):
+            from fastapi.openapi.docs import get_swagger_ui_oauth2_redirect_html
+            return get_swagger_ui_oauth2_redirect_html()
     
     logger.info("Application initialized with logging system")
     
