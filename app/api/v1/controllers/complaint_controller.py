@@ -28,19 +28,33 @@ def save_original_complaint(complaint_data: Dict[str, Any]) -> Dict[str, Any]:
 def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optional[UUID] = None) -> Complaint:
     """สร้างข้อร้องเรียนใหม่"""
     try:
+        # 1. ตรวจสอบโครงสร้างข้อมูลที่ได้รับ
+        is_request_object = isinstance(complaint_data, dict) and "body" in complaint_data and "headers" in complaint_data
+        
+        # กรณีที่ได้รับข้อมูลที่อาจถูกห่อหุ้มมาจาก middleware หรือ request object
+        if is_request_object and isinstance(complaint_data["body"], str):
+            try:
+                # พยายามแปลง JSON string จาก body
+                print("Extracting from request object body string")
+                complaint_data = json.loads(complaint_data["body"])
+                print(f"Successfully parsed body JSON: {list(complaint_data.keys()) if isinstance(complaint_data, dict) else 'Not a dict'}")
+            except json.JSONDecodeError as e:
+                print(f"Failed to parse JSON from body: {e}")
+        elif is_request_object and isinstance(complaint_data["body"], dict):
+            # ใช้ body dictionary โดยตรง
+            print("Extracting from request object body dict")
+            complaint_data = complaint_data["body"]
+            
         # แปลงข้อมูล formData ถ้ามีก่อน
-        if "formData" in complaint_data:
+        if isinstance(complaint_data, dict) and "formData" in complaint_data:
             complaint_data = complaint_data["formData"]
 
         # Check if data is in flat format and convert to step format if needed
-        if "subject" in complaint_data and "step1" not in complaint_data:
+        if isinstance(complaint_data, dict) and "subject" in complaint_data and "step1" not in complaint_data:
+            print("Converting flat format to step format")
             structured_data = {
-                "step1": {
-                    "general": {}
-                },
-                "step2": {
-                    "general": {}
-                },
+                "step1": {"general": {}},
+                "step2": {"general": {}},
                 "step3": {
                     "general": {
                         "subject": complaint_data.get("subject", ""),
@@ -52,16 +66,14 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                     }
                 },
                 "step4": {
-                    "general": {
-                        "accepted": complaint_data.get("accepted", True)
-                    }
+                    "general": {"accepted": complaint_data.get("accepted", True)}
                 }
             }
             
             # Handle complainant data
             complainant_type = complaint_data.get("complainant_type", "individual")
             
-            if complainant_type == "individual" or complainant_type == "INDIVIDUAL" or complainant_type == "general":
+            if complainant_type.lower() in ["individual", "general"]:
                 structured_data["step1"]["general"]["activeType"] = "general" 
                 structured_data["step1"]["general"]["general"] = complaint_data.get("complainant_data", {}).get("general", {})
                 
@@ -69,7 +81,7 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                 if not structured_data["step1"]["general"]["general"] and isinstance(complaint_data.get("complainant_data", {}), dict):
                     structured_data["step1"]["general"]["general"] = complaint_data.get("complainant_data", {})
                 
-            elif complainant_type == "corporate" or complainant_type == "CORPORATE":
+            elif complainant_type.lower() == "corporate":
                 structured_data["step1"]["general"]["activeType"] = "corporate"
                 structured_data["step1"]["general"]["corporate"] = complaint_data.get("complainant_data", {}).get("corporate", {})
                 
@@ -91,21 +103,16 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
             
             # Handle respondent data
             respondent_type = complaint_data.get("respondent_type", "individual")
-
-            # ใช้ตัวพิมพ์เล็กสำหรับการเปรียบเทียบประเภท
             respondent_type_lower = respondent_type.lower() if isinstance(respondent_type, str) else "individual"
             
             # ตรวจสอบประเภทข้อมูลที่แท้จริง
             if "corporate" in complaint_data.get("respondent_data", {}):
-                # ถ้ามีข้อมูล corporate โดยตรง ให้ใช้ค่านี้ไม่ว่า respondent_type จะเป็นอะไร
                 structured_data["step2"]["general"]["activeType"] = "corporate"
                 structured_data["step2"]["general"]["corporate"] = complaint_data.get("respondent_data", {})
             elif "government" in complaint_data.get("respondent_data", {}):
-                # ถ้ามีข้อมูล government โดยตรง ให้ใช้ค่านี้ไม่ว่า respondent_type จะเป็นอะไร
                 structured_data["step2"]["general"]["activeType"] = "government"
                 structured_data["step2"]["general"]["government"] = complaint_data.get("respondent_data", {})
             else:
-                # ไม่พบข้อมูลพิเศษ ใช้ตามประเภทที่ระบุ
                 if respondent_type_lower == "individual":
                     structured_data["step2"]["general"]["activeType"] = "individual"
                     structured_data["step2"]["general"]["individual"] = complaint_data.get("respondent_data", {})
