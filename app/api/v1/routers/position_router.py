@@ -56,7 +56,7 @@ async def search_positions_by_name_endpoint(
     positions = search_positions_by_name(db, search_term=search_term, skip=skip, limit=limit)
     return format_response("0000", positions)
 
-@router.post("/", response_model=FormatResponseModel)
+@router.post("", response_model=FormatResponseModel)
 async def create_position_endpoint(
     position: PositionCreate, 
     db: Session = Depends(get_db),

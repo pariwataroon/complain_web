@@ -20,7 +20,7 @@ router = APIRouter(
     tags=["complaints"],
 )
 
-@router.post("/", response_model=FormatResponseModel)
+@router.post("", response_model=FormatResponseModel)
 async def create_new_complaint(
     request_data: Dict[str, Any],  # Accept any JSON structure
     db: Session = Depends(get_db),

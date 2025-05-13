@@ -21,7 +21,7 @@ router = APIRouter(
     tags=["time settings"],
 )
 
-@router.post("/", response_model=FormatResponseModel)
+@router.post("", response_model=FormatResponseModel)
 async def create_new_time_setting(
     time_setting: TimeSettingCreate, 
     db: Session = Depends(get_db),

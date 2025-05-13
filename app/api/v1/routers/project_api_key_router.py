@@ -25,7 +25,7 @@ router = APIRouter(
 )
 
 # สร้าง API Key ใหม่
-@router.post("/", response_model=FormatResponseModel)
+@router.post("", response_model=FormatResponseModel)
 async def create_new_project_api_key(
     project_data: ProjectApiKeyCreate,
     db: Session = Depends(get_db),

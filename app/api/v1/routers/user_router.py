@@ -66,7 +66,7 @@ async def read_user(
 
 
 # POST /api/v1/users/?roles=admin&roles=supervisor
-@router.post("/", response_model=FormatResponseModel)
+@router.post("", response_model=FormatResponseModel)
 async def create_new_user(
     user: UserCreate, 
     roles: Optional[list[str]] = Query(default=None),

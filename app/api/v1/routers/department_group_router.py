@@ -52,7 +52,7 @@ async def read_department_group(
         raise HTTPException(status_code=404, detail=f"Department group with ID {group_id} not found")
     return format_response("0000", group)
 
-@router.post("/", response_model=FormatResponseModel)
+@router.post("", response_model=FormatResponseModel)
 async def create_department_group_endpoint(
     group: DepartmentGroupCreate, 
     db: Session = Depends(get_db),

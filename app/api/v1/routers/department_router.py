@@ -77,7 +77,7 @@ async def search_departments_by_name_endpoint(
     departments = search_departments_by_name(db, search_term=search_term, skip=skip, limit=limit)
     return format_response("0000", departments)
 
-@router.post("/", response_model=FormatResponseModel)
+@router.post("", response_model=FormatResponseModel)
 async def create_department_endpoint(
     department: DepartmentCreate, 
     db: Session = Depends(get_db),

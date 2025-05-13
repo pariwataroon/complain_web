@@ -72,7 +72,7 @@ async def get_available_departments_endpoint(
         return format_response("5000", {"error": str(e)})
 
 # Assign signature authority to a user
-@router.post("/", response_model=FormatResponseModel)
+@router.post("", response_model=FormatResponseModel)
 async def assign_signature_authority_endpoint(
     authority_data: SignatureAuthorityCreate,
     db: Session = Depends(get_db),

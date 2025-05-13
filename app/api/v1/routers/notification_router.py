@@ -20,7 +20,7 @@ router = APIRouter(
     tags=["notifications"],
 )
 
-# @router.post("/", response_model=FormatResponseModel)
+# @router.post("", response_model=FormatResponseModel)
 # async def create_new_notification(
 #     notification: NotificationCreate,
 #     db: Session = Depends(get_db),
