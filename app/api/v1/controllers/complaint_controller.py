@@ -263,47 +263,48 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                         print("WARNING: activeType is government but no government data found")
                 
                 elif active_type == "individual" or active_type == "general":
-                    # ตรวจสอบว่ามีข้อมูล corporate ก่อน เพราะมีความสำคัญสูงกว่า
-                    if "corporate" in step2_general and isinstance(step2_general["corporate"], dict):
-                        respondent_type = RespondentType.CORPORATE
-                        corp_data = step2_general["corporate"]
-                        if "companyName" in corp_data and not "name" in corp_data:
-                            corp_data["name"] = corp_data["companyName"]
-                        respondent_data = process_nested_fields(corp_data)
-                        print("**** OVERRIDE: Found corporate data despite activeType=individual ****")
-                    elif "government" in step2_general and isinstance(step2_general["government"], dict):
-                        respondent_type = RespondentType.GOVERNMENT
-                        gov_data = step2_general["government"]
-                        if "agencyName" in gov_data and not "name" in gov_data:
-                            gov_data["name"] = gov_data["agencyName"]
-                        respondent_data = process_nested_fields(gov_data)
-                        print("**** OVERRIDE: Found government data despite activeType=individual ****")
-                    else:
-                        # ใช้ individual ตาม activeType
-                        respondent_type = RespondentType.INDIVIDUAL
-                        print("**** Setting respondent_type = INDIVIDUAL based on activeType ****")
-                        
-                        if "individual" in step2_general:
-                            if "corporate" in step2_general["individual"]:
-                                # กรณีพิเศษ: มีข้อมูล corporate อยู่ใน individual
-                                respondent_type = RespondentType.CORPORATE
-                                corp_data = step2_general["individual"]["corporate"]
-                                if "companyName" in corp_data and not "name" in corp_data:
-                                    corp_data["name"] = corp_data["companyName"]
-                                respondent_data = process_nested_fields(corp_data)
-                                print("**** OVERRIDE: Found corporate data inside individual ****")
-                            else:
-                                # ใช้ข้อมูล individual ตามปกติ
-                                respondent_data = process_nested_fields(step2_general["individual"])
-                                print("**** Using individual data directly ****")
+                    # ตรวจสอบว่ามีข้อมูล corporate หรือ government ซ้อนอยู่หรือไม่
+                    if "individual" in step2_general and isinstance(step2_general["individual"], dict):
+                        # ตรวจสอบ government ใน individual
+                        if "government" in step2_general["individual"] and isinstance(step2_general["individual"]["government"], dict):
+                            # กรณีพิเศษ: มีข้อมูล government อยู่ใน individual
+                            respondent_type = RespondentType.GOVERNMENT
+                            gov_data = step2_general["individual"]["government"]
+                            if "agencyName" in gov_data and not "name" in gov_data:
+                                gov_data["name"] = gov_data["agencyName"]
+                            respondent_data = process_nested_fields(gov_data)
+                            print("**** OVERRIDE: Found government data inside individual ****")
+                        # ตรวจสอบ corporate ใน individual (ยังคงรักษาเงื่อนไขเดิม)
+                        elif "corporate" in step2_general["individual"] and isinstance(step2_general["individual"]["corporate"], dict):
+                            # กรณีพิเศษ: มีข้อมูล corporate อยู่ใน individual
+                            respondent_type = RespondentType.CORPORATE
+                            corp_data = step2_general["individual"]["corporate"]
+                            if "companyName" in corp_data and not "name" in corp_data:
+                                corp_data["name"] = corp_data["companyName"]
+                            respondent_data = process_nested_fields(corp_data)
+                            print("**** OVERRIDE: Found corporate data inside individual ****")
                         else:
-                            print("WARNING: activeType is individual but no individual data found")
+                            # ใช้ individual ตาม activeType
+                            respondent_type = RespondentType.INDIVIDUAL
+                            respondent_data = process_nested_fields(step2_general["individual"])
+                            print("**** Setting respondent_type = INDIVIDUAL based on activeType ****")
+                    else:
+                        print("WARNING: activeType is individual but no individual data found")
             
             # ถ้าไม่มี activeType ให้ตรวจสอบจากฟิลด์โดยตรง
             else:
                 print("**** No activeType found, detecting from available fields ****")
                 
-                if "corporate" in step2_general and isinstance(step2_general["corporate"], dict):
+                if "government" in step2_general and isinstance(step2_general["government"], dict):
+                    # พบข้อมูล government โดยตรง
+                    respondent_type = RespondentType.GOVERNMENT
+                    gov_data = step2_general["government"]
+                    if "agencyName" in gov_data and not "name" in gov_data:
+                        gov_data["name"] = gov_data["agencyName"] 
+                    respondent_data = process_nested_fields(gov_data)
+                    print(f"***** AUTO-DETECTED: Respondent is GOVERNMENT (found government field) *****")
+                
+                elif "corporate" in step2_general and isinstance(step2_general["corporate"], dict):
                     # พบข้อมูล corporate โดยตรง
                     respondent_type = RespondentType.CORPORATE
                     corp_data = step2_general["corporate"]
@@ -312,19 +313,21 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                         corp_data["name"] = corp_data["companyName"]
                     respondent_data = process_nested_fields(corp_data)
                     print(f"***** AUTO-DETECTED: Respondent is CORPORATE (found corporate field) *****")
-                    
-                elif "government" in step2_general and isinstance(step2_general["government"], dict):
-                    # พบข้อมูล government โดยตรง
-                    respondent_type = RespondentType.GOVERNMENT
-                    gov_data = step2_general["government"]
-                    if "agencyName" in gov_data and not "name" in gov_data:
-                        gov_data["name"] = gov_data["agencyName"] 
-                    respondent_data = process_nested_fields(gov_data)
-                    print(f"***** AUTO-DETECTED: Respondent is GOVERNMENT (found government field) *****")
-                    
+                
                 elif "individual" in step2_general and isinstance(step2_general["individual"], dict):
-                    # พบข้อมูล individual โดยตรง - ตรวจสอบว่ามี corporate ซ้อนอยู่หรือไม่
-                    if "corporate" in step2_general["individual"] and isinstance(step2_general["individual"]["corporate"], dict):
+                    # พบข้อมูล individual โดยตรง - ตรวจสอบว่ามี corporate หรือ government ซ้อนอยู่หรือไม่
+                    
+                    # เพิ่มการตรวจสอบ government ใน individual ก่อน corporate
+                    if "government" in step2_general["individual"] and isinstance(step2_general["individual"]["government"], dict):
+                        # พบ government ใน individual
+                        respondent_type = RespondentType.GOVERNMENT
+                        gov_data = step2_general["individual"]["government"]
+                        if "agencyName" in gov_data and not "name" in gov_data:
+                            gov_data["name"] = gov_data["agencyName"]
+                        respondent_data = process_nested_fields(gov_data)
+                        print(f"***** AUTO-DETECTED: Respondent is GOVERNMENT (found government inside individual) *****")
+                    
+                    elif "corporate" in step2_general["individual"] and isinstance(step2_general["individual"]["corporate"], dict):
                         # พบ corporate ใน individual
                         respondent_type = RespondentType.CORPORATE
                         corp_data = step2_general["individual"]["corporate"]
@@ -332,8 +335,9 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                             corp_data["name"] = corp_data["companyName"]
                         respondent_data = process_nested_fields(corp_data)
                         print(f"***** AUTO-DETECTED: Respondent is CORPORATE (found corporate inside individual) *****")
+                    
                     else:
-                        # ไม่พบ corporate ใน individual ให้ใช้ individual ตามปกติ
+                        # ไม่พบข้อมูลซ้อน ใช้ individual ตามปกติ
                         respondent_type = RespondentType.INDIVIDUAL
                         respondent_data = process_nested_fields(step2_general["individual"])
                         print(f"***** AUTO-DETECTED: Respondent is INDIVIDUAL (found individual field) *****")
