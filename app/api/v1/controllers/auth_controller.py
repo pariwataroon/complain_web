@@ -34,7 +34,7 @@ def authenticate_user(db: Session, citizen_id: str, password: str):
     return user, None
 
 
-def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=90)):
+def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=float(env.JWT_EXPIRATION_DELTA_MIN))):
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire, "type": "access"})
@@ -42,7 +42,7 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes
     return encoded_jwt
 
 
-def create_refresh_token(data: dict, expires_delta: timedelta = timedelta(days=7)):
+def create_refresh_token(data: dict, expires_delta: timedelta = timedelta(days=float(env.JWT_REFRESH_TOKEN_EXPIRATION_DELTA_DAYS))):
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire, "type": "refresh"})
