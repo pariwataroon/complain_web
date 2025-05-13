@@ -1,10 +1,25 @@
-// pages/admin/ComplaintArchives.jsx
-
 import React, { useState } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableNewAddComp from "@services/TableNewAddComp/TableNewAddComp";
 
+// สำหรับกรองเดือน (คำย่อในวันที่)
+const THAI_MONTH_ABBREV = {
+  1: "ม.ค.",
+  2: "ก.พ.",
+  3: "มี.ค.",
+  4: "เม.ย.",
+  5: "พ.ค.",
+  6: "มิ.ย.",
+  7: "ก.ค.",
+  8: "ส.ค.",
+  9: "ก.ย.",
+  10: "ต.ค.",
+  11: "พ.ย.",
+  12: "ธ.ค.",
+};
+
+// ตัวเลือกเดือน (สำหรับ SelectField)
 const MONTH_OPTIONS = [
   { value: "1", label: "มกราคม" },
   { value: "2", label: "กุมภาพันธ์" },
@@ -20,6 +35,7 @@ const MONTH_OPTIONS = [
   { value: "12", label: "ธันวาคม" },
 ];
 
+// ตัวเลือกปีงบประมาณ
 const FISCAL_YEAR_OPTIONS = [
   { value: "2566", label: "2566" },
   { value: "2567", label: "2567" },
@@ -28,7 +44,6 @@ const FISCAL_YEAR_OPTIONS = [
   { value: "2570", label: "2570" },
 ];
 
-// ─── mock data (ตัวอย่าง) ─────────────────────────────────────────────────
 // ─── mock data (20 รายการ) ─────────────────────────────────────────────────
 const mockComplaints = [
   {
@@ -238,39 +253,27 @@ const NewAdditionalComplaintsSummaryComponents = () => {
   const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
   const router = useRouter();
 
+  // เปลี่ยนหน้า summary
   const handleSummaryByIssueType = () => {
-    router.push("/admin/complaint-issue-summary");
+    router.push(
+      "/admin/document/new-additional-complaints-summary/summaryresults"
+    );
   };
 
-  const handleSearch = (filters) => {
-    const {
-      receiveDateFrom,
-      receiveDateTo,
-      agency: fAgency,
-      claimantName: fName,
-      issueType: fIssueType,
-      subIssueType: fSubIssueType,
-      responsibleOfficer: fOfficer,
-      status: fStatus,
-    } = filters;
+  // กรองข้อมูลตามเดือนและปีงบประมาณ
+  const handleSearch = ({ receiveDateFrom, receiveDateTo }) => {
+    let result = allComplaints;
 
-    const result = allComplaints.filter((item) => {
-      // date range
-      if (
-        receiveDateFrom &&
-        new Date(item.receiveDate) < new Date(receiveDateFrom)
-      )
-        return false;
-      if (receiveDateTo && new Date(item.receiveDate) > new Date(receiveDateTo))
-        return false;
-      if (fAgency && item.agency !== fAgency) return false;
-      if (fName && !item.claimantName.includes(fName)) return false;
-      if (fIssueType && item.issueType !== fIssueType) return false;
-      if (fSubIssueType && item.subIssueType !== fSubIssueType) return false;
-      if (fOfficer && item.responsibleOfficer !== fOfficer) return false;
-      if (fStatus && item.status !== fStatus) return false;
-      return true;
-    });
+    if (receiveDateFrom) {
+      const monthLabel = THAI_MONTH_ABBREV[receiveDateFrom];
+      result = result.filter((item) => item.receiveDate.includes(monthLabel));
+    }
+
+    if (receiveDateTo) {
+      result = result.filter((item) =>
+        item.receiveDate.endsWith(receiveDateTo)
+      );
+    }
 
     setFilteredComplaints(result);
   };
@@ -296,7 +299,6 @@ const NewAdditionalComplaintsSummaryComponents = () => {
       <TableNewAddComp
         data={filteredComplaints}
         title="รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่ม"
-        // navigateTo="/admin/edit/website-complaints"
         onSearch={handleSearch}
         actionButtonLabel="สรุปผลตามประเภทเรื่อง"
         onActionClick={handleSummaryByIssueType}

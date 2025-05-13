@@ -1,8 +1,12 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import PendingWorkfollowupComponents from "@components/Report/PendingWorkfollowupComponents/PendingWorkfollowupComponents";
 
 const PendingWorkfollowup = () => {
-  return <div>รายงานการติดตามงานค้าง</div>;
+  return (
+    <div>
+      <PendingWorkfollowupComponents />
+    </div>
+  );
 };
 
 PendingWorkfollowup.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
