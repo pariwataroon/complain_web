@@ -28,21 +28,12 @@ def save_original_complaint(complaint_data: Dict[str, Any]) -> Dict[str, Any]:
 def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optional[UUID] = None) -> Complaint:
     """สร้างข้อร้องเรียนใหม่"""
     try:
-        # Debug - พิมพ์ข้อมูลที่ได้รับเพื่อตรวจสอบโครงสร้าง
-        print("Received complaint data structure:")
-        print(json.dumps(complaint_data, indent=2, ensure_ascii=False)[:500] + "...")  # แสดงแค่ 500 ตัวอักษรแรก
-        
         # แปลงข้อมูล formData ถ้ามีก่อน
         if "formData" in complaint_data:
-            print("Found formData wrapper, extracting inner content...")
             complaint_data = complaint_data["formData"]
-            print("Extracted formData content:", json.dumps(complaint_data, indent=2, ensure_ascii=False)[:500] + "...")
-        
+
         # Check if data is in flat format and convert to step format if needed
         if "subject" in complaint_data and "step1" not in complaint_data:
-            # We're receiving a flat structure, convert to step format
-            print("Converting flat structure to step format...")
-            
             structured_data = {
                 "step1": {
                     "general": {}
@@ -100,11 +91,7 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
             
             # Handle respondent data
             respondent_type = complaint_data.get("respondent_type", "individual")
-            print(f"Detected respondent_type from flat data: {respondent_type}")
-            
-            # เพิ่ม log เพื่อตรวจสอบข้อมูล respondent_data
-            print(f"Respondent data from flat structure: {json.dumps(complaint_data.get('respondent_data', {}), indent=2, ensure_ascii=False)[:200]}...")
-            
+
             # ใช้ตัวพิมพ์เล็กสำหรับการเปรียบเทียบประเภท
             respondent_type_lower = respondent_type.lower() if isinstance(respondent_type, str) else "individual"
             
@@ -113,12 +100,10 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                 # ถ้ามีข้อมูล corporate โดยตรง ให้ใช้ค่านี้ไม่ว่า respondent_type จะเป็นอะไร
                 structured_data["step2"]["general"]["activeType"] = "corporate"
                 structured_data["step2"]["general"]["corporate"] = complaint_data.get("respondent_data", {})
-                print("DETECTED: corporate data in respondent_data, setting activeType=corporate")
             elif "government" in complaint_data.get("respondent_data", {}):
                 # ถ้ามีข้อมูล government โดยตรง ให้ใช้ค่านี้ไม่ว่า respondent_type จะเป็นอะไร
                 structured_data["step2"]["general"]["activeType"] = "government"
                 structured_data["step2"]["general"]["government"] = complaint_data.get("respondent_data", {})
-                print("DETECTED: government data in respondent_data, setting activeType=government")
             else:
                 # ไม่พบข้อมูลพิเศษ ใช้ตามประเภทที่ระบุ
                 if respondent_type_lower == "individual":
@@ -132,8 +117,7 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                     structured_data["step2"]["general"]["government"] = complaint_data.get("respondent_data", {})
                 
             complaint_data = structured_data
-            print("Converted structure:", json.dumps(complaint_data, indent=2, ensure_ascii=False)[:500] + "...")
-        
+           
         # 1. เก็บข้อมูลดิบทั้งหมดแบบ JSON object
         original_data = save_original_complaint(complaint_data)
         
@@ -142,10 +126,6 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
         step2 = complaint_data.get("step2", {})
         step3 = complaint_data.get("step3", {})
         step4 = complaint_data.get("step4", {})
-        
-        # Debug - ตรวจสอบโครงสร้างของ step2 และ step3
-        print("Step2 structure:", json.dumps(step2, indent=2, ensure_ascii=False))
-        print("Step3 structure:", json.dumps(step3, indent=2, ensure_ascii=False))
         
         # 3. ดึงข้อมูลเรื่องร้องเรียน
         subject = ""
@@ -156,7 +136,6 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
         
         if "general" in step3:
             step3_general = step3["general"]
-            print("Step3 general:", json.dumps(step3_general, indent=2, ensure_ascii=False))
             subject = step3_general.get("subject", "")
             description = step3_general.get("description", "")
             complaint_type = step3_general.get("complaintType", "")
@@ -166,7 +145,6 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                 try:
                     incident_date = datetime.fromisoformat(step3_general["incidentDate"].replace('Z', '+00:00'))
                 except Exception as e:
-                    print(f"Error parsing incident_date: {e}")
                     incident_date = None
         
         # 4. ข้อมูลการยอมรับเงื่อนไข
@@ -196,25 +174,21 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                 # กรณีนิติบุคคล มีข้อมูลผู้ลงนาม
                 if "signer" in step1_general and step1_general.get("signer"):
                     complainant_data["signer"] = process_nested_fields(step1_general["signer"])
-                print(f"AUTO-DETECTED: Complainant is CORPORATE (detected corporate field)")
             
             # เช็คว่ามี general โดยตรงไหม (กรณีไม่มี activeType)
             elif "general" in step1_general:
                 active_type = "general"
                 complainant_type = ComplainantType.INDIVIDUAL
                 complainant_data = process_nested_fields(step1_general["general"])
-                print(f"AUTO-DETECTED: Complainant is INDIVIDUAL (detected general field)")
             
             # กรณีมี activeType ระบุ
             else:
                 active_type = step1_general.get("activeType", "general")
-                print(f"Processing step1 with activeType: {active_type}")
                 
                 # ตรวจสอบประเภทผู้ร้องเรียน - บุคคลธรรมดา
                 if (active_type == "general" or active_type == "individual") and "general" in step1_general:
                     complainant_type = ComplainantType.INDIVIDUAL
                     complainant_data = process_nested_fields(step1_general["general"])
-                    print(f"Processed complainant data: {complainant_data}")
                 
                 # ตรวจสอบข้อมูลนิติบุคคล
                 elif active_type == "corporate" and "corporate" in step1_general:
@@ -239,11 +213,9 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
             # ตรวจสอบ activeType ก่อนเป็นอันดับแรก
             if "activeType" in step2_general:
                 active_type = step2_general["activeType"]
-                print(f"**** CHECKING: activeType = {active_type} ****")
                 
                 if active_type == "corporate":
                     respondent_type = RespondentType.CORPORATE
-                    print("**** Setting respondent_type = CORPORATE based on activeType ****")
                     
                     # ตรวจสอบว่ามีข้อมูล corporate อยู่หรือไม่
                     if "corporate" in step2_general:
@@ -251,20 +223,15 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                         if "companyName" in corp_data and not "name" in corp_data:
                             corp_data["name"] = corp_data["companyName"]
                         respondent_data = process_nested_fields(corp_data)
-                        print("**** Using corporate data directly ****")
                     # ถ้าไม่มี corporate แต่มีใน individual
                     elif "individual" in step2_general and isinstance(step2_general["individual"], dict) and "corporate" in step2_general["individual"]:
                         corp_data = step2_general["individual"]["corporate"]
                         if "companyName" in corp_data and not "name" in corp_data:
                             corp_data["name"] = corp_data["companyName"]
                         respondent_data = process_nested_fields(corp_data)
-                        print("**** Using corporate data from individual.corporate ****")
-                    else:
-                        print("WARNING: activeType is corporate but no corporate data found")
                 
                 elif active_type == "government":
                     respondent_type = RespondentType.GOVERNMENT
-                    print("**** Setting respondent_type = GOVERNMENT based on activeType ****")
                     
                     # ตรวจสอบว่ามีข้อมูล government อยู่หรือไม่
                     if "government" in step2_general:
@@ -272,16 +239,12 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                         if "agencyName" in gov_data and not "name" in gov_data:
                             gov_data["name"] = gov_data["agencyName"]
                         respondent_data = process_nested_fields(gov_data)
-                        print("**** Using government data directly ****")
                     # ถ้าไม่มี government แต่มีใน individual
                     elif "individual" in step2_general and isinstance(step2_general["individual"], dict) and "government" in step2_general["individual"]:
                         gov_data = step2_general["individual"]["government"]
                         if "agencyName" in gov_data and not "name" in gov_data:
                             gov_data["name"] = gov_data["agencyName"]
                         respondent_data = process_nested_fields(gov_data)
-                        print("**** Using government data from individual.government ****")
-                    else:
-                        print("WARNING: activeType is government but no government data found")
                 
                 elif active_type == "individual" or active_type == "general":
                     # ตรวจสอบว่ามีข้อมูล corporate หรือ government ซ้อนอยู่หรือไม่
@@ -294,7 +257,6 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                             if "agencyName" in gov_data and not "name" in gov_data:
                                 gov_data["name"] = gov_data["agencyName"]
                             respondent_data = process_nested_fields(gov_data)
-                            print("**** OVERRIDE: Found government data inside individual ****")
                         # ตรวจสอบ corporate ใน individual (ยังคงรักษาเงื่อนไขเดิม)
                         elif "corporate" in step2_general["individual"] and isinstance(step2_general["individual"]["corporate"], dict):
                             # กรณีพิเศษ: มีข้อมูล corporate อยู่ใน individual
@@ -303,7 +265,6 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                             if "companyName" in corp_data and not "name" in corp_data:
                                 corp_data["name"] = corp_data["companyName"]
                             respondent_data = process_nested_fields(corp_data)
-                            print("**** OVERRIDE: Found corporate data inside individual ****")
                         # ตรวจสอบกรณี individual.individual (ซ้อน 2 ชั้น)
                         elif "individual" in step2_general["individual"] and isinstance(step2_general["individual"]["individual"], dict):
                             inner_individual = step2_general["individual"]["individual"]
@@ -314,31 +275,23 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                                 if "agencyName" in gov_data and not "name" in gov_data:
                                     gov_data["name"] = gov_data["agencyName"]
                                 respondent_data = process_nested_fields(gov_data)
-                                print("**** DEEP NESTED: Found government inside individual.individual ****")
                             elif "corporate" in inner_individual and isinstance(inner_individual["corporate"], dict):
                                 respondent_type = RespondentType.CORPORATE
                                 corp_data = inner_individual["corporate"]
                                 if "companyName" in corp_data and not "name" in corp_data:
                                     corp_data["name"] = corp_data["companyName"]
                                 respondent_data = process_nested_fields(corp_data)
-                                print("**** DEEP NESTED: Found corporate inside individual.individual ****")
                             else:
                                 # ใช้ข้อมูล individual.individual โดยตรง
                                 respondent_type = RespondentType.INDIVIDUAL
                                 respondent_data = process_nested_fields(inner_individual)
-                                print("**** USING: individual.individual data directly ****")
                         else:
                             # ใช้ individual ตาม activeType
                             respondent_type = RespondentType.INDIVIDUAL
                             respondent_data = process_nested_fields(step2_general["individual"])
-                            print("**** Setting respondent_type = INDIVIDUAL based on activeType ****")
-                    else:
-                        print("WARNING: activeType is individual but no individual data found")
             
             # ถ้าไม่มี activeType ให้ตรวจสอบจากฟิลด์โดยตรง
             else:
-                print("**** No activeType found, detecting from available fields ****")
-                
                 if "government" in step2_general and isinstance(step2_general["government"], dict):
                     # พบข้อมูล government โดยตรง
                     respondent_type = RespondentType.GOVERNMENT
@@ -346,7 +299,6 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                     if "agencyName" in gov_data and not "name" in gov_data:
                         gov_data["name"] = gov_data["agencyName"] 
                     respondent_data = process_nested_fields(gov_data)
-                    print(f"***** AUTO-DETECTED: Respondent is GOVERNMENT (found government field) *****")
                 
                 elif "corporate" in step2_general and isinstance(step2_general["corporate"], dict):
                     # พบข้อมูล corporate โดยตรง
@@ -356,7 +308,6 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                     if "companyName" in corp_data and not "name" in corp_data:
                         corp_data["name"] = corp_data["companyName"]
                     respondent_data = process_nested_fields(corp_data)
-                    print(f"***** AUTO-DETECTED: Respondent is CORPORATE (found corporate field) *****")
                 
                 elif "individual" in step2_general and isinstance(step2_general["individual"], dict):
                     # พบข้อมูล individual โดยตรง - ตรวจสอบว่ามี corporate หรือ government ซ้อนอยู่หรือไม่
@@ -369,8 +320,7 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                         if "agencyName" in gov_data and not "name" in gov_data:
                             gov_data["name"] = gov_data["agencyName"]
                         respondent_data = process_nested_fields(gov_data)
-                        print(f"***** AUTO-DETECTED: Respondent is GOVERNMENT (found government inside individual) *****")
-                    
+                        
                     elif "corporate" in step2_general["individual"] and isinstance(step2_general["individual"]["corporate"], dict):
                         # พบ corporate ใน individual
                         respondent_type = RespondentType.CORPORATE
@@ -378,8 +328,7 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                         if "companyName" in corp_data and not "name" in corp_data:
                             corp_data["name"] = corp_data["companyName"]
                         respondent_data = process_nested_fields(corp_data)
-                        print(f"***** AUTO-DETECTED: Respondent is CORPORATE (found corporate inside individual) *****")
-                    
+                        
                     # เพิ่มการตรวจสอบ individual.individual
                     elif "individual" in step2_general["individual"] and isinstance(step2_general["individual"]["individual"], dict):
                         inner_individual = step2_general["individual"]["individual"]
@@ -390,59 +339,40 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                             if "agencyName" in gov_data and not "name" in gov_data:
                                 gov_data["name"] = gov_data["agencyName"]
                             respondent_data = process_nested_fields(gov_data)
-                            print("***** AUTO-DETECTED: Found government inside individual.individual *****")
                         elif "corporate" in inner_individual and isinstance(inner_individual["corporate"], dict):
                             respondent_type = RespondentType.CORPORATE
                             corp_data = inner_individual["corporate"]
                             if "companyName" in corp_data and not "name" in corp_data:
                                 corp_data["name"] = corp_data["companyName"]
                             respondent_data = process_nested_fields(corp_data)
-                            print("***** AUTO-DETECTED: Found corporate inside individual.individual *****")
                         else:
                             # ใช้ข้อมูล individual.individual โดยตรง
                             respondent_type = RespondentType.INDIVIDUAL
                             respondent_data = process_nested_fields(inner_individual)
-                            print("***** AUTO-DETECTED: Using individual.individual data directly *****")
                     else:
                         # ไม่พบข้อมูลซ้อน ใช้ individual ตามปกติ
                         respondent_type = RespondentType.INDIVIDUAL
                         respondent_data = process_nested_fields(step2_general["individual"])
-                        print(f"***** AUTO-DETECTED: Respondent is INDIVIDUAL (found individual field) *****")
-            
-            print(f"Final respondent type: {respondent_type}")
-            print(f"Respondent data keys: {list(respondent_data.keys()) if isinstance(respondent_data, dict) else 'Not a dict'}")
-        
+    
         # 7. สร้างเลขที่ข้อร้องเรียน
         complaint_number = generate_complaint_number(db)
-        
-        # Debug prints
-        print(f"Subject from step3: '{subject}'")
-        print(f"Complaint type: '{complaint_type}'")
-        print(f"Complainant data: {complainant_data}")
-        print(f"Respondent data: {respondent_data}")
-        print(f"Final respondent type: {respondent_type}")
         
         # หากไม่มี subject แต่ข้อมูลอื่นมีครบ ให้ใช้ค่าเริ่มต้น
         if not subject and complainant_data and respondent_data:
             subject = "ทดสอบเรื่องร้องเรียน"
-            print(f"Using default subject: '{subject}'")
         
         # หากไม่มี complainant_data แต่มีผู้ถูกร้อง ให้ใช้ค่าเริ่มต้น
         if not complainant_data and respondent_data:
             complainant_data = {"name": "ผู้ร้องเรียนทั่วไป", "email": "anonymous@example.com"}
-            print(f"Using default complainant data: {complainant_data}")
             
         # Validate required fields and return error if missing
         if not subject:
-            print("ERROR: Subject is missing in the data")
             raise ValueError("Subject is required")
             
         if not complainant_data:
-            print("ERROR: Complainant data is missing")
             raise ValueError("Complainant data is required")
             
         if not respondent_data:
-            print("ERROR: Respondent data is missing")
             raise ValueError("Respondent data is required")
             
         # Convert all JSON data to proper format for database (explicitly to JSON strings)
@@ -468,16 +398,6 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
             created_by=user_id
         )
         
-        # Debug - Print object before saving
-        print("Debug - About to save:")
-        print(f"Complainant data type: {type(new_complaint.complainant_data)}")
-        print(f"Complainant data: {new_complaint.complainant_data}")
-        print(f"Respondent data type: {type(new_complaint.respondent_data)}")
-        print(f"Respondent data: {new_complaint.respondent_data}")
-        print(f"Full data type: {type(new_complaint.full_complaint_data)}")
-        print(f"Complainant type: {complainant_type}")
-        print(f"Final respondent type before saving: {respondent_type}")
-        
         # บันทึกข้อมูล
         db.add(new_complaint)
         db.commit()
@@ -490,8 +410,6 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
         
     except Exception as e:
         db.rollback()
-        print(f"ERROR: {str(e)}")
-        print(traceback.format_exc())
         raise
 
 def extract_address_fields(data: Dict) -> Dict:
@@ -650,7 +568,6 @@ def get_complaint(db: Session, complaint_id: uuid.UUID):
         try:
             full_complaint_data = json.loads(full_complaint_data)
         except Exception as e:
-            print(f"Error parsing full_complaint_data: {e}")
             full_complaint_data = {}
     
     complainant_data = complaint.complainant_data
@@ -658,7 +575,6 @@ def get_complaint(db: Session, complaint_id: uuid.UUID):
         try:
             complainant_data = json.loads(complainant_data)
         except Exception as e:
-            print(f"Error parsing complainant_data: {e}")
             complainant_data = {}
     
     respondent_data = complaint.respondent_data
@@ -666,7 +582,6 @@ def get_complaint(db: Session, complaint_id: uuid.UUID):
         try:
             respondent_data = json.loads(respondent_data)
         except Exception as e:
-            print(f"Error parsing respondent_data: {e}")
             respondent_data = {}
     
     # Set the parsed data back to the complaint object for other functions to use
