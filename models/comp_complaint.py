@@ -20,6 +20,17 @@ class ComplaintStatus(str, enum.Enum):
     COMPLETED = "completed"                 # เสร็จสิ้น
     CANCELLED = "cancelled"                 # ยกเลิก
 
+# Define complaint type (ประเภทผู้ร้องเรียน)
+class ComplainantType(str, enum.Enum):
+    INDIVIDUAL = "individual"   # บุคคลธรรมดา
+    CORPORATE = "corporate"     # นิติบุคคล
+
+# Define respondent type (ประเภทผู้ถูกร้องเรียน)
+class RespondentType(str, enum.Enum):
+    INDIVIDUAL = "individual"   # บุคคลธรรมดา
+    CORPORATE = "corporate"     # นิติบุคคล
+    GOVERNMENT = "government"   # หน่วยงานราชการ
+
 class Complaint(Base):
     __tablename__ = "comp_complaints"
 
@@ -35,42 +46,45 @@ class Complaint(Base):
         comment="สถานะการร้องเรียน: submitted=ส่งคำร้อง, sent_to_agency=ส่งหน่วยงาน, in_process=อยู่ระหว่างดำเนินการ, in_review=อยู่ระหว่างการพิจารณา, tracking=ติดตามผลการพิจารณา, reviewed=แจ้งผลการพิจารณา, completed=เสร็จสิ้น, cancelled=ยกเลิก"
     )
     
-    # Complainant information
-    complainant_data = Column(JSON, nullable=False)
-    complainant_type = Column(NVARCHAR(50), default="general")  # general or corporate
-    delegate_data = Column(JSON, nullable=True)  # Optional delegate information
+    # ข้อมูลผู้ร้องเรียน (ความเรียบง่าย - เก็บเฉพาะสิ่งที่จำเป็น)
+    complainant_data = Column(JSON, nullable=False, default="{}")
+    complainant_type = Column(Enum(ComplainantType), default=ComplainantType.INDIVIDUAL, nullable=False)
+    delegate_data = Column(JSON, nullable=True)  # ข้อมูลผู้รับมอบอำนาจ (ถ้ามี)
     
-    # Respondent information
-    respondent_data = Column(JSON, nullable=False)
-    respondent_type = Column(NVARCHAR(50), nullable=False)  # individual, corporate or government
+    # ข้อมูลผู้ถูกร้องเรียน
+    respondent_data = Column(JSON, nullable=False, default="{}")
+    respondent_type = Column(Enum(RespondentType), nullable=False)
     
-    # Incident information
+    # เก็บข้อมูลทั้งหมดไว้อ้างอิง
+    full_complaint_data = Column(JSON, nullable=True)
+    
+    # ข้อมูลเหตุการณ์
     incident_date = Column(DateTime, nullable=True)
     complaint_type = Column(NVARCHAR(100), nullable=True)
     
-    # Acceptance of terms
+    # การยอมรับเงื่อนไข
     terms_accepted = Column(Boolean, default=True)
     
-    # Timestamps
+    # เวลาที่บันทึก
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
-    # Agency handling
+    # ข้อมูลหน่วยงานที่รับผิดชอบ
     assigned_to = Column(NVARCHAR(200), nullable=True, comment="หน่วยงานที่รับผิดชอบ")
     assigned_date = Column(DateTime, nullable=True)
     
-    # Resolution information
+    # ข้อมูลการแก้ไขปัญหา
     resolution_summary = Column(NVARCHAR(2000), nullable=True)
     resolved_date = Column(DateTime, nullable=True)
     
-    # User who created the complaint
+    # ผู้สร้างข้อร้องเรียน
     created_by = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_users.id"), nullable=True)
     creator = relationship("User", back_populates="complaints")
     
-    # Attachments
+    # เอกสารแนบ
     attachments = relationship("ComplaintAttachment", back_populates="complaint", cascade="all, delete-orphan")
     
-    # Timeline tracking
+    # ประวัติสถานะ
     status_history = relationship("ComplaintStatusHistory", back_populates="complaint", cascade="all, delete-orphan")
 
 class ComplaintAttachment(Base):
