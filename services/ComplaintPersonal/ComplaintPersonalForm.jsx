@@ -17,7 +17,8 @@ const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมู�
     const [zipCodeValue, setZipCodeValue] = useState("");
     
     const handleChange = (field) => (e) => {
-        onChange(field, e.target.value);
+        const value = typeof e === "object" && e?.target ? e.target.value : e;
+        onChange(field, value);
     };
 
     return (

@@ -9,8 +9,9 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import AddCircleOutlineOutlinedIcon from "@mui/icons-material/AddCircleOutlineOutlined";
 import RemoveCircleOutlineOutlinedIcon from "@mui/icons-material/RemoveCircleOutlineOutlined";
 import AddUserModal from "./modal/AddUserModal";
-import { GetDetailedStatsbyRole } from "@pages/api/settinggeneral/users";
+import { GetDetailedStatsbyRole, DelUsers } from "@pages/api/settinggeneral/users";
 import { formatThaiDateTime, formatPhoneNumber_null, formatCitizenId_null } from "@utils/Formats";
+import { showLoading, closeAlert, alertError, alertSuccess, showConfirm } from "@utils/Alerts";
 
 const mockData = {
   admin: [
@@ -122,8 +123,7 @@ export default function UserManagementUI() {
     const fetchStats = async () => {
       try {
         const data = await GetDetailedStatsbyRole();
-        console.log({ data });
-        setStats(data);
+        setStats(data);        
       } catch (err) {
         console.error("โหลดข้อมูลไม่สำเร็จ:", err);
       } finally {
@@ -134,6 +134,40 @@ export default function UserManagementUI() {
     fetchStats();
   }, []);
 
+  const fetchStats = async () => {
+    try {
+      showLoading("กำลังโหลดข้อมูล...");
+      const data = await GetDetailedStatsbyRole();
+      setStats(data);
+    } catch (err) {
+      console.error("โหลดข้อมูลไม่สำเร็จ:", err);
+      alertError("เกิดข้อผิดพลาด", "ไม่สามารถโหลดข้อมูลได้");
+    } finally {
+      closeAlert();
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    const confirm = await showConfirm(
+      "ยืนยันการลบผู้ใช้งาน",
+      `คุณต้องการลบผู้ใช้งาน <strong>${user.full_name}</strong> ใช่หรือไม่?`
+    );
+
+    if (confirm) {
+      try {
+        showLoading("กำลังลบผู้ใช้งาน...");
+        await DelUsers(user.id);
+        alertSuccess("ลบผู้ใช้งานสำเร็จ");
+        await fetchStats();
+      } catch (err) {
+        alertError("เกิดข้อผิดพลาด", "ไม่สามารถลบผู้ใช้งานได้");
+        closeAlert();
+      }
+    }
+  };
+  
+  
 
   const [expandedSections, setExpandedSections] = useState(
     sections.map((section) => section.expanded)
@@ -211,11 +245,17 @@ export default function UserManagementUI() {
 
   const [openModal, setOpenModal] = useState(false);
   const handleOpenModal = () => {
-    setOpenModal(true);
+    showLoading("กำลังโหลด...");
+    setTimeout(() => {
+      setOpenModal(true);
+      closeAlert();
+    }, 300);
   };
+  
 
   const handleCloseModal = () => {
     setOpenModal(false);
+    closeAlert();
   };
 
   return (
@@ -396,39 +436,18 @@ export default function UserManagementUI() {
                           <div className={styles.actionButtons}>
                             <button className={styles.actionButton}>✓</button>
                             <button className={styles.actionButton}>✎</button>
-                            <button className={styles.actionButton}>×</button>
+                            <button
+                              className={styles.actionButton}
+                              onClick={() => handleDeleteUser(user)}
+                            >
+                              ×
+                            </button>
                           </div>
                         </div>
                       </div>
 
                       <div className={styles.userDetails}>
                         <div className={styles.detailsColumn}>
-                          {/* <div className={styles.detailRow}>
-                            <span className={styles.detailLabel}>รหัสผ่าน:</span>
-                            <span className={styles.detailValue}>
-                              <span
-                                style={{
-                                  border: "none",
-                                  background: "transparent",
-                                }}
-                              >
-                                {userPasswordVisibility[sectionIndex][userIdx]
-                                  ? user.details.password
-                                  : "************"}
-                              </span>
-                              <IconButton
-                                onClick={() => togglePasswordVisibility(sectionIndex, userIdx)}
-                                sx={{ padding: 0, margin: 0 }}
-                              >
-                                {userPasswordVisibility[sectionIndex][userIdx] ? (
-                                  <VisibilityOff />
-                                ) : (
-                                  <Visibility />
-                                )}
-                              </IconButton>
-                            </span>
-                          </div> */}
-
                           <div className={styles.detailRow}><span className={styles.detailLabel}>Password:</span> #</div>
                           <div className={styles.detailRow}><span className={styles.detailLabel}>ชื่อ - นามสกุล:</span> {user.full_name_with_title}</div>
                           <div className={styles.detailRow}><span className={styles.detailLabel}>เลขบัตรประชาชน:</span> {formatCitizenId_null(user.citizen_id)}</div>

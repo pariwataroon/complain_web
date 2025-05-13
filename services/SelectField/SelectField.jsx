@@ -12,7 +12,7 @@ const SelectField = ({
     label,
     inputLabel,
     value,
-    onChange,
+    onChange = () => { },
     name,
     districtCode,
     amphureCode,
@@ -34,7 +34,10 @@ const SelectField = ({
             }
 
             if (externalOptions && externalOptions.length > 0) {
-                setOptions(externalOptions);
+                const mapped = optionMapper
+                    ? externalOptions.map(optionMapper)
+                    : externalOptions;
+                setOptions(mapped);
                 return;
             }
 
@@ -58,10 +61,10 @@ const SelectField = ({
                     response = Array.from(zipMap.values());
                 }
 
-
-
-                if (!Array.isArray(response)) throw new Error("Response is not array");
-                const mapped = optionMapper ? response.map(optionMapper) : response;
+                const finalResponse = Array.isArray(response) ? response : [];
+                const mapped = optionMapper
+                    ? finalResponse.map(optionMapper)
+                    : finalResponse;
                 setOptions(mapped);
             } catch (error) {
                 console.error("Failed to fetch or map options:", error);
@@ -72,6 +75,21 @@ const SelectField = ({
         fetchOptions();
     }, [label, districtCode, amphureCode, provinceCode]);
 
+    useEffect(() => {
+        if (!provinceCode) return;
+
+        if (label === "อำเภอ/เขต" || label === "ตำบล/แขวง" || label === "รหัสไปรษณีย์") {
+            onChange({ target: { name, value: "" } });
+        }
+    }, [provinceCode]);
+
+    useEffect(() => {
+        if (!amphureCode) return;
+
+        if (label === "ตำบล/แขวง" || label === "รหัสไปรษณีย์") {
+            onChange({ target: { name, value: "" } });
+        }
+    }, [amphureCode]);
 
     return (
         <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
@@ -94,6 +112,7 @@ const SelectField = ({
                     );
                     onChange({ target: { name, value: selected ?? e.target.value } });
                 }}
+                placeholder={!label ? inputLabel : undefined}
                 label={!label ? inputLabel : undefined}
                 InputProps={{
                     sx: {

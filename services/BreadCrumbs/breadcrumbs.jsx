@@ -24,8 +24,8 @@ const BreadcrumbsService = ({ items = [], separator = ">" }) => {
               display: "flex",
               alignItems: "center",
               color: "#1D40F8",
-              fontWeight: "bold", // ทำให้เป็นตัวหนา
-              fontSize: "18px", // ปรับขนาดตัวอักษร
+              fontWeight: "bold",
+              fontSize: "18px",
             }}
           >
             {item.icon && <span style={{ marginRight: 4 }}>{item.icon}</span>}
@@ -33,7 +33,6 @@ const BreadcrumbsService = ({ items = [], separator = ">" }) => {
           </span>
         );
 
-        // ถ้ามี url ให้ใช้ Link, ถ้าไม่มีให้ใช้ Typography
         return item.url ? (
           <Link
             key={index}

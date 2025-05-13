@@ -10,3 +10,5 @@ const SearchID = () => {
 SearchID.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default SearchID;
+
+

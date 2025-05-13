@@ -27,7 +27,8 @@ const Tab5 = ({
     step3 = {},
     step4 = {},
   } = formData;
-
+  console.log({ formData });
+  
   const complainant = step1.general?.general || {};
   const delegate = step1.general?.delegate || {};
   const corporate = step1.general?.corporate || {};
@@ -37,8 +38,6 @@ const Tab5 = ({
   const government = step2.general?.government || {};
   const complaint = step3.general || {};
   const files = complaint.attachment || [];
-
-  console.log({ formData });
 
   const InfoItem = ({ label, value }) => (
     <Grid item xs={12} sm={6}>

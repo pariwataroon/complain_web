@@ -1,8 +1,8 @@
 import { Box, Typography } from "@mui/material";
-import { Swiper, SwiperSlide } from "swiper/react";
-import 'swiper/css';
-import 'swiper/css/pagination';
-import { Pagination } from 'swiper';
+// import { Swiper, SwiperSlide } from "swiper/react";
+// import 'swiper/css';
+// import 'swiper/css/pagination';
+// import { Pagination } from 'swiper';
 
 const PopularQuestionsStats = () => {
   const questions = [

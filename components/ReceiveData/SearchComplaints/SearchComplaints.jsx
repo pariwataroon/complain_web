@@ -119,10 +119,8 @@ const mockComplaints = [
   },
 ];
 
-/* dropdown options (ส่งไป TableList) */
 const agencyOptions = ["สป-กค-1234-5-678-9", "สป-สร-1234-5-678-9"];
 
-/* util */
 const safeIncludes = (t, q) =>
   (t ?? "")
     .toString()

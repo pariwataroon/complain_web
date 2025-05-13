@@ -12,4 +12,19 @@ const GetDetailedStatsbyRole = async () => {
   }
 };
 
-export { GetDetailedStatsbyRole };
+const AddUsers = async () => {
+
+};
+
+const DelUsers = async (id) => {
+  try {
+    const { data } = await axiosInstance.delete(`/users/${id}`);
+    return data;
+    
+  } catch (err) {
+    console.error("Error deleting user:", err);
+    throw err;
+  }
+};
+
+export { GetDetailedStatsbyRole, AddUsers, DelUsers };

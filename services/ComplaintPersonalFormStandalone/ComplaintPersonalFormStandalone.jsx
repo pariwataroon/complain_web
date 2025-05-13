@@ -1,0 +1,123 @@
+import React, { useState } from "react";
+import {
+    Box,
+    Grid,
+    Typography,
+} from "@mui/material";
+import IDCardInput from "@services/IDCardInput/IDCardInput";
+import InputText from "@services/InputText/InputText";
+import InputPhone from "@services/InputPhone/InputPhone";
+import SelectField from "@services/SelectField/SelectField";
+import InputZipcode from "@services/InputZipcode/InputZipcode";
+import styles from "./ComplaintPersonalFormStandalone.module.scss";
+
+
+const ComplaintPersonalFormStandalone = ({ data = {}, onChange, title = "ข้อมูลผู้ร้องทุกข์" }) => {
+    const [districtValue, setDistrictValue] = useState("");
+    const [zipCodeValue, setZipCodeValue] = useState("");
+
+    const handleChange = (field) => (e) => {
+        const value = typeof e === "object" && e?.target ? e.target.value : e;
+        onChange(field, value);
+    };
+
+    return (
+        <Box>
+            <Typography className={styles.title}>{title}</Typography>
+            <Grid container spacing={2}>
+                <Grid item xs={12}>
+                    <IDCardInput
+                        value={data.idCard}
+                        onChange={(val) => onChange("idCard", val)}
+                        required
+                    />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                    <InputText
+                        label="ชื่อ - นามสกุล"
+                        placeholder="ชื่อ - นามสกุล"
+                        value={data.name}
+                        onChange={handleChange("name")}
+                        required
+                    />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                    <InputText
+                        label="ที่อยู่ที่สามารถติดต่อได้"
+                        placeholder="ที่อยู่ที่สามารถติดต่อได้"
+                        value={data.address}
+                        onChange={handleChange("address")}
+                        required
+                    />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                    <InputPhone
+                        label="หมายเลขโทรศัพท์"
+                        placeholder="หมายเลขโทรศัพท์"
+                        value={data.phone}
+                        onChange={handleChange("phone")}
+                        required
+                    />
+                </Grid>
+
+                <Grid item xs={12} sm={3}>
+                    <SelectField
+                        label="จังหวัด"
+                        value={data.province}
+                        onChange={handleChange("province")}
+                        required
+                    />
+                </Grid>
+
+                <Grid item xs={12} sm={3}>
+                    <SelectField
+                        label="อำเภอ/เขต"
+                        value={data.districts}
+                        provinceCode={data.province?.value}
+                        onChange={handleChange("districts")}
+                        required
+                    />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                    <InputText
+                        label="อีเมล"
+                        placeholder="อีเมล"
+                        value={data.email}
+                        onChange={handleChange("email")}
+                        required
+                    />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                    <SelectField
+                        label="ตำบล/แขวง"
+                        value={data.subdistricts}
+                        amphureCode={data.districts?.value}
+                        onChange={handleChange("subdistricts")}
+                        required
+                    />
+                </Grid>
+
+                <Grid item xs={12} sm={3}>
+                    <SelectField
+                        label="รหัสไปรษณีย์"
+                        value={data.zipcode}
+                        amphureCode={data.districts?.value}
+                        onChange={handleChange("zipcode")}
+                        optionMapper={(item) => ({
+                            value: item.zip_code,
+                            label: String(item.zip_code),
+                        })}
+                        required
+                    />
+                </Grid>
+            </Grid>
+        </Box>
+    );
+};
+
+
+export default ComplaintPersonalFormStandalone;
