@@ -1179,6 +1179,35 @@
 							"response": []
 						},
 						{
+							"name": "Get User Permission Pages Resources Bygroup",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/permissions/user-resources/bygroup",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"permissions",
+										"user-resources",
+										"bygroup"
+									]
+								}
+							},
+							"response": []
+						},
+						{
 							"name": "Create Resource",
 							"request": {
 								"auth": {
