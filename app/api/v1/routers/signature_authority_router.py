@@ -22,7 +22,7 @@ router = APIRouter(
 )
 
 # Endpoint to get all signature authorities
-@router.get("/", response_model=FormatResponseModel)
+@router.get("", response_model=FormatResponseModel)
 async def read_signature_authorities(
     skip: int = 0, 
     limit: int = 100, 

@@ -41,7 +41,7 @@ async def create_new_time_setting(
         print(f"Error creating time setting: {str(e)}")
         return format_response("5000", {"error": "Error creating time setting"})
 
-@router.get("/", response_model=FormatResponseModel)
+@router.get("", response_model=FormatResponseModel)
 async def read_time_settings(
     skip: int = 0, 
     limit: int = 100, 

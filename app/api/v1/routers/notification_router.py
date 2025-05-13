@@ -33,7 +33,7 @@ router = APIRouter(
 #     except Exception as e:
 #         return format_response("5000", {"error": str(e)})
 
-@router.get("/", response_model=FormatResponseModel)
+@router.get("", response_model=FormatResponseModel)
 async def get_notifications(
     exclusive: bool = False,
     include_seen: bool = True,

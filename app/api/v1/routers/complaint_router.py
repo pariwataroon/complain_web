@@ -92,7 +92,7 @@ async def create_new_complaint(
         traceback.print_exc()
         return format_response("5000", {"error": str(e)})
 
-@router.get("/", response_model=FormatResponseModel)
+@router.get("", response_model=FormatResponseModel)
 async def read_complaints(
     skip: int = 0,
     limit: int = 100,

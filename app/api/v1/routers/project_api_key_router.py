@@ -48,7 +48,7 @@ async def create_new_project_api_key(
         return format_response("5000", {"error": f"Error creating project API key: {str(e)}"})
 
 # ดึงรายการ API Key ทั้งหมด
-@router.get("/", response_model=FormatResponseModel)
+@router.get("", response_model=FormatResponseModel)
 async def list_project_api_keys(
     skip: int = 0,
     limit: int = 100,

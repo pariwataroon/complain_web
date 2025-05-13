@@ -20,7 +20,7 @@ router = APIRouter(
     tags=["departments"],
 )
 
-@router.get("/", response_model=FormatResponseModel)
+@router.get("", response_model=FormatResponseModel)
 async def read_departments(
     skip: int = 0, 
     limit: int = 100, 
