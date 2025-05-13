@@ -26,10 +26,7 @@ app.add_middleware(
 @app.middleware("http")
 async def add_charset_middleware(request, call_next):
     response = await call_next(request)
-    # เช็คว่าเป็น response JSON หรือไม่ ก่อนกำหนด Content-Type
-    content_type = response.headers.get("content-type", "")
-    if "application/json" in content_type:
-        response.headers["Content-Type"] = "application/json; charset=utf-8"
+    response.headers["Content-Type"] = "application/json; charset=utf-8"
     return response
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
