@@ -32,7 +32,7 @@ async def read_geographies(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงรายการภูมิภาคทั้งหมด"""
     geographies_data = get_geographies(db, skip=skip, limit=limit)
@@ -42,7 +42,7 @@ async def read_geographies(
 async def read_geography(
     geography_id: int, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงข้อมูลภูมิภาคตาม ID"""
     geography = get_geography_by_id(db, geography_id=geography_id)
@@ -54,7 +54,7 @@ async def read_geography(
 async def create_geography_endpoint(
     geography: GeographyCreate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_create("setting_geography"))
+    current_user: str = Depends(can_create("setting_users"))
 ):
     """สร้างภูมิภาคใหม่"""
     try:
@@ -71,7 +71,7 @@ async def update_geography_endpoint(
     geography_id: int, 
     geography: GeographyUpdate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("setting_geography"))
+    current_user: str = Depends(can_update("setting_users"))
 ):
     """อัปเดตข้อมูลภูมิภาค"""
     try:
@@ -91,7 +91,7 @@ async def update_geography_endpoint(
 async def delete_geography_endpoint(
     geography_id: int, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_delete("setting_geography"))
+    current_user: str = Depends(can_delete("setting_users"))
 ):
     """ลบภูมิภาค"""
     success = delete_geography(db, geography_id=geography_id)
@@ -106,7 +106,7 @@ async def read_provinces_endpoint(
     limit: int = 100, 
     geography_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงรายการจังหวัดทั้งหมด หรือตามภูมิภาค"""
     if geography_id:
@@ -119,7 +119,7 @@ async def read_provinces_endpoint(
 async def read_province_endpoint(
     province_id: int, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงข้อมูลจังหวัดตาม ID"""
     province = get_province_by_id(db, province_id=province_id)
@@ -131,7 +131,7 @@ async def read_province_endpoint(
 async def create_province_endpoint(
     province: ProvinceCreate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_create("setting_geography"))
+    current_user: str = Depends(can_create("setting_users"))
 ):
     """สร้างจังหวัดใหม่"""
     try:
@@ -148,7 +148,7 @@ async def update_province_endpoint(
     province_id: int, 
     province: ProvinceUpdate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("setting_geography"))
+    current_user: str = Depends(can_update("setting_users"))
 ):
     """อัปเดตข้อมูลจังหวัด"""
     try:
@@ -168,7 +168,7 @@ async def update_province_endpoint(
 async def delete_province_endpoint(
     province_id: int, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_delete("setting_geography"))
+    current_user: str = Depends(can_delete("setting_users"))
 ):
     """ลบจังหวัด"""
     success = delete_province(db, province_id=province_id)
@@ -183,7 +183,7 @@ async def read_amphures_endpoint(
     limit: int = 100, 
     province_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงรายการอำเภอทั้งหมด หรือตามจังหวัด"""
     if province_id:
@@ -196,7 +196,7 @@ async def read_amphures_endpoint(
 async def read_amphure_endpoint(
     amphure_id: int, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงข้อมูลอำเภอตาม ID"""
     amphure = get_amphure_by_id(db, amphure_id=amphure_id)
@@ -208,7 +208,7 @@ async def read_amphure_endpoint(
 async def create_amphure_endpoint(
     amphure: AmphureCreate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_create("setting_geography"))
+    current_user: str = Depends(can_create("setting_users"))
 ):
     """สร้างอำเภอใหม่"""
     try:
@@ -225,7 +225,7 @@ async def update_amphure_endpoint(
     amphure_id: int, 
     amphure: AmphureUpdate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("setting_geography"))
+    current_user: str = Depends(can_update("setting_users"))
 ):
     """อัปเดตข้อมูลอำเภอ"""
     try:
@@ -245,7 +245,7 @@ async def update_amphure_endpoint(
 async def delete_amphure_endpoint(
     amphure_id: int, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_delete("setting_geography"))
+    current_user: str = Depends(can_delete("setting_users"))
 ):
     """ลบอำเภอ"""
     success = delete_amphure(db, amphure_id=amphure_id)
@@ -260,7 +260,7 @@ async def read_districts_endpoint(
     limit: int = 100, 
     amphure_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงรายการตำบลทั้งหมด หรือตามอำเภอ"""
     if amphure_id:
@@ -273,7 +273,7 @@ async def read_districts_endpoint(
 async def read_district_endpoint(
     district_id: str, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงข้อมูลตำบลตาม ID"""
     district = get_district_by_id(db, district_id=district_id)
@@ -285,7 +285,7 @@ async def read_district_endpoint(
 async def create_district_endpoint(
     district: DistrictCreate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_create("setting_geography"))
+    current_user: str = Depends(can_create("setting_users"))
 ):
     """สร้างตำบลใหม่"""
     try:
@@ -302,7 +302,7 @@ async def update_district_endpoint(
     district_id: str, 
     district: DistrictUpdate, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("setting_geography"))
+    current_user: str = Depends(can_update("setting_users"))
 ):
     """อัปเดตข้อมูลตำบล"""
     try:
@@ -322,7 +322,7 @@ async def update_district_endpoint(
 async def delete_district_endpoint(
     district_id: str, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_delete("setting_geography"))
+    current_user: str = Depends(can_delete("setting_users"))
 ):
     """ลบตำบล"""
     success = delete_district(db, district_id=district_id)
