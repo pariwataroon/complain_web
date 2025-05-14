@@ -8,7 +8,7 @@ from datetime import datetime
 from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
 from app.api.v1.controllers.complaint_controller import (
-    create_complaint, get_complaints, get_complaint, update_complaint_status, delete_complaint
+    create_complaint, get_complaints, get_complaint, update_complaint_status, delete_complaint, get_user_complaints, get_user_complaint_detail
 )
 from app.api.v1.schemas.complaint import ComplaintCreate, ComplaintResponse, ComplaintListItem, StatusUpdateRequest
 from models.comp_complaint import Complaint, ComplaintStatus
@@ -104,6 +104,25 @@ async def read_complaints(
     result = get_complaints(db, skip=skip, limit=limit, status=status)
     return format_response("0000", result)
 
+@router.get("/me", response_model=FormatResponseModel)
+async def read_my_complaints(
+    skip: int = 0, 
+    limit: int = 100, 
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ดึงรายการข้อร้องเรียนทั้งหมดของผู้ใช้ที่ล็อกอินเข้าระบบ"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    # แปลงเป็น UUID
+    user_id = UUID(current_user)
+    
+    # ใช้ฟังก์ชันใหม่
+    result = get_user_complaints(db, user_id, skip=skip, limit=limit, status=status)
+    return format_response("0000", result)
+
 @router.get("/{complaint_id}", response_model=FormatResponseModel)
 async def read_complaint(
     complaint_id: UUID,
@@ -115,6 +134,30 @@ async def read_complaint(
     
     if complaint is None:
         raise HTTPException(status_code=404, detail=f"Complaint with ID {complaint_id} not found")
+    
+    return format_response("0000", complaint)
+
+@router.get("/me/{complaint_id}", response_model=FormatResponseModel)
+async def read_my_complaint_detail(
+    complaint_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ดึงรายละเอียดข้อร้องเรียนของผู้ใช้ที่ล็อกอินเข้าระบบ"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    # แปลงเป็น UUID
+    user_id = UUID(current_user)
+    
+    # ใช้ฟังก์ชันใหม่
+    complaint = get_user_complaint_detail(db, user_id, complaint_id)
+    
+    if complaint is None:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Complaint with ID {complaint_id} not found or you don't have permission to view it"
+        )
     
     return format_response("0000", complaint)
 

@@ -768,3 +768,57 @@ def delete_complaint(db: Session, complaint_id: uuid.UUID):
     db.commit()
     
     return True
+
+def get_user_complaints(db: Session, user_id: UUID, skip: int = 0, limit: int = 100, status: Optional[str] = None):
+    """ดึงรายการข้อร้องเรียนของผู้ใช้เฉพาะราย"""
+    # สร้าง query พื้นฐาน
+    query = db.query(Complaint).filter(Complaint.created_by == user_id)
+    
+    # กรองตาม status ถ้าระบุ
+    if status:
+        query = query.filter(Complaint.status == status)
+    
+    # นับจำนวนรายการทั้งหมดเฉพาะของ user นี้
+    total_count = query.count()
+    
+    # เรียงลำดับตามวันที่สร้าง ล่าสุดขึ้นก่อน
+    query = query.order_by(Complaint.created_at.desc())
+
+    # ดึงข้อมูลตาม pagination
+    complaints = query.offset(skip).limit(limit).all()
+    
+    result = []
+    for complaint in complaints:
+        try:
+            # แยกข้อมูลสำหรับแสดงในรายการ
+            list_item = create_complaint_list_item(complaint)
+            result.append(list_item)
+        except Exception as e:
+            # ถ้าเกิด error กับ complaint ใดๆ ให้ข้ามไปและ log error
+            print(f"Error processing complaint {complaint.id}: {str(e)}")
+            continue
+    
+    # คืนค่าเป็น dictionary ที่มีข้อมูล pagination และ items
+    return {
+        "items": result,
+        "pagination": {
+            "total": total_count,
+            "skip": skip,
+            "limit": limit,
+            "has_more": total_count > (skip + limit)
+        }
+    }
+
+def get_user_complaint_detail(db: Session, user_id: UUID, complaint_id: UUID):
+    """ดึงข้อมูลข้อร้องเรียนแบบละเอียดของผู้ใช้เฉพาะราย"""
+    # ตรวจสอบว่า complaint นี้เป็นของ user หรือไม่
+    complaint = db.query(Complaint).filter(
+        Complaint.id == complaint_id,
+        Complaint.created_by == user_id
+    ).first()
+    
+    if not complaint:
+        return None
+    
+    # ใช้ฟังก์ชันเดิมในการดึงรายละเอียด
+    return get_complaint(db, complaint_id)
