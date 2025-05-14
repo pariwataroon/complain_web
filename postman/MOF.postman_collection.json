@@ -2417,7 +2417,8 @@
 							],
 							"path": [
 								"venues",
-								"grouped"
+								"grouped",
+								"department"
 							]
 						},
 						"description": "ดึงข้อมูลสถานที่แบ่งตามหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_department"
@@ -4955,6 +4956,78 @@
 				],
 				"path": [
 					"complaints",
+					"{{complaint_id}}"
+				]
+				},
+				"description": "Get detailed information about a specific complaint by ID"
+			}
+			},
+			{
+			"name": "Get All Me Complaints",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/complaints/me?skip=0&limit=10&status=SUBMITTED",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"complaints",
+					"me"
+				],
+				"query": [
+					{
+					"key": "skip",
+					"value": "0"
+					},
+					{
+					"key": "limit",
+					"value": "10"
+					},
+					{
+					"key": "status",
+					"value": "SUBMITTED",
+					"description": "Optional filter by status"
+					}
+				]
+				},
+				"description": "Get a list of complaints with pagination and optional status filtering"
+			}
+			},
+			{
+			"name": "Get Me Complaint by ID",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/complaints/me/{{complaint_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"complaints",
+					"me",
 					"{{complaint_id}}"
 				]
 				},
