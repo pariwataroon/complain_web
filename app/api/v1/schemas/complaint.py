@@ -3,6 +3,7 @@ from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from uuid import UUID
 from models.comp_complaint import ComplaintStatus
+from .pagination import PaginatedResponse
 
 class ComplaintCreate(BaseModel):
     # Direct fields instead of nested structure
@@ -62,6 +63,10 @@ class ComplaintListItem(BaseModel):
     
     class Config:
         from_attributes = True
+
+class ComplaintList(PaginatedResponse[ComplaintListItem]):
+    """รายการข้อร้องเรียนพร้อม pagination"""
+    pass
 
 class AttachmentInfo(BaseModel):
     fileName: str

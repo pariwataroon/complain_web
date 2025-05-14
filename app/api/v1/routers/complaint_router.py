@@ -100,9 +100,9 @@ async def read_complaints(
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
-    """Get a list of complaints with optional status filter"""
-    complaints = get_complaints(db, skip=skip, limit=limit, status=status)
-    return format_response("0000", complaints)
+    """Get a list of complaints with pagination and optional status filter"""
+    result = get_complaints(db, skip=skip, limit=limit, status=status)
+    return format_response("0000", result)
 
 @router.get("/{complaint_id}", response_model=FormatResponseModel)
 async def read_complaint(

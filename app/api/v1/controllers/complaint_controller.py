@@ -499,15 +499,19 @@ def create_status_history(db: Session, complaint_id: UUID, status: ComplaintStat
     db.commit()
 
 def get_complaints(db: Session, skip: int = 0, limit: int = 100, status: Optional[str] = None):
-    """ดึงรายการข้อร้องเรียนพร้อมการแบ่งหน้า"""
+    """ดึงรายการข้อร้องเรียนพร้อมการแบ่งหน้าและนับจำนวนทั้งหมด"""
     query = db.query(Complaint)
     
     if status:
         query = query.filter(Complaint.status == status)
     
+    # นับจำนวนรายการทั้งหมด
+    total_count = query.count()
+    
     # เรียงลำดับตามวันที่สร้าง ล่าสุดขึ้นก่อน
     query = query.order_by(Complaint.created_at.desc())
 
+    # ดึงข้อมูลตาม pagination
     complaints = query.offset(skip).limit(limit).all()
     
     result = []
@@ -521,7 +525,16 @@ def get_complaints(db: Session, skip: int = 0, limit: int = 100, status: Optiona
             print(f"Error processing complaint {complaint.id}: {str(e)}")
             continue
     
-    return result
+    # คืนค่าเป็น dictionary ที่มีข้อมูล pagination และ items
+    return {
+        "items": result,
+        "pagination": {
+            "total": total_count,
+            "skip": skip,
+            "limit": limit,
+            "has_more": total_count > (skip + limit)
+        }
+    }
 
 def ensure_dict(data):
     """ตรวจสอบให้แน่ใจว่าข้อมูลเป็น dictionary"""
