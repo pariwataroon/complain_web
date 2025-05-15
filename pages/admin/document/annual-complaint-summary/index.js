@@ -1,8 +1,12 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import AnnualComplaintSummaryComponents from "@components/Report/AnnualComplaintSummaryComponents/AnnualComplaintSummaryComponents";
 
 const AnnualComplaintSummary = () => {
-  return <div>รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ</div>;
+  return (
+    <div>
+      <AnnualComplaintSummaryComponents />
+    </div>
+  );
 };
 
 AnnualComplaintSummary.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
