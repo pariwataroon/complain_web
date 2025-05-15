@@ -3,249 +3,93 @@ import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableWorkFollow from "@services/TableWorkFollow/TableWorkFollow";
 
-// สำหรับกรองเดือน (คำย่อในวันที่)
-const THAI_MONTH_ABBREV = {
-  1: "ม.ค.",
-  2: "ก.พ.",
-  3: "มี.ค.",
-  4: "เม.ย.",
-  5: "พ.ค.",
-  6: "มิ.ย.",
-  7: "ก.ค.",
-  8: "ส.ค.",
-  9: "ก.ย.",
-  10: "ต.ค.",
-  11: "พ.ย.",
-  12: "ธ.ค.",
-};
-
-// ตัวเลือกเดือน (สำหรับ SelectField)
-const MONTH_OPTIONS = [
-  { value: "1", label: "มกราคม" },
-  { value: "2", label: "กุมภาพันธ์" },
-  { value: "3", label: "มีนาคม" },
-  { value: "4", label: "เมษายน" },
-  { value: "5", label: "พฤษภาคม" },
-  { value: "6", label: "มิถุนายน" },
-  { value: "7", label: "กรกฎาคม" },
-  { value: "8", label: "สิงหาคม" },
-  { value: "9", label: "กันยายน" },
-  { value: "10", label: "ตุลาคม" },
-  { value: "11", label: "พฤศจิกายน" },
-  { value: "12", label: "ธันวาคม" },
-];
-
-// ตัวเลือกปีงบประมาณ
-const FISCAL_YEAR_OPTIONS = [
-  { value: "2566", label: "2566" },
-  { value: "2567", label: "2567" },
-  { value: "2568", label: "2568" },
-  { value: "2569", label: "2569" },
-  { value: "2570", label: "2570" },
-];
-
-// ─── mock data (20 รายการ) ─────────────────────────────────────────────────
+// mock data (ปรับให้ตรงกับ columns)
 const mockComplaints = [
   {
     id: 1,
-    receiveDate: "30 ม.ค. 2568",
-    receiptNumber: "97/68",
-    claimantName: "นางสาวภัทร มีความสุข",
-    responsibleOfficer: "นางสาววิชนิดา มณี",
+    responsibleOfficer: "นางสาวพัชรินทร์ จันทร์โพธิ์",
+    receiptNumber: "98/68",
+    receiptDate: "20 ม.ค. 2568",
+    referenceNumber: "747/67",
+    proposeDate: "6 พ.ย. 2567",
+    complaint: "เร่งรัดผลการพิจารณา ราษฎรศุภชัย อเจริญ",
+    receiveDate: "22 พ.ย. 2567",
     agency: "กรมธนารักษ์",
-    issueType: "พฤติกรรมเจ้าหน้าที่",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
+    letterNumber: "000/000",
+    status: "รอแจ้งผลจากหน่วยงาน",
+    elapsedDays: 2,
   },
   {
     id: 2,
-    receiveDate: "30 ม.ค. 2568",
-    receiptNumber: "97/68",
-    claimantName: "นายภัทร วรากร",
-    responsibleOfficer: "นางสาวปรินา ชูเกียรติ",
-    agency: "โรงงานไฟฟ้า",
-    issueType: "บ้านเชิงบ้านญ ครัวพยาบาล การซ่อมแซม",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
+    responsibleOfficer: "นางสาวสุวิชา ลีละเศรษฐกุล",
+    receiptNumber: "98/68",
+    receiptDate: "20 ม.ค. 2568",
+    referenceNumber: "747/67",
+    proposeDate: "6 พ.ย. 2567",
+    complaint:
+      "แจ้งผลการพิจารณารายผู้ประกอบการก่อสร้าง (บ. ราษฎร์วิศ ดีเวลลอปเมนท์ จำกัด)",
+    receiveDate: "11 พ.ย. 2567",
+    agency: "กรมบัญชีกลาง",
+    letterNumber: "000/000",
+    status: "อยู่ระหว่างดำเนินการ",
+    elapsedDays: 30,
   },
   {
     id: 3,
-    receiveDate: "30 ม.ค. 2568",
-    receiptNumber: "97/68",
-    claimantName: "นายธีรภัทร ชูนันท์",
-    responsibleOfficer: "นางสาวปรินา ชูเกียรติ",
+    responsibleOfficer: "นางสาวสุปราณี อาทร",
+    receiptNumber: "98/68",
+    receiptDate: "20 ม.ค. 2568",
+    referenceNumber: "747/67",
+    proposeDate: "6 พ.ย. 2567",
+    complaint: "แจ้งผลการพิจารณารายนายอุกฤษชัย พจมานต",
+    receiveDate: "25 พ.ย. 2567",
     agency: "กรมศุลกากร",
-    issueType: "ภาษีอากร",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
+    letterNumber: "000/000",
+    status: "รอแจ้งผลจากหน่วยงาน",
+    elapsedDays: 1,
   },
   {
     id: 4,
-    receiveDate: "31 ม.ค. 2568",
-    receiptNumber: "98/69",
-    claimantName: "นางสาวจุฑาภรณ์ กาญจนาภรณ์",
-    responsibleOfficer: "นายณัฐพล รุ่งโรจน์",
-    agency: "ธนาคารแห่งประเทศไทย",
-    issueType: "การจัดสวัสดิการ",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
+    responsibleOfficer: "นางสาวสุปราณี อาทร",
+    receiptNumber: "98/68",
+    receiptDate: "20 ม.ค. 2568",
+    referenceNumber: "747/67",
+    proposeDate: "6 พ.ย. 2567",
+    complaint: "แจ้งผลการพิจารณารายนายดินผล ทิพย์สุทธิ์",
+    receiveDate: "21 พ.ย. 2567",
+    agency: "กรมสรรพสามิต",
+    letterNumber: "000/000",
+    status: "รอแจ้งผลจากหน่วยงาน",
+    elapsedDays: 3,
   },
+  // ... เพิ่มเติมตามรูปแบบเดียวกันสำหรับรายการที่เหลือ
+];
+
+// ตัวเลือกประเภทเรื่อง
+const ISSUE_TYPE_OPTIONS = [
+  { value: "พฤติกรรมเจ้าหน้าที่", label: "พฤติกรรมเจ้าหน้าที่" },
   {
-    id: 5,
-    receiveDate: "31 ม.ค. 2568",
-    receiptNumber: "98/69",
-    claimantName: "นายอาทิตย์ รุ่งเรือง",
-    responsibleOfficer: "นางสาวมณีรัตน์ สุขใจ",
-    agency: "สำนักงานเศรษฐกิจการคลัง",
-    issueType: "การเบิกจ่ายงบประมาณ",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
+    value: "บ้านเชิงบ้านญ ครัวพยาบาล การซ่อมแซม",
+    label: "บ้านเชิงบ้านญ ครัวพยาบาล การซ่อมแซม",
   },
-  {
-    id: 6,
-    receiveDate: "01 ก.พ. 2568",
-    receiptNumber: "99/70",
-    claimantName: "นางสาวมณีรัตน์ สุขใจ",
-    responsibleOfficer: "นายสมชาย ใจดี",
-    agency: "กรมบัญชีกลาง",
-    issueType: "การจัดทำรายงาน",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 7,
-    receiveDate: "01 ก.พ. 2568",
-    receiptNumber: "99/70",
-    claimantName: "นายสมชาย ใจดี",
-    responsibleOfficer: "นางสาวสุดารัตน์ แสงสุริยา",
-    agency: "โรงพยาบาลศิริราช",
-    issueType: "การให้คำปรึกษา",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 8,
-    receiveDate: "02 ก.พ. 2568",
-    receiptNumber: "100/71",
-    claimantName: "นางสาวสุดารัตน์ แสงสุริยา",
-    responsibleOfficer: "นายวิชัย ศรีสวัสดิ์",
-    agency: "สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน",
-    issueType: "การพัฒนาบุคลากร",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 9,
-    receiveDate: "03 ก.พ. 2568",
-    receiptNumber: "101/72",
-    claimantName: "นายวิชัย ศรีสวัสดิ์",
-    responsibleOfficer: "นางสาวอรทัย ศรีสง่า",
-    agency: "การไฟฟ้าส่วนภูมิภาค",
-    issueType: "การซ่อมแซมถนน",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 10,
-    receiveDate: "04 ก.พ. 2568",
-    receiptNumber: "102/73",
-    claimantName: "นางสาวอรทัย ศรีสง่า",
-    responsibleOfficer: "นายอาทิตย์ รุ่งเรือง",
-    agency: "กรมป่าไม้",
-    issueType: "การอนุรักษ์ป่าไม้",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 11,
-    receiveDate: "05 ก.พ. 2568",
-    receiptNumber: "103/74",
-    claimantName: "นายณัฐพล รุ่งโรจน์",
-    responsibleOfficer: "นางสาวจุฑาภรณ์ กาญจนาภรณ์",
-    agency: "กรมทรัพยากรน้ำ",
-    issueType: "การจัดการน้ำ",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 12,
-    receiveDate: "06 ก.พ. 2568",
-    receiptNumber: "104/75",
-    claimantName: "นางสาวกมลทิพย์ จันทร์ฉาย",
-    responsibleOfficer: "นางสาวกรรณิการ์ แก้วประเสริฐ",
-    agency: "กรมอุตุนิยมวิทยา",
-    issueType: "การพยากรณ์อากาศ",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 13,
-    receiveDate: "07 ก.พ. 2568",
-    receiptNumber: "105/76",
-    claimantName: "นายสนธยา ทองแท้",
-    responsibleOfficer: "นายปวิชญ์ พิสุทธิ์",
-    agency: "กรมอนามัย",
-    issueType: "การส่งเสริมสุขภาพ",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 14,
-    receiveDate: "08 ก.พ. 2568",
-    receiptNumber: "106/77",
-    claimantName: "นางสาวกรรณิการ์ แก้วประเสริฐ",
-    responsibleOfficer: "นางสาวพิมพ์ชนก วัฒนานนท์",
-    agency: "สำนักงานหลักประกันสุขภาพแห่งชาติ",
-    issueType: "การประกันสุขภาพถ้วนหน้า",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 15,
-    receiveDate: "09 ก.พ. 2568",
-    receiptNumber: "107/78",
-    claimantName: "นายปวิชญ์ พิสุทธิ์",
-    responsibleOfficer: "นายกฤษณ์ ศรีวัฒนา",
-    agency: "กรมการปกครอง",
-    issueType: "การบริการทะเบียนราษฎร์",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 16,
-    receiveDate: "10 ก.พ. 2568",
-    receiptNumber: "108/79",
-    claimantName: "นางสาวพิมพ์ชนก วัฒนานนท์",
-    responsibleOfficer: "นางสาวชุติมา นิลวรรณ",
-    agency: "กรมการขนส่งทางบก",
-    issueType: "การขนส่งสาธารณะ",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 17,
-    receiveDate: "11 ก.พ. 2568",
-    receiptNumber: "109/80",
-    claimantName: "นายกฤษณ์ ศรีวัฒนา",
-    responsibleOfficer: "นายสารัช โชติปราณี",
-    agency: "กรมเจ้าท่า",
-    issueType: "การเดินเรือ",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 18,
-    receiveDate: "12 ก.พ. 2568",
-    receiptNumber: "110/81",
-    claimantName: "นางสาวชุติมา นิลวรรณ",
-    responsibleOfficer: "นางสาวปิยนุช ศรีประกาย",
-    agency: "กรมชลประทาน",
-    issueType: "การชลประทาน",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 19,
-    receiveDate: "13 ก.พ. 2568",
-    receiptNumber: "111/82",
-    claimantName: "นายสารัช โชติปราณี",
-    responsibleOfficer: "นายธีรภัทร ชูนันท์",
-    agency: "กรมส่งเสริมการค้าระหว่างประเทศ",
-    issueType: "การค้าระหว่างประเทศ",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  {
-    id: 20,
-    receiveDate: "14 ก.พ. 2568",
-    receiptNumber: "112/83",
-    claimantName: "นางสาวปิยนุช ศรีประกาย",
-    responsibleOfficer: "นางสาวภัทร มีความสุข",
-    agency: "กรมการศึกษา",
-    issueType: "การศึกษา",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
+  { value: "ภาษีอากร", label: "ภาษีอากร" },
+  { value: "การจัดสวัสดิการ", label: "การจัดสวัสดิการ" },
+  { value: "การเบิกจ่ายงบประมาณ", label: "การเบิกจ่ายงบประมาณ" },
+  { value: "การจัดทำรายงาน", label: "การจัดทำรายงาน" },
+  { value: "การให้คำปรึกษา", label: "การให้คำปรึกษา" },
+  { value: "การพัฒนาบุคลากร", label: "การพัฒนาบุคลากร" },
+  { value: "การซ่อมแซมถนน", label: "การซ่อมแซมถนน" },
+  { value: "การอนุรักษ์ป่าไม้", label: "การอนุรักษ์ป่าไม้" },
+  { value: "การจัดการน้ำ", label: "การจัดการน้ำ" },
+  { value: "การพยากรณ์อากาศ", label: "การพยากรณ์อากาศ" },
+  { value: "การส่งเสริมสุขภาพ", label: "การส่งเสริมสุขภาพ" },
+  { value: "การประกันสุขภาพถ้วนหน้า", label: "การประกันสุขภาพถ้วนหน้า" },
+  { value: "การบริการทะเบียนราษฎร์", label: "การบริการทะเบียนราษฎร์" },
+  { value: "การขนส่งสาธารณะ", label: "การขนส่งสาธารณะ" },
+  { value: "การเดินเรือ", label: "การเดินเรือ" },
+  { value: "การชลประทาน", label: "การชลประทาน" },
+  { value: "การค้าระหว่างประเทศ", label: "การค้าระหว่างประเทศ" },
+  { value: "การศึกษา", label: "การศึกษา" },
 ];
 
 const PendingWorkfollowupComponents = () => {
@@ -260,19 +104,22 @@ const PendingWorkfollowupComponents = () => {
     );
   };
 
-  // กรองข้อมูลตามเดือนและปีงบประมาณ
-  const handleSearch = ({ receiveDateFrom, receiveDateTo }) => {
+  // กรองข้อมูลตามวันที่และประเภทเรื่อง
+  const handleSearch = ({ receiveDateFrom, receiveDateTo, issueType }) => {
     let result = allComplaints;
 
     if (receiveDateFrom) {
-      const monthLabel = THAI_MONTH_ABBREV[receiveDateFrom];
-      result = result.filter((item) => item.receiveDate.includes(monthLabel));
+      result = result.filter((item) =>
+        item.receiveDate.includes(receiveDateFrom)
+      );
     }
-
     if (receiveDateTo) {
       result = result.filter((item) =>
-        item.receiveDate.endsWith(receiveDateTo)
+        item.receiveDate.includes(receiveDateTo)
       );
+    }
+    if (issueType) {
+      result = result.filter((item) => item.issueType === issueType);
     }
 
     setFilteredComplaints(result);
@@ -304,15 +151,19 @@ const PendingWorkfollowupComponents = () => {
         filterFields={[
           {
             name: "receiveDateFrom",
-            label: "เดือน",
-            type: "select",
-            options: MONTH_OPTIONS,
+            label: "ตั้งแต่วันที่",
+            type: "date",
           },
           {
             name: "receiveDateTo",
-            label: "ปีงบประมาณ",
+            label: "ถึงวันที่",
+            type: "date",
+          },
+          {
+            name: "issueType",
+            label: "ประเภทเรื่อง",
             type: "select",
-            options: FISCAL_YEAR_OPTIONS,
+            options: ISSUE_TYPE_OPTIONS,
           },
         ]}
       />
