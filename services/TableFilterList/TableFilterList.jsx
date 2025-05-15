@@ -79,7 +79,15 @@ const TableFilterList = ({
     onSearch(cleared);
   };
 
-  const handleRowClick = (item) => navigateTo && router.push(`${navigateTo}/${item.id}`);
+  const handleRowClick = (item, groupKey) => {
+    if (navigateTo) {
+      router.push({
+        pathname: `${navigateTo}/${item.id}`,
+        query: { group: groupKey },
+      });
+    }
+  };
+
   const handleNavigateTo = () => router.push("/admin/AccountBox");
 
   return (
@@ -163,7 +171,7 @@ const TableFilterList = ({
                     .map((item, idx) => (
                       <TableRow
                         key={item.id}
-                        onClick={() => handleRowClick(item)}
+                        onClick={() => handleRowClick(item, group.title)}
                         sx={{ cursor: "pointer", "&:hover": { backgroundColor: "#f5f7ff" } }}
                       >
                         <TableCell align="center" sx={{ fontWeight: 600, color: "#1120A3" }}>

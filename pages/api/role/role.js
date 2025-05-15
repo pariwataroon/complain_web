@@ -135,7 +135,7 @@ const getUsersByRole = async (role_id) => {
   try {
     const { data } = await axiosInstance.get(`/users/detailed-stats/by-role`, {
       params: {
-        role_id, // Pass the role_id as a query parameter
+        role_id,
       },
     });
     return data;
@@ -147,7 +147,7 @@ const getUsersByRole = async (role_id) => {
 
 /* ========== GET ALL USERS BY GROUP ========== */
 
-const getUsersByGroup = async (role_id) => {
+const getUsersByGroup = async () => {
   try {
     const { data } = await axiosInstance.get(
       "/permissions/user-resources/bygroup"

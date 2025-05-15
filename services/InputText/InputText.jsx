@@ -8,6 +8,7 @@ const InputText = ({
     value,
     onChange,
     name,
+    disabled,
     InputProps = {},
     ...props
 }) => {
@@ -31,11 +32,13 @@ const InputText = ({
                 name={name}
                 label={!label ? inputLabel : undefined}
                 onChange={onChange}
+                disabled={disabled}
                 InputProps={{
                     ...InputProps,
                     sx: {
                         height: "40px",
                         borderRadius: "10px",
+                        backgroundColor: disabled ? "#E8E9F6" : "white",
                         color: "#1120A3",
                         "& fieldset": {
                             borderColor: "#1120A3",

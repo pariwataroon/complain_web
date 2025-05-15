@@ -2,7 +2,7 @@ import axiosInstance from "@pages/api/axiosInstance";
 
 export const getNotifications = async () => {
   try {
-    const { data } = await axiosInstance.get("/notifications/");
+    const { data } = await axiosInstance.get("/notifications");
     return data;
   } catch (err) {
     console.error("Error fetching notifications:", err);

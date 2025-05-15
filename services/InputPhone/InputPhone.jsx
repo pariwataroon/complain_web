@@ -7,6 +7,7 @@ const InputPhone = ({
     value,
     onChange,
     name,
+    disabled,
     ...props
 }) => {
     const handleChange = (e) => {
@@ -42,6 +43,7 @@ const InputPhone = ({
                 variant="outlined"
                 value={value}
                 name={name}
+                disabled={disabled}
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
                 placeholder="โทรศัพท์มือถือ 0XX-XXX-XXXX"
@@ -51,6 +53,7 @@ const InputPhone = ({
                     pattern: "[0-9]*",
                 }}
                 sx={{
+                    backgroundColor: disabled ? "#E8E9F6" : "white",
                     "& .MuiOutlinedInput-root": {
                         height: "40px",
                         borderRadius: "10px",

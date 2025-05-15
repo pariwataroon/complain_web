@@ -3,9 +3,7 @@ import WebsiteComplaints from "@components/ReceiveData/WebsiteComplaints/Website
 
 const Websitecomplaints = () => {
   return (
-    <div>
       <WebsiteComplaints />
-    </div>
   );
 };
 

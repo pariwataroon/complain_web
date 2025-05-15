@@ -1,4 +1,3 @@
-// components/ReceiveData/Opm1111/TableListWebComplaints.jsx
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
@@ -23,48 +22,36 @@ const TableListWebComplaints = ({
   data = [],
   title = "",
   navigateTo = "",
-  agencyOptions = [], // [{ value, label }]
-  issueTypeOptions = [], // [{ value, label }]
+  agencyOptions = [],
+  issueTypeOptions = [],
   issueSubTypeOptions = [],
-  onSearch = () => {},
+  onSearch = () => { },
   handleNavigateTo,
+  page,
+  onPageChange,
+  rowsPerPage,
+  onRowsPerPageChange,
+  total = 0,
 }) => {
   const router = useRouter();
 
-  /* ---------------------------------------------------------------------- */
-  /*  filters                                                               */
-  /* ---------------------------------------------------------------------- */
   const [filters, setFilters] = useState({
-    claimantName: "", // ชื่อผู้ร้อง
-    issueType: "", // ประเภทเรื่อง
+    claimantName: "",
+    issueType: "",
     issueSubType: "",
-    subject: "", // ชื่อเรื่อง
-    accusedName: "", // ชื่อผู้ถูกร้อง
-    ssoNo: "", // เลขที่ สรร
+    subject: "",
+    accusedName: "",
+    ssoNo: "",
   });
   const handleChange = (field) => (e) =>
     setFilters({ ...filters, [field]: e?.target ? e.target.value : e });
-
-  /* ---------------------------------------------------------------------- */
-  /*  pagination                                                            */
-  /* ---------------------------------------------------------------------- */
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-
-  const pagedData = useMemo(
-    () => data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [data, page, rowsPerPage]
-  );
-
+  const pagedData = data;
   const handlePageChange = (_, newPage) => setPage(newPage);
   const handleRowsPerPageChange = (e) => {
     setRowsPerPage(parseInt(e.target.value, 10));
     setPage(0);
   };
 
-  /* ---------------------------------------------------------------------- */
-  /*  search handlers                                                       */
-  /* ---------------------------------------------------------------------- */
   const handleSearchClick = () => {
     onSearch(filters);
   };
@@ -82,16 +69,10 @@ const TableListWebComplaints = ({
     setPage(0);
     onSearch(cleared);
   };
-
-  /* ---------------------------------------------------------------------- */
-  /*  row click                                                             */
-  /* ---------------------------------------------------------------------- */
+  
   const handleRowClick = (item) =>
     navigateTo && router.push(`${navigateTo}/${item.id}`);
 
-  /* ---------------------------------------------------------------------- */
-  /*  render                                                                */
-  /* ---------------------------------------------------------------------- */
   return (
     <Container
       maxWidth={false}
@@ -224,12 +205,12 @@ const TableListWebComplaints = ({
                 >
                   {page * rowsPerPage + idx + 1}
                 </TableCell>
-                <TableCell>{item.claimantName || "-"}</TableCell>
-                <TableCell>{item.issueType || "-"}</TableCell>
+                <TableCell>{item.complainant_name || "-"}</TableCell>
+                <TableCell>{item.complaint_type || "-"}</TableCell>
                 <TableCell className={styles.ellipsisCell}>
                   {item.subject || "-"}
                 </TableCell>
-                <TableCell>{item.accusedName || "-"}</TableCell>
+                <TableCell>{item.respondent_name || "-"}</TableCell>
                 <TableCell>{item.ssoNo || "-"}</TableCell>
               </TableRow>
             ))}
@@ -239,11 +220,11 @@ const TableListWebComplaints = ({
         <TablePagination
           component="div"
           rowsPerPageOptions={[5, 10, 25]}
-          count={data.length}
+          count={total}
           rowsPerPage={rowsPerPage}
           page={page}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
+          onPageChange={(_, newPage) => onPageChange(newPage)}
+          onRowsPerPageChange={(e) => onRowsPerPageChange(parseInt(e.target.value, 10))}
           sx={{ borderTop: "1px solid #eee" }}
         />
       </Box>

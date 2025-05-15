@@ -12,10 +12,7 @@ import InputZipcode from "@services/InputZipcode/InputZipcode";
 import styles from "./ComplaintPersonalForm.module.scss";
 
 
-const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมูลผู้ร้องทุกข์" }) => {
-    const [districtValue, setDistrictValue] = useState("");
-    const [zipCodeValue, setZipCodeValue] = useState("");
-    
+const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมูลผู้ร้องทุกข์" }) => {    
     const handleChange = (field) => (e) => {
         const value = typeof e === "object" && e?.target ? e.target.value : e;
         onChange(field, value);

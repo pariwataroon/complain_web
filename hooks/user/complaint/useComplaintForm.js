@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import { useRouter } from "next/router";
 import {
   alertSuccess,
   alertError,
@@ -7,8 +7,13 @@ import {
   closeAlert,
   showConfirm,
 } from "@utils/Alerts";
+import {
+  Addcomplaints,
+  UploadAttachments,
+} from "@pages/api/complaint/complaint";
 
 export default function useComplaintForm() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     step1: {},
     step2: {},
@@ -32,17 +37,6 @@ export default function useComplaintForm() {
 
   const handleSubmitForm = async () => {
     const { step1, step2, step3, step4 } = formData;
-    const complainant = step1?.[step1.tab] || {};
-    const respondent = step2?.[step2.tab] || {};
-    const details = step3 || {};
-    const confirmation = step4 || {};
-
-    const payload = {
-      complainant,
-      respondent,
-      details,
-      confirmation,
-    };
 
     const isConfirmed = await showConfirm(
       "แจ้งเรื่องร้องทุกข์",
@@ -62,10 +56,33 @@ export default function useComplaintForm() {
 
     try {
       showLoading("กำลังส่งข้อมูล...");
-      const res = await axios.post("/complaints", payload);
-      closeAlert();
-      alertSuccess("ส่งเรื่องสำเร็จ", "ระบบได้รับข้อมูลของคุณแล้ว");
-      console.log("ส่งข้อมูลสำเร็จ:", res.data);
+
+      const res = await Addcomplaints(formData);
+      const { res_code, res_message, res_data } = res;
+
+      if (res_code === "0001") {
+        const complaint_id = res_data?.complaint_id;
+        const attachments = formData.step3?.general?.attachment || [];
+
+        if (complaint_id && attachments.length > 0) {
+          const formDataUpload = new FormData();
+          attachments.forEach((file) => {
+            formDataUpload.append("file", file);
+          });
+
+          await UploadAttachments(complaint_id, formDataUpload);
+        }
+
+        closeAlert();
+        await alertSuccess("ส่งเรื่องสำเร็จ", "ระบบได้รับข้อมูลของคุณแล้ว");
+        router.push("/");
+      } else if (res_code === "5000" && res_data?.error) {
+        closeAlert();
+        alertError("ข้อมูลไม่ครบ", res_data.error);
+      } else {
+        closeAlert();
+        alertError("เกิดข้อผิดพลาด", res_message || "ไม่สามารถส่งเรื่องได้");
+      }
     } catch (error) {
       closeAlert();
       alertError(
@@ -75,6 +92,7 @@ export default function useComplaintForm() {
       console.error("ส่งข้อมูลไม่สำเร็จ:", error);
     }
   };
+  
 
 
   return {

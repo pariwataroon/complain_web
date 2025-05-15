@@ -1,4 +1,3 @@
-// components/ReceiveData/Opm1111/Opm1111Components.jsx
 import React, { useState } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";

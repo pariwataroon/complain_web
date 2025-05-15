@@ -88,7 +88,9 @@ const HourlyStatsChart = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="time" />
               <YAxis />
-              <Tooltip />
+              <Tooltip
+                formatter={(value) => [`${value} คน`, "จำนวน"]}
+              />
               <Legend />
               <Line
                 type="monotone"

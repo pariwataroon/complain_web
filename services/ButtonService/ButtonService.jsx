@@ -43,6 +43,16 @@ const ButtonService = ({
       text: "#2499FF",
       hover: "#d5ebff",
     },
+    ล้าง: {
+      background: "#EAF5FF",
+      text: "#2499FF",
+      hover: "#d5ebff",
+    },
+    บันทึก: {
+      background: "#2499FF",
+      text: "#FFFFFF",
+      hover: "#1786e0",
+    },
   };
 
 

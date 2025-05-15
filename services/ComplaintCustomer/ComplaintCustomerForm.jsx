@@ -11,9 +11,6 @@ import SelectField from "@services/SelectField/SelectField";
 import InputZipcode from "@services/InputZipcode/InputZipcode";
 import styles from "./ComplaintCustomerForm.module.scss";
 
-const districts = ["อำเภอ/เขต A", "อำเภอ/เขต B"];
-const subdistricts = ["ตำบล/แขวง A", "ตำบล/แขวง B"];
-const provinces = ["กรุงเทพมหานคร", "เชียงใหม่", "ภูเก็ต"];
 
 const ComplaintCustomerForm = ({ data = {}, onChange, title = "ข้อมูลผู้ร้องทุกข์" }) => {
     const handleChange = (field) => (e) => {
@@ -61,10 +58,10 @@ const ComplaintCustomerForm = ({ data = {}, onChange, title = "ข้อมู�
 
                 <Grid item xs={12} sm={3}>
                     <SelectField
-                        label="ตำบล/แขวง"
-                        value={data.subdistricts}
-                        onChange={handleChange("subdistricts")}
-                        options={subdistricts}
+                        label="จังหวัด"
+                        value={data.province}
+                        onChange={handleChange("province")}
+                        required
                     />
                 </Grid>
 
@@ -72,8 +69,9 @@ const ComplaintCustomerForm = ({ data = {}, onChange, title = "ข้อมู�
                     <SelectField
                         label="อำเภอ/เขต"
                         value={data.districts}
+                        provinceCode={data.province?.value}
                         onChange={handleChange("districts")}
-                        options={districts}
+                        required
                     />
                 </Grid>
 
@@ -85,20 +83,28 @@ const ComplaintCustomerForm = ({ data = {}, onChange, title = "ข้อมู�
                     />
                 </Grid>
 
+
                 <Grid item xs={12} sm={3}>
                     <SelectField
-                        label="จังหวัด"
-                        value={data.province}
-                        onChange={handleChange("province")}
-                        options={provinces}
+                        label="ตำบล/แขวง"
+                        value={data.subdistricts}
+                        amphureCode={data.districts?.value}
+                        onChange={handleChange("subdistricts")}
+                        required
                     />
                 </Grid>
 
                 <Grid item xs={12} sm={3}>
-                    <InputZipcode
+                    <SelectField
                         label="รหัสไปรษณีย์"
                         value={data.zipcode}
+                        amphureCode={data.districts?.value}
                         onChange={handleChange("zipcode")}
+                        optionMapper={(item) => ({
+                            value: item.zip_code,
+                            label: String(item.zip_code),
+                        })}
+                        required
                     />
                 </Grid>
             </Grid>

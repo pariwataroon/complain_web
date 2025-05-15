@@ -7,6 +7,7 @@ import {
     Typography,
 } from "@mui/material";
 import { GetProvincesSelect, GetAmphuresSelect, GetDistrictsSelect, GetZipcodeSelect } from "@pages/api/allselect/allselect";
+import styles from "./SelectField.module.scss";
 
 const SelectField = ({
     label,
@@ -22,6 +23,14 @@ const SelectField = ({
     optionMapper = null
 }) => {
     const [options, setOptions] = useState([]);
+    const allOptions = [
+        { value: "", label: label || inputLabel, disabled: true },
+        ...options,
+    ];
+    const selectedValue = typeof value === "object"
+        ? value?.value ?? ""
+        : value ?? "";
+
 
     useEffect(() => {
         const fetchOptions = async () => {
@@ -104,16 +113,35 @@ const SelectField = ({
 
             <TextField
                 select
+                displayEmpty
                 name={name}
-                value={typeof value === "object" ? value?.value ?? "" : value}
+                value={selectedValue}
                 onChange={(e) => {
-                    const selected = options.find((opt) =>
-                        typeof opt === "object" ? opt.value === e.target.value : opt === e.target.value
+                    const selected = allOptions.find((opt) =>
+                        typeof opt === "object"
+                            ? opt.value === e.target.value
+                            : opt === e.target.value
                     );
                     onChange({ target: { name, value: selected ?? e.target.value } });
                 }}
-                placeholder={!label ? inputLabel : undefined}
-                label={!label ? inputLabel : undefined}
+                renderValue={(selected) => {
+                    const selectedOption = allOptions.find((opt) =>
+                        typeof opt === "object"
+                            ? opt.value === selected
+                            : opt === selected
+                    );
+
+                    if (!selectedOption || selectedOption.value === "") {
+                        return (
+                            <span className={styles.selectPlaceholder}>
+                                {label || inputLabel}
+                            </span>
+                        );
+                    }
+
+                    return selectedOption.label;
+                }}
+                                    
                 InputProps={{
                     sx: {
                         height: "40px",
@@ -125,19 +153,18 @@ const SelectField = ({
                     },
                 }}
             >
-                {Array.isArray(options) &&
-                    options.map((opt, idx) => {
-                        const isPrimitive = typeof opt !== "object";
-                        const optionValue = isPrimitive ? opt : opt.value;
-                        const optionLabel = isPrimitive ? String(opt) : String(opt.label);
+                {allOptions.map((opt, idx) => {
+                    const isPrimitive = typeof opt !== "object";
+                    const optionValue = isPrimitive ? opt : opt.value;
+                    const optionLabel = isPrimitive ? String(opt) : String(opt.label);
+                    const isDisabled = isPrimitive ? false : opt.disabled ?? false;
 
-                        return (
-                            <MenuItem key={idx} value={optionValue}>
-                                {optionLabel}
-                            </MenuItem>
-                        );
-                    })}
-
+                    return (
+                        <MenuItem key={idx} value={optionValue} disabled={isDisabled}>
+                            {optionLabel}
+                        </MenuItem>
+                    );
+                })}
             </TextField>
         </FormControl>
     );
