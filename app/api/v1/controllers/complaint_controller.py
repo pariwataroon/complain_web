@@ -42,7 +42,6 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                         "subject": complaint_data.get("subject", ""),
                         "description": complaint_data.get("description", ""),
                         "complaintType": complaint_data.get("complaint_type", ""),
-                        "channel": complaint_data.get("channel", ""),
                         "incidentDate": complaint_data.get("incident_date", None),
                         "attachment": complaint_data.get("attachments", [])
                     }
@@ -125,7 +124,6 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
         subject = ""
         description = ""
         complaint_type = ""
-        channel = ""
         incident_date = None
         
         if "general" in step3:
@@ -133,7 +131,6 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
             subject = step3_general.get("subject", "")
             description = step3_general.get("description", "")
             complaint_type = step3_general.get("complaintType", "")
-            channel = step3_general.get("channel", "")
             
             if "incidentDate" in step3_general and step3_general["incidentDate"]:
                 try:
