@@ -22,67 +22,22 @@ router = APIRouter(
 
 @router.post("", response_model=FormatResponseModel)
 async def create_new_complaint(
-    request_data: Dict[str, Any],  # Accept any JSON structure
+    request_data: Dict[str, Any],
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
     """Create a new complaint using the nested structure"""
     try:
-        # Extract data from nested structure
-        # Step 1: Complainant data
-        step1 = request_data.get("step1", {}).get("general", {})
-        general_data = step1.get("general", {})
-        delegate_data = step1.get("delegate", {})
-        corporate_data = step1.get("corporate", {})
-        signer_data = step1.get("signer", {})
+        # สร้างข้อมูลอย่างมีประสิทธิภาพ - ส่งข้อมูลต้นฉบับทั้งหมดไปให้ controller
+        # ไม่ต้องแยกแยะข้อมูลที่นี่ เพราะมีการประมวลผลเต็มรูปแบบที่ controller แล้ว
+        complaint_data = request_data
         
-        # Determine complainant type
-        complainant_type = "general"
-        if corporate_data and any(corporate_data.values()):
-            complainant_type = "corporate"
-        
-        # Step 2: Respondent data
-        step2 = request_data.get("step2", {}).get("general", {})
-        # Determine respondent type (individual, corporate, government)
-        respondent_type = "individual"
-        respondent_data = {}
-        if "individual" in step2 and step2.get("individual") and any(step2.get("individual", {}).values()):
-            respondent_type = "individual"
-            respondent_data = step2.get("individual", {})
-        elif "corporate" in step2 and step2.get("corporate") and any(step2.get("corporate", {}).values()):
-            respondent_type = "corporate"
-            respondent_data = step2.get("corporate", {})
-        elif "government" in step2 and step2.get("government") and any(step2.get("government", {}).values()):
-            respondent_type = "government"
-            respondent_data = step2.get("government", {})
-        
-        # Step 3: Incident details
-        step3 = request_data.get("step3", {}).get("general", {})
-        
-        # Step 4: Acceptance
-        step4 = request_data.get("step4", {}).get("general", {})
-
-        # แยกค่า complaintType ออกมาเพื่อส่งเป็น property ตรงๆ
-        complaint_type = step3.get("complaintType", "")
-        
-        # Create data structure for controller
-        complaint_data = {
-            "subject": step3.get("subject", ""),
-            "description": step3.get("description", ""),
-            "complainant_type": complainant_type,
-            "complainant_data": {
-                "general": general_data,
-                "corporate": corporate_data,
-                "delegate": delegate_data if delegate_data and any(delegate_data.values()) else None,
-                "signer": signer_data if signer_data and any(signer_data.values()) else None
-            },
-            "respondent_data": {
-                respondent_type: respondent_data
-            },
-            "incident_data": step3,
-            "accepted": step4.get("accepted", True),
-            "complaintType": complaint_type
-        }
+        # Extract complaintType from step3 if present for backward compatibility
+        if "step3" in request_data and "general" in request_data["step3"]:
+            if "complaintType" in request_data["step3"]["general"]:
+                # Ensure complaintType is at the root level as well
+                complaint_data = {**request_data}
+                complaint_data["complaintType"] = request_data["step3"]["general"]["complaintType"]
         
         # Use the controller function instead of directly creating model instance
         new_complaint = create_complaint(db, complaint_data, UUID(current_user) if current_user else None)
@@ -92,6 +47,7 @@ async def create_new_complaint(
             "complaint_number": new_complaint.complaint_number
         })
     except Exception as e:
+        db.rollback()
         import traceback
         traceback.print_exc()
         return format_response("5000", {"error": str(e)})
