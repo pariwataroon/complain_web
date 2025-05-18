@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "1a1f1b65-4084-49c7-838f-213ed1e335f7",
+		"_postman_id": "45af45f7-c489-44bb-8dc3-2244f55e891c",
 		"name": "COMP_MOF_API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "2230736"
@@ -447,123 +447,123 @@
 				{
 					"name": "auth/forgot-password",
 					"request": {
-					  "auth": {
-						"type": "noauth"
-					  },
-					  "method": "POST",
-					  "header": [],
-					  "body": {
-						"mode": "raw",
-						"raw": "{\n    \"email\": \"user@example.com\"\n}",
-						"options": {
-						  "raw": {
-							"language": "json"
-						  }
-						}
-					  },
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/auth/forgot-password",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "auth",
-						  "forgot-password"
-						]
-					  },
-					  "description": "ส่งอีเมลลิงก์รีเซ็ตรหัสผ่านให้กับผู้ใช้ เมื่ออีเมลตรงกับผู้ใช้ในระบบ จะส่งลิงก์รีเซ็ตรหัสผ่านที่มีอายุ 30 นาที"
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"user@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/auth/forgot-password",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"auth",
+								"forgot-password"
+							]
+						},
+						"description": "ส่งอีเมลลิงก์รีเซ็ตรหัสผ่านให้กับผู้ใช้ เมื่ออีเมลตรงกับผู้ใช้ในระบบ จะส่งลิงก์รีเซ็ตรหัสผ่านที่มีอายุ 30 นาที"
 					},
 					"response": []
 				},
 				{
-				"name": "auth/reset-password",
-				"request": {
-					"auth": {
-					"type": "noauth"
+					"name": "auth/reset-password",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"your_reset_token_here\",\n    \"new_password\": \"newSecurePassword123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/auth/reset-password",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"auth",
+								"reset-password"
+							]
+						},
+						"description": "รีเซ็ตรหัสผ่านโดยใช้ token ที่ได้รับจากอีเมล token มีอายุ 30 นาทีและใช้งานได้เพียงครั้งเดียว"
 					},
-					"method": "POST",
-					"header": [],
-					"body": {
-					"mode": "raw",
-					"raw": "{\n    \"token\": \"your_reset_token_here\",\n    \"new_password\": \"newSecurePassword123!\"\n}",
-					"options": {
-						"raw": {
-						"language": "json"
-						}
-					}
-					},
-					"url": {
-					"raw": "{{API}}{{PREFIX}}/auth/reset-password",
-					"host": [
-						"{{API}}{{PREFIX}}"
-					],
-					"path": [
-						"auth",
-						"reset-password"
-					]
-					},
-					"description": "รีเซ็ตรหัสผ่านโดยใช้ token ที่ได้รับจากอีเมล token มีอายุ 30 นาทีและใช้งานได้เพียงครั้งเดียว"
-				},
-				"response": []
-				},
-				{
-				"name": "auth/verify-reset-token",
-				"request": {
-					"auth": {
-					"type": "noauth"
-					},
-					"method": "GET",
-					"header": [],
-					"url": {
-					"raw": "{{API}}{{PREFIX}}/auth/verify-reset-token?token=your_reset_token_here",
-					"host": [
-						"{{API}}{{PREFIX}}"
-					],
-					"path": [
-						"auth",
-						"verify-reset-token"
-					],
-					"query": [
-						{
-						"key": "token",
-						"value": "your_reset_token_here"
-						}
-					]
-					},
-					"description": "ตรวจสอบความถูกต้องของ token รีเซ็ตรหัสผ่าน เพื่อให้ frontend สามารถตรวจสอบก่อนแสดงฟอร์มรีเซ็ตรหัสผ่านได้"
-				},
-				"response": []
+					"response": []
 				},
 				{
-				"name": "Verify Employee with ThaiID",
-				"request": {
-					"auth": {
-					"type": "noauth"
+					"name": "auth/verify-reset-token",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/auth/verify-reset-token?token=your_reset_token_here",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"auth",
+								"verify-reset-token"
+							],
+							"query": [
+								{
+									"key": "token",
+									"value": "your_reset_token_here"
+								}
+							]
+						},
+						"description": "ตรวจสอบความถูกต้องของ token รีเซ็ตรหัสผ่าน เพื่อให้ frontend สามารถตรวจสอบก่อนแสดงฟอร์มรีเซ็ตรหัสผ่านได้"
 					},
-					"method": "POST",
-					"header": [],
-					"body": {
-					"mode": "raw",
-					"raw": "{\n    \"citizen_id\": \"1234567890123\",\n    \"project_api_key\": \"comp_mof_a1b2c3d4e5f6g7h8i9j0\"\n}",
-					"options": {
-						"raw": {
-						"language": "json"
-						}
-					}
-					},
-					"url": {
-					"raw": "{{API}}{{PREFIX}}/auth/verify-employee",
-					"host": [
-						"{{API}}{{PREFIX}}"
-					],
-					"path": [
-						"auth",
-						"verify-employee"
-					]
-					},
-					"description": "ตรวจสอบว่าผู้ใช้ที่เข้าสู่ระบบด้วย ThaiID จากระบบอื่นเป็นพนักงาน/เจ้าหน้าที่ในระบบนี้หรือไม่ - ต้องใช้ API Key ของโปรเจคที่ได้รับอนุญาต"
+					"response": []
 				},
-				"response": []
+				{
+					"name": "Verify Employee with ThaiID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"citizen_id\": \"1234567890123\",\n    \"project_api_key\": \"comp_mof_a1b2c3d4e5f6g7h8i9j0\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/auth/verify-employee",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"auth",
+								"verify-employee"
+							]
+						},
+						"description": "ตรวจสอบว่าผู้ใช้ที่เข้าสู่ระบบด้วย ThaiID จากระบบอื่นเป็นพนักงาน/เจ้าหน้าที่ในระบบนี้หรือไม่ - ต้องใช้ API Key ของโปรเจคที่ได้รับอนุญาต"
+					},
+					"response": []
 				}
 			]
 		},
@@ -2141,197 +2141,197 @@
 		{
 			"name": "PROJECT API KEYS",
 			"item": [
-			  {
-				"name": "Get All Project API Keys",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "GET",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/project-api-keys",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "project-api-keys"
-					]
-				  },
-				  "description": "ดึงรายการ API Key ทั้งหมดในระบบ - ต้องมีสิทธิ์อ่านใน setting_access"
+				{
+					"name": "Get All Project API Keys",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/project-api-keys",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"project-api-keys"
+							]
+						},
+						"description": "ดึงรายการ API Key ทั้งหมดในระบบ - ต้องมีสิทธิ์อ่านใน setting_access"
+					},
+					"response": []
 				},
-				"response": []
-			  },
-			  {
-				"name": "Create Project API Key",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "POST",
-				  "header": [],
-				  "body": {
-					"mode": "raw",
-					"raw": "{\n    \"project_name\": \"โครงการทดสอบ\",\n    \"description\": \"API Key สำหรับการทดสอบการเชื่อมต่อ\",\n    \"is_active\": true\n}",
-					"options": {
-					  "raw": {
-						"language": "json"
-					  }
-					}
-				  },
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/project-api-keys",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "project-api-keys"
-					]
-				  },
-				  "description": "สร้าง API Key ใหม่สำหรับโปรเจค - ต้องมีสิทธิ์สร้างใน setting_access"
+				{
+					"name": "Create Project API Key",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"project_name\": \"โครงการทดสอบ\",\n    \"description\": \"API Key สำหรับการทดสอบการเชื่อมต่อ\",\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/project-api-keys",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"project-api-keys"
+							]
+						},
+						"description": "สร้าง API Key ใหม่สำหรับโปรเจค - ต้องมีสิทธิ์สร้างใน setting_access"
+					},
+					"response": []
 				},
-				"response": []
-			  },
-			  {
-				"name": "Get Project API Key by ID",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "GET",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/project-api-keys/{{api_key_id}}",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "project-api-keys",
-					  "{{api_key_id}}"
-					]
-				  },
-				  "description": "ดึงข้อมูล API Key ตาม ID - ต้องมีสิทธิ์อ่านใน setting_access"
+				{
+					"name": "Get Project API Key by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/project-api-keys/{{api_key_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"project-api-keys",
+								"{{api_key_id}}"
+							]
+						},
+						"description": "ดึงข้อมูล API Key ตาม ID - ต้องมีสิทธิ์อ่านใน setting_access"
+					},
+					"response": []
 				},
-				"response": []
-			  },
-			  {
-				"name": "Update Project API Key",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "PUT",
-				  "header": [],
-				  "body": {
-					"mode": "raw",
-					"raw": "{\n    \"project_name\": \"โครงการทดสอบ (อัพเดต)\",\n    \"description\": \"API Key สำหรับการทดสอบการเชื่อมต่อ (อัพเดต)\",\n    \"is_active\": true\n}",
-					"options": {
-					  "raw": {
-						"language": "json"
-					  }
-					}
-				  },
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/project-api-keys/{{api_key_id}}",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "project-api-keys",
-					  "{{api_key_id}}"
-					]
-				  },
-				  "description": "อัปเดตข้อมูล API Key - ต้องมีสิทธิ์แก้ไขใน setting_access"
+				{
+					"name": "Update Project API Key",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"project_name\": \"โครงการทดสอบ (อัพเดต)\",\n    \"description\": \"API Key สำหรับการทดสอบการเชื่อมต่อ (อัพเดต)\",\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/project-api-keys/{{api_key_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"project-api-keys",
+								"{{api_key_id}}"
+							]
+						},
+						"description": "อัปเดตข้อมูล API Key - ต้องมีสิทธิ์แก้ไขใน setting_access"
+					},
+					"response": []
 				},
-				"response": []
-			  },
-			  {
-				"name": "Delete Project API Key",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "DELETE",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/project-api-keys/{{api_key_id}}",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "project-api-keys",
-					  "{{api_key_id}}"
-					]
-				  },
-				  "description": "ลบ API Key - ต้องมีสิทธิ์ลบใน setting_access"
+				{
+					"name": "Delete Project API Key",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/project-api-keys/{{api_key_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"project-api-keys",
+								"{{api_key_id}}"
+							]
+						},
+						"description": "ลบ API Key - ต้องมีสิทธิ์ลบใน setting_access"
+					},
+					"response": []
 				},
-				"response": []
-			  },
-			  {
-				"name": "Regenerate Project API Key",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "POST",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/project-api-keys/{{api_key_id}}/regenerate",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "project-api-keys",
-					  "{{api_key_id}}",
-					  "regenerate"
-					]
-				  },
-				  "description": "สร้าง API Key ใหม่สำหรับโปรเจคที่มีอยู่แล้ว - ต้องมีสิทธิ์แก้ไขใน setting_access"
-				},
-				"response": []
-			  }
+				{
+					"name": "Regenerate Project API Key",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/project-api-keys/{{api_key_id}}/regenerate",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"project-api-keys",
+								"{{api_key_id}}",
+								"regenerate"
+							]
+						},
+						"description": "สร้าง API Key ใหม่สำหรับโปรเจคที่มีอยู่แล้ว - ต้องมีสิทธิ์แก้ไขใน setting_access"
+					},
+					"response": []
+				}
 			],
 			"description": "API สำหรับจัดการ Project API Key ที่ใช้ในการยืนยันตัวตนระหว่างโปรเจค"
 		},
@@ -2667,6 +2667,181 @@
 			"name": "POSITIONS",
 			"item": [
 				{
+					"name": "Get User Positions",
+					"item": [
+						{
+							"name": "Get User Positions",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/positions/user/{{user_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"positions",
+										"user",
+										"{{user_id}}"
+									]
+								},
+								"description": "ดึงข้อมูลตำแหน่งทั้งหมดของผู้ใช้ - ต้องมีสิทธิ์อ่านใน setting_users"
+							},
+							"response": []
+						},
+						{
+							"name": "Get User Primary Position",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/positions/user/{{user_id}}/primary",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"positions",
+										"user",
+										"{{user_id}}",
+										"primary"
+									]
+								},
+								"description": "ดึงข้อมูลตำแหน่งหลักของผู้ใช้ - ต้องมีสิทธิ์อ่านใน setting_users"
+							},
+							"response": []
+						},
+						{
+							"name": "Assign Position to User",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"user_id\": \"{{user_id}}\",\n    \"position_id\": \"{{position_id}}\",\n    \"is_primary\": true,\n    \"start_date\": \"2023-05-01T00:00:00Z\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/positions/user/assign",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"positions",
+										"user",
+										"assign"
+									]
+								},
+								"description": "กำหนดตำแหน่งให้กับผู้ใช้ - ต้องมีสิทธิ์แก้ไขใน setting_users"
+							},
+							"response": []
+						},
+						{
+							"name": "Update User Position",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"is_primary\": true,\n    \"start_date\": \"2023-06-01T00:00:00Z\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/positions/user/{{user_position_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"positions",
+										"user",
+										"{{user_position_id}}"
+									]
+								},
+								"description": "อัปเดตข้อมูลตำแหน่งของผู้ใช้ - ต้องมีสิทธิ์แก้ไขใน setting_users"
+							},
+							"response": []
+						},
+						{
+							"name": "Remove Position from User",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/positions/user/{{user_position_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"positions",
+										"user",
+										"{{user_position_id}}"
+									]
+								},
+								"description": "ลบตำแหน่งออกจากผู้ใช้ (กำหนดวันสิ้นสุด) - ต้องมีสิทธิ์แก้ไขใน setting_users"
+							},
+							"response": []
+						}
+					],
+					"description": "API สำหรับจัดการตำแหน่งของผู้ใช้"
+				},
+				{
 					"name": "Get All Positions",
 					"request": {
 						"auth": {
@@ -2862,12 +3037,872 @@
 						"description": "ลบตำแหน่ง (soft delete) - ต้องมีสิทธิ์ลบใน setting_positions"
 					},
 					"response": []
+				}
+			],
+			"description": "API สำหรับจัดการข้อมูลตำแหน่งและการกำหนดตำแหน่งให้กับผู้ใช้"
+		},
+		{
+			"name": "DEPARTMENTS",
+			"item": [
+				{
+					"name": "Get All Departments",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/departments",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"departments"
+							]
+						},
+						"description": "ดึงรายการหน่วยงานทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
 				},
 				{
-					"name": "Get User Positions",
+					"name": "Get Departments Grouped",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/departments/grouped",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"departments",
+								"grouped"
+							]
+						},
+						"description": "ดึงข้อมูลหน่วยงานแบ่งตามกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Departments with Venues",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/departments/with-venues",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"departments",
+								"with-venues"
+							]
+						},
+						"description": "ดึงข้อมูลหน่วยงานพร้อมสถานที่ - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Department by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/departments/{{department_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"departments",
+								"{{department_id}}"
+							]
+						},
+						"description": "ดึงข้อมูลหน่วยงานตาม ID - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Departments by Name",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/departments/search/by-name?search_term=กระทรวง",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"departments",
+								"search",
+								"by-name"
+							],
+							"query": [
+								{
+									"key": "search_term",
+									"value": "กระทรวง"
+								}
+							]
+						},
+						"description": "ค้นหาหน่วยงานตามชื่อ รหัส หรือตัวย่อ - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Department",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"หน่วยงานทดสอบ\",\n    \"short_name\": \"นง.ทส\",\n    \"code\": \"TEST\",\n    \"parent_id\": null,\n    \"group_id\": \"{{department_group_id}}\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/departments",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"departments"
+							]
+						},
+						"description": "สร้างหน่วยงานใหม่ - ต้องมีสิทธิ์สร้างใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Department",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"หน่วยงานทดสอบ (แก้ไข)\",\n    \"short_name\": \"นง.ทส.ก\",\n    \"code\": \"TEST-UPD\",\n    \"parent_id\": null,\n    \"group_id\": \"{{department_group_id}}\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/departments/{{department_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"departments",
+								"{{department_id}}"
+							]
+						},
+						"description": "อัปเดตข้อมูลหน่วยงาน - ต้องมีสิทธิ์แก้ไขใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Department",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/departments/{{department_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"departments",
+								"{{department_id}}"
+							]
+						},
+						"description": "ลบหน่วยงาน (soft delete) - ต้องมีสิทธิ์ลบใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Departments Stats",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/departments/stats/overview",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"departments",
+								"stats",
+								"overview"
+							]
+						},
+						"description": "ดึงข้อมูลสถิติสำหรับหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Batch Update Department Order",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    {\n        \"id\": \"{{department_id_1}}\",\n        \"order_index\": 10\n    },\n    {\n        \"id\": \"{{department_id_2}}\",\n        \"order_index\": 20\n    },\n    {\n        \"id\": \"{{department_id_3}}\",\n        \"order_index\": 30\n    }\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/departments/batch-update-order",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"departments",
+								"batch-update-order"
+							]
+						},
+						"description": "อัปเดตลำดับของหน่วยงานหลายรายการพร้อมกัน - ต้องมีสิทธิ์แก้ไขใน setting_department"
+					},
+					"response": []
+				}
+			],
+			"description": "API สำหรับจัดการข้อมูลหน่วยงาน"
+		},
+		{
+			"name": "DEPARTMENT GROUPS",
+			"item": [
+				{
+					"name": "Get All Department Groups",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/department-groups",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"department-groups"
+							]
+						},
+						"description": "ดึงรายการกลุ่มหน่วยงานทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Department Groups with Departments",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/department-groups/with-departments",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"department-groups",
+								"with-departments"
+							]
+						},
+						"description": "ดึงรายการกลุ่มหน่วยงานพร้อมหน่วยงานที่อยู่ในกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Department Group by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"department-groups",
+								"{{group_id}}"
+							]
+						},
+						"description": "ดึงข้อมูลกลุ่มหน่วยงานตาม ID - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Department Group",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"กลุ่มหน่วยงานทดสอบ\",\n    \"description\": \"คำอธิบายกลุ่มหน่วยงานทดสอบ\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/department-groups",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"department-groups"
+							]
+						},
+						"description": "สร้างกลุ่มหน่วยงานใหม่ - ต้องมีสิทธิ์สร้างใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Department Group",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"กลุ่มหน่วยงานทดสอบ (แก้ไข)\",\n    \"description\": \"คำอธิบายกลุ่มหน่วยงานทดสอบที่แก้ไขแล้ว\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"department-groups",
+								"{{group_id}}"
+							]
+						},
+						"description": "อัปเดตข้อมูลกลุ่มหน่วยงาน - ต้องมีสิทธิ์แก้ไขใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Department Group",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"department-groups",
+								"{{group_id}}"
+							]
+						},
+						"description": "ลบกลุ่มหน่วยงาน (soft delete) - ต้องมีสิทธิ์ลบใน setting_department"
+					},
+					"response": []
+				}
+			],
+			"description": "API สำหรับจัดการข้อมูลกลุ่มหน่วยงาน"
+		},
+		{
+			"name": "SIGNATURE AUTHORITY",
+			"item": [
+				{
+					"name": "Get All Signature Authorities",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities"
+							]
+						},
+						"description": "ดึงรายการผู้มีอำนาจลงนามทั้งหมดในระบบ - ต้องมีสิทธิ์อ่านใน setting_users"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Available Users",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities/available-users",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities",
+								"available-users"
+							]
+						},
+						"description": "ดึงรายการผู้ใช้ที่สามารถกำหนดเป็นผู้มีอำนาจลงนามได้"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Available Departments",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities/available-departments",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities",
+								"available-departments"
+							]
+						},
+						"description": "ดึงรายการหน่วยงานที่สามารถกำหนดผู้มีอำนาจลงนามได้"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Authorities by Department",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities/department/{{department_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities",
+								"department",
+								"{{department_id}}"
+							]
+						},
+						"description": "ดึงรายการผู้มีอำนาจลงนามในหน่วยงานที่ระบุ - ต้องมีสิทธิ์อ่านใน setting_users"
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Signature Authority",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": \"{{user_id}}\",\n    \"department_id\": \"{{department_id}}\",\n    \"is_active\": true,\n    \"start_date\": \"2025-05-01T00:00:00Z\",\n    \"end_date\": null\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities"
+							]
+						},
+						"description": "กำหนดสิทธิการลงนามใหม่ให้กับผู้ใช้ในหน่วยงานที่ระบุ - ต้องมีสิทธิ์สร้างใน setting_users"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Signature Authority",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities/{{authority_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities",
+								"{{authority_id}}"
+							]
+						},
+						"description": "ยกเลิกสิทธิการลงนามของผู้ใช้ (soft delete) - ต้องมีสิทธิ์ลบใน setting_users"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Users with Signature by Department Group",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities/users-and-departments",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities",
+								"users-and-departments"
+							]
+						},
+						"description": "ดึงรายการผู้ใช้ที่มีอำนาจลงนามจัดกลุ่มตามกลุ่มหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_users"
+					},
+					"response": []
+				}
+			],
+			"description": "API สำหรับจัดการผู้มีอำนาจลงนามเอกสาร - เชื่อมโยงผู้ใช้กับหน่วยงานโดยตรง โดยใช้ข้อมูลตำแหน่งจาก user_positions"
+		},
+		{
+			"name": "NOTIFICATIONS",
+			"item": [
+				{
+					"name": "Create Notification",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"New User Registration\",\n    \"message\": \"A new user has registered in the system.\",\n    \"role_seeking_group\": \"admin\",\n    \"redirect_url\": \"/users/123e4567-e89b-12d3-a456-426614174000\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/notifications",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"notifications"
+							]
+						},
+						"description": "สร้างการแจ้งเตือนใหม่"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Notifications by Role",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/notifications?role=admin",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"notifications"
+							],
+							"query": [
+								{
+									"key": "role",
+									"value": "admin"
+								}
+							]
+						},
+						"description": "ดึงการแจ้งเตือนตามบทบาท (role)"
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Notification as Seen",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/notifications/123e4567-e89b-12d3-a456-426614174001/seen",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"notifications",
+								"123e4567-e89b-12d3-a456-426614174001",
+								"seen"
+							]
+						},
+						"description": "ทำเครื่องหมายว่าแจ้งเตือนนี้ถูกเห็นแล้วโดยผู้ใช้ที่กำลัง login"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "GEOGRAPHY",
+			"item": [
+				{
+					"name": "Regions Endpoints",
 					"item": [
 						{
-							"name": "Get User Positions",
+							"name": "Get All Regions",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -2882,22 +3917,21 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/positions/user/{{user_id}}",
+									"raw": "{{API}}{{PREFIX}}/geography/regions",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"positions",
-										"user",
-										"{{user_id}}"
+										"geography",
+										"regions"
 									]
 								},
-								"description": "ดึงข้อมูลตำแหน่งทั้งหมดของผู้ใช้ - ต้องมีสิทธิ์อ่านใน setting_users"
+								"description": "ดึงรายการภูมิภาคทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_geography"
 							},
 							"response": []
 						},
 						{
-							"name": "Get User Primary Position",
+							"name": "Get Region by ID",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -2912,23 +3946,22 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/positions/user/{{user_id}}/primary",
+									"raw": "{{API}}{{PREFIX}}/geography/regions/{{region_id}}",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"positions",
-										"user",
-										"{{user_id}}",
-										"primary"
+										"geography",
+										"regions",
+										"{{region_id}}"
 									]
 								},
-								"description": "ดึงข้อมูลตำแหน่งหลักของผู้ใช้ - ต้องมีสิทธิ์อ่านใน setting_users"
+								"description": "ดึงข้อมูลภูมิภาคตาม ID - ต้องมีสิทธิ์อ่านใน setting_geography"
 							},
 							"response": []
 						},
 						{
-							"name": "Assign Position to User",
+							"name": "Create Region",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -2944,7 +3977,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"user_id\": \"{{user_id}}\",\n    \"position_id\": \"{{position_id}}\",\n    \"is_primary\": true,\n    \"start_date\": \"2023-05-01T00:00:00Z\"\n}",
+									"raw": "{\n    \"name\": \"ภูมิภาคใหม่\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2952,22 +3985,21 @@
 									}
 								},
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/positions/user/assign",
+									"raw": "{{API}}{{PREFIX}}/geography/regions",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"positions",
-										"user",
-										"assign"
+										"geography",
+										"regions"
 									]
 								},
-								"description": "กำหนดตำแหน่งให้กับผู้ใช้ - ต้องมีสิทธิ์แก้ไขใน setting_users"
+								"description": "สร้างภูมิภาคใหม่ - ต้องมีสิทธิ์สร้างใน setting_geography"
 							},
 							"response": []
 						},
 						{
-							"name": "Update User Position",
+							"name": "Update Region",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -2983,7 +4015,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"is_primary\": true,\n    \"start_date\": \"2023-06-01T00:00:00Z\"\n}",
+									"raw": "{\n    \"name\": \"ภูมิภาคที่แก้ไข\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2991,22 +4023,22 @@
 									}
 								},
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/positions/user/{{user_position_id}}",
+									"raw": "{{API}}{{PREFIX}}/geography/regions/{{region_id}}",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"positions",
-										"user",
-										"{{user_position_id}}"
+										"geography",
+										"regions",
+										"{{region_id}}"
 									]
 								},
-								"description": "อัปเดตข้อมูลตำแหน่งของผู้ใช้ - ต้องมีสิทธิ์แก้ไขใน setting_users"
+								"description": "แก้ไขข้อมูลภูมิภาค - ต้องมีสิทธิ์แก้ไขใน setting_geography"
 							},
 							"response": []
 						},
 						{
-							"name": "Remove Position from User",
+							"name": "Delete Region",
 							"request": {
 								"auth": {
 									"type": "bearer",
@@ -3021,2427 +4053,2036 @@
 								"method": "DELETE",
 								"header": [],
 								"url": {
-									"raw": "{{API}}{{PREFIX}}/positions/user/{{user_position_id}}",
+									"raw": "{{API}}{{PREFIX}}/geography/regions/{{region_id}}",
 									"host": [
 										"{{API}}{{PREFIX}}"
 									],
 									"path": [
-										"positions",
-										"user",
-										"{{user_position_id}}"
+										"geography",
+										"regions",
+										"{{region_id}}"
 									]
 								},
-								"description": "ลบตำแหน่งออกจากผู้ใช้ (กำหนดวันสิ้นสุด) - ต้องมีสิทธิ์แก้ไขใน setting_users"
+								"description": "ลบภูมิภาค - ต้องมีสิทธิ์ลบใน setting_geography"
 							},
 							"response": []
 						}
 					],
-					"description": "API สำหรับจัดการตำแหน่งของผู้ใช้"
-				}
-			],
-			"description": "API สำหรับจัดการข้อมูลตำแหน่งและการกำหนดตำแหน่งให้กับผู้ใช้"
-		},
-		{
-			"name": "DEPARTMENTS",
-			"item": [
-			  {
-				"name": "Get All Departments",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "GET",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/departments",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "departments"
-					]
-				  },
-				  "description": "ดึงรายการหน่วยงานทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_department"
+					"description": "API จัดการข้อมูลภูมิภาค"
 				},
-				"response": []
-			  },
-			  {
-				"name": "Get Departments Grouped",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "GET",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/departments/grouped",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "departments",
-					  "grouped"
-					]
-				  },
-				  "description": "ดึงข้อมูลหน่วยงานแบ่งตามกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_department"
-				},
-				"response": []
-			  },
-			  {
-				"name": "Get Departments with Venues",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "GET",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/departments/with-venues",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "departments",
-					  "with-venues"
-					]
-				  },
-				  "description": "ดึงข้อมูลหน่วยงานพร้อมสถานที่ - ต้องมีสิทธิ์อ่านใน setting_department"
-				},
-				"response": []
-			  },
-			  {
-				"name": "Get Department by ID",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "GET",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/departments/{{department_id}}",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "departments",
-					  "{{department_id}}"
-					]
-				  },
-				  "description": "ดึงข้อมูลหน่วยงานตาม ID - ต้องมีสิทธิ์อ่านใน setting_department"
-				},
-				"response": []
-			  },
-			  {
-				"name": "Search Departments by Name",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "GET",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/departments/search/by-name?search_term=กระทรวง",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "departments",
-					  "search",
-					  "by-name"
-					],
-					"query": [
-					  {
-						"key": "search_term",
-						"value": "กระทรวง"
-					  }
-					]
-				  },
-				  "description": "ค้นหาหน่วยงานตามชื่อ รหัส หรือตัวย่อ - ต้องมีสิทธิ์อ่านใน setting_department"
-				},
-				"response": []
-			  },
-			  {
-				"name": "Create Department",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "POST",
-				  "header": [],
-				  "body": {
-					"mode": "raw",
-					"raw": "{\n    \"name\": \"หน่วยงานทดสอบ\",\n    \"short_name\": \"นง.ทส\",\n    \"code\": \"TEST\",\n    \"parent_id\": null,\n    \"group_id\": \"{{department_group_id}}\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
-					"options": {
-					  "raw": {
-						"language": "json"
-					  }
-					}
-				  },
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/departments",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "departments"
-					]
-				  },
-				  "description": "สร้างหน่วยงานใหม่ - ต้องมีสิทธิ์สร้างใน setting_department"
-				},
-				"response": []
-			  },
-			  {
-				"name": "Update Department",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "PUT",
-				  "header": [],
-				  "body": {
-					"mode": "raw",
-					"raw": "{\n    \"name\": \"หน่วยงานทดสอบ (แก้ไข)\",\n    \"short_name\": \"นง.ทส.ก\",\n    \"code\": \"TEST-UPD\",\n    \"parent_id\": null,\n    \"group_id\": \"{{department_group_id}}\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
-					"options": {
-					  "raw": {
-						"language": "json"
-					  }
-					}
-				  },
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/departments/{{department_id}}",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "departments",
-					  "{{department_id}}"
-					]
-				  },
-				  "description": "อัปเดตข้อมูลหน่วยงาน - ต้องมีสิทธิ์แก้ไขใน setting_department"
-				},
-				"response": []
-			  },
-			  {
-				"name": "Delete Department",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "DELETE",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/departments/{{department_id}}",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "departments",
-					  "{{department_id}}"
-					]
-				  },
-				  "description": "ลบหน่วยงาน (soft delete) - ต้องมีสิทธิ์ลบใน setting_department"
-				},
-				"response": []
-			  },
-			  {
-				"name": "Get Departments Stats",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "GET",
-				  "header": [],
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/departments/stats/overview",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "departments",
-					  "stats",
-					  "overview"
-					]
-				  },
-				  "description": "ดึงข้อมูลสถิติสำหรับหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_department"
-				},
-				"response": []
-			  },
-			  {
-				"name": "Batch Update Department Order",
-				"request": {
-				  "auth": {
-					"type": "bearer",
-					"bearer": [
-					  {
-						"key": "token",
-						"value": "{{access_token}}",
-						"type": "string"
-					  }
-					]
-				  },
-				  "method": "POST",
-				  "header": [],
-				  "body": {
-					"mode": "raw",
-					"raw": "[\n    {\n        \"id\": \"{{department_id_1}}\",\n        \"order_index\": 10\n    },\n    {\n        \"id\": \"{{department_id_2}}\",\n        \"order_index\": 20\n    },\n    {\n        \"id\": \"{{department_id_3}}\",\n        \"order_index\": 30\n    }\n]",
-					"options": {
-					  "raw": {
-						"language": "json"
-					  }
-					}
-				  },
-				  "url": {
-					"raw": "{{API}}{{PREFIX}}/departments/batch-update-order",
-					"host": [
-					  "{{API}}{{PREFIX}}"
-					],
-					"path": [
-					  "departments",
-					  "batch-update-order"
-					]
-				  },
-				  "description": "อัปเดตลำดับของหน่วยงานหลายรายการพร้อมกัน - ต้องมีสิทธิ์แก้ไขใน setting_department"
-				},
-				"response": []
-			  }
-			],
-			"description": "API สำหรับจัดการข้อมูลหน่วยงาน"
-		},
-		{
-		"name": "DEPARTMENT GROUPS",
-		"item": [
-			{
-			"name": "Get All Department Groups",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/department-groups",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"department-groups"
-				]
-				},
-				"description": "ดึงรายการกลุ่มหน่วยงานทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_department"
-			},
-			"response": []
-			},
-			{
-			"name": "Get Department Groups with Departments",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/department-groups/with-departments",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"department-groups",
-					"with-departments"
-				]
-				},
-				"description": "ดึงรายการกลุ่มหน่วยงานพร้อมหน่วยงานที่อยู่ในกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_department"
-			},
-			"response": []
-			},
-			{
-			"name": "Get Department Group by ID",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"department-groups",
-					"{{group_id}}"
-				]
-				},
-				"description": "ดึงข้อมูลกลุ่มหน่วยงานตาม ID - ต้องมีสิทธิ์อ่านใน setting_department"
-			},
-			"response": []
-			},
-			{
-			"name": "Create Department Group",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "POST",
-				"header": [],
-				"body": {
-				"mode": "raw",
-				"raw": "{\n    \"name\": \"กลุ่มหน่วยงานทดสอบ\",\n    \"description\": \"คำอธิบายกลุ่มหน่วยงานทดสอบ\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
-				"options": {
-					"raw": {
-					"language": "json"
-					}
-				}
-				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/department-groups",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"department-groups"
-				]
-				},
-				"description": "สร้างกลุ่มหน่วยงานใหม่ - ต้องมีสิทธิ์สร้างใน setting_department"
-			},
-			"response": []
-			},
-			{
-			"name": "Update Department Group",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "PUT",
-				"header": [],
-				"body": {
-				"mode": "raw",
-				"raw": "{\n    \"name\": \"กลุ่มหน่วยงานทดสอบ (แก้ไข)\",\n    \"description\": \"คำอธิบายกลุ่มหน่วยงานทดสอบที่แก้ไขแล้ว\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
-				"options": {
-					"raw": {
-					"language": "json"
-					}
-				}
-				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"department-groups",
-					"{{group_id}}"
-				]
-				},
-				"description": "อัปเดตข้อมูลกลุ่มหน่วยงาน - ต้องมีสิทธิ์แก้ไขใน setting_department"
-			},
-			"response": []
-			},
-			{
-			"name": "Delete Department Group",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "DELETE",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/department-groups/{{group_id}}",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"department-groups",
-					"{{group_id}}"
-				]
-				},
-				"description": "ลบกลุ่มหน่วยงาน (soft delete) - ต้องมีสิทธิ์ลบใน setting_department"
-			},
-			"response": []
-			}
-		],
-		"description": "API สำหรับจัดการข้อมูลกลุ่มหน่วยงาน"
-		},
-		{
-		"name": "SIGNATURE AUTHORITY",
-		"item": [
-			{
-			"name": "Get All Signature Authorities",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/signature-authorities",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"signature-authorities"
-				]
-				},
-				"description": "ดึงรายการผู้มีอำนาจลงนามทั้งหมดในระบบ - ต้องมีสิทธิ์อ่านใน setting_users"
-			},
-			"response": []
-			},
-			{
-			"name": "Get Available Users",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/signature-authorities/available-users",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"signature-authorities",
-					"available-users"
-				]
-				},
-				"description": "ดึงรายการผู้ใช้ที่สามารถกำหนดเป็นผู้มีอำนาจลงนามได้"
-			},
-			"response": []
-			},
-			{
-			"name": "Get Available Departments",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/signature-authorities/available-departments",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"signature-authorities",
-					"available-departments"
-				]
-				},
-				"description": "ดึงรายการหน่วยงานที่สามารถกำหนดผู้มีอำนาจลงนามได้"
-			},
-			"response": []
-			},
-			{
-			"name": "Get Authorities by Department",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/signature-authorities/department/{{department_id}}",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"signature-authorities",
-					"department",
-					"{{department_id}}"
-				]
-				},
-				"description": "ดึงรายการผู้มีอำนาจลงนามในหน่วยงานที่ระบุ - ต้องมีสิทธิ์อ่านใน setting_users"
-			},
-			"response": []
-			},
-			{
-			"name": "Assign Signature Authority",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "POST",
-				"header": [],
-				"body": {
-				"mode": "raw",
-				"raw": "{\n    \"user_id\": \"{{user_id}}\",\n    \"department_id\": \"{{department_id}}\",\n    \"is_active\": true,\n    \"start_date\": \"2025-05-01T00:00:00Z\",\n    \"end_date\": null\n}",
-				"options": {
-					"raw": {
-					"language": "json"
-					}
-				}
-				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/signature-authorities",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"signature-authorities"
-				]
-				},
-				"description": "กำหนดสิทธิการลงนามใหม่ให้กับผู้ใช้ในหน่วยงานที่ระบุ - ต้องมีสิทธิ์สร้างใน setting_users"
-			},
-			"response": []
-			},
-			{
-			"name": "Remove Signature Authority",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "DELETE",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/signature-authorities/{{authority_id}}",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"signature-authorities",
-					"{{authority_id}}"
-				]
-				},
-				"description": "ยกเลิกสิทธิการลงนามของผู้ใช้ (soft delete) - ต้องมีสิทธิ์ลบใน setting_users"
-			},
-			"response": []
-			},
-			{
-			"name": "Get Users with Signature by Department Group",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/signature-authorities/users-and-departments",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"signature-authorities",
-					"users-and-departments"
-				]
-				},
-				"description": "ดึงรายการผู้ใช้ที่มีอำนาจลงนามจัดกลุ่มตามกลุ่มหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_users"
-			},
-			"response": []
-			}
-		],
-		"description": "API สำหรับจัดการผู้มีอำนาจลงนามเอกสาร - เชื่อมโยงผู้ใช้กับหน่วยงานโดยตรง โดยใช้ข้อมูลตำแหน่งจาก user_positions"
-		},
-		{
-            "name": "NOTIFICATIONS",
-            "item": [
-                {
-                    "name": "Create Notification",
-                    "request": {
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-									"key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        },
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json",
-                                "type": "text"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"title\": \"New User Registration\",\n    \"message\": \"A new user has registered in the system.\",\n    \"role_seeking_group\": \"admin\",\n    \"redirect_url\": \"/users/123e4567-e89b-12d3-a456-426614174000\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{API}}{{PREFIX}}/notifications",
-                            "host": [
-                                "{{API}}{{PREFIX}}"
-                            ],
-                            "path": [
-                                "notifications"
-                            ]
-                        },
-                        "description": "สร้างการแจ้งเตือนใหม่"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Notifications by Role",
-                    "request": {
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        },
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{API}}{{PREFIX}}/notifications?role=admin",
-                            "host": [
-                                "{{API}}{{PREFIX}}"
-                            ],
-                            "path": [
-                                "notifications"
-                            ],
-                            "query": [
-                                {
-                                    "key": "role",
-                                    "value": "admin"
-                                }
-                            ]
-                        },
-                        "description": "ดึงการแจ้งเตือนตามบทบาท (role)"
-                    },
-                    "response": []
-                },
 				{
-					"name": "Mark Notification as Seen",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "PUT",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/notifications/123e4567-e89b-12d3-a456-426614174001/seen",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "notifications",
-						  "123e4567-e89b-12d3-a456-426614174001",
-						  "seen"
-						]
-					  },
-					  "description": "ทำเครื่องหมายว่าแจ้งเตือนนี้ถูกเห็นแล้วโดยผู้ใช้ที่กำลัง login"
-					},
-					"response": []
-				  }
-            ]
-        },
-		{
-			"name": "GEOGRAPHY",
-			"item": [
-			  {
-				"name": "Regions Endpoints",
-				"item": [
-				  {
-					"name": "Get All Regions",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/regions",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "regions"
-						]
-					  },
-					  "description": "ดึงรายการภูมิภาคทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Get Region by ID",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/regions/{{region_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "regions",
-						  "{{region_id}}"
-						]
-					  },
-					  "description": "ดึงข้อมูลภูมิภาคตาม ID - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Create Region",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "POST",
-					  "header": [],
-					  "body": {
-						"mode": "raw",
-						"raw": "{\n    \"name\": \"ภูมิภาคใหม่\"\n}",
-						"options": {
-						  "raw": {
-							"language": "json"
-						  }
+					"name": "Provinces Endpoints",
+					"item": [
+						{
+							"name": "Get All Provinces",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/provinces",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"provinces"
+									]
+								},
+								"description": "ดึงรายการจังหวัดทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Provinces by Geography",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/provinces?geography_id={{region_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"provinces"
+									],
+									"query": [
+										{
+											"key": "geography_id",
+											"value": "{{region_id}}"
+										}
+									]
+								},
+								"description": "ดึงรายการจังหวัดตามภูมิภาค - ต้องมีสิทธิ์อ่านใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Province by ID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/provinces/{{province_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"provinces",
+										"{{province_id}}"
+									]
+								},
+								"description": "ดึงข้อมูลจังหวัดตาม ID - ต้องมีสิทธิ์อ่านใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Province",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"code\": \"99\",\n    \"name_th\": \"จังหวัดทดสอบ\",\n    \"name_en\": \"Test Province\",\n    \"geography_id\": 1\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/provinces",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"provinces"
+									]
+								},
+								"description": "สร้างจังหวัดใหม่ - ต้องมีสิทธิ์สร้างใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Province",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name_th\": \"จังหวัดทดสอบ (แก้ไข)\",\n    \"name_en\": \"Test Province (Modified)\",\n    \"geography_id\": 2\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/provinces/{{province_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"provinces",
+										"{{province_id}}"
+									]
+								},
+								"description": "แก้ไขข้อมูลจังหวัด - ต้องมีสิทธิ์แก้ไขใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Province",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/provinces/{{province_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"provinces",
+										"{{province_id}}"
+									]
+								},
+								"description": "ลบจังหวัด - ต้องมีสิทธิ์ลบใน setting_geography"
+							},
+							"response": []
 						}
-					  },
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/regions",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "regions"
-						]
-					  },
-					  "description": "สร้างภูมิภาคใหม่ - ต้องมีสิทธิ์สร้างใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Update Region",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "PUT",
-					  "header": [],
-					  "body": {
-						"mode": "raw",
-						"raw": "{\n    \"name\": \"ภูมิภาคที่แก้ไข\"\n}",
-						"options": {
-						  "raw": {
-							"language": "json"
-						  }
+					],
+					"description": "API จัดการข้อมูลจังหวัด"
+				},
+				{
+					"name": "Amphures Endpoints",
+					"item": [
+						{
+							"name": "Get All Amphures",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/amphures",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"amphures"
+									]
+								},
+								"description": "ดึงรายการอำเภอทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Amphures by Province",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/amphures?province_id={{province_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"amphures"
+									],
+									"query": [
+										{
+											"key": "province_id",
+											"value": "{{province_id}}"
+										}
+									]
+								},
+								"description": "ดึงรายการอำเภอตามจังหวัด - ต้องมีสิทธิ์อ่านใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Amphure by ID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/amphures/{{amphure_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"amphures",
+										"{{amphure_id}}"
+									]
+								},
+								"description": "ดึงข้อมูลอำเภอตาม ID - ต้องมีสิทธิ์อ่านใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Amphure",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"code\": \"9999\",\n    \"name_th\": \"อำเภอทดสอบ\",\n    \"name_en\": \"Test Amphure\",\n    \"province_id\": 1\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/amphures",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"amphures"
+									]
+								},
+								"description": "สร้างอำเภอใหม่ - ต้องมีสิทธิ์สร้างใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Amphure",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name_th\": \"อำเภอทดสอบ (แก้ไข)\",\n    \"name_en\": \"Test Amphure (Modified)\",\n    \"province_id\": 2\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/amphures/{{amphure_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"amphures",
+										"{{amphure_id}}"
+									]
+								},
+								"description": "แก้ไขข้อมูลอำเภอ - ต้องมีสิทธิ์แก้ไขใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Amphure",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/amphures/{{amphure_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"amphures",
+										"{{amphure_id}}"
+									]
+								},
+								"description": "ลบอำเภอ - ต้องมีสิทธิ์ลบใน setting_geography"
+							},
+							"response": []
 						}
-					  },
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/regions/{{region_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "regions",
-						  "{{region_id}}"
-						]
-					  },
-					  "description": "แก้ไขข้อมูลภูมิภาค - ต้องมีสิทธิ์แก้ไขใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Delete Region",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "DELETE",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/regions/{{region_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "regions",
-						  "{{region_id}}"
-						]
-					  },
-					  "description": "ลบภูมิภาค - ต้องมีสิทธิ์ลบใน setting_geography"
-					},
-					"response": []
-				  }
-				],
-				"description": "API จัดการข้อมูลภูมิภาค"
-			  },
-			  {
-				"name": "Provinces Endpoints",
-				"item": [
-				  {
-					"name": "Get All Provinces",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/provinces",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "provinces"
-						]
-					  },
-					  "description": "ดึงรายการจังหวัดทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Get Provinces by Geography",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/provinces?geography_id={{region_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "provinces"
-						],
-						"query": [
-						  {
-							"key": "geography_id",
-							"value": "{{region_id}}"
-						  }
-						]
-					  },
-					  "description": "ดึงรายการจังหวัดตามภูมิภาค - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Get Province by ID",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/provinces/{{province_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "provinces",
-						  "{{province_id}}"
-						]
-					  },
-					  "description": "ดึงข้อมูลจังหวัดตาม ID - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Create Province",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "POST",
-					  "header": [],
-					  "body": {
-						"mode": "raw",
-						"raw": "{\n    \"code\": \"99\",\n    \"name_th\": \"จังหวัดทดสอบ\",\n    \"name_en\": \"Test Province\",\n    \"geography_id\": 1\n}",
-						"options": {
-						  "raw": {
-							"language": "json"
-						  }
+					],
+					"description": "API จัดการข้อมูลอำเภอ"
+				},
+				{
+					"name": "Districts Endpoints",
+					"item": [
+						{
+							"name": "Get All Districts",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/districts",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"districts"
+									]
+								},
+								"description": "ดึงรายการตำบลทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Districts by Amphure",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/districts?amphure_id={{amphure_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"districts"
+									],
+									"query": [
+										{
+											"key": "amphure_id",
+											"value": "{{amphure_id}}"
+										}
+									]
+								},
+								"description": "ดึงรายการตำบลตามอำเภอ - ต้องมีสิทธิ์อ่านใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Get District by ID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/districts/{{district_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"districts",
+										"{{district_id}}"
+									]
+								},
+								"description": "ดึงข้อมูลตำบลตาม ID - ต้องมีสิทธิ์อ่านใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Create District",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"id\": \"999999\",\n    \"zip_code\": 99999,\n    \"name_th\": \"ตำบลทดสอบ\",\n    \"name_en\": \"Test District\",\n    \"amphure_id\": 1\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/districts",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"districts"
+									]
+								},
+								"description": "สร้างตำบลใหม่ - ต้องมีสิทธิ์สร้างใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Update District",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"zip_code\": 99999,\n    \"name_th\": \"ตำบลทดสอบ (แก้ไข)\",\n    \"name_en\": \"Test District (Modified)\",\n    \"amphure_id\": 2\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/districts/{{district_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"districts",
+										"{{district_id}}"
+									]
+								},
+								"description": "แก้ไขข้อมูลตำบล - ต้องมีสิทธิ์แก้ไขใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete District",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/districts/{{district_id}}",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"districts",
+										"{{district_id}}"
+									]
+								},
+								"description": "ลบตำบล - ต้องมีสิทธิ์ลบใน setting_geography"
+							},
+							"response": []
 						}
-					  },
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/provinces",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "provinces"
-						]
-					  },
-					  "description": "สร้างจังหวัดใหม่ - ต้องมีสิทธิ์สร้างใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Update Province",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "PUT",
-					  "header": [],
-					  "body": {
-						"mode": "raw",
-						"raw": "{\n    \"name_th\": \"จังหวัดทดสอบ (แก้ไข)\",\n    \"name_en\": \"Test Province (Modified)\",\n    \"geography_id\": 2\n}",
-						"options": {
-						  "raw": {
-							"language": "json"
-						  }
+					],
+					"description": "API จัดการข้อมูลตำบล"
+				},
+				{
+					"name": "Utility Endpoints",
+					"item": [
+						{
+							"name": "Get Geography Statistics",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/stats",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"stats"
+									]
+								},
+								"description": "ดึงข้อมูลสถิติของข้อมูลภูมิศาสตร์ - ต้องมีสิทธิ์อ่านใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Search by Zipcode",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/search/by-zipcode/10400",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"search",
+										"by-zipcode",
+										"10400"
+									]
+								},
+								"description": "ค้นหาสถานที่ตามรหัสไปรษณีย์ - ต้องมีสิทธิ์อ่านใน setting_geography"
+							},
+							"response": []
+						},
+						{
+							"name": "Search by Province Name",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/search/by-province/กรุงเทพ",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"search",
+										"by-province",
+										"กรุงเทพ"
+									]
+								},
+								"description": "ค้นหาข้อมูลจังหวัดตามชื่อ (ภาษาไทยหรืออังกฤษ) - รองรับการค้นหาแบบบางส่วนของชื่อ"
+							},
+							"response": []
+						},
+						{
+							"name": "Search by Amphure Name",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/search/by-amphure/เมือง",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"search",
+										"by-amphure",
+										"เมือง"
+									]
+								},
+								"description": "ค้นหาข้อมูลอำเภอตามชื่อ (ภาษาไทยหรืออังกฤษ) - รองรับการค้นหาแบบบางส่วนของชื่อ"
+							},
+							"response": []
+						},
+						{
+							"name": "Search by District Name",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/geography/search/by-district/สามเสน",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"geography",
+										"search",
+										"by-district",
+										"สามเสน"
+									]
+								},
+								"description": "ค้นหาข้อมูลตำบลตามชื่อ (ภาษาไทยหรืออังกฤษ) - รองรับการค้นหาแบบบางส่วนของชื่อ"
+							},
+							"response": []
 						}
-					  },
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/provinces/{{province_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "provinces",
-						  "{{province_id}}"
-						]
-					  },
-					  "description": "แก้ไขข้อมูลจังหวัด - ต้องมีสิทธิ์แก้ไขใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Delete Province",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "DELETE",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/provinces/{{province_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "provinces",
-						  "{{province_id}}"
-						]
-					  },
-					  "description": "ลบจังหวัด - ต้องมีสิทธิ์ลบใน setting_geography"
-					},
-					"response": []
-				  }
-				],
-				"description": "API จัดการข้อมูลจังหวัด"
-			  },
-			  {
-				"name": "Amphures Endpoints",
-				"item": [
-				  {
-					"name": "Get All Amphures",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/amphures",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "amphures"
-						]
-					  },
-					  "description": "ดึงรายการอำเภอทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Get Amphures by Province",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/amphures?province_id={{province_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "amphures"
-						],
-						"query": [
-						  {
-							"key": "province_id",
-							"value": "{{province_id}}"
-						  }
-						]
-					  },
-					  "description": "ดึงรายการอำเภอตามจังหวัด - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Get Amphure by ID",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/amphures/{{amphure_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "amphures",
-						  "{{amphure_id}}"
-						]
-					  },
-					  "description": "ดึงข้อมูลอำเภอตาม ID - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Create Amphure",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "POST",
-					  "header": [],
-					  "body": {
-						"mode": "raw",
-						"raw": "{\n    \"code\": \"9999\",\n    \"name_th\": \"อำเภอทดสอบ\",\n    \"name_en\": \"Test Amphure\",\n    \"province_id\": 1\n}",
-						"options": {
-						  "raw": {
-							"language": "json"
-						  }
-						}
-					  },
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/amphures",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "amphures"
-						]
-					  },
-					  "description": "สร้างอำเภอใหม่ - ต้องมีสิทธิ์สร้างใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Update Amphure",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "PUT",
-					  "header": [],
-					  "body": {
-						"mode": "raw",
-						"raw": "{\n    \"name_th\": \"อำเภอทดสอบ (แก้ไข)\",\n    \"name_en\": \"Test Amphure (Modified)\",\n    \"province_id\": 2\n}",
-						"options": {
-						  "raw": {
-							"language": "json"
-						  }
-						}
-					  },
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/amphures/{{amphure_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "amphures",
-						  "{{amphure_id}}"
-						]
-					  },
-					  "description": "แก้ไขข้อมูลอำเภอ - ต้องมีสิทธิ์แก้ไขใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Delete Amphure",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "DELETE",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/amphures/{{amphure_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "amphures",
-						  "{{amphure_id}}"
-						]
-					  },
-					  "description": "ลบอำเภอ - ต้องมีสิทธิ์ลบใน setting_geography"
-					},
-					"response": []
-				  }
-				],
-				"description": "API จัดการข้อมูลอำเภอ"
-			  },
-			  {
-				"name": "Districts Endpoints",
-				"item": [
-				  {
-					"name": "Get All Districts",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/districts",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "districts"
-						]
-					  },
-					  "description": "ดึงรายการตำบลทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Get Districts by Amphure",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/districts?amphure_id={{amphure_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "districts"
-						],
-						"query": [
-						  {
-							"key": "amphure_id",
-							"value": "{{amphure_id}}"
-						  }
-						]
-					  },
-					  "description": "ดึงรายการตำบลตามอำเภอ - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Get District by ID",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/districts/{{district_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "districts",
-						  "{{district_id}}"
-						]
-					  },
-					  "description": "ดึงข้อมูลตำบลตาม ID - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Create District",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "POST",
-					  "header": [],
-					  "body": {
-						"mode": "raw",
-						"raw": "{\n    \"id\": \"999999\",\n    \"zip_code\": 99999,\n    \"name_th\": \"ตำบลทดสอบ\",\n    \"name_en\": \"Test District\",\n    \"amphure_id\": 1\n}",
-						"options": {
-						  "raw": {
-							"language": "json"
-						  }
-						}
-					  },
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/districts",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "districts"
-						]
-					  },
-					  "description": "สร้างตำบลใหม่ - ต้องมีสิทธิ์สร้างใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Update District",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "PUT",
-					  "header": [],
-					  "body": {
-						"mode": "raw",
-						"raw": "{\n    \"zip_code\": 99999,\n    \"name_th\": \"ตำบลทดสอบ (แก้ไข)\",\n    \"name_en\": \"Test District (Modified)\",\n    \"amphure_id\": 2\n}",
-						"options": {
-						  "raw": {
-							"language": "json"
-						  }
-						}
-					  },
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/districts/{{district_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "districts",
-						  "{{district_id}}"
-						]
-					  },
-					  "description": "แก้ไขข้อมูลตำบล - ต้องมีสิทธิ์แก้ไขใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Delete District",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "DELETE",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/districts/{{district_id}}",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "districts",
-						  "{{district_id}}"
-						]
-					  },
-					  "description": "ลบตำบล - ต้องมีสิทธิ์ลบใน setting_geography"
-					},
-					"response": []
-				  }
-				],
-				"description": "API จัดการข้อมูลตำบล"
-			  },
-			  {
-				"name": "Utility Endpoints",
-				"item": [
-				  {
-					"name": "Get Geography Statistics",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/stats",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "stats"
-						]
-					  },
-					  "description": "ดึงข้อมูลสถิติของข้อมูลภูมิศาสตร์ - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Search by Zipcode",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/search/by-zipcode/10400",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "search",
-						  "by-zipcode",
-						  "10400"
-						]
-					  },
-					  "description": "ค้นหาสถานที่ตามรหัสไปรษณีย์ - ต้องมีสิทธิ์อ่านใน setting_geography"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Search by Province Name",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/search/by-province/กรุงเทพ",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "search",
-						  "by-province",
-						  "กรุงเทพ"
-						]
-					  },
-					  "description": "ค้นหาข้อมูลจังหวัดตามชื่อ (ภาษาไทยหรืออังกฤษ) - รองรับการค้นหาแบบบางส่วนของชื่อ"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Search by Amphure Name",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/search/by-amphure/เมือง",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "search",
-						  "by-amphure",
-						  "เมือง"
-						]
-					  },
-					  "description": "ค้นหาข้อมูลอำเภอตามชื่อ (ภาษาไทยหรืออังกฤษ) - รองรับการค้นหาแบบบางส่วนของชื่อ"
-					},
-					"response": []
-				  },
-				  {
-					"name": "Search by District Name",
-					"request": {
-					  "auth": {
-						"type": "bearer",
-						"bearer": [
-						  {
-							"key": "token",
-							"value": "{{access_token}}",
-							"type": "string"
-						  }
-						]
-					  },
-					  "method": "GET",
-					  "header": [],
-					  "url": {
-						"raw": "{{API}}{{PREFIX}}/geography/search/by-district/สามเสน",
-						"host": [
-						  "{{API}}{{PREFIX}}"
-						],
-						"path": [
-						  "geography",
-						  "search",
-						  "by-district",
-						  "สามเสน"
-						]
-					  },
-					  "description": "ค้นหาข้อมูลตำบลตามชื่อ (ภาษาไทยหรืออังกฤษ) - รองรับการค้นหาแบบบางส่วนของชื่อ"
-					},
-					"response": []
-				  }
-				],
-				"description": "API สำหรับดึงข้อมูลสถิติและค้นหาข้อมูล"
-			  }
+					],
+					"description": "API สำหรับดึงข้อมูลสถิติและค้นหาข้อมูล"
+				}
 			],
 			"description": "API สำหรับจัดการข้อมูลภูมิศาสตร์ (ภูมิภาค, จังหวัด, อำเภอ, ตำบล)"
 		},
 		{
-		"name": "COMPLAINTS",
-		"item": [
-			{
-			"name": "Create Complaint",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "POST",
-				"header": [],
-				"body": {
-				"mode": "raw",
-				"raw": "{\r\n  \"step1\": {\r\n    \"general\": {\r\n      \"general\": {\r\n        \"idCard\": \"1234567890123\",\r\n        \"name\": \"ผู้ร้องทุกข์ทดสอบ\",\r\n        \"address\": \"123 ถนนทดสอบ\",\r\n        \"phone\": \"0812345678\",\r\n        \"subdistricts\": \"ตำบลทดสอบ\",\r\n        \"districts\": \"อำเภอทดสอบ\",\r\n        \"email\": \"test@example.com\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"zipcode\": \"10100\"\r\n      },\r\n      \"delegate\": {\r\n        \"idCard\": \"9876543210987\",\r\n        \"name\": \"ผู้รับมอบอำนาจทดสอบ\",\r\n        \"address\": \"456 ถนนทดสอบ\",\r\n        \"phone\": \"0898765432\",\r\n        \"email\": \"delegate@example.com\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"subdistricts\": \"ตำบลทดสอบ 2\",\r\n        \"districts\": \"อำเภอทดสอบ 2\",\r\n        \"zipcode\": \"10110\"\r\n      }\r\n    }\r\n  },\r\n  \"step2\": {\r\n    \"general\": {\r\n      \"individual\": {\r\n        \"idCard\": \"1122334455667\",\r\n        \"name\": \"ผู้ถูกร้องทุกข์ทดสอบ\",\r\n        \"email\": \"respondent@example.com\",\r\n        \"address\": \"789 ถนนทดสอบ\",\r\n        \"phone\": \"0823456789\",\r\n        \"subdistricts\": \"ตำบลทดสอบ 3\",\r\n        \"districts\": \"อำเภอทดสอบ 3\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"zipcode\": \"10120\"\r\n      }\r\n    }\r\n  },\r\n  \"step3\": {\r\n    \"general\": {\r\n      \"incidentDate\": \"2023-10-15T14:30:00.000Z\",\r\n      \"complaintType\": \"การทุจริต\",\r\n      \"subject\": \"เรื่องร้องเรียนทดสอบ\",\r\n      \"description\": \"รายละเอียดเรื่องร้องเรียนทดสอบ เพื่อการทดสอบระบบ\",\r\n      \"attachment\": []\r\n    }\r\n  },\r\n  \"step4\": {\r\n    \"general\": {\r\n      \"accepted\": true\r\n    }\r\n  }\r\n}",
-				"options": {
-					"raw": {
-					"language": "json"
-					}
-				}
-				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"complaints"
-				]
-				},
-				"description": "Create a new complaint using the nested structure with 4 steps"
-			}
-			},
-			{
-			"name": "Get All Complaints",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints?skip=0&limit=10&status=SUBMITTED",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"complaints"
-				],
-				"query": [
-					{
-					"key": "skip",
-					"value": "0"
+			"name": "COMPLAINTS",
+			"item": [
+				{
+					"name": "Create Complaint",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"step1\": {\r\n    \"general\": {\r\n      \"general\": {\r\n        \"idCard\": \"1234567890123\",\r\n        \"name\": \"ผู้ร้องทุกข์ทดสอบ\",\r\n        \"address\": \"123 ถนนทดสอบ\",\r\n        \"phone\": \"0812345678\",\r\n        \"subdistricts\": \"ตำบลทดสอบ\",\r\n        \"districts\": \"อำเภอทดสอบ\",\r\n        \"email\": \"test@example.com\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"zipcode\": \"10100\"\r\n      },\r\n      \"delegate\": {\r\n        \"idCard\": \"9876543210987\",\r\n        \"name\": \"ผู้รับมอบอำนาจทดสอบ\",\r\n        \"address\": \"456 ถนนทดสอบ\",\r\n        \"phone\": \"0898765432\",\r\n        \"email\": \"delegate@example.com\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"subdistricts\": \"ตำบลทดสอบ 2\",\r\n        \"districts\": \"อำเภอทดสอบ 2\",\r\n        \"zipcode\": \"10110\"\r\n      }\r\n    }\r\n  },\r\n  \"step2\": {\r\n    \"general\": {\r\n      \"individual\": {\r\n        \"idCard\": \"1122334455667\",\r\n        \"name\": \"ผู้ถูกร้องทุกข์ทดสอบ\",\r\n        \"email\": \"respondent@example.com\",\r\n        \"address\": \"789 ถนนทดสอบ\",\r\n        \"phone\": \"0823456789\",\r\n        \"subdistricts\": \"ตำบลทดสอบ 3\",\r\n        \"districts\": \"อำเภอทดสอบ 3\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"zipcode\": \"10120\"\r\n      }\r\n    }\r\n  },\r\n  \"step3\": {\r\n    \"general\": {\r\n      \"incidentDate\": \"2023-10-15T14:30:00.000Z\",\r\n      \"complaintType\": \"การทุจริต\",\r\n      \"subject\": \"เรื่องร้องเรียนทดสอบ\",\r\n      \"description\": \"รายละเอียดเรื่องร้องเรียนทดสอบ เพื่อการทดสอบระบบ\",\r\n      \"attachment\": []\r\n    }\r\n  },\r\n  \"step4\": {\r\n    \"general\": {\r\n      \"accepted\": true\r\n    }\r\n  }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints"
+							]
+						},
+						"description": "Create a new complaint using the nested structure with 4 steps"
 					},
-					{
-					"key": "limit",
-					"value": "10"
+					"response": []
+				},
+				{
+					"name": "Get All Complaints",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints?skip=0&limit=10&status=SUBMITTED",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "SUBMITTED",
+									"description": "Optional filter by status"
+								}
+							]
+						},
+						"description": "Get a list of complaints with pagination and optional status filtering"
 					},
-					{
-					"key": "status",
-					"value": "SUBMITTED",
-					"description": "Optional filter by status"
-					}
-				]
+					"response": []
 				},
-				"description": "Get a list of complaints with pagination and optional status filtering"
-			}
-			},
-			{
-			"name": "Get Complaint by ID",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"complaints",
-					"{{complaint_id}}"
-				]
-				},
-				"description": "Get detailed information about a specific complaint by ID"
-			}
-			},
-			{
-			"name": "Get All Me Complaints",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints/me?skip=0&limit=10&status=SUBMITTED",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"complaints",
-					"me"
-				],
-				"query": [
-					{
-					"key": "skip",
-					"value": "0"
+				{
+					"name": "Get Complaint by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}"
+							]
+						},
+						"description": "Get detailed information about a specific complaint by ID"
 					},
-					{
-					"key": "limit",
-					"value": "10"
+					"response": []
+				},
+				{
+					"name": "Get All Me Complaints",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/me?skip=0&limit=10&status=SUBMITTED",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"me"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "SUBMITTED",
+									"description": "Optional filter by status"
+								}
+							]
+						},
+						"description": "Get a list of complaints with pagination and optional status filtering"
 					},
-					{
-					"key": "status",
-					"value": "SUBMITTED",
-					"description": "Optional filter by status"
-					}
-				]
+					"response": []
 				},
-				"description": "Get a list of complaints with pagination and optional status filtering"
-			}
-			},
-			{
-			"name": "Get Me Complaint by ID",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
+				{
+					"name": "Get Me Complaint by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/me/{{complaint_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"me",
+								"{{complaint_id}}"
+							]
+						},
+						"description": "Get detailed information about a specific complaint by ID"
+					},
+					"response": []
 				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints/me/{{complaint_id}}",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"complaints",
-					"me",
-					"{{complaint_id}}"
-				]
+				{
+					"name": "Update Complaint Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"IN_PROCESS\",\n    \"notes\": \"เริ่มการดำเนินการตรวจสอบข้อเท็จจริง\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/status",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"status"
+							]
+						},
+						"description": "Update the status of a complaint"
+					},
+					"response": []
 				},
-				"description": "Get detailed information about a specific complaint by ID"
-			}
-			},
-			{
-			"name": "Update Complaint Status",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
+				{
+					"name": "Assign Complaint",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "\"กรมสรรพากร\"",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/assign",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"assign"
+							]
+						},
+						"description": "Assign a complaint to an agency"
+					},
+					"response": []
 				},
-				"method": "PATCH",
-				"header": [],
-				"body": {
-				"mode": "raw",
-				"raw": "{\n    \"status\": \"IN_PROCESS\",\n    \"notes\": \"เริ่มการดำเนินการตรวจสอบข้อเท็จจริง\"\n}",
-				"options": {
-					"raw": {
-					"language": "json"
-					}
+				{
+					"name": "Add Resolution",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "\"ได้ดำเนินการตรวจสอบข้อเท็จจริงแล้ว พบว่า... และได้ดำเนินการแก้ไขโดย...\"",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/resolution",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"resolution"
+							]
+						},
+						"description": "Add resolution details to a complaint"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Complaint",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}"
+							]
+						},
+						"description": "Delete a complaint (requires delete permission on 'complaints')"
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Attachment",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/path/to/your/file.pdf"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/upload-attachment",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"upload-attachment"
+							]
+						},
+						"description": "Upload an attachment file for a complaint"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Attachment to Complaint",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/path/to/your/file.pdf"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/attachments",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"attachments"
+							]
+						},
+						"description": "Add an attachment to a specific complaint"
+					},
+					"response": []
 				}
-				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/status",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"complaints",
-					"{{complaint_id}}",
-					"status"
-				]
-				},
-				"description": "Update the status of a complaint"
-			}
-			},
-			{
-			"name": "Assign Complaint",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "PATCH",
-				"header": [],
-				"body": {
-				"mode": "raw",
-				"raw": "\"กรมสรรพากร\"",
-				"options": {
-					"raw": {
-					"language": "json"
-					}
-				}
-				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/assign",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"complaints",
-					"{{complaint_id}}",
-					"assign"
-				]
-				},
-				"description": "Assign a complaint to an agency"
-			}
-			},
-			{
-			"name": "Add Resolution",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "PATCH",
-				"header": [],
-				"body": {
-				"mode": "raw",
-				"raw": "\"ได้ดำเนินการตรวจสอบข้อเท็จจริงแล้ว พบว่า... และได้ดำเนินการแก้ไขโดย...\"",
-				"options": {
-					"raw": {
-					"language": "json"
-					}
-				}
-				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/resolution",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"complaints",
-					"{{complaint_id}}",
-					"resolution"
-				]
-				},
-				"description": "Add resolution details to a complaint"
-			}
-			},
-			{
-			"name": "Delete Complaint",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "DELETE",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"complaints",
-					"{{complaint_id}}"
-				]
-				},
-				"description": "Delete a complaint (requires delete permission on 'complaints')"
-			}
-			},
-			{
-			"name": "Upload Attachment",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "POST",
-				"header": [],
-				"body": {
-				"mode": "formdata",
-				"formdata": [
-					{
-					"key": "file",
-					"type": "file",
-					"src": "/path/to/your/file.pdf"
-					}
-				]
-				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints/upload-attachment",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"complaints",
-					"upload-attachment"
-				]
-				},
-				"description": "Upload an attachment file for a complaint"
-			}
-			},
-			{
-			"name": "Add Attachment to Complaint",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "POST",
-				"header": [],
-				"body": {
-				"mode": "formdata",
-				"formdata": [
-					{
-					"key": "file",
-					"type": "file",
-					"src": "/path/to/your/file.pdf"
-					}
-				]
-				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/attachments",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"complaints",
-					"{{complaint_id}}",
-					"attachments"
-				]
-				},
-				"description": "Add an attachment to a specific complaint"
-			}
-			}
-		],
-		"description": "API endpoints for managing complaints"
+			],
+			"description": "API endpoints for managing complaints"
 		},
 		{
-		"name": "FILE MANAGEMENT",
-		"item": [
-			{
-			"name": "Get Storage Usage",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/file-management/usage",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"file-management",
-					"usage"
-				]
-				},
-				"description": "Get storage usage statistics (admin permission required)"
-			}
-			},
-			{
-			"name": "Cleanup Files",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "POST",
-				"header": [],
-				"body": {
-				"mode": "raw",
-				"raw": "{\n    \"folder\": \"complaints\"\n}",
-				"options": {
-					"raw": {
-					"language": "json"
-					}
-				}
-				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/file-management/cleanup",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"file-management",
-					"cleanup"
-				]
-				},
-				"description": "Manually run file cleanup process (admin permission required)"
-			}
-			},
-			{
-			"name": "List Files by Date",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
-				},
-				"method": "GET",
-				"header": [],
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/file-management/list-by-date?start_date=2023-10-01&end_date=2023-10-31&folder=complaints",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"file-management",
-					"list-by-date"
-				],
-				"query": [
-					{
-					"key": "start_date",
-					"value": "2023-10-01"
+			"name": "FILE MANAGEMENT",
+			"item": [
+				{
+					"name": "Get Storage Usage",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/file-management/usage",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"file-management",
+								"usage"
+							]
+						},
+						"description": "Get storage usage statistics (admin permission required)"
 					},
-					{
-					"key": "end_date",
-					"value": "2023-10-31"
+					"response": []
+				},
+				{
+					"name": "Cleanup Files",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"folder\": \"complaints\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/file-management/cleanup",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"file-management",
+								"cleanup"
+							]
+						},
+						"description": "Manually run file cleanup process (admin permission required)"
 					},
-					{
-					"key": "folder",
-					"value": "complaints"
-					}
-				]
+					"response": []
 				},
-				"description": "List files within a specific date range (admin permission required)"
-			}
-			},
-			{
-			"name": "Move Storage",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
+				{
+					"name": "List Files by Date",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/file-management/list-by-date?start_date=2023-10-01&end_date=2023-10-31&folder=complaints",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"file-management",
+								"list-by-date"
+							],
+							"query": [
+								{
+									"key": "start_date",
+									"value": "2023-10-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2023-10-31"
+								},
+								{
+									"key": "folder",
+									"value": "complaints"
+								}
+							]
+						},
+						"description": "List files within a specific date range (admin permission required)"
+					},
+					"response": []
 				},
-				"method": "POST",
-				"header": [],
-				"body": {
-				"mode": "raw",
-				"raw": "{\n    \"new_location\": \"/path/to/new/storage\"\n}",
-				"options": {
-					"raw": {
-					"language": "json"
-					}
+				{
+					"name": "Move Storage",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"new_location\": \"/path/to/new/storage\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/file-management/move-storage",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"file-management",
+								"move-storage"
+							]
+						},
+						"description": "Move all uploaded files to a new storage location (admin permission required)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Retention Policy",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"days\": 90\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/file-management/update-retention",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"file-management",
+								"update-retention"
+							]
+						},
+						"description": "Update the global file retention policy (admin permission required)"
+					},
+					"response": []
 				}
+			],
+			"description": "API endpoints for managing file storage"
+		},
+		{
+			"name": "COMPLAINT METADATA",
+			"item": [
+				{
+					"name": "COMPLAINT REGISTRATION",
+					"item": [
+						{
+							"name": "Register Complaint",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"complaint_number\": \"COMP-2025-00001\",\n    \"registration_date\": \"2025-05-19T10:00:00.000Z\",\n    \"priority\": \"medium\",\n    \"registration_channel_id\": \"{{complaint_channel_id}}\",\n    \"due_date\": \"2025-06-19T10:00:00.000Z\",\n    \"notes\": \"เรื่องร้องเรียนลงทะเบียนโดยเจ้าหน้าที่\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/register",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"complaints",
+										"{{complaint_id}}",
+										"register"
+									]
+								},
+								"description": "ลงทะเบียนเรื่องร้องเรียนในระบบโดยเจ้าหน้าที่ - ต้องมีสิทธิ์แก้ไขใน complaints"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Registration Data",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/registration",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"complaints",
+										"{{complaint_id}}",
+										"registration"
+									]
+								},
+								"description": "ดึงข้อมูลการลงทะเบียนเรื่องร้องเรียน"
+							},
+							"response": []
+						}
+					]
 				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/file-management/move-storage",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"file-management",
-					"move-storage"
-				]
+				{
+					"name": "Get All Complaint Types",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/types?skip=0&limit=100&active_only=true",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"types"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "100"
+								},
+								{
+									"key": "active_only",
+									"value": "true"
+								}
+							]
+						},
+						"description": "ดึงรายการประเภทเรื่องร้องเรียนหลักทั้งหมด"
+					},
+					"response": []
 				},
-				"description": "Move all uploaded files to a new storage location (admin permission required)"
-			}
-			},
-			{
-			"name": "Update Retention Policy",
-			"request": {
-				"auth": {
-				"type": "bearer",
-				"bearer": [
-					{
-					"key": "token",
-					"value": "{{access_token}}",
-					"type": "string"
-					}
-				]
+				{
+					"name": "Create Complaint Type",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"ประเภทเรื่องร้องเรียนใหม่\",\n    \"description\": \"คำอธิบายประเภทเรื่องร้องเรียนใหม่\",\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/types",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"types"
+							]
+						},
+						"description": "สร้างประเภทเรื่องร้องเรียนหลักใหม่ - ต้องมีสิทธิ์สร้างใน complaint_types"
+					},
+					"response": []
 				},
-				"method": "POST",
-				"header": [],
-				"body": {
-				"mode": "raw",
-				"raw": "{\n    \"days\": 90\n}",
-				"options": {
-					"raw": {
-					"language": "json"
-					}
+				{
+					"name": "Get Complaint Type by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/types/{{complaint_type_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"types",
+								"{{complaint_type_id}}"
+							]
+						},
+						"description": "ดึงข้อมูลประเภทเรื่องร้องเรียนหลักตาม ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Complaint Type",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"ประเภทเรื่องร้องเรียนที่ปรับปรุงแล้ว\",\n    \"description\": \"คำอธิบายประเภทเรื่องร้องเรียนที่ปรับปรุงแล้ว\",\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/types/{{complaint_type_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"types",
+								"{{complaint_type_id}}"
+							]
+						},
+						"description": "อัพเดทข้อมูลประเภทเรื่องร้องเรียนหลัก - ต้องมีสิทธิ์แก้ไขใน complaint_types"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Complaint Type",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/types/{{complaint_type_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"types",
+								"{{complaint_type_id}}"
+							]
+						},
+						"description": "ลบประเภทเรื่องร้องเรียนหลัก - ต้องมีสิทธิ์ลบใน complaint_types"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Complaint Subtypes",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/subtypes?skip=0&limit=100&active_only=true&parent_type_id={{complaint_type_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"subtypes"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "100"
+								},
+								{
+									"key": "active_only",
+									"value": "true"
+								},
+								{
+									"key": "parent_type_id",
+									"value": "{{complaint_type_id}}",
+									"description": "Optional - filter by parent type"
+								}
+							]
+						},
+						"description": "ดึงรายการประเภทเรื่องร้องเรียนย่อยทั้งหมด (สามารถกรองตามประเภทหลักได้)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Complaint Subtype",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"parent_type_id\": \"{{complaint_type_id}}\",\n    \"name\": \"ประเภทเรื่องร้องเรียนย่อยใหม่\",\n    \"description\": \"คำอธิบายประเภทเรื่องร้องเรียนย่อยใหม่\",\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/subtypes",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"subtypes"
+							]
+						},
+						"description": "สร้างประเภทเรื่องร้องเรียนย่อยใหม่ - ต้องมีสิทธิ์สร้างใน complaint_subtypes"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Complaint Subtype by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/subtypes/{{complaint_subtype_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"subtypes",
+								"{{complaint_subtype_id}}"
+							]
+						},
+						"description": "ดึงข้อมูลประเภทเรื่องร้องเรียนย่อยตาม ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Complaint Subtype",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"parent_type_id\": \"{{complaint_type_id}}\",\n    \"name\": \"ประเภทเรื่องร้องเรียนย่อยที่ปรับปรุงแล้ว\",\n    \"description\": \"คำอธิบายประเภทเรื่องร้องเรียนย่อยที่ปรับปรุงแล้ว\",\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/subtypes/{{complaint_subtype_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"subtypes",
+								"{{complaint_subtype_id}}"
+							]
+						},
+						"description": "อัพเดทข้อมูลประเภทเรื่องร้องเรียนย่อย - ต้องมีสิทธิ์แก้ไขใน complaint_subtypes"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Complaint Subtype",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/subtypes/{{complaint_subtype_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"subtypes",
+								"{{complaint_subtype_id}}"
+							]
+						},
+						"description": "ลบประเภทเรื่องร้องเรียนย่อย - ต้องมีสิทธิ์ลบใน complaint_subtypes"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Complaint Channels",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/channels?skip=0&limit=100&active_only=true",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"channels"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "100"
+								},
+								{
+									"key": "active_only",
+									"value": "true"
+								}
+							]
+						},
+						"description": "ดึงรายการช่องทางการร้องเรียนทั้งหมด"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Complaint Channel",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"ช่องทางการร้องเรียนใหม่\",\n    \"description\": \"คำอธิบายช่องทางการร้องเรียนใหม่\",\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/channels",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"channels"
+							]
+						},
+						"description": "สร้างช่องทางการร้องเรียนใหม่ - ต้องมีสิทธิ์สร้างใน complaint_channels"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Complaint Channel by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/channels/{{complaint_channel_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"channels",
+								"{{complaint_channel_id}}"
+							]
+						},
+						"description": "ดึงข้อมูลช่องทางการร้องเรียนตาม ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Complaint Channel",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"ช่องทางการร้องเรียนที่ปรับปรุงแล้ว\",\n    \"description\": \"คำอธิบายช่องทางการร้องเรียนที่ปรับปรุงแล้ว\",\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/channels/{{complaint_channel_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"channels",
+								"{{complaint_channel_id}}"
+							]
+						},
+						"description": "อัพเดทข้อมูลช่องทางการร้องเรียน - ต้องมีสิทธิ์แก้ไขใน complaint_channels"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Complaint Channel",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaint-metadata/channels/{{complaint_channel_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaint-metadata",
+								"channels",
+								"{{complaint_channel_id}}"
+							]
+						},
+						"description": "ลบช่องทางการร้องเรียน - ต้องมีสิทธิ์ลบใน complaint_channels"
+					},
+					"response": []
 				}
-				},
-				"url": {
-				"raw": "{{API}}{{PREFIX}}/file-management/update-retention",
-				"host": [
-					"{{API}}{{PREFIX}}"
-				],
-				"path": [
-					"file-management",
-					"update-retention"
-				]
-				},
-				"description": "Update the global file retention policy (admin permission required)"
-			}
-			}
-		],
-		"description": "API endpoints for managing file storage"
+			],
+			"description": "API สำหรับจัดการข้อมูลพื้นฐานเกี่ยวกับเรื่องร้องเรียน เช่น ประเภทเรื่องร้องเรียน และช่องทางการร้องเรียน"
 		}
 	],
 	"event": [
