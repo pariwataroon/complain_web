@@ -23,6 +23,16 @@ def save_original_complaint(complaint_data: Dict[str, Any]) -> Dict[str, Any]:
         "step3": copy.deepcopy(complaint_data.get("step3", {})),
         "step4": copy.deepcopy(complaint_data.get("step4", {}))
     }
+    
+    # ตรวจสอบว่ามี complaintType ใน step3.general หรือไม่ และมีค่าหรือไม่
+    if "step3" in result and "general" in result["step3"]:
+        if "complaintType" in result["step3"]["general"] and result["step3"]["general"]["complaintType"]:
+            # พบค่า complaintType ที่ไม่ว่างเปล่า - ไม่ต้องทำอะไร
+            pass
+        elif "complaintType" in complaint_data:
+            # ถ้ามีค่าที่ระดับบนสุด ให้ใช้ค่านั้น
+            result["step3"]["general"]["complaintType"] = complaint_data["complaintType"]
+    
     return result
 
 def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optional[UUID] = None) -> Complaint:
@@ -31,6 +41,11 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
         # แปลงข้อมูล formData ถ้ามีก่อน
         if "formData" in complaint_data:
             complaint_data = complaint_data["formData"]
+
+        # เก็บค่า complaintType จาก root level ไว้ก่อน เพราะมีความสำคัญ
+        root_complaint_type = ""
+        if "complaintType" in complaint_data and complaint_data["complaintType"]:
+            root_complaint_type = complaint_data["complaintType"]
 
         # Check if data is in flat format and convert to step format if needed
         if "subject" in complaint_data and "step1" not in complaint_data:
@@ -41,7 +56,7 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                     "general": {
                         "subject": complaint_data.get("subject", ""),
                         "description": complaint_data.get("description", ""),
-                        "complaintType": complaint_data.get("complaint_type", ""),
+                        "complaintType": complaint_data.get("complaintType", complaint_data.get("complaint_type", "")),
                         "incidentDate": complaint_data.get("incident_date", None),
                         "attachment": complaint_data.get("attachments", [])
                     }
@@ -108,8 +123,20 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                 elif respondent_type_lower == "government":
                     structured_data["step2"]["general"]["activeType"] = "government"
                     structured_data["step2"]["general"]["government"] = complaint_data.get("respondent_data", {})
+            
+            # รักษาค่า complaintType จาก root level ไว้
+            if root_complaint_type:
+                structured_data["complaintType"] = root_complaint_type
+                structured_data["step3"]["general"]["complaintType"] = root_complaint_type
                 
             complaint_data = structured_data
+        
+        # ถ้าไม่มีการแปลงโครงสร้าง ให้ตรวจสอบว่ายังมีค่า root_complaint_type จาก step แรกหรือไม่
+        elif root_complaint_type:
+            complaint_data["complaintType"] = root_complaint_type
+            # ตรวจสอบและอัพเดต step3.general.complaintType
+            if "step3" in complaint_data and "general" in complaint_data["step3"]:
+                complaint_data["step3"]["general"]["complaintType"] = root_complaint_type
            
         # 1. เก็บข้อมูลดิบทั้งหมดแบบ JSON object
         original_data = save_original_complaint(complaint_data)
@@ -125,18 +152,30 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
         description = ""
         complaint_type = ""
         incident_date = None
-        
+
+        # กำหนดค่าจากพารามิเตอร์โดยตรงก่อน - มีความสำคัญสูงสุด
+        if "complaintType" in complaint_data and complaint_data["complaintType"]:
+            complaint_type = complaint_data["complaintType"]
+
+        # ดึงข้อมูลจาก step3 แล้ว
         if "general" in step3:
             step3_general = step3["general"]
             subject = step3_general.get("subject", "")
             description = step3_general.get("description", "")
-            complaint_type = step3_general.get("complaintType", "")
+            
+            # ถ้ายังไม่มีค่า complaint_type จาก root ให้ใช้จาก step3.general 
+            if not complaint_type and "complaintType" in step3_general and step3_general["complaintType"]:
+                complaint_type = step3_general["complaintType"]
             
             if "incidentDate" in step3_general and step3_general["incidentDate"]:
                 try:
                     incident_date = datetime.fromisoformat(step3_general["incidentDate"].replace('Z', '+00:00'))
                 except Exception as e:
                     incident_date = None
+        
+        # หากยังไม่มีค่า complaint_type แต่มี root_complaint_type ให้ใช้ค่านั้น
+        if not complaint_type and root_complaint_type:
+            complaint_type = root_complaint_type
         
         # 4. ข้อมูลการยอมรับเงื่อนไข
         accepted = True
@@ -365,13 +404,27 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
             
         if not respondent_data:
             raise ValueError("Respondent data is required")
+
+        # อัพเดต complaintType ในข้อมูลต้นฉบับก่อนแปลงเป็น JSON 
+        # (ทั้ง root level และ step3.general)
+        if complaint_type:
+            # อัพเดตที่ root level
+            if isinstance(complaint_data, dict):
+                complaint_data["complaintType"] = complaint_type
             
-        # Convert all JSON data to proper format for database (explicitly to JSON strings)
+            # อัพเดตที่ step3.general
+            if isinstance(original_data, dict) and "step3" in original_data and "general" in original_data["step3"]:
+                original_data["step3"]["general"]["complaintType"] = complaint_type
+        
+        # Convert all JSON data to proper format for database
         complainant_data_json = convert_to_db_json(complainant_data)
         respondent_data_json = convert_to_db_json(respondent_data)
         delegate_data_json = convert_to_db_json(delegate_data) if delegate_data else None
+        
+        # อัพเดต full_complaint_data หลังจากอัพเดต complaintType ในต้นฉบับ
         full_complaint_data_json = convert_to_db_json(original_data)
         
+        # สร้าง complaint ใหม่โดยใช้ค่าที่กำหนด
         new_complaint = Complaint(
             complaint_number=complaint_number,
             subject=subject,
@@ -401,6 +454,8 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
         
     except Exception as e:
         db.rollback()
+        print(f"Error in create_complaint: {str(e)}")
+        traceback.print_exc()
         raise
 
 def extract_address_fields(data: Dict) -> Dict:

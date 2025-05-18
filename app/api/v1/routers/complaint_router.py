@@ -61,6 +61,9 @@ async def create_new_complaint(
         
         # Step 4: Acceptance
         step4 = request_data.get("step4", {}).get("general", {})
+
+        # แยกค่า complaintType ออกมาเพื่อส่งเป็น property ตรงๆ
+        complaint_type = step3.get("complaintType", "")
         
         # Create data structure for controller
         complaint_data = {
@@ -78,6 +81,7 @@ async def create_new_complaint(
             },
             "incident_data": step3,
             "accepted": step4.get("accepted", True),
+            "complaintType": complaint_type
         }
         
         # Use the controller function instead of directly creating model instance
