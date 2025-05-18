@@ -34,14 +34,39 @@ def get_client_ip(request: Request) -> str:
 
 async def get_body_data(request: Request) -> str:
     """Safely extract body content, with size limit"""
+    # ตรวจสอบ content-type ก่อน
+    content_type = request.headers.get("content-type", "").lower()
+    
+    # กรณีเป็น multipart/form-data (อัพโหลดไฟล์)
+    if content_type.startswith("multipart/form-data"):
+        try:
+            # ดึงข้อมูลไฟล์เฉพาะส่วน metadata เท่านั้น
+            body = await request.body()
+            
+            # ดึงชื่อไฟล์จาก header ถ้าเป็นไปได้
+            filename = "unknown"
+            if "content-disposition" in request.headers:
+                disposition = request.headers["content-disposition"]
+                if "filename=" in disposition:
+                    filename = disposition.split("filename=")[1].strip('"\'')
+            
+            # แสดงเฉพาะขนาดไฟล์และ content-type
+            file_size = len(body)
+            content_length = request.headers.get("content-length", "unknown")
+            
+            return f"[MULTIPART_FORM_DATA] File upload: {filename}, Size: {content_length} bytes (Binary data omitted for logging)"
+        except Exception as e:
+            return f"[MULTIPART_FORM_DATA] Unable to process file upload data: {str(e)}"
+    
+    # กรณีอื่นๆ ที่ไม่ใช่การอัพโหลดไฟล์
     body = await request.body()
-
+    
     # ถ้าไม่มี body ให้ระบุว่าไม่มี
     if not body:
         return "No Body"
 
     # ถ้าเป็น JSON ให้แปลงเป็น dict แล้วแปลงกลับเป็น JSON สวยงาม
-    if request.headers.get("content-type", "").startswith("application/json"):
+    if content_type.startswith("application/json"):
         try:
             body_dict = json.loads(body)
             for key, value in body_dict.items():
