@@ -1,0 +1,52 @@
+{
+  "comp_complaint_subtypes": [
+    {
+      "parent_type_name": "ร้องเรียนทั่วไป",
+      "name": "ผู้บริโภค",
+      "description": "เรื่องร้องเรียนเกี่ยวกับการคุ้มครองผู้บริโภค",
+      "is_active": true
+    },
+    {
+      "parent_type_name": "ร้องเรียนทั่วไป",
+      "name": "สิ่งแวดล้อม",
+      "description": "เรื่องร้องเรียนเกี่ยวกับสิ่งแวดล้อม",
+      "is_active": true
+    },
+    {
+      "parent_type_name": "บริการ",
+      "name": "ความล่าช้า",
+      "description": "ร้องเรียนความล่าช้าในการให้บริการ",
+      "is_active": true
+    },
+    {
+      "parent_type_name": "บริการ",
+      "name": "คุณภาพบริการ",
+      "description": "ร้องเรียนเกี่ยวกับคุณภาพการให้บริการ",
+      "is_active": true
+    },
+    {
+      "parent_type_name": "พฤติกรรมเจ้าหน้าที่",
+      "name": "การให้บริการ",
+      "description": "ร้องเรียนพฤติกรรมการให้บริการของเจ้าหน้าที่",
+      "is_active": true
+    },
+    {
+      "parent_type_name": "พฤติกรรมเจ้าหน้าที่",
+      "name": "การใช้วาจา",
+      "description": "ร้องเรียนการใช้วาจาไม่เหมาะสมของเจ้าหน้าที่",
+      "is_active": true
+    },
+    {
+      "parent_type_name": "ทุจริต",
+      "name": "เรียกรับผลประโยชน์",
+      "description": "ร้องเรียนเจ้าหน้าที่เรียกรับผลประโยชน์",
+      "is_active": true
+    },
+    {
+      "parent_type_name": "ทุจริต",
+      "name": "ทุจริตการจัดซื้อจัดจ้าง",
+      "description": "ร้องเรียนการทุจริตด้านการจัดซื้อจัดจ้าง",
+      "is_active": true
+    }
+  ]
+}

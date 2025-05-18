@@ -22,7 +22,8 @@ from .comp_amphures import Amphure
 from .comp_districts import District
 from .project_api_key import ProjectApiKey
 from .signature_authorities import SignatureAuthority
-from .comp_complaint import Complaint, ComplaintAttachment
+from .comp_complaint import Complaint, ComplaintAttachment, ComplaintStatusHistory
+from .comp_complaint_types import ComplaintType, ComplaintSubType, ComplaintChannel
 
 
 # ระบุโมเดลที่สามารถนำเข้าเมื่อใช้ from models import *
@@ -32,4 +33,5 @@ __all__ = [
     'ResourceGroup', 'TimeSetting', 'UserPosition', 'Venue', 'VerificationToken',
     'Geography', 'Province', 'Amphure', 'District', 'ProjectApiKey',
     'SignatureAuthority', 'Complaint', 'ComplaintAttachment',
+    'ComplaintStatusHistory', 'ComplaintType', 'ComplaintSubType', 'ComplaintChannel',
 ]

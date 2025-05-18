@@ -1,0 +1,229 @@
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, Body, Query
+from sqlalchemy.orm import Session
+from typing import Optional
+
+from app.api.middleware.jwt_verify import verify_token
+from app.api.middleware.permission_middleware import can_create, can_read, can_update, can_delete
+from app.api.v1.controllers.complaint_metadata_controller import (
+    # ComplaintType
+    get_complaint_types, create_complaint_type, get_complaint_type, update_complaint_type, delete_complaint_type,
+    # ComplaintSubType
+    get_complaint_subtypes, create_complaint_subtype, get_complaint_subtype, update_complaint_subtype, delete_complaint_subtype,
+    # ComplaintChannel
+    get_complaint_channels, create_complaint_channel, get_complaint_channel, update_complaint_channel, delete_complaint_channel
+)
+from app.api.v1.schemas.complaint_metadata import (
+    # ComplaintType
+    ComplaintTypeCreate, ComplaintTypeUpdate, ComplaintTypeResponse, ComplaintTypeList,
+    # ComplaintSubType
+    ComplaintSubTypeCreate, ComplaintSubTypeUpdate, ComplaintSubTypeResponse, ComplaintSubTypeList,
+    # ComplaintChannel
+    ComplaintChannelCreate, ComplaintChannelUpdate, ComplaintChannelResponse, ComplaintChannelList
+)
+from config.database import get_db
+from lib.format_data import FormatResponseModel, format_response
+
+router = APIRouter(
+    prefix="/complaint-metadata",
+    tags=["complaint_metadata"],
+)
+
+# === ComplaintType Routes ===
+
+@router.get("/types", response_model=FormatResponseModel)
+async def read_complaint_types(
+    skip: int = 0, 
+    limit: int = 100,
+    active_only: bool = False,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ดึงรายการประเภทเรื่องร้องเรียนหลัก"""
+    complaint_types = get_complaint_types(db, skip=skip, limit=limit, active_only=active_only)
+    
+    # แปลงข้อมูลโดยใช้ Pydantic schema
+    result = [ComplaintTypeResponse.from_orm(type_item).dict() for type_item in complaint_types]
+    
+    return format_response("0000", result)
+
+@router.post("/types", response_model=FormatResponseModel)
+async def create_type(
+    type_data: ComplaintTypeCreate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_create("setting_access"))
+):
+    """สร้างประเภทเรื่องร้องเรียนหลักใหม่"""
+    new_type = create_complaint_type(db, type_data.dict())
+    return format_response("0001", ComplaintTypeResponse.from_orm(new_type).dict())
+
+@router.get("/types/{type_id}", response_model=FormatResponseModel)
+async def read_complaint_type(
+    type_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ดึงข้อมูลประเภทเรื่องร้องเรียนหลัก"""
+    complaint_type = get_complaint_type(db, type_id)
+    if complaint_type is None:
+        raise HTTPException(status_code=404, detail="Complaint type not found")
+    return format_response("0000", ComplaintTypeResponse.from_orm(complaint_type).dict())
+
+@router.put("/types/{type_id}", response_model=FormatResponseModel)
+async def update_type(
+    type_id: UUID,
+    type_data: ComplaintTypeUpdate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("setting_access"))
+):
+    """อัพเดทข้อมูลประเภทเรื่องร้องเรียนหลัก"""
+    updated_type = update_complaint_type(db, type_id, type_data.dict(exclude_unset=True))
+    if updated_type is None:
+        raise HTTPException(status_code=404, detail="Complaint type not found")
+    return format_response("0002", ComplaintTypeResponse.from_orm(updated_type).dict())
+
+@router.delete("/types/{type_id}", response_model=FormatResponseModel)
+async def delete_type(
+    type_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_delete("setting_access"))
+):
+    """ลบประเภทเรื่องร้องเรียนหลัก"""
+    success = delete_complaint_type(db, type_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Complaint type not found")
+    return format_response("0003", {"id": str(type_id)})
+
+# === ComplaintSubType Routes ===
+
+@router.get("/subtypes", response_model=FormatResponseModel)
+async def read_complaint_subtypes(
+    skip: int = 0, 
+    limit: int = 100,
+    parent_type_id: Optional[UUID] = None,
+    active_only: bool = False,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ดึงรายการประเภทเรื่องร้องเรียนย่อย"""
+    result = get_complaint_subtypes(db, skip=skip, limit=limit, parent_type_id=parent_type_id, active_only=active_only)
+    return format_response("0000", result)
+
+@router.post("/subtypes", response_model=FormatResponseModel)
+async def create_subtype(
+    subtype_data: ComplaintSubTypeCreate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_create("complaint_subtypes"))
+):
+    """สร้างประเภทเรื่องร้องเรียนย่อยใหม่"""
+    # ตรวจสอบว่า parent_type_id มีอยู่จริง
+    parent_type = get_complaint_type(db, subtype_data.parent_type_id)
+    if parent_type is None:
+        raise HTTPException(status_code=404, detail="Parent complaint type not found")
+    
+    new_subtype = create_complaint_subtype(db, subtype_data.dict())
+    return format_response("0001", ComplaintSubTypeResponse.from_orm(new_subtype).dict())
+
+@router.get("/subtypes/{subtype_id}", response_model=FormatResponseModel)
+async def read_complaint_subtype(
+    subtype_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ดึงข้อมูลประเภทเรื่องร้องเรียนย่อย"""
+    complaint_subtype = get_complaint_subtype(db, subtype_id)
+    if complaint_subtype is None:
+        raise HTTPException(status_code=404, detail="Complaint subtype not found")
+    return format_response("0000", ComplaintSubTypeResponse.from_orm(complaint_subtype).dict())
+
+@router.put("/subtypes/{subtype_id}", response_model=FormatResponseModel)
+async def update_subtype(
+    subtype_id: UUID,
+    subtype_data: ComplaintSubTypeUpdate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("complaint_subtypes"))
+):
+    """อัพเดทข้อมูลประเภทเรื่องร้องเรียนย่อย"""
+    # ตรวจสอบว่า parent_type_id มีอยู่จริง (ถ้ามีการเปลี่ยนแปลง)
+    if subtype_data.parent_type_id:
+        parent_type = get_complaint_type(db, subtype_data.parent_type_id)
+        if parent_type is None:
+            raise HTTPException(status_code=404, detail="Parent complaint type not found")
+    
+    updated_subtype = update_complaint_subtype(db, subtype_id, subtype_data.dict(exclude_unset=True))
+    if updated_subtype is None:
+        raise HTTPException(status_code=404, detail="Complaint subtype not found")
+    return format_response("0002", ComplaintSubTypeResponse.from_orm(updated_subtype).dict())
+
+@router.delete("/subtypes/{subtype_id}", response_model=FormatResponseModel)
+async def delete_subtype(
+    subtype_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_delete("complaint_subtypes"))
+):
+    """ลบประเภทเรื่องร้องเรียนย่อย"""
+    success = delete_complaint_subtype(db, subtype_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Complaint subtype not found")
+    return format_response("0003", {"id": str(subtype_id)})
+
+# === ComplaintChannel Routes ===
+
+@router.get("/channels", response_model=FormatResponseModel)
+async def read_complaint_channels(
+    skip: int = 0, 
+    limit: int = 100,
+    active_only: bool = False,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ดึงรายการช่องทางการร้องเรียน"""
+    result = get_complaint_channels(db, skip=skip, limit=limit, active_only=active_only)
+    return format_response("0000", result)
+
+@router.post("/channels", response_model=FormatResponseModel)
+async def create_channel(
+    channel_data: ComplaintChannelCreate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_create("complaint_channels"))
+):
+    """สร้างช่องทางการร้องเรียนใหม่"""
+    new_channel = create_complaint_channel(db, channel_data.dict())
+    return format_response("0001", ComplaintChannelResponse.from_orm(new_channel).dict())
+
+@router.get("/channels/{channel_id}", response_model=FormatResponseModel)
+async def read_complaint_channel(
+    channel_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ดึงข้อมูลช่องทางการร้องเรียน"""
+    channel = get_complaint_channel(db, channel_id)
+    if channel is None:
+        raise HTTPException(status_code=404, detail="Complaint channel not found")
+    return format_response("0000", ComplaintChannelResponse.from_orm(channel).dict())
+
+@router.put("/channels/{channel_id}", response_model=FormatResponseModel)
+async def update_channel(
+    channel_id: UUID,
+    channel_data: ComplaintChannelUpdate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("complaint_channels"))
+):
+    """อัพเดทข้อมูลช่องทางการร้องเรียน"""
+    updated_channel = update_complaint_channel(db, channel_id, channel_data.dict(exclude_unset=True))
+    if updated_channel is None:
+        raise HTTPException(status_code=404, detail="Complaint channel not found")
+    return format_response("0002", ComplaintChannelResponse.from_orm(updated_channel).dict())
+
+@router.delete("/channels/{channel_id}", response_model=FormatResponseModel)
+async def delete_channel(
+    channel_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_delete("complaint_channels"))
+):
+    """ลบช่องทางการร้องเรียน"""
+    success = delete_complaint_channel(db, channel_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Complaint channel not found")
+    return format_response("0003", {"id": str(channel_id)})

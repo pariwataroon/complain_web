@@ -1,7 +1,7 @@
 import uuid
 import enum
 from sqlalchemy import (NVARCHAR, Boolean, Column, DateTime, 
-                      ForeignKey, Integer, Text, JSON, Enum)
+                      ForeignKey, Integer, Text, JSON, Enum, String)
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -86,6 +86,31 @@ class Complaint(Base):
     
     # ประวัติสถานะ
     status_history = relationship("ComplaintStatusHistory", back_populates="complaint", cascade="all, delete-orphan")
+
+    # ข้อมูลเพิ่มเติมสำหรับเจ้าหน้าที่
+    complaint_type_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_complaint_types.id"), nullable=True)
+    complaint_subtype_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_complaint_subtypes.id"), nullable=True)
+    complaint_channel_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_complaint_channels.id"), nullable=True)
+    
+    # ข้อมูลเลขที่อ้างอิงจากระบบอื่น
+    reference_number = Column(NVARCHAR(100), nullable=True, comment="เลข อปค.")
+    reference_number2 = Column(NVARCHAR(100), nullable=True, comment="เลข สตร.")
+    reference_number3 = Column(NVARCHAR(100), nullable=True, comment="เลขหนังสือ")
+    
+    # ข้อมูลวันที่ลงทะเบียน
+    registration_date = Column(DateTime, nullable=True)
+    
+    # ความลับ
+    confidentiality_level = Column(String(50), nullable=True, comment="ขั้นความลับ")
+    urgency_level = Column(String(50), nullable=True, comment="ความเร่งด่วน")
+    
+    # หน่วยงานที่ส่งเรื่องมาถึง กค.
+    agency_sender = Column(NVARCHAR(200), nullable=True, comment="หน่วยงานที่ส่งเรื่องมาถึง กค.")
+    
+    # Relationships
+    complaint_type_relation = relationship("ComplaintType", back_populates="complaints")
+    complaint_subtype_relation = relationship("ComplaintSubType", back_populates="complaints")
+    complaint_channel_relation = relationship("ComplaintChannel", back_populates="complaints")
 
 class ComplaintAttachment(Base):
     __tablename__ = "comp_complaint_attachments"

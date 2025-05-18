@@ -26,6 +26,9 @@ from seeders.comp_geographies_seeder import GeographySeeder
 from seeders.comp_provinces_seeder import ProvinceSeeder
 from seeders.comp_amphures_seeder import AmphureSeeder
 from seeders.comp_districts_seeder import DistrictSeeder
+from seeders.comp_complaint_types_seeder import ComplaintTypeSeeder
+from seeders.comp_complaint_subtypes_seeder import ComplaintSubTypeSeeder
+from seeders.comp_complaint_channels_seeder import ComplaintChannelSeeder
 
 # เพิ่ม path เพื่อป้องกัน import error
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -64,6 +67,9 @@ def check_and_seed_tables():
             {"name": "provinces", "seeder": ProvinceSeeder(), "table_prefix": "comp_"},
             {"name": "amphures", "seeder": AmphureSeeder(), "table_prefix": "comp_"},
             {"name": "districts", "seeder": DistrictSeeder(), "table_prefix": "comp_"},
+            {"name": "complaint_types", "seeder": ComplaintTypeSeeder(), "table_prefix": "comp_"},
+            {"name": "complaint_subtypes", "seeder": ComplaintSubTypeSeeder(), "table_prefix": "comp_"},
+            {"name": "complaint_channels", "seeder": ComplaintChannelSeeder(), "table_prefix": "comp_"},
         ]
 
         # วนลูปตรวจสอบแต่ละตาราง โดยเรียกตามลำดับที่กำหนดไว้ในลิสต์
