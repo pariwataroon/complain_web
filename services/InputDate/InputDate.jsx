@@ -11,11 +11,12 @@ dayjs.locale("th");
 
 const InputDate = ({ label, value, onChange, name }) => {
   const [open, setOpen] = useState(false);
-  const pickerRef = useRef();
+  const pickerRef = useRef(null);
 
   return (
     <Box mt={-2}>
       <FormLabel>{label}</FormLabel>
+
       <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="th">
         <DateTimePicker
           ampm={false}
@@ -32,6 +33,24 @@ const InputDate = ({ label, value, onChange, name }) => {
             textField: {
               fullWidth: true,
               size: "small",
+              InputProps: {
+                sx: {
+                  // ---- รูปทรงและสีเส้นขอบ ----
+                  borderRadius: "10px",
+                  "& fieldset": {
+                    borderRadius: "10px",
+                    borderColor: "#1120A3 !important",
+                  },
+                  // ---- สีตัวอักษร / placeholder ----
+                  "& .MuiOutlinedInput-input": {
+                    color: "#1120A3",
+                    "&::placeholder": {
+                      color: "#1120A3",
+                      opacity: 1,
+                    },
+                  },
+                },
+              },
               inputProps: {
                 readOnly: true,
                 onClick: (e) => {

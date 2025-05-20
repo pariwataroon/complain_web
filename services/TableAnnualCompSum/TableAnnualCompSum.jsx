@@ -24,7 +24,7 @@ import styles from "./TableAnnualCompSum.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
-import InputDate from "@services/InputDate/InputDate";
+import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
 
 const TableAnnualCompSum = ({
   data = [],
@@ -108,11 +108,13 @@ const TableAnnualCompSum = ({
                     onChange={handleChange(f.name)}
                   />
                 ) : f.type === "date" ? (
-                  <InputDate
-                    label={f.label}
-                    value={filters[f.name]}
-                    onChange={handleChange(f.name)}
-                  />
+                  <Box mt={2}>
+                    <InputDateNoTime
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                    />{" "}
+                  </Box>
                 ) : (
                   <InputText
                     fullWidth
@@ -123,35 +125,38 @@ const TableAnnualCompSum = ({
                 )}
               </Box>
             ))}
-            <IconButton
-              onClick={handleSearchClick}
-              sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                width: 40,
-                height: 40,
-                ml: 1,
-                "&:hover": {
-                  bgcolor: "#1120A3", // คงสีเดิมไว้ตอน hover
-                },
-              }}
-            >
-              <SearchIcon />
-            </IconButton>
-            <IconButton
-              onClick={handleClearClick}
-              sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                width: 40,
-                height: 40,
-                "&:hover": {
-                  bgcolor: "#1120A3", // คงสีเดิมไว้ตอน hover
-                },
-              }}
-            >
-              <SearchOffIcon />
-            </IconButton>
+            <Box mt={3}>
+              <IconButton
+                onClick={handleSearchClick}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  width: 40,
+                  height: 40,
+                  ml: 1,
+                  "&:hover": {
+                    bgcolor: "#1120A3", // คงสีเดิมไว้ตอน hover
+                  },
+                }}
+              >
+                <SearchIcon />
+              </IconButton>
+              <IconButton
+                onClick={handleClearClick}
+                sx={{
+                  marginLeft: "10px",
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  width: 40,
+                  height: 40,
+                  "&:hover": {
+                    bgcolor: "#1120A3", // คงสีเดิมไว้ตอน hover
+                  },
+                }}
+              >
+                <SearchOffIcon />
+              </IconButton>
+            </Box>
           </Box>
           <Box
             display="flex"

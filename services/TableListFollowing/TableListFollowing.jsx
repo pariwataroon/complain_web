@@ -194,7 +194,7 @@ const TableListFollowing = ({
               </TableCell>
               <TableCell sx={{ width: 200 }}>ชื่อสกุลผู้ร้อง</TableCell>
               <TableCell sx={{ width: 180 }}>หน่วยงานที่เกี่ยวข้อง</TableCell>
-              <TableCell sx={{ width: 300 }}>เลขสรร.</TableCell>
+              <TableCell sx={{ width: 100 }}>เลขสรร.</TableCell>
               <TableCell sx={{ width: 180 }}>เรื่อง</TableCell>
               <TableCell sx={{ width: 160 }}>ประเภทเรื่อง</TableCell>
               <TableCell sx={{ width: 160 }}>วันที่รับเรื่อง</TableCell>

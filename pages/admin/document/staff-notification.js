@@ -1,8 +1,12 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import StaffNotificationComponents from "@components/Report/StaffNotificationComponents/StaffNotificationComponents";
 
 const StaffNotification = () => {
-  return <div>รายงานการแจ้งเตือนเจ้าหน้าที่</div>;
+  return (
+    <div>
+      <StaffNotificationComponents />
+    </div>
+  );
 };
 
 StaffNotification.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;

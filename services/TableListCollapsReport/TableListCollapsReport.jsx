@@ -12,7 +12,6 @@ import {
   TablePagination,
   Container,
   IconButton,
-  Collapse,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
@@ -24,6 +23,7 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonService from "@services/ButtonService/ButtonService";
+import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
 
 const TableListBox = ({
   data = [],
@@ -151,6 +151,15 @@ const TableListBox = ({
                     value={filters[f.name]}
                     onChange={handleChange(f.name)}
                   />
+                ) : f.type === "date" ? ( // 👈 เพิ่มเงื่อนไขนี้
+                  <Box mt={2}>
+                    <InputDateNoTime
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      name={f.name}
+                    />{" "}
+                  </Box>
                 ) : (
                   <InputText
                     fullWidth
@@ -161,33 +170,35 @@ const TableListBox = ({
                 )}
               </Box>
             ))}
-
-            <IconButton
-              onClick={handleSearchClick}
-              sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                width: 48,
-                height: 48,
-                borderRadius: "50%",
-                "&:hover": { bgcolor: "#0b1580" },
-              }}
-            >
-              <SearchIcon />
-            </IconButton>
-            <IconButton
-              onClick={handleClearSearch}
-              sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                width: 48,
-                height: 48,
-                borderRadius: "50%",
-                "&:hover": { bgcolor: "#0b1580" },
-              }}
-            >
-              <SearchOffIcon />
-            </IconButton>
+            <Box mt={3}>
+              <IconButton
+                onClick={handleSearchClick}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  "&:hover": { bgcolor: "#0b1580" },
+                }}
+              >
+                <SearchIcon />
+              </IconButton>
+              <IconButton
+                onClick={handleClearSearch}
+                sx={{
+                  marginLeft: "10px",
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  "&:hover": { bgcolor: "#0b1580" },
+                }}
+              >
+                <SearchOffIcon />
+              </IconButton>
+            </Box>
           </Box>
 
           {/* ปุ่มใหญ่ตรงกลาง */}

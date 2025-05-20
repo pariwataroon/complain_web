@@ -24,7 +24,7 @@ import styles from "./TableWorkFollow.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
-import InputDate from "@services/InputDate/InputDate";
+import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
 
 const TableWorkFollow = ({
   data = [],
@@ -150,7 +150,7 @@ const TableWorkFollow = ({
                     onChange={handleChange(f.name)}
                   />
                 ) : f.type === "date" ? (
-                  <InputDate
+                  <InputDateNoTime
                     label={f.label}
                     value={filters[f.name]}
                     onChange={handleChange(f.name)}

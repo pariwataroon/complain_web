@@ -121,24 +121,6 @@ const claimantOptions = [
   })),
 ];
 
-const departmentOptions = [
-  { value: "", label: "ทั้งหมด" },
-  ...[...new Set(mockComplaints.map((c) => c.department))].map((dep) => ({
-    value: dep,
-    label: dep,
-  })),
-];
-
-const responsibleOfficerOptions = [
-  { value: "", label: "ทั้งหมด" },
-  ...[...new Set(mockComplaints.map((c) => c.responsibleOfficer))].map(
-    (officer) => ({
-      value: officer,
-      label: officer,
-    })
-  ),
-];
-
 // ─── Component ─────────────────────────────────────────────────────────────
 const AnnualInspectorComplaintsSummaryComponents = () => {
   const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
@@ -206,14 +188,12 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
           {
             name: "department",
             label: "ตั้งแต่วันที่",
-            type: "select",
-            options: departmentOptions,
+            type: "date",
           },
           {
             name: "responsibleOfficer",
             label: "ถึงวันที่",
-            type: "select",
-            options: responsibleOfficerOptions,
+            type: "date",
           },
         ]}
       />

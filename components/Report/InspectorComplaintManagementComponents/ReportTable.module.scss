@@ -1,0 +1,177 @@
+.container {
+  width: 100%;
+  overflow-x: auto;
+  padding: 16px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+
+  th,
+  td {
+    border: 1px solid #2b35a1;
+    padding: 6px 4px;
+    vertical-align: middle;
+    word-break: break-word;
+    text-align: center;
+  }
+
+  th {
+    background-color: #fff;
+    color: #1120a3;
+    font-weight: 600;
+  }
+
+  /* ─── ปรับเส้นแบ่ง header ให้ต่อเนื่อง ─────────────────────── */
+  thead tr th {
+    border-bottom: none;
+  }
+  thead tr:last-child th {
+    /* ให้แถว header สุดท้ายมีเส้นแบ่งด้านล่าง */
+    border-bottom: 1px solid #2b35a1;
+  }
+
+  /* ─── แถว sub-header จริงๆ (แถวที่ 3 ของ thead) ───────────────── */
+  thead tr:nth-child(3) th {
+    background-color: #f5f5f5;
+    font-weight: 500;
+    font-size: 11px;
+  }
+
+  /* ─── กำหนดความกว้างคอลัมน์ 1–18 ───────────────────────────────── */
+  /* ลำดับ */
+  th:nth-child(1),
+  td:nth-child(1) {
+    width: 10px;
+  }
+  /* วันที่ สคบ. รับเรื่อง */
+  th:nth-child(2),
+  td:nth-child(2) {
+    width: 40px;
+  }
+  /* เรื่อง */
+  th:nth-child(3),
+  td:nth-child(3) {
+    width: 150px;
+    text-align: left;
+  }
+  /* leaf ของ “หน่วยงาน” (GSB–ไผ่) */
+  th:nth-child(4),
+  td:nth-child(4),
+  th:nth-child(5),
+  td:nth-child(5),
+  th:nth-child(6),
+  td:nth-child(6),
+  th:nth-child(7),
+  td:nth-child(7),
+  th:nth-child(8),
+  td:nth-child(8),
+  th:nth-child(9),
+  td:nth-child(9) {
+    width: 60px;
+  }
+  /* leaf ของ “ประเภทเรื่อง” (หน่วยงาน + ส่วนบุคคล) */
+  th:nth-child(10),
+  td:nth-child(10),
+  th:nth-child(11),
+  td:nth-child(11),
+  th:nth-child(12),
+  td:nth-child(12),
+  th:nth-child(13),
+  td:nth-child(13) {
+    width: 60px;
+    min-width: 60px;
+  }
+  /* จังหวัด (กทม., ตวจ.) */
+  th:nth-child(14),
+  td:nth-child(14),
+  th:nth-child(15),
+  td:nth-child(15) {
+    width: 30px; /* ปรับลงจาก 50px */
+    max-width: 30px; /* กันไม่ให้ขยายเกิน */
+  }
+
+  /* สถานะ (ดำเนินการ, ยุติ) */
+  th:nth-child(17),
+  td:nth-child(17),
+  th:nth-child(18),
+  td:nth-child(18) {
+    width: 50px;
+  }
+  /* (คอลัมน์หมายเหตุ จัดการด้วย colgroup) */
+}
+
+/* ─── หัวข้อกลุ่มใหญ่ ─────────────────────────────────────────── */
+.unitHeader {
+  background-color: #1120a3;
+  color: #fff;
+  font-weight: 600;
+}
+
+.typeHeader {
+  background-color: #1120a3;
+  color: #fff;
+  font-weight: 600;
+}
+
+.provinceHeader {
+  background-color: #1120a3;
+  color: #fff;
+  font-weight: 600;
+}
+
+.statusHeader {
+  background-color: #1120a3;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ─── สีคอลัมน์ leaf ภายใต้ “หน่วยงาน” ──────────────────────── */
+.colGsb {
+  background-color: #ffc0cb;
+}
+.colPdmo {
+  background-color: #ffe4b5;
+}
+.colBsy {
+  background-color: #d6d6ff;
+}
+.colYst {
+  background-color: #a8e1ff;
+}
+.colSura {
+  background-color: #c2ffff;
+}
+.colPhai {
+  background-color: #b5ffb5;
+}
+
+/* ─── สีคอลัมน์ leaf ภายใต้ “ประเภทเรื่อง” ──────────────────── */
+.colTypeUnitS {
+  background-color: #d3d3d3;
+}
+.colTypeUnitNoS {
+  background-color: #e5e5e5;
+}
+.colPersonalS {
+  background-color: #d3d3d3;
+}
+.colPersonalNoS {
+  background-color: #e5e5e5;
+}
+
+/* ─── สีคอลัมน์ leaf ภายใต้ “สถานะ” ─────────────────────────── */
+.colOngoing {
+  background-color: #ffde59;
+}
+.colDone {
+  background-color: #8fd400;
+}
+
+/* ─── Styling สำหรับคอลัมน์หมายเหตุ ─────────────────────────── */
+.remarkCol {
+  text-align: left;
+}

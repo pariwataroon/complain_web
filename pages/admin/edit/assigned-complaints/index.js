@@ -1,8 +1,12 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import AssignedComplaintsComponents from "@components/ReceiveData/AssignedComplaintsComponents/AssignedComplaintsComponents";
 
 const Assignedcomplaints = () => {
-  return <div>เรื่องร้องเรียนที่ได้รับมอบหมาย</div>;
+  return (
+    <div>
+      <AssignedComplaintsComponents />
+    </div>
+  );
 };
 
 Assignedcomplaints.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
