@@ -10,8 +10,8 @@ export default function Forbidden403() {
         <NavbarMain menuType="alt" />
       </div>
       <div style={{ padding: "250px 50px", textAlign: "center" }}>
-        <h1>403 - ไม่สามารถเข้าถึงหน้านี้ได้</h1>
-        <p>คุณไม่มีสิทธิ์เข้าถึงหน้านี้ กรุณาติดต่อผู้ดูแลระบบ</p>
+        <h1>ไม่พบเพจที่คุณค้นหา</h1>
+        <p>กรุณาตรวจสอบ URL หรือกลับไปหน้าแรก</p>
       </div>
 
       <Footer />

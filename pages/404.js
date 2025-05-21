@@ -10,12 +10,9 @@ export default function Forbidden404() {
         <NavbarMain menuType="alt" />
       </div>
       <div style={{ padding: "250px 50px", textAlign: "center" }}>
-        <h1>404 - ไม่พบหน้าที่คุณค้นหา</h1>
-        <p>
-          หน้านี้อาจถูกลบหรือไม่มีอยู่ในระบบ กรุณาตรวจสอบ URL หรือกลับไปหน้าแรก
-        </p>
+        <h1>ไม่พบเพจที่คุณค้นหา</h1>
+        <p>กรุณาตรวจสอบ URL หรือกลับไปหน้าแรก</p>
       </div>
-
       <Footer />
     </div>
   );
