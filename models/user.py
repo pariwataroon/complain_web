@@ -49,3 +49,5 @@ class User(Base):
     verification_tokens = relationship("VerificationToken", back_populates="user", cascade="all, delete-orphan")
 
     complaints = relationship("Complaint", back_populates="creator")
+    
+    api_logs = relationship("ApiLog", back_populates="user")

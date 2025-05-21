@@ -1,10 +1,15 @@
 import time
 import uuid
 import json
+import jwt
 from fastapi import Request, FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.datastructures import Headers
+from sqlalchemy.orm import Session
 from lib.logger import get_logger
+from models.api_log import ApiLog
+from config.database import SessionLocal
+from config.dotenv import JWT_SECRET_KEY
 
 logger = get_logger("api", console_output=False)
 
@@ -117,11 +122,32 @@ def filter_important_headers(headers: Headers) -> dict:
     return filtered
 
 
+def extract_user_id_from_token(authorization_header: str) -> str:
+    """Extract user ID from JWT token"""
+    if not authorization_header or not authorization_header.startswith("Bearer "):
+        return None
+    
+    try:
+        # ตัด "Bearer " ออกแล้วดึงเฉพาะ token
+        token = authorization_header.replace("Bearer ", "", 1)
+        
+        # ถอดรหัส JWT token
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        
+        # ดึง user_id จาก payload (ตามโครงสร้าง JWT ที่ใช้)
+        return payload.get("sub")  # sub คือ subject ใน JWT ที่เก็บ user_id
+        
+    except Exception as e:
+        logger.error(f"Error extracting user ID from token: {str(e)}")
+        return None
+
+
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         request_id = str(uuid.uuid4())
         start_time = time.time()
         client_ip = get_client_ip(request)
+        user_id = None
 
         # เตรียมข้อมูล request สำหรับ log
         try:
@@ -135,6 +161,12 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
             # เก็บเฉพาะ headers ที่สำคัญ
             headers = filter_important_headers(request.headers)
+            
+            # ดึง user_id จาก token (ถ้ามี)
+            auth_header = request.headers.get("authorization")
+            if auth_header:
+                user_id = extract_user_id_from_token(auth_header)
+            
             path = request.url.path
             query_params = str(
                 request.query_params) if request.query_params else "No Query Params"
@@ -155,14 +187,15 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             # คำนวณเวลาที่ใช้
             process_time = time.time() - start_time
 
-            # บันทึก log เมื่อได้รับ response แล้ว (เก็บแค่ครั้งเดียว)
+            # สร้าง log entry
             log_entry = {
                 "request_id": request_id,
                 "status": response.status_code,
                 "method": method,
                 "path": path,
                 "client_ip": client_ip,
-                "process_time_ms": round(process_time * 1000, 2)
+                "process_time_ms": round(process_time * 1000, 2),
+                "user_id": user_id
             }
 
             # เพิ่ม headers, body และ query_params เมื่อจำเป็น
@@ -177,16 +210,27 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             if query_params != "No Query Params":
                 log_entry["query_params"] = query_params
 
-            # เลือกระดับ log ตาม status code
+            # บันทึก log ลงไฟล์
             if 400 <= response.status_code < 500:
-                logger.warning(
-                    f"API Request: {json.dumps(log_entry, ensure_ascii=False)}")
+                logger.warning(f"API Request: {json.dumps(log_entry, ensure_ascii=False)}")
             elif response.status_code >= 500:
-                logger.error(
-                    f"API Request: {json.dumps(log_entry, ensure_ascii=False)}")
+                logger.error(f"API Request: {json.dumps(log_entry, ensure_ascii=False)}")
             else:
-                logger.info(
-                    f"API Request: {json.dumps(log_entry, ensure_ascii=False)}")
+                logger.info(f"API Request: {json.dumps(log_entry, ensure_ascii=False)}")
+
+            # บันทึก log ลงฐานข้อมูล (แยกเป็น thread หรือ task)
+            await self.save_log_to_database(
+                request_id=request_id,
+                method=method,
+                path=path,
+                query_params=query_params if query_params != "No Query Params" else None,
+                client_ip=client_ip,
+                status_code=response.status_code,
+                process_time_ms=round(process_time * 1000, 2),
+                request_body=body_data if body_data != "No Body" else None,
+                request_headers=json.dumps(headers) if headers else None,
+                user_id=user_id
+            )
 
             return response
 
@@ -202,7 +246,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 "client_ip": client_ip,
                 "process_time_ms": round(process_time * 1000, 2),
                 "headers": headers,
-                "error": str(e)
+                "error": str(e),
+                "user_id": user_id
             }
 
             # เพิ่ม body เมื่อไม่ใช่ GET request หรือเป็น No Body
@@ -215,7 +260,52 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
             logger.error(
                 f"API Request Failed: {json.dumps(log_entry, ensure_ascii=False)}", exc_info=True)
+            
+            # พยายามบันทึก log ลงฐานข้อมูลแม้จะมี error
+            try:
+                await self.save_log_to_database(
+                    request_id=request_id,
+                    method=method,
+                    path=path,
+                    query_params=query_params if query_params != "No Query Params" else None,
+                    client_ip=client_ip,
+                    status_code=500,
+                    process_time_ms=round(process_time * 1000, 2),
+                    request_body=body_data if body_data != "No Body" else None,
+                    request_headers=json.dumps(headers) if headers else None,
+                    user_id=user_id
+                )
+            except Exception as db_error:
+                logger.error(f"Failed to save error log to database: {str(db_error)}")
+                
             raise
+
+    async def save_log_to_database(self, **log_data):
+        """Save log entry to database in a non-blocking way"""
+        try:
+            # ใช้ context manager เพื่อจัดการ session
+            with SessionLocal() as db:
+                # สร้าง ApiLog record ใหม่
+                api_log = ApiLog(
+                    request_id=log_data["request_id"],
+                    method=log_data["method"],
+                    path=log_data["path"],
+                    query_params=log_data["query_params"],
+                    client_ip=log_data["client_ip"],
+                    status_code=log_data["status_code"],
+                    process_time_ms=log_data["process_time_ms"],
+                    request_body=log_data["request_body"],
+                    request_headers=log_data["request_headers"],
+                    user_id=log_data["user_id"] if log_data["user_id"] else None
+                )
+                
+                # บันทึก record ลงฐานข้อมูล
+                db.add(api_log)
+                db.commit()
+                
+        except Exception as e:
+            # บันทึก error แต่ไม่ throw exception เพื่อไม่ให้กระทบ request หลัก
+            logger.error(f"Failed to save API log to database: {str(e)}")
 
 
 def setup_logging_middleware(app: FastAPI):

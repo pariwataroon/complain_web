@@ -2,7 +2,9 @@ import os
 import sys
 import urllib.parse
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect, text, MetaData, Table, Column, Integer, String, DateTime, Float, Text, ForeignKey
+from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
+from sqlalchemy.sql import func
 
 from config.database import Base, engine, get_db
 from config.dotenv import DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
@@ -29,6 +31,9 @@ from seeders.comp_districts_seeder import DistrictSeeder
 from seeders.comp_complaint_types_seeder import ComplaintTypeSeeder
 from seeders.comp_complaint_subtypes_seeder import ComplaintSubTypeSeeder
 from seeders.comp_complaint_channels_seeder import ComplaintChannelSeeder
+
+# Import the ApiLog model (you'll need to create this)
+from models.api_log import ApiLog
 
 # เพิ่ม path เพื่อป้องกัน import error
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -85,13 +90,48 @@ def check_and_seed_tables():
                 logger.info(f"Seeder for '{table_name}' completed with success: {success}")
             else:
                 logger.info(f"Table '{table_name}' does not exist yet. Will be created on next app start.")
+                
+        # Check if api_logs table exists, create it if not
+        if "api_logs" not in tables:
+            logger.info("Creating api_logs table...")
+            ensure_api_logs_table_exists()
 
     except Exception as e:
         logger.error(f"Error checking and seeding tables: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())  # เพิ่ม stack trace เพื่อ debug
 
-# แก้ไขเฉพาะส่วนที่เกี่ยวข้องกับการสร้างฐานข้อมูล
+
+def ensure_api_logs_table_exists():
+    """Ensure the api_logs table exists in the database"""
+    try:
+        # Define the api_logs table using SQLAlchemy Core
+        metadata = MetaData()
+        api_logs = Table(
+            "api_logs", metadata,
+            Column("id", UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4),
+            Column("request_id", String(100), index=True),
+            Column("method", String(10)),
+            Column("path", String(255)),
+            Column("query_params", Text, nullable=True),
+            Column("client_ip", String(50)),
+            Column("status_code", Integer),
+            Column("process_time_ms", Float),
+            Column("request_body", Text, nullable=True),
+            Column("request_headers", Text, nullable=True),
+            Column("user_id", UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), nullable=True),
+            Column("created_at", DateTime, default=func.now())
+        )
+        
+        # Create the table if it doesn't exist
+        metadata.create_all(engine, tables=[api_logs])
+        logger.info("API logs table created successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error creating API logs table: {str(e)}")
+        return False
+
 
 def init_database():
     """Initialize database tables based on SQLAlchemy models"""
@@ -142,6 +182,9 @@ def init_database():
         # 3. ตรวจสอบและนำข้อมูล seed เข้าระบบถ้าจำเป็น
         logger.info("Checking tables for data...")
         check_and_seed_tables()
+        
+        # Make sure the API logs table exists (in case it wasn't created by SQLAlchemy models)
+        ensure_api_logs_table_exists()
         
         # เพิ่มการเรียก UserRoleSeeder โดยตรง
         from seeders.user_role_seeder import UserRoleSeeder
