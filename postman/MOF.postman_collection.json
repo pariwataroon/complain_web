@@ -568,6 +568,214 @@
 			]
 		},
 		{
+		"name": "API LOGS",
+		"item": [
+			{
+			"name": "Get All API Logs",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/api-logs?skip=0&limit=100&user_id=&path=%2Fapi%2Fv1%2Fauth&method=&status_code=&client_ip=",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"api-logs"
+				],
+				"query": [
+					{
+					"key": "skip",
+					"value": "0"
+					},
+					{
+					"key": "limit",
+					"value": "100"
+					},
+					{
+					"key": "user_id",
+					"value": ""
+					},
+					{
+					"key": "path",
+					"value": "/api/v1/auth"
+					},
+					{
+					"key": "method",
+					"value": ""
+					},
+					{
+					"key": "status_code",
+					"value": ""
+					},
+					{
+					"key": "client_ip",
+					"value": ""
+					}
+				]
+				},
+				"description": "ดึงข้อมูลบันทึกการเรียกใช้ API ทั้งหมด พร้อมตัวกรองต่างๆ - ต้องมีสิทธิ์อ่านใน system_logs"
+			},
+			"response": []
+			},
+			{
+			"name": "Get API Log Details",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/api-logs/details/{{log_id}}",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"api-logs",
+					"details",
+					"{{log_id}}"
+				]
+				},
+				"description": "ดึงข้อมูลรายละเอียดของบันทึก API ตาม ID - ต้องมีสิทธิ์อ่านใน system_logs"
+			},
+			"response": []
+			},
+			{
+			"name": "Get API Log Statistics",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/api-logs/stats?days=7&user_id=",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"api-logs",
+					"stats"
+				],
+				"query": [
+					{
+					"key": "days",
+					"value": "7"
+					},
+					{
+					"key": "user_id",
+					"value": ""
+					}
+				]
+				},
+				"description": "ดึงข้อมูลสถิติการเรียกใช้ API - ต้องมีสิทธิ์อ่านใน system_logs"
+			},
+			"response": []
+			},
+			{
+			"name": "Get User Activity Logs",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/api-logs/user-activity/{{user_id}}?skip=0&limit=50",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"api-logs",
+					"user-activity",
+					"{{user_id}}"
+				],
+				"query": [
+					{
+					"key": "skip",
+					"value": "0"
+					},
+					{
+					"key": "limit",
+					"value": "50"
+					}
+				]
+				},
+				"description": "ดึงประวัติการใช้งานระบบของผู้ใช้รายบุคคล - ต้องมีสิทธิ์อ่านใน system_logs"
+			},
+			"response": []
+			},
+			{
+			"name": "Cleanup Old Logs",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "DELETE",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/api-logs/cleanup?days=90",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"api-logs",
+					"cleanup"
+				],
+				"query": [
+					{
+					"key": "days",
+					"value": "90"
+					}
+				]
+				},
+				"description": "ลบบันทึกการเรียกใช้งาน API ที่เก่ากว่าจำนวนวันที่ระบุ - ต้องมีสิทธิ์ลบใน system_logs"
+			},
+			"response": []
+			}
+		],
+		"description": "API สำหรับดูบันทึกการเรียกใช้งาน API และประวัติการใช้งานระบบ"
+		},
+		{
 			"name": "USERS",
 			"item": [
 				{
