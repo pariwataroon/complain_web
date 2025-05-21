@@ -38,7 +38,7 @@ def get_client_ip(request: Request) -> str:
 
 
 async def get_body_data(request: Request) -> str:
-    """Safely extract body content, with size limit"""
+    """Safely extract body content, with size limit and sensitive data filtering"""
     # ตรวจสอบ content-type ก่อน
     content_type = request.headers.get("content-type", "").lower()
     
@@ -74,12 +74,35 @@ async def get_body_data(request: Request) -> str:
     if content_type.startswith("application/json"):
         try:
             body_dict = json.loads(body)
-            for key, value in body_dict.items():
-                if isinstance(value, str) and len(value) > 500:
-                    body_dict[key] = value[:500] + "... [truncated]"
+            
+            # กรองข้อมูลที่ sensitive
+            sensitive_fields = ['password', 'pin', 'secret', 'token', 'key', 'รหัสผ่าน']
+            
+            # ฟังก์ชันช่วยกรองข้อมูล sensitive แบบ recursive
+            def filter_sensitive_data(data):
+                if isinstance(data, dict):
+                    for key in list(data.keys()):
+                        # กรองตาม key
+                        if any(sensitive in key.lower() for sensitive in sensitive_fields):
+                            data[key] = "[FILTERED]"
+                        elif isinstance(data[key], (dict, list)):
+                            data[key] = filter_sensitive_data(data[key])
+                        # ตัดข้อความที่ยาวเกินไป
+                        elif isinstance(data[key], str) and len(data[key]) > 500:
+                            data[key] = data[key][:500] + "... [truncated]"
+                elif isinstance(data, list):
+                    for i, item in enumerate(data):
+                        data[i] = filter_sensitive_data(item)
+                return data
+                
+            # กรองข้อมูลที่ sensitive
+            body_dict = filter_sensitive_data(body_dict)
+            
+            # แปลงกลับเป็น JSON string โดยใช้ ensure_ascii=False เพื่อรองรับภาษาไทย
             return json.dumps(body_dict, ensure_ascii=False)
-        except:
-            pass
+        except Exception as e:
+            # ถ้าแปลง JSON ไม่ได้ ให้แสดงข้อความ error
+            return f"Error parsing JSON body: {str(e)}"
 
     # ถ้าไม่ใช่ JSON หรือแปลงไม่ได้ ให้แสดงเป็น bytes และจำกัดความยาว
     if len(body) > 1000:
@@ -294,7 +317,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     client_ip=log_data["client_ip"],
                     status_code=log_data["status_code"],
                     process_time_ms=log_data["process_time_ms"],
-                    request_body=log_data["request_body"],
+                    request_body=log_data["request_body"] if log_data["request_body"] else None,
                     request_headers=log_data["request_headers"],
                     user_id=log_data["user_id"] if log_data["user_id"] else None
                 )
