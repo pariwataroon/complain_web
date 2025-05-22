@@ -1,0 +1,59 @@
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session
+from typing import List, Optional, Dict, Any
+from datetime import datetime, timedelta
+
+from app.api.middleware.jwt_verify import verify_token
+from app.api.middleware.permission_middleware import permission_required
+from config.database import get_db
+from lib.format_data import FormatResponseModel, format_response
+
+# นำเข้า controller สำหรับ dashboard
+from app.api.v1.controllers.dashboard_controller import (
+    get_staff_workload,
+    get_staff_performance
+)
+
+router = APIRouter(
+    prefix="/dashboard",
+    tags=["dashboard"],
+)
+
+@router.get("/staff-workload", response_model=FormatResponseModel)
+async def get_staff_workload_data(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """
+    ดึงข้อมูลภาระงานของเจ้าหน้าที่แต่ละคน แยกตามสถานะของเรื่องร้องทุกข์
+    เพื่อแสดงบน dashboard สำหรับผู้บริหาร
+    """
+    try:
+        result = get_staff_workload(db, skip, limit)
+        return format_response("0000", result)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return format_response("5000", {"error": str(e)})
+
+@router.get("/staff-performance", response_model=FormatResponseModel)
+async def get_staff_performance_data(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """
+    ดึงข้อมูลประสิทธิภาพการทำงานของเจ้าหน้าที่
+    แสดงจำนวนเรื่องที่จัดการสำเร็จ ระยะเวลาเฉลี่ยในการจัดการเรื่องร้องทุกข์
+    """
+    try:
+        result = get_staff_performance(db, date_from, date_to)
+        return format_response("0000", result)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return format_response("5000", {"error": str(e)})
