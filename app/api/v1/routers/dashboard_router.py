@@ -22,8 +22,10 @@ router = APIRouter(
 
 @router.get("/staff-workload", response_model=FormatResponseModel)
 async def get_staff_workload_data(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = 0, 
+    limit: int = 100, 
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
@@ -32,7 +34,7 @@ async def get_staff_workload_data(
     เพื่อแสดงบน dashboard สำหรับผู้บริหาร
     """
     try:
-        result = get_staff_workload(db, skip, limit)
+        result = get_staff_workload(db, skip, limit, date_from, date_to)
         return format_response("0000", result)
     except Exception as e:
         import traceback

@@ -228,22 +228,47 @@ def _calculate_summary_stats(db: Session) -> Dict:
         "status_counts": status_counts
     }
 
-def get_staff_workload(db: Session, skip: int = 0, limit: int = 100):
+def get_staff_workload(db: Session, skip: int = 0, limit: int = 100, date_from: Optional[str] = None, date_to: Optional[str] = None):
     """
     ดึงข้อมูลภาระงานของเจ้าหน้าที่แต่ละคน แยกตามสถานะของเรื่องร้องทุกข์
+    สามารถระบุช่วงเวลาที่ต้องการดูข้อมูลได้
     """
+    # แปลงวันที่
+    try:
+        if date_from:
+            start_date = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+        else:
+            # ถ้าไม่ระบุ ใช้ข้อมูลตั้งแต่ต้นปีปัจจุบัน
+            current_year = datetime.now().year
+            start_date = datetime(current_year, 1, 1)
+            
+        if date_to:
+            end_date = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
+        else:
+            end_date = datetime.now()
+    except ValueError as e:
+        logger.error(f"Invalid date format: {str(e)}")
+        # ถ้าไม่ระบุ ใช้ข้อมูลตั้งแต่ต้นปีปัจจุบัน
+        current_year = datetime.now().year
+        start_date = datetime(current_year, 1, 1)
+        end_date = datetime.now()
+    
     # 1. ดึงรายชื่อเจ้าหน้าที่
     staff_ids = _get_staff_list(db)
     
-    # 2. คำนวณสถิติโดยรวม
-    summary_stats = _calculate_summary_stats(db)
+    # 2. คำนวณสถิติโดยรวมตามช่วงเวลา
+    summary_stats = _calculate_summary_stats_by_date(db, start_date, end_date)
     total_count = summary_stats["total_complaints"]
     
     # 3. ดึงจำนวนเรื่องตามสถานะแยกตามเจ้าหน้าที่ (ทำครั้งเดียว)
-    status_counts_by_staff = _get_status_counts_by_staff(db, staff_ids)
+    status_counts_by_staff = _get_status_counts_by_staff_and_date(db, staff_ids, start_date, end_date)
     
     # 4. สร้างผลลัพธ์
     result = {
+        "date_range": {
+            "from": start_date.isoformat(),
+            "to": end_date.isoformat()
+        },
         "summary": {
             "total_staff": len(staff_ids),
             "total_complaints": total_count,
@@ -257,7 +282,8 @@ def get_staff_workload(db: Session, skip: int = 0, limit: int = 100):
     
     for staff_id in staff_ids:
         latest_complaints = db.query(Complaint).filter(
-            Complaint.assigned_to == staff_id
+            Complaint.assigned_to == staff_id,
+            Complaint.assigned_date.between(start_date, end_date)
         ).order_by(Complaint.updated_at.desc()).limit(5).all()
         
         latest_list = []
@@ -317,6 +343,59 @@ def get_staff_workload(db: Session, skip: int = 0, limit: int = 100):
     
     return result
 
+def _calculate_summary_stats_by_date(db: Session, start_date: datetime, end_date: datetime) -> Dict:
+    """
+    คำนวณสถิติโดยรวมทั้งหมดตามช่วงวันที่กำหนด
+    """
+    total_count = db.query(func.count(Complaint.id)).filter(
+        Complaint.created_at.between(start_date, end_date)
+    ).scalar()
+    
+    # นับจำนวน complaint แยกตามสถานะทั้งหมด
+    status_counts_query = db.query(
+        Complaint.status,
+        func.count(Complaint.id).label('count')
+    ).filter(
+        Complaint.created_at.between(start_date, end_date)
+    ).group_by(Complaint.status).all()
+    
+    status_counts = {status.value: 0 for status in ComplaintStatus}
+    for status, count in status_counts_query:
+        status_counts[status.value] = count
+    
+    return {
+        "total_complaints": total_count,
+        "status_counts": status_counts
+    }
+
+def _get_status_counts_by_staff_and_date(db: Session, staff_ids: List[str], start_date: datetime, end_date: datetime) -> Dict[str, Dict[str, int]]:
+    """
+    ดึงจำนวนเรื่องตามสถานะแยกตามเจ้าหน้าที่ตามช่วงวันที่ (ทำครั้งเดียว)
+    """
+    results = {}
+    
+    # ใช้ GROUP BY เพื่อลดจำนวน queries
+    status_counts = db.query(
+        Complaint.assigned_to,
+        Complaint.status,
+        func.count(Complaint.id).label('count')
+    ).filter(
+        Complaint.assigned_to.in_(staff_ids),
+        Complaint.assigned_date.between(start_date, end_date)
+    ).group_by(
+        Complaint.assigned_to,
+        Complaint.status
+    ).all()
+    
+    # จัดเรียงผลลัพธ์เป็น dictionary
+    for staff_id in staff_ids:
+        results[staff_id] = {status.value: 0 for status in ComplaintStatus}
+    
+    for assigned_to, status, count in status_counts:
+        if assigned_to in results:
+            results[assigned_to][status.value] = count
+    
+    return results
 def get_staff_performance(db: Session, date_from: Optional[str] = None, date_to: Optional[str] = None):
     """
     ดึงข้อมูลประสิทธิภาพการทำงานของเจ้าหน้าที่
