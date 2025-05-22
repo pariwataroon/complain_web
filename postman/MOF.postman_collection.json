@@ -7,6 +7,92 @@
 	},
 	"item": [
 		{
+		"name": "DASHBOARD",
+		"item": [
+			{
+			"name": "Get Staff Workload",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/dashboard/staff-workload?skip=0&limit=100",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"dashboard",
+					"staff-workload"
+				],
+				"query": [
+					{
+					"key": "skip",
+					"value": "0"
+					},
+					{
+					"key": "limit",
+					"value": "100"
+					}
+				]
+				},
+				"description": "ดึงข้อมูลภาระงานของเจ้าหน้าที่แต่ละคน แยกตามสถานะของเรื่องร้องทุกข์ แสดงปริมาณงานที่ได้รับมอบหมาย สัดส่วนงาน และความคืบหน้า"
+			},
+			"response": []
+			},
+			{
+			"name": "Get Staff Performance",
+			"request": {
+				"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+					"key": "token",
+					"value": "{{access_token}}",
+					"type": "string"
+					}
+				]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+				"raw": "{{API}}{{PREFIX}}/dashboard/staff-performance?date_from=2025-04-01&date_to=2025-04-30",
+				"host": [
+					"{{API}}{{PREFIX}}"
+				],
+				"path": [
+					"dashboard",
+					"staff-performance"
+				],
+				"query": [
+					{
+					"key": "date_from",
+					"value": "2025-04-01",
+					"description": "Optional - วันที่เริ่มต้น"
+					},
+					{
+					"key": "date_to",
+					"value": "2025-04-30T23:59:59Z",
+					"description": "Optional - วันที่สิ้นสุด"
+					}
+				]
+				},
+				"description": "ดึงข้อมูลประสิทธิภาพการทำงานของเจ้าหน้าที่ แสดงจำนวนเรื่องที่ได้รับมอบหมาย จำนวนเรื่องที่จัดการสำเร็จ ระยะเวลาเฉลี่ยในการจัดการเรื่องร้องทุกข์ และประสิทธิภาพการทำงาน"
+			},
+			"response": []
+			}
+		],
+		"description": "API สำหรับดูข้อมูล dashboard ภาระงานและประสิทธิภาพการทำงานของเจ้าหน้าที่"
+		},
+		{
 			"name": "ThaID_SandBox_MOF",
 			"item": [
 				{
