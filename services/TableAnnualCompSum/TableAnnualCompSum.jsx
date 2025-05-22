@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import PropTypes from "prop-types";
 import { useRouter } from "next/router";
 import {
@@ -25,16 +25,17 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
+import { exportElementToPDF } from "@utils/exportPDF";
 
 const TableAnnualCompSum = ({
   data = [],
   filterFields = [],
-  onSearch = () => {},
+  onSearch = () => { },
   navigateTo = "",
 }) => {
   const router = useRouter();
+  const pdfRef = useRef();
 
-  // Filters state
   const initialFilters = filterFields.reduce(
     (acc, f) => ({ ...acc, [f.name]: "" }),
     {}
@@ -163,7 +164,12 @@ const TableAnnualCompSum = ({
             alignItems="center"
             sx={{ flex: "1 0 300px", justifyContent: "flex-end" }}
           >
-            <ExportButton label="Export PDF" />
+            <ExportButton
+              label="Export PDF"
+              onClick={() =>
+                exportElementToPDF(pdfRef, "รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ.pdf")
+              }
+            />;
             <ExportButton label="Export Excel" />
           </Box>
         </Box>
@@ -186,145 +192,147 @@ const TableAnnualCompSum = ({
       </Box>
 
       {/* Summary Table with collapsible children */}
-      <Box sx={{ overflowX: "auto", px: 2, pb: 1 }}>
-        <Table sx={{ minWidth: 1000 }}>
-          <TableHead>
-            <TableRow>
-              {columns.map((col, idx) => (
-                <TableCell
-                  key={idx}
-                  sx={{ width: col.width }}
-                  align={idx === 1 ? "left" : "center"}
-                >
-                  {col.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {pagedData.map((row, idx) => (
-              <React.Fragment key={row.id}>
-                <TableRow
-                  hover
-                  sx={{ cursor: "pointer" }}
-                  onClick={() => navigateTo && router.push(`${navigateTo}`)}
-                >
+      <div ref={pdfRef}>
+        <Box sx={{ overflowX: "auto", px: 2, pb: 1 }}>
+          <Table sx={{ minWidth: 1000 }}>
+            <TableHead>
+              <TableRow>
+                {columns.map((col, idx) => (
                   <TableCell
-                    align="center"
-                    sx={{
-                      width: columns[0].width,
-                      fontWeight: 600,
-                      color: "#1120A3",
-                    }}
+                    key={idx}
+                    sx={{ width: col.width }}
+                    align={idx === 1 ? "left" : "center"}
                   >
-                    {page * rowsPerPage + idx + 1}
+                    {col.label}
                   </TableCell>
-                  <TableCell
-                    sx={{
-                      width: columns[1].width,
-                      display: "flex",
-                      alignItems: "center",
-                    }}
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {pagedData.map((row, idx) => (
+                <React.Fragment key={row.id}>
+                  <TableRow
+                    hover
+                    sx={{ cursor: "pointer" }}
+                    onClick={() => navigateTo && router.push(`${navigateTo}`)}
                   >
-                    <IconButton
-                      size="small"
-                      sx={{ p: 0 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleRow(row.id);
+                    <TableCell
+                      align="center"
+                      sx={{
+                        width: columns[0].width,
+                        fontWeight: 600,
+                        color: "#1120A3",
                       }}
                     >
-                      {expanded[row.id] ? (
-                        <ExpandLessIcon />
-                      ) : (
-                        <ExpandMoreIcon />
-                      )}
-                    </IconButton>
-                    {row.agency}
-                  </TableCell>
-                  <TableCell
-                    sx={{ width: columns[2].width, textAlign: "center" }}
-                  >
-                    {row.total ?? "-"}
-                  </TableCell>
-                  <TableCell
-                    sx={{ width: columns[3].width, textAlign: "center" }}
-                  >
-                    {row.closed ?? "-"}
-                  </TableCell>
-                  <TableCell
-                    sx={{ width: columns[4].width, textAlign: "center" }}
-                  >
-                    {row.ongoing ?? "-"}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell style={{ padding: 0 }} colSpan={columns.length}>
-                    <Collapse
-                      in={expanded[row.id]}
-                      timeout="auto"
-                      unmountOnExit
+                      {page * rowsPerPage + idx + 1}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        width: columns[1].width,
+                        display: "flex",
+                        alignItems: "center",
+                      }}
                     >
-                      <Box>
-                        <Table size="small">
-                          <TableBody>
-                            {(row.children || []).map((child) => (
-                              <TableRow
-                                key={child.id}
-                                sx={{ backgroundColor: "#FEFAEF" }}
-                                hover
-                              >
-                                <TableCell sx={{ width: columns[0].width }} />
-                                <TableCell sx={{ width: columns[1].width }}>
-                                  {child.agency}
-                                </TableCell>
-                                <TableCell
-                                  sx={{
-                                    width: columns[2].width,
-                                    textAlign: "center",
-                                  }}
+                      <IconButton
+                        size="small"
+                        sx={{ p: 0 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleRow(row.id);
+                        }}
+                      >
+                        {expanded[row.id] ? (
+                          <ExpandLessIcon />
+                        ) : (
+                          <ExpandMoreIcon />
+                        )}
+                      </IconButton>
+                      {row.agency}
+                    </TableCell>
+                    <TableCell
+                      sx={{ width: columns[2].width, textAlign: "center" }}
+                    >
+                      {row.total ?? "-"}
+                    </TableCell>
+                    <TableCell
+                      sx={{ width: columns[3].width, textAlign: "center" }}
+                    >
+                      {row.closed ?? "-"}
+                    </TableCell>
+                    <TableCell
+                      sx={{ width: columns[4].width, textAlign: "center" }}
+                    >
+                      {row.ongoing ?? "-"}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell style={{ padding: 0 }} colSpan={columns.length}>
+                      <Collapse
+                        in={expanded[row.id]}
+                        timeout="auto"
+                        unmountOnExit
+                      >
+                        <Box>
+                          <Table size="small">
+                            <TableBody>
+                              {(row.children || []).map((child) => (
+                                <TableRow
+                                  key={child.id}
+                                  sx={{ backgroundColor: "#FEFAEF" }}
+                                  hover
                                 >
-                                  {child.total ?? "-"}
-                                </TableCell>
-                                <TableCell
-                                  sx={{
-                                    width: columns[3].width,
-                                    textAlign: "center",
-                                  }}
-                                >
-                                  {child.closed ?? "-"}
-                                </TableCell>
-                                <TableCell
-                                  sx={{
-                                    width: columns[4].width,
-                                    textAlign: "center",
-                                  }}
-                                >
-                                  {child.ongoing ?? "-"}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </Box>
-                    </Collapse>
-                  </TableCell>
-                </TableRow>
-              </React.Fragment>
-            ))}
-          </TableBody>
-        </Table>
-        <TablePagination
-          component="div"
-          rowsPerPageOptions={[5, 10, 25]}
-          count={data.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          sx={{ borderTop: "1px solid #eee" }}
-        />
-      </Box>
+                                  <TableCell sx={{ width: columns[0].width }} />
+                                  <TableCell sx={{ width: columns[1].width }}>
+                                    {child.agency}
+                                  </TableCell>
+                                  <TableCell
+                                    sx={{
+                                      width: columns[2].width,
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    {child.total ?? "-"}
+                                  </TableCell>
+                                  <TableCell
+                                    sx={{
+                                      width: columns[3].width,
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    {child.closed ?? "-"}
+                                  </TableCell>
+                                  <TableCell
+                                    sx={{
+                                      width: columns[4].width,
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    {child.ongoing ?? "-"}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </Box>
+                      </Collapse>
+                    </TableCell>
+                  </TableRow>
+                </React.Fragment>
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination
+            component="div"
+            rowsPerPageOptions={[5, 10, 25]}
+            count={data.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            sx={{ borderTop: "1px solid #eee" }}
+          />
+        </Box>
+      </div>
     </Container>
   );
 };

@@ -1,5 +1,3 @@
-// pages/admin/ComplaintArchives.jsx
-
 import React, { useState } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";

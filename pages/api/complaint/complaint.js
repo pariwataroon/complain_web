@@ -16,9 +16,36 @@ const GetAllComplaints = async ({
   }
 };
 
+const GetMeAllComplaints = async ({
+  skip = 0,
+  limit = 10,
+  status = "SUBMITTED",
+}) => {
+  try {
+    const response = await axiosInstance.get("/complaints/me", {
+      params: { skip, limit, status },
+    });
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching complaints:", error);
+    throw error;
+  }
+};
+
 const GetComplaintByID = async (id) => {
   try {
     const response = await axiosInstance.get(`/complaints/${id}`);
+    return response.data;
+  } catch (err) {
+    console.error("Error fetching GetComplaintByID :", err);
+    return null;
+  }
+};
+
+
+const GetComplaintMeByID = async (id) => {
+  try {
+    const response = await axiosInstance.get(`/complaints/me/${id}`);
     return response.data;
   } catch (err) {
     console.error("Error fetching GetComplaintByID :", err);
@@ -53,4 +80,11 @@ const UploadAttachments = async (complaint_id, formDataUpload) => {
   }
 };
 
-export { Addcomplaints, GetAllComplaints, UploadAttachments, GetComplaintByID };
+export {
+  Addcomplaints,
+  GetAllComplaints,
+  UploadAttachments,
+  GetComplaintByID,
+  GetMeAllComplaints,
+  GetComplaintMeByID,
+};

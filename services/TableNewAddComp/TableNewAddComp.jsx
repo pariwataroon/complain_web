@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import PropTypes from "prop-types";
 import { useRouter } from "next/router";
 import {
@@ -20,27 +20,20 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonService from "@services/ButtonService/ButtonService";
+import { exportElementToPDF } from "@utils/exportPDF";
 
-/**
- * props:
- * - data: array of objects
- * - title: table title
- * - navigateTo: base path for row click (item.id appended)
- * - onSearch: function(filters) => void
- * - filterFields: [{ name, label, type, options? }]
- * - actionButtonLabel: label for custom action button
- * - onActionClick: click handler for custom action button
- */
+
 const TableNewAddComp = ({
   data = [],
   title = "",
   navigateTo = "",
-  onSearch = () => {},
+  onSearch = () => { },
   filterFields = [],
   actionButtonLabel = "",
-  onActionClick = () => {},
+  onActionClick = () => { },
 }) => {
   const router = useRouter();
+  const pdfRef = useRef();
 
   // 1) initial filters จาก props.filterFields
   const initialFilters = filterFields.reduce((acc, f) => {
@@ -215,7 +208,12 @@ const TableNewAddComp = ({
 
             {/* กล่องสำหรับปุ่ม Export */}
             <Box display="flex" alignItems="center" gap={1} mr={4}>
-              <ExportButton label="Export PDF" />
+              <ExportButton
+                label="Export PDF"
+                onClick={() =>
+                  exportElementToPDF(pdfRef, "รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่ม.pdf")
+                }
+              />;
               <ExportButton label="Export Excel" />
             </Box>
           </Box>
@@ -223,61 +221,63 @@ const TableNewAddComp = ({
       </Box>
 
       {/* Data Table */}
-      <Box
-        className={styles.tableWrapper}
-        id="table-results"
-        sx={{ overflowX: "auto", px: 2, pb: 1 }}
-      >
-        <Table sx={{ minWidth: 1400 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell align="center" sx={{ width: 80 }}>
-                ลำดับ
-              </TableCell>
-              {columns.map((col) => (
-                <TableCell key={col.name} sx={{ width: col.width }}>
-                  {col.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {pagedData.map((item, idx) => (
-              <TableRow
-                key={item.id}
-                onClick={() => handleRowClick(item)}
-                sx={{
-                  cursor: "pointer",
-                  "&:hover": { backgroundColor: "#f5f7ff" },
-                }}
-              >
-                <TableCell
-                  align="center"
-                  sx={{ width: 80, fontWeight: 600, color: "#1120A3" }}
-                >
-                  {page * rowsPerPage + idx + 1}
+      <div ref={pdfRef}>
+        <Box
+          className={styles.tableWrapper}
+          id="table-results"
+          sx={{ overflowX: "auto", px: 2, pb: 1 }}
+        >
+          <Table sx={{ minWidth: 1400 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center" sx={{ width: 80 }}>
+                  ลำดับ
                 </TableCell>
                 {columns.map((col) => (
                   <TableCell key={col.name} sx={{ width: col.width }}>
-                    {item[col.name] ?? "-"}
+                    {col.label}
                   </TableCell>
                 ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {pagedData.map((item, idx) => (
+                <TableRow
+                  key={item.id}
+                  onClick={() => handleRowClick(item)}
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": { backgroundColor: "#f5f7ff" },
+                  }}
+                >
+                  <TableCell
+                    align="center"
+                    sx={{ width: 80, fontWeight: 600, color: "#1120A3" }}
+                  >
+                    {page * rowsPerPage + idx + 1}
+                  </TableCell>
+                  {columns.map((col) => (
+                    <TableCell key={col.name} sx={{ width: col.width }}>
+                      {item[col.name] ?? "-"}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
-        <TablePagination
-          component="div"
-          rowsPerPageOptions={[5, 10, 25]}
-          count={data.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          sx={{ borderTop: "1px solid #eee" }}
-        />
-      </Box>
+          <TablePagination
+            component="div"
+            rowsPerPageOptions={[5, 10, 25]}
+            count={data.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            sx={{ borderTop: "1px solid #eee" }}
+          />
+        </Box>
+      </div>
     </Container>
   );
 };
@@ -296,10 +296,10 @@ TableNewAddComp.defaultProps = {
   data: [],
   title: "",
   navigateTo: "",
-  onSearch: () => {},
+  onSearch: () => { },
   filterFields: [],
   actionButtonLabel: "",
-  onActionClick: () => {},
+  onActionClick: () => { },
 };
 
 export default TableNewAddComp;

@@ -1,6 +1,4 @@
-// components/services/TableListCollaps/TableListCollaps.jsx
-
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -24,41 +22,31 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 
-/**
- * props:
- * - data: array of objects
- * - title: table title
- * - navigateTo: base path for row click (item.id appended)
- * - onSearch: function(filters) => void
- * - filterFields: [{ name, label, type, options? }]
- */
+import { exportElementToPDF } from "@utils/exportPDF";
+
 const TableListBox = ({
   data = [],
   title = "",
   navigateTo = "",
-  onSearch = () => {},
+  onSearch = () => { },
   filterFields = [],
 }) => {
   const router = useRouter();
+  const pdfRef = useRef();
 
-  // 1) build initialFilters
   const initialFilters = filterFields.reduce((acc, f) => {
     acc[f.name] = "";
     return acc;
   }, {});
 
-  // 2) filters reflect the inputs
   const [filters, setFilters] = useState(initialFilters);
-  // 3) appliedFilters only updates on 🔍 or clear
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
 
-  // 4) update filters on change (no search yet)
   const handleChange = (field) => (e) => {
     const value = e?.target ? e.target.value : e;
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
-  // 5) pagination state
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const pagedData = useMemo(
@@ -182,150 +170,152 @@ const TableListBox = ({
             </IconButton>
           </Box>
           <Box display="flex" alignItems="center" gap={1} flexShrink={0} mr={4}>
-            <ExportButton label="Export PDF" />
+            <ExportButton label="Export PDF" onClick={() => exportElementToPDF(pdfRef, "รายงานติดตามสถานะ.pdf")} />
             <ExportButton label="Export Excel" />
           </Box>
         </Box>
       </Box>
 
       {/* data table */}
-      <Box
-        className={styles.tableWrapper}
-        id="table-results"
-        sx={{ overflowX: "auto", px: 2, pb: 1 }}
-      >
-        <Table sx={{ minWidth: 1400 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell align="center" sx={{ width: 80 }}></TableCell>
-              {columns.map((col) => (
-                <TableCell key={col.name} sx={{ width: col.width }}>
-                  {col.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {pagedData.map((item, idx) => (
-              <React.Fragment key={item.id}>
-                <TableRow
-                  onClick={() => router.push(`${navigateTo}/${item.id}`)}
-                  sx={{
-                    cursor: "pointer",
-                    "&:hover": { backgroundColor: "#f5f7ff" },
-                  }}
-                >
-                  {/* Icon cell */}
-                  <TableCell align="center" sx={{ width: 80 }}>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggle(item.id);
-                      }}
-                    >
-                      {openRow === item.id ? (
-                        <ExpandLessIcon />
-                      ) : (
-                        <ExpandMoreIcon />
-                      )}
-                    </IconButton>
+      <div ref={pdfRef}>
+        <Box
+          className={styles.tableWrapper}
+          id="table-results"
+          sx={{ overflowX: "auto", px: 2, pb: 1 }}
+        >
+          <Table sx={{ minWidth: 1400 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center" sx={{ width: 80 }}></TableCell>
+                {columns.map((col) => (
+                  <TableCell key={col.name} sx={{ width: col.width }}>
+                    {col.label}
                   </TableCell>
-
-                  {/* other cells */}
-                  {columns.map((col) => (
-                    <TableCell key={col.name} sx={{ width: col.width }}>
-                      {col.name === "department" ? "" : item[col.name] ?? ""}
-                    </TableCell>
-                  ))}
-                </TableRow>
-
-                {/* collapse details */}
-                <TableRow>
-                  <TableCell
-                    style={{ padding: 0 }}
-                    colSpan={columns.length + 1}
-                    sx={{ backgroundColor: "#fefaef" }}
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {pagedData.map((item, idx) => (
+                <React.Fragment key={item.id}>
+                  <TableRow
+                    onClick={() => router.push(`${navigateTo}/${item.id}`)}
+                    sx={{
+                      cursor: "pointer",
+                      "&:hover": { backgroundColor: "#f5f7ff" },
+                    }}
                   >
-                    <Collapse
-                      in={openRow === item.id}
-                      timeout="auto"
-                      unmountOnExit
+                    {/* Icon cell */}
+                    <TableCell align="center" sx={{ width: 80 }}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggle(item.id);
+                        }}
+                      >
+                        {openRow === item.id ? (
+                          <ExpandLessIcon />
+                        ) : (
+                          <ExpandMoreIcon />
+                        )}
+                      </IconButton>
+                    </TableCell>
+
+                    {/* other cells */}
+                    {columns.map((col) => (
+                      <TableCell key={col.name} sx={{ width: col.width }}>
+                        {col.name === "department" ? "" : item[col.name] ?? ""}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+
+                  {/* collapse details */}
+                  <TableRow>
+                    <TableCell
+                      style={{ padding: 0 }}
+                      colSpan={columns.length + 1}
+                      sx={{ backgroundColor: "#fefaef" }}
                     >
-                      <Box>
-                        <Table size="small">
-                          <TableBody>
-                            {(() => {
-                              // use appliedFilters.department
-                              const filteredDepts = appliedFilters.department
-                                ? item.departmentsData.filter(
+                      <Collapse
+                        in={openRow === item.id}
+                        timeout="auto"
+                        unmountOnExit
+                      >
+                        <Box>
+                          <Table size="small">
+                            <TableBody>
+                              {(() => {
+                                // use appliedFilters.department
+                                const filteredDepts = appliedFilters.department
+                                  ? item.departmentsData.filter(
                                     (d) =>
                                       d.department === appliedFilters.department
                                   )
-                                : item.departmentsData;
+                                  : item.departmentsData;
 
-                              if (filteredDepts.length) {
-                                return filteredDepts.map((dept, i) => (
-                                  <TableRow key={i}>
-                                    <TableCell sx={{ width: 80 }} />
-                                    <TableCell
-                                      sx={{ width: columns[0].width }}
-                                    />
-                                    <TableCell sx={{ width: columns[1].width }}>
-                                      {dept.department}
-                                    </TableCell>
-                                    <TableCell
-                                      sx={{ width: columns[2].width }}
-                                    />
-                                    <TableCell sx={{ width: columns[3].width }}>
-                                      {dept.receiptNumber}
-                                    </TableCell>
-                                    <TableCell sx={{ width: columns[4].width }}>
-                                      {dept.referenceNumber}
-                                    </TableCell>
-                                    <TableCell sx={{ width: columns[5].width }}>
-                                      {dept.workingDays}
-                                    </TableCell>
-                                    <TableCell sx={{ width: columns[6].width }}>
-                                      {dept.status}
-                                    </TableCell>
-                                  </TableRow>
-                                ));
-                              } else {
-                                return (
-                                  <TableRow>
-                                    <TableCell
-                                      colSpan={columns.length + 1}
-                                      align="center"
-                                    >
-                                      ไม่มีข้อมูลหน่วยงาน
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              }
-                            })()}
-                          </TableBody>
-                        </Table>
-                      </Box>
-                    </Collapse>
-                  </TableCell>
-                </TableRow>
-              </React.Fragment>
-            ))}
-          </TableBody>
-        </Table>
+                                if (filteredDepts.length) {
+                                  return filteredDepts.map((dept, i) => (
+                                    <TableRow key={i}>
+                                      <TableCell sx={{ width: 80 }} />
+                                      <TableCell
+                                        sx={{ width: columns[0].width }}
+                                      />
+                                      <TableCell sx={{ width: columns[1].width }}>
+                                        {dept.department}
+                                      </TableCell>
+                                      <TableCell
+                                        sx={{ width: columns[2].width }}
+                                      />
+                                      <TableCell sx={{ width: columns[3].width }}>
+                                        {dept.receiptNumber}
+                                      </TableCell>
+                                      <TableCell sx={{ width: columns[4].width }}>
+                                        {dept.referenceNumber}
+                                      </TableCell>
+                                      <TableCell sx={{ width: columns[5].width }}>
+                                        {dept.workingDays}
+                                      </TableCell>
+                                      <TableCell sx={{ width: columns[6].width }}>
+                                        {dept.status}
+                                      </TableCell>
+                                    </TableRow>
+                                  ));
+                                } else {
+                                  return (
+                                    <TableRow>
+                                      <TableCell
+                                        colSpan={columns.length + 1}
+                                        align="center"
+                                      >
+                                        ไม่มีข้อมูลหน่วยงาน
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                }
+                              })()}
+                            </TableBody>
+                          </Table>
+                        </Box>
+                      </Collapse>
+                    </TableCell>
+                  </TableRow>
+                </React.Fragment>
+              ))}
+            </TableBody>
+          </Table>
 
-        <TablePagination
-          component="div"
-          rowsPerPageOptions={[5, 10, 25]}
-          count={data.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          sx={{ borderTop: "1px solid #eee" }}
-        />
-      </Box>
+          <TablePagination
+            component="div"
+            rowsPerPageOptions={[5, 10, 25]}
+            count={data.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            sx={{ borderTop: "1px solid #eee" }}
+          />
+        </Box>
+      </div>
     </Container>
   );
 };

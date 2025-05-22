@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Box, Typography } from "@mui/material";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import styles from "./ReportTable.module.scss";
+import { exportElementToPDF } from "@utils/exportPDF";
 
 const data = [
   {
@@ -30,18 +31,16 @@ const data = [
 ];
 
 const InspectorComplaintManagementComponents = () => {
-  const [selectedInspector, setSelectedInspector] = useState("");
+  const pdfRef = useRef();
 
-  // สเตตเก็บตัวเลือกผู้ตรวจ (อาจจะดึงจาก API ก็ได้)
+  const [selectedInspector, setSelectedInspector] = useState("");
   const [inspectorOptions, setInspectorOptions] = useState([
     { value: "", label: "กรุณาเลือกผู้ตรวจ", disabled: true },
     { value: "inspector1", label: "นายสมชาย ใจดี" },
     { value: "inspector2", label: "นางสาวอรทัย แซ่ลิ้ม" },
     { value: "inspector3", label: "นายวิทยา ศรีสุข" },
-    // ... เพิ่มตามจริง
   ]);
 
-  // handler จะได้รับ object { target: { name, value } }
   const handleInspectorChange = ({ target: { name, value } }) => {
     setSelectedInspector(value);
   };
@@ -132,177 +131,184 @@ const InspectorComplaintManagementComponents = () => {
               gap: 1,
             }}
           >
-            <ExportButton label="Export PDF" />
+            <ExportButton
+              label="Export PDF"
+              onClick={() =>
+                exportElementToPDF(pdfRef, "รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ.pdf")
+              }
+            />;
             <ExportButton label="Export Excel" />
           </Box>
         </Box>
 
-        <Box className={styles.container}>
-          <table className={styles.table}>
-            {/* กำหนดความกว้างคอลัมน์ด้วย colgroup: 18 คอลัมน์แรก ปกติ / คอลัมน์หมายเหตุ 400px */}
-            <colgroup>
-              {/* 1: ลำดับ, 2: วันที่, 3: เรื่อง */}
-              <col style={{ width: "15px" }} />
-              <col style={{ width: "40px" }} />
-              <col style={{ width: "150px" }} />
+        <div ref={pdfRef}>
+          <Box className={styles.container}>
+            <table className={styles.table}>
+              {/* กำหนดความกว้างคอลัมน์ด้วย colgroup: 18 คอลัมน์แรก ปกติ / คอลัมน์หมายเหตุ 400px */}
+              <colgroup>
+                {/* 1: ลำดับ, 2: วันที่, 3: เรื่อง */}
+                <col style={{ width: "15px" }} />
+                <col style={{ width: "40px" }} />
+                <col style={{ width: "150px" }} />
 
-              {/* 4–9: หน่วยงาน (6 คอลัมน์ @60px) */}
-              <col span="6" style={{ width: "16px" }} />
+                {/* 4–9: หน่วยงาน (6 คอลัมน์ @60px) */}
+                <col span="6" style={{ width: "16px" }} />
 
-              {/* 10–13: ประเภทเรื่อง (4 คอลัมน์ @60px) */}
-              <col span="4" style={{ width: "16px" }} />
+                {/* 10–13: ประเภทเรื่อง (4 คอลัมน์ @60px) */}
+                <col span="4" style={{ width: "16px" }} />
 
-              {/* 14–15: จังหวัด (2 คอลัมน์ @30px เล็กลง) */}
-              <col span="2" style={{ width: "15px" }} />
+                {/* 14–15: จังหวัด (2 คอลัมน์ @30px เล็กลง) */}
+                <col span="2" style={{ width: "15px" }} />
 
-              {/* 16–18: สถานะ (3 คอลัมน์ @50px) */}
-              <col span="3" style={{ width: "20px" }} />
+                {/* 16–18: สถานะ (3 คอลัมน์ @50px) */}
+                <col span="3" style={{ width: "20px" }} />
 
-              {/* 19: หมายเหตุ */}
-              <col style={{ width: "150px" }} />
-            </colgroup>
+                {/* 19: หมายเหตุ */}
+                <col style={{ width: "150px" }} />
+              </colgroup>
 
-            <thead>
-              {/* Row 1: กลุ่มหลัก */}
-              <tr>
-                <th rowSpan={3}>ลำดับ</th>
-                <th rowSpan={3}>
-                  วันที่ สคบ.
-                  <br />
-                  รับเรื่อง
-                </th>
-                <th rowSpan={3} style={{ textAlign: "left" }}>
-                  เรื่อง
-                </th>
-
-                {/* หน่วยงาน */}
-                <th colSpan={6} className={styles.unitHeader}>
-                  หน่วยงาน
-                </th>
-                {/* ประเภทเรื่อง */}
-                <th colSpan={4} className={styles.typeHeader}>
-                  ประเภทเรื่อง
-                </th>
-                {/* จังหวัด */}
-                <th colSpan={2} className={styles.provinceHeader}>
-                  จังหวัด
-                </th>
-                {/* สถานะ */}
-                <th colSpan={3} className={styles.statusHeader}>
-                  สถานะ
-                </th>
-
-                <th rowSpan={3} className={styles.remarkCol}>
-                  หมายเหตุ
-                </th>
-              </tr>
-
-              {/* Row 2: Leaf ของหน่วยงาน + subgroup ของ ประเภทเรื่อง + province leaves + กลางของสถานะ */}
-              <tr>
-                {/* หน่วยงาน (rowSpan=2) */}
-                <th rowSpan={2} style={{ backgroundColor: "#ffc0cb" }}>
-                  GSB
-                </th>
-                <th rowSpan={2} style={{ backgroundColor: "#ffe4b5" }}>
-                  PD
-                  <br />
-                  MO
-                </th>
-                <th rowSpan={2} style={{ backgroundColor: "#d6d6ff" }}>
-                  บสส
-                </th>
-                <th rowSpan={2} style={{ backgroundColor: "#a8e1ff" }}>
-                  ยสท
-                </th>
-                <th rowSpan={2} style={{ backgroundColor: "#c2ffff" }}>
-                  สุรา
-                </th>
-                <th rowSpan={2} style={{ backgroundColor: "#b5ffb5" }}>
-                  ไผ่
-                </th>
-
-                {/* ประเภทเรื่อง: subgroup headers */}
-                <th colSpan={2}>หน่วยงาน</th>
-                <th colSpan={2}>ส่วนบุคคล</th>
-
-                {/* จังหวัด (rowSpan=2) */}
-                <th rowSpan={2} style={{ backgroundColor: "#843DFF" }}>
-                  กทม.
-                </th>
-                <th rowSpan={2} style={{ backgroundColor: "#BEA6FF" }}>
-                  ตวจ.
-                </th>
-
-                {/* สถานะ: ประสาน (rowSpan=2) + สถานะเรื่อง (colSpan=2) */}
-                <th rowSpan={2}>
-                  ประสาน
-                  <br />
-                  (ครั้ง)
-                </th>
-                <th colSpan={2}>สถานะเรื่อง</th>
-              </tr>
-
-              {/* Row 3: Leaf ของ ประเภทเรื่อง + leaf ของ สถานะเรื่อง */}
-              <tr>
-                {/* ประเภทเรื่อง leaf */}
-                <th style={{ backgroundColor: "#A5A5A5" }}>$</th>
-                <th style={{ backgroundColor: "#D9D9D9" }}>No$</th>
-                <th style={{ backgroundColor: "#A5A5A5" }}>$</th>
-                <th style={{ backgroundColor: "#D9D9D9" }}>No$</th>
-
-                {/* สถานะเรื่อง leaf */}
-                <th style={{ backgroundColor: "#FFD86C" }}>ดำเนินการ</th>
-                <th style={{ backgroundColor: "#89DB5D" }}>ยุติ</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {data.map((row) => (
-                <tr key={row.order}>
-                  <td>{row.order}</td>
-                  <td style={{ whiteSpace: "pre-line", textAlign: "center" }}>
-                    {row.date}
-                  </td>
-                  <td style={{ textAlign: "left" }}>{row.subject}</td>
+              <thead>
+                {/* Row 1: กลุ่มหลัก */}
+                <tr>
+                  <th rowSpan={3}>ลำดับ</th>
+                  <th rowSpan={3}>
+                    วันที่ สคบ.
+                    <br />
+                    รับเรื่อง
+                  </th>
+                  <th rowSpan={3} style={{ textAlign: "left" }}>
+                    เรื่อง
+                  </th>
 
                   {/* หน่วยงาน */}
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-
-                  {/* ประเภทเรื่อง: หน่วยงาน */}
-                  <td></td>
-                  <td></td>
-                  {/* ประเภทเรื่อง: ส่วนบุคคล */}
-                  <td></td>
-                  <td></td>
-
+                  <th colSpan={6} className={styles.unitHeader}>
+                    หน่วยงาน
+                  </th>
+                  {/* ประเภทเรื่อง */}
+                  <th colSpan={4} className={styles.typeHeader}>
+                    ประเภทเรื่อง
+                  </th>
                   {/* จังหวัด */}
-                  <td>{row.province.BKK}</td>
-                  <td>{row.province.PROV}</td>
-                  <td>{row.province.COORD}</td>
-
+                  <th colSpan={2} className={styles.provinceHeader}>
+                    จังหวัด
+                  </th>
                   {/* สถานะ */}
-                  <td></td>
-                  <td></td>
+                  <th colSpan={3} className={styles.statusHeader}>
+                    สถานะ
+                  </th>
 
-                  {/* หมายเหตุ */}
-                  <td
-                    className={styles.remarkCol}
-                    style={{ textAlign: "left" }}
-                  >
-                    {row.remark}
-                  </td>
+                  <th rowSpan={3} className={styles.remarkCol}>
+                    หมายเหตุ
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </Box>
+
+                {/* Row 2: Leaf ของหน่วยงาน + subgroup ของ ประเภทเรื่อง + province leaves + กลางของสถานะ */}
+                <tr>
+                  {/* หน่วยงาน (rowSpan=2) */}
+                  <th rowSpan={2} style={{ backgroundColor: "#ffc0cb" }}>
+                    GSB
+                  </th>
+                  <th rowSpan={2} style={{ backgroundColor: "#ffe4b5" }}>
+                    PD
+                    <br />
+                    MO
+                  </th>
+                  <th rowSpan={2} style={{ backgroundColor: "#d6d6ff" }}>
+                    บสส
+                  </th>
+                  <th rowSpan={2} style={{ backgroundColor: "#a8e1ff" }}>
+                    ยสท
+                  </th>
+                  <th rowSpan={2} style={{ backgroundColor: "#c2ffff" }}>
+                    สุรา
+                  </th>
+                  <th rowSpan={2} style={{ backgroundColor: "#b5ffb5" }}>
+                    ไผ่
+                  </th>
+
+                  {/* ประเภทเรื่อง: subgroup headers */}
+                  <th colSpan={2}>หน่วยงาน</th>
+                  <th colSpan={2}>ส่วนบุคคล</th>
+
+                  {/* จังหวัด (rowSpan=2) */}
+                  <th rowSpan={2} style={{ backgroundColor: "#843DFF" }}>
+                    กทม.
+                  </th>
+                  <th rowSpan={2} style={{ backgroundColor: "#BEA6FF" }}>
+                    ตวจ.
+                  </th>
+
+                  {/* สถานะ: ประสาน (rowSpan=2) + สถานะเรื่อง (colSpan=2) */}
+                  <th rowSpan={2}>
+                    ประสาน
+                    <br />
+                    (ครั้ง)
+                  </th>
+                  <th colSpan={2}>สถานะเรื่อง</th>
+                </tr>
+
+                {/* Row 3: Leaf ของ ประเภทเรื่อง + leaf ของ สถานะเรื่อง */}
+                <tr>
+                  {/* ประเภทเรื่อง leaf */}
+                  <th style={{ backgroundColor: "#A5A5A5" }}>$</th>
+                  <th style={{ backgroundColor: "#D9D9D9" }}>No$</th>
+                  <th style={{ backgroundColor: "#A5A5A5" }}>$</th>
+                  <th style={{ backgroundColor: "#D9D9D9" }}>No$</th>
+
+                  {/* สถานะเรื่อง leaf */}
+                  <th style={{ backgroundColor: "#FFD86C" }}>ดำเนินการ</th>
+                  <th style={{ backgroundColor: "#89DB5D" }}>ยุติ</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {data.map((row) => (
+                  <tr key={row.order}>
+                    <td>{row.order}</td>
+                    <td style={{ whiteSpace: "pre-line", textAlign: "center" }}>
+                      {row.date}
+                    </td>
+                    <td style={{ textAlign: "left" }}>{row.subject}</td>
+
+                    {/* หน่วยงาน */}
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+
+                    {/* ประเภทเรื่อง: หน่วยงาน */}
+                    <td></td>
+                    <td></td>
+                    {/* ประเภทเรื่อง: ส่วนบุคคล */}
+                    <td></td>
+                    <td></td>
+
+                    {/* จังหวัด */}
+                    <td>{row.province.BKK}</td>
+                    <td>{row.province.PROV}</td>
+                    <td>{row.province.COORD}</td>
+
+                    {/* สถานะ */}
+                    <td></td>
+                    <td></td>
+
+                    {/* หมายเหตุ */}
+                    <td
+                      className={styles.remarkCol}
+                      style={{ textAlign: "left" }}
+                    >
+                      {row.remark}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Box>
+        </div >
       </Box>
-    </Box>
+    </Box >
   );
 };
 

@@ -1,6 +1,4 @@
-// components/services/TableListCollaps/TableListCollaps.jsx
-
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -24,18 +22,20 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonService from "@services/ButtonService/ButtonService";
 import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
+import { exportElementToPDF } from "@utils/exportPDF";
 
 const TableListBox = ({
   data = [],
   title = "",
   navigateTo = "",
-  onSearch = () => {},
+  onSearch = () => { },
   filterFields = [],
   reportTitle = "",
   reportSubTitle = "",
   dateRange = "",
 }) => {
   const router = useRouter();
+  const pdfRef = useRef();
 
   // Initial filters
   const initialFilters = filterFields.reduce((acc, f) => {
@@ -220,7 +220,12 @@ const TableListBox = ({
           </Box>
 
           <Box display="flex" gap={1}>
-            <ExportButton label="Export PDF" />
+            <ExportButton
+              label="Export PDF"
+              onClick={() =>
+                exportElementToPDF(pdfRef, "รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ.pdf")
+              }
+            />;            
             <ExportButton label="Export Excel" />
           </Box>
         </Box>
@@ -255,186 +260,189 @@ const TableListBox = ({
       </Box>
 
       {/* Table */}
-      <Box id="table-results" sx={{ overflowX: "auto", px: 2, pb: 1 }}>
-        <Table
-          sx={{
-            minWidth: columns.reduce((sum, c) => sum + c.width, 0),
-            tableLayout: "fixed",
-          }}
-        >
-          <TableHead>
-            <TableRow>
-              {columns.map((col) => (
-                <TableCell
-                  key={col.name}
-                  align={col.align}
-                  sx={{ width: col.width }}
-                >
-                  {col.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {/* Totals */}
-            <TableRow sx={{ backgroundColor: "#f5f5f5", fontWeight: "bold" }}>
-              {columns.map((col) => (
-                <TableCell
-                  key={col.name}
-                  align={col.align}
-                  sx={{ width: col.width }}
-                >
-                  {col.name === "claimantName"
-                    ? "รวม"
-                    : col.name === "totalDept"
-                    ? totalDeptSum
-                    : col.name === "inProgressCnt"
-                    ? inProgressSum
-                    : closedSum}
-                </TableCell>
-              ))}
-            </TableRow>
+      <div ref={pdfRef}>
 
-            {/* Rows */}
-            {pagedData.map((item) => (
-              <React.Fragment key={item.id}>
-                {/* Parent row */}
-                <TableRow
-                  onClick={() => router.push(`${navigateTo}/${item.id}`)}
-                  sx={{
-                    cursor: "pointer",
-                    "&:hover": { backgroundColor: "#f5f7ff" },
-                  }}
-                >
-                  {columns.map((col) => {
-                    const val =
-                      col.name === "claimantName"
-                        ? item.claimantName
-                        : col.name === "totalDept"
-                        ? item.departmentsData.reduce(
-                            (s, d) => s + (d.totalDept || 0),
-                            0
-                          )
+        <Box id="table-results" sx={{ overflowX: "auto", px: 2, pb: 1 }}>
+          <Table
+            sx={{
+              minWidth: columns.reduce((sum, c) => sum + c.width, 0),
+              tableLayout: "fixed",
+            }}
+          >
+            <TableHead>
+              <TableRow>
+                {columns.map((col) => (
+                  <TableCell
+                    key={col.name}
+                    align={col.align}
+                    sx={{ width: col.width }}
+                  >
+                    {col.label}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {/* Totals */}
+              <TableRow sx={{ backgroundColor: "#f5f5f5", fontWeight: "bold" }}>
+                {columns.map((col) => (
+                  <TableCell
+                    key={col.name}
+                    align={col.align}
+                    sx={{ width: col.width }}
+                  >
+                    {col.name === "claimantName"
+                      ? "รวม"
+                      : col.name === "totalDept"
+                        ? totalDeptSum
                         : col.name === "inProgressCnt"
-                        ? item.departmentsData.reduce(
-                            (s, d) => s + (d.inProgressCnt || 0),
-                            0
-                          )
-                        : item.departmentsData.reduce(
-                            (s, d) => s + (d.closedCnt || 0),
-                            0
-                          );
+                          ? inProgressSum
+                          : closedSum}
+                  </TableCell>
+                ))}
+              </TableRow>
 
-                    return col.name === "claimantName" ? (
-                      <TableCell
-                        key={col.name}
-                        align={col.align}
-                        sx={{ display: "flex", alignItems: "center" }}
-                      >
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggle(item.id);
-                          }}
-                          sx={{ mr: 1 }}
+              {/* Rows */}
+              {pagedData.map((item) => (
+                <React.Fragment key={item.id}>
+                  {/* Parent row */}
+                  <TableRow
+                    onClick={() => router.push(`${navigateTo}/${item.id}`)}
+                    sx={{
+                      cursor: "pointer",
+                      "&:hover": { backgroundColor: "#f5f7ff" },
+                    }}
+                  >
+                    {columns.map((col) => {
+                      const val =
+                        col.name === "claimantName"
+                          ? item.claimantName
+                          : col.name === "totalDept"
+                            ? item.departmentsData.reduce(
+                              (s, d) => s + (d.totalDept || 0),
+                              0
+                            )
+                            : col.name === "inProgressCnt"
+                              ? item.departmentsData.reduce(
+                                (s, d) => s + (d.inProgressCnt || 0),
+                                0
+                              )
+                              : item.departmentsData.reduce(
+                                (s, d) => s + (d.closedCnt || 0),
+                                0
+                              );
+
+                      return col.name === "claimantName" ? (
+                        <TableCell
+                          key={col.name}
+                          align={col.align}
+                          sx={{ display: "flex", alignItems: "center" }}
                         >
-                          {openRow === item.id ? (
-                            <ExpandLessIcon />
-                          ) : (
-                            <ExpandMoreIcon />
-                          )}
-                        </IconButton>
-                        {val}
-                      </TableCell>
-                    ) : (
-                      <TableCell
-                        key={col.name}
-                        align={col.align}
-                        sx={{ width: col.width }}
-                      >
-                        {val}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-
-                {/* First-level collapse */}
-                {openRow === item.id &&
-                  item.departmentsData.map((d, idx) => {
-                    const key = `${item.id}_${idx}`;
-                    return (
-                      <React.Fragment key={key}>
-                        <TableRow sx={{ backgroundColor: "#fefaef" }}>
-                          <TableCell
-                            align="left"
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              pl: 4,
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggle(item.id);
                             }}
+                            sx={{ mr: 1 }}
                           >
-                            <IconButton
-                              size="small"
-                              onClick={() => handleChildToggle(item.id, idx)}
-                              sx={{ mr: 1 }}
+                            {openRow === item.id ? (
+                              <ExpandLessIcon />
+                            ) : (
+                              <ExpandMoreIcon />
+                            )}
+                          </IconButton>
+                          {val}
+                        </TableCell>
+                      ) : (
+                        <TableCell
+                          key={col.name}
+                          align={col.align}
+                          sx={{ width: col.width }}
+                        >
+                          {val}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+
+                  {/* First-level collapse */}
+                  {openRow === item.id &&
+                    item.departmentsData.map((d, idx) => {
+                      const key = `${item.id}_${idx}`;
+                      return (
+                        <React.Fragment key={key}>
+                          <TableRow sx={{ backgroundColor: "#fefaef" }}>
+                            <TableCell
+                              align="left"
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                pl: 4,
+                              }}
                             >
-                              {openChild[key] ? (
-                                <ExpandLessIcon />
-                              ) : (
-                                <ExpandMoreIcon />
-                              )}
-                            </IconButton>
-                            {d.department}
-                          </TableCell>
-                          <TableCell align="center">{d.totalDept}</TableCell>
-                          <TableCell align="center">
-                            {d.inProgressCnt}
-                          </TableCell>
-                          <TableCell align="center">{d.closedCnt}</TableCell>
-                        </TableRow>
-
-                        {/* Second-level collapse */}
-                        {d.children &&
-                          openChild[key] &&
-                          d.children.map((c, j) => (
-                            <TableRow key={`${key}_${j}`}>
-                              <TableCell
-                                align="left"
-                                sx={{ width: columns[0].width, pl: 8 }}
+                              <IconButton
+                                size="small"
+                                onClick={() => handleChildToggle(item.id, idx)}
+                                sx={{ mr: 1 }}
                               >
-                                {c.department}
-                              </TableCell>
-                              <TableCell align="center">
-                                {c.totalDept}
-                              </TableCell>
-                              <TableCell align="center">
-                                {c.inProgressCnt}
-                              </TableCell>
-                              <TableCell align="center">
-                                {c.closedCnt}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                      </React.Fragment>
-                    );
-                  })}
-              </React.Fragment>
-            ))}
-          </TableBody>
-        </Table>
+                                {openChild[key] ? (
+                                  <ExpandLessIcon />
+                                ) : (
+                                  <ExpandMoreIcon />
+                                )}
+                              </IconButton>
+                              {d.department}
+                            </TableCell>
+                            <TableCell align="center">{d.totalDept}</TableCell>
+                            <TableCell align="center">
+                              {d.inProgressCnt}
+                            </TableCell>
+                            <TableCell align="center">{d.closedCnt}</TableCell>
+                          </TableRow>
 
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={data.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          sx={{ borderTop: "1px solid #eee" }}
-        />
-      </Box>
+                          {/* Second-level collapse */}
+                          {d.children &&
+                            openChild[key] &&
+                            d.children.map((c, j) => (
+                              <TableRow key={`${key}_${j}`}>
+                                <TableCell
+                                  align="left"
+                                  sx={{ width: columns[0].width, pl: 8 }}
+                                >
+                                  {c.department}
+                                </TableCell>
+                                <TableCell align="center">
+                                  {c.totalDept}
+                                </TableCell>
+                                <TableCell align="center">
+                                  {c.inProgressCnt}
+                                </TableCell>
+                                <TableCell align="center">
+                                  {c.closedCnt}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </React.Fragment>
+                      );
+                    })}
+                </React.Fragment>
+              ))}
+            </TableBody>
+          </Table>
+
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={data.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            sx={{ borderTop: "1px solid #eee" }}
+          />
+        </Box>
+      </div>
     </Container>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import PropTypes from "prop-types";
 import { useRouter } from "next/router";
 import {
@@ -25,15 +25,16 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
+import { exportElementToPDF } from "@utils/exportPDF";
 
 const TableWorkFollow = ({
   data = [],
   filterFields = [],
-  onSearch = () => {},
+  onSearch = () => { },
   navigateTo = "",
 }) => {
   const router = useRouter();
-
+  const pdfRef = useRef();
   // Group data by responsibleOfficer
   const groupedData = useMemo(
     () =>
@@ -195,7 +196,12 @@ const TableWorkFollow = ({
             alignItems="center"
             sx={{ flex: "1 0 300px", justifyContent: "flex-end" }}
           >
-            <ExportButton label="Export PDF" />
+            <ExportButton
+              label="Export PDF"
+              onClick={() =>
+                exportElementToPDF(pdfRef, "ายงานสรุปเรื่องร้องเรียนของหน่วยงาน.pdf")
+              }
+            />;
             <ExportButton label="Export Excel" />
           </Box>
         </Box>
@@ -219,116 +225,119 @@ const TableWorkFollow = ({
       </Box>
 
       {/* Table with grouped collapsible rows */}
-      <Box sx={{ overflowX: "auto", px: 2, pb: 1 }}>
-        <Table sx={{ minWidth: 1400 }}>
-          <TableHead>
-            <TableRow>
-              {columns.map((col, i) => (
-                <TableCell
-                  key={i}
-                  align={i === 0 ? "center" : "left"}
-                  sx={{ width: col.width }}
-                >
-                  {col.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {pagedGroups.map((groupKey) => {
-              const items = groupedData[groupKey];
-              return (
-                <React.Fragment key={groupKey}>
-                  <TableRow sx={{ "&:hover": { backgroundColor: "#f5f7ff" } }}>
-                    <TableCell align="center" sx={{ width: 60 }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => toggleGroup(groupKey)}
-                      >
-                        {expandedGroups[groupKey] ? (
-                          <ExpandLessIcon />
-                        ) : (
-                          <ExpandMoreIcon />
-                        )}
-                      </IconButton>
-                    </TableCell>
-                    <TableCell colSpan={columns.length + 1} sx={{ width: 300 }}>
-                      {`เจ้าหน้าที่ผู้รับผิดชอบ : ${groupKey}`}
-                    </TableCell>
-                  </TableRow>
-                  {/* Detail rows */}
-                  <TableRow>
-                    <TableCell
-                      style={{ padding: 0 }}
-                      colSpan={columns.length + 2}
-                    >
-                      <Collapse
-                        in={expandedGroups[groupKey]}
-                        timeout="auto"
-                        unmountOnExit
-                      >
-                        <Box>
-                          <Table size="small">
-                            <TableBody sx={{ backgroundColor: "#FEFAEF" }}>
-                              {items.map((item, idx) => (
-                                <TableRow
-                                  key={item.id}
-                                  sx={{
-                                    "&:hover": { backgroundColor: "#f5f7ff" },
-                                  }}
-                                  onClick={() =>
-                                    navigateTo &&
-                                    router.push(`${navigateTo}/${item.id}`)
-                                  }
-                                >
-                                  {/* ลำดับ */}
-                                  <TableCell
-                                    align="center"
-                                    sx={{
-                                      width: columns[0].width,
-                                      fontWeight: 600,
-                                      color: "#1120A3",
-                                    }}
-                                  >
-                                    {page * rowsPerPage + idx + 1}
-                                  </TableCell>
-                                  {/* remaining columns */}
-                                  {columns.slice(1).map((col, i) => (
-                                    <TableCell
-                                      key={i}
-                                      sx={{ width: col.width }}
-                                    >
-                                      {col.render
-                                        ? col.render(item)
-                                        : item[col.field] || "-"}
-                                    </TableCell>
-                                  ))}
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </Box>
-                      </Collapse>
-                    </TableCell>
-                  </TableRow>
-                </React.Fragment>
-              );
-            })}
-          </TableBody>
-        </Table>
+      <div ref={pdfRef}>
 
-        <TablePagination
-          component="div"
-          rowsPerPageOptions={[5, 10, 25]}
-          count={flatData.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          sx={{ borderTop: "1px solid #eee" }}
-        />
-      </Box>
-    </Container>
+        <Box sx={{ overflowX: "auto", px: 2, pb: 1 }}>
+          <Table sx={{ minWidth: 1400 }}>
+            <TableHead>
+              <TableRow>
+                {columns.map((col, i) => (
+                  <TableCell
+                    key={i}
+                    align={i === 0 ? "center" : "left"}
+                    sx={{ width: col.width }}
+                  >
+                    {col.label}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {pagedGroups.map((groupKey) => {
+                const items = groupedData[groupKey];
+                return (
+                  <React.Fragment key={groupKey}>
+                    <TableRow sx={{ "&:hover": { backgroundColor: "#f5f7ff" } }}>
+                      <TableCell align="center" sx={{ width: 60 }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => toggleGroup(groupKey)}
+                        >
+                          {expandedGroups[groupKey] ? (
+                            <ExpandLessIcon />
+                          ) : (
+                            <ExpandMoreIcon />
+                          )}
+                        </IconButton>
+                      </TableCell>
+                      <TableCell colSpan={columns.length + 1} sx={{ width: 300 }}>
+                        {`เจ้าหน้าที่ผู้รับผิดชอบ : ${groupKey}`}
+                      </TableCell>
+                    </TableRow>
+                    {/* Detail rows */}
+                    <TableRow>
+                      <TableCell
+                        style={{ padding: 0 }}
+                        colSpan={columns.length + 2}
+                      >
+                        <Collapse
+                          in={expandedGroups[groupKey]}
+                          timeout="auto"
+                          unmountOnExit
+                        >
+                          <Box>
+                            <Table size="small">
+                              <TableBody sx={{ backgroundColor: "#FEFAEF" }}>
+                                {items.map((item, idx) => (
+                                  <TableRow
+                                    key={item.id}
+                                    sx={{
+                                      "&:hover": { backgroundColor: "#f5f7ff" },
+                                    }}
+                                    onClick={() =>
+                                      navigateTo &&
+                                      router.push(`${navigateTo}/${item.id}`)
+                                    }
+                                  >
+                                    {/* ลำดับ */}
+                                    <TableCell
+                                      align="center"
+                                      sx={{
+                                        width: columns[0].width,
+                                        fontWeight: 600,
+                                        color: "#1120A3",
+                                      }}
+                                    >
+                                      {page * rowsPerPage + idx + 1}
+                                    </TableCell>
+                                    {/* remaining columns */}
+                                    {columns.slice(1).map((col, i) => (
+                                      <TableCell
+                                        key={i}
+                                        sx={{ width: col.width }}
+                                      >
+                                        {col.render
+                                          ? col.render(item)
+                                          : item[col.field] || "-"}
+                                      </TableCell>
+                                    ))}
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </Box>
+                        </Collapse>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
+
+          <TablePagination
+            component="div"
+            rowsPerPageOptions={[5, 10, 25]}
+            count={flatData.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            sx={{ borderTop: "1px solid #eee" }}
+          />
+        </Box>
+      </div>
+    </Container >
   );
 };
 

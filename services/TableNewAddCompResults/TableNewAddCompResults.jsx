@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { useRouter } from "next/router";
 import {
@@ -19,6 +19,7 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import styles from "./TableNewAddCompResults.module.scss";
+import { exportElementToPDF } from "@utils/exportPDF";
 
 const TableNewAddCompResults = ({
   data,
@@ -34,6 +35,7 @@ const TableNewAddCompResults = ({
   onNoteChange,
 }) => {
   const router = useRouter();
+  const pdfRef = useRef();
   const [tableData, setTableData] = useState(data);
   useEffect(() => setTableData(data), [data]);
 
@@ -154,7 +156,12 @@ const TableNewAddCompResults = ({
             mr={4}
             sx={{ flex: "0 0 700px", justifyContent: "flex-end" }}
           >
-            <ExportButton label="Export PDF" />
+            <ExportButton
+              label="Export PDF"
+              onClick={() =>
+                exportElementToPDF(pdfRef, "สรุปผลตามประเภทเรื่อง.pdf")
+              }
+            />;
             <ExportButton label="Export Excel" />
           </Box>
         </Box>
@@ -197,91 +204,94 @@ const TableNewAddCompResults = ({
       </Box>
 
       {/* Data Table */}
-      <Box
-        className={styles.tableWrapper}
-        sx={{ overflowX: "auto", px: 2, pb: 1 }}
-      >
-        <Table sx={{ minWidth: 1400 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell align="center" sx={{ width: 80 }}>
-                ลำดับ
-              </TableCell>
-              {columns.map((col) => (
-                <TableCell key={col.name} sx={{ width: col.width }}>
-                  {col.label}
+      <div ref={pdfRef}>
+
+        <Box
+          className={styles.tableWrapper}
+          sx={{ overflowX: "auto", px: 2, pb: 1 }}
+        >
+          <Table sx={{ minWidth: 1400 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center" sx={{ width: 80 }}>
+                  ลำดับ
                 </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {pagedData.map((item, idx) => (
-              <TableRow
-                key={item.id}
-                onClick={() => handleRowClick(item)}
-                sx={{
-                  cursor: "pointer",
-                  "&:hover": { backgroundColor: "#f5f7ff" },
-                }}
-              >
-                <TableCell
-                  align="center"
-                  sx={{ width: 80, fontWeight: 600, color: "#1120A3" }}
-                >
-                  {page * rowsPerPage + idx + 1}
-                </TableCell>
-                {columns.map((col) => {
-                  const value = item[col.name] ?? "";
-                  return (
-                    <TableCell key={col.name} sx={{ width: col.width }}>
-                      {col.type === "select" ? (
-                        <SelectField
-                          fullWidth
-                          options={col.options}
-                          value={value}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(selected) => {
-                            if (selected === "__add") {
-                              onAddNote?.(item.id);
-                            } else if (onNoteChange) {
-                              onNoteChange(item.id, selected);
-                            } else {
-                              setTableData((prev) =>
-                                prev.map((r) =>
-                                  r.id === item.id
-                                    ? { ...r, note: selected }
-                                    : r
-                                )
-                              );
-                            }
-                          }}
-                          MenuProps={{
-                            PaperProps: {
-                              onMouseDown: (e) => e.stopPropagation(),
-                            },
-                          }}
-                        />
-                      ) : (
-                        value
-                      )}
-                    </TableCell>
-                  );
-                })}
+                {columns.map((col) => (
+                  <TableCell key={col.name} sx={{ width: col.width }}>
+                    {col.label}
+                  </TableCell>
+                ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <TablePagination
-          component="div"
-          rowsPerPageOptions={[5, 10, 25]}
-          count={tableData.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          sx={{ borderTop: "1px solid #eee" }}
-        />
-      </Box>
+            </TableHead>
+            <TableBody>
+              {pagedData.map((item, idx) => (
+                <TableRow
+                  key={item.id}
+                  onClick={() => handleRowClick(item)}
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": { backgroundColor: "#f5f7ff" },
+                  }}
+                >
+                  <TableCell
+                    align="center"
+                    sx={{ width: 80, fontWeight: 600, color: "#1120A3" }}
+                  >
+                    {page * rowsPerPage + idx + 1}
+                  </TableCell>
+                  {columns.map((col) => {
+                    const value = item[col.name] ?? "";
+                    return (
+                      <TableCell key={col.name} sx={{ width: col.width }}>
+                        {col.type === "select" ? (
+                          <SelectField
+                            fullWidth
+                            options={col.options}
+                            value={value}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(selected) => {
+                              if (selected === "__add") {
+                                onAddNote?.(item.id);
+                              } else if (onNoteChange) {
+                                onNoteChange(item.id, selected);
+                              } else {
+                                setTableData((prev) =>
+                                  prev.map((r) =>
+                                    r.id === item.id
+                                      ? { ...r, note: selected }
+                                      : r
+                                  )
+                                );
+                              }
+                            }}
+                            MenuProps={{
+                              PaperProps: {
+                                onMouseDown: (e) => e.stopPropagation(),
+                              },
+                            }}
+                          />
+                        ) : (
+                          value
+                        )}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination
+            component="div"
+            rowsPerPageOptions={[5, 10, 25]}
+            count={tableData.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            sx={{ borderTop: "1px solid #eee" }}
+          />
+        </Box>
+      </div>
     </Container>
   );
 };
@@ -307,10 +317,10 @@ TableNewAddCompResults.defaultProps = {
   summaryDate: "",
   summaryCategory: "",
   navigateTo: "",
-  onSearch: () => {},
+  onSearch: () => { },
   filterFields: [],
   NOTE_OPTIONS: [],
-  onAddNote: () => {},
+  onAddNote: () => { },
   onNoteChange: null,
 };
 

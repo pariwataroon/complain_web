@@ -292,13 +292,13 @@ const NewAdditionalComplaintsSummaryComponents = () => {
               />
             ),
           },
-          { label: "รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่ม" },
+          { label: "รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่มทั้งหมด" },
         ]}
       />
 
       <TableNewAddComp
         data={filteredComplaints}
-        title="รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่ม"
+        title="รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่มทั้งหมด"
         onSearch={handleSearch}
         actionButtonLabel="สรุปผลตามประเภทเรื่อง"
         onActionClick={handleSummaryByIssueType}

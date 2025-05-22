@@ -1,6 +1,4 @@
-// components/services/TableListAgency/TableListAgency.jsx
-
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -15,41 +13,31 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
-
 import styles from "./TableListStaffNoti.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
+import { exportElementToPDF } from "@utils/exportPDF";
 
-/**
- * props:
- * - data: array of objects
- * - title: table title
- * - navigateTo: base path for row click (item.id appended)
- * - onSearch: function(filters) => void
- * - filterFields: [{ name, label, type, options? }]
- */
 const TableListStaffNoti = ({
   data = [],
   title = "",
   navigateTo = "",
-  onSearch = () => {},
+  onSearch = () => { },
   filterFields = [],
 }) => {
   const router = useRouter();
+  const pdfRef = useRef();
 
-  // 1) initial filters จาก props.filterFields
   const initialFilters = filterFields.reduce((acc, f) => {
     acc[f.name] = "";
     return acc;
   }, {});
   const [filters, setFilters] = useState(initialFilters);
 
-  // 2) handle input change
   const handleChange = (field) => (e) =>
     setFilters({ ...filters, [field]: e?.target ? e.target.value : e });
 
-  // 3) pagination
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const pagedData = useMemo(
@@ -174,69 +162,76 @@ const TableListStaffNoti = ({
           </Box>
 
           <Box display="flex" alignItems="center" gap={1} flexShrink={0} mr={4}>
-            <ExportButton label="Export PDF" />
+            <ExportButton
+              label="Export PDF"
+              onClick={() =>
+                exportElementToPDF(pdfRef, "ายงานสรุปเรื่องร้องเรียนของหน่วยงาน.pdf")
+              }
+            />;
             <ExportButton label="Export Excel" />
           </Box>
         </Box>
       </Box>
 
       {/* Data Table */}
-      <Box
-        className={styles.tableWrapper}
-        id="table-results"
-        sx={{ overflowX: "auto", px: 2, pb: 1 }}
-      >
-        <Table sx={{ minWidth: 1400 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell align="center" sx={{ width: 80 }}>
-                ลำดับ
-              </TableCell>
-              {columns.map((col) => (
-                <TableCell key={col.name} sx={{ width: col.width }}>
-                  {col.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {pagedData.map((item, idx) => (
-              <TableRow
-                key={item.id}
-                onClick={() => handleRowClick(item)}
-                sx={{
-                  cursor: "pointer",
-                  "&:hover": { backgroundColor: "#f5f7ff" },
-                }}
-              >
-                <TableCell
-                  align="center"
-                  sx={{ width: 80, fontWeight: 600, color: "#1120A3" }}
-                >
-                  {page * rowsPerPage + idx + 1}
+      <div ref={pdfRef}>
+        <Box
+          className={styles.tableWrapper}
+          id="table-results"
+          sx={{ overflowX: "auto", px: 2, pb: 1 }}
+        >
+          <Table sx={{ minWidth: 1400 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center" sx={{ width: 80 }}>
+                  ลำดับ
                 </TableCell>
                 {columns.map((col) => (
                   <TableCell key={col.name} sx={{ width: col.width }}>
-                    {/* ถ้าไม่มี property ใด ก็โชว์ "-" */}
-                    {item[col.name] ?? "-"}
+                    {col.label}
                   </TableCell>
                 ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {pagedData.map((item, idx) => (
+                <TableRow
+                  key={item.id}
+                  onClick={() => handleRowClick(item)}
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": { backgroundColor: "#f5f7ff" },
+                  }}
+                >
+                  <TableCell
+                    align="center"
+                    sx={{ width: 80, fontWeight: 600, color: "#1120A3" }}
+                  >
+                    {page * rowsPerPage + idx + 1}
+                  </TableCell>
+                  {columns.map((col) => (
+                    <TableCell key={col.name} sx={{ width: col.width }}>
+                      {/* ถ้าไม่มี property ใด ก็โชว์ "-" */}
+                      {item[col.name] ?? "-"}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
-        <TablePagination
-          component="div"
-          rowsPerPageOptions={[5, 10, 25]}
-          count={data.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          sx={{ borderTop: "1px solid #eee" }}
-        />
-      </Box>
+          <TablePagination
+            component="div"
+            rowsPerPageOptions={[5, 10, 25]}
+            count={data.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            sx={{ borderTop: "1px solid #eee" }}
+          />
+        </Box>
+      </div>
     </Container>
   );
 };

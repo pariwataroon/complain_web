@@ -1,10 +1,8 @@
-// components/ReceiveData/Opm1111/Opm1111Components.jsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListCollaps from "@services/TableListCollaps/TableListCollaps";
 
-// ─── mock data (20 รายการ) ─────────────────────────────────────────────────
 const mockComplaints = [
   {
     id: 1,
@@ -108,10 +106,8 @@ const mockComplaints = [
       },
     ],
   },
-  // ... รายการที่ 6–20 ในรูปแบบเดียวกัน
 ];
 
-// ─── filter options ─────────────────────────────────────────────────────────
 const departmentOptions = [
   { value: "", label: "ทั้งหมด" },
   { value: "ภาษีอากร", label: "ภาษีอากร" },
@@ -149,6 +145,7 @@ const StatusTrackingReport = () => {
   const [allComplaints] = useState(mockComplaints);
   const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
   const router = useRouter();
+  
 
   const handleSearch = (filters) => {
     const {
@@ -262,6 +259,7 @@ const StatusTrackingReport = () => {
           },
         ]}
       />
+
     </>
   );
 };

@@ -1,6 +1,4 @@
-// components/services/TableListAgency/TableListAgency.jsx
-
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -21,24 +19,17 @@ import SearchOffIcon from "@mui/icons-material/SearchOff";
 import styles from "./TableListTab.module.scss";
 import InputText from "@services/InputText/InputText";
 import ExportButton from "@services/ExportButton/ExportButton";
+import { exportElementToPDF } from "@utils/exportPDF";
 
-/**
- * props:
- * - summaryData: array of objects for tab 0
- * - pendingData: array of objects for tab 1
- * - onSearch: fn(filters) => void
- * - filterFields: [{ name, label, type }]
- * - navigateTo: base path string for row click
- */
 const TableListAgency = ({
   summaryData = [],
   pendingData = [],
-  onSearch = () => {},
+  onSearch = () => { },
   filterFields = [],
   navigateTo = "",
 }) => {
   const router = useRouter();
-
+  const pdfRef = useRef();
   // tab state
   const [tabIndex, setTabIndex] = useState(0);
   const handleTabChange = (_, idx) => {
@@ -258,71 +249,78 @@ const TableListAgency = ({
           </IconButton>
 
           <Box flexGrow={1} />
-          <ExportButton label="Export PDF" />
+          <ExportButton
+            label="Export PDF"
+            onClick={() =>
+              exportElementToPDF(pdfRef, "ผลการดำเนินการและเรื่องค้างพิจารณา.pdf")
+            }
+          />;
           <ExportButton label="Export Excel" />
         </Box>
       </Box>
 
       {/* Table */}
-      <Box
-        className={styles.tableWrapper}
-        sx={{ overflowX: "auto", px: 2, pb: 1 }}
-      >
-        <Table sx={{ minWidth: 600, tableLayout: "fixed" }}>
-          <TableHead>
-            <TableRow>
-              {currentColumns.map((col) => (
-                <TableCell key={col.field} align={col.align}>
-                  {col.headerName}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {pagedData.map((row) => (
-              <TableRow
-                key={row.id}
-                hover
-                sx={{ cursor: "pointer" }}
-                onClick={() =>
-                  navigateTo && router.push(`${navigateTo}/${row.id}`)
-                }
-              >
+      <div ref={pdfRef}>
+        <Box
+          className={styles.tableWrapper}
+          sx={{ overflowX: "auto", px: 2, pb: 1 }}
+        >
+          <Table sx={{ minWidth: 600, tableLayout: "fixed" }}>
+            <TableHead>
+              <TableRow>
                 {currentColumns.map((col) => (
                   <TableCell key={col.field} align={col.align}>
-                    {row[col.field]}
+                    {col.headerName}
                   </TableCell>
                 ))}
               </TableRow>
-            ))}
+            </TableHead>
+            <TableBody>
+              {pagedData.map((row) => (
+                <TableRow
+                  key={row.id}
+                  hover
+                  sx={{ cursor: "pointer" }}
+                  onClick={() =>
+                    navigateTo && router.push(`${navigateTo}/${row.id}`)
+                  }
+                >
+                  {currentColumns.map((col) => (
+                    <TableCell key={col.field} align={col.align}>
+                      {row[col.field]}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
 
-            {/* summary row */}
-            <TableRow sx={{ backgroundColor: "#e3f2fd", fontWeight: "bold" }}>
-              {currentColumns.map((col) =>
-                col.field === "claimantName" ? (
-                  <TableCell key={col.field}>รวม</TableCell>
-                ) : (
-                  <TableCell key={col.field} align={col.align}>
-                    {totals[col.field]}
-                  </TableCell>
-                )
-              )}
-            </TableRow>
-          </TableBody>
-        </Table>
+              {/* summary row */}
+              <TableRow sx={{ backgroundColor: "#e3f2fd", fontWeight: "bold" }}>
+                {currentColumns.map((col) =>
+                  col.field === "claimantName" ? (
+                    <TableCell key={col.field}>รวม</TableCell>
+                  ) : (
+                    <TableCell key={col.field} align={col.align}>
+                      {totals[col.field]}
+                    </TableCell>
+                  )
+                )}
+              </TableRow>
+            </TableBody>
+          </Table>
 
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={currentData.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          sx={{ borderTop: "1px solid #eee" }}
-        />
-      </Box>
-    </Container>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={currentData.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            sx={{ borderTop: "1px solid #eee" }}
+          />
+        </Box>
+      </div>
+    </Container >
   );
 };
 
