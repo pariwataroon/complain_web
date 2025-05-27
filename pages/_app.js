@@ -1,3 +1,4 @@
+import Head from "next/head";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
 import { LoadingProvider } from "@context/LoadingProvider";
@@ -10,6 +11,9 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <LoadingProvider>
+      <Head>
+        <title>{process.env.NEXT_PUBLIC_APP_NAME}</title>
+      </Head>
       <StoreProvider>
         {getLayout(<Component {...pageProps} />)}
         <style jsx global>{`

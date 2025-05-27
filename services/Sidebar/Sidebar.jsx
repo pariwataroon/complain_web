@@ -30,6 +30,8 @@ import {
 } from "@pages/api/notifications/notifications";
 import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 import { formatElapsedThaiTime } from "@utils/Formats";
+import LayersIcon from '@mui/icons-material/Layers';
+import TuneIcon from '@mui/icons-material/Tune';
 import Cookies from "js-cookie";
 
 export default function Sidebar() {
@@ -54,7 +56,7 @@ export default function Sidebar() {
     document: Description,
     edit: Edit,
     dashboard: Dashboard,
-    stacked_line_chart: StackedLineChart,
+    stacked_line_chart: LayersIcon,
     account_box: AccountBox,
   };
 

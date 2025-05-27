@@ -103,7 +103,7 @@ const Filteromplaints = () => {
       <BreadcrumbsService items={breadcrumbItems} />
       <TableFilterList
         title="คัดกรองเรื่องร้องเรียน"
-        navigateTo="/admin/edit/search"
+        navigateTo="/admin/edit/search/Filteromplaints/edit"
         groups={[
           { title: "ช่องทางการรับเรื่อง : เว็บไซต์", data: group1 },
           { title: "ช่องทางการรับเรื่อง : ผู้ดูแลระบบ(แอดมิน)", data: group2 },

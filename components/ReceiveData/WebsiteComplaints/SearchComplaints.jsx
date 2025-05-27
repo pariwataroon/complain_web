@@ -78,7 +78,7 @@ const SearchComplaints = () => {
     const delegateData = delegateMethods.getValues();
 
     router.push({
-      pathname: "/next-page", // 🔁 เปลี่ยนชื่อหน้าที่คุณจะใช้
+      pathname: "/next-page",
       query: {
         data: JSON.stringify({
           general: generalData,
