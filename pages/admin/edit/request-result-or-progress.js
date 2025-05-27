@@ -1,8 +1,12 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import RequestResultProgress from "@components/ReceiveData/RequestResultProgress/RequestResultProgress";
 
 const Requestresultorprogress = () => {
-  return <div>แบบรายงานขอทราบผลการพิจารณาหรือผลความคืบหน้า</div>;
+  return (
+    <div>
+      <RequestResultProgress />
+    </div>
+  );
 };
 
 Requestresultorprogress.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;

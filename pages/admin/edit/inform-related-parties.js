@@ -1,8 +1,12 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import InformRelatedParties from "@components/ReceiveData/InformRelatedParties/InformRelatedParties";
 
 const Informrelatedparties = () => {
-  return <div>แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ</div>;
+  return (
+    <div>
+      <InformRelatedParties />
+    </div>
+  );
 };
 
 Informrelatedparties.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;

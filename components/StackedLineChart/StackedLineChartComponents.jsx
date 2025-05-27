@@ -93,7 +93,7 @@ const ComplaintArchives = () => {
       <TableListFollowing
         data={filteredComplaints}
         title="ติดตามผลการดำเนินการ"
-        navigateTo="/admin/edit/website-complaints"
+        navigateTo="/admin/StackedLineChart"
         statusOptions={statusOptions}
         onSearch={handleSearch}
       />

@@ -3,10 +3,10 @@ import Box from "@mui/material/Box";
 import Grid from "@mui/material/Unstable_Grid2";
 import { Paper, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
+import CloseIcon from "@mui/icons-material/Close";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
 import ButtonService from "@services/ButtonService/ButtonService";
-import CloseIcon from "@mui/icons-material/Close";
 
 const SetPeriodComponent = () => {
   // Breadcrumbs

@@ -1,8 +1,12 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import ForwardtoagencyComponents from "@components/ReceiveData/ForwardtoagencyComponents/ForwardtoagencyComponents";
 
 const Forwardtoagency = () => {
-  return <div>แบบรายงานส่งหน่วยงานที่เกี่ยวข้อง</div>;
+  return (
+    <div>
+      <ForwardtoagencyComponents />
+    </div>
+  );
 };
 
 Forwardtoagency.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
