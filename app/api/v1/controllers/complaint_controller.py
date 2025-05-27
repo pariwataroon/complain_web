@@ -469,250 +469,264 @@ def process_nested_fields(data: Dict) -> Dict:
     return result
 
 def extract_incident_location(complaint_data: Dict) -> Dict:
-    """สกัดข้อมูลสถานที่เกิดเหตุจากข้อมูลร้องเรียน"""
+    """สกัดข้อมูลสถานที่สำหรับรายงานตามลำดับความสำคัญ"""
     incident_location = {}
     
-    # Strategy 1: ดึงจาก step3.general.incidentLocation (ถ้ามี)
+    # Priority 1: สถานที่เกิดเหตุที่ระบุชัดเจน
     step3 = complaint_data.get("step3", {})
     general = step3.get("general", {})
     
-    if "incidentLocation" in general and isinstance(general["incidentLocation"], dict):
-        location = general["incidentLocation"]
-        # สกัดข้อมูล province
-        if "province" in location and isinstance(location["province"], dict):
-            incident_location["incident_province_id"] = location["province"].get("value")
-            incident_location["incident_province"] = location["province"].get("label")
-        
-        # สกัดข้อมูล district
-        if "districts" in location and isinstance(location["districts"], dict):
-            incident_location["incident_district_id"] = location["districts"].get("value")
-            incident_location["incident_district"] = location["districts"].get("label")
-        
-        # สกัดข้อมูล subdistrict
-        if "subdistricts" in location and isinstance(location["subdistricts"], dict):
-            incident_location["incident_subdistrict_id"] = location["subdistricts"].get("value")
-            incident_location["incident_subdistrict"] = location["subdistricts"].get("label")
+    if "incidentLocation" in general:
+        incident_location = extract_location_data(general["incidentLocation"])
+        if incident_location:
+            return normalize_location_data(incident_location)
     
-    # Strategy 2: ถ้าไม่มี incidentLocation ลองดูที่ step3.general โดยตรง
-    if not incident_location:
-        # ข้อมูลจังหวัด
-        if "province" in general and isinstance(general["province"], dict):
-            incident_location["incident_province_id"] = general["province"].get("value")
-            incident_location["incident_province"] = general["province"].get("label")
-            
-        # ข้อมูลอำเภอ
-        if "districts" in general and isinstance(general["districts"], dict):
-            incident_location["incident_district_id"] = general["districts"].get("value")
-            incident_location["incident_district"] = general["districts"].get("label")
-            
-        # ข้อมูลตำบล
-        if "subdistricts" in general and isinstance(general["subdistricts"], dict):
-            incident_location["incident_subdistrict_id"] = general["subdistricts"].get("value")
-            incident_location["incident_subdistrict"] = general["subdistricts"].get("label")
+    # Priority 2: ที่อยู่ผู้ถูกร้องเรียน (เหมาะสำหรับรายงาน)
+    step2 = complaint_data.get("step2", {}).get("general", {})
+    respondent_location = extract_respondent_location(step2)
     
-    # Strategy 3: ถ้าไม่พบที่เกิดเหตุโดยตรง ใช้ข้อมูลที่อยู่ของผู้ถูกร้องเรียน
-    if not incident_location and "step2" in complaint_data:
-        step2 = complaint_data.get("step2", {}).get("general", {})
-        
-        # ตรวจสอบประเภทผู้ถูกร้องเรียน
-        active_type = step2.get("activeType")
-        respondent_data = None
-        
-        if active_type == "government" and "government" in step2:
-            respondent_data = step2["government"]
-        elif active_type == "corporate" and "corporate" in step2:
-            respondent_data = step2["corporate"]
-        elif active_type in ["individual", "general"] and "individual" in step2:
-            respondent_data = step2["individual"]
-        
-        # สกัดข้อมูลที่อยู่จาก respondent_data
-        if respondent_data and isinstance(respondent_data, dict):
-            # ข้อมูลจังหวัด
-            if "province" in respondent_data and isinstance(respondent_data["province"], dict):
-                incident_location["incident_province_id"] = respondent_data["province"].get("value")
-                incident_location["incident_province"] = respondent_data["province"].get("label")
-                
-            # ข้อมูลอำเภอ
-            if "districts" in respondent_data and isinstance(respondent_data["districts"], dict):
-                incident_location["incident_district_id"] = respondent_data["districts"].get("value")
-                incident_location["incident_district"] = respondent_data["districts"].get("label")
-                
-            # ข้อมูลตำบล
-            if "subdistricts" in respondent_data and isinstance(respondent_data["subdistricts"], dict):
-                incident_location["incident_subdistrict_id"] = respondent_data["subdistricts"].get("value")
-                incident_location["incident_subdistrict"] = respondent_data["subdistricts"].get("label")
+    if respondent_location:
+        return normalize_location_data(respondent_location)
     
-    # Strategy 4: ถ้ายังไม่พบ ใช้ข้อมูลที่อยู่ของผู้ร้องเรียน
-    if not incident_location and "step1" in complaint_data:
-        step1 = complaint_data.get("step1", {}).get("general", {})
-        
-        complainant_data = None
-        active_type = step1.get("activeType", "general")
-        
-        if active_type == "corporate" and "corporate" in step1:
-            complainant_data = step1["corporate"]
-        elif (active_type == "general" or active_type == "individual") and "general" in step1:
-            complainant_data = step1["general"]
-        
-        # สกัดข้อมูลที่อยู่จาก complainant_data
-        if complainant_data and isinstance(complainant_data, dict):
-            # ข้อมูลจังหวัด
-            if "province" in complainant_data and isinstance(complainant_data["province"], dict):
-                incident_location["incident_province_id"] = complainant_data["province"].get("value")
-                incident_location["incident_province"] = complainant_data["province"].get("label")
-                
-            # ข้อมูลอำเภอ
-            if "districts" in complainant_data and isinstance(complainant_data["districts"], dict):
-                incident_location["incident_district_id"] = complainant_data["districts"].get("value")
-                incident_location["incident_district"] = complainant_data["districts"].get("label")
-                
-            # ข้อมูลตำบล
-            if "subdistricts" in complainant_data and isinstance(complainant_data["subdistricts"], dict):
-                incident_location["incident_subdistrict_id"] = complainant_data["subdistricts"].get("value")
-                incident_location["incident_subdistrict"] = complainant_data["subdistricts"].get("label")
+    # Priority 3: ที่อยู่ผู้ร้องเรียน (fallback)
+    complainant_location = fallback_to_step1_location(complaint_data)
     
-    return incident_location
+    if complainant_location:
+        return normalize_location_data(complainant_location)
+    
+    # กรณีไม่มีข้อมูลเลย
+    return {}
 
-def verify_geographic_data(db: Session, incident_location: Dict) -> Dict:
-    """ตรวจสอบและยืนยันความถูกต้องของข้อมูลทางภูมิศาสตร์"""
-    verified_data = {}
+def extract_location_data(location_data: Dict) -> Dict:
+    """สกัดข้อมูลที่อยู่จากโครงสร้างข้อมูลที่อยู่"""
+    if not isinstance(location_data, dict):
+        return {}
     
-    # ตรวจสอบจังหวัด
-    province_id = incident_location.get("incident_province_id")
-    province_name = incident_location.get("incident_province")
+    location = {}
     
-    # กรณีมี province_id ให้ใช้ข้อมูลจากฐานข้อมูลเท่านั้น
-    if province_id:
-        try:
-            # รองรับกรณีที่ province_id อาจเป็นได้ทั้ง int หรือ string
-            if isinstance(province_id, str) and province_id.isdigit():
-                province_id = int(province_id)
-                
-            province = db.query(Province).filter(Province.id == province_id).first()
-            if province:
-                verified_data["incident_province_id"] = province.id
-                verified_data["incident_province"] = province.name_th  # ใช้ชื่อจากฐานข้อมูลเสมอ
-        except (ValueError, TypeError):
-            # กรณีแปลงค่าไม่ได้ ให้ค้นหาจากชื่อแทน
-            if province_name:
-                province = db.query(Province).filter(
-                    (Province.name_th.ilike(f"%{province_name}%")) | 
-                    (Province.name_en.ilike(f"%{province_name}%"))
-                ).first()
-                if province:
-                    verified_data["incident_province_id"] = province.id
-                    verified_data["incident_province"] = province.name_th
-    # กรณีไม่มี province_id แต่มีชื่อ
-    elif province_name:
-        # ค้นหาจากชื่อ
-        province = db.query(Province).filter(
-            (Province.name_th.ilike(f"%{province_name}%")) | 
-            (Province.name_en.ilike(f"%{province_name}%"))
-        ).first()
-        if province:
-            verified_data["incident_province_id"] = province.id
-            verified_data["incident_province"] = province.name_th
+    # ตรวจสอบรูปแบบข้อมูลที่อยู่
+    if "province" in location_data:
+        province_data = location_data["province"]
+        if isinstance(province_data, dict):
+            location["incident_province_id"] = province_data.get("value")
+            location["incident_province"] = province_data.get("label")
+        elif isinstance(province_data, str):
+            location["incident_province"] = province_data
     
-    # แก้ไขส่วนที่เกี่ยวข้องกับอำเภอ
-    district_id = incident_location.get("incident_district_id")
-    district_name = incident_location.get("incident_district")
+    if "districts" in location_data:
+        district_data = location_data["districts"]
+        if isinstance(district_data, dict):
+            location["incident_district_id"] = district_data.get("value")
+            location["incident_district"] = district_data.get("label")
+        elif isinstance(district_data, str):
+            location["incident_district"] = district_data
     
-    # ตรวจสอบอำเภอ โดยไม่จำเป็นต้องขึ้นกับการมีจังหวัดที่ถูกต้อง
-    if district_id:
-        try:
-            # เก็บเป็นค่า original_id ไว้ก่อนแปลง
-            original_district_id = district_id
-            
-            # แปลงเป็น int ถ้าเป็นไปได้
-            if isinstance(district_id, str) and district_id.isdigit():
-                district_id = int(district_id)
-                
-            # ค้นหาอำเภอโดยตรง
-            amphure = db.query(Amphure).filter(Amphure.id == district_id).first()
-            
-            # ถ้ามีจังหวัดที่ตรวจสอบแล้ว ให้กรองด้วยจังหวัดด้วย
-            if "incident_province_id" in verified_data and amphure and amphure.province_id != verified_data["incident_province_id"]:
-                # ถ้าอำเภอไม่ได้อยู่ในจังหวัดที่กำหนด ลองค้นหาในจังหวัดที่ถูกต้อง
-                amphure = db.query(Amphure).filter(
-                    Amphure.province_id == verified_data["incident_province_id"],
-                    ((Amphure.name_th.ilike(f"%{district_name}%")) | (Amphure.name_en.ilike(f"%{district_name}%")))
-                ).first()
-            
-            if amphure:
-                verified_data["incident_district_id"] = amphure.id
-                verified_data["incident_district"] = amphure.name_th
-            elif district_name and "incident_province_id" in verified_data:
-                # ค้นหาอำเภอจากชื่อในจังหวัดที่ถูกต้อง
-                amphure = db.query(Amphure).filter(
-                    ((Amphure.name_th.ilike(f"%{district_name}%")) | (Amphure.name_en.ilike(f"%{district_name}%"))),
-                    (Amphure.province_id == verified_data["incident_province_id"])
-                ).first()
-                if amphure:
-                    verified_data["incident_district_id"] = amphure.id
-                    verified_data["incident_district"] = amphure.name_th
-        except (ValueError, TypeError):
-            # กรณีแปลงค่าไม่ได้ ให้ค้นหาจากชื่อแทน
-            if district_name and "incident_province_id" in verified_data:
-                amphure = db.query(Amphure).filter(
-                    ((Amphure.name_th.ilike(f"%{district_name}%")) | (Amphure.name_en.ilike(f"%{district_name}%"))),
-                    (Amphure.province_id == verified_data["incident_province_id"])
-                ).first()
-                if amphure:
-                    verified_data["incident_district_id"] = amphure.id
-                    verified_data["incident_district"] = amphure.name_th
-    # กรณีมีแต่ชื่ออำเภอ และมีจังหวัดที่ถูกต้อง
-    elif district_name and "incident_province_id" in verified_data:
-        amphure = db.query(Amphure).filter(
-            ((Amphure.name_th.ilike(f"%{district_name}%")) | (Amphure.name_en.ilike(f"%{district_name}%"))),
-            (Amphure.province_id == verified_data["incident_province_id"])
-        ).first()
-        if amphure:
-            verified_data["incident_district_id"] = amphure.id
-            verified_data["incident_district"] = amphure.name_th
+    if "subdistricts" in location_data:
+        subdistrict_data = location_data["subdistricts"]
+        if isinstance(subdistrict_data, dict):
+            location["incident_subdistrict_id"] = subdistrict_data.get("value")
+            location["incident_subdistrict"] = subdistrict_data.get("label")
+        elif isinstance(subdistrict_data, str):
+            location["incident_subdistrict"] = subdistrict_data
     
-    # ส่วนตำบล (subdistrict) - ต้องแก้ไขการจัดการกับ ID
-    subdistrict_id = incident_location.get("incident_subdistrict_id")
-    subdistrict_name = incident_location.get("incident_subdistrict")
-    
-    if subdistrict_id:
-        # ไม่ต้องแปลง subdistrict_id เป็น int เพราะในแบบจำลอง District.id เป็น string
-        subdistrict_id = str(subdistrict_id)
-        
-        # ค้นหาตำบลโดยตรงจาก ID
-        district = db.query(District).filter(District.id == subdistrict_id).first()
-        
-        # ถ้ามีอำเภอที่ตรวจสอบแล้ว ให้ตรวจสอบความสอดคล้องกับอำเภอด้วย
-        if "incident_district_id" in verified_data and district and district.amphure_id != verified_data["incident_district_id"]:
-            # ถ้าตำบลไม่ได้อยู่ในอำเภอที่กำหนด ลองค้นหาในอำเภอที่ถูกต้อง
-            district = db.query(District).filter(
-                District.amphure_id == verified_data["incident_district_id"],
-                ((District.name_th.ilike(f"%{subdistrict_name}%")) | (District.name_en.ilike(f"%{subdistrict_name}%")))
-            ).first()
-        
-        if district:
-            verified_data["incident_subdistrict_id"] = district.id
-            verified_data["incident_subdistrict"] = district.name_th
-        elif subdistrict_name and "incident_district_id" in verified_data:
-            # ค้นหาตำบลจากชื่อ
-            district = db.query(District).filter(
-                ((District.name_th.ilike(f"%{subdistrict_name}%")) | (District.name_en.ilike(f"%{subdistrict_name}%"))),
-                (District.amphure_id == verified_data["incident_district_id"])
-            ).first()
-            if district:
-                verified_data["incident_subdistrict_id"] = district.id
-                verified_data["incident_subdistrict"] = district.name_th
-    # กรณีมีแต่ชื่อตำบล
-    elif subdistrict_name and "incident_district_id" in verified_data:
-        district = db.query(District).filter(
-            ((District.name_th.ilike(f"%{subdistrict_name}%")) | (District.name_en.ilike(f"%{subdistrict_name}%"))),
-            (District.amphure_id == verified_data["incident_district_id"])
-        ).first()
-        if district:
-            verified_data["incident_subdistrict_id"] = district.id
-            verified_data["incident_subdistrict"] = district.name_th
-                
-    return verified_data
+    # กรองค่า None และ empty string ออก
+    return {k: v for k, v in location.items() if v}
 
+def extract_complainant_location(step1_general: Dict) -> Dict:
+    """ดึงข้อมูลที่อยู่ผู้ร้องเรียนตามประเภท"""
+    location = {}
+    
+    # ตรวจสอบประเภทผู้ร้องเรียน
+    active_type = step1_general.get("activeType", "general")
+    
+    complainant_data = None
+    if active_type == "corporate" and "corporate" in step1_general:
+        complainant_data = step1_general["corporate"]
+    elif active_type in ["general", "individual"] and "general" in step1_general:
+        complainant_data = step1_general["general"]
+    elif "general" in step1_general:
+        # fallback กรณีไม่มี activeType
+        complainant_data = step1_general["general"]
+    elif "corporate" in step1_general:
+        # fallback กรณีมีข้อมูล corporate
+        complainant_data = step1_general["corporate"]
+    
+    if isinstance(complainant_data, dict):
+        location = extract_address_fields(complainant_data, "incident")
+    
+    return location
+
+def extract_respondent_location(step2_general: Dict) -> Dict:
+    """ดึงข้อมูลที่อยู่ผู้ถูกร้องเรียนตามประเภท"""
+    location = {}
+    
+    active_type = step2_general.get("activeType", "individual")
+    respondent_data = step2_general.get(active_type, {})
+    
+    # กรณีมีข้อมูลซ้อนใน individual
+    if active_type == "individual" and isinstance(respondent_data, dict):
+        # ตรวจสอบว่ามีข้อมูลซ้อนหรือไม่
+        if "corporate" in respondent_data:
+            respondent_data = respondent_data["corporate"]
+        elif "government" in respondent_data:
+            respondent_data = respondent_data["government"]
+        elif "individual" in respondent_data:
+            respondent_data = respondent_data["individual"]
+    
+    if isinstance(respondent_data, dict):
+        location = extract_address_fields(respondent_data, "incident")
+    
+    return location
+
+def extract_address_fields(data: Dict, prefix: str = "incident") -> Dict:
+    """สกัดข้อมูลที่อยู่จากข้อมูลบุคคลหรือองค์กร"""
+    location = {}
+    
+    if not isinstance(data, dict):
+        return location
+    
+    # ตรวจสอบรูปแบบข้อมูลที่อยู่
+    if "province" in data:
+        province_data = data["province"]
+        if isinstance(province_data, dict):
+            location[f"{prefix}_province_id"] = province_data.get("value")
+            location[f"{prefix}_province"] = province_data.get("label")
+        elif isinstance(province_data, str):
+            location[f"{prefix}_province"] = province_data
+    
+    if "districts" in data:
+        district_data = data["districts"]
+        if isinstance(district_data, dict):
+            location[f"{prefix}_district_id"] = district_data.get("value")
+            location[f"{prefix}_district"] = district_data.get("label")
+        elif isinstance(district_data, str):
+            location[f"{prefix}_district"] = district_data
+    
+    if "subdistricts" in data:
+        subdistrict_data = data["subdistricts"]
+        if isinstance(subdistrict_data, dict):
+            location[f"{prefix}_subdistrict_id"] = subdistrict_data.get("value")
+            location[f"{prefix}_subdistrict"] = subdistrict_data.get("label")
+        elif isinstance(subdistrict_data, str):
+            location[f"{prefix}_subdistrict"] = subdistrict_data
+    
+    # รองรับกรณีที่ใช้ชื่อ field แตกต่างกัน
+    if "amphur" in data or "amphure" in data:
+        amphur_data = data.get("amphur", data.get("amphure"))
+        if isinstance(amphur_data, dict):
+            location[f"{prefix}_district_id"] = amphur_data.get("value")
+            location[f"{prefix}_district"] = amphur_data.get("label")
+        elif isinstance(amphur_data, str):
+            location[f"{prefix}_district"] = amphur_data
+    
+    if "tambon" in data or "district" in data:
+        tambon_data = data.get("tambon", data.get("district"))
+        if isinstance(tambon_data, dict):
+            location[f"{prefix}_subdistrict_id"] = tambon_data.get("value")
+            location[f"{prefix}_subdistrict"] = tambon_data.get("label")
+        elif isinstance(tambon_data, str):
+            location[f"{prefix}_subdistrict"] = tambon_data
+    
+    # กรองค่า None และ empty string ออก
+    return {k: v for k, v in location.items() if v}
+
+def fallback_to_step1_location(complaint_data: Dict) -> Dict:
+    """ใช้ที่อยู่ผู้ร้องเรียนเป็นทางเลือกสำรอง"""
+    step1 = complaint_data.get("step1", {}).get("general", {})
+    return extract_complainant_location(step1)
+
+def check_province_only_data(location_data: Dict) -> bool:
+    """ตรวจสอบว่ามีข้อมูลเฉพาะจังหวัดหรือไม่"""
+    has_province = bool(location_data.get("incident_province_id") or location_data.get("incident_province"))
+    has_district = bool(location_data.get("incident_district_id") or location_data.get("incident_district"))
+    has_subdistrict = bool(location_data.get("incident_subdistrict_id") or location_data.get("incident_subdistrict"))
+    
+    return has_province and not has_district and not has_subdistrict
+
+def normalize_location_data(location_data: Dict) -> Dict:
+    """ปรับปรุงและทำให้ข้อมูลที่อยู่เป็นมาตรฐาน"""
+    normalized = {}
+    
+    # กรองเฉพาะข้อมูลที่มีค่า
+    for key, value in location_data.items():
+        if value and str(value).strip():
+            normalized[key] = str(value).strip()
+    
+    return normalized
+
+# ปรับปรุงฟังก์ชัน extract_incident_location ให้สมบูรณ์
+def extract_incident_location(complaint_data: Dict):
+    """สกัดข้อมูลสถานที่สำหรับรายงานตามลำดับความสำคัญ"""
+    incident_location = {}
+    
+    # Priority 1: สถานที่เกิดเหตุที่ระบุชัดเจน
+    step3 = complaint_data.get("step3", {})
+    general = step3.get("general", {})
+    
+    if "incidentLocation" in general:
+        incident_location = extract_location_data(general["incidentLocation"])
+        if incident_location:
+            return normalize_location_data(incident_location)
+    
+    # Priority 2: ที่อยู่ผู้ถูกร้องเรียน (เหมาะสำหรับรายงาน)
+    step2 = complaint_data.get("step2", {}).get("general", {})
+    respondent_location = extract_respondent_location(step2)
+    
+    if respondent_location:
+        return normalize_location_data(respondent_location)
+    
+    # Priority 3: ที่อยู่ผู้ร้องเรียน (fallback)
+    complainant_location = fallback_to_step1_location(complaint_data)
+    
+    if complainant_location:
+        return normalize_location_data(complainant_location)
+    
+    # กรณีไม่มีข้อมูลเลย
+    return {}
+
+def get_best_available_location(complaint_data: Dict) -> Dict:
+    """ดึงข้อมูลที่อยู่ที่ดีที่สุดที่มีอยู่"""
+    location = extract_incident_location(complaint_data)
+    
+    # ถ้าไม่มีข้อมูลครบถ้วน ให้ใช้ข้อมูลที่มีอยู่
+    if not location:
+        # ลองดึงจากข้อมูลดิบ
+        all_locations = []
+        
+        # เก็บข้อมูลจากทุกแหล่ง
+        step1_location = fallback_to_step1_location(complaint_data)
+        if step1_location:
+            all_locations.append(("complainant", step1_location))
+        
+        step2_location = extract_respondent_location(complaint_data.get("step2", {}).get("general", {}))
+        if step2_location:
+            all_locations.append(("respondent", step2_location))
+        
+        # เลือกข้อมูลที่มีความละเอียดมากที่สุด
+        best_location = None
+        best_score = 0
+        
+        for source, loc_data in all_locations:
+            score = 0
+            if loc_data.get("incident_province_id") or loc_data.get("incident_province"):
+                score += 1
+            if loc_data.get("incident_district_id") or loc_data.get("incident_district"):
+                score += 2
+            if loc_data.get("incident_subdistrict_id") or loc_data.get("incident_subdistrict"):
+                score += 4
+            
+            if score > best_score:
+                best_score = score
+                best_location = loc_data
+        
+        location = best_location or {}
+    
+    return normalize_location_data(location)
+
+# ปรับปรุงฟังก์ชัน prepare_complaint_model_data ให้ใช้ฟังก์ชันใหม่
+# เปลี่ยนจาก:
+# incident_location = extract_incident_location(complaint_data)
+# เป็น:
 def prepare_complaint_model_data(
     db: Session, 
     complaint_data: Dict, 
@@ -825,8 +839,8 @@ def prepare_complaint_model_data(
     delegate_data_json = convert_to_db_json(delegate_data) if delegate_data else None
     full_complaint_data_json = convert_to_db_json(original_data)
     
-    # เพิ่มการดึงข้อมูลสถานที่เกิดเหตุ
-    incident_location = extract_incident_location(complaint_data)
+    # เพิ่มการดึงข้อมูลสถานที่เกิดเหตุ (ใช้ฟังก์ชันที่ปรับปรุงแล้ว)
+    incident_location = get_best_available_location(complaint_data)
     
     # ตรวจสอบความถูกต้องของข้อมูลทางภูมิศาสตร์
     verified_location = verify_geographic_data(db, incident_location)
@@ -1640,3 +1654,195 @@ def set_default_channel_id(db: Session):
         db.commit()
         return {"updated_count": result}
     return {"updated_count": 0, "error": "ไม่พบช่องทางเริ่มต้น (ออนไลน์)"}
+
+def verify_geographic_data(db: Session, location_data: Dict) -> Dict:
+    """ตรวจสอบและยืนยันความถูกต้องของข้อมูลทางภูมิศาสตร์"""
+    verified_location = {}
+    
+    if not location_data:
+        return verified_location
+    
+    # ตรวจสอบข้อมูลจังหวัด
+    province_id = location_data.get("incident_province_id")
+    province_name = location_data.get("incident_province")
+    
+    if province_id:
+        # ตรวจสอบว่า province_id มีอยู่จริงในฐานข้อมูล
+        province = db.query(Province).filter(Province.id == province_id).first()
+        if province:
+            verified_location["incident_province_id"] = province.id
+            verified_location["incident_province"] = province.name_th
+        elif province_name:
+            # หาจังหวัดจากชื่อ
+            province = db.query(Province).filter(
+                (Province.name_th.ilike(f"%{province_name}%")) | 
+                (Province.name_en.ilike(f"%{province_name}%"))
+            ).first()
+            if province:
+                verified_location["incident_province_id"] = province.id
+                verified_location["incident_province"] = province.name_th
+    elif province_name:
+        # หาจังหวัดจากชื่อเมื่อไม่มี ID
+        province = db.query(Province).filter(
+            (Province.name_th.ilike(f"%{province_name}%")) | 
+            (Province.name_en.ilike(f"%{province_name}%"))
+        ).first()
+        if province:
+            verified_location["incident_province_id"] = province.id
+            verified_location["incident_province"] = province.name_th
+    
+    # ตรวจสอบข้อมูลอำเภอ (เฉพาะเมื่อมีจังหวัดแล้ว)
+    if verified_location.get("incident_province_id"):
+        district_id = location_data.get("incident_district_id")
+        district_name = location_data.get("incident_district")
+        
+        if district_id:
+            # ตรวจสอบว่า district_id มีอยู่จริงและอยู่ในจังหวัดที่ถูกต้อง
+            amphure = db.query(Amphure).filter(
+                Amphure.id == district_id,
+                Amphure.province_id == verified_location["incident_province_id"]
+            ).first()
+            if amphure:
+                verified_location["incident_district_id"] = amphure.id
+                verified_location["incident_district"] = amphure.name_th
+            elif district_name:
+                # หาอำเภอจากชื่อ
+                amphure = db.query(Amphure).filter(
+                    ((Amphure.name_th.ilike(f"%{district_name}%")) | 
+                     (Amphure.name_en.ilike(f"%{district_name}%"))),
+                    Amphure.province_id == verified_location["incident_province_id"]
+                ).first()
+                if amphure:
+                    verified_location["incident_district_id"] = amphure.id
+                    verified_location["incident_district"] = amphure.name_th
+        elif district_name:
+            # หาอำเภอจากชื่อเมื่อไม่มี ID
+            amphure = db.query(Amphure).filter(
+                ((Amphure.name_th.ilike(f"%{district_name}%")) | 
+                 (Amphure.name_en.ilike(f"%{district_name}%"))),
+                Amphure.province_id == verified_location["incident_province_id"]
+            ).first()
+            if amphure:
+                verified_location["incident_district_id"] = amphure.id
+                verified_location["incident_district"] = amphure.name_th
+    
+    # ตรวจสอบข้อมูลตำบล (เฉพาะเมื่อมีอำเภอแล้ว)
+    if verified_location.get("incident_district_id"):
+        subdistrict_id = location_data.get("incident_subdistrict_id")
+        subdistrict_name = location_data.get("incident_subdistrict")
+        
+        if subdistrict_id:
+            # ตรวจสอบว่า subdistrict_id มีอยู่จริงและอยู่ในอำเภอที่ถูกต้อง
+            district = db.query(District).filter(
+                District.id == str(subdistrict_id),
+                District.amphure_id == verified_location["incident_district_id"]
+            ).first()
+            if district:
+                verified_location["incident_subdistrict_id"] = district.id
+                verified_location["incident_subdistrict"] = district.name_th
+            elif subdistrict_name:
+                # หาตำบลจากชื่อ
+                district = db.query(District).filter(
+                    ((District.name_th.ilike(f"%{subdistrict_name}%")) | 
+                     (District.name_en.ilike(f"%{subdistrict_name}%"))),
+                    District.amphure_id == verified_location["incident_district_id"]
+                ).first()
+                if district:
+                    verified_location["incident_subdistrict_id"] = district.id
+                    verified_location["incident_subdistrict"] = district.name_th
+        elif subdistrict_name:
+            # หาตำบลจากชื่อเมื่อไม่มี ID
+            district = db.query(District).filter(
+                ((District.name_th.ilike(f"%{subdistrict_name}%")) | 
+                 (District.name_en.ilike(f"%{subdistrict_name}%"))),
+                District.amphure_id == verified_location["incident_district_id"]
+            ).first()
+            if district:
+                verified_location["incident_subdistrict_id"] = district.id
+                verified_location["incident_subdistrict"] = district.name_th
+    
+    return verified_location
+
+def handle_incomplete_location_data(location_data: Dict) -> Dict:
+    """จัดการกับข้อมูลที่อยู่ที่ไม่สมบูรณ์"""
+    result = {}
+    
+    # กรณีที่มีข้อมูลเฉพาะจังหวัด
+    if check_province_only_data(location_data):
+        # ใช้ข้อมูลระดับจังหวัดในการรายงาน
+        result = {
+            "incident_province_id": location_data.get("incident_province_id"),
+            "incident_province": location_data.get("incident_province"),
+            "location_level": "province_only"
+        }
+    
+    # กรณีที่ไม่มีข้อมูลเลย
+    elif not location_data:
+        result = {
+            "location_level": "no_location_data"
+        }
+    
+    # กรณีปกติ
+    else:
+        result = location_data.copy()
+        result["location_level"] = "complete"
+    
+    return result
+
+def get_fallback_location_strategy(complaint_data: Dict) -> Dict:
+    """กลยุทธ์การหาข้อมูลที่อยู่สำรอง"""
+    strategies = []
+    
+    # Strategy 1: ที่อยู่ผู้ถูกร้องเรียน
+    step2_location = extract_respondent_location(complaint_data.get("step2", {}).get("general", {}))
+    if step2_location:
+        strategies.append(("respondent", step2_location))
+    
+    # Strategy 2: ที่อยู่ผู้ร้องเรียน
+    step1_location = fallback_to_step1_location(complaint_data)
+    if step1_location:
+        strategies.append(("complainant", step1_location))
+    
+    # Strategy 3: สถานที่เกิดเหตุที่ระบุโดยตรง
+    step3 = complaint_data.get("step3", {}).get("general", {})
+    if "incidentLocation" in step3:
+        incident_loc = extract_location_data(step3["incidentLocation"])
+        if incident_loc:
+            strategies.append(("incident", incident_loc))
+    
+    # เลือกกลยุทธ์ที่ดีที่สุด (มีข้อมูลมากที่สุด)
+    best_strategy = None
+    best_score = 0
+    
+    for strategy_name, location in strategies:
+        score = calculate_location_completeness_score(location)
+        if score > best_score:
+            best_score = score
+            best_strategy = (strategy_name, location)
+    
+    if best_strategy:
+        return {
+            "strategy": best_strategy[0],
+            "location": best_strategy[1],
+            "completeness_score": best_score
+        }
+    
+    return {"strategy": "none", "location": {}, "completeness_score": 0}
+
+def calculate_location_completeness_score(location_data: Dict) -> int:
+    """คำนวณคะแนนความสมบูรณ์ของข้อมูลที่อยู่"""
+    score = 0
+    
+    # จังหวัด (ค่าน้ำหนัก 1)
+    if location_data.get("incident_province_id") or location_data.get("incident_province"):
+        score += 1
+    
+    # อำเภอ (ค่าน้ำหนัก 2)
+    if location_data.get("incident_district_id") or location_data.get("incident_district"):
+        score += 2
+    
+    # ตำบล (ค่าน้ำหนัก 4)
+    if location_data.get("incident_subdistrict_id") or location_data.get("incident_subdistrict"):
+        score += 4
+    
+    return score
