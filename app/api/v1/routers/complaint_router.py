@@ -4,14 +4,15 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 import json
 from datetime import datetime
+from models.comp_complaint_types import ComplaintType
 
 from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
 from app.api.v1.controllers.complaint_controller import (
-    create_complaint, get_complaints, get_complaint, update_complaint_status, delete_complaint, get_user_complaints, get_user_complaint_detail
+    create_complaint, get_complaints, get_complaint, update_complaint_status, delete_complaint, get_user_complaints, get_user_complaint_detail, update_complaint_details, add_related_complaint
 )
 from app.api.v1.schemas.complaint import ComplaintCreate, ComplaintResponse, ComplaintListItem, StatusUpdateRequest
-from models.comp_complaint import Complaint, ComplaintStatus
+from models.comp_complaint import Complaint, ComplaintStatus, SeverityLevel, SatisfactionRating
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
 
@@ -28,18 +29,46 @@ async def create_new_complaint(
 ):
     """Create a new complaint using the nested structure"""
     try:
-        # สร้างข้อมูลอย่างมีประสิทธิภาพ - ส่งข้อมูลต้นฉบับทั้งหมดไปให้ controller
-        # ไม่ต้องแยกแยะข้อมูลที่นี่ เพราะมีการประมวลผลเต็มรูปแบบที่ controller แล้ว
+        # สร้างข้อมูลอย่างมีประสิทธิภาพ
         complaint_data = request_data
         
         # Extract complaintType from step3 if present for backward compatibility
         if "step3" in request_data and "general" in request_data["step3"]:
             if "complaintType" in request_data["step3"]["general"]:
-                # Ensure complaintType is at the root level as well
                 complaint_data = {**request_data}
                 complaint_data["complaintType"] = request_data["step3"]["general"]["complaintType"]
+
+        # ตรวจสอบ complaint_type ก่อนบันทึก
+        complaint_type = None
+        if "complaintType" in complaint_data:
+            complaint_type = complaint_data["complaintType"]
+        elif "step3" in complaint_data and "general" in complaint_data["step3"]:
+            complaint_type = complaint_data["step3"]["general"].get("complaintType")
+
+        if complaint_type:
+            # ตรวจสอบว่า complaint_type มีในฐานข้อมูลหรือไม่
+            valid_type = db.query(ComplaintType).filter(
+                ComplaintType.name == complaint_type,
+                ComplaintType.is_active == True
+            ).first()
+            
+            if not valid_type:
+                # แนวทางที่ 1: แจ้งเตือนและปฏิเสธการบันทึก
+                # return format_response("4000", {"error": f"ประเภทเรื่องร้องเรียน '{complaint_type}' ไม่มีอยู่ในระบบ"})
+                
+                # แนวทางที่ 2: แมปไปยังประเภท "อื่นๆ" โดยอัตโนมัติ
+                default_type = db.query(ComplaintType).filter(
+                    ComplaintType.name == "อื่นๆ",
+                    ComplaintType.is_active == True
+                ).first()
+                
+                if default_type:
+                    if "complaintType" in complaint_data:
+                        complaint_data["complaintType"] = "อื่นๆ"
+                    if "step3" in complaint_data and "general" in complaint_data["step3"]:
+                        complaint_data["step3"]["general"]["complaintType"] = "อื่นๆ"
         
-        # Use the controller function instead of directly creating model instance
+        # ใช้ controller function เพื่อสร้างข้อร้องเรียน
         new_complaint = create_complaint(db, complaint_data, UUID(current_user) if current_user else None)
         
         return format_response("0001", {
@@ -313,3 +342,104 @@ async def add_attachment_to_complaint(
         })
     except Exception as e:
         return format_response("5000", {"error": str(e)})
+
+@router.patch("/{complaint_id}/details", response_model=FormatResponseModel)
+async def update_complaint_additional_details(
+    complaint_id: UUID,
+    update_data: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("complaints"))
+):
+    """อัพเดทข้อมูลเพิ่มเติมของเรื่องร้องเรียน เช่น ความลับ ความเร่งด่วน พื้นที่เกิดเหตุ"""
+    try:
+        updated_complaint = update_complaint_details(
+            db, 
+            complaint_id, 
+            update_data, 
+            UUID(current_user) if current_user else None
+        )
+        
+        if not updated_complaint:
+            raise HTTPException(status_code=404, detail=f"Complaint with ID {complaint_id} not found")
+        
+        return format_response("0002", {
+            "id": complaint_id,
+            "updated_at": updated_complaint.updated_at
+        })
+    except ValueError as e:
+        return format_response("4000", {"error": str(e)})
+
+@router.post("/{complaint_id}/related/{related_complaint_id}", response_model=FormatResponseModel)
+async def add_related_complaint_connection(
+    complaint_id: UUID,
+    related_complaint_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("complaints"))
+):
+    """เพิ่มความสัมพันธ์ระหว่างเรื่องร้องเรียน"""
+    success = add_related_complaint(db, complaint_id, related_complaint_id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="One or both complaints not found")
+    
+    return format_response("0002", {
+        "complaint_id": complaint_id,
+        "related_complaint_id": related_complaint_id,
+        "status": "linked"
+    })
+
+@router.patch("/{complaint_id}/severity", response_model=FormatResponseModel)
+async def update_complaint_severity(
+    complaint_id: UUID,
+    severity_level: SeverityLevel,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("complaints"))
+):
+    """อัพเดทระดับความรุนแรงของเรื่องร้องเรียน"""
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    
+    if not complaint:
+        raise HTTPException(status_code=404, detail=f"Complaint with ID {complaint_id} not found")
+    
+    complaint.severity_level = severity_level
+    complaint.updated_at = datetime.now()
+    
+    db.commit()
+    db.refresh(complaint)
+    
+    return format_response("0002", {
+        "id": complaint_id,
+        "severity_level": severity_level.value
+    })
+
+@router.patch("/{complaint_id}/satisfaction", response_model=FormatResponseModel)
+async def update_complaint_satisfaction(
+    complaint_id: UUID,
+    rating: SatisfactionRating,
+    comment: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """บันทึกคะแนนความพึงพอใจต่อการแก้ไขปัญหา"""
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    
+    if not complaint:
+        raise HTTPException(status_code=404, detail=f"Complaint with ID {complaint_id} not found")
+    
+    # ตรวจสอบว่าผู้ใช้มีสิทธิ์ในการให้คะแนน (ควรเป็นเจ้าของเรื่องร้องเรียน)
+    if current_user and complaint.created_by and str(complaint.created_by) != current_user:
+        raise HTTPException(status_code=403, detail="You don't have permission to rate this complaint")
+    
+    complaint.satisfaction_rating = rating
+    if comment:
+        complaint.satisfaction_comment = comment
+    complaint.updated_at = datetime.now()
+    
+    db.commit()
+    db.refresh(complaint)
+    
+    return format_response("0002", {
+        "id": complaint_id,
+        "satisfaction_rating": rating.value,
+        "has_comment": comment is not None
+    })

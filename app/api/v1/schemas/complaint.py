@@ -99,3 +99,29 @@ class ComplaintResponse(BaseModel):
 class StatusUpdateRequest(BaseModel):
     status: ComplaintStatus
     notes: Optional[str] = None
+
+class ComplaintDetails(BaseModel):
+    confidentiality_level: Optional[str] = None
+    urgency_level: Optional[str] = None
+    severity_level: Optional[str] = None
+    incident_province_id: Optional[int] = None
+    incident_province: Optional[str] = None
+    incident_district_id: Optional[int] = None
+    incident_district: Optional[str] = None
+    incident_subdistrict_id: Optional[str] = None
+    incident_subdistrict: Optional[str] = None
+    assigned_officer_id: Optional[UUID] = None
+    progress_percentage: Optional[int] = None
+    processing_notes: Optional[str] = None
+    parent_complaint_id: Optional[UUID] = None
+    related_complaints: Optional[List[str]] = None
+    
+    class Config:
+        from_attributes = True
+
+class SatisfactionUpdate(BaseModel):
+    rating: int
+    comment: Optional[str] = None
+    
+    class Config:
+        from_attributes = True

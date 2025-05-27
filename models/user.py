@@ -48,6 +48,7 @@ class User(Base):
     # เพิ่มความสัมพันธ์กับ VerificationToken
     verification_tokens = relationship("VerificationToken", back_populates="user", cascade="all, delete-orphan")
 
-    complaints = relationship("Complaint", back_populates="creator")
+    complaints = relationship("Complaint", back_populates="creator", foreign_keys="[Complaint.created_by]")
+    assigned_complaints = relationship("Complaint", back_populates="assigned_officer", foreign_keys="[Complaint.assigned_officer_id]")
     
     api_logs = relationship("ApiLog", back_populates="user")

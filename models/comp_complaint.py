@@ -1,7 +1,7 @@
 import uuid
 import enum
 from sqlalchemy import (NVARCHAR, Boolean, Column, DateTime, 
-                      ForeignKey, Integer, Text, JSON, Enum, String)
+                      ForeignKey, Integer, Text, JSON, Enum, String, Float)
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -30,6 +30,40 @@ class RespondentType(str, enum.Enum):
     INDIVIDUAL = "individual"   # บุคคลธรรมดา
     CORPORATE = "corporate"     # นิติบุคคล
     GOVERNMENT = "government"   # หน่วยงานราชการ
+
+# Define complaint filing type (ประเภทการยื่นเรื่องร้องเรียน)
+class ComplaintFilingType(str, enum.Enum):
+    NEW = "new"                # เรื่องร้องเรียนใหม่
+    ADDITIONAL = "additional"  # เรื่องร้องเรียนเพิ่มเติม
+    ANONYMOUS = "anonymous"    # รับเรื่องจากคณะทำงานบัตรสนเท่ห์
+
+# เพิ่ม Enum สำหรับระดับความเร่งด่วนและความลับ
+class ConfidentialityLevel(str, enum.Enum):
+    NORMAL = "normal"              # ปกติ
+    CONFIDENTIAL = "confidential"  # ลับ
+    SECRET = "secret"              # ลับมาก
+    TOP_SECRET = "top_secret"      # ลับที่สุด
+
+class UrgencyLevel(str, enum.Enum):
+    LOW = "low"           # ปกติ
+    MEDIUM = "medium"     # เร่งด่วน
+    HIGH = "high"         # ด่วน
+    URGENT = "urgent"     # ด่วนมาก
+    CRITICAL = "critical" # ด่วนที่สุด
+
+class SeverityLevel(str, enum.Enum):
+    LOW = "low"           # น้อย
+    MEDIUM = "medium"     # ปานกลาง
+    HIGH = "high"         # มาก
+    CRITICAL = "critical" # รุนแรง
+
+# เพิ่ม Enum สำหรับความพึงพอใจ
+class SatisfactionRating(int, enum.Enum):
+    VERY_DISSATISFIED = 1  # ไม่พอใจมาก
+    DISSATISFIED = 2       # ไม่พอใจ
+    NEUTRAL = 3            # เฉยๆ
+    SATISFIED = 4          # พอใจ
+    VERY_SATISFIED = 5     # พอใจมาก
 
 class Complaint(Base):
     __tablename__ = "comp_complaints"
@@ -79,7 +113,7 @@ class Complaint(Base):
     
     # ผู้สร้างข้อร้องเรียน
     created_by = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_users.id"), nullable=True)
-    creator = relationship("User", back_populates="complaints")
+    creator = relationship("User", back_populates="complaints", foreign_keys=[created_by])
     
     # เอกสารแนบ
     attachments = relationship("ComplaintAttachment", back_populates="complaint", cascade="all, delete-orphan")
@@ -93,19 +127,68 @@ class Complaint(Base):
     complaint_channel_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_complaint_channels.id"), nullable=True)
     
     # ข้อมูลเลขที่อ้างอิงจากระบบอื่น
-    reference_number = Column(NVARCHAR(100), nullable=True, comment="เลข อปค.")
-    reference_number2 = Column(NVARCHAR(100), nullable=True, comment="เลข สตร.")
-    reference_number3 = Column(NVARCHAR(100), nullable=True, comment="เลขหนังสือ")
+    reference_number = Column(NVARCHAR(100), nullable=True, comment="เลข สป.กค.")
+    reference_date = Column(DateTime, nullable=True, comment="วันที่เลข สป.กค.")
+    reference_number2 = Column(NVARCHAR(100), nullable=True, comment="เลข สป.สร.")  # แก้ไขจาก "เลข สตร."
+    reference_date2 = Column(DateTime, nullable=True, comment="วันที่เลข สป.สร.")
+    reference_number3 = Column(NVARCHAR(100), nullable=True, comment="เลข สตป.")
+    reference_date3 = Column(DateTime, nullable=True, comment="วันที่เลข สตป.")
+    reference_number4 = Column(NVARCHAR(100), nullable=True, comment="เลข สรร. (สารบัญ)")  # แก้จาก สรจ. เป็น สรร.
+    reference_date4 = Column(DateTime, nullable=True, comment="วันที่เลข สรร. (สารบัญ)")  # แก้จาก สรจ. เป็น สรร.
+    
+    # เลขที่หนังสือ (แยกต่างหากจาก reference_number3)
+    document_number = Column(NVARCHAR(100), nullable=True, comment="เลขที่หนังสือ")
+    document_date = Column(DateTime, nullable=True, comment="วันที่หนังสือ")
     
     # ข้อมูลวันที่ลงทะเบียน
     registration_date = Column(DateTime, nullable=True)
     
     # ความลับ
-    confidentiality_level = Column(String(50), nullable=True, comment="ขั้นความลับ")
-    urgency_level = Column(String(50), nullable=True, comment="ความเร่งด่วน")
+    confidentiality_level = Column(Enum(ConfidentialityLevel), nullable=True, 
+                                  default=ConfidentialityLevel.NORMAL,
+                                  comment="ขั้นความลับ: normal=ปกติ, confidential=ลับ, secret=ลับมาก, top_secret=ลับที่สุด")
+    urgency_level = Column(Enum(UrgencyLevel), nullable=True, 
+                          default=UrgencyLevel.LOW,
+                          comment="ความเร่งด่วน: low=ปกติ, medium=เร่งด่วน, high=ด่วน, urgent=ด่วนมาก, critical=ด่วนที่สุด")
     
     # หน่วยงานที่ส่งเรื่องมาถึง กค.
     agency_sender = Column(NVARCHAR(200), nullable=True, comment="หน่วยงานที่ส่งเรื่องมาถึง กค.")
+    
+    # ประเภทการร้องเรียน (เรื่องใหม่/เพิ่มเติม/จากคณะทำงานบัตรสนเท่ห์)
+    complaint_filing_type = Column(Enum(ComplaintFilingType), default=ComplaintFilingType.NEW, nullable=False, 
+        comment="ประเภทการร้องเรียน: new=เรื่องใหม่, additional=เรื่องเพิ่มเติม, anonymous=รับเรื่องจากคณะทำงานบัตรสนเท่ห์")
+    
+    # เลขที่อ้างอิงเพิ่มเติม
+    additional_reference_number1 = Column(NVARCHAR(100), nullable=True, comment="เลขที่อ้างอิง(เลข สรร.สารบัญ) 1")  # แก้จาก สรจ. เป็น สรร.
+    additional_reference_date1 = Column(DateTime, nullable=True, comment="วันที่อ้างอิง(เลข สรร.สารบัญ) 1")  # แก้จาก สรจ. เป็น สรร.
+    additional_reference_number2 = Column(NVARCHAR(100), nullable=True, comment="เลขที่อ้างอิง(เลข สรร.สารบัญ) 2")  # แก้จาก สรจ. เป็น สรร.
+    additional_reference_date2 = Column(DateTime, nullable=True, comment="วันที่อ้างอิง(เลข สรร.สารบัญ) 2")  # แก้จาก สรจ. เป็น สรร.
+    
+    # เพิ่มฟิลด์สำหรับข้อมูลที่ตั้งเหตุการณ์
+    incident_province_id = Column(Integer, nullable=True, comment="รหัสจังหวัดที่เกิดเหตุ")
+    incident_province = Column(NVARCHAR(100), nullable=True, comment="จังหวัดที่เกิดเหตุ")
+    incident_district_id = Column(Integer, nullable=True, comment="รหัสอำเภอที่เกิดเหตุ") 
+    incident_district = Column(NVARCHAR(100), nullable=True, comment="อำเภอที่เกิดเหตุ")
+    incident_subdistrict_id = Column(NVARCHAR(100), nullable=True, comment="รหัสตำบลที่เกิดเหตุ")
+    incident_subdistrict = Column(NVARCHAR(100), nullable=True, comment="ตำบลที่เกิดเหตุ")
+    
+    # เพิ่มฟิลด์สำหรับข้อมูลการดำเนินงานละเอียด
+    assigned_officer_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_users.id"), nullable=True, comment="ผู้รับผิดชอบเรื่อง")
+    progress_percentage = Column(Integer, nullable=True, default=0, comment="ร้อยละความคืบหน้าของการดำเนินการ")
+    processing_notes = Column(Text, nullable=True, comment="บันทึกการดำเนินงาน/การแจ้งกลับ")
+    
+    # เพิ่มฟิลด์สำหรับข้อมูลการประเมิน
+    severity_level = Column(Enum(SeverityLevel), nullable=True, comment="ระดับความรุนแรง/ความสำคัญของเรื่อง")
+    satisfaction_rating = Column(Enum(SatisfactionRating), nullable=True, comment="คะแนนความพึงพอใจต่อการแก้ไข")
+    satisfaction_comment = Column(Text, nullable=True, comment="ความคิดเห็นต่อการแก้ไข")
+    
+    # เพิ่มฟิลด์สำหรับความสัมพันธ์ระหว่างเรื่องร้องเรียน
+    parent_complaint_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_complaints.id"), nullable=True, comment="เรื่องร้องเรียนต้นเรื่อง")
+    related_complaints = Column(JSON, nullable=True, comment="เรื่องร้องเรียนที่เกี่ยวข้อง")
+    
+    # Relationships
+    parent_complaint = relationship("Complaint", remote_side=[id], backref="child_complaints", foreign_keys=[parent_complaint_id])
+    assigned_officer = relationship("User", back_populates="assigned_complaints", foreign_keys=[assigned_officer_id])
     
     # Relationships
     complaint_type_relation = relationship("ComplaintType", back_populates="complaints")

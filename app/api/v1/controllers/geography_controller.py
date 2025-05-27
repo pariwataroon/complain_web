@@ -392,3 +392,71 @@ def get_locations_by_district_name(db: Session, name: str):
         })
     
     return results
+
+def get_locations_for_form(db: Session):
+    """ดึงข้อมูลตำแหน่งที่ตั้งทั้งหมดสำหรับแสดงบนฟอร์ม"""
+    # ดึงข้อมูลจังหวัดทั้งหมดในรูปแบบที่เหมาะสมกับการใช้งาน
+    provinces = db.query(Province).order_by(Province.name_th).all()
+    
+    result = []
+    for province in provinces:
+        province_data = {
+            "value": province.id,
+            "label": province.name_th,
+            "name_en": province.name_en,
+            "code": province.code,
+            "amphures": []
+        }
+        
+        # ดึงอำเภอในจังหวัดนี้
+        amphures = db.query(Amphure).filter(
+            Amphure.province_id == province.id
+        ).order_by(Amphure.name_th).all()
+        
+        for amphure in amphures:
+            amphure_data = {
+                "value": amphure.id,
+                "label": amphure.name_th,
+                "name_en": amphure.name_en,
+                "code": amphure.code,
+                "districts": []
+            }
+            
+            # ดึงตำบลในอำเภอนี้
+            districts = db.query(District).filter(
+                District.amphure_id == amphure.id
+            ).order_by(District.name_th).all()
+            
+            for district in districts:
+                district_data = {
+                    "value": district.id,
+                    "label": district.name_th,
+                    "name_en": district.name_en,
+                    "zip_code": district.zip_code
+                }
+                amphure_data["districts"].append(district_data)
+            
+            province_data["amphures"].append(amphure_data)
+        
+        result.append(province_data)
+    
+    return result
+
+def get_province_options(db: Session):
+    """ดึงข้อมูลจังหวัดในรูปแบบตัวเลือกสำหรับฟอร์ม (value/label)"""
+    provinces = db.query(Province).order_by(Province.name_th).all()
+    return [{"value": p.id, "label": p.name_th} for p in provinces]
+
+def get_amphure_options(db: Session, province_id: int):
+    """ดึงข้อมูลอำเภอในรูปแบบตัวเลือกสำหรับฟอร์ม (value/label)"""
+    amphures = db.query(Amphure).filter(
+        Amphure.province_id == province_id
+    ).order_by(Amphure.name_th).all()
+    return [{"value": a.id, "label": a.name_th} for a in amphures]
+
+def get_district_options(db: Session, amphure_id: int):
+    """ดึงข้อมูลตำบลในรูปแบบตัวเลือกสำหรับฟอร์ม (value/label)"""
+    districts = db.query(District).filter(
+        District.amphure_id == amphure_id
+    ).order_by(District.name_th).all()
+    return [{"value": d.id, "label": d.name_th, "zip_code": d.zip_code} for d in districts]
