@@ -613,93 +613,103 @@ def verify_geographic_data(db: Session, incident_location: Dict) -> Dict:
             verified_data["incident_province_id"] = province.id
             verified_data["incident_province"] = province.name_th
     
-    # ทำต่อสำหรับอำเภอ โดยใช้ province_id ที่ถูกต้องแล้ว
+    # แก้ไขส่วนที่เกี่ยวข้องกับอำเภอ
     district_id = incident_location.get("incident_district_id")
     district_name = incident_location.get("incident_district")
     
-    if "incident_province_id" in verified_data:
-        province_id = verified_data["incident_province_id"]
-        
-        # กรณีมี district_id
-        if district_id:
-            try:
-                # รองรับกรณีที่ district_id อาจเป็นได้ทั้ง int หรือ string
-                if isinstance(district_id, str) and district_id.isdigit():
-                    district_id = int(district_id)
-                    
-                amphure = db.query(Amphure).filter(
-                    (Amphure.id == district_id),
-                    (Amphure.province_id == province_id)
-                ).first()
+    # ตรวจสอบอำเภอ โดยไม่จำเป็นต้องขึ้นกับการมีจังหวัดที่ถูกต้อง
+    if district_id:
+        try:
+            # เก็บเป็นค่า original_id ไว้ก่อนแปลง
+            original_district_id = district_id
+            
+            # แปลงเป็น int ถ้าเป็นไปได้
+            if isinstance(district_id, str) and district_id.isdigit():
+                district_id = int(district_id)
                 
-                if amphure:
-                    verified_data["incident_district_id"] = amphure.id
-                    verified_data["incident_district"] = amphure.name_th
-                elif district_name:
-                    # ค้นหาอำเภอจากชื่อในจังหวัดที่ถูกต้อง
-                    amphure = db.query(Amphure).filter(
-                        ((Amphure.name_th.ilike(f"%{district_name}%")) | (Amphure.name_en.ilike(f"%{district_name}%"))),
-                        (Amphure.province_id == province_id)
-                    ).first()
-                    if amphure:
-                        verified_data["incident_district_id"] = amphure.id
-                        verified_data["incident_district"] = amphure.name_th
-            except (ValueError, TypeError):
-                # กรณีแปลงค่าไม่ได้ ให้ค้นหาจากชื่อแทน
-                if district_name:
-                    amphure = db.query(Amphure).filter(
-                        ((Amphure.name_th.ilike(f"%{district_name}%")) | (Amphure.name_en.ilike(f"%{district_name}%"))),
-                        (Amphure.province_id == province_id)
-                    ).first()
-                    if amphure:
-                        verified_data["incident_district_id"] = amphure.id
-                        verified_data["incident_district"] = amphure.name_th
-        # กรณีมีแต่ชื่ออำเภอ
-        elif district_name:
-            amphure = db.query(Amphure).filter(
-                ((Amphure.name_th.ilike(f"%{district_name}%")) | (Amphure.name_en.ilike(f"%{district_name}%"))),
-                (Amphure.province_id == province_id)
-            ).first()
+            # ค้นหาอำเภอโดยตรง
+            amphure = db.query(Amphure).filter(Amphure.id == district_id).first()
+            
+            # ถ้ามีจังหวัดที่ตรวจสอบแล้ว ให้กรองด้วยจังหวัดด้วย
+            if "incident_province_id" in verified_data and amphure and amphure.province_id != verified_data["incident_province_id"]:
+                # ถ้าอำเภอไม่ได้อยู่ในจังหวัดที่กำหนด ลองค้นหาในจังหวัดที่ถูกต้อง
+                amphure = db.query(Amphure).filter(
+                    Amphure.province_id == verified_data["incident_province_id"],
+                    ((Amphure.name_th.ilike(f"%{district_name}%")) | (Amphure.name_en.ilike(f"%{district_name}%")))
+                ).first()
+            
             if amphure:
                 verified_data["incident_district_id"] = amphure.id
                 verified_data["incident_district"] = amphure.name_th
+            elif district_name and "incident_province_id" in verified_data:
+                # ค้นหาอำเภอจากชื่อในจังหวัดที่ถูกต้อง
+                amphure = db.query(Amphure).filter(
+                    ((Amphure.name_th.ilike(f"%{district_name}%")) | (Amphure.name_en.ilike(f"%{district_name}%"))),
+                    (Amphure.province_id == verified_data["incident_province_id"])
+                ).first()
+                if amphure:
+                    verified_data["incident_district_id"] = amphure.id
+                    verified_data["incident_district"] = amphure.name_th
+        except (ValueError, TypeError):
+            # กรณีแปลงค่าไม่ได้ ให้ค้นหาจากชื่อแทน
+            if district_name and "incident_province_id" in verified_data:
+                amphure = db.query(Amphure).filter(
+                    ((Amphure.name_th.ilike(f"%{district_name}%")) | (Amphure.name_en.ilike(f"%{district_name}%"))),
+                    (Amphure.province_id == verified_data["incident_province_id"])
+                ).first()
+                if amphure:
+                    verified_data["incident_district_id"] = amphure.id
+                    verified_data["incident_district"] = amphure.name_th
+    # กรณีมีแต่ชื่ออำเภอ และมีจังหวัดที่ถูกต้อง
+    elif district_name and "incident_province_id" in verified_data:
+        amphure = db.query(Amphure).filter(
+            ((Amphure.name_th.ilike(f"%{district_name}%")) | (Amphure.name_en.ilike(f"%{district_name}%"))),
+            (Amphure.province_id == verified_data["incident_province_id"])
+        ).first()
+        if amphure:
+            verified_data["incident_district_id"] = amphure.id
+            verified_data["incident_district"] = amphure.name_th
     
-    # ทำต่อสำหรับตำบล โดยใช้ district_id ที่ถูกต้องแล้ว
+    # ส่วนตำบล (subdistrict) - ต้องแก้ไขการจัดการกับ ID
     subdistrict_id = incident_location.get("incident_subdistrict_id")
     subdistrict_name = incident_location.get("incident_subdistrict")
     
-    if "incident_district_id" in verified_data:
-        district_id = verified_data["incident_district_id"]
+    if subdistrict_id:
+        # ไม่ต้องแปลง subdistrict_id เป็น int เพราะในแบบจำลอง District.id เป็น string
+        subdistrict_id = str(subdistrict_id)
         
-        # กรณีมี subdistrict_id
-        if subdistrict_id:
-            # ไม่ต้องแปลงเป็น Integer เพราะในแบบจำลอง District.id เป็น String
+        # ค้นหาตำบลโดยตรงจาก ID
+        district = db.query(District).filter(District.id == subdistrict_id).first()
+        
+        # ถ้ามีอำเภอที่ตรวจสอบแล้ว ให้ตรวจสอบความสอดคล้องกับอำเภอด้วย
+        if "incident_district_id" in verified_data and district and district.amphure_id != verified_data["incident_district_id"]:
+            # ถ้าตำบลไม่ได้อยู่ในอำเภอที่กำหนด ลองค้นหาในอำเภอที่ถูกต้อง
             district = db.query(District).filter(
-                (District.id == str(subdistrict_id)),
-                (District.amphure_id == district_id)
+                District.amphure_id == verified_data["incident_district_id"],
+                ((District.name_th.ilike(f"%{subdistrict_name}%")) | (District.name_en.ilike(f"%{subdistrict_name}%")))
             ).first()
-            
-            if district:
-                verified_data["incident_subdistrict_id"] = district.id  # เก็บเป็น string ตามแบบจำลอง
-                verified_data["incident_subdistrict"] = district.name_th
-            elif subdistrict_name:
-                # ค้นหาตำบลจากชื่อในอำเภอที่ถูกต้อง
-                district = db.query(District).filter(
-                    ((District.name_th.ilike(f"%{subdistrict_name}%")) | (District.name_en.ilike(f"%{subdistrict_name}%"))),
-                    (District.amphure_id == district_id)
-                ).first()
-                if district:
-                    verified_data["incident_subdistrict_id"] = district.id
-                    verified_data["incident_subdistrict"] = district.name_th
-        # กรณีมีแต่ชื่อตำบล
-        elif subdistrict_name:
+        
+        if district:
+            verified_data["incident_subdistrict_id"] = district.id
+            verified_data["incident_subdistrict"] = district.name_th
+        elif subdistrict_name and "incident_district_id" in verified_data:
+            # ค้นหาตำบลจากชื่อ
             district = db.query(District).filter(
                 ((District.name_th.ilike(f"%{subdistrict_name}%")) | (District.name_en.ilike(f"%{subdistrict_name}%"))),
-                (District.amphure_id == district_id)
+                (District.amphure_id == verified_data["incident_district_id"])
             ).first()
             if district:
                 verified_data["incident_subdistrict_id"] = district.id
                 verified_data["incident_subdistrict"] = district.name_th
+    # กรณีมีแต่ชื่อตำบล
+    elif subdistrict_name and "incident_district_id" in verified_data:
+        district = db.query(District).filter(
+            ((District.name_th.ilike(f"%{subdistrict_name}%")) | (District.name_en.ilike(f"%{subdistrict_name}%"))),
+            (District.amphure_id == verified_data["incident_district_id"])
+        ).first()
+        if district:
+            verified_data["incident_subdistrict_id"] = district.id
+            verified_data["incident_subdistrict"] = district.name_th
                 
     return verified_data
 
@@ -1427,7 +1437,6 @@ def get_or_create_location_ids(db: Session, location_data: Dict) -> Dict:
                             result["district_name"] = district.name_th
     
     return result
-
 def update_existing_geographic_data(db: Session, complaint_id: UUID = None) -> bool:
     """ปรับปรุงข้อมูลทางภูมิศาสตร์ในข้อร้องเรียนที่มีอยู่แล้ว"""
     try:
@@ -1469,21 +1478,16 @@ def update_existing_geographic_data(db: Session, complaint_id: UUID = None) -> b
             
             # 3. กรณีมี district_id แต่ชื่อไม่ตรงกัน
             if complaint.incident_district_id:
-                try:
-                    # แปลง district_id เป็น Integer ถ้าต้องการ
-                    district_id = complaint.incident_district_id
-                    if isinstance(district_id, str) and district_id.isdigit():
-                        district_id = int(district_id)
-                        
-                    amphure = db.query(Amphure).filter(Amphure.id == district_id).first()
-                    if amphure and (complaint.incident_district != amphure.name_th):
-                        complaint.incident_district = amphure.name_th
-                        need_update = True
-                except (ValueError, TypeError):
-                    pass
+                # district_id ในตาราง Amphure เป็น integer
+                district_id = complaint.incident_district_id
+                amphure = db.query(Amphure).filter(Amphure.id == district_id).first()
+                if amphure and (complaint.incident_district != amphure.name_th):
+                    complaint.incident_district = amphure.name_th
+                    need_update = True
             
             # 4. กรณีมี subdistrict_id แต่ชื่อไม่ตรงกัน
             if complaint.incident_subdistrict_id:
+                # ต้องแน่ใจว่า subdistrict_id เป็น string เมื่อทำการค้นหาจาก District
                 district = db.query(District).filter(District.id == str(complaint.incident_subdistrict_id)).first()
                 if district and (complaint.incident_subdistrict != district.name_th):
                     complaint.incident_subdistrict = district.name_th
@@ -1499,6 +1503,23 @@ def update_existing_geographic_data(db: Session, complaint_id: UUID = None) -> b
                 if province:
                     complaint.incident_province_id = province.id
                     complaint.incident_province = province.name_th
+                    need_update = True
+            
+            # 6. กรณีมีชื่อ district แต่ไม่มี district_id หรือ district_id ไม่ถูกต้อง
+            if complaint.incident_district and complaint.incident_province_id and (
+                not complaint.incident_district_id or not db.query(Amphure).filter(
+                    Amphure.id == complaint.incident_district_id,
+                    Amphure.province_id == complaint.incident_province_id
+                ).first()
+            ):
+                amphure = db.query(Amphure).filter(
+                    (Amphure.name_th.ilike(f"%{complaint.incident_district}%")) | 
+                    (Amphure.name_en.ilike(f"%{complaint.incident_district}%")),
+                    Amphure.province_id == complaint.incident_province_id
+                ).first()
+                if amphure:
+                    complaint.incident_district_id = amphure.id
+                    complaint.incident_district = amphure.name_th
                     need_update = True
             
             # บันทึกการเปลี่ยนแปลงถ้าจำเป็น
