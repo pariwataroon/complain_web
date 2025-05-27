@@ -12,14 +12,18 @@
     "@date-io/dayjs": "^3.2.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@highcharts/map-collection": "^2.3.0",
     "@mui/icons-material": "^5.0.0",
     "@mui/material": "^5.17.1",
     "@mui/x-date-pickers": "^8.0.0",
     "@mui/x-date-pickers-pro": "^8.0.0",
     "axios": "^1.8.4",
+    "chart.js": "^4.4.9",
     "date-fns": "^4.1.0",
     "date-fns-buddhist-adapter": "^1.0.5",
     "dayjs": "^1.11.13",
+    "highcharts": "^12.2.0",
+    "highcharts-react-official": "^3.2.2",
     "html2canvas": "^1.4.1",
     "js-cookie": "^3.0.5",
     "jspdf": "^3.0.1",
@@ -35,7 +39,7 @@
     "recharts": "^2.15.3",
     "sass": "^1.86.0",
     "sweetalert2": "^11.0.0",
-    "swiper": "^7.4.1"
+    "swiper": "^11.2.8"
   },
   "devDependencies": {
     "eslint": "^9.23.0",

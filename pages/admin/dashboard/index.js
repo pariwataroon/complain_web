@@ -1,41 +1,50 @@
-import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
 import DashboardComponents_Main from "@components/Dashboard/DashboardComponents_Main";
 import DashboardComponents_Home from "@components/Dashboard/DashboardComponents_Home";
-import Cookies from "js-cookie";
 
-const Dashboard = () => {
-  const router = useRouter();
-  const [component, setComponent] = useState(null);
+const Dashboard = ({ roles }) => {
+  if (!roles?.length) {
+    return <div>ไม่พบข้อมูลผู้ใช้</div>;
+  }
 
-  useEffect(() => {
-    const cookieValue = Cookies.get("info");
-    if (cookieValue) {
-      try {
-        const parsed = JSON.parse(cookieValue);
-        const roles = parsed.roles || [];
+  if (
+    ["admin", "staff", "supervisor", "department"].some((r) =>
+      roles.includes(r)
+    )
+  ) {
+    return <DashboardComponents_Main />;
+  }
 
-        switch (true) {
-          case roles.includes("admin" || "staff" || "supervisor" || "department"):
-            setComponent(<DashboardComponents_Main />);
-            break;
-          case roles.includes("admin_home"):
-            setComponent(<DashboardComponents_Home />);
-            break;
-        }
-      } catch (err) {
-        console.error("Error parsing cookie:", err);
-        setComponent(<div>เกิดข้อผิดพลาดในการอ่านข้อมูลผู้ใช้</div>);
-      }
-    } else {
-      setComponent(<div>ไม่พบข้อมูลผู้ใช้</div>);
-    }
-  }, []);
+  if (roles.includes("admin_home")) {
+    return <DashboardComponents_Home />;
+  }
 
-  return component || <div>กำลังโหลด...</div>;
+  return <div>ไม่ได้รับอนุญาตให้เข้าถึง</div>;
 };
 
 Dashboard.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default Dashboard;
+
+export async function getServerSideProps(context) {
+  const { req } = context;
+  const cookie = req.cookies?.info || null;
+  let roles = [];
+
+  if (cookie) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(cookie));
+      if (typeof parsed.roles === "string") {
+        roles = JSON.parse(parsed.roles);
+      } else if (Array.isArray(parsed.roles)) {
+        roles = parsed.roles;
+      }
+    } catch (err) {
+      console.error("Error parsing cookie or roles:", err);
+    }
+  }
+
+  return {
+    props: { roles },
+  };
+}
