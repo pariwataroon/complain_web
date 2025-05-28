@@ -5193,9 +5193,40 @@
 								"complaints"
 							]
 						},
-						"description": "Create a new complaint using the nested structure with 4 steps"
+						"description": "Create a new complaint using queue system with fallback to direct processing. Returns either task_id (async) or complaint_id (sync) depending on queue availability."
 					},
 					"response": []
+				},
+				{
+				"name": "Check Queue Task Status",
+				"request": {
+					"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+						}
+					]
+					},
+					"method": "GET",
+					"header": [],
+					"url": {
+					"raw": "{{API}}{{PREFIX}}/complaints/queue/status/{{task_id}}",
+					"host": [
+						"{{API}}{{PREFIX}}"
+					],
+					"path": [
+						"complaints",
+						"queue",
+						"status",
+						"{{task_id}}"
+					]
+					},
+					"description": "ตรวจสอบสถานะการประมวลผล queue task สำหรับเรื่องร้องเรียนที่สร้างผ่าน queue system"
+				},
+				"response": []
 				},
 				{
 					"name": "Get All Complaints",
@@ -5570,6 +5601,160 @@
 				}
 			],
 			"description": "API endpoints for managing complaints"
+		},
+		{
+			"name": "COMPLAINTS REFERENCES",
+			"item": [
+				{
+				"name": "Update Complaint Details",
+				"request": {
+					"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+						}
+					]
+					},
+					"method": "PATCH",
+					"header": [],
+					"body": {
+					"mode": "raw",
+					"raw": "{\n    \"confidentiality_level\": \"confidential\",\n    \"urgency_level\": \"high\",\n    \"incident_location\": \"กรุงเทพมหานคร\",\n    \"additional_notes\": \"ข้อมูลเพิ่มเติมสำหรับเรื่องร้องเรียน\"\n}",
+					"options": {
+						"raw": {
+						"language": "json"
+						}
+					}
+					},
+					"url": {
+					"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/details",
+					"host": [
+						"{{API}}{{PREFIX}}"
+					],
+					"path": [
+						"complaints",
+						"{{complaint_id}}",
+						"details"
+					]
+					},
+					"description": "อัพเดทข้อมูลเพิ่มเติมของเรื่องร้องเรียน เช่น ระดับความลับ ความเร่งด่วน พื้นที่เกิดเหตุ"
+				},
+				"response": []
+				},
+				{
+				"name": "Add Related Complaint",
+				"request": {
+					"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+						}
+					]
+					},
+					"method": "POST",
+					"header": [],
+					"url": {
+					"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/related/{{related_complaint_id}}",
+					"host": [
+						"{{API}}{{PREFIX}}"
+					],
+					"path": [
+						"complaints",
+						"{{complaint_id}}",
+						"related",
+						"{{related_complaint_id}}"
+					]
+					},
+					"description": "เพิ่มความสัมพันธ์ระหว่างเรื่องร้องเรียน เชื่อมโยงเรื่องร้องเรียนที่เกี่ยวข้องกัน"
+				},
+				"response": []
+				},
+				{
+				"name": "Update Complaint Severity",
+				"request": {
+					"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+						}
+					]
+					},
+					"method": "PATCH",
+					"header": [],
+					"body": {
+					"mode": "raw",
+					"raw": "\"HIGH\"",
+					"options": {
+						"raw": {
+						"language": "json"
+						}
+					}
+					},
+					"url": {
+					"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/severity",
+					"host": [
+						"{{API}}{{PREFIX}}"
+					],
+					"path": [
+						"complaints",
+						"{{complaint_id}}",
+						"severity"
+					]
+					},
+					"description": "อัพเดทระดับความรุนแรงของเรื่องร้องเรียน (LOW, MEDIUM, HIGH, CRITICAL)"
+				},
+				"response": []
+				},
+				{
+				"name": "Update Complaint Satisfaction",
+				"request": {
+					"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+						}
+					]
+					},
+					"method": "PATCH",
+					"header": [],
+					"body": {
+					"mode": "raw",
+					"raw": "{\n    \"rating\": \"SATISFIED\",\n    \"comment\": \"พอใจกับการแก้ไขปัญหา ได้รับการตอบสนองที่ดี\"\n}",
+					"options": {
+						"raw": {
+						"language": "json"
+						}
+					}
+					},
+					"url": {
+					"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/satisfaction",
+					"host": [
+						"{{API}}{{PREFIX}}"
+					],
+					"path": [
+						"complaints",
+						"{{complaint_id}}",
+						"satisfaction"
+					]
+					},
+					"description": "บันทึกคะแนนความพึงพอใจต่อการแก้ไขปัญหา (VERY_DISSATISFIED, DISSATISFIED, NEUTRAL, SATISFIED, VERY_SATISFIED)"
+				},
+				"response": []
+				}
+			],
+			"description": "API endpoints for managing references related to complaints, such as agencies, complaint types, and statuses."
 		},
 		{
 			"name": "FILE MANAGEMENT",
