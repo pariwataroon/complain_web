@@ -12,6 +12,7 @@ from app.api.v1.controllers.complaint_controller import (
     create_complaint, get_complaints, get_complaint, update_complaint_status, delete_complaint, get_user_complaints, get_user_complaint_detail, update_complaint_details, add_related_complaint
 )
 from app.api.v1.schemas.complaint import ComplaintCreate, ComplaintResponse, ComplaintListItem, StatusUpdateRequest
+from app.services.complaint_queue_service import ComplaintQueueService
 from models.comp_complaint import Complaint, ComplaintStatus, SeverityLevel, SatisfactionRating
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
@@ -27,59 +28,30 @@ async def create_new_complaint(
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
-    """Create a new complaint using the nested structure"""
+    """Create a new complaint using queue system only"""
     try:
-        # สร้างข้อมูลอย่างมีประสิทธิภาพ
-        complaint_data = request_data
+        from config.dotenv import RABBITMQ_URL
+        from app.services.complaint_queue_service import ComplaintQueueService
         
-        # Extract complaintType from step3 if present for backward compatibility
-        if "step3" in request_data and "general" in request_data["step3"]:
-            if "complaintType" in request_data["step3"]["general"]:
-                complaint_data = {**request_data}
-                complaint_data["complaintType"] = request_data["step3"]["general"]["complaintType"]
-
-        # ตรวจสอบ complaint_type ก่อนบันทึก
-        complaint_type = None
-        if "complaintType" in complaint_data:
-            complaint_type = complaint_data["complaintType"]
-        elif "step3" in complaint_data and "general" in complaint_data["step3"]:
-            complaint_type = complaint_data["step3"]["general"].get("complaintType")
-
-        if complaint_type:
-            # ตรวจสอบว่า complaint_type มีในฐานข้อมูลหรือไม่
-            valid_type = db.query(ComplaintType).filter(
-                ComplaintType.name == complaint_type,
-                ComplaintType.is_active == True
-            ).first()
+        # ส่งเข้า queue เท่านั้น ไม่มี fallback
+        with ComplaintQueueService(RABBITMQ_URL) as queue_service:
+            task_id = queue_service.queue_complaint_creation(request_data, current_user)
             
-            if not valid_type:
-                # แนวทางที่ 1: แจ้งเตือนและปฏิเสธการบันทึก
-                # return format_response("4000", {"error": f"ประเภทเรื่องร้องเรียน '{complaint_type}' ไม่มีอยู่ในระบบ"})
-                
-                # แนวทางที่ 2: แมปไปยังประเภท "อื่นๆ" โดยอัตโนมัติ
-                default_type = db.query(ComplaintType).filter(
-                    ComplaintType.name == "อื่นๆ",
-                    ComplaintType.is_active == True
-                ).first()
-                
-                if default_type:
-                    if "complaintType" in complaint_data:
-                        complaint_data["complaintType"] = "อื่นๆ"
-                    if "step3" in complaint_data and "general" in complaint_data["step3"]:
-                        complaint_data["step3"]["general"]["complaintType"] = "อื่นๆ"
-        
-        # ใช้ controller function เพื่อสร้างข้อร้องเรียน
-        new_complaint = create_complaint(db, complaint_data, UUID(current_user) if current_user else None)
-        
-        return format_response("0001", {
-            "complaint_id": new_complaint.id,
-            "complaint_number": new_complaint.complaint_number
-        })
+            return format_response("0001", {
+                "task_id": task_id,
+                "status": "queued",
+                "message": "คำร้องเรียนถูกเพิ่มเข้า queue เพื่อประมวลผล",
+                "processing_mode": "async"
+            })
+            
     except Exception as e:
-        db.rollback()
+        # ถ้า queue ไม่ทำงาน ให้ error ไปเลย
         import traceback
         traceback.print_exc()
-        return format_response("5000", {"error": str(e)})
+        return format_response("5000", {
+            "error": "Queue system error", 
+            "details": str(e)
+        })
 
 @router.get("", response_model=FormatResponseModel)
 async def read_complaints(
@@ -443,3 +415,71 @@ async def update_complaint_satisfaction(
         "satisfaction_rating": rating.value,
         "has_comment": comment is not None
     })
+
+@router.get("/queue/status/{task_id}", response_model=FormatResponseModel)
+async def check_queue_task_status(
+    task_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ตรวจสอบสถานะการประมวลผล queue task"""
+    try:
+        from datetime import timedelta
+        
+        # ค้นหาเรื่องร้องเรียนที่สร้างใหม่ในช่วง 10 นาทีที่ผ่านมา
+        recent_time = datetime.now() - timedelta(minutes=10)
+        recent_complaints = db.query(Complaint).filter(
+            Complaint.created_at >= recent_time,
+            Complaint.created_by == UUID(current_user) if current_user else None
+        ).order_by(Complaint.created_at.desc()).limit(5).all()
+        
+        # ถ้ามีเรื่องร้องเรียนที่สร้างใหม่
+        if recent_complaints:
+            latest_complaint = recent_complaints[0]
+            return format_response("0000", {
+                "task_id": task_id,
+                "status": "completed",
+                "message": "Task processed successfully",
+                "complaint_id": str(latest_complaint.id),
+                "complaint_number": latest_complaint.complaint_number,
+                "created_at": latest_complaint.created_at.isoformat()
+            })
+        
+        # ตรวจสอบว่า task ยังอยู่ใน queue หรือไม่
+        try:
+            from config.dotenv import RABBITMQ_URL
+            import pika
+            
+            connection = pika.BlockingConnection(pika.URLParameters(RABBITMQ_URL))
+            channel = connection.channel()
+            
+            # ตรวจสอบจำนวน message ใน queue
+            method = channel.queue_declare(queue='complaint_processing', passive=True)
+            queue_count = method.method.message_count
+            connection.close()
+            
+            if queue_count > 0:
+                return format_response("0000", {
+                    "task_id": task_id,
+                    "status": "processing",
+                    "message": f"Task is in queue (position: {queue_count})",
+                    "queue_size": queue_count
+                })
+            else:
+                return format_response("0000", {
+                    "task_id": task_id,
+                    "status": "completed",
+                    "message": "Task completed but complaint not found"
+                })
+                
+        except Exception as queue_error:
+            # ถ้าเชื่อมต่อ queue ไม่ได้
+            return format_response("0000", {
+                "task_id": task_id,
+                "status": "unknown",
+                "message": "Cannot check queue status",
+                "error": str(queue_error)
+            })
+        
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
