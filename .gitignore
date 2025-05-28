@@ -4,3 +4,4 @@ __pycache__
 logs/*
 uploads/*
 *.meta
+worker_heartbeat.json
