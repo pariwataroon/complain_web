@@ -1,8 +1,23 @@
+import { useEffect, useState } from "react";
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
 import DashboardComponents_Main from "@components/Dashboard/DashboardComponents_Main";
 import DashboardComponents_Home from "@components/Dashboard/DashboardComponents_Home";
+import { showLoading, closeAlert } from "@utils/Alerts";
 
 const Dashboard = ({ roles }) => {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    showLoading("กำลังโหลด...");
+
+    const timer = setTimeout(() => {
+      closeAlert();
+      setIsLoading(false);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   if (!roles?.length) {
     return <div>ไม่พบข้อมูลผู้ใช้</div>;
   }

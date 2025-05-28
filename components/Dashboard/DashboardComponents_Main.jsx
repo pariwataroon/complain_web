@@ -7,8 +7,23 @@ import BottomLeftService from "@services/DashBoardBottomLeftService/DashBoardBot
 import BottomRightService from "@services/DashBoardBottomRightService/DashBoardBottomRightService";
 import DashBoardCard from "@services/DashBoardCard/DashBoardCard";
 import TopStatsSwiper from "@services/TopStatsSwiper/TopStatsSwiper";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import dayjs from "dayjs";
+import "dayjs/locale/th";
+import buddhistEra from "dayjs/plugin/buddhistEra";
+dayjs.extend(buddhistEra);
+dayjs.locale("th");
+
 
 const DashboardComponents_Main = () => {
+  const [selectedYear, setSelectedYear] = useState("2567");
+  const data = [selectedYear] || [];
+  const [startDate, setStartDate] = useState(dayjs("2025-01-31"));
+  const [endDate, setEndDate] = useState(dayjs("2025-04-02"));
+  const dateRangeText = `ณ ${startDate.format("DD MMMM BBBB")} - ${endDate.format("DD MMMM BBBB")}`;
+
   const breadcrumbItems = [
     {
       label: "Dashboard",
@@ -52,7 +67,7 @@ const DashboardComponents_Main = () => {
           {/* ซ้ายบนกลาง - Chart */}
           <Box
             sx={{
-              marginTop: 3,
+              marginTop: 2,
               backgroundColor: "#fff",
               p: 2,
               height: "550px",
@@ -99,6 +114,7 @@ const DashboardComponents_Main = () => {
         </Grid>
 
         <Grid item xs={12} md={4}>
+
           <Box
             sx={{
               backgroundColor: "#fff",
@@ -111,15 +127,44 @@ const DashboardComponents_Main = () => {
               gap: 3,
             }}
           >
+            <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="th">
+              <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+                <DatePicker
+                  label="วันที่เริ่มต้น"
+                  value={startDate}
+                  onChange={(newValue) => setStartDate(newValue)}
+                  format="DD/MM/YYYY"
+                  slotProps={{ textField: { size: "small", fullWidth: true } }}
+                />
+                <Box sx={{ display: "flex", alignItems: "center", fontWeight: "bold" }}>
+                  ถึง
+                </Box>
+                <DatePicker
+                  label="วันที่สิ้นสุด"
+                  value={endDate}
+                  onChange={(newValue) => setEndDate(newValue)}
+                  format="DD/MM/YYYY"
+                  slotProps={{ textField: { size: "small", fullWidth: true } }}
+                />
+              </Box>
+            </LocalizationProvider>
+
             <TopStatsSwiper
               title="สถิติหน่วยงานที่มีเรื่องสูงมากที่สุด"
               bgColor="#64B5F6"
               headerColor="#1976D2"
+              startDate={startDate}
+              endDate={endDate}
+              variant="high"
               data={[
                 [
                   { name: "กรมสรรพสามิต", count: 29 },
                   { name: "กรมบัญชีกลาง", count: 28 },
                   { name: "ธนาคารแห่งประเทศไทย", count: 25 },
+                  { name: "กรมธนารักษ์", count: 12 },
+                  { name: "สำนักงานเศรษฐกิจการคลัง", count: 11 },
+                  { name: "กรมธนารักษ์", count: 12 },
+                  { name: "สำนักงานเศรษฐกิจการคลัง", count: 11 },
                   { name: "กรมธนารักษ์", count: 12 },
                   { name: "สำนักงานเศรษฐกิจการคลัง", count: 11 },
                 ],
@@ -138,8 +183,15 @@ const DashboardComponents_Main = () => {
               title="สถิติหน่วยงานที่มีเรื่องต่ำมากที่สุด"
               bgColor="#FFECB3"
               headerColor="#F44336"
+              startDate={startDate}
+              endDate={endDate}
+              variant="low"
               data={[
                 [
+                  { name: "สำนักงานบริหารที่สาธารณะ", count: 8 },
+                  { name: "สำนักงานคณะกรรมการนโยบาย...", count: 7 },
+                  { name: "ธนาคารแห่งประเทศไทย", count: 5 },
+                  { name: "สำนักงานเศรษฐกิจการคลัง", count: 4 },
                   { name: "สำนักงานบริหารที่สาธารณะ", count: 8 },
                   { name: "กรมศุลกากร", count: 7 },
                   { name: "สำนักงานคณะกรรมการนโยบาย...", count: 7 },
@@ -157,7 +209,7 @@ const DashboardComponents_Main = () => {
             />
           </Box>
         </Grid>
-        
+
       </Grid>
     </Box>
   );

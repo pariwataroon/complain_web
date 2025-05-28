@@ -1,61 +1,66 @@
 import React from "react";
-import { Box, Typography, Select, MenuItem, FormControl } from "@mui/material";
+import { Box, Typography } from "@mui/material";
+import styles from "./DashBoardCard.module.scss";
+
+const cards = [
+    {
+        title: "เรื่องราวร้องทุกข์ทั้งหมด",
+        count: 203,
+        unit: "เรื่อง",
+        gradient: styles.cardBrown,
+        trend: "+15%",
+        compareYear: "2564",
+    },
+    {
+        title: "เรื่องราวร้องทุกข์ยุติ",
+        count: 120,
+        unit: "เรื่อง",
+        gradient: styles.cardBlue,
+        trend: "-10%",
+        compareYear: "2564",
+    },
+    {
+        title: "เรื่องราวร้องทุกข์ดำเนินการ",
+        count: 83,
+        unit: "เรื่อง",
+        gradient: styles.cardPink,
+        trend: "+72%",
+        compareYear: "2564",
+    },
+];
 
 const DashBoardCard = () => {
     return (
-        <Box sx={{ display: "flex", gap: 1, mb: 3 }}>
-            <Box
-                sx={{
-                    flex: 1,
-                    backgroundColor: "#8B4513",
-                    color: "white",
-                    p: 2,
-                    borderRadius: 2,
-                    textAlign: "center",
-                }}
-            >
-                <Typography sx={{ fontSize: "10px", mb: 0.5 }}>เก็บข้อมูลยุทธศาสตร์เดิม</Typography>
-                <Typography variant="h4" sx={{ fontWeight: "bold" }}>203</Typography>
-                <Typography sx={{ fontSize: "12px" }}>โรง</Typography>
-                <Typography sx={{ fontSize: "9px", mt: 0.5, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    📈 10% เมื่อเทียบกับปี 2564
-                </Typography>
-            </Box>
-            <Box
-                sx={{
-                    flex: 1,
-                    backgroundColor: "#4A5CD6",
-                    color: "white",
-                    p: 2,
-                    borderRadius: 2,
-                    textAlign: "center",
-                }}
-            >
-                <Typography sx={{ fontSize: "10px", mb: 0.5 }}>เก็บข้อมูลยุทธศาสตร์ใหม่</Typography>
-                <Typography variant="h4" sx={{ fontWeight: "bold" }}>120</Typography>
-                <Typography sx={{ fontSize: "12px" }}>โรง</Typography>
-                <Typography sx={{ fontSize: "9px", mt: 0.5, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    📈 5% เมื่อเทียบกับปี 2564
-                </Typography>
-            </Box>
-            <Box
-                sx={{
-                    flex: 1,
-                    backgroundColor: "#E91E63",
-                    color: "white",
-                    p: 2,
-                    borderRadius: 2,
-                    textAlign: "center",
-                }}
-            >
-                <Typography sx={{ fontSize: "10px", mb: 0.5 }}>เก็บข้อมูลยุทธศาสตร์ต่อเนื่อง</Typography>
-                <Typography variant="h4" sx={{ fontWeight: "bold" }}>83</Typography>
-                <Typography sx={{ fontSize: "12px" }}>โรง</Typography>
-                <Typography sx={{ fontSize: "9px", mt: 0.5, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    📈 72% เมื่อเทียบกับปี 2564
-                </Typography>
-            </Box>
+        <Box className={styles.container}>
+            {cards.map((card, index) => {
+                const isPositive = card.trend.startsWith("+");
+                const trendColor = isPositive ? "#4caf50" : "#f44336";
+                const iconSrc = isPositive ? "/icons/up.png" : "/icons/down.png";
+
+                return (
+                    <Box key={index} className={`${styles.card} ${card.gradient}`}>
+                        <Typography className={styles.title}>{card.title}</Typography>
+                        <Typography className={styles.count}>
+                            {card.count} <span className={styles.unit}>{card.unit}</span>
+                        </Typography>
+                        <Box className={styles.trendLine}>
+                            <img
+                                src={iconSrc}
+                                alt={isPositive ? "เพิ่มขึ้น" : "ลดลง"}
+                                className={styles.trendIcon}
+                            />
+                            <Typography sx={{ fontSize: 12, color: trendColor, ml: 0.5, mr: 0.5 }}>
+                                {card.trend}
+                            </Typography>
+                            <Typography sx={{ fontSize: 12 }}>
+                                เมื่อเทียบกับปี {card.compareYear}
+                            </Typography>
+                        </Box>
+                    </Box>
+                );
+            })}
         </Box>
     );
 };
+
 export default DashBoardCard;

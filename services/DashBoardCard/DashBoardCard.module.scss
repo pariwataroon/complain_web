@@ -1,0 +1,54 @@
+.container {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.card {
+    flex: 1;
+    color: white;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+}
+
+.cardBrown {
+    background: linear-gradient(135deg, #4e2600, #b1792c);
+}
+
+.cardBlue {
+    background: linear-gradient(135deg, #002984, #3d5afe);
+}
+
+.cardPink {
+    background: linear-gradient(135deg, #c2185b, #f06292);
+}
+
+.title {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.count {
+    font-size: 28px;
+    font-weight: bold;
+
+    .unit {
+        font-size: 18px;
+        font-weight: normal;
+    }
+}
+
+.trendLine {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.trendIcon {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+}

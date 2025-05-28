@@ -1,0 +1,93 @@
+.topStatsBox {
+    border-radius: 16px;
+    overflow: hidden;
+    padding-bottom: 12px;
+
+    .header {
+        text-align: center;
+        padding: 12px 16px;
+        font-size: 14px;
+        font-weight: bold;
+        color: white;
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;
+    }
+
+    .subtitle {
+        text-align: center;
+        font-size: 12px;
+        color: #0d47a1;
+        padding: 6px 16px;
+        line-height: 1.5;
+        font-weight: 500;
+    }
+
+    .slideBox {
+        padding: 0 16px;
+    }
+
+    .itemBox {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: rgba(255, 255, 255, 0.4);
+        padding: 10px 12px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+    }
+
+    .rankCircle {
+        width: 24px;
+        height: 24px;
+        background-color: white;
+        color: #1976d2;
+        font-size: 12px;
+        font-weight: bold;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+
+    .label {
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 200px;
+    }
+
+    .count {
+        font-size: 13px;
+        font-weight: bold;
+        color: #000;
+    }
+}
+
+.cardBlue {
+    background: linear-gradient(to bottom, #e3f2fd, #bbdefb);
+
+    .header {
+        background: linear-gradient(to right, #1565c0, #42a5f5);
+    }
+
+    .rankCircle {
+        color: white;
+        background-color: #1565c0;
+    }
+}
+
+.cardRed {
+    background: linear-gradient(to bottom, #ffecb3, #ffe082);
+
+    .header {
+        background: linear-gradient(to right, #f44336, #ffc107);
+    }
+
+    .rankCircle {
+        color: white;
+        background-color: #f44336;
+    }
+}
