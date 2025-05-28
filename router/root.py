@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 # นำเข้า router เวอร์ชัน v1
 from app.api.v1.routers.dashboard_router import router as dashboard_router_v1
+from app.api.v1.routers.health_router import router as health_router_v1
 from app.api.v1.routers.auth_router import router as auth_router_v1
 from app.api.v1.routers.api_log_router import router as api_log_router_v1
 from app.api.v1.routers.user_router import router as user_router_v1
@@ -32,6 +33,7 @@ v2_router = APIRouter(prefix=API_V2_PREFIX)
 
 # รวม router เวอร์ชัน 1
 v1_router.include_router(dashboard_router_v1)
+v1_router.include_router(health_router_v1)
 v1_router.include_router(auth_router_v1)
 v1_router.include_router(api_log_router_v1)
 v1_router.include_router(user_router_v1)

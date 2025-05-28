@@ -25,6 +25,7 @@ class ApiLog(Base):
     
     # User tracking when authenticated
     user_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), nullable=True)
-    user = relationship("User", back_populates="api_logs")
+    # ใช้ string reference แทนการ import เพื่อหลีกเลี่ยง circular import
+    user = relationship("User", back_populates="api_logs", lazy="select")
     
     created_at = Column(DateTime, default=func.now())
