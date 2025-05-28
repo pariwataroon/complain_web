@@ -46,10 +46,24 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Create a base class for declarative models
 Base = declarative_base()
 
-# Function to get a database session
+# Function to get a database session (for FastAPI dependencies)
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+# Function to get a database session (for workers and scripts)
+def get_db_session():
+    """สร้าง database session สำหรับ worker และ scripts (generator)"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Function to get a direct database session (without generator)
+def create_db_session():
+    """สร้าง database session โดยตรง (ไม่ใช่ generator) สำหรับ worker"""
+    return SessionLocal()
