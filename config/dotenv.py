@@ -35,3 +35,5 @@ FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 SWAGGER_USERNAME = os.getenv("SWAGGER_USERNAME")
 SWAGGER_PASSWORD = os.getenv("SWAGGER_PASSWORD")
+
+RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://localhost")
