@@ -77,7 +77,7 @@ export default function Sidebar() {
       console.error("Cookie parsing failed", err);
     }
 
-    if (roles.includes("admin_home")) return;
+    if (roles.includes("people")) return;
 
     (async () => {
       try {
