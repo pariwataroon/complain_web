@@ -6,3 +6,5 @@ logs/*
 uploads/*
 *.meta
 worker_heartbeat.json
+*/test_reports/*
+*/security/test_reports/*
