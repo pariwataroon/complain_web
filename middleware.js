@@ -23,7 +23,11 @@ export function middleware(request) {
   if (pathname.startsWith("/admin")) {
     try {
       const allowedPaths = JSON.parse(permission_paths || "[]");
-
+      
+      const hasAdminAccess = allowedPaths.some((p) => p.startsWith("/admin"));
+      if (hasAdminAccess) {
+        return NextResponse.next();
+      }
       const hasAnyAdminAccess = allowedPaths.some((p) =>
         p.startsWith("/admin")
       );
