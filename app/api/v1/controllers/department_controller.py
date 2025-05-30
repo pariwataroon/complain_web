@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from typing import List, Optional, Union, Dict, Any
 from uuid import UUID
 from fastapi import HTTPException
@@ -163,9 +164,8 @@ def create_department(db: Session, department_data: dict) -> Dict[str, Any]:
         if not parent:
             logger.warning(f"Parent department not found: {department_data['parent_id']}")
             raise HTTPException(status_code=404, detail=f"Parent department with ID {department_data['parent_id']} not found")
-    
-    # ค้นหาค่า order_index ที่มากที่สุด
-    max_order = db.query(db.func.max(Department.order_index)).scalar() or 0
+      # ค้นหาค่า order_index ที่มากที่สุด
+    max_order = db.query(func.max(Department.order_index)).scalar() or 0
     
     # กำหนดค่า order_index อัตโนมัติถ้าไม่ได้ระบุ
     if "order_index" not in department_data or department_data["order_index"] is None:
@@ -279,11 +279,10 @@ def get_departments_stats(db: Session) -> Dict[str, Any]:
     """Get departments statistics"""
     # จำนวนหน่วยงานทั้งหมด
     total_count = db.query(Department).filter(Department.is_active == True).count()
-    
-    # จำนวนหน่วยงานแยกตามกลุ่ม
+      # จำนวนหน่วยงานแยกตามกลุ่ม
     group_stats = db.query(
         DepartmentGroup.name,
-        db.func.count(Department.id).label('count')
+        func.count(Department.id).label('count')
     ).join(
         Department,
         Department.group_id == DepartmentGroup.id
