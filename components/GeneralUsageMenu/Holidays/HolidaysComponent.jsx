@@ -25,10 +25,10 @@ export default function HolidaysComponent() {
       <BreadcrumbsService items={breadcrumbItems} />
       <div className={styles.iframeContainer}>
         <iframe
-          src="https://calendar.google.com/calendar/embed?src=th.th%23holiday%40group.v.calendar.google.com&ctz=Asia%2FBangkok&hl=th"
+          src="https://calendar.google.com/calendar/embed?src=th.th%23holiday%40group.v.calendar.google.com&src=c_4de045b78a977dcb60ee3293a658163f2e3885f8cd635402837167eeeb02909f%40group.calendar.google.com&ctz=Asia%2FBangkok&hl=th"
           style={{ border: "0" }}
-          width="100%" // กำหนดให้ความกว้างเป็น 100% ของ container
-          height="100%" // กำหนดให้ความสูงเป็น 100% ของ container
+          width="100%"
+          height="100%"
         ></iframe>
       </div>
     </div>
