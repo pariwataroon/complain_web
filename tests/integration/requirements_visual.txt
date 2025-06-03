@@ -1,0 +1,18 @@
+# Requirements for Visual Report Generator
+# สำหรับสร้างรายงานภาพจากผลการทดสอบ API
+
+# Core data processing
+pandas>=1.5.0
+numpy>=1.24.0
+
+# Visualization libraries
+matplotlib>=3.6.0
+seaborn>=0.12.0
+plotly>=5.17.0
+
+# Additional utilities
+Pillow>=9.0.0
+kaleido>=0.2.1  # สำหรับ export plotly เป็นรูปภาพ
+
+# Optional: for better styling
+colorama>=0.4.6
