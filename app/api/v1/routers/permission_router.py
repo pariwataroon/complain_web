@@ -95,9 +95,19 @@ async def create_new_role(
         db_role = create_role(db, role)
         result = RoleResponse.model_validate(db_role).model_dump()
         return format_response("0001", result)
+    except ValueError as e:
+        # 🔧 FIX: จัดการ duplicate name error
+        if "already exists" in str(e):
+            return format_response("4001", {"error": str(e)})
+        else:
+            return format_response("4000", {"error": str(e)})
     except Exception as e:
         print(f"Error creating role: {str(e)}")
-        return format_response("5000", {"error": "Error creating role"})
+        # 🔧 FIX: จัดการ database constraint errors
+        if "UNIQUE KEY constraint" in str(e):
+            return format_response("4001", {"error": f"Role name '{role.name}' already exists"})
+        else:
+            return format_response("5000", {"error": "Error creating role"})
 
 @router.get("/roles", response_model=FormatResponseModel)
 async def read_roles(
