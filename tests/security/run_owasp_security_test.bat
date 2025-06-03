@@ -16,10 +16,6 @@ echo 3. Running OWASP Top 10 Security Tests...
 python owasp_top10_tester.py
 
 echo.
-echo 4. Generating comprehensive reports...
-python owasp_doc_generator.py
-
-echo.
 echo ========================================
 echo    OWASP Security Testing Complete!
 echo ========================================
