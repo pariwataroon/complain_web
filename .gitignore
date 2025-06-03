@@ -9,3 +9,5 @@ worker_heartbeat.json
 */test_reports/*
 */security/test_reports/*
 */integration/visual_reports/*
+*/integration/test_reports/*
+*/integration/client_reports/*
