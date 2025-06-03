@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
+from sqlalchemy import func, case
 from typing import List, Optional, Union, Dict, Any
 from uuid import UUID
 from fastapi import HTTPException
@@ -276,60 +276,72 @@ def delete_department(db: Session, department_id: UUID) -> bool:
     return True
 
 def get_departments_stats(db: Session) -> Dict[str, Any]:
-    """Get departments statistics"""
-    # จำนวนหน่วยงานทั้งหมด
-    total_count = db.query(Department).filter(Department.is_active == True).count()
-      # จำนวนหน่วยงานแยกตามกลุ่ม
-    group_stats = db.query(
-        DepartmentGroup.name,
-        func.count(Department.id).label('count')
-    ).join(
-        Department,
-        Department.group_id == DepartmentGroup.id
-    ).filter(
-        Department.is_active == True,
-        DepartmentGroup.is_active == True
-    ).group_by(
-        DepartmentGroup.name
-    ).all()
-    
-    group_counts = {group: count for group, count in group_stats}
-    
-    # จำนวนหน่วยงานที่มี parent กับไม่มี parent
-    parent_stats = db.query(
-        db.func.count(Department.id).filter(Department.parent_id != None).label('with_parent'),
-        db.func.count(Department.id).filter(Department.parent_id == None).label('without_parent')
-    ).filter(
-        Department.is_active == True
-    ).first()
-    
-    hierarchy_counts = {
-        "with_parent": parent_stats[0] if parent_stats else 0,
-        "without_parent": parent_stats[1] if parent_stats else 0
-    }
-    
-    # จำนวนสถานที่ในแต่ละหน่วยงาน
-    venue_stats = db.query(
-        Department.name,
-        db.func.count(Venue.id).label('venue_count')
-    ).outerjoin(
-        Venue,
-        Venue.department_id == Department.id
-    ).filter(
-        Department.is_active == True,
-        (Venue.id == None) | (Venue.is_active == True)
-    ).group_by(
-        Department.name
-    ).all()
-    
-    venue_counts = {dept: count for dept, count in venue_stats}
-    
-    return {
-        "total": total_count,
-        "by_group": group_counts,
-        "hierarchy": hierarchy_counts,
-        "venues_by_department": venue_counts
-    }
+    """Get departments statistics - FIXED for SQL Server compatibility"""
+    try:
+        # จำนวนหน่วยงานทั้งหมด
+        total_count = db.query(Department).filter(Department.is_active == True).count()
+        
+        # จำนวนหน่วยงานแยกตามกลุ่ม
+        group_stats = db.query(
+            DepartmentGroup.name,
+            func.count(Department.id).label('count')
+        ).join(
+            Department,
+            Department.group_id == DepartmentGroup.id
+        ).filter(
+            Department.is_active == True,
+            DepartmentGroup.is_active == True
+        ).group_by(
+            DepartmentGroup.name
+        ).all()
+        
+        group_counts = {group: count for group, count in group_stats}
+        
+        # 🔧 FIX: จำนวนหน่วยงานที่มี parent กับไม่มี parent - ใช้ CASE WHEN แทน FILTER
+        parent_stats = db.query(
+            func.sum(case((Department.parent_id.isnot(None), 1), else_=0)).label('with_parent'),
+            func.sum(case((Department.parent_id.is_(None), 1), else_=0)).label('without_parent')
+        ).filter(
+            Department.is_active == True
+        ).first()
+        
+        hierarchy_counts = {
+            "with_parent": parent_stats.with_parent if parent_stats else 0,
+            "without_parent": parent_stats.without_parent if parent_stats else 0
+        }
+        
+        # จำนวนสถานที่ในแต่ละหน่วยงาน
+        venue_stats = db.query(
+            Department.name,
+            func.count(Venue.id).label('venue_count')
+        ).outerjoin(
+            Venue,
+            Venue.department_id == Department.id
+        ).filter(
+            Department.is_active == True,
+            (Venue.id == None) | (Venue.is_active == True)
+        ).group_by(
+            Department.name
+        ).all()
+        
+        venue_counts = {dept: count for dept, count in venue_stats}
+        
+        return {
+            "total": total_count,
+            "by_group": group_counts,
+            "hierarchy": hierarchy_counts,
+            "venues_by_department": venue_counts
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in get_departments_stats: {str(e)}")
+        # Return safe default values if query fails
+        return {
+            "total": 0,
+            "by_group": {},
+            "hierarchy": {"with_parent": 0, "without_parent": 0},
+            "venues_by_department": {}
+        }
 
 def update_department_order_batch(db: Session, order_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Update order_index for multiple departments in batch"""

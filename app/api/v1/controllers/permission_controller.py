@@ -1,5 +1,6 @@
 import uuid
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 
@@ -118,20 +119,37 @@ def check_permission(db: Session, user_id: UUID, resource_path: str, action: str
 def create_role(db: Session, role_data):
     """สร้างบทบาทใหม่ พร้อมกำหนด order_index ให้เป็นลำดับสุดท้ายเสมอ"""
     
-    # ค้นหาค่า order_index ที่มากที่สุดในปัจจุบัน
-    max_order = db.query(db.func.max(Role.order_index)).scalar() or 0
-    
-    # สร้าง role ใหม่ และกำหนด order_index ให้มากกว่าค่าที่มากที่สุด
-    role = Role(
-        name=role_data.name,
-        description=role_data.description,
-        order_index=max_order + 10  # เพิ่มทีละ 10 เพื่อให้มีช่องว่างสำหรับการเรียงลำดับในภายหลัง
-    )
-    
-    db.add(role)
-    db.commit()
-    db.refresh(role)
-    return role
+    try:
+        # 🔧 FIX: ตรวจสอบว่ามี role name นี้อยู่แล้วหรือไม่
+        existing_role = db.query(Role).filter(Role.name == role_data.name).first()
+        if existing_role:
+            raise ValueError(f"Role name '{role_data.name}' already exists")
+        
+        # ค้นหาค่า order_index ที่มากที่สุดในปัจจุบัน
+        max_order = db.query(func.max(Role.order_index)).scalar() or 0
+        
+        # สร้าง role ใหม่ และกำหนด order_index ให้มากกว่าค่าที่มากที่สุด
+        role = Role(
+            name=role_data.name,
+            description=role_data.description,
+            order_index=max_order + 10  # เพิ่มทีละ 10 เพื่อให้มีช่องว่างสำหรับการเรียงลำดับในภายหลัง
+        )
+        
+        db.add(role)
+        db.commit()
+        db.refresh(role)
+        return role
+        
+    except ValueError:
+        # Re-raise ValueError for duplicate name
+        raise
+    except Exception as e:
+        db.rollback()
+        # จัดการ database errors อื่นๆ
+        if "UNIQUE KEY constraint" in str(e) and "name" in str(e):
+            raise ValueError(f"Role name '{role_data.name}' already exists")
+        else:
+            raise Exception(f"Database error: {str(e)}")
 
 def get_roles(db: Session, skip: int = 0, limit: int = 100):
     """ดึงข้อมูลบทบาททั้งหมด"""

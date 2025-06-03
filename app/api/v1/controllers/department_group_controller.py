@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from typing import List, Optional, Union, Dict, Any
 from uuid import UUID
 from fastapi import HTTPException
@@ -75,7 +76,7 @@ def create_department_group(db: Session, group_data: dict) -> Dict[str, Any]:
         raise DuplicateKeyError(f"Department group with name '{group_data['name']}' already exists")
     
     # ค้นหาค่า order_index ที่มากที่สุด
-    max_order = db.query(db.func.max(DepartmentGroup.order_index)).scalar() or 0
+    max_order = db.query(func.max(DepartmentGroup.order_index)).scalar() or 0
     
     # กำหนดค่า order_index อัตโนมัติถ้าไม่ได้ระบุ
     if "order_index" not in group_data or group_data["order_index"] is None:

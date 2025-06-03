@@ -150,54 +150,93 @@ def search_venues_by_name(db: Session, search_term: str, skip: int = 0, limit: i
     return [VenueSchema.model_validate(venue).model_dump() for venue in venues]
 
 def create_venue(db: Session, venue_data: dict) -> Dict[str, Any]:
-    """Create new venue"""
-    # Check if venue with same name already exists
-    existing = db.query(Venue).filter(
-        Venue.name == venue_data["name"],
-        Venue.is_active == True
-    ).first()
-    
-    if existing:
-        logger.warning(f"Duplicate venue name: {venue_data['name']}")
-        raise DuplicateKeyError(f"Venue with name '{venue_data['name']}' already exists")
-    
-    # Check if department exists if department_id is provided
-    if venue_data.get("department_id"):
-        department = db.query(Department).filter(
-            Department.id == venue_data["department_id"],
-            Department.is_active == True
+    """Create new venue - FIXED for NULL department_id issue"""
+    try:
+        # Check if venue with same name already exists
+        existing = db.query(Venue).filter(
+            Venue.name == venue_data["name"],
+            Venue.is_active == True
         ).first()
         
-        if not department:
-            logger.warning(f"Department not found: {venue_data['department_id']}")
-            raise HTTPException(status_code=404, detail=f"Department with ID {venue_data['department_id']} not found")
-    
-    # ค้นหาค่า order_index ที่มากที่สุดในกลุ่มเดียวกัน (ถ้ามีการระบุกลุ่ม)
-    group_filter = {}
-    if "group_name" in venue_data and venue_data["group_name"]:
-        group_filter["group_name"] = venue_data["group_name"]
+        if existing:
+            logger.warning(f"Duplicate venue name: {venue_data['name']}")
+            raise DuplicateKeyError(f"Venue with name '{venue_data['name']}' already exists")
+        
+        # 🔧 FIX: Handle department_id - ensure it's not NULL
+        department_id = venue_data.get("department_id")
+        
+        if department_id:
+            # Check if provided department exists
+            department = db.query(Department).filter(
+                Department.id == department_id,
+                Department.is_active == True
+            ).first()
+            
+            if not department:
+                logger.warning(f"Department not found: {department_id}")
+                raise HTTPException(status_code=404, detail=f"Department with ID {department_id} not found")
+        else:
+            # 🔧 FIX: Get a default department if not provided
+            default_department = db.query(Department).filter(
+                Department.is_active == True
+            ).order_by(Department.order_index).first()
+            
+            if not default_department:
+                logger.error("No active departments found for venue creation")
+                raise HTTPException(status_code=400, detail="No active departments available. Please create a department first.")
+            
+            department_id = default_department.id
+            logger.info(f"Using default department {default_department.name} for venue {venue_data['name']}")
+        
+        # 🔧 FIX: Ensure department_id is set in venue_data
+        venue_data["department_id"] = department_id
+        
+        # ค้นหาค่า order_index ที่มากที่สุดในกลุ่มเดียวกัน
+        group_filter = {}
+        if "group_name" in venue_data and venue_data["group_name"]:
+            group_filter["group_name"] = venue_data["group_name"]
 
-    # แก้จาก db.func.max เป็น func.max
-    max_order = db.query(func.max(Venue.order_index)).filter_by(**group_filter).scalar() or 0
-    print(f"Max order index for group {group_filter}: {max_order}")
-    # กำหนดค่า order_index อัตโนมัติถ้าไม่ได้ระบุ
-    if "order_index" not in venue_data or venue_data["order_index"] is None:
-        venue_data["order_index"] = max_order + 10
-    
-    # Create venue
-    db_venue = Venue()
-    for key, value in venue_data.items():
-        setattr(db_venue, key, value)
-    db_venue.order_index = venue_data["order_index"]
-    print(f"Creating venue with order index: {db_venue}")
-    db.add(db_venue)
-    db.commit()
-    db.refresh(db_venue)
-    
-    # Load department data
-    db.refresh(db_venue, ['department'])
-    
-    return VenueSchema.model_validate(db_venue).model_dump()
+        max_order = db.query(func.max(Venue.order_index)).filter_by(**group_filter).scalar() or 0
+        logger.debug(f"Max order index for group {group_filter}: {max_order}")
+        
+        # กำหนดค่า order_index อัตโนมัติถ้าไม่ได้ระบุ
+        if "order_index" not in venue_data or venue_data["order_index"] is None:
+            venue_data["order_index"] = max_order + 10
+        
+        # 🔧 FIX: Create venue with proper field assignment
+        db_venue = Venue(
+            name=venue_data.get("name"),
+            short_name=venue_data.get("short_name"),
+            code=venue_data.get("code"),
+            abbreviation=venue_data.get("abbreviation"),
+            color_code=venue_data.get("color_code"),
+            department_id=department_id,  # ✅ Ensure this is not NULL
+            group_name=venue_data.get("group_name"),
+            order_index=venue_data["order_index"],
+            is_active=True
+        )
+        
+        logger.debug(f"Creating venue: {db_venue.name} with department_id: {db_venue.department_id}")
+        
+        db.add(db_venue)
+        db.commit()
+        db.refresh(db_venue)
+        
+        # Load department data
+        db.refresh(db_venue, ['department'])
+        
+        logger.info(f"Successfully created venue: {db_venue.name} with ID {db_venue.id}")
+        
+        return VenueSchema.model_validate(db_venue).model_dump()
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating venue: {str(e)}")
+        
+        if isinstance(e, (DuplicateKeyError, HTTPException)):
+            raise e
+        else:
+            raise HTTPException(status_code=500, detail=f"Error creating venue: {str(e)}")
 
 def update_venue(db: Session, venue_id: UUID, venue_data: dict) -> Optional[Dict[str, Any]]:
     """Update venue"""
@@ -258,7 +297,7 @@ def get_venues_stats(db: Session) -> Dict[str, Any]:
     # จำนวนสถานที่แยกตามกลุ่ม
     group_stats = db.query(
         Venue.group_name,
-        func.count(Venue.id).label('count')  # แก้จาก db.func.count เป็น func.count
+        func.count(Venue.id).label('count')
     ).filter(
         Venue.is_active == True,
         Venue.group_name != None
@@ -271,7 +310,7 @@ def get_venues_stats(db: Session) -> Dict[str, Any]:
     # จำนวนสถานที่แยกตามหน่วยงานหลัก
     dept_stats = db.query(
         Department.name,
-        func.count(Venue.id).label('count')  # แก้จาก db.func.count เป็น func.count
+        func.count(Venue.id).label('count')
     ).join(
         Department,
         Department.id == Venue.department_id
