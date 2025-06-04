@@ -12,7 +12,8 @@ from app.api.v1.controllers.complaint_assignment_controller import (
     link_related_complaint,
     update_complainant_data, 
     update_respondent_data, 
-    search_complaint_for_reference
+    search_complaint_for_reference,
+    add_additional_complaint_reference
 )
 import lib.format_data as format_data
 
@@ -45,11 +46,17 @@ async def update_assignment(
 ):
     """อัพเดทข้อมูลการมอบหมายตามฟอร์ม"""
     try:
+        # ✅ แก้ไข: ตรวจสอบ UUID format ก่อน
+        try:
+            updated_by_uuid = UUID(current_user)
+        except ValueError:
+            return format_data.format_response("4000", {"error": "Invalid user ID format", "message": "INVALID_USER_ID"})
+        
         result = update_complaint_assignment_data(
             db=db,
             complaint_id=complaint_id,
             assignment_data=assignment_data,
-            updated_by=UUID(current_user) if isinstance(current_user, str) else current_user.id
+            updated_by=updated_by_uuid
         )
         
         if result["success"]:
@@ -151,3 +158,147 @@ async def search_complaints_for_reference(
         
     except Exception as e:
         return format_data.format_response("5000", {"error": str(e), "message": "INTERNAL_SERVER_ERROR"})
+
+@router.get("/{complaint_id}/history")
+async def get_assignment_history(
+    complaint_id: UUID,
+    current_user: str = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+    """ดูประวัติการเปลี่ยนแปลงในการมอบหมายงาน"""
+    try:
+        # ดึงประวัติจาก status_history
+        from models.comp_complaint import ComplaintStatusHistory
+        
+        histories = db.query(ComplaintStatusHistory).filter(
+            ComplaintStatusHistory.complaint_id == complaint_id
+        ).order_by(ComplaintStatusHistory.changed_at.desc()).all()
+        
+        result = []
+        for history in histories:
+            result.append({
+                "id": str(history.id),
+                "status": history.status,
+                "notes": history.notes,
+                "changed_by": history.changed_by,
+                "changed_at": history.changed_at.isoformat()
+            })
+        
+        return format_data.format_response("0000", {
+            "history": result,
+            "message": "GET_HISTORY_SUCCESS"
+        })
+        
+    except Exception as e:
+        return format_data.format_response("5000", {
+            "error": str(e),
+            "message": "INTERNAL_SERVER_ERROR"
+        })
+
+@router.post("/{complaint_id}/additional-reference")
+async def add_additional_reference(
+    complaint_id: UUID,
+    reference_data: Dict[str, Any],
+    current_user: str = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+    """เพิ่มเลขอ้างอิงสำหรับเรื่องร้องเรียนเพิ่มเติม"""
+    try:
+        reference_complaint_id = reference_data.get("reference_complaint_id")
+        reference_complaint_number = reference_data.get("reference_complaint_number")
+        
+        if not reference_complaint_id and not reference_complaint_number:
+            return format_data.format_response("4000", {
+                "error": "กรุณาระบุ ID หรือเลขที่เรื่องร้องเรียนอ้างอิง",
+                "message": "MISSING_REFERENCE"
+            })
+        
+        result = add_additional_complaint_reference(
+            db=db,
+            complaint_id=complaint_id,
+            reference_complaint_id=reference_complaint_id,
+            reference_complaint_number=reference_complaint_number,
+            updated_by=UUID(current_user)
+        )
+        
+        if result["success"]:
+            return format_data.format_response("0000", {
+                "data": result,
+                "message": "ADDITIONAL_REFERENCE_ADDED"
+            })
+        else:
+            return format_data.format_response("4000", {
+                "error": result["message"],
+                "message": "ADD_REFERENCE_FAILED"
+            })
+            
+    except Exception as e:
+        return format_data.format_response("5000", {
+            "error": str(e),
+            "message": "INTERNAL_SERVER_ERROR"
+        })
+    
+@router.post("/bulk-assignment")
+async def bulk_assignment(
+    assignment_data: Dict[str, Any],
+    current_user: str = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+    """มอบหมายงานแบบ bulk หลายเรื่องพร้อมกัน"""
+    try:
+        complaint_ids = assignment_data.get("complaint_ids", [])
+        officer_id = assignment_data.get("assigned_officer_id")
+        
+        if not complaint_ids:
+            return format_data.format_response("4000", {
+                "error": "กรุณาเลือกเรื่องร้องเรียน",
+                "message": "NO_COMPLAINTS_SELECTED"
+            })
+        
+        success_count = 0
+        failed_count = 0
+        results = []
+        
+        for complaint_id in complaint_ids:
+            try:
+                result = update_complaint_assignment_data(
+                    db=db,
+                    complaint_id=UUID(complaint_id),
+                    assignment_data={"assigned_officer_id": officer_id},
+                    updated_by=UUID(current_user)
+                )
+                
+                if result["success"]:
+                    success_count += 1
+                else:
+                    failed_count += 1
+                
+                results.append({
+                    "complaint_id": complaint_id,
+                    "success": result["success"],
+                    "message": result["message"]
+                })
+                
+            except Exception as e:
+                failed_count += 1
+                results.append({
+                    "complaint_id": complaint_id,
+                    "success": False,
+                    "message": str(e)
+                })
+        
+        return format_data.format_response("0000", {
+            "summary": {
+                "total": len(complaint_ids),
+                "success": success_count,
+                "failed": failed_count
+            },
+            "details": results,
+            "message": "BULK_ASSIGNMENT_COMPLETED"
+        })
+        
+    except Exception as e:
+        return format_data.format_response("5000", {
+            "error": str(e),
+            "message": "INTERNAL_SERVER_ERROR"
+        })
