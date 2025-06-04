@@ -2,6 +2,7 @@ import uuid
 import json
 import traceback
 import logging
+import copy
 from datetime import datetime, date
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -516,20 +517,16 @@ def process_nested_fields(data: Dict) -> Dict:
     
     for key, value in data.items():
         if isinstance(value, dict):
-            result[key] = process_nested_fields(value)
-        elif isinstance(value, list):
-            processed_list = []
-            for item in value:
-                if isinstance(item, dict):
-                    processed_list.append(process_nested_fields(item))
-                else:
-                    processed_list.append(item)
-            result[key] = processed_list
-        else:
-            if isinstance(value, str):
-                value = value.strip()
-            if value is not None and value != "":
+            # สำหรับ nested objects (เช่น province, districts)
+            if "value" in value and "label" in value:
+                result[f"{key}_id"] = value["value"]
+                result[key] = value["label"]
+            else:
                 result[key] = value
+        elif isinstance(value, list):
+            result[key] = value
+        else:
+            result[key] = value
     
     return result
 
