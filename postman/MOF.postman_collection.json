@@ -6569,6 +6569,244 @@
 						"description": "ลบช่องทางการร้องเรียน - ต้องมีสิทธิ์ลบใน complaint_channels"
 					},
 					"response": []
+				},
+				{
+					"name": "COMPLAINT TYPES FOR FORMS",
+					"item": [
+						{
+							"name": "Get Complaint Types for Form",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/complaint-metadata/types/for-form?active_only=true",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"complaint-metadata",
+										"types",
+										"for-form"
+									],
+									"query": [
+										{
+											"key": "active_only",
+											"value": "true",
+											"description": "ดึงเฉพาะประเภทที่เปิดใช้งาน"
+										}
+									]
+								},
+								"description": "ดึงรายการประเภทเรื่องร้องเรียนหลักสำหรับใช้ใน frontend form (format: value, label)"
+							},
+							"response": []
+						},
+						{
+							"name": "Search Complaint Types",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/complaint-metadata/types/search?search=ฉ้อโกง&active_only=true",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"complaint-metadata",
+										"types",
+										"search"
+									],
+									"query": [
+										{
+											"key": "search",
+											"value": "ฉ้อโกง",
+											"description": "คำค้นหาประเภทเรื่องร้องเรียน"
+										},
+										{
+											"key": "active_only",
+											"value": "true",
+											"description": "ดึงเฉพาะประเภทที่เปิดใช้งาน"
+										}
+									]
+								},
+								"description": "ค้นหาประเภทเรื่องร้องเรียนตามชื่อ"
+							},
+							"response": []
+						},
+						{
+							"name": "Validate Complaint Type",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/complaint-metadata/types/validate?type_name=ฉ้อโกง",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"complaint-metadata",
+										"types",
+										"validate"
+									],
+									"query": [
+										{
+											"key": "type_name",
+											"value": "ฉ้อโกง",
+											"description": "ชื่อประเภทเรื่องร้องเรียนที่ต้องการตรวจสอบ"
+										}
+									]
+								},
+								"description": "ตรวจสอบว่าประเภทเรื่องร้องเรียนที่ระบุมีอยู่ในระบบหรือไม่"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Popular Complaint Types",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/complaint-metadata/types/popular?limit=10",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"complaint-metadata",
+										"types",
+										"popular"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "10",
+											"description": "จำนวนประเภทที่ได้รับความนิยมสูงสุด"
+										}
+									]
+								},
+								"description": "ดึงรายการประเภทเรื่องร้องเรียนที่ได้รับความนิยมสูงสุด (ตามจำนวนการใช้งาน)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Complaint Subtypes for Form",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/complaint-metadata/subtypes/for-form?parent_type_id={{parent_type_id}}&active_only=true",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"complaint-metadata",
+										"subtypes",
+										"for-form"
+									],
+									"query": [
+										{
+											"key": "parent_type_id",
+											"value": "{{parent_type_id}}",
+											"description": "ID ของประเภทหลัก (ถ้าไม่ระบุจะดึงทั้งหมด)"
+										},
+										{
+											"key": "active_only",
+											"value": "true",
+											"description": "ดึงเฉพาะประเภทที่เปิดใช้งาน"
+										}
+									]
+								},
+								"description": "ดึงรายการประเภทเรื่องร้องเรียนย่อยสำหรับใช้ใน frontend form"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Complaint Channels for Form",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/complaint-metadata/channels/for-form?active_only=true",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"complaint-metadata",
+										"channels",
+										"for-form"
+									],
+									"query": [
+										{
+											"key": "active_only",
+											"value": "true",
+											"description": "ดึงเฉพาะช่องทางที่เปิดใช้งาน"
+										}
+									]
+								},
+								"description": "ดึงรายการช่องทางการร้องเรียนสำหรับใช้ใน frontend form"
+							},
+							"response": []
+						}
+					],
+					"description": "API สำหรับดึงข้อมูลประเภทเรื่องร้องเรียนสำหรับใช้ใน frontend form"
 				}
 			],
 			"description": "API สำหรับจัดการข้อมูลพื้นฐานเกี่ยวกับเรื่องร้องเรียน เช่น ประเภทเรื่องร้องเรียน และช่องทางการร้องเรียน"
