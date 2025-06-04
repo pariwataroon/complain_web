@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from uuid import UUID
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from datetime import datetime
 
 from config.database import get_db
 from models.user import User
@@ -13,7 +14,11 @@ from app.api.v1.controllers.complaint_assignment_controller import (
     update_complainant_data, 
     update_respondent_data, 
     search_complaint_for_reference,
-    add_additional_complaint_reference
+    add_additional_complaint_reference,
+    get_assignment_statistics,
+    auto_assign_complaint,
+    validate_officer_assignment,
+    get_complaint_assignment_history
 )
 import lib.format_data as format_data
 
@@ -22,7 +27,7 @@ router = APIRouter(prefix="/complaints", tags=["complaint-assignment"])
 @router.get("/{complaint_id}/assignment-form")
 async def get_assignment_form(
     complaint_id: UUID,
-    current_user: str = Depends(verify_token),
+    current_user: User = Depends(verify_token),
     db: Session = Depends(get_db)
 ):
     """ดึงข้อมูลสำหรับฟอร์ม Assignment"""
@@ -41,7 +46,7 @@ async def get_assignment_form(
 async def update_assignment(
     complaint_id: UUID,
     assignment_data: Dict[str, Any],
-    current_user: str = Depends(verify_token),
+    current_user: User = Depends(verify_token),
     db: Session = Depends(get_db)
 ):
     """อัพเดทข้อมูลการมอบหมายตามฟอร์ม"""
@@ -56,7 +61,7 @@ async def update_assignment(
             db=db,
             complaint_id=complaint_id,
             assignment_data=assignment_data,
-            updated_by=updated_by_uuid
+            updated_by=current_user.id
         )
         
         if result["success"]:
@@ -162,30 +167,19 @@ async def search_complaints_for_reference(
 @router.get("/{complaint_id}/history")
 async def get_assignment_history(
     complaint_id: UUID,
-    current_user: str = Depends(verify_token),
+    current_user: User = Depends(verify_token),
     db: Session = Depends(get_db)
 ):
     """ดูประวัติการเปลี่ยนแปลงในการมอบหมายงาน"""
     try:
-        # ดึงประวัติจาก status_history
-        from models.comp_complaint import ComplaintStatusHistory
-        
-        histories = db.query(ComplaintStatusHistory).filter(
-            ComplaintStatusHistory.complaint_id == complaint_id
-        ).order_by(ComplaintStatusHistory.changed_at.desc()).all()
-        
-        result = []
-        for history in histories:
-            result.append({
-                "id": str(history.id),
-                "status": history.status,
-                "notes": history.notes,
-                "changed_by": history.changed_by,
-                "changed_at": history.changed_at.isoformat()
-            })
+        results = get_complaint_assignment_history(
+            db=db,
+            complaint_id=complaint_id,
+            limit=20
+        )
         
         return format_data.format_response("0000", {
-            "history": result,
+            "data": results,
             "message": "GET_HISTORY_SUCCESS"
         })
         
@@ -295,6 +289,98 @@ async def bulk_assignment(
             },
             "details": results,
             "message": "BULK_ASSIGNMENT_COMPLETED"
+        })
+        
+    except Exception as e:
+        return format_data.format_response("5000", {
+            "error": str(e),
+            "message": "INTERNAL_SERVER_ERROR"
+        })
+    
+@router.get("/statistics")
+async def get_assignment_statistics(
+    date_from: Optional[str] = Query(None, description="วันที่เริ่มต้น (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="วันที่สิ้นสุด (YYYY-MM-DD)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(verify_token)
+):
+    """ดูสถิติการมอบหมายงาน"""
+    try:
+        date_from_obj = None
+        date_to_obj = None
+        
+        if date_from:
+            date_from_obj = datetime.fromisoformat(date_from)
+        if date_to:
+            date_to_obj = datetime.fromisoformat(date_to)
+        
+        results = get_assignment_statistics(
+            db=db,
+            date_from=date_from_obj,
+            date_to=date_to_obj
+        )
+        
+        return format_data.format_response("0000", {
+            "data": results,
+            "message": "GET_STATISTICS_SUCCESS"
+        })
+        
+    except Exception as e:
+        return format_data.format_response("5000", {
+            "error": str(e),
+            "message": "INTERNAL_SERVER_ERROR"
+        })
+
+@router.post("/{complaint_id}/auto-assign")
+async def auto_assign_complaint_route(
+    complaint_id: UUID,
+    assignment_rules: Dict[str, Any] = {},
+    db: Session = Depends(get_db),
+    current_user: User = Depends(verify_token)
+):
+    """มอบหมายงานอัตโนมัติ"""
+    try:
+        result = auto_assign_complaint(
+            db=db,
+            complaint_id=complaint_id,
+            assignment_rules=assignment_rules
+        )
+        
+        if result.get("success"):
+            return format_data.format_response("0000", {
+                "data": result,
+                "message": "AUTO_ASSIGN_SUCCESS"
+            })
+        else:
+            return format_data.format_response("4000", {
+                "error": result.get("message"),
+                "message": "AUTO_ASSIGN_FAILED"
+            })
+        
+    except Exception as e:
+        return format_data.format_response("5000", {
+            "error": str(e),
+            "message": "INTERNAL_SERVER_ERROR"
+        })
+
+@router.post("/validate-officer")
+async def validate_officer_assignment_route(  # ← เปลี่ยนชื่อ function
+    officer_data: Dict[str, Any],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(verify_token)
+):
+    """ตรวจสอบความเหมาะสมของการมอบหมายเจ้าหน้าที่"""
+    try:
+        result = validate_officer_assignment(
+            db=db,
+            officer_id=UUID(officer_data.get("officer_id")),
+            complaint_type=officer_data.get("complaint_type"),
+            urgency_level=officer_data.get("urgency_level")
+        )
+        
+        return format_data.format_response("0000", {
+            "data": result,
+            "message": "VALIDATE_OFFICER_SUCCESS"
         })
         
     except Exception as e:

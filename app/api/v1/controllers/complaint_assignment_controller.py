@@ -6,7 +6,7 @@ import json
 
 from models.comp_complaint import (
     Complaint, ComplaintStatus, ComplaintFilingType, 
-    ConfidentialityLevel, UrgencyLevel
+    ConfidentialityLevel, UrgencyLevel, ComplaintStatusHistory
 )
 from models.user import User
 from models.comp_complaint_types import ComplaintType, ComplaintSubType, ComplaintChannel
@@ -488,4 +488,312 @@ def add_additional_complaint_reference(
     except Exception as e:
         db.rollback()
         logger.error(f"Error adding reference: {str(e)}")
+        return {"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"}
+    
+
+def get_complaint_assignment_history(
+    db: Session,
+    complaint_id: UUID,
+    limit: int = 20
+) -> List[Dict]:
+    """ดูประวัติการเปลี่ยนแปลงการมอบหมาย"""
+    try:
+        history = db.query(ComplaintStatusHistory).filter(
+            ComplaintStatusHistory.complaint_id == complaint_id
+        ).order_by(ComplaintStatusHistory.changed_at.desc()).limit(limit).all()
+        
+        results = []
+        for record in history:
+            # ดึงข้อมูลผู้เปลี่ยนแปลง
+            changed_by_user = None
+            if record.changed_by:
+                changed_by_user = db.query(User).filter(User.id == record.changed_by).first()
+            
+            results.append({
+                "id": str(record.id),
+                "status": record.status,
+                "notes": record.notes,
+                "changed_at": record.changed_at.isoformat(),
+                "changed_by": {
+                    "id": str(record.changed_by) if record.changed_by else None,
+                    "name": f"{changed_by_user.first_name} {changed_by_user.last_name}" if changed_by_user else "ระบบ"
+                }
+            })
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error getting assignment history: {str(e)}")
+        return []
+
+def bulk_assignment_complaints(
+    db: Session,
+    complaint_ids: List[UUID],
+    assignment_data: Dict[str, Any],
+    updated_by: UUID
+) -> Dict:
+    """มอบหมายงานแบบ bulk หลายเรื่องพร้อมกัน"""
+    try:
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        for complaint_id in complaint_ids:
+            result = update_complaint_assignment_data(
+                db=db,
+                complaint_id=complaint_id,
+                assignment_data=assignment_data,
+                updated_by=updated_by
+            )
+            
+            if result.get("success"):
+                success_count += 1
+            else:
+                error_count += 1
+                errors.append({
+                    "complaint_id": str(complaint_id),
+                    "error": result.get("message", "Unknown error")
+                })
+        
+        return {
+            "success": error_count == 0,
+            "message": f"ประมวลผลเสร็จสิ้น: สำเร็จ {success_count} เรื่อง, ผิดพลาด {error_count} เรื่อง",
+            "summary": {
+                "total": len(complaint_ids),
+                "success": success_count,
+                "error": error_count
+            },
+            "errors": errors if errors else None
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in bulk assignment: {str(e)}")
+        return {
+            "success": False,
+            "message": f"เกิดข้อผิดพลาดในการมอบหมายงานแบบ bulk: {str(e)}"
+        }
+
+def get_assignment_statistics(
+    db: Session,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None
+) -> Dict:
+    """สถิติการมอบหมายงาน"""
+    try:
+        from sqlalchemy import func, and_
+        
+        # Base query
+        query = db.query(Complaint)
+        
+        # Filter by date range if provided
+        if date_from:
+            query = query.filter(Complaint.created_at >= date_from)
+        if date_to:
+            query = query.filter(Complaint.created_at <= date_to)
+        
+        # Count by status
+        status_counts = {}
+        for status in ['submitted', 'assigned', 'in_progress', 'resolved', 'closed']:
+            count = query.filter(Complaint.status == status).count()
+            status_counts[status] = count
+        
+        # Count by urgency level
+        urgency_counts = {}
+        for urgency in ['low', 'medium', 'high', 'urgent', 'critical']:
+            count = query.filter(Complaint.urgency_level == urgency).count()
+            urgency_counts[urgency] = count
+        
+        # Count by confidentiality level
+        confidentiality_counts = {}
+        for level in ['normal', 'confidential', 'secret', 'top_secret']:
+            count = query.filter(Complaint.confidentiality_level == level).count()
+            confidentiality_counts[level] = count
+        
+        # Assigned vs Unassigned
+        assigned_count = query.filter(Complaint.assigned_officer_id.isnot(None)).count()
+        unassigned_count = query.filter(Complaint.assigned_officer_id.is_(None)).count()
+        
+        # Officer workload
+        officer_workload = db.query(
+            Complaint.assigned_officer_id,
+            func.count(Complaint.id).label('count')
+        ).filter(
+            Complaint.assigned_officer_id.isnot(None)
+        ).group_by(Complaint.assigned_officer_id).all()
+        
+        officer_stats = []
+        for officer_id, count in officer_workload:
+            officer = db.query(User).filter(User.id == officer_id).first()
+            if officer:
+                officer_stats.append({
+                    "officer_id": str(officer_id),
+                    "officer_name": f"{officer.first_name} {officer.last_name}",
+                    "complaint_count": count
+                })
+        
+        return {
+            "total_complaints": query.count(),
+            "status_distribution": status_counts,
+            "urgency_distribution": urgency_counts,
+            "confidentiality_distribution": confidentiality_counts,
+            "assignment_status": {
+                "assigned": assigned_count,
+                "unassigned": unassigned_count
+            },
+            "officer_workload": officer_stats,
+            "date_range": {
+                "from": date_from.isoformat() if date_from else None,
+                "to": date_to.isoformat() if date_to else None
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting assignment statistics: {str(e)}")
+        return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
+
+def validate_officer_assignment(
+    db: Session,
+    officer_id: UUID,
+    complaint_type: str = None,
+    urgency_level: str = None
+) -> Dict:
+    """ตรวจสอบความเหมาะสมของการมอบหมายเจ้าหน้าที่"""
+    try:
+        officer = db.query(User).filter(User.id == officer_id, User.is_active == True).first()
+        if not officer:
+            return {
+                "valid": False,
+                "message": "ไม่พบเจ้าหน้าที่หรือเจ้าหน้าที่ไม่ได้ใช้งาน"
+            }
+        
+        # ตรวจสอบภาระงานปัจจุบัน
+        current_workload = db.query(Complaint).filter(
+            Complaint.assigned_officer_id == officer_id,
+            Complaint.status.in_(['assigned', 'in_progress'])
+        ).count()
+        
+        # กำหนดขีดจำกัดงาน (ปรับตามนีค์องค์กร)
+        max_workload = 20
+        
+        warnings = []
+        if current_workload >= max_workload:
+            warnings.append(f"เจ้าหน้าที่มีภาระงาน {current_workload} เรื่อง (เกินขีดจำกัด {max_workload} เรื่อง)")
+        
+        # ตรวจสอบความเหมาะสมตามประเภทเรื่อง
+        if complaint_type and urgency_level == 'critical':
+            # ตรวจสอบประสบการณ์กับเรื่องด่วนที่สุด
+            critical_experience = db.query(Complaint).filter(
+                Complaint.assigned_officer_id == officer_id,
+                Complaint.urgency_level == 'critical',
+                Complaint.status == 'resolved'
+            ).count()
+            
+            if critical_experience < 3:
+                warnings.append("เจ้าหน้าที่มีประสบการณ์จัดการเรื่องด่วนที่สุดน้อย")
+        
+        return {
+            "valid": True,
+            "officer": {
+                "id": str(officer.id),
+                "name": f"{officer.first_name} {officer.last_name}",
+                "current_workload": current_workload,
+                "max_workload": max_workload
+            },
+            "warnings": warnings,
+            "recommendation": "เหมาะสม" if not warnings else "ควรพิจารณา"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error validating officer assignment: {str(e)}")
+        return {
+            "valid": False,
+            "message": f"เกิดข้อผิดพลาด: {str(e)}"
+        }
+
+def auto_assign_complaint(
+    db: Session,
+    complaint_id: UUID,
+    assignment_rules: Dict[str, Any] = None
+) -> Dict:
+    """มอบหมายงานอัตโนมัติตามกฎที่กำหนด"""
+    try:
+        complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+        if not complaint:
+            return {"success": False, "message": "ไม่พบเรื่องร้องเรียน"}
+        
+        if complaint.assigned_officer_id:
+            return {"success": False, "message": "เรื่องนี้มีการมอบหมายแล้ว"}
+        
+        # กฎการมอบหมายอัตโนมัติ
+        if not assignment_rules:
+            assignment_rules = {
+                "by_urgency": True,
+                "by_workload": True,
+                "by_expertise": False
+            }
+        
+        # หาเจ้าหน้าที่ที่เหมาะสม
+        available_officers = db.query(User).filter(
+            User.is_active == True,
+            # สามารถเพิ่มเงื่อนไข role ได้
+        ).all()
+        
+        if not available_officers:
+            return {"success": False, "message": "ไม่มีเจ้าหน้าที่ที่พร้อมรับงาน"}
+        
+        # คำนวณคะแนนความเหมาะสม
+        officer_scores = []
+        for officer in available_officers:
+            score = 0
+            
+            # คะแนนจากภาระงาน (น้อยกว่า = ดีกว่า)
+            if assignment_rules.get("by_workload"):
+                workload = db.query(Complaint).filter(
+                    Complaint.assigned_officer_id == officer.id,
+                    Complaint.status.in_(['assigned', 'in_progress'])
+                ).count()
+                score += max(0, 100 - (workload * 5))  # ลบคะแนนตามจำนวนงาน
+            
+            # คะแนนจากความเร่งด่วน (มีประสบการณ์กับเรื่องเร่งด่วน)
+            if assignment_rules.get("by_urgency") and complaint.urgency_level in ['urgent', 'critical']:
+                urgent_experience = db.query(Complaint).filter(
+                    Complaint.assigned_officer_id == officer.id,
+                    Complaint.urgency_level.in_(['urgent', 'critical']),
+                    Complaint.status == 'resolved'
+                ).count()
+                score += urgent_experience * 10
+            
+            officer_scores.append({
+                "officer": officer,
+                "score": score
+            })
+        
+        # เลือกเจ้าหน้าที่ที่มีคะแนนสูงสุด
+        best_officer = max(officer_scores, key=lambda x: x["score"])["officer"]
+        
+        # มอบหมายงาน
+        assignment_data = {
+            "assigned_officer_id": str(best_officer.id),
+            "urgency_level": complaint.urgency_level,
+            "confidentiality_level": complaint.confidentiality_level
+        }
+        
+        result = update_complaint_assignment_data(
+            db=db,
+            complaint_id=complaint_id,
+            assignment_data=assignment_data,
+            updated_by=best_officer.id  # หรือ system user ID
+        )
+        
+        if result.get("success"):
+            result["auto_assigned"] = True
+            result["assigned_officer"] = {
+                "id": str(best_officer.id),
+                "name": f"{best_officer.first_name} {best_officer.last_name}"
+            }
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error in auto assignment: {str(e)}")
         return {"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"}
