@@ -904,12 +904,56 @@ def create_status_history(db: Session, complaint_id: UUID, status: ComplaintStat
     db.add(status_history)
     db.commit()
 
-def get_complaints(db: Session, skip: int = 0, limit: int = 100, status: Optional[str] = None):
-    """ดึงรายการข้อร้องเรียนพร้อมการแบ่งหน้าและนับจำนวนทั้งหมด"""
+def get_complaints(
+    db: Session, 
+    skip: int = 0, 
+    limit: int = 100, 
+    status: Optional[str] = None,
+    complaint_type: Optional[str] = None,
+    assignee: Optional[str] = None,
+    location: Optional[str] = None,
+    urgency: Optional[str] = None,
+    search: Optional[str] = None
+):
+    """ดึงรายการข้อร้องเรียนพร้อมการแบ่งหน้าและ filter ขั้นสูง"""
     query = db.query(Complaint)
     
+    # Filter by status
     if status:
         query = query.filter(Complaint.status == status)
+    
+    # Filter by complaint type
+    if complaint_type:
+        query = query.filter(Complaint.complaint_type.ilike(f"%{complaint_type}%"))
+    
+    # Filter by assignee
+    if assignee:
+        query = query.filter(
+            (Complaint.assigned_to.ilike(f"%{assignee}%")) |
+            (Complaint.assigned_officer_id.isnot(None))
+        )
+    
+    # Filter by location
+    if location:
+        query = query.filter(
+            (Complaint.incident_province.ilike(f"%{location}%")) |
+            (Complaint.incident_district.ilike(f"%{location}%")) |
+            (Complaint.incident_subdistrict.ilike(f"%{location}%"))
+        )
+    
+    # Filter by urgency
+    if urgency:
+        query = query.filter(Complaint.urgency_level == urgency)
+    
+    # Search in multiple fields
+    if search:
+        search_filter = (
+            Complaint.complaint_number.ilike(f"%{search}%") |
+            Complaint.subject.ilike(f"%{search}%") |
+            Complaint.description.ilike(f"%{search}%") |
+            Complaint.complaint_type.ilike(f"%{search}%")
+        )
+        query = query.filter(search_filter)
     
     total_count = query.count()
     query = query.order_by(Complaint.created_at.desc())
@@ -918,12 +962,15 @@ def get_complaints(db: Session, skip: int = 0, limit: int = 100, status: Optiona
     result = []
     for complaint in complaints:
         try:
-            list_item = create_complaint_list_item(complaint)
-            result.append(list_item)
+            list_item = create_complaint_list_item(complaint, db)  # ✅ ส่ง db parameter
+            result.append(list_item.__dict__)
         except Exception as e:
             if DEBUG_MODE:
-                print(f"Error processing complaint {complaint.id}: {str(e)}")
+                print(f"Error creating list item: {str(e)}")
             continue
+    
+    # ✅ เพิ่มข้อมูล filters สำหรับ frontend
+    filters = get_filter_options(db)
     
     return {
         "items": result,
@@ -932,10 +979,64 @@ def get_complaints(db: Session, skip: int = 0, limit: int = 100, status: Optiona
             "skip": skip,
             "limit": limit,
             "has_more": total_count > (skip + limit)
-        }
+        },
+        "filters": filters  # ✅ เพิ่มส่วนนี้
     }
 
-def create_complaint_list_item(complaint: Complaint) -> ComplaintListItem:
+def get_filter_options(db: Session) -> Dict:
+    """ดึงตัวเลือกสำหรับ filter"""
+    try:
+        # ดึงสถานะที่มีอยู่
+        available_statuses = [
+            {"value": "SUBMITTED", "label": "รับเรื่อง"},
+            {"value": "SENT_TO_AGENCY", "label": "ส่งหน่วยงาน"},
+            {"value": "IN_PROCESS", "label": "กำลังดำเนินการ"},
+            {"value": "IN_REVIEW", "label": "อยู่ระหว่างพิจารณา"},
+            {"value": "TRACKING", "label": "ติดตามผล"},
+            {"value": "REVIEWED", "label": "แจ้งผลการพิจารณา"},
+            {"value": "COMPLETED", "label": "เสร็จสิ้น"}
+        ]
+        
+        # ดึงประเภทเรื่องร้องเรียนที่มีอยู่
+        complaint_types = db.query(ComplaintType).filter(ComplaintType.is_active == True).all()
+        available_types = [
+            {"value": ctype.name, "label": ctype.name} 
+            for ctype in complaint_types
+        ]
+        
+        # ตัวเลือกความเร่งด่วน
+        available_urgency = [
+            {"value": "LOW", "label": "ต่ำ"},
+            {"value": "MEDIUM", "label": "กลาง"},
+            {"value": "HIGH", "label": "สูง"},
+            {"value": "CRITICAL", "label": "วิกฤต"}
+        ]
+        
+        # ตัวเลือกความรุนแรง
+        available_severity = [
+            {"value": "LOW", "label": "ต่ำ"},
+            {"value": "MEDIUM", "label": "กลาง"},
+            {"value": "HIGH", "label": "สูง"},
+            {"value": "CRITICAL", "label": "วิกฤต"}
+        ]
+        
+        return {
+            "available_statuses": available_statuses,
+            "available_types": available_types,
+            "available_urgency": available_urgency,
+            "available_severity": available_severity
+        }
+    except Exception as e:
+        if DEBUG_MODE:
+            print(f"Error getting filter options: {str(e)}")
+        return {
+            "available_statuses": [],
+            "available_types": [],
+            "available_urgency": [],
+            "available_severity": []
+        }
+
+def create_complaint_list_item(complaint: Complaint, db: Session = None) -> ComplaintListItem:
     """สร้างข้อมูลแบบย่อสำหรับแสดงในรายการ"""
     complainant_data = ensure_dict(complaint.complainant_data)
     complainant_name = complainant_data.get("name", "")
@@ -949,16 +1050,74 @@ def create_complaint_list_item(complaint: Complaint) -> ComplaintListItem:
     elif complaint.respondent_type == RespondentType.GOVERNMENT:
         respondent_name = respondent_data.get("agencyName", respondent_data.get("name", ""))
     
+    # เพิ่มข้อมูลประเภทเรื่องร้องเรียน
+    complaint_type_thai = get_thai_complaint_type(complaint.complaint_type)
+    
+    # เพิ่มข้อมูลสถานที่เกิดเหตุ
+    incident_location = ""
+    if complaint.incident_province:
+        incident_location = complaint.incident_province
+        if complaint.incident_district:
+            incident_location += f" > {complaint.incident_district}"
+        if complaint.incident_subdistrict:
+            incident_location += f" > {complaint.incident_subdistrict}"
+    
+    # เพิ่มข้อมูลผู้รับผิดชอบ
+    assigned_info = ""
+    if complaint.assigned_to:
+        assigned_info = complaint.assigned_to
+    elif complaint.assigned_officer_id and db:  # ✅ ตรวจสอบ db ก่อนใช้
+        try:
+            from models.user import User
+            assigned_officer = db.query(User).filter(User.id == complaint.assigned_officer_id).first()
+            if assigned_officer:
+                assigned_info = f"{assigned_officer.first_name} {assigned_officer.last_name}"
+        except:
+            assigned_info = "มอบหมายแล้ว"
+    elif complaint.assigned_officer_id:
+        assigned_info = "มอบหมายแล้ว"
+    
+    # เพิ่มข้อมูลสถานะภาษาไทย
+    status_thai = get_thai_status(complaint.status)
+    
     return ComplaintListItem(
         id=complaint.id,
         complaint_number=complaint.complaint_number,
         subject=complaint.subject,
-        complaint_type=complaint.complaint_type,
-        status=complaint.status,
+        complaint_type=complaint_type_thai,
+        status=status_thai,
         created_at=complaint.created_at,
         complainant_name=complainant_name,
-        respondent_name=respondent_name
+        respondent_name=respondent_name,
+        incident_location=incident_location,
+        assigned_to=assigned_info,
+        urgency_level=complaint.urgency_level or "LOW",
+        severity_level=complaint.severity_level or "LOW"
     )
+
+def get_thai_complaint_type(complaint_type: str) -> str:
+    """แปลงประเภทเรื่องร้องเรียนเป็นภาษาไทย"""
+    type_mapping = {
+        "fraud": "ฉ้อโกง",
+        "corruption": "ทุจริต", 
+        "service": "บริการ",
+        "product": "สินค้าและบริการ",
+        "other": "อื่นๆ"
+    }
+    return type_mapping.get(complaint_type, complaint_type)
+
+def get_thai_status(status: str) -> str:
+    """แปลงสถานะเป็นภาษาไทย"""
+    status_mapping = {
+        "submitted": "รับเรื่อง",
+        "sent_to_agency": "ส่งหน่วยงาน",
+        "in_process": "กำลังดำเนินการ",
+        "in_review": "อยู่ระหว่างพิจารณา",
+        "tracking": "ติดตามผล",
+        "reviewed": "แจ้งผลการพิจารณา",
+        "completed": "เสร็จสิ้น"
+    }
+    return status_mapping.get(status, status)
 
 def ensure_dict(data):
     """ตรวจสอบให้แน่ใจว่าข้อมูลเป็น dictionary"""
@@ -1170,8 +1329,8 @@ def get_user_complaints(db: Session, user_id: UUID, skip: int = 0, limit: int = 
     result = []
     for complaint in complaints:
         try:
-            list_item = create_complaint_list_item(complaint)
-            result.append(list_item)
+            list_item = create_complaint_list_item(complaint, db)  # ✅ ส่ง db parameter
+            result.append(list_item.__dict__)  # ✅ แปลงเป็น dict
         except Exception as e:
             if DEBUG_MODE:
                 print(f"Error processing complaint {complaint.id}: {str(e)}")

@@ -55,11 +55,16 @@ class ComplaintListItem(BaseModel):
     id: UUID
     complaint_number: str
     subject: str
+    complaint_type: str
+    status: str
     created_at: datetime
-    status: ComplaintStatus
-    complaint_type: Optional[str] = None
     complainant_name: str
-    respondent_name: Optional[str] = None
+    respondent_name: str
+    # เพิ่มฟิลด์ใหม่
+    incident_location: Optional[str] = ""
+    assigned_to: Optional[str] = ""
+    urgency_level: Optional[str] = "LOW"
+    severity_level: Optional[str] = "LOW"
     
     class Config:
         from_attributes = True

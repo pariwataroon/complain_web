@@ -58,11 +58,26 @@ async def read_complaints(
     skip: int = 0,
     limit: int = 100,
     status: Optional[str] = None,
+    complaint_type: Optional[str] = None,  # เพิ่ม filter ประเภทเรื่องร้องเรียน
+    assignee: Optional[str] = None,  # เพิ่ม filter ผู้รับผิดชอบ
+    location: Optional[str] = None,  # เพิ่ม filter สถานที่
+    urgency: Optional[str] = None,  # เพิ่ม filter ความเร่งด่วน
+    search: Optional[str] = None,  # เพิ่ม search
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
-    """Get a list of complaints with pagination and optional status filter"""
-    result = get_complaints(db, skip=skip, limit=limit, status=status)
+    """Get a list of complaints with advanced filtering and search"""
+    result = get_complaints(
+        db, 
+        skip=skip, 
+        limit=limit, 
+        status=status,
+        complaint_type=complaint_type,
+        assignee=assignee,
+        location=location,
+        urgency=urgency,
+        search=search
+    )
     return format_response("0000", result)
 
 @router.get("/me", response_model=FormatResponseModel)
