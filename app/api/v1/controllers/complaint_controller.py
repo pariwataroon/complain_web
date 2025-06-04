@@ -24,7 +24,7 @@ from models.user import User
 logger = logging.getLogger(__name__)
 
 # Global flag สำหรับควบคุม debug logs
-DEBUG_MODE = False
+DEBUG_MODE = True
 
 def debug_log(message: str):
     """ฟังก์ชันสำหรับ debug logging"""
@@ -499,11 +499,15 @@ def handle_respondent_data(structured_data: Dict, flat_data: Dict):
         structured_data["step2"]["general"][respondent_type_lower] = respondent_data
 
 def extract_complaint_data(complaint_data: Dict, root_complaint_type: str) -> Dict:
-    """สกัดข้อมูลที่จำเป็นจาก complaint_data"""
+    """สกัดข้อมูลที่จำเป็นจาก complaint_data - เพิ่ม debug"""
     step1 = complaint_data.get("step1", {})
     step2 = complaint_data.get("step2", {})
     step3 = complaint_data.get("step3", {})
     step4 = complaint_data.get("step4", {})
+    
+    # ✅ เพิ่ม debug log
+    debug_log(f"🔍 Step1 structure: {json.dumps(step1, ensure_ascii=False, indent=2)}")
+    debug_log(f"🔍 Step2 structure: {json.dumps(step2, ensure_ascii=False, indent=2)}")
     
     # สกัดข้อมูลเรื่องร้องเรียน
     subject = ""
@@ -540,6 +544,19 @@ def extract_complaint_data(complaint_data: Dict, root_complaint_type: str) -> Di
     complainant_result = process_complainant_data(step1)
     respondent_result = process_respondent_data(step2)
     
+    # ✅ เพิ่ม debug log
+    debug_log(f"🔍 Complainant result: {json.dumps(complainant_result, ensure_ascii=False, default=str)}")
+    debug_log(f"🔍 Respondent result: {json.dumps(respondent_result, ensure_ascii=False, default=str)}")
+    
+    # ✅ ตรวจสอบข้อมูลที่จำเป็น
+    if not complainant_result.get("data"):
+        debug_log("❌ No complainant data found!")
+        raise ValueError("Complainant data is required")
+    
+    if not respondent_result.get("data"):
+        debug_log("❌ No respondent data found!")
+        raise ValueError("Respondent data is required")
+    
     return {
         "subject": subject,
         "description": description,
@@ -554,24 +571,54 @@ def extract_complaint_data(complaint_data: Dict, root_complaint_type: str) -> Di
     }
 
 def process_complainant_data(step1: Dict) -> Dict:
-    """ประมวลผลข้อมูลผู้ร้องเรียน"""
+    """ประมวลผลข้อมูลผู้ร้องเรียน - แก้ไขแล้ว"""
     complainant_data = {}
     complainant_type = ComplainantType.INDIVIDUAL
     delegate_data = None
     
+    debug_log(f"🔍 Processing complainant data: {json.dumps(step1, ensure_ascii=False, indent=2)}")
+    
     if "general" in step1:
         step1_general = step1["general"]
-        active_type = step1_general.get("activeType", "general")
         
-        if active_type == "corporate":
+        # ✅ ตรวจสอบข้อมูลที่มีอยู่จริงก่อน แทนการพึ่ง activeType
+        if "corporate" in step1_general and step1_general["corporate"]:
+            debug_log("📋 Found corporate data")
             complainant_type = ComplainantType.CORPORATE
-            complainant_data = process_nested_fields(step1_general.get("corporate", {}))
+            complainant_data = process_nested_fields(step1_general["corporate"])
+            
+            # ✅ ตรวจสอบ signer (ผู้ลงนาม) แยกต่างหาก
+            if "signer" in step1_general and step1_general["signer"]:
+                debug_log("✍️ Found signer data")
+                complainant_data["signer"] = process_nested_fields(step1_general["signer"])
+        
+        # ถ้าไม่มี corporate ลองดู general
+        elif "general" in step1_general and step1_general["general"]:
+            debug_log("👤 Found general (individual) data")
+            complainant_type = ComplainantType.INDIVIDUAL
+            complainant_data = process_nested_fields(step1_general["general"])
+        
+        # ถ้าไม่มีทั้งคู่ ลองใช้ activeType
         else:
-            complainant_data = process_nested_fields(step1_general.get("general", {}))
+            active_type = step1_general.get("activeType", "general")
+            debug_log(f"🔄 Using activeType fallback: {active_type}")
+            
+            if active_type == "corporate" and "corporate" in step1_general:
+                complainant_type = ComplainantType.CORPORATE
+                complainant_data = process_nested_fields(step1_general["corporate"])
+            else:
+                # ใช้ข้อมูลทั้งหมดใน step1_general เป็น individual data
+                complainant_type = ComplainantType.INDIVIDUAL
+                # ✅ ลบ activeType ออกก่อนประมวลผล
+                filtered_data = {k: v for k, v in step1_general.items() if k not in ["activeType", "corporate", "general", "signer", "delegate"]}
+                complainant_data = process_nested_fields(filtered_data)
         
         # ตรวจสอบข้อมูลผู้รับมอบอำนาจ
-        if "delegate" in step1_general:
+        if "delegate" in step1_general and step1_general["delegate"]:
+            debug_log("📄 Found delegate data")
             delegate_data = process_nested_fields(step1_general["delegate"])
+    
+    debug_log(f"✅ Processed complainant: type={complainant_type}, data_keys={list(complainant_data.keys())}")
     
     return {
         "data": complainant_data,
@@ -580,34 +627,79 @@ def process_complainant_data(step1: Dict) -> Dict:
     }
 
 def process_respondent_data(step2: Dict) -> Dict:
-    """ประมวลผลข้อมูลผู้ถูกร้องเรียน"""
+    """ประมวลผลข้อมูลผู้ถูกร้องเรียน - แก้ไขแล้ว"""
     respondent_data = {}
     respondent_type = RespondentType.INDIVIDUAL
     
+    debug_log(f"🔍 Processing respondent data: {json.dumps(step2, ensure_ascii=False, indent=2)}")
+    
     if "general" not in step2:
+        debug_log("❌ No general section in step2")
         return {"data": respondent_data, "type": respondent_type}
         
     step2_general = step2["general"]
-    active_type = step2_general.get("activeType", "")
     
-    if active_type == "corporate":
-        respondent_type = RespondentType.CORPORATE
-        respondent_data = get_respondent_data_by_type(step2_general, "corporate")
-    
-    elif active_type == "government":
+    # ✅ ตรวจสอบข้อมูลที่มีอยู่จริงก่อน
+    if "government" in step2_general and step2_general["government"]:
+        debug_log("🏛️ Found government data")
         respondent_type = RespondentType.GOVERNMENT
-        respondent_data = get_respondent_data_by_type(step2_general, "government")
+        respondent_data = process_nested_fields(step2_general["government"])
+        
+        # ✅ แก้ไขชื่อให้ถูกต้อง
+        if "agencyName" in respondent_data and "name" not in respondent_data:
+            respondent_data["name"] = respondent_data["agencyName"]
     
-    elif active_type == "individual":
+    # ตรวจสอบ corporate
+    elif "corporate" in step2_general and step2_general["corporate"]:
+        debug_log("🏢 Found corporate data")
+        respondent_type = RespondentType.CORPORATE
+        respondent_data = process_nested_fields(step2_general["corporate"])
+        
+        if "companyName" in respondent_data and "name" not in respondent_data:
+            respondent_data["name"] = respondent_data["companyName"]
+    
+    # ตรวจสอบ individual
+    elif "individual" in step2_general and step2_general["individual"]:
+        debug_log("👤 Found individual data")
         respondent_type = RespondentType.INDIVIDUAL
-        respondent_data = get_respondent_data_by_type(step2_general, "individual")
+        respondent_data = process_nested_fields(step2_general["individual"])
     
+    # ใช้ activeType เป็นตัวกำหนด (fallback)
     else:
-        # ตรวจสอบ nested structure
-        if "individual" in step2_general:
-            result = check_nested_respondent_type(step2_general["individual"])
-            respondent_data = result["data"]
-            respondent_type = result["type"]
+        active_type = step2_general.get("activeType", "individual")
+        debug_log(f"🔄 Using activeType fallback: {active_type}")
+        
+        if active_type == "government" and "government" in step2_general:
+            respondent_type = RespondentType.GOVERNMENT
+            respondent_data = process_nested_fields(step2_general["government"])
+            if "agencyName" in respondent_data and "name" not in respondent_data:
+                respondent_data["name"] = respondent_data["agencyName"]
+        
+        elif active_type == "corporate" and "corporate" in step2_general:
+            respondent_type = RespondentType.CORPORATE
+            respondent_data = process_nested_fields(step2_general["corporate"])
+            if "companyName" in respondent_data and "name" not in respondent_data:
+                respondent_data["name"] = respondent_data["companyName"]
+        
+        elif active_type == "individual" and "individual" in step2_general:
+            respondent_type = RespondentType.INDIVIDUAL
+            respondent_data = process_nested_fields(step2_general["individual"])
+        
+        # ถ้าไม่มี nested structure ลองใช้ข้อมูลจาก step2_general โดยตรง
+        else:
+            debug_log("🔄 Using direct data from step2_general")
+            if active_type == "government":
+                respondent_type = RespondentType.GOVERNMENT
+            elif active_type == "corporate":
+                respondent_type = RespondentType.CORPORATE
+            else:
+                respondent_type = RespondentType.INDIVIDUAL
+            
+            # ใช้ข้อมูลที่เหลือใน step2_general (ลบ activeType ออก)
+            filtered_data = {k: v for k, v in step2_general.items() if k not in ["activeType"]}
+            respondent_data = process_nested_fields(filtered_data)
+    
+    debug_log(f"✅ Processed respondent: type={respondent_type}, data_keys={list(respondent_data.keys())}")
     
     return {
         "data": respondent_data,
