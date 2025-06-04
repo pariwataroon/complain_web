@@ -6807,6 +6807,71 @@
 						}
 					],
 					"description": "API สำหรับดึงข้อมูลประเภทเรื่องร้องเรียนสำหรับใช้ใน frontend form"
+				},
+				{
+					"name": "Get Complaints with Advanced Filters",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints?skip=0&limit=10&status=SUBMITTED&complaint_type=ฉ้อโกง&location=กรุงเทพ&urgency=HIGH&search=โอนเงิน",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนที่จะข้าม"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "จำนวนสูงสุดที่จะดึง"
+								},
+								{
+									"key": "status",
+									"value": "SUBMITTED",
+									"description": "กรองตามสถานะ"
+								},
+								{
+									"key": "complaint_type",
+									"value": "ฉ้อโกง",
+									"description": "กรองตามประเภทเรื่องร้องเรียน"
+								},
+								{
+									"key": "location",
+									"value": "กรุงเทพ",
+									"description": "กรองตามสถานที่เกิดเหตุ"
+								},
+								{
+									"key": "urgency",
+									"value": "HIGH",
+									"description": "กรองตามความเร่งด่วน"
+								},
+								{
+									"key": "search",
+									"value": "โอนเงิน",
+									"description": "ค้นหาในหลายฟิลด์"
+								}
+							]
+						},
+						"description": "ดึงรายการเรื่องร้องเรียนพร้อม filter และ search ขั้นสูง"
+					},
+					"response": []
 				}
 			],
 			"description": "API สำหรับจัดการข้อมูลพื้นฐานเกี่ยวกับเรื่องร้องเรียน เช่น ประเภทเรื่องร้องเรียน และช่องทางการร้องเรียน"
