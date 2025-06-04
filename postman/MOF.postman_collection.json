@@ -5752,6 +5752,45 @@
 					"description": "บันทึกคะแนนความพึงพอใจต่อการแก้ไขปัญหา (VERY_DISSATISFIED, DISSATISFIED, NEUTRAL, SATISFIED, VERY_SATISFIED)"
 				},
 				"response": []
+				},
+				{
+					"name": "Update Complaint Details - Enhanced",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"subject\": \"เรื่องร้องเรียนที่อัพเดท\",\n    \"description\": \"รายละเอียดเรื่องร้องเรียนที่ปรับปรุงแล้ว\",\n    \"complaint_type\": \"การทุจริต\",\n    \"incident_date\": \"2025-06-04T14:30:00.000Z\",\n    \"confidentiality_level\": \"confidential\",\n    \"urgency_level\": \"high\",\n    \"incident_province_id\": \"1\",\n    \"incident_district_id\": \"1001\",\n    \"incident_subdistrict_id\": \"100101\",\n    \"complainant_data\": {\n        \"name\": \"นายสมชาย ใจดี ปรับปรุง\",\n        \"phone\": \"0812345679\",\n        \"signer\": {\n            \"name\": \"นายสมชาย ใจดี\",\n            \"position\": \"ผู้ร้องเรียน\",\n            \"date\": \"2025-06-04T00:00:00.000Z\"\n        }\n    },\n    \"respondent_data\": {\n        \"name\": \"บริษัท ทดสอบ จำกัด ปรับปรุง\",\n        \"address\": \"456 ถนนพหลโยธิน แขวงจตุจักร\",\n        \"province\": {\n            \"value\": \"1\",\n            \"label\": \"กรุงเทพมหานคร\"\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/details",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"details"
+							]
+						},
+						"description": "อัพเดทรายละเอียดเรื่องร้องเรียนแบบครบถ้วน รวมข้อมูลผู้ร้องเรียน ผู้ถูกร้องเรียน และที่อยู่สถานที่เกิดเหตุ - ต้องมีสิทธิ์แก้ไขใน complaints"
+					},
+					"response": []
 				}
 			],
 			"description": "API endpoints for managing references related to complaints, such as agencies, complaint types, and statuses."
@@ -6875,6 +6914,346 @@
 				}
 			],
 			"description": "API สำหรับจัดการข้อมูลพื้นฐานเกี่ยวกับเรื่องร้องเรียน เช่น ประเภทเรื่องร้องเรียน และช่องทางการร้องเรียน"
+		},
+		{
+			"name": "COMPLAINT ASSIGNMENT",
+			"item": [
+				{
+					"name": "Get Assignment Form Data",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/assignment-form",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"assignment-form"
+							]
+						},
+						"description": "ดึงข้อมูลฟอร์มการมอบหมายงาน พร้อมข้อมูล dropdown options และข้อมูลเลขอ้างอิง - ต้องมีสิทธิ์อ่านใน complaints"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Assignment",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reference_number1\": \"ศธ 0506/2568\",\n    \"reference_date1\": \"2025-06-04T00:00:00.000Z\",\n    \"reference_number2\": \"มท 1234/2568\",\n    \"reference_date2\": \"2025-06-04T00:00:00.000Z\",\n    \"reference_number3\": \"สรร 5678/2568\",\n    \"reference_date3\": \"2025-06-04T00:00:00.000Z\",\n    \"reference_number4\": \"กค 9012/2568\",\n    \"reference_date4\": \"2025-06-04T00:00:00.000Z\",\n    \"document_date\": \"2025-06-04T00:00:00.000Z\",\n    \"assigned_officer_id\": \"{{user_id}}\",\n    \"assigned_agency\": \"กรมสรรพากร\",\n    \"confidentiality_level\": \"confidential\",\n    \"urgency_level\": \"high\",\n    \"has_complaints_addition\": true,\n    \"has_complaints_objection\": false,\n    \"has_prosecution_request\": true,\n    \"ministry_regulation_clause\": \"มาตรา 15\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/assignment",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"assignment"
+							]
+						},
+						"description": "อัพเดทข้อมูลการมอบหมายงานตามฟอร์ม UI - ต้องมีสิทธิ์แก้ไขใน complaints"
+					},
+					"response": []
+				},
+				{
+					"name": "Link Related Complaint",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"related_complaint_id\": \"{{related_complaint_id}}\",\n    \"relationship_type\": \"additional\",\n    \"notes\": \"เรื่องร้องเรียนเพิ่มเติมที่เกี่ยวข้อง\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/link-related",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"link-related"
+							]
+						},
+						"description": "เชื่อมโยงเรื่องร้องเรียนที่เกี่ยวข้อง - ต้องมีสิทธิ์แก้ไขใน complaints"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Complainant Data",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"นายสมชาย ใจดี\",\n    \"idCard\": \"1234567890123\",\n    \"phone\": \"0812345678\",\n    \"email\": \"somchai@example.com\",\n    \"address\": \"123 ถนนสุขุมวิท\",\n    \"province\": {\n        \"value\": \"1\",\n        \"label\": \"กรุงเทพมหานคร\"\n    },\n    \"districts\": {\n        \"value\": \"1001\",\n        \"label\": \"เขตวัฒนา\"\n    },\n    \"subdistricts\": {\n        \"value\": \"100101\",\n        \"label\": \"แขวงลุมพินี\"\n    },\n    \"zipcode\": \"10330\",\n    \"signer\": {\n        \"name\": \"นายสมชาย ใจดี\",\n        \"position\": \"ผู้ร้องเรียน\",\n        \"date\": \"2025-06-04T00:00:00.000Z\"\n    },\n    \"delegate\": {\n        \"name\": \"นางสมหญิง รักดี\",\n        \"idCard\": \"9876543210987\",\n        \"phone\": \"0898765432\",\n        \"relationship\": \"คู่สมรส\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/complainant",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"complainant"
+							]
+						},
+						"description": "อัพเดทข้อมูลผู้ร้องเรียน รวมผู้ลงนามและผู้รับมอบอำนาจ - ต้องมีสิทธิ์แก้ไขใน complaints"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Respondent Data",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"บริษัท ทดสอบ จำกัด\",\n    \"companyName\": \"บริษัท ทดสอบ จำกัด\",\n    \"taxId\": \"0123456789012\",\n    \"registrationNumber\": \"0105012345678\",\n    \"phone\": \"023456789\",\n    \"email\": \"contact@testcompany.com\",\n    \"address\": \"456 ถนนพหลโยธิน\",\n    \"province\": {\n        \"value\": \"1\",\n        \"label\": \"กรุงเทพมหานคร\"\n    },\n    \"districts\": {\n        \"value\": \"1002\",\n        \"label\": \"เขตจตุจักร\"\n    },\n    \"subdistricts\": {\n        \"value\": \"100201\",\n        \"label\": \"แขวงจตุจักร\"\n    },\n    \"zipcode\": \"10900\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/respondent",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"respondent"
+							]
+						},
+						"description": "อัพเดทข้อมูลผู้ถูกร้องเรียน รวมที่อยู่และข้อมูลนิติบุคคล - ต้องมีสิทธิ์แก้ไขใน complaints"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Complaints for Reference",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/search-for-reference?q=COMP&limit=10",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"search-for-reference"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "COMP",
+									"description": "คำค้นหา (เลขที่หรือหัวข้อ)"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "จำนวนสูงสุดที่จะดึง"
+								}
+							]
+						},
+						"description": "ค้นหาเรื่องร้องเรียนเพื่อใช้เป็นอ้างอิง สำหรับเรื่องร้องเรียนเพิ่มเติม - ต้องมีสิทธิ์อ่านใน complaints"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Additional Reference",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reference_complaint_id\": \"{{reference_complaint_id}}\",\n    \"reference_complaint_number\": \"COMP-2025-00001\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/additional-reference",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"additional-reference"
+							]
+						},
+						"description": "เพิ่มเลขอ้างอิงสำหรับเรื่องร้องเรียนเพิ่มเติม บันทึกลงช่อง 'เลขที่อ้างอิง(เลข สรร.สารบัญ)' - ต้องมีสิทธิ์แก้ไขใน complaints"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Assignment History",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/history",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"history"
+							]
+						},
+						"description": "ดูประวัติการเปลี่ยนแปลงในการมอบหมายงาน - ต้องมีสิทธิ์อ่านใน complaints"
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk Assignment",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"complaint_ids\": [\n        \"{{complaint_id_1}}\",\n        \"{{complaint_id_2}}\",\n        \"{{complaint_id_3}}\"\n    ],\n    \"assigned_officer_id\": \"{{user_id}}\",\n    \"assigned_agency\": \"กรมสรรพากร\",\n    \"confidentiality_level\": \"normal\",\n    \"urgency_level\": \"medium\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/bulk-assignment",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"bulk-assignment"
+							]
+						},
+						"description": "มอบหมายงานแบบ bulk หลายเรื่องพร้อมกัน - ต้องมีสิทธิ์แก้ไขใน complaints"
+					},
+					"response": []
+				}
+			],
+			"description": "API สำหรับจัดการการมอบหมายงานเรื่องร้องเรียน รวมการเชื่อมโยงเรื่องเพิ่มเติม และการแก้ไขข้อมูลผู้เกี่ยวข้อง"
 		}
 	],
 	"event": [
@@ -6919,6 +7298,48 @@
 			"key": "refresh_token",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "complaint_id",
+			"value": "",
+			"type": "string",
+			"description": "ID ของเรื่องร้องเรียนหลัก"
+		},
+		{
+			"key": "related_complaint_id",
+			"value": "",
+			"type": "string",
+			"description": "ID ของเรื่องร้องเรียนที่เกี่ยวข้อง"
+		},
+		{
+			"key": "reference_complaint_id",
+			"value": "",
+			"type": "string",
+			"description": "ID ของเรื่องร้องเรียนอ้างอิง"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string",
+			"description": "ID ของเจ้าหน้าที่ที่ได้รับมอบหมาย"
+		},
+		{
+			"key": "complaint_id_1",
+			"value": "",
+			"type": "string",
+			"description": "ID ของเรื่องร้องเรียนที่ 1 สำหรับ bulk operations"
+		},
+		{
+			"key": "complaint_id_2",
+			"value": "",
+			"type": "string", 
+			"description": "ID ของเรื่องร้องเรียนที่ 2 สำหรับ bulk operations"
+		},
+		{
+			"key": "complaint_id_3",
+			"value": "",
+			"type": "string",
+			"description": "ID ของเรื่องร้องเรียนที่ 3 สำหรับ bulk operations"
 		}
 	]
 }
