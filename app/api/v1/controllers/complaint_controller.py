@@ -24,7 +24,7 @@ from models.user import User
 logger = logging.getLogger(__name__)
 
 # Global flag สำหรับควบคุม debug logs
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 def debug_log(message: str):
     """ฟังก์ชันสำหรับ debug logging"""
