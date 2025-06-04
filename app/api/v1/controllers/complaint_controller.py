@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from sqlalchemy.orm import Session
 from uuid import UUID
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 import logging
 import traceback
 import copy

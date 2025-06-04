@@ -1,7 +1,7 @@
 import uuid
 import enum
 from sqlalchemy import (NVARCHAR, Boolean, Column, DateTime, 
-                      ForeignKey, Integer, Text, JSON, Enum, String, Float)
+                      ForeignKey, Integer, JSON, Enum)
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -129,7 +129,7 @@ class Complaint(Base):
     new_complaint = Column(Boolean, default=True, comment='ร้องเรียนใหม่')
     add_more_complaint_to_ref = Column(Boolean, default=False, comment='ร้องเรียนเพิ่มเติม')
     group_work = Column(Boolean, default=False, comment='รับเรื่องจากคณะบัตรสนเท่ห์')
-    regulation_reference = Column(Text, nullable=True, comment='อ้างอิงกฎหมาย/ระเบียบที่เกี่ยวข้อง')
+    regulation_reference = Column(NVARCHAR(1000), nullable=True, comment='อ้างอิงกฎหมาย/ระเบียบที่เกี่ยวข้อง')
 
     # ข้อมูลเลขที่อ้างอิงจากระบบอื่น
     reference_number = Column(NVARCHAR(100), nullable=True, comment="เลข สป.กค.")
@@ -180,12 +180,12 @@ class Complaint(Base):
     # เพิ่มฟิลด์สำหรับข้อมูลการดำเนินงานละเอียด
     assigned_officer_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_users.id"), nullable=True, comment="ผู้รับผิดชอบเรื่อง")
     progress_percentage = Column(Integer, nullable=True, default=0, comment="ร้อยละความคืบหน้าของการดำเนินการ")
-    processing_notes = Column(Text, nullable=True, comment="บันทึกการดำเนินงาน/การแจ้งกลับ")
+    processing_notes = Column(NVARCHAR(4000), nullable=True, comment="บันทึกการดำเนินงาน/การแจ้งกลับ")
     
     # เพิ่มฟิลด์สำหรับข้อมูลการประเมิน
     severity_level = Column(Enum(SeverityLevel), nullable=True, comment="ระดับความรุนแรง/ความสำคัญของเรื่อง")
     satisfaction_rating = Column(Enum(SatisfactionRating), nullable=True, comment="คะแนนความพึงพอใจต่อการแก้ไข")
-    satisfaction_comment = Column(Text, nullable=True, comment="ความคิดเห็นต่อการแก้ไข")
+    satisfaction_comment = Column(NVARCHAR(2000), nullable=True, comment="ความคิดเห็นต่อการแก้ไข")
     
     # เพิ่มฟิลด์สำหรับความสัมพันธ์ระหว่างเรื่องร้องเรียน
     parent_complaint_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_complaints.id"), nullable=True, comment="เรื่องร้องเรียนต้นเรื่อง")
