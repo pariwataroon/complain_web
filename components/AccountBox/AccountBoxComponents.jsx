@@ -236,11 +236,15 @@ const StaffProfile = ({ staff }) => {
 /*  main component                                                             */
 /* -------------------------------------------------------------------------- */
 const AccountBoxComponents = () => {
+  // เปลี่ยน handleYearChange ให้รับ event และดึง value
   const [fiscalYear, setFiscalYear] = useState(fiscalYearOptions[0].value);
+  const handleYearChange = (e) => {
+    setFiscalYear(e.target.value);
+  };
+
   const [open, setOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
 
-  const handleYearChange = (_, newValue) => setFiscalYear(newValue);
   const handleOpenModal = (staff) => {
     setSelectedStaff(staff);
     setOpen(true);
@@ -253,6 +257,7 @@ const AccountBoxComponents = () => {
   return (
     <Box>
       <BreadcrumbsService items={breadcrumbItems} />
+
       <Box display="flex" justifyContent="flex-end" mt={2} px={1}>
         <Typography color="#1120A3" fontWeight={600} mb={0.5} mr={2}>
           ปีงบประมาณ
@@ -260,12 +265,13 @@ const AccountBoxComponents = () => {
         <SelectMenuService
           options={fiscalYearOptions}
           value={fiscalYear}
-          onChange={handleYearChange}
+          handleChange={handleYearChange}
           name="fiscalYear"
           width="160px"
           placeholder="เลือกปี"
         />
       </Box>
+
       <Box display="flex" flexWrap="wrap" gap={3} mt={4} px={1}>
         {summaryCards.map((card) => (
           <Box
@@ -291,6 +297,7 @@ const AccountBoxComponents = () => {
           </Box>
         ))}
       </Box>
+
       <Box mt={6} px={1}>
         <Box display="flex" alignItems="center" mb={3}>
           <Typography color="#1120A3" fontWeight={700} fontSize={20} mr={2}>
@@ -391,7 +398,7 @@ const AccountBoxComponents = () => {
                 height: { xs: "auto", md: "85vh" },
               }}
             >
-              {/* Fixed Profile Section - ส่วนที่ไม่ให้เลื่อน */}
+              {/* Fixed Profile Section */}
               <Box
                 sx={{
                   width: { xs: "100%", md: 320 },
@@ -488,7 +495,7 @@ const AccountBoxComponents = () => {
                 </Box>
               </Box>
 
-              {/* Scrollable Content Section - ส่วนที่สามารถเลื่อนได้ */}
+              {/* Scrollable Content Section */}
               <Box
                 sx={{
                   flexGrow: 1,
