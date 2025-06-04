@@ -460,13 +460,13 @@ def extract_incident_location(complaint_data: Dict) -> Dict:
     step3 = complaint_data.get("step3", {})
     general = step3.get("general", {})
     
-    if "incidentLocation" in general:
+    if "incidentLocation" in general and general["incidentLocation"]:
         incident_location = extract_location_data(general["incidentLocation"])
         if incident_location:
             return normalize_location_data(incident_location)
     
     # ✅ Priority 2: ที่อยู่ผู้ร้องเรียน (complainant) - ที่เกิดเหตุส่วนใหญ่
-    complainant_location = fallback_to_step1_location(complaint_data)
+    complainant_location = extract_complainant_address_from_data(complaint_data)
     if complainant_location:
         return normalize_location_data(complainant_location)
     
@@ -477,6 +477,58 @@ def extract_incident_location(complaint_data: Dict) -> Dict:
         return normalize_location_data(respondent_location)
     
     return {}
+
+def extract_complainant_address_from_data(complaint_data: Dict) -> Dict:
+    """สกัดที่อยู่ผู้ร้องเรียนจากข้อมูล step1"""
+    step1 = complaint_data.get("step1", {}).get("general", {})
+    
+    # ตรวจสอบประเภทผู้ร้องเรียน
+    if "general" in step1 and isinstance(step1["general"], dict):
+        # บุคคลธรรมดา
+        complainant_data = step1["general"]
+        return extract_address_from_person_data(complainant_data)
+    elif "corporate" in step1 and isinstance(step1["corporate"], dict):
+        # นิติบุคคล
+        complainant_data = step1["corporate"]
+        return extract_address_from_person_data(complainant_data)
+    
+    return {}
+
+def extract_address_from_person_data(person_data: Dict) -> Dict:
+    """สกัดข้อมูลที่อยู่จากข้อมูลบุคคล"""
+    location = {}
+    
+    if not isinstance(person_data, dict):
+        return location
+    
+    # ✅ สกัดข้อมูลจังหวัด
+    if "province" in person_data:
+        province_data = person_data["province"]
+        if isinstance(province_data, dict):
+            location["incident_province_id"] = province_data.get("value")
+            location["incident_province"] = province_data.get("label")
+        elif isinstance(province_data, str):
+            location["incident_province"] = province_data
+    
+    # ✅ สกัดข้อมูลอำเภอ/เขต
+    if "districts" in person_data:
+        district_data = person_data["districts"]
+        if isinstance(district_data, dict):
+            location["incident_district_id"] = district_data.get("value")
+            location["incident_district"] = district_data.get("label")
+        elif isinstance(district_data, str):
+            location["incident_district"] = district_data
+    
+    # ✅ สกัดข้อมูลตำบล/แขวง
+    if "subdistricts" in person_data:
+        subdistrict_data = person_data["subdistricts"]
+        if isinstance(subdistrict_data, dict):
+            location["incident_subdistrict_id"] = subdistrict_data.get("value")
+            location["incident_subdistrict"] = subdistrict_data.get("label")
+        elif isinstance(subdistrict_data, str):
+            location["incident_subdistrict"] = subdistrict_data
+    
+    return {k: v for k, v in location.items() if v}
 
 def extract_location_data(location_data: Dict) -> Dict:
     """สกัดข้อมูลที่อยู่จากโครงสร้างข้อมูลที่อยู่"""
@@ -1037,43 +1089,22 @@ def get_filter_options(db: Session) -> Dict:
 def create_complaint_list_item(complaint: Complaint, db: Session = None) -> ComplaintListItem:
     """สร้างข้อมูลแบบย่อสำหรับแสดงในรายการ"""
     complainant_data = ensure_dict(complaint.complainant_data)
-    complainant_name = complainant_data.get("name", "")
+    delegate_data = ensure_dict(complaint.delegate_data) if complaint.delegate_data else None
+    
+    # ✅ แก้ไขการแสดงชื่อผู้ร้องเรียน - รวม delegate
+    complainant_name = get_display_complainant_name(complainant_data, delegate_data)
     
     respondent_data = ensure_dict(complaint.respondent_data)
-    respondent_name = ""
-    if complaint.respondent_type == RespondentType.INDIVIDUAL:
-        respondent_name = respondent_data.get("name", "")
-    elif complaint.respondent_type == RespondentType.CORPORATE:
-        respondent_name = respondent_data.get("companyName", respondent_data.get("name", ""))
-    elif complaint.respondent_type == RespondentType.GOVERNMENT:
-        respondent_name = respondent_data.get("agencyName", respondent_data.get("name", ""))
+    respondent_name = get_display_respondent_name(complaint.respondent_type, respondent_data)
     
     # เพิ่มข้อมูลประเภทเรื่องร้องเรียน
     complaint_type_thai = get_thai_complaint_type(complaint.complaint_type)
     
-    # เพิ่มข้อมูลสถานที่เกิดเหตุ
-    incident_location = ""
-    if complaint.incident_province:
-        incident_location = complaint.incident_province
-        if complaint.incident_district:
-            incident_location += f" > {complaint.incident_district}"
-        if complaint.incident_subdistrict:
-            incident_location += f" > {complaint.incident_subdistrict}"
+    # ✅ เพิ่มข้อมูลสถานที่เกิดเหตุ - ใช้ข้อมูลที่บันทึกไว้แล้ว
+    incident_location = get_display_incident_location(complaint)
     
     # เพิ่มข้อมูลผู้รับผิดชอบ
-    assigned_info = ""
-    if complaint.assigned_to:
-        assigned_info = complaint.assigned_to
-    elif complaint.assigned_officer_id and db:  # ✅ ตรวจสอบ db ก่อนใช้
-        try:
-            from models.user import User
-            assigned_officer = db.query(User).filter(User.id == complaint.assigned_officer_id).first()
-            if assigned_officer:
-                assigned_info = f"{assigned_officer.first_name} {assigned_officer.last_name}"
-        except:
-            assigned_info = "มอบหมายแล้ว"
-    elif complaint.assigned_officer_id:
-        assigned_info = "มอบหมายแล้ว"
+    assigned_info = get_display_assigned_info(complaint, db)
     
     # เพิ่มข้อมูลสถานะภาษาไทย
     status_thai = get_thai_status(complaint.status)
@@ -1092,6 +1123,70 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
         urgency_level=complaint.urgency_level or "LOW",
         severity_level=complaint.severity_level or "LOW"
     )
+
+def get_display_complainant_name(complainant_data: Dict, delegate_data: Dict = None) -> str:
+    """แสดงชื่อผู้ร้องเรียน - รวม delegate ถ้ามี"""
+    primary_name = complainant_data.get("name", "")
+    
+    # ✅ ถ้ามี delegate ให้แสดงทั้งคู่
+    if delegate_data and isinstance(delegate_data, dict):
+        delegate_name = delegate_data.get("name", "")
+        if delegate_name and delegate_name.strip():
+            return f"{primary_name} (ผู้รับมอบอำนาจ: {delegate_name})"
+    
+    return primary_name
+
+def get_display_respondent_name(respondent_type: RespondentType, respondent_data: Dict) -> str:
+    """แสดงชื่อผู้ถูกร้องเรียนตามประเภท"""
+    if respondent_type == RespondentType.INDIVIDUAL:
+        return respondent_data.get("name", "")
+    elif respondent_type == RespondentType.CORPORATE:
+        # ✅ ลองหาทั้ง companyName และ name
+        return (respondent_data.get("companyName") or 
+                respondent_data.get("name") or "")
+    elif respondent_type == RespondentType.GOVERNMENT:
+        # ✅ ลองหาทั้ง agencyName และ name
+        return (respondent_data.get("agencyName") or 
+                respondent_data.get("name") or "")
+    return ""
+
+def get_display_incident_location(complaint: Complaint) -> str:
+    """แสดงสถานที่เกิดเหตุจากข้อมูลที่บันทึกไว้"""
+    incident_location = ""
+    
+    # ✅ ใช้ข้อมูลที่บันทึกไว้แล้วใน database
+    if complaint.incident_province:
+        incident_location = complaint.incident_province
+        
+        if complaint.incident_district:
+            # ✅ ตรวจสอบว่า district มี "เขต" หรือไม่
+            district_name = complaint.incident_district
+            if not district_name.startswith("เขต") and complaint.incident_province == "กรุงเทพมหานคร":
+                district_name = f"เขต{district_name}"
+            incident_location += f" > {district_name}"
+            
+        if complaint.incident_subdistrict:
+            incident_location += f" > {complaint.incident_subdistrict}"
+    
+    return incident_location
+
+def get_display_assigned_info(complaint: Complaint, db: Session = None) -> str:
+    """แสดงข้อมูลผู้รับผิดชอบ"""
+    if complaint.assigned_to:
+        return complaint.assigned_to
+    elif complaint.assigned_officer_id and db:
+        try:
+            from models.user import User
+            assigned_officer = db.query(User).filter(User.id == complaint.assigned_officer_id).first()
+            if assigned_officer:
+                return f"{assigned_officer.first_name} {assigned_officer.last_name}"
+        except Exception:
+            pass
+        return "มอบหมายแล้ว"
+    elif complaint.assigned_officer_id:
+        return "มอบหมายแล้ว"
+    
+    return ""
 
 def get_thai_complaint_type(complaint_type: str) -> str:
     """แปลงประเภทเรื่องร้องเรียนเป็นภาษาไทย"""
