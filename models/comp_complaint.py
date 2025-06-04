@@ -126,6 +126,11 @@ class Complaint(Base):
     complaint_subtype_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_complaint_subtypes.id"), nullable=True)
     complaint_channel_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_complaint_channels.id"), nullable=True)
     
+    new_complaint = Column(Boolean, default=True, comment='ร้องเรียนใหม่')
+    add_more_complaint_to_ref = Column(Boolean, default=False, comment='ร้องเรียนเพิ่มเติม')
+    group_work = Column(Boolean, default=False, comment='รับเรื่องจากคณะบัตรสนเท่ห์')
+    regulation_reference = Column(Text, nullable=True, comment='อ้างอิงกฎหมาย/ระเบียบที่เกี่ยวข้อง')
+
     # ข้อมูลเลขที่อ้างอิงจากระบบอื่น
     reference_number = Column(NVARCHAR(100), nullable=True, comment="เลข สป.กค.")
     reference_date = Column(DateTime, nullable=True, comment="วันที่เลข สป.กค.")
