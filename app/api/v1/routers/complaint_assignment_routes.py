@@ -22,7 +22,7 @@ from app.api.v1.controllers.complaint_assignment_controller import (
 )
 import lib.format_data as format_data
 
-router = APIRouter(prefix="/complaints", tags=["complaint-assignment"])
+router = APIRouter(prefix="/complaints-assignment", tags=["complaint_assignment"])
 
 @router.get("/{complaint_id}/assignment-form")
 async def get_assignment_form(

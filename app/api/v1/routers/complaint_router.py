@@ -2,9 +2,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
-import json
+
+from models.user import User
 from datetime import datetime
-from models.comp_complaint_types import ComplaintType
+from models.comp_complaint_types import ComplaintType, ComplaintChannel
 
 from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
@@ -98,6 +99,143 @@ async def read_my_complaints(
     # ใช้ฟังก์ชันใหม่
     result = get_user_complaints(db, user_id, skip=skip, limit=limit, status=status)
     return format_response("0000", result)
+
+@router.get("/assignment-form", response_model=FormatResponseModel)
+async def get_complaints_assignment_form(
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    complaint_type: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ดึงรายการเรื่องร้องเรียนทั้งหมดสำหรับฟอร์ม assignment"""
+    try:
+        # ดึงข้อมูลเรื่องร้องเรียนทั้งหมด
+        query = db.query(Complaint)
+        
+        # Apply filters
+        if status:
+            query = query.filter(Complaint.status == status)
+        
+        if complaint_type:
+            query = query.filter(Complaint.complaint_type.ilike(f"%{complaint_type}%"))
+        
+        if search:
+            search_filter = (
+                Complaint.complaint_number.ilike(f"%{search}%") |
+                Complaint.subject.ilike(f"%{search}%") |
+                Complaint.description.ilike(f"%{search}%")
+            )
+            query = query.filter(search_filter)
+        
+        # Get total count
+        total_count = query.count()
+        
+        # Get paginated results
+        complaints = query.order_by(
+            Complaint.created_at.desc()
+        ).offset(skip).limit(limit).all()
+        
+        # จัดรูปแบบข้อมูลเรื่องร้องเรียนทั้งหมด
+        complaints_data = []
+        
+        for complaint in complaints:
+            # ดึงข้อมูลผู้ร้องเรียนจาก complainant_data
+            citizen_id = None
+            complainant_name = None
+            
+            try:
+                import json
+                if complaint.complainant_data:
+                    # ตรวจสอบว่าเป็น string หรือ dict แล้ว
+                    if isinstance(complaint.complainant_data, str):
+                        complainant_data = json.loads(complaint.complainant_data)
+                    else:
+                        complainant_data = complaint.complainant_data
+                    
+                    # ลองหาข้อมูลในหลายๆ key ที่เป็นไปได้
+                    if complaint.complainant_type == "INDIVIDUAL":
+                        citizen_id = (
+                            complainant_data.get("idCard") or 
+                            complainant_data.get("citizen_id") or 
+                            complainant_data.get("nationalId") or
+                            complainant_data.get("id_card")
+                        )
+                        complainant_name = (
+                            complainant_data.get("name") or 
+                            complainant_data.get("fullName") or 
+                            complainant_data.get("full_name") or
+                            f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip() or
+                            f"{complainant_data.get('first_name', '')} {complainant_data.get('last_name', '')}".strip()
+                        )
+                    elif complaint.complainant_type == "CORPORATE":
+                        citizen_id = (
+                            complainant_data.get("idCard") or 
+                            complainant_data.get("taxId") or 
+                            complainant_data.get("registrationNumber") or
+                            complainant_data.get("company_id")
+                        )
+                        complainant_name = (
+                            complainant_data.get("name") or 
+                            complainant_data.get("companyName") or 
+                            complainant_data.get("company_name") or
+                            complainant_data.get("organizationName")
+                        )
+                        
+            except Exception as e:
+                pass
+            
+            # ถ้ายังไม่ได้ข้อมูล ลองดึงจาก User table
+            if not citizen_id or not complainant_name:
+                if complaint.created_by:
+                    user = db.query(User).filter(User.id == complaint.created_by).first()
+                    if user:
+                        if not citizen_id:
+                            citizen_id = user.citizen_id
+                        if not complainant_name:
+                            complainant_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+                            if not complainant_name:
+                                complainant_name = user.email
+            
+            # จัดรูปแบบข้อมูลเรื่องร้องเรียน - เฉพาะที่ต้องการ
+            complaint_data = {
+                "id": str(complaint.id),
+                "complaint_number": complaint.complaint_number,
+                "citizen_id": citizen_id,
+                "complainant_name": complainant_name,
+                "subject": complaint.subject,
+                "reference_number": complaint.reference_number,
+                "reference_date": complaint.reference_date.isoformat() if complaint.reference_date else None,
+                "reference_number2": complaint.reference_number2,
+                "reference_date2": complaint.reference_date2.isoformat() if complaint.reference_date2 else None,
+                "reference_number3": complaint.reference_number3,
+                "reference_date3": complaint.reference_date3.isoformat() if complaint.reference_date3 else None,
+                "reference_number4": complaint.reference_number4,
+                "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None
+            }
+            
+            complaints_data.append(complaint_data)
+        
+        return format_response("0000", {
+            "data": {
+                "complaints": complaints_data,
+                "pagination": {
+                    "total": total_count,
+                    "skip": skip,
+                    "limit": limit,
+                    "has_more": total_count > (skip + limit)
+                }
+            },
+            "message": "GET_DATA_SUCCESSFULLY"
+        })
+        
+    except Exception as e:
+        return format_response("5000", {
+            "error": str(e),
+            "message": "INTERNAL_SERVER_ERROR"
+        })
 
 @router.get("/{complaint_id}", response_model=FormatResponseModel)
 async def read_complaint(
