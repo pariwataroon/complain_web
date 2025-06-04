@@ -453,10 +453,10 @@ def process_nested_fields(data: Dict) -> Dict:
     return result
 
 def extract_incident_location(complaint_data: Dict) -> Dict:
-    """สกัดข้อมูลสถานที่สำหรับรายงานตามลำดับความสำคัญ"""
+    """สกัดข้อมูลสถานที่เกิดเหตุตามลำดับความสำคัญที่ถูกต้อง"""
     incident_location = {}
     
-    # Priority 1: สถานที่เกิดเหตุที่ระบุชัดเจน
+    # ✅ Priority 1: สถานที่เกิดเหตุที่ระบุชัดเจนใน step3
     step3 = complaint_data.get("step3", {})
     general = step3.get("general", {})
     
@@ -465,18 +465,16 @@ def extract_incident_location(complaint_data: Dict) -> Dict:
         if incident_location:
             return normalize_location_data(incident_location)
     
-    # Priority 2: ที่อยู่ผู้ถูกร้องเรียน
-    step2 = complaint_data.get("step2", {}).get("general", {})
-    respondent_location = extract_respondent_location(step2)
-    
-    if respondent_location:
-        return normalize_location_data(respondent_location)
-    
-    # Priority 3: ที่อยู่ผู้ร้องเรียน
+    # ✅ Priority 2: ที่อยู่ผู้ร้องเรียน (complainant) - ที่เกิดเหตุส่วนใหญ่
     complainant_location = fallback_to_step1_location(complaint_data)
-    
     if complainant_location:
         return normalize_location_data(complainant_location)
+    
+    # ✅ Priority 3: ที่อยู่ผู้ถูกร้องเรียน (respondent) - เป็นทางเลือกสุดท้าย
+    step2 = complaint_data.get("step2", {}).get("general", {})
+    respondent_location = extract_respondent_location(step2)
+    if respondent_location:
+        return normalize_location_data(respondent_location)
     
     return {}
 
@@ -628,31 +626,31 @@ def normalize_location_data(location_data: Dict) -> Dict:
     return normalized
 
 def get_best_available_location(complaint_data: Dict) -> Dict:
-    """ดึงข้อมูลที่อยู่ที่ดีที่สุดที่มีอยู่"""
+    """ดึงข้อมูลที่อยู่ที่ดีที่สุดตามหลักการใหม่"""
     location = extract_incident_location(complaint_data)
     
     if not location:
         all_locations = []
         
+        # ✅ ลำดับใหม่: ผู้ร้องเรียนก่อน (เป็นสถานที่เกิดเหตุส่วนใหญ่)
         step1_location = fallback_to_step1_location(complaint_data)
         if step1_location:
             all_locations.append(("complainant", step1_location))
         
+        # ✅ ผู้ถูกร้องเรียนเป็นทางเลือกสำรอง
         step2_location = extract_respondent_location(complaint_data.get("step2", {}).get("general", {}))
         if step2_location:
             all_locations.append(("respondent", step2_location))
         
+        # เลือกตามคะแนนความสมบูรณ์
         best_location = None
         best_score = 0
         
         for source, loc_data in all_locations:
-            score = 0
-            if loc_data.get("incident_province_id") or loc_data.get("incident_province"):
-                score += 1
-            if loc_data.get("incident_district_id") or loc_data.get("incident_district"):
-                score += 2
-            if loc_data.get("incident_subdistrict_id") or loc_data.get("incident_subdistrict"):
-                score += 4
+            score = calculate_location_completeness_score(loc_data)
+            # ✅ ให้คะแนนพิเศษกับที่อยู่ผู้ร้องเรียน
+            if source == "complainant":
+                score += 0.5
             
             if score > best_score:
                 best_score = score
@@ -1777,33 +1775,43 @@ def handle_incomplete_location_data(location_data: Dict) -> Dict:
     return result
 
 def get_fallback_location_strategy(complaint_data: Dict) -> Dict:
-    """กลยุทธ์การหาข้อมูลที่อยู่สำรอง"""
+    """กลยุทธ์การหาข้อมูลที่อยู่สำรองแบบใหม่"""
     strategies = []
     
     try:
-        # Strategy 1: ที่อยู่ผู้ถูกร้องเรียน
-        step2_location = extract_respondent_location(complaint_data.get("step2", {}).get("general", {}))
-        if step2_location:
-            strategies.append(("respondent", step2_location))
-        
-        # Strategy 2: ที่อยู่ผู้ร้องเรียน
-        step1_location = fallback_to_step1_location(complaint_data)
-        if step1_location:
-            strategies.append(("complainant", step1_location))
-        
-        # Strategy 3: สถานที่เกิดเหตุที่ระบุโดยตรง
+        # ✅ Strategy 1: สถานที่เกิดเหตุที่ระบุโดยตรง (สำคัญสุด)
         step3 = complaint_data.get("step3", {}).get("general", {})
         if "incidentLocation" in step3:
             incident_loc = extract_location_data(step3["incidentLocation"])
             if incident_loc:
-                strategies.append(("incident", incident_loc))
+                strategies.append(("specific_incident", incident_loc))
         
-        # เลือกกลยุทธ์ที่ดีที่สุด
+        # ✅ Strategy 2: ที่อยู่ผู้ร้องเรียน (เหตุการณ์ส่วนใหญ่เกิดที่นี่)
+        step1_location = fallback_to_step1_location(complaint_data)
+        if step1_location:
+            strategies.append(("complainant", step1_location))
+        
+        # ✅ Strategy 3: ที่อยู่ผู้ถูกร้องเรียน (ทางเลือกสุดท้าย)
+        step2_location = extract_respondent_location(complaint_data.get("step2", {}).get("general", {}))
+        if step2_location:
+            strategies.append(("respondent", step2_location))
+        
+        # เลือกกลยุทธ์ที่ดีที่สุดตามลำดับความสำคัญใหม่
+        priority_order = ["specific_incident", "complainant", "respondent"]
         best_strategy = None
         best_score = 0
         
         for strategy_name, location in strategies:
             score = calculate_location_completeness_score(location)
+            
+            # ✅ ให้คะแนนพิเศษตามลำดับความสำคัญ
+            if strategy_name == "specific_incident":
+                score += 10  # สำคัญสุด
+            elif strategy_name == "complainant":
+                score += 5   # สำคัญรอง
+            elif strategy_name == "respondent":
+                score += 1   # ทางเลือกสุดท้าย
+            
             if score > best_score:
                 best_score = score
                 best_strategy = (strategy_name, location)
