@@ -211,7 +211,7 @@ const TableListWebComplaints = ({
                   {item.subject || "-"}
                 </TableCell>
                 <TableCell>{item.respondent_name || "-"}</TableCell>
-                <TableCell>{item.ssoNo || "-"}</TableCell>
+                <TableCell>{item.complaint_number || "-"}</TableCell>
               </TableRow>
             ))}
           </TableBody>

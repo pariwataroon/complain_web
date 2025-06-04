@@ -12,8 +12,28 @@ const GetAllSelect = async () => {
   }
 };
 
+// !! ComplaintTypes
+
+const GetAllSelectComplaintTypes = async ({
+  skip = 0,
+  limit = 10,
+  active_only = "true",
+} = {}) => {
+  try {
+    const response = await axiosInstance.get("/complaint-metadata/types", {
+      params: { skip, limit, active_only },
+    });
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error fetching all select data:", error);
+    throw error;
+  }
+};
+
 // !! GEOGRAPHY
-//  All Provinces geography/provinces
+//  All Provinces
 const GetProvincesSelect = async () => {
   try {
     const response = await axiosInstance.get("/geography/provinces");
@@ -28,13 +48,12 @@ const GetProvincesSelect = async () => {
     throw error;
   }
 };
-//  All Amphures  geography/amphures
+//  All Amphures
 const GetAmphuresSelect = async (provinceCode) => {
-  
   try {
     const response = await axiosInstance.get(
       `/geography/amphures?province_id=${provinceCode}`
-    );    
+    );
     if (response?.data?.res_data) {
       return response.data.res_data.map((item) => ({
         value: item.id,
@@ -49,8 +68,8 @@ const GetAmphuresSelect = async (provinceCode) => {
   }
 };
 
-//  All Districts geography/districts
-const GetDistrictsSelect = async (amphureCode) => {  
+//  All Districts
+const GetDistrictsSelect = async (amphureCode) => {
   try {
     const response = await axiosInstance.get(
       `/geography/districts?amphure_id=${amphureCode}`
@@ -70,7 +89,7 @@ const GetDistrictsSelect = async (amphureCode) => {
     return [];
   }
 };
-//  All Zipcode  geography/search/by-zipcode/10400
+//  All Zipcode
 const GetZipcodeSelect = async (districtNameTH) => {
   try {
     const response = await axiosInstance.get(
@@ -107,4 +126,5 @@ export {
   GetAmphuresSelect,
   GetDistrictsSelect,
   GetZipcodeSelect,
+  GetAllSelectComplaintTypes,
 };

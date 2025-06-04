@@ -1,34 +1,62 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+นี่คือโปรเจกต์ [Next.js](https://nextjs.org/) ที่สร้างขึ้นโดยใช้ [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app)
 
-## Getting Started
+## เริ่มต้นใช้งาน
 
-First, run the development server:
+### ขั้นตอนที่ 1: ติดตั้ง Dependencies
+
+ก่อนเริ่มต้นเซิร์ฟเวอร์พัฒนา **อย่าลืมติดตั้ง dependencies**:
+
+```bash
+npm install -f
+```
+
+เพื่อให้มั่นใจว่าทุกแพ็คเกจที่จำเป็นจะถูกติดตั้งครบถ้วน
+
+### ขั้นตอนที่ 2: รันเซิร์ฟเวอร์พัฒนา
+
+เมื่อทำการติดตั้ง dependencies เสร็จแล้ว ให้เริ่มต้นเซิร์ฟเวอร์พัฒนาได้ด้วยคำสั่ง:
 
 ```bash
 npm run dev
-# or
+# หรือ
 yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+จากนั้นเปิด [http://localhost:3000](http://localhost:3000) บนเว็บเบราว์เซอร์เพื่อดูผลลัพธ์
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+### ขั้นตอนที่ 3: แก้ไขโปรเจกต์
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+คุณสามารถเริ่มแก้ไขแอปพลิเคชันได้โดยการแก้ไขไฟล์ เช่น `pages/index.js` หน้าจอจะอัปเดตโดยอัตโนมัติเมื่อคุณบันทึกการเปลี่ยนแปลง
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+## การใช้งาน API Routes
 
-## Learn More
+- API Routes สามารถเข้าถึงได้ที่ [http://localhost:3000/api/hello](http://localhost:3000/api/hello)
+- ไดเรกทอรี `pages/api` จะถูกแมปเป็น `/api/*` และไฟล์ในไดเรกทอรีนี้จะถูกปฏิบัติเป็น [API Routes](https://nextjs.org/docs/api-routes/introduction) แทนที่จะเป็น React Pages
+- คุณสามารถปรับแต่ง API Endpoint ได้โดยแก้ไขไฟล์ `pages/api/hello.js`
 
-To learn more about Next.js, take a look at the following resources:
+## ตัวแปรสภาพแวดล้อม (Environment Variables)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **สำคัญมาก**: โปรเจกต์นี้ไม่มีไฟล์ `.env` แต่จะมีเพียง `.env.example` เพื่อเป็นตัวอย่าง  
+  **ห้าม** อัปโหลดไฟล์ `.env` จริงขึ้นไปในระบบควบคุมเวอร์ชัน (Version Control)  
+  กรุณาเก็บข้อมูลสำคัญและการตั้งค่าที่ต้องขึ้นอยู่กับสภาพแวดล้อมไว้ในเครื่องของคุณเท่านั้น
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+## ศึกษาเพิ่มเติม
 
-## Deploy on Vercel
+หากต้องการเรียนรู้เพิ่มเติมเกี่ยวกับ Next.js สามารถอ่านได้ที่:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- [เอกสาร Next.js](https://nextjs.org/docs) - เรียนรู้เกี่ยวกับฟีเจอร์และ API ของ Next.js
+- [เรียนรู้ Next.js](https://nextjs.org/learn) - คอร์สเรียนแบบโต้ตอบของ Next.js
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+คุณยังสามารถดู [GitHub ของ Next.js](https://github.com/vercel/next.js) เพื่อร่วมให้ความคิดเห็นหรือมีส่วนร่วมในโปรเจกต์
+
+## การ Deploy
+
+วิธีที่ง่ายที่สุดในการ Deploy แอปพลิเคชัน Next.js คือการใช้ [แพลตฟอร์ม Vercel](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) ซึ่งสร้างโดยทีมพัฒนา Next.js
+
+อ่านเพิ่มเติมเกี่ยวกับ [การ Deploy Next.js](https://nextjs.org/docs/deployment) ได้จากเอกสาร
+
+## หมายเหตุ
+
+1. **อย่าลืมรันคำสั่ง `npm install -f`** ก่อนรันเซิร์ฟเวอร์พัฒนาเพื่อป้องกันปัญหา Dependencies ขาดหาย
+2. ตรวจสอบให้แน่ใจว่าไฟล์ `.env` ของคุณถูกตั้งค่าอย่างถูกต้องในเครื่อง โดยใช้ `.env.example` เป็นตัวอย่าง
+3. **ห้าม Commit ตัวแปรหรือค่าที่สำคัญในไฟล์ `.env`** ขึ้นไปยังระบบควบคุมเวอร์ชัน เพื่อความปลอดภัยของข้อมูล

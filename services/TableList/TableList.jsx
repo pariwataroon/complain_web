@@ -18,6 +18,9 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import SearchOffIcon from '@mui/icons-material/SearchOff';
+import {
+  formatCitizenId_null,
+} from "@utils/Formats";
 
 const TableList = ({
   data = [],
@@ -36,6 +39,10 @@ const TableList = ({
     subject: "",
     docNo: "",
     agency: "",
+    docKk: "",
+    docSr: "",
+    docStp: "",
+    docGov: "",
   });
   const handleChange = (field) => (e) =>
     setFilters({ ...filters, [field]: e?.target ? e.target.value : e });
@@ -66,6 +73,10 @@ const TableList = ({
       subject: "",
       docNo: "",
       agency: "",
+      docKk: "",
+      docSr: "",
+      docStp: "",
+      docGov: "",
     };
     setFilters(cleared);
     setPage(0);
@@ -121,9 +132,9 @@ const TableList = ({
             onChange={handleChange("subject")}
           />
           <InputText
-            label="เลขที่หนังสือ"
-            value={filters.docNo}
-            onChange={handleChange("docNo")}
+            label="เลขที่ส่วนรับราชการ"
+            value={filters.docGov}
+            onChange={handleChange("docGov")}
           />
           <SelectField
             label="หน่วยงานอื่นที่ส่งเรื่องมายัง กก."
@@ -196,38 +207,45 @@ const TableList = ({
               <TableCell sx={{ width: 200 }}>ชื่อผู้ร้อง</TableCell>
               <TableCell sx={{ width: 180 }}>บัตรประชาชน</TableCell>
               <TableCell sx={{ width: 300 }}>ชื่อเรื่อง</TableCell>
-              <TableCell sx={{ width: 180 }}>เลขที่หนังสือ</TableCell>
-              <TableCell sx={{ width: 200 }}>หน่วยงาน</TableCell>
-              <TableCell sx={{ width: 160 }}>สถานะการดำเนินการ</TableCell>
+              <TableCell sx={{ width: 180 }}>เลขที่สป.กค.</TableCell>
+              <TableCell sx={{ width: 180 }}>เลขที่สป.สร.</TableCell>
+              <TableCell sx={{ width: 180 }}>เลขที่สตป.</TableCell>
+              <TableCell sx={{ width: 180 }}>เลขที่ส่วนรับราชการ</TableCell>
             </TableRow>
           </TableHead>
 
           <TableBody>
-            {pagedData.map((item, idx) => (
-              <TableRow
-                key={item.id}
-                onClick={() => handleRowClick(item)}
-                sx={{
-                  cursor: "pointer",
-                  "&:hover": { backgroundColor: "#f5f7ff" },
-                }}
-              >
-                <TableCell
-                  align="center"
-                  sx={{ fontWeight: 600, color: "#1120A3" }}
+            {pagedData.length > 0 ? (
+              pagedData.map((item, idx) => (
+                <TableRow
+                  key={item.id}
+                  onClick={() => handleRowClick(item)}
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": { backgroundColor: "#f5f7ff" },
+                  }}
                 >
-                  {page * rowsPerPage + idx + 1}
+                  <TableCell align="center" sx={{ fontWeight: 600, color: "#1120A3" }}>
+                    {page * rowsPerPage + idx + 1}
+                  </TableCell>
+                  <TableCell>{item?.name ?? "-"}</TableCell>
+                  <TableCell>{formatCitizenId_null(item?.citizenId ?? "-")}</TableCell>
+                  <TableCell className={styles.ellipsisCell}>
+                    {item?.subject ?? "-"}
+                  </TableCell>
+                  <TableCell>{item?.docKk ?? "-"}</TableCell>
+                  <TableCell>{item?.docSr ?? "-"}</TableCell>
+                  <TableCell>{item?.docStp ?? "-"}</TableCell>
+                  <TableCell>{item?.docGov ?? "-"}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={8} align="center" sx={{ py: 3, color: "#999" }}>
+                  ไม่พบข้อมูลที่ค้นหา
                 </TableCell>
-                <TableCell>{item?.name ?? "-"}</TableCell>
-                <TableCell>{item?.citizenId ?? "-"}</TableCell>
-                <TableCell className={styles.ellipsisCell}>
-                  {item?.subject ?? "-"}
-                </TableCell>
-                <TableCell>{item?.docNo ?? "-"}</TableCell>
-                <TableCell>{item?.agency ?? "-"}</TableCell>
-                <TableCell>{item?.status ?? "-"}</TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
 
