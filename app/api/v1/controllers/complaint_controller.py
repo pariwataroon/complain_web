@@ -21,8 +21,10 @@ logger = logging.getLogger(__name__)
 DEBUG_MODE = False
 
 def debug_log(message: str):
-    """Log debug messages ด้วย logging level"""
-    logger.debug(message)
+    """ฟังก์ชันสำหรับ debug logging"""
+    if DEBUG_MODE:
+        print(f"[DEBUG] {message}")
+        logging.info(f"[DEBUG] {message}")
 
 def save_original_complaint(complaint_data: Dict[str, Any]) -> Dict[str, Any]:
     """บันทึกข้อมูลตามโครงสร้าง step1-step4 ตามที่ได้รับจากหน้าบ้าน"""
@@ -369,7 +371,7 @@ def extract_complaint_data(complaint_data: Dict, root_complaint_type: str) -> Di
     }
 
 def process_complainant_data(step1: Dict) -> Dict:
-    """ประมวลผลข้อมูลผู้ร้องเรียน"""
+    """ประมวลผลข้อมูลผู้ร้องเรียน - ปรับปรุงการจัดการ signer"""
     complainant_data = {}
     complainant_type = ComplainantType.INDIVIDUAL  # ค่าเริ่มต้น
     delegate_data = None
@@ -383,9 +385,14 @@ def process_complainant_data(step1: Dict) -> Dict:
             complainant_type = ComplainantType.CORPORATE
             complainant_data = process_nested_fields(step1_general["corporate"])
             
-            # ตรวจสอบผู้ลงนาม (signer)
+            # ✅ ตรวจสอบผู้ลงนาม (signer) - สำคัญมาก!
             if "signer" in step1_general and step1_general.get("signer"):
-                complainant_data["signer"] = process_nested_fields(step1_general["signer"])
+                signer_data = process_nested_fields(step1_general["signer"])
+                # เก็บ signer ไว้ในข้อมูลหลัก
+                complainant_data["signer"] = signer_data
+            elif "signer" in complainant_data:
+                # ถ้า signer อยู่ใน corporate data แล้ว ให้เก็บไว้
+                pass
         
         elif "general" in step1_general and step1_general["general"]:
             # กรณีบุคคลธรรมดา
@@ -400,8 +407,10 @@ def process_complainant_data(step1: Dict) -> Dict:
                 complainant_type = ComplainantType.CORPORATE
                 complainant_data = process_nested_fields(step1_general["corporate"])
                 
+                # ✅ จัดการ signer
                 if "signer" in step1_general and step1_general.get("signer"):
-                    complainant_data["signer"] = process_nested_fields(step1_general["signer"])
+                    signer_data = process_nested_fields(step1_general["signer"])
+                    complainant_data["signer"] = signer_data
             
             elif active_type in ["general", "individual"]:
                 complainant_type = ComplainantType.INDIVIDUAL
@@ -1334,152 +1343,192 @@ def get_filter_options(db: Session) -> Dict:
         }
 
 def create_complaint_list_item(complaint: Complaint, db: Session = None) -> ComplaintListItem:
-    """สร้างข้อมูลแบบย่อสำหรับแสดงในรายการ - ปรับปรุงการแสดงผล"""
-    complainant_data = ensure_dict(complaint.complainant_data)
-    delegate_data = ensure_dict(complaint.delegate_data) if complaint.delegate_data else None
-    
-    # ✅ แก้ไขการแสดงชื่อผู้ร้องเรียน - รวม delegate
-    complainant_name = get_display_complainant_name(complainant_data, delegate_data)
-    
-    respondent_data = ensure_dict(complaint.respondent_data)
-    
-    # ✅ ปรับปรุงการแสดงชื่อผู้ถูกร้องเรียน
-    respondent_name = get_display_respondent_name(complaint.respondent_type, respondent_data)
-    
-    # เพิ่มข้อมูลประเภทเรื่องร้องเรียน
-    complaint_type_thai = get_thai_complaint_type(complaint.complaint_type)
-    
-    # ✅ เพิ่มข้อมูลสถานที่เกิดเหตุ - ใช้ข้อมูลที่บันทึกไว้แล้ว
-    incident_location = get_display_incident_location(complaint)
-    
-    # เพิ่มข้อมูลผู้รับผิดชอบ
-    assigned_info = get_display_assigned_info(complaint, db)
-    
-    # เพิ่มข้อมูลสถานะภาษาไทย
-    status_thai = get_thai_status(complaint.status)
-    
-    return ComplaintListItem(
-        id=complaint.id,
-        complaint_number=complaint.complaint_number,
-        subject=complaint.subject,
-        complaint_type=complaint_type_thai,
-        status=status_thai,
-        created_at=complaint.created_at,
-        complainant_name=complainant_name,
-        respondent_name=respondent_name,  # ✅ จะแสดง "(ไม่ทราบตัวตนที่แท้จริง)" ถ้าเป็นกรณีพิเศษ
-        incident_location=incident_location,
-        assigned_to=assigned_info,
-        urgency_level=complaint.urgency_level or "LOW",
-        severity_level=complaint.severity_level or "LOW"
-    )
+    """สร้างข้อมูลแบบย่อสำหรับแสดงในรายการ"""
+    try:
+        complainant_data = ensure_dict(complaint.complainant_data)
+        delegate_data = ensure_dict(complaint.delegate_data) if complaint.delegate_data else None
+        
+        # แสดงชื่อผู้ร้องเรียน - รวม delegate และ signer
+        complainant_name = get_display_complainant_name(complainant_data, delegate_data)
+        
+        respondent_data = ensure_dict(complaint.respondent_data)
+        
+        # แสดงชื่อผู้ถูกร้องเรียน
+        respondent_name = get_display_respondent_name(complaint.respondent_type, respondent_data)
+        
+        # ประเภทเรื่องร้องเรียนภาษาไทย
+        complaint_type_thai = get_thai_complaint_type(complaint.complaint_type)
+        
+        # สถานที่เกิดเหตุ
+        incident_location = get_display_incident_location(complaint)
+        
+        # ผู้รับผิดชอบ
+        assigned_info = get_display_assigned_info(complaint, db)
+        
+        # สถานะภาษาไทย
+        status_thai = get_thai_status(complaint.status)
+        
+        return ComplaintListItem(
+            id=complaint.id,
+            complaint_number=complaint.complaint_number,
+            subject=complaint.subject,
+            complaint_type=complaint_type_thai,
+            status=status_thai,
+            created_at=complaint.created_at,
+            complainant_name=complainant_name,
+            respondent_name=respondent_name,
+            incident_location=incident_location,
+            assigned_to=assigned_info,
+            urgency_level=complaint.urgency_level.lower() if complaint.urgency_level else "low",
+            severity_level=complaint.severity_level.lower() if complaint.severity_level else "low"
+        )
+        
+    except Exception as e:
+        debug_log(f"Error creating list item: {str(e)}")
+        debug_log(f"Complaint ID: {complaint.id}")
+        debug_log(f"Traceback: {traceback.format_exc()}")
+        
+        # Return minimal item in case of error
+        return ComplaintListItem(
+            id=complaint.id,
+            complaint_number=complaint.complaint_number or "",
+            subject=complaint.subject or "",
+            complaint_type=complaint.complaint_type or "",
+            status=get_thai_status(complaint.status),
+            created_at=complaint.created_at,
+            complainant_name="ข้อมูลไม่สมบูรณ์",
+            respondent_name="ข้อมูลไม่สมบูรณ์",
+            incident_location="",
+            assigned_to="",
+            urgency_level="low",
+            severity_level="low"
+        )
 
 def get_display_complainant_name(complainant_data: Dict, delegate_data: Dict = None) -> str:
-    """แสดงชื่อผู้ร้องเรียน - รวม delegate ถ้ามี"""
-    primary_name = complainant_data.get("name", "")
+    """แสดงชื่อผู้ร้องเรียน - รวม delegate และ signer ถ้ามี"""
     
-    # ✅ ถ้ามี delegate ให้แสดงทั้งคู่
-    if delegate_data and isinstance(delegate_data, dict):
-        delegate_name = delegate_data.get("name", "")
-        if delegate_name and delegate_name.strip():
-            return f"{primary_name} (ผู้รับมอบอำนาจ: {delegate_name})"
+    # ตรวจสอบว่าเป็นนิติบุคคลหรือไม่
+    company_name = complainant_data.get("name", "")
     
-    return primary_name
+    # ตรวจสอบหลายเงื่อนไขสำหรับนิติบุคคล
+    is_corporate = (
+        complainant_data.get("companyName") or  # มี companyName
+        complainant_data.get("taxId") or        # มี taxId
+        complainant_data.get("registrationNumber") or  # มี registrationNumber
+        complainant_data.get("idCard", "").startswith(("0", "1", "2", "3")) or  # เลขนิติบุคคล
+        any(keyword in company_name for keyword in ["บริษัท", "จำกัด", "มหาชน", "ห้างหุ้นส่วน"])
+    )
+    
+    # กรณีนิติบุคคล
+    if is_corporate:
+        display_name = company_name
+        
+        # ตรวจสอบ signer (ผู้มีอำนาจลงนาม)
+        signer_data = complainant_data.get("signer")
+        if signer_data and isinstance(signer_data, dict):
+            signer_name = signer_data.get("name", "")
+            signer_position = signer_data.get("position", "")
+            
+            if signer_name:
+                if signer_position:
+                    display_name += f" (ลงนามโดย: {signer_name} - {signer_position})"
+                else:
+                    display_name += f" (ลงนามโดย: {signer_name})"
+        
+        # ตรวจสอบ delegate สำหรับนิติบุคคล
+        if delegate_data and isinstance(delegate_data, dict):
+            delegate_name = delegate_data.get("name", "")
+            if delegate_name and delegate_name.strip():
+                display_name += f" [ผู้รับมอบอำนาจ: {delegate_name}]"
+        
+        return display_name
+    
+    # กรณีบุคคลธรรมดา
+    else:
+        primary_name = company_name
+        
+        # ถ้ามี delegate ให้แสดงทั้งคู่
+        if delegate_data and isinstance(delegate_data, dict):
+            delegate_name = delegate_data.get("name", "")
+            if delegate_name and delegate_name.strip():
+                return f"{primary_name} (ผู้รับมอบอำนาจ: {delegate_name})"
+        
+        return primary_name
 
 def get_display_respondent_name(respondent_type: RespondentType, respondent_data: Dict) -> str:
-    """แสดงชื่อผู้ถูกร้องเรียนตามประเภท - ปรับปรุงให้รองรับกรณีพิเศษ"""
-    if respondent_type == RespondentType.INDIVIDUAL:
-        name = respondent_data.get("name", "")
-        
-        # ✅ ตรวจสอบ flag พิเศษ
-        if respondent_data.get("respondent_category") == "UNKNOWN_IDENTITY":
-            if not name:
-                return "ผู้ถูกร้องเรียนไม่ทราบตัวตน"
-            elif "ไม่ทราบตัวตนที่แท้จริง" not in name:
-                return f"{name} (ไม่ทราบตัวตนที่แท้จริง)"
-        
-        return name or "ไม่ทราบชื่อ"
-        
+    """แสดงชื่อผู้ถูกร้องเรียน"""
+    if respondent_type == RespondentType.GOVERNMENT:
+        agency_name = respondent_data.get("agencyName", "")
+        full_name = respondent_data.get("fullName", "")
+        return full_name if full_name else agency_name
+    
     elif respondent_type == RespondentType.CORPORATE:
-        # ✅ ลองหาทั้ง companyName และ name
-        return (respondent_data.get("companyName") or 
-                respondent_data.get("name") or "ไม่ทราบชื่อบริษัท")
-    elif respondent_type == RespondentType.GOVERNMENT:
-        # ✅ ลองหาทั้ง agencyName และ name
-        return (respondent_data.get("agencyName") or 
-                respondent_data.get("name") or "ไม่ทราบชื่อหน่วยงาน")
-    return "ไม่ทราบประเภท"
+        return respondent_data.get("name", respondent_data.get("companyName", ""))
+    
+    elif respondent_type == RespondentType.INDIVIDUAL:
+        return respondent_data.get("name", "")
+    
+    else:
+        return respondent_data.get("name", "บุคคลไม่ทราบชื่อ")
 
 def get_display_incident_location(complaint: Complaint) -> str:
-    """แสดงสถานที่เกิดเหตุจากข้อมูลที่บันทึกไว้"""
-    incident_location = ""
+    """แสดงสถานที่เกิดเหตุ"""
+    location_parts = []
     
-    # ✅ ใช้ข้อมูลที่บันทึกไว้แล้วใน database
     if complaint.incident_province:
-        incident_location = complaint.incident_province
-        
-        if complaint.incident_district:
-            # ✅ ตรวจสอบว่า district มี "เขต" หรือไม่
-            district_name = complaint.incident_district
-            if not district_name.startswith("เขต") and complaint.incident_province == "กรุงเทพมหานคร":
-                district_name = f"เขต{district_name}"
-            incident_location += f" > {district_name}"
-            
-        if complaint.incident_subdistrict:
-            incident_location += f" > {complaint.incident_subdistrict}"
+        location_parts.append(complaint.incident_province)
+    if complaint.incident_district:
+        location_parts.append(complaint.incident_district)
+    if complaint.incident_subdistrict:
+        location_parts.append(complaint.incident_subdistrict)
     
-    return incident_location
+    return " > ".join(location_parts) if location_parts else ""
 
 def get_display_assigned_info(complaint: Complaint, db: Session = None) -> str:
     """แสดงข้อมูลผู้รับผิดชอบ"""
     if complaint.assigned_to:
         return complaint.assigned_to
     elif complaint.assigned_officer_id and db:
-        try:
-            from models.user import User
-            assigned_officer = db.query(User).filter(User.id == complaint.assigned_officer_id).first()
-            if assigned_officer:
-                return f"{assigned_officer.first_name} {assigned_officer.last_name}"
-        except Exception:
-            pass
-        return "มอบหมายแล้ว"
-    elif complaint.assigned_officer_id:
-        return "มอบหมายแล้ว"
-    
-    return ""
+        # ถ้ามีการกำหนด officer โดยเฉพาะ
+        return "เจ้าหน้าที่ที่รับผิดชอบ"
+    else:
+        return ""
 
 def get_thai_complaint_type(complaint_type: str) -> str:
     """แปลงประเภทเรื่องร้องเรียนเป็นภาษาไทย"""
     type_mapping = {
-        "fraud": "ฉ้อโกง",
-        "corruption": "ทุจริต", 
-        "service": "บริการ",
-        "product": "สินค้าและบริการ",
-        "other": "อื่นๆ"
+        "FRAUD": "ฉ้อโกง",
+        "CORRUPTION": "ทุจริต", 
+        "SERVICE": "บริการ",
+        "OTHER": "อื่นๆ"
     }
     return type_mapping.get(complaint_type, complaint_type)
 
 def get_thai_status(status: str) -> str:
     """แปลงสถานะเป็นภาษาไทย"""
     status_mapping = {
-        "submitted": "รับเรื่อง",
-        "sent_to_agency": "ส่งหน่วยงาน",
-        "in_process": "กำลังดำเนินการ",
-        "in_review": "อยู่ระหว่างพิจารณา",
-        "tracking": "ติดตามผล",
-        "reviewed": "แจ้งผลการพิจารณา",
-        "completed": "เสร็จสิ้น"
+        "SUBMITTED": "รับเรื่อง",
+        "submitted": "รับเรื่อง",  # ✅ เพิ่มกรณี lowercase
+        "SENT_TO_AGENCY": "ส่งหน่วยงาน", 
+        "IN_PROCESS": "กำลังดำเนินการ",
+        "IN_REVIEW": "อยู่ระหว่างพิจารณา",
+        "TRACKING": "ติดตามผล",
+        "REVIEWED": "แจ้งผลการพิจารณา",
+        "COMPLETED": "เสร็จสิ้น"
     }
-    return status_mapping.get(status, status)
+    return status_mapping.get(status.upper() if status else "", status)  # ✅ ใช้ upper()
 
-def ensure_dict(data):
-    """ตรวจสอบให้แน่ใจว่าข้อมูลเป็น dictionary"""
+def ensure_dict(data: Any) -> Dict:
+    """แปลงข้อมูลให้เป็น dict"""
+    if data is None:
+        return {}
+    if isinstance(data, dict):
+        return data
     if isinstance(data, str):
         try:
             return json.loads(data)
-        except json.JSONDecodeError:
+        except:
             return {}
-    elif isinstance(data, dict):
-        return data
     return {}
 
 def get_complaint(db: Session, complaint_id: uuid.UUID):
