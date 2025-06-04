@@ -54,6 +54,11 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
             complaint_data = complaint_data["formData"]
             debug_log(f"✅ [CONTROLLER] Extracted formData")
 
+        # ✅ Debug โครงสร้าง step1
+        if DEBUG_MODE and "step1" in complaint_data:
+            print(f"🔍 [DEBUG] Original step1 structure:")
+            print(json.dumps(complaint_data["step1"], indent=2, ensure_ascii=False))
+
         # เก็บค่า complaintType จาก root level ไว้ก่อน
         root_complaint_type = complaint_data.get("complaintType", "")
 
@@ -65,12 +70,26 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
         elif root_complaint_type:
             ensure_complaint_type_consistency(complaint_data, root_complaint_type)
         
+        # ✅ Normalize step1 structure
+        if "step1" in complaint_data:
+            complaint_data["step1"] = normalize_step1_structure(complaint_data["step1"])
+            if DEBUG_MODE:
+                print(f"🔍 [DEBUG] Normalized step1 structure:")
+                print(json.dumps(complaint_data["step1"], indent=2, ensure_ascii=False))
+        
         # 1. เก็บข้อมูลดิบทั้งหมดแบบ JSON object
         original_data = save_original_complaint(complaint_data)
         
         # 2. แยกข้อมูลตามขั้นตอนและประมวลผลเฉพาะส่วนที่จำเป็น
         extracted_data = extract_complaint_data(complaint_data, root_complaint_type)
-        
+
+        # ✅ Debug extracted data
+        if DEBUG_MODE:
+            print(f"🔍 [DEBUG] Extracted complainant data:")
+            print(f"  - Type: {extracted_data.get('complainant_type')}")
+            print(f"  - Data keys: {list(extracted_data.get('complainant_data', {}).keys())}")
+            print(f"  - Has delegate: {bool(extracted_data.get('delegate_data'))}")
+
         # ตรวจสอบข้อมูลที่จำเป็น
         if not extracted_data.get("subject"):
             raise ValueError("Subject is required")
@@ -195,6 +214,10 @@ def ensure_complaint_type_consistency(data: Dict, complaint_type: str):
 
 def extract_complaint_data(complaint_data: Dict, root_complaint_type: str) -> Dict:
     """สกัดข้อมูลที่จำเป็นจาก complaint_data"""
+    # ✅ ปรับปรุงโครงสร้าง step1 ก่อนประมวลผล
+    if "step1" in complaint_data:
+        complaint_data["step1"] = normalize_step1_structure(complaint_data["step1"])
+    
     step1 = complaint_data.get("step1", {})
     step2 = complaint_data.get("step2", {})
     step3 = complaint_data.get("step3", {})
@@ -256,31 +279,57 @@ def process_complainant_data(step1: Dict) -> Dict:
     if "general" in step1:
         step1_general = step1["general"]
         
-        if "corporate" in step1_general:
+        # ✅ เพิ่มการจัดการกรณีที่ corporate อยู่ใน general โดยตรง
+        if "corporate" in step1_general and isinstance(step1_general["corporate"], dict):
+            # กรณีที่ corporate อยู่ใน general (ข้อมูลใหม่)
             complainant_type = ComplainantType.CORPORATE
             complainant_data = process_nested_fields(step1_general["corporate"])
             
+            # จัดการข้อมูล signer
             if "signer" in step1_general and step1_general.get("signer"):
                 complainant_data["signer"] = process_nested_fields(step1_general["signer"])
         
-        elif "general" in step1_general:
+        elif "general" in step1_general and isinstance(step1_general["general"], dict):
+            # กรณีปกติ - individual
             complainant_type = ComplainantType.INDIVIDUAL
             complainant_data = process_nested_fields(step1_general["general"])
         
         else:
-            active_type = step1_general.get("activeType", "general")
+            # ✅ ใช้ activeType เป็นหลัก หรือตรวจสอบจากโครงสร้างข้อมูล
+            active_type = step1_general.get("activeType")
             
-            if (active_type == "general" or active_type == "individual") and "general" in step1_general:
-                complainant_type = ComplainantType.INDIVIDUAL
-                complainant_data = process_nested_fields(step1_general["general"])
+            # ✅ ถ้าไม่มี activeType ให้ตรวจสอบจากโครงสร้างข้อมูล
+            if not active_type:
+                if "corporate" in step1_general:
+                    active_type = "corporate"
+                elif "general" in step1_general:
+                    active_type = "general"
+                else:
+                    active_type = "general"  # default
             
-            elif active_type == "corporate" and "corporate" in step1_general:
+            if active_type == "corporate":
                 complainant_type = ComplainantType.CORPORATE
-                complainant_data = process_nested_fields(step1_general["corporate"])
+                if "corporate" in step1_general:
+                    complainant_data = process_nested_fields(step1_general["corporate"])
+                else:
+                    # ใช้ข้อมูลทั้งหมดใน general เป็น corporate data
+                    complainant_data = process_nested_fields(step1_general)
                 
+                # จัดการข้อมูล signer
                 if "signer" in step1_general and step1_general.get("signer"):
                     complainant_data["signer"] = process_nested_fields(step1_general["signer"])
+            
+            elif active_type in ["general", "individual"]:
+                complainant_type = ComplainantType.INDIVIDUAL
+                if "general" in step1_general:
+                    complainant_data = process_nested_fields(step1_general["general"])
+                else:
+                    # ใช้ข้อมูลทั้งหมดใน general เป็น individual data
+                    filtered_data = {k: v for k, v in step1_general.items() 
+                                   if k not in ["corporate", "signer", "delegate"]}
+                    complainant_data = process_nested_fields(filtered_data)
         
+        # ✅ จัดการข้อมูล delegate
         if "delegate" in step1_general and step1_general.get("delegate") and isinstance(step1_general["delegate"], dict) and len(step1_general["delegate"]) > 0:
             delegate_data = process_nested_fields(step1_general["delegate"])
     
@@ -289,6 +338,38 @@ def process_complainant_data(step1: Dict) -> Dict:
         "type": complainant_type,
         "delegate_data": delegate_data
     }
+
+def normalize_step1_structure(step1_data: Dict) -> Dict:
+    """ปรับปรุงโครงสร้าง step1 ให้เป็นมาตรฐาน"""
+    if not isinstance(step1_data, dict) or "general" not in step1_data:
+        return step1_data
+    
+    general = step1_data["general"]
+    
+    # ✅ ถ้า corporate อยู่ใน general โดยตรง ให้ปรับโครงสร้าง
+    if "corporate" in general and isinstance(general["corporate"], dict):
+        # ตรวจสอบว่ามี activeType หรือไม่
+        if "activeType" not in general:
+            general["activeType"] = "corporate"
+        
+        # ถ้ามี signer ให้เก็บไว้
+        signer_data = general.get("signer")
+        delegate_data = general.get("delegate")
+        
+        # ปรับโครงสร้างใหม่
+        normalized_general = {
+            "activeType": "corporate",
+            "corporate": general["corporate"]
+        }
+        
+        if signer_data:
+            normalized_general["signer"] = signer_data
+        if delegate_data:
+            normalized_general["delegate"] = delegate_data
+        
+        return {"general": normalized_general}
+    
+    return step1_data
 
 def process_respondent_data(step2: Dict) -> Dict:
     """ประมวลผลข้อมูลผู้ถูกร้องเรียน"""
@@ -482,17 +563,28 @@ def extract_complainant_address_from_data(complaint_data: Dict) -> Dict:
     """สกัดที่อยู่ผู้ร้องเรียนจากข้อมูล step1"""
     step1 = complaint_data.get("step1", {}).get("general", {})
     
-    # ตรวจสอบประเภทผู้ร้องเรียน
-    if "general" in step1 and isinstance(step1["general"], dict):
-        # บุคคลธรรมดา
-        complainant_data = step1["general"]
-        return extract_address_from_person_data(complainant_data)
-    elif "corporate" in step1 and isinstance(step1["corporate"], dict):
-        # นิติบุคคล
+    # ✅ ตรวจสอบประเภทผู้ร้องเรียนจากโครงสร้างข้อมูล
+    if "corporate" in step1 and isinstance(step1["corporate"], dict):
+        # กรณี corporate อยู่ใน general โดยตรง
         complainant_data = step1["corporate"]
         return extract_address_from_person_data(complainant_data)
-    
-    return {}
+    elif "general" in step1 and isinstance(step1["general"], dict):
+        # กรณี individual ปกติ
+        complainant_data = step1["general"]
+        return extract_address_from_person_data(complainant_data)
+    else:
+        # ✅ ตรวจสอบจาก activeType
+        active_type = step1.get("activeType", "general")
+        
+        if active_type == "corporate" and "corporate" in step1:
+            complainant_data = step1["corporate"]
+        elif active_type in ["general", "individual"] and "general" in step1:
+            complainant_data = step1["general"]
+        else:
+            # fallback: ใช้ข้อมูลทั้งหมดใน step1.general
+            complainant_data = step1
+        
+        return extract_address_from_person_data(complainant_data)
 
 def extract_address_from_person_data(person_data: Dict) -> Dict:
     """สกัดข้อมูลที่อยู่จากข้อมูลบุคคล"""
