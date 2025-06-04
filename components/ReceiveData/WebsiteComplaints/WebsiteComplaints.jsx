@@ -4,7 +4,6 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListWebComplaints from "@services/TableListWebComplaints/TableListWebComplaints";
 import { GetAllComplaints } from "@pages/api/complaint/complaint";
 
-
 const breadcrumbItems = [
   {
     label: "รับเข้าข้อมูล",
@@ -19,9 +18,6 @@ const breadcrumbItems = [
   { label: "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์" },
 ];
 
-
-
-
 const agencyOptions = [
   "กรมสรรพากร",
   "กรมศุลกากร",
@@ -30,7 +26,6 @@ const agencyOptions = [
   "สำนักงานบริหารหนี้สาธารณะ",
   "ธนาคารแห่งประเทศไทย",
 ];
-
 
 const WebsiteComplaints = () => {
   const router = useRouter();

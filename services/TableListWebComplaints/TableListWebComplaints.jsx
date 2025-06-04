@@ -25,7 +25,7 @@ const TableListWebComplaints = ({
   agencyOptions = [],
   issueTypeOptions = [],
   issueSubTypeOptions = [],
-  onSearch = () => { },
+  onSearch = () => {},
   handleNavigateTo,
   page,
   onPageChange,
@@ -43,19 +43,17 @@ const TableListWebComplaints = ({
     accusedName: "",
     ssoNo: "",
   });
+
+  // ฟังก์ชันจัดการการอัปเดต filter แต่ละ field
   const handleChange = (field) => (e) =>
     setFilters({ ...filters, [field]: e?.target ? e.target.value : e });
-  const pagedData = data;
-  const handlePageChange = (_, newPage) => setPage(newPage);
-  const handleRowsPerPageChange = (e) => {
-    setRowsPerPage(parseInt(e.target.value, 10));
-    setPage(0);
-  };
 
+  // เมื่อคลิกปุ่มค้นหา
   const handleSearchClick = () => {
     onSearch(filters);
   };
 
+  // เมื่อคลิกปุ่มเคลียร์การค้นหา (reset filters และไปหน้าแรก)
   const handleClearSearch = () => {
     const cleared = {
       claimantName: "",
@@ -66,12 +64,17 @@ const TableListWebComplaints = ({
       ssoNo: "",
     };
     setFilters(cleared);
-    setPage(0);
+    // เปลี่ยนไปหน้าแรกด้วย onPageChange
+    onPageChange(0);
     onSearch(cleared);
   };
-  
+
+  // กรณีคลิกแถวใด ให้ navigate ไปยังหน้า edit (ส่ง id)
   const handleRowClick = (item) =>
     navigateTo && router.push(`${navigateTo}/${item.id}`);
+
+  // เตรียมข้อมูลที่จะแสดง (paging มาแล้วจาก parent)
+  const pagedData = data;
 
   return (
     <Container
@@ -224,7 +227,9 @@ const TableListWebComplaints = ({
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={(_, newPage) => onPageChange(newPage)}
-          onRowsPerPageChange={(e) => onRowsPerPageChange(parseInt(e.target.value, 10))}
+          onRowsPerPageChange={(e) =>
+            onRowsPerPageChange(parseInt(e.target.value, 10))
+          }
           sx={{ borderTop: "1px solid #eee" }}
         />
       </Box>

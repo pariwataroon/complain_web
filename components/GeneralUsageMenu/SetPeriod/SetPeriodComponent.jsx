@@ -7,6 +7,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
 import ButtonService from "@services/ButtonService/ButtonService";
+import { alertSuccess } from "@utils/Alerts";
 
 const SetPeriodComponent = () => {
   // Breadcrumbs
@@ -44,6 +45,12 @@ const SetPeriodComponent = () => {
   const handlePeriod2Change = (event) => setPeriod2(event.target.value);
   const handlePeriod3Change = (event) => setPeriod3(event.target.value);
   const handlePeriod4Change = (event) => setPeriod4(event.target.value);
+
+  // ฟังก์ชันเมื่อกดปุ่มบันทึก
+  const handleSave = () => {
+    // สามารถเพิ่ม logic เก็บค่าหรือ API call ได้ที่นี่
+    alertSuccess("บันทึกสำเร็จ");
+  };
 
   // Component ย่อย แสดง Paper พร้อม icon + ข้อความ และ Select + "วัน"
   const RenderPaperItem = ({ iconSrc, text, value, onChange }) => (
@@ -88,7 +95,7 @@ const SetPeriodComponent = () => {
           value={value}
           handleChange={onChange}
           options={selectOptions}
-          width={80}
+          width={100}
           sx={{ marginRight: 1, textAlign: "center" }}
           size="small"
         />
@@ -192,7 +199,13 @@ const SetPeriodComponent = () => {
               label="ล้าง"
               variant="outlined"
               iconLeft={<CloseIcon />}
-              onClick={[]} // ใส่ฟังก์ชันที่ต้องการจะทำเมื่อคลิก
+              onClick={() => {
+                // รีเซ็ตค่ากลับเป็นค่าเริ่มต้น
+                setPeriod1(3);
+                setPeriod2(15);
+                setPeriod3(30);
+                setPeriod4(7);
+              }}
               sx={{
                 backgroundColor: "#ffffff",
                 color: "#50ADFF",
@@ -210,7 +223,7 @@ const SetPeriodComponent = () => {
               label="บันทึก"
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
-              onClick={[]} // ใส่ฟังก์ชันที่ต้องการจะทำเมื่อคลิก
+              onClick={handleSave}
               sx={{
                 backgroundColor: "#2196F3",
                 color: "#FFF",

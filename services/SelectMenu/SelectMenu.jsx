@@ -80,7 +80,7 @@ const SelectMenuService = ({
           name={name}
           renderValue={(selected) =>
             selected === "" ? (
-              <span style={{ color: "#999" }}>-- เลือกตัวเลือก --</span>
+              <span style={{ color: "#999" }}></span>
             ) : (
               options.find((o) => o.value === selected)?.label || ""
             )
