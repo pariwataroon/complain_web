@@ -53,7 +53,7 @@ def update_complaint_assignment_data(
 ) -> Dict:
     """อัพเดทข้อมูลการมอบหมายตามฟอร์ม UI"""
     try:
-        # ✅ เพิ่มการตรวจสอบข้อมูล
+        # ✅ ตรวจสอบข้อมูล
         validation = validate_assignment_data(assignment_data)
         if not validation["valid"]:
             return {
@@ -67,107 +67,121 @@ def update_complaint_assignment_data(
         
         # เก็บข้อมูลเดิมไว้สำหรับ log
         old_data = {
-            "assigned_officer_id": complaint.assigned_officer_id,
+            "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
             "confidentiality_level": complaint.confidentiality_level,
             "urgency_level": complaint.urgency_level
         }
         
-        # ✅ อัพเดทเลขอ้างอิงตามฟอร์ม
-        if "reference_number" in assignment_data:
-            complaint.reference_number = assignment_data["reference_number"]
-        if "reference_date" in assignment_data:
-            complaint.reference_date = assignment_data["reference_date"]
-            
+        # อัพเดทข้อมูลอ้างอิง
+        if "reference_number1" in assignment_data:
+            complaint.reference_number = assignment_data["reference_number1"]
+        if "reference_date1" in assignment_data:
+            complaint.reference_date = datetime.fromisoformat(assignment_data["reference_date1"].replace('Z', '+00:00')) if assignment_data["reference_date1"] else None
+        
         if "reference_number2" in assignment_data:
             complaint.reference_number2 = assignment_data["reference_number2"]
         if "reference_date2" in assignment_data:
-            complaint.reference_date2 = assignment_data["reference_date2"]
-            
+            complaint.reference_date2 = datetime.fromisoformat(assignment_data["reference_date2"].replace('Z', '+00:00')) if assignment_data["reference_date2"] else None
+        
         if "reference_number3" in assignment_data:
             complaint.reference_number3 = assignment_data["reference_number3"]
         if "reference_date3" in assignment_data:
-            complaint.reference_date3 = assignment_data["reference_date3"]
-            
+            complaint.reference_date3 = datetime.fromisoformat(assignment_data["reference_date3"].replace('Z', '+00:00')) if assignment_data["reference_date3"] else None
+        
         if "reference_number4" in assignment_data:
             complaint.reference_number4 = assignment_data["reference_number4"]
         if "reference_date4" in assignment_data:
-            complaint.reference_date4 = assignment_data["reference_date4"]
+            complaint.reference_date4 = datetime.fromisoformat(assignment_data["reference_date4"].replace('Z', '+00:00')) if assignment_data["reference_date4"] else None
         
-        # ✅ เลขที่หนังสือ
+        # อัพเดทข้อมูลเอกสาร
         if "document_number" in assignment_data:
             complaint.document_number = assignment_data["document_number"]
         if "document_date" in assignment_data:
-            complaint.document_date = assignment_data["document_date"]
+            complaint.document_date = datetime.fromisoformat(assignment_data["document_date"].replace('Z', '+00:00')) if assignment_data["document_date"] else None
         
-        # ✅ หน่วยงานผู้ส่ง
-        if "agency_sender" in assignment_data:
-            complaint.agency_sender = assignment_data["agency_sender"]
-        
-        # ✅ ความลับและความเร่งด่วน
-        if "confidentiality_level" in assignment_data:
-            complaint.confidentiality_level = ConfidentialityLevel(assignment_data["confidentiality_level"])
-        if "urgency_level" in assignment_data:
-            complaint.urgency_level = UrgencyLevel(assignment_data["urgency_level"])
-        
-        # ✅ ประเภทการร้องเรียน (checkbox)
-        if "complaint_filing_type" in assignment_data:
-            complaint.complaint_filing_type = ComplaintFilingType(assignment_data["complaint_filing_type"])
-        
-        # ✅ เลขอ้างอิงเพิ่มเติม
-        if "additional_reference_number1" in assignment_data:
-            complaint.additional_reference_number1 = assignment_data["additional_reference_number1"]
-        if "additional_reference_date1" in assignment_data:
-            complaint.additional_reference_date1 = assignment_data["additional_reference_date1"]
-            
-        if "additional_reference_number2" in assignment_data:
-            complaint.additional_reference_number2 = assignment_data["additional_reference_number2"]
-        if "additional_reference_date2" in assignment_data:
-            complaint.additional_reference_date2 = assignment_data["additional_reference_date2"]
-        
-        # ✅ การมอบหมายเจ้าหน้าที่
+        # อัพเดทการมอบหมาย
         if "assigned_officer_id" in assignment_data:
-            complaint.assigned_officer_id = assignment_data["assigned_officer_id"]
-            complaint.assigned_date = datetime.now()
-            
-            # อัพเดทชื่อเจ้าหน้าที่
-            if assignment_data["assigned_officer_id"]:
-                officer = db.query(User).filter(User.id == assignment_data["assigned_officer_id"]).first()
+            complaint.assigned_officer_id = UUID(assignment_data["assigned_officer_id"]) if assignment_data["assigned_officer_id"] else None
+            if complaint.assigned_officer_id:
+                complaint.assigned_date = datetime.now()
+                
+                # ดึงชื่อเจ้าหน้าที่
+                officer = db.query(User).filter(User.id == complaint.assigned_officer_id).first()
                 if officer:
                     complaint.assigned_to = f"{officer.first_name} {officer.last_name}"
         
-        # ✅ เพิ่มการบันทึก audit log
+        if "assigned_agency" in assignment_data:
+            complaint.agency_sender = assignment_data["assigned_agency"]
+        
+        # อัพเดทระดับความลับและความเร่งด่วน
+        if "confidentiality_level" in assignment_data:
+            complaint.confidentiality_level = assignment_data["confidentiality_level"]
+        
+        if "urgency_level" in assignment_data:
+            complaint.urgency_level = assignment_data["urgency_level"]
+        
+        # อัพเดทข้อมูลเพิ่มเติม
+        if "has_complaints_addition" in assignment_data:
+            # บันทึกลง JSON field หรือ boolean field ตามโครงสร้าง database
+            pass
+        
+        if "has_complaints_objection" in assignment_data:
+            pass
+        
+        if "has_prosecution_request" in assignment_data:
+            pass
+        
+        if "ministry_regulation_clause" in assignment_data:
+            # บันทึกข้อมูลมาตราที่เกี่ยวข้อง
+            pass
+        
+        # อัพเดทเวลา
+        complaint.updated_at = datetime.now()
+        
+        # บันทึกประวัติการเปลี่ยนแปลง
         changes = []
         for key, old_value in old_data.items():
-            if key in assignment_data:
-                new_value = assignment_data[key]
-                if old_value != new_value:
-                    changes.append(f"{key}: {old_value} → {new_value}")
+            new_value = None
+            if key == "assigned_officer_id" and "assigned_officer_id" in assignment_data:
+                new_value = assignment_data["assigned_officer_id"]
+            elif key == "confidentiality_level" and "confidentiality_level" in assignment_data:
+                new_value = assignment_data["confidentiality_level"]
+            elif key == "urgency_level" and "urgency_level" in assignment_data:
+                new_value = assignment_data["urgency_level"]
+            
+            if new_value and old_value != new_value:
+                changes.append(f"{key}: {old_value} → {new_value}")
         
         if changes:
-            # บันทึกประวัติการเปลี่ยนแปลง
-            from models.comp_complaint import ComplaintStatusHistory
             history = ComplaintStatusHistory(
                 complaint_id=complaint_id,
                 status=complaint.status,
                 notes=f"อัพเดทการมอบหมาย: {'; '.join(changes)}",
-                changed_by=updated_by
+                changed_by=updated_by,
+                changed_at=datetime.now()
             )
             db.add(history)
-        
-        complaint.updated_at = datetime.now()
         
         db.commit()
         db.refresh(complaint)
         
+        # ✅ แก้ไข: Return dictionary แทน SQLAlchemy object
         return {
             "success": True,
             "message": "อัพเดทข้อมูลการมอบหมายเรียบร้อย",
-            "complaint": complaint,
-            "changes": changes
+            "complaint_id": str(complaint.id),
+            "complaint_number": complaint.complaint_number,
+            "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
+            "assigned_to": complaint.assigned_to,
+            "confidentiality_level": complaint.confidentiality_level,
+            "urgency_level": complaint.urgency_level,
+            "changes": changes,
+            "updated_at": complaint.updated_at.isoformat()
         }
         
     except Exception as e:
         db.rollback()
+        logger.error(f"Error updating assignment: {str(e)}")
         return {"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"}
 
 def get_assignment_form_data(db: Session, complaint_id: UUID) -> Dict:
@@ -180,13 +194,7 @@ def get_assignment_form_data(db: Session, complaint_id: UUID) -> Dict:
         # ดึงข้อมูล dropdown options
         complaint_types = db.query(ComplaintType).filter(ComplaintType.is_active == True).order_by(ComplaintType.name).all()
         complaint_channels = db.query(ComplaintChannel).filter(ComplaintChannel.is_active == True).order_by(ComplaintChannel.name).all()
-        
-        # ✅ แก้ไข: เปลี่ยนจาก name__in เป็นการ query ธรรมดา
-        available_officers = db.query(User).filter(
-            User.is_active == True
-            # ✅ ลบส่วน roles filter ออกไปก่อน เพื่อให้ทำงานได้
-            # User.roles.any(name__in=['officer', 'supervisor', 'admin'])
-        ).all()
+        available_officers = db.query(User).filter(User.is_active == True).all()
         
         return {
             "complaint": {
@@ -227,7 +235,7 @@ def get_assignment_form_data(db: Session, complaint_id: UUID) -> Dict:
                 "additional_reference_date2": complaint.additional_reference_date2.isoformat() if complaint.additional_reference_date2 else None,
                 
                 # การมอบหมาย
-                "assigned_officer_id": complaint.assigned_officer_id,
+                "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
                 "assigned_to": complaint.assigned_to,
                 "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
                 
@@ -270,65 +278,52 @@ def link_related_complaint(
     related_complaint_number: str,
     updated_by: UUID
 ) -> Dict:
-    """เชื่อมโยงเรื่องร้องเรียนเพิ่มเติมกับเรื่องหลัก"""
+    """เชื่อมโยงเรื่องร้องเรียนที่เกี่ยวข้อง"""
     try:
-        # ค้นหาเรื่องหลัก
+        # หาเรื่องหลัก
         main_complaint = db.query(Complaint).filter(Complaint.id == main_complaint_id).first()
         if not main_complaint:
             return {"success": False, "message": "ไม่พบเรื่องร้องเรียนหลัก"}
         
-        # ค้นหาเรื่องที่เกี่ยวข้องจากเลขที่
+        # หาเรื่องที่ต้องการเชื่อมโยง
         related_complaint = db.query(Complaint).filter(
             Complaint.complaint_number == related_complaint_number
         ).first()
-        
         if not related_complaint:
-            return {"success": False, "message": "ไม่พบเรื่องร้องเรียนที่อ้างอิง"}
+            return {"success": False, "message": "ไม่พบเรื่องร้องเรียนที่ต้องการเชื่อมโยง"}
         
-        # ✅ บันทึกข้อมูลลงใน additional_reference_number1
-        if not main_complaint.additional_reference_number1:
-            main_complaint.additional_reference_number1 = related_complaint_number
-            main_complaint.additional_reference_date1 = datetime.now()
-            ref_field = "additional_reference_number1"
-        elif not main_complaint.additional_reference_number2:
-            main_complaint.additional_reference_number2 = related_complaint_number
-            main_complaint.additional_reference_date2 = datetime.now()
-            ref_field = "additional_reference_number2"
-        else:
-            return {"success": False, "message": "ช่องเลขอ้างอิงเต็มแล้ว (สูงสุด 2 เรื่อง)"}
+        # อัพเดทข้อมูลความสัมพันธ์
+        try:
+            related_list = json.loads(main_complaint.related_complaints) if main_complaint.related_complaints else []
+        except:
+            related_list = []
         
-        # ✅ อัพเดท parent-child relationship
-        main_complaint.parent_complaint_id = related_complaint.id
+        # เพิ่มเรื่องที่เกี่ยวข้องใหม่
+        related_info = {
+            "id": str(related_complaint.id),
+            "complaint_number": related_complaint.complaint_number,
+            "subject": related_complaint.subject,
+            "linked_at": datetime.now().isoformat()
+        }
         
-        # ✅ อัพเดท related_complaints array
-        related_complaints = []
-        if main_complaint.related_complaints:
-            try:
-                related_complaints = json.loads(main_complaint.related_complaints)
-            except:
-                related_complaints = []
-        
-        if str(related_complaint.id) not in related_complaints:
-            related_complaints.append(str(related_complaint.id))
-            main_complaint.related_complaints = json.dumps(related_complaints)
-        
-        main_complaint.updated_at = datetime.now()
-        
-        db.commit()
-        db.refresh(main_complaint)
+        # ตรวจสอบว่ายังไม่ได้เชื่อมโยงไว้แล้ว
+        if not any(item.get("id") == str(related_complaint.id) for item in related_list):
+            related_list.append(related_info)
+            main_complaint.related_complaints = json.dumps(related_list, ensure_ascii=False)
+            main_complaint.updated_at = datetime.now()
+            
+            db.commit()
         
         return {
             "success": True,
-            "message": f"เชื่อมโยงเรื่องร้องเรียนเรียบร้อยแล้ว (บันทึกใน {ref_field})",
-            "linked_complaint": {
-                "main_complaint_id": str(main_complaint.id),
-                "related_complaint_id": str(related_complaint.id),
-                "reference_field": ref_field
-            }
+            "message": "เชื่อมโยงเรื่องร้องเรียนเรียบร้อย",
+            "main_complaint_number": main_complaint.complaint_number,
+            "related_complaint_number": related_complaint.complaint_number
         }
         
     except Exception as e:
         db.rollback()
+        logger.error(f"Error linking complaint: {str(e)}")
         return {"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"}
 
 def update_complainant_data(
@@ -337,48 +332,37 @@ def update_complainant_data(
     complainant_data: Dict[str, Any],
     updated_by: UUID
 ) -> Dict:
-    """อัพเดทข้อมูลผู้ร้องเรียน (รวมผู้ลงนาม)"""
+    """อัพเดทข้อมูลผู้ร้องเรียน"""
     try:
         complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
         if not complaint:
             return {"success": False, "message": "ไม่พบเรื่องร้องเรียน"}
         
-        # Merge ข้อมูลใหม่กับข้อมูลเดิม
-        current_data = {}
-        if complaint.complainant_data:
-            try:
-                current_data = json.loads(complaint.complainant_data) if isinstance(complaint.complainant_data, str) else complaint.complainant_data
-            except:
-                current_data = {}
+        # Merge ข้อมูลใหม่
+        try:
+            current_data = json.loads(complaint.complainant_data) if complaint.complainant_data else {}
+        except:
+            current_data = {}
         
-        # อัพเดทข้อมูลผู้ลงนาม
-        if "signer" in complainant_data:
-            current_data["signer"] = complainant_data["signer"]
-        
-        # อัพเดทข้อมูลผู้รับมอบอำนาจ
-        if "delegate" in complainant_data:
-            current_data["delegate"] = complainant_data["delegate"]
-        
-        # อัพเดทข้อมูลทั่วไป
-        allowed_fields = ["name", "idCard", "address", "phone", "email", "province", "districts", "subdistricts", "zipcode"]
-        for field in allowed_fields:
-            if field in complainant_data:
-                current_data[field] = complainant_data[field]
+        # อัพเดทข้อมูล
+        for key, value in complainant_data.items():
+            current_data[key] = value
         
         complaint.complainant_data = json.dumps(current_data, ensure_ascii=False)
         complaint.updated_at = datetime.now()
         
         db.commit()
-        db.refresh(complaint)
         
         return {
             "success": True,
             "message": "อัพเดทข้อมูลผู้ร้องเรียนเรียบร้อย",
+            "complaint_id": str(complaint.id),
             "updated_data": current_data
         }
         
     except Exception as e:
         db.rollback()
+        logger.error(f"Error updating complainant: {str(e)}")
         return {"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"}
 
 def update_respondent_data(
@@ -387,93 +371,63 @@ def update_respondent_data(
     respondent_data: Dict[str, Any],
     updated_by: UUID
 ) -> Dict:
-    """อัพเดทข้อมูลผู้ถูกร้องเรียน (รวมที่อยู่)"""
+    """อัพเดทข้อมูลผู้ถูกร้องเรียน"""
     try:
         complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
         if not complaint:
             return {"success": False, "message": "ไม่พบเรื่องร้องเรียน"}
         
-        # Merge ข้อมูลใหม่กับข้อมูลเดิม
-        current_data = {}
-        if complaint.respondent_data:
-            try:
-                current_data = json.loads(complaint.respondent_data) if isinstance(complaint.respondent_data, str) else complaint.respondent_data
-            except:
-                current_data = {}
+        # Merge ข้อมูลใหม่
+        try:
+            current_data = json.loads(complaint.respondent_data) if complaint.respondent_data else {}
+        except:
+            current_data = {}
         
-        # อัพเดทข้อมูลที่อยู่
-        address_fields = ["address", "province", "districts", "subdistricts", "zipcode"]
-        for field in address_fields:
-            if field in respondent_data:
-                current_data[field] = respondent_data[field]
-        
-        # อัพเดทข้อมูลทั่วไป
-        general_fields = ["name", "idCard", "phone", "email", "companyName", "agencyName", "taxId", "registrationNumber"]
-        for field in general_fields:
-            if field in respondent_data:
-                current_data[field] = respondent_data[field]
+        # อัพเดทข้อมูล
+        for key, value in respondent_data.items():
+            current_data[key] = value
         
         complaint.respondent_data = json.dumps(current_data, ensure_ascii=False)
-        
-        # อัพเดทข้อมูลสถานที่เกิดเหตุถ้ามีการเปลี่ยน
-        if "province" in respondent_data:
-            province_data = respondent_data["province"]
-            if isinstance(province_data, dict):
-                complaint.incident_province_id = province_data.get("value")
-                complaint.incident_province = province_data.get("label")
-        
-        if "districts" in respondent_data:
-            district_data = respondent_data["districts"]
-            if isinstance(district_data, dict):
-                complaint.incident_district_id = district_data.get("value")
-                complaint.incident_district = district_data.get("label")
-        
-        if "subdistricts" in respondent_data:
-            subdistrict_data = respondent_data["subdistricts"]
-            if isinstance(subdistrict_data, dict):
-                complaint.incident_subdistrict_id = subdistrict_data.get("value")
-                complaint.incident_subdistrict = subdistrict_data.get("label")
-        
         complaint.updated_at = datetime.now()
         
         db.commit()
-        db.refresh(complaint)
         
         return {
             "success": True,
             "message": "อัพเดทข้อมูลผู้ถูกร้องเรียนเรียบร้อย",
+            "complaint_id": str(complaint.id),
             "updated_data": current_data
         }
         
     except Exception as e:
         db.rollback()
+        logger.error(f"Error updating respondent: {str(e)}")
         return {"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"}
 
-def search_complaint_for_reference(db: Session, search_term: str) -> List[Dict]:
+def search_complaint_for_reference(db: Session, search_term: str, limit: int = 10) -> List[Dict]:
     """ค้นหาเรื่องร้องเรียนสำหรับการอ้างอิง"""
     try:
-        query = db.query(Complaint).filter(
-            (Complaint.complaint_number.ilike(f"%{search_term}%")) |
-            (Complaint.subject.ilike(f"%{search_term}%"))
-        ).limit(10)
+        complaints = db.query(Complaint).filter(
+            (Complaint.complaint_number.contains(search_term)) |
+            (Complaint.subject.contains(search_term))
+        ).limit(limit).all()
         
-        complaints = query.all()
-        
-        result = []
+        results = []
         for complaint in complaints:
-            result.append({
+            results.append({
                 "id": str(complaint.id),
                 "complaint_number": complaint.complaint_number,
                 "subject": complaint.subject,
                 "status": complaint.status,
-                "created_at": complaint.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                "created_at": complaint.created_at.isoformat()
             })
         
-        return result
+        return results
         
     except Exception as e:
+        logger.error(f"Error searching complaints: {str(e)}")
         return []
-    
+
 def add_additional_complaint_reference(
     db: Session,
     complaint_id: UUID,
@@ -487,7 +441,7 @@ def add_additional_complaint_reference(
         if not complaint:
             return {"success": False, "message": "ไม่พบเรื่องร้องเรียน"}
         
-        # หาเรื่องอ้างอิงจาก ID หรือ เลขที่
+        # หาเรื่องอ้างอิง
         reference_complaint = None
         if reference_complaint_id:
             reference_complaint = db.query(Complaint).filter(
@@ -520,20 +474,18 @@ def add_additional_complaint_reference(
         complaint.updated_at = current_time
         
         db.commit()
-        db.refresh(complaint)
         
         return {
             "success": True,
             "message": "เพิ่มเลขอ้างอิงเรียบร้อย",
-            "data": {
-                "complaint_id": str(complaint_id),
-                "reference_complaint_id": str(reference_complaint.id),
-                "reference_complaint_number": reference_complaint.complaint_number,
-                "reference_field": reference_field,
-                "reference_date": current_time.isoformat()
-            }
+            "complaint_id": str(complaint_id),
+            "reference_complaint_id": str(reference_complaint.id),
+            "reference_complaint_number": reference_complaint.complaint_number,
+            "reference_field": reference_field,
+            "reference_date": current_time.isoformat()
         }
         
     except Exception as e:
         db.rollback()
+        logger.error(f"Error adding reference: {str(e)}")
         return {"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"}
