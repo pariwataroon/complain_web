@@ -297,12 +297,13 @@ export default function Sidebar() {
       </ListItemButton>
       {submenuItems[key] && (
         <Box
-          className={`${styles.submenu} ${openSubmenu === key ? styles.submenuVisible : ""}`}
+          className={`${styles.submenu} ${
+            openSubmenu === key ? styles.submenuVisible : ""
+          }`}
           style={{ top: submenuTop, left: "80px" }}
           onMouseEnter={() => setOpenSubmenu(key)}
           onMouseLeave={() => setOpenSubmenu(null)}
         >
-
           <ul>
             {submenuItems[key].map((item, i) => (
               <React.Fragment key={i}>
