@@ -224,13 +224,7 @@ export default function ComplaintComponent() {
                       disabled={!acceptSubmit}
                       iconRight={<CheckIcon />}
                     />
-                    <ButtonService
-                      label="ส่งออก"
-                      color="ส่งออก"
-                      variant="outlined"
-                      onClick={() => exportElementToPDF(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
-                      iconRight={<UploadOutlinedIcon />}
-                    />
+                    
                   </>
                 ) : (
                   <>

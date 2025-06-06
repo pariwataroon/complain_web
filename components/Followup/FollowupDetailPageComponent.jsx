@@ -1,5 +1,3 @@
-/* pages/followup/[id].jsx */
-
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
@@ -22,6 +20,7 @@ import ComplaintIDService from "@services/ComplaintIDService/ComplaintIDService"
 import { GetComplaintMeByID } from "@pages/api/complaint/complaint";
 import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 import { formatThaiDate } from "@utils/Formats";
+import { exportElementToPDF } from "@utils/exportPDF";
 import styles from "./FollowupDetailPage.module.scss";
 
 const STEP_DEFS = [
@@ -41,7 +40,8 @@ export default function FollowupDetailPage() {
     const [errorMsg, setErrorMsg] = useState("");
 
     const fetchedRef = useRef(false);
-
+    const pdfRef = useRef();
+    
     useEffect(() => {
         if (!router.isReady || !id || fetchedRef.current) return;
 

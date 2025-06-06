@@ -53,6 +53,16 @@ const GetComplaintMeByID = async (id) => {
   }
 };
 
+const GetComplaintTaskStatus = async (id) => {
+  try {
+    const response = await axiosInstance.get(`/complaints/queue/status/${id}`);
+    return response.data;
+  } catch (err) {
+    console.error("Error fetching GetComplaintByID :", err);
+    return null;
+  }
+};
+
 const Addcomplaints = async (data) => {
   try {
     const response = await axiosInstance.post("/complaints", data);
@@ -87,4 +97,5 @@ export {
   GetComplaintByID,
   GetMeAllComplaints,
   GetComplaintMeByID,
+  GetComplaintTaskStatus,
 };

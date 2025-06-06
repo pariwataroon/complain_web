@@ -10,6 +10,7 @@ import {
 import {
   Addcomplaints,
   UploadAttachments,
+  GetComplaintTaskStatus,
 } from "@pages/api/complaint/complaint";
 
 export default function useComplaintForm() {
@@ -20,7 +21,6 @@ export default function useComplaintForm() {
     step3: {},
     step4: {},
   });
-
 
   const updateStepData = (stepKey, tabKey, data) => {
     setFormData((prev) => ({
@@ -56,13 +56,19 @@ export default function useComplaintForm() {
 
     try {
       showLoading("กำลังส่งข้อมูล...");
-
-      const res = await Addcomplaints(formData);
+      const body = {
+        step1,
+        step2,
+        step3,
+        step4,
+      };
+      const res = await Addcomplaints(body);
       const { res_code, res_message, res_data } = res;
 
       if (res_code === "0001") {
         const complaint_id = res_data?.complaint_id;
-        const attachments = formData.step3?.general?.attachment || [];
+        const task_id = res_data?.task_id;
+        const attachments = body.step3?.general?.attachment || [];
 
         if (complaint_id && attachments.length > 0) {
           const formDataUpload = new FormData();
@@ -75,7 +81,16 @@ export default function useComplaintForm() {
 
         closeAlert();
         await alertSuccess("ส่งเรื่องสำเร็จ", "ระบบได้รับข้อมูลของคุณแล้ว");
-        router.push("/");
+
+        const taskStatusRes = await GetComplaintTaskStatus(task_id);
+        const { res_code: statusCode, res_data: statusData } = taskStatusRes;
+
+        if (statusCode === "0000") {
+          const complaintId = statusData?.complaint_id; 
+          router.push(`/followup/${complaintId}`); 
+        } else {
+          alertError("เกิดข้อผิดพลาด", "ไม่สามารถดึงข้อมูลสถานะคำร้องได้");
+        }
       } else if (res_code === "5000" && res_data?.error) {
         closeAlert();
         alertError("ข้อมูลไม่ครบ", res_data.error);
@@ -92,8 +107,6 @@ export default function useComplaintForm() {
       console.error("ส่งข้อมูลไม่สำเร็จ:", error);
     }
   };
-  
-
 
   return {
     formData,

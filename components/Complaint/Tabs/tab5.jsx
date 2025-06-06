@@ -27,7 +27,7 @@ const Tab5 = ({
     step3 = {},
     step4 = {},
   } = formData;
-  console.log({ formData });
+  // console.log({ formData });
   
   const complainant = step1.general?.general || {};
   const delegate = step1.general?.delegate || {};

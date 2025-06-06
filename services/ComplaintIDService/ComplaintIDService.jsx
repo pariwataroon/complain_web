@@ -294,10 +294,10 @@ const ComplaintIDService = ({ complaint }) => {
             </div>
 
             {/* ปุ่ม Action */}
-            {/* <Box
+            <Box
                 sx={{ display: "flex", justifyContent: "center", mt: 4, gap: 2 }}
             >
-                <ButtonService
+                {/* <ButtonService
                     label="แก้ไข"
                     color="แก้ไข"
                     variant="outlined"
@@ -308,7 +308,7 @@ const ComplaintIDService = ({ complaint }) => {
                     color="ยืนยัน"
                     variant="contained"
                     iconRight={<CheckIcon />}
-                />
+                /> */}
                 <ButtonService
                     label="ส่งออก"
                     color="ส่งออก"
@@ -316,7 +316,7 @@ const ComplaintIDService = ({ complaint }) => {
                     onClick={() => exportElementToPDF(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
                     iconRight={<UploadOutlinedIcon />}
                 />
-            </Box> */}
+            </Box>
         </Box>
     );
 };
