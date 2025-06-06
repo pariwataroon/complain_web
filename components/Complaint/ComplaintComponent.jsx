@@ -61,19 +61,6 @@ export default function ComplaintComponent() {
           }
         }
 
-        // !! รอถามคณะกรรมการว่าบังคับส่งไหม
-        // const delegateFields = [
-        //   { key: "name", label: "ชื่อผู้รับมอบอำนาจ" },
-        //   { key: "phone", label: "เบอร์โทรผู้รับมอบอำนาจ" },
-        // ];
-        // for (const field of delegateFields) {
-        //   const value = data?.delegate?.[field.key];
-        //   if (!value) {
-        //     await alertError("ข้อมูลไม่ครบ", `กรุณากรอก ${field.label}`);
-        //     return false;
-        //   }
-        // }
-
       } else {
         const corpFields = [
           { key: "name", label: "ชื่อองค์กร" },
@@ -88,19 +75,7 @@ export default function ComplaintComponent() {
             return false;
           }
         }
-        
-        // !! รอถามคณะกรรมการว่าบังคับส่งไหม
-        // const signerFields = [
-        //   { key: "name", label: "ชื่อผู้มีอำนาจลงนาม" },
-        //   { key: "phone", label: "เบอร์โทรผู้มีอำนาจลงนาม" },
-        // ];
-        // for (const field of signerFields) {
-        //   const value = data?.signer?.[field.key];
-        //   if (!value) {
-        //     await alertError("ข้อมูลไม่ครบ", `กรุณากรอก ${field.label} ของผู้มีอำนาจลงนาม`);
-        //     return false;
-        //   }
-        // }
+
       }
     }
 

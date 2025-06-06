@@ -28,7 +28,7 @@ const SelectFieldType = ({
   ];
 
   const selectedValue =
-    typeof value === "object" ? value?.value ?? "" : value ?? "";
+    allOptions.find(opt => opt.label === value)?.value ?? "";
 
   return (
     <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
@@ -52,7 +52,7 @@ const SelectFieldType = ({
               ? opt.value === e.target.value
               : opt === e.target.value
           );
-          onChange({ target: { name, value: picked ?? e.target.value } });
+          onChange({ target: { name, value: picked?.label ?? e.target.value } });
         }}
         renderValue={(selected) => {
           const selOpt = allOptions.find((opt) =>

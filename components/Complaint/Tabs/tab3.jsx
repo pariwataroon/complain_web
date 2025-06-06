@@ -13,15 +13,27 @@ import { GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
 const Tab3 = ({ stepKey, tabData, updateStepData }) => {
   const [form, setForm] = useState({});
   const [complaintTypes, setComplaintTypes] = useState([]);
-
+  
   /* ---------- handler ---------- */
   const handleChange = (field) => (valueOrEvent) => {
-    const value = valueOrEvent?.target?.value ?? valueOrEvent;
+    let value = valueOrEvent?.target?.value ?? valueOrEvent;
+
+    if (field === "complaintType") {
+      const selectedType = complaintTypes.find((type) => type.value === value);
+      value = selectedType?.label || value; 
+    }
+
     const updated = { ...form, [field]: value };
     setForm(updated);
-    updateStepData(stepKey, "general", updated);
-  };
+    const updatedGeneral = { ...updated };
 
+    if (updatedGeneral.complaintType && typeof updatedGeneral.complaintType === "string") {
+      updatedGeneral.complaintType = updatedGeneral.complaintType; 
+    }
+
+    updateStepData(stepKey, "general", updatedGeneral);
+  };
+  
   /* ---------- mount ---------- */
   useEffect(() => {
     setForm(tabData || {});
@@ -81,7 +93,7 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 label="ประเภทเรื่องราวร้องทุกข์"
                 name="complaintType"
                 value={form.complaintType || ""}
-                options={complaintTypes}           /* ← array {value,label} */
+                options={complaintTypes}
                 onChange={handleChange("complaintType")}
                 required
               />
