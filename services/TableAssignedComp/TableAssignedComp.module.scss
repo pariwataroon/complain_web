@@ -10,6 +10,7 @@
   font-weight: bold;
   font-size: 18px;
 }
+
 .headerBar2 {
   height: 50px;
   border-top-left-radius: 12px;
@@ -25,8 +26,9 @@
 .tableWrapper {
   background-color: white;
   border-radius: 0 0 16px 16px;
-  box-shadow: none; /* <─ เอาเงาออก */
-  overflow: hidden;
+  box-shadow: none; /* เอาเงาออก */
+  overflow: visible; /* เปลี่ยนจาก hidden เป็น visible สำหรับ DatePicker */
+  position: relative; /* เพิ่ม position relative */
 }
 
 .tableWrapper thead tr {
@@ -62,5 +64,91 @@
     gap: 12px;
     flex-wrap: wrap;
     align-items: center;
+  }
+}
+
+/* อัพเดทสไตล์สำหรับ responsive table */
+@media (max-width: 1350px) {
+  .tableWrapper {
+    overflow-x: auto;
+    overflow-y: visible; /* ยังคง visible สำหรับ DatePicker */
+
+    /* Custom scrollbar สำหรับ webkit browsers */
+    &::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background-color: #f5f5f5;
+      border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: #c1c1c1;
+      border-radius: 4px;
+
+      &:hover {
+        background-color: #a8a8a8;
+      }
+    }
+  }
+}
+
+/* เดิม - เพิ่มสไตล์สำหรับ responsive table (รองรับ breakpoint เก่า) */
+@media (max-width: 1200px) {
+  .tableWrapper {
+    overflow-x: auto;
+    overflow-y: visible; /* ยังคง visible สำหรับ DatePicker */
+  }
+}
+
+/* เพิ่มสไตล์สำหรับ hover effect */
+.tableWrapper tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.tableWrapper tbody tr:hover {
+  background-color: #f5f7ff !important;
+}
+
+/* เพิ่มสไตล์สำหรับ pagination */
+.tableWrapper .MuiTablePagination-root {
+  border-top: 1px solid #eee;
+  margin-top: 8px;
+  padding: 16px;
+}
+
+.tableWrapper .MuiTablePagination-toolbar {
+  padding: 0;
+}
+
+.tableWrapper .MuiTablePagination-selectLabel,
+.tableWrapper .MuiTablePagination-displayedRows {
+  font-size: 14px;
+  color: #666;
+}
+
+.tableWrapper .MuiTablePagination-select {
+  font-size: 14px;
+}
+
+.tableWrapper .MuiTablePagination-actions button {
+  color: #1120a3;
+}
+
+.tableWrapper .MuiTablePagination-actions button:hover {
+  background-color: #f5f7ff;
+}
+
+.tableWrapper .MuiTablePagination-actions button.Mui-disabled {
+  color: #ccc;
+}
+
+/* เพิ่มสไตล์สำหรับ text overflow ใน table cells */
+@media (max-width: 1350px) {
+  .tableWrapper .MuiTableCell-root {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
