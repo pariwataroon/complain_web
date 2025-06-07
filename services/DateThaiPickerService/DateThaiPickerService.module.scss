@@ -117,33 +117,9 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   pointer-events: none;
 }
 
-.popupOverlay {
-  // ← Desktop และ Tablet - แสดงใต้ input
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 9999;
-  margin-top: 8px;
-
-  // ← สำหรับ Mobile (xs) เท่านั้น - แสดงเป็น modal แต่ยังอยู่ใต้ input
-  @media (max-width: 599px) {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 9999;
-    pointer-events: none;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 10px;
-    box-sizing: border-box;
-
-    // ← คำนวณตำแหน่งให้อยู่ใต้ input
-    padding-top: calc(var(--input-top, 100px) + 50px);
-  }
+// ← Portal overlay สำหรับ Calendar popup
+.portalOverlay {
+  pointer-events: auto;
 }
 
 .popupCalendar {
@@ -158,10 +134,11 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   min-width: 280px;
   font-family: "Roboto", "Helvetica", "Arial", sans-serif;
   box-sizing: border-box;
+  position: relative;
+  z-index: 99999; // ← สูงสุด
 
   // ← สำหรับ Mobile (xs) เท่านั้น
   @media (max-width: 599px) {
-    pointer-events: auto;
     max-width: calc(100vw - 20px);
     min-width: 280px;
     padding: 12px;
