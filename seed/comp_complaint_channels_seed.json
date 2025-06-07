@@ -29,6 +29,16 @@
       "name": "หน่วยงานอื่น",
       "description": "รับเรื่องต่อจากหน่วยงานอื่น",
       "is_active": true
+    },
+    {
+      "name": "opm1111",
+      "description": "ร้องเรียนผ่านระบบ OPM 1111 (สำนักงานปลัดสำนักนายกรัฐมนตรี)",
+      "is_active": true
+    },
+    {
+      "name": "แอดมิน",
+      "description": "เพิ่มโดยแอดมิน",
+      "is_active": true
     }
   ]
 }
