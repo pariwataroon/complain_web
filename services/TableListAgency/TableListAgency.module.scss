@@ -1,7 +1,6 @@
 .headerBar {
   background: linear-gradient(to right, #1223a5, #2499ff);
   height: 50px;
-
   border-top-right-radius: 12px;
   padding: 0 24px;
   display: flex;
@@ -9,7 +8,20 @@
   color: white;
   font-weight: bold;
   font-size: 18px;
+
+  @media (max-width: 600px) {
+    height: 35px;
+    padding: 0 12px;
+    font-size: 14px;
+  }
+
+  @media (max-width: 900px) and (min-width: 601px) {
+    height: 40px;
+    padding: 0 16px;
+    font-size: 16px;
+  }
 }
+
 .headerBar2 {
   height: 50px;
   border-top-left-radius: 12px;
@@ -20,12 +32,29 @@
   color: #1120a3;
   font-weight: bold;
   font-size: 18px;
+
+  @media (max-width: 600px) {
+    height: 40px;
+    padding: 0 16px;
+    font-size: 16px;
+  }
+
+  @media (max-width: 900px) and (min-width: 601px) {
+    height: 50px;
+    padding: 0 24px;
+    font-size: 18px;
+  }
 }
+
 .tableWrapper {
   background-color: white;
   border-radius: 0 0 16px 16px;
-  box-shadow: none; /* <─ เอาเงาออก */
+  box-shadow: none;
   overflow: hidden;
+
+  @media (max-width: 1200px) {
+    overflow-x: auto;
+  }
 }
 
 .tableWrapper thead tr {
@@ -37,6 +66,11 @@
   color: #1120a3;
   font-size: 14px;
   border-bottom: 1px solid #d9dbe9;
+
+  @media (max-width: 600px) {
+    font-size: 12px;
+    padding: 8px 6px;
+  }
 }
 
 .MuiTableCell-root {
@@ -47,6 +81,11 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+
+  @media (max-width: 600px) {
+    font-size: 12px;
+    padding: 8px 6px;
+  }
 }
 
 .filterRow {
@@ -56,10 +95,21 @@
   align-items: center;
   margin: 20px 0;
 
+  @media (max-width: 600px) {
+    flex-direction: column;
+    gap: 12px;
+    margin: 12px 0;
+  }
+
   > div {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
     align-items: center;
+
+    @media (max-width: 600px) {
+      width: 100%;
+      justify-content: center;
+    }
   }
 }

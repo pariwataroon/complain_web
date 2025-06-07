@@ -73,13 +73,14 @@ const TableListBox = ({
   const handleRowClick = (item) =>
     navigateTo && router.push(`${navigateTo}/${item.id}`);
 
-  // define the 5 columns to show
+  // แก้ไข: เปลี่ยน columns ให้ตรงกับ mockComplaints data structure
   const columns = [
     { name: "claimantName", label: "ชื่อผู้ร้อง", width: 200 },
+    { name: "issue", label: "ชื่อเรื่อง", width: 300 },
     { name: "issueType", label: "ประเภทเรื่อง", width: 180 },
-    { name: "subject", label: "ชื่อเรื่อง", width: 300 },
-    { name: "accusedName", label: "ชื่อผู้ถูกร้อง", width: 180 },
-    { name: "ssoNo", label: "เลขที่ สรร.", width: 160 },
+    { name: "agency", label: "หน่วยงาน", width: 200 },
+    { name: "responsibleOfficer", label: "เจ้าหน้าที่รับผิดชอบ", width: 180 },
+    { name: "status", label: "สถานะ", width: 150 },
   ];
 
   return (
@@ -97,14 +98,30 @@ const TableListBox = ({
         display="flex"
         alignItems="center"
         justifyContent="space-between"
+      ></Box>
+
+      {/* แก้ไข: ย้าย export buttons มาอยู่ในแถวเดียวกับ title */}
+      <Box
+        mt={2}
+        className={styles.headerBar2}
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        px={2}
       >
         <Box>{title}</Box>
+
+        {/* ปุ่ม export ด้านขวา */}
+        <Box display="flex" alignItems="center" gap={1}>
+          <ExportButton label="Export PDF" />
+          <ExportButton label="Export Excel" />
+        </Box>
       </Box>
 
       {/* search bar */}
       <Box width="100%" px={2} py={1}>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          {/* ฝั่งซ้าย: filters + search (เลื่อนซ้าย–ขวาได้) */}
+        <Box display="flex" alignItems="center" justifyContent="flex-start">
+          {/* filters + search buttons */}
           <Box
             display="flex"
             alignItems="center"
@@ -160,12 +177,6 @@ const TableListBox = ({
             >
               <SearchOffIcon />
             </IconButton>
-          </Box>
-
-          {/* ฝั่งขวา: export ปุ่มไม่เลื่อน */}
-          <Box display="flex" alignItems="center" gap={1} flexShrink={0} mr={4}>
-            <ExportButton label="Export PDF" />
-            <ExportButton label="Export Excel" />
           </Box>
         </Box>
       </Box>

@@ -188,7 +188,6 @@ const RequestResultProgress = () => {
           >
             <SelectField
               label="เรียน*"
-              inputLabel="เลือกเรียน"
               name="salutation"
               value={form.salutation}
               onChange={handleChange}

@@ -361,12 +361,12 @@ const AgencyComplaintSummary = () => {
           {
             name: "receiveDateFrom",
             label: "ตั้งแต่วันที่",
-            type: "text",
+            type: "date",
           },
           {
             name: "receiveDateTo",
             label: "ถึงวันที่",
-            type: "text",
+            type: "date",
           },
           {
             name: "agency",

@@ -23,39 +23,228 @@ const breadcrumbItems = [
   },
 ];
 
-// Mock data matching the table columns in the design
+// Mock data updated to 2025 (ค.ศ.) / 2568 (พ.ศ.)
 const mockData = [
   {
     id: 1,
     name: "นางสาวณภัทร มีความสุข",
     subject: "พฤติกรรมเจ้าหน้าที่กกต.ไม่เหมาะสม",
-    docNo4: "125/26",
-    docNo: "สป-กค-1234-5-678-9",
-    docNo2: "สป-สร-1234-5-678-9",
-    docNo3: "สตป-1234-5-678-9",
-    receiveDate: "2025-01-17T00:00:00.000Z",
+    docNo4: "125/68",
+    docNo: "สป-กค-2568-5-001-125",
+    docNo2: "สป-สร-2568-5-001-125",
+    docNo3: "สตป-2568-001-125",
+    receiveDate: "2025-05-15T00:00:00.000Z", // 15 พ.ค. 2568
   },
   {
     id: 2,
     name: "นางสาวจารุณี สิขังสมาธิมี",
-    subject: "พฤติกรรมเจ้าหน้าที่กกต.ไม่เหมาะสม",
-    docNo4: "124/26",
-    docNo: "สป-กค-1234-5-678-9",
-    docNo2: "สป-สร-1234-5-678-9",
-    docNo3: "สตป-1234-5-678-9",
-    receiveDate: "2025-01-18T00:00:00.000Z",
+    subject: "การเรียกรับผลประโยชน์ที่มิควรได้",
+    docNo4: "124/68",
+    docNo: "สป-กค-2568-5-002-124",
+    docNo2: "สป-สร-2568-5-002-124",
+    docNo3: "สตป-2568-002-124",
+    receiveDate: "2025-05-16T00:00:00.000Z", // 16 พ.ค. 2568
   },
   {
     id: 3,
     name: "บริษัท สกายเทค อินโนเวชั่น จำกัด",
     subject: "ไม่สามารถเบิกค่ารักษาพยาบาลได้",
-    docNo4: "123/26",
-    docNo: "สป-กค-1234-5-678-9",
-    docNo2: "สป-สร-1234-5-678-9",
-    docNo3: "สตป-1234-5-678-9",
-    receiveDate: "2025-01-18T00:00:00.000Z",
+    docNo4: "123/68",
+    docNo: "สป-กค-2568-5-003-123",
+    docNo2: "สป-สร-2568-5-003-123",
+    docNo3: "สตป-2568-003-123",
+    receiveDate: "2025-05-17T00:00:00.000Z", // 17 พ.ค. 2568
   },
-  // ... เหลือข้อมูล mockData เหมือนเดิม
+  {
+    id: 4,
+    name: "นายสมชาย เจริญสุข",
+    subject: "ทุจริตในการจัดซื้อจัดจ้าง",
+    docNo4: "126/68",
+    docNo: "สป-กค-2568-5-004-126",
+    docNo2: "สป-สร-2568-5-004-126",
+    docNo3: "สตป-2568-004-126",
+    receiveDate: "2025-05-20T00:00:00.000Z", // 20 พ.ค. 2568
+  },
+  {
+    id: 5,
+    name: "นางวิไลวรรณ สร้างบารมี",
+    subject: "ละเว้นการปฏิบัติหน้าที่ราชการ",
+    docNo4: "127/68",
+    docNo: "สป-กค-2568-5-005-127",
+    docNo2: "สป-สร-2568-5-005-127",
+    docNo3: "สตป-2568-005-127",
+    receiveDate: "2025-05-22T00:00:00.000Z", // 22 พ.ค. 2568
+  },
+  {
+    id: 6,
+    name: "นายอนุชา ใจดี",
+    subject: "หลอกลวงประชาชน",
+    docNo4: "128/68",
+    docNo: "สป-กค-2568-5-006-128",
+    docNo2: "สป-สร-2568-5-006-128",
+    docNo3: "สตป-2568-006-128",
+    receiveDate: "2025-05-23T00:00:00.000Z", // 23 พ.ค. 2568
+  },
+  {
+    id: 7,
+    name: "นางสาวปิยะนุช รักษ์งาม",
+    subject: "การให้บริการล่าช้า",
+    docNo4: "129/68",
+    docNo: "สป-กค-2568-5-007-129",
+    docNo2: "สป-สร-2568-5-007-129",
+    docNo3: "สตป-2568-007-129",
+    receiveDate: "2025-05-25T00:00:00.000Z", // 25 พ.ค. 2568
+  },
+  {
+    id: 8,
+    name: "นายธีระพงษ์ สุขใส",
+    subject: "ฉ้อโกงเงินสวัสดิการ",
+    docNo4: "130/68",
+    docNo: "สป-กค-2568-5-008-130",
+    docNo2: "สป-สร-2568-5-008-130",
+    docNo3: "สตป-2568-008-130",
+    receiveDate: "2025-05-27T00:00:00.000Z", // 27 พ.ค. 2568
+  },
+  {
+    id: 9,
+    name: "นางประภาพร มั่งคั่ง",
+    subject: "ประพฤติมิชอบ",
+    docNo4: "131/68",
+    docNo: "สป-กค-2568-5-009-131",
+    docNo2: "สป-สร-2568-5-009-131",
+    docNo3: "สตป-2568-009-131",
+    receiveDate: "2025-05-28T00:00:00.000Z", // 28 พ.ค. 2568
+  },
+  {
+    id: 10,
+    name: "นายสุรพล ดีมาก",
+    subject: "ปัญหาสิ่งแวดล้อม",
+    docNo4: "132/68",
+    docNo: "สป-กค-2568-5-010-132",
+    docNo2: "สป-สร-2568-5-010-132",
+    docNo3: "สตป-2568-010-132",
+    receiveDate: "2025-05-30T00:00:00.000Z", // 30 พ.ค. 2568
+  },
+  {
+    id: 11,
+    name: "นางสาวมณีรัตน์ แสงทอง",
+    subject: "ข้อเสนอแนะการปรับปรุงระบบ",
+    docNo4: "133/68",
+    docNo: "สป-กค-2568-6-011-133",
+    docNo2: "สป-สร-2568-6-011-133",
+    docNo3: "สตป-2568-011-133",
+    receiveDate: "2025-06-01T00:00:00.000Z", // 1 มิ.ย. 2568
+  },
+  {
+    id: 12,
+    name: "นายกิตติพงษ์ เรืองรอง",
+    subject: "การซื้อขายออนไลน์ผิดกฎหมาย",
+    docNo4: "134/68",
+    docNo: "สป-กค-2568-6-012-134",
+    docNo2: "สป-สร-2568-6-012-134",
+    docNo3: "สตป-2568-012-134",
+    receiveDate: "2025-06-03T00:00:00.000Z", // 3 มิ.ย. 2568
+  },
+  {
+    id: 13,
+    name: "นางอรพิน วิสุทธิ์",
+    subject: "ร้องเรียนทั่วไป เรื่องการบริการ",
+    docNo4: "135/68",
+    docNo: "สป-กค-2568-6-013-135",
+    docNo2: "สป-สร-2568-6-013-135",
+    docNo3: "สตป-2568-013-135",
+    receiveDate: "2025-06-05T00:00:00.000Z", // 5 มิ.ย. 2568
+  },
+  {
+    id: 14,
+    name: "นายชัยวัฒน์ สมบูรณ์",
+    subject: "พฤติกรรมเจ้าหน้าที่ไม่สุภาพ",
+    docNo4: "136/68",
+    docNo: "สป-กค-2568-6-014-136",
+    docNo2: "สป-สร-2568-6-014-136",
+    docNo3: "สตป-2568-014-136",
+    receiveDate: "2025-06-07T00:00:00.000Z", // 7 มิ.ย. 2568 (วันนี้)
+  },
+  {
+    id: 15,
+    name: "นางสาวสุพัตรา มีสุข",
+    subject: "ทุจริตการเบิกค่าตอบแทน",
+    docNo4: "137/68",
+    docNo: "สป-กค-2568-6-015-137",
+    docNo2: "สป-สร-2568-6-015-137",
+    docNo3: "สตป-2568-015-137",
+    receiveDate: "2025-06-14T00:00:00.000Z", // 14 มิ.ย. 2568 ← เพิ่มวันที่นี้เพื่อทดสอบ
+  },
+  {
+    id: 16,
+    name: "นายวิทยา อัจฉริยะ",
+    subject: "ละเว้นการดูแลทรัพย์สินของรัฐ",
+    docNo4: "138/68",
+    docNo: "สป-กค-2568-4-016-138",
+    docNo2: "สป-สร-2568-4-016-138",
+    docNo3: "สตป-2568-016-138",
+    receiveDate: "2025-04-20T00:00:00.000Z", // 20 เม.ย. 2568
+  },
+  {
+    id: 17,
+    name: "นางนิภา สีสวย",
+    subject: "หลอกลวงการขายของออนไลน์",
+    docNo4: "139/68",
+    docNo: "สป-กค-2568-4-017-139",
+    docNo2: "สป-สร-2568-4-017-139",
+    docNo3: "สตป-2568-017-139",
+    receiveDate: "2025-04-25T00:00:00.000Z", // 25 เม.ย. 2568
+  },
+  {
+    id: 18,
+    name: "นายรัตนชัย สง่างาม",
+    subject: "การเรียกรับสินบนจากประชาชน",
+    docNo4: "140/68",
+    docNo: "สป-กค-2568-4-018-140",
+    docNo2: "สป-สร-2568-4-018-140",
+    docNo3: "สตป-2568-018-140",
+    receiveDate: "2025-04-30T00:00:00.000Z", // 30 เม.ย. 2568
+  },
+  {
+    id: 19,
+    name: "นางสาวชนิกานต์ รื่นเริง",
+    subject: "การให้บริการไม่เป็นธรรม",
+    docNo4: "141/68",
+    docNo: "สป-กค-2568-3-019-141",
+    docNo2: "สป-สร-2568-3-019-141",
+    docNo3: "สตป-2568-019-141",
+    receiveDate: "2025-03-18T00:00:00.000Z", // 18 มี.ค. 2568
+  },
+  {
+    id: 20,
+    name: "นายปราโมทย์ เจษฎาวรรณ",
+    subject: "ฉ้อโกงงบประมาณโครงการ",
+    docNo4: "142/68",
+    docNo: "สป-กค-2568-3-020-142",
+    docNo2: "สป-สร-2568-3-020-142",
+    docNo3: "สตป-2568-020-142",
+    receiveDate: "2025-03-22T00:00:00.000Z", // 22 มี.ค. 2568
+  },
+  {
+    id: 21,
+    name: "นางขวัญจิรา พร้อมจิต",
+    subject: "ประพฤติมิชอบในการปฏิบัติงาน",
+    docNo4: "143/68",
+    docNo: "สป-กค-2568-3-021-143",
+    docNo2: "สป-สร-2568-3-021-143",
+    docNo3: "สตป-2568-021-143",
+    receiveDate: "2025-03-25T00:00:00.000Z", // 25 มี.ค. 2568
+  },
+  {
+    id: 22,
+    name: "นายอภิชาติ มั่นคง",
+    subject: "ปัญหาสิ่งแวดล้อมในชุมชน",
+    docNo4: "144/68",
+    docNo: "สป-กค-2568-2-022-144",
+    docNo2: "สป-สร-2568-2-022-144",
+    docNo3: "สตป-2568-022-144",
+    receiveDate: "2025-02-14T00:00:00.000Z", // 14 ก.พ. 2568
+  },
 ];
 
 const AssignedAnonymousComponents = () => {
@@ -81,10 +270,61 @@ const AssignedAnonymousComponents = () => {
 
   const router = useRouter();
 
-  // ฟังก์ชันแปลงจาก Thai date object เป็น Date object
-  const convertThaiDateToDate = (thaiDate) => {
-    if (!thaiDate) return null;
-    return new Date(thaiDate.year, thaiDate.month - 1, thaiDate.day);
+  // ฟังก์ชันแปลงจาก Thai date object เป็น Date object (แก้ไขใหม่)
+  const convertThaiDateToDate = (thaiDateObj) => {
+    if (!thaiDateObj) return null;
+
+    console.log("🔍 Thai date object received:", thaiDateObj);
+
+    // ใช้ year (ค.ศ.) โดยตรงจาก DateThaiPickerService
+    // เพราะ DateThaiPickerService ส่งมาทั้ง year (ค.ศ.) และ buddhistYear (พ.ศ.)
+    const gregorianYear = thaiDateObj.year; // ใช้ year ที่เป็น ค.ศ. โดยตรง
+
+    console.log(
+      `🔍 Converting: ${thaiDateObj.day}/${thaiDateObj.month}/${thaiDateObj.buddhistYear} (Thai) -> ${thaiDateObj.day}/${thaiDateObj.month}/${gregorianYear} (Gregorian)`
+    );
+
+    // สร้าง Date object (เดือนใน JavaScript เริ่มจาก 0)
+    return new Date(gregorianYear, thaiDateObj.month - 1, thaiDateObj.day);
+  };
+
+  // ฟังก์ชันแปลง ISO date string เป็น Date object และเปรียบเทียบ
+  const isSameDate = (isoDateString, thaiDateObject) => {
+    if (!isoDateString || !thaiDateObject) return false;
+
+    console.log("🔍 Comparing dates:");
+    console.log("  - ISO string:", isoDateString);
+    console.log("  - Thai date object:", thaiDateObject);
+
+    // แปลง ISO string เป็น Date
+    const isoDate = new Date(isoDateString);
+    console.log("  - ISO date parsed:", isoDate);
+
+    // แปลง Thai date object เป็น Date
+    const thaiDate = convertThaiDateToDate(thaiDateObject);
+    console.log("  - Thai date converted:", thaiDate);
+
+    if (!thaiDate) return false;
+
+    // เปรียบเทียบเฉพาะวัน เดือน ปี (ไม่รวมเวลา)
+    const isSame =
+      isoDate.getFullYear() === thaiDate.getFullYear() &&
+      isoDate.getMonth() === thaiDate.getMonth() &&
+      isoDate.getDate() === thaiDate.getDate();
+
+    console.log("  - Are they the same?", isSame);
+    console.log(
+      "  - ISO: ",
+      `${isoDate.getDate()}/${isoDate.getMonth() + 1}/${isoDate.getFullYear()}`
+    );
+    console.log(
+      "  - Thai:",
+      `${thaiDate.getDate()}/${
+        thaiDate.getMonth() + 1
+      }/${thaiDate.getFullYear()}`
+    );
+
+    return isSame;
   };
 
   const handleChange = (field) => (e) => {
@@ -94,44 +334,51 @@ const AssignedAnonymousComponents = () => {
 
   // Handler สำหรับ DateThaiPickerService
   const handleDateChange = (thaiDate) => {
+    console.log("🔍 Date changed to:", thaiDate);
     setFilters((prev) => ({ ...prev, receiveDate: thaiDate }));
   };
 
   // ฟังก์ชันกรองข้อมูล
   const handleSearch = () => {
+    console.log("🔍 Searching with filters:", filters);
+
     const filtered = mockData.filter((item) => {
       const matchName = filters.claimantName
         ? item.name.toLowerCase().includes(filters.claimantName.toLowerCase())
         : true;
+
       const matchSubject = filters.subject
         ? item.subject.toLowerCase().includes(filters.subject.toLowerCase())
         : true;
+
       const matchDocNo4 = filters.docNo4
         ? item.docNo4.includes(filters.docNo4)
         : true;
 
-      // แก้ไขการเปรียบเทียบวันที่สำหรับ DateThaiPickerService
+      // แก้ไขการเปรียบเทียบวันที่
       const matchDate = filters.receiveDate
-        ? (() => {
-            const selectedDate = convertThaiDateToDate(filters.receiveDate);
-            const itemDate = new Date(item.receiveDate);
-
-            // เปรียบเทียบเฉพาะวัน เดือน ปี (ไม่รวมเวลา)
-            return (
-              selectedDate &&
-              selectedDate.getFullYear() === itemDate.getFullYear() &&
-              selectedDate.getMonth() === itemDate.getMonth() &&
-              selectedDate.getDate() === itemDate.getDate()
-            );
-          })()
+        ? isSameDate(item.receiveDate, filters.receiveDate)
         : true;
 
-      return matchName && matchSubject && matchDocNo4 && matchDate;
+      const matches = matchName && matchSubject && matchDocNo4 && matchDate;
+
+      console.log(`🔍 Item ${item.id} (${item.name}):`, {
+        matchName,
+        matchSubject,
+        matchDocNo4,
+        matchDate,
+        finalMatch: matches,
+      });
+
+      return matches;
     });
+
+    console.log("🔍 Filtered results:", filtered);
     setFilteredRows(filtered);
   };
 
   const handleClearSearch = () => {
+    console.log("🧹 Clearing search");
     const cleared = {
       claimantName: "",
       subject: "",
@@ -179,7 +426,7 @@ const AssignedAnonymousComponents = () => {
             padding: isMobile ? "0 16px" : "0 24px",
           }}
         >
-          บัตรสนเท่ห์ที่ได้รับมอบหมาย
+          บัตรสนเท่ห์ที่ได้รับมอบหมาย ({filteredRows.length} รายการ)
         </Box>
 
         {/* Filters */}
@@ -258,6 +505,7 @@ const AssignedAnonymousComponents = () => {
                   label="ชื่อผู้ร้อง"
                   value={filters.claimantName}
                   onChange={handleChange("claimantName")}
+                  placeholder="กรอกชื่อผู้ร้อง"
                 />
               </Box>
 
@@ -282,6 +530,7 @@ const AssignedAnonymousComponents = () => {
                   label="ชื่อเรื่อง"
                   value={filters.subject}
                   onChange={handleChange("subject")}
+                  placeholder="กรอกชื่อเรื่อง"
                 />
               </Box>
 
@@ -306,6 +555,7 @@ const AssignedAnonymousComponents = () => {
                   label="เลขที่ สรร."
                   value={filters.docNo4}
                   onChange={handleChange("docNo4")}
+                  placeholder="กรอกเลขที่ สรร."
                 />
               </Box>
 
@@ -392,7 +642,7 @@ const AssignedAnonymousComponents = () => {
           <Box
             sx={{
               display: "flex",
-              flexDirection: isMobile ? "column" : "row", // เพิ่ม flexDirection
+              flexDirection: isMobile ? "column" : "row",
               gap: { xs: 1.5, sm: 1, md: 1.2 },
               justifyContent: isBelow1350
                 ? "center"
@@ -420,7 +670,7 @@ const AssignedAnonymousComponents = () => {
               sx={{
                 minWidth: isBelow1350
                   ? "120px"
-                  : { xs: "100%", sm: "120px", md: "100px", lg: "auto" }, // เปลี่ยน xs เป็น 100%
+                  : { xs: "100%", sm: "120px", md: "100px", lg: "auto" },
                 fontSize: isBelow1350
                   ? "12px"
                   : { xs: "14px", sm: "12px", md: "13px", lg: "14px" },
@@ -436,7 +686,7 @@ const AssignedAnonymousComponents = () => {
                 height: isBelow1350
                   ? "40px"
                   : { xs: "auto", sm: "40px", lg: "40px" },
-                flex: isBelow1350 ? 0 : { xs: 0, sm: 0, lg: 0 }, // เปลี่ยน xs เป็น 0
+                flex: isBelow1350 ? 0 : { xs: 0, sm: 0, lg: 0 },
               }}
             />
             <ExportButton
@@ -450,7 +700,7 @@ const AssignedAnonymousComponents = () => {
               sx={{
                 minWidth: isBelow1350
                   ? "120px"
-                  : { xs: "100%", sm: "120px", md: "100px", lg: "auto" }, // เปลี่ยน xs เป็น 100%
+                  : { xs: "100%", sm: "120px", md: "100px", lg: "auto" },
                 fontSize: isBelow1350
                   ? "12px"
                   : { xs: "14px", sm: "12px", md: "13px", lg: "14px" },
@@ -466,7 +716,7 @@ const AssignedAnonymousComponents = () => {
                 height: isBelow1350
                   ? "40px"
                   : { xs: "auto", sm: "40px", lg: "40px" },
-                flex: isBelow1350 ? 0 : { xs: 0, sm: 0, lg: 0 }, // เปลี่ยน xs เป็น 0
+                flex: isBelow1350 ? 0 : { xs: 0, sm: 0, lg: 0 },
               }}
             />
           </Box>

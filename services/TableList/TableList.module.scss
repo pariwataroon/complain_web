@@ -14,8 +14,36 @@
 .tableWrapper {
   background-color: white;
   border-radius: 0 0 16px 16px;
-  box-shadow: none; /* <─ เอาเงาออก */
-  overflow: hidden;
+  box-shadow: none;
+  /* เปลี่ยนจาก overflow: hidden เป็น overflow-x: auto */
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+/* เพิ่ม responsive overflow สำหรับหน้าจอใหญ่ */
+@media (min-width: 1200px) {
+  .tableWrapper {
+    overflow-x: visible;
+  }
+}
+
+/* เพิ่ม styling สำหรับ scrollbar ให้สวย */
+.tableWrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.tableWrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.tableWrapper::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.tableWrapper::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .tableWrapper thead tr {
@@ -52,4 +80,12 @@
     flex-wrap: wrap;
     align-items: center;
   }
+}
+
+/* เพิ่ม class สำหรับ ellipsis cell */
+.ellipsisCell {
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

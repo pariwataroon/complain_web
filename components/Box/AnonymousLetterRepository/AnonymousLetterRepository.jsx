@@ -350,7 +350,7 @@ const AnonymousLetterRepository = () => {
       <TableListBox
         data={filteredComplaints}
         title="ติดตามผลการดำเนินการ"
-        navigateTo="/admin/edit/website-complaints"
+        navigateTo="/admin/box/new"
         onSearch={handleSearch}
         filterFields={[
           { name: "claimantName", label: "ชื่อผู้ร้อง", type: "text" },
