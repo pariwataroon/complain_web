@@ -3,18 +3,18 @@ import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
-import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
 import ButtonService from "@services/ButtonService/ButtonService";
 import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 
 const InitialNotificationComplainantAgency = () => {
   const { id } = useRouter().query;
   const [form, setForm] = useState({
     salutation: "",
     refNo: "",
-    date: "",
+    date: null, // เปลี่ยนเป็น null สำหรับ DateThaiPickerService
     subject: "",
     department: "",
     signer: "",
@@ -27,6 +27,11 @@ const InitialNotificationComplainantAgency = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handler สำหรับ DateThaiPickerService
+  const handleDateChange = (thaiDate) => {
+    setForm((prev) => ({ ...prev, date: thaiDate }));
   };
 
   return (
@@ -111,16 +116,16 @@ const InitialNotificationComplainantAgency = () => {
               value={form.refNo}
               onChange={handleChange}
             />
-            <Box sx={{ mt: { xs: 0, sm: 0, md: 1.9 } }}>
-              <InputDateNoTime
+            <Box sx={{ position: "relative", zIndex: 1 }}>
+              <DateThaiPickerService
                 label={
                   <span>
                     วันที่<span style={{ color: "red", marginLeft: 4 }}>*</span>
                   </span>
                 }
-                name="date"
                 value={form.date}
-                onChange={handleChange}
+                onChange={handleDateChange}
+                placeholder="เลือกวันที่"
               />
             </Box>
           </Box>
@@ -273,7 +278,18 @@ const InitialNotificationComplainantAgency = () => {
               variant="outlined"
               iconLeft={<CloseIcon />}
               onClick={() => {
-                /* TODO: clear form */
+                setForm({
+                  salutation: "",
+                  refNo: "",
+                  date: null,
+                  subject: "",
+                  department: "",
+                  signer: "",
+                  confidentiality: "",
+                  urgency: "",
+                  attachment: "",
+                  note: "",
+                });
               }}
               sx={{
                 borderColor: "#50ADFF",
@@ -291,6 +307,7 @@ const InitialNotificationComplainantAgency = () => {
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={() => {
+                console.log("Form data:", form);
                 /* TODO: save form */
               }}
               sx={{

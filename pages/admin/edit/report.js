@@ -1,8 +1,12 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import ReceiveReportsAgencies from "@components/ReceiveData/ReceiveReportsAgencies/ReceiveReportsAgencies";
 
 const Report = () => {
-  return <div>รับเรื่องรายงานผลการพิจารณาจากหน่วยงาน</div>;
+  return (
+    <div>
+      <ReceiveReportsAgencies />
+    </div>
+  );
 };
 
 Report.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;

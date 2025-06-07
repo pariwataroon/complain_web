@@ -1,34 +1,164 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
-import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import ButtonService from "@services/ButtonService/ButtonService";
 import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 
+// Constants สำหรับ options (ย้ายออกมาข้างนอกเพื่อ performance)
+const SIGNER_OPTIONS = [
+  { value: "ปลัดกระทรวงมหาดไทย", label: "ปลัดกระทรวงมหาดไทย" },
+  { value: "รองปลัดกระทรวงมหาดไทย", label: "รองปลัดกระทรวงมหาดไทย" },
+  {
+    value: "อธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
+    label: "อธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
+  },
+  {
+    value: "รองอธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
+    label: "รองอธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
+  },
+  {
+    value: "ผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
+    label: "ผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
+  },
+  {
+    value: "รองผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
+    label: "รองผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
+  },
+  { value: "ผู้ว่าราชการจังหวัด", label: "ผู้ว่าราชการจังหวัด" },
+  { value: "รองผู้ว่าราชการจังหวัด", label: "รองผู้ว่าราชการจังหวัด" },
+  { value: "อธิบดีกรมการปกครอง", label: "อธิบดีกรมการปกครอง" },
+  { value: "รองอธิบดีกรมการปกครอง", label: "รองอธิบดีกรมการปกครอง" },
+  {
+    value: "ผู้อำนวยการกองกิจการท้องถิ่น",
+    label: "ผู้อำนวยการกองกิจการท้องถิ่น",
+  },
+  { value: "ผู้อำนวยการกองนิติการ", label: "ผู้อำนวยการกองนิติการ" },
+];
+
+const DEPARTMENT_OPTIONS = [
+  { value: "กระทรวงมหาดไทย", label: "กระทรวงมหาดไทย" },
+  {
+    value: "กรมส่งเสริมการปกครองท้องถิ่น",
+    label: "กรมส่งเสริมการปกครองท้องถิ่น",
+  },
+  { value: "กรมการปกครอง", label: "กรมการปกครอง" },
+  {
+    value: "กรมป้องกันและบรรเทาสาธารณภัย",
+    label: "กรมป้องกันและบรรเทาสาธารณภัย",
+  },
+  { value: "จังหวัด", label: "จังหวัด" },
+  { value: "อำเภอ", label: "อำเภอ" },
+  { value: "องค์การบริหารส่วนจังหวัด", label: "องค์การบริหารส่วนจังหวัด" },
+  { value: "เทศบาลเมือง", label: "เทศบาลเมือง" },
+  { value: "เทศบาลตำบล", label: "เทศบาลตำบล" },
+  { value: "องค์การบริหารส่วนตำบล", label: "องค์การบริหารส่วนตำบล" },
+  { value: "กรุงเทพมหานคร", label: "กรุงเทพมหานคร" },
+  { value: "เมืองพัทยา", label: "เมืองพัทยา" },
+  {
+    value: "สำนักงานคณะกรรมการการเลือกตั้ง",
+    label: "สำนักงานคณะกรรมการการเลือกตั้ง",
+  },
+  { value: "สำนักงานตำรวจแห่งชาติ", label: "สำนักงานตำรวจแห่งชาติ" },
+  { value: "ประชาชน", label: "ประชาชน" },
+  { value: "นิติบุคคล", label: "นิติบุคคล" },
+  { value: "อื่นๆ", label: "อื่นๆ" },
+];
+
+const CONFIDENTIALITY_OPTIONS = [
+  { value: "ปกติ", label: "ปกติ" },
+  { value: "ลับ", label: "ลับ" },
+  { value: "ลับมาก", label: "ลับมาก" },
+  { value: "ลับที่สุด", label: "ลับที่สุด" },
+];
+
+const URGENCY_OPTIONS = [
+  { value: "ปกติ", label: "ปกติ" },
+  { value: "เร่งด่วน", label: "เร่งด่วน" },
+  { value: "เร่งด่วนมาก", label: "เร่งด่วนมาก" },
+  { value: "เร่งด่วนที่สุด", label: "เร่งด่วนที่สุด" },
+];
+
+const PROPOSE_FOR_OPTIONS = [
+  { value: "ทราบ", label: "ทราบ" },
+  { value: "พิจารณา", label: "พิจารณา" },
+  { value: "อนุมัติ", label: "อนุมัติ" },
+  { value: "ดำเนินการ", label: "ดำเนินการ" },
+  { value: "ตรวจสอบ", label: "ตรวจสอบ" },
+  { value: "ติดตาม", label: "ติดตาม" },
+  { value: "ประสานงาน", label: "ประสานงาน" },
+  { value: "รายงาน", label: "รายงาน" },
+];
+
+const DECISION_OPTIONS = [
+  { value: "อนุมัติ", label: "อนุมัติ" },
+  { value: "ไม่อนุมัติ", label: "ไม่อนุมัติ" },
+  { value: "พิจารณาแล้ว", label: "พิจารณาแล้ว" },
+  { value: "ทราบแล้ว", label: "ทราบแล้ว" },
+  { value: "ดำเนินการแล้ว", label: "ดำเนินการแล้ว" },
+  { value: "ส่งต่อ", label: "ส่งต่อ" },
+  { value: "ชี้แจง", label: "ชี้แจง" },
+  { value: "แก้ไข", label: "แก้ไข" },
+  { value: "ยกเลิก", label: "ยกเลิก" },
+  { value: "รอการพิจารณา", label: "รอการพิจารณา" },
+];
+
 const InformRelatedParties = () => {
   const { id } = useRouter().query;
-  const [form, setForm] = useState({
-    refNo: "",
-    date: "",
-    subject: "",
-    signer: "",
-    department: "",
-    confidentiality: "",
-    urgency: "",
-    proposeFor: "",
-    decision: "",
-    attachment: "",
-    details: "",
-  });
 
-  const handleChange = (e) => {
+  // Initial form state
+  const initialFormState = useMemo(
+    () => ({
+      refNo: "",
+      date: null, // เปลี่ยนเป็น null สำหรับ DateThaiPickerService
+      subject: "",
+      signer: "",
+      department: "",
+      confidentiality: "",
+      urgency: "",
+      proposeFor: "",
+      decision: "",
+      attachment: "",
+      details: "",
+    }),
+    []
+  );
+
+  const [form, setForm] = useState(initialFormState);
+
+  // Memoized handlers
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-  };
+  }, []);
+
+  // Handler สำหรับ DateThaiPickerService
+  const handleDateChange = useCallback((thaiDate) => {
+    setForm((prev) => ({ ...prev, date: thaiDate }));
+  }, []);
+
+  const handleClear = useCallback(() => {
+    setForm(initialFormState);
+  }, [initialFormState]);
+
+  const handleSave = useCallback(() => {
+    console.log("Form data:", form);
+    // TODO: save form
+  }, [form]);
+
+  const handleFileChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setForm((prev) => ({
+        ...prev,
+        attachment: file.name,
+      }));
+    }
+  }, []);
 
   return (
     <Box
@@ -90,27 +220,18 @@ const InformRelatedParties = () => {
             }}
           >
             <InputText
-              label={
-                <span>
-                  เลขที่ สป.กค.
-                  <span style={{ color: "red", marginLeft: 4 }}>*</span>
-                </span>
-              }
+              label="เลขที่ สป.กค.*"
               inputLabel="กรอกเลขที่ สป.กค."
               name="refNo"
               value={form.refNo}
               onChange={handleChange}
             />
-            <Box sx={{ mt: { xs: 0, sm: 0, md: 1.9 } }}>
-              <InputDateNoTime
-                label={
-                  <span>
-                    วันที่<span style={{ color: "red", marginLeft: 4 }}>*</span>
-                  </span>
-                }
-                name="date"
+            <Box sx={{ position: "relative", zIndex: 1 }}>
+              <DateThaiPickerService
+                label="วันที่*"
                 value={form.date}
-                onChange={handleChange}
+                onChange={handleDateChange}
+                placeholder="เลือกวันที่"
               />
             </Box>
           </Box>
@@ -118,11 +239,7 @@ const InformRelatedParties = () => {
           {/* row 2: เรื่อง */}
           <Box>
             <InputText
-              label={
-                <span>
-                  เรื่อง<span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label="เรื่อง*"
               inputLabel="กรอกเรื่อง"
               name="subject"
               value={form.subject}
@@ -139,25 +256,20 @@ const InformRelatedParties = () => {
             }}
           >
             <SelectField
-              label={
-                <span>
-                  ผู้ลงนาม<span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label="ผู้ลงนาม*"
+              inputLabel="เลือกผู้ลงนาม"
               name="signer"
               value={form.signer}
               onChange={handleChange}
+              options={SIGNER_OPTIONS}
             />
             <SelectField
-              label={
-                <span>
-                  หน่วยงาน / ผู้ร้อง / อื่นๆ
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label="หน่วยงาน / ผู้ร้อง / อื่นๆ*"
+              inputLabel="เลือกหน่วยงาน / ผู้ร้อง / อื่นๆ"
               name="department"
               value={form.department}
               onChange={handleChange}
+              options={DEPARTMENT_OPTIONS}
             />
           </Box>
 
@@ -170,26 +282,20 @@ const InformRelatedParties = () => {
             }}
           >
             <SelectField
-              label={
-                <span>
-                  ชั้นความลับ
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label="ชั้นความลับ*"
+              inputLabel="เลือกชั้นความลับ"
               name="confidentiality"
               value={form.confidentiality}
               onChange={handleChange}
+              options={CONFIDENTIALITY_OPTIONS}
             />
             <SelectField
-              label={
-                <span>
-                  ชั้นความเร่งด่วน
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label="ชั้นความเร่งด่วน*"
+              inputLabel="เลือกชั้นความเร่งด่วน"
               name="urgency"
               value={form.urgency}
               onChange={handleChange}
+              options={URGENCY_OPTIONS}
             />
           </Box>
 
@@ -202,26 +308,20 @@ const InformRelatedParties = () => {
             }}
           >
             <SelectField
-              label={
-                <span>
-                  เสนอเพื่อ
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label="เสนอเพื่อ*"
+              inputLabel="เลือกเสนอเพื่อ"
               name="proposeFor"
               value={form.proposeFor}
               onChange={handleChange}
+              options={PROPOSE_FOR_OPTIONS}
             />
             <SelectField
-              label={
-                <span>
-                  ผลการพิจารณา
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label="ผลการพิจารณา*"
+              inputLabel="เลือกผลการพิจารณา"
               name="decision"
               value={form.decision}
               onChange={handleChange}
+              options={DECISION_OPTIONS}
             />
           </Box>
 
@@ -240,15 +340,7 @@ const InformRelatedParties = () => {
                       type="file"
                       id="attachment-upload"
                       style={{ display: "none" }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setForm((prev) => ({
-                            ...prev,
-                            attachment: file.name,
-                          }));
-                        }
-                      }}
+                      onChange={handleFileChange}
                     />
                     <label
                       htmlFor="attachment-upload"
@@ -296,9 +388,7 @@ const InformRelatedParties = () => {
               label="ล้าง"
               variant="outlined"
               iconLeft={<CloseIcon />}
-              onClick={() => {
-                /* TODO: clear form */
-              }}
+              onClick={handleClear}
               sx={{
                 borderColor: "#50ADFF",
                 color: "#50ADFF",
@@ -313,9 +403,7 @@ const InformRelatedParties = () => {
               label="บันทึก"
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
-              onClick={() => {
-                /* TODO: save form */
-              }}
+              onClick={handleSave}
               sx={{
                 backgroundColor: "#2196F3",
                 color: "#FFF",
