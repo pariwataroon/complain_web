@@ -10,7 +10,7 @@ from models.comp_complaint_types import ComplaintType, ComplaintChannel
 from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
 from app.api.v1.controllers.complaint_controller import (
-    create_complaint, get_complaints, get_complaint, update_complaint_status, delete_complaint, get_user_complaints, get_user_complaint_detail, update_complaint_details, add_related_complaint, get_my_complaint_by_id
+    create_complaint, get_complaints, get_complaint, update_complaint_status, delete_complaint, get_user_complaints, get_user_complaint_detail, update_complaint_details, add_related_complaint, get_my_complaint_by_id, get_complaint_by_id_with_assignment
 )
 from app.api.v1.schemas.complaint import ComplaintCreate, ComplaintResponse, ComplaintListItem, StatusUpdateRequest
 from app.services.complaint_queue_service import ComplaintQueueService
@@ -243,13 +243,24 @@ async def read_complaint(
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
-    """Get a specific complaint by ID"""
-    complaint = get_complaint(db, complaint_id)
-    
-    if complaint is None:
-        raise HTTPException(status_code=404, detail=f"Complaint with ID {complaint_id} not found")
-    
-    return format_response("0000", complaint)
+    """Get a specific complaint by ID with assignment form data"""
+    try:
+        # ใช้ฟังก์ชันใหม่ที่รวม assignment form
+        result = get_complaint_by_id_with_assignment(db, complaint_id)
+        
+        if "error" in result:
+            return format_response("4004", {
+                "error": result["error"], 
+                "message": "COMPLAINT_NOT_FOUND"
+            })
+        
+        return format_response("0000", result)
+        
+    except Exception as e:
+        return format_response("5000", {
+            "error": str(e), 
+            "message": "INTERNAL_SERVER_ERROR"
+        })
 
 @router.get("/me/{complaint_id}", response_model=FormatResponseModel)
 async def read_my_complaint_detail(

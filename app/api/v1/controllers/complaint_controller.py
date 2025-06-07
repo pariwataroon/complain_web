@@ -2225,3 +2225,43 @@ def get_my_complaint_by_id(db: Session, complaint_id: UUID, current_user_id: UUI
     except Exception as e:
         logger.error(f"Error getting my complaint: {str(e)}")
         return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
+    
+def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict:
+    """ดึงรายละเอียดเรื่องร้องเรียนใดๆ รวมข้อมูล assignment form (ไม่จำกัดเฉพาะเจ้าของ)"""
+    try:
+        # ดึงข้อมูลเรื่องร้องเรียน
+        complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+        
+        if not complaint:
+            return {"error": "ไม่พบเรื่องร้องเรียน"}
+        
+        # ดึงข้อมูล assignment form
+        assignment_form_data = get_assignment_form_data(db, complaint_id)
+        
+        # แปลงข้อมูลตามรูปแบบเดิม
+        result = {
+            "id": str(complaint.id),
+            "complaint_number": complaint.complaint_number,
+            "step1": parse_complainant_data(complaint.complainant_data),
+            "step2": parse_respondent_data(complaint.respondent_data),
+            "step3": parse_incident_data(complaint),
+            "step4": {"general": {"accepted": complaint.terms_accepted}},
+            "status": complaint.status,
+            "status_history": format_status_history(complaint.status_history),
+            "created_at": complaint.created_at.isoformat(),
+            "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
+            "assigned_to": complaint.assigned_to,
+            "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
+            "resolution_summary": complaint.resolution_summary,
+            "resolved_date": complaint.resolved_date.isoformat() if complaint.resolved_date else None,
+        }
+        
+        # เพิ่มข้อมูล assignment form (เฉพาะส่วน complaint ไม่รวม options)
+        if "error" not in assignment_form_data and "complaint" in assignment_form_data:
+            result["assignment_form"] = assignment_form_data["complaint"]
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error getting complaint with assignment: {str(e)}")
+        return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
