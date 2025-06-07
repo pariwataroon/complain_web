@@ -91,7 +91,7 @@ def update_complaint_assignment_data(
                         assignment_reason = assignment_data["assignment_reason"]
                         changes.append(f"เหตุผลการมอบหมาย: {assignment_reason}")
                         
-                        # บันทึกในฟิลด์ processing_notes หรือสร้างฟิลด์ใหม่
+                        # บันทึกในฟิลด์ processing_notes
                         if complaint.processing_notes:
                             complaint.processing_notes += f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M')}] เหตุผลการมอบหมาย: {assignment_reason}"
                         else:
@@ -112,6 +112,62 @@ def update_complaint_assignment_data(
                     changes.append(f"วันที่มอบหมาย: {old_date.strftime('%Y-%m-%d') if old_date else 'ไม่ระบุ'} → {complaint.assigned_date.strftime('%Y-%m-%d')}")
             except ValueError:
                 return {"success": False, "message": "รูปแบบวันที่มอบหมายไม่ถูกต้อง"}
+
+        # ✅ บันทึก complaint_type_id, complaint_subtype_id, complaint_channel_id
+        if "complaint_type_id" in assignment_data and assignment_data["complaint_type_id"]:
+            try:
+                type_id = UUID(assignment_data["complaint_type_id"])
+                complaint_type = db.query(ComplaintType).filter(ComplaintType.id == type_id).first()
+                if complaint_type:
+                    old_type_id = complaint.complaint_type_id
+                    complaint.complaint_type_id = type_id
+                    
+                    if str(old_type_id) != str(type_id):
+                        changes.append(f"ประเภทเรื่องร้องเรียน: {old_type_id or 'ไม่ระบุ'} → {complaint_type.name}")
+                else:
+                    return {"success": False, "message": "ไม่พบประเภทเรื่องร้องเรียนที่ระบุ"}
+            except ValueError:
+                return {"success": False, "message": "รูปแบบ complaint_type_id ไม่ถูกต้อง"}
+
+        if "complaint_subtype_id" in assignment_data and assignment_data["complaint_subtype_id"]:
+            try:
+                subtype_id = UUID(assignment_data["complaint_subtype_id"])
+                complaint_subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == subtype_id).first()
+                if complaint_subtype:
+                    old_subtype_id = complaint.complaint_subtype_id
+                    complaint.complaint_subtype_id = subtype_id
+                    
+                    if str(old_subtype_id) != str(subtype_id):
+                        changes.append(f"ประเภทเรื่องร้องเรียนย่อย: {old_subtype_id or 'ไม่ระบุ'} → {complaint_subtype.name}")
+                else:
+                    return {"success": False, "message": "ไม่พบประเภทเรื่องร้องเรียนย่อยที่ระบุ"}
+            except ValueError:
+                return {"success": False, "message": "รูปแบบ complaint_subtype_id ไม่ถูกต้อง"}
+
+        if "complaint_channel_id" in assignment_data and assignment_data["complaint_channel_id"]:
+            try:
+                channel_id = UUID(assignment_data["complaint_channel_id"])
+                complaint_channel = db.query(ComplaintChannel).filter(ComplaintChannel.id == channel_id).first()
+                if complaint_channel:
+                    old_channel_id = complaint.complaint_channel_id
+                    complaint.complaint_channel_id = channel_id
+                    
+                    if str(old_channel_id) != str(channel_id):
+                        changes.append(f"ช่องทางการร้องเรียน: {old_channel_id or 'ไม่ระบุ'} → {complaint_channel.name}")
+                else:
+                    return {"success": False, "message": "ไม่พบช่องทางการร้องเรียนที่ระบุ"}
+            except ValueError:
+                return {"success": False, "message": "รูปแบบ complaint_channel_id ไม่ถูกต้อง"}
+
+        # ✅ บันทึก registration_date (วันที่ลงทะเบียน)
+        if "registration_date" in assignment_data and assignment_data["registration_date"]:
+            try:
+                old_date = complaint.registration_date
+                complaint.registration_date = datetime.fromisoformat(assignment_data["registration_date"].replace('Z', '+00:00'))
+                if old_date != complaint.registration_date:
+                    changes.append(f"วันที่ลงทะเบียน: {old_date.strftime('%Y-%m-%d') if old_date else 'ไม่ระบุ'} → {complaint.registration_date.strftime('%Y-%m-%d')}")
+            except ValueError:
+                return {"success": False, "message": "รูปแบบวันที่ลงทะเบียนไม่ถูกต้อง"}
 
         # ✅ 1. บันทึก reference_number1-4 (existing code)
         if "reference_number1" in assignment_data:
@@ -266,6 +322,10 @@ def update_complaint_assignment_data(
             "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
             "confidentiality_level": complaint.confidentiality_level,
             "urgency_level": complaint.urgency_level,
+            "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
+            "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
+            "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
+            "registration_date": complaint.registration_date.isoformat() if complaint.registration_date else None,
             "changes": changes,
             "updated_at": complaint.updated_at.isoformat()
         }
