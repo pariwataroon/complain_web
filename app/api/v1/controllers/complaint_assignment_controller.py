@@ -60,7 +60,60 @@ def update_complaint_assignment_data(
 
         changes = []
 
-        # ✅ 1. บันทึก reference_number1-4
+        # ✅ บันทึก assigned_officer_id และ assigned_date
+        if "assigned_officer_id" in assignment_data and assignment_data["assigned_officer_id"]:
+            try:
+                officer_id = UUID(assignment_data["assigned_officer_id"])
+                
+                # ดึงข้อมูลเจ้าหน้าที่
+                officer = db.query(User).filter(User.id == officer_id).first()
+                if officer:
+                    old_officer_id = complaint.assigned_officer_id
+                    old_assigned_to = complaint.assigned_to
+                    
+                    complaint.assigned_officer_id = officer_id
+                    complaint.assigned_to = f"{officer.first_name} {officer.last_name}"
+                    
+                    # กำหนด assigned_date อัตโนมัติหากไม่ได้ระบุ
+                    if "assigned_date" in assignment_data and assignment_data["assigned_date"]:
+                        try:
+                            complaint.assigned_date = datetime.fromisoformat(assignment_data["assigned_date"].replace('Z', '+00:00'))
+                        except ValueError:
+                            complaint.assigned_date = datetime.now()
+                    else:
+                        complaint.assigned_date = datetime.now()
+                    
+                    if str(old_officer_id) != str(officer_id):
+                        changes.append(f"มอบหมายให้: {old_assigned_to or 'ไม่ระบุ'} → {complaint.assigned_to}")
+                    
+                    # เพิ่มบันทึกเหตุผลการมอบหมาย
+                    if "assignment_reason" in assignment_data and assignment_data["assignment_reason"]:
+                        assignment_reason = assignment_data["assignment_reason"]
+                        changes.append(f"เหตุผลการมอบหมาย: {assignment_reason}")
+                        
+                        # บันทึกในฟิลด์ processing_notes หรือสร้างฟิลด์ใหม่
+                        if complaint.processing_notes:
+                            complaint.processing_notes += f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M')}] เหตุผลการมอบหมาย: {assignment_reason}"
+                        else:
+                            complaint.processing_notes = f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] เหตุผลการมอบหมาย: {assignment_reason}"
+                    
+                else:
+                    return {"success": False, "message": "ไม่พบเจ้าหน้าที่ที่ระบุ"}
+                    
+            except ValueError:
+                return {"success": False, "message": "รูปแบบ assigned_officer_id ไม่ถูกต้อง"}
+
+        # ✅ บันทึก assigned_date แยกต่างหาก (ถ้าไม่ได้มอบหมายเจ้าหน้าที่ใหม่)
+        elif "assigned_date" in assignment_data and assignment_data["assigned_date"]:
+            try:
+                old_date = complaint.assigned_date
+                complaint.assigned_date = datetime.fromisoformat(assignment_data["assigned_date"].replace('Z', '+00:00'))
+                if old_date != complaint.assigned_date:
+                    changes.append(f"วันที่มอบหมาย: {old_date.strftime('%Y-%m-%d') if old_date else 'ไม่ระบุ'} → {complaint.assigned_date.strftime('%Y-%m-%d')}")
+            except ValueError:
+                return {"success": False, "message": "รูปแบบวันที่มอบหมายไม่ถูกต้อง"}
+
+        # ✅ 1. บันทึก reference_number1-4 (existing code)
         if "reference_number1" in assignment_data:
             old_value = complaint.reference_number
             complaint.reference_number = assignment_data["reference_number1"]
@@ -121,17 +174,9 @@ def update_complaint_assignment_data(
             if assignment_data["complaint_filing_type"] != old_value:
                 changes.append(f"ประเภทการยื่น: {old_value} → {assignment_data['complaint_filing_type']}")
 
-        # ✅ 5. บันทึกฟิลด์ใหม่ (ลบฟิลด์เก่าออก)
-        # ลบส่วนนี้ออก - ไม่มีแล้ว
-        # if "has_complaints_addition" in assignment_data:
-        # if "has_complaints_objection" in assignment_data:
-        # if "has_prosecution_request" in assignment_data:
-        # if "ministry_regulation_clause" in assignment_data:
-
-        # ✅ 6. ตรวจสอบและบันทึกประเภทการร้องเรียนใหม่
+        # ✅ 5. ตรวจสอบและบันทึกประเภทการร้องเรียนใหม่
         complaint_types_count = 0
         
-        # ใช้ฟิลด์ใหม่ที่มีใน model แล้ว
         if "new_complaint" in assignment_data:
             old_value = complaint.new_complaint
             complaint.new_complaint = bool(assignment_data["new_complaint"])
@@ -147,38 +192,14 @@ def update_complaint_assignment_data(
                 changes.append(f"ร้องเรียนเพิ่มเติม: {old_value} → {complaint.add_more_complaint_to_ref}")
             if complaint.add_more_complaint_to_ref:
                 complaint_types_count += 1
-                
-                # ✅ ถ้าเป็นร้องเรียนเพิ่มเติม ต้องมี additional_reference_number1
-                if "additional_reference_number1" not in assignment_data or not assignment_data["additional_reference_number1"]:
-                    return {
-                        "success": False, 
-                        "message": "ร้องเรียนเพิ่มเติมต้องระบุเลขอ้างอิง 1"
-                    }
-                if "additional_reference_date1" not in assignment_data or not assignment_data["additional_reference_date1"]:
-                    return {
-                        "success": False, 
-                        "message": "ร้องเรียนเพิ่มเติมต้องระบุวันที่อ้างอิง 1"
-                    }
 
         if "group_work" in assignment_data:
             old_value = complaint.group_work
             complaint.group_work = bool(assignment_data["group_work"])
             if complaint.group_work != old_value:
-                changes.append(f"รับเรื่องจากคณะบัตรสนเท่ห์: {old_value} → {complaint.group_work}")
+                changes.append(f"งานกลุ่ม: {old_value} → {complaint.group_work}")
             if complaint.group_work:
                 complaint_types_count += 1
-                
-                # ✅ ถ้าเป็นรับเรื่องจากคณะบัตรสนเท่ห์ ต้องมี additional_reference_number2
-                if "additional_reference_number2" not in assignment_data or not assignment_data["additional_reference_number2"]:
-                    return {
-                        "success": False, 
-                        "message": "รับเรื่องจากคณะบัตรสนเท่ห์ต้องระบุเลขอ้างอิง 2"
-                    }
-                if "additional_reference_date2" not in assignment_data or not assignment_data["additional_reference_date2"]:
-                    return {
-                        "success": False, 
-                        "message": "รับเรื่องจากคณะบัตรสนเท่ห์ต้องระบุวันที่อ้างอิง 2"
-                    }
 
         # ✅ ตรวจสอบว่าเลือกประเภทได้เพียงอย่างเดียว
         if complaint_types_count > 1:
@@ -187,60 +208,31 @@ def update_complaint_assignment_data(
                 "message": "กรุณาเลือกประเภทการร้องเรียนเพียงอย่างเดียว"
             }
         elif complaint_types_count == 0:
-            # ถ้าไม่ได้เลือกเลย ให้เป็น new_complaint = true
             complaint.new_complaint = True
             complaint.add_more_complaint_to_ref = False
             complaint.group_work = False
 
-        # ✅ ถ้าเป็น new_complaint ล้างข้อมูล additional_reference
-        if complaint.new_complaint:
-            complaint.additional_reference_number1 = None
-            complaint.additional_reference_date1 = None
-            complaint.additional_reference_number2 = None
-            complaint.additional_reference_date2 = None
-
         # ✅ บันทึก regulation_reference
         if "regulation_reference" in assignment_data:
             old_value = complaint.regulation_reference
-            complaint.regulation_reference = assignment_data["regulation_reference"]
+            new_value = assignment_data["regulation_reference"]
+            
+            if new_value:
+                try:
+                    cleaned_value = new_value.replace('?', '').strip()
+                    if cleaned_value:
+                        complaint.regulation_reference = cleaned_value
+                    else:
+                        complaint.regulation_reference = None
+                except:
+                    complaint.regulation_reference = None
+            else:
+                complaint.regulation_reference = new_value
+            
             if assignment_data["regulation_reference"] != old_value:
-                changes.append(f"อ้างอิงกฎหมาย: {old_value} → {assignment_data['regulation_reference']}")
+                changes.append(f"อ้างอิงกฎหมาย: {old_value} → {complaint.regulation_reference}")
 
-        # ✅ 7. บันทึก additional_reference
-        if "additional_reference_number1" in assignment_data:
-            old_value = complaint.additional_reference_number1
-            complaint.additional_reference_number1 = assignment_data["additional_reference_number1"]
-            if assignment_data["additional_reference_number1"] != old_value:
-                changes.append(f"เลขอ้างอิงเพิ่มเติม 1: {old_value} → {assignment_data['additional_reference_number1']}")
-
-        if "additional_reference_date1" in assignment_data and assignment_data["additional_reference_date1"]:
-            complaint.additional_reference_date1 = datetime.fromisoformat(assignment_data["additional_reference_date1"].replace('Z', '+00:00'))
-
-        if "additional_reference_number2" in assignment_data:
-            old_value = complaint.additional_reference_number2
-            complaint.additional_reference_number2 = assignment_data["additional_reference_number2"]
-            if assignment_data["additional_reference_number2"] != old_value:
-                changes.append(f"เลขอ้างอิงเพิ่มเติม 2: {old_value} → {assignment_data['additional_reference_number2']}")
-
-        if "additional_reference_date2" in assignment_data and assignment_data["additional_reference_date2"]:
-            complaint.additional_reference_date2 = datetime.fromisoformat(assignment_data["additional_reference_date2"].replace('Z', '+00:00'))
-
-        # ✅ 8. บันทึกข้อมูลอื่นๆ
-        if "assigned_officer_id" in assignment_data and assignment_data["assigned_officer_id"]:
-            try:
-                officer_id = UUID(assignment_data["assigned_officer_id"])
-                old_value = complaint.assigned_officer_id
-                complaint.assigned_officer_id = officer_id
-                complaint.assigned_date = datetime.now()
-                
-                officer = db.query(User).filter(User.id == officer_id).first()
-                if officer:
-                    complaint.assigned_to = f"{officer.first_name} {officer.last_name}"
-                    changes.append(f"มอบหมายให้: {complaint.assigned_to}")
-                
-            except ValueError:
-                logger.warning(f"Invalid officer ID format: {assignment_data['assigned_officer_id']}")
-
+        # ✅ 6. บันทึกข้อมูลอื่นๆ
         if "confidentiality_level" in assignment_data:
             old_value = complaint.confidentiality_level
             complaint.confidentiality_level = assignment_data["confidentiality_level"]
@@ -271,6 +263,7 @@ def update_complaint_assignment_data(
             },
             "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
             "assigned_to": complaint.assigned_to,
+            "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
             "confidentiality_level": complaint.confidentiality_level,
             "urgency_level": complaint.urgency_level,
             "changes": changes,
@@ -290,38 +283,53 @@ def get_assignment_form_data(db: Session, complaint_id: UUID) -> Dict:
         if not complaint:
             return {"error": "ไม่พบเรื่องร้องเรียน"}
         
+        # แปลงข้อมูลและตรวจสอบ encoding
+        def safe_encode(value):
+            """ตรวจสอบและแปลงข้อความให้เป็น UTF-8 ที่ถูกต้อง"""
+            if value is None:
+                return None
+            if isinstance(value, str):
+                try:
+                    # ลองแปลงกลับเป็น bytes แล้วแปลงเป็น string ใหม่
+                    if '?' in value:
+                        # ถ้ามีเครื่องหมายคำถาม อาจเป็นปัญหา encoding
+                        return None
+                    return value
+                except:
+                    return None
+            return str(value)
+        
         complaint_data = {
             "id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
-            "subject": complaint.subject,
-            "complaint_type": complaint.complaint_type,
+            "subject": safe_encode(complaint.subject),
+            "complaint_type": safe_encode(complaint.complaint_type),
             "status": complaint.status,
-            "reference_number": complaint.reference_number,
+            "reference_number": safe_encode(complaint.reference_number),
             "reference_date": complaint.reference_date.isoformat() if complaint.reference_date else None,
-            "reference_number2": complaint.reference_number2,
+            "reference_number2": safe_encode(complaint.reference_number2),
             "reference_date2": complaint.reference_date2.isoformat() if complaint.reference_date2 else None,
-            "reference_number3": complaint.reference_number3,
+            "reference_number3": safe_encode(complaint.reference_number3),
             "reference_date3": complaint.reference_date3.isoformat() if complaint.reference_date3 else None,
-            "reference_number4": complaint.reference_number4,
+            "reference_number4": safe_encode(complaint.reference_number4),
             "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
-            "document_number": complaint.document_number,
+            "document_number": safe_encode(complaint.document_number),
             "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
             "confidentiality_level": complaint.confidentiality_level,
             "urgency_level": complaint.urgency_level,
             "complaint_filing_type": complaint.complaint_filing_type,
-            "agency_sender": complaint.agency_sender,
-            "additional_reference_number1": complaint.additional_reference_number1,
+            "agency_sender": safe_encode(complaint.agency_sender),
+            "additional_reference_number1": safe_encode(complaint.additional_reference_number1),
             "additional_reference_date1": complaint.additional_reference_date1.isoformat() if complaint.additional_reference_date1 else None,
-            "additional_reference_number2": complaint.additional_reference_number2,
+            "additional_reference_number2": safe_encode(complaint.additional_reference_number2),
             "additional_reference_date2": complaint.additional_reference_date2.isoformat() if complaint.additional_reference_date2 else None,
             "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
-            "assigned_to": complaint.assigned_to,
+            "assigned_to": safe_encode(complaint.assigned_to),
             "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
-            # ✅ ใช้ฟิลด์ใหม่แทนฟิลด์เก่า
             "new_complaint": complaint.new_complaint,
             "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
             "group_work": complaint.group_work,
-            "regulation_reference": complaint.regulation_reference,
+            "regulation_reference": safe_encode(complaint.regulation_reference),
             "created_at": complaint.created_at.isoformat(),
             "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None
         }

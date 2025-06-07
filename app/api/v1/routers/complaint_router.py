@@ -10,7 +10,7 @@ from models.comp_complaint_types import ComplaintType, ComplaintChannel
 from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
 from app.api.v1.controllers.complaint_controller import (
-    create_complaint, get_complaints, get_complaint, update_complaint_status, delete_complaint, get_user_complaints, get_user_complaint_detail, update_complaint_details, add_related_complaint
+    create_complaint, get_complaints, get_complaint, update_complaint_status, delete_complaint, get_user_complaints, get_user_complaint_detail, update_complaint_details, add_related_complaint, get_my_complaint_by_id
 )
 from app.api.v1.schemas.complaint import ComplaintCreate, ComplaintResponse, ComplaintListItem, StatusUpdateRequest
 from app.services.complaint_queue_service import ComplaintQueueService
@@ -257,23 +257,30 @@ async def read_my_complaint_detail(
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
-    """ดึงรายละเอียดข้อร้องเรียนของผู้ใช้ที่ล็อกอินเข้าระบบ"""
+    """ดึงรายละเอียดข้อร้องเรียนของผู้ใช้ที่ล็อกอินเข้าระบบ รวมข้อมูล assignment form"""
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
     
-    # แปลงเป็น UUID
-    user_id = UUID(current_user)
-    
-    # ใช้ฟังก์ชันใหม่
-    complaint = get_user_complaint_detail(db, user_id, complaint_id)
-    
-    if complaint is None:
-        raise HTTPException(
-            status_code=404, 
-            detail=f"Complaint with ID {complaint_id} not found or you don't have permission to view it"
-        )
-    
-    return format_response("0000", complaint)
+    try:
+        # แปลงเป็น UUID
+        user_id = UUID(current_user)
+        
+        # ใช้ฟังก์ชันใหม่ที่รวม assignment form
+        result = get_my_complaint_by_id(db, complaint_id, user_id)
+        
+        if "error" in result:
+            return format_response("4004", {
+                "error": result["error"], 
+                "message": "COMPLAINT_NOT_FOUND"
+            })
+        
+        return format_response("0000", result)
+        
+    except Exception as e:
+        return format_response("5000", {
+            "error": str(e), 
+            "message": "INTERNAL_SERVER_ERROR"
+        })
 
 @router.patch("/{complaint_id}/status", response_model=FormatResponseModel)
 async def update_status(

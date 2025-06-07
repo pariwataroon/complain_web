@@ -20,6 +20,7 @@ from app.api.v1.schemas.complaint import ComplaintListItem
 from models.comp_complaint_types import ComplaintType, ComplaintSubType, ComplaintChannel
 from app.api.v1.controllers.geography_controller import model_to_dict
 from models.user import User
+from app.api.v1.controllers.complaint_assignment_controller import get_assignment_form_data
 
 logger = logging.getLogger(__name__)
 
@@ -256,6 +257,7 @@ def prepare_complaint_model_data(
         "incident_subdistrict": location_data.get("subdistrict_name"),
         "confidentiality_level": ConfidentialityLevel.NORMAL,
         "urgency_level": UrgencyLevel.LOW,
+        "severity_level": SeverityLevel.LOW,
         "complaint_filing_type": ComplaintFilingType.NEW,
         "progress_percentage": 0
     }
@@ -787,7 +789,7 @@ def generate_complaint_number(db: Session) -> str:
     ).count()
     
     sequence = str(today_count + 1).zfill(5)
-    return f"CMPL-{date_part}-{sequence}"
+    return f"MOF-{date_part}-{sequence}"
 
 def create_status_history(db: Session, complaint_id: UUID, status: ComplaintStatus, notes: str, user_id: Optional[UUID] = None):
     """สร้างประวัติสถานะใหม่"""
@@ -1890,7 +1892,7 @@ def extract_location_data_from_nested(data: Dict) -> Dict:
     location_data = {}
     
     try:
-        # ลองดึงจาก step1 > general > general
+        # ลองหาจาก step1 > general > general
         step1 = data.get("step1", {}).get("general", {})
         
         if "general" in step1:
@@ -2109,3 +2111,117 @@ def extract_incident_location(full_data: Dict) -> Dict:
             print(f"Error extracting incident location: {str(e)}")
     
     return location_data
+
+def parse_complainant_data(complainant_data):
+    """แปลงข้อมูลผู้ร้องเรียนให้อยู่ในรูปแบบ step1"""
+    try:
+        if isinstance(complainant_data, str):
+            data = json.loads(complainant_data)
+        else:
+            data = complainant_data or {}
+        
+        return {
+            "general": {
+                "general": data
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error parsing complainant data: {str(e)}")
+        return {"general": {"general": {}}}
+
+def parse_respondent_data(respondent_data):
+    """แปลงข้อมูลผู้ถูกร้องเรียนให้อยู่ในรูปแบบ step2"""
+    try:
+        if isinstance(respondent_data, str):
+            data = json.loads(respondent_data)
+        else:
+            data = respondent_data or {}
+        
+        return {
+            "general": {
+                "activeType": "individual",
+                "individual": data
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error parsing respondent data: {str(e)}")
+        return {"general": {"activeType": "individual", "individual": {}}}
+
+def parse_incident_data(complaint):
+    """แปลงข้อมูลเหตุการณ์ให้อยู่ในรูปแบบ step3"""
+    try:
+        return {
+            "general": {
+                "complaintType": complaint.complaint_type or "",
+                "subject": complaint.subject or "",
+                "description": complaint.description or "",
+                "incidentDate": complaint.incident_date.isoformat() if complaint.incident_date else None,
+                "attachment": []
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error parsing incident data: {str(e)}")
+        return {"general": {"complaintType": "", "subject": "", "description": "", "incidentDate": None, "attachment": []}}
+
+def format_status_history(status_history_list):
+    """จัดรูปแบบประวัติสถานะ"""
+    try:
+        if not status_history_list:
+            return []
+        
+        formatted_history = []
+        for history in status_history_list:
+            formatted_history.append({
+                "status": history.status,
+                "notes": history.notes,
+                "changed_at": history.changed_at.isoformat() if history.changed_at else None,
+                "changed_by": str(history.changed_by) if history.changed_by else None
+            })
+        
+        return formatted_history
+    except Exception as e:
+        logger.error(f"Error formatting status history: {str(e)}")
+        return []
+
+def get_my_complaint_by_id(db: Session, complaint_id: UUID, current_user_id: UUID) -> Dict:
+    """ดึงรายละเอียดเรื่องร้องเรียนของตัวเอง รวมข้อมูล assignment form"""
+    try:
+        # ดึงข้อมูลเรื่องร้องเรียน
+        complaint = db.query(Complaint).filter(
+            Complaint.id == complaint_id,
+            Complaint.created_by == current_user_id
+        ).first()
+        
+        if not complaint:
+            return {"error": "ไม่พบเรื่องร้องเรียน"}
+        
+        # ดึงข้อมูล assignment form
+        assignment_form_data = get_assignment_form_data(db, complaint_id)
+        
+        # แปลงข้อมูลตามรูปแบบเดิม
+        result = {
+            "id": str(complaint.id),
+            "complaint_number": complaint.complaint_number,
+            "step1": parse_complainant_data(complaint.complainant_data),
+            "step2": parse_respondent_data(complaint.respondent_data),
+            "step3": parse_incident_data(complaint),
+            "step4": {"general": {"accepted": complaint.terms_accepted}},
+            "status": complaint.status,
+            "status_history": format_status_history(complaint.status_history),
+            "created_at": complaint.created_at.isoformat(),
+            "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
+            "assigned_to": complaint.assigned_to,
+            "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
+            "resolution_summary": complaint.resolution_summary,
+            "resolved_date": complaint.resolved_date.isoformat() if complaint.resolved_date else None,
+        }
+        
+        # เพิ่มข้อมูล assignment form (เฉพาะส่วน complaint ไม่รวม options)
+        if "error" not in assignment_form_data and "complaint" in assignment_form_data:
+            result["assignment_form"] = assignment_form_data["complaint"]
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error getting my complaint: {str(e)}")
+        return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
