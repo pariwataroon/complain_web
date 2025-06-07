@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
 import { useRouter } from "next/router";
 import {
@@ -12,6 +12,8 @@ import {
   Container,
   IconButton,
   Collapse,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   ExpandMore as ExpandMoreIcon,
@@ -24,17 +26,80 @@ import styles from "./TableWorkFollow.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
-import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
 
 const TableWorkFollow = ({
   data = [],
   filterFields = [],
-  onSearch = () => { },
+  onSearch = () => {},
   navigateTo = "",
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
+  const theme = useTheme();
+  const isXs = useMediaQuery(theme.breakpoints.down("sm")); // < 600px
+  const isSm = useMediaQuery(theme.breakpoints.down("md")); // < 900px
+  const isBelow1100 = useMediaQuery("(max-width:1100px)");
+
+  // เพิ่ม state สำหรับ client-side mounting - เหมือน TableListCollapsReport
+  const [isMounted, setIsMounted] = useState(false);
+
+  // เพิ่ม useEffect สำหรับ client-side mounting - เหมือน TableListCollapsReport
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // เพิ่ม useEffect สำหรับ global CSS สำหรับ DatePicker - เหมือน TableListCollapsReport
+  useEffect(() => {
+    if (typeof window === "undefined") return; // ← check window
+
+    const style = document.createElement("style");
+    style.textContent = `
+      .MuiPopper-root {
+        z-index: 99999 !important;
+      }
+      .MuiDialog-root {
+        z-index: 99999 !important;
+      }
+      .MuiModal-root {
+        z-index: 99999 !important;
+      }
+      .MuiPickersPopper-root {
+        z-index: 99999 !important;
+      }
+      .MuiDateCalendar-root {
+        z-index: 99999 !important;
+      }
+      .MuiPickersDay-root {
+        z-index: 99999 !important;
+      }
+      .MuiPickersCalendarHeader-root {
+        z-index: 99999 !important;
+      }
+      .MuiPickersYear-root {
+        z-index: 99999 !important;
+      }
+      .MuiPickersMonth-root {
+        z-index: 99999 !important;
+      }
+      .MuiDatePicker-root {
+        z-index: 99999 !important;
+      }
+      .MuiPaper-root.MuiPickersPopper-paper {
+        z-index: 99999 !important;
+      }
+    `;
+
+    document.head.appendChild(style);
+
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
+
   // Group data by responsibleOfficer
   const groupedData = useMemo(
     () =>
@@ -53,14 +118,12 @@ const TableWorkFollow = ({
   const toggleGroup = (key) =>
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  // Filters state
-  const initialFilters = filterFields.reduce(
-    (acc, f) => ({ ...acc, [f.name]: "" }),
-    {}
-  );
+  // Initial filters - ใช้ pattern เดียวกับ TableListCollapsReport
+  const initialFilters = filterFields.reduce((acc, f) => {
+    acc[f.name] = "";
+    return acc;
+  }, {});
   const [filters, setFilters] = useState(initialFilters);
-  const handleChange = (name) => (e) =>
-    setFilters({ ...filters, [name]: e?.target?.value ?? e });
 
   // Pagination
   const [page, setPage] = useState(0);
@@ -76,15 +139,87 @@ const TableWorkFollow = ({
     setPage(0);
   };
 
-  // Search / Clear
+  // Handlers - ใช้ pattern เดียวกับ TableListCollapsReport
+  const handleChange = (field) => (e) => {
+    const value = e?.target ? e.target.value : e;
+    setFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleDateChange = (field) => (selectedDate) => {
+    setFilters((prev) => ({ ...prev, [field]: selectedDate }));
+  };
+
   const handleSearchClick = () => {
     setPage(0);
     onSearch(filters);
   };
-  const handleClearClick = () => {
+  const handleClearSearch = () => {
     setFilters(initialFilters);
     setPage(0);
     onSearch(initialFilters);
+  };
+
+  // ฟังก์ชันสำหรับ DatePicker Props - เหมือน TableListCollapsReport
+  const getDatePickerProps = () => {
+    if (!isMounted || typeof window === "undefined") {
+      return {
+        // Server-side safe props
+        sx: {
+          width: "100%",
+          position: "relative",
+          zIndex: 1000,
+        },
+      };
+    }
+
+    return {
+      // Client-side props with document.body
+      componentsProps: {
+        popper: {
+          style: {
+            zIndex: 99999,
+          },
+          placement: "bottom-start",
+          container: document.body,
+        },
+      },
+      PopperProps: {
+        style: {
+          zIndex: 99999,
+        },
+        disablePortal: false,
+        container: document.body,
+      },
+      slotProps: {
+        popper: {
+          style: {
+            zIndex: 99999,
+          },
+          container: document.body,
+        },
+      },
+      sx: {
+        width: "100%",
+        position: "relative",
+        zIndex: 1000,
+        "& .MuiInputBase-root": {
+          position: "relative",
+          zIndex: 1000,
+        },
+        "& .MuiPopper-root": {
+          zIndex: `${99999} !important`,
+        },
+        "& .MuiDialog-root": {
+          zIndex: `${99999} !important`,
+        },
+        "& .MuiModal-root": {
+          zIndex: `${99999} !important`,
+        },
+        "& .MuiPaper-root": {
+          zIndex: `${99999} !important`,
+        },
+      },
+    };
   };
 
   // Columns configuration
@@ -129,92 +264,351 @@ const TableWorkFollow = ({
         backgroundColor: "#fff",
         borderRadius: 2,
         boxShadow: "0 6px 18px rgba(0,0,0,.06)",
+        overflow: "hidden", // ← เหมือน TableListCollapsReport
+        position: "relative",
+        zIndex: 1,
       }}
     >
       <Box className={styles.headerBar}></Box>
-      <Box px={2} py={1}>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
+
+      {/* Filters Section - Responsive - ใช้ structure เหมือน TableListCollapsReport */}
+      <Box
+        px={{ xs: 1.5, sm: 2 }}
+        py={{ xs: 1.5, sm: 1 }}
+        sx={{
+          overflow: "visible",
+          position: "relative",
+          zIndex: 1000, // ← เหมือน TableListCollapsReport
+        }}
+      >
+        {isSm || isBelow1100 ? (
+          // Mobile & Tablet & Small Desktop Layout (< 1100px)
+          <>
+            {/* Filter Fields - Grid Layout */}
+            <Box
+              display="grid"
+              gridTemplateColumns={{
+                xs: "1fr",
+                sm: "1fr 1fr",
+                md: "repeat(3, 1fr)",
+              }}
+              gap={{ xs: 2, sm: 1.5 }}
+              sx={{
+                mb: 2,
+                width: "100%",
+                position: "relative",
+                zIndex: 1000, // ← เหมือน TableListCollapsReport
+                "& > div": {
+                  minWidth: 0,
+                  position: "relative",
+                  zIndex: 1000, // ← เหมือน TableListCollapsReport
+                },
+              }}
+            >
+              {filterFields.map((f, index) => (
+                <Box
+                  key={f.name}
+                  sx={{
+                    position: "relative",
+                    zIndex: 1000 + index, // ← เหมือน TableListCollapsReport
+                  }}
+                >
+                  {f.type === "select" ? (
+                    <SelectField
+                      fullWidth
+                      label={f.label}
+                      options={f.options}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size={isXs ? "small" : "medium"}
+                      sx={{
+                        position: "relative",
+                        zIndex: 1000 + index,
+                      }}
+                    />
+                  ) : f.type === "date" ? (
+                    <DateThaiPickerService
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleDateChange(f.name)}
+                      placeholder={f.placeholder || `เลือก${f.label}`}
+                      disabled={f.disabled || false}
+                      required={f.required || false}
+                      {...getDatePickerProps()} // ← ใช้ฟังก์ชันเหมือน TableListCollapsReport
+                    />
+                  ) : (
+                    <InputText
+                      fullWidth
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size={isXs ? "small" : "medium"}
+                      sx={{
+                        position: "relative",
+                        zIndex: 1000 + index,
+                      }}
+                    />
+                  )}
+                </Box>
+              ))}
+            </Box>
+
+            {/* Search Buttons */}
+            <Box
+              display="flex"
+              gap={1.5}
+              justifyContent="center"
+              mb={2}
+              sx={{
+                position: "relative",
+                zIndex: 500, // ← เหมือน TableListCollapsReport
+              }}
+            >
+              <IconButton
+                onClick={handleSearchClick}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  width: { xs: 40, sm: 48 },
+                  height: { xs: 40, sm: 48 },
+                  "&:hover": { bgcolor: "#0b1580" },
+                  position: "relative",
+                  zIndex: 500,
+                }}
+              >
+                <SearchIcon sx={{ fontSize: { xs: 18, sm: 24 } }} />
+              </IconButton>
+              <IconButton
+                onClick={handleClearSearch}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  width: { xs: 40, sm: 48 },
+                  height: { xs: 40, sm: 48 },
+                  "&:hover": { bgcolor: "#0b1580" },
+                  position: "relative",
+                  zIndex: 500,
+                }}
+              >
+                <SearchOffIcon sx={{ fontSize: { xs: 18, sm: 24 } }} />
+              </IconButton>
+            </Box>
+
+            {/* Export Buttons - Mobile/Tablet */}
+            <Box
+              display="flex"
+              flexDirection="column"
+              gap={1.5}
+              alignItems="center"
+              sx={{
+                position: "relative",
+                zIndex: 500,
+              }}
+            >
+              {isXs ? (
+                // XS - แยกบรรทัด
+                <>
+                  <ExportButton
+                    label="Export PDF"
+                    onClick={() =>
+                      exportElementToPDF(pdfRef, "รายงานการติดตามงานค้าง.pdf")
+                    }
+                    size="small"
+                    sx={{
+                      width: "100%",
+                      maxWidth: "300px",
+                    }}
+                  />
+                  <ExportButton
+                    label="Export Excel"
+                    size="small"
+                    sx={{
+                      width: "100%",
+                      maxWidth: "300px",
+                    }}
+                  />
+                </>
+              ) : (
+                // SM+ - อยู่แถวเดียวกัน
+                <Box
+                  display="flex"
+                  gap={1}
+                  width="100%"
+                  justifyContent="center"
+                >
+                  <ExportButton
+                    label="Export PDF"
+                    onClick={() =>
+                      exportElementToPDF(pdfRef, "รายงานการติดตามงานค้าง.pdf")
+                    }
+                    size="medium"
+                    sx={{
+                      flex: 1,
+                      maxWidth: "150px",
+                    }}
+                  />
+                  <ExportButton
+                    label="Export Excel"
+                    size="medium"
+                    sx={{
+                      flex: 1,
+                      maxWidth: "150px",
+                    }}
+                  />
+                </Box>
+              )}
+            </Box>
+          </>
+        ) : (
+          // Large Desktop Layout (>= 1100px) - เหมือน TableListCollapsReport
           <Box
             display="flex"
             alignItems="center"
-            gap={1}
-            sx={{ flexGrow: 1, overflowX: "auto" }}
+            justifyContent="space-between"
+            sx={{
+              position: "relative",
+              zIndex: 1000,
+            }}
           >
-            {filterFields.map((f) => (
-              <Box key={f.name} flex="1 1 0" minWidth="140px" maxWidth="300px">
-                {f.type === "select" ? (
-                  <SelectField
-                    fullWidth
-                    label={f.label}
-                    options={f.options}
-                    value={filters[f.name]}
-                    onChange={handleChange(f.name)}
-                  />
-                ) : f.type === "date" ? (
-                  <InputDateNoTime
-                    label={f.label}
-                    value={filters[f.name]}
-                    onChange={handleChange(f.name)}
-                  />
-                ) : (
-                  <InputText
-                    fullWidth
-                    label={f.label}
-                    value={filters[f.name]}
-                    onChange={handleChange(f.name)}
-                  />
-                )}
+            {/* Left Side - Filters + Search */}
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={1}
+              sx={{
+                flexGrow: 1,
+                overflowX: "visible",
+                maxWidth: "60%",
+                position: "relative",
+                zIndex: 1000,
+              }}
+            >
+              {filterFields.map((f, index) => (
+                <Box
+                  key={f.name}
+                  sx={{
+                    flex: "1 1 140px",
+                    minWidth: "140px",
+                    maxWidth: "300px",
+                    position: "relative",
+                    zIndex: 1000 + index,
+                  }}
+                >
+                  {f.type === "select" ? (
+                    <SelectField
+                      fullWidth
+                      label={f.label}
+                      options={f.options}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      sx={{
+                        position: "relative",
+                        zIndex: 1000 + index,
+                      }}
+                    />
+                  ) : f.type === "date" ? (
+                    <DateThaiPickerService
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleDateChange(f.name)}
+                      placeholder={f.placeholder || `เลือก${f.label}`}
+                      disabled={f.disabled || false}
+                      required={f.required || false}
+                      {...getDatePickerProps()} // ← ใช้ฟังก์ชันเหมือน TableListCollapsReport
+                    />
+                  ) : (
+                    <InputText
+                      fullWidth
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      sx={{
+                        position: "relative",
+                        zIndex: 1000 + index,
+                      }}
+                    />
+                  )}
+                </Box>
+              ))}
+
+              {/* Search Buttons */}
+              <Box
+                display="flex"
+                gap={1}
+                sx={{
+                  flexShrink: 0,
+                  ml: 1,
+                  position: "relative",
+                  zIndex: 500,
+                }}
+              >
+                <IconButton
+                  onClick={handleSearchClick}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    width: 40,
+                    height: 40,
+                    "&:hover": { bgcolor: "#0b1580" },
+                    position: "relative",
+                    zIndex: 500,
+                  }}
+                >
+                  <SearchIcon />
+                </IconButton>
+                <IconButton
+                  onClick={handleClearSearch}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    width: 40,
+                    height: 40,
+                    "&:hover": { bgcolor: "#0b1580" },
+                    position: "relative",
+                    zIndex: 500,
+                  }}
+                >
+                  <SearchOffIcon />
+                </IconButton>
               </Box>
-            ))}
-            <IconButton
-              onClick={handleSearchClick}
+            </Box>
+
+            {/* Right Side - Export Buttons */}
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={1}
               sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                "&:hover": { bgcolor: "#0b1580" },
-                width: 40,
-                height: 40,
+                flexShrink: 0,
+                ml: 2,
+                position: "relative",
+                zIndex: 500,
               }}
             >
-              <SearchIcon />
-            </IconButton>
-            <IconButton
-              onClick={handleClearClick}
-              sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                "&:hover": { bgcolor: "#0b1580" },
-                width: 40,
-                height: 40,
-              }}
-            >
-              <SearchOffIcon />
-            </IconButton>
+              <ExportButton
+                label="Export PDF"
+                onClick={() =>
+                  exportElementToPDF(pdfRef, "รายงานการติดตามงานค้าง.pdf")
+                }
+                size="medium"
+              />
+              <ExportButton label="Export Excel" size="medium" />
+            </Box>
           </Box>
-          <Box
-            display="flex"
-            alignItems="center"
-            sx={{ flex: "1 0 300px", justifyContent: "flex-end" }}
-          >
-            <ExportButton
-              label="Export PDF"
-              onClick={() =>
-                exportElementToPDF(pdfRef, "ายงานสรุปเรื่องร้องเรียนของหน่วยงาน.pdf")
-              }
-            />;
-            <ExportButton label="Export Excel" />
-          </Box>
-        </Box>
+        )}
       </Box>
 
+      {/* Report Title */}
       <Box
         sx={{
           backgroundColor: "#EAF5FF",
           p: 2,
           color: "#1120A3",
           textAlign: "center",
-          fontSize: "20px",
+          fontSize: { xs: 16, sm: 18, md: 20 },
           fontWeight: "bold",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         รายงานการติดตามงานค้าง
@@ -226,16 +620,50 @@ const TableWorkFollow = ({
 
       {/* Table with grouped collapsible rows */}
       <div ref={pdfRef}>
-
-        <Box sx={{ overflowX: "auto", px: 2, pb: 1 }}>
-          <Table sx={{ minWidth: 1400 }}>
+        <Box
+          sx={{
+            overflowX: "auto",
+            px: { xs: 1, sm: 2 },
+            pb: 1,
+            position: "relative",
+            zIndex: 1,
+            "&::-webkit-scrollbar": {
+              height: "8px",
+            },
+            "&::-webkit-scrollbar-track": {
+              backgroundColor: "#f1f1f1",
+              borderRadius: "4px",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: "#888",
+              borderRadius: "4px",
+              "&:hover": {
+                backgroundColor: "#555",
+              },
+            },
+          }}
+        >
+          <Table
+            sx={{
+              minWidth: 1400,
+              position: "relative",
+              zIndex: 1,
+            }}
+          >
             <TableHead>
               <TableRow>
                 {columns.map((col, i) => (
                   <TableCell
                     key={i}
                     align={i === 0 ? "center" : "left"}
-                    sx={{ width: col.width }}
+                    sx={{
+                      width: col.width,
+                      fontSize: { xs: 12, sm: 14 },
+                      fontWeight: 600,
+                      color: "#1120a3",
+                      position: "relative",
+                      zIndex: 1,
+                    }}
                   >
                     {col.label}
                   </TableCell>
@@ -247,8 +675,21 @@ const TableWorkFollow = ({
                 const items = groupedData[groupKey];
                 return (
                   <React.Fragment key={groupKey}>
-                    <TableRow sx={{ "&:hover": { backgroundColor: "#f5f7ff" } }}>
-                      <TableCell align="center" sx={{ width: 60 }}>
+                    <TableRow
+                      sx={{
+                        "&:hover": { backgroundColor: "#f5f7ff" },
+                        position: "relative",
+                        zIndex: 1,
+                      }}
+                    >
+                      <TableCell
+                        align="center"
+                        sx={{
+                          width: 60,
+                          position: "relative",
+                          zIndex: 1,
+                        }}
+                      >
                         <IconButton
                           size="small"
                           onClick={() => toggleGroup(groupKey)}
@@ -260,7 +701,16 @@ const TableWorkFollow = ({
                           )}
                         </IconButton>
                       </TableCell>
-                      <TableCell colSpan={columns.length + 1} sx={{ width: 300 }}>
+                      <TableCell
+                        colSpan={columns.length + 1}
+                        sx={{
+                          width: 300,
+                          fontSize: { xs: 12, sm: 14 },
+                          fontWeight: "bold",
+                          position: "relative",
+                          zIndex: 1,
+                        }}
+                      >
                         {`เจ้าหน้าที่ผู้รับผิดชอบ : ${groupKey}`}
                       </TableCell>
                     </TableRow>
@@ -269,6 +719,10 @@ const TableWorkFollow = ({
                       <TableCell
                         style={{ padding: 0 }}
                         colSpan={columns.length + 2}
+                        sx={{
+                          position: "relative",
+                          zIndex: 1,
+                        }}
                       >
                         <Collapse
                           in={expandedGroups[groupKey]}
@@ -277,12 +731,23 @@ const TableWorkFollow = ({
                         >
                           <Box>
                             <Table size="small">
-                              <TableBody sx={{ backgroundColor: "#FEFAEF" }}>
+                              <TableBody
+                                sx={{
+                                  backgroundColor: "#FEFAEF",
+                                  position: "relative",
+                                  zIndex: 1,
+                                }}
+                              >
                                 {items.map((item, idx) => (
                                   <TableRow
                                     key={item.id}
                                     sx={{
                                       "&:hover": { backgroundColor: "#f5f7ff" },
+                                      cursor: navigateTo
+                                        ? "pointer"
+                                        : "default",
+                                      position: "relative",
+                                      zIndex: 1,
                                     }}
                                     onClick={() =>
                                       navigateTo &&
@@ -296,6 +761,9 @@ const TableWorkFollow = ({
                                         width: columns[0].width,
                                         fontWeight: 600,
                                         color: "#1120A3",
+                                        fontSize: { xs: 12, sm: 14 },
+                                        position: "relative",
+                                        zIndex: 1,
                                       }}
                                     >
                                       {page * rowsPerPage + idx + 1}
@@ -304,7 +772,12 @@ const TableWorkFollow = ({
                                     {columns.slice(1).map((col, i) => (
                                       <TableCell
                                         key={i}
-                                        sx={{ width: col.width }}
+                                        sx={{
+                                          width: col.width,
+                                          fontSize: { xs: 12, sm: 14 },
+                                          position: "relative",
+                                          zIndex: 1,
+                                        }}
                                       >
                                         {col.render
                                           ? col.render(item)
@@ -333,11 +806,19 @@ const TableWorkFollow = ({
             page={page}
             onPageChange={handlePageChange}
             onRowsPerPageChange={handleRowsPerPageChange}
-            sx={{ borderTop: "1px solid #eee" }}
+            sx={{
+              borderTop: "1px solid #eee",
+              position: "relative",
+              zIndex: 1,
+              "& .MuiTablePagination-toolbar": {
+                fontSize: { xs: 12, sm: 14 },
+                minHeight: { xs: 48, sm: 52 },
+              },
+            }}
           />
         </Box>
       </div>
-    </Container >
+    </Container>
   );
 };
 

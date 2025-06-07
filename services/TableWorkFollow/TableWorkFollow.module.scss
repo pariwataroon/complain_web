@@ -1,7 +1,6 @@
 .headerBar {
   background: linear-gradient(to right, #1223a5, #2499ff);
   height: 50px;
-
   border-top-right-radius: 12px;
   padding: 0 24px;
   display: flex;
@@ -9,57 +8,106 @@
   color: white;
   font-weight: bold;
   font-size: 18px;
+  position: relative;
+  z-index: 1;
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    padding: 0 16px;
+    border-top-left-radius: 12px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 0 12px;
+    height: 36px;
+    font-size: 14px;
+  }
 }
-.headerBar2 {
-  height: 50px;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
-  padding: 0 24px;
-  display: flex;
-  align-items: center;
-  color: #1120a3;
-  font-weight: bold;
-  font-size: 18px;
-}
+
 .tableWrapper {
   background-color: white;
   border-radius: 0 0 16px 16px;
-  box-shadow: none; /* <─ เอาเงาออก */
+  box-shadow: none;
   overflow: hidden;
-}
+  position: relative;
+  z-index: 1;
 
-.tableWrapper thead tr {
-  background-color: #e8e9f6 !important;
+  // Responsive table styling
+  @media (max-width: 1200px) {
+    overflow-x: auto;
+
+    &::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background-color: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: #888;
+      border-radius: 4px;
+
+      &:hover {
+        background-color: #555;
+      }
+    }
+  }
 }
 
 .MuiTableCell-head {
   font-weight: 600;
   color: #1120a3;
-  font-size: 14px;
   border-bottom: 1px solid #d9dbe9;
+  position: relative;
+  z-index: 1;
+
+  // Responsive font sizes
+  @media (max-width: 768px) {
+    font-size: 13px;
+    padding: 12px 8px;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 12px;
+    padding: 10px 6px;
+  }
 }
 
 .MuiTableCell-root {
-  font-size: 14px;
   color: #333;
-  padding: 14px 12px;
   border-bottom: 1px solid #eee;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
+  word-wrap: break-word;
+  white-space: normal;
+  vertical-align: top;
+  line-height: 1.4;
+  position: relative;
+  z-index: 1;
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    font-size: 13px;
+    padding: 8px 6px;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 12px;
+    padding: 6px 4px;
+  }
 }
 
-.filterRow {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  margin: 20px 0;
+// Fix DatePicker z-index issues - เหมือน TableListCollapsReport
+.datePickerContainer {
+  position: relative;
+  z-index: 10;
+}
 
-  > div {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
+// Container for filters with high z-index - เหมือน TableListCollapsReport
+.filtersContainer {
+  position: relative;
+  z-index: 100;
+  overflow: visible;
 }
