@@ -9,6 +9,7 @@
   font-weight: bold;
   font-size: 18px;
 }
+
 .headerBar2 {
   height: 50px;
   border-top-left-radius: 12px;
@@ -20,31 +21,11 @@
   font-weight: bold;
   font-size: 18px;
 }
+
 .tableWrapper {
   background-color: white;
   border-radius: 0 0 16px 16px;
-  box-shadow: none; /* <─ เอาเงาออก */
-  overflow: hidden;
-}
-
-.tableWrapper thead tr {
-  background-color: #e8e9f6 !important;
-}
-
-.MuiTableCell-head {
-  font-weight: 600;
-  color: #1120a3;
-  font-size: 14px;
-  border-bottom: 1px solid #d9dbe9;
-}
-
-.MuiTableCell-root {
-  font-size: 14px;
-  color: #333;
-  padding: 14px 12px;
-  border-bottom: 1px solid #eee;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -62,3 +43,10 @@
     align-items: center;
   }
 }
+
+/* ลบ global table styles ที่อาจจะซ้อนทับ */
+.tableWrapper thead tr {
+  background-color: #e8e9f6 !important;
+}
+
+/* เอา MUI global styles ออก เพราะเราจัดการใน component แล้ว */
