@@ -54,13 +54,30 @@ export default function ComplaintComponent() {
 
     // STEP 1: ข้อมูลผู้ร้องทุกข์
     if (activeStep === 0) {
-      const currentTab = tabStates.step1;
+      const currentTab = tabStates.step1; // 0 = บุคคลทั่วไป, 1 = นิติบุคคล
+
+      console.log('=== Validation Debug ===', {
+        activeStep,
+        currentTab,
+        stepKey,
+        data: data
+      });
 
       if (currentTab === 0) {
-        // console.log("Validating บุคคลทั่วไป - general fields");
+        // ตรวจสอบเฉพาะ tab บุคคลทั่วไป
+        console.log('Validating บุคคลทั่วไป tab');
 
+        const idCardValue = data?.general?.idCard;
+        if (!hasValue(idCardValue)) {
+          errors[`general.idCard`] = "กรุณากรอก เลขบัตรประชาชน ของผู้ร้องทุกข์";
+        } else if (idCardValue.length !== 13) {
+          errors[`general.idCard`] = "กรุณากรอกเลขบัตรประจำตัวประชาชนให้ครบ 13 หลัก ของผู้ร้องทุกข์";
+        } else if (!/^\d{13}$/.test(idCardValue)) {
+          errors[`general.idCard`] = "เลขบัตรประจำตัวประชาชนต้องเป็นตัวเลขเท่านั้น ของผู้ร้องทุกข์";
+        }
+
+        // Validation ฟิลด์อื่นๆ ของบุคคลทั่วไป
         const generalFields = [
-          { key: "idCard", label: "เลขบัตรประชาชน" },
           { key: "name", label: "ชื่อ - นามสกุล" },
           { key: "address", label: "ที่อยู่" },
           { key: "phone", label: "หมายเลขโทรศัพท์" },
@@ -71,7 +88,6 @@ export default function ComplaintComponent() {
           { key: "email", label: "อีเมล" },
         ];
 
-        // ตรวจสอบ general (required)
         generalFields.forEach(field => {
           const value = data?.general?.[field.key];
           if (!hasValue(value)) {
@@ -79,13 +95,20 @@ export default function ComplaintComponent() {
           }
         });
 
-        // delegate เป็น optional ไม่ต้องตรวจสอบ
-
       } else if (currentTab === 1) {
-        // console.log("Validating นิติบุคคล - corporate fields");
+        // ตรวจสอบเฉพาะ tab นิติบุคคล
+        console.log('Validating นิติบุคคล tab');
+
+        const corpIdCardValue = data?.corporate?.idCard;
+        if (!hasValue(corpIdCardValue)) {
+          errors[`corporate.idCard`] = "กรุณากรอก เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคล ของนิติบุคคล";
+        } else if (corpIdCardValue.length !== 13) {
+          errors[`corporate.idCard`] = "กรุณากรอกเลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลให้ครบ 13 หลัก ของนิติบุคคล";
+        } else if (!/^\d{13}$/.test(corpIdCardValue)) {
+          errors[`corporate.idCard`] = "เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลต้องเป็นตัวเลขเท่านั้น ของนิติบุคคล";
+        }
 
         const corpFields = [
-          { key: "idCard", label: "เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคล" },
           { key: "name", label: "ชื่อองค์กร/บริษัท" },
           { key: "address", label: "ที่อยู่องค์กร" },
           { key: "phone", label: "หมายเลขโทรศัพท์" },
@@ -102,15 +125,20 @@ export default function ComplaintComponent() {
             errors[`corporate.${field.key}`] = `กรุณากรอก ${field.label} ของนิติบุคคล`;
           }
         });
-
       }
     }
 
-    // STEP 2: ข้อมูลผู้ถูกร้องทุกข์ (เหมือนเดิม)
+    // STEP 2: ข้อมูลผู้ถูกร้องทุกข์
     if (activeStep === 1) {
       const currentTab = tabStates.step2;
       const typeMap = ["individual", "corporate", "government"];
       const activeType = typeMap[currentTab];
+
+      console.log('=== Step 2 Validation ===', {
+        currentTab,
+        activeType,
+        data: data[activeType]
+      });
 
       if (!activeType) {
         errors.activeType = "กรุณาเลือกประเภทผู้ถูกร้องทุกข์";
@@ -156,14 +184,26 @@ export default function ComplaintComponent() {
         const requiredFields = requiredFieldsMap[activeType] || [];
         requiredFields.forEach(field => {
           const value = current[field.key];
-          if (!hasValue(value)) {
-            errors[`${activeType}.${field.key}`] = `กรุณากรอก ${field.label}`;
+
+          // เพิ่ม validation สำหรับ ID Card ใน step 2 ด้วย
+          if (field.key === 'idCard') {
+            if (!hasValue(value)) {
+              errors[`${activeType}.${field.key}`] = `กรุณากรอก ${field.label}`;
+            } else if (value.length !== 13) {
+              errors[`${activeType}.${field.key}`] = `กรุณากรอก${field.label}ให้ครบ 13 หลัก`;
+            } else if (!/^\d{13}$/.test(value)) {
+              errors[`${activeType}.${field.key}`] = `${field.label}ต้องเป็นตัวเลขเท่านั้น`;
+            }
+          } else {
+            if (!hasValue(value)) {
+              errors[`${activeType}.${field.key}`] = `กรุณากรอก ${field.label}`;
+            }
           }
         });
       }
     }
 
-    // STEP 3: รายละเอียดเรื่องร้องทุกข์ (เหมือนเดิม)
+    // STEP 3: รายละเอียดเรื่องร้องทุกข์
     if (activeStep === 2) {
       const detail = data || {};
       if (!hasValue(detail.subject)) {
@@ -174,12 +214,15 @@ export default function ComplaintComponent() {
       }
     }
 
-    // console.log("Validation errors:", errors);
+    console.log('=== Final Validation Result ===', {
+      errors,
+      hasErrors: Object.keys(errors).length > 0
+    });
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  // Validate step for submit (with alert)
   const validateStepForSubmit = async () => {
     setShouldShowValidation(true);
     const isValid = validateCurrentStep();
@@ -195,7 +238,6 @@ export default function ComplaintComponent() {
     return true;
   };
 
-  // Update validation when data changes
   React.useEffect(() => {
     if (shouldShowValidation) {
       validateCurrentStep();
@@ -226,7 +268,6 @@ export default function ComplaintComponent() {
     }
   };
 
-  // Function to handle tab change from child components
   const handleTabChange = (stepKey, tabIndex) => {
     setTabStates(prev => ({
       ...prev,

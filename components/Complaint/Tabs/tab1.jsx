@@ -10,9 +10,30 @@ const Tab1 = ({
   tabData,
   updateStepData,
   validationErrors = {},
-  shouldShowValidation = false
+  shouldShowValidation = false,
+  onTabChange,
+  currentTab = 0
 }) => {
   const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    setActive(currentTab);
+  }, [currentTab]);
+
+  const handleTabChange = (newTab) => {
+    console.log('=== Tab Change ===', {
+      from: active,
+      to: newTab,
+      stepKey
+    });
+
+    setActive(newTab);
+
+    if (onTabChange) {
+      onTabChange('step1', newTab);
+    }
+  };
+
 
   const handleUpdate = (type) => (name, value) => {
     const prev = tabData[type] || {};
@@ -134,7 +155,7 @@ const Tab1 = ({
               validationErrors={validationErrors}
               shouldShowValidation={shouldShowValidation}
               fieldPrefix="signer"
-              formType="optional" 
+              formType="optional"
             />
           </div>
         </>

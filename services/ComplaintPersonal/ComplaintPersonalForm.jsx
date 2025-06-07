@@ -16,27 +16,33 @@ const ComplaintPersonalForm = ({
     formType = "mandatory",
 }) => {
     const handleChange = (field) => (value) => {
-        console.log("ComplaintPersonalForm handleChange:", {
-            field,
-            value,
-            formType,
-            valueType: typeof value,
-        });
-
         let finalValue = value;
 
         if (typeof value === "object" && value?.target) {
             finalValue = value.target.value;
-            console.log("Detected event object, extracted value:", finalValue);
         }
 
-        console.log("Calling parent onChange with:", { field, finalValue });
         onChange(field, finalValue);
     };
 
     const getFieldError = (fieldName) => {
         const errorKey = fieldPrefix ? `${fieldPrefix}.${fieldName}` : fieldName;
-        return shouldShowValidation ? validationErrors[errorKey] : "";
+        const error = shouldShowValidation ? validationErrors[errorKey] : "";
+
+        // Debug สำหรับ ID Card
+        // if (fieldName === 'idCard') {
+        //     console.log('ID Card Debug:', {
+        //         fieldName,
+        //         errorKey,
+        //         shouldShowValidation,
+        //         validationErrors,
+        //         error,
+        //         currentValue: data.idCard,
+        //         valueLength: data.idCard?.length
+        //     });
+        // }
+
+        return error;
     };
 
     const hasFieldError = (fieldName) => {
@@ -59,14 +65,14 @@ const ComplaintPersonalForm = ({
             <Typography className={styles.title}>
                 {title}{" "}
                 {formType === "optional" && (
-                    <span className={styles.optionalText}>(ไม่บังคับ)</span>
+                    <span className={styles.optionalText}></span>
                 )}
             </Typography>
             <Grid container spacing={2}>
                 <Grid item xs={12}>
                     <IDCardInput
                         value={data.idCard}
-                        onChange={(val) => onChange("idCard", val)}
+                        onChange={handleChange("idCard")}
                         error={hasFieldError("idCard")}
                         helperText={getFieldError("idCard")}
                         label={formatLabel("เลขบัตรประจำตัวประชาชน")}
