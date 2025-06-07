@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -10,6 +10,8 @@ import {
   TablePagination,
   Container,
   IconButton,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
@@ -21,14 +23,14 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonService from "@services/ButtonService/ButtonService";
-import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
 
-const TableListBox = ({
+const TableListCollapsReport = ({
   data = [],
   title = "",
   navigateTo = "",
-  onSearch = () => { },
+  onSearch = () => {},
   filterFields = [],
   reportTitle = "",
   reportSubTitle = "",
@@ -36,6 +38,69 @@ const TableListBox = ({
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
+  const theme = useTheme();
+  const isXs = useMediaQuery(theme.breakpoints.down("sm")); // < 600px
+  const isSm = useMediaQuery(theme.breakpoints.down("md")); // < 900px
+  const isBelow1100 = useMediaQuery("(max-width:1100px)");
+  const isBelow1200 = useMediaQuery("(max-width:1200px)");
+
+  // เพิ่ม state สำหรับ client-side mounting
+  const [isMounted, setIsMounted] = useState(false);
+
+  // เพิ่ม useEffect สำหรับ client-side mounting
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // เพิ่ม useEffect สำหรับ global CSS สำหรับ DatePicker
+  useEffect(() => {
+    if (typeof window === "undefined") return; // ← check window
+
+    const style = document.createElement("style");
+    style.textContent = `
+      .MuiPopper-root {
+        z-index: 99999 !important;
+      }
+      .MuiDialog-root {
+        z-index: 99999 !important;
+      }
+      .MuiModal-root {
+        z-index: 99999 !important;
+      }
+      .MuiPickersPopper-root {
+        z-index: 99999 !important;
+      }
+      .MuiDateCalendar-root {
+        z-index: 99999 !important;
+      }
+      .MuiPickersDay-root {
+        z-index: 99999 !important;
+      }
+      .MuiPickersCalendarHeader-root {
+        z-index: 99999 !important;
+      }
+      .MuiPickersYear-root {
+        z-index: 99999 !important;
+      }
+      .MuiPickersMonth-root {
+        z-index: 99999 !important;
+      }
+      .MuiDatePicker-root {
+        z-index: 99999 !important;
+      }
+      .MuiPaper-root.MuiPickersPopper-paper {
+        z-index: 99999 !important;
+      }
+    `;
+
+    document.head.appendChild(style);
+
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
 
   // Initial filters
   const initialFilters = filterFields.reduce((acc, f) => {
@@ -79,6 +144,11 @@ const TableListBox = ({
     const value = e?.target ? e.target.value : e;
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
+
+  const handleDateChange = (field) => (selectedDate) => {
+    setFilters((prev) => ({ ...prev, [field]: selectedDate }));
+  };
+
   const handleSearchClick = () => {
     setPage(0);
     onSearch(filters);
@@ -117,6 +187,69 @@ const TableListBox = ({
     { name: "closedCnt", label: "ยุติ", width: 100, align: "center" },
   ];
 
+  // ฟังก์ชันสำหรับ DatePicker Props (เช็ค client-side)
+  const getDatePickerProps = () => {
+    if (!isMounted || typeof window === "undefined") {
+      return {
+        // Server-side safe props
+        sx: {
+          width: "100%",
+          position: "relative",
+          zIndex: 1000,
+        },
+      };
+    }
+
+    return {
+      // Client-side props with document.body
+      componentsProps: {
+        popper: {
+          style: {
+            zIndex: 99999,
+          },
+          placement: "bottom-start",
+          container: document.body,
+        },
+      },
+      PopperProps: {
+        style: {
+          zIndex: 99999,
+        },
+        disablePortal: false,
+        container: document.body,
+      },
+      slotProps: {
+        popper: {
+          style: {
+            zIndex: 99999,
+          },
+          container: document.body,
+        },
+      },
+      sx: {
+        width: "100%",
+        position: "relative",
+        zIndex: 1000,
+        "& .MuiInputBase-root": {
+          position: "relative",
+          zIndex: 1000,
+        },
+        "& .MuiPopper-root": {
+          zIndex: `${99999} !important`,
+        },
+        "& .MuiDialog-root": {
+          zIndex: `${99999} !important`,
+        },
+        "& .MuiModal-root": {
+          zIndex: `${99999} !important`,
+        },
+        "& .MuiPaper-root": {
+          zIndex: `${99999} !important`,
+        },
+      },
+    };
+  };
+
   return (
     <Container
       maxWidth={false}
@@ -125,6 +258,9 @@ const TableListBox = ({
         backgroundColor: "#fff",
         borderRadius: 2,
         boxShadow: "0 6px 18px rgba(0,0,0,.06)",
+        overflow: "hidden",
+        position: "relative",
+        zIndex: 1,
       }}
     >
       {/* Header */}
@@ -133,102 +269,445 @@ const TableListBox = ({
         display="flex"
         alignItems="center"
         justifyContent="space-between"
-      >
-        <Box>{title}</Box>
-      </Box>
+        sx={{
+          fontSize: { xs: 14, sm: 16, md: 18 },
+          height: { xs: 40, sm: 50 },
+          px: { xs: 2, sm: 3 },
+          position: "relative",
+          zIndex: 1,
+        }}
+      ></Box>
 
-      {/* Filters */}
-      <Box px={2} py={1}>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Box display="flex" gap={1} sx={{ flexGrow: 1, overflowX: "auto" }}>
-            {filterFields.map((f) => (
-              <Box key={f.name} flex="1 1 0" minWidth="200px" maxWidth="300px">
-                {f.type === "select" ? (
-                  <SelectField
-                    fullWidth
-                    label={f.label}
-                    options={f.options}
-                    value={filters[f.name]}
-                    onChange={handleChange(f.name)}
+      {/* Title and Export Buttons */}
+      {isSm ? (
+        // Mobile & Tablet Layout
+        <>
+          {/* Title */}
+          <Box
+            className={styles.headerBar2}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            sx={{
+              fontSize: { xs: 16, sm: 18 },
+              height: { xs: 40, sm: 50 },
+              px: { xs: 2, sm: 3 },
+              position: "relative",
+              zIndex: 1,
+            }}
+          >
+            <Box sx={{ fontWeight: "bold", textAlign: "center" }}>{title}</Box>
+          </Box>
+
+          {/* Export Buttons Section - Mobile */}
+          <Box
+            sx={{
+              backgroundColor: "#f8f9fa",
+              py: { xs: 1.5, sm: 2 },
+              px: { xs: 2, sm: 3 },
+              borderBottom: "1px solid #e0e0e0",
+              mt: 2,
+              position: "relative",
+              zIndex: 1,
+            }}
+          >
+            <Box
+              display="flex"
+              flexDirection="column"
+              gap={1.5}
+              alignItems="center"
+            >
+              {isXs ? (
+                // XS - แยกบรรทัด
+                <>
+                  <ExportButton
+                    label="Export PDF"
+                    onClick={() =>
+                      exportElementToPDF(
+                        pdfRef,
+                        "รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ.pdf"
+                      )
+                    }
+                    size="small"
+                    sx={{
+                      width: "100%",
+                      maxWidth: "300px",
+                    }}
                   />
-                ) : f.type === "date" ? ( // 👈 เพิ่มเงื่อนไขนี้
-                  <Box mt={2}>
-                    <InputDateNoTime
+                  <ExportButton
+                    label="Export Excel"
+                    size="small"
+                    sx={{
+                      width: "100%",
+                      maxWidth: "300px",
+                    }}
+                  />
+                </>
+              ) : (
+                // SM - อยู่แถวเดียวกัน
+                <Box
+                  display="flex"
+                  gap={1}
+                  width="100%"
+                  justifyContent="center"
+                >
+                  <ExportButton
+                    label="Export PDF"
+                    onClick={() =>
+                      exportElementToPDF(
+                        pdfRef,
+                        "รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ.pdf"
+                      )
+                    }
+                    size="medium"
+                    sx={{
+                      flex: 1,
+                      maxWidth: "150px",
+                    }}
+                  />
+                  <ExportButton
+                    label="Export Excel"
+                    size="medium"
+                    sx={{
+                      flex: 1,
+                      maxWidth: "150px",
+                    }}
+                  />
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </>
+      ) : (
+        // Desktop Layout - Title and Export Buttons in same row
+        <Box
+          className={styles.headerBar2}
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          sx={{
+            fontSize: { xs: 16, sm: 18, md: 18 },
+            height: { xs: 40, sm: 50 },
+            px: { xs: 2, sm: 3 },
+            position: "relative",
+            zIndex: 1,
+            mt: 2,
+          }}
+        >
+          <Box sx={{ fontWeight: "bold" }}>{title}</Box>
+
+          {/* Export Buttons - Desktop */}
+          <Box display="flex" gap={1} alignItems="center">
+            <ExportButton
+              label="Export PDF"
+              onClick={() =>
+                exportElementToPDF(
+                  pdfRef,
+                  "รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ.pdf"
+                )
+              }
+              size="medium"
+            />
+            <ExportButton label="Export Excel" size="medium" />
+          </Box>
+        </Box>
+      )}
+
+      {/* Filters Section - Responsive */}
+      <Box
+        px={{ xs: 1.5, sm: 2 }}
+        py={{ xs: 1.5, sm: 1 }}
+        sx={{
+          overflow: "visible",
+          position: "relative",
+          zIndex: 1000,
+        }}
+      >
+        {isSm || isBelow1100 ? (
+          // Mobile & Tablet & Small Desktop Layout (< 1100px)
+          <>
+            {/* Filter Fields - Grid Layout */}
+            <Box
+              display="grid"
+              gridTemplateColumns={{
+                xs: "1fr",
+                sm: "1fr 1fr",
+                md: "repeat(3, 1fr)",
+              }}
+              gap={{ xs: 2, sm: 1.5 }}
+              sx={{
+                mb: 2,
+                width: "100%",
+                position: "relative",
+                zIndex: 1000,
+                "& > div": {
+                  minWidth: 0,
+                  position: "relative",
+                  zIndex: 1000,
+                },
+              }}
+            >
+              {filterFields.map((f, index) => (
+                <Box
+                  key={f.name}
+                  sx={{
+                    position: "relative",
+                    zIndex: 1000 + index,
+                  }}
+                >
+                  {f.type === "select" ? (
+                    <SelectField
+                      fullWidth
+                      label={f.label}
+                      options={f.options}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size={isXs ? "small" : "medium"}
+                      sx={{
+                        position: "relative",
+                        zIndex: 1000 + index,
+                      }}
+                    />
+                  ) : f.type === "date" ? (
+                    <DateThaiPickerService
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleDateChange(f.name)}
+                      placeholder={f.placeholder || `เลือก${f.label}`}
+                      disabled={f.disabled || false}
+                      required={f.required || false}
+                      {...getDatePickerProps()} // ← ใช้ฟังก์ชันที่เช็ค client-side
+                    />
+                  ) : (
+                    <InputText
+                      fullWidth
                       label={f.label}
                       value={filters[f.name]}
                       onChange={handleChange(f.name)}
-                      name={f.name}
-                    />{" "}
-                  </Box>
-                ) : (
-                  <InputText
-                    fullWidth
-                    label={f.label}
-                    value={filters[f.name]}
-                    onChange={handleChange(f.name)}
-                  />
-                )}
-              </Box>
-            ))}
-            <Box mt={3}>
+                      size={isXs ? "small" : "medium"}
+                      sx={{
+                        position: "relative",
+                        zIndex: 1000 + index,
+                      }}
+                    />
+                  )}
+                </Box>
+              ))}
+            </Box>
+
+            {/* Search Buttons */}
+            <Box
+              display="flex"
+              gap={1.5}
+              justifyContent="center"
+              mb={2}
+              sx={{
+                position: "relative",
+                zIndex: 500,
+              }}
+            >
               <IconButton
                 onClick={handleSearchClick}
                 sx={{
                   bgcolor: "#1120A3",
                   color: "#fff",
-                  width: 48,
-                  height: 48,
-                  borderRadius: "50%",
+                  width: { xs: 40, sm: 48 },
+                  height: { xs: 40, sm: 48 },
                   "&:hover": { bgcolor: "#0b1580" },
+                  position: "relative",
+                  zIndex: 500,
                 }}
               >
-                <SearchIcon />
+                <SearchIcon sx={{ fontSize: { xs: 18, sm: 24 } }} />
               </IconButton>
               <IconButton
                 onClick={handleClearSearch}
                 sx={{
-                  marginLeft: "10px",
                   bgcolor: "#1120A3",
                   color: "#fff",
-                  width: 48,
-                  height: 48,
-                  borderRadius: "50%",
+                  width: { xs: 40, sm: 48 },
+                  height: { xs: 40, sm: 48 },
                   "&:hover": { bgcolor: "#0b1580" },
+                  position: "relative",
+                  zIndex: 500,
                 }}
               >
-                <SearchOffIcon />
+                <SearchOffIcon sx={{ fontSize: { xs: 18, sm: 24 } }} />
               </IconButton>
             </Box>
-          </Box>
 
-          {/* ปุ่มใหญ่ตรงกลาง */}
-          <Box mr={1}>
-            <ButtonService
-              label="ผลการดำเนินการและเรื่องค้างพิจารณา"
-              color="#1120A3"
-              style={{
-                minWidth: 240,
-                height: 40,
-                borderRadius: 12,
+            {/* Action Button - Mobile/Tablet/Small Desktop */}
+            <Box
+              display="flex"
+              justifyContent="center"
+              sx={{
+                position: "relative",
+                zIndex: 500,
               }}
-              onClick={() =>
-                router.push(
-                  "/admin/document/annual-inspector-complaints-summary/resultscomplaints"
-                )
-              }
-            />
-          </Box>
+            >
+              <ButtonService
+                label="ผลการดำเนินการและเรื่องค้างพิจารณา"
+                color="#1120A3"
+                onClick={() =>
+                  router.push(
+                    "/admin/document/annual-inspector-complaints-summary/resultscomplaints"
+                  )
+                }
+                sx={{
+                  width: "100%",
+                  maxWidth: "350px",
+                  height: { xs: 36, sm: 40 },
+                  fontSize: { xs: 12, sm: 14 },
+                  position: "relative",
+                  zIndex: 500,
+                }}
+              />
+            </Box>
+          </>
+        ) : (
+          // Large Desktop Layout (>= 1100px)
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{
+              position: "relative",
+              zIndex: 1000,
+            }}
+          >
+            {/* Left Side - Filters + Search */}
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={1}
+              sx={{
+                flexGrow: 1,
+                overflowX: "visible",
+                maxWidth: "65%",
+                position: "relative",
+                zIndex: 1000,
+              }}
+            >
+              {filterFields.map((f, index) => (
+                <Box
+                  key={f.name}
+                  sx={{
+                    flex: "1 1 180px",
+                    minWidth: "180px",
+                    maxWidth: "250px",
+                    position: "relative",
+                    zIndex: 1000 + index,
+                  }}
+                >
+                  {f.type === "select" ? (
+                    <SelectField
+                      fullWidth
+                      label={f.label}
+                      options={f.options}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size="medium"
+                      sx={{
+                        position: "relative",
+                        zIndex: 1000 + index,
+                      }}
+                    />
+                  ) : f.type === "date" ? (
+                    <DateThaiPickerService
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleDateChange(f.name)}
+                      placeholder={f.placeholder || `เลือก${f.label}`}
+                      disabled={f.disabled || false}
+                      required={f.required || false}
+                      {...getDatePickerProps()} // ← ใช้ฟังก์ชันที่เช็ค client-side
+                    />
+                  ) : (
+                    <InputText
+                      fullWidth
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size="medium"
+                      sx={{
+                        position: "relative",
+                        zIndex: 1000 + index,
+                      }}
+                    />
+                  )}
+                </Box>
+              ))}
 
-          <Box display="flex" gap={1}>
-            <ExportButton
-              label="Export PDF"
-              onClick={() =>
-                exportElementToPDF(pdfRef, "รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ.pdf")
-              }
-            />;            
-            <ExportButton label="Export Excel" />
+              {/* Search Buttons */}
+              <Box
+                display="flex"
+                gap={1}
+                sx={{
+                  flexShrink: 0,
+                  ml: 1,
+                  position: "relative",
+                  zIndex: 500,
+                }}
+              >
+                <IconButton
+                  onClick={handleSearchClick}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    width: 48,
+                    height: 48,
+                    "&:hover": { bgcolor: "#0b1580" },
+                    position: "relative",
+                    zIndex: 500,
+                  }}
+                >
+                  <SearchIcon />
+                </IconButton>
+                <IconButton
+                  onClick={handleClearSearch}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    width: 48,
+                    height: 48,
+                    "&:hover": { bgcolor: "#0b1580" },
+                    position: "relative",
+                    zIndex: 500,
+                  }}
+                >
+                  <SearchOffIcon />
+                </IconButton>
+              </Box>
+            </Box>
+
+            {/* Right Side - Action Button */}
+            <Box
+              sx={{
+                flexShrink: 0,
+                ml: 2,
+                position: "relative",
+                zIndex: 500,
+              }}
+            >
+              <ButtonService
+                label="ผลการดำเนินการและเรื่องค้างพิจารณา"
+                color="#1120A3"
+                onClick={() =>
+                  router.push(
+                    "/admin/document/annual-inspector-complaints-summary/resultscomplaints"
+                  )
+                }
+                sx={{
+                  minWidth: "240px",
+                  height: 40,
+                  fontSize: "14px",
+                  position: "relative",
+                  zIndex: 500,
+                }}
+              />
+            </Box>
           </Box>
-        </Box>
+        )}
       </Box>
 
       {/* Subtitle / Info Box */}
@@ -238,19 +717,22 @@ const TableListBox = ({
         bgcolor="#EAF5FF"
         py={2}
         mb={2}
-        sx={{ fontWeight: "bold", color: "#0d47a1" }}
+        sx={{
+          fontWeight: "bold",
+          color: "#0d47a1",
+          fontSize: { xs: 14, sm: 16 },
+          px: { xs: 1, sm: 2 },
+          position: "relative",
+          zIndex: 1,
+        }}
       >
-        {/* หัวเรื่องหลัก */}
         {reportTitle}
-
-        {/* หัวเรื่องย่อย ถ้ามี */}
         {reportSubTitle && (
           <>
             <br />
             {reportSubTitle}
           </>
         )}
-
         {dateRange && (
           <>
             <br />
@@ -261,12 +743,36 @@ const TableListBox = ({
 
       {/* Table */}
       <div ref={pdfRef}>
-
-        <Box id="table-results" sx={{ overflowX: "auto", px: 2, pb: 1 }}>
+        <Box
+          id="table-results"
+          sx={{
+            overflowX: "auto",
+            px: { xs: 1, sm: 2 },
+            pb: 1,
+            position: "relative",
+            zIndex: 1,
+            "&::-webkit-scrollbar": {
+              height: "8px",
+            },
+            "&::-webkit-scrollbar-track": {
+              backgroundColor: "#f1f1f1",
+              borderRadius: "4px",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: "#888",
+              borderRadius: "4px",
+              "&:hover": {
+                backgroundColor: "#555",
+              },
+            },
+          }}
+        >
           <Table
             sx={{
               minWidth: columns.reduce((sum, c) => sum + c.width, 0),
               tableLayout: "fixed",
+              position: "relative",
+              zIndex: 1,
             }}
           >
             <TableHead>
@@ -275,7 +781,14 @@ const TableListBox = ({
                   <TableCell
                     key={col.name}
                     align={col.align}
-                    sx={{ width: col.width }}
+                    sx={{
+                      width: col.width,
+                      fontSize: { xs: 12, sm: 14 },
+                      fontWeight: 600,
+                      color: "#1120a3",
+                      position: "relative",
+                      zIndex: 1,
+                    }}
                   >
                     {col.label}
                   </TableCell>
@@ -289,15 +802,21 @@ const TableListBox = ({
                   <TableCell
                     key={col.name}
                     align={col.align}
-                    sx={{ width: col.width }}
+                    sx={{
+                      width: col.width,
+                      fontSize: { xs: 12, sm: 14 },
+                      fontWeight: "bold",
+                      position: "relative",
+                      zIndex: 1,
+                    }}
                   >
                     {col.name === "claimantName"
                       ? "รวม"
                       : col.name === "totalDept"
-                        ? totalDeptSum
-                        : col.name === "inProgressCnt"
-                          ? inProgressSum
-                          : closedSum}
+                      ? totalDeptSum
+                      : col.name === "inProgressCnt"
+                      ? inProgressSum
+                      : closedSum}
                   </TableCell>
                 ))}
               </TableRow>
@@ -311,6 +830,8 @@ const TableListBox = ({
                     sx={{
                       cursor: "pointer",
                       "&:hover": { backgroundColor: "#f5f7ff" },
+                      position: "relative",
+                      zIndex: 1,
                     }}
                   >
                     {columns.map((col) => {
@@ -318,25 +839,31 @@ const TableListBox = ({
                         col.name === "claimantName"
                           ? item.claimantName
                           : col.name === "totalDept"
-                            ? item.departmentsData.reduce(
+                          ? item.departmentsData.reduce(
                               (s, d) => s + (d.totalDept || 0),
                               0
                             )
-                            : col.name === "inProgressCnt"
-                              ? item.departmentsData.reduce(
-                                (s, d) => s + (d.inProgressCnt || 0),
-                                0
-                              )
-                              : item.departmentsData.reduce(
-                                (s, d) => s + (d.closedCnt || 0),
-                                0
-                              );
+                          : col.name === "inProgressCnt"
+                          ? item.departmentsData.reduce(
+                              (s, d) => s + (d.inProgressCnt || 0),
+                              0
+                            )
+                          : item.departmentsData.reduce(
+                              (s, d) => s + (d.closedCnt || 0),
+                              0
+                            );
 
                       return col.name === "claimantName" ? (
                         <TableCell
                           key={col.name}
                           align={col.align}
-                          sx={{ display: "flex", alignItems: "center" }}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            fontSize: { xs: 12, sm: 14 },
+                            position: "relative",
+                            zIndex: 1,
+                          }}
                         >
                           <IconButton
                             size="small"
@@ -358,7 +885,12 @@ const TableListBox = ({
                         <TableCell
                           key={col.name}
                           align={col.align}
-                          sx={{ width: col.width }}
+                          sx={{
+                            width: col.width,
+                            fontSize: { xs: 12, sm: 14 },
+                            position: "relative",
+                            zIndex: 1,
+                          }}
                         >
                           {val}
                         </TableCell>
@@ -372,13 +904,22 @@ const TableListBox = ({
                       const key = `${item.id}_${idx}`;
                       return (
                         <React.Fragment key={key}>
-                          <TableRow sx={{ backgroundColor: "#fefaef" }}>
+                          <TableRow
+                            sx={{
+                              backgroundColor: "#fefaef",
+                              position: "relative",
+                              zIndex: 1,
+                            }}
+                          >
                             <TableCell
                               align="left"
                               sx={{
                                 display: "flex",
                                 alignItems: "center",
                                 pl: 4,
+                                fontSize: { xs: 12, sm: 14 },
+                                position: "relative",
+                                zIndex: 1,
                               }}
                             >
                               <IconButton
@@ -394,31 +935,89 @@ const TableListBox = ({
                               </IconButton>
                               {d.department}
                             </TableCell>
-                            <TableCell align="center">{d.totalDept}</TableCell>
-                            <TableCell align="center">
+                            <TableCell
+                              align="center"
+                              sx={{
+                                fontSize: { xs: 12, sm: 14 },
+                                position: "relative",
+                                zIndex: 1,
+                              }}
+                            >
+                              {d.totalDept}
+                            </TableCell>
+                            <TableCell
+                              align="center"
+                              sx={{
+                                fontSize: { xs: 12, sm: 14 },
+                                position: "relative",
+                                zIndex: 1,
+                              }}
+                            >
                               {d.inProgressCnt}
                             </TableCell>
-                            <TableCell align="center">{d.closedCnt}</TableCell>
+                            <TableCell
+                              align="center"
+                              sx={{
+                                fontSize: { xs: 12, sm: 14 },
+                                position: "relative",
+                                zIndex: 1,
+                              }}
+                            >
+                              {d.closedCnt}
+                            </TableCell>
                           </TableRow>
 
                           {/* Second-level collapse */}
                           {d.children &&
                             openChild[key] &&
                             d.children.map((c, j) => (
-                              <TableRow key={`${key}_${j}`}>
+                              <TableRow
+                                key={`${key}_${j}`}
+                                sx={{
+                                  position: "relative",
+                                  zIndex: 1,
+                                }}
+                              >
                                 <TableCell
                                   align="left"
-                                  sx={{ width: columns[0].width, pl: 8 }}
+                                  sx={{
+                                    width: columns[0].width,
+                                    pl: 8,
+                                    fontSize: { xs: 12, sm: 14 },
+                                    position: "relative",
+                                    zIndex: 1,
+                                  }}
                                 >
                                   {c.department}
                                 </TableCell>
-                                <TableCell align="center">
+                                <TableCell
+                                  align="center"
+                                  sx={{
+                                    fontSize: { xs: 12, sm: 14 },
+                                    position: "relative",
+                                    zIndex: 1,
+                                  }}
+                                >
                                   {c.totalDept}
                                 </TableCell>
-                                <TableCell align="center">
+                                <TableCell
+                                  align="center"
+                                  sx={{
+                                    fontSize: { xs: 12, sm: 14 },
+                                    position: "relative",
+                                    zIndex: 1,
+                                  }}
+                                >
                                   {c.inProgressCnt}
                                 </TableCell>
-                                <TableCell align="center">
+                                <TableCell
+                                  align="center"
+                                  sx={{
+                                    fontSize: { xs: 12, sm: 14 },
+                                    position: "relative",
+                                    zIndex: 1,
+                                  }}
+                                >
                                   {c.closedCnt}
                                 </TableCell>
                               </TableRow>
@@ -439,7 +1038,15 @@ const TableListBox = ({
             page={page}
             onPageChange={handlePageChange}
             onRowsPerPageChange={handleRowsPerPageChange}
-            sx={{ borderTop: "1px solid #eee" }}
+            sx={{
+              borderTop: "1px solid #eee",
+              position: "relative",
+              zIndex: 1,
+              "& .MuiTablePagination-toolbar": {
+                fontSize: { xs: 12, sm: 14 },
+                minHeight: { xs: 48, sm: 52 },
+              },
+            }}
           />
         </Box>
       </div>
@@ -447,4 +1054,4 @@ const TableListBox = ({
   );
 };
 
-export default TableListBox;
+export default TableListCollapsReport;

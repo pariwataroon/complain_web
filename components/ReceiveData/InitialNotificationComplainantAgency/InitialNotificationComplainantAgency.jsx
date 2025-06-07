@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
@@ -10,11 +10,13 @@ import CloseIcon from "@mui/icons-material/Close";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 
 const InitialNotificationComplainantAgency = () => {
-  const { id } = useRouter().query;
+  const router = useRouter();
+  const { id } = router.query;
+
   const [form, setForm] = useState({
     salutation: "",
     refNo: "",
-    date: null, // เปลี่ยนเป็น null สำหรับ DateThaiPickerService
+    date: null,
     subject: "",
     department: "",
     signer: "",
@@ -24,15 +26,84 @@ const InitialNotificationComplainantAgency = () => {
     note: "",
   });
 
-  const handleChange = (e) => {
+  // ใช้ useCallback เพื่อป้องกัน re-render loop
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  // Handler สำหรับ DateThaiPickerService
-  const handleDateChange = (thaiDate) => {
+  // Handler สำหรับ DateThaiPickerService - ใช้ useCallback
+  const handleDateChange = useCallback((thaiDate) => {
     setForm((prev) => ({ ...prev, date: thaiDate }));
-  };
+  }, []);
+
+  // Handler สำหรับ file upload - ใช้ useCallback
+  const handleFileChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setForm((prev) => ({
+        ...prev,
+        attachment: file.name,
+      }));
+    }
+  }, []);
+
+  // Clear form handler - ใช้ useCallback
+  const handleClear = useCallback(() => {
+    setForm({
+      salutation: "",
+      refNo: "",
+      date: null,
+      subject: "",
+      department: "",
+      signer: "",
+      confidentiality: "",
+      urgency: "",
+      attachment: "",
+      note: "",
+    });
+  }, []);
+
+  // Save form handler - ใช้ useCallback
+  const handleSave = useCallback(() => {
+    console.log("Form data:", form);
+    // TODO: save form
+  }, [form]);
+
+  // Options สำหรับ SelectField
+  const salutationOptions = [
+    { value: "director", label: "ผู้อำนวยการ" },
+    { value: "manager", label: "ผู้จัดการ" },
+    { value: "head", label: "หัวหน้า" },
+    { value: "minister", label: "รัฐมนตรี" },
+  ];
+
+  const departmentOptions = [
+    { value: "complainant", label: "ผู้ร้องเรียน" },
+    { value: "transport_land", label: "กรมการขนส่งทางบก" },
+    { value: "transport_water", label: "กรมการขนส่งทางน้ำ" },
+    { value: "transport_air", label: "กรมการขนส่งทางอากาศ" },
+  ];
+
+  const signerOptions = [
+    { value: "signer1", label: "ผู้ลงนาม 1" },
+    { value: "signer2", label: "ผู้ลงนาม 2" },
+    { value: "signer3", label: "ผู้ลงนาม 3" },
+  ];
+
+  const confidentialityOptions = [
+    { value: "normal", label: "ปกติ" },
+    { value: "confidential", label: "ลับ" },
+    { value: "secret", label: "ลับมาก" },
+    { value: "top_secret", label: "ลับที่สุด" },
+  ];
+
+  const urgencyOptions = [
+    { value: "normal", label: "ปกติ" },
+    { value: "urgent", label: "ด่วน" },
+    { value: "very_urgent", label: "ด่วนมาก" },
+    { value: "extremely_urgent", label: "ด่วนที่สุด" },
+  ];
 
   return (
     <Box
@@ -103,6 +174,7 @@ const InitialNotificationComplainantAgency = () => {
               name="salutation"
               value={form.salutation}
               onChange={handleChange}
+              options={salutationOptions}
             />
             <InputText
               label={
@@ -157,6 +229,7 @@ const InitialNotificationComplainantAgency = () => {
               name="department"
               value={form.department}
               onChange={handleChange}
+              options={departmentOptions}
             />
           </Box>
 
@@ -171,6 +244,7 @@ const InitialNotificationComplainantAgency = () => {
               name="signer"
               value={form.signer}
               onChange={handleChange}
+              options={signerOptions}
             />
           </Box>
 
@@ -192,6 +266,7 @@ const InitialNotificationComplainantAgency = () => {
               name="confidentiality"
               value={form.confidentiality}
               onChange={handleChange}
+              options={confidentialityOptions}
             />
             <SelectField
               label={
@@ -203,6 +278,7 @@ const InitialNotificationComplainantAgency = () => {
               name="urgency"
               value={form.urgency}
               onChange={handleChange}
+              options={urgencyOptions}
             />
           </Box>
 
@@ -221,15 +297,7 @@ const InitialNotificationComplainantAgency = () => {
                       type="file"
                       id="attachment-upload"
                       style={{ display: "none" }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setForm((prev) => ({
-                            ...prev,
-                            attachment: file.name,
-                          }));
-                        }
-                      }}
+                      onChange={handleFileChange}
                     />
                     <label
                       htmlFor="attachment-upload"
@@ -277,20 +345,7 @@ const InitialNotificationComplainantAgency = () => {
               label="ล้าง"
               variant="outlined"
               iconLeft={<CloseIcon />}
-              onClick={() => {
-                setForm({
-                  salutation: "",
-                  refNo: "",
-                  date: null,
-                  subject: "",
-                  department: "",
-                  signer: "",
-                  confidentiality: "",
-                  urgency: "",
-                  attachment: "",
-                  note: "",
-                });
-              }}
+              onClick={handleClear}
               sx={{
                 borderColor: "#50ADFF",
                 color: "#50ADFF",
@@ -306,10 +361,7 @@ const InitialNotificationComplainantAgency = () => {
               label="บันทึก"
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
-              onClick={() => {
-                console.log("Form data:", form);
-                /* TODO: save form */
-              }}
+              onClick={handleSave}
               sx={{
                 backgroundColor: "#2196F3",
                 color: "#FFF",

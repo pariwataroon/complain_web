@@ -4,9 +4,16 @@ import {
   TextField,
   FormControl,
   Typography,
-  FormHelperText,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
-import { GetProvincesSelect, GetAmphuresSelect, GetDistrictsSelect, GetZipcodeSelect } from "@pages/api/allselect/allselect";
+import CloseIcon from "@mui/icons-material/Close";
+import {
+  GetProvincesSelect,
+  GetAmphuresSelect,
+  GetDistrictsSelect,
+  GetZipcodeSelect,
+} from "@pages/api/allselect/allselect";
 import styles from "./SelectField.module.scss";
 
 const SelectField = ({
@@ -32,101 +39,89 @@ const SelectField = ({
   ...otherProps
 }) => {
   const [options, setOptions] = useState([]);
-  const [loading, setLoading] = useState(false);
 
-  const getLabelText = (label) => {
-    if (typeof label === 'string') {
-      return label;
+  // แก้ไข: กรอง externalOptions ให้แน่ใจว่าไม่มี invalid objects
+  const validOptions = options.filter((opt) => {
+    if (typeof opt === "object" && opt !== null) {
+      return opt.value !== undefined && opt.label !== undefined;
     }
-    if (label && label.props && label.props.children) {
-      if (Array.isArray(label.props.children)) {
-        return label.props.children[0] || '';
-      }
-      return label.props.children;
+    return typeof opt === "string" || typeof opt === "number";
+  });
+
+  // แก้ไข: เอา placeholder option สีเทาออก - ใช้เฉพาะ validOptions
+  const allOptions = [...validOptions];
+
+  // แก้ไขการจัดการ selectedValue
+  const selectedValue = (() => {
+    if (value === null || value === undefined) return "";
+
+    // ถ้า value เป็น object ให้ใช้ value.value
+    if (typeof value === "object" && value !== null) {
+      return value.value || "";
     }
-    return '';
+
+    // ถ้า value เป็น string ให้ใช้เลย
+    return String(value);
+  })();
+
+  // ตรวจสอบว่ามีค่าที่เลือกหรือไม่ (สำหรับแสดงปุ่มลบ)
+  const hasValue = selectedValue && selectedValue !== "";
+
+  // ฟังก์ชันลบค่า
+  const handleClear = (e) => {
+    e.stopPropagation(); // ป้องกันไม่ให้เปิด dropdown
+    onChange({
+      target: {
+        name,
+        value: "",
+      },
+    });
   };
 
-  const labelText = getLabelText(label);
-
-  const placeholderText = placeholder || labelText || inputLabel || "เลือก...";
-
-  const allOptions = [
-    { value: "", label: placeholderText, disabled: true },
-    ...options,
-  ];
-
-  const selectedValue = (typeof value === "object" && value !== null)
-    ? (value?.value ?? "")
-    : (value ?? "");
-
-  const isFieldDisabled = disabled || loading || (
-    (labelText === "อำเภอ/เขต" && !provinceCode) ||
-    (labelText === "ตำบล/แขวง" && !amphureCode) ||
-    (labelText === "รหัสไปรษณีย์" && !amphureCode)
-  );
-
   useEffect(() => {
-    if (labelText === "จังหวัด") {
-      const loadProvinces = async () => {
-        setLoading(true);
-        try {
-          const response = await GetProvincesSelect();
-
-          const finalResponse = Array.isArray(response) ? response : [];
-          const mapped = finalResponse.map(item => {
-            if (typeof item === 'object' && item !== null) {
+    const fetchOptions = async () => {
+      // ถ้ามี external options ให้ใช้เลย ไม่ต้อง fetch
+      if (externalOptions && externalOptions.length > 0) {
+        // แก้ไข: ตรวจสอบและทำความสะอาด externalOptions
+        const cleanedOptions = externalOptions
+          .filter((opt) => {
+            // กรองเฉพาะ options ที่ valid
+            if (typeof opt === "object" && opt !== null) {
+              return opt.value !== undefined && opt.label !== undefined;
+            }
+            return typeof opt === "string" || typeof opt === "number";
+          })
+          .map((opt) => {
+            // แปลงให้เป็น format ที่ถูกต้อง
+            if (typeof opt === "object" && opt !== null) {
               return {
-                value: item.value || item.id || item.code || item.province_code || item.amphure_code || item.district_code,
-                label: item.label || item.name || item.title || item.name_th || String(item)
+                value: String(opt.value || ""),
+                label: String(opt.label || ""),
               };
             }
-            return { value: item, label: String(item) };
+            return {
+              value: String(opt),
+              label: String(opt),
+            };
           });
 
-          setOptions(mapped);
-        } catch (error) {
-          console.error("❌ Failed to load provinces:", error);
-          setOptions([]);
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      loadProvinces();
-    }
-  }, [labelText]);
-
-  useEffect(() => {
-
-    if (labelText === "จังหวัด") {
-      return;
-    }
-
-    const fetchOptions = async () => {
-      if (
-        (labelText === "อำเภอ/เขต" && !provinceCode) ||
-        (labelText === "ตำบล/แขวง" && !amphureCode) ||
-        (labelText === "รหัสไปรษณีย์" && !amphureCode)
-      ) {
-        setOptions([]);
-        return;
-      }
-
-      if (externalOptions && externalOptions.length > 0) {
         const mapped = optionMapper
-          ? externalOptions.map(optionMapper)
-          : externalOptions;
+          ? cleanedOptions.map(optionMapper)
+          : cleanedOptions;
+
         setOptions(mapped);
         return;
       }
 
-      if (!["อำเภอ/เขต", "ตำบล/แขวง", "รหัสไปรษณีย์"].includes(labelText)) {
-        setOptions([]);
+      // เงื่อนไขสำหรับ location fields
+      if (
+        (label === "อำเภอ/เขต" && !provinceCode) ||
+        (label === "ตำบล/แขวง" && !amphureCode) ||
+        (label === "รหัสไปรษณีย์" && !amphureCode)
+      ) {
         return;
       }
 
-      setLoading(true);
       try {
         let response = null;
 
@@ -185,7 +180,14 @@ const SelectField = ({
     };
 
     fetchOptions();
-  }, [labelText, provinceCode, amphureCode, externalOptions.length]);
+  }, [
+    label,
+    externalOptions,
+    optionMapper,
+    districtCode,
+    amphureCode,
+    provinceCode,
+  ]);
 
   const handleChange = (event) => {
     const selectedOptionValue = event.target.value;
@@ -258,101 +260,91 @@ const SelectField = ({
         displayEmpty
         name={name}
         value={selectedValue}
-        onChange={handleChange}
-        disabled={isFieldDisabled}
-        error={error}
-        size={size}
-        placeholder={placeholderText}
-        renderValue={renderValue}
-        SelectProps={{
-          displayEmpty: true,
-          ...otherProps.SelectProps,
+        onChange={(e) => {
+          const selectedVal = e.target.value;
+
+          // ส่งค่าเป็น string ไม่ใช่ object
+          onChange({
+            target: {
+              name,
+              value: selectedVal, // ส่งเป็น string value ตรงๆ
+            },
+          });
+        }}
+        renderValue={(selected) => {
+          // หา option ที่ตรงกับ selected value
+          const selectedOption = allOptions.find((opt) => {
+            const optValue = typeof opt === "object" ? opt.value : opt;
+            return optValue === selected;
+          });
+
+          // แก้ไข: ถ้าไม่เจอหรือเป็นค่าว่าง แสดง placeholder
+          if (!selectedOption || selected === "") {
+            return (
+              <span className={styles.selectPlaceholder}>
+                {label || inputLabel}
+              </span>
+            );
+          }
+
+          // แสดง label ของ option ที่เลือก
+          return selectedOption.label || String(selectedOption);
         }}
         InputProps={{
           sx: {
-            height: "56px",
-            borderRadius: "12px",
-            color: "#000000",
-            backgroundColor: isFieldDisabled ? "#f8fafc" : "transparent",
+            height: "40px",
+            borderRadius: "10px",
+            color: "#1120A3",
             "& fieldset": {
-              borderColor: error ? "#ef4444" : "#d1d5db",
-              borderWidth: error ? "2px" : "1px",
-            },
-            "&:hover fieldset": {
-              borderColor: error ? "#dc2626" : "#7dd3fc",
-            },
-            "&.Mui-focused fieldset": {
-              borderColor: error ? "#ef4444" : "#0ea5e9",
-              borderWidth: "2px",
-              boxShadow: error
-                ? "0 0 0 3px rgba(239, 68, 68, 0.1)"
-                : "0 0 0 3px rgba(14, 165, 233, 0.1)",
-            },
-            "& .MuiSelect-icon": {
-              color: error ? "#ef4444" : "#64748b",
+              borderColor: "#1120A3",
             },
           },
-          ...otherProps.InputProps,
+          endAdornment: hasValue && (
+            <InputAdornment position="end">
+              <IconButton
+                onClick={handleClear}
+                edge="end"
+                size="small"
+                sx={{
+                  color: "#999",
+                  "&:hover": {
+                    color: "#666",
+                    backgroundColor: "rgba(0, 0, 0, 0.04)",
+                  },
+                  mr: 1,
+                }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </InputAdornment>
+          ),
         }}
-        {...otherProps}
       >
         {allOptions.map((opt, idx) => {
-          const isPrimitive = typeof opt !== "object" || opt === null;
-          const optionValue = isPrimitive ? opt : opt.value;
-          const optionLabel = isPrimitive ? String(opt) : String(opt.label);
+          const isPrimitive = typeof opt !== "object";
+          const optionValue = isPrimitive
+            ? String(opt)
+            : String(opt.value || "");
+          const optionLabel = isPrimitive
+            ? String(opt)
+            : String(opt.label || opt.value || "");
           const isDisabled = isPrimitive ? false : opt.disabled ?? false;
 
+          // แก้ไข: ไม่แสดง option ที่เป็น "[object Object]"
+          if (
+            optionLabel === "[object Object]" ||
+            optionValue === "[object Object]"
+          ) {
+            return null;
+          }
+
           return (
-            <MenuItem
-              key={`${optionValue}-${idx}`}
-              value={optionValue}
-              disabled={isDisabled}
-              className={styles.selectMenuItem}
-              sx={{
-                color: isDisabled ? "#94a3b8" : "#000000",
-                fontStyle: isDisabled ? "italic" : "normal",
-                "&:hover": {
-                  backgroundColor: isDisabled ? "transparent" : "#f1f5f9",
-                },
-                "&.Mui-selected": {
-                  backgroundColor: "#e0f2fe",
-                  color: "#0891b2",
-                  "&:hover": {
-                    backgroundColor: "#bae6fd",
-                  },
-                },
-              }}
-            >
+            <MenuItem key={idx} value={optionValue} disabled={isDisabled}>
               {optionLabel}
             </MenuItem>
           );
         })}
       </TextField>
-
-      {helperText && (
-        <FormHelperText
-          error={error}
-          className={styles.selectHelperText}
-          sx={{
-            marginLeft: "6px",
-            marginTop: "8px",
-            fontSize: "0.875rem",
-            display: "flex",
-            alignItems: "center",
-            "&.Mui-error": {
-              color: "#ef4444",
-              fontWeight: 500,
-              "&::before": {
-                content: "'⚠'",
-                marginRight: "6px",
-                fontSize: "1rem",
-              },
-            },
-          }}
-        >
-          {helperText}
-        </FormHelperText>
-      )}
     </FormControl>
   );
 };

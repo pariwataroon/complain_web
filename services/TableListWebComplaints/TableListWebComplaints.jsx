@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -10,6 +10,8 @@ import {
   TablePagination,
   Container,
   IconButton,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import styles from "./TableListWebComplaints.module.scss";
@@ -22,11 +24,9 @@ const TableListWebComplaints = ({
   data = [],
   title = "",
   navigateTo = "",
-  agencyOptions = [],
   issueTypeOptions = [],
   issueSubTypeOptions = [],
   onSearch = () => {},
-  handleNavigateTo,
   page,
   onPageChange,
   rowsPerPage,
@@ -34,6 +34,9 @@ const TableListWebComplaints = ({
   total = 0,
 }) => {
   const router = useRouter();
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery("(max-width:1200px)");
+  const isExtraSmallScreen = useMediaQuery("(max-width:600px)");
 
   const [filters, setFilters] = useState({
     claimantName: "",
@@ -44,17 +47,50 @@ const TableListWebComplaints = ({
     ssoNo: "",
   });
 
-  // ฟังก์ชันจัดการการอัปเดต filter แต่ละ field
-  const handleChange = (field) => (e) =>
-    setFilters({ ...filters, [field]: e?.target ? e.target.value : e });
-
-  // เมื่อคลิกปุ่มค้นหา
-  const handleSearchClick = () => {
-    onSearch(filters);
+  // Handle input text change
+  const handleInputChange = (field) => (e) => {
+    const value = e?.target?.value || "";
+    setFilters((prev) => ({
+      ...prev,
+      [field]: String(value),
+    }));
   };
 
-  // เมื่อคลิกปุ่มเคลียร์การค้นหา (reset filters และไปหน้าแรก)
-  const handleClearSearch = () => {
+  // Handle SelectField change
+  const handleSelectChange = (field) => (e) => {
+    let finalValue = "";
+
+    if (e && typeof e === "object") {
+      if (e.target && e.target.value !== undefined) {
+        const selectedValue = e.target.value;
+
+        if (typeof selectedValue === "object" && selectedValue !== null) {
+          finalValue = String(selectedValue.value || "");
+        } else {
+          finalValue = String(selectedValue || "");
+        }
+      } else if (e.value !== undefined) {
+        finalValue = String(e.value || "");
+      }
+    } else {
+      finalValue = String(e || "");
+    }
+
+    setFilters((prev) => ({
+      ...prev,
+      [field]: finalValue,
+    }));
+  };
+
+  // เมื่อคลิกปุ่มค้นหา
+  const handleSearchClick = useCallback(() => {
+    console.log("🔍 Search clicked with filters:", filters);
+    onSearch(filters);
+  }, [filters, onSearch]);
+
+  // เมื่อคลิกปุ่มเคลียร์การค้นหา
+  const handleClearSearch = useCallback(() => {
+    console.log("🧹 Clear search clicked");
     const cleared = {
       claimantName: "",
       issueType: "",
@@ -64,17 +100,20 @@ const TableListWebComplaints = ({
       ssoNo: "",
     };
     setFilters(cleared);
-    // เปลี่ยนไปหน้าแรกด้วย onPageChange
     onPageChange(0);
     onSearch(cleared);
-  };
+  }, [onPageChange, onSearch]);
 
-  // กรณีคลิกแถวใด ให้ navigate ไปยังหน้า edit (ส่ง id)
+  // กรณีคลิกแถวใด ให้ navigate ไปยังหน้า edit
   const handleRowClick = (item) =>
     navigateTo && router.push(`${navigateTo}/${item.id}`);
 
-  // เตรียมข้อมูลที่จะแสดง (paging มาแล้วจาก parent)
-  const pagedData = data;
+  // Handle Enter key press for search
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      handleSearchClick();
+    }
+  };
 
   return (
     <Container
@@ -88,135 +127,348 @@ const TableListWebComplaints = ({
     >
       <Box className={styles.headerBar}>{title}</Box>
 
-      {/* search bar */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        gap={1}
-        mt={2}
-        sx={{
-          flexWrap: "nowrap",
-          whiteSpace: "nowrap",
-          overflowX: "auto",
-          px: 2,
-        }}
-      >
-        <Box
-          display="flex"
-          alignItems="center"
-          gap={1}
-          sx={{ flexWrap: "nowrap" }}
-        >
-          <InputText
-            label="ชื่อผู้ร้อง"
-            value={filters.claimantName}
-            onChange={handleChange("claimantName")}
-          />
-          <SelectField
-            label="ประเภทเรื่อง"
-            options={issueTypeOptions}
-            value={filters.issueType}
-            onChange={handleChange("issueType")}
-          />
-          <SelectField
-            label="ประเภทเรื่องย่อย"
-            options={issueSubTypeOptions}
-            value={filters.issueSubType}
-            onChange={handleChange("issueSubType")}
-          />
-          <InputText
-            label="เลขที่ สรร"
-            value={filters.ssoNo}
-            onChange={handleChange("ssoNo")}
-          />
-          <InputText
-            label="ชื่อเรื่อง"
-            value={filters.subject}
-            onChange={handleChange("subject")}
-          />
-          <SelectField
-            label="ชื่อผู้ถูกร้อง"
-            options={agencyOptions}
-            value={filters.accusedName}
-            onChange={handleChange("accusedName")}
-          />
+      {/* Search Bar - Responsive Layout */}
+      <Box sx={{ px: 2, py: 2 }}>
+        {isSmallScreen ? (
+          // Mobile/Tablet Layout (< 1200px)
+          <Box display="flex" flexDirection="column" gap={2}>
+            {/* Search Fields Grid */}
+            <Box
+              display="grid"
+              gridTemplateColumns={{
+                xs: "1fr",
+                sm: "1fr 1fr",
+                md: "1fr 1fr 1fr",
+              }}
+              gap={2}
+            >
+              <InputText
+                label="ชื่อผู้ร้อง"
+                inputLabel="กรอกชื่อผู้ร้อง"
+                value={String(filters.claimantName || "")}
+                onChange={handleInputChange("claimantName")}
+                onKeyPress={handleKeyPress}
+              />
 
-          <IconButton
-            onClick={handleSearchClick}
+              <SelectField
+                label="ประเภทเรื่อง"
+                inputLabel="เลือกประเภทเรื่อง"
+                options={issueTypeOptions}
+                value={String(filters.issueType || "")}
+                onChange={handleSelectChange("issueType")}
+                name="issueType"
+              />
+
+              <SelectField
+                label="ประเภทเรื่องย่อย"
+                inputLabel="เลือกประเภทเรื่องย่อย"
+                options={issueSubTypeOptions}
+                value={String(filters.issueSubType || "")}
+                onChange={handleSelectChange("issueSubType")}
+                name="issueSubType"
+              />
+
+              <InputText
+                label="เลขที่ สรร"
+                inputLabel="กรอกเลขที่ สรร"
+                value={String(filters.ssoNo || "")}
+                onChange={handleInputChange("ssoNo")}
+                onKeyPress={handleKeyPress}
+              />
+
+              <InputText
+                label="ชื่อเรื่อง"
+                inputLabel="กรอกชื่อเรื่อง"
+                value={String(filters.subject || "")}
+                onChange={handleInputChange("subject")}
+                onKeyPress={handleKeyPress}
+              />
+
+              <InputText
+                label="ชื่อผู้ถูกร้อง"
+                inputLabel="กรอกชื่อผู้ถูกร้อง"
+                value={String(filters.accusedName || "")}
+                onChange={handleInputChange("accusedName")}
+                onKeyPress={handleKeyPress}
+              />
+            </Box>
+
+            {/* Action Buttons - Responsive Layout */}
+            {isExtraSmallScreen ? (
+              // Extra Small (xs) - แยกบรรทัด
+              <Box display="flex" flexDirection="column" gap={2}>
+                {/* Search & Clear Buttons */}
+                <Box display="flex" justifyContent="center" gap={1}>
+                  <IconButton
+                    onClick={handleSearchClick}
+                    sx={{
+                      bgcolor: "#1120A3",
+                      color: "#fff",
+                      "&:hover": { bgcolor: "#0b1580" },
+                      height: 40,
+                      width: 40,
+                    }}
+                    title="ค้นหา"
+                  >
+                    <SearchIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={handleClearSearch}
+                    sx={{
+                      bgcolor: "#dc3545",
+                      color: "#fff",
+                      "&:hover": { bgcolor: "#c82333" },
+                      height: 40,
+                      width: 40,
+                    }}
+                    title="ล้างการค้นหา"
+                  >
+                    <SearchOffIcon />
+                  </IconButton>
+                </Box>
+
+                {/* Export Buttons - แยกบรรทัดและแยกปุ่ม */}
+                <Box display="flex" flexDirection="column" gap={1}>
+                  <ExportButton label="Export PDF" />
+                  <ExportButton label="Export Excel" />
+                </Box>
+              </Box>
+            ) : (
+              // Small and up (sm+) - แถวเดียว
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                flexWrap="wrap"
+                gap={1}
+              >
+                {/* Search & Clear Buttons */}
+                <Box display="flex" gap={1}>
+                  <IconButton
+                    onClick={handleSearchClick}
+                    sx={{
+                      bgcolor: "#1120A3",
+                      color: "#fff",
+                      "&:hover": { bgcolor: "#0b1580" },
+                      height: 40,
+                      width: 40,
+                    }}
+                    title="ค้นหา"
+                  >
+                    <SearchIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={handleClearSearch}
+                    sx={{
+                      bgcolor: "#dc3545",
+                      color: "#fff",
+                      "&:hover": { bgcolor: "#c82333" },
+                      height: 40,
+                      width: 40,
+                    }}
+                    title="ล้างการค้นหา"
+                  >
+                    <SearchOffIcon />
+                  </IconButton>
+                </Box>
+
+                {/* Export Buttons */}
+                <Box display="flex" gap={1}>
+                  <ExportButton label="Export PDF" />
+                  <ExportButton label="Export Excel" />
+                </Box>
+              </Box>
+            )}
+          </Box>
+        ) : (
+          // Desktop Layout (>= 1200px)
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            gap={1}
             sx={{
-              bgcolor: "#1120A3",
-              color: "#fff",
-              "&:hover": { bgcolor: "#0b1580" },
-              flexShrink: 0,
+              flexWrap: "nowrap",
+              whiteSpace: "nowrap",
+              overflowX: "auto",
             }}
           >
-            <SearchIcon />
-          </IconButton>
-          <IconButton
-            onClick={handleClearSearch}
-            sx={{
-              bgcolor: "#1120A3",
-              color: "#fff",
-              "&:hover": { bgcolor: "#0b1580" },
-              flexShrink: 0,
-            }}
-          >
-            <SearchOffIcon />
-          </IconButton>
-        </Box>
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={1}
+              sx={{ flexWrap: "nowrap" }}
+            >
+              <InputText
+                label="ชื่อผู้ร้อง"
+                inputLabel="กรอกชื่อผู้ร้อง"
+                value={String(filters.claimantName || "")}
+                onChange={handleInputChange("claimantName")}
+                onKeyPress={handleKeyPress}
+              />
 
-        {/* export buttons */}
-        <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
-          <ExportButton label="Export PDF" />
-          <ExportButton label="Export Excel" />
-        </Box>
+              <SelectField
+                label="ประเภทเรื่อง"
+                inputLabel="เลือกประเภทเรื่อง"
+                options={issueTypeOptions}
+                value={String(filters.issueType || "")}
+                onChange={handleSelectChange("issueType")}
+                name="issueType"
+              />
+
+              <SelectField
+                label="ประเภทเรื่องย่อย"
+                inputLabel="เลือกประเภทเรื่องย่อย"
+                options={issueSubTypeOptions}
+                value={String(filters.issueSubType || "")}
+                onChange={handleSelectChange("issueSubType")}
+                name="issueSubType"
+              />
+
+              <InputText
+                label="เลขที่ สรร"
+                inputLabel="กรอกเลขที่ สรร"
+                value={String(filters.ssoNo || "")}
+                onChange={handleInputChange("ssoNo")}
+                onKeyPress={handleKeyPress}
+              />
+
+              <InputText
+                label="ชื่อเรื่อง"
+                inputLabel="กรอกชื่อเรื่อง"
+                value={String(filters.subject || "")}
+                onChange={handleInputChange("subject")}
+                onKeyPress={handleKeyPress}
+              />
+
+              <InputText
+                label="ชื่อผู้ถูกร้อง"
+                inputLabel="กรอกชื่อผู้ถูกร้อง"
+                value={String(filters.accusedName || "")}
+                onChange={handleInputChange("accusedName")}
+                onKeyPress={handleKeyPress}
+              />
+
+              <IconButton
+                onClick={handleSearchClick}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#0b1580" },
+                  flexShrink: 0,
+                  height: 40,
+                  width: 40,
+                }}
+                title="ค้นหา"
+              >
+                <SearchIcon />
+              </IconButton>
+              <IconButton
+                onClick={handleClearSearch}
+                sx={{
+                  bgcolor: "#dc3545",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#c82333" },
+                  flexShrink: 0,
+                  height: 40,
+                  width: 40,
+                }}
+                title="ล้างการค้นหา"
+              >
+                <SearchOffIcon />
+              </IconButton>
+            </Box>
+
+            {/* Export buttons - Responsive for xs */}
+            <Box
+              display="flex"
+              flexDirection={isExtraSmallScreen ? "column" : "row"}
+              gap={1}
+              sx={{ flexShrink: 0 }}
+            >
+              <ExportButton label="Export PDF" />
+              <ExportButton label="Export Excel" />
+            </Box>
+          </Box>
+        )}
       </Box>
 
-      {/* table */}
+      {/* Table - Conditional Scrolling based on screen size */}
       <Box
         className={styles.tableWrapper}
         id="table-results"
-        sx={{ overflowX: "auto", px: 2, pb: 1 }}
+        sx={{
+          overflowX: isSmallScreen ? "auto" : "visible",
+          px: 2,
+          pb: 1,
+        }}
       >
-        <Table sx={{ minWidth: 1400 }}>
+        <Table
+          sx={{
+            minWidth: isSmallScreen ? 1400 : "100%",
+            width: isSmallScreen ? 1400 : "100%",
+          }}
+        >
           <TableHead>
             <TableRow>
-              <TableCell align="center" sx={{ width: 80 }}>
+              <TableCell align="center" sx={{ width: 80, fontWeight: "bold" }}>
                 ลำดับ
               </TableCell>
-              <TableCell sx={{ width: 200 }}>ชื่อผู้ร้อง</TableCell>
-              <TableCell sx={{ width: 180 }}>ประเภทเรื่อง</TableCell>
-              <TableCell sx={{ width: 300 }}>ชื่อเรื่อง</TableCell>
-              <TableCell sx={{ width: 180 }}>ชื่อผู้ถูกร้อง</TableCell>
-              <TableCell sx={{ width: 160 }}>เลขที่ สรร</TableCell>
+              <TableCell sx={{ width: 200, fontWeight: "bold" }}>
+                ชื่อผู้ร้อง
+              </TableCell>
+              <TableCell sx={{ width: 180, fontWeight: "bold" }}>
+                ประเภทเรื่อง
+              </TableCell>
+              <TableCell sx={{ width: 300, fontWeight: "bold" }}>
+                ชื่อเรื่อง
+              </TableCell>
+              <TableCell sx={{ width: 180, fontWeight: "bold" }}>
+                ชื่อผู้ถูกร้อง
+              </TableCell>
+              <TableCell sx={{ width: 160, fontWeight: "bold" }}>
+                เลขที่ สรร
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {pagedData.map((item, idx) => (
-              <TableRow
-                key={item.id}
-                onClick={() => handleRowClick(item)}
-                sx={{
-                  cursor: "pointer",
-                  "&:hover": { backgroundColor: "#f5f7ff" },
-                }}
-              >
-                <TableCell
-                  align="center"
-                  sx={{ fontWeight: 600, color: "#1120A3" }}
+            {data.length > 0 ? (
+              data.map((item, idx) => (
+                <TableRow
+                  key={item.id}
+                  onClick={() => handleRowClick(item)}
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": { backgroundColor: "#f5f7ff" },
+                    "&:nth-of-type(even)": { backgroundColor: "#fafafa" },
+                  }}
                 >
-                  {page * rowsPerPage + idx + 1}
+                  <TableCell
+                    align="center"
+                    sx={{ fontWeight: 600, color: "#1120A3" }}
+                  >
+                    {page * rowsPerPage + idx + 1}
+                  </TableCell>
+                  <TableCell>{item.complainant_name || "-"}</TableCell>
+                  <TableCell>{item.complaint_type || "-"}</TableCell>
+                  <TableCell className={styles.ellipsisCell}>
+                    {item.subject || "-"}
+                  </TableCell>
+                  <TableCell>{item.respondent_name || "-"}</TableCell>
+                  <TableCell>{item.complaint_number || "-"}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  align="center"
+                  sx={{ py: 3, color: "#999" }}
+                >
+                  ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา
                 </TableCell>
-                <TableCell>{item.complainant_name || "-"}</TableCell>
-                <TableCell>{item.complaint_type || "-"}</TableCell>
-                <TableCell className={styles.ellipsisCell}>
-                  {item.subject || "-"}
-                </TableCell>
-                <TableCell>{item.respondent_name || "-"}</TableCell>
-                <TableCell>{item.complaint_number || "-"}</TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
 
@@ -229,6 +481,10 @@ const TableListWebComplaints = ({
           onPageChange={(_, newPage) => onPageChange(newPage)}
           onRowsPerPageChange={(e) =>
             onRowsPerPageChange(parseInt(e.target.value, 10))
+          }
+          labelRowsPerPage="แถวต่อหน้า:"
+          labelDisplayedRows={({ from, to, count }) =>
+            `${from}-${to} จาก ${count !== -1 ? count : `มากกว่า ${to}`}`
           }
           sx={{ borderTop: "1px solid #eee" }}
         />

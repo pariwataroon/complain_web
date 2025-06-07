@@ -1,17 +1,24 @@
 .headerBar {
   background: linear-gradient(to right, #1223a5, #2499ff);
-  height: 50px;
-
   border-top-right-radius: 12px;
   padding: 0 24px;
   display: flex;
   align-items: center;
   color: white;
   font-weight: bold;
-  font-size: 18px;
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    padding: 0 16px;
+    border-top-left-radius: 12px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 0 12px;
+  }
 }
+
 .headerBar2 {
-  height: 50px;
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
   padding: 0 24px;
@@ -19,13 +26,48 @@
   align-items: center;
   color: #1120a3;
   font-weight: bold;
-  font-size: 18px;
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    padding: 0 16px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  @media (max-width: 480px) {
+    padding: 0 12px;
+  }
 }
+
 .tableWrapper {
   background-color: white;
   border-radius: 0 0 16px 16px;
-  box-shadow: none; /* <─ เอาเงาออก */
+  box-shadow: none;
   overflow: hidden;
+
+  // Responsive table styling
+  @media (max-width: 1200px) {
+    overflow-x: auto;
+
+    // Custom scrollbar for mobile
+    &::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background-color: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: #888;
+      border-radius: 4px;
+
+      &:hover {
+        background-color: #555;
+      }
+    }
+  }
 }
 
 .tableWrapper thead tr {
@@ -35,18 +77,37 @@
 .MuiTableCell-head {
   font-weight: 600;
   color: #1120a3;
-  font-size: 14px;
   border-bottom: 1px solid #d9dbe9;
+
+  // Responsive font sizes
+  @media (max-width: 768px) {
+    font-size: 13px;
+    padding: 12px 8px;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 12px;
+    padding: 10px 6px;
+  }
 }
 
 .MuiTableCell-root {
-  font-size: 14px;
   color: #333;
-  padding: 14px 12px;
   border-bottom: 1px solid #eee;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    font-size: 13px;
+    padding: 12px 8px;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 12px;
+    padding: 10px 6px;
+  }
 }
 
 .filterRow {
@@ -61,5 +122,59 @@
     gap: 12px;
     flex-wrap: wrap;
     align-items: center;
+  }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 16px;
+    margin: 16px 0;
+
+    > div {
+      width: 100%;
+      justify-content: center;
+      gap: 8px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    margin: 12px 0;
+
+    > div {
+      gap: 6px;
+    }
+  }
+}
+
+// Additional responsive utility classes
+.mobileHidden {
+  @media (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+.tabletHidden {
+  @media (max-width: 1024px) {
+    display: none !important;
+  }
+}
+
+.desktopHidden {
+  @media (min-width: 769px) {
+    display: none !important;
+  }
+}
+
+// Responsive text truncation
+.textTruncate {
+  @media (max-width: 768px) {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 480px) {
+    max-width: 80px;
   }
 }

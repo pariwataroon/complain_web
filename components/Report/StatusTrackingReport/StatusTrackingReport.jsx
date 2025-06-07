@@ -145,7 +145,6 @@ const StatusTrackingReport = () => {
   const [allComplaints] = useState(mockComplaints);
   const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
   const router = useRouter();
-  
 
   const handleSearch = (filters) => {
     const {
@@ -232,7 +231,7 @@ const StatusTrackingReport = () => {
       <TableListCollaps
         data={filteredComplaints}
         title="รายงานติดตามสถานะ"
-        navigateTo="/admin/edit/opm1111"
+        navigateTo="/admin/document/status-tracking-report"
         handleNavigateTo={handleNavigateTo}
         onSearch={handleSearch}
         filterFields={[
@@ -259,7 +258,6 @@ const StatusTrackingReport = () => {
           },
         ]}
       />
-
     </>
   );
 };

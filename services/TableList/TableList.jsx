@@ -11,6 +11,8 @@ import {
   Container,
   IconButton,
   Button,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import styles from "./TableList.module.scss";
@@ -29,6 +31,9 @@ const TableList = ({
   handleNavigateTo,
 }) => {
   const router = useRouter();
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery("(max-width:1200px)");
+  const isExtraSmallScreen = useMediaQuery("(max-width:600px)");
 
   /* ฟิลเตอร์ที่ผู้ใช้กรอก (จะส่งกลับเมื่อกดค้นหา) */
   const [filters, setFilters] = useState({
@@ -106,116 +111,303 @@ const TableList = ({
     >
       <Box className={styles.headerBar}>{title}</Box>
 
-      {/* Search Filters */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        gap={1}
-        mt={2}
-        sx={{
-          flexWrap: "nowrap",
-          whiteSpace: "nowrap",
-          overflowX: "auto",
-          px: 2,
-        }}
-      >
-        <Box
-          display="flex"
-          alignItems="center"
-          gap={1}
-          sx={{ flexWrap: "nowrap" }}
-        >
-          <InputText
-            label="ชื่อผู้ร้อง"
-            inputLabel="กรอกชื่อผู้ร้อง"
-            value={filters.claimantName}
-            onChange={handleChange("claimantName")}
-            onKeyPress={handleKeyPress}
-          />
-          <InputText
-            label="เลขบัตรประชาชน"
-            inputLabel="กรอกเลขบัตรประชาชน"
-            value={filters.citizenId}
-            onChange={handleChange("citizenId")}
-            onKeyPress={handleKeyPress}
-          />
-          <InputText
-            label="ชื่อเรื่อง"
-            inputLabel="กรอกชื่อเรื่อง"
-            value={filters.subject}
-            onChange={handleChange("subject")}
-            onKeyPress={handleKeyPress}
-          />
-          <InputText
-            label="เลขที่ส่วนรับราชการ"
-            inputLabel="กรอกเลขที่ส่วนรับราชการ"
-            value={filters.docGov}
-            onChange={handleChange("docGov")}
-            onKeyPress={handleKeyPress}
-          />
-          <SelectField
-            label="หน่วยงานอื่นที่ส่งเรื่องมายัง กก."
-            inputLabel="เลือกหน่วยงาน"
-            options={agencyOptions}
-            value={filters.agency}
-            onChange={handleChange("agency")}
-          />
+      {/* Search Bar - Responsive Layout */}
+      <Box sx={{ px: 2, py: 2 }}>
+        {isSmallScreen ? (
+          // Mobile/Tablet Layout (< 1200px)
+          <Box display="flex" flexDirection="column" gap={2}>
+            {/* Search Fields Grid */}
+            <Box
+              display="grid"
+              gridTemplateColumns={{
+                xs: "1fr",
+                sm: "1fr 1fr",
+                md: "1fr 1fr 1fr",
+              }}
+              gap={2}
+            >
+              <InputText
+                label="ชื่อผู้ร้อง"
+                inputLabel="กรอกชื่อผู้ร้อง"
+                value={filters.claimantName}
+                onChange={handleChange("claimantName")}
+                onKeyPress={handleKeyPress}
+              />
+              <InputText
+                label="เลขบัตรประชาชน"
+                inputLabel="กรอกเลขบัตรประชาชน"
+                value={filters.citizenId}
+                onChange={handleChange("citizenId")}
+                onKeyPress={handleKeyPress}
+              />
+              <InputText
+                label="ชื่อเรื่อง"
+                inputLabel="กรอกชื่อเรื่อง"
+                value={filters.subject}
+                onChange={handleChange("subject")}
+                onKeyPress={handleKeyPress}
+              />
+              <InputText
+                label="เลขที่ส่วนรับราชการ"
+                inputLabel="กรอกเลขที่ส่วนรับราชการ"
+                value={filters.docGov}
+                onChange={handleChange("docGov")}
+                onKeyPress={handleKeyPress}
+              />
+              <SelectField
+                label="หน่วยงานอื่นที่ส่งเรื่องมายัง กก."
+                inputLabel="เลือกหน่วยงาน"
+                options={agencyOptions}
+                value={filters.agency}
+                onChange={handleChange("agency")}
+              />
+            </Box>
 
-          <IconButton
-            onClick={handleSearchClick}
-            sx={{
-              bgcolor: "#1120A3",
-              color: "#fff",
-              "&:hover": { bgcolor: "#0b1580" },
-              flexShrink: 0,
-              height: 40,
-              width: 40,
-            }}
-            title="ค้นหา"
-          >
-            <SearchIcon />
-          </IconButton>
-          <IconButton
-            onClick={handleClearSearch}
-            sx={{
-              bgcolor: "#dc3545",
-              color: "#fff",
-              "&:hover": { bgcolor: "#c82333" },
-              flexShrink: 0,
-              height: 40,
-              width: 40,
-            }}
-            title="ล้างการค้นหา"
-          >
-            <SearchOffIcon />
-          </IconButton>
+            {/* Action Buttons - Responsive Layout */}
+            {isExtraSmallScreen ? (
+              // Extra Small (xs) - แยกบรรทัดและเรียงแนวตั้ง
+              <Box display="flex" flexDirection="column" gap={2}>
+                {/* Search & Clear Buttons */}
+                <Box display="flex" justifyContent="center" gap={1}>
+                  <IconButton
+                    onClick={handleSearchClick}
+                    sx={{
+                      bgcolor: "#1120A3",
+                      color: "#fff",
+                      "&:hover": { bgcolor: "#0b1580" },
+                      height: 40,
+                      width: 40,
+                    }}
+                    title="ค้นหา"
+                  >
+                    <SearchIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={handleClearSearch}
+                    sx={{
+                      bgcolor: "#dc3545",
+                      color: "#fff",
+                      "&:hover": { bgcolor: "#c82333" },
+                      height: 40,
+                      width: 40,
+                    }}
+                    title="ล้างการค้นหา"
+                  >
+                    <SearchOffIcon />
+                  </IconButton>
+                </Box>
 
-          <Button
-            variant="contained"
-            onClick={handleNavigateTo}
+                {/* Navigation Button */}
+                <Box display="flex" justifyContent="center">
+                  <Button
+                    variant="contained"
+                    onClick={handleNavigateTo}
+                    sx={{
+                      backgroundColor: "#1120A3",
+                      color: "#fff",
+                      borderRadius: "12px",
+                      fontWeight: "bold",
+                      px: 3,
+                      py: 1,
+                      height: 40,
+                      "&:hover": { backgroundColor: "#0b1580" },
+                      width: "100%",
+                      maxWidth: 300,
+                    }}
+                  >
+                    คัดกรองเรื่องร้องเรียน
+                  </Button>
+                </Box>
+
+                {/* Export Buttons - แยกบรรทัด */}
+                <Box display="flex" flexDirection="column" gap={1}>
+                  <ExportButton label="Export PDF" />
+                  <ExportButton label="Export Excel" />
+                </Box>
+              </Box>
+            ) : (
+              // Small and up (sm+) - จัดเป็น 2 แถว
+              <Box display="flex" flexDirection="column" gap={2}>
+                {/* แถวที่ 1: Search, Clear, Navigate */}
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  flexWrap="wrap"
+                  gap={1}
+                >
+                  <Box display="flex" gap={1}>
+                    <IconButton
+                      onClick={handleSearchClick}
+                      sx={{
+                        bgcolor: "#1120A3",
+                        color: "#fff",
+                        "&:hover": { bgcolor: "#0b1580" },
+                        height: 40,
+                        width: 40,
+                      }}
+                      title="ค้นหา"
+                    >
+                      <SearchIcon />
+                    </IconButton>
+                    <IconButton
+                      onClick={handleClearSearch}
+                      sx={{
+                        bgcolor: "#dc3545",
+                        color: "#fff",
+                        "&:hover": { bgcolor: "#c82333" },
+                        height: 40,
+                        width: 40,
+                      }}
+                      title="ล้างการค้นหา"
+                    >
+                      <SearchOffIcon />
+                    </IconButton>
+                  </Box>
+
+                  <Button
+                    variant="contained"
+                    onClick={handleNavigateTo}
+                    sx={{
+                      backgroundColor: "#1120A3",
+                      color: "#fff",
+                      borderRadius: "12px",
+                      fontWeight: "bold",
+                      px: 3,
+                      py: 1,
+                      height: 40,
+                      "&:hover": { backgroundColor: "#0b1580" },
+                      minWidth: 220,
+                    }}
+                  >
+                    คัดกรองเรื่องร้องเรียน
+                  </Button>
+                </Box>
+
+                {/* แถวที่ 2: Export Buttons */}
+                <Box display="flex" justifyContent="center" gap={1}>
+                  <ExportButton label="Export PDF" />
+                  <ExportButton label="Export Excel" />
+                </Box>
+              </Box>
+            )}
+          </Box>
+        ) : (
+          // Desktop Layout (>= 1200px)
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            gap={1}
             sx={{
-              backgroundColor: "#1120A3",
-              color: "#fff",
-              borderRadius: "12px",
-              fontWeight: "bold",
-              px: 3,
-              py: 1,
-              minWidth: 220,
-              height: 40,
-              "&:hover": { backgroundColor: "#0b1580" },
-              flexShrink: 0,
+              flexWrap: "nowrap",
+              whiteSpace: "nowrap",
+              overflowX: "auto",
             }}
           >
-            คัดกรองเรื่องร้องเรียน
-          </Button>
-        </Box>
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={1}
+              sx={{ flexWrap: "nowrap" }}
+            >
+              <InputText
+                label="ชื่อผู้ร้อง"
+                inputLabel="กรอกชื่อผู้ร้อง"
+                value={filters.claimantName}
+                onChange={handleChange("claimantName")}
+                onKeyPress={handleKeyPress}
+              />
+              <InputText
+                label="เลขบัตรประชาชน"
+                inputLabel="กรอกเลขบัตรประชาชน"
+                value={filters.citizenId}
+                onChange={handleChange("citizenId")}
+                onKeyPress={handleKeyPress}
+              />
+              <InputText
+                label="ชื่อเรื่อง"
+                inputLabel="กรอกชื่อเรื่อง"
+                value={filters.subject}
+                onChange={handleChange("subject")}
+                onKeyPress={handleKeyPress}
+              />
+              <InputText
+                label="เลขที่ส่วนรับราชการ"
+                inputLabel="กรอกเลขที่ส่วนรับราชการ"
+                value={filters.docGov}
+                onChange={handleChange("docGov")}
+                onKeyPress={handleKeyPress}
+              />
+              <SelectField
+                label="หน่วยงานอื่นที่ส่งเรื่องมายัง กก."
+                inputLabel="เลือกหน่วยงาน"
+                options={agencyOptions}
+                value={filters.agency}
+                onChange={handleChange("agency")}
+              />
 
-        {/* ปุ่ม Export */}
-        <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
-          <ExportButton label="Export PDF" />
-          <ExportButton label="Export Excel" />
-        </Box>
+              <IconButton
+                onClick={handleSearchClick}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#0b1580" },
+                  flexShrink: 0,
+                  height: 40,
+                  width: 40,
+                }}
+                title="ค้นหา"
+              >
+                <SearchIcon />
+              </IconButton>
+              <IconButton
+                onClick={handleClearSearch}
+                sx={{
+                  bgcolor: "#dc3545",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#c82333" },
+                  flexShrink: 0,
+                  height: 40,
+                  width: 40,
+                }}
+                title="ล้างการค้นหา"
+              >
+                <SearchOffIcon />
+              </IconButton>
+
+              <Button
+                variant="contained"
+                onClick={handleNavigateTo}
+                sx={{
+                  backgroundColor: "#1120A3",
+                  color: "#fff",
+                  borderRadius: "12px",
+                  fontWeight: "bold",
+                  px: 3,
+                  py: 1,
+                  minWidth: 220,
+                  height: 40,
+                  "&:hover": { backgroundColor: "#0b1580" },
+                  flexShrink: 0,
+                }}
+              >
+                คัดกรองเรื่องร้องเรียน
+              </Button>
+            </Box>
+
+            {/* Export buttons - Responsive for xs */}
+            <Box
+              display="flex"
+              flexDirection={isExtraSmallScreen ? "column" : "row"}
+              gap={1}
+              sx={{ flexShrink: 0 }}
+            >
+              <ExportButton label="Export PDF" />
+              <ExportButton label="Export Excel" />
+            </Box>
+          </Box>
+        )}
       </Box>
 
       {/* Results Summary */}
@@ -225,13 +417,22 @@ const TableList = ({
         </Box>
       </Box>
 
-      {/* Table + Pagination */}
+      {/* Table - Conditional Scrolling based on screen size */}
       <Box
         className={styles.tableWrapper}
         id="table-results"
-        sx={{ overflowX: "auto", px: 2, pb: 1 }}
+        sx={{
+          overflowX: isSmallScreen ? "auto" : "visible",
+          px: 2,
+          pb: 1,
+        }}
       >
-        <Table sx={{ minWidth: 1400 }}>
+        <Table
+          sx={{
+            minWidth: isSmallScreen ? 1600 : "100%",
+            width: isSmallScreen ? 1600 : "100%",
+          }}
+        >
           <TableHead>
             <TableRow>
               <TableCell align="center" sx={{ width: 80, fontWeight: "bold" }}>

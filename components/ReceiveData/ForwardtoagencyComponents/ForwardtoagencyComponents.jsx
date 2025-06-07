@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
@@ -10,14 +10,16 @@ import CloseIcon from "@mui/icons-material/Close";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 
 const ForwardtoagencyComponents = () => {
-  const { id } = useRouter().query;
+  const router = useRouter();
+  const { id } = router.query;
+
   const [form, setForm] = useState({
     salutation: "",
     refNo: "",
-    date1: null, // เปลี่ยนเป็น null สำหรับ DateThaiPickerService
+    date1: null,
     subject: "",
     bookNo: "",
-    date2: null, // เปลี่ยนเป็น null สำหรับ DateThaiPickerService
+    date2: null,
     signer: "",
     department: "",
     confidentiality: "",
@@ -26,15 +28,192 @@ const ForwardtoagencyComponents = () => {
     note: "",
   });
 
-  const handleChange = (e) => {
+  // ใช้ useCallback เพื่อป้องกัน re-render loop
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
+    // แก้ไข: ตรวจสอบว่า value ไม่ใช่ object
+    const finalValue =
+      typeof value === "object" && value !== null ? value.value || "" : value;
+    setForm((prev) => ({ ...prev, [name]: finalValue }));
+  }, []);
 
-  // Handler สำหรับ DateThaiPickerService
-  const handleDateChange = (field) => (thaiDate) => {
-    setForm((prev) => ({ ...prev, [field]: thaiDate }));
-  };
+  // Handler สำหรับ DateThaiPickerService - ใช้ useCallback
+  const handleDateChange = useCallback(
+    (field) => (thaiDate) => {
+      setForm((prev) => ({ ...prev, [field]: thaiDate }));
+    },
+    []
+  );
+
+  // Handler สำหรับ file upload - ใช้ useCallback
+  const handleFileChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setForm((prev) => ({
+        ...prev,
+        attachment: file.name,
+      }));
+    }
+  }, []);
+
+  // Clear form handler - ใช้ useCallback
+  const handleClear = useCallback(() => {
+    setForm({
+      salutation: "",
+      refNo: "",
+      date1: null,
+      subject: "",
+      bookNo: "",
+      date2: null,
+      signer: "",
+      department: "",
+      confidentiality: "",
+      urgency: "",
+      attachment: "",
+      note: "",
+    });
+  }, []);
+
+  // Save form handler - ใช้ useCallback
+  const handleSave = useCallback(() => {
+    console.log("Form data:", form);
+    // TODO: save form
+  }, [form]);
+
+  // Options สำหรับ SelectField - แก้ไขให้แน่ใจว่าเป็น format ที่ถูกต้อง
+  const salutationOptions = [
+    { value: "director_general", label: "อธิบดี" },
+    { value: "deputy_director_general", label: "รองอธิบดี" },
+    { value: "director", label: "ผู้อำนวยการ" },
+    { value: "deputy_director", label: "รองผู้อำนวยการ" },
+    { value: "secretary_general", label: "เลขาธิการ" },
+    { value: "deputy_secretary_general", label: "รองเลขาธิการ" },
+    { value: "minister", label: "รัฐมนตรี" },
+    { value: "deputy_minister", label: "รองรัฐมนตรี" },
+  ];
+
+  const signerOptions = [
+    { value: "signer1", label: "นายสมชาย ใจดี" },
+    { value: "signer2", label: "นางสุดา มีสุข" },
+    { value: "signer3", label: "นายอนุชา เจริญ" },
+    { value: "signer4", label: "นางสาวปิยะดา สมศรี" },
+    { value: "signer5", label: "นายวิชัย รุ่งเรือง" },
+  ];
+
+  // แก้ไข: หน่วยงานในกระทรวงต่างๆ ของไทย
+  const departmentOptions = [
+    // กระทรวงคมนาคม
+    { value: "dlt", label: "กรมการขนส่งทางบก" },
+    { value: "dmt", label: "กรมการขนส่งทางน้ำและพาณิชยนาวี" },
+    { value: "caat", label: "การบินพลเรือนแห่งประเทศไทย" },
+    { value: "doh", label: "กรมทางหลวง" },
+    { value: "rrd", label: "กรมทางหลวงชนบท" },
+    { value: "srt", label: "การรถไฟแห่งประเทศไทย" },
+    { value: "port_authority", label: "การท่าเรือแห่งประเทศไทย" },
+    { value: "expressway", label: "การทางพิเศษแห่งประเทศไทย" },
+
+    // กระทรวงมหาดไทย
+    { value: "dopa", label: "กรมการปกครอง" },
+    { value: "dpt", label: "กรมส่งเสริมการปกครองท้องถิ่น" },
+    { value: "dpw", label: "กรมโยธาธิการและผังเมือง" },
+    { value: "disaster_prevention", label: "กรมป้องกันและบรรเทาสาธารณภัย" },
+
+    // กระทรวงการคลัง
+    { value: "rd", label: "กรมสรรพากร" },
+    { value: "customs", label: "กรมศุลกากร" },
+    { value: "treasury", label: "กรมบัญชีกลาง" },
+    { value: "excise", label: "กรมสรรพสามิต" },
+    { value: "lands", label: "กรมธนารักษ์" },
+
+    // กระทรวงศึกษาธิการ
+    { value: "moe", label: "สำนักงานปลัดกระทรวงศึกษาธิการ" },
+    { value: "obec", label: "สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน" },
+    { value: "ohec", label: "สำนักงานคณะกรรมการการอุดมศึกษา" },
+    { value: "ovec", label: "สำนักงานคณะกรรมการการอาชีวศึกษา" },
+
+    // กระทรวงสาธารณสุข
+    { value: "moph", label: "สำนักงานปลัดกระทรวงสาธารณสุข" },
+    { value: "ddc", label: "กรมควบคุมโรค" },
+    { value: "fda", label: "สำนักงานคณะกรรมการอาหารและยา" },
+    { value: "dmh", label: "กรมสุขภาพจิต" },
+
+    // กระทรวงแรงงาน
+    { value: "doe", label: "กรมการจัดหางาน" },
+    { value: "dlpw", label: "กรมสวัสดิการและคุ้มครองแรงงาน" },
+    { value: "dsd", label: "กรมพัฒนาฝีมือแรงงาน" },
+
+    // กระทรวงยุติธรรม
+    { value: "corrections", label: "กรมราชทัณฑ์" },
+    { value: "probation", label: "กรมคุมประพฤติ" },
+    { value: "legal_execution", label: "กรมบังคับคดี" },
+    { value: "rights_liberty", label: "กรมคุ้มครองสิทธิและเสรีภาพ" },
+
+    // กระทรวงเกษตรและสหกรณ์
+    { value: "doa", label: "กรมส่งเสริมการเกษตร" },
+    { value: "fisheries", label: "กรมประมง" },
+    { value: "livestock", label: "กรมปศุสัตว์" },
+    { value: "cooperatives", label: "กรมส่งเสริมสหกรณ์" },
+
+    // กระทรวงพาณิชย์
+    { value: "dbd", label: "กรมพัฒนาธุรกิจการค้า" },
+    { value: "dit", label: "กรมการค้าต่างประเทศ" },
+    { value: "dip", label: "กรมทรัพย์สินทางปัญญา" },
+
+    // กระทรวงอุตสาหกรรม
+    { value: "diw", label: "กรมโรงงานอุตสาหกรรม" },
+    { value: "tisi", label: "สำนักงานมาตรฐานผลิตภัณฑ์อุตสาหกรรม" },
+
+    // กระทรวงพลังงาน
+    { value: "doae", label: "กรมพัฒนาพลังงานทดแทนและอนุรักษ์พลังงาน" },
+    { value: "dmf", label: "กรมเชื้อเพลิงธรรมชาติ" },
+
+    // กระทรวงทรัพยากรธรรมชาติและสิ่งแวดล้อม
+    { value: "pcd", label: "กรมควบคุมมลพิษ" },
+    { value: "dnp", label: "กรมอุทยานแห่งชาติ สัตว์ป่า และพันธุ์พืช" },
+    { value: "marine", label: "กรมทรัพยากรทางทะเลและชายฝั่ง" },
+
+    // กระทรวงการท่องเที่ยวและกีฬา
+    { value: "tat", label: "การท่องเที่ยวแห่งประเทศไทย" },
+    { value: "sports_authority", label: "การกีฬาแห่งประเทศไทย" },
+
+    // กระทรวงเทคโนโลยีสารสนเทศและการสื่อสาร
+    {
+      value: "nbtc",
+      label:
+        "สำนักงานคณะกรรมการกิจการกระจายเสียง กิจการโทรทัศน์ และกิจการโทรคมนาคมแห่งชาติ",
+    },
+    { value: "etda", label: "สำนักงานพัฒนาเศรษฐกิจดิจิทัลแห่งชาติ" },
+
+    // กระทรวงวัฒนธรรม
+    { value: "culture", label: "กรมส่งเสริมวัฒนธรรม" },
+    { value: "fine_arts", label: "กรมศิลปากร" },
+
+    // กระทรวงการพัฒนาสังคมและความมั่นคงของมนุษย์
+    { value: "dop", label: "กรมพัฒนาสังคมและสวัสดิการ" },
+    { value: "dosa", label: "กรมกิจการผู้สูงอายุ" },
+
+    // หน่วยงานอิสระ
+    { value: "ombudsman", label: "สำนักงานผู้ตรวจการแผ่นดิน" },
+    {
+      value: "nacc",
+      label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ",
+    },
+    { value: "nhrct", label: "สำนักงานคณะกรรมการสิทธิมนุษยชนแห่งชาติ" },
+  ];
+
+  const confidentialityOptions = [
+    { value: "normal", label: "ปกติ" },
+    { value: "confidential", label: "ลับ" },
+    { value: "secret", label: "ลับมาก" },
+    { value: "top_secret", label: "ลับที่สุด" },
+  ];
+
+  const urgencyOptions = [
+    { value: "normal", label: "ปกติ" },
+    { value: "urgent", label: "ด่วน" },
+    { value: "very_urgent", label: "ด่วนมาก" },
+    { value: "extremely_urgent", label: "ด่วนที่สุด" },
+  ];
 
   return (
     <Box
@@ -108,11 +287,7 @@ const ForwardtoagencyComponents = () => {
               name="salutation"
               value={form.salutation}
               onChange={handleChange}
-              externalOptions={
-                [
-                  /* … */
-                ]
-              }
+              options={salutationOptions}
             />
             <InputText
               label={
@@ -201,11 +376,7 @@ const ForwardtoagencyComponents = () => {
               name="signer"
               value={form.signer}
               onChange={handleChange}
-              externalOptions={
-                [
-                  /* … */
-                ]
-              }
+              options={signerOptions}
             />
           </Box>
 
@@ -221,11 +392,7 @@ const ForwardtoagencyComponents = () => {
               name="department"
               value={form.department}
               onChange={handleChange}
-              externalOptions={
-                [
-                  /* … */
-                ]
-              }
+              options={departmentOptions}
             />
           </Box>
 
@@ -247,11 +414,7 @@ const ForwardtoagencyComponents = () => {
               name="confidentiality"
               value={form.confidentiality}
               onChange={handleChange}
-              externalOptions={
-                [
-                  /* … */
-                ]
-              }
+              options={confidentialityOptions}
             />
             <SelectField
               label={
@@ -263,11 +426,7 @@ const ForwardtoagencyComponents = () => {
               name="urgency"
               value={form.urgency}
               onChange={handleChange}
-              externalOptions={
-                [
-                  /* … */
-                ]
-              }
+              options={urgencyOptions}
             />
           </Box>
 
@@ -292,15 +451,7 @@ const ForwardtoagencyComponents = () => {
                       type="file"
                       id="attachment-upload"
                       style={{ display: "none" }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setForm((prev) => ({
-                            ...prev,
-                            attachment: file.name,
-                          }));
-                        }
-                      }}
+                      onChange={handleFileChange}
                     />
                     <label
                       htmlFor="attachment-upload"
@@ -340,7 +491,7 @@ const ForwardtoagencyComponents = () => {
             justifyContent: "center",
             gap: 2,
             mb: 5,
-            px: { xs: 2, sm: 2, md: 0 }, // เพิ่ม padding ซ้าย-ขวา เมื่อขนาดหน้าจอเป็น sm หรือต่ำกว่า
+            px: { xs: 2, sm: 2, md: 0 },
           }}
         >
           <Box sx={{ width: { xs: "100%", md: "18%" } }}>
@@ -348,22 +499,7 @@ const ForwardtoagencyComponents = () => {
               label="ล้าง"
               variant="outlined"
               iconLeft={<CloseIcon />}
-              onClick={() => {
-                setForm({
-                  salutation: "",
-                  refNo: "",
-                  date1: null,
-                  subject: "",
-                  bookNo: "",
-                  date2: null,
-                  signer: "",
-                  department: "",
-                  confidentiality: "",
-                  urgency: "",
-                  attachment: "",
-                  note: "",
-                });
-              }}
+              onClick={handleClear}
               sx={{
                 borderColor: "#50ADFF",
                 color: "#50ADFF",
@@ -379,10 +515,7 @@ const ForwardtoagencyComponents = () => {
               label="บันทึก"
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
-              onClick={() => {
-                console.log("Form data:", form);
-                /* TODO: save form */
-              }}
+              onClick={handleSave}
               sx={{
                 backgroundColor: "#2196F3",
                 color: "#FFF",
