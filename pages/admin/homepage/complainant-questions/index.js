@@ -1,8 +1,8 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import ComplainantquestionsComponents from "@components/HomePage/Complainantquestions/ComplainantquestionsComponents";
 
 const Complainantquestions = () => {
-  return <div>รายงานคำถามจากผู้ร้อง</div>;
+  return <ComplainantquestionsComponents/>
 };
 
 Complainantquestions.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
