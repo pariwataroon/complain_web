@@ -336,99 +336,159 @@ def update_complaint_assignment_data(
         return {"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"}
 
 def get_assignment_form_data(db: Session, complaint_id: UUID) -> Dict:
-    """ดึงข้อมูลสำหรับฟอร์ม Assignment"""
+    """ดึงข้อมูลสำหรับฟอร์ม Assignment รวมข้อมูลเรื่องร้องเรียนและตัวเลือกต่างๆ"""
     try:
+        # ดึงข้อมูลเรื่องร้องเรียน
         complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
         
         if not complaint:
-            return {"error": "ไม่พบเรื่องร้องเรียน"}
+            return {
+                "error": "ไม่พบเรื่องร้องเรียนที่ระบุ",
+                "message": "COMPLAINT_NOT_FOUND"
+            }
         
-        # แปลงข้อมูลและตรวจสอบ encoding
-        def safe_encode(value):
-            """ตรวจสอบและแปลงข้อความให้เป็น UTF-8 ที่ถูกต้อง"""
-            if value is None:
-                return None
-            if isinstance(value, str):
-                try:
-                    # ลองแปลงกลับเป็น bytes แล้วแปลงเป็น string ใหม่
-                    if '?' in value:
-                        # ถ้ามีเครื่องหมายคำถาม อาจเป็นปัญหา encoding
-                        return None
-                    return value
-                except:
-                    return None
-            return str(value)
-        
+        # ✅ เพิ่มข้อมูลครบถ้วนรวมฟิลด์ที่ขาดหายไป
         complaint_data = {
             "id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
-            "subject": safe_encode(complaint.subject),
-            "complaint_type": safe_encode(complaint.complaint_type),
+            "subject": complaint.subject,
+            "complaint_type": complaint.complaint_type,
             "status": complaint.status,
-            "reference_number": safe_encode(complaint.reference_number),
+            
+            # Reference Numbers (1-4)
+            "reference_number": complaint.reference_number,
             "reference_date": complaint.reference_date.isoformat() if complaint.reference_date else None,
-            "reference_number2": safe_encode(complaint.reference_number2),
+            "reference_number2": complaint.reference_number2,
             "reference_date2": complaint.reference_date2.isoformat() if complaint.reference_date2 else None,
-            "reference_number3": safe_encode(complaint.reference_number3),
+            "reference_number3": complaint.reference_number3,
             "reference_date3": complaint.reference_date3.isoformat() if complaint.reference_date3 else None,
-            "reference_number4": safe_encode(complaint.reference_number4),
+            "reference_number4": complaint.reference_number4,
             "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
-            "document_number": safe_encode(complaint.document_number),
+            
+            # Document Info
+            "document_number": complaint.document_number,
             "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
+            
+            # Classification Levels
             "confidentiality_level": complaint.confidentiality_level,
             "urgency_level": complaint.urgency_level,
             "complaint_filing_type": complaint.complaint_filing_type,
-            "agency_sender": safe_encode(complaint.agency_sender),
-            "additional_reference_number1": safe_encode(complaint.additional_reference_number1),
+            
+            # Agency Info
+            "agency_sender": complaint.agency_sender,
+            
+            # ✅ Additional Reference Numbers (ฟิลด์ที่ขาดหายไป)
+            "additional_reference_number1": complaint.additional_reference_number1,
             "additional_reference_date1": complaint.additional_reference_date1.isoformat() if complaint.additional_reference_date1 else None,
-            "additional_reference_number2": safe_encode(complaint.additional_reference_number2),
+            "additional_reference_number2": complaint.additional_reference_number2,
             "additional_reference_date2": complaint.additional_reference_date2.isoformat() if complaint.additional_reference_date2 else None,
+            
+            # ✅ Assignment Info (ฟิลด์ที่ขาดหายไป)
             "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
-            "assigned_to": safe_encode(complaint.assigned_to),
+            "assigned_to": complaint.assigned_to,
             "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
+            
+            # ✅ Complaint Categories (ฟิลด์ที่ขาดหายไป)
+            "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
+            "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
+            "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
+            
+            # ✅ Registration Date (ฟิลด์ที่ขาดหายไป)
+            "registration_date": complaint.registration_date.isoformat() if complaint.registration_date else None,
+            
+            # Workflow Flags
             "new_complaint": complaint.new_complaint,
             "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
             "group_work": complaint.group_work,
-            "regulation_reference": safe_encode(complaint.regulation_reference),
+            
+            # Legal Reference
+            "regulation_reference": complaint.regulation_reference,
+            
+            # Timestamps
             "created_at": complaint.created_at.isoformat(),
             "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None
         }
-
-        # ดึงข้อมูล dropdown options
-        complaint_types = db.query(ComplaintType).filter(ComplaintType.is_active == True).order_by(ComplaintType.name).all()
-        complaint_channels = db.query(ComplaintChannel).filter(ComplaintChannel.is_active == True).order_by(ComplaintChannel.name).all()
-        available_officers = db.query(User).filter(User.is_active == True).all()
+        
+        # ดึงตัวเลือกต่างๆ สำหรับฟอร์ม
+        options = get_assignment_options(db)
         
         return {
-            "complaint": complaint_data,
-            "options": {
-                "complaint_types": [{"value": str(ct.id), "label": ct.name} for ct in complaint_types],
-                "complaint_channels": [{"value": str(cc.id), "label": cc.name} for cc in complaint_channels],
-                "officers": [{"value": str(u.id), "label": f"{u.first_name} {u.last_name}"} for u in available_officers],
-                "confidentiality_levels": [
-                    {"value": "normal", "label": "ปกติ"},
-                    {"value": "confidential", "label": "ลับ"},
-                    {"value": "secret", "label": "ลับมาก"},
-                    {"value": "top_secret", "label": "ลับที่สุด"}
-                ],
-                "urgency_levels": [
-                    {"value": "low", "label": "ไม่เร่งด่วน"},
-                    {"value": "medium", "label": "เร่งด่วน"},
-                    {"value": "high", "label": "ด่วน"},
-                    {"value": "urgent", "label": "ด่วนมาก"},
-                    {"value": "critical", "label": "ด่วนที่สุด"}
-                ],
-                "filing_types": [
-                    {"value": "new", "label": "เรื่องส่องเค้นใหม่"},
-                    {"value": "additional", "label": "เรื่องส่องเค้นเพิ่มเติม"},
-                    {"value": "anonymous", "label": "รับเรื่องจากคณะทำงานบัตรสนเท่ห์"}
-                ]
-            }
+            "data": {
+                "complaint": complaint_data,
+                "options": options
+            },
+            "message": "GET_DATA_SUCCESSFULLY"
         }
         
     except Exception as e:
         logger.error(f"Error getting assignment form data: {str(e)}")
-        return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
+        return {
+            "error": str(e),
+            "message": "INTERNAL_SERVER_ERROR"
+        }
+
+def get_assignment_options(db: Session) -> Dict:
+    """ดึงตัวเลือกทั้งหมดสำหรับการมอบหมายงาน"""
+    try:
+        # ดึงประเภทเรื่องร้องเรียน
+        complaint_types = db.query(ComplaintType).filter(ComplaintType.is_active == True).order_by(ComplaintType.name).all()
+        
+        # ดึงช่องทางการร้องเรียน
+        complaint_channels = db.query(ComplaintChannel).filter(ComplaintChannel.is_active == True).order_by(ComplaintChannel.name).all()
+        
+        # ดึงรายการเจ้าหน้าที่
+        from models.user import User
+        officers = db.query(User).filter(User.is_active == True).all()
+        
+        return {
+            "complaint_types": [
+                {
+                    "value": str(ct.id),
+                    "label": ct.name
+                } for ct in complaint_types
+            ],
+            "complaint_channels": [
+                {
+                    "value": str(cc.id),
+                    "label": cc.name
+                } for cc in complaint_channels
+            ],
+            "officers": [
+                {
+                    "value": str(officer.id),
+                    "label": f"{officer.first_name} {officer.last_name}".strip()
+                } for officer in officers if officer.first_name or officer.last_name
+            ],
+            "confidentiality_levels": [
+                {"value": "normal", "label": "ปกติ"},
+                {"value": "confidential", "label": "ลับ"},
+                {"value": "secret", "label": "ลับมาก"},
+                {"value": "top_secret", "label": "ลับที่สุด"}
+            ],
+            "urgency_levels": [
+                {"value": "low", "label": "ไม่เร่งด่วน"},
+                {"value": "medium", "label": "เร่งด่วน"},
+                {"value": "high", "label": "ด่วน"},
+                {"value": "urgent", "label": "ด่วนมาก"},
+                {"value": "critical", "label": "ด่วนที่สุด"}
+            ],
+            "filing_types": [
+                {"value": "new", "label": "เรื่องส่องเค้นใหม่"},
+                {"value": "additional", "label": "เรื่องส่องเค้นเพิ่มเติม"},
+                {"value": "anonymous", "label": "รับเรื่องจากคณะทำงานบัตรสนเท่ห์"}
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting assignment options: {str(e)}")
+        return {
+            "complaint_types": [],
+            "complaint_channels": [],
+            "officers": [],
+            "confidentiality_levels": [],
+            "urgency_levels": [],
+            "filing_types": []
+        }
 
 def link_related_complaint(
     db: Session,

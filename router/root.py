@@ -21,6 +21,7 @@ from app.api.v1.routers.complaint_router import router as complaint_router_v1
 from app.api.v1.routers.complaint_metadata_router import router as complaint_metadata_router_v1
 from app.api.v1.routers.complaint_registration_router import router as complaint_registration_router_v1
 from app.api.v1.routers.complaint_assignment_routes import router as assignment_router
+from app.api.v1.routers.complaint_reference_router import router as complaint_reference_router_v1
 # from app.api.v1.routers.file_management_router import router as file_management_router_v1
 from config.dotenv import PREFIX
 
@@ -53,6 +54,7 @@ v1_router.include_router(complaint_router_v1)
 v1_router.include_router(complaint_metadata_router_v1)
 v1_router.include_router(complaint_registration_router_v1)
 v1_router.include_router(assignment_router)
+v1_router.include_router(complaint_reference_router_v1)
 # v1_router.include_router(file_management_router_v1)
 
 # เมื่อมี router เวอร์ชัน 2 ในอนาคต จะเพิ่มได้ง่ายๆ

@@ -67,6 +67,7 @@ class SatisfactionRating(int, enum.Enum):
 
 class Complaint(Base):
     __tablename__ = "comp_complaints"
+     
 
     id = Column(UNIQUEIDENTIFIER(as_uuid=True), primary_key=True, default=uuid.uuid4)
     complaint_number = Column(NVARCHAR(100), unique=True, nullable=False)
@@ -203,8 +204,9 @@ class Complaint(Base):
 class ComplaintAttachment(Base):
     __tablename__ = "comp_complaint_attachments"
     
+    
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
-    complaint_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_complaints.id"), nullable=False)
+    complaint_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_complaints.id"), nullable=False)
     file_name = Column(NVARCHAR(255), nullable=False)
     file_size = Column(Integer, nullable=False)
     file_url = Column(NVARCHAR(1024), nullable=False)
@@ -218,8 +220,9 @@ class ComplaintStatusHistory(Base):
     """Track complaint status changes over time"""
     __tablename__ = "comp_complaint_status_history"
     
+    
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
-    complaint_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_complaints.id"), nullable=False)
+    complaint_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_complaints.id"), nullable=False)
     status = Column(Enum(ComplaintStatus), nullable=False)
     notes = Column(NVARCHAR(1000), nullable=True)
     changed_by = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_users.id"), nullable=True)

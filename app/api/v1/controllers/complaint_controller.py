@@ -2183,44 +2183,20 @@ def format_status_history(status_history_list):
         logger.error(f"Error formatting status history: {str(e)}")
         return []
 
-def get_my_complaint_by_id(db: Session, complaint_id: UUID, current_user_id: UUID) -> Dict:
-    """ดึงรายละเอียดเรื่องร้องเรียนของตัวเอง รวมข้อมูล assignment form"""
+def get_my_complaint_by_id(db: Session, complaint_id: UUID, user_id: UUID) -> Dict:
+    """ดึงรายละเอียดเรื่องร้องเรียนของผู้ใช้คนนั้นๆ รวมข้อมูล assignment form"""
     try:
-        # ดึงข้อมูลเรื่องร้องเรียน
+        # ตรวจสอบว่าเรื่องร้องเรียนเป็นของผู้ใช้คนนี้
         complaint = db.query(Complaint).filter(
             Complaint.id == complaint_id,
-            Complaint.created_by == current_user_id
+            Complaint.created_by == user_id  # ใช้ created_by แทน complainant_id
         ).first()
         
         if not complaint:
-            return {"error": "ไม่พบเรื่องร้องเรียน"}
+            return {"error": "ไม่พบเรื่องร้องเรียนหรือคุณไม่มีสิทธิ์เข้าถึง"}
         
-        # ดึงข้อมูล assignment form
-        assignment_form_data = get_assignment_form_data(db, complaint_id)
-        
-        # แปลงข้อมูลตามรูปแบบเดิม
-        result = {
-            "id": str(complaint.id),
-            "complaint_number": complaint.complaint_number,
-            "step1": parse_complainant_data(complaint.complainant_data),
-            "step2": parse_respondent_data(complaint.respondent_data),
-            "step3": parse_incident_data(complaint),
-            "step4": {"general": {"accepted": complaint.terms_accepted}},
-            "status": complaint.status,
-            "status_history": format_status_history(complaint.status_history),
-            "created_at": complaint.created_at.isoformat(),
-            "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
-            "assigned_to": complaint.assigned_to,
-            "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
-            "resolution_summary": complaint.resolution_summary,
-            "resolved_date": complaint.resolved_date.isoformat() if complaint.resolved_date else None,
-        }
-        
-        # เพิ่มข้อมูล assignment form (เฉพาะส่วน complaint ไม่รวม options)
-        if "error" not in assignment_form_data and "complaint" in assignment_form_data:
-            result["assignment_form"] = assignment_form_data["complaint"]
-        
-        return result
+        # ใช้ฟังก์ชันเดียวกัน
+        return get_complaint_by_id_with_assignment(db, complaint_id)
         
     except Exception as e:
         logger.error(f"Error getting my complaint: {str(e)}")
@@ -2235,9 +2211,6 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
         if not complaint:
             return {"error": "ไม่พบเรื่องร้องเรียน"}
         
-        # ดึงข้อมูล assignment form
-        assignment_form_data = get_assignment_form_data(db, complaint_id)
-        
         # แปลงข้อมูลตามรูปแบบเดิม
         result = {
             "id": str(complaint.id),
@@ -2256,9 +2229,69 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             "resolved_date": complaint.resolved_date.isoformat() if complaint.resolved_date else None,
         }
         
-        # เพิ่มข้อมูล assignment form (เฉพาะส่วน complaint ไม่รวม options)
-        if "error" not in assignment_form_data and "complaint" in assignment_form_data:
-            result["assignment_form"] = assignment_form_data["complaint"]
+        # ✅ เพิ่มข้อมูล assignment_form ครบถ้วนทุกฟิลด์
+        assignment_form = {
+            "id": str(complaint.id),
+            "complaint_number": complaint.complaint_number,
+            "subject": complaint.subject,
+            "complaint_type": complaint.complaint_type,
+            "status": complaint.status,
+            
+            # ✅ Reference Numbers (1-4)
+            "reference_number": complaint.reference_number,
+            "reference_date": complaint.reference_date.isoformat() if complaint.reference_date else None,
+            "reference_number2": complaint.reference_number2,
+            "reference_date2": complaint.reference_date2.isoformat() if complaint.reference_date2 else None,
+            "reference_number3": complaint.reference_number3,
+            "reference_date3": complaint.reference_date3.isoformat() if complaint.reference_date3 else None,
+            "reference_number4": complaint.reference_number4,
+            "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
+            
+            # ✅ Document Info
+            "document_number": complaint.document_number,
+            "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
+            
+            # ✅ Levels & Classifications
+            "confidentiality_level": complaint.confidentiality_level,
+            "urgency_level": complaint.urgency_level,
+            "complaint_filing_type": complaint.complaint_filing_type,
+            
+            # ✅ Agency Info
+            "agency_sender": complaint.agency_sender,
+            
+            # ✅ Additional Reference Numbers (เพิ่มใหม่)
+            "additional_reference_number1": complaint.additional_reference_number1,
+            "additional_reference_date1": complaint.additional_reference_date1.isoformat() if complaint.additional_reference_date1 else None,
+            "additional_reference_number2": complaint.additional_reference_number2,
+            "additional_reference_date2": complaint.additional_reference_date2.isoformat() if complaint.additional_reference_date2 else None,
+            
+            # ✅ Assignment Info (เพิ่มใหม่)
+            "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
+            "assigned_to": complaint.assigned_to,
+            "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
+            
+            # ✅ Complaint Categories (เพิ่มใหม่)
+            "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
+            "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
+            "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
+            
+            # ✅ Registration Date (เพิ่มใหม่)
+            "registration_date": complaint.registration_date.isoformat() if complaint.registration_date else None,
+            
+            # ✅ Workflow Flags
+            "new_complaint": complaint.new_complaint,
+            "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
+            "group_work": complaint.group_work,
+            
+            # ✅ Legal Reference
+            "regulation_reference": complaint.regulation_reference,
+            
+            # ✅ Timestamps
+            "created_at": complaint.created_at.isoformat(),
+            "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None
+        }
+        
+        result["assignment_form"] = assignment_form
         
         return result
         
