@@ -11,7 +11,6 @@ import {
   TablePagination,
   Container,
   IconButton,
-  Collapse,
 } from "@mui/material";
 import {
   ExpandMore as ExpandMoreIcon,
@@ -24,13 +23,26 @@ import styles from "./TableAnnualCompSum.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
-import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
+import DateThaiPickerService from "@services/dateThaiPickerService/dateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
+
+// สร้าง component แยกสำหรับ date picker เพื่อป้องกัน hooks issue
+const DatePickerWrapper = ({ field, value, onChange }) => {
+  return (
+    <Box mt={2}>
+      <DateThaiPickerService
+        label={field.label}
+        value={value}
+        onChange={onChange}
+      />
+    </Box>
+  );
+};
 
 const TableAnnualCompSum = ({
   data = [],
   filterFields = [],
-  onSearch = () => { },
+  onSearch = () => {},
   navigateTo = "",
 }) => {
   const router = useRouter();
@@ -70,12 +82,45 @@ const TableAnnualCompSum = ({
 
   // Columns config
   const columns = [
-    { label: "ลำดับ", width: 80 },
-    { label: "หน่วยงาน", width: 400 },
-    { label: "จำนวน", width: 120 },
-    { label: "ยุติ", width: 120 },
-    { label: "อยู่ระหว่างดำเนินการ", width: 160 },
+    { label: "ลำดับ", width: "80px" },
+    { label: "หน่วยงาน", width: "400px" },
+    { label: "จำนวน", width: "120px" },
+    { label: "ยุติ", width: "120px" },
+    { label: "อยู่ระหว่างดำเนินการ", width: "160px" },
   ];
+
+  // แยก date fields และ non-date fields
+  const dateFields = filterFields.filter((f) => f.type === "date");
+  const nonDateFields = filterFields.filter((f) => f.type !== "date");
+
+  // สร้าง flat list ของ rows รวมทั้ง parent และ child
+  const createFlatRows = (data) => {
+    const flatRows = [];
+    data.forEach((parentRow, parentIndex) => {
+      // เพิ่ม parent row
+      flatRows.push({
+        ...parentRow,
+        isParent: true,
+        level: 0,
+        displayIndex: page * rowsPerPage + parentIndex + 1,
+      });
+
+      // เพิ่ม child rows ถ้า expanded
+      if (expanded[parentRow.id] && parentRow.children) {
+        parentRow.children.forEach((childRow) => {
+          flatRows.push({
+            ...childRow,
+            isParent: false,
+            level: 1,
+            parentId: parentRow.id,
+          });
+        });
+      }
+    });
+    return flatRows;
+  };
+
+  const flatRows = createFlatRows(pagedData);
 
   return (
     <Container
@@ -98,7 +143,8 @@ const TableAnnualCompSum = ({
             gap={1}
             sx={{ flexGrow: 1, overflowX: "auto" }}
           >
-            {filterFields.map((f) => (
+            {/* Render non-date fields */}
+            {nonDateFields.map((f) => (
               <Box key={f.name} flex="1 1 0" minWidth="140px" maxWidth="300px">
                 {f.type === "select" ? (
                   <SelectField
@@ -108,14 +154,6 @@ const TableAnnualCompSum = ({
                     value={filters[f.name]}
                     onChange={handleChange(f.name)}
                   />
-                ) : f.type === "date" ? (
-                  <Box mt={2}>
-                    <InputDateNoTime
-                      label={f.label}
-                      value={filters[f.name]}
-                      onChange={handleChange(f.name)}
-                    />{" "}
-                  </Box>
                 ) : (
                   <InputText
                     fullWidth
@@ -126,6 +164,18 @@ const TableAnnualCompSum = ({
                 )}
               </Box>
             ))}
+
+            {/* Render date fields separately */}
+            {dateFields.map((f) => (
+              <Box key={f.name} flex="1 1 0" minWidth="140px" maxWidth="300px">
+                <DatePickerWrapper
+                  field={f}
+                  value={filters[f.name]}
+                  onChange={handleChange(f.name)}
+                />
+              </Box>
+            ))}
+
             <Box mt={3}>
               <IconButton
                 onClick={handleSearchClick}
@@ -136,7 +186,7 @@ const TableAnnualCompSum = ({
                   height: 40,
                   ml: 1,
                   "&:hover": {
-                    bgcolor: "#1120A3", // คงสีเดิมไว้ตอน hover
+                    bgcolor: "#1120A3",
                   },
                 }}
               >
@@ -151,7 +201,7 @@ const TableAnnualCompSum = ({
                   width: 40,
                   height: 40,
                   "&:hover": {
-                    bgcolor: "#1120A3", // คงสีเดิมไว้ตอน hover
+                    bgcolor: "#1120A3",
                   },
                 }}
               >
@@ -167,9 +217,12 @@ const TableAnnualCompSum = ({
             <ExportButton
               label="Export PDF"
               onClick={() =>
-                exportElementToPDF(pdfRef, "รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ.pdf")
+                exportElementToPDF(
+                  pdfRef,
+                  "รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ.pdf"
+                )
               }
-            />;
+            />
             <ExportButton label="Export Excel" />
           </Box>
         </Box>
@@ -191,16 +244,30 @@ const TableAnnualCompSum = ({
         ตั้งแต่วันที่ 1 ตุลาคม 2567 ถึงวันที่ 25 พฤศจิกายน 2567
       </Box>
 
-      {/* Summary Table with collapsible children */}
+      {/* Summary Table */}
       <div ref={pdfRef}>
         <Box sx={{ overflowX: "auto", px: 2, pb: 1 }}>
-          <Table sx={{ minWidth: 1000 }}>
+          <Table
+            sx={{
+              minWidth: 1000,
+              tableLayout: "fixed",
+              width: "100%",
+            }}
+          >
             <TableHead>
               <TableRow>
                 {columns.map((col, idx) => (
                   <TableCell
                     key={idx}
-                    sx={{ width: col.width }}
+                    sx={{
+                      width: col.width,
+                      backgroundColor: "#e8e9f6",
+                      fontWeight: 600,
+                      color: "#1120a3",
+                      fontSize: "14px",
+                      border: "1px solid #e0e0e0",
+                      padding: "14px 12px",
+                    }}
                     align={idx === 1 ? "left" : "center"}
                   >
                     {col.label}
@@ -209,115 +276,109 @@ const TableAnnualCompSum = ({
               </TableRow>
             </TableHead>
             <TableBody>
-              {pagedData.map((row, idx) => (
-                <React.Fragment key={row.id}>
-                  <TableRow
-                    hover
-                    sx={{ cursor: "pointer" }}
-                    onClick={() => navigateTo && router.push(`${navigateTo}`)}
+              {flatRows.map((row, idx) => (
+                <TableRow
+                  key={`${row.id}-${row.level}`}
+                  hover
+                  sx={{
+                    cursor: row.isParent ? "pointer" : "default",
+                    backgroundColor: row.isParent ? "white" : "#FEFAEF",
+                    "&:hover": {
+                      backgroundColor: row.isParent ? "#f5f5f5" : "#FEF8E7",
+                    },
+                  }}
+                  onClick={() => {
+                    if (row.isParent && navigateTo) {
+                      router.push(`${navigateTo}`);
+                    }
+                  }}
+                >
+                  {/* Column 1 - ลำดับ */}
+                  <TableCell
+                    align="center"
+                    sx={{
+                      width: columns[0].width,
+                      fontWeight: row.isParent ? 600 : 400,
+                      color: row.isParent ? "#1120A3" : "#333",
+                      fontSize: "14px",
+                      border: "1px solid #e0e0e0",
+                      padding: row.isParent ? "14px 12px" : "8px 12px",
+                    }}
                   >
-                    <TableCell
-                      align="center"
-                      sx={{
-                        width: columns[0].width,
-                        fontWeight: 600,
-                        color: "#1120A3",
-                      }}
-                    >
-                      {page * rowsPerPage + idx + 1}
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        width: columns[1].width,
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      <IconButton
-                        size="small"
-                        sx={{ p: 0 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleRow(row.id);
-                        }}
-                      >
-                        {expanded[row.id] ? (
-                          <ExpandLessIcon />
-                        ) : (
-                          <ExpandMoreIcon />
-                        )}
-                      </IconButton>
-                      {row.agency}
-                    </TableCell>
-                    <TableCell
-                      sx={{ width: columns[2].width, textAlign: "center" }}
-                    >
-                      {row.total ?? "-"}
-                    </TableCell>
-                    <TableCell
-                      sx={{ width: columns[3].width, textAlign: "center" }}
-                    >
-                      {row.closed ?? "-"}
-                    </TableCell>
-                    <TableCell
-                      sx={{ width: columns[4].width, textAlign: "center" }}
-                    >
-                      {row.ongoing ?? "-"}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell style={{ padding: 0 }} colSpan={columns.length}>
-                      <Collapse
-                        in={expanded[row.id]}
-                        timeout="auto"
-                        unmountOnExit
-                      >
-                        <Box>
-                          <Table size="small">
-                            <TableBody>
-                              {(row.children || []).map((child) => (
-                                <TableRow
-                                  key={child.id}
-                                  sx={{ backgroundColor: "#FEFAEF" }}
-                                  hover
-                                >
-                                  <TableCell sx={{ width: columns[0].width }} />
-                                  <TableCell sx={{ width: columns[1].width }}>
-                                    {child.agency}
-                                  </TableCell>
-                                  <TableCell
-                                    sx={{
-                                      width: columns[2].width,
-                                      textAlign: "center",
-                                    }}
-                                  >
-                                    {child.total ?? "-"}
-                                  </TableCell>
-                                  <TableCell
-                                    sx={{
-                                      width: columns[3].width,
-                                      textAlign: "center",
-                                    }}
-                                  >
-                                    {child.closed ?? "-"}
-                                  </TableCell>
-                                  <TableCell
-                                    sx={{
-                                      width: columns[4].width,
-                                      textAlign: "center",
-                                    }}
-                                  >
-                                    {child.ongoing ?? "-"}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </Box>
-                      </Collapse>
-                    </TableCell>
-                  </TableRow>
-                </React.Fragment>
+                    {row.isParent ? row.displayIndex : ""}
+                  </TableCell>
+
+                  {/* Column 2 - หน่วยงาน */}
+                  <TableCell
+                    sx={{
+                      width: columns[1].width,
+                      fontSize: "14px",
+                      border: "1px solid #e0e0e0",
+                      padding: row.isParent ? "14px 12px" : "8px 12px 8px 40px",
+                    }}
+                  >
+                    {row.isParent ? (
+                      <Box display="flex" alignItems="center">
+                        <IconButton
+                          size="small"
+                          sx={{ p: 0, mr: 1 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleRow(row.id);
+                          }}
+                        >
+                          {expanded[row.id] ? (
+                            <ExpandLessIcon />
+                          ) : (
+                            <ExpandMoreIcon />
+                          )}
+                        </IconButton>
+                        {row.agency}
+                      </Box>
+                    ) : (
+                      row.agency
+                    )}
+                  </TableCell>
+
+                  {/* Column 3 - จำนวน */}
+                  <TableCell
+                    align="center"
+                    sx={{
+                      width: columns[2].width,
+                      fontSize: "14px",
+                      border: "1px solid #e0e0e0",
+                      padding: row.isParent ? "14px 12px" : "8px 12px",
+                    }}
+                  >
+                    {row.total ?? "-"}
+                  </TableCell>
+
+                  {/* Column 4 - ยุติ */}
+                  <TableCell
+                    align="center"
+                    sx={{
+                      width: columns[3].width,
+                      fontSize: "14px",
+                      border: "1px solid #e0e0e0",
+                      padding: row.isParent ? "14px 12px" : "8px 12px",
+                    }}
+                  >
+                    {row.closed ?? "-"}
+                  </TableCell>
+
+                  {/* Column 5 - อยู่ระหว่างดำเนินการ */}
+                  <TableCell
+                    align="center"
+                    sx={{
+                      width: columns[4].width,
+                      fontSize: "14px",
+                      border: "1px solid #e0e0e0",
+                      padding: row.isParent ? "14px 12px" : "8px 12px",
+                    }}
+                  >
+                    {row.ongoing ?? "-"}
+                  </TableCell>
+                </TableRow>
               ))}
             </TableBody>
           </Table>

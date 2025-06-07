@@ -10,6 +10,7 @@ const mockComplaints = [
     total: 22,
     closed: 20,
     ongoing: 2,
+    receiveDate: "2567-10-15",
     children: [
       {
         id: 101,
@@ -40,6 +41,7 @@ const mockComplaints = [
     total: 16,
     closed: 9,
     ongoing: 7,
+    receiveDate: "2567-10-20",
     children: [
       {
         id: 201,
@@ -64,6 +66,7 @@ const mockComplaints = [
     total: 4,
     closed: 2,
     ongoing: 2,
+    receiveDate: "2567-11-01",
     children: [
       {
         id: 301,
@@ -94,6 +97,7 @@ const mockComplaints = [
     total: 2,
     closed: null,
     ongoing: 2,
+    receiveDate: "2567-11-05",
     children: [
       {
         id: 401,
@@ -117,6 +121,7 @@ const mockComplaints = [
     total: 4,
     closed: 1,
     ongoing: 3,
+    receiveDate: "2567-11-10",
     children: [
       {
         id: 501,
@@ -141,6 +146,7 @@ const mockComplaints = [
     total: 2,
     closed: 1,
     ongoing: 1,
+    receiveDate: "2567-11-15",
     children: [
       {
         id: 601,
@@ -164,6 +170,7 @@ const mockComplaints = [
     total: null,
     closed: null,
     ongoing: null,
+    receiveDate: "2567-11-18",
     children: [
       {
         id: 701,
@@ -187,6 +194,7 @@ const mockComplaints = [
     total: 7,
     closed: 4,
     ongoing: 3,
+    receiveDate: "2567-11-20",
     children: [
       {
         id: 801,
@@ -211,6 +219,7 @@ const mockComplaints = [
     total: 4,
     closed: null,
     ongoing: 4,
+    receiveDate: "2567-11-22",
     children: [
       {
         id: 901,
@@ -234,6 +243,7 @@ const mockComplaints = [
     total: 8,
     closed: 6,
     ongoing: 2,
+    receiveDate: "2567-11-25",
     children: [
       {
         id: 1001,
@@ -272,24 +282,79 @@ const AnnualComplaintSummaryComponents = () => {
     );
   };
 
-  // กรองข้อมูลตามวันที่และประเภทเรื่อง
+  // ฟังก์ชันแปลงวันที่จาก Thai date picker object ให้เป็น Buddhist year string
+  const formatDateForComparison = (dateInput) => {
+    if (!dateInput) return null;
+
+    // ถ้าเป็น object ที่มี buddhistYear, month, day
+    if (dateInput && typeof dateInput === "object" && dateInput.buddhistYear) {
+      const year = dateInput.buddhistYear;
+      const month = String(dateInput.month).padStart(2, "0");
+      const day = String(dateInput.day).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    // ถ้าเป็น Date object ให้แปลงเป็น Buddhist year
+    if (dateInput instanceof Date) {
+      const year = dateInput.getFullYear() + 543; // แปลงเป็น พ.ศ.
+      const month = String(dateInput.getMonth() + 1).padStart(2, "0");
+      const day = String(dateInput.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    // ถ้าเป็น string แล้ว
+    if (typeof dateInput === "string") {
+      return dateInput.split("T")[0];
+    }
+
+    return String(dateInput);
+  };
+
+  // กรองข้อมูลตามวันที่
   const handleSearch = ({ receiveDateFrom, receiveDateTo, issueType }) => {
+    console.log("Search params:", {
+      receiveDateFrom,
+      receiveDateTo,
+      issueType,
+    }); // Debug log
+
     let result = allComplaints;
 
+    // กรองตามวันที่เริ่มต้น
     if (receiveDateFrom) {
-      result = result.filter((item) =>
-        item.receiveDate.includes(receiveDateFrom)
-      );
+      const fromDate = formatDateForComparison(receiveDateFrom);
+      console.log("From date formatted:", fromDate); // Debug log
+
+      result = result.filter((item) => {
+        if (!item.receiveDate) return false;
+        const itemDate = formatDateForComparison(item.receiveDate);
+        console.log(
+          `Comparing ${itemDate} >= ${fromDate}:`,
+          itemDate >= fromDate
+        ); // Debug log
+        return itemDate >= fromDate;
+      });
     }
+
+    // กรองตามวันที่สิ้นสุด
     if (receiveDateTo) {
-      result = result.filter((item) =>
-        item.receiveDate.includes(receiveDateTo)
-      );
+      const toDate = formatDateForComparison(receiveDateTo);
+      console.log("To date formatted:", toDate); // Debug log
+
+      result = result.filter((item) => {
+        if (!item.receiveDate) return false;
+        const itemDate = formatDateForComparison(item.receiveDate);
+        console.log(`Comparing ${itemDate} <= ${toDate}:`, itemDate <= toDate); // Debug log
+        return itemDate <= toDate;
+      });
     }
+
+    // กรองตามประเภทเรื่อง (ถ้ามี)
     if (issueType) {
       result = result.filter((item) => item.issueType === issueType);
     }
 
+    console.log("Filtered result:", result); // Debug log
     setFilteredComplaints(result);
   };
 
