@@ -1,7 +1,6 @@
 .headerBar {
   background: linear-gradient(to right, #1223a5, #2499ff);
   height: 50px;
-
   border-top-right-radius: 12px;
   padding: 0 24px;
   display: flex;
@@ -9,7 +8,19 @@
   color: white;
   font-weight: bold;
   font-size: 18px;
+
+  // ← เพิ่ม responsive
+  @media (max-width: 599px) {
+    height: 44px;
+    padding: 0 16px;
+    font-size: 16px;
+  }
+
+  @media (max-width: 899px) and (min-width: 600px) {
+    font-size: 17px;
+  }
 }
+
 .headerBar2 {
   height: 50px;
   border-top-left-radius: 12px;
@@ -20,12 +31,29 @@
   color: #1120a3;
   font-weight: bold;
   font-size: 18px;
+
+  // ← เพิ่ม responsive
+  @media (max-width: 599px) {
+    height: 44px;
+    padding: 0 16px;
+    font-size: 16px;
+  }
+
+  @media (max-width: 899px) and (min-width: 600px) {
+    font-size: 17px;
+  }
 }
+
 .tableWrapper {
   background-color: white;
   border-radius: 0 0 16px 16px;
-  box-shadow: none; /* <─ เอาเงาออก */
+  box-shadow: none;
   overflow: hidden;
+
+  // ← เพิ่ม responsive table styles
+  @media (max-width: 1560px) {
+    overflow-x: auto;
+  }
 }
 
 .tableWrapper thead tr {
@@ -37,6 +65,12 @@
   color: #1120a3;
   font-size: 14px;
   border-bottom: 1px solid #d9dbe9;
+
+  // ← เพิ่ม responsive
+  @media (max-width: 599px) {
+    font-size: 12px;
+    padding: 8px 4px;
+  }
 }
 
 .MuiTableCell-root {
@@ -47,6 +81,12 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+
+  // ← เพิ่ม responsive
+  @media (max-width: 599px) {
+    font-size: 11px;
+    padding: 6px 4px;
+  }
 }
 
 .filterRow {
@@ -61,5 +101,35 @@
     gap: 12px;
     flex-wrap: wrap;
     align-items: center;
+  }
+
+  // ← เพิ่ม responsive
+  @media (max-width: 899px) {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+
+    > div {
+      justify-content: center;
+    }
+  }
+}
+
+// ← เพิ่ม responsive utilities
+@media (max-width: 599px) {
+  .mobileHidden {
+    display: none;
+  }
+}
+
+@media (max-width: 899px) {
+  .tabletHidden {
+    display: none;
+  }
+}
+
+@media (max-width: 1199px) {
+  .laptopHidden {
+    display: none;
   }
 }
