@@ -1,8 +1,8 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-
+import DefineNewsComponents from "@components/HomePage/News/NewsComponents";
 
 const News = () => {
-  return <div>กำหนดข่าวสาร</div>;
+  return <DefineNewsComponents/>;
 };
 
 News.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
