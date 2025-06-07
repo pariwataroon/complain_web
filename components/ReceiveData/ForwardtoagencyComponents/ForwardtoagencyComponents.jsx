@@ -3,22 +3,21 @@ import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
-import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
 import ButtonService from "@services/ButtonService/ButtonService";
-import { Box, Typography, IconButton } from "@mui/material";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 
 const ForwardtoagencyComponents = () => {
   const { id } = useRouter().query;
   const [form, setForm] = useState({
     salutation: "",
     refNo: "",
-    date1: "",
+    date1: null, // เปลี่ยนเป็น null สำหรับ DateThaiPickerService
     subject: "",
     bookNo: "",
-    date2: "",
+    date2: null, // เปลี่ยนเป็น null สำหรับ DateThaiPickerService
     signer: "",
     department: "",
     confidentiality: "",
@@ -30,6 +29,11 @@ const ForwardtoagencyComponents = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handler สำหรับ DateThaiPickerService
+  const handleDateChange = (field) => (thaiDate) => {
+    setForm((prev) => ({ ...prev, [field]: thaiDate }));
   };
 
   return (
@@ -122,16 +126,16 @@ const ForwardtoagencyComponents = () => {
               value={form.refNo}
               onChange={handleChange}
             />
-            <Box sx={{ mt: { xs: 0, sm: 0, md: 1.9 } }}>
-              <InputDateNoTime
+            <Box sx={{ position: "relative", zIndex: 1 }}>
+              <DateThaiPickerService
                 label={
                   <span>
                     วันที่<span style={{ color: "red", marginLeft: 4 }}>*</span>
                   </span>
                 }
-                name="date1"
                 value={form.date1}
-                onChange={handleChange}
+                onChange={handleDateChange("date1")}
+                placeholder="เลือกวันที่"
               />
             </Box>
           </Box>
@@ -175,16 +179,16 @@ const ForwardtoagencyComponents = () => {
               value={form.bookNo}
               onChange={handleChange}
             />
-            <Box sx={{ mt: { xs: 0, sm: 0, md: 1.9 } }}>
-              <InputDateNoTime
+            <Box sx={{ position: "relative", zIndex: 1 }}>
+              <DateThaiPickerService
                 label={
                   <span>
                     วันที่<span style={{ color: "red", marginLeft: 2 }}>*</span>
                   </span>
                 }
-                name="date2"
                 value={form.date2}
-                onChange={handleChange}
+                onChange={handleDateChange("date2")}
+                placeholder="เลือกวันที่"
               />
             </Box>
             <SelectField
@@ -345,7 +349,20 @@ const ForwardtoagencyComponents = () => {
               variant="outlined"
               iconLeft={<CloseIcon />}
               onClick={() => {
-                /* TODO: clear form */
+                setForm({
+                  salutation: "",
+                  refNo: "",
+                  date1: null,
+                  subject: "",
+                  bookNo: "",
+                  date2: null,
+                  signer: "",
+                  department: "",
+                  confidentiality: "",
+                  urgency: "",
+                  attachment: "",
+                  note: "",
+                });
               }}
               sx={{
                 borderColor: "#50ADFF",
@@ -363,6 +380,7 @@ const ForwardtoagencyComponents = () => {
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={() => {
+                console.log("Form data:", form);
                 /* TODO: save form */
               }}
               sx={{

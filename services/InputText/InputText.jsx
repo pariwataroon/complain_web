@@ -9,9 +9,12 @@ const InputText = ({
   name,
   disabled,
   InputProps = {},
+  multiline,
+  rows,
   ...props
 }) => {
   const isReadOnly = InputProps?.readOnly;
+  const isMultiline = multiline || rows > 1;
 
   return (
     <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
@@ -32,10 +35,13 @@ const InputText = ({
         label={!label ? inputLabel : undefined}
         onChange={onChange}
         disabled={disabled}
+        multiline={isMultiline}
+        rows={rows}
         InputProps={{
           ...InputProps,
           sx: {
-            height: "40px",
+            // ถ้าเป็น multiline ไม่ต้องกำหนด height คงที่
+            ...(isMultiline ? {} : { height: "40px" }),
             borderRadius: "10px",
             backgroundColor: disabled ? "#E8E9F6" : "white",
             color: "#1120A3",
@@ -48,6 +54,13 @@ const InputText = ({
               "& input": {
                 color: "#999",
               },
+              "& textarea": {
+                color: "#999",
+              },
+            }),
+            // เพิ่ม padding สำหรับ multiline
+            ...(isMultiline && {
+              "& .MuiInputBase-input": {},
             }),
             ...InputProps.sx,
           },

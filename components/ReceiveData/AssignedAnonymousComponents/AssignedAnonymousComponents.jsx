@@ -392,6 +392,7 @@ const AssignedAnonymousComponents = () => {
           <Box
             sx={{
               display: "flex",
+              flexDirection: isMobile ? "column" : "row", // เพิ่ม flexDirection
               gap: { xs: 1.5, sm: 1, md: 1.2 },
               justifyContent: isBelow1350
                 ? "center"
@@ -419,7 +420,7 @@ const AssignedAnonymousComponents = () => {
               sx={{
                 minWidth: isBelow1350
                   ? "120px"
-                  : { xs: "45%", sm: "120px", md: "100px", lg: "auto" },
+                  : { xs: "100%", sm: "120px", md: "100px", lg: "auto" }, // เปลี่ยน xs เป็น 100%
                 fontSize: isBelow1350
                   ? "12px"
                   : { xs: "14px", sm: "12px", md: "13px", lg: "14px" },
@@ -435,7 +436,7 @@ const AssignedAnonymousComponents = () => {
                 height: isBelow1350
                   ? "40px"
                   : { xs: "auto", sm: "40px", lg: "40px" },
-                flex: isBelow1350 ? 0 : { xs: 1, sm: 0, lg: 0 },
+                flex: isBelow1350 ? 0 : { xs: 0, sm: 0, lg: 0 }, // เปลี่ยน xs เป็น 0
               }}
             />
             <ExportButton
@@ -449,7 +450,7 @@ const AssignedAnonymousComponents = () => {
               sx={{
                 minWidth: isBelow1350
                   ? "120px"
-                  : { xs: "45%", sm: "120px", md: "100px", lg: "auto" },
+                  : { xs: "100%", sm: "120px", md: "100px", lg: "auto" }, // เปลี่ยน xs เป็น 100%
                 fontSize: isBelow1350
                   ? "12px"
                   : { xs: "14px", sm: "12px", md: "13px", lg: "14px" },
@@ -465,7 +466,7 @@ const AssignedAnonymousComponents = () => {
                 height: isBelow1350
                   ? "40px"
                   : { xs: "auto", sm: "40px", lg: "40px" },
-                flex: isBelow1350 ? 0 : { xs: 1, sm: 0, lg: 0 },
+                flex: isBelow1350 ? 0 : { xs: 0, sm: 0, lg: 0 }, // เปลี่ยน xs เป็น 0
               }}
             />
           </Box>

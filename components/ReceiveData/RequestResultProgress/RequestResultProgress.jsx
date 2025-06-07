@@ -3,18 +3,18 @@ import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
-import InputDateNoTime from "@services/InputDateNoTime/InputDateNoTime";
 import ButtonService from "@services/ButtonService/ButtonService";
 import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 
 const RequestResultProgress = () => {
   const { id } = useRouter().query;
   const [form, setForm] = useState({
     salutation: "",
     refNo: "",
-    date: "",
+    date: null,
     subject: "",
     department: "",
     signer: "",
@@ -28,6 +28,104 @@ const RequestResultProgress = () => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
+
+  // Handler สำหรับ DateThaiPickerService
+  const handleDateChange = (thaiDate) => {
+    setForm((prev) => ({ ...prev, date: thaiDate }));
+  };
+
+  // Options สำหรับ SelectField
+  const salutationOptions = [
+    { value: "นายกรัฐมนตรี", label: "นายกรัฐมนตรี" },
+    {
+      value: "รัฐมนตรีว่าการกระทรวงมหาดไทย",
+      label: "รัฐมนตรีว่าการกระทรวงมหาดไทย",
+    },
+    { value: "ปลัดกระทรวงมหาดไทย", label: "ปลัดกระทรวงมหาดไทย" },
+    {
+      value: "อธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
+      label: "อธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
+    },
+    { value: "ผู้ว่าราชการจังหวัด", label: "ผู้ว่าราชการจังหวัด" },
+    { value: "นายอำเภอ", label: "นายอำเภอ" },
+    { value: "ปลัดอำเภอ", label: "ปลัดอำเภอ" },
+    { value: "หัวหน้าส่วนราชการ", label: "หัวหน้าส่วนราชการ" },
+    { value: "ผู้บัญชาการตำรวจแห่งชาติ", label: "ผู้บัญชาการตำรวจแห่งชาติ" },
+    {
+      value: "ผู้อำนวยการสำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ",
+      label: "ผู้อำนวยการสำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ",
+    },
+  ];
+
+  const departmentOptions = [
+    { value: "กระทรวงมหาดไทย", label: "กระทรวงมหาดไทย" },
+    {
+      value: "กรมส่งเสริมการปกครองท้องถิ่น",
+      label: "กรมส่งเสริมการปกครองท้องถิ่น",
+    },
+    { value: "กรมการปกครอง", label: "กรมการปกครอง" },
+    {
+      value: "กรมป้องกันและบรรเทาสาธารณภัย",
+      label: "กรมป้องกันและบรรเทาสาธารณภัย",
+    },
+    { value: "จังหวัด", label: "จังหวัด" },
+    { value: "อำเภอ", label: "อำเภอ" },
+    { value: "องค์การบริหารส่วนจังหวัด", label: "องค์การบริหารส่วนจังหวัด" },
+    { value: "เทศบาลเมือง", label: "เทศบาลเมือง" },
+    { value: "เทศบาลตำบล", label: "เทศบาลตำบล" },
+    { value: "องค์การบริหารส่วนตำบล", label: "องค์การบริหารส่วนตำบล" },
+    { value: "กรุงเทพมหานคร", label: "กรุงเทพมหานคร" },
+    { value: "เมืองพัทยา", label: "เมืองพัทยา" },
+    {
+      value: "สำนักงานคณะกรรมการการเลือกตั้ง",
+      label: "สำนักงานคณะกรรมการการเลือกตั้ง",
+    },
+    { value: "สำนักงานตำรวจแห่งชาติ", label: "สำนักงานตำรวจแห่งชาติ" },
+  ];
+
+  const signerOptions = [
+    { value: "ปลัดกระทรวงมหาดไทย", label: "ปลัดกระทรวงมหาดไทย" },
+    { value: "รองปลัดกระทรวงมหาดไทย", label: "รองปลัดกระทรวงมหาดไทย" },
+    {
+      value: "อธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
+      label: "อธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
+    },
+    {
+      value: "รองอธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
+      label: "รองอธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
+    },
+    {
+      value: "ผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
+      label: "ผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
+    },
+    {
+      value: "รองผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
+      label: "รองผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
+    },
+    { value: "ผู้ว่าราชการจังหวัด", label: "ผู้ว่าราชการจังหวัด" },
+    { value: "รองผู้ว่าราชการจังหวัด", label: "รองผู้ว่าราชการจังหวัด" },
+    { value: "อธิบดีกรมการปกครอง", label: "อธิบดีกรมการปกครอง" },
+    { value: "รองอธิบดีกรมการปกครอง", label: "รองอธิบดีกรมการปกครอง" },
+    {
+      value: "ผู้อำนวยการกองกิจการท้องถิ่น",
+      label: "ผู้อำนวยการกองกิจการท้องถิ่น",
+    },
+    { value: "ผู้อำนวยการกองนิติการ", label: "ผู้อำนวยการกองนิติการ" },
+  ];
+
+  const confidentialityOptions = [
+    { value: "ปกติ", label: "ปกติ" },
+    { value: "ลับ", label: "ลับ" },
+    { value: "ลับมาก", label: "ลับมาก" },
+    { value: "ลับที่สุด", label: "ลับที่สุด" },
+  ];
+
+  const urgencyOptions = [
+    { value: "ปกติ", label: "ปกติ" },
+    { value: "เร่งด่วน", label: "เร่งด่วน" },
+    { value: "เร่งด่วนมาก", label: "เร่งด่วนมาก" },
+    { value: "เร่งด่วนที่สุด", label: "เร่งด่วนที่สุด" },
+  ];
 
   return (
     <Box
@@ -89,14 +187,12 @@ const RequestResultProgress = () => {
             }}
           >
             <SelectField
-              label={
-                <span>
-                  เรียน<span style={{ color: "red", marginLeft: 4 }}>*</span>
-                </span>
-              }
+              label="เรียน*"
+              inputLabel="เลือกเรียน"
               name="salutation"
               value={form.salutation}
               onChange={handleChange}
+              options={salutationOptions}
             />
             <InputText
               label={
@@ -110,16 +206,16 @@ const RequestResultProgress = () => {
               value={form.refNo}
               onChange={handleChange}
             />
-            <Box sx={{ mt: { xs: 0, sm: 0, md: 1.9 } }}>
-              <InputDateNoTime
+            <Box sx={{ position: "relative", zIndex: 1 }}>
+              <DateThaiPickerService
                 label={
                   <span>
                     วันที่<span style={{ color: "red", marginLeft: 4 }}>*</span>
                   </span>
                 }
-                name="date"
                 value={form.date}
-                onChange={handleChange}
+                onChange={handleDateChange}
+                placeholder="เลือกวันที่"
               />
             </Box>
           </Box>
@@ -142,29 +238,24 @@ const RequestResultProgress = () => {
           {/* Row 3: หน่วยงาน / ผู้ร้อง* */}
           <Box>
             <SelectField
-              label={
-                <span>
-                  หน่วยงาน / ผู้ร้อง
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label="หน่วยงาน / ผู้ร้อง*"
+              inputLabel="เลือกหน่วยงาน / ผู้ร้อง"
               name="department"
               value={form.department}
               onChange={handleChange}
+              options={departmentOptions}
             />
           </Box>
 
           {/* Row 4: ผู้ลงนาม* */}
           <Box>
             <SelectField
-              label={
-                <span>
-                  ผู้ลงนาม<span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label="ผู้ลงนาม*"
+              inputLabel="เลือกผู้ลงนาม"
               name="signer"
               value={form.signer}
               onChange={handleChange}
+              options={signerOptions}
             />
           </Box>
 
@@ -177,26 +268,20 @@ const RequestResultProgress = () => {
             }}
           >
             <SelectField
-              label={
-                <span>
-                  ชั้นความลับ
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label="ชั้นความลับ*"
+              inputLabel="เลือกชั้นความลับ"
               name="confidentiality"
               value={form.confidentiality}
               onChange={handleChange}
+              options={confidentialityOptions}
             />
             <SelectField
-              label={
-                <span>
-                  ชั้นความเร่งด่วน
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label="ชั้นความเร่งด่วน*"
+              inputLabel="เลือกชั้นความเร่งด่วน"
               name="urgency"
               value={form.urgency}
               onChange={handleChange}
+              options={urgencyOptions}
             />
           </Box>
 
@@ -272,7 +357,18 @@ const RequestResultProgress = () => {
               variant="outlined"
               iconLeft={<CloseIcon />}
               onClick={() => {
-                /* TODO: clear form */
+                setForm({
+                  salutation: "",
+                  refNo: "",
+                  date: null,
+                  subject: "",
+                  department: "",
+                  signer: "",
+                  confidentiality: "",
+                  urgency: "",
+                  attachment: "",
+                  note: "",
+                });
               }}
               sx={{
                 borderColor: "#50ADFF",
@@ -290,6 +386,7 @@ const RequestResultProgress = () => {
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={() => {
+                console.log("Form data:", form);
                 /* TODO: save form */
               }}
               sx={{

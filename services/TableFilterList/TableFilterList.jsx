@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -23,23 +23,58 @@ const TableFilterList = ({
   groups = [],
   title = "",
   navigateTo = "",
-  agencyOptions = [],
-  onSearch = () => { },
+  issueTypeOptions = [],
+  respondentOptions = [],
+  onSearch = () => {},
 }) => {
   const router = useRouter();
 
   const [filters, setFilters] = useState({
     claimantName: "",
-    citizenId: "",
     subject: "",
-    docNo: "",
-    agency: "",
     issueType: "",
     respondentName: "",
   });
 
-  const handleChange = (field) => (e) =>
-    setFilters({ ...filters, [field]: e?.target ? e.target.value : e });
+  // Handle input text change
+  const handleInputChange = (field) => (e) => {
+    const value = e?.target?.value || "";
+    setFilters((prev) => ({
+      ...prev,
+      [field]: String(value),
+    }));
+  };
+
+  // Handle SelectField change - รองรับ SelectField component ของคุณ
+  const handleSelectChange = (field) => (e) => {
+    let finalValue = "";
+
+    if (e && typeof e === "object") {
+      if (e.target && e.target.value !== undefined) {
+        // กรณี SelectField ส่ง {target: {name, value: selected}}
+        const selectedValue = e.target.value;
+
+        if (typeof selectedValue === "object" && selectedValue !== null) {
+          // ถ้า selected เป็น object {value, label}
+          finalValue = String(selectedValue.value || "");
+        } else {
+          // ถ้า selected เป็น primitive value
+          finalValue = String(selectedValue || "");
+        }
+      } else if (e.value !== undefined) {
+        // กรณีส่ง object {value, label} โดยตรง
+        finalValue = String(e.value || "");
+      }
+    } else {
+      // กรณีส่ง primitive value โดยตรง
+      finalValue = String(e || "");
+    }
+
+    setFilters((prev) => ({
+      ...prev,
+      [field]: finalValue,
+    }));
+  };
 
   const [paginationStates, setPaginationStates] = useState(
     groups.map(() => ({ page: 0, rowsPerPage: 10 }))
@@ -60,24 +95,28 @@ const TableFilterList = ({
     );
   };
 
-  const handleSearchClick = () => {
-    onSearch(filters);
-  };
+  const handleSearchClick = useCallback(() => {
+    setPaginationStates(groups.map(() => ({ page: 0, rowsPerPage: 10 })));
 
-  const handleClearSearch = () => {
+    if (typeof onSearch === "function") {
+      onSearch(filters);
+    }
+  }, [filters, onSearch, groups]);
+
+  const handleClearSearch = useCallback(() => {
     const cleared = {
       claimantName: "",
-      citizenId: "",
       subject: "",
-      docNo: "",
-      agency: "",
       issueType: "",
       respondentName: "",
     };
     setFilters(cleared);
     setPaginationStates(groups.map(() => ({ page: 0, rowsPerPage: 10 })));
-    onSearch(cleared);
-  };
+
+    if (typeof onSearch === "function") {
+      onSearch(cleared);
+    }
+  }, [onSearch, groups]);
 
   const handleRowClick = (item, groupKey) => {
     if (navigateTo) {
@@ -90,32 +129,103 @@ const TableFilterList = ({
 
   const handleNavigateTo = () => router.push("/admin/AccountBox");
 
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      handleSearchClick();
+    }
+  };
+
   return (
     <Container
       maxWidth={false}
       disableGutters
-      sx={{ backgroundColor: "#fff", borderRadius: 2, boxShadow: "0 6px 18px rgba(0,0,0,.06)" }}
+      sx={{
+        backgroundColor: "#fff",
+        borderRadius: 2,
+        boxShadow: "0 6px 18px rgba(0,0,0,.06)",
+      }}
     >
       <Box className={styles.headerBar}>{title}</Box>
 
+      {/* Search Filters */}
       <Box
         display="flex"
         justifyContent="space-between"
         alignItems="center"
         gap={1}
         mt={2}
-        sx={{ flexWrap: "nowrap", whiteSpace: "nowrap", overflowX: "auto", px: 2 }}
+        sx={{
+          flexWrap: "nowrap",
+          whiteSpace: "nowrap",
+          overflowX: "auto",
+          px: 2,
+        }}
       >
-        <Box display="flex" alignItems="center" gap={1} sx={{ flexWrap: "nowrap" }}>
-          <InputText label="ชื่อผู้ร้อง" value={filters.claimantName} onChange={handleChange("claimantName")} />
-          <SelectField label="ประเภทเรื่อง" options={agencyOptions} value={filters.issueType} onChange={handleChange("issueType")} />
-          <InputText label="ชื่อเรื่อง" value={filters.subject} onChange={handleChange("subject")} />
-          <SelectField label="ชื่อผู้ถูกร้อง" options={agencyOptions} value={filters.respondentName} onChange={handleChange("respondentName")} />
+        <Box
+          display="flex"
+          alignItems="center"
+          gap={1}
+          sx={{ flexWrap: "nowrap" }}
+        >
+          <InputText
+            label="ชื่อผู้ร้อง"
+            inputLabel="กรอกชื่อผู้ร้อง"
+            value={String(filters.claimantName || "")}
+            onChange={handleInputChange("claimantName")}
+            onKeyPress={handleKeyPress}
+          />
 
-          <IconButton onClick={handleSearchClick} sx={{ bgcolor: "#1120A3", color: "#fff", "&:hover": { bgcolor: "#0b1580" }, flexShrink: 0 }}>
+          <SelectField
+            label="ประเภทเรื่อง"
+            inputLabel="เลือกประเภทเรื่อง"
+            options={issueTypeOptions}
+            value={String(filters.issueType || "")}
+            onChange={handleSelectChange("issueType")}
+            name="issueType"
+          />
+
+          <InputText
+            label="ชื่อเรื่อง"
+            inputLabel="กรอกชื่อเรื่อง"
+            value={String(filters.subject || "")}
+            onChange={handleInputChange("subject")}
+            onKeyPress={handleKeyPress}
+          />
+
+          <InputText
+            label="ชื่อผู้ถูกร้อง"
+            inputLabel="กรอกชื่อผู้ถูกร้อง"
+            value={String(filters.respondentName || "")}
+            onChange={handleInputChange("respondentName")}
+            onKeyPress={handleKeyPress}
+          />
+
+          <IconButton
+            onClick={handleSearchClick}
+            sx={{
+              bgcolor: "#1120A3",
+              color: "#fff",
+              "&:hover": { bgcolor: "#0b1580" },
+              flexShrink: 0,
+              height: 40,
+              width: 40,
+            }}
+            title="ค้นหา"
+          >
             <SearchIcon />
           </IconButton>
-          <IconButton onClick={handleClearSearch} sx={{ bgcolor: "#1120A3", color: "#fff", "&:hover": { bgcolor: "#0b1580" }, flexShrink: 0 }}>
+          <IconButton
+            onClick={handleClearSearch}
+            sx={{
+              bgcolor: "#dc3545",
+              color: "#fff",
+              "&:hover": { bgcolor: "#c82333" },
+              flexShrink: 0,
+              height: 40,
+              width: 40,
+            }}
+            title="ล้างการค้นหา"
+          >
             <SearchOffIcon />
           </IconButton>
 
@@ -130,6 +240,7 @@ const TableFilterList = ({
               px: 3,
               py: 1,
               minWidth: 220,
+              height: 40,
               "&:hover": { backgroundColor: "#0b1580" },
               flexShrink: 0,
             }}
@@ -144,66 +255,138 @@ const TableFilterList = ({
         </Box>
       </Box>
 
-      {groups.map((group, groupIdx) => {
-        const { page, rowsPerPage } = paginationStates[groupIdx] || { page: 0, rowsPerPage: 10 };
-        return (
-          <Box key={groupIdx} sx={{ mt: 4 }}>
-            <Box className={styles.headerBar}>{group.title}</Box>
+      {/* Groups Tables */}
+      {groups.length > 0 ? (
+        groups.map((group, groupIdx) => {
+          const { page, rowsPerPage } = paginationStates[groupIdx] || {
+            page: 0,
+            rowsPerPage: 10,
+          };
+          return (
+            <Box key={groupIdx} sx={{ mt: 4 }}>
+              <Box className={styles.headerBar}>
+                {group.title} ({group.data.length} รายการ)
+              </Box>
 
-            <Box className={styles.tableWrapper} sx={{ overflowX: "auto", px: 2, pb: 1 }}>
-              <Table sx={{ minWidth: 1400 }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell align="center" sx={{ width: 80 }}>ลำดับ</TableCell>
-                    <TableCell sx={{ width: 200 }}>ชื่อผู้ร้อง</TableCell>
-                    <TableCell sx={{ width: 180 }}>ประเภทเรื่อง</TableCell>
-                    <TableCell sx={{ width: 300 }}>ชื่อเรื่อง</TableCell>
-                    <TableCell sx={{ width: 180 }}>ชื่อผู้ถูกร้อง</TableCell>
-                    <TableCell sx={{ width: 200 }}>เลขที่สป.กค</TableCell>
-                    <TableCell sx={{ width: 200 }}>เลขที่สป.สร</TableCell>
-                    <TableCell sx={{ width: 200 }}>เลขที่สตป.</TableCell>
-                    <TableCell sx={{ width: 160 }}>เลขที่สรร</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {group.data
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((item, idx) => (
-                      <TableRow
-                        key={item.id}
-                        onClick={() => handleRowClick(item, group.title)}
-                        sx={{ cursor: "pointer", "&:hover": { backgroundColor: "#f5f7ff" } }}
+              <Box
+                className={styles.tableWrapper}
+                sx={{ overflowX: "auto", px: 2, pb: 1 }}
+              >
+                <Table sx={{ minWidth: 1400 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell
+                        align="center"
+                        sx={{ width: 80, fontWeight: "bold" }}
                       >
-                        <TableCell align="center" sx={{ fontWeight: 600, color: "#1120A3" }}>
-                          {page * rowsPerPage + idx + 1}
+                        ลำดับ
+                      </TableCell>
+                      <TableCell sx={{ width: 200, fontWeight: "bold" }}>
+                        ชื่อผู้ร้อง
+                      </TableCell>
+                      <TableCell sx={{ width: 180, fontWeight: "bold" }}>
+                        ประเภทเรื่อง
+                      </TableCell>
+                      <TableCell sx={{ width: 300, fontWeight: "bold" }}>
+                        ชื่อเรื่อง
+                      </TableCell>
+                      <TableCell sx={{ width: 180, fontWeight: "bold" }}>
+                        ชื่อผู้ถูกร้อง
+                      </TableCell>
+                      <TableCell sx={{ width: 200, fontWeight: "bold" }}>
+                        เลขที่สป.กค
+                      </TableCell>
+                      <TableCell sx={{ width: 200, fontWeight: "bold" }}>
+                        เลขที่สป.สร
+                      </TableCell>
+                      <TableCell sx={{ width: 200, fontWeight: "bold" }}>
+                        เลขที่สตป.
+                      </TableCell>
+                      <TableCell sx={{ width: 160, fontWeight: "bold" }}>
+                        เลขที่สรร
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {group.data.length > 0 ? (
+                      group.data
+                        .slice(
+                          page * rowsPerPage,
+                          page * rowsPerPage + rowsPerPage
+                        )
+                        .map((item, idx) => (
+                          <TableRow
+                            key={item.id}
+                            onClick={() => handleRowClick(item, group.title)}
+                            sx={{
+                              cursor: "pointer",
+                              "&:hover": { backgroundColor: "#f5f7ff" },
+                              "&:nth-of-type(even)": {
+                                backgroundColor: "#fafafa",
+                              },
+                            }}
+                          >
+                            <TableCell
+                              align="center"
+                              sx={{ fontWeight: 600, color: "#1120A3" }}
+                            >
+                              {page * rowsPerPage + idx + 1}
+                            </TableCell>
+                            <TableCell>{item?.name ?? "-"}</TableCell>
+                            <TableCell>{item?.issueType ?? "-"}</TableCell>
+                            <TableCell>{item?.subject ?? "-"}</TableCell>
+                            <TableCell>{item?.respondentName ?? "-"}</TableCell>
+                            <TableCell>{item?.docNo ?? "-"}</TableCell>
+                            <TableCell>{item?.docNo2 ?? "-"}</TableCell>
+                            <TableCell>{item?.docNo3 ?? "-"}</TableCell>
+                            <TableCell>{item?.docNo4 ?? "-"}</TableCell>
+                          </TableRow>
+                        ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={9}
+                          align="center"
+                          sx={{ py: 3, color: "#999" }}
+                        >
+                          ไม่พบข้อมูลในกลุ่มนี้
                         </TableCell>
-                        <TableCell>{item?.name ?? "-"}</TableCell>
-                        <TableCell>{item?.issueType ?? "-"}</TableCell>
-                        <TableCell>{item?.subject ?? "-"}</TableCell>
-                        <TableCell>{item?.respondentName ?? "-"}</TableCell>
-                        <TableCell>{item?.docNo ?? "-"}</TableCell>
-                        <TableCell>{item?.docNo2 ?? "-"}</TableCell>
-                        <TableCell>{item?.docNo3 ?? "-"}</TableCell>
-                        <TableCell>{item?.docNo4 ?? "-"}</TableCell>
                       </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
+                    )}
+                  </TableBody>
+                </Table>
 
-              <TablePagination
-                component="div"
-                rowsPerPageOptions={[5, 10, 25]}
-                count={group.data.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handlePageChange(groupIdx)}
-                onRowsPerPageChange={handleRowsPerPageChange(groupIdx)}
-                sx={{ borderTop: "1px solid #eee" }}
-              />
+                <TablePagination
+                  component="div"
+                  rowsPerPageOptions={[5, 10, 25, 50]}
+                  count={group.data.length}
+                  rowsPerPage={rowsPerPage}
+                  page={page}
+                  onPageChange={handlePageChange(groupIdx)}
+                  onRowsPerPageChange={handleRowsPerPageChange(groupIdx)}
+                  labelRowsPerPage="แถวต่อหน้า:"
+                  labelDisplayedRows={({ from, to, count }) =>
+                    `${from}-${to} จาก ${
+                      count !== -1 ? count : `มากกว่า ${to}`
+                    }`
+                  }
+                  sx={{ borderTop: "1px solid #eee" }}
+                />
+              </Box>
             </Box>
+          );
+        })
+      ) : (
+        <Box sx={{ textAlign: "center", py: 4, color: "#999" }}>
+          <Box sx={{ fontSize: "1.2rem", mb: 2 }}>
+            🔍 ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา
           </Box>
-        );
-      })}
+          <Box sx={{ fontSize: "0.9rem" }}>
+            ลองปรับเงื่อนไขการค้นหา หรือกดปุ่ม "ล้างการค้นหา"
+            เพื่อแสดงข้อมูลทั้งหมด
+          </Box>
+        </Box>
+      )}
     </Container>
   );
 };

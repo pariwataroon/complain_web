@@ -17,17 +17,15 @@ import styles from "./TableList.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
-import SearchOffIcon from '@mui/icons-material/SearchOff';
-import {
-  formatCitizenId_null,
-} from "@utils/Formats";
+import SearchOffIcon from "@mui/icons-material/SearchOff";
+import { formatCitizenId_null } from "@utils/Formats";
 
 const TableList = ({
   data = [],
   title = "",
   navigateTo = "",
   agencyOptions = [],
-  onSearch = () => { },
+  onSearch = () => {},
   handleNavigateTo,
 }) => {
   const router = useRouter();
@@ -37,15 +35,17 @@ const TableList = ({
     claimantName: "",
     citizenId: "",
     subject: "",
-    docNo: "",
+    docGov: "",
     agency: "",
     docKk: "",
     docSr: "",
     docStp: "",
-    docGov: "",
   });
-  const handleChange = (field) => (e) =>
-    setFilters({ ...filters, [field]: e?.target ? e.target.value : e });
+
+  const handleChange = (field) => (e) => {
+    const value = e?.target ? e.target.value : e;
+    setFilters((prev) => ({ ...prev, [field]: value }));
+  };
 
   /* pagination */
   const [page, setPage] = useState(0);
@@ -63,6 +63,8 @@ const TableList = ({
   };
 
   const handleSearchClick = () => {
+    console.log("Searching with filters:", filters); // Debug log
+    setPage(0); // Reset to first page when searching
     onSearch(filters);
   };
 
@@ -71,19 +73,26 @@ const TableList = ({
       claimantName: "",
       citizenId: "",
       subject: "",
-      docNo: "",
+      docGov: "",
       agency: "",
       docKk: "",
       docSr: "",
       docStp: "",
-      docGov: "",
     };
     setFilters(cleared);
     setPage(0);
     onSearch(cleared);
   };
 
-  const handleRowClick = (item) => navigateTo && router.push(`${navigateTo}/${item.id}`);
+  const handleRowClick = (item) =>
+    navigateTo && router.push(`${navigateTo}/${item.id}`);
+
+  // Handle Enter key press for search
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      handleSearchClick();
+    }
+  };
 
   return (
     <Container
@@ -97,6 +106,7 @@ const TableList = ({
     >
       <Box className={styles.headerBar}>{title}</Box>
 
+      {/* Search Filters */}
       <Box
         display="flex"
         justifyContent="space-between"
@@ -118,26 +128,35 @@ const TableList = ({
         >
           <InputText
             label="ชื่อผู้ร้อง"
+            inputLabel="กรอกชื่อผู้ร้อง"
             value={filters.claimantName}
             onChange={handleChange("claimantName")}
+            onKeyPress={handleKeyPress}
           />
           <InputText
             label="เลขบัตรประชาชน"
+            inputLabel="กรอกเลขบัตรประชาชน"
             value={filters.citizenId}
             onChange={handleChange("citizenId")}
+            onKeyPress={handleKeyPress}
           />
           <InputText
             label="ชื่อเรื่อง"
+            inputLabel="กรอกชื่อเรื่อง"
             value={filters.subject}
             onChange={handleChange("subject")}
+            onKeyPress={handleKeyPress}
           />
           <InputText
             label="เลขที่ส่วนรับราชการ"
+            inputLabel="กรอกเลขที่ส่วนรับราชการ"
             value={filters.docGov}
             onChange={handleChange("docGov")}
+            onKeyPress={handleKeyPress}
           />
           <SelectField
             label="หน่วยงานอื่นที่ส่งเรื่องมายัง กก."
+            inputLabel="เลือกหน่วยงาน"
             options={agencyOptions}
             value={filters.agency}
             onChange={handleChange("agency")}
@@ -150,18 +169,24 @@ const TableList = ({
               color: "#fff",
               "&:hover": { bgcolor: "#0b1580" },
               flexShrink: 0,
+              height: 40,
+              width: 40,
             }}
+            title="ค้นหา"
           >
             <SearchIcon />
           </IconButton>
           <IconButton
             onClick={handleClearSearch}
             sx={{
-              bgcolor: "#1120A3",
+              bgcolor: "#dc3545",
               color: "#fff",
-              "&:hover": { bgcolor: "#0b1580" },
+              "&:hover": { bgcolor: "#c82333" },
               flexShrink: 0,
+              height: 40,
+              width: 40,
             }}
+            title="ล้างการค้นหา"
           >
             <SearchOffIcon />
           </IconButton>
@@ -177,6 +202,7 @@ const TableList = ({
               px: 3,
               py: 1,
               minWidth: 220,
+              height: 40,
               "&:hover": { backgroundColor: "#0b1580" },
               flexShrink: 0,
             }}
@@ -192,7 +218,14 @@ const TableList = ({
         </Box>
       </Box>
 
-      {/* table + pagination */}
+      {/* Results Summary */}
+      <Box sx={{ px: 2, py: 1 }}>
+        <Box sx={{ color: "#666", fontSize: "0.9rem" }}>
+          พบข้อมูล {data.length} รายการ
+        </Box>
+      </Box>
+
+      {/* Table + Pagination */}
       <Box
         className={styles.tableWrapper}
         id="table-results"
@@ -201,16 +234,30 @@ const TableList = ({
         <Table sx={{ minWidth: 1400 }}>
           <TableHead>
             <TableRow>
-              <TableCell align="center" sx={{ width: 80 }}>
+              <TableCell align="center" sx={{ width: 80, fontWeight: "bold" }}>
                 ลำดับ
               </TableCell>
-              <TableCell sx={{ width: 200 }}>ชื่อผู้ร้อง</TableCell>
-              <TableCell sx={{ width: 180 }}>บัตรประชาชน</TableCell>
-              <TableCell sx={{ width: 300 }}>ชื่อเรื่อง</TableCell>
-              <TableCell sx={{ width: 180 }}>เลขที่สป.กค.</TableCell>
-              <TableCell sx={{ width: 180 }}>เลขที่สป.สร.</TableCell>
-              <TableCell sx={{ width: 180 }}>เลขที่สตป.</TableCell>
-              <TableCell sx={{ width: 180 }}>เลขที่ส่วนรับราชการ</TableCell>
+              <TableCell sx={{ width: 200, fontWeight: "bold" }}>
+                ชื่อผู้ร้อง
+              </TableCell>
+              <TableCell sx={{ width: 180, fontWeight: "bold" }}>
+                บัตรประชาชน
+              </TableCell>
+              <TableCell sx={{ width: 300, fontWeight: "bold" }}>
+                ชื่อเรื่อง
+              </TableCell>
+              <TableCell sx={{ width: 180, fontWeight: "bold" }}>
+                เลขที่สป.กค.
+              </TableCell>
+              <TableCell sx={{ width: 180, fontWeight: "bold" }}>
+                เลขที่สป.สร.
+              </TableCell>
+              <TableCell sx={{ width: 180, fontWeight: "bold" }}>
+                เลขที่สตป.
+              </TableCell>
+              <TableCell sx={{ width: 180, fontWeight: "bold" }}>
+                เลขที่ส่วนรับราชการ
+              </TableCell>
             </TableRow>
           </TableHead>
 
@@ -223,13 +270,19 @@ const TableList = ({
                   sx={{
                     cursor: "pointer",
                     "&:hover": { backgroundColor: "#f5f7ff" },
+                    "&:nth-of-type(even)": { backgroundColor: "#fafafa" },
                   }}
                 >
-                  <TableCell align="center" sx={{ fontWeight: 600, color: "#1120A3" }}>
+                  <TableCell
+                    align="center"
+                    sx={{ fontWeight: 600, color: "#1120A3" }}
+                  >
                     {page * rowsPerPage + idx + 1}
                   </TableCell>
                   <TableCell>{item?.name ?? "-"}</TableCell>
-                  <TableCell>{formatCitizenId_null(item?.citizenId ?? "-")}</TableCell>
+                  <TableCell>
+                    {formatCitizenId_null(item?.citizenId ?? "-")}
+                  </TableCell>
                   <TableCell className={styles.ellipsisCell}>
                     {item?.subject ?? "-"}
                   </TableCell>
@@ -241,7 +294,11 @@ const TableList = ({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 3, color: "#999" }}>
+                <TableCell
+                  colSpan={8}
+                  align="center"
+                  sx={{ py: 3, color: "#999" }}
+                >
                   ไม่พบข้อมูลที่ค้นหา
                 </TableCell>
               </TableRow>
@@ -249,15 +306,19 @@ const TableList = ({
           </TableBody>
         </Table>
 
-        {/* pagination bar */}
+        {/* Pagination */}
         <TablePagination
           component="div"
-          rowsPerPageOptions={[5, 10, 25]}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           count={data.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handlePageChange}
           onRowsPerPageChange={handleRowsPerPageChange}
+          labelRowsPerPage="แถวต่อหน้า:"
+          labelDisplayedRows={({ from, to, count }) =>
+            `${from}-${to} จาก ${count !== -1 ? count : `มากกว่า ${to}`}`
+          }
           sx={{ borderTop: "1px solid #eee" }}
         />
       </Box>
