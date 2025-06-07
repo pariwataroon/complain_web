@@ -14,12 +14,12 @@ const ExportButton = ({ label = "Export PDF", onClick, sx = {}, ...props }) => {
         fontWeight: "bold",
         px: 3,
         py: 1,
-        whiteSpace: "nowrap", // ป้องกันการขึ้นบรรทัดใหม่
-        minWidth: "fit-content", // ขนาดตามเนื้อหา
+        whiteSpace: "nowrap",
+        minWidth: "fit-content", 
         "&:hover": {
           backgroundColor: "#dfe0f0",
         },
-        ...sx, // เพิ่มรองรับ sx props จากภายนอก
+        ...sx,
       }}
       {...props}
     >

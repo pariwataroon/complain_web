@@ -1,168 +1,72 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
-import TableListBox from "@services/TableListBox/TableListBox";
+import TableListOPM from "@services/TableListOPM/TableListOPM";
+import Cookies from "js-cookie";
+import { Encode, GetTimelineHeader } from "@pages/api/opm/opm";
 
-const mockComplaints = [
-  {
-    id: 1,
-    claimantName: "บริษัท เค.เค. ดีเวลลอป จำกัด",
-    issueType: "ภาษีอากร",
-    subIssueType: "ภาษีอากร",
-    ssoNo: "1234-5-678-9",
-    subject: "การเรียกเก็บภาษีมูลค่าเพิ่ม (VAT) ซ้ำซ้อน",
-    accusedName: "กรมสรรพากร",
-  },
-  {
-    id: 2,
-    claimantName: "บจก. ทีเคเค เทรดดิ้ง จำกัด",
-    issueType: "ภาษีอากร",
-    subIssueType: "ภาษีอากร",
-    ssoNo: "2345-6-789-0",
-    subject: "ขอคืนภาษีซื้อที่ชำระเกิน",
-    accusedName: "กรมสรรพากร",
-  },
-  {
-    id: 3,
-    claimantName: "คุณสมชาย ใจดี",
-    issueType: "บ้านเช่าบ้าน/ค่ารักษาพยาบาล/การจัดซื้อจัดจ้าง",
-    subIssueType: "ค่ารักษาพยาบาล",
-    ssoNo: "3456-7-890-1",
-    subject: "ขอเบิกค่ารักษาพยาบาลตามสิทธิ์",
-    accusedName: "สำนักงานเศรษฐกิจการคลัง",
-  },
-  {
-    id: 4,
-    claimantName: "นางสาวอรทัย มั่งคั่ง",
-    issueType: "บ้านเช่าบ้าน/ค่ารักษาพยาบาล/การจัดซื้อจัดจ้าง",
-    subIssueType: "การจัดซื้อจัดจ้าง",
-    ssoNo: "4567-8-901-2",
-    subject: "จัดซื้อครุภัณฑ์ราชการไม่ตรงสเปค",
-    accusedName: "กรมบัญชีกลาง",
-  },
-  {
-    id: 5,
-    claimantName: "บริษัท ภูมิสิริ อินดัสตรี้ จำกัด",
-    issueType: "การแก้ไขปัญหาหนี้สิน",
-    subIssueType: "หนี้ในระบบ",
-    ssoNo: "5678-9-012-3",
-    subject: "ขอปรับโครงสร้างหนี้สิน",
-    accusedName: "สำนักงานบริหารหนี้สาธารณะ",
-  },
-  {
-    id: 6,
-    claimantName: "หจก. เอ็มเอ็นพี วัสดุภัณฑ์",
-    issueType: "การแก้ไขปัญหาหนี้สิน",
-    subIssueType: "หนี้นอกระบบ",
-    ssoNo: "6789-0-123-4",
-    subject: "ปัญหาหนี้นอกระบบดอกเบี้ยสูง",
-    accusedName: "ธนาคารแห่งประเทศไทย",
-  },
-  {
-    id: 7,
-    claimantName: "นางสาวปิยนันท์ ทองสุข",
-    issueType: "พฤติกรรมเจ้าหน้าที่",
-    subIssueType: "พฤติกรรมเจ้าหน้าที่",
-    ssoNo: "7890-1-234-5",
-    subject: "เจ้าหน้าที่ปฏิเสธให้บริการ",
-    accusedName: "กรมศุลกากร",
-  },
-  {
-    id: 8,
-    claimantName: "บริษัท ยูไลเซียน เทรดดิ้ง จำกัด",
-    issueType: "อื่นๆ",
-    subIssueType: "อื่นๆ",
-    ssoNo: "8901-2-345-6",
-    subject: "ข้อเสนอแนะปรับปรุงเว็บไซต์",
-    accusedName: "สำนักงานเลขาธิการนายกรัฐมนตรี",
-  },
-  {
-    id: 9,
-    claimantName: "นายธนกฤต อัครเดชา",
-    issueType: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
-    subIssueType: "โครงการสาธารณูปโภคพื้นฐาน",
-    ssoNo: "9012-3-456-7",
-    subject: "ข้อร้องเรียนถนนชำรุดไม่ได้รับการแก้ไข",
-    accusedName: "กรมโยธาธิการและผังเมือง",
-  },
-  {
-    id: 10,
-    claimantName: "บริษัท ทีเค ระบบซัพพลาย จำกัด",
-    issueType: "นโยบายรัฐฯ ด้านสวัสดิการ",
-    subIssueType: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
-    ssoNo: "0123-4-567-8",
-    subject: "ลงทะเบียนสวัสดิการไม่สำเร็จ",
-    accusedName: "สำนักงานหลักประกันสุขภาพแห่งชาติ",
-  },
-];
-
-const issueTypeOptions = [
-  { value: "", label: "ทั้งหมด" },
-  { value: "ภาษีอากร", label: "ภาษีอากร" },
-  {
-    value: "บ้านเช่าบ้าน/ค่ารักษาพยาบาล/การจัดซื้อจัดจ้าง",
-    label: "บ้านเช่าบ้าน/ค่ารักษาพยาบาล/การจัดซื้อจัดจ้าง",
-  },
-  { value: "การแก้ไขปัญหาหนี้สิน", label: "การแก้ไขปัญหาหนี้สิน" },
-  { value: "พฤติกรรมเจ้าหน้าที่", label: "พฤติกรรมเจ้าหน้าที่" },
-  { value: "อื่นๆ", label: "อื่นๆ" },
-  {
-    value: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
-    label: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
-  },
-  { value: "นโยบายรัฐฯ ด้านสวัสดิการ", label: "นโยบายรัฐฯ ด้านสวัสดิการ" },
-];
-
-// ประเภทเรื่องย่อย (subIssueType)
-const subIssueTypeOptions = [
-  { value: "", label: "ทั้งหมด" },
-  { value: "ภาษีอากร", label: "ภาษีอากร" },
-  { value: "ค่ารักษาพยาบาล", label: "ค่ารักษาพยาบาล" },
-  { value: "การจัดซื้อจัดจ้าง", label: "การจัดซื้อจัดจ้าง" },
-  { value: "หนี้ในระบบ", label: "หนี้ในระบบ" },
-  { value: "หนี้นอกระบบ", label: "หนี้นอกระบบ" },
-  { value: "พฤติกรรมเจ้าหน้าที่", label: "พฤติกรรมเจ้าหน้าที่" },
-  { value: "อื่นๆ", label: "อื่นๆ" },
-  { value: "โครงการสาธารณูปโภคพื้นฐาน", label: "โครงการสาธารณูปโภคพื้นฐาน" },
-  {
-    value: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
-    label: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
-  },
-];
-
-// ─── helper ─────────────────────────────────────────────────────────────────
-const safeIncludes = (text = "", query = "") =>
-  text.toLowerCase().includes(query.toLowerCase());
-
-// ─── component ───────────────────────────────────────────────────────────────
 const Opm1111Components = () => {
-  const [allComplaints] = useState(mockComplaints);
-  const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
+  const [result, setResult] = useState("");
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [complaints, setComplaints] = useState([]);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const router = useRouter();
 
-  const handleNavigateTo = (item) =>
-    router.push(`/admin/edit/opm1111/${item.id}`);
+  useEffect(() => {
+    const fetchToken = async () => {
+      try {
+        const existingToken = Cookies.get("opm_token");
+        if (existingToken) {
+          setResult(existingToken);
+        } else {
+          const encodeResult = await Encode();
+          setResult(encodeResult.token_id);
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        setResult("Error occurred while fetching token.");
+      }
+    };
 
-  const handleSearch = (filters) => {
-    const result = allComplaints.filter((item) => {
-      if (
-        filters.claimantName &&
-        !safeIncludes(item.claimantName, filters.claimantName)
-      )
-        return false;
-      if (filters.issueType && item.issueType !== filters.issueType)
-        return false;
-      if (filters.subIssueType && item.subIssueType !== filters.subIssueType)
-        return false;
-      if (filters.subject && !safeIncludes(item.subject, filters.subject))
-        return false;
-      if (filters.ssoNo && !safeIncludes(item.ssoNo, filters.ssoNo))
-        return false;
-      if (filters.accusedName && item.accusedName !== filters.accusedName)
-        return false;
-      return true;
-    });
-    setFilteredComplaints(result);
+    fetchToken();
+  }, []);
+
+  const fetchTimelineHeader = async (take) => {
+    try {
+      const timelineData = await GetTimelineHeader(take);
+      const parsedData = Array.isArray(timelineData) ? timelineData : timelineData;
+
+      const mappedComplaints = parsedData.map((item) => ({
+        case_id: item.case_id,
+        case_code: item.case_code,
+        customer_name: item.customer_name,
+        type_text: item.type_text,
+        secret_id: item.secret_id,
+        status_text: item.status_text,
+        main_status_text: item.main_status_text,
+        Action: "View Details",
+      }));
+
+      setComplaints(mappedComplaints);
+      setFilteredComplaints(mappedComplaints);
+    } catch (error) {
+      console.error("Error fetching timeline header:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchTimelineHeader(rowsPerPage);
+  }, [rowsPerPage]);
+
+  const handleSearch = (searchQuery) => {
+    const filtered = complaints.filter((complaint) =>
+      complaint.case_code.includes(searchQuery) || complaint.customer_name.includes(searchQuery)
+    );
+    setFilteredComplaints(filtered);
+  };
+
+  const handleNavigateTo = (path) => {
+    router.push(path);
   };
 
   return (
@@ -182,36 +86,17 @@ const Opm1111Components = () => {
           { label: "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ OPM1111" },
         ]}
       />
+      
 
-      <TableListBox
+      <TableListOPM
         data={filteredComplaints}
         title="เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ OPM1111"
         navigateTo="/admin/edit/opm1111"
         onSearch={handleSearch}
         handleNavigateTo={handleNavigateTo}
-        filterFields={[
-          { name: "claimantName", label: "ชื่อผู้ร้อง", type: "text" },
-          {
-            name: "issueType",
-            label: "ประเภทเรื่อง",
-            type: "select",
-            options: issueTypeOptions,
-          },
-          {
-            name: "subIssueType",
-            label: "ประเภทเรื่องย่อย",
-            type: "select",
-            options: subIssueTypeOptions,
-          },
-          { name: "ssoNo", label: "เลขที่ สรร", type: "text" },
-          { name: "subject", label: "ชื่อเรื่อง", type: "text" },
-          {
-            name: "accusedName",
-            label: "ผู้ถูกร้อง",
-            type: "text",
-          },
-        ]}
+        onRowsPerPageChange={(newRowsPerPage) => setRowsPerPage(newRowsPerPage)}
       />
+
     </>
   );
 };

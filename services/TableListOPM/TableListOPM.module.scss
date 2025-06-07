@@ -1,0 +1,284 @@
+.container {
+  width: 100%;
+  max-width: 100%;
+
+  @media (max-width: 768px) {
+    margin: 0;
+    border-radius: 8px !important;
+  }
+}
+
+.headerBar {
+  background: linear-gradient(to right, #1223a5, #2499ff);
+  height: 50px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+
+  @media (max-width: 768px) {
+    height: 45px;
+    padding: 0 16px;
+    font-size: 16px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+  }
+}
+
+.headerTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (max-width: 480px) {
+    font-size: 14px;
+  }
+}
+
+.headerBar2 {
+  height: 50px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  color: #1120a3;
+  font-weight: bold;
+  font-size: 18px;
+
+  @media (max-width: 768px) {
+    height: 45px;
+    padding: 0 16px;
+    font-size: 16px;
+  }
+}
+
+.searchSection {
+  width: 100%;
+  padding: 16px;
+
+  @media (max-width: 768px) {
+    padding: 12px;
+  }
+}
+
+.filtersContainer {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+}
+
+.filtersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  flex: 1;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 1025px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @media (min-width: 1200px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.filterField {
+  min-width: 0;
+}
+
+.searchButtons {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+
+  @media (max-width: 1024px) {
+    justify-content: center;
+  }
+}
+
+.actionButtons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+.buttonGroup {
+  display: flex;
+  align-items: center;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.exportButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.tableWrapper {
+  background-color: white;
+  border-radius: 0 0 16px 16px;
+  box-shadow: none;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    border-radius: 0 0 8px 8px;
+  }
+}
+
+.tableContainer {
+  overflow-x: auto;
+  padding: 0 16px 8px;
+
+  @media (max-width: 768px) {
+    padding: 0 8px 8px;
+  }
+}
+
+.mobileView {
+  padding: 16px;
+
+  @media (max-width: 480px) {
+    padding: 8px;
+  }
+}
+
+.mobileCard {
+  transition: all 0.2s ease-in-out;
+  border: 1px solid #e0e0e0;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.tableWrapper thead tr {
+  background-color: #e8e9f6 !important;
+}
+
+.MuiTableCell-head {
+  font-weight: 600;
+  color: #1120a3;
+  font-size: 14px;
+  border-bottom: 1px solid #d9dbe9;
+
+  @media (max-width: 1024px) {
+    font-size: 13px;
+    padding: 8px 6px;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 12px;
+    padding: 6px 4px;
+  }
+}
+
+.MuiTableCell-root {
+  font-size: 14px;
+  color: #333;
+  padding: 14px 12px;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+
+  @media (max-width: 1024px) {
+    font-size: 13px;
+    padding: 8px 6px;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 12px;
+    padding: 6px 4px;
+  }
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0;
+
+  >div {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 16px;
+    margin: 16px 0;
+
+    >div {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
+
+// Responsive table utilities
+@media (max-width: 1024px) {
+  .tableWrapper table {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 768px) {
+  .tableWrapper table {
+    display: none;
+  }
+}
+
+// Hide scrollbar on mobile
+@media (max-width: 768px) {
+  .tableContainer::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tableContainer {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
