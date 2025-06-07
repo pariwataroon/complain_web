@@ -3,6 +3,7 @@ import {
   MenuItem,
   TextField,
   FormControl,
+  InputLabel,
   Typography,
   IconButton,
   InputAdornment,
@@ -28,15 +29,6 @@ const SelectField = ({
   zipcodeCode,
   options: externalOptions = [],
   optionMapper = null,
-  placeholder,
-  error = false,
-  helperText = "",
-  required = false,
-  disabled = false,
-  fullWidth = true,
-  variant = "outlined",
-  size = "medium",
-  ...otherProps
 }) => {
   const [options, setOptions] = useState([]);
 
@@ -125,57 +117,31 @@ const SelectField = ({
       try {
         let response = null;
 
-        if (labelText === "อำเภอ/เขต" && provinceCode) {
+        if (label === "จังหวัด") {
+          response = await GetProvincesSelect();
+        } else if (label === "อำเภอ/เขต") {
           response = await GetAmphuresSelect(provinceCode);
-        } else if (labelText === "ตำบล/แขวง" && amphureCode) {
+        } else if (label === "ตำบล/แขวง") {
           response = await GetDistrictsSelect(amphureCode);
-        } else if (labelText === "รหัสไปรษณีย์" && amphureCode) {
-
+        } else if (label === "รหัสไปรษณีย์") {
           const districts = await GetDistrictsSelect(amphureCode);
-
           const zipMap = new Map();
           districts.forEach((item) => {
-            const zipValue = item.zip_code || item.zipcode || item.postal_code || item.postcode;
-
-            if (zipValue && !zipMap.has(zipValue)) {
-              zipMap.set(zipValue, {
-                value: zipValue,
-                label: zipValue,
-                id: item.id,
-                district_code: item.district_code,
-                name_th: item.name_th,
-                name_en: item.name_en
-              });
+            if (item.zip_code && !zipMap.has(item.zip_code)) {
+              zipMap.set(item.zip_code, item);
             }
           });
-
           response = Array.from(zipMap.values());
         }
 
         const finalResponse = Array.isArray(response) ? response : [];
-        const mapped = finalResponse.map(item => {
-          if (typeof item === 'object' && item !== null) {
-            if (labelText === "รหัสไปรษณีย์" && item.value && item.label) {
-              return {
-                value: item.value,
-                label: item.label
-              };
-            }
-
-            return {
-              value: item.value || item.id || item.code || item.province_code || item.amphure_code || item.district_code,
-              label: item.label || item.name || item.title || item.name_th || String(item)
-            };
-          }
-          return { value: item, label: String(item) };
-        });
-
+        const mapped = optionMapper
+          ? finalResponse.map(optionMapper)
+          : finalResponse;
         setOptions(mapped);
       } catch (error) {
-        console.error(`❌ Failed to fetch options for ${labelText}:`, error);
+        console.error("Failed to fetch or map options:", error);
         setOptions([]);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -189,69 +155,34 @@ const SelectField = ({
     provinceCode,
   ]);
 
-  const handleChange = (event) => {
-    const selectedOptionValue = event.target.value;
+  useEffect(() => {
+    if (!provinceCode) return;
 
-    
-
-    const selectedOption = allOptions.find((opt) => {
-      if (typeof opt === "object" && opt !== null) {
-        return opt.value === selectedOptionValue;
-      }
-      return opt === selectedOptionValue;
-    });
-
-
-    if (selectedOption && selectedOption.value !== "") {
-      onChange(selectedOption);
-    } else {
-      onChange("");
+    if (
+      label === "อำเภอ/เขต" ||
+      label === "ตำบล/แขวง" ||
+      label === "รหัสไปรษณีย์"
+    ) {
+      onChange({ target: { name, value: "" } });
     }
-  };
+  }, [provinceCode]);
 
-  const renderValue = (selected) => {
-    const selectedOption = allOptions.find((opt) => {
-      if (typeof opt === "object" && opt !== null) {
-        return opt.value === selected;
-      }
-      return opt === selected;
-    });
+  useEffect(() => {
+    if (!amphureCode) return;
 
-    if (!selectedOption || selectedOption.value === "") {
-      return (
-        <span className={styles.selectPlaceholder}>
-          {placeholderText}
-        </span>
-      );
+    if (label === "ตำบล/แขวง" || label === "รหัสไปรษณีย์") {
+      onChange({ target: { name, value: "" } });
     }
-
-    return selectedOption.label;
-  };
+  }, [amphureCode]);
 
   return (
-    <FormControl
-      fullWidth={fullWidth}
-      variant={variant}
-      error={error}
-      disabled={isFieldDisabled}
-      sx={{ mb: 2 }}
-      className={styles.selectFormControl}
-    >
+    <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
       {label && (
         <Typography
           variant="subtitle2"
-          className={styles.selectLabel}
-          sx={{
-            color: error ? "#ef4444" : "#334155",
-            fontWeight: 600,
-            mb: 1,
-            opacity: isFieldDisabled ? 0.6 : 1
-          }}
+          sx={{ color: "#1120A3", fontWeight: 600, mb: 1 }}
         >
           {label}
-          {required && !isFieldDisabled && (
-            <span className={styles.requiredAsterisk}> *</span>
-          )}
         </Typography>
       )}
 

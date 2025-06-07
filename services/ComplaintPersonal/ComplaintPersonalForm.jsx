@@ -3,7 +3,7 @@ import { Box, Grid, Typography } from "@mui/material";
 import IDCardInput from "@services/IDCardInput/IDCardInput";
 import InputText from "@services/InputText/InputText";
 import InputPhone from "@services/InputPhone/InputPhone";
-import SelectField from "@services/SelectField/SelectField";
+import SelectFieldPAA from "@services/SelectFieldPAA/SelectFieldPAA";
 import styles from "./ComplaintPersonalForm.module.scss";
 
 const ComplaintPersonalForm = ({
@@ -103,7 +103,7 @@ const ComplaintPersonalForm = ({
                     />
                 </Grid>
                 <Grid item xs={12} sm={3}>
-                    <SelectField
+                    <SelectFieldPAA
                         label={formatLabel("จังหวัด")}
                         value={data.province || ""}
                         onChange={(option) => onChange("province", option)}
@@ -114,7 +114,7 @@ const ComplaintPersonalForm = ({
                     />
                 </Grid>
                 <Grid item xs={12} sm={3}>
-                    <SelectField
+                    <SelectFieldPAA
                         label={formatLabel("อำเภอ/เขต")}
                         value={data.districts || ""}
                         provinceCode={data.province?.value}
@@ -138,7 +138,7 @@ const ComplaintPersonalForm = ({
                 </Grid>
 
                 <Grid item xs={12} sm={3}>
-                    <SelectField
+                    <SelectFieldPAA
                         label={formatLabel("ตำบล/แขวง")}
                         value={data.subdistricts || ""}
                         amphureCode={data.districts?.value}
@@ -150,7 +150,7 @@ const ComplaintPersonalForm = ({
                     />
                 </Grid>
                 <Grid item xs={12} sm={3}>
-                    <SelectField
+                    <SelectFieldPAA
                         label={formatLabel("รหัสไปรษณีย์")}
                         value={data.zipcode || ""}
                         amphureCode={data.districts?.value}
