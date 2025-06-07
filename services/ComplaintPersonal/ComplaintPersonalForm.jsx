@@ -1,120 +1,169 @@
-import React, { useState } from "react";
-import {
-    Box,
-    Grid,
-    Typography,
-} from "@mui/material";
+import React from "react";
+import { Box, Grid, Typography } from "@mui/material";
 import IDCardInput from "@services/IDCardInput/IDCardInput";
 import InputText from "@services/InputText/InputText";
 import InputPhone from "@services/InputPhone/InputPhone";
 import SelectField from "@services/SelectField/SelectField";
-import InputZipcode from "@services/InputZipcode/InputZipcode";
 import styles from "./ComplaintPersonalForm.module.scss";
 
+const ComplaintPersonalForm = ({
+    data = {},
+    onChange,
+    title = "ข้อมูลผู้ร้องทุกข์",
+    validationErrors = {},
+    shouldShowValidation = false,
+    fieldPrefix = "",
+    formType = "mandatory",
+}) => {
+    const handleChange = (field) => (value) => {
+        console.log("ComplaintPersonalForm handleChange:", {
+            field,
+            value,
+            formType,
+            valueType: typeof value,
+        });
 
-const ComplaintPersonalForm = ({ data = {}, onChange, title = "ข้อมูลผู้ร้องทุกข์" }) => {    
-    const handleChange = (field) => (e) => {
-        const value = typeof e === "object" && e?.target ? e.target.value : e;
-        onChange(field, value);
+        let finalValue = value;
+
+        if (typeof value === "object" && value?.target) {
+            finalValue = value.target.value;
+            console.log("Detected event object, extracted value:", finalValue);
+        }
+
+        console.log("Calling parent onChange with:", { field, finalValue });
+        onChange(field, finalValue);
+    };
+
+    const getFieldError = (fieldName) => {
+        const errorKey = fieldPrefix ? `${fieldPrefix}.${fieldName}` : fieldName;
+        return shouldShowValidation ? validationErrors[errorKey] : "";
+    };
+
+    const hasFieldError = (fieldName) => {
+        return shouldShowValidation && !!getFieldError(fieldName);
+    };
+
+    const formatLabel = (baseLabel) => {
+        return (
+            <>
+                {baseLabel}{" "}
+                {formType === "mandatory" && (
+                    <span className={styles.requiredAsterisk}>*</span>
+                )}
+            </>
+        );
     };
 
     return (
-        <Box>
-            <Typography className={styles.title}>{title}</Typography>
+        <Box className={styles.formContainer}>
+            <Typography className={styles.title}>
+                {title}{" "}
+                {formType === "optional" && (
+                    <span className={styles.optionalText}>(ไม่บังคับ)</span>
+                )}
+            </Typography>
             <Grid container spacing={2}>
                 <Grid item xs={12}>
                     <IDCardInput
                         value={data.idCard}
                         onChange={(val) => onChange("idCard", val)}
-                        required
+                        error={hasFieldError("idCard")}
+                        helperText={getFieldError("idCard")}
+                        label={formatLabel("เลขบัตรประจำตัวประชาชน")}
                     />
                 </Grid>
-
                 <Grid item xs={12} sm={6}>
                     <InputText
-                        label="ชื่อ - นามสกุล"
+                        label={formatLabel("ชื่อ - นามสกุล")}
                         placeholder="ชื่อ - นามสกุล"
                         value={data.name}
                         onChange={handleChange("name")}
-                        required
+                        error={hasFieldError("name")}
+                        helperText={getFieldError("name")}
                     />
                 </Grid>
-
                 <Grid item xs={12} sm={6}>
                     <InputText
-                        label="ที่อยู่ที่สามารถติดต่อได้"
+                        label={formatLabel("ที่อยู่ที่สามารถติดต่อได้")}
                         placeholder="ที่อยู่ที่สามารถติดต่อได้"
                         value={data.address}
                         onChange={handleChange("address")}
-                        required
+                        error={hasFieldError("address")}
+                        helperText={getFieldError("address")}
                     />
                 </Grid>
-
                 <Grid item xs={12} sm={6}>
                     <InputPhone
-                        label="หมายเลขโทรศัพท์"
+                        label={formatLabel("หมายเลขโทรศัพท์")}
                         placeholder="หมายเลขโทรศัพท์"
                         value={data.phone}
                         onChange={handleChange("phone")}
-                        required
+                        error={hasFieldError("phone")}
+                        helperText={getFieldError("phone")}
                     />
                 </Grid>
-
                 <Grid item xs={12} sm={3}>
                     <SelectField
-                        label="จังหวัด"
-                        value={data.province}
-                        onChange={handleChange("province")}
-                        required
+                        label={formatLabel("จังหวัด")}
+                        value={data.province || ""}
+                        onChange={(option) => onChange("province", option)}
+                        error={hasFieldError("province")}
+                        helperText={getFieldError("province")}
+                        placeholder="เลือกจังหวัด"
+                        formType={formType}
                     />
                 </Grid>
-
                 <Grid item xs={12} sm={3}>
                     <SelectField
-                        label="อำเภอ/เขต"
-                        value={data.districts}
+                        label={formatLabel("อำเภอ/เขต")}
+                        value={data.districts || ""}
                         provinceCode={data.province?.value}
-                        onChange={handleChange("districts")}
-                        required
+                        onChange={(option) => onChange("districts", option)}
+                        error={hasFieldError("districts")}
+                        helperText={getFieldError("districts")}
+                        placeholder="เลือกอำเภอ/เขต"
+                        formType={formType}
                     />
                 </Grid>
 
                 <Grid item xs={12} sm={6}>
                     <InputText
-                        label="อีเมล"
+                        label={formatLabel("อีเมล")}
                         placeholder="อีเมล"
                         value={data.email}
                         onChange={handleChange("email")}
-                        required
-                    />
-                </Grid>
-                <Grid item xs={12} sm={3}>
-                    <SelectField
-                        label="ตำบล/แขวง"
-                        value={data.subdistricts}
-                        amphureCode={data.districts?.value}
-                        onChange={handleChange("subdistricts")}
-                        required
+                        error={hasFieldError("email")}
+                        helperText={getFieldError("email")}
                     />
                 </Grid>
 
                 <Grid item xs={12} sm={3}>
                     <SelectField
-                        label="รหัสไปรษณีย์"
-                        value={data.zipcode}
+                        label={formatLabel("ตำบล/แขวง")}
+                        value={data.subdistricts || ""}
                         amphureCode={data.districts?.value}
-                        onChange={handleChange("zipcode")}
-                        optionMapper={(item) => ({
-                            value: item.zip_code,
-                            label: String(item.zip_code),
-                          })}
-                        required
+                        onChange={(option) => onChange("subdistricts", option)}
+                        error={hasFieldError("subdistricts")}
+                        helperText={getFieldError("subdistricts")}
+                        placeholder="เลือกตำบล/แขวง"
+                        formType={formType}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                    <SelectField
+                        label={formatLabel("รหัสไปรษณีย์")}
+                        value={data.zipcode || ""}
+                        amphureCode={data.districts?.value}
+                        onChange={(option) => onChange("zipcode", option)}
+                        error={hasFieldError("zipcode")}
+                        helperText={getFieldError("zipcode")}
+                        placeholder="เลือกรหัสไปรษณีย์"
+                        formType={formType}
                     />
                 </Grid>
             </Grid>
         </Box>
     );
 };
-
 
 export default ComplaintPersonalForm;

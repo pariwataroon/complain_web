@@ -21,6 +21,14 @@ const stepLabels = ["ข้อมูลผู้ร้องทุกข์", "�
 export default function ComplaintComponent() {
   const [activeStep, setActiveStep] = useState(0);
   const [acceptSubmit, setAcceptSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
+  const [shouldShowValidation, setShouldShowValidation] = useState(false);
+
+  const [tabStates, setTabStates] = useState({
+    step1: 0, 
+    step2: 0, 
+  });
+
   const StepComponent = processComponents[activeStep];
   const pdfRef = useRef();
 
@@ -32,16 +40,25 @@ export default function ComplaintComponent() {
     handleSubmitForm,
   } = useComplaintForm();
 
+  const hasValue = (value) => {
+    if (!value) return false;
+    if (typeof value === "object" && (!value.value)) return false;
+    if (typeof value === "string" && value.trim() === "") return false;
+    return true;
+  };
 
-  const validateStep = async () => {
+  const validateCurrentStep = () => {
     const stepKey = `step${activeStep + 1}`;
     const data = getStepTabData(stepKey, "general");
+    const errors = {};
 
     // STEP 1: ข้อมูลผู้ร้องทุกข์
     if (activeStep === 0) {
-      const isIndividual = !!data?.general?.idCard;
+      const currentTab = tabStates.step1;
 
-      if (isIndividual) {
+      if (currentTab === 0) {
+        // console.log("Validating บุคคลทั่วไป - general fields");
+
         const generalFields = [
           { key: "idCard", label: "เลขบัตรประชาชน" },
           { key: "name", label: "ชื่อ - นามสกุล" },
@@ -53,122 +70,169 @@ export default function ComplaintComponent() {
           { key: "zipcode", label: "รหัสไปรษณีย์" },
           { key: "email", label: "อีเมล" },
         ];
-        for (const field of generalFields) {
-          const value = data?.general?.[field.key];
-          if (!value || (typeof value === "object" && !value.value)) {
-            await alertError("ข้อมูลไม่ครบ", `กรุณากรอก ${field.label}`);
-            return false;
-          }
-        }
 
-      } else {
+        // ตรวจสอบ general (required)
+        generalFields.forEach(field => {
+          const value = data?.general?.[field.key];
+          if (!hasValue(value)) {
+            errors[`general.${field.key}`] = `กรุณากรอก ${field.label} ของผู้ร้องทุกข์`;
+          }
+        });
+
+        // delegate เป็น optional ไม่ต้องตรวจสอบ
+
+      } else if (currentTab === 1) {
+        // console.log("Validating นิติบุคคล - corporate fields");
+
         const corpFields = [
-          { key: "name", label: "ชื่อองค์กร" },
-          { key: "address", label: "ที่อยู่" },
+          { key: "idCard", label: "เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคล" },
+          { key: "name", label: "ชื่อองค์กร/บริษัท" },
+          { key: "address", label: "ที่อยู่องค์กร" },
           { key: "phone", label: "หมายเลขโทรศัพท์" },
+          { key: "province", label: "จังหวัด" },
+          { key: "districts", label: "อำเภอ/เขต" },
+          { key: "subdistricts", label: "ตำบล/แขวง" },
+          { key: "zipcode", label: "รหัสไปรษณีย์" },
           { key: "email", label: "อีเมล" },
         ];
-        for (const field of corpFields) {
+
+        corpFields.forEach(field => {
           const value = data?.corporate?.[field.key];
-          if (!value) {
-            await alertError("ข้อมูลไม่ครบ", `กรุณากรอก ${field.label} ของนิติบุคคล`);
-            return false;
+          if (!hasValue(value)) {
+            errors[`corporate.${field.key}`] = `กรุณากรอก ${field.label} ของนิติบุคคล`;
           }
-        }
+        });
 
       }
     }
 
-    // STEP 2: ข้อมูลผู้ถูกร้องทุกข์
+    // STEP 2: ข้อมูลผู้ถูกร้องทุกข์ (เหมือนเดิม)
     if (activeStep === 1) {
-      const activeType = data?.activeType;
+      const currentTab = tabStates.step2;
+      const typeMap = ["individual", "corporate", "government"];
+      const activeType = typeMap[currentTab];
+
       if (!activeType) {
-        await alertError("ข้อมูลไม่ครบ", "กรุณาเลือกประเภทผู้ถูกร้องทุกข์");
-        return false;
-      }
+        errors.activeType = "กรุณาเลือกประเภทผู้ถูกร้องทุกข์";
+      } else {
+        const current = data[activeType] || {};
+        const requiredFieldsMap = {
+          individual: [
+            { key: "idCard", label: "เลขบัตรประชาชน" },
+            { key: "name", label: "ชื่อ - นามสกุล" },
+            { key: "address", label: "ที่อยู่" },
+            { key: "phone", label: "หมายเลขโทรศัพท์" },
+            { key: "province", label: "จังหวัด" },
+            { key: "districts", label: "อำเภอ/เขต" },
+            { key: "subdistricts", label: "ตำบล/แขวง" },
+            { key: "zipcode", label: "รหัสไปรษณีย์" },
+            { key: "email", label: "อีเมล" },
+          ],
+          corporate: [
+            { key: "companyName", label: "ชื่อบริษัท" },
+            { key: "signatoryName", label: "ชื่อผู้มีอำนาจลงนาม" },
+            { key: "address", label: "ที่อยู่บริษัท" },
+            { key: "phone", label: "หมายเลขโทรศัพท์" },
+            { key: "province", label: "จังหวัด" },
+            { key: "districts", label: "อำเภอ/เขต" },
+            { key: "subdistricts", label: "ตำบล/แขวง" },
+            { key: "zipcode", label: "รหัสไปรษณีย์" },
+            { key: "email", label: "อีเมล" },
+          ],
+          government: [
+            { key: "idCard", label: "เลขบัตรประชาชน" },
+            { key: "agencyName", label: "หน่วยงาน" },
+            { key: "fullName", label: "ชื่อ - นามสกุล" },
+            { key: "address", label: "ที่อยู่ที่สามารถติดต่อได้" },
+            { key: "phone", label: "หมายเลขโทรศัพท์" },
+            { key: "province", label: "จังหวัด" },
+            { key: "districts", label: "อำเภอ/เขต" },
+            { key: "subdistricts", label: "ตำบล/แขวง" },
+            { key: "zipcode", label: "รหัสไปรษณีย์" },
+            { key: "email", label: "อีเมล" },
+          ],
+        };
 
-      const current = data[activeType] || {};
-      const requiredFieldsMap = {
-        individual: [
-          { key: "idCard", label: "เลขบัตรประชาชน" },
-          { key: "name", label: "ชื่อ - นามสกุล" },
-          { key: "address", label: "ที่อยู่" },
-          { key: "phone", label: "หมายเลขโทรศัพท์" },
-          { key: "province", label: "จังหวัด" },
-          { key: "districts", label: "อำเภอ/เขต" },
-          { key: "subdistricts", label: "ตำบล/แขวง" },
-          { key: "zipcode", label: "รหัสไปรษณีย์" },
-          { key: "email", label: "อีเมล" },
-        ],
-        corporate: [
-          { key: "companyName", label: "ชื่อบริษัท" },
-          { key: "signatoryName", label: "ชื่อผู้มีอำนาจลงนาม" },
-          { key: "address", label: "ที่อยู่บริษัท" },
-          { key: "phone", label: "หมายเลขโทรศัพท์" },
-          { key: "province", label: "จังหวัด" },
-          { key: "districts", label: "อำเภอ/เขต" },
-          { key: "subdistricts", label: "ตำบล/แขวง" },
-          { key: "zipcode", label: "รหัสไปรษณีย์" },
-          { key: "email", label: "อีเมล" },
-        ],
-        government: [
-          { key: "idCard", label: "เลขบัตรประชาชน" },
-          { key: "agencyName", label: "หน่วยงาน" },
-          { key: "fullName", label: "ชื่อ - นามสกุล" },
-          { key: "address", label: "ที่อยู่ที่สามารถติดต่อได้" },
-          { key: "phone", label: "หมายเลขโทรศัพท์" },
-          { key: "province", label: "จังหวัด" },
-          { key: "districts", label: "อำเภอ/เขต" },
-          { key: "subdistricts", label: "ตำบล/แขวง" },
-          { key: "zipcode", label: "รหัสไปรษณีย์" },
-          { key: "email", label: "อีเมล" },
-        ],
-      };
-
-      const requiredFields = requiredFieldsMap[activeType] || [];
-      for (let field of requiredFields) {
-        const value = current[field.key];
-        if (!value || (typeof value === "object" && !value.value)) {
-          await alertError("ข้อมูลไม่ครบ", `กรุณากรอก ${field.label}`);
-          return false;
-        }
+        const requiredFields = requiredFieldsMap[activeType] || [];
+        requiredFields.forEach(field => {
+          const value = current[field.key];
+          if (!hasValue(value)) {
+            errors[`${activeType}.${field.key}`] = `กรุณากรอก ${field.label}`;
+          }
+        });
       }
     }
 
-    // STEP 3: รายละเอียดเรื่องร้องทุกข์ (หากคุณใช้ Tab3)
+    // STEP 3: รายละเอียดเรื่องร้องทุกข์ (เหมือนเดิม)
     if (activeStep === 2) {
       const detail = data || {};
-      if (!detail.subject || !detail.description) {
-        await alertError("ข้อมูลไม่ครบ", "กรุณากรอกหัวข้อเรื่อง และรายละเอียดเรื่องร้องทุกข์");
-        return false;
+      if (!hasValue(detail.subject)) {
+        errors.subject = "กรุณากรอกหัวข้อเรื่อง";
       }
+      if (!hasValue(detail.description)) {
+        errors.description = "กรุณากรอกรายละเอียดเรื่องร้องทุกข์";
+      }
+    }
+
+    // console.log("Validation errors:", errors);
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Validate step for submit (with alert)
+  const validateStepForSubmit = async () => {
+    setShouldShowValidation(true);
+    const isValid = validateCurrentStep();
+
+    if (!isValid) {
+      const firstError = Object.values(validationErrors)[0];
+      if (firstError) {
+        await alertError("ข้อมูลไม่ครบ", firstError);
+      }
+      return false;
     }
 
     return true;
   };
 
-
-
+  // Update validation when data changes
+  React.useEffect(() => {
+    if (shouldShowValidation) {
+      validateCurrentStep();
+    }
+  }, [formData, activeStep, shouldShowValidation, tabStates]);
 
   const handleNext = async () => {
-    const currentStepKey = `step${activeStep + 1}`;
-    const currentTabData = getStepTabData(currentStepKey, "general");
-    const isValid = await validateStep();
+    const isValid = await validateStepForSubmit();
     if (!isValid) return;
 
-    // console.log(`📦 Data in ${currentStepKey}:`, currentTabData);
-
     setActiveStep((prev) => Math.min(prev + 1, processComponents.length - 1));
+    setShouldShowValidation(false);
   };
 
   const handleBack = () => {
     setActiveStep((prev) => Math.max(prev - 1, 0));
+    setShouldShowValidation(false);
   };
 
   const handleSubmit = async () => {
     await handleSubmitForm();
   };
 
+  const handleStepClick = (stepIndex) => {
+    if (stepIndex <= activeStep) {
+      setActiveStep(stepIndex);
+      setShouldShowValidation(false);
+    }
+  };
+
+  // Function to handle tab change from child components
+  const handleTabChange = (stepKey, tabIndex) => {
+    setTabStates(prev => ({
+      ...prev,
+      [stepKey]: tabIndex
+    }));
+  };
 
   return (
     <>
@@ -181,7 +245,7 @@ export default function ComplaintComponent() {
                 <StepperComponent
                   steps={stepLabels}
                   activeStep={activeStep}
-                  setActiveStep={setActiveStep}
+                  setActiveStep={handleStepClick}
                 />
               </Box>
             )}
@@ -203,6 +267,10 @@ export default function ComplaintComponent() {
                   updateStepData={updateStepData}
                   onAccepted={setAcceptSubmit}
                   formData={getFormData()}
+                  validationErrors={validationErrors}
+                  shouldShowValidation={shouldShowValidation}
+                  onTabChange={handleTabChange}
+                  currentTab={tabStates[`step${activeStep + 1}`] || 0}
                 />
               )}
 
@@ -224,7 +292,6 @@ export default function ComplaintComponent() {
                       disabled={!acceptSubmit}
                       iconRight={<CheckIcon />}
                     />
-                    
                   </>
                 ) : (
                   <>
@@ -244,22 +311,19 @@ export default function ComplaintComponent() {
                       }
                       color="ถัดไป"
                       variant="contained"
-                        onClick={
-                          () => {
-                            if (activeStep === 3) {
-                              if (!acceptSubmit) {
-                                alertError("ไม่สามารถส่งได้", "กรุณายอมรับเงื่อนไขก่อนส่งเรื่องร้องทุกข์");
-                                return;
-                              }
-                              handleNext();
-                            } else {
-                              handleNext();
-                            }
+                      onClick={() => {
+                        if (activeStep === 3) {
+                          if (!acceptSubmit) {
+                            alertError("ไม่สามารถส่งได้", "กรุณายอมรับเงื่อนไขก่อนส่งเรื่องร้องทุกข์");
+                            return;
                           }
+                          handleNext();
+                        } else {
+                          handleNext();
                         }
-                        disabled={activeStep === 3 && !acceptSubmit}
+                      }}
+                      disabled={activeStep === 3 && !acceptSubmit}
                     />
-
                   </>
                 )}
               </Box>

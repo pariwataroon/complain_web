@@ -13,6 +13,7 @@ function MyApp({ Component, pageProps }) {
     <LoadingProvider>
       <Head>
         <title>{process.env.NEXT_PUBLIC_APP_NAME}</title>
+        <link rel="icon" href="/favicon.ico" />
       </Head>
       <StoreProvider>
         {getLayout(<Component {...pageProps} />)}

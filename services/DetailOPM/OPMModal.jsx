@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
     Modal,
     Box,
@@ -15,13 +15,15 @@ import styles from "./OPMModal.module.scss";
 
 const OPMModal = ({ open, onClose, params, caseDetails }) => {
     const { handleSubmit, control, reset } = useForm();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleModalClose = () => {
-        onClose();
-        reset();
+        if (!isSubmitting) {
+            onClose();
+            reset();
+        }
     };
 
-    // Helper function to format Thai date to MySQL datetime format
     const formatThaiDateToMySQL = (thaiDate) => {
         if (!thaiDate) return null;
 
@@ -37,8 +39,26 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
     };
 
     const handleFormSubmit = async (data) => {
+        if (isSubmitting) return; 
+
         try {
-            // Custom validation with specific field highlighting
+            setIsSubmitting(true);
+
+            const caseIdValue = caseDetails.find(
+                (detail) => detail.field === "case_id"
+            )?.value;
+
+            if (!caseIdValue) {
+                console.error("case_id is undefined or not found in caseDetails.");
+                await alertError("เกิดข้อผิดพลาด", "ไม่พบข้อมูล case_id");
+                setIsSubmitting(false);
+                return;
+            }
+
+            const created_by = caseDetails.find(
+                (detail) => detail.field === "created_by"
+            )?.value || "vampirebeam";
+
             const errors = [];
 
             if (!data.type_id && data.type_id !== 0) {
@@ -71,48 +91,56 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                     `<div style="text-align: left;">${errors.join("<br/>")}</div>`,
                     true
                 );
+                setIsSubmitting(false);
                 return;
             }
 
-            // Show loading
             showLoading("กำลังส่งเรื่องไปยัง สปน...");
 
-            // Prepare data for OPM submission
             const submitData = {
+                case_id: caseIdValue,
                 type_id: data.type_id,
-                objective_id: 6,
-                terminal_org_id: "{{created_by_org}}", 
-                terminal_owner_id: "vampirebeam", 
+                created_by: created_by,
                 contact_detail: data.contact_detail || "",
                 date_opened: formatThaiDateToMySQL(data.date_opened),
                 date_closed: formatThaiDateToMySQL(data.date_closed),
                 detail: data.detail,
                 severity_id: data.severity_id,
                 secret_id: data.secret_id,
-                case_id: params?.id,
                 send_to: "OPM"
             };
 
             console.log("OPM Form Data Submitted:", submitData);
 
-            await AddOperating(submitData);
+            const response = await AddOperating(submitData);
+            console.log("API Response:", response);
 
             closeAlert();
-            await alertSuccess("สำเร็จ", "ส่งเรื่องไปยัง สปน. เรียบร้อยแล้ว");
 
-            handleModalClose();
+            onClose();
+            reset();
+            setIsSubmitting(false);
 
-            window.location.reload();
+            setTimeout(async () => {
+                await alertSuccess("สำเร็จ", "ส่งเรื่องไปยัง สปน. เรียบร้อยแล้ว");
+                window.location.reload();
+            }, 300);
 
         } catch (error) {
             closeAlert();
+            setIsSubmitting(false);
             console.error("Error submitting OPM form:", error);
-            await alertError("เกิดข้อผิดพลาด", "ไม่สามารถส่งเรื่องไปยัง สปน. ได้ กรุณาลองใหม่อีกครั้ง");
+            await alertError("เกิดข้อผิดพลาด", `ไม่สามารถส่งเรื่องไปยัง สปน. ได้ กรุณาลองใหม่อีกครั้ง: ${error.message || error}`);
         }
     };
 
     return (
-        <Modal open={open} onClose={handleModalClose}>
+        <Modal
+            open={open}
+            onClose={handleModalClose}
+            disableEscapeKeyDown={isSubmitting}
+            style={{ zIndex: isSubmitting ? 1200 : 1300 }}
+        >
             <Box className={styles.modalOverlay}>
                 <Box className={styles.modalContainer}>
                     <Box className={styles.modalHeader}>
@@ -144,6 +172,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                             helperText={error?.message}
                                             className={styles.selectField}
                                             placeholder="เลือกประเภทเรื่อง"
+                                            disabled={isSubmitting}
                                         >
                                             <MenuItem value={14}>รายงานผลปฏิบัติงาน</MenuItem>
                                             <MenuItem value={15}>รายงานผลการพิจารณาเรื่อง</MenuItem>
@@ -173,6 +202,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                             helperText={error?.message}
                                             className={styles.selectField}
                                             placeholder="เลือกระดับความสำคัญ"
+                                            disabled={isSubmitting}
                                         >
                                             <MenuItem value={1}>ปกติ</MenuItem>
                                             <MenuItem value={2}>ด่วน</MenuItem>
@@ -204,6 +234,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                             helperText={error?.message}
                                             className={styles.selectField}
                                             placeholder="เลือกระดับความลับ"
+                                            disabled={isSubmitting}
                                         >
                                             <MenuItem value={1}>ปกติ</MenuItem>
                                             <MenuItem value={2}>ลับ</MenuItem>
@@ -232,6 +263,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                             onChange={field.onChange}
                                             name={field.name}
                                             placeholder="กรุณาเลือกวันที่เปิดเรื่อง..."
+                                            disabled={isSubmitting}
                                         />
                                         {error && (
                                             <Typography className={styles.errorText}>
@@ -260,6 +292,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                             onChange={field.onChange}
                                             name={field.name}
                                             placeholder="กรุณาเลือกวันที่ปิดเรื่อง..."
+                                            disabled={isSubmitting}
                                         />
                                         {error && (
                                             <Typography className={styles.errorText}>
@@ -291,6 +324,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                             helperText={error?.message}
                                             className={styles.textAreaField}
                                             placeholder="กรอกรายละเอียดการติดต่อ (ถ้ามี)..."
+                                            disabled={isSubmitting}
                                         />
                                     </Box>
                                 )}
@@ -318,6 +352,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                             helperText={error?.message}
                                             className={styles.textAreaField}
                                             placeholder="กรุณากรอกรายละเอียดการปฏิบัติงาน..."
+                                            disabled={isSubmitting}
                                         />
                                     </Box>
                                 )}
@@ -328,14 +363,17 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                             <Button
                                 onClick={handleModalClose}
                                 className={styles.cancelButton}
+                                type="button"
+                                disabled={isSubmitting}
                             >
                                 ยกเลิก
                             </Button>
                             <Button
                                 type="submit"
                                 className={styles.submitButton}
+                                disabled={isSubmitting}
                             >
-                                ส่งเรื่องไปยัง สปน.
+                                {isSubmitting ? "กำลังส่ง..." : "ส่งเรื่องไปยัง สปน."}
                             </Button>
                         </Box>
                     </form>

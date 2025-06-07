@@ -1,50 +1,666 @@
-.formGroup {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-top: 16px;
-}
-
-.formField {
-    width: 100%;
-    font-family: "Prompt", sans-serif;
-
-    .MuiInputBase-root {
-        border-radius: 8px;
-        border: 1.5px solid #0b1f8f;
-        font-size: 16px;
-        padding: 10px 14px;
-        color: #0b1f8f;
-    }
-
-    .MuiOutlinedInput-root {
-        &:hover .MuiOutlinedInput-notchedOutline {
-            border-color: #0b1f8f;
-        }
-
-        &.Mui-focused .MuiOutlinedInput-notchedOutline {
-            border-color: #0b1f8f;
-            box-shadow: 0 0 0 2px rgba(11, 31, 143, 0.1);
-        }
-    }
-
-    .MuiInputLabel-root {
-        color: #0b1f8f;
-        font-weight: 500;
-    }
-
-    .MuiOutlinedInput-notchedOutline {
-        border-color: #0b1f8f;
-    }
-
-    .MuiSelect-select {
-        padding: 10px 14px;
-    }
-}
-
 .title {
-    color: #0b1f8f;
-    font-weight: bold;
-    font-size: 18px;
-    margin-bottom: 16px;
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #1e293b;
+    margin-bottom: 32px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e2e8f0;
+    position: relative;
+
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 50px;
+        height: 2px;
+        background: linear-gradient(90deg, #0B1F8F, #3FA9F5);
+    }
+}
+
+.optionalTitle {
+    color: #64748b;
+
+    &::after {
+        background: linear-gradient(90deg, #64748b, #94a3b8);
+    }
+}
+
+.optionalText {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 400;
+    font-style: italic;
+    margin-left: 8px;
+}
+
+// Red asterisk for required fields (custom component level)
+.requiredAsterisk {
+    color: #ef4444;
+    font-weight: 700;
+    margin-left: 4px;
+    font-size: 1.1em;
+    display: inline;
+    vertical-align: top;
+    animation: pulse 2s infinite;
+}
+
+// Container class เพื่อให้ global styles ทำงาน
+.formContainer {
+    width: 100%;
+
+    // Required field styling (MUI level)
+    :global(.MuiFormLabel-root.MuiInputLabel-root) {
+        font-weight: 600;
+        color: #334155;
+        transition: all 0.2s ease;
+
+        &.Mui-required {
+            &::after {
+                content: ' *';
+                color: #ef4444;
+                font-weight: 700;
+                margin-left: 4px;
+                font-size: 1.1em;
+                animation: pulse 2s infinite;
+            }
+        }
+
+        &.Mui-error {
+            color: #ef4444;
+            font-weight: 600;
+
+            &::after {
+                content: ' *';
+                color: #ef4444;
+                font-weight: 700;
+                margin-left: 4px;
+                font-size: 1.1em;
+                animation: pulse 2s infinite;
+            }
+        }
+
+        &.Mui-focused {
+            color: #0ea5e9;
+
+            &.Mui-required::after {
+                color: #ef4444;
+            }
+        }
+    }
+
+    // Input field styling
+    :global(.MuiOutlinedInput-root) {
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+        &:hover:not(.Mui-error):not(.Mui-focused) {
+            :global(.MuiOutlinedInput-notchedOutline) {
+                border-color: #7dd3fc;
+            }
+        }
+
+        &.Mui-focused:not(.Mui-error) {
+            :global(.MuiOutlinedInput-notchedOutline) {
+                border-color: #0ea5e9;
+                border-width: 2px;
+                box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+            }
+
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+        }
+
+        &.Mui-error {
+            :global(.MuiOutlinedInput-notchedOutline) {
+                border-color: #ef4444;
+                border-width: 2px;
+            }
+
+            &:hover {
+                :global(.MuiOutlinedInput-notchedOutline) {
+                    border-color: #dc2626;
+                }
+            }
+
+            &.Mui-focused {
+                :global(.MuiOutlinedInput-notchedOutline) {
+                    border-color: #ef4444;
+                    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+                }
+            }
+        }
+    }
+
+    // Helper text styling
+    :global(.MuiFormHelperText-root) {
+        margin-left: 6px;
+        margin-top: 8px;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+
+        &.Mui-error {
+            color: #ef4444;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+
+            &::before {
+                content: '⚠';
+                margin-right: 6px;
+                font-size: 1rem;
+                animation: bounce 1s infinite;
+            }
+        }
+    }
+
+    // Select field specific styling
+    :global(.MuiSelect-select) {
+        padding: 16px 18px;
+        font-size: 1rem;
+        color: #000000 !important; // สีดำสำหรับ select
+
+        &:focus {
+            background: transparent;
+            color: #000000 !important;
+        }
+    }
+
+    :global(.MuiSelect-icon) {
+        color: #64748b;
+        transition: color 0.2s ease;
+    }
+
+    :global(.MuiOutlinedInput-root.Mui-focused) {
+        :global(.MuiSelect-icon) {
+            color: #0ea5e9;
+        }
+    }
+
+    :global(.MuiOutlinedInput-root.Mui-error) {
+        :global(.MuiSelect-icon) {
+            color: #ef4444;
+        }
+    }
+
+    // Input base styling - ปรับสีเป็นดำ
+    :global(.MuiInputBase-input) {
+        padding: 16px 18px;
+        font-size: 1rem;
+        color: #000000 !important; // สีดำสำหรับ input text
+        transition: all 0.2s ease;
+
+        &::placeholder {
+            color: #94a3b8 !important;
+            opacity: 1;
+            font-style: italic;
+        }
+
+        &.Mui-disabled {
+            color: #64748b !important;
+
+            &::placeholder {
+                color: #94a3b8 !important;
+            }
+        }
+
+        &:focus {
+            background: rgba(14, 165, 233, 0.02);
+            color: #000000 !important;
+        }
+    }
+
+    // Phone input specific styling - ปรับสีเป็นดำ
+    :global(.PhoneInputInput) {
+        border: none !important;
+        outline: none !important;
+        padding: 16px 18px !important;
+        font-size: 1rem !important;
+        color: #000000 !important; // สีดำสำหรับ phone input
+        background: transparent !important;
+        width: 100% !important;
+        transition: all 0.2s ease !important;
+
+        &::placeholder {
+            color: #94a3b8 !important;
+            font-style: italic !important;
+        }
+
+        &:focus {
+            background: rgba(14, 165, 233, 0.02) !important;
+            color: #000000 !important;
+        }
+    }
+
+    // ID Card input specific styling - ปรับสีเป็นดำ
+    :global(.IDCardInput) {
+        :global(.MuiOutlinedInput-root) {
+            padding-right: 12px;
+        }
+
+        :global(.MuiInputAdornment-root) {
+            color: #64748b;
+        }
+
+        :global(.MuiInputBase-input) {
+            color: #000000 !important; // สีดำสำหรับ ID Card input
+        }
+    }
+
+    // Text area styling - ปรับสีเป็นดำ
+    :global(.MuiInputBase-inputMultiline) {
+        color: #000000 !important; // สีดำสำหรับ textarea
+
+        &::placeholder {
+            color: #94a3b8 !important;
+        }
+    }
+
+    // เพิ่มการจัดการ autocomplete input
+    :global(.MuiAutocomplete-input) {
+        color: #000000 !important; // สีดำสำหรับ autocomplete
+    }
+
+    // Animation for validation feedback
+    :global(.Mui-error) {
+        animation: shake 0.4s ease-in-out;
+    }
+}
+
+// Print mode adjustments - ใช้ .printMode class แทน universal selector
+.printMode {
+    .requiredAsterisk {
+        color: #000 !important;
+        animation: none !important;
+    }
+
+    :global(.MuiFormLabel-root.MuiInputLabel-root) {
+        &.Mui-required::after {
+            color: #000 !important;
+            animation: none !important;
+        }
+    }
+
+    :global(.MuiFormHelperText-root.Mui-error) {
+        color: #000 !important;
+
+        &::before {
+            content: '!' !important;
+            animation: none !important;
+        }
+    }
+
+    // Reset animations in print mode
+    :global(*) {
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+    }
+}
+
+// Reduced motion class
+.reducedMotion {
+    .requiredAsterisk {
+        animation: none;
+    }
+
+    :global(.MuiFormLabel-root.MuiInputLabel-root) {
+        &.Mui-required::after {
+            animation: none;
+        }
+    }
+
+    :global(.MuiFormHelperText-root.Mui-error) {
+        &::before {
+            animation: none;
+        }
+    }
+
+    :global(.Mui-error) {
+        animation: none;
+    }
+
+    &.errorSummary {
+        animation: none;
+
+        .summaryTitle::before {
+            animation: none;
+        }
+
+        .errorList li {
+            animation: none;
+        }
+    }
+}
+
+// Animation keyframes
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-4px);
+    }
+
+    75% {
+        transform: translateX(4px);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: scale(1.05);
+    }
+}
+
+@keyframes bounce {
+
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+        transform: translateY(0);
+    }
+
+    40% {
+        transform: translateY(-3px);
+    }
+
+    60% {
+        transform: translateY(-2px);
+    }
+}
+
+// Error summary styling
+.errorSummary {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 32px;
+    animation: slideIn 0.3s ease-out;
+
+    .summaryTitle {
+        color: #dc2626;
+        font-weight: 700;
+        font-size: 1rem;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+
+        &::before {
+            content: '⚠';
+            margin-right: 8px;
+            font-size: 1.2rem;
+            animation: bounce 1s infinite;
+        }
+    }
+
+    .errorList {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+
+        li {
+            color: #dc2626;
+            font-size: 0.875rem;
+            padding: 4px 0;
+            font-weight: 500;
+            animation: fadeIn 0.3s ease-out;
+
+            &::before {
+                content: '• ';
+                color: #dc2626;
+                font-weight: bold;
+                margin-right: 8px;
+            }
+        }
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+    .title {
+        font-size: 1.125rem;
+        margin-bottom: 24px;
+    }
+
+    .optionalText {
+        font-size: 0.8rem;
+    }
+
+    .requiredAsterisk {
+        font-size: 1em;
+        margin-left: 2px;
+    }
+
+    .formContainer {
+        :global(.MuiInputBase-input) {
+            padding: 14px 16px;
+            font-size: 0.95rem;
+            color: #000000 !important;
+        }
+
+        :global(.PhoneInputInput) {
+            padding: 14px 16px !important;
+            font-size: 0.95rem !important;
+            color: #000000 !important;
+        }
+
+        :global(.MuiSelect-select) {
+            color: #000000 !important;
+        }
+
+        :global(.MuiFormLabel-root.MuiInputLabel-root) {
+            &.Mui-required::after {
+                font-size: 1em;
+                margin-left: 2px;
+            }
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .title {
+        font-size: 1rem;
+        margin-bottom: 20px;
+    }
+
+    .requiredAsterisk {
+        font-size: 0.9em;
+        margin-left: 2px;
+    }
+
+    .formContainer {
+        :global(.MuiFormLabel-root) {
+            font-size: 0.95rem;
+
+            &.Mui-required::after {
+                font-size: 0.9em;
+                margin-left: 2px;
+            }
+        }
+
+        :global(.MuiFormHelperText-root) {
+            font-size: 0.8rem;
+        }
+
+        :global(.MuiInputBase-input) {
+            color: #000000 !important;
+        }
+
+        :global(.PhoneInputInput) {
+            color: #000000 !important;
+        }
+
+        :global(.MuiSelect-select) {
+            color: #000000 !important;
+        }
+    }
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+    .requiredAsterisk {
+        color: #dc2626 !important;
+        font-weight: 900 !important;
+        text-shadow: 0 0 2px #ffffff !important;
+    }
+
+    .formContainer {
+        :global(.MuiFormLabel-root.MuiInputLabel-root) {
+            &.Mui-required::after {
+                color: #dc2626 !important;
+                font-weight: 900 !important;
+                text-shadow: 0 0 2px #ffffff !important;
+            }
+        }
+
+        :global(.MuiOutlinedInput-root.Mui-error) {
+            :global(.MuiOutlinedInput-notchedOutline) {
+                border-color: #dc2626 !important;
+                border-width: 3px !important;
+            }
+        }
+
+        :global(.MuiFormHelperText-root.Mui-error) {
+            color: #dc2626 !important;
+            font-weight: 700 !important;
+        }
+
+        // ใน high contrast mode ให้ text เป็นสีดำเข้ม
+        :global(.MuiInputBase-input) {
+            color: #000000 !important;
+        }
+    }
+}
+
+// Print mode
+@media print {
+    .formContainer {
+        &.printMode {
+            .requiredAsterisk {
+                color: #000 !important;
+                animation: none !important;
+            }
+
+            :global(.MuiFormLabel-root.MuiInputLabel-root) {
+                &.Mui-required::after {
+                    color: #000 !important;
+                    animation: none !important;
+                }
+            }
+
+            :global(.MuiFormHelperText-root.Mui-error) {
+                color: #000 !important;
+
+                &::before {
+                    content: '!' !important;
+                    animation: none !important;
+                }
+            }
+
+            :global(.MuiInputBase-input) {
+                color: #000000 !important;
+            }
+
+            :global(.PhoneInputInput) {
+                color: #000000 !important;
+            }
+
+            :global(.MuiSelect-select) {
+                color: #000000 !important;
+            }
+        }
+    }
+}
+
+// Reduced motion preference
+@media (prefers-reduced-motion: reduce) {
+    .formContainer {
+        &.reducedMotion {
+            .requiredAsterisk {
+                animation: none;
+            }
+
+            :global(.MuiFormLabel-root.MuiInputLabel-root) {
+                &.Mui-required::after {
+                    animation: none;
+                }
+            }
+
+            :global(.MuiFormHelperText-root.Mui-error) {
+                &::before {
+                    animation: none;
+                }
+            }
+
+            :global(.Mui-error) {
+                animation: none;
+            }
+        }
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .formContainer {
+        :global(.MuiFormLabel-root.MuiInputLabel-root) {
+            color: #e2e8f0;
+
+            &.Mui-focused {
+                color: #7dd3fc;
+            }
+        }
+
+        :global(.MuiInputBase-input) {
+            color: #000000 !important;
+
+            &::placeholder {
+                color: #64748b !important;
+            }
+        }
+
+        :global(.PhoneInputInput) {
+            color: #000000 !important;
+        }
+
+        :global(.MuiSelect-select) {
+            color: #000000 !important;
+        }
+    }
 }

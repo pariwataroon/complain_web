@@ -55,7 +55,21 @@ export const closeAlert = () => {
   Swal.close();
 };
 
-export const alertSuccess = (title, text, isHtml = false) => showAlert("success", title, text, isHtml);
+export const alertSuccess = (title, text, isHtml = false) => {
+  return Swal.fire({
+    icon: "success",
+    title,
+    ...(isHtml ? { html: text } : { text }),
+    confirmButtonColor: "#3085d6",
+    confirmButtonText: "ตกลง",
+    allowOutsideClick: true,
+    allowEscapeKey: true,
+    customClass: {
+      container: "swal-high-zindex",
+    },
+  });
+};
+
 export const alertError = (title, text, isHtml = false) => showAlert("error", title, text, isHtml);
 export const alertWarning = (title, text, isHtml = false) => showAlert("warning", title, text, isHtml);
 export const alertInfo = (title, text, isHtml = false) => showAlert("info", title, text, isHtml);

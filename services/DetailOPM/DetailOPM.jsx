@@ -37,8 +37,7 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
 
     const [opmModalOpen, setOpmModalOpen] = useState(false);
     const [citizenModalOpen, setCitizenModalOpen] = useState(false);
-    console.log({ caseDetails });
-    
+
     const handleRowSendOPM = () => {
         setOpmModalOpen(true);
     };
@@ -50,6 +49,31 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
     const getFieldValue = (fieldName) => {
         const field = caseDetails?.find((item) => item.field === fieldName);
         return field?.value || "-";
+    };
+
+    const getFieldArrayValue = (fieldName) => {
+        const field = caseDetails?.find((item) => item.field === fieldName);
+        const value = field?.value;
+
+        if (Array.isArray(value)) {
+            return value;
+        }
+
+        if (typeof value === 'string' && (value.startsWith('[') || value.startsWith('{'))) {
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                console.warn(`Failed to parse JSON for field ${fieldName}:`, error);
+                return [];
+            }
+        }
+
+        if (value && typeof value === 'object') {
+            return [value];
+        }
+
+        return [];
     };
 
     const getStatusColor = (status) => {
@@ -110,6 +134,9 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
         );
     }
 
+    // Get org owner list safely
+    const orgOwnerList = getFieldArrayValue("list_case_org_owner");
+
     return (
         <Box className={styles.detailContainer}>
             <Typography variant="h4" className={styles.title}>
@@ -126,6 +153,18 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
                         <Typography variant="h6" className={styles.sectionTitle}>
                             ข้อมูลหลัก
                         </Typography>
+                        <Box sx={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
+                            <ButtonSent
+                                label={isTablet ? "ส่งเรื่อง สปน." : "ส่งเรื่อง สปน."}
+                                size={isTablet ? "small" : "medium"}
+                                onClick={handleRowSendOPM}
+                            />
+                            <ButtonSent
+                                label={isTablet ? "ส่งประชาชน" : "ส่งเรื่องประชาชน"}
+                                size={isTablet ? "small" : "medium"}
+                                onClick={handleRowSendCitizen}
+                            />
+                        </Box>
                     </Box>
 
                     <Grid container spacing={3} className={styles.infoGrid}>
@@ -216,91 +255,97 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
                         <Typography variant="h6" className={styles.sectionTitle}>
                             ขั้นตอนการดำเนินงาน
                         </Typography>
-                        <Box sx={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
-                            <ButtonSent
-                                label={isTablet ? "ส่งเรื่อง สปน." : "ส่งเรื่อง สปน."}
-                                size={isTablet ? "small" : "medium"}
-                                onClick={handleRowSendOPM}
-                            />
-                            <ButtonSent
-                                label={isTablet ? "ส่งประชาชน" : "ส่งเรื่องประชาชน"}
-                                size={isTablet ? "small" : "medium"}
-                                onClick={handleRowSendCitizen}
-                            />
-                        </Box>
+                        
                     </Box>
 
-                    <Stepper orientation="vertical" className={styles.stepper}>
-                        {getFieldValue("list_case_org_owner")?.map((org, index) => (
-                            <Step key={index} active={true} completed={org.case_org_status_text === "เสร็จสิ้น"}>
-                                <StepLabel
-                                    icon={
-                                        <Avatar
-                                            className={styles.stepAvatar}
-                                            sx={{
-                                                bgcolor: theme.palette[getStatusColor(org.case_org_status_text)]?.main || '#gray'
-                                            }}
-                                        >
-                                            {org.line}
-                                        </Avatar>
-                                    }
-                                >
-                                    <Typography variant="h6" className={styles.stepTitle}>
-                                        ขั้นตอนที่ {org.line}
-                                    </Typography>
-                                </StepLabel>
-                                <StepContent>
-                                    <Card className={styles.stepCard}>
-                                        <CardContent className={styles.stepContent}>
-                                            <Box className={styles.stepInfo}>
-                                                <BusinessIcon className={styles.stepIcon} />
-                                                <Box>
-                                                    <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                        หน่วยงาน
-                                                    </Typography>
-                                                    <Typography variant="body1" className={styles.stepValue}>
-                                                        {org.org_text}
+                    {/* Show message if no org owner data */}
+                    {orgOwnerList.length === 0 ? (
+                        <Box sx={{
+                            textAlign: 'center',
+                            py: 4,
+                            color: 'text.secondary'
+                        }}>
+                            <BusinessIcon sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+                            <Typography variant="h6" gutterBottom>
+                                ไม่มีข้อมูลขั้นตอนการดำเนินงาน
+                            </Typography>
+                            <Typography variant="body2">
+                                ยังไม่มีการกำหนดขั้นตอนการดำเนินงานสำหรับคำร้องนี้
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <Stepper orientation="vertical" className={styles.stepper}>
+                            {orgOwnerList.map((org, index) => (
+                                <Step key={index} active={true} completed={org.case_org_status_text === "เสร็จสิ้น"}>
+                                    <StepLabel
+                                        icon={
+                                            <Avatar
+                                                className={styles.stepAvatar}
+                                                sx={{
+                                                    bgcolor: theme.palette[getStatusColor(org.case_org_status_text)]?.main || '#gray'
+                                                }}
+                                            >
+                                                {org.line || index + 1}
+                                            </Avatar>
+                                        }
+                                    >
+                                        <Typography variant="h6" className={styles.stepTitle}>
+                                            ขั้นตอนที่ {org.line || index + 1}
+                                        </Typography>
+                                    </StepLabel>
+                                    <StepContent>
+                                        <Card className={styles.stepCard}>
+                                            <CardContent className={styles.stepContent}>
+                                                <Box className={styles.stepInfo}>
+                                                    <BusinessIcon className={styles.stepIcon} />
+                                                    <Box>
+                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                            หน่วยงาน
+                                                        </Typography>
+                                                        <Typography variant="body1" className={styles.stepValue}>
+                                                            {org.org_text || 'ไม่ระบุหน่วยงาน'}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+
+                                                <Box className={styles.stepInfo}>
+                                                    <Box className={styles.statusContainer}>
+                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                            สถานะ
+                                                        </Typography>
+                                                        <Chip
+                                                            label={org.case_org_status_text || 'ไม่ระบุสถานะ'}
+                                                            color={getStatusColor(org.case_org_status_text)}
+                                                            className={styles.statusChip}
+                                                            size="small"
+                                                            icon={getStatusIcon(org.case_org_status_text)}
+                                                        />
+                                                    </Box>
+                                                </Box>
+
+                                                {org.case_org_summary_result && (
+                                                    <Box className={styles.summaryResult}>
+                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                            สรุปผลการดำเนินงาน
+                                                        </Typography>
+                                                        <Typography variant="body2" className={styles.summaryText}>
+                                                            {org.case_org_summary_result}
+                                                        </Typography>
+                                                    </Box>
+                                                )}
+
+                                                <Box className={styles.createdBy}>
+                                                    <Typography variant="caption" className={styles.createdByText}>
+                                                        สร้างโดย: {org.created_by_text || 'ไม่ระบุ'}
                                                     </Typography>
                                                 </Box>
-                                            </Box>
-
-                                            <Box className={styles.stepInfo}>
-                                                <Box className={styles.statusContainer}>
-                                                    <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                        สถานะ
-                                                    </Typography>
-                                                    <Chip
-                                                        label={org.case_org_status_text}
-                                                        color={getStatusColor(org.case_org_status_text)}
-                                                        className={styles.statusChip}
-                                                        size="small"
-                                                        icon={getStatusIcon(org.case_org_status_text)}
-                                                    />
-                                                </Box>
-                                            </Box>
-
-                                            {org.case_org_summary_result && (
-                                                <Box className={styles.summaryResult}>
-                                                    <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                        สรุปผลการดำเนินงาน
-                                                    </Typography>
-                                                    <Typography variant="body2" className={styles.summaryText}>
-                                                        {org.case_org_summary_result}
-                                                    </Typography>
-                                                </Box>
-                                            )}
-
-                                            <Box className={styles.createdBy}>
-                                                <Typography variant="caption" className={styles.createdByText}>
-                                                    สร้างโดย: {org.created_by_text}
-                                                </Typography>
-                                            </Box>
-                                        </CardContent>
-                                    </Card>
-                                </StepContent>
-                            </Step>
-                        ))}
-                    </Stepper>
+                                            </CardContent>
+                                        </Card>
+                                    </StepContent>
+                                </Step>
+                            ))}
+                        </Stepper>
+                    )}
                 </CardContent>
             </Card>
 

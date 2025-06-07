@@ -3,8 +3,8 @@ import {
   MenuItem,
   TextField,
   FormControl,
-  InputLabel,
   Typography,
+  FormHelperText,
 } from "@mui/material";
 import { GetProvincesSelect, GetAmphuresSelect, GetDistrictsSelect, GetZipcodeSelect } from "@pages/api/allselect/allselect";
 import styles from "./SelectField.module.scss";
@@ -13,7 +13,7 @@ const SelectField = ({
   label,
   inputLabel,
   value,
-  onChange = () => {},
+  onChange = () => { },
   name,
   districtCode,
   amphureCode,
@@ -21,24 +21,95 @@ const SelectField = ({
   zipcodeCode,
   options: externalOptions = [],
   optionMapper = null,
+  placeholder,
+  error = false,
+  helperText = "",
+  required = false,
+  disabled = false,
+  fullWidth = true,
+  variant = "outlined",
+  size = "medium",
+  ...otherProps
 }) => {
-    const [options, setOptions] = useState([]);
-    const allOptions = [
-        { value: "", label: label || inputLabel, disabled: true },
-        ...options,
-    ];
-    const selectedValue = typeof value === "object"
-        ? value?.value ?? ""
-        : value ?? "";
+  const [options, setOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
 
+  const getLabelText = (label) => {
+    if (typeof label === 'string') {
+      return label;
+    }
+    if (label && label.props && label.props.children) {
+      if (Array.isArray(label.props.children)) {
+        return label.props.children[0] || '';
+      }
+      return label.props.children;
+    }
+    return '';
+  };
+
+  const labelText = getLabelText(label);
+
+  const placeholderText = placeholder || labelText || inputLabel || "เลือก...";
+
+  const allOptions = [
+    { value: "", label: placeholderText, disabled: true },
+    ...options,
+  ];
+
+  const selectedValue = (typeof value === "object" && value !== null)
+    ? (value?.value ?? "")
+    : (value ?? "");
+
+  const isFieldDisabled = disabled || loading || (
+    (labelText === "อำเภอ/เขต" && !provinceCode) ||
+    (labelText === "ตำบล/แขวง" && !amphureCode) ||
+    (labelText === "รหัสไปรษณีย์" && !amphureCode)
+  );
 
   useEffect(() => {
+    if (labelText === "จังหวัด") {
+      const loadProvinces = async () => {
+        setLoading(true);
+        try {
+          const response = await GetProvincesSelect();
+
+          const finalResponse = Array.isArray(response) ? response : [];
+          const mapped = finalResponse.map(item => {
+            if (typeof item === 'object' && item !== null) {
+              return {
+                value: item.value || item.id || item.code || item.province_code || item.amphure_code || item.district_code,
+                label: item.label || item.name || item.title || item.name_th || String(item)
+              };
+            }
+            return { value: item, label: String(item) };
+          });
+
+          setOptions(mapped);
+        } catch (error) {
+          console.error("❌ Failed to load provinces:", error);
+          setOptions([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      loadProvinces();
+    }
+  }, [labelText]);
+
+  useEffect(() => {
+
+    if (labelText === "จังหวัด") {
+      return;
+    }
+
     const fetchOptions = async () => {
       if (
-        (label === "อำเภอ/เขต" && !provinceCode) ||
-        (label === "ตำบล/แขวง" && !amphureCode) ||
-        (label === "รหัสไปรษณีย์" && !amphureCode)
+        (labelText === "อำเภอ/เขต" && !provinceCode) ||
+        (labelText === "ตำบล/แขวง" && !amphureCode) ||
+        (labelText === "รหัสไปรษณีย์" && !amphureCode)
       ) {
+        setOptions([]);
         return;
       }
 
@@ -50,128 +121,240 @@ const SelectField = ({
         return;
       }
 
+      if (!["อำเภอ/เขต", "ตำบล/แขวง", "รหัสไปรษณีย์"].includes(labelText)) {
+        setOptions([]);
+        return;
+      }
+
+      setLoading(true);
       try {
         let response = null;
 
-        if (label === "จังหวัด") {
-          response = await GetProvincesSelect();
-        } else if (label === "อำเภอ/เขต") {
+        if (labelText === "อำเภอ/เขต" && provinceCode) {
           response = await GetAmphuresSelect(provinceCode);
-        } else if (label === "ตำบล/แขวง") {
+        } else if (labelText === "ตำบล/แขวง" && amphureCode) {
           response = await GetDistrictsSelect(amphureCode);
-        } else if (label === "รหัสไปรษณีย์") {
+        } else if (labelText === "รหัสไปรษณีย์" && amphureCode) {
+
           const districts = await GetDistrictsSelect(amphureCode);
+
           const zipMap = new Map();
           districts.forEach((item) => {
-            if (item.zip_code && !zipMap.has(item.zip_code)) {
-              zipMap.set(item.zip_code, item);
+            const zipValue = item.zip_code || item.zipcode || item.postal_code || item.postcode;
+
+            if (zipValue && !zipMap.has(zipValue)) {
+              zipMap.set(zipValue, {
+                value: zipValue,
+                label: zipValue,
+                id: item.id,
+                district_code: item.district_code,
+                name_th: item.name_th,
+                name_en: item.name_en
+              });
             }
           });
+
           response = Array.from(zipMap.values());
         }
 
         const finalResponse = Array.isArray(response) ? response : [];
-        const mapped = optionMapper
-          ? finalResponse.map(optionMapper)
-          : finalResponse;
+        const mapped = finalResponse.map(item => {
+          if (typeof item === 'object' && item !== null) {
+            if (labelText === "รหัสไปรษณีย์" && item.value && item.label) {
+              return {
+                value: item.value,
+                label: item.label
+              };
+            }
+
+            return {
+              value: item.value || item.id || item.code || item.province_code || item.amphure_code || item.district_code,
+              label: item.label || item.name || item.title || item.name_th || String(item)
+            };
+          }
+          return { value: item, label: String(item) };
+        });
+
         setOptions(mapped);
       } catch (error) {
-        console.error("Failed to fetch or map options:", error);
+        console.error(`❌ Failed to fetch options for ${labelText}:`, error);
         setOptions([]);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchOptions();
-  }, [label, districtCode, amphureCode, provinceCode]);
+  }, [labelText, provinceCode, amphureCode, externalOptions.length]);
 
-  useEffect(() => {
-    if (!provinceCode) return;
+  const handleChange = (event) => {
+    const selectedOptionValue = event.target.value;
 
-    if (
-      label === "อำเภอ/เขต" ||
-      label === "ตำบล/แขวง" ||
-      label === "รหัสไปรษณีย์"
-    ) {
-      onChange({ target: { name, value: "" } });
+    
+
+    const selectedOption = allOptions.find((opt) => {
+      if (typeof opt === "object" && opt !== null) {
+        return opt.value === selectedOptionValue;
+      }
+      return opt === selectedOptionValue;
+    });
+
+
+    if (selectedOption && selectedOption.value !== "") {
+      onChange(selectedOption);
+    } else {
+      onChange("");
     }
-  }, [provinceCode]);
+  };
 
-  useEffect(() => {
-    if (!amphureCode) return;
+  const renderValue = (selected) => {
+    const selectedOption = allOptions.find((opt) => {
+      if (typeof opt === "object" && opt !== null) {
+        return opt.value === selected;
+      }
+      return opt === selected;
+    });
 
-    if (label === "ตำบล/แขวง" || label === "รหัสไปรษณีย์") {
-      onChange({ target: { name, value: "" } });
+    if (!selectedOption || selectedOption.value === "") {
+      return (
+        <span className={styles.selectPlaceholder}>
+          {placeholderText}
+        </span>
+      );
     }
-  }, [amphureCode]);
+
+    return selectedOption.label;
+  };
 
   return (
-    <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+    <FormControl
+      fullWidth={fullWidth}
+      variant={variant}
+      error={error}
+      disabled={isFieldDisabled}
+      sx={{ mb: 2 }}
+      className={styles.selectFormControl}
+    >
       {label && (
         <Typography
           variant="subtitle2"
-          sx={{ color: "#1120A3", fontWeight: 600, mb: 1 }}
+          className={styles.selectLabel}
+          sx={{
+            color: error ? "#ef4444" : "#334155",
+            fontWeight: 600,
+            mb: 1,
+            opacity: isFieldDisabled ? 0.6 : 1
+          }}
         >
           {label}
+          {required && !isFieldDisabled && (
+            <span className={styles.requiredAsterisk}> *</span>
+          )}
         </Typography>
       )}
 
-            <TextField
-                select
-                displayEmpty
-                name={name}
-                value={selectedValue}
-                onChange={(e) => {
-                    const selected = allOptions.find((opt) =>
-                        typeof opt === "object"
-                            ? opt.value === e.target.value
-                            : opt === e.target.value
-                    );
-                    onChange({ target: { name, value: selected ?? e.target.value } });
-                }}
-                renderValue={(selected) => {
-                    const selectedOption = allOptions.find((opt) =>
-                        typeof opt === "object"
-                            ? opt.value === selected
-                            : opt === selected
-                    );
+      <TextField
+        select
+        displayEmpty
+        name={name}
+        value={selectedValue}
+        onChange={handleChange}
+        disabled={isFieldDisabled}
+        error={error}
+        size={size}
+        placeholder={placeholderText}
+        renderValue={renderValue}
+        SelectProps={{
+          displayEmpty: true,
+          ...otherProps.SelectProps,
+        }}
+        InputProps={{
+          sx: {
+            height: "56px",
+            borderRadius: "12px",
+            color: "#000000",
+            backgroundColor: isFieldDisabled ? "#f8fafc" : "transparent",
+            "& fieldset": {
+              borderColor: error ? "#ef4444" : "#d1d5db",
+              borderWidth: error ? "2px" : "1px",
+            },
+            "&:hover fieldset": {
+              borderColor: error ? "#dc2626" : "#7dd3fc",
+            },
+            "&.Mui-focused fieldset": {
+              borderColor: error ? "#ef4444" : "#0ea5e9",
+              borderWidth: "2px",
+              boxShadow: error
+                ? "0 0 0 3px rgba(239, 68, 68, 0.1)"
+                : "0 0 0 3px rgba(14, 165, 233, 0.1)",
+            },
+            "& .MuiSelect-icon": {
+              color: error ? "#ef4444" : "#64748b",
+            },
+          },
+          ...otherProps.InputProps,
+        }}
+        {...otherProps}
+      >
+        {allOptions.map((opt, idx) => {
+          const isPrimitive = typeof opt !== "object" || opt === null;
+          const optionValue = isPrimitive ? opt : opt.value;
+          const optionLabel = isPrimitive ? String(opt) : String(opt.label);
+          const isDisabled = isPrimitive ? false : opt.disabled ?? false;
 
-                    if (!selectedOption || selectedOption.value === "") {
-                        return (
-                            <span className={styles.selectPlaceholder}>
-                                {label || inputLabel}
-                            </span>
-                        );
-                    }
-
-                    return selectedOption.label;
-                }}
-                                    
-                InputProps={{
-                    sx: {
-                        height: "40px",
-                        borderRadius: "10px",
-                        color: "#1120A3",
-                        "& fieldset": {
-                            borderColor: "#1120A3",
-                        },
-                    },
-                }}
+          return (
+            <MenuItem
+              key={`${optionValue}-${idx}`}
+              value={optionValue}
+              disabled={isDisabled}
+              className={styles.selectMenuItem}
+              sx={{
+                color: isDisabled ? "#94a3b8" : "#000000",
+                fontStyle: isDisabled ? "italic" : "normal",
+                "&:hover": {
+                  backgroundColor: isDisabled ? "transparent" : "#f1f5f9",
+                },
+                "&.Mui-selected": {
+                  backgroundColor: "#e0f2fe",
+                  color: "#0891b2",
+                  "&:hover": {
+                    backgroundColor: "#bae6fd",
+                  },
+                },
+              }}
             >
-                {allOptions.map((opt, idx) => {
-                    const isPrimitive = typeof opt !== "object";
-                    const optionValue = isPrimitive ? opt : opt.value;
-                    const optionLabel = isPrimitive ? String(opt) : String(opt.label);
-                    const isDisabled = isPrimitive ? false : opt.disabled ?? false;
+              {optionLabel}
+            </MenuItem>
+          );
+        })}
+      </TextField>
 
-                    return (
-                        <MenuItem key={idx} value={optionValue} disabled={isDisabled}>
-                            {optionLabel}
-                        </MenuItem>
-                    );
-                })}
-            </TextField>
-        </FormControl>
-    );
+      {helperText && (
+        <FormHelperText
+          error={error}
+          className={styles.selectHelperText}
+          sx={{
+            marginLeft: "6px",
+            marginTop: "8px",
+            fontSize: "0.875rem",
+            display: "flex",
+            alignItems: "center",
+            "&.Mui-error": {
+              color: "#ef4444",
+              fontWeight: 500,
+              "&::before": {
+                content: "'⚠'",
+                marginRight: "6px",
+                fontSize: "1rem",
+              },
+            },
+          }}
+        >
+          {helperText}
+        </FormHelperText>
+      )}
+    </FormControl>
+  );
 };
 
 export default SelectField;

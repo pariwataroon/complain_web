@@ -125,7 +125,7 @@ const TableListOPM = ({
   const handleRowSend = (data) => {
     if (navigateTo) {
       router.push({
-        pathname: `${navigateTo}/Send`,
+        pathname: `${navigateTo}/send`,
         query: { ...data },
       });
     }

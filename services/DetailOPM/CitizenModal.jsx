@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
     Modal,
     Box,
@@ -14,15 +14,34 @@ import styles from "./CitizenModal.module.scss";
 
 const CitizenModal = ({ open, onClose, params, caseDetails }) => {
     const { handleSubmit, control, reset } = useForm();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleModalClose = () => {
-        onClose();
-        reset();
+        if (!isSubmitting) {
+            onClose();
+            reset();
+        }
     };
 
     const handleFormSubmit = async (data) => {
+        if (isSubmitting) return;
+
         try {
-            // Custom validation with specific field highlighting
+            setIsSubmitting(true);
+
+            const caseIdValue = caseDetails.find(
+                (detail) => detail.field === "case_id"
+            )?.value;
+
+            if (!caseIdValue) {
+                console.error("case_id is undefined or not found in caseDetails.");
+                await alertError("เกิดข้อผิดพลาด", "ไม่พบข้อมูล case_id");
+                setIsSubmitting(false);
+                return;
+            } else {
+                console.log("case_id:", caseIdValue);
+            }
+
             const errors = [];
 
             if (!data.status_id && data.status_id !== 0) {
@@ -39,45 +58,57 @@ const CitizenModal = ({ open, onClose, params, caseDetails }) => {
                     `<div style="text-align: left;">${errors.join("<br/>")}</div>`,
                     true
                 );
+                setIsSubmitting(false);
                 return;
             }
 
             // Show loading
             showLoading("กำลังส่งเรื่องไปยังประชาชน...");
 
-            // Prepare data for Citizen submission
             const submitData = {
-                case_id: params?.id,
+                case_id: caseIdValue,
                 status_id: data.status_id,
                 details: data.details,
-                send_to: "CITIZEN", // Identifier for Citizen
-                created_by: "vampirebeam", // Current user
+                send_to: "CITIZEN",
+                created_by: "vampirebeam",
                 created_date: new Date().toISOString()
             };
 
-            // Call your API here
-            await SetOrgSummaryResult(submitData);
-
             console.log("Citizen Form Data Submitted:", submitData);
 
-            // Close loading and show success
+            const response = await SetOrgSummaryResult(submitData);
+            console.log("API Response:", response);
+
+            // Close loading immediately
             closeAlert();
-            await alertSuccess("สำเร็จ", "ส่งเรื่องไปยังประชาชนเรียบร้อยแล้ว");
 
-            handleModalClose();
+            // Close modal first BEFORE showing success alert
+            onClose();
+            reset();
+            setIsSubmitting(false);
 
-            // Optionally refresh the data
-            window.location.reload();
+            // Wait a bit for modal to close, then show success
+            setTimeout(async () => {
+                await alertSuccess("สำเร็จ", "ส่งเรื่องไปยังประชาชนเรียบร้อยแล้ว");
+                // Reload after success alert is dismissed
+                window.location.reload();
+            }, 300);
 
         } catch (error) {
             closeAlert();
+            setIsSubmitting(false);
             console.error("Error submitting Citizen form:", error);
             await alertError("เกิดข้อผิดพลาด", "ไม่สามารถส่งเรื่องไปยังประชาชนได้ กรุณาลองใหม่อีกครั้ง");
         }
     };
 
     return (
-        <Modal open={open} onClose={handleModalClose}>
+        <Modal
+            open={open}
+            onClose={handleModalClose}
+            disableEscapeKeyDown={isSubmitting} // Disable escape when submitting
+            style={{ zIndex: isSubmitting ? 1200 : 1300 }} // Lower z-index when submitting
+        >
             <Box className={styles.modalOverlay}>
                 <Box className={styles.modalContainer}>
                     <Box className={styles.modalHeader}>
@@ -109,6 +140,7 @@ const CitizenModal = ({ open, onClose, params, caseDetails }) => {
                                             helperText={error?.message}
                                             className={styles.selectField}
                                             placeholder="เลือกสถานะการดำเนินการ"
+                                            disabled={isSubmitting}
                                         >
                                             <MenuItem value={0}>อยู่ระหว่างดำเนินการ</MenuItem>
                                             <MenuItem value={1}>ยุติเรื่อง</MenuItem>
@@ -141,6 +173,7 @@ const CitizenModal = ({ open, onClose, params, caseDetails }) => {
                                             helperText={error?.message}
                                             className={styles.textAreaField}
                                             placeholder="กรุณากรอกรายละเอียดการดำเนินการที่จะแจ้งให้ประชาชนทราบ..."
+                                            disabled={isSubmitting}
                                         />
                                     </Box>
                                 )}
@@ -151,14 +184,17 @@ const CitizenModal = ({ open, onClose, params, caseDetails }) => {
                             <Button
                                 onClick={handleModalClose}
                                 className={styles.cancelButton}
+                                type="button"
+                                disabled={isSubmitting}
                             >
                                 ยกเลิก
                             </Button>
                             <Button
                                 type="submit"
                                 className={styles.submitButton}
+                                disabled={isSubmitting}
                             >
-                                ส่งเรื่องไปยังประชาชน
+                                {isSubmitting ? "กำลังส่ง..." : "ส่งเรื่องไปยังประชาชน"}
                             </Button>
                         </Box>
                     </form>

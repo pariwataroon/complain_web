@@ -10,17 +10,23 @@ import InputTextarea from "@services/InputTextarea/InputTextarea";
 
 import { GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
 
-const Tab3 = ({ stepKey, tabData, updateStepData }) => {
+const Tab3 = ({
+  stepKey,
+  tabData,
+  updateStepData,
+  validationErrors = {},
+  shouldShowValidation = false
+}) => {
   const [form, setForm] = useState({});
   const [complaintTypes, setComplaintTypes] = useState([]);
-  
+
   /* ---------- handler ---------- */
   const handleChange = (field) => (valueOrEvent) => {
     let value = valueOrEvent?.target?.value ?? valueOrEvent;
 
     if (field === "complaintType") {
       const selectedType = complaintTypes.find((type) => type.value === value);
-      value = selectedType?.label || value; 
+      value = selectedType?.label || value;
     }
 
     const updated = { ...form, [field]: value };
@@ -28,12 +34,22 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
     const updatedGeneral = { ...updated };
 
     if (updatedGeneral.complaintType && typeof updatedGeneral.complaintType === "string") {
-      updatedGeneral.complaintType = updatedGeneral.complaintType; 
+      updatedGeneral.complaintType = updatedGeneral.complaintType;
     }
 
     updateStepData(stepKey, "general", updatedGeneral);
   };
-  
+
+  // Helper function to get field error
+  const getFieldError = (fieldName) => {
+    return shouldShowValidation ? validationErrors[fieldName] : "";
+  };
+
+  // Helper function to check if field has error
+  const hasFieldError = (fieldName) => {
+    return shouldShowValidation && !!getFieldError(fieldName);
+  };
+
   /* ---------- mount ---------- */
   useEffect(() => {
     setForm(tabData || {});
@@ -84,6 +100,8 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 value={form.channel || ""}
                 name="channel"
                 InputProps={{ readOnly: true }}
+                error={hasFieldError("channel")}
+                helperText={getFieldError("channel")}
                 required
               />
             </Grid>
@@ -95,6 +113,8 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 value={form.complaintType || ""}
                 options={complaintTypes}
                 onChange={handleChange("complaintType")}
+                error={hasFieldError("complaintType")}
+                helperText={getFieldError("complaintType")}
                 required
               />
             </Grid>
@@ -105,6 +125,8 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 name="subject"
                 value={form.subject || ""}
                 onChange={handleChange("subject")}
+                error={hasFieldError("subject")}
+                helperText={getFieldError("subject")}
                 required
               />
             </Grid>
@@ -115,6 +137,8 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 name="incidentDate"
                 value={form.incidentDate || ""}
                 onChange={handleChange("incidentDate")}
+                error={hasFieldError("incidentDate")}
+                helperText={getFieldError("incidentDate")}
                 required
               />
             </Grid>
@@ -125,6 +149,8 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 name="description"
                 value={form.description || ""}
                 onChange={handleChange("description")}
+                error={hasFieldError("description")}
+                helperText={getFieldError("description")}
                 required
               />
             </Grid>
@@ -134,7 +160,8 @@ const Tab3 = ({ stepKey, tabData, updateStepData }) => {
                 label="เอกสารประกอบการร้องเรียน"
                 name="attachment"
                 onChange={(file) => handleChange("attachment")(file)}
-                helperText="หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"
+                error={hasFieldError("attachment")}
+                helperText={getFieldError("attachment") || "หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"}
                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                 maxFiles={3}
                 maxSizeMB={10}

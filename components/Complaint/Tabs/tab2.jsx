@@ -7,7 +7,13 @@ import ComplaintMinistryForm from "@services/ComplaintMinistry/ComplaintMinistry
 const tabs = ["บุคคลทั่วไป", "นิติบุคคล", "หน่วยงานของรัฐ"];
 const underlineColors = ["#0B1F8F", "#3FA9F5", "#EDC458"];
 
-const Tab2 = ({ stepKey, tabData, updateStepData }) => {
+const Tab2 = ({
+  stepKey,
+  tabData,
+  updateStepData,
+  validationErrors = {},
+  shouldShowValidation = false
+}) => {
   const [active, setActive] = useState(0);
 
   const handleChange = (type) => (name, value) => {
@@ -17,6 +23,7 @@ const Tab2 = ({ stepKey, tabData, updateStepData }) => {
     };
 
     const updatedData = {
+      ...tabData,
       [type]: updatedTypeData,
       activeType: type,
     };
@@ -24,6 +31,11 @@ const Tab2 = ({ stepKey, tabData, updateStepData }) => {
     updateStepData(stepKey, "general", updatedData);
   };
 
+  // Helper function to get current active type
+  const getCurrentType = () => {
+    const typeMap = ["individual", "corporate", "government"];
+    return typeMap[active];
+  };
 
   return (
     <div className={styles.container}>
@@ -50,6 +62,9 @@ const Tab2 = ({ stepKey, tabData, updateStepData }) => {
             data={tabData.individual || {}}
             onChange={handleChange("individual")}
             title="ข้อมูลผู้ถูกร้องทุกข์"
+            validationErrors={validationErrors}
+            shouldShowValidation={shouldShowValidation}
+            fieldPrefix="individual"
             required
           />
         </div>
@@ -61,7 +76,10 @@ const Tab2 = ({ stepKey, tabData, updateStepData }) => {
           <ComplaintCustomerForm
             data={tabData.corporate || {}}
             onChange={handleChange("corporate")}
-            title="ข้อมูลผู้ถูกร้องทุกข์"
+            title="ข้อมูลผู้ถูกร้องทุกข์ (นิติบุคคล)"
+            validationErrors={validationErrors}
+            shouldShowValidation={shouldShowValidation}
+            fieldPrefix="corporate"
             required
           />
         </div>
@@ -74,6 +92,9 @@ const Tab2 = ({ stepKey, tabData, updateStepData }) => {
             data={tabData.government || {}}
             onChange={handleChange("government")}
             title="ข้อมูลหน่วยงานของรัฐที่ถูกร้องทุกข์"
+            validationErrors={validationErrors}
+            shouldShowValidation={shouldShowValidation}
+            fieldPrefix="government"
             required
           />
         </div>
