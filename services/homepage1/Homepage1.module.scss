@@ -1,9 +1,60 @@
-.mobileImage {
-  display: block;
+.container {
+  position: relative;
+  min-height: 90vh;
+  width: 100%;
+  overflow: visible;
+  z-index: 1;
 }
 
-.iphoneImage {
+.background {
+  background-image: url('/images/bg01.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.mobileImageWrapper {
+  position: absolute;
+  top: 15%;
+  left: 25%;
+  z-index: 1000;
+  width: 550px;
+  max-width: 45vw;
+  transform: translateZ(0);
+  will-change: transform;
+  isolation: isolate;
+}
+
+.mobileImage {
   display: block;
+  width: 100%;
+  height: auto;
+  filter:
+    drop-shadow(25px 35px 60px rgba(0, 0, 0, 0.5)) drop-shadow(15px 20px 30px rgba(0, 0, 0, 0.3)) drop-shadow(5px 8px 15px rgba(0, 0, 0, 0.2));
+  transition: all 0.3s ease;
+}
+
+.mobileImage:hover {
+  transform: scale(1.02) translateY(-8px);
+  filter:
+    drop-shadow(30px 45px 80px rgba(0, 0, 0, 0.6)) drop-shadow(20px 25px 40px rgba(0, 0, 0, 0.4)) drop-shadow(8px 12px 20px rgba(0, 0, 0, 0.3));
+}
+
+.headerWrapper {
+  position: absolute;
+  top: 30%;
+  left: 15%;
+  transform: translateY(-50%);
+  color: white;
+  z-index: 10;
+  /* ✅ ให้ต่ำกว่ามือถือ */
+  max-width: 60%;
 }
 
 .headerText {
@@ -12,7 +63,58 @@
   display: flex;
   align-items: center;
   text-align: center;
+  margin: 0;
+  line-height: 1;
+  text-shadow:
+    3px 3px 15px rgba(0, 0, 0, 0.7),
+    6px 6px 30px rgba(0, 0, 0, 0.5),
+    1px 1px 5px rgba(0, 0, 0, 0.9);
+}
 
+.mofText {
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+  /* ✅ ให้มือถือทะลุผ่าน */
+}
+
+.divider {
+  display: inline-block;
+  width: 5px;
+  height: 1em;
+  background-color: white;
+  margin: 0 15px 0 15px;
+  box-shadow:
+    0 0 15px rgba(255, 255, 255, 0.6),
+    0 0 30px rgba(255, 255, 255, 0.3);
+  z-index: 1;
+  /* ✅ ให้มือถือทะลุผ่าน */
+}
+
+.subText {
+  font-size: 3rem;
+  font-weight: normal;
+  margin-left: 10px;
+  position: relative;
+  z-index: 1;
+  /* ✅ ให้มือถือทะลุผ่าน */
+  text-shadow:
+    2px 2px 10px rgba(0, 0, 0, 0.7),
+    4px 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.buttonWrapper {
+  position: absolute;
+  top: 40%;
+  left: 70%;
+  transform: translateX(-50%);
+  z-index: 1001;
+  /* ✅ ให้สูงกว่ามือถือเล็กน้อย */
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 10px;
+  isolation: isolate;
 }
 
 .button {
@@ -27,10 +129,14 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
   font-weight: bold;
+  white-space: nowrap;
+  position: relative;
+  z-index: 1;
 }
 
 .button:hover {
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
 }
 
 .buttonwhit {
@@ -45,32 +151,205 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
   font-weight: bold;
+  white-space: nowrap;
+  position: relative;
+  z-index: 1;
 }
 
 .buttonwhit:hover {
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .mobileImageWrapper {
+    position: absolute;
+    width: 480px;
+    top: 18%;
+    left: 20%;
+    z-index: 1000;
+  }
+
+  .headerText {
+    font-size: 12rem;
+  }
+
+  .subText {
+    font-size: 2.5rem;
+  }
+
+  .headerWrapper {
+    max-width: 55%;
+    z-index: 10;
+  }
+
+  .buttonWrapper {
+    top: 45%;
+    left: 65%;
+    z-index: 1001;
+  }
+
+  .button,
+  .buttonwhit {
+    padding: 25px 25px;
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 1200px) and (min-width: 1025px) {
+  .mobileImageWrapper {
+    position: absolute;
+    width: 500px;
+    top: 16%;
+    left: 24%;
+    z-index: 1000;
+  }
+
+  .headerText {
+    font-size: 13rem;
+  }
 }
 
 @media (max-width: 768px) {
-
-  /* ซ่อนภาพมือถือในขนาดหน้าจอเล็ก */
   .mobileImage {
     display: none;
   }
 
-  .iphoneImage {
+  .mobileImageWrapper {
     display: none;
   }
 
-  /* ปรับขนาดข้อความ h1 ให้เล็กลง */
+  .headerWrapper {
+    top: 20%;
+    left: 5%;
+    right: 5%;
+    transform: translateY(-20%);
+    max-width: 90%;
+    z-index: 5;
+  }
+
   .headerText {
     font-size: 6rem;
-    /* ปรับขนาดข้อความให้เล็กลง */
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .mofText {
+    margin-bottom: 20px;
+  }
+
+  .divider {
+    display: none;
+  }
+
+  .subText {
+    font-size: 1.8rem;
+    margin-left: 0;
+    line-height: 1.2;
+  }
+
+  .buttonWrapper {
+    top: 60%;
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: column;
+    gap: 15px;
+    width: 90%;
+    max-width: 400px;
+    z-index: 10;
   }
 
   .button {
     padding: 20px;
     font-size: 1.5rem;
-    /* ปรับขนาดปุ่ม */
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .buttonwhit {
+    padding: 20px;
+    font-size: 1.5rem;
+    width: 100%;
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerText {
+    font-size: 4rem;
+  }
+
+  .subText {
+    font-size: 1.4rem;
+  }
+
+  .buttonWrapper {
+    top: 55%;
+    width: 95%;
+  }
+
+  .button,
+  .buttonwhit {
+    padding: 18px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .headerWrapper {
+    top: 15%;
+  }
+
+  .headerText {
+    font-size: 3.5rem;
+  }
+
+  .subText {
+    font-size: 1.2rem;
+  }
+
+  .buttonWrapper {
+    top: 50%;
+  }
+
+  .button,
+  .buttonwhit {
+    padding: 15px;
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .mobileImageWrapper {
+    position: absolute;
+    width: 600px;
+    top: 26%;
+    left: 26%;
+    z-index: 1000;
+  }
+
+  .headerText {
+    font-size: 18rem;
+  }
+
+  .subText {
+    font-size: 3.5rem;
+  }
+
+  .headerWrapper {
+    max-width: 65%;
+    z-index: 10;
+  }
+
+  .buttonWrapper {
+    z-index: 1001;
+  }
+
+  .button,
+  .buttonwhit {
+    padding: 35px 40px;
+    font-size: 26px;
   }
 }

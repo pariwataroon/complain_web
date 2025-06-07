@@ -1,0 +1,571 @@
+.container {
+    background-image: url('/images/bg03.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+    width: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    overflow: hidden;
+}
+
+.content {
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 5%;
+    position: relative;
+    z-index: 2;
+    min-height: 100vh;
+}
+
+/* Left Content */
+.leftContent {
+    flex: 1;
+    max-width: 600px;
+    padding-right: 60px;
+    color: white;
+    z-index: 10;
+    position: relative;
+}
+
+.title {
+    font-size: 3.5rem;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 30px;
+    line-height: 1.2;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.description {
+    margin-bottom: 40px;
+
+    p {
+        font-size: 1.2rem;
+        line-height: 1.8;
+        margin-bottom: 15px;
+        color: #2c3e50;
+        font-weight: 500;
+        text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.8);
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+}
+
+.downloadButtons {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.playStoreButton,
+.appStoreButton {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 12px;
+    overflow: hidden;
+
+    img {
+        width: 160px;
+        height: auto;
+        display: block;
+        transition: transform 0.3s ease;
+    }
+
+    &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+
+        img {
+            transform: scale(1.05);
+        }
+    }
+}
+
+/* Right Content */
+.rightContent {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    max-height: 800px;
+}
+
+.thaidLogo {
+    position: absolute;
+    top: 20%;
+    right: 20%;
+    z-index: 3;
+
+    img {
+        width: 400px;
+        height: 400px;
+        object-fit: contain;
+        filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.15));
+    }
+}
+
+.phoneWithQR {
+    position: absolute;
+    top: 55%;
+    right: 5%;
+    transform: rotate(8deg);
+    z-index: 4;
+}
+
+.phoneImage {
+    width: 380px;
+    height: 380px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 30px rgba(0, 0, 0, 0.25));
+    transition: transform 0.3s ease;
+
+    &:hover {
+        transform: rotate(8deg) scale(1.02);
+    }
+}
+
+/* Large Desktop */
+@media (min-width: 1440px) {
+    .title {
+        font-size: 4rem;
+    }
+
+    .description p {
+        font-size: 1.3rem;
+    }
+
+    .playStoreButton img,
+    .appStoreButton img {
+        width: 180px;
+    }
+
+    .thaidLogo img {
+        width: 450px;
+        height: 450px;
+    }
+
+    .phoneImage {
+        width: 420px;
+        height: 420px;
+    }
+}
+
+/* Desktop */
+@media (max-width: 1439px) and (min-width: 1025px) {
+    .title {
+        font-size: 3.2rem;
+    }
+
+    .description p {
+        font-size: 1.1rem;
+    }
+
+    .thaidLogo img {
+        width: 350px;
+        height: 350px;
+    }
+
+    .phoneImage {
+        width: 340px;
+        height: 340px;
+    }
+}
+
+/* Tablet */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .container {
+        min-height: 100vh;
+        padding: 60px 0;
+    }
+
+    .content {
+        flex-direction: column;
+        text-align: center;
+        padding: 0 4%;
+        gap: 60px;
+        justify-content: center;
+    }
+
+    .leftContent {
+        padding-right: 0;
+        max-width: 100%;
+        order: 2;
+        z-index: 10;
+    }
+
+    .rightContent {
+        order: 1;
+        height: 350px;
+        width: 100%;
+        position: relative;
+    }
+
+    .title {
+        font-size: 2.8rem;
+        margin-bottom: 25px;
+    }
+
+    .description p {
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+    }
+
+    .downloadButtons {
+        justify-content: center;
+        gap: 20px;
+    }
+
+    .playStoreButton img,
+    .appStoreButton img {
+        width: 160px;
+    }
+
+    .thaidLogo {
+        top: 0;
+        right: 50%;
+        transform: translateX(50%);
+
+        img {
+            width: 280px;
+            height: 280px;
+        }
+    }
+
+    .phoneWithQR {
+        top: 45%;
+        right: 30%;
+        transform: translateX(50%) rotate(5deg);
+    }
+
+    .phoneImage {
+        width: 250px;
+        height: 250px;
+    }
+}
+
+/* ✅ Mobile - ปรับใหม่ให้สวยขึ้น */
+@media (max-width: 768px) {
+    .container {
+        min-height: 100vh;
+        padding: 40px 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .content {
+        flex-direction: column;
+        padding: 0 20px;
+        gap: 0;
+        justify-content: flex-start;
+        align-items: center;
+        min-height: auto;
+    }
+
+    /* ✅ ให้รูปอยู่ด้านบนก่อน */
+    .rightContent {
+        order: 1;
+        height: 300px;
+        width: 100%;
+        position: relative;
+        margin-bottom: 40px;
+        flex-shrink: 0;
+    }
+
+    .thaidLogo {
+        top: 10%;
+        right: 50%;
+        transform: translateX(50%);
+
+        img {
+            width: 200px;
+            height: 200px;
+        }
+    }
+
+    .phoneWithQR {
+        top: 10%;
+        right: 30%;
+        transform: translateX(50%) rotate(5deg);
+    }
+
+    .phoneImage {
+        width: 180px;
+        height: 180px;
+    }
+
+    /* ✅ ข้อความอยู่ด้านล่าง ไม่ทับรูป */
+    .leftContent {
+        order: 2;
+        padding-right: 0;
+        max-width: 100%;
+        text-align: center;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px 20px;
+        margin-top: 200px;
+    }
+
+    .title {
+        font-size: 2rem;
+        margin-bottom: 20px;
+        color: white;
+    }
+
+    .description {
+        margin-bottom: 30px;
+
+        p {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            color: #2c3e50;
+            text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.9);
+        }
+    }
+
+    .downloadButtons {
+        flex-direction: column;
+        gap: 15px;
+        align-items: center;
+
+        .playStoreButton img,
+        .appStoreButton img {
+            width: 180px;
+        }
+    }
+}
+
+/* ✅ Mobile Small - ปรับให้สวยขึ้น */
+@media (max-width: 480px) {
+    .container {
+        padding: 30px 0;
+    }
+
+    .content {
+        padding: 0 15px;
+    }
+
+    .rightContent {
+        height: 250px;
+        margin-bottom: 30px;
+    }
+
+    .thaidLogo img {
+        width: 160px;
+        height: 160px;
+    }
+
+    .phoneImage {
+        width: 150px;
+        height: 150px;
+    }
+
+    .leftContent {
+        padding: 25px 15px;
+        margin-top: 15px;
+    }
+
+    .title {
+        font-size: 1.6rem;
+        margin-bottom: 15px;
+    }
+
+    .description {
+        margin-bottom: 25px;
+
+        p {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+    }
+
+    .downloadButtons {
+        gap: 12px;
+
+        .playStoreButton img,
+        .appStoreButton img {
+            width: 160px;
+        }
+    }
+}
+
+/* ✅ Extra Small Mobile */
+@media (max-width: 360px) {
+    .container {
+        padding: 20px 0;
+    }
+
+    .content {
+        padding: 0 10px;
+    }
+
+    .rightContent {
+        height: 220px;
+        margin-bottom: 25px;
+    }
+
+    .thaidLogo img {
+        width: 130px;
+        height: 130px;
+    }
+
+    .phoneImage {
+        width: 120px;
+        height: 120px;
+    }
+
+    .leftContent {
+        padding: 20px 12px;
+    }
+
+    .title {
+        font-size: 1.4rem;
+        margin-bottom: 12px;
+    }
+
+    .description {
+        margin-bottom: 20px;
+
+        p {
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+        }
+    }
+
+    .downloadButtons {
+        gap: 10px;
+
+        .playStoreButton img,
+        .appStoreButton img {
+            width: 140px;
+        }
+    }
+}
+
+/* ✅ Landscape Mobile - แก้ปัญหา landscape */
+@media (max-width: 768px) and (orientation: landscape) and (max-height: 500px) {
+    .container {
+        min-height: 100vh;
+        padding: 20px 0;
+    }
+
+    .content {
+        flex-direction: row;
+        gap: 30px;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .rightContent {
+        order: 2;
+        flex: 1;
+        height: 60vh;
+        margin-bottom: 0;
+    }
+
+    .leftContent {
+        order: 1;
+        flex: 1;
+        text-align: left;
+        padding: 20px;
+        margin-top: 0;
+        max-width: 50%;
+    }
+
+    .title {
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+    }
+
+    .description p {
+        font-size: 0.8rem;
+        margin-bottom: 8px;
+    }
+
+    .downloadButtons {
+        flex-direction: row;
+        gap: 10px;
+        justify-content: flex-start;
+
+        .playStoreButton img,
+        .appStoreButton img {
+            width: 120px;
+        }
+    }
+
+    .thaidLogo img {
+        width: 150px;
+        height: 150px;
+    }
+
+    .phoneImage {
+        width: 130px;
+        height: 130px;
+    }
+}
+
+/* ✅ Performance & Accessibility */
+.thaidLogo img,
+.phoneImage {
+    will-change: transform;
+    backface-visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .playStoreButton,
+    .appStoreButton,
+    .phoneImage {
+        transition: none;
+    }
+
+    .playStoreButton:hover,
+    .appStoreButton:hover {
+        transform: none;
+    }
+
+    .phoneImage:hover {
+        transform: rotate(8deg);
+    }
+}
+
+/* ✅ Glass effect สำหรับ mobile */
+.leftContent {
+    position: relative;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg,
+                rgba(255, 255, 255, 0.15) 0%,
+                rgba(255, 255, 255, 0.05) 100%);
+        border-radius: 20px;
+        pointer-events: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .leftContent {
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    } }

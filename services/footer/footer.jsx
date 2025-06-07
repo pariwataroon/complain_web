@@ -3,6 +3,18 @@ import styles from "./Footer.module.scss";
 import { LocalPhone, ChatBubbleOutline } from "@mui/icons-material";
 
 export default function Footer() {
+
+  const handleStepsClick = (e) => {
+    e.preventDefault();
+    const stepsSection = document.getElementById('steps-section');
+    if (stepsSection) {
+      stepsSection.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
+
   return (
     <footer className={styles.footer}>
       <div className={styles.footerContainer}>
@@ -10,19 +22,16 @@ export default function Footer() {
         <div className={styles.column}>
           <h4>เว็บไซต์</h4>
           <div className={styles.linkContainer}>
-            <a href="#" className={styles.linkItem}>
+            <a href="/" className={styles.linkItem}>
               หน้าหลัก
             </a>
-            <a href="#" className={styles.linkItem}>
-              ระเบียบขั้นตอน
+            <a href="#steps-section" className={styles.linkItem} onClick={handleStepsClick}>
+              ขั้นตอนการแจ้งเรื่องร้องทุกข์
             </a>
-            <a href="#" className={styles.linkItem}>
+            <a href="/complaint" className={styles.linkItem}>
               แจ้งเรื่องร้องทุกข์
             </a>
-            <a href="#" className={styles.linkItem}>
-              การรับเรื่องร้องทุกข์
-            </a>
-            <a href="#" className={styles.linkItem}>
+            <a href="/login" className={styles.linkItem}>
               ลงทะเบียน
             </a>
             <a href="#" className={styles.linkItem}>

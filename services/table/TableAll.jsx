@@ -13,7 +13,7 @@ import {
 
 import styles from "./TableAll.module.scss";
 import InputText from "@services/InputText/InputText";
-import SelectField from "@services/SelectField/SelectField";
+import SelectField from "@services/SelectField/SelectField"; // ✅ ใช้ SelectField ที่ถูกต้อง
 import ExportButton from "@services/ExportButton/ExportButton";
 import { formatThaiDateTime } from "@utils/Formats";
 
@@ -76,7 +76,15 @@ const TableAll = ({
                     <SelectField
                         label="สถานะการดำเนินการ"
                         value={statusFilter}
-                        onChange={(e) => onStatusChange(e.target.value)}
+                        onChange={(e) => {
+                            console.log("Status filter onChange:", e);
+
+                            if (e && e.target && e.target.value !== undefined) {
+                                onStatusChange(e.target.value);
+                            } else {
+                                onStatusChange(e || "");
+                            }
+                        }}
                         options={[
                             { value: "", label: "— ทุกสถานะ —" },
                             ...Object.entries(statusMap).map(([key, value]) => ({

@@ -1,0 +1,266 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modalContent {
+  background: linear-gradient(135deg, #003366 0%, #004080 50%, #0066cc 100%);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  animation: slideInFromRight 0.4s ease-out;
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modalLogo {
+  height: 50px;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.closeButton:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.closeIcon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.closeIcon span {
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background-color: white;
+  border-radius: 1px;
+  top: 50%;
+  left: 0;
+  transform-origin: center;
+}
+
+.closeIcon span:first-child {
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.closeIcon span:last-child {
+  transform: translateY(-50%) rotate(-45deg);
+}
+
+.modalNav {
+  flex: 1;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modalNavItem {
+  color: white;
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 500;
+  padding: 20px 16px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  border-left: 4px solid transparent;
+}
+
+.modalNavItem:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-left-color: #EDC458;
+  transform: translateX(8px);
+}
+
+.modalUserSection {
+  padding: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.modalUserInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.userWelcome {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.modalProfileImage {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.welcomeText {
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.modalButtonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modalComplaintButton,
+.modalFollowupButton,
+.modalLoginButton,
+.modalAdminButton,
+/* ✅ เพิ่ม */
+.modalLogoutButton {
+  /* ✅ เพิ่ม */
+  width: 100%;
+  font-weight: bold;
+  font-size: 16px;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.modalComplaintButton {
+  background-color: #EDC458;
+  color: #003366;
+}
+
+.modalComplaintButton:hover {
+  background-color: #f5d26b;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(237, 196, 88, 0.3);
+}
+
+.modalFollowupButton {
+  background-color: #E0E6F7;
+  color: #003366;
+}
+
+.modalFollowupButton:hover {
+  background-color: #f0f4ff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(224, 230, 247, 0.3);
+}
+
+/* ✅ เพิ่ม CSS สำหรับปุ่ม Admin */
+.modalAdminButton {
+  background-color: #28a745;
+  color: white;
+}
+
+.modalAdminButton:hover {
+  background-color: #218838;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(40, 167, 69, 0.3);
+}
+
+/* ✅ เพิ่ม CSS สำหรับปุ่ม Logout */
+.modalLogoutButton {
+  background-color: #dc3545;
+  color: white;
+}
+
+.modalLogoutButton:hover {
+  background-color: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(220, 53, 69, 0.3);
+}
+
+.modalLoginButton {
+  background: linear-gradient(45deg, #EDC458, #f5d26b);
+  color: #003366;
+}
+
+.modalLoginButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(237, 196, 88, 0.4);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Mobile optimization */
+@media (max-width: 480px) {
+  .modalHeader {
+    padding: 16px 20px;
+  }
+
+  .modalNav {
+    padding: 32px 20px;
+  }
+
+  .modalNavItem {
+    font-size: 16px;
+    padding: 16px 12px;
+  }
+
+  .modalUserSection {
+    padding: 20px;
+  }
+
+  .modalComplaintButton,
+  .modalFollowupButton,
+  .modalLoginButton,
+  .modalAdminButton,
+  /* ✅ เพิ่ม */
+  .modalLogoutButton {
+    /* ✅ เพิ่ม */
+    padding: 14px 20px;
+    font-size: 15px;
+  }
+}

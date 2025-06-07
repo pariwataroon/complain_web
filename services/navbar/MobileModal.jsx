@@ -1,8 +1,29 @@
 import React from "react";
 import styles from "./MobileModal.module.scss";
 
-export default function MobileModal({ isOpen, onClose, userInfo, onLoginClick, onComplaintClick, onFollowUpClick }) {
+export default function MobileModal({
+  isOpen,
+  onClose,
+  userInfo,
+  onLoginClick,
+  onComplaintClick,
+  onFollowUpClick,
+  onAdminClick,
+  onLogoutClick,
+  isAdminUser
+}) {
   if (!isOpen) return null;
+
+  const handleStepsClick = () => {
+    const stepsSection = document.getElementById('steps-section');
+    if (stepsSection) {
+      stepsSection.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+    onClose();
+  };
 
   return (
     <div className={styles.modalOverlay}>
@@ -23,7 +44,7 @@ export default function MobileModal({ isOpen, onClose, userInfo, onLoginClick, o
           <a href="/" className={styles.modalNavItem} onClick={onClose}>
             หน้าหลัก
           </a>
-          <a href="#" className={styles.modalNavItem} onClick={onClose}>
+          <a href="#steps-section" className={styles.modalNavItem} onClick={handleStepsClick}>
             ขั้นตอนการแจ้งเรื่องร้องทุกข์
           </a>
           <a href="#" className={styles.modalNavItem} onClick={onClose}>
@@ -49,8 +70,21 @@ export default function MobileModal({ isOpen, onClose, userInfo, onLoginClick, o
                 </span>
               </div>
               <div className={styles.modalButtonGroup}>
-                <button 
-                  className={styles.modalComplaintButton} 
+                {/* ✅ เพิ่มปุ่ม Admin ถ้าเป็น admin user */}
+                {isAdminUser && (
+                  <button
+                    className={styles.modalAdminButton}
+                    onClick={() => {
+                      onAdminClick();
+                      onClose();
+                    }}
+                  >
+                    จัดการระบบ
+                  </button>
+                )}
+
+                <button
+                  className={styles.modalComplaintButton}
                   onClick={() => {
                     onComplaintClick();
                     onClose();
@@ -58,14 +92,25 @@ export default function MobileModal({ isOpen, onClose, userInfo, onLoginClick, o
                 >
                   แจ้งเรื่องร้องทุกข์
                 </button>
-                <button 
-                  className={styles.modalFollowupButton} 
+                <button
+                  className={styles.modalFollowupButton}
                   onClick={() => {
                     onFollowUpClick();
                     onClose();
                   }}
                 >
                   ติดตามผล
+                </button>
+
+                {/* ✅ เพิ่มปุ่ม Logout */}
+                <button
+                  className={styles.modalLogoutButton}
+                  onClick={() => {
+                    onLogoutClick();
+                    onClose();
+                  }}
+                >
+                  ออกจากระบบ
                 </button>
               </div>
             </div>

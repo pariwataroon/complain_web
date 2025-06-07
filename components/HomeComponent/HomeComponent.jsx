@@ -1,4 +1,4 @@
-import Navbar  from "@services/navbar/navbar";
+import Navbar from "@services/navbar/navbar";
 import Footer from "@services/footer/footer";
 import Homepage1 from "@services/homepage1/homepage1";
 import Homepage2 from "@services/homepage2/homepage2";
@@ -12,21 +12,22 @@ export default function HomeComponent() {
   return (
     <div style={{ position: "relative" }}>
       <div
-        style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 }}
+        style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 100 }}
       >
         <Navbar menuType="alt" />
       </div>
 
       <Homepage1 />
       <Homepage2 />
-      <Homepage3 />
+      <div id="steps-section">
+        <Homepage3 />
+      </div>
       <Homepage4 />
       <Homepage5 />
-      <Homepage6 />
-
-      {/* เรียกใช้ Chat component */}
+      <div id="steps-ask">
+        <Homepage6 />
+      </div>
       <Chat />
-
       <Footer />
     </div>
   );

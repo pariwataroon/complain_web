@@ -7,9 +7,9 @@ import {
   FormHelperText,
 } from "@mui/material";
 import { GetProvincesSelect, GetAmphuresSelect, GetDistrictsSelect, GetZipcodeSelect } from "@pages/api/allselect/allselect";
-import styles from "./SelectField.module.scss";
+import styles from "./SelectFieldPAA.module.scss";
 
-const SelectField = ({
+const SelectFieldPAA = ({
   label,
   inputLabel,
   value,
@@ -66,9 +66,7 @@ const SelectField = ({
     (labelText === "รหัสไปรษณีย์" && !amphureCode)
   );
 
-  // ✅ useEffect สำหรับ initial load จังหวัด
   useEffect(() => {
-
     if (labelText === "จังหวัด") {
       const loadProvinces = async () => {
         setLoading(true);
@@ -97,7 +95,7 @@ const SelectField = ({
 
       loadProvinces();
     }
-  }, [labelText]); 
+  }, [labelText]);
 
   useEffect(() => {
 
@@ -123,7 +121,6 @@ const SelectField = ({
         return;
       }
 
-      // ไม่เรียก API ถ้าไม่ใช่ field ที่ต้องการ
       if (!["อำเภอ/เขต", "ตำบล/แขวง", "รหัสไปรษณีย์"].includes(labelText)) {
         setOptions([]);
         return;
@@ -138,20 +135,43 @@ const SelectField = ({
         } else if (labelText === "ตำบล/แขวง" && amphureCode) {
           response = await GetDistrictsSelect(amphureCode);
         } else if (labelText === "รหัสไปรษณีย์" && amphureCode) {
+
           const districts = await GetDistrictsSelect(amphureCode);
+
           const zipMap = new Map();
           districts.forEach((item) => {
+
             if (item.zip_code && !zipMap.has(item.zip_code)) {
-              zipMap.set(item.zip_code, item);
+              zipMap.set(item.zip_code, {
+                value: item.zip_code,
+                label: item.zip_code,
+                originalData: item 
+              });
             }
           });
+
           response = Array.from(zipMap.values());
         }
 
         const finalResponse = Array.isArray(response) ? response : [];
-
         const mapped = finalResponse.map(item => {
           if (typeof item === 'object' && item !== null) {
+            if (labelText === "รหัสไปรษณีย์") {
+              if (item.value && item.label) {
+                return {
+                  value: item.value,
+                  label: item.label
+                };
+              }
+              const zipValue = item.zip_code || item.zipcode || item.postal_code;
+              if (zipValue) {
+                return {
+                  value: zipValue,
+                  label: zipValue
+                };
+              }
+            }
+
             return {
               value: item.value || item.id || item.code || item.province_code || item.amphure_code || item.district_code,
               label: item.label || item.name || item.title || item.name_th || String(item)
@@ -162,7 +182,6 @@ const SelectField = ({
 
         setOptions(mapped);
       } catch (error) {
-        console.error(`❌ Failed to fetch options for ${labelText}:`, error);
         setOptions([]);
       } finally {
         setLoading(false);
@@ -175,7 +194,6 @@ const SelectField = ({
   const handleChange = (event) => {
     const selectedOptionValue = event.target.value;
 
-   
     const selectedOption = allOptions.find((opt) => {
       if (typeof opt === "object" && opt !== null) {
         return opt.value === selectedOptionValue;
@@ -341,4 +359,4 @@ const SelectField = ({
   );
 };
 
-export default SelectField;
+export default SelectFieldPAA;
