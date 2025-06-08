@@ -30,3 +30,9 @@ const nextConfig = {
 };
 
 module.exports = withTM(nextConfig);
+
+// module.exports = {
+//   eslint: {
+//     ignoreDuringBuilds: true,
+//   },
+// };
