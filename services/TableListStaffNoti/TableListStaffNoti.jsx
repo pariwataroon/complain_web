@@ -32,7 +32,7 @@ const TableListStaffNoti = ({
   const pdfRef = useRef();
   const theme = useTheme();
 
-  // ← Dynamic responsive breakpoints
+  // Dynamic responsive breakpoints
   const isExtraSmall = useMediaQuery("(max-width:640px)");
   const isSmall = useMediaQuery("(max-width:768px)");
   const isMedium = useMediaQuery("(max-width:1024px)");
@@ -92,7 +92,7 @@ const TableListStaffNoti = ({
     { name: "countTimes", label: "จำนวนครั้ง", width: 120 },
   ];
 
-  // ← Dynamic layout calculation
+  // Dynamic layout calculation with consistent sizing
   const getLayoutConfig = () => {
     if (isExtraSmall) {
       return {
@@ -102,6 +102,8 @@ const TableListStaffNoti = ({
         buttonSize: "small",
         gap: 1,
         padding: 1,
+        inputHeight: "40px",
+        iconSize: 36,
       };
     } else if (isSmall) {
       return {
@@ -111,38 +113,76 @@ const TableListStaffNoti = ({
         buttonSize: "small",
         gap: 1,
         padding: 1.5,
+        inputHeight: "40px",
+        iconSize: 40,
       };
     } else if (isMedium) {
       return {
-        layout: "hybrid",
+        layout: "two-row", // New layout for medium screens
         fieldsPerRow: 3,
         fieldWidth: "calc(33.33% - 6px)",
-        buttonSize: "medium",
+        buttonSize: "small",
         gap: 1.5,
         padding: 2,
+        inputHeight: "40px",
+        iconSize: 40,
       };
     } else if (isLarge) {
       return {
         layout: "single-row",
         fieldsPerRow: filterFields.length,
         fieldWidth: "auto",
-        buttonSize: "medium",
+        buttonSize: "small",
         gap: 1.5,
         padding: 2,
+        inputHeight: "40px",
+        iconSize: 40,
       };
     } else {
       return {
         layout: "single-row",
         fieldsPerRow: filterFields.length,
         fieldWidth: "auto",
-        buttonSize: "medium",
+        buttonSize: "small",
         gap: 2,
         padding: 2,
+        inputHeight: "40px",
+        iconSize: 40,
       };
     }
   };
 
   const layoutConfig = getLayoutConfig();
+
+  // Common filter field styles
+  const getFilterFieldStyles = () => ({
+    "& .MuiInputBase-root": {
+      height: layoutConfig.inputHeight,
+    },
+    "& .MuiInputLabel-root": {
+      fontSize: isExtraSmall ? "13px" : "14px",
+    },
+    "& .MuiInputBase-input": {
+      fontSize: isExtraSmall ? "13px" : "14px",
+    },
+  });
+
+  const renderFilterField = (f) => {
+    const commonProps = {
+      fullWidth: true,
+      label: f.label,
+      value: filters[f.name],
+      onChange: handleChange(f.name),
+      size: "small",
+      sx: getFilterFieldStyles(),
+    };
+
+    return f.type === "select" ? (
+      <SelectField {...commonProps} options={f.options} />
+    ) : (
+      <InputText {...commonProps} />
+    );
+  };
 
   return (
     <Container
@@ -162,9 +202,19 @@ const TableListStaffNoti = ({
         alignItems="center"
         justifyContent="space-between"
         sx={{
-          fontSize: isExtraSmall ? "14px" : isSmall ? "16px" : "18px",
-          padding: isExtraSmall ? "0 12px" : isSmall ? "0 16px" : "0 24px",
-          height: isExtraSmall ? "40px" : isSmall ? "44px" : "50px",
+          // Remove the responsive font size changes to keep consistent with SCSS
+          fontSize: "18px",
+          padding: "0 24px",
+          height: "50px",
+          // Add responsive styles that match your SCSS
+          "@media (max-width: 599px)": {
+            height: "44px",
+            padding: "0 16px",
+            fontSize: "16px",
+          },
+          "@media (max-width: 899px) and (min-width: 600px)": {
+            fontSize: "17px",
+          },
         }}
       >
         <Box>{title}</Box>
@@ -181,7 +231,7 @@ const TableListStaffNoti = ({
         }}
       >
         {layoutConfig.layout === "stacked" ? (
-          // ← Stacked Layout (Mobile/Small screens)
+          // Stacked Layout (Mobile/Small screens)
           <>
             {/* Filter Fields */}
             <Box
@@ -196,34 +246,7 @@ const TableListStaffNoti = ({
             >
               {filterFields.map((f) => (
                 <Box key={f.name} sx={{ minWidth: 0 }}>
-                  {f.type === "select" ? (
-                    <SelectField
-                      fullWidth
-                      label={f.label}
-                      options={f.options}
-                      value={filters[f.name]}
-                      onChange={handleChange(f.name)}
-                      size="small"
-                      sx={{
-                        "& .MuiInputBase-root": {
-                          height: "40px",
-                        },
-                      }}
-                    />
-                  ) : (
-                    <InputText
-                      fullWidth
-                      label={f.label}
-                      value={filters[f.name]}
-                      onChange={handleChange(f.name)}
-                      size="small"
-                      sx={{
-                        "& .MuiInputBase-root": {
-                          height: "40px",
-                        },
-                      }}
-                    />
-                  )}
+                  {renderFilterField(f)}
                 </Box>
               ))}
             </Box>
@@ -236,8 +259,8 @@ const TableListStaffNoti = ({
                   bgcolor: "#1120A3",
                   color: "#fff",
                   "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
-                  width: 40,
-                  height: 40,
+                  width: layoutConfig.iconSize,
+                  height: layoutConfig.iconSize,
                   borderRadius: "50%",
                   transition: "all 0.2s ease-in-out",
                 }}
@@ -250,8 +273,8 @@ const TableListStaffNoti = ({
                   bgcolor: "#1120A3",
                   color: "#fff",
                   "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
-                  width: 40,
-                  height: 40,
+                  width: layoutConfig.iconSize,
+                  height: layoutConfig.iconSize,
                   borderRadius: "50%",
                   transition: "all 0.2s ease-in-out",
                 }}
@@ -273,7 +296,7 @@ const TableListStaffNoti = ({
                 size={layoutConfig.buttonSize}
                 sx={{
                   minWidth: isExtraSmall ? "100px" : "120px",
-                  height: "40px",
+                  height: layoutConfig.inputHeight,
                   fontSize: "12px",
                 }}
               />
@@ -282,92 +305,90 @@ const TableListStaffNoti = ({
                 size={layoutConfig.buttonSize}
                 sx={{
                   minWidth: isExtraSmall ? "100px" : "120px",
-                  height: "40px",
+                  height: layoutConfig.inputHeight,
                   fontSize: "12px",
                 }}
               />
             </Box>
           </>
-        ) : layoutConfig.layout === "hybrid" ? (
-          // ← Hybrid Layout (Medium screens)
+        ) : layoutConfig.layout === "two-row" ? (
+          // Two-row Layout (Medium screens below 1025px)
           <>
-            {/* Filter Fields + Search Buttons */}
+            {/* First Row - First 3 fields */}
             <Box
               display="grid"
-              gridTemplateColumns={`repeat(${Math.min(
-                layoutConfig.fieldsPerRow,
-                filterFields.length
-              )}, 1fr) auto auto`}
+              gridTemplateColumns="repeat(3, 1fr)"
               gap={layoutConfig.gap}
-              alignItems="end"
               mb={2}
               sx={{
                 overflow: "visible",
                 width: "100%",
               }}
             >
-              {filterFields.map((f) => (
+              {filterFields.slice(0, 3).map((f) => (
                 <Box key={f.name} sx={{ minWidth: 0 }}>
-                  {f.type === "select" ? (
-                    <SelectField
-                      fullWidth
-                      label={f.label}
-                      options={f.options}
-                      value={filters[f.name]}
-                      onChange={handleChange(f.name)}
-                      size="small"
-                      sx={{
-                        "& .MuiInputBase-root": {
-                          height: "44px",
-                        },
-                      }}
-                    />
-                  ) : (
-                    <InputText
-                      fullWidth
-                      label={f.label}
-                      value={filters[f.name]}
-                      onChange={handleChange(f.name)}
-                      size="small"
-                      sx={{
-                        "& .MuiInputBase-root": {
-                          height: "44px",
-                        },
-                      }}
-                    />
-                  )}
+                  {renderFilterField(f)}
+                </Box>
+              ))}
+            </Box>
+
+            {/* Second Row - Remaining fields + Search Buttons */}
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={layoutConfig.gap}
+              mb={2}
+              sx={{
+                overflow: "visible",
+                width: "100%",
+              }}
+            >
+              {/* Remaining filter fields */}
+              {filterFields.slice(3).map((f) => (
+                <Box
+                  key={f.name}
+                  sx={{
+                    flex: "1 1 0",
+                    minWidth: 0,
+                  }}
+                >
+                  {renderFilterField(f)}
                 </Box>
               ))}
 
               {/* Search Buttons */}
-              <IconButton
-                onClick={handleSearchClick}
-                sx={{
-                  bgcolor: "#1120A3",
-                  color: "#fff",
-                  "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
-                  width: 44,
-                  height: 44,
-                  borderRadius: "50%",
-                  transition: "all 0.2s ease-in-out",
-                }}
-              >
-                <SearchIcon />
-              </IconButton>
-              <IconButton
-                onClick={handleClearSearch}
-                sx={{
-                  bgcolor: "#1120A3",
-                  color: "#fff",
-                  "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
-                  width: 44,
-                  height: 44,
-                  borderRadius: "50%",
-                  transition: "all 0.2s ease-in-out",
-                }}
-              >
-                <SearchOffIcon />
-              </IconButton>
+              <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
+                <IconButton
+                  onClick={handleSearchClick}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                    width: layoutConfig.iconSize,
+                    height: layoutConfig.iconSize,
+                    borderRadius: "50%",
+                    transition: "all 0.2s ease-in-out",
+                    mt: 1,
+                  }}
+                >
+                  <SearchIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  onClick={handleClearSearch}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                    width: layoutConfig.iconSize,
+                    height: layoutConfig.iconSize,
+                    borderRadius: "50%",
+                    transition: "all 0.2s ease-in-out",
+                    mt: 1,
+                  }}
+                >
+                  <SearchOffIcon fontSize="small" />
+                </IconButton>
+              </Box>
             </Box>
 
             {/* Export Buttons */}
@@ -383,8 +404,8 @@ const TableListStaffNoti = ({
                 size={layoutConfig.buttonSize}
                 sx={{
                   minWidth: "120px",
-                  height: "44px",
-                  fontSize: "14px",
+                  height: layoutConfig.inputHeight,
+                  fontSize: "12px",
                 }}
               />
               <ExportButton
@@ -392,17 +413,17 @@ const TableListStaffNoti = ({
                 size={layoutConfig.buttonSize}
                 sx={{
                   minWidth: "120px",
-                  height: "44px",
-                  fontSize: "14px",
+                  height: layoutConfig.inputHeight,
+                  fontSize: "12px",
                 }}
               />
             </Box>
           </>
         ) : (
-          // ← Single Row Layout (Large screens)
+          // Single Row Layout (Large screens)
           <Box
             display="flex"
-            alignItems="end"
+            alignItems="center"
             justifyContent="space-between"
             gap={layoutConfig.gap}
             sx={{
@@ -413,7 +434,7 @@ const TableListStaffNoti = ({
             {/* Left Section: Filters + Search */}
             <Box
               display="flex"
-              alignItems="end"
+              alignItems="center"
               gap={layoutConfig.gap}
               sx={{
                 flexGrow: 1,
@@ -433,34 +454,7 @@ const TableListStaffNoti = ({
                     maxWidth: isLarge ? "250px" : "none",
                   }}
                 >
-                  {f.type === "select" ? (
-                    <SelectField
-                      fullWidth
-                      label={f.label}
-                      options={f.options}
-                      value={filters[f.name]}
-                      onChange={handleChange(f.name)}
-                      size="medium"
-                      sx={{
-                        "& .MuiInputBase-root": {
-                          height: "56px",
-                        },
-                      }}
-                    />
-                  ) : (
-                    <InputText
-                      fullWidth
-                      label={f.label}
-                      value={filters[f.name]}
-                      onChange={handleChange(f.name)}
-                      size="medium"
-                      sx={{
-                        "& .MuiInputBase-root": {
-                          height: "56px",
-                        },
-                      }}
-                    />
-                  )}
+                  {renderFilterField(f)}
                 </Box>
               ))}
 
@@ -472,13 +466,14 @@ const TableListStaffNoti = ({
                     bgcolor: "#1120A3",
                     color: "#fff",
                     "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
-                    width: 48,
-                    height: 48,
+                    width: layoutConfig.iconSize,
+                    height: layoutConfig.iconSize,
                     borderRadius: "50%",
                     transition: "all 0.2s ease-in-out",
+                    mt: 1,
                   }}
                 >
-                  <SearchIcon />
+                  <SearchIcon fontSize="small" />
                 </IconButton>
                 <IconButton
                   onClick={handleClearSearch}
@@ -486,13 +481,14 @@ const TableListStaffNoti = ({
                     bgcolor: "#1120A3",
                     color: "#fff",
                     "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
-                    width: 48,
-                    height: 48,
+                    width: layoutConfig.iconSize,
+                    height: layoutConfig.iconSize,
                     borderRadius: "50%",
                     transition: "all 0.2s ease-in-out",
+                    mt: 1,
                   }}
                 >
-                  <SearchOffIcon />
+                  <SearchOffIcon fontSize="small" />
                 </IconButton>
               </Box>
             </Box>
@@ -503,10 +499,11 @@ const TableListStaffNoti = ({
               gap={1}
               sx={{
                 flexShrink: 0,
+                alignItems: "center",
                 ...(isLarge && {
                   width: "100%",
                   justifyContent: "center",
-                  mt: 2,
+                  pt: 1,
                 }),
               }}
             >
@@ -521,8 +518,9 @@ const TableListStaffNoti = ({
                 size={layoutConfig.buttonSize}
                 sx={{
                   minWidth: "120px",
-                  height: "48px",
-                  fontSize: "14px",
+                  height: layoutConfig.inputHeight,
+                  fontSize: "12px",
+                  mt: 1,
                 }}
               />
               <ExportButton
@@ -530,8 +528,9 @@ const TableListStaffNoti = ({
                 size={layoutConfig.buttonSize}
                 sx={{
                   minWidth: "120px",
-                  height: "48px",
-                  fontSize: "14px",
+                  height: layoutConfig.inputHeight,
+                  fontSize: "12px",
+                  mt: 1,
                 }}
               />
             </Box>
@@ -582,12 +581,12 @@ const TableListStaffNoti = ({
                     fontWeight: 600,
                     color: "#1120a3",
                     border: "1px solid #e0e0e0",
-                    fontSize: isExtraSmall ? "11px" : isSmall ? "12px" : "14px",
-                    padding: isExtraSmall
-                      ? "6px 2px"
-                      : isSmall
-                      ? "8px 4px"
-                      : "14px 12px",
+
+                    padding: "14px 12px", // Keep consistent padding
+                    // Add responsive styles only for very small screens if needed
+                    "@media (max-width: 599px)": {
+                      padding: "8px 4px",
+                    },
                   }}
                 >
                   ลำดับ
@@ -602,19 +601,15 @@ const TableListStaffNoti = ({
                       fontWeight: 600,
                       color: "#1120a3",
                       border: "1px solid #e0e0e0",
-                      fontSize: isExtraSmall
-                        ? "11px"
-                        : isSmall
-                        ? "12px"
-                        : "14px",
-                      padding: isExtraSmall
-                        ? "6px 2px"
-                        : isSmall
-                        ? "8px 4px"
-                        : "14px 12px",
+
+                      padding: "14px 12px", // Keep consistent padding
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
+                      // Add responsive styles only for very small screens if needed
+                      "@media (max-width: 599px)": {
+                        padding: "8px 4px",
+                      },
                     }}
                   >
                     {col.label}
@@ -644,16 +639,12 @@ const TableListStaffNoti = ({
                       fontWeight: 600,
                       color: "#1120A3",
                       border: "1px solid #e0e0e0",
-                      fontSize: isExtraSmall
-                        ? "10px"
-                        : isSmall
-                        ? "11px"
-                        : "14px",
-                      padding: isExtraSmall
-                        ? "4px 2px"
-                        : isSmall
-                        ? "6px 4px"
-                        : "14px 12px",
+
+                      padding: "14px 12px", // Keep consistent padding
+                      // Add responsive styles only for very small screens if needed
+                      "@media (max-width: 599px)": {
+                        padding: "6px 4px",
+                      },
                     }}
                   >
                     {page * rowsPerPage + idx + 1}
@@ -665,19 +656,15 @@ const TableListStaffNoti = ({
                         width: needsScrollbar ? col.width : "auto",
                         minWidth: needsScrollbar ? col.width : "auto",
                         border: "1px solid #e0e0e0",
-                        fontSize: isExtraSmall
-                          ? "10px"
-                          : isSmall
-                          ? "11px"
-                          : "14px",
-                        padding: isExtraSmall
-                          ? "4px 2px"
-                          : isSmall
-                          ? "6px 4px"
-                          : "14px 12px",
+
+                        padding: "14px 12px", // Keep consistent padding
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
+                        // Add responsive styles only for very small screens if needed
+                        "@media (max-width: 599px)": {
+                          padding: "6px 4px",
+                        },
                       }}
                     >
                       {item[col.name] ?? "-"}
@@ -699,12 +686,17 @@ const TableListStaffNoti = ({
             sx={{
               borderTop: "1px solid #eee",
               "& .MuiTablePagination-toolbar": {
-                fontSize: isExtraSmall ? "11px" : isSmall ? "12px" : "14px",
-                padding: isExtraSmall ? "6px" : isSmall ? "8px" : "16px",
+                padding: "16px", // Keep consistent padding
+                // Add responsive styles only for very small screens if needed
+                "@media (max-width: 599px)": {
+                  padding: "6px",
+                },
               },
               "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
                 {
-                  fontSize: isExtraSmall ? "11px" : isSmall ? "12px" : "14px",
+                  fontSize: "14px", // Keep consistent font size
+                  // Add responsive styles only for very small screens if needed
+                  "@media (max-width: 599px)": {},
                 },
             }}
           />

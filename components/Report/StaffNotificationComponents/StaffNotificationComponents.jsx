@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/router";
-import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
+import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs"; // Fixed: Changed BreadCrumbs to Breadcrumbs
 import TableListStaffNoti from "@services/TableListStaffNoti/TableListStaffNoti";
 
 // ─── mock data (20 รายการ) ─────────────────────────────────────────────────
@@ -35,13 +35,82 @@ const mockComplaints = [
     issueType: "ระยะเวลาการนำกลุ่มสำรวจตรวจสอบกลับจากหน่วยงาน",
     countTimes: 1,
   },
-  // ... เพิ่ม rows ตามต้องการ ...
+  // Add more mock data as needed
+  {
+    id: 4,
+    claimantName: "นายสมชาย ใจดี",
+    issue: "ปัญหาการอนุมัติเอกสาร",
+    responsibleOfficer: "นายธารกร ภูมิรัตน์",
+    receiptNumber: "842/68",
+    officerReceiveDate: "22 พ.ย. 2567",
+    issueType: "ระยะเวลาเรื่องร้องเรียนใหม่ / เรื่องร้องเรียนเพิ่มเติม",
+    countTimes: 1,
+  },
+  {
+    id: 5,
+    claimantName: "นางสาวจิราพร สว่างใส",
+    issue: "ค่าธรรมเนียมไม่ถูกต้อง",
+    responsibleOfficer: "นางสาวนภัส มีความสุข",
+    receiptNumber: "843/68",
+    officerReceiveDate: "23 พ.ย. 2567",
+    issueType: "ระยะเวลาส่งเอกสารเพิ่มเติมจากผู้ร้อง",
+    countTimes: 2,
+  },
+  {
+    id: 6,
+    claimantName: "นายพิชัย รุ่งเรือง",
+    issue: "ปัญหาการคำนวณภาษี",
+    responsibleOfficer: "นางสาวปวิณา อมรชัยกุล",
+    receiptNumber: "844/68",
+    officerReceiveDate: "24 พ.ย. 2567",
+    issueType: "ระยะเวลาการนำกลุ่มสำรวจตรวจสอบกลับจากหน่วยงาน",
+    countTimes: 1,
+  },
+  {
+    id: 7,
+    claimantName: "บริษัท สมบูรณ์ การค้า จำกัด",
+    issue: "ความล่าช้าในการดำเนินการ",
+    responsibleOfficer: "นายธารกร ภูมิรัตน์",
+    receiptNumber: "845/68",
+    officerReceiveDate: "25 พ.ย. 2567",
+    issueType: "ระยะเวลาเรื่องร้องเรียนใหม่ / เรื่องร้องเรียนเพิ่มเติม",
+    countTimes: 3,
+  },
+  {
+    id: 8,
+    claimantName: "นางวิมล ขจรศิลป์",
+    issue: "ปัญหาการติดต่อเจ้าหน้าที่",
+    responsibleOfficer: "นางสาวนภัส มีความสุข",
+    receiptNumber: "846/68",
+    officerReceiveDate: "26 พ.ย. 2567",
+    issueType: "ระยะเวลาส่งเอกสารเพิ่มเติมจากผู้ร้อง",
+    countTimes: 2,
+  },
+  {
+    id: 9,
+    claimantName: "นายสุรชาติ เจริญสุข",
+    issue: "ข้อมูลไม่ถูกต้องในระบบ",
+    responsibleOfficer: "นางสาวปวิณา อมรชัยกุล",
+    receiptNumber: "847/68",
+    officerReceiveDate: "27 พ.ย. 2567",
+    issueType: "ระยะเวลาการนำกลุ่มสำรวจตรวจสอบกลับจากหน่วยงาน",
+    countTimes: 1,
+  },
+  {
+    id: 10,
+    claimantName: "นางสาวอัญชลี มั่นใจ",
+    issue: "ปัญหาการออกใบรับรอง",
+    responsibleOfficer: "นายธารกร ภูมิรัตน์",
+    receiptNumber: "848/68",
+    officerReceiveDate: "28 พ.ย. 2567",
+    issueType: "ระยะเวลาเรื่องร้องเรียนใหม่ / เรื่องร้องเรียนเพิ่มเติม",
+    countTimes: 2,
+  },
 ];
 
-const ComplaintArchives = () => {
+const StaffNotificationComponents = () => {
   const [allComplaints] = useState(mockComplaints);
   const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
-  const router = useRouter();
 
   // สร้าง options ออกมาก่อน
   const responsibleOfficerOptions = useMemo(() => {
@@ -142,4 +211,4 @@ const ComplaintArchives = () => {
   );
 };
 
-export default ComplaintArchives;
+export default StaffNotificationComponents;

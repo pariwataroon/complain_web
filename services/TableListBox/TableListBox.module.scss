@@ -1,7 +1,6 @@
 .headerBar {
   background: linear-gradient(to right, #1223a5, #2499ff);
   height: 50px;
-
   border-top-right-radius: 12px;
   padding: 0 24px;
   display: flex;
@@ -9,7 +8,18 @@
   color: white;
   font-weight: bold;
   font-size: 18px;
+
+  @media (max-width: 640px) {
+    height: 44px;
+    padding: 0 16px;
+    font-size: 16px;
+  }
+
+  @media (max-width: 768px) and (min-width: 641px) {
+    font-size: 17px;
+  }
 }
+
 .headerBar2 {
   height: 50px;
   border-top-left-radius: 12px;
@@ -20,12 +30,30 @@
   color: #1120a3;
   font-weight: bold;
   font-size: 18px;
+
+  @media (max-width: 640px) {
+    height: auto;
+    min-height: 50px;
+    padding: 16px;
+    font-size: 16px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  @media (max-width: 768px) and (min-width: 641px) {
+    font-size: 17px;
+  }
 }
+
 .tableWrapper {
   background-color: white;
   border-radius: 0 0 16px 16px;
-  box-shadow: none; /* <─ เอาเงาออก */
+  box-shadow: none;
   overflow: hidden;
+
+  @media (max-width: 1200px) {
+    overflow-x: auto;
+  }
 }
 
 .tableWrapper thead tr {
@@ -35,14 +63,15 @@
 .MuiTableCell-head {
   font-weight: 600;
   color: #1120a3;
-  font-size: 14px;
+  font-size: 14px; // Keep consistent font size - removed responsive sizing
   border-bottom: 1px solid #d9dbe9;
+  padding: 14px 12px; // Keep consistent padding
 }
 
 .MuiTableCell-root {
-  font-size: 14px;
+  font-size: 14px; // Keep consistent font size - removed responsive sizing
   color: #333;
-  padding: 14px 12px;
+  padding: 14px 12px; // Keep consistent padding
   border-bottom: 1px solid #eee;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -61,5 +90,34 @@
     gap: 12px;
     flex-wrap: wrap;
     align-items: center;
+  }
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+
+    > div {
+      justify-content: center;
+    }
+  }
+}
+
+// Responsive utilities
+@media (max-width: 640px) {
+  .mobileHidden {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .tabletHidden {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .laptopHidden {
+    display: none;
   }
 }
