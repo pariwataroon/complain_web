@@ -301,6 +301,48 @@ def update_complaint_assignment_data(
             if assignment_data["urgency_level"] != old_value:
                 changes.append(f"ระดับความเร่งด่วน: {old_value} → {assignment_data['urgency_level']}")
 
+        # ✅ 7. บันทึก additional_reference_number1-2 และ additional_reference_date1-2 (ที่ขาดหายไป)
+        if "additional_reference_number1" in assignment_data:
+            old_value = complaint.additional_reference_number1
+            complaint.additional_reference_number1 = assignment_data["additional_reference_number1"]
+            if assignment_data["additional_reference_number1"] != old_value:
+                changes.append(f"เลขอ้างอิงเพิ่มเติม 1: {old_value} → {assignment_data['additional_reference_number1']}")
+
+        if "additional_reference_date1" in assignment_data and assignment_data["additional_reference_date1"]:
+            try:
+                old_date = complaint.additional_reference_date1
+                complaint.additional_reference_date1 = datetime.fromisoformat(assignment_data["additional_reference_date1"].replace('Z', '+00:00'))
+                if old_date != complaint.additional_reference_date1:
+                    changes.append(f"วันที่อ้างอิงเพิ่มเติม 1: {old_date} → {complaint.additional_reference_date1}")
+            except ValueError:
+                return {"success": False, "message": "รูปแบบวันที่อ้างอิงเพิ่มเติม 1 ไม่ถูกต้อง"}
+
+        if "additional_reference_number2" in assignment_data:
+            old_value = complaint.additional_reference_number2
+            complaint.additional_reference_number2 = assignment_data["additional_reference_number2"]
+            if assignment_data["additional_reference_number2"] != old_value:
+                changes.append(f"เลขอ้างอิงเพิ่มเติม 2: {old_value} → {assignment_data['additional_reference_number2']}")
+
+        if "additional_reference_date2" in assignment_data and assignment_data["additional_reference_date2"]:
+            try:
+                old_date = complaint.additional_reference_date2
+                complaint.additional_reference_date2 = datetime.fromisoformat(assignment_data["additional_reference_date2"].replace('Z', '+00:00'))
+                if old_date != complaint.additional_reference_date2:
+                    changes.append(f"วันที่อ้างอิงเพิ่มเติม 2: {old_date} → {complaint.additional_reference_date2}")
+            except ValueError:
+                return {"success": False, "message": "รูปแบบวันที่อ้างอิงเพิ่มเติม 2 ไม่ถูกต้อง"}
+
+        # ✅ 8. บันทึก assignment_reason (ถ้ามี)
+        if "assignment_reason" in assignment_data:
+            # สามารถเก็บใน processing_notes หรือสร้างฟิลด์ใหม่
+            old_notes = complaint.processing_notes
+            if assignment_data["assignment_reason"]:
+                if old_notes:
+                    complaint.processing_notes = f"{old_notes}\n\nเหตุผลการมอบหมาย: {assignment_data['assignment_reason']}"
+                else:
+                    complaint.processing_notes = f"เหตุผลการมอบหมาย: {assignment_data['assignment_reason']}"
+                changes.append(f"เหตุผลการมอบหมาย: {assignment_data['assignment_reason']}")
+
         # บันทึกการเปลี่ยนแปลง
         complaint.updated_at = datetime.now()
         
