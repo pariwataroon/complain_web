@@ -27,78 +27,121 @@ logger = logging.getLogger(__name__)
 # Global flag สำหรับควบคุม debug logs
 DEBUG_MODE = False
 
-def debug_log(message: str):
-    """ฟังก์ชันสำหรับ debug logging"""
-    if DEBUG_MODE:
-        print(f"[DEBUG] {message}")
-        logging.info(f"[DEBUG] {message}")
+def get_or_set_default_complaint_channel(db: Session, channel_id: Optional[UUID] = None) -> Optional[UUID]:
+    """ดึงหรือกำหนดช่องทางการร้องเรียนเริ่มต้น"""
+    from models.comp_complaint_types import ComplaintChannel
+    
+    if channel_id:
+        # ตรวจสอบว่า channel_id ที่ส่งมาถูกต้องหรือไม่
+        channel = db.query(ComplaintChannel).filter(
+            ComplaintChannel.id == channel_id,
+            ComplaintChannel.is_active == True
+        ).first()
+        
+        if channel:
+            return channel_id
+    
+    # หาช่องทาง "เว็บไซต์" เป็นค่าเริ่มต้น
+    website_channel = db.query(ComplaintChannel).filter(
+        ComplaintChannel.name == "เว็บไซต์",
+        ComplaintChannel.is_active == True
+    ).first()
+    
+    if website_channel:
+        return website_channel.id
+    
+    # ถ้าไม่พบ "เว็บไซต์" ให้หาช่องทางแรกที่เปิดใช้งาน
+    default_channel = db.query(ComplaintChannel).filter(
+        ComplaintChannel.is_active == True
+    ).first()
+    
+    if default_channel:
+        return default_channel.id
+    else:
+        return None
+
+def validate_complaint_channel(db: Session, channel_id: UUID) -> bool:
+    """ตรวจสอบความถูกต้องของช่องทางการร้องเรียน"""
+    from models.comp_complaint_types import ComplaintChannel
+    
+    try:
+        channel = db.query(ComplaintChannel).filter(
+            ComplaintChannel.id == channel_id,
+            ComplaintChannel.is_active == True
+        ).first()
+        return channel is not None
+    except Exception:
+        return False
 
 def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optional[UUID] = None) -> Complaint:
     """สร้างข้อร้องเรียนใหม่"""
     try:
-        debug_log(f"🔍 [CONTROLLER] Starting create_complaint with user: {user_id}")
-        
-        # ✅ ตรวจสอบ user_id ก่อนสร้างเรื่อง
-        if user_id:
-            user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
-            if not user:
-                raise ValueError(f"User ID {user_id} not found or inactive")
-        
-        # แปลงข้อมูล formData ถ้ามีก่อน
-        if "formData" in complaint_data:
-            complaint_data = convert_form_data_to_structured(complaint_data["formData"])
+        complaint_channel_id = None
+        if "complaint_channel_id" in complaint_data:
+            channel_id_str = complaint_data["complaint_channel_id"]
 
-        # เก็บค่า complaintType จาก root level ไว้ก่อน
-        root_complaint_type = complaint_data.get("complaintType", "")
-
-        # ตรวจสอบและแปลงรูปแบบข้อมูลถ้าจำเป็น
-        if "subject" in complaint_data and "step1" not in complaint_data:
-            complaint_data = convert_flat_to_structured(complaint_data, root_complaint_type)
-        elif root_complaint_type:
-            ensure_complaint_type_consistency(complaint_data, root_complaint_type)
+            if channel_id_str and channel_id_str != 'None' and channel_id_str != 'null':
+                try:
+                    complaint_channel_id = UUID(channel_id_str)
+                    
+                    # ตรวจสอบว่าช่องทางนี้มีอยู่จริงหรือไม่
+                    from models.comp_complaint_types import ComplaintChannel
+                    channel = db.query(ComplaintChannel).filter(
+                        ComplaintChannel.id == complaint_channel_id,
+                        ComplaintChannel.is_active == True
+                    ).first()
+                    
+                    if not channel:
+                        complaint_channel_id = get_or_set_default_complaint_channel(db)
+                except (ValueError, TypeError) as e:
+                    complaint_channel_id = get_or_set_default_complaint_channel(db)
+            else:
+                complaint_channel_id = get_or_set_default_complaint_channel(db)
+        else:
+            complaint_channel_id = get_or_set_default_complaint_channel(db)
         
-        # 1. เก็บข้อมูลดิบทั้งหมดแบบ JSON object
+        # ถ้าไม่พบช่องทางใดๆ ให้ error
+        if not complaint_channel_id:
+            raise ValueError("ไม่พบช่องทางการร้องเรียนที่เปิดใช้งาน")
+        
+        # บันทึกข้อมูลต้นฉบับ
         original_data = save_original_complaint(complaint_data)
         
-        # 2. แยกข้อมูลตามขั้นตอนและประมวลผลเฉพาะส่วนที่จำเป็น
+        # สกัดข้อมูลหลัก
+        root_complaint_type = complaint_data.get("complaintType", "")
+        
+        # ประมวลผลข้อมูล
         extracted_data = extract_complaint_data(complaint_data, root_complaint_type)
         
-        # ตรวจสอบข้อมูลที่จำเป็น
-        if not extracted_data.get("subject"):
-            raise ValueError("Subject is required")
-            
-        if not extracted_data.get("complainant_data"):
-            raise ValueError("Complainant data is required")
-            
-        if not extracted_data.get("respondent_data"):
-            raise ValueError("Respondent data is required")
-        
-        # เตรียมข้อมูลสำหรับสร้าง model
-        complaint_model_data = prepare_complaint_model_data(
+        # เตรียมข้อมูลสำหรับ model
+        model_data = prepare_complaint_model_data(
             db, complaint_data, original_data, extracted_data, root_complaint_type, user_id
         )
         
-        # บันทึกข้อมูล
-        new_complaint = Complaint(**complaint_model_data)
+        # ✅ เพิ่ม complaint_channel_id เข้าไปใน model data
+        if complaint_channel_id:
+            model_data["complaint_channel_id"] = complaint_channel_id
+        
+        # สร้าง Complaint object
+        new_complaint = Complaint(**model_data)
+        
+        # บันทึกลงฐานข้อมูล
         db.add(new_complaint)
         db.commit()
         db.refresh(new_complaint)
         
-        # บันทึกประวัติสถานะเริ่มต้น
-        create_status_history(db, new_complaint.id, ComplaintStatus.SUBMITTED, "รับเรื่องร้องเรียนเรียบร้อย", user_id)
+        # สร้างประวัติสถานะ
+        create_status_history(
+            db, new_complaint.id, ComplaintStatus.SUBMITTED, 
+            "เรื่องร้องเรียนได้รับการสร้างขึ้นใหม่", user_id
+        )
         
-        # ตรวจสอบข้อมูลทางภูมิศาสตร์อีกครั้งหลังจากบันทึก
-        update_existing_geographic_data(db, new_complaint.id)
-        
-        logger.info(f"Complaint created: {new_complaint.complaint_number}")
         return new_complaint
         
     except Exception as e:
-        print(f"❌ [{datetime.now().strftime('%H:%M:%S')}] Create complaint failed: {str(e)}")
-        if DEBUG_MODE:
-            print(f"Full traceback: {traceback.format_exc()}")
-        db.rollback()
-        raise
+        traceback.print_exc()
+        logger.error(f"Error creating complaint: {str(e)}")
+        raise e
 
 def update_complaint_details(db: Session, complaint_id: UUID, update_data: Dict[str, Any], user_id: Optional[UUID] = None) -> Complaint:
     """อัพเดทรายละเอียดข้อร้องเรียน"""
@@ -507,10 +550,6 @@ def extract_complaint_data(complaint_data: Dict, root_complaint_type: str) -> Di
     step3 = complaint_data.get("step3", {})
     step4 = complaint_data.get("step4", {})
     
-    # ✅ เพิ่ม debug log
-    debug_log(f"🔍 Step1 structure: {json.dumps(step1, ensure_ascii=False, indent=2)}")
-    debug_log(f"🔍 Step2 structure: {json.dumps(step2, ensure_ascii=False, indent=2)}")
-    
     # สกัดข้อมูลเรื่องร้องเรียน
     subject = ""
     description = ""
@@ -545,18 +584,12 @@ def extract_complaint_data(complaint_data: Dict, root_complaint_type: str) -> Di
     # ประมวลผลข้อมูลผู้ร้องเรียนและผู้ถูกร้องเรียน
     complainant_result = process_complainant_data(step1)
     respondent_result = process_respondent_data(step2)
-    
-    # ✅ เพิ่ม debug log
-    debug_log(f"🔍 Complainant result: {json.dumps(complainant_result, ensure_ascii=False, default=str)}")
-    debug_log(f"🔍 Respondent result: {json.dumps(respondent_result, ensure_ascii=False, default=str)}")
-    
+
     # ✅ ตรวจสอบข้อมูลที่จำเป็น
     if not complainant_result.get("data"):
-        debug_log("❌ No complainant data found!")
         raise ValueError("Complainant data is required")
     
     if not respondent_result.get("data"):
-        debug_log("❌ No respondent data found!")
         raise ValueError("Respondent data is required")
     
     return {
@@ -578,32 +611,26 @@ def process_complainant_data(step1: Dict) -> Dict:
     complainant_type = ComplainantType.INDIVIDUAL
     delegate_data = None
     
-    debug_log(f"🔍 Processing complainant data: {json.dumps(step1, ensure_ascii=False, indent=2)}")
-    
     if "general" in step1:
         step1_general = step1["general"]
         
         # ✅ ตรวจสอบข้อมูลที่มีอยู่จริงก่อน แทนการพึ่ง activeType
         if "corporate" in step1_general and step1_general["corporate"]:
-            debug_log("📋 Found corporate data")
             complainant_type = ComplainantType.CORPORATE
             complainant_data = process_nested_fields(step1_general["corporate"])
             
             # ✅ ตรวจสอบ signer (ผู้ลงนาม) แยกต่างหาก
             if "signer" in step1_general and step1_general["signer"]:
-                debug_log("✍️ Found signer data")
                 complainant_data["signer"] = process_nested_fields(step1_general["signer"])
         
         # ถ้าไม่มี corporate ลองดู general
         elif "general" in step1_general and step1_general["general"]:
-            debug_log("👤 Found general (individual) data")
             complainant_type = ComplainantType.INDIVIDUAL
             complainant_data = process_nested_fields(step1_general["general"])
         
         # ถ้าไม่มีทั้งคู่ ลองใช้ activeType
         else:
             active_type = step1_general.get("activeType", "general")
-            debug_log(f"🔄 Using activeType fallback: {active_type}")
             
             if active_type == "corporate" and "corporate" in step1_general:
                 complainant_type = ComplainantType.CORPORATE
@@ -617,10 +644,7 @@ def process_complainant_data(step1: Dict) -> Dict:
         
         # ตรวจสอบข้อมูลผู้รับมอบอำนาจ
         if "delegate" in step1_general and step1_general["delegate"]:
-            debug_log("📄 Found delegate data")
             delegate_data = process_nested_fields(step1_general["delegate"])
-    
-    debug_log(f"✅ Processed complainant: type={complainant_type}, data_keys={list(complainant_data.keys())}")
     
     return {
         "data": complainant_data,
@@ -633,17 +657,13 @@ def process_respondent_data(step2: Dict) -> Dict:
     respondent_data = {}
     respondent_type = RespondentType.INDIVIDUAL
     
-    debug_log(f"🔍 Processing respondent data: {json.dumps(step2, ensure_ascii=False, indent=2)}")
-    
     if "general" not in step2:
-        debug_log("❌ No general section in step2")
         return {"data": respondent_data, "type": respondent_type}
         
     step2_general = step2["general"]
     
     # ✅ ตรวจสอบข้อมูลที่มีอยู่จริงก่อน
     if "government" in step2_general and step2_general["government"]:
-        debug_log("🏛️ Found government data")
         respondent_type = RespondentType.GOVERNMENT
         respondent_data = process_nested_fields(step2_general["government"])
         
@@ -653,7 +673,6 @@ def process_respondent_data(step2: Dict) -> Dict:
     
     # ตรวจสอบ corporate
     elif "corporate" in step2_general and step2_general["corporate"]:
-        debug_log("🏢 Found corporate data")
         respondent_type = RespondentType.CORPORATE
         respondent_data = process_nested_fields(step2_general["corporate"])
         
@@ -662,14 +681,12 @@ def process_respondent_data(step2: Dict) -> Dict:
     
     # ตรวจสอบ individual
     elif "individual" in step2_general and step2_general["individual"]:
-        debug_log("👤 Found individual data")
         respondent_type = RespondentType.INDIVIDUAL
         respondent_data = process_nested_fields(step2_general["individual"])
     
     # ใช้ activeType เป็นตัวกำหนด (fallback)
     else:
         active_type = step2_general.get("activeType", "individual")
-        debug_log(f"🔄 Using activeType fallback: {active_type}")
         
         if active_type == "government" and "government" in step2_general:
             respondent_type = RespondentType.GOVERNMENT
@@ -689,7 +706,6 @@ def process_respondent_data(step2: Dict) -> Dict:
         
         # ถ้าไม่มี nested structure ลองใช้ข้อมูลจาก step2_general โดยตรง
         else:
-            debug_log("🔄 Using direct data from step2_general")
             if active_type == "government":
                 respondent_type = RespondentType.GOVERNMENT
             elif active_type == "corporate":
@@ -700,9 +716,7 @@ def process_respondent_data(step2: Dict) -> Dict:
             # ใช้ข้อมูลที่เหลือใน step2_general (ลบ activeType ออก)
             filtered_data = {k: v for k, v in step2_general.items() if k not in ["activeType"]}
             respondent_data = process_nested_fields(filtered_data)
-    
-    debug_log(f"✅ Processed respondent: type={respondent_type}, data_keys={list(respondent_data.keys())}")
-    
+
     return {
         "data": respondent_data,
         "type": respondent_type
@@ -977,11 +991,6 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
         )
         
     except Exception as e:
-        debug_log(f"Error creating list item: {str(e)}")
-        debug_log(f"Complaint ID: {complaint.id}")
-        debug_log(f"Traceback: {traceback.format_exc()}")
-        
-        # Return minimal item in case of error
         return ComplaintListItem(
             id=complaint.id,
             complaint_number=complaint.complaint_number or "",

@@ -11,7 +11,6 @@ class ComplaintQueueService:
         self.connection = pika.BlockingConnection(pika.URLParameters(self.rabbitmq_url))
         self.channel = self.connection.channel()
         
-        # สร้าง queue สำหรับการประมวลผลคำร้องเรียน
         self.channel.queue_declare(queue='complaint_processing', durable=True)
     
     def close_connection(self):
@@ -36,7 +35,7 @@ class ComplaintQueueService:
             routing_key='complaint_processing',
             body=json.dumps(message, default=str),
             properties=pika.BasicProperties(
-                delivery_mode=2,  # Make message persistent
+                delivery_mode=2,
                 message_id=task_id
             )
         )
@@ -50,13 +49,11 @@ class ComplaintQueueService:
                 message = json.loads(body)
                 result = callback_function(message)
                 
-                # Acknowledge message if processed successfully
                 ch.basic_ack(delivery_tag=method.delivery_tag)
                 return result
                 
             except Exception as e:
                 print(f"Error processing message: {str(e)}")
-                # Reject message and requeue
                 ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
         
         self.channel.basic_qos(prefetch_count=1)

@@ -1,19 +1,17 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Body
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Body, Query
 from sqlalchemy.orm import Session
-from typing import List, Optional, Dict, Any
+from typing import Optional, Dict, Any
 
 from models.user import User
 from datetime import datetime
-from models.comp_complaint_types import ComplaintType, ComplaintChannel
 
 from app.api.middleware.jwt_verify import verify_token
-from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
+from app.api.middleware.permission_middleware import can_update, can_delete
 from app.api.v1.controllers.complaint_controller import (
-    create_complaint, get_complaints, get_complaint, update_complaint_status, delete_complaint, get_user_complaints, get_user_complaint_detail, update_complaint_details, add_related_complaint, get_my_complaint_by_id, get_complaint_by_id_with_assignment
+    get_complaints, update_complaint_status, delete_complaint, get_user_complaints, update_complaint_details, add_related_complaint, get_my_complaint_by_id, get_complaint_by_id_with_assignment
 )
-from app.api.v1.schemas.complaint import ComplaintCreate, ComplaintResponse, ComplaintListItem, StatusUpdateRequest
-from app.services.complaint_queue_service import ComplaintQueueService
+from app.api.v1.schemas.complaint import StatusUpdateRequest
 from models.comp_complaint import Complaint, ComplaintStatus, SeverityLevel, SatisfactionRating
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
@@ -26,15 +24,30 @@ router = APIRouter(
 @router.post("", response_model=FormatResponseModel)
 async def create_new_complaint(
     request_data: Dict[str, Any],
+    complaint_channel_id: Optional[UUID] = Query(None, description="UUID ของช่องทางการร้องเรียน"),
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
     """Create a new complaint using queue system only"""
     try:
+        if complaint_channel_id:
+            from models.comp_complaint_types import ComplaintChannel
+            channel = db.query(ComplaintChannel).filter(
+                ComplaintChannel.id == complaint_channel_id,
+                ComplaintChannel.is_active == True
+            ).first()
+            
+            if not channel:
+                return format_response("4000", {
+                    "error": "Invalid complaint_channel_id",
+                    "message": "ไม่พบช่องทางการร้องเรียนที่ระบุ หรือช่องทางดังกล่าวไม่ได้เปิดใช้งาน"
+                })
+            
+            request_data["complaint_channel_id"] = str(complaint_channel_id)
+        
         from config.dotenv import RABBITMQ_URL
         from app.services.complaint_queue_service import ComplaintQueueService
         
-        # ส่งเข้า queue เท่านั้น ไม่มี fallback
         with ComplaintQueueService(RABBITMQ_URL) as queue_service:
             task_id = queue_service.queue_complaint_creation(request_data, current_user)
             
@@ -42,11 +55,11 @@ async def create_new_complaint(
                 "task_id": task_id,
                 "status": "queued",
                 "message": "คำร้องเรียนถูกเพิ่มเข้า queue เพื่อประมวลผล",
-                "processing_mode": "async"
+                "processing_mode": "async",
+                "complaint_channel_id": str(complaint_channel_id) if complaint_channel_id else None
             })
             
     except Exception as e:
-        # ถ้า queue ไม่ทำงาน ให้ error ไปเลย
         import traceback
         traceback.print_exc()
         return format_response("5000", {
