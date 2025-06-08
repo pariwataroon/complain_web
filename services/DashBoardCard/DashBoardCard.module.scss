@@ -1,54 +1,241 @@
 .container {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 24px;
+  display: flex;
+  gap: 8px; // ลดจาก 12px
+  margin-bottom: 12px; // ลดจาก 24px
+
+  // Mobile: Stack vertically
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 4px; // ลดจาก 8px
+    margin-bottom: 8px; // ลดจาก 16px
+  }
+
+  // Small tablets: 2 cards per row
+  @media (min-width: 769px) and (max-width: 1024px) {
+    flex-wrap: wrap;
+
+    .card:last-child {
+      flex-basis: 100%;
+    }
+  }
 }
 
 .card {
-    flex: 1;
-    color: white;
-    border-radius: 12px;
-    padding: 16px;
-    text-align: center;
+  flex: 1;
+  color: white;
+  border-radius: 8px; // ลดจาก 12px
+  padding: 8px; // ลดจาก 10px เป็น 8px
+  text-align: center;
+  min-width: 0;
+  min-height: 60px; // ลดจาก 70px เป็น 60px
+
+  // Mobile responsive
+  @media (max-width: 768px) {
+    padding: 6px; // ลดจาก 8px เป็น 6px
+    border-radius: 6px; // ลดจาก 8px
+    min-height: 55px; // ลดจาก 70px เป็น 55px
+  }
+
+  // Small tablets
+  @media (min-width: 769px) and (max-width: 1024px) {
+    flex: 1 1 calc(50% - 4px); // ลดจาก 6px
+    margin-bottom: 4px; // ลดจาก 8px
+    min-height: 65px; // ลดจาก 75px เป็น 65px
+
+    &:last-child {
+      flex: 1 1 100%;
+      margin-bottom: 0;
+    }
+  }
+
+  // Large screens
+  @media (min-width: 1200px) {
+    min-height: 75px; // ลดจาก 90px เป็น 75px
+    padding: 10px; // ลดจาก 14px เป็น 10px
+  }
 }
 
 .cardBrown {
-    background: linear-gradient(135deg, #4e2600, #b1792c);
+  background: linear-gradient(135deg, #4e2600, #b1792c);
 }
 
 .cardBlue {
-    background: linear-gradient(135deg, #002984, #3d5afe);
+  background: linear-gradient(135deg, #002984, #3d5afe);
 }
 
 .cardPink {
-    background: linear-gradient(135deg, #c2185b, #f06292);
+  background: linear-gradient(135deg, #c2185b, #f06292);
 }
 
 .title {
-    font-size: 12px;
-    font-weight: bold;
-    margin-bottom: 8px;
+  font-size: 10px; // ลดจาก 11px เป็น 10px
+  font-weight: bold;
+  margin-bottom: 3px; // ลดจาก 4px เป็น 3px
+  line-height: 1.2; // ลดจาก 1.3
+
+  // Mobile responsive
+  @media (max-width: 480px) {
+    font-size: 8px; // ลดจาก 9px เป็น 8px
+    margin-bottom: 3px; // ลดจาก 4px เป็น 3px
+  }
+
+  // Small mobile
+  @media (max-width: 360px) {
+    font-size: 7px; // ลดจาก 8px เป็น 7px
+  }
+
+  // Large screens
+  @media (min-width: 1200px) {
+    font-size: 11px; // ลดจาก 12px เป็น 11px
+    margin-bottom: 4px; // ลดจาก 6px เป็น 4px
+  }
 }
 
 .count {
-    font-size: 28px;
-    font-weight: bold;
+  font-size: 20px; // ลดจาก 22px เป็น 20px
+  font-weight: bold;
+  line-height: 1.1; // ลดจาก 1.2
 
-    .unit {
-        font-size: 18px;
-        font-weight: normal;
-    }
+  // Mobile responsive
+  @media (max-width: 768px) {
+    font-size: 18px; // ลดจาก 20px เป็น 18px
+  }
+
+  @media (max-width: 480px) {
+    font-size: 16px; // ลดจาก 18px เป็น 16px
+  }
+
+  @media (max-width: 360px) {
+    font-size: 14px; // ลดจาก 16px เป็น 14px
+  }
+
+  // Large screens
+  @media (min-width: 1200px) {
+    font-size: 22px; // ลดจาก 24px เป็น 22px
+  }
+}
+
+.unit {
+  font-size: 14px; // ลดจาก 15px เป็น 14px
+  font-weight: normal;
+
+  // Mobile responsive
+  @media (max-width: 768px) {
+    font-size: 12px; // ลดจาก 13px เป็น 12px
+  }
+
+  @media (max-width: 480px) {
+    font-size: 10px; // ลดจาก 11px เป็น 10px
+  }
+
+  @media (max-width: 360px) {
+    font-size: 9px; // ลดจาก 10px เป็น 9px
+  }
+
+  // Large screens
+  @media (min-width: 1200px) {
+    font-size: 15px; // ลดจาก 16px เป็น 15px
+  }
 }
 
 .trendLine {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 3px; // ลดจาก 4px เป็น 3px
+  flex-wrap: wrap;
+  gap: 2px; // ลดจาก 3px เป็น 2px
+
+  // Mobile responsive
+  @media (max-width: 480px) {
+    margin-top: 2px; // ลดจาก 4px เป็น 2px
+    gap: 1px; // ลดจาก 2px เป็น 1px
+  }
+
+  // Large screens
+  @media (min-width: 1200px) {
+    margin-top: 4px; // ลดจาก 6px เป็น 4px
+    gap: 3px; // ลดจาก 4px เป็น 3px
+  }
 }
 
 .trendIcon {
-    width: 14px;
-    height: 14px;
-    object-fit: contain;
+  width: 10px; // ลดจาก 11px เป็น 10px
+  height: 10px; // ลดจาก 11px เป็น 10px
+  object-fit: contain;
+  flex-shrink: 0;
+
+  // Mobile responsive
+  @media (max-width: 480px) {
+    width: 8px; // ลดจาก 9px เป็น 8px
+    height: 8px; // ลดจาก 9px เป็น 8px
+  }
+
+  // Large screens
+  @media (min-width: 1200px) {
+    width: 11px; // ลดจาก 12px เป็น 11px
+    height: 11px; // ลดจาก 12px เป็น 11px
+  }
+}
+
+.trendText {
+  font-size: 9px; // ลดจาก 10px เป็น 9px
+  font-weight: bold;
+
+  // Mobile responsive
+  @media (max-width: 480px) {
+    font-size: 8px; // ลดจาก 9px เป็น 8px
+  }
+
+  @media (max-width: 360px) {
+    font-size: 7px; // ลดจาก 8px เป็น 7px
+  }
+
+  // Large screens
+  @media (min-width: 1200px) {
+    font-size: 10px; // ลดจาก 11px เป็น 10px
+  }
+}
+
+.compareText {
+  font-size: 9px; // ลดจาก 10px เป็น 9px
+
+  // Mobile responsive
+  @media (max-width: 480px) {
+    font-size: 8px; // ลดจาก 9px เป็น 8px
+  }
+
+  @media (max-width: 360px) {
+    font-size: 7px; // ลดจาก 8px เป็น 7px
+    line-height: 1.1; // ลดจาก 1.2
+  }
+
+  // Very small screens: break to new line
+  @media (max-width: 320px) {
+    flex-basis: 100%;
+    margin-top: 1px; // ลดจาก 2px เป็น 1px
+  }
+
+  // Large screens
+  @media (min-width: 1200px) {
+    font-size: 10px; // ลดจาก 11px เป็น 10px
+  }
+}
+
+// Animation for better UX
+.card {
+  transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out; // ลด duration
+
+  &:hover {
+    transform: translateY(-1px); // ลดจาก -2px
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); // ลด shadow
+  }
+
+  // Disable hover effect on touch devices
+  @media (hover: none) {
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
+  }
 }

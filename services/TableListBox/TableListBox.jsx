@@ -10,6 +10,7 @@ import {
   TablePagination,
   Container,
   IconButton,
+  useMediaQuery,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
@@ -35,6 +36,13 @@ const TableListBox = ({
   filterFields = [],
 }) => {
   const router = useRouter();
+
+  // Updated responsive breakpoints starting from 1305px
+  const isExtraSmall = useMediaQuery("(max-width:640px)");
+  const isSmall = useMediaQuery("(max-width:768px)");
+  const isMedium = useMediaQuery("(max-width:1024px)");
+  const isLarge = useMediaQuery("(max-width:1305px)"); // New breakpoint for responsive filters
+  const needsScrollbar = useMediaQuery("(max-width:1200px)");
 
   // initialize filter state based on filterFields prop
   const initialFilters = filterFields.reduce((acc, f) => {
@@ -73,7 +81,6 @@ const TableListBox = ({
   const handleRowClick = (item) =>
     navigateTo && router.push(`${navigateTo}/${item.id}`);
 
-  // แก้ไข: เปลี่ยน columns ให้ตรงกับ mockComplaints data structure
   const columns = [
     { name: "claimantName", label: "ชื่อผู้ร้อง", width: 200 },
     { name: "issue", label: "ชื่อเรื่อง", width: 300 },
@@ -83,6 +90,90 @@ const TableListBox = ({
     { name: "status", label: "สถานะ", width: 150 },
   ];
 
+  // Updated dynamic layout configuration with new breakpoint
+  const getLayoutConfig = () => {
+    if (isExtraSmall) {
+      return {
+        layout: "stacked",
+        fieldsPerRow: 1,
+        gap: 1,
+        padding: 1,
+        inputHeight: "40px",
+        iconSize: 36,
+      };
+    } else if (isSmall) {
+      return {
+        layout: "stacked",
+        fieldsPerRow: 2,
+        gap: 1,
+        padding: 1.5,
+        inputHeight: "40px",
+        iconSize: 40,
+      };
+    } else if (isMedium) {
+      return {
+        layout: "two-row",
+        fieldsPerRow: 3,
+        gap: 1.5,
+        padding: 2,
+        inputHeight: "40px",
+        iconSize: 40,
+      };
+    } else if (isLarge) {
+      // New responsive layout for screens 1025px - 1305px
+      return {
+        layout: "large-responsive",
+        fieldsPerRow: Math.min(4, filterFields.length),
+        gap: 1.5,
+        padding: 2,
+        inputHeight: "40px",
+        iconSize: 40,
+      };
+    } else {
+      // Only for screens larger than 1305px
+      return {
+        layout: "single-row",
+        fieldsPerRow: filterFields.length,
+        gap: 1.5,
+        padding: 2,
+        inputHeight: "40px",
+        iconSize: 40,
+      };
+    }
+  };
+
+  const layoutConfig = getLayoutConfig();
+
+  // Common filter field styles
+  const getFilterFieldStyles = () => ({
+    "& .MuiInputBase-root": {
+      height: layoutConfig.inputHeight,
+    },
+    "& .MuiInputLabel-root": {
+      fontSize: isExtraSmall ? "13px" : "14px",
+    },
+    "& .MuiInputBase-input": {
+      fontSize: isExtraSmall ? "13px" : "14px",
+    },
+  });
+
+  const renderFilterField = (f) => {
+    const commonProps = {
+      fullWidth: true,
+      label: f.label,
+      value: filters[f.name],
+      onChange: handleChange(f.name),
+      size: "small",
+      sx: getFilterFieldStyles(),
+    };
+
+    return f.type === "select" ? (
+      <SelectField {...commonProps} options={f.options} />
+    ) : (
+      <InputText {...commonProps} />
+    );
+  };
+
   return (
     <Container
       maxWidth={false}
@@ -91,6 +182,7 @@ const TableListBox = ({
         backgroundColor: "#fff",
         borderRadius: 2,
         boxShadow: "0 6px 18px rgba(0,0,0,.06)",
+        overflow: "visible",
       }}
     >
       <Box
@@ -100,101 +192,453 @@ const TableListBox = ({
         justifyContent="space-between"
       ></Box>
 
-      {/* แก้ไข: ย้าย export buttons มาอยู่ในแถวเดียวกับ title */}
+      {/* Header with title and export buttons */}
       <Box
         mt={2}
         className={styles.headerBar2}
         display="flex"
         alignItems="center"
         justifyContent="space-between"
-        px={2}
+        px={isExtraSmall ? 1 : 2}
+        sx={{
+          flexDirection: isExtraSmall ? "column" : "row",
+          gap: isExtraSmall ? 1 : 0,
+        }}
       >
-        <Box>{title}</Box>
+        <Box
+          sx={{
+            fontSize: isExtraSmall ? "16px" : "18px",
+            fontWeight: "bold",
+            color: "#1120a3",
+          }}
+        >
+          {title}
+        </Box>
 
-        {/* ปุ่ม export ด้านขวา */}
-        <Box display="flex" alignItems="center" gap={1}>
-          <ExportButton label="Export PDF" />
-          <ExportButton label="Export Excel" />
+        {/* Export buttons */}
+        <Box
+          display="flex"
+          alignItems="center"
+          gap={1}
+          sx={{
+            flexDirection: isExtraSmall ? "column" : "row",
+            width: isExtraSmall ? "100%" : "auto",
+          }}
+        >
+          <ExportButton
+            label="Export PDF"
+            sx={{
+              fontSize: isExtraSmall ? "12px" : "14px",
+              minWidth: isExtraSmall ? "120px" : "auto",
+            }}
+          />
+          <ExportButton
+            label="Export Excel"
+            sx={{
+              fontSize: isExtraSmall ? "12px" : "14px",
+              minWidth: isExtraSmall ? "120px" : "auto",
+            }}
+          />
         </Box>
       </Box>
 
-      {/* search bar */}
-      <Box width="100%" px={2} py={1}>
-        <Box display="flex" alignItems="center" justifyContent="flex-start">
-          {/* filters + search buttons */}
+      {/* Responsive Filters */}
+      <Box
+        width="100%"
+        px={layoutConfig.padding}
+        py={layoutConfig.padding}
+        sx={{
+          overflow: "visible",
+          boxSizing: "border-box",
+        }}
+      >
+        {layoutConfig.layout === "stacked" ? (
+          // Stacked Layout (Mobile/Small screens)
+          <>
+            {/* Filter Fields */}
+            <Box
+              display="grid"
+              gridTemplateColumns={`repeat(${layoutConfig.fieldsPerRow}, 1fr)`}
+              gap={layoutConfig.gap}
+              mb={2}
+              sx={{
+                overflow: "visible",
+                width: "100%",
+              }}
+            >
+              {filterFields.map((f) => (
+                <Box key={f.name} sx={{ minWidth: 0 }}>
+                  {renderFilterField(f)}
+                </Box>
+              ))}
+            </Box>
+
+            {/* Search Buttons */}
+            <Box display="flex" justifyContent="center" gap={1} mb={2}>
+              <IconButton
+                onClick={handleSearchClick}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                  width: layoutConfig.iconSize,
+                  height: layoutConfig.iconSize,
+                  borderRadius: "50%",
+                  transition: "all 0.2s ease-in-out",
+                }}
+              >
+                <SearchIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                onClick={handleClearSearch}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                  width: layoutConfig.iconSize,
+                  height: layoutConfig.iconSize,
+                  borderRadius: "50%",
+                  transition: "all 0.2s ease-in-out",
+                }}
+              >
+                <SearchOffIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          </>
+        ) : layoutConfig.layout === "two-row" ? (
+          // Two-row Layout (Medium screens)
+          <>
+            {/* First Row - First 3 fields */}
+            <Box
+              display="grid"
+              gridTemplateColumns="repeat(3, 1fr)"
+              gap={layoutConfig.gap}
+              mb={2}
+              sx={{
+                overflow: "visible",
+                width: "100%",
+              }}
+            >
+              {filterFields.slice(0, 3).map((f) => (
+                <Box key={f.name} sx={{ minWidth: 0 }}>
+                  {renderFilterField(f)}
+                </Box>
+              ))}
+            </Box>
+
+            {/* Second Row - Remaining fields + Search Buttons */}
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={layoutConfig.gap}
+              mb={2}
+              sx={{
+                overflow: "visible",
+                width: "100%",
+              }}
+            >
+              {/* Remaining filter fields */}
+              {filterFields.slice(3).map((f) => (
+                <Box
+                  key={f.name}
+                  sx={{
+                    flex: "1 1 0",
+                    minWidth: 0,
+                  }}
+                >
+                  {renderFilterField(f)}
+                </Box>
+              ))}
+
+              {/* Search Buttons */}
+              <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
+                <IconButton
+                  onClick={handleSearchClick}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                    width: layoutConfig.iconSize,
+                    height: layoutConfig.iconSize,
+                    borderRadius: "50%",
+                    transition: "all 0.2s ease-in-out",
+                    mt: 1,
+                  }}
+                >
+                  <SearchIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  onClick={handleClearSearch}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                    width: layoutConfig.iconSize,
+                    height: layoutConfig.iconSize,
+                    borderRadius: "50%",
+                    transition: "all 0.2s ease-in-out",
+                    mt: 1,
+                  }}
+                >
+                  <SearchOffIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+          </>
+        ) : layoutConfig.layout === "large-responsive" ? (
+          // Large Responsive Layout (1025px - 1305px)
+          <>
+            {/* First Row - First 4 fields or all if less than 4 */}
+            <Box
+              display="grid"
+              gridTemplateColumns={`repeat(${Math.min(
+                4,
+                filterFields.length
+              )}, 1fr)`}
+              gap={layoutConfig.gap}
+              mb={2}
+              sx={{
+                overflow: "visible",
+                width: "100%",
+              }}
+            >
+              {filterFields
+                .slice(0, Math.min(4, filterFields.length))
+                .map((f) => (
+                  <Box key={f.name} sx={{ minWidth: 0 }}>
+                    {renderFilterField(f)}
+                  </Box>
+                ))}
+            </Box>
+
+            {/* Second Row - Remaining fields + Search Buttons (if more than 4 fields) */}
+            {filterFields.length > 4 && (
+              <Box
+                display="flex"
+                alignItems="center"
+                gap={layoutConfig.gap}
+                mb={2}
+                sx={{
+                  overflow: "visible",
+                  width: "100%",
+                }}
+              >
+                {/* Remaining filter fields */}
+                {filterFields.slice(4).map((f) => (
+                  <Box
+                    key={f.name}
+                    sx={{
+                      flex: "1 1 0",
+                      minWidth: 0,
+                    }}
+                  >
+                    {renderFilterField(f)}
+                  </Box>
+                ))}
+
+                {/* Search Buttons */}
+                <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
+                  <IconButton
+                    onClick={handleSearchClick}
+                    sx={{
+                      bgcolor: "#1120A3",
+                      color: "#fff",
+                      "&:hover": {
+                        bgcolor: "#0b1580",
+                        transform: "scale(1.05)",
+                      },
+                      width: layoutConfig.iconSize,
+                      height: layoutConfig.iconSize,
+                      borderRadius: "50%",
+                      transition: "all 0.2s ease-in-out",
+                      mt: 1,
+                    }}
+                  >
+                    <SearchIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    onClick={handleClearSearch}
+                    sx={{
+                      bgcolor: "#1120A3",
+                      color: "#fff",
+                      "&:hover": {
+                        bgcolor: "#0b1580",
+                        transform: "scale(1.05)",
+                      },
+                      width: layoutConfig.iconSize,
+                      height: layoutConfig.iconSize,
+                      borderRadius: "50%",
+                      transition: "all 0.2s ease-in-out",
+                      mt: 1,
+                    }}
+                  >
+                    <SearchOffIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </Box>
+            )}
+
+            {/* Search buttons centered if 4 or fewer fields */}
+            {filterFields.length <= 4 && (
+              <Box display="flex" justifyContent="center" gap={1} mb={2}>
+                <IconButton
+                  onClick={handleSearchClick}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                    width: layoutConfig.iconSize,
+                    height: layoutConfig.iconSize,
+                    borderRadius: "50%",
+                    transition: "all 0.2s ease-in-out",
+                  }}
+                >
+                  <SearchIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  onClick={handleClearSearch}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                    width: layoutConfig.iconSize,
+                    height: layoutConfig.iconSize,
+                    borderRadius: "50%",
+                    transition: "all 0.2s ease-in-out",
+                  }}
+                >
+                  <SearchOffIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            )}
+          </>
+        ) : (
+          // Single Row Layout (Screens larger than 1305px)
           <Box
             display="flex"
             alignItems="center"
-            gap={1}
+            gap={layoutConfig.gap}
             sx={{
-              flexGrow: 1,
-              overflowX: "auto",
+              overflow: "visible",
+              flexWrap: "nowrap",
             }}
           >
+            {/* Filter fields */}
             {filterFields.map((f) => (
-              <Box key={f.name} flex="1 1 0" minWidth="140px" maxWidth="200px">
-                {f.type === "select" ? (
-                  <SelectField
-                    fullWidth
-                    label={f.label}
-                    options={f.options}
-                    value={filters[f.name]}
-                    onChange={handleChange(f.name)}
-                  />
-                ) : (
-                  <InputText
-                    fullWidth
-                    label={f.label}
-                    value={filters[f.name]}
-                    onChange={handleChange(f.name)}
-                  />
-                )}
+              <Box
+                key={f.name}
+                sx={{
+                  flex: "1 1 0",
+                  minWidth: "140px",
+                  maxWidth: "200px",
+                }}
+              >
+                {renderFilterField(f)}
               </Box>
             ))}
 
-            <IconButton
-              onClick={handleSearchClick}
-              sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                "&:hover": { bgcolor: "#0b1580" },
-                width: 40,
-                height: 40,
-              }}
-            >
-              <SearchIcon />
-            </IconButton>
-
-            <IconButton
-              onClick={handleClearSearch}
-              sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                "&:hover": { bgcolor: "#0b1580" },
-                width: 40,
-                height: 40,
-              }}
-            >
-              <SearchOffIcon />
-            </IconButton>
+            {/* Search Buttons */}
+            <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
+              <IconButton
+                onClick={handleSearchClick}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                  width: layoutConfig.iconSize,
+                  height: layoutConfig.iconSize,
+                  borderRadius: "50%",
+                  transition: "all 0.2s ease-in-out",
+                  mt: 1,
+                }}
+              >
+                <SearchIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                onClick={handleClearSearch}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                  width: layoutConfig.iconSize,
+                  height: layoutConfig.iconSize,
+                  borderRadius: "50%",
+                  transition: "all 0.2s ease-in-out",
+                  mt: 1,
+                }}
+              >
+                <SearchOffIcon fontSize="small" />
+              </IconButton>
+            </Box>
           </Box>
-        </Box>
+        )}
       </Box>
 
-      {/* table */}
+      {/* Data Table with conditional scrollbar */}
       <Box
         className={styles.tableWrapper}
         id="table-results"
-        sx={{ overflowX: "auto", px: 2, pb: 1 }}
+        sx={{
+          overflowX: needsScrollbar ? "auto" : "visible",
+          px: layoutConfig.padding,
+          pb: 1,
+          "&::-webkit-scrollbar": {
+            height: "8px",
+          },
+          "&::-webkit-scrollbar-track": {
+            backgroundColor: "#f1f1f1",
+            borderRadius: "4px",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "#c1c1c1",
+            borderRadius: "4px",
+            "&:hover": {
+              backgroundColor: "#a8a8a8",
+            },
+          },
+        }}
       >
-        <Table sx={{ minWidth: 1400 }}>
+        <Table
+          sx={{
+            minWidth: needsScrollbar ? 1400 : "100%",
+            width: "100%",
+            tableLayout: needsScrollbar ? "auto" : "fixed",
+          }}
+        >
           <TableHead>
             <TableRow>
-              <TableCell align="center" sx={{ width: 80 }}>
+              <TableCell
+                align="center"
+                sx={{
+                  width: 80,
+                  minWidth: 80,
+                  backgroundColor: "#e8e9f6",
+                  fontWeight: 600,
+                  color: "#1120a3",
+                  border: "1px solid #e0e0e0",
+                  fontSize: "14px",
+                  padding: "14px 12px",
+                }}
+              >
                 ลำดับ
               </TableCell>
               {columns.map((col) => (
-                <TableCell key={col.name} sx={{ width: col.width }}>
+                <TableCell
+                  key={col.name}
+                  sx={{
+                    width: needsScrollbar ? col.width : "auto",
+                    minWidth: needsScrollbar ? col.width : "auto",
+                    backgroundColor: "#e8e9f6",
+                    fontWeight: 600,
+                    color: "#1120a3",
+                    border: "1px solid #e0e0e0",
+                    fontSize: "14px",
+                    padding: "14px 12px",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
                   {col.label}
                 </TableCell>
               ))}
@@ -207,17 +651,41 @@ const TableListBox = ({
                 onClick={() => handleRowClick(item)}
                 sx={{
                   cursor: "pointer",
-                  "&:hover": { backgroundColor: "#f5f7ff" },
+                  "&:hover": {
+                    backgroundColor: "#f5f7ff",
+                    transform: "scale(1.001)",
+                    transition: "all 0.2s ease-in-out",
+                  },
                 }}
               >
                 <TableCell
                   align="center"
-                  sx={{ width: 80, fontWeight: 600, color: "#1120A3" }}
+                  sx={{
+                    width: 80,
+                    minWidth: 80,
+                    fontWeight: 600,
+                    color: "#1120A3",
+                    border: "1px solid #e0e0e0",
+                    fontSize: "14px",
+                    padding: "14px 12px",
+                  }}
                 >
                   {page * rowsPerPage + idx + 1}
                 </TableCell>
                 {columns.map((col) => (
-                  <TableCell key={col.name} sx={{ width: col.width }}>
+                  <TableCell
+                    key={col.name}
+                    sx={{
+                      width: needsScrollbar ? col.width : "auto",
+                      minWidth: needsScrollbar ? col.width : "auto",
+                      border: "1px solid #e0e0e0",
+                      fontSize: "14px",
+                      padding: "14px 12px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
                     {item[col.name] ?? "-"}
                   </TableCell>
                 ))}
@@ -234,7 +702,17 @@ const TableListBox = ({
           page={page}
           onPageChange={handlePageChange}
           onRowsPerPageChange={handleRowsPerPageChange}
-          sx={{ borderTop: "1px solid #eee" }}
+          sx={{
+            borderTop: "1px solid #eee",
+            "& .MuiTablePagination-toolbar": {
+              fontSize: "14px",
+              padding: "16px",
+            },
+            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
+              {
+                fontSize: "14px",
+              },
+          }}
         />
       </Box>
     </Container>
