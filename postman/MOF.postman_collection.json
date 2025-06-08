@@ -7113,6 +7113,44 @@
 					"response": []
 				},
 				{
+					"name": "Update Assignment (Additional References Only)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"additional_reference_number1\": \"ADD-REF-2025-001\",\n    \"additional_reference_date1\": \"2025-01-20T00:00:00Z\",\n    \"additional_reference_number2\": \"ADD-REF-2025-002\",\n    \"additional_reference_date2\": \"2025-01-21T00:00:00Z\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints-assignment/{{complaint_id}}/assignment",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints-assignment",
+								"{{complaint_id}}",
+								"assignment"
+							]
+						},
+						"description": "อัพเดทเฉพาะเลขอ้างอิงเพิ่มเติม"
+					}
+				},
+				{
 					"name": "Link Related Complaint",
 					"request": {
 						"auth": {
