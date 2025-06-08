@@ -7,39 +7,136 @@ import {
   TableRow,
   TableCell,
   TableBody,
-  TablePagination,
   Container,
   IconButton,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Search as SearchIcon,
   SearchOff as SearchOffIcon,
 } from "@mui/icons-material";
 
-import styles from "./TableAnnualResults.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
-import InputDate from "@services/InputDate/InputDate";
+import DateThaiPickerService from "@services/dateThaiPickerService/dateThaiPickerService";
+import styles from "./TableAnnualResults.module.scss";
 
 const TableAnnualResults = ({
   data = [],
   filterFields = [],
   onSearch = () => {},
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.down("md"));
+  const isExtraSmall = useMediaQuery("(max-width:640px)");
+  const isSmallScreen = useMediaQuery("(max-width:1400px)"); // สำหรับ table scroll
+
   // Filters state
   const initialFilters = filterFields.reduce(
     (acc, f) => ({ ...acc, [f.name]: "" }),
     {}
   );
   const [filters, setFilters] = useState(initialFilters);
+  const [searchFilters, setSearchFilters] = useState(initialFilters); // เก็บค่าที่ใช้ในการค้นหาจริง
+  const [hasSearched, setHasSearched] = useState(false); // ตรวจสอบว่าได้กดค้นหาแล้วหรือยัง
+
   const handleChange = (name) => (e) =>
     setFilters({ ...filters, [name]: e?.target?.value ?? e });
-  const handleSearchClick = () => onSearch(filters);
+
+  const handleSearchClick = () => {
+    setSearchFilters(filters); // อัพเดทค่าที่ใช้ในการค้นหา
+    setHasSearched(true); // ทำเครื่องหมายว่าได้ค้นหาแล้ว
+    onSearch(filters);
+  };
+
   const handleClearClick = () => {
     setFilters(initialFilters);
+    setSearchFilters(initialFilters); // ล้างค่าการค้นหาด้วย
+    setHasSearched(false); // รีเซ็ตสถานะการค้นหา
     onSearch(initialFilters);
   };
+
+  // ฟังก์ชันสำหรับกรองข้อมูลภายใน component (ใช้ searchFilters แทน filters)
+  const getFilteredData = () => {
+    // ถ้ายังไม่ได้กดค้นหา ให้แสดงข้อมูลทั้งหมด
+    if (!hasSearched) {
+      return data;
+    }
+
+    let result = data;
+
+    // กรองตาม agency
+    if (searchFilters.agency) {
+      result = result.filter((item) => item.agency === searchFilters.agency);
+    }
+
+    // กรองตาม responsibleOfficer
+    if (searchFilters.responsibleOfficer) {
+      result = result.filter(
+        (item) => item.responsibleOfficer === searchFilters.responsibleOfficer
+      );
+    }
+
+    // กรองตาม status
+    if (searchFilters.status) {
+      result = result.filter((item) => item.status === searchFilters.status);
+    }
+
+    // กรองตาม receiptNumber (เลขรับ สรร.)
+    if (searchFilters.receiptNumber) {
+      result = result.filter((item) =>
+        item.receiptNumber
+          ?.toLowerCase()
+          .includes(searchFilters.receiptNumber.toLowerCase())
+      );
+    }
+
+    // กรองตาม complainant (ชื่อผู้ร้อง)
+    if (searchFilters.complainant) {
+      result = result.filter((item) =>
+        item.complainant
+          ?.toLowerCase()
+          .includes(searchFilters.complainant.toLowerCase())
+      );
+    }
+
+    // กรองตาม complaint (ชื่อเรื่อง)
+    if (searchFilters.complaint) {
+      result = result.filter((item) =>
+        item.complaint
+          ?.toLowerCase()
+          .includes(searchFilters.complaint.toLowerCase())
+      );
+    }
+
+    // กรองตาม issueType (ประเภทเรื่อง)
+    if (searchFilters.issueType) {
+      result = result.filter((item) =>
+        item.issueType
+          ?.toLowerCase()
+          .includes(searchFilters.issueType.toLowerCase())
+      );
+    }
+
+    // สำหรับ date fields - ถ้ามีการส่งค่ามาสามารถเพิ่มการกรองได้
+    // ขณะนี้ข้อมูล mock ใช้รูปแบบ "30 ม.ค. 2568" ซึ่งอาจต้องแปลงก่อนเปรียบเทียบ
+    if (searchFilters.receiveDateFrom || searchFilters.receiveDateTo) {
+      // สามารถเพิ่มการกรองตามวันที่ได้ที่นี่
+      // ต้องแปลงรูปแบบวันที่ให้ตรงกันก่อน
+    }
+
+    return result;
+  };
+
+  // ใช้ข้อมูลที่กรองแล้ว
+  const filteredData = getFilteredData();
+
+  // แยก date fields และ non-date fields
+  const dateFields = filterFields.filter((f) => f.type === "date");
+  const nonDateFields = filterFields.filter((f) => f.type !== "date");
 
   // Columns config
   const columns = [
@@ -74,51 +171,122 @@ const TableAnnualResults = ({
     },
   ];
 
-  // Split data by status
-  const closedData = data.filter((r) => r.status === "ยุติ");
-  const ongoingData = data.filter((r) => r.status === "อยู่ระหว่างดำเนินการ");
+  // Split data by status (ใช้ข้อมูลที่กรองแล้ว)
+  const closedData = filteredData.filter((r) => r.status === "ยุติ");
+  const ongoingData = filteredData.filter(
+    (r) => r.status === "อยู่ระหว่างดำเนินการ"
+  );
 
   const renderTable = (dataset) => (
-    <Table sx={{ minWidth: 1200 }}>
-      <TableHead>
-        <TableRow>
-          {columns.map((col, idx) => (
-            <TableCell
-              key={idx}
-              sx={{ width: col.width }}
-              align={col.align || (idx === 1 ? "left" : "center")}
-            >
-              {col.label}
-            </TableCell>
-          ))}
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {dataset.map((row, idx) => (
-          <TableRow key={row.id} hover>
-            {columns.map((col, cIdx) => {
-              let content;
-              if (cIdx === 0) {
-                content = idx + 1;
-              } else if (col.render) {
-                content = col.render(row);
-              } else {
-                content = row[col.field] ?? "-";
-              }
-              return (
-                <TableCell
-                  key={cIdx}
-                  sx={{ width: col.width }}
-                  align={col.align || (cIdx === 1 ? "left" : "center")}
-                >
-                  {content}
-                </TableCell>
-              );
-            })}
+    <Box
+      sx={{
+        overflowX: "auto", // เสมอมี scrollbar ถ้าจำเป็น
+        width: "100%",
+        // เพิ่มการป้องกันทะลุ
+        maxWidth: "100%",
+        boxSizing: "border-box",
+      }}
+    >
+      <Table
+        sx={{
+          minWidth: 1400, // กำหนด minWidth คงที่
+          width: "100%",
+          tableLayout: "fixed", // บังคับให้ใช้ width ที่กำหนด
+        }}
+      >
+        <TableHead>
+          <TableRow>
+            {columns.map((col, idx) => (
+              <TableCell
+                key={idx}
+                sx={{
+                  width: `${col.width}px`, // ใช้ px แทน
+                  minWidth: `${col.width}px`,
+                  maxWidth: `${col.width}px`, // เพิ่ม maxWidth เพื่อป้องกันขยาย
+                  backgroundColor: "#e8e9f6",
+                  fontWeight: 600,
+                  color: "#1120a3",
+                  border: "1px solid #e0e0e0",
+                  whiteSpace: "nowrap",
+                  fontSize: isMobile ? "12px" : "14px",
+                  padding: isMobile ? "8px 4px" : "14px 12px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+                align={col.align || (idx === 1 ? "left" : "center")}
+              >
+                {col.label}
+              </TableCell>
+            ))}
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHead>
+        <TableBody>
+          {dataset.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length}
+                sx={{
+                  textAlign: "center",
+                  padding: isMobile ? "20px 10px" : "40px 20px",
+                  color: "#666",
+                  fontStyle: "italic",
+                  border: "1px solid #e0e0e0",
+                  fontSize: isMobile ? "12px" : "14px",
+                }}
+              >
+                {hasSearched
+                  ? "ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา"
+                  : "กรุณากดปุ่มค้นหาเพื่อแสดงข้อมูล"}
+              </TableCell>
+            </TableRow>
+          ) : (
+            dataset.map((row, idx) => (
+              <TableRow key={row.id} hover>
+                {columns.map((col, cIdx) => {
+                  let content;
+                  if (cIdx === 0) {
+                    content = idx + 1;
+                  } else if (col.render) {
+                    content = col.render(row);
+                  } else {
+                    content = row[col.field] ?? "-";
+                  }
+                  return (
+                    <TableCell
+                      key={cIdx}
+                      sx={{
+                        width: `${col.width}px`,
+                        minWidth: `${col.width}px`,
+                        maxWidth: `${col.width}px`, // เพิ่ม maxWidth เพื่อป้องกันขยาย
+                        border: "1px solid #e0e0e0",
+                        fontSize: isMobile ? "11px" : "14px",
+                        padding: isMobile ? "6px 4px" : "14px 12px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        // ปรับ whiteSpace ตามคอลัมน์
+                        whiteSpace:
+                          cIdx === 4 || cIdx === 6 ? "normal" : "nowrap",
+                        // สำหรับคอลัมน์ที่ยาว ให้แสดงแบบหลายบรรทัด
+                        ...(cIdx === 4 || cIdx === 6
+                          ? {
+                              whiteSpace: "normal",
+                              wordWrap: "break-word",
+                              textOverflow: "unset",
+                            }
+                          : {}),
+                      }}
+                      align={col.align || (cIdx === 1 ? "left" : "center")}
+                    >
+                      {content}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </Box>
   );
 
   return (
@@ -129,121 +297,545 @@ const TableAnnualResults = ({
         backgroundColor: "#fff",
         borderRadius: 2,
         boxShadow: "0 6px 18px rgba(0,0,0,.06)",
+        // ← แก้ไขส่วนนี้เพื่อให้ date picker แสดงได้ถูกต้อง
+        overflow: "visible", // เปลี่ยนเป็น visible
+        position: "relative",
+        zIndex: 1, // กำหนด z-index base ต่ำ
       }}
     >
-      {/* Filters */}
-      <Box px={2} py={1}>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Box
-            display="flex"
-            alignItems="center"
-            gap={1}
-            sx={{ flexGrow: 1, overflowX: "auto" }}
-          >
-            {filterFields.map((f) => (
-              <Box key={f.name} flex="1 1 0" minWidth="140px" maxWidth="300px">
-                {f.type === "select" ? (
-                  <SelectField
-                    fullWidth
+      <Box className={styles.headerBar} />
+
+      {/* Responsive Filters */}
+      <Box
+        px={isMobile ? 1 : 2}
+        py={isMobile ? 1.5 : 2}
+        sx={{
+          // ← ลบ position relative และ z-index ออก เพื่อไม่ให้ขัดแย้งกับ date picker
+          overflow: "visible", // เพิ่มเพื่อให้ date picker แสดงได้
+        }}
+      >
+        {isExtraSmall ? (
+          // Extra Small Layout (< 640px) - แยกเป็น 3 บรรทัด
+          <>
+            {/* Filter Fields - บรรทัดแรก */}
+            <Box
+              display="flex"
+              alignItems="flex-end"
+              justifyContent="center"
+              gap={1.5}
+              flexWrap="wrap"
+              mb={2}
+              sx={{
+                overflow: "visible", // ← เพิ่มเพื่อให้ date picker แสดงได้
+              }}
+            >
+              {/* Non-date fields */}
+              {nonDateFields.map((f) => (
+                <Box
+                  key={f.name}
+                  sx={{
+                    minWidth: "140px",
+                    flex: "1 1 140px",
+                    maxWidth: "300px",
+                  }}
+                >
+                  {f.type === "select" ? (
+                    <SelectField
+                      fullWidth
+                      label={f.label}
+                      options={f.options}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size="small"
+                      sx={{
+                        "& .MuiInputBase-root": {
+                          height: "40px",
+                        },
+                      }}
+                    />
+                  ) : (
+                    <InputText
+                      fullWidth
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size="small"
+                      sx={{
+                        "& .MuiInputBase-root": {
+                          height: "40px",
+                        },
+                      }}
+                    />
+                  )}
+                </Box>
+              ))}
+
+              {/* Date fields - แก้ไขส่วนนี้ */}
+              {dateFields.map((f) => (
+                <Box
+                  key={f.name}
+                  sx={{
+                    minWidth: "140px",
+                    flex: "1 1 140px",
+                    maxWidth: "300px",
+                    // ← ลบ position relative และ z-index ออก
+                  }}
+                >
+                  <DateThaiPickerService
                     label={f.label}
-                    options={f.options}
                     value={filters[f.name]}
                     onChange={handleChange(f.name)}
+                    // ← ลบ props ที่ไม่จำเป็นออก เพราะ DateThaiPickerService ใหม่ใช้ portal แล้ว
                   />
-                ) : f.type === "date" ? (
-                  <InputDate
+                </Box>
+              ))}
+            </Box>
+
+            {/* Search buttons - บรรทัดที่สอง (ตรงกลาง) */}
+            <Box display="flex" justifyContent="center" gap={1} mb={2}>
+              <IconButton
+                onClick={handleSearchClick}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  "&:hover": {
+                    bgcolor: "#0f1a8f",
+                    transform: "scale(1.05)",
+                  },
+                  transition: "all 0.2s ease-in-out",
+                }}
+              >
+                <SearchIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                onClick={handleClearClick}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  "&:hover": {
+                    bgcolor: "#0f1a8f",
+                    transform: "scale(1.05)",
+                  },
+                  transition: "all 0.2s ease-in-out",
+                }}
+              >
+                <SearchOffIcon fontSize="small" />
+              </IconButton>
+            </Box>
+
+            {/* Export Buttons - บรรทัดที่สาม (ตรงกลาง) */}
+            <Box display="flex" justifyContent="center" gap={1} flexWrap="wrap">
+              <ExportButton
+                label="Export PDF"
+                size="medium"
+                sx={{
+                  minWidth: "120px",
+                  fontSize: "14px",
+                  height: "40px",
+                  borderRadius: "8px",
+                  px: 2,
+                }}
+              />
+              <ExportButton
+                label="Export Excel"
+                size="medium"
+                sx={{
+                  minWidth: "120px",
+                  fontSize: "14px",
+                  height: "40px",
+                  borderRadius: "8px",
+                  px: 2,
+                }}
+              />
+            </Box>
+          </>
+        ) : isMobile ? (
+          // Mobile Layout (640px+) - แยกเป็น 2 บรรทัด
+          <>
+            {/* Filter Fields + Search Buttons - บรรทัดแรก */}
+            <Box
+              display="flex"
+              alignItems="flex-end"
+              gap={1.5}
+              flexWrap="wrap"
+              mb={2}
+              sx={{
+                overflow: "visible", // ← เพิ่มเพื่อให้ date picker แสดงได้
+              }}
+            >
+              {/* Non-date fields */}
+              {nonDateFields.map((f) => (
+                <Box
+                  key={f.name}
+                  sx={{
+                    minWidth: "140px",
+                    flex: "1 1 140px",
+                    maxWidth: "300px",
+                  }}
+                >
+                  {f.type === "select" ? (
+                    <SelectField
+                      fullWidth
+                      label={f.label}
+                      options={f.options}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size="small"
+                      sx={{
+                        "& .MuiInputBase-root": {
+                          height: "40px",
+                        },
+                      }}
+                    />
+                  ) : (
+                    <InputText
+                      fullWidth
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size="small"
+                      sx={{
+                        "& .MuiInputBase-root": {
+                          height: "40px",
+                        },
+                      }}
+                    />
+                  )}
+                </Box>
+              ))}
+
+              {/* Date fields - แก้ไขส่วนนี้ */}
+              {dateFields.map((f) => (
+                <Box
+                  key={f.name}
+                  sx={{
+                    width: "100%",
+                    maxWidth: "100%",
+                    boxSizing: "border-box",
+                    "& > div": {
+                      width: "100% !important",
+                      maxWidth: "100% !important",
+                      boxSizing: "border-box !important",
+                    },
+                    "& .MuiFormControl-root": {
+                      width: "100% !important",
+                      maxWidth: "100% !important",
+                      boxSizing: "border-box !important",
+                    },
+                    "& .datePickerContainer": {
+                      width: "100% !important",
+                      maxWidth: "100% !important",
+                      boxSizing: "border-box !important",
+                    },
+                    "& .inputField": {
+                      width: "100% !important",
+                      maxWidth: "100% !important",
+                      boxSizing: "border-box !important",
+                    },
+                    "& .dateInput": {
+                      width: "100% !important",
+                      maxWidth: "100% !important",
+                      boxSizing: "border-box !important",
+                    },
+                  }}
+                >
+                  <DateThaiPickerService
                     label={f.label}
                     value={filters[f.name]}
                     onChange={handleChange(f.name)}
+                    placeholder="กรุณาเลือกวันที่"
                   />
-                ) : (
-                  <InputText
-                    fullWidth
-                    label={f.label}
-                    value={filters[f.name]}
-                    onChange={handleChange(f.name)}
-                  />
-                )}
+                </Box>
+              ))}
+
+              {/* Search buttons */}
+              <Box
+                display="flex"
+                gap={1}
+                sx={{
+                  alignSelf: "flex-end",
+                  height: "40px",
+                  alignItems: "center",
+                }}
+              >
+                <IconButton
+                  onClick={handleSearchClick}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    "&:hover": {
+                      bgcolor: "#0f1a8f",
+                      transform: "scale(1.05)",
+                    },
+                    transition: "all 0.2s ease-in-out",
+                  }}
+                >
+                  <SearchIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  onClick={handleClearClick}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    "&:hover": {
+                      bgcolor: "#0f1a8f",
+                      transform: "scale(1.05)",
+                    },
+                    transition: "all 0.2s ease-in-out",
+                  }}
+                >
+                  <SearchOffIcon fontSize="small" />
+                </IconButton>
               </Box>
-            ))}
-            <IconButton
-              onClick={handleSearchClick}
-              sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                width: 40,
-                height: 40,
-                ml: 1,
-                "&:hover": { bgcolor: "#1120A3" },
-              }}
-            >
-              <SearchIcon />
-            </IconButton>
-            <IconButton
-              onClick={handleClearClick}
-              sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                width: 40,
-                height: 40,
-                "&:hover": { bgcolor: "#1120A3" },
-              }}
-            >
-              <SearchOffIcon />
-            </IconButton>
-          </Box>
+            </Box>
+
+            {/* Export Buttons - บรรทัดที่สอง */}
+            <Box display="flex" justifyContent="center" gap={1} flexWrap="wrap">
+              <ExportButton
+                label="Export PDF"
+                size="medium"
+                sx={{
+                  minWidth: "120px",
+                  fontSize: "14px",
+                  height: "40px",
+                  borderRadius: "8px",
+                  px: 2,
+                }}
+              />
+              <ExportButton
+                label="Export Excel"
+                size="medium"
+                sx={{
+                  minWidth: "120px",
+                  fontSize: "14px",
+                  height: "40px",
+                  borderRadius: "8px",
+                  px: 2,
+                }}
+              />
+            </Box>
+          </>
+        ) : (
+          // Desktop Layout - แถวเดียว
           <Box
             display="flex"
-            alignItems="center"
-            sx={{ flex: "1 0 300px", justifyContent: "flex-end" }}
+            alignItems="flex-end"
+            justifyContent="space-between"
+            gap={2}
+            flexWrap="wrap"
+            sx={{
+              overflow: "visible", // ← เพิ่มเพื่อให้ date picker แสดงได้
+            }}
           >
-            <ExportButton label="Export PDF" />
-            <ExportButton label="Export Excel" />
+            {/* Filter Fields Section */}
+            <Box
+              display="flex"
+              alignItems="flex-end"
+              gap={2}
+              flexWrap="wrap"
+              sx={{
+                flexGrow: 1,
+                overflow: "visible", // ← เพิ่มเพื่อให้ date picker แสดงได้
+              }}
+            >
+              {/* Non-date fields */}
+              {nonDateFields.map((f) => (
+                <Box
+                  key={f.name}
+                  sx={{
+                    minWidth: "180px",
+                    flex: "1 1 180px",
+                    maxWidth: "300px",
+                  }}
+                >
+                  {f.type === "select" ? (
+                    <SelectField
+                      fullWidth
+                      label={f.label}
+                      options={f.options}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size="medium"
+                      sx={{
+                        "& .MuiInputBase-root": {
+                          height: "56px",
+                        },
+                      }}
+                    />
+                  ) : (
+                    <InputText
+                      fullWidth
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size="medium"
+                      sx={{
+                        "& .MuiInputBase-root": {
+                          height: "56px",
+                        },
+                      }}
+                    />
+                  )}
+                </Box>
+              ))}
+
+              {/* Date fields - แก้ไขส่วนนี้ */}
+              {dateFields.map((f) => (
+                <Box
+                  key={f.name}
+                  sx={{
+                    minWidth: "180px",
+                    flex: "1 1 180px",
+                    maxWidth: "300px",
+                    // ← ลบ position relative และ z-index ออก
+                  }}
+                >
+                  <DateThaiPickerService
+                    label={f.label}
+                    value={filters[f.name]}
+                    onChange={handleChange(f.name)}
+                    // ← ลบ props ที่ไม่จำเป็นออก
+                  />
+                </Box>
+              ))}
+
+              {/* Search buttons */}
+              <Box
+                display="flex"
+                gap={1}
+                sx={{
+                  alignSelf: "flex-end",
+                  height: "70px",
+                  alignItems: "center",
+                }}
+              >
+                <IconButton
+                  onClick={handleSearchClick}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    "&:hover": {
+                      bgcolor: "#0f1a8f",
+                      transform: "scale(1.05)",
+                    },
+                    transition: "all 0.2s ease-in-out",
+                  }}
+                >
+                  <SearchIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  onClick={handleClearClick}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    "&:hover": {
+                      bgcolor: "#0f1a8f",
+                      transform: "scale(1.05)",
+                    },
+                    transition: "all 0.2s ease-in-out",
+                  }}
+                >
+                  <SearchOffIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+
+            {/* Export Buttons Section */}
+            <Box
+              display="flex"
+              gap={1}
+              flexWrap="wrap"
+              sx={{
+                justifyContent: "flex-end",
+                alignSelf: "flex-end",
+                mb: 2,
+              }}
+            >
+              <ExportButton
+                label="Export PDF"
+                size="medium"
+                sx={{
+                  minWidth: "120px",
+                  fontSize: "14px",
+                  height: "40px",
+                  borderRadius: "8px",
+                  px: 2,
+                }}
+              />
+              <ExportButton
+                label="Export Excel"
+                size="medium"
+                sx={{
+                  minWidth: "120px",
+                  fontSize: "14px",
+                  height: "40px",
+                  borderRadius: "8px",
+                  px: 2,
+                }}
+              />
+            </Box>
           </Box>
-        </Box>
+        )}
       </Box>
 
+      {/* Title Sections - ทำ responsive ด้วย */}
       {/* Closed Section */}
       <Box
         sx={{
           backgroundColor: "#EAF5FF",
-          p: 2,
+          p: isMobile ? 1.5 : 2,
           color: "#1120A3",
           textAlign: "center",
-          fontSize: "20px",
+          fontSize: isMobile ? "16px" : isTablet ? "18px" : "20px",
           fontWeight: "bold",
+          lineHeight: 1.4,
         }}
       >
         รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี
         <br />
         ประจำปีงบประมาณ 2568 ตั้งแต่วันที่ 1 ตุลาคม 2567 - 31 ธันวาคม 2567
         <br />
-        สถานะ ยุติแล้ว
+        สถานะ ยุติแล้ว ({closedData.length} รายการ)
       </Box>
-      <Box sx={{ overflowX: "auto", px: 2, pb: 4 }}>
-        {renderTable(closedData)}
-      </Box>
+      <Box sx={{ px: isMobile ? 1 : 2, pb: 4 }}>{renderTable(closedData)}</Box>
 
       {/* Ongoing Section */}
       <Box
         sx={{
           backgroundColor: "#FEECEC",
-          p: 2,
+          p: isMobile ? 1.5 : 2,
           color: "#D32F2F",
           textAlign: "center",
-          fontSize: "20px",
+          fontSize: isMobile ? "16px" : isTablet ? "18px" : "20px",
           fontWeight: "bold",
+          lineHeight: 1.4,
         }}
       >
         รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี
         <br />
         ประจำปีงบประมาณ 2568 ตั้งแต่วันที่ 1 ตุลาคม 2567 - 31 ธันวาคม 2567
         <br />
-        สถานะ อยู่ระหว่างดำเนินการ
+        สถานะ อยู่ระหว่างดำเนินการ ({ongoingData.length} รายการ)
       </Box>
-      <Box sx={{ overflowX: "auto", px: 2, pb: 4 }}>
-        {renderTable(ongoingData)}
-      </Box>
+      <Box sx={{ px: isMobile ? 1 : 2, pb: 4 }}>{renderTable(ongoingData)}</Box>
     </Container>
   );
 };

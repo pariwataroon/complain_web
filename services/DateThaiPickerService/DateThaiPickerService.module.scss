@@ -117,9 +117,43 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   pointer-events: none;
 }
 
-// ← Portal overlay สำหรับ Calendar popup
-.portalOverlay {
-  pointer-events: auto;
+// ← เพิ่ม Backdrop สำหรับ overlay
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99998;
+  backdrop-filter: blur(2px);
+}
+
+// ← Container สำหรับจัดกลางจอ
+.centeredPopup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 20px;
+  box-sizing: border-box;
+
+  @media (max-width: 599px) {
+    padding: 16px;
+  }
+
+  @media (max-width: 460px) {
+    padding: 12px;
+  }
+
+  @media (max-width: 360px) {
+    padding: 10px;
+  }
 }
 
 .popupCalendar {
@@ -128,34 +162,35 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   box-shadow: $shadow;
   border: 1px solid #0f67b1;
   padding: 16px;
-  animation: slideDown 0.3s ease-out;
+  animation: modalSlideIn 0.3s ease-out;
   width: 100%;
-  max-width: 320px;
-  min-width: 280px;
+  max-width: 380px; // ← เพิ่มขนาดเล็กน้อย
+  min-width: 320px;
   font-family: "Roboto", "Helvetica", "Arial", sans-serif;
   box-sizing: border-box;
   position: relative;
-  z-index: 99999; // ← สูงสุด
+  max-height: 90vh; // ← จำกัดความสูงไม่ให้เกิน viewport
+  overflow-y: auto; // ← เพิ่ม scroll ถ้าจำเป็น
 
-  // ← สำหรับ Mobile (xs) เท่านั้น
   @media (max-width: 599px) {
-    max-width: calc(100vw - 20px);
+    max-width: calc(100vw - 32px);
     min-width: 280px;
-    padding: 12px;
+    padding: 14px;
     border-radius: 12px;
+  }
 
-    // ← สำหรับหน้าจอเล็กมาก
-    @media (max-width: 360px) {
-      max-width: calc(100vw - 16px);
-      min-width: 260px;
-      padding: 10px;
-    }
+  @media (max-width: 460px) {
+    max-width: calc(100vw - 24px);
+    min-width: 260px;
+    padding: 12px;
+    border-radius: 10px;
+  }
 
-    @media (max-width: 320px) {
-      max-width: calc(100vw - 12px);
-      min-width: 240px;
-      padding: 8px;
-    }
+  @media (max-width: 360px) {
+    max-width: calc(100vw - 20px);
+    min-width: 240px;
+    padding: 10px;
+    border-radius: 8px;
   }
 }
 
@@ -266,12 +301,23 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   }
 }
 
-// Month Selector
+// Month Selector - แก้ไขหลัก
 .monthSelector {
   margin-bottom: 16px;
+  width: 100%;
 
   @media (max-width: 599px) {
     margin-bottom: 12px;
+  }
+
+  @media (max-width: 460px) {
+    margin-bottom: 10px;
+    padding: 0 2px;
+  }
+
+  @media (max-width: 360px) {
+    margin-bottom: 8px;
+    padding: 0 1px;
   }
 }
 
@@ -279,9 +325,32 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 6px;
+  max-width: 100%;
+  margin: 0 auto;
 
   @media (max-width: 599px) {
     gap: 4px;
+  }
+
+  @media (max-width: 460px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3px;
+    padding: 0 4px;
+    max-width: calc(100% - 8px);
+  }
+
+  @media (max-width: 360px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2px;
+    padding: 0 2px;
+    max-width: calc(100% - 4px);
+  }
+
+  @media (max-width: 320px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    padding: 0 1px;
+    max-width: calc(100% - 2px);
   }
 }
 
@@ -297,6 +366,10 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   transition: all 0.2s ease;
   font-family: "Roboto", "Helvetica", "Arial", sans-serif;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 
   &:hover {
     background: $hover-color;
@@ -318,6 +391,24 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   @media (max-width: 599px) {
     font-size: 11px;
     padding: 4px 6px;
+  }
+
+  @media (max-width: 460px) {
+    font-size: 10px;
+    padding: 3px 4px;
+    border-radius: 4px;
+  }
+
+  @media (max-width: 360px) {
+    font-size: 9px;
+    padding: 2px 3px;
+    border-radius: 3px;
+  }
+
+  @media (max-width: 320px) {
+    font-size: 8px;
+    padding: 2px 2px;
+    border-radius: 3px;
   }
 }
 
@@ -594,15 +685,15 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   }
 }
 
-// Animations
-@keyframes slideDown {
+// Animations - แก้ไข animation ใหม่
+@keyframes modalSlideIn {
   from {
     opacity: 0;
-    transform: translateY(-10px) scale(0.95);
+    transform: scale(0.9) translateY(-20px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 

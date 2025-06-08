@@ -27,6 +27,7 @@ const DateThaiPickerService = ({
     width: 0,
   });
   const [isMounted, setIsMounted] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false); // ← เพิ่ม state สำหรับตรวจสอบขนาดหน้าจอ
 
   const inputRef = useRef(null);
   const popupRef = useRef(null);
@@ -52,6 +53,23 @@ const DateThaiPickerService = ({
   // ตรวจสอบ client-side mounting
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  // ← เพิ่ม useEffect สำหรับตรวจสอบขนาดหน้าจอ
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerWidth <= 460);
+    };
+
+    // ตรวจสอบครั้งแรก
+    checkScreenSize();
+
+    // เพิ่ม event listener สำหรับ resize
+    window.addEventListener("resize", checkScreenSize);
+
+    return () => {
+      window.removeEventListener("resize", checkScreenSize);
+    };
   }, []);
 
   // แปลงปี ค.ศ. เป็น พ.ศ.
@@ -92,9 +110,9 @@ const DateThaiPickerService = ({
     return true;
   };
 
-  // คำนวณตำแหน่งของ input
+  // คำนวณตำแหน่งของ input (เฉพาะหน้าจอใหญ่)
   const calculatePosition = () => {
-    if (inputRef.current) {
+    if (inputRef.current && !isSmallScreen) {
       const rect = inputRef.current.getBoundingClientRect();
       const scrollTop =
         window.pageYOffset || document.documentElement.scrollTop;
@@ -237,30 +255,47 @@ const DateThaiPickerService = ({
       }
     };
 
+    const handleEscKey = (event) => {
+      if (event.key === "Escape" && isOpen) {
+        setIsOpen(false);
+        setShowYearSelector(false);
+      }
+    };
+
+    // ← แก้ไขการจัดการ scroll สำหรับหน้าจอใหญ่
     const handleScroll = () => {
-      if (isOpen) {
+      if (isOpen && !isSmallScreen) {
         calculatePosition();
       }
     };
 
     const handleResize = () => {
-      if (isOpen) {
+      if (isOpen && !isSmallScreen) {
         calculatePosition();
       }
     };
 
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      window.addEventListener("scroll", handleScroll, true);
-      window.addEventListener("resize", handleResize);
+      document.addEventListener("keydown", handleEscKey);
+
+      // ← เฉพาะหน้าจอเล็กถึงจะป้องกัน body scroll
+      if (isSmallScreen) {
+        document.body.style.overflow = "hidden";
+      } else {
+        window.addEventListener("scroll", handleScroll, true);
+        window.addEventListener("resize", handleResize);
+      }
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscKey);
       window.removeEventListener("scroll", handleScroll, true);
       window.removeEventListener("resize", handleResize);
+      document.body.style.overflow = "unset";
     };
-  }, [isOpen]);
+  }, [isOpen, isSmallScreen]);
 
   // อัพเดต selectedDate เมื่อ value prop เปลี่ยน
   useEffect(() => {
@@ -269,7 +304,7 @@ const DateThaiPickerService = ({
 
   const handleInputClick = () => {
     if (!disabled && !isReadOnly) {
-      if (!isOpen) {
+      if (!isOpen && !isSmallScreen) {
         calculatePosition();
       }
       setIsOpen(!isOpen);
@@ -277,144 +312,158 @@ const DateThaiPickerService = ({
     }
   };
 
-  // สร้าง popup calendar
+  // สร้าง popup calendar - แก้ไขให้แยกระหว่างหน้าจอเล็กและใหญ่
   const renderPopupCalendar = () => {
     if (!isOpen || !isMounted || typeof window === "undefined") return null;
 
     return createPortal(
-      <div
-        className={styles.portalOverlay}
-        style={{
-          position: "absolute",
-          top: inputPosition.top + 8,
-          left: inputPosition.left,
-          width: Math.max(inputPosition.width, 320),
-          zIndex: 99999,
-        }}
-      >
-        <div ref={popupRef} className={styles.popupCalendar}>
-          <div className={styles.calendarHeader}>
-            <button className={styles.navButton} onClick={goToPreviousMonth}>
-              ‹
-            </button>
-            <div className={styles.monthYearSelector}>
-              <button
-                className={styles.monthYearButton}
-                onClick={toggleYearSelector}
-              >
-                {thaiMonths[currentMonth]} {toBuddhistYear(currentYear)}
+      <>
+        {/* ← Backdrop/Overlay เฉพาะหน้าจอเล็ก */}
+        {isSmallScreen && <div className={styles.backdrop} />}
+
+        {/* ← Calendar popup */}
+        <div
+          className={
+            isSmallScreen ? styles.centeredPopup : styles.portalOverlay
+          }
+          style={
+            isSmallScreen
+              ? {} // ใช้ CSS สำหรับกลางจอ
+              : {
+                  position: "absolute",
+                  top: inputPosition.top + 8,
+                  left: inputPosition.left,
+                  width: Math.max(inputPosition.width, 320),
+                  zIndex: 99999,
+                }
+          }
+        >
+          <div ref={popupRef} className={styles.popupCalendar}>
+            <div className={styles.calendarHeader}>
+              <button className={styles.navButton} onClick={goToPreviousMonth}>
+                ‹
+              </button>
+              <div className={styles.monthYearSelector}>
+                <button
+                  className={styles.monthYearButton}
+                  onClick={toggleYearSelector}
+                >
+                  {thaiMonths[currentMonth]} {toBuddhistYear(currentYear)}
+                </button>
+              </div>
+              <button className={styles.navButton} onClick={goToNextMonth}>
+                ›
               </button>
             </div>
-            <button className={styles.navButton} onClick={goToNextMonth}>
-              ›
-            </button>
-          </div>
 
-          {/* Month and Year Selector */}
-          {showYearSelector && (
-            <div className={styles.selectorContainer}>
-              {/* Month Selector */}
-              <div className={styles.monthSelector}>
-                <h4 className={styles.selectorTitle}>เลือกเดือน</h4>
-                <div className={styles.monthGrid}>
-                  {thaiMonths.map((month, index) => (
-                    <button
-                      key={index}
-                      className={`${styles.monthItem} ${
-                        index === currentMonth ? styles.selected : ""
-                      }`}
-                      onClick={() => handleMonthSelect(index)}
+            {/* Month and Year Selector */}
+            {showYearSelector && (
+              <div className={styles.selectorContainer}>
+                {/* Month Selector */}
+                <div className={styles.monthSelector}>
+                  <h4 className={styles.selectorTitle}>เลือกเดือน</h4>
+                  <div className={styles.monthGrid}>
+                    {thaiMonths.map((month, index) => (
+                      <button
+                        key={index}
+                        className={`${styles.monthItem} ${
+                          index === currentMonth ? styles.selected : ""
+                        }`}
+                        onClick={() => handleMonthSelect(index)}
+                      >
+                        {month}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Year Selector */}
+                <div className={styles.yearSelector}>
+                  <h4 className={styles.selectorTitle}>เลือกปี</h4>
+                  <div className={styles.yearSelectWrapper}>
+                    <select
+                      className={styles.yearSelect}
+                      value={currentYear}
+                      onChange={(e) =>
+                        handleYearSelect(parseInt(e.target.value))
+                      }
                     >
-                      {month}
-                    </button>
+                      {generateYearOptions().map((yearOption) => (
+                        <option key={yearOption.value} value={yearOption.value}>
+                          {yearOption.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Calendar Grid */}
+            {!showYearSelector && (
+              <div className={styles.calendarGrid}>
+                <div className={styles.daysHeader}>
+                  {thaiDays.map((day, index) => (
+                    <div key={index} className={styles.dayHeader}>
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                <div className={styles.daysGrid}>
+                  {generateCalendar().map((day, index) => (
+                    <div
+                      key={index}
+                      className={getDayCellClasses(day)}
+                      onClick={() => handleDateClick(day)}
+                    >
+                      {day}
+                    </div>
                   ))}
                 </div>
               </div>
+            )}
 
-              {/* Year Selector */}
-              <div className={styles.yearSelector}>
-                <h4 className={styles.selectorTitle}>เลือกปี</h4>
-                <div className={styles.yearSelectWrapper}>
-                  <select
-                    className={styles.yearSelect}
-                    value={currentYear}
-                    onChange={(e) => handleYearSelect(parseInt(e.target.value))}
-                  >
-                    {generateYearOptions().map((yearOption) => (
-                      <option key={yearOption.value} value={yearOption.value}>
-                        {yearOption.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Calendar Grid */}
-          {!showYearSelector && (
-            <div className={styles.calendarGrid}>
-              <div className={styles.daysHeader}>
-                {thaiDays.map((day, index) => (
-                  <div key={index} className={styles.dayHeader}>
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              <div className={styles.daysGrid}>
-                {generateCalendar().map((day, index) => (
-                  <div
-                    key={index}
-                    className={getDayCellClasses(day)}
-                    onClick={() => handleDateClick(day)}
-                  >
-                    {day}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Footer with today button */}
-          <div className={styles.popupFooter}>
-            <button
-              className={styles.todayButton}
-              onClick={() => {
-                const today = new Date();
-                if (
-                  isDateSelectable(
-                    today.getFullYear(),
-                    today.getMonth(),
-                    today.getDate()
-                  )
-                ) {
-                  setCurrentMonth(today.getMonth());
-                  setCurrentYear(today.getFullYear());
+            {/* Footer with today button */}
+            <div className={styles.popupFooter}>
+              <button
+                className={styles.todayButton}
+                onClick={() => {
+                  const today = new Date();
+                  if (
+                    isDateSelectable(
+                      today.getFullYear(),
+                      today.getMonth(),
+                      today.getDate()
+                    )
+                  ) {
+                    setCurrentMonth(today.getMonth());
+                    setCurrentYear(today.getFullYear());
+                    setShowYearSelector(false);
+                    handleDateClick(today.getDate());
+                  }
+                }}
+              >
+                วันนี้
+              </button>
+              <button
+                className={styles.clearButton}
+                onClick={() => {
+                  setSelectedDate(null);
+                  if (onChange) {
+                    onChange(null);
+                  }
+                  goToCurrentMonth();
+                  setIsOpen(false);
                   setShowYearSelector(false);
-                  handleDateClick(today.getDate());
-                }
-              }}
-            >
-              วันนี้
-            </button>
-            <button
-              className={styles.clearButton}
-              onClick={() => {
-                setSelectedDate(null);
-                if (onChange) {
-                  onChange(null);
-                }
-                goToCurrentMonth();
-                setIsOpen(false);
-                setShowYearSelector(false);
-              }}
-            >
-              ล้าง
-            </button>
+                }}
+              >
+                ล้าง
+              </button>
+            </div>
           </div>
         </div>
-      </div>,
+      </>,
       document.body
     );
   };
