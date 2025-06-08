@@ -18,16 +18,35 @@ const DateThaiPickerService = ({
 }) => {
   const [selectedDate, setSelectedDate] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  // แก้ไขการตั้งค่า initial month และ year
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    if (value && value.month) {
+      return value.month - 1; // แปลงจาก 1-12 เป็น 0-11
+    }
+    return new Date().getMonth();
+  });
+  const [currentYear, setCurrentYear] = useState(() => {
+    if (value && value.year) {
+      return value.year;
+    }
+    return new Date().getFullYear();
+  });
   const [showYearSelector, setShowYearSelector] = useState(false);
   const [inputPosition, setInputPosition] = useState({
     top: 0,
     left: 0,
     width: 0,
+    // ← เพิ่ม properties สำหรับการปรับตำแหน่ง
+    isRightAligned: false,
+    availableSpace: {
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+    },
   });
   const [isMounted, setIsMounted] = useState(false);
-  const [isSmallScreen, setIsSmallScreen] = useState(false); // ← เพิ่ม state สำหรับตรวจสอบขนาดหน้าจอ
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
 
   const inputRef = useRef(null);
   const popupRef = useRef(null);
@@ -55,7 +74,7 @@ const DateThaiPickerService = ({
     setIsMounted(true);
   }, []);
 
-  // ← เพิ่ม useEffect สำหรับตรวจสอบขนาดหน้าจอ
+  // เพิ่ม useEffect สำหรับตรวจสอบขนาดหน้าจอ
   useEffect(() => {
     const checkScreenSize = () => {
       setIsSmallScreen(window.innerWidth <= 460);
@@ -110,7 +129,7 @@ const DateThaiPickerService = ({
     return true;
   };
 
-  // คำนวณตำแหน่งของ input (เฉพาะหน้าจอใหญ่)
+  // ← แก้ไขฟังก์ชันคำนวณตำแหน่งให้เป็น dynamic
   const calculatePosition = () => {
     if (inputRef.current && !isSmallScreen) {
       const rect = inputRef.current.getBoundingClientRect();
@@ -119,10 +138,58 @@ const DateThaiPickerService = ({
       const scrollLeft =
         window.pageXOffset || document.documentElement.scrollLeft;
 
+      // ขนาดของ popup calendar (ประมาณ)
+      const popupWidth = Math.max(rect.width, 320);
+      const popupHeight = 400; // ประมาณความสูงของ popup
+
+      // ขนาดของ viewport
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // คำนวณพื้นที่ว่างรอบๆ input
+      const availableSpace = {
+        left: rect.left,
+        right: viewportWidth - rect.right,
+        top: rect.top,
+        bottom: viewportHeight - rect.bottom,
+      };
+
+      // กำหนดตำแหน่ง left
+      let left = rect.left + scrollLeft;
+      let isRightAligned = false;
+
+      // ตรวจสอบว่าทะลุขอบขวาหรือไม่
+      if (left + popupWidth > viewportWidth) {
+        // ถ้าทะลุ ให้จัดชิดขวาของ input
+        left = rect.right + scrollLeft - popupWidth;
+        isRightAligned = true;
+
+        // ถ้ายังทะลุซ้าย ให้จัดให้อยู่ในขอบจอ
+        if (left < scrollLeft) {
+          left = scrollLeft + 10; // เว้นระยะจากขอบ 10px
+        }
+      }
+
+      // กำหนดตำแหน่ง top
+      let top = rect.bottom + scrollTop + 8;
+
+      // ตรวจสอบว่าทะลุขอบล่างหรือไม่
+      if (top + popupHeight > viewportHeight + scrollTop) {
+        // ถ้าทะลุ ให้แสดงด้านบนของ input
+        top = rect.top + scrollTop - popupHeight - 8;
+
+        // ถ้ายังทะลุด้านบน ให้จัดให้อยู่ในขอบจอ
+        if (top < scrollTop) {
+          top = scrollTop + 10; // เว้นระยะจากขอบ 10px
+        }
+      }
+
       setInputPosition({
-        top: rect.bottom + scrollTop,
-        left: rect.left + scrollLeft,
-        width: rect.width,
+        top,
+        left,
+        width: popupWidth,
+        isRightAligned,
+        availableSpace,
       });
     }
   };
@@ -241,6 +308,14 @@ const DateThaiPickerService = ({
     setCurrentYear(today.getFullYear());
   };
 
+  // เพิ่ม function สำหรับไปที่วันที่ที่เลือก
+  const goToSelectedDate = () => {
+    if (selectedDate && selectedDate.month && selectedDate.year) {
+      setCurrentMonth(selectedDate.month - 1); // แปลงจาก 1-12 เป็น 0-11
+      setCurrentYear(selectedDate.year);
+    }
+  };
+
   // ปิด popup เมื่อคลิกข้างนอก
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -262,7 +337,7 @@ const DateThaiPickerService = ({
       }
     };
 
-    // ← แก้ไขการจัดการ scroll สำหรับหน้าจอใหญ่
+    // ← แก้ไขการจัดการ scroll และ resize ให้คำนวณตำแหน่งใหม่
     const handleScroll = () => {
       if (isOpen && !isSmallScreen) {
         calculatePosition();
@@ -279,7 +354,7 @@ const DateThaiPickerService = ({
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleEscKey);
 
-      // ← เฉพาะหน้าจอเล็กถึงจะป้องกัน body scroll
+      // เฉพาะหน้าจอเล็กถึงจะป้องกัน body scroll
       if (isSmallScreen) {
         document.body.style.overflow = "hidden";
       } else {
@@ -297,13 +372,24 @@ const DateThaiPickerService = ({
     };
   }, [isOpen, isSmallScreen]);
 
-  // อัพเดต selectedDate เมื่อ value prop เปลี่ยน
+  // แก้ไข useEffect สำหรับอัพเดต selectedDate และ currentMonth/Year
   useEffect(() => {
     setSelectedDate(value);
+    // ถ้ามี value ให้ปรับ currentMonth และ currentYear ไปตาม value
+    if (value && value.month && value.year) {
+      setCurrentMonth(value.month - 1); // แปลงจาก 1-12 เป็น 0-11
+      setCurrentYear(value.year);
+    }
   }, [value]);
 
   const handleInputClick = () => {
     if (!disabled && !isReadOnly) {
+      // เมื่อเปิด popup ให้ไปที่วันที่ที่เลือกไว้ (ถ้ามี)
+      if (selectedDate && selectedDate.month && selectedDate.year) {
+        setCurrentMonth(selectedDate.month - 1);
+        setCurrentYear(selectedDate.year);
+      }
+
       if (!isOpen && !isSmallScreen) {
         calculatePosition();
       }
@@ -312,16 +398,16 @@ const DateThaiPickerService = ({
     }
   };
 
-  // สร้าง popup calendar - แก้ไขให้แยกระหว่างหน้าจอเล็กและใหญ่
+  // ← แก้ไข renderPopupCalendar ให้ใช้ตำแหน่งที่คำนวณแล้ว
   const renderPopupCalendar = () => {
     if (!isOpen || !isMounted || typeof window === "undefined") return null;
 
     return createPortal(
       <>
-        {/* ← Backdrop/Overlay เฉพาะหน้าจอเล็ก */}
+        {/* Backdrop/Overlay เฉพาะหน้าจอเล็ก */}
         {isSmallScreen && <div className={styles.backdrop} />}
 
-        {/* ← Calendar popup */}
+        {/* Calendar popup */}
         <div
           className={
             isSmallScreen ? styles.centeredPopup : styles.portalOverlay
@@ -331,10 +417,12 @@ const DateThaiPickerService = ({
               ? {} // ใช้ CSS สำหรับกลางจอ
               : {
                   position: "absolute",
-                  top: inputPosition.top + 8,
+                  top: inputPosition.top,
                   left: inputPosition.left,
-                  width: Math.max(inputPosition.width, 320),
+                  width: inputPosition.width,
                   zIndex: 99999,
+                  // ← เพิ่ม maxWidth เพื่อป้องกันการทะลุ
+                  maxWidth: `${window.innerWidth - 20}px`,
                 }
           }
         >
@@ -446,6 +534,15 @@ const DateThaiPickerService = ({
               >
                 วันนี้
               </button>
+              {/* ปุ่มไปที่วันที่ที่เลือก */}
+              {selectedDate && (
+                <button
+                  className={styles.goToSelectedButton}
+                  onClick={goToSelectedDate}
+                >
+                  ไปที่วันที่เลือก
+                </button>
+              )}
               <button
                 className={styles.clearButton}
                 onClick={() => {

@@ -184,6 +184,18 @@ const BottomRightService = () => {
             sx={{
               fontSize: { xs: "10px", md: "12px" },
               height: { xs: "24px", md: "32px" },
+              borderRadius: "8px", // เพิ่ม borderRadius
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: "#1976d2", // สีฟ้า border
+                borderRadius: "8px",
+              },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor: "#1565c0", // สีฟ้าเข้มเมื่อ hover
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                borderColor: "#1976d2", // สีฟ้าเมื่อ focus
+                borderWidth: "2px",
+              },
             }}
           >
             <MenuItem value="2567">2567</MenuItem>

@@ -1,15 +1,9 @@
 import React, { useRef, useState, useMemo } from "react";
-import {
-  Box,
-  Typography,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-} from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import Highcharts from "highcharts/highmaps";
 import HighchartsReact from "highcharts-react-official";
 import mapDataThailand from "@highcharts/map-collection/countries/th/th-all.geo.json";
+import SelectField from "@services/SelectField/SelectField";
 
 const provinceValues = {
   2564: [
@@ -186,17 +180,36 @@ const provinceValues = {
   ],
 };
 
-const years = [2564, 2565, 2566, 2567];
+// Options สำหรับ SelectField
+const provinceOptions = [
+  { value: "ทั้งหมด", label: "ทั้งหมด" },
+  { value: "th-bk", label: "กรุงเทพมหานคร" },
+  { value: "th-kr", label: "กระบี่" },
+  { value: "th-yl", label: "ยะลา" },
+  { value: "th-ct", label: "ชัยนาท" },
+  { value: "th-pt", label: "ประจวบคีรีขันธ์" },
+];
+
+const yearOptions = [
+  { value: "2564", label: "2564" },
+  { value: "2565", label: "2565" },
+  { value: "2566", label: "2566" },
+  { value: "2567", label: "2567" },
+];
 
 const TopLeftService = () => {
   const chartRef = useRef(null);
-  const [selectedStartYear, setSelectedStartYear] = useState(2564);
-  const [selectedEndYear, setSelectedEndYear] = useState(2567);
+  const [selectedStartYear, setSelectedStartYear] = useState("2564");
+  const [selectedEndYear, setSelectedEndYear] = useState("2567");
   const [selectedProvince, setSelectedProvince] = useState("ทั้งหมด");
 
   const mergedData = useMemo(() => {
     const dataMap = {};
-    for (let year = selectedStartYear; year <= selectedEndYear; year++) {
+    for (
+      let year = parseInt(selectedStartYear);
+      year <= parseInt(selectedEndYear);
+      year++
+    ) {
       provinceValues[year]?.forEach((item) => {
         dataMap[item["hc-key"]] = (dataMap[item["hc-key"]] || 0) + item.value;
       });
@@ -211,7 +224,7 @@ const TopLeftService = () => {
     () => ({
       chart: {
         map: mapDataThailand,
-        height: 1000,
+        height: 740,
       },
       title: {
         text: "",
@@ -251,6 +264,28 @@ const TopLeftService = () => {
     [mergedData, selectedStartYear, selectedEndYear]
   );
 
+  const handleProvinceChange = (e) => {
+    setSelectedProvince(e.target.value);
+  };
+
+  const handleStartYearChange = (e) => {
+    const newStartYear = e.target.value;
+    setSelectedStartYear(newStartYear);
+    // ถ้าปีเริ่มต้นมากกว่าปีสิ้นสุด ให้ปรับปีสิ้นสุดให้เท่ากับปีเริ่มต้น
+    if (parseInt(newStartYear) > parseInt(selectedEndYear)) {
+      setSelectedEndYear(newStartYear);
+    }
+  };
+
+  const handleEndYearChange = (e) => {
+    const newEndYear = e.target.value;
+    setSelectedEndYear(newEndYear);
+    // ถ้าปีสิ้นสุดน้อยกว่าปีเริ่มต้น ให้ปรับปีเริ่มต้นให้เท่ากับปีสิ้นสุด
+    if (parseInt(newEndYear) < parseInt(selectedStartYear)) {
+      setSelectedStartYear(newEndYear);
+    }
+  };
+
   return (
     <Box>
       <Box
@@ -262,52 +297,37 @@ const TopLeftService = () => {
           gap: 2,
         }}
       >
-        <FormControl size="small">
-          <InputLabel>จังหวัด</InputLabel>
-          <Select
-            value={selectedProvince}
+        <Box sx={{ minWidth: 140 }}>
+          <SelectField
             label="จังหวัด"
-            onChange={(e) => setSelectedProvince(e.target.value)}
-            sx={{ minWidth: 140 }}
-          >
-            <MenuItem value="ทั้งหมด">ทั้งหมด</MenuItem>
-            <MenuItem value="th-bk">กรุงเทพมหานคร</MenuItem>
-            <MenuItem value="th-kr">กระบี่</MenuItem>
-            <MenuItem value="th-yl">ยะลา</MenuItem>
-            <MenuItem value="th-ct">ชัยนาท</MenuItem>
-            <MenuItem value="th-pt">ประจวบคีรีขันธ์</MenuItem>
-          </Select>
-        </FormControl>
+            options={provinceOptions}
+            value={selectedProvince}
+            onChange={handleProvinceChange}
+            name="province"
+          />
+        </Box>
 
-        <FormControl size="small">
-          <InputLabel>ปีเริ่มต้น</InputLabel>
-          <Select
-            value={selectedStartYear}
+        <Box sx={{ minWidth: 120 }}>
+          <SelectField
             label="ปีเริ่มต้น"
-            onChange={(e) => setSelectedStartYear(Number(e.target.value))}
-          >
-            {years.map((y) => (
-              <MenuItem key={y} value={y}>
-                {y}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            options={yearOptions}
+            value={selectedStartYear}
+            onChange={handleStartYearChange}
+            name="startYear"
+          />
+        </Box>
 
-        <FormControl size="small">
-          <InputLabel>ปีสิ้นสุด</InputLabel>
-          <Select
-            value={selectedEndYear}
+        <Box sx={{ minWidth: 120 }}>
+          <SelectField
             label="ปีสิ้นสุด"
-            onChange={(e) => setSelectedEndYear(Number(e.target.value))}
-          >
-            {years.map((y) => (
-              <MenuItem key={y} value={y}>
-                {y}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            options={yearOptions.filter(
+              (year) => parseInt(year.value) >= parseInt(selectedStartYear)
+            )}
+            value={selectedEndYear}
+            onChange={handleEndYearChange}
+            name="endYear"
+          />
+        </Box>
       </Box>
 
       <HighchartsReact

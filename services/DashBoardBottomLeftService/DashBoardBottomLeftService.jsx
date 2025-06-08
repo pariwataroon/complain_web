@@ -36,6 +36,7 @@ const BottomLeftService = () => {
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
   const [selectedDepartment, setSelectedDepartment] = useState("1");
+  const [selectedYear, setSelectedYear] = useState("2568");
   const data = chartDataByDepartment[selectedDepartment] || [];
 
   useEffect(() => {
@@ -196,10 +197,23 @@ const BottomLeftService = () => {
               }}
             >
               <Select
-                defaultValue="2568"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
                 sx={{
                   fontSize: { xs: "10px", md: "12px" },
                   height: { xs: "24px", md: "32px" },
+                  borderRadius: "8px", // เพิ่ม borderRadius
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#1976d2", // สีฟ้า border
+                    borderRadius: "8px",
+                  },
+                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#1565c0", // สีฟ้าเข้มเมื่อ hover
+                  },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#1976d2", // สีฟ้าเมื่อ focus
+                    borderWidth: "2px",
+                  },
                 }}
               >
                 <MenuItem value="2567">2567</MenuItem>
@@ -232,6 +246,18 @@ const BottomLeftService = () => {
                 sx={{
                   fontSize: { xs: "10px", md: "12px" },
                   height: { xs: "24px", md: "32px" },
+                  borderRadius: "8px", // เพิ่ม borderRadius
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#1976d2", // สีฟ้า border
+                    borderRadius: "8px",
+                  },
+                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#1565c0", // สีฟ้าเข้มเมื่อ hover
+                  },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#1976d2", // สีฟ้าเมื่อ focus
+                    borderWidth: "2px",
+                  },
                 }}
               >
                 {[

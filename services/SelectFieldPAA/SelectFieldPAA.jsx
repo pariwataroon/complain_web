@@ -6,14 +6,19 @@ import {
   Typography,
   FormHelperText,
 } from "@mui/material";
-import { GetProvincesSelect, GetAmphuresSelect, GetDistrictsSelect, GetZipcodeSelect } from "@pages/api/allselect/allselect";
+import {
+  GetProvincesSelect,
+  GetAmphuresSelect,
+  GetDistrictsSelect,
+  GetZipcodeSelect,
+} from "@pages/api/allselect/allselect";
 import styles from "./SelectFieldPAA.module.scss";
 
 const SelectFieldPAA = ({
   label,
   inputLabel,
   value,
-  onChange = () => { },
+  onChange = () => {},
   name,
   districtCode,
   amphureCode,
@@ -35,16 +40,16 @@ const SelectFieldPAA = ({
   const [loading, setLoading] = useState(false);
 
   const getLabelText = (label) => {
-    if (typeof label === 'string') {
+    if (typeof label === "string") {
       return label;
     }
     if (label && label.props && label.props.children) {
       if (Array.isArray(label.props.children)) {
-        return label.props.children[0] || '';
+        return label.props.children[0] || "";
       }
       return label.props.children;
     }
-    return '';
+    return "";
   };
 
   const labelText = getLabelText(label);
@@ -56,15 +61,17 @@ const SelectFieldPAA = ({
     ...options,
   ];
 
-  const selectedValue = (typeof value === "object" && value !== null)
-    ? (value?.value ?? "")
-    : (value ?? "");
+  const selectedValue =
+    typeof value === "object" && value !== null
+      ? value?.value ?? ""
+      : value ?? "";
 
-  const isFieldDisabled = disabled || loading || (
+  const isFieldDisabled =
+    disabled ||
+    loading ||
     (labelText === "อำเภอ/เขต" && !provinceCode) ||
     (labelText === "ตำบล/แขวง" && !amphureCode) ||
-    (labelText === "รหัสไปรษณีย์" && !amphureCode)
-  );
+    (labelText === "รหัสไปรษณีย์" && !amphureCode);
 
   useEffect(() => {
     if (labelText === "จังหวัด") {
@@ -74,11 +81,22 @@ const SelectFieldPAA = ({
           const response = await GetProvincesSelect();
 
           const finalResponse = Array.isArray(response) ? response : [];
-          const mapped = finalResponse.map(item => {
-            if (typeof item === 'object' && item !== null) {
+          const mapped = finalResponse.map((item) => {
+            if (typeof item === "object" && item !== null) {
               return {
-                value: item.value || item.id || item.code || item.province_code || item.amphure_code || item.district_code,
-                label: item.label || item.name || item.title || item.name_th || String(item)
+                value:
+                  item.value ||
+                  item.id ||
+                  item.code ||
+                  item.province_code ||
+                  item.amphure_code ||
+                  item.district_code,
+                label:
+                  item.label ||
+                  item.name ||
+                  item.title ||
+                  item.name_th ||
+                  String(item),
               };
             }
             return { value: item, label: String(item) };
@@ -98,7 +116,6 @@ const SelectFieldPAA = ({
   }, [labelText]);
 
   useEffect(() => {
-
     if (labelText === "จังหวัด") {
       return;
     }
@@ -135,17 +152,15 @@ const SelectFieldPAA = ({
         } else if (labelText === "ตำบล/แขวง" && amphureCode) {
           response = await GetDistrictsSelect(amphureCode);
         } else if (labelText === "รหัสไปรษณีย์" && amphureCode) {
-
           const districts = await GetDistrictsSelect(amphureCode);
 
           const zipMap = new Map();
           districts.forEach((item) => {
-
             if (item.zip_code && !zipMap.has(item.zip_code)) {
               zipMap.set(item.zip_code, {
                 value: item.zip_code,
                 label: item.zip_code,
-                originalData: item 
+                originalData: item,
               });
             }
           });
@@ -154,27 +169,39 @@ const SelectFieldPAA = ({
         }
 
         const finalResponse = Array.isArray(response) ? response : [];
-        const mapped = finalResponse.map(item => {
-          if (typeof item === 'object' && item !== null) {
+        const mapped = finalResponse.map((item) => {
+          if (typeof item === "object" && item !== null) {
             if (labelText === "รหัสไปรษณีย์") {
               if (item.value && item.label) {
                 return {
                   value: item.value,
-                  label: item.label
+                  label: item.label,
                 };
               }
-              const zipValue = item.zip_code || item.zipcode || item.postal_code;
+              const zipValue =
+                item.zip_code || item.zipcode || item.postal_code;
               if (zipValue) {
                 return {
                   value: zipValue,
-                  label: zipValue
+                  label: zipValue,
                 };
               }
             }
 
             return {
-              value: item.value || item.id || item.code || item.province_code || item.amphure_code || item.district_code,
-              label: item.label || item.name || item.title || item.name_th || String(item)
+              value:
+                item.value ||
+                item.id ||
+                item.code ||
+                item.province_code ||
+                item.amphure_code ||
+                item.district_code,
+              label:
+                item.label ||
+                item.name ||
+                item.title ||
+                item.name_th ||
+                String(item),
             };
           }
           return { value: item, label: String(item) };
@@ -201,7 +228,6 @@ const SelectFieldPAA = ({
       return opt === selectedOptionValue;
     });
 
-
     if (selectedOption && selectedOption.value !== "") {
       onChange(selectedOption);
     } else {
@@ -219,9 +245,7 @@ const SelectFieldPAA = ({
 
     if (!selectedOption || selectedOption.value === "") {
       return (
-        <span className={styles.selectPlaceholder}>
-          {placeholderText}
-        </span>
+        <span className={styles.selectPlaceholder}>{placeholderText}</span>
       );
     }
 
@@ -245,7 +269,7 @@ const SelectFieldPAA = ({
             color: error ? "#ef4444" : "#334155",
             fontWeight: 600,
             mb: 1,
-            opacity: isFieldDisabled ? 0.6 : 1
+            opacity: isFieldDisabled ? 0.6 : 1,
           }}
         >
           {label}
@@ -272,26 +296,26 @@ const SelectFieldPAA = ({
         }}
         InputProps={{
           sx: {
-            height: "56px",
+            height: "40px",
             borderRadius: "12px",
             color: "#000000",
             backgroundColor: isFieldDisabled ? "#f8fafc" : "transparent",
             "& fieldset": {
-              borderColor: error ? "#ef4444" : "#d1d5db",
-              borderWidth: error ? "2px" : "1px",
+              borderColor: error ? "#ef4444" : "#1120A3", // เปลี่ยนเป็นสี #1120A3
+              borderWidth: error ? "2px" : "1.5px",
             },
             "&:hover fieldset": {
-              borderColor: error ? "#dc2626" : "#7dd3fc",
+              borderColor: error ? "#dc2626" : "#0d1a85", // สีน้ำเงินเข้มเมื่อ hover
             },
             "&.Mui-focused fieldset": {
-              borderColor: error ? "#ef4444" : "#0ea5e9",
+              borderColor: error ? "#ef4444" : "#1120A3", // สี #1120A3 เมื่อ focus
               borderWidth: "2px",
               boxShadow: error
                 ? "0 0 0 3px rgba(239, 68, 68, 0.1)"
-                : "0 0 0 3px rgba(14, 165, 233, 0.1)",
+                : "0 0 0 3px rgba(17, 32, 163, 0.15)", // shadow สี #1120A3
             },
             "& .MuiSelect-icon": {
-              color: error ? "#ef4444" : "#64748b",
+              color: error ? "#ef4444" : "#1120A3", // ไอคอนสี #1120A3
             },
           },
           ...otherProps.InputProps,
