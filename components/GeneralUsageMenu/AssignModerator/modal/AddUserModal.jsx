@@ -17,6 +17,7 @@ import IDCardInput from "@services/IDCardInput/IDCardInput";
 import InputPhone from "@services/InputPhone/InputPhone";
 import ButtonService from "@services/ButtonService/ButtonService";
 import useCRUDFormUsers from "@hooks/admin/setting/useCRUDFormUsers";
+import { alertSuccess } from "@utils/Alerts";
 import styles from "./AddUserModal.module.scss";
 
 const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
@@ -25,11 +26,12 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
     handleSubmit,
     control,
     errors,
-    onSubmit,
+    onSubmit: originalOnSubmit,
     watch,
     isSubmitting,
     setValue,
     reset,
+    getValues, // เพิ่ม getValues เพื่อดึงข้อมูลฟอร์ม
   } = useCRUDFormUsers(editingUser, onUserUpdated);
 
   const provinceCode = watch("province")?.value;
@@ -39,6 +41,36 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
   const amphureCode2 = watch("districts2")?.value;
 
   const syncAddress = watch("syncAddress");
+
+  // ← แก้ไข handleFormSubmit ให้ไม่ต้องรับ parameter จาก react-hook-form
+  const handleFormSubmit = async () => {
+    try {
+      console.log("🚀 Form submit started...");
+
+      // ดึงข้อมูลจากฟอร์มด้วย getValues()
+      const formData = getValues();
+      console.log("📋 Form data:", formData);
+
+      // เรียก originalOnSubmit จาก hook
+      console.log("📤 Calling originalOnSubmit...");
+      await originalOnSubmit(formData);
+
+      console.log("✅ Submit successful!");
+
+      // ปิด Modal
+      console.log("🚪 Closing modal...");
+      onClose();
+      console.log("🔔 Showing success alert...");
+      alertSuccess(
+        editingUser
+          ? "แก้ไขข้อมูลผู้ใช้งานสำเร็จ"
+          : "เพิ่มข้อมูลผู้ใช้งานสำเร็จ"
+      );
+    } catch (error) {
+      console.error("❌ Error submitting form:", error);
+      // หากต้องการแจ้งเตือนข้อผิดพลาดด้วย สามารถเพิ่ม alertError ได้
+    }
+  };
 
   // Helper function to clear form
   const clearForm = () => {
@@ -213,7 +245,8 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
           backgroundColor: "#ffffff",
         }}
       >
-        <form onSubmit={handleSubmit(onSubmit)}>
+        {/* ← ลบ onSubmit ออกจาก form element */}
+        <form>
           <Grid container spacing={2}>
             {/* Row 1 */}
             <Grid item xs={12} sm={4}>
@@ -227,9 +260,7 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
               <TextfieldService
                 fullWidth
                 placeholder="กรุณากรอกชื่อผู้ใช้งาน"
-                {...register("username", {
-                  required: "กรุณากรอกชื่อผู้ใช้งาน",
-                })}
+                {...register("username")}
               />
               {editingUser && (
                 <Typography
@@ -256,9 +287,7 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
               <TextfieldService
                 fullWidth
                 placeholder="กรุณากรอกชื่อผู้ใช้งาน"
-                {...register("full_name", {
-                  required: "กรุณากรอกชื่อผู้ใช้งาน",
-                })}
+                {...register("full_name")}
               />
               {errors.full_name && (
                 <Typography color="error">
@@ -278,7 +307,6 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
               <Controller
                 name="group"
                 control={control}
-                rules={{ required: "กรุณาเลือกกลุ่มผู้ใช้งาน" }}
                 render={({ field: { value, onChange, ...field } }) => {
                   console.log(
                     "🎛️ SelectMenuService render - Current value:",
@@ -321,7 +349,7 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
               <TextfieldService
                 fullWidth
                 placeholder="ตำแหน่ง"
-                {...register("role", { required: "กรุณากรอกตำแหน่ง" })}
+                {...register("role")}
               />
               {errors.role && (
                 <Typography color="error">{errors.role.message}</Typography>
@@ -404,16 +432,14 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
                     <InputText
                       label="ชื่อ - นามสกุล"
                       placeholder="ชื่อ - นามสกุล"
-                      {...register("name", {
-                        required: "กรุณากรอกชื่อ - นามสกุล",
-                      })}
+                      {...register("name")}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <InputText
                       label="ที่อยู่ที่ตามบัตรประชาชน"
                       placeholder="ที่อยู่ที่ตามบัตรประชาชน"
-                      {...register("address", { required: "กรุณากรอกที่อยู่" })}
+                      {...register("address")}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -449,7 +475,7 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
                     <InputText
                       label="อีเมล"
                       placeholder="อีเมล"
-                      {...register("email", { required: "กรุณากรอกอีเมล" })}
+                      {...register("email")}
                     />
                   </Grid>
                   <Grid item xs={12} sm={3}>
@@ -508,7 +534,7 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
                   <InputText
                     label="ที่อยู่ที่สามารถติดต่อได้"
                     placeholder="ที่อยู่ที่สามารถติดต่อได้"
-                    {...register("address2", { required: "กรุณากรอกที่อยู่" })}
+                    {...register("address2")}
                   />
                   {errors.address2 && (
                     <Typography color="error">
@@ -605,10 +631,11 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
               />
             </Grid>
             <Grid item xs={12} sm={6}>
+              {/* ← เปลี่ยนจาก type="submit" เป็น onClick={handleFormSubmit} */}
               <ButtonService
                 label={editingUser ? "บันทึกการแก้ไข" : "บันทึก"}
                 color="บันทึก"
-                onClick={handleSubmit(onSubmit)}
+                onClick={handleFormSubmit}
                 disabled={isSubmitting}
                 sx={{
                   borderRadius: "15px",
