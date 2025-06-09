@@ -12,34 +12,72 @@ import {
   TablePagination,
   Container,
   IconButton,
+  TextField,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 
 import styles from "./TableListTab.module.scss";
-import InputText from "@services/InputText/InputText";
-import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
 
-const TableListAgency = ({
+// ← เพิ่ม try-catch และ fallback สำหรับ imports
+let InputText, SelectField, ExportButton, DateThaiPickerService;
+
+try {
+  InputText = require("@services/InputText/InputText").default;
+} catch (e) {
+  console.warn("InputText import failed:", e);
+  InputText = null;
+}
+
+try {
+  SelectField = require("@services/SelectField/SelectField").default;
+} catch (e) {
+  console.warn("SelectField import failed:", e);
+  SelectField = null;
+}
+
+try {
+  ExportButton = require("@services/ExportButton/ExportButton").default;
+} catch (e) {
+  console.warn("ExportButton import failed:", e);
+  ExportButton = null;
+}
+
+try {
+  DateThaiPickerService =
+    require("@services/DateThaiPickerService/DateThaiPickerService").default;
+} catch (e) {
+  console.warn("DateThaiPickerService import failed:", e);
+  DateThaiPickerService = null;
+}
+
+const TableListTab = ({
   summaryData = [],
   pendingData = [],
-  onSearch = () => { },
+  onSearch = () => {},
   filterFields = [],
   navigateTo = "",
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
+
   // tab state
   const [tabIndex, setTabIndex] = useState(0);
+
   const handleTabChange = (_, idx) => {
     setTabIndex(idx);
     setPage(0);
   };
 
-  // filters state
+  // filters state - แก้ไขให้รองรับทั้ง string และ object (สำหรับ date)
   const initialFilters = filterFields.reduce((acc, f) => {
-    acc[f.name] = "";
+    acc[f.name] = f.type === "date" ? null : "";
     return acc;
   }, {});
   const [filters, setFilters] = useState(initialFilters);
@@ -96,17 +134,40 @@ const TableListAgency = ({
     [currentData, page, rowsPerPage]
   );
 
-  // filter handlers
-  const handleChangeFilter = (name) => (e) =>
-    setFilters({ ...filters, [name]: e.target.value });
+  // ← ปรับปรุง filter handlers ให้รองรับ date และ debug ดีขึ้น
+  const handleChangeFilter = (name) => (value) => {
+    console.log(`🔧 Filter changed: ${name} =`, value);
+
+    let newValue;
+    // ถ้าเป็น event object (จาก InputText/SelectField/TextField)
+    if (value && value.target) {
+      newValue = value.target.value;
+    } else {
+      // ถ้าเป็นค่าโดยตรง (จาก DateThaiPickerService)
+      newValue = value;
+    }
+
+    console.log(`🔧 Setting filter ${name} to:`, newValue);
+    setFilters((prev) => {
+      const updated = { ...prev, [name]: newValue };
+      console.log("🔧 Updated filters:", updated);
+      return updated;
+    });
+  };
+
   const handleSearchClick = () => {
+    console.log("🔍 Search button clicked with filters:", filters);
     setPage(0);
     onSearch(filters);
   };
+
   const handleClearClick = () => {
-    setFilters(initialFilters);
+    console.log("🧹 Clear button clicked");
+    const clearedFilters = { ...initialFilters };
+    console.log("🧹 Cleared filters:", clearedFilters);
+    setFilters(clearedFilters);
     setPage(0);
-    onSearch(initialFilters);
+    onSearch(clearedFilters);
   };
 
   // pagination handlers
@@ -127,6 +188,119 @@ const TableListAgency = ({
     return acc;
   }, {});
 
+  // ← ปรับปรุงฟังก์ชัน renderFilterField ให้มี fallback และ debug
+  const renderFilterField = (field) => {
+    console.log(`🎨 Rendering field: ${field.name} (${field.type})`);
+
+    switch (field.type) {
+      case "date":
+        if (DateThaiPickerService) {
+          console.log(`📅 Using DateThaiPickerService for ${field.name}`);
+          return (
+            <DateThaiPickerService
+              label={field.label}
+              value={filters[field.name]}
+              onChange={handleChangeFilter(field.name)}
+              placeholder={field.placeholder || "กรุณาเลือกวันที่"}
+              minDate={field.minDate}
+              maxDate={field.maxDate}
+            />
+          );
+        }
+        // ← Fallback เป็น TextField
+        console.log(`📅 Using TextField fallback for ${field.name}`);
+        return (
+          <TextField
+            fullWidth
+            label={field.label}
+            type="date"
+            value={filters[field.name] || ""}
+            onChange={handleChangeFilter(field.name)}
+            placeholder={field.placeholder}
+            InputLabelProps={{ shrink: true }}
+            sx={{ mb: 2 }}
+          />
+        );
+
+      case "select":
+        if (SelectField) {
+          console.log(`📋 Using SelectField for ${field.name}`);
+          return (
+            <SelectField
+              fullWidth
+              label={field.label}
+              options={field.options || []}
+              value={filters[field.name]}
+              onChange={handleChangeFilter(field.name)}
+              name={field.name}
+            />
+          );
+        }
+        // ← Fallback เป็น TextField
+        console.log(`📋 Using TextField fallback for ${field.name}`);
+        return (
+          <TextField
+            fullWidth
+            label={field.label}
+            value={filters[field.name]}
+            onChange={handleChangeFilter(field.name)}
+            placeholder={field.placeholder}
+            sx={{ mb: 2 }}
+          />
+        );
+
+      default: // "text" หรือไม่ระบุ type
+        if (InputText) {
+          console.log(`📝 Using InputText for ${field.name}`);
+          return (
+            <InputText
+              fullWidth
+              label={field.label}
+              value={filters[field.name]}
+              onChange={handleChangeFilter(field.name)}
+              placeholder={field.placeholder}
+            />
+          );
+        }
+        // ← Fallback เป็น TextField
+        console.log(`📝 Using TextField fallback for ${field.name}`);
+        return (
+          <TextField
+            fullWidth
+            label={field.label}
+            value={filters[field.name]}
+            onChange={handleChangeFilter(field.name)}
+            placeholder={field.placeholder}
+            sx={{ mb: 2 }}
+          />
+        );
+    }
+  };
+
+  // ← Fallback สำหรับ ExportButton
+  const renderExportButton = (label, onClick) => {
+    if (ExportButton) {
+      return <ExportButton label={label} onClick={onClick} />;
+    }
+    // ← Fallback เป็น button ธรรมดา
+    return (
+      <button
+        onClick={onClick}
+        style={{
+          padding: isMobile ? "6px 12px" : "8px 16px",
+          backgroundColor: "#1120A3",
+          color: "white",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer",
+          fontSize: isMobile ? "12px" : "14px",
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
+
   return (
     <Container
       maxWidth={false}
@@ -143,14 +317,21 @@ const TableListAgency = ({
           <Tabs
             value={tabIndex}
             onChange={handleTabChange}
-            sx={{ ".MuiTabs-indicator": { display: "none" } }}
+            sx={{
+              ".MuiTabs-indicator": { display: "none" },
+              "& .MuiTab-root": {
+                fontSize: isMobile ? "12px" : "14px",
+                minWidth: isMobile ? 120 : 180,
+                padding: isMobile ? "8px 12px" : "12px 24px",
+              },
+            }}
+            variant={isMobile ? "scrollable" : "standard"}
+            scrollButtons={isMobile ? "auto" : false}
           >
             <Tab
               label="ผลการดำเนินเรื่องร้องทุกข์"
               sx={{
                 textTransform: "none",
-                minWidth: 180,
-                px: 3,
                 height: 40,
                 lineHeight: "40px",
                 backgroundColor: "#878FD0",
@@ -178,8 +359,6 @@ const TableListAgency = ({
               label="เรื่องค้างการพิจารณา"
               sx={{
                 textTransform: "none",
-                minWidth: 180,
-                px: 3,
                 mr: 1,
                 height: 40,
                 lineHeight: "40px",
@@ -209,53 +388,101 @@ const TableListAgency = ({
         <Box className={styles.headerBar} />
       </Box>
 
-      {/* Filters */}
-      <Box px={2} py={1}>
-        <Box display="flex" alignItems="center" gap={1}>
-          {filterFields.map((f) => (
-            <Box key={f.name} flex="1 1 0" minWidth="200px">
-              <InputText
-                fullWidth
-                label={f.label}
-                value={filters[f.name]}
-                onChange={handleChangeFilter(f.name)}
-              />
-            </Box>
-          ))}
-
-          <IconButton
-            onClick={handleSearchClick}
+      {/* ← Filters section - Always visible, responsive layout */}
+      <Box px={isMobile ? 1 : 2} py={1}>
+        <Box
+          display="flex"
+          alignItems="flex-end"
+          gap={1}
+          flexWrap="wrap"
+          sx={{
+            // สำหรับ mobile: แสดงเป็น column
+            flexDirection: isMobile ? "column" : "row",
+            alignItems: isMobile ? "stretch" : "flex-end",
+          }}
+        >
+          {/* Filter fields container */}
+          <Box
+            display="flex"
+            gap={1}
+            flexWrap="wrap"
             sx={{
-              bgcolor: "#1120A3",
-              color: "#fff",
-              width: 40,
-              height: 40,
-              "&:hover": { bgcolor: "#0b1580" },
+              flex: 1,
+              width: "100%",
+              flexDirection: isMobile ? "column" : "row",
+              "& > *": {
+                flex: isMobile
+                  ? "1 1 100%"
+                  : isTablet
+                  ? "1 1 calc(50% - 8px)"
+                  : "1 1 0",
+                minWidth: isMobile ? "100%" : isTablet ? "200px" : "150px",
+                maxWidth: isMobile ? "100%" : "300px",
+              },
             }}
           >
-            <SearchIcon />
-          </IconButton>
-          <IconButton
-            onClick={handleClearClick}
+            {filterFields.map((f) => (
+              <Box key={f.name}>{renderFilterField(f)}</Box>
+            ))}
+          </Box>
+
+          {/* ปุ่มค้นหาและเคลียร์ */}
+          <Box
+            display="flex"
+            gap={1}
             sx={{
-              bgcolor: "#1120A3",
-              color: "#fff",
-              width: 40,
-              height: 40,
-              "&:hover": { bgcolor: "#0b1580" },
+              flexShrink: 0,
+              alignItems: "center",
+              justifyContent: isMobile ? "center" : "flex-start",
+              width: isMobile ? "100%" : "auto",
+              mt: isMobile ? 2 : 0,
             }}
           >
-            <SearchOffIcon />
-          </IconButton>
+            <IconButton
+              onClick={handleSearchClick}
+              sx={{
+                bgcolor: "#1120A3",
+                color: "#fff",
+                width: isMobile ? 36 : 40,
+                height: isMobile ? 36 : 40,
+                "&:hover": { bgcolor: "#0b1580" },
+              }}
+            >
+              <SearchIcon fontSize={isMobile ? "small" : "medium"} />
+            </IconButton>
+            <IconButton
+              onClick={handleClearClick}
+              sx={{
+                bgcolor: "#1120A3",
+                color: "#fff",
+                width: isMobile ? 36 : 40,
+                height: isMobile ? 36 : 40,
+                "&:hover": { bgcolor: "#0b1580" },
+              }}
+            >
+              <SearchOffIcon fontSize={isMobile ? "small" : "medium"} />
+            </IconButton>
+          </Box>
 
-          <Box flexGrow={1} />
-          <ExportButton
-            label="Export PDF"
-            onClick={() =>
-              exportElementToPDF(pdfRef, "ผลการดำเนินการและเรื่องค้างพิจารณา.pdf")
-            }
-          />;
-          <ExportButton label="Export Excel" />
+          {/* Export buttons */}
+          <Box
+            display="flex"
+            gap={1}
+            sx={{
+              flexShrink: 0,
+              width: isMobile ? "100%" : "auto",
+              justifyContent: isMobile ? "center" : "flex-end",
+              mt: isMobile ? 1 : 0,
+            }}
+          >
+            {renderExportButton("Export PDF", () =>
+              exportElementToPDF(
+                pdfRef,
+                "ผลการดำเนินการและเรื่องค้างพิจารณา.pdf"
+              )
+            )}
+            {renderExportButton("Export Excel", () => {})}
+          </Box>
         </Box>
       </Box>
 
@@ -263,13 +490,24 @@ const TableListAgency = ({
       <div ref={pdfRef}>
         <Box
           className={styles.tableWrapper}
-          sx={{ overflowX: "auto", px: 2, pb: 1 }}
+          sx={{
+            overflowX: "auto",
+            px: isMobile ? 1 : 2,
+            pb: 1,
+          }}
         >
-          <Table sx={{ minWidth: 600, tableLayout: "fixed" }}>
+          <Table sx={{ minWidth: isMobile ? 400 : 600, tableLayout: "fixed" }}>
             <TableHead>
               <TableRow>
                 {currentColumns.map((col) => (
-                  <TableCell key={col.field} align={col.align}>
+                  <TableCell
+                    key={col.field}
+                    align={col.align}
+                    sx={{
+                      fontSize: isMobile ? "12px" : "14px",
+                      padding: isMobile ? "8px 4px" : "16px",
+                    }}
+                  >
                     {col.headerName}
                   </TableCell>
                 ))}
@@ -286,7 +524,14 @@ const TableListAgency = ({
                   }
                 >
                   {currentColumns.map((col) => (
-                    <TableCell key={col.field} align={col.align}>
+                    <TableCell
+                      key={col.field}
+                      align={col.align}
+                      sx={{
+                        fontSize: isMobile ? "12px" : "14px",
+                        padding: isMobile ? "8px 4px" : "16px",
+                      }}
+                    >
                       {row[col.field]}
                     </TableCell>
                   ))}
@@ -297,9 +542,24 @@ const TableListAgency = ({
               <TableRow sx={{ backgroundColor: "#e3f2fd", fontWeight: "bold" }}>
                 {currentColumns.map((col) =>
                   col.field === "claimantName" ? (
-                    <TableCell key={col.field}>รวม</TableCell>
+                    <TableCell
+                      key={col.field}
+                      sx={{
+                        fontSize: isMobile ? "12px" : "14px",
+                        padding: isMobile ? "8px 4px" : "16px",
+                      }}
+                    >
+                      รวม
+                    </TableCell>
                   ) : (
-                    <TableCell key={col.field} align={col.align}>
+                    <TableCell
+                      key={col.field}
+                      align={col.align}
+                      sx={{
+                        fontSize: isMobile ? "12px" : "14px",
+                        padding: isMobile ? "8px 4px" : "16px",
+                      }}
+                    >
                       {totals[col.field]}
                     </TableCell>
                   )
@@ -309,19 +569,24 @@ const TableListAgency = ({
           </Table>
 
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
+            rowsPerPageOptions={isMobile ? [5, 10] : [5, 10, 25]}
             component="div"
             count={currentData.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handlePageChange}
             onRowsPerPageChange={handleRowsPerPageChange}
-            sx={{ borderTop: "1px solid #eee" }}
+            sx={{
+              borderTop: "1px solid #eee",
+              "& .MuiTablePagination-toolbar": {
+                fontSize: isMobile ? "12px" : "14px",
+              },
+            }}
           />
         </Box>
       </div>
-    </Container >
+    </Container>
   );
 };
 
-export default TableListAgency;
+export default TableListTab;

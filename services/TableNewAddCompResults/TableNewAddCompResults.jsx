@@ -52,8 +52,11 @@ const TableNewAddCompResults = ({
     [tableData, page, rowsPerPage]
   );
 
-  const handleFilterChange = (field) => (e) =>
-    setFilters((prev) => ({ ...prev, [field]: e.target.value }));
+  const handleFilterChange = (field) => (e) => {
+    const value = e.target ? e.target.value : e;
+    setFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
   const handleSearchClick = () => {
     setPage(0);
     onSearch(filters);
@@ -84,6 +87,21 @@ const TableNewAddCompResults = ({
     },
   ];
 
+  const handleNoteSelectChange = (itemId, selectedValue) => {
+    if (selectedValue === "__add") {
+      onAddNote?.(itemId);
+      return;
+    }
+
+    if (onNoteChange) {
+      onNoteChange(itemId, selectedValue);
+    } else {
+      setTableData((prev) =>
+        prev.map((r) => (r.id === itemId ? { ...r, note: selectedValue } : r))
+      );
+    }
+  };
+
   return (
     <Container
       maxWidth={false}
@@ -110,43 +128,55 @@ const TableNewAddCompResults = ({
                     fullWidth
                     label={f.label}
                     options={f.options}
-                    value={filters[f.name]}
+                    value={filters[f.name] || ""}
                     onChange={handleFilterChange(f.name)}
+                    name={f.name}
                   />
                 ) : (
                   <InputText
                     fullWidth
                     label={f.label}
-                    value={filters[f.name]}
+                    value={filters[f.name] || ""}
                     onChange={handleFilterChange(f.name)}
+                    name={f.name}
                   />
                 )}
               </Box>
             ))}
-            <IconButton
-              onClick={handleSearchClick}
+            <Box
+              display="flex"
+              gap={1}
               sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                "&:hover": { bgcolor: "#0b1580" },
-                width: 40,
-                height: 40,
+                flexShrink: 0,
+                alignItems: "center", // ← จัดให้อยู่ตรงกลางในแนวตั้ง
+                justifyContent: "center", // ← จัดให้อยู่ตรงกลางในแนวนอน
               }}
             >
-              <SearchIcon />
-            </IconButton>
-            <IconButton
-              onClick={handleClearSearch}
-              sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                "&:hover": { bgcolor: "#0b1580" },
-                width: 40,
-                height: 40,
-              }}
-            >
-              <SearchOffIcon />
-            </IconButton>
+              <IconButton
+                onClick={handleSearchClick}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#0b1580" },
+                  width: 40,
+                  height: 40,
+                }}
+              >
+                <SearchIcon />
+              </IconButton>
+              <IconButton
+                onClick={handleClearSearch}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#0b1580" },
+                  width: 40,
+                  height: 40,
+                }}
+              >
+                <SearchOffIcon />
+              </IconButton>
+            </Box>
           </Box>
 
           <Box
@@ -161,7 +191,7 @@ const TableNewAddCompResults = ({
               onClick={() =>
                 exportElementToPDF(pdfRef, "สรุปผลตามประเภทเรื่อง.pdf")
               }
-            />;
+            />
             <ExportButton label="Export Excel" />
           </Box>
         </Box>
@@ -205,7 +235,6 @@ const TableNewAddCompResults = ({
 
       {/* Data Table */}
       <div ref={pdfRef}>
-
         <Box
           className={styles.tableWrapper}
           sx={{ overflowX: "auto", px: 2, pb: 1 }}
@@ -244,32 +273,35 @@ const TableNewAddCompResults = ({
                     return (
                       <TableCell key={col.name} sx={{ width: col.width }}>
                         {col.type === "select" ? (
-                          <SelectField
-                            fullWidth
-                            options={col.options}
-                            value={value}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(selected) => {
-                              if (selected === "__add") {
-                                onAddNote?.(item.id);
-                              } else if (onNoteChange) {
-                                onNoteChange(item.id, selected);
-                              } else {
-                                setTableData((prev) =>
-                                  prev.map((r) =>
-                                    r.id === item.id
-                                      ? { ...r, note: selected }
-                                      : r
-                                  )
-                                );
-                              }
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
                             }}
-                            MenuProps={{
-                              PaperProps: {
-                                onMouseDown: (e) => e.stopPropagation(),
-                              },
-                            }}
-                          />
+                            style={{ width: "100%" }}
+                          >
+                            <SelectField
+                              options={col.options}
+                              value={value}
+                              onChange={(valueOrEvent) => {
+                                let selectedValue;
+
+                                if (valueOrEvent && valueOrEvent.target) {
+                                  selectedValue = valueOrEvent.target.value;
+                                  if (
+                                    typeof valueOrEvent.stopPropagation ===
+                                    "function"
+                                  ) {
+                                    valueOrEvent.stopPropagation();
+                                  }
+                                } else {
+                                  selectedValue = valueOrEvent;
+                                }
+
+                                handleNoteSelectChange(item.id, selectedValue);
+                              }}
+                              name={`${col.name}_${item.id}`}
+                            />
+                          </div>
                         ) : (
                           value
                         )}
@@ -317,10 +349,10 @@ TableNewAddCompResults.defaultProps = {
   summaryDate: "",
   summaryCategory: "",
   navigateTo: "",
-  onSearch: () => { },
+  onSearch: () => {},
   filterFields: [],
   NOTE_OPTIONS: [],
-  onAddNote: () => { },
+  onAddNote: () => {},
   onNoteChange: null,
 };
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Typography, IconButton, Modal } from "@mui/material";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
-import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import ButtonService from "@services/ButtonService/ButtonService";
 import SearchIcon from "@mui/icons-material/Search";
 import AddCircleOutlineOutlinedIcon from "@mui/icons-material/AddCircleOutlineOutlined";
@@ -20,6 +19,8 @@ import {
   UpdateVenue,
 } from "@pages/api/settinggeneral/department/department";
 import { alertSuccess, showConfirm, alertError } from "@utils/Alerts";
+import SelectField from "@services/SelectField/SelectField";
+
 /* -------------------------------------------------------------------------- */
 /*  static data                                                               */
 /* -------------------------------------------------------------------------- */
@@ -38,6 +39,129 @@ const breadcrumbItems = [
     label: "กำหนดหน่วยงานในสังกัด",
     url: "/admin/settinggeneral/department",
   },
+];
+
+// Mock options สำหรับส่วนราชการ
+const mockGovernmentOptions = [
+  { label: "กระทรวงมหาดไทย", value: "ministry_interior" },
+  { label: "กระทรวงการคลัง", value: "ministry_finance" },
+  { label: "กระทรวงศึกษาธิการ", value: "ministry_education" },
+  { label: "กระทรวงสาธารณสุข", value: "ministry_health" },
+  { label: "กระทรวงคมนาคม", value: "ministry_transport" },
+  { label: "กระทรวงพาณิชย์", value: "ministry_commerce" },
+  { label: "กระทรวงอุตสาหกรรม", value: "ministry_industry" },
+  { label: "กระทรวงเกษตรและสหกรณ์", value: "ministry_agriculture" },
+  {
+    label: "กระทรวงทรัพยากรธรรมชาติและสิ่งแวดล้อม",
+    value: "ministry_environment",
+  },
+  { label: "กระทรวงพลังงาน", value: "ministry_energy" },
+  { label: "กระทรวงแรงงาน", value: "ministry_labour" },
+  { label: "กระทรวงวิทยาศาสตร์และเทคโนโลยี", value: "ministry_science" },
+  {
+    label: "กระทรวงการพัฒนาสังคมและความมั่นคงของมนุษย์",
+    value: "ministry_social",
+  },
+  { label: "กระทรวงวัฒนธรรม", value: "ministry_culture" },
+  { label: "กระทรวงการท่องเที่ยวและกีฬา", value: "ministry_tourism" },
+  { label: "กระทรวงดิจิทัลเพื่อเศรษฐกิจและสังคม", value: "ministry_digital" },
+  { label: "สำนักนายกรัฐมนตรี", value: "prime_minister_office" },
+  { label: "กรมการปกครอง", value: "department_provincial" },
+  { label: "กรมส่งเสริมการปกครองท้องถิ่น", value: "department_local_admin" },
+  { label: "กรมพัฒนาที่ดิน", value: "land_development_department" },
+  { label: "กรมทรัพยากรน้ำ", value: "department_water_resources" },
+  { label: "กรมอุตุนิยมวิทยา", value: "meteorological_department" },
+  {
+    label: "กรมป้องกันและบรรเทาสาธารณภัย",
+    value: "disaster_prevention_department",
+  },
+  { label: "กรมโยธาธิการและผังเมือง", value: "public_works_department" },
+  { label: "กรมสรรพากร", value: "revenue_department" },
+];
+
+// Mock options สำหรับรัฐวิสาหกิจ
+const mockStateEnterpriseOptions = [
+  { label: "การไฟฟ้าฝ่ายผลิตแห่งประเทศไทย (กฟผ.)", value: "egat" },
+  { label: "การไฟฟ้านครหลวง (กฟน.)", value: "mea" },
+  { label: "การไฟฟ้าส่วนภูมิภาค (กฟภ.)", value: "pea" },
+  { label: "บริษัท ปตท. จำกัด (มหาชน)", value: "ptt" },
+  { label: "บริษัท ปตท. สำรวจและผลิตปิโตรเลียม จำกัด (มหาชน)", value: "pttep" },
+  { label: "บริษัท ปตท. โกลบอล เคมิคอล จำกัด (มหาชน)", value: "pttgc" },
+  { label: "การประปานครหลวง", value: "mwa" },
+  { label: "การประปาส่วนภูมิภาค", value: "pwa" },
+  { label: "การทางพิเศษแห่งประเทศไทย", value: "exat" },
+  { label: "การรถไฟแห่งประเทศไทย", value: "srt" },
+  { label: "การรถไฟฟ้าขนส่งมวลชนแห่งประเทศไทย", value: "bmta" },
+  { label: "การท่าเรือแห่งประเทศไทย", value: "pat" },
+  { label: "การท่าอากาศยานแห่งประเทศไทย", value: "aot" },
+  { label: "บริษัท ทีโอที จำกัด (มหาชน)", value: "tot" },
+  { label: "บริษัท กสท โทรคมนาคม จำกัด (มหาชน)", value: "kat" },
+  { label: "ธนาคารกรุงไทย จำกัด (มหาชน)", value: "ktb" },
+  { label: "ธนาคารกรุงเทพ จำกัด (มหาชน)", value: "bbl" },
+  { label: "ธนาคารกสิกรไทย จำกัด (มหาชน)", value: "kbank" },
+  { label: "บริษัท ไปรษณีย์ไทย จำกัด", value: "thailand_post" },
+  {
+    label: "บริษัท ท่อส่งก๊าซธรรมชาติแห่งประเทศไทย จำกัด (มหาชน)",
+    value: "pttngd",
+  },
+  { label: "การยางแห่งประเทศไทย", value: "raot" },
+  { label: "การนิคมอุตสาหกรรมแห่งประเทศไทย", value: "ieat" },
+  { label: "การไฟฟ้าส่วนภูมิภาค", value: "pea_regional" },
+  { label: "บริษัท บางจาก คอร์ปอเรชั่น จำกัด (มหาชน)", value: "bjc" },
+  { label: "บริษัท ไทยออยล์ จำกัด (มหาชน)", value: "top" },
+];
+
+// Mock options สำหรับอื่นๆ
+const mockOtherOptions = [
+  {
+    label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ (ป.ป.ช.)",
+    value: "nacc",
+  },
+  {
+    label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตในภาครัฐ (ป.ป.ท.)",
+    value: "pacc",
+  },
+  { label: "สำนักงานอัยการสูงสุด", value: "attorney_general" },
+  { label: "สำนักงานตำรวจแห่งชาติ", value: "royal_police" },
+  { label: "สำนักงานผู้ตรวจการแผ่นดิน", value: "ombudsman" },
+  { label: "สำนักงานศาลยุติธรรม", value: "courts_justice" },
+  { label: "สำนักงานศาลปกครอง", value: "administrative_court" },
+  {
+    label: "สำนักงานคณะกรรมการการเลือกตั้ง (กกต.)",
+    value: "election_commission",
+  },
+  {
+    label: "สำนักงานคณะกรรมการข้าราชการพลเรือน (ก.พ.)",
+    value: "civil_service_commission",
+  },
+  { label: "สำนักงานการตรวจเงินแผ่นดิน", value: "state_audit_office" },
+  { label: "ธนาคารแห่งประเทศไทย", value: "bank_of_thailand" },
+  {
+    label: "สำนักงานคณะกรรมการกำกับหลักทรัพย์และตลาดหลักทรัพย์ (ก.ล.ต.)",
+    value: "sec",
+  },
+  {
+    label: "สำนักงานคณะกรรมการคุ้มครองผู้บริโภค",
+    value: "consumer_protection",
+  },
+  {
+    label: "สำนักงานคณะกรรมการข้าราชการครู (ก.ค.ศ.)",
+    value: "teacher_council",
+  },
+  {
+    label: "สำนักงานคณะกรรมการพัฒนาการเศรษฐกิจและสังคมแห่งชาติ (สศช.)",
+    value: "nesdb",
+  },
+  { label: "องค์การบริหารส่วนจังหวัด", value: "provincial_admin" },
+  { label: "เทศบาลนคร", value: "city_municipality" },
+  { label: "เทศบาลเมือง", value: "town_municipality" },
+  { label: "เทศบาลตำบล", value: "subdistrict_municipality" },
+  { label: "องค์การบริหารส่วนตำบล (อบต.)", value: "subdistrict_admin" },
+  { label: "กรุงเทพมหานคร (กทม.)", value: "bangkok_metro" },
+  { label: "เมืองพัทยา", value: "pattaya_city" },
+  { label: "สำนักงานปลัดสำนักนายกรัฐมนตรี", value: "pmo_secretariat" },
+  { label: "สำนักข่าวกรองแห่งชาติ (สขช.)", value: "nis" },
+  { label: "สำนักงานสภาความมั่นคงแห่งชาติ (สมช.)", value: "nsc" },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -61,9 +185,13 @@ const DepartmentManagement = () => {
   /* ------------------------------ state ----------------------------------- */
   const [stats, setStats] = useState({ res_data: [] });
   const [filteredStats, setFilteredStats] = useState({ res_data: [] });
-  const [stateEnterpriseOptions, setStateEnterpriseOptions] = useState([]);
-  const [governmentOptions, setGovernmentOptions] = useState([]);
-  const [otherOptions, setOtherOptions] = useState([]);
+  const [stateEnterpriseOptions, setStateEnterpriseOptions] = useState(
+    mockStateEnterpriseOptions
+  );
+  const [governmentOptions, setGovernmentOptions] = useState(
+    mockGovernmentOptions
+  );
+  const [otherOptions, setOtherOptions] = useState(mockOtherOptions);
 
   /* ------------------------------- useEffect -------------------------------- */
   const fetchDepartmentDetails = async () => {
@@ -82,7 +210,11 @@ const DepartmentManagement = () => {
         label: v.name, // หรือ v.short_name แล้วแต่ต้องการแสดง
         value: v.id, // จะใช้ code / abbreviation ก็เปลี่ยนตรงนี้
       }));
-      setStateEnterpriseOptions(wisetakitOptions);
+      // Merge กับ mock data
+      setStateEnterpriseOptions([
+        ...mockStateEnterpriseOptions,
+        ...wisetakitOptions,
+      ]);
 
       /* ---------- 1. ดึง venues เฉพาะกลุ่ม "ส่วนราชการ" ---------- */
       const GovVenues = response.res_data.flatMap((dept) =>
@@ -96,9 +228,10 @@ const DepartmentManagement = () => {
         label: v.name, // หรือ v.short_name แล้วแต่ต้องการแสดง
         value: v.id, // จะใช้ code / abbreviation ก็เปลี่ยนตรงนี้
       }));
-      setGovernmentOptions(govOptions);
+      // Merge กับ mock data
+      setGovernmentOptions([...mockGovernmentOptions, ...govOptions]);
 
-      /* ---------- 1. ดึง venues เฉพาะกลุ่ม "ส่วนราชการ" ---------- */
+      /* ---------- 1. ดึง venues เฉพาะกลุ่ม "อื่นๆ" ---------- */
       const OtherVenues = response.res_data.flatMap((dept) =>
         dept.venue_groups
           .filter((g) => g.group_name === "อื่นๆ")
@@ -110,7 +243,8 @@ const DepartmentManagement = () => {
         label: v.name, // หรือ v.short_name แล้วแต่ต้องการแสดง
         value: v.id, // จะใช้ code / abbreviation ก็เปลี่ยนตรงนี้
       }));
-      setOtherOptions(otherOpts);
+      // Merge กับ mock data
+      setOtherOptions([...mockOtherOptions, ...otherOpts]);
 
       /* ---------- 3. map ข้อมูลเดิมไว้ใช้งานหน้าตาราง ---------- */
       const mappedData = response.res_data.map((department) => ({
@@ -132,6 +266,77 @@ const DepartmentManagement = () => {
       setFilteredStats({ res_data: mappedData });
     } catch (err) {
       console.error("Error fetching department details:", err);
+      // ใช้ mock data ถ้า API error
+      const mockData = {
+        res_data: [
+          {
+            department_id: 1,
+            role_name: "government",
+            role_description: "ส่วนราชการ",
+            users: [
+              {
+                id: 1,
+                main_department: "กระทรวงมหาดไทย",
+                sub_department: "มท.",
+                color_code: "#FF5722",
+                group_name: "ส่วนราชการ",
+              },
+              {
+                id: 2,
+                main_department: "กระทรวงการคลัง",
+                sub_department: "กค.",
+                color_code: "#4CAF50",
+                group_name: "ส่วนราชการ",
+              },
+            ],
+          },
+          {
+            department_id: 2,
+            role_name: "state_enterprise",
+            role_description: "รัฐวิสาหกิจ",
+            users: [
+              {
+                id: 3,
+                main_department: "การไฟฟ้าฝ่ายผลิตแห่งประเทศไทย",
+                sub_department: "กฟผ.",
+                color_code: "#2196F3",
+                group_name: "รัฐวิสาหกิจ",
+              },
+              {
+                id: 4,
+                main_department: "บริษัท ปตท. จำกัด (มหาชน)",
+                sub_department: "ปตท.",
+                color_code: "#FF9800",
+                group_name: "รัฐวิสาหกิจ",
+              },
+            ],
+          },
+          {
+            department_id: 3,
+            role_name: "other",
+            role_description: "อื่นๆ",
+            users: [
+              {
+                id: 5,
+                main_department:
+                  "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ",
+                sub_department: "ป.ป.ช.",
+                color_code: "#9C27B0",
+                group_name: "อื่นๆ",
+              },
+              {
+                id: 6,
+                main_department: "ธนาคารแห่งประเทศไทย",
+                sub_department: "ธปท.",
+                color_code: "#607D8B",
+                group_name: "อื่นๆ",
+              },
+            ],
+          },
+        ],
+      };
+      setStats(mockData);
+      setFilteredStats(mockData);
     }
   };
 
@@ -149,10 +354,11 @@ const DepartmentManagement = () => {
   };
 
   /* -------------------------------- handlers -------------------------------- */
-  const handleInputChange = (name, value) => {
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
-      console.log("SelectMenu change →", updated);
+      console.log("SelectField change →", updated);
       return updated;
     });
   };
@@ -692,19 +898,16 @@ const DepartmentManagement = () => {
         ].map((field) => (
           <Box sx={{ flex: "1 1 300px" }} key={field.name}>
             <Typography
-              sx={{ fontSize: 18, fontWeight: "bold", color: "#1120A3" }}
+              sx={{ fontSize: 18, fontWeight: "bold", color: "#1120A3", mb: 1 }}
             >
               {field.label}
             </Typography>
-            <SelectMenuService
+            <SelectField
+              label={`เลือก${field.label}`}
               options={field.options}
-              value={formData[field.name]}
-              handleChange={(e) =>
-                handleInputChange(field.name, e.target.value)
-              }
+              value={formData[field.name] || ""}
+              onChange={handleInputChange}
               name={field.name}
-              width="100%"
-              placeholder={`เลือก${field.label}`}
             />
           </Box>
         ))}
@@ -715,12 +918,14 @@ const DepartmentManagement = () => {
             color="primary"
             onClick={handleSearch}
             sx={{
+              marginBottom: 17,
               backgroundColor: "#2499FF",
               color: "#ffffff",
               borderRadius: 30,
               px: 3,
               height: 40,
               boxShadow: 2,
+
               "&:hover": { backgroundColor: "#0067B1" },
             }}
             iconRight={<SearchIcon />}

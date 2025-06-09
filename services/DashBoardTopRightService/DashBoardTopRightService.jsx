@@ -51,7 +51,7 @@ const TopRightChart = () => {
       { name: "สำนักงานพัฒนาการศึกษาชาวบ้าน", color: "#1A237E" },
       { name: "กรุงเทพการ", color: "#3949AB" },
       { name: "สำนักงานเขตกรุงเทพมหานคร", color: "#7986CB" },
-      { name: "อะชาการและเทคโนโลยี", color: "#29B6F6" },
+      { name: "วิชาการและเทคโนโลยี", color: "#29B6F6" },
       { name: "สำนักงานพัฒนาวิศวกรรม", color: "#81D4FA" },
       { name: "หน่วยงาน A", color: "#FBC02D" },
       { name: "หน่วยงาน B", color: "#FBE9A7" },
@@ -139,7 +139,7 @@ const TopRightChart = () => {
     { text: "รายเดือน", id: "monthly" },
     { text: "รายไตรมาส", id: "quarterly" },
     { text: "รายปี", id: "yearly" },
-    { text: "เปลี่ยนแผนกภาพระบวง", id: "department" },
+    { text: "เปรียบเทียบระหว่างปี", id: "department" },
   ];
 
   // Options for SelectField

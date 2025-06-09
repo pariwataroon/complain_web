@@ -300,7 +300,7 @@ const NewAdditionalComplaintsSummaryComponents = () => {
         data={filteredComplaints}
         title="รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่มทั้งหมด"
         onSearch={handleSearch}
-        actionButtonLabel="สรุปผลตามประเภทเรื่อง"
+        actionButtonLabel="แก้ไขหมายเหตุ"
         onActionClick={handleSummaryByIssueType}
         filterFields={[
           {

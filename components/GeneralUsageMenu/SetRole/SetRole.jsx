@@ -29,11 +29,12 @@ import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import {
   Diversity3Outlined as IcHome,
-  DashboardOutlined as IcDash,
-  TuneOutlined as IcTune,
-  DriveFileRenameOutlineOutlined as IcEdit,
-  MoveToInboxOutlined as IcBox,
-  InsertChartOutlined as IcDoc,
+  Dashboard,
+  Settings,
+  Edit,
+  Inventory2,
+  Description,
+  AccountBox,
   ArticleOutlined as IcDefault,
   AssessmentOutlined as IcReport,
   PersonOutlineOutlined as IcUser,
@@ -46,6 +47,7 @@ import {
   AddCircleOutline as IcToggle,
 } from "@mui/icons-material";
 import { alertSuccess, alertWarning } from "@utils/Alerts";
+import LayersIcon from "@mui/icons-material/Layers";
 import {
   getMenuPermission,
   deletePermission,
@@ -562,13 +564,13 @@ const SetRole = () => {
       /* group icon */
       const gIcon = {
         homepage: <IcHome />,
-        dashboard: <IcDash />,
-        setting: <IcTune />,
-        edit: <IcEdit />,
-        box: <IcBox />,
-        document: <IcDoc />,
-        stacked_line_chart: <IcDefault />,
-        account_box: <IcDefault />,
+        dashboard: <Dashboard />,
+        setting: <Settings />,
+        edit: <Edit />,
+        box: <Inventory2 />,
+        document: <Description />,
+        stacked_line_chart: <LayersIcon />,
+        account_box: <AccountBox />,
       }[group.group_name] || <IcDefault />;
 
       /* sub-menu items */
