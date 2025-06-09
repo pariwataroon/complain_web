@@ -2300,3 +2300,206 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
     except Exception as e:
         logger.error(f"Error getting complaint with assignment: {str(e)}")
         return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
+    
+def get_complaints_grouped_by_channel(
+    db: Session, 
+    skip: int = 0, 
+    limit: int = 100, 
+    status: Optional[str] = None,
+    complaint_type: Optional[str] = None,
+    complaint_subtype: Optional[str] = None,
+    assignee: Optional[str] = None,
+    location: Optional[str] = None,
+    urgency: Optional[str] = None,
+    search: Optional[str] = None,
+    complainant_name: Optional[str] = None,
+):
+    """ดึงรายการข้อร้องเรียนที่จัดกลุ่มตาม complaint_channel_id"""
+    from models.comp_complaint_types import ComplaintChannel, ComplaintSubType
+    from sqlalchemy import or_
+    
+    try:
+        # สร้าง query พื้นฐาน
+        query = db.query(Complaint)
+        
+        # Apply filters
+        if status:
+            query = query.filter(Complaint.status == status)
+        
+        if complaint_type:
+            query = query.filter(Complaint.complaint_type.ilike(f"%{complaint_type}%"))
+        
+        if complaint_subtype:
+            query = query.join(ComplaintSubType, Complaint.complaint_subtype_id == ComplaintSubType.id)
+            query = query.filter(ComplaintSubType.name.ilike(f"%{complaint_subtype}%"))
+        
+        if assignee:
+            query = query.filter(
+                (Complaint.assigned_to.ilike(f"%{assignee}%")) |
+                (Complaint.assigned_officer_id.isnot(None))
+            )
+        
+        if location:
+            query = query.filter(
+                (Complaint.incident_province.ilike(f"%{location}%")) |
+                (Complaint.incident_district.ilike(f"%{location}%")) |
+                (Complaint.incident_subdistrict.ilike(f"%{location}%"))
+            )
+        
+        if urgency:
+            query = query.filter(Complaint.urgency_level == urgency)
+        
+        if search:
+            query = query.outerjoin(ComplaintSubType, Complaint.complaint_subtype_id == ComplaintSubType.id)
+            query = query.filter(
+                or_(
+                    Complaint.complaint_number.ilike(f"%{search}%"),
+                    Complaint.subject.ilike(f"%{search}%"),
+                    Complaint.description.ilike(f"%{search}%"),
+                    Complaint.complaint_type.ilike(f"%{search}%"),
+                    ComplaintSubType.name.ilike(f"%{search}%"),
+                    Complaint.complainant_data.ilike(f"%{search}%")
+                )
+            )
+        
+        if complainant_name:
+            query = query.filter(Complaint.complainant_data.ilike(f"%{complainant_name}%"))
+
+        # Get total count และ complaints
+        total_count = query.count()
+        query = query.order_by(Complaint.created_at.desc())
+        complaints = query.offset(skip).limit(limit).all()
+
+        # จัดกลุ่มตาม complaint_channel_id
+        grouped = {}
+        
+        for complaint in complaints:
+            # กำหนด channel info
+            channel_id = str(complaint.complaint_channel_id) if complaint.complaint_channel_id else "unknown"
+            channel_name = get_channel_name(db, complaint.complaint_channel_id)
+            
+            # สร้าง complaint item
+            item = create_grouped_complaint_item(db, complaint)
+            item["complaint_channel_id"] = channel_id
+            item["complaint_channel_name"] = channel_name
+            
+            # เพิ่มเข้า group
+            if channel_id not in grouped:
+                grouped[channel_id] = {
+                    "complaint_channel_id": channel_id,
+                    "complaint_channel_name": channel_name,
+                    "items": []
+                }
+            grouped[channel_id]["items"].append(item)
+
+        # แปลงเป็น list และเตรียม response
+        grouped_list = list(grouped.values())
+        filters = get_filter_options(db)
+        
+        return {
+            "groups": grouped_list,
+            "pagination": {
+                "total": total_count,
+                "skip": skip,
+                "limit": limit,
+                "has_more": total_count > (skip + limit)
+            },
+            "filters": filters
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting complaints grouped by channel: {str(e)}")
+        return {
+            "groups": [],
+            "pagination": {"total": 0, "skip": skip, "limit": limit, "has_more": False},
+            "filters": get_filter_options(db)
+        }
+
+def get_channel_name(db: Session, channel_id: Optional[UUID]) -> str:
+    """ดึงชื่อช่องทางการร้องเรียน"""
+    if not channel_id:
+        return "ไม่ระบุช่องทาง"
+    
+    try:
+        from models.comp_complaint_types import ComplaintChannel
+        channel = db.query(ComplaintChannel).filter(ComplaintChannel.id == channel_id).first()
+        return channel.name if channel else "ไม่ระบุช่องทาง"
+    except Exception:
+        return "ไม่ระบุช่องทาง"
+
+def create_grouped_complaint_item(db: Session, complaint: Complaint) -> Dict:
+    """สร้างข้อมูล complaint item สำหรับการจัดกลุ่ม"""
+    try:
+        # ดึงข้อมูล complaint_subtype
+        complaint_subtype = ""
+        if complaint.complaint_subtype_id:
+            from models.comp_complaint_types import ComplaintSubType
+            subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
+            if subtype:
+                complaint_subtype = subtype.name
+        
+        return {
+            "id": str(complaint.id),
+            "complaint_number": complaint.complaint_number,
+            "subject": complaint.subject,
+            "complaint_type": complaint.complaint_type,
+            "complaint_subtype": complaint_subtype,
+            "status": get_thai_status(complaint.status),
+            "created_at": complaint.created_at.isoformat() if complaint.created_at else None,
+            "complainant_name": get_display_complainant_name(
+                ensure_dict(complaint.complainant_data), 
+                ensure_dict(complaint.delegate_data) if complaint.delegate_data else None
+            ),
+            "respondent_name": get_display_respondent_name(
+                complaint.respondent_type, 
+                ensure_dict(complaint.respondent_data)
+            ),
+            "incident_location": get_display_incident_location(complaint),
+            "assigned_to": complaint.assigned_to or "",
+            "urgency_level": complaint.urgency_level.lower() if complaint.urgency_level else "low",
+            "severity_level": complaint.severity_level.lower() if complaint.severity_level else "low",
+            
+            # Reference fields
+            "additional_reference_number1": complaint.additional_reference_number1,
+            "additional_reference_date1": complaint.additional_reference_date1.isoformat() if complaint.additional_reference_date1 else None,
+            "additional_reference_number2": complaint.additional_reference_number2,
+            "additional_reference_date2": complaint.additional_reference_date2.isoformat() if complaint.additional_reference_date2 else None,
+            "reference_number": complaint.reference_number,
+            "reference_date": complaint.reference_date.isoformat() if complaint.reference_date else None,
+            "reference_number2": complaint.reference_number2,
+            "reference_date2": complaint.reference_date2.isoformat() if complaint.reference_date2 else None,
+            "reference_number3": complaint.reference_number3,
+            "reference_date3": complaint.reference_date3.isoformat() if complaint.reference_date3 else None,
+            "reference_number4": complaint.reference_number4,
+            "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating grouped complaint item: {str(e)}")
+        return {
+            "id": str(complaint.id),
+            "complaint_number": complaint.complaint_number or "",
+            "subject": complaint.subject or "",
+            "complaint_type": complaint.complaint_type or "",
+            "complaint_subtype": "",
+            "status": get_thai_status(complaint.status),
+            "created_at": complaint.created_at.isoformat() if complaint.created_at else None,
+            "complainant_name": "ข้อมูลไม่สมบูรณ์",
+            "respondent_name": "ข้อมูลไม่สมบูรณ์",
+            "incident_location": "",
+            "assigned_to": "",
+            "urgency_level": "low",
+            "severity_level": "low",
+            "additional_reference_number1": None,
+            "additional_reference_date1": None,
+            "additional_reference_number2": None,
+            "additional_reference_date2": None,
+            "reference_number": None,
+            "reference_date": None,
+            "reference_number2": None,
+            "reference_date2": None,
+            "reference_number3": None,
+            "reference_date3": None,
+            "reference_number4": None,
+            "reference_date4": None,
+        }
