@@ -1160,63 +1160,6 @@ def ensure_dict(data: Any) -> Dict:
             return {}
     return {}
 
-def get_complaint(db: Session, complaint_id: uuid.UUID):
-    """ดึงข้อมูลข้อร้องเรียนแบบละเอียด"""
-    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
-    
-    if not complaint:
-        return None
-    
-    attachment_list = get_complaint_attachments(complaint)
-    status_history = get_complaint_status_history(db, complaint_id)
-    
-    full_complaint_data = complaint.full_complaint_data
-    if isinstance(full_complaint_data, str):
-        try:
-            full_complaint_data = json.loads(full_complaint_data)
-        except Exception as e:
-            full_complaint_data = {}
-    
-    complainant_data = complaint.complainant_data
-    if isinstance(complainant_data, str):
-        try:
-            complainant_data = json.loads(complainant_data)
-        except Exception as e:
-            complainant_data = {}
-    
-    respondent_data = complaint.respondent_data
-    if isinstance(respondent_data, str):
-        try:
-            respondent_data = json.loads(respondent_data)
-        except Exception as e:
-            respondent_data = {}
-    
-    complaint.full_complaint_data = full_complaint_data
-    complaint.complainant_data = complainant_data
-    complaint.respondent_data = respondent_data
-    
-    if full_complaint_data and isinstance(full_complaint_data, dict) and "step1" in full_complaint_data:
-        response_data = {
-            "id": complaint.id,
-            "complaint_number": complaint.complaint_number,
-            **full_complaint_data,
-            "status": complaint.status,
-            "status_history": status_history,
-            "created_at": complaint.created_at,
-            "updated_at": complaint.updated_at,
-            "assigned_to": complaint.assigned_to,
-            "assigned_date": complaint.assigned_date,
-            "resolution_summary": complaint.resolution_summary,
-            "resolved_date": complaint.resolved_date
-        }
-        
-        if "step3" in response_data and "general" in response_data["step3"]:
-            response_data["step3"]["general"]["attachment"] = attachment_list
-        
-        return response_data
-    
-    return reconstruct_complaint_data(complaint, attachment_list, status_history)
-
 def get_complaint_attachments(complaint: Complaint) -> List[Dict]:
     """ดึงรายการไฟล์แนบของข้อร้องเรียน"""
     attachment_list = []
@@ -1375,18 +1318,6 @@ def get_user_complaints(db: Session, user_id: UUID, skip: int = 0, limit: int = 
             "has_more": total_count > (skip + limit)
         }
     }
-
-def get_user_complaint_detail(db: Session, user_id: UUID, complaint_id: UUID):
-    """ดึงข้อมูลข้อร้องเรียนแบบละเอียดของผู้ใช้เฉพาะราย"""
-    complaint = db.query(Complaint).filter(
-        Complaint.id == complaint_id,
-        Complaint.created_by == user_id
-    ).first()
-    
-    if not complaint:
-        return None
-    
-    return get_complaint(db, complaint_id)
 
 def map_complaint_type(db: Session, complaint_type_str: str) -> str:
     """แมปประเภทเรื่องร้องเรียนจากข้อความที่รับเข้ามาเป็นประเภทที่มีในฐานข้อมูล"""
