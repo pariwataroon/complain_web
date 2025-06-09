@@ -823,12 +823,13 @@ def get_complaints(
     limit: int = 100, 
     status: Optional[str] = None,
     complaint_type: Optional[str] = None,
+    complaint_subtype: Optional[str] = None,  # เพิ่ม filter
     assignee: Optional[str] = None,
     location: Optional[str] = None,
     urgency: Optional[str] = None,
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    complainant_name: Optional[str] = None,   # เพิ่ม filter
 ):
-    """ดึงรายการข้อร้องเรียนพร้อมการแบ่งหน้าและ filter ขั้นสูง"""
     query = db.query(Complaint)
     
     # Filter by status
@@ -838,53 +839,70 @@ def get_complaints(
     # Filter by complaint type
     if complaint_type:
         query = query.filter(Complaint.complaint_type.ilike(f"%{complaint_type}%"))
-    
-    # Filter by assignee
+    if complaint_subtype:
+        query = query.filter(Complaint.complaint_subtype_id.isnot(None))
+        # join กับ ComplaintSubType เพื่อค้นหาด้วยชื่อ
+        from models.comp_complaint_types import ComplaintSubType
+        query = query.join(ComplaintSubType, Complaint.complaint_subtype_id == ComplaintSubType.id)
+        query = query.filter(ComplaintSubType.name.ilike(f"%{complaint_subtype}%"))
     if assignee:
         query = query.filter(
             (Complaint.assigned_to.ilike(f"%{assignee}%")) |
             (Complaint.assigned_officer_id.isnot(None))
         )
-    
-    # Filter by location
     if location:
         query = query.filter(
             (Complaint.incident_province.ilike(f"%{location}%")) |
             (Complaint.incident_district.ilike(f"%{location}%")) |
             (Complaint.incident_subdistrict.ilike(f"%{location}%"))
         )
-    
-    # Filter by urgency
     if urgency:
         query = query.filter(Complaint.urgency_level == urgency)
-    
-    # Search in multiple fields
+
+    # ปรับ search ให้ค้นหา complainant_name, complaint_type, complaint_subtype
     if search:
-        search_filter = (
-            Complaint.complaint_number.ilike(f"%{search}%") |
-            Complaint.subject.ilike(f"%{search}%") |
-            Complaint.description.ilike(f"%{search}%") |
-            Complaint.complaint_type.ilike(f"%{search}%")
+        from sqlalchemy import or_
+        from models.comp_complaint_types import ComplaintSubType
+        # join กับ ComplaintSubType เพื่อค้นหาด้วยชื่อ
+        query = query.outerjoin(ComplaintSubType, Complaint.complaint_subtype_id == ComplaintSubType.id)
+        query = query.filter(
+            or_(
+                Complaint.complaint_number.ilike(f"%{search}%"),
+                Complaint.subject.ilike(f"%{search}%"),
+                Complaint.description.ilike(f"%{search}%"),
+                Complaint.complaint_type.ilike(f"%{search}%"),
+                ComplaintSubType.name.ilike(f"%{search}%"),
+                Complaint.complainant_data.ilike(f"%{search}%")  # ค้นหาใน JSON string
+            )
         )
-        query = query.filter(search_filter)
-    
+    # filter ด้วย complainant_name (LIKE ใน JSON)
+    if complainant_name:
+        query = query.filter(Complaint.complainant_data.ilike(f"%{complainant_name}%"))
+
     total_count = query.count()
     query = query.order_by(Complaint.created_at.desc())
     complaints = query.offset(skip).limit(limit).all()
-    
+
     result = []
     for complaint in complaints:
         try:
-            list_item = create_complaint_list_item(complaint, db)  # ✅ ส่ง db parameter
-            result.append(list_item.__dict__)
+            list_item = create_complaint_list_item(complaint, db)
+            # เพิ่ม complaint_subtype ใน response
+            complaint_subtype_name = ""
+            if db and hasattr(complaint, "complaint_subtype_id") and complaint.complaint_subtype_id:
+                from models.comp_complaint_types import ComplaintSubType
+                subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
+                if subtype:
+                    complaint_subtype_name = subtype.name
+            list_item_dict = list_item.__dict__
+            list_item_dict["complaint_subtype"] = complaint_subtype_name
+            result.append(list_item_dict)
         except Exception as e:
             if DEBUG_MODE:
                 print(f"Error creating list item: {str(e)}")
             continue
-    
-  #ข้อมูล filters สำหรับ frontend
+
     filters = get_filter_options(db)
-    
     return {
         "items": result,
         "pagination": {
@@ -893,7 +911,7 @@ def get_complaints(
             "limit": limit,
             "has_more": total_count > (skip + limit)
         },
-        "filters": filters #ส่วนนี้
+        "filters": filters
     }
 
 def get_filter_options(db: Session) -> Dict:
@@ -975,19 +993,28 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
         # สถานะภาษาไทย
         status_thai = get_thai_status(complaint.status)
         
+        # เพิ่มดึง complaint_subtype
+        complaint_subtype_name = ""
+        if db and hasattr(complaint, "complaint_subtype_id") and complaint.complaint_subtype_id:
+            from models.comp_complaint_types import ComplaintSubType
+            subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
+            if subtype:
+                complaint_subtype_name = subtype.name
+
         return ComplaintListItem(
             id=complaint.id,
             complaint_number=complaint.complaint_number,
             subject=complaint.subject,
-            complaint_type=complaint_type_thai,
-            status=status_thai,
+            complaint_type=get_thai_complaint_type(complaint.complaint_type),
+            status=get_thai_status(complaint.status),
             created_at=complaint.created_at,
-            complainant_name=complainant_name,
-            respondent_name=respondent_name,
-            incident_location=incident_location,
-            assigned_to=assigned_info,
+            complainant_name=get_display_complainant_name(ensure_dict(complaint.complainant_data), ensure_dict(complaint.delegate_data) if complaint.delegate_data else None),
+            respondent_name=get_display_respondent_name(complaint.respondent_type, ensure_dict(complaint.respondent_data)),
+            incident_location=get_display_incident_location(complaint),
+            assigned_to=get_display_assigned_info(complaint, db),
             urgency_level=complaint.urgency_level.lower() if complaint.urgency_level else "low",
-            severity_level=complaint.severity_level.lower() if complaint.severity_level else "low"
+            severity_level=complaint.severity_level.lower() if complaint.severity_level else "low",
+            complaint_subtype=complaint_subtype_name  # เพิ่มตรงนี้
         )
         
     except Exception as e:
@@ -1720,6 +1747,7 @@ def verify_geographic_data(db: Session, location_data: Dict) -> Dict:
                         ((Amphure.name_th.ilike(f"%{district_name}%")) | 
                          (Amphure.name_en.ilike(f"%{district_name}%"))),
                         Amphure.province_id == verified_location["incident_province_id"]
+
                     ).first()
                     if amphure:
                         verified_location["incident_district_id"] = amphure.id

@@ -56,6 +56,7 @@ class ComplaintListItem(BaseModel):
     complaint_number: str
     subject: str
     complaint_type: str
+    complaint_subtype: Optional[str] = ""
     status: str
     created_at: datetime
     complainant_name: str
