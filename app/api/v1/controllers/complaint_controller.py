@@ -2080,14 +2080,48 @@ def extract_incident_location(full_data: Dict) -> Dict:
     
     return location_data
 
-def parse_complainant_data(complainant_data):
-    """แปลงข้อมูลผู้ร้องเรียนให้อยู่ในรูปแบบ step1"""
+def enrich_address_fields(data: dict, db: Session) -> dict:
+    """แปลง province, districts, subdistricts, zipcode ให้เป็น object (value/label/zip_code)"""
+    if not data or not db:
+        return data
+    # Province
+    if "province" in data and isinstance(data["province"], (int, str)):
+        province = db.query(Province).filter(Province.id == data["province"]).first()
+        if province:
+            data["province"] = {"value": province.id, "label": province.name_th}
+    # District
+    if "districts" in data and isinstance(data["districts"], (int, str)):
+        amphure = db.query(Amphure).filter(Amphure.id == data["districts"]).first()
+        if amphure:
+            data["districts"] = {"value": amphure.id, "label": amphure.name_th}
+    # Subdistrict
+    if "subdistricts" in data and isinstance(data["subdistricts"], (int, str)):
+        district = db.query(District).filter(District.id == str(data["subdistricts"])).first()
+        if district:
+            data["subdistricts"] = {
+                "value": district.id,
+                "label": district.name_th,
+                "zip_code": {
+                    "value": district.zip_code,
+                    "label": str(district.zip_code)
+                }
+            }
+            # เพิ่ม zipcode field ด้วย (ถ้ามี)
+            data["zipcode"] = district.zip_code
+    # Zipcode
+    if "zipcode" in data and isinstance(data["zipcode"], int):
+        data["zipcode"] = {"value": data["zipcode"], "label": str(data["zipcode"])}
+    return data
+
+def parse_complainant_data(complainant_data, db: Session = None):
+    """แปลงข้อมูลผู้ร้องเรียนให้อยู่ในรูปแบบ step1 พร้อม enrich address"""
     try:
         if isinstance(complainant_data, str):
             data = json.loads(complainant_data)
         else:
             data = complainant_data or {}
-        
+        # enrich address fields
+        data = enrich_address_fields(data, db)
         return {
             "general": {
                 "general": data
@@ -2097,14 +2131,14 @@ def parse_complainant_data(complainant_data):
         logger.error(f"Error parsing complainant data: {str(e)}")
         return {"general": {"general": {}}}
 
-def parse_respondent_data(respondent_data):
-    """แปลงข้อมูลผู้ถูกร้องเรียนให้อยู่ในรูปแบบ step2"""
+def parse_respondent_data(respondent_data, db: Session = None):
+    """แปลงข้อมูลผู้ถูกร้องเรียนให้อยู่ในรูปแบบ step2 พร้อม enrich address"""
     try:
         if isinstance(respondent_data, str):
             data = json.loads(respondent_data)
         else:
             data = respondent_data or {}
-        
+        data = enrich_address_fields(data, db)
         return {
             "general": {
                 "activeType": "individual",
@@ -2183,8 +2217,8 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
         result = {
             "id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
-            "step1": parse_complainant_data(complaint.complainant_data),
-            "step2": parse_respondent_data(complaint.respondent_data),
+            "step1": parse_complainant_data(complaint.complainant_data, db),
+            "step2": parse_respondent_data(complaint.respondent_data, db),
             "step3": parse_incident_data(complaint),
             "step4": {"general": {"accepted": complaint.terms_accepted}},
             "status": complaint.status,
