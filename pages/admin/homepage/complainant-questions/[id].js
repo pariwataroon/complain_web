@@ -1,13 +1,7 @@
-import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
+import ComplainantquestionsChatbot from "@components/HomePage/Complainantquestions/ComplainantquestionsChatbot";
 
-import React from 'react'
-
-const id= () => {
-  return (
-    <div>
-      
-    </div>
-  )
+const id = () => {
+  return ( <ComplainantquestionsChatbot/>)
 }
 
-export default [id]
+export default id

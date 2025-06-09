@@ -15,6 +15,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import dayjs from 'dayjs';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import DateThaiPickerService from '@services/DateThaiPickerService/DateThaiPickerService';
 
     const newsData = [
     {
@@ -224,8 +225,7 @@ export default function NewDetails({ mode = 'create' }) {
                 fullWidth
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                sx={{ border: '1px solid #007AFF', borderRadius: '8px', '& fieldset': { border: 'none' } }}
-              />
+                sx={{ border: '1px solid #007AFF', borderRadius: '8px', '& fieldset': { border: 'none' } }}/>
               <Typography sx={{ color: '#1120A3', fontWeight: 'bold' }}>เนื้อหาข่าวสาร</Typography>
               <Box sx={{ border: '1px solid #007AFF', borderRadius: '8px', '& fieldset': { border: 'none' } }}>
                 <RichTextEditor value={content} onChange={setContent} />
@@ -235,16 +235,14 @@ export default function NewDetails({ mode = 'create' }) {
                 fullWidth
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                sx={{ border: '1px solid #007AFF', borderRadius: '8px', '& fieldset': { border: 'none' } }}
-              />
+                sx={{ border: '1px solid #007AFF', borderRadius: '8px', '& fieldset': { border: 'none' } }}/>
 
               <Stack spacing={2}>
                 <Box display="flex" justifyContent="flex-end">
                   <Stack direction="row" spacing={2} alignItems="center">
                     <FormControlLabel
                       control={<Checkbox checked={pinTop} onChange={(e) => setPinTop(e.target.checked)} />}
-                      label="แสดงผลยอด"
-                    />
+                      label="แสดงผลยอด"/>
                     <FormControlLabel
                       control={<Checkbox checked={publish} onChange={(e) => setPublish(e.target.checked)} />}
                       label="กำหนดระยะเวลา"
@@ -252,16 +250,21 @@ export default function NewDetails({ mode = 'create' }) {
                   </Stack>
                 </Box>
 
-                <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap">
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 2,}} >
                   <ImageUpload images={images} setImages={setImages} />
-                  <TextField
-                    type="date"
-                    value={expireDate}
-                    onChange={(e) => setExpireDate(e.target.value)}
-                    size="small"
-                    sx={{ width: 160 }}
-                  />
-                </Stack>
+                  <Box sx={{ minWidth: 220 }}>
+                    <DateThaiPickerService
+                      onChange={(dateObj) => setExpireDate(dateObj)}
+                      name="expireDate"
+                    />
+                  </Box>
+                </Box>
               </Stack>
 
               <Box textAlign="center" mt={4}>
@@ -274,8 +277,7 @@ export default function NewDetails({ mode = 'create' }) {
                     fontWeight: 'bold',
                     width: '230px',
                     height: '56px',
-                  }}
-                >
+                  }}>
                   โพสต์
                 </Button>
               </Box>
