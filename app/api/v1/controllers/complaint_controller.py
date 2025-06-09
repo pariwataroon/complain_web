@@ -2150,20 +2150,41 @@ def parse_respondent_data(respondent_data, db: Session = None):
         return {"general": {"activeType": "individual", "individual": {}}}
 
 def parse_incident_data(complaint):
-    """แปลงข้อมูลเหตุการณ์ให้อยู่ในรูปแบบ step3"""
+    """แปลงข้อมูลเหตุการณ์ให้อยู่ในรูปแบบ step3 - รวม attachments"""
     try:
+        # ดึงไฟล์แนบจาก relationship
+        attachment_list = []
+        if hasattr(complaint, 'attachments') and complaint.attachments:
+            for attachment in complaint.attachments:
+                attachment_list.append({
+                    "id": str(attachment.id),
+                    "fileName": attachment.file_name,
+                    "fileSize": attachment.file_size,
+                    "fileUrl": attachment.file_url,
+                    "fileType": attachment.file_type,
+                    "created_at": attachment.created_at.isoformat() if attachment.created_at else None
+                })
+        
         return {
             "general": {
                 "complaintType": complaint.complaint_type or "",
                 "subject": complaint.subject or "",
                 "description": complaint.description or "",
                 "incidentDate": complaint.incident_date.isoformat() if complaint.incident_date else None,
-                "attachment": []
+                "attachment": attachment_list  # เพิ่มไฟล์แนบที่ดึงจากฐานข้อมูล
             }
         }
     except Exception as e:
         logger.error(f"Error parsing incident data: {str(e)}")
-        return {"general": {"complaintType": "", "subject": "", "description": "", "incidentDate": None, "attachment": []}}
+        return {
+            "general": {
+                "complaintType": "", 
+                "subject": "", 
+                "description": "", 
+                "incidentDate": None, 
+                "attachment": []
+            }
+        }
 
 def format_status_history(status_history_list):
     """จัดรูปแบบประวัติสถานะ"""
@@ -2203,11 +2224,11 @@ def get_my_complaint_by_id(db: Session, complaint_id: UUID, user_id: UUID) -> Di
     except Exception as e:
         logger.error(f"Error getting my complaint: {str(e)}")
         return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
-    
+ 
 def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict:
     """ดึงรายละเอียดเรื่องร้องเรียนใดๆ รวมข้อมูล assignment form (ไม่จำกัดเฉพาะเจ้าของ)"""
     try:
-        # ดึงข้อมูลเรื่องร้องเรียน
+        # ดึงข้อมูลเรื่องร้องเรียนพร้อม attachments
         complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
         
         if not complaint:
@@ -2219,7 +2240,7 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             "complaint_number": complaint.complaint_number,
             "step1": parse_complainant_data(complaint.complainant_data, db),
             "step2": parse_respondent_data(complaint.respondent_data, db),
-            "step3": parse_incident_data(complaint),
+            "step3": parse_incident_data(complaint),  # ฟังก์ชันนี้ดึง attachments แล้ว
             "step4": {"general": {"accepted": complaint.terms_accepted}},
             "status": complaint.status,
             "status_history": format_status_history(complaint.status_history),
@@ -2231,7 +2252,7 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             "resolved_date": complaint.resolved_date.isoformat() if complaint.resolved_date else None,
         }
         
-        # ✅ เพิ่มข้อมูล assignment_form ครบถ้วนทุกฟิลด์
+        # เพิ่มข้อมูล assignment_form ครบถ้วนทุกฟิลด์
         assignment_form = {
             "id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
@@ -2239,7 +2260,7 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             "complaint_type": complaint.complaint_type,
             "status": complaint.status,
             
-            # ✅ Reference Numbers (1-4)
+            # Reference Numbers (1-4)
             "reference_number": complaint.reference_number,
             "reference_date": complaint.reference_date.isoformat() if complaint.reference_date else None,
             "reference_number2": complaint.reference_number2,
@@ -2249,48 +2270,51 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             "reference_number4": complaint.reference_number4,
             "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
             
-            # ✅ Document Info
+            # Document Info
             "document_number": complaint.document_number,
             "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
             
-            # ✅ Levels & Classifications
+            # Levels & Classifications
             "confidentiality_level": complaint.confidentiality_level,
             "urgency_level": complaint.urgency_level,
             "complaint_filing_type": complaint.complaint_filing_type,
             
-            # ✅ Agency Info
+            # Agency Info
             "agency_sender": complaint.agency_sender,
             
-            # ✅ Additional Reference Numbers (เพิ่มใหม่)
+            # Additional Reference Numbers
             "additional_reference_number1": complaint.additional_reference_number1,
             "additional_reference_date1": complaint.additional_reference_date1.isoformat() if complaint.additional_reference_date1 else None,
             "additional_reference_number2": complaint.additional_reference_number2,
             "additional_reference_date2": complaint.additional_reference_date2.isoformat() if complaint.additional_reference_date2 else None,
             
-            # ✅ Assignment Info (เพิ่มใหม่)
+            # Assignment Info
             "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
             "assigned_to": complaint.assigned_to,
             "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
             
-            # ✅ Complaint Categories (เพิ่มใหม่)
+            # Complaint Categories
             "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
             "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
             "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
             
-            # ✅ Registration Date (เพิ่มใหม่)
+            # Registration Date
             "registration_date": complaint.registration_date.isoformat() if complaint.registration_date else None,
             
-            # ✅ Workflow Flags
+            # Workflow Flags
             "new_complaint": complaint.new_complaint,
             "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
             "group_work": complaint.group_work,
             
-            # ✅ Legal Reference
+            # Legal Reference
             "regulation_reference": complaint.regulation_reference,
             
-            # ✅ Timestamps
+            # Timestamps
             "created_at": complaint.created_at.isoformat(),
-            "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None
+            "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
+            
+            # ✅ เพิ่มไฟล์แนบใน assignment_form ด้วย
+            "attachments": parse_incident_data(complaint)["general"]["attachment"]
         }
         
         result["assignment_form"] = assignment_form
@@ -2299,8 +2323,8 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
         
     except Exception as e:
         logger.error(f"Error getting complaint with assignment: {str(e)}")
-        return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
-    
+        return {"error": f"เกิดข้อผิดพลาด: {str(e)}"} 
+
 def get_complaints_grouped_by_channel(
     db: Session, 
     skip: int = 0, 
