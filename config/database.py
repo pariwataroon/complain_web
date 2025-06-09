@@ -4,6 +4,7 @@ import urllib.parse
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import QueuePool
 from lib.logger import get_logger
 
 from config.dotenv import DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
@@ -13,7 +14,7 @@ logger = get_logger("database", console_output=False)
 # Get database connection details from environment variables
 DB_PASSWORD_ENCODE = urllib.parse.quote_plus(DB_PASSWORD)
 
-# Create the SQLAlchemy engine - Updated to use ODBC Driver 18
+# Create the SQLAlchemy engine - Optimized with connection pooling
 SQLALCHEMY_DATABASE_URL = f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD_ENCODE}@{DB_HOST}:{DB_PORT}/{DB_NAME}?driver=ODBC+Driver+18+for+SQL+Server&charset=UTF8"
 
 # ล็อกข้อมูลการเชื่อมต่อ (ไม่มีรหัสผ่าน)
@@ -23,25 +24,31 @@ logger.info(connection_info)
 try:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
-        pool_pre_ping=True,  # Check connection before using it
-        pool_recycle=3600,   # Recycle connections after 1 hour
-        echo=False,          # Set to True for SQL query logging
-        pool_size=20,        # Set the pool size to 5 connections
-        max_overflow=20,    # Allow up to 10 additional connections beyond the pool size
-        pool_timeout=60,        # เพิ่มเวลา timeout จาก 30 วินาที เป็น 60 วินาที
+        poolclass=QueuePool,
+        pool_size=15,        # จำนวน connections ที่รักษาไว้
+        max_overflow=25,     # connections เพิ่มเติมเมื่อ pool เต็ม
+        pool_pre_ping=True,  # ตรวจสอบ connection ก่อนใช้
+        pool_recycle=3600,   # รีไซเคิล connections ทุก 1 ชั่วโมง
+        pool_timeout=60,     # timeout 60 วินาที
+        echo=False,          # เปิดเป็น True เมื่อต้องการดู SQL logs
         connect_args={
             "TrustServerCertificate": "yes",
             "Encrypt": "yes",
             "charset": "utf8"
         }
     )
-    logger.info("Database engine created successfully")
+    logger.info("Database engine created successfully with optimized connection pool and indexing support")
 except Exception as e:
     logger.error(f"Failed to create database engine: {str(e)}")
     raise
 
-# Create a session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Create a session factory with optimized settings
+SessionLocal = sessionmaker(
+    autocommit=False, 
+    autoflush=False, 
+    bind=engine,
+    expire_on_commit=False  # ป้องกัน lazy loading issues
+)
 
 # Create a base class for declarative models
 Base = declarative_base()
@@ -67,3 +74,15 @@ def get_db_session():
 def create_db_session():
     """สร้าง database session โดยตรง (ไม่ใช่ generator) สำหรับ worker"""
     return SessionLocal()
+
+# Function to create all indexes (เรียกใช้หลัง create_all)
+def create_indexes():
+    """สร้าง indexes หลังจากสร้างตารางแล้ว"""
+    try:
+        # SQLAlchemy จะสร้าง indexes ที่กำหนดใน models อัตโนมัติ
+        # เมื่อเรียก Base.metadata.create_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+        logger.info("All indexes created successfully")
+    except Exception as e:
+        logger.error(f"Failed to create indexes: {str(e)}")
+        raise
