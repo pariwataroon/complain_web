@@ -72,11 +72,13 @@ async def read_complaints(
     skip: int = 0,
     limit: int = 100,
     status: Optional[str] = None,
-    complaint_type: Optional[str] = None,  # เพิ่ม filter ประเภทเรื่องร้องเรียน
-    assignee: Optional[str] = None,  # เพิ่ม filter ผู้รับผิดชอบ
-    location: Optional[str] = None,  # เพิ่ม filter สถานที่
-    urgency: Optional[str] = None,  # เพิ่ม filter ความเร่งด่วน
-    search: Optional[str] = None,  # เพิ่ม search
+    complaint_type: Optional[str] = None,
+    complaint_subtype: Optional[str] = None,  # เพิ่ม filter
+    assignee: Optional[str] = None,
+    location: Optional[str] = None,
+    urgency: Optional[str] = None,
+    search: Optional[str] = None,
+    complainant_name: Optional[str] = None,   # เพิ่ม filter
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
@@ -87,10 +89,12 @@ async def read_complaints(
         limit=limit, 
         status=status,
         complaint_type=complaint_type,
+        complaint_subtype=complaint_subtype,   # ส่งไป controller
         assignee=assignee,
         location=location,
         urgency=urgency,
-        search=search
+        search=search,
+        complainant_name=complainant_name      # ส่งไป controller
     )
     return format_response("0000", result)
 
