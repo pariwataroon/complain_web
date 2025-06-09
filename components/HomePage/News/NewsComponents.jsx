@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useRouter } from 'next/router';
+import { method } from 'lodash';
 
 const newsData = [
   {
@@ -65,22 +66,28 @@ const DefineNewsComponents = () => {
   const [selectedIndex, setSelectedIndex] = useState(null);
 
   const handleAddNews = () => {
-    router.push('/admin/homepage/news/create');
+    router.push({
+      pathname: "/admin/homepage/news",
+      query: { method: "CreateNew" },
+    });
   };
 
   const handleEditNews = (index) => {
     const item = newsList[index];
-    const params = new URLSearchParams({
-      id: index,
-      title: item.title,
-      content: item.content,
-      url: item.url || '',
-      pinTop: item.pinTop ?? false,
-      publish: item.publish ?? true,
-      expireDate: item.expireDate || '',
-      img: item.img || '',
+    router.push({
+      pathname: "/admin/homepage/news",
+      query: {
+        method: "EditNew",
+        id: index,
+        title: item.title,
+        content: item.content || '',
+        url: item.url || '',
+        pinTop: item.pinTop ?? false,
+        publish: item.publish ?? true,
+        expireDate: item.expireDate || '',
+        img: item.img || '',
+      }
     });
-    router.push(`/admin/homepage/news/edit?${params.toString()}`);
   };
 
   const openDeleteDialog = (index) => {
@@ -204,8 +211,7 @@ const DefineNewsComponents = () => {
               height: 50,
               px: 4,
               py: 2,
-              '&:hover': { backgroundColor: '#FEE2E2', borderColor: '#DC2626' },
-            }}>
+              '&:hover': { backgroundColor: '#FEE2E2', borderColor: '#DC2626' },}}>
             <span style={{ display: 'flex', alignItems: 'center' }}>
               <img src="/icons/Cross.png" alt="" style={{ width: 22, height: 22, marginRight: 10 }} />
               ยกเลิก
