@@ -7085,6 +7085,87 @@
 					"response": []
 				},
 				{
+					"name": "Get Complaints Grouped by Channel",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/group-by-channel?skip=0&limit=100&status=SUBMITTED&complaint_type=&complaint_subtype=&assignee=&location=&urgency=&search=&complainant_name=",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"group-by-channel"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนที่จะข้าม"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนสูงสุดที่จะดึง"
+								},
+								{
+									"key": "status",
+									"value": "SUBMITTED",
+									"description": "กรองตามสถานะ (Optional)"
+								},
+								{
+									"key": "complaint_type",
+									"value": "",
+									"description": "กรองตามประเภทเรื่องร้องเรียน (Optional)"
+								},
+								{
+									"key": "complaint_subtype",
+									"value": "",
+									"description": "กรองตามประเภทเรื่องร้องเรียนย่อย (Optional)"
+								},
+								{
+									"key": "assignee",
+									"value": "",
+									"description": "กรองตามผู้รับผิดชอบ (Optional)"
+								},
+								{
+									"key": "location",
+									"value": "",
+									"description": "กรองตามสถานที่เกิดเหตุ (Optional)"
+								},
+								{
+									"key": "urgency",
+									"value": "",
+									"description": "กรองตามความเร่งด่วน (Optional)"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "ค้นหาในหลายฟิลด์ (Optional)"
+								},
+								{
+									"key": "complainant_name",
+									"value": "",
+									"description": "กรองตามชื่อผู้ร้องเรียน (Optional)"
+								}
+							]
+						},
+						"description": "ดึงรายการเรื่องร้องเรียนที่จัดกลุ่มตาม complaint_channel_id พร้อมข้อมูลช่องทางการร้องเรียนและฟิลด์อ้างอิงเพิ่มเติม รองรับการกรองและค้นหาข้อมูล"
+					},
+					"response": []
+				},
+				{
 					"name": "Update Assignment (Complete)",
 					"request": {
 						"auth": {
