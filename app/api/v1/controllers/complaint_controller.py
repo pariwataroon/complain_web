@@ -17,10 +17,12 @@ from models.comp_provinces import Province
 from models.comp_amphures import Amphure
 from models.comp_districts import District
 from app.api.v1.schemas.complaint import ComplaintListItem
+from app.api.v1.schemas.notification import NotificationCreate
 from models.comp_complaint_types import ComplaintType, ComplaintSubType, ComplaintChannel
 from app.api.v1.controllers.geography_controller import model_to_dict
 from models.user import User
 from app.api.v1.controllers.complaint_assignment_controller import get_assignment_form_data
+import app.api.v1.controllers.notification_controller as notification_controller
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +137,37 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
             db, new_complaint.id, ComplaintStatus.SUBMITTED, 
             "เรื่องร้องเรียนได้รับการสร้างขึ้นใหม่", user_id
         )
+        
+        # ✅ เพิ่มส่วนนี้หลัง create_status_history
+        # สร้าง notification เมื่อมีเรื่องร้องเรียนใหม่
+        try:
+            # ดึงข้อมูลผู้ร้องเรียน
+            complainant_data = ensure_dict(extracted_data.get("complainant_data", {}))
+            delegate_data = ensure_dict(extracted_data.get("delegate_data")) if extracted_data.get("delegate_data") else None
+            complainant_name = get_complainant_display_name_for_notification(complainant_data, delegate_data)
+            
+            # ดึงชื่อช่องทาง
+            channel_name = get_channel_name_for_notification(db, complaint_channel_id)
+            
+            # สร้าง notification message
+            notification_message = create_complaint_notification_message(
+                new_complaint, complainant_name, channel_name, extracted_data.get("complaint_type", "")
+            )
+            print(f"Notification message: {notification_message}")
+            # สร้าง notification
+            notification_data = NotificationCreate(
+                title="เรื่องร้องเรียนใหม่",
+                message=notification_message,
+                role_seeking_group="admin,staff,supervisor",
+                redirect_url=f"/complaints/{new_complaint.id}"
+            )
+            
+            notification_controller.create_notification(db, notification_data)
+            logger.info(f"Notification created for new complaint: {new_complaint.complaint_number}")
+            
+        except Exception as e:
+            # ถ้าสร้าง notification ไม่สำเร็จ ให้บันทึก error แต่ไม่ทำให้การสร้างเรื่องร้องเรียนล้มเหลว
+            logger.error(f"Error creating notification for complaint {new_complaint.complaint_number}: {str(e)}")
         
         return new_complaint
         
@@ -1271,6 +1304,36 @@ def update_complaint_status(db: Session, complaint_id: uuid.UUID, new_status: Co
         complaint.resolved_date = datetime.now()
     
     create_status_history(db, complaint_id, new_status, notes, user_id)
+    
+    try:
+        old_status = complaint.status
+        if should_notify_status_change(old_status, new_status):
+            # ดึงข้อมูลผู้ร้องเรียน
+            complainant_data = ensure_dict(complaint.complainant_data)
+            delegate_data = ensure_dict(complaint.delegate_data) if complaint.delegate_data else None
+            complainant_name = get_complainant_display_name_for_notification(complainant_data, delegate_data)
+            
+            # สร้าง notification message
+            status_message = create_status_change_notification_message(
+                complaint, old_status, new_status, complainant_name, notes
+            )
+            
+            # กำหนด role ที่จะได้รับ notification ตามสถานะ
+            target_roles = get_notification_roles_by_status(new_status)
+            
+            # สร้าง notification
+            notification_data = NotificationCreate(
+                title="อัปเดตสถานะเรื่องร้องเรียน",
+                message=status_message,
+                role_seeking_group=target_roles,
+                redirect_url=f"/complaints/{complaint.id}"
+            )
+            
+            notification_controller.create_notification(db, notification_data)
+            logger.info(f"Status change notification created for complaint: {complaint.complaint_number}")
+            
+    except Exception as e:
+        logger.error(f"Error creating status change notification: {str(e)}")
     
     db.commit()
     db.refresh(complaint)
@@ -2527,3 +2590,268 @@ def create_grouped_complaint_item(db: Session, complaint: Complaint) -> Dict:
             "reference_number4": None,
             "reference_date4": None,
         }
+
+
+def get_channel_name_for_notification(db: Session, channel_id: UUID) -> str:
+    """ดึงชื่อช่องทางการร้องเรียนจาก ID สำหรับ notification"""
+    from models.comp_complaint_types import ComplaintChannel
+    
+    try:
+        if not channel_id:
+            return "ไม่ระบุช่องทาง"
+            
+        channel = db.query(ComplaintChannel).filter(
+            ComplaintChannel.id == channel_id
+        ).first()
+        
+        if channel:
+            return channel.name
+        else:
+            return "ช่องทางไม่ทราบ"
+            
+    except Exception as e:
+        logger.error(f"Error getting channel name for ID {channel_id}: {str(e)}")
+        return "ช่องทางไม่ทราบ"
+
+def get_complainant_display_name_for_notification(complainant_data: Dict, delegate_data: Dict = None) -> str:
+    """สร้างชื่อผู้ร้องเรียนสำหรับแสดงใน notification"""
+    try:
+        # ลองดึงชื่อจากข้อมูลผู้ร้องเรียน
+        if "name" in complainant_data:
+            return complainant_data["name"]
+        
+        # รวมชื่อ-นามสกุล
+        first_name = complainant_data.get("firstName", "") or complainant_data.get("first_name", "")
+        last_name = complainant_data.get("lastName", "") or complainant_data.get("last_name", "")
+        
+        if first_name and last_name:
+            name = f"{first_name} {last_name}"
+        elif first_name:
+            name = first_name
+        elif last_name:
+            name = last_name
+        else:
+            name = ""
+        
+        # ถ้ายังไม่มีชื่อ ลองดึงจากชื่อบริษัท (กรณีนิติบุคคล)
+        if not name:
+            company_name = complainant_data.get("companyName", "")
+            if company_name:
+                name = company_name
+        
+        # เพิ่มผู้รับมอบอำนาจถ้ามี
+        if delegate_data and isinstance(delegate_data, dict):
+            delegate_name = delegate_data.get("name", "")
+            if delegate_name and delegate_name.strip():
+                if name:
+                    name += f" (ผู้รับมอบอำนาจ: {delegate_name})"
+                else:
+                    name = f"ผู้รับมอบอำนาจ: {delegate_name}"
+        
+        # ถ้าไม่มีชื่อเลย ให้ใช้ "ผู้ร้องเรียนไม่ทราบชื่อ"
+        return name if name else "ผู้ร้องเรียนไม่ทราบชื่อ"
+        
+    except Exception as e:
+        logger.error(f"Error getting complainant display name: {str(e)}")
+        return "ผู้ร้องเรียน"
+
+def create_complaint_notification_message(
+    complaint: Complaint, 
+    complainant_name: str, 
+    channel_name: str, 
+    complaint_type: str
+) -> str:
+    """สร้างข้อความ notification สำหรับเรื่องร้องเรียนใหม่"""
+    try:
+        # ข้อความพื้นฐาน
+        base_message = f"มีเรื่องร้องเรียนใหม่จาก {complainant_name}"
+        
+        # เพิ่มประเภทเรื่องร้องเรียน
+        if complaint_type:
+            base_message += f" ประเภท: {complaint_type}"
+        
+        # เพิ่มช่องทางการร้องเรียน
+        if channel_name and channel_name != "ช่องทางไม่ทราบ":
+            base_message += f" ผ่านช่องทาง: {channel_name}"
+        
+        # เพิ่มหัวข้อเรื่องร้องเรียน
+        if complaint.subject:
+            subject_preview = complaint.subject[:50] + "..." if len(complaint.subject) > 50 else complaint.subject
+            base_message += f" หัวข้อ: {subject_preview}"
+        
+        # เพิ่มเลขที่เรื่อง
+        base_message += f" เลขที่เรื่อง: {complaint.complaint_number}"
+        
+        return base_message
+        
+    except Exception as e:
+        logger.error(f"Error creating notification message: {str(e)}")
+        return f"มีเรื่องร้องเรียนใหม่ เลขที่: {complaint.complaint_number}"
+
+def should_notify_status_change(old_status: ComplaintStatus, new_status: ComplaintStatus) -> bool:
+    """ตรวจสอบว่าควรส่ง notification เมื่อเปลี่ยนสถานะหรือไม่"""
+    # สถานะที่สำคัญที่ควรแจ้งเตือน
+    important_statuses = [
+        ComplaintStatus.SENT_TO_AGENCY,
+        ComplaintStatus.IN_PROCESS,
+        ComplaintStatus.REVIEWED,
+        ComplaintStatus.COMPLETED
+    ]
+    
+    return new_status in important_statuses and old_status != new_status
+
+def create_status_change_notification_message(
+    complaint: Complaint, 
+    old_status: ComplaintStatus, 
+    new_status: ComplaintStatus,
+    complainant_name: str,
+    notes: Optional[str] = None
+) -> str:
+    """สร้างข้อความ notification สำหรับการเปลี่ยนสถานะ"""
+    try:
+        # แปลสถานะเป็นภาษาไทย
+        old_status_thai = get_thai_status(old_status.value)
+        new_status_thai = get_thai_status(new_status.value)
+        
+        message = f"เรื่องร้องเรียน {complaint.complaint_number} จาก {complainant_name} "
+        message += f"เปลี่ยนสถานะจาก '{old_status_thai}' เป็น '{new_status_thai}'"
+        
+        # เพิ่มหมายเหตุถ้ามี
+        if notes:
+            notes_preview = notes[:100] + "..." if len(notes) > 100 else notes
+            message += f" หมายเหตุ: {notes_preview}"
+        
+        return message
+        
+    except Exception as e:
+        logger.error(f"Error creating status change notification message: {str(e)}")
+        return f"อัปเดตสถานะเรื่องร้องเรียน {complaint.complaint_number}"
+
+def get_notification_roles_by_status(status: ComplaintStatus) -> str:
+    """กำหนด role ที่จะได้รับ notification ตามสถานะ"""
+    role_mapping = {
+        ComplaintStatus.SUBMITTED: "admin,staff",
+        ComplaintStatus.SENT_TO_AGENCY: "admin,staff,supervisor",
+        ComplaintStatus.IN_PROCESS: "admin,staff,supervisor",
+        ComplaintStatus.IN_REVIEW: "admin,supervisor",
+        ComplaintStatus.REVIEWED: "admin,staff,supervisor",
+        ComplaintStatus.COMPLETED: "admin,staff,supervisor"
+    }
+    
+    return role_mapping.get(status, "admin,staff")
+
+def create_assignment_notification_message(
+    complaint: Complaint,
+    complainant_name: str,
+    assigned_to: str,
+    assigned_officer_name: Optional[str] = None
+) -> str:
+    """สร้างข้อความ notification สำหรับการมอบหมายงาน"""
+    try:
+        message = f"เรื่องร้องเรียน {complaint.complaint_number} จาก {complainant_name}"
+        
+        if assigned_officer_name:
+            message += f" ได้รับการมอบหมายให้ {assigned_officer_name}"
+        elif assigned_to:
+            message += f" ได้รับการมอบหมายให้ {assigned_to}"
+        else:
+            message += " ได้รับการมอบหมายงาน"
+        
+        # เพิ่มหัวข้อเรื่องร้องเรียน
+        if complaint.subject:
+            subject_preview = complaint.subject[:50] + "..." if len(complaint.subject) > 50 else complaint.subject
+            message += f" หัวข้อ: {subject_preview}"
+        
+        return message
+        
+    except Exception as e:
+        logger.error(f"Error creating assignment notification message: {str(e)}")
+        return f"มอบหมายเรื่องร้องเรียน {complaint.complaint_number}"
+
+def assign_complaint_to_officer(
+    db: Session, 
+    complaint_id: UUID, 
+    assigned_to: Optional[str] = None,
+    assigned_officer_id: Optional[UUID] = None,
+    notes: Optional[str] = None,
+    user_id: Optional[UUID] = None
+) -> Complaint:
+    """มอบหมายเรื่องร้องเรียนให้เจ้าหน้าที่"""
+    try:
+        complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+        
+        if not complaint:
+            raise ValueError("ไม่พบเรื่องร้องเรียน")
+        
+        # บันทึกข้อมูลการมอบหมาย
+        complaint.assigned_to = assigned_to
+        complaint.assigned_officer_id = assigned_officer_id
+        complaint.assigned_date = datetime.now()
+        complaint.updated_at = datetime.now()
+        
+        # สร้างประวัติ
+        assignment_notes = notes or "มอบหมายเรื่องร้องเรียนให้เจ้าหน้าที่"
+        if assigned_to:
+            assignment_notes += f" ({assigned_to})"
+        
+        create_status_history(db, complaint_id, complaint.status, assignment_notes, user_id)
+        
+        # ✅ สร้าง notification สำหรับการมอบหมายงาน
+        try:
+            # ดึงข้อมูลผู้ร้องเรียน
+            complainant_data = ensure_dict(complaint.complainant_data)
+            delegate_data = ensure_dict(complaint.delegate_data) if complaint.delegate_data else None
+            complainant_name = get_complainant_display_name_for_notification(complainant_data, delegate_data)
+            
+            # ดึงชื่อเจ้าหน้าที่ (ถ้ามี)
+            assigned_officer_name = None
+            if assigned_officer_id:
+                try:
+                    from app.api.v1.controllers.user_controller import get_user_with_roles_and_titles
+                    officer_info = get_user_with_roles_and_titles(db, assigned_officer_id)
+                    if officer_info:
+                        assigned_officer_name = officer_info.get("displayName") or officer_info.get("username")
+                except Exception:
+                    pass
+            
+            # สร้าง notification message
+            assignment_message = create_assignment_notification_message(
+                complaint, complainant_name, assigned_to or "", assigned_officer_name
+            )
+            
+            # สร้าง notification สำหรับทีม
+            notification_data = NotificationCreate(
+                title="มอบหมายเรื่องร้องเรียน",
+                message=assignment_message,
+                role_seeking_group="admin,staff,supervisor",
+                redirect_url=f"/complaints/{complaint.id}"
+            )
+            
+            notification_controller.create_notification(db, notification_data)
+            
+            # สร้าง notification เฉพาะให้เจ้าหน้าที่ที่ได้รับมอบหมาย (ถ้ามี)
+            if assigned_officer_id:
+                personal_notification = NotificationCreate(
+                    title="คุณได้รับมอบหมายเรื่องร้องเรียนใหม่",
+                    message=f"คุณได้รับมอบหมายเรื่องร้องเรียน {complaint.complaint_number} จาก {complainant_name}",
+                    user_id=assigned_officer_id,
+                    redirect_url=f"/complaints/{complaint.id}"
+                )
+                
+                notification_controller.create_notification(db, personal_notification)
+            
+            logger.info(f"Assignment notification created for complaint: {complaint.complaint_number}")
+            
+        except Exception as e:
+            logger.error(f"Error creating assignment notification: {str(e)}")
+        
+        db.commit()
+        db.refresh(complaint)
+        
+        logger.info(f"Complaint {complaint.complaint_number} assigned successfully")
+        return complaint
+        
+    except Exception as e:
+        logger.error(f"Failed to assign complaint {complaint_id}: {str(e)}")
+        db.rollback()
+        raise
