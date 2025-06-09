@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "6b2491a0-56cc-4830-a587-2fe7668bba1c",
+		"_postman_id": "3cc99cea-5e12-47c0-bcca-0b2d24dc9beb",
 		"name": "COMP_MOF_API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "2230736"
@@ -3255,7 +3255,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"นักวิชาการคอมพิวเตอร์\",\n    \"description\": \"นักวิชาการคอมพิวเตอร์\",\n    \"level\": \"ชำนาญการ\",\n    \"is_active\": true\n}",
+							"raw": "{\n    \"name\": \"นักวิชาการคอมพิวเตอร์2\",\n    \"description\": \"นักวิชาการคอมพิวเตอร์2\",\n    \"level\": \"ชำนาญการ\",\n    \"is_active\": true\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -5162,6 +5162,31 @@
 			"item": [
 				{
 					"name": "Create Complaint",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// ดึงข้อมูลจาก response\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"// ตรวจสอบว่า login สำเร็จและมี token\r",
+									"if (jsonData.res_code === \"0000\" && jsonData.res_data.task_id) {\r",
+									"    // บันทึก access_token ลงใน Collection Variables\r",
+									"    pm.collectionVariables.set(\"task_id\", jsonData.res_data.task_id);\r",
+									"    \r",
+									"    console.log(\"task_id saved to collection variables!\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -5177,7 +5202,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"step1\": {\r\n    \"general\": {\r\n      \"general\": {\r\n        \"idCard\": \"1234567890123\",\r\n        \"name\": \"ผู้ร้องทุกข์ทดสอบ\",\r\n        \"address\": \"123 ถนนทดสอบ\",\r\n        \"phone\": \"0812345678\",\r\n        \"subdistricts\": \"ตำบลทดสอบ\",\r\n        \"districts\": \"อำเภอทดสอบ\",\r\n        \"email\": \"test@example.com\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"zipcode\": \"10100\"\r\n      },\r\n      \"delegate\": {\r\n        \"idCard\": \"9876543210987\",\r\n        \"name\": \"ผู้รับมอบอำนาจทดสอบ\",\r\n        \"address\": \"456 ถนนทดสอบ\",\r\n        \"phone\": \"0898765432\",\r\n        \"email\": \"delegate@example.com\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"subdistricts\": \"ตำบลทดสอบ 2\",\r\n        \"districts\": \"อำเภอทดสอบ 2\",\r\n        \"zipcode\": \"10110\"\r\n      }\r\n    }\r\n  },\r\n  \"step2\": {\r\n    \"general\": {\r\n      \"individual\": {\r\n        \"idCard\": \"1122334455667\",\r\n        \"name\": \"ผู้ถูกร้องทุกข์ทดสอบ\",\r\n        \"email\": \"respondent@example.com\",\r\n        \"address\": \"789 ถนนทดสอบ\",\r\n        \"phone\": \"0823456789\",\r\n        \"subdistricts\": \"ตำบลทดสอบ 3\",\r\n        \"districts\": \"อำเภอทดสอบ 3\",\r\n        \"province\": \"กรุงเทพมหานคร\",\r\n        \"zipcode\": \"10120\"\r\n      }\r\n    }\r\n  },\r\n  \"step3\": {\r\n    \"general\": {\r\n      \"incidentDate\": \"2023-10-15T14:30:00.000Z\",\r\n      \"complaintType\": \"การทุจริต\",\r\n      \"subject\": \"เรื่องร้องเรียนทดสอบ\",\r\n      \"description\": \"รายละเอียดเรื่องร้องเรียนทดสอบ เพื่อการทดสอบระบบ\",\r\n      \"attachment\": []\r\n    }\r\n  },\r\n  \"step4\": {\r\n    \"general\": {\r\n      \"accepted\": true\r\n    }\r\n  }\r\n}",
+							"raw": "{\r\n  \"step1\": {\r\n    \"general\": {\r\n      \"general\": {\r\n        \"idCard\": \"1100500123456\",\r\n        \"name\": \"นายมานะ รักชาติ\",\r\n        \"address\": \"123/456 หมู่ 7 ถนนพหลโยธิน\",\r\n        \"phone\": \"0812345678\",\r\n        \"province\": {\r\n          \"value\": 1,\r\n          \"label\": \"กรุงเทพมหานคร\"\r\n        },\r\n        \"districts\": {\r\n          \"value\": 30,\r\n          \"label\": \"จตุจักร\"\r\n        },\r\n        \"subdistricts\": {\r\n          \"value\": \"103001\",\r\n          \"label\": \"ลาดยาว\",\r\n          \"zip_code\": 10900\r\n        },\r\n        \"zipcode\": {\r\n          \"value\": 10900,\r\n          \"label\": \"10900\"\r\n        },\r\n        \"email\": \"mana@example.com\"\r\n      }\r\n    }\r\n  },\r\n  \"step2\": {\r\n    \"general\": {\r\n      \"individual\": {\r\n        \"idCard\": \"1100500654321\",\r\n        \"name\": \"นายสมชาย มีเงิน\",\r\n        \"email\": \"somchai@example.com\",\r\n        \"address\": \"88/99 หมู่บ้านเศรษฐกิจ\",\r\n        \"phone\": \"0898765432\",\r\n        \"province\": {\r\n          \"value\": 1,\r\n          \"label\": \"กรุงเทพมหานคร\"\r\n        },\r\n        \"districts\": {\r\n          \"value\": 40,\r\n          \"label\": \"บางแค\"\r\n        },\r\n        \"subdistricts\": {\r\n          \"value\": \"104001\",\r\n          \"label\": \"บางแค\",\r\n          \"zip_code\": 10160\r\n        },\r\n        \"zipcode\": {\r\n          \"value\": 10160,\r\n          \"label\": \"10160\"\r\n        }\r\n      },\r\n      \"activeType\": \"individual\"\r\n    }\r\n  },\r\n  \"step3\": {\r\n    \"general\": {\r\n      \"complaintType\": \"ฉ้อโกง\",\r\n      \"subject\": \"ถูกหลอกให้โอนเงินซื้อสินค้าออนไลน์\",\r\n      \"incidentDate\": \"2023-12-25T10:00:00.000Z\",\r\n      \"description\": \"ข้าพเจ้าได้ซื้อโทรศัพท์มือถือจากร้านค้าออนไลน์ ได้โอนเงิน 15,000 บาทไปแล้ว แต่ไม่ได้รับสินค้า และผู้ขายบล็อกการติดต่อทั้งหมด\",\r\n      \"attachment\": []\r\n    }\r\n  },\r\n  \"step4\": {\r\n    \"general\": {\r\n      \"accepted\": true\r\n    }\r\n  }\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -5199,6 +5224,31 @@
 				},
 				{
 					"name": "Check Queue Task Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// ดึงข้อมูลจาก response\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"// ตรวจสอบว่า login สำเร็จและมี token\r",
+									"if (jsonData.res_code === \"0000\" && jsonData.res_data.complaint_id) {\r",
+									"    // บันทึก access_token ลงใน Collection Variables\r",
+									"    pm.collectionVariables.set(\"complaint_id\", jsonData.res_data.complaint_id);\r",
+									"    \r",
+									"    console.log(\"complaint_id saved to collection variables!\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -7051,7 +7101,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"assigned_officer_id\": \"{{user_id}}\",\n    \"assigned_date\": \"2025-06-07T16:00:00Z\",\n    \"assignment_reason\": \"มีความเชี่ยวชาญด้านการทุจริตและมีประสบการณ์ในการจัดการเรื่องร้องเรียนประเภทนี้\",\n    \"complaint_type_id\": \"8584a70b-2b1c-4962-9bdd-f9f31d58bf61\",\n    \"complaint_subtype_id\": \"4b0dacd9-7257-4d5e-bcdc-7252cef517e3\",\n    \"complaint_channel_id\": \"fbb00403-2752-436a-9476-2f3acdeaf4cf\",\n    \"registration_date\": \"2025-06-07T00:00:00Z\",\n    \"confidentiality_level\": \"confidential\",\n    \"urgency_level\": \"high\",\n    \"reference_number1\": \"REF-2025-001\",\n    \"reference_date1\": \"2025-01-15T00:00:00Z\",\n    \"reference_number2\": \"REF-2025-002\",\n    \"reference_date2\": \"2025-01-16T00:00:00Z\",\n    \"reference_number3\": \"REF-2025-003\",\n    \"reference_date3\": \"2025-01-17T00:00:00Z\",\n    \"reference_number4\": \"REF-2025-004\",\n    \"reference_date4\": \"2025-01-18T00:00:00Z\",\n    \"complaint_filing_type\": \"new\",\n    \"document_number\": \"DOC-2025-12345\",\n    \"document_date\": \"2025-01-14T00:00:00Z\",\n    \"assigned_agency\": \"กรมการขนส่งทางบก\",\n    \"new_complaint\": true,\n    \"add_more_complaint_to_ref\": false,\n    \"group_work\": false,\n    \"regulation_reference\": \"มาตรา 18 แห่งพระราชบัญญัติระเบียบบริหารราชการแผ่นดิน\"\n}",
+							"raw": "{\n    \"assigned_officer_id\": \"{{user_id}}\",\n    \"assigned_date\": \"2025-06-07T16:00:00Z\",\n    \"assignment_reason\": \"มีความเชี่ยวชาญด้านการทุจริตและมีประสบการณ์ในการจัดการเรื่องร้องเรียนประเภทนี้\",\n    \"complaint_type_id\": \"5f1f8deb-a30d-4021-842f-69f816b68529\",\n    \"complaint_subtype_id\": \"5f56b154-0bd5-4df6-9b35-4e27bdb99214\",\n    \"registration_date\": \"2025-06-07T00:00:00Z\",\n    \"confidentiality_level\": \"confidential\",\n    \"urgency_level\": \"high\",\n    \"reference_number1\": \"REF-2025-001\",\n    \"reference_date1\": \"2025-01-15T00:00:00Z\",\n    \"reference_number2\": \"REF-2025-002\",\n    \"reference_date2\": \"2025-01-16T00:00:00Z\",\n    \"reference_number3\": \"REF-2025-003\",\n    \"reference_date3\": \"2025-01-17T00:00:00Z\",\n    \"reference_number4\": \"REF-2025-004\",\n    \"reference_date4\": \"2025-01-18T00:00:00Z\",\n    \"complaint_filing_type\": \"new\",\n    \"document_number\": \"DOC-2025-12345\",\n    \"document_date\": \"2025-01-14T00:00:00Z\",\n    \"assigned_agency\": \"กรมการขนส่งทางบก\",\n    \"new_complaint\": true,\n    \"add_more_complaint_to_ref\": false,\n    \"group_work\": false,\n    \"regulation_reference\": \"มาตรา 18 แห่งพระราชบัญญัติระเบียบบริหารราชการแผ่นดิน\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -7129,7 +7179,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"additional_reference_number1\": \"ADD-REF-2025-001\",\n    \"additional_reference_date1\": \"2025-01-20T00:00:00Z\",\n    \"additional_reference_number2\": \"ADD-REF-2025-002\",\n    \"additional_reference_date2\": \"2025-01-21T00:00:00Z\"\n}",
+							"raw": "{\n    \"assigned_officer_id\": \"{{user_id}}\",\n    \"new_complaint\": true,\n    \"add_more_complaint_to_ref\": false,\n    \"group_work\": false,\n    \"additional_reference_number1\": \"ADD-REF-2025-001\",\n    \"additional_reference_date1\": \"2025-01-20T00:00:00Z\",\n    \"additional_reference_number2\": \"ADD-REF-2025-002\",\n    \"additional_reference_date2\": \"2025-01-21T00:00:00Z\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -7148,7 +7198,8 @@
 							]
 						},
 						"description": "อัพเดทเฉพาะเลขอ้างอิงเพิ่มเติม"
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Link Related Complaint",
