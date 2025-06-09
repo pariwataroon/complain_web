@@ -16,6 +16,12 @@ logger = logging.getLogger(__name__)
 # Cache สำหรับข้อมูลผู้ใช้
 _user_info_cache = {}
 
+# เพิ่ม role ที่ถือว่าเป็นเจ้าหน้าที่ทุกประเภท
+STAFF_ROLES = [
+    "staff", "admin", "admin_home", "supervisor", "department"
+]
+EXCLUDED_ROLES = ["people"]
+
 def _get_user_info(db: Session, staff_id: str) -> Dict:
     """
     Helper function สำหรับดึงข้อมูลผู้ใช้โดยใช้ cache
@@ -55,237 +61,96 @@ def _get_user_info(db: Session, staff_id: str) -> Dict:
 
 def _get_staff_list(db: Session) -> List[str]:
     """
-    Helper function สำหรับดึงรายชื่อเจ้าหน้าที่โดยใช้ relationship
+    ดึงรายชื่อเจ้าหน้าที่ทุกคนที่มี role ตาม STAFF_ROLES แม้ไม่มีงาน
     """
-    staff_ids = []
-    
-    # เฉพาะ role ที่ถือว่าเป็นเจ้าหน้าที่
-    # staff_roles = ["staff", "admin", "admin_home", "supervisor", "department"]
-    staff_roles = ["staff"]
-    
-    # Role ที่ไม่ควรนับเป็นเจ้าหน้าที่
-    excluded_roles = ["people"]
-    
-    # ดึงรายชื่อ role ทั้งหมดในระบบ
-    try:
-        all_roles = db.query(distinct(Role.name)).all()
-        role_names = [r[0] for r in all_roles]
-        logger.info(f"Available roles in database: {role_names}")
-        
-        # ปรับปรุง staff_roles ให้มีเฉพาะที่มีในฐานข้อมูล
-        staff_roles = [r for r in staff_roles if r in role_names]
-        if not staff_roles:
-            logger.warning("No matching staff roles found in database")
-            return []
-        
-        logger.info(f"Using roles for staff: {staff_roles}")
-    except Exception as e:
-        logger.error(f"Could not retrieve role names: {str(e)}")
-    
-    # วิธี 1: ใช้ relationship และ exists()
-    try:
-        from models.user_role import UserRole
-        from sqlalchemy import exists, select
-        
-        # ใช้ exists() เพื่อตรวจสอบว่ามี staff role และไม่มี excluded role
-        staff_role_exists = exists().where(
-            and_(
-                UserRole.user_id == User.id,
-                UserRole.role_id == Role.id,
-                Role.name.in_(staff_roles)
-            )
-        )
-        
-        excluded_role_exists = exists().where(
-            and_(
-                UserRole.user_id == User.id,
-                UserRole.role_id == Role.id,
-                Role.name.in_(excluded_roles)
-            )
-        )
-        
-        # ดึงเฉพาะ users ที่มี staff role และไม่มี excluded role
-        users = db.query(User).filter(
-            staff_role_exists,
-            ~excluded_role_exists
-        ).all()
-        
-        staff_ids = [str(user.id) for user in users]
-        logger.info(f"Found {len(staff_ids)} staff using exists() approach")
-        
-        # Log generated SQL for debugging
-        query = db.query(User).filter(
-            staff_role_exists,
-            ~excluded_role_exists
-        )
-        compiled_query = query.statement.compile(dialect=db.bind.dialect, 
-                                             compile_kwargs={"literal_binds": True})
-        logger.debug(f"Generated SQL: {compiled_query}")
-        
-    except Exception as e:
-        logger.error(f"Error with exists() approach: {str(e)}")
-        
-        # วิธี 2: ใช้ relationship ของ model โดยตรง
-        try:
-            from sqlalchemy import select
-            from sqlalchemy.orm import selectinload
-            
-            # ใช้ relationship ของ model โดยตรง
-            staff_users = db.query(User).options(
-                selectinload(User.roles).selectinload(UserRole.role)
-            ).filter(
-                User.roles.any(UserRole.role.has(Role.name.in_(staff_roles))),
-                ~User.roles.any(UserRole.role.has(Role.name.in_(excluded_roles)))
-            ).all()
-            
-            staff_ids = [str(user.id) for user in staff_users]
-            logger.info(f"Found {len(staff_ids)} staff using direct relationship")
-            
-            # Log generated SQL for debugging
-            query = db.query(User).filter(
-                User.roles.any(UserRole.role.has(Role.name.in_(staff_roles))),
-                ~User.roles.any(UserRole.role.has(Role.name.in_(excluded_roles)))
-            )
-            compiled_query = query.statement.compile(dialect=db.bind.dialect, 
-                                                 compile_kwargs={"literal_binds": True})
-            logger.debug(f"Generated SQL: {compiled_query}")
-            
-        except Exception as e2:
-            logger.error(f"Error with direct relationship: {str(e2)}")
-    
-    # หากไม่พบเจ้าหน้าที่เลย ลองดึงจากผู้ที่มีงานมอบหมาย
-    if not staff_ids:
-        try:
-            assigned_users = db.query(distinct(Complaint.assigned_to)).filter(
-                Complaint.assigned_to.isnot(None)
-            ).all()
-            
-            staff_ids = [str(assigned[0]) for assigned in assigned_users]
-            logger.info(f"Found {len(staff_ids)} staff from assigned users")
-            
-        except Exception as e:
-            logger.error(f"Error fetching assigned users: {str(e)}")
-    
-    # Debug log
-    logger.info(f"Final staff count: {len(staff_ids)}")
-    if staff_ids:
-        logger.info(f"Sample staff IDs: {staff_ids[:min(3, len(staff_ids))]}")
-    else:
-        logger.warning("No staff found for dashboard!")
-        # สร้าง mock data เพื่อให้ dashboard ไม่ว่างเปล่า
-        mock_ids = ["00000000-0000-0000-0000-000000000001"]
-        logger.warning(f"Using mock staff ID: {mock_ids[0]}")
-        staff_ids = mock_ids
-    
+    from models.user_role import UserRole
+    from models.role import Role
+
+    staff_users = db.query(User.id).join(UserRole, User.id == UserRole.user_id)\
+        .join(Role, UserRole.role_id == Role.id)\
+        .filter(Role.name.in_(STAFF_ROLES))\
+        .distinct().all()
+    staff_ids = [str(u.id) for u in staff_users]
+
+    excluded_users = db.query(User.id).join(UserRole, User.id == UserRole.user_id)\
+        .join(Role, UserRole.role_id == Role.id)\
+        .filter(Role.name.in_(EXCLUDED_ROLES)).distinct().all()
+    excluded_ids = set(str(u.id) for u in excluded_users)
+
+    staff_ids = [uid for uid in staff_ids if uid not in excluded_ids]
     return staff_ids
 
-def _get_status_counts_by_staff(db: Session, staff_ids: List[str]) -> Dict[str, Dict[str, int]]:
+def get_staff_workload(
+    db: Session, 
+    skip: int = 0, 
+    limit: int = 100, 
+    date_from: Optional[str] = None, 
+    date_to: Optional[str] = None,
+    year: Optional[int] = None
+):
     """
-    ดึงจำนวนเรื่องตามสถานะแยกตามเจ้าหน้าที่ (ทำครั้งเดียว)
+    ดึงข้อมูลภาระงานของเจ้าหน้าที่แต่ละคน แยกตามสถานะของเรื่องร้องทุกข์
+    สามารถระบุช่วงเวลาหรือปีงบประมาณได้
     """
-    results = {}
-    
-    # ใช้ GROUP BY เพื่อลดจำนวน queries
+    # ถ้าเลือกปี ให้ใช้ช่วงวันที่ของปีงบประมาณนั้น
+    if year:
+        # ปีงบประมาณไทย: ต.ค. ปีที่แล้ว - ก.ย. ปีนี้
+        start_date = datetime(year - 1, 10, 1)
+        end_date = datetime(year, 9, 30, 23, 59, 59)
+    else:
+        try:
+            if date_from:
+                start_date = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+            else:
+                current_year = datetime.now().year
+                start_date = datetime(current_year, 1, 1)
+            if date_to:
+                end_date = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
+            else:
+                end_date = datetime.now()
+        except ValueError:
+            current_year = datetime.now().year
+            start_date = datetime(current_year, 1, 1)
+            end_date = datetime.now()
+
+    # 1. ดึงรายชื่อเจ้าหน้าที่ทุกคน
+    staff_ids = _get_staff_list(db)
+
+    # 2. ดึงจำนวนเรื่องตามสถานะแยกตามเจ้าหน้าที่ (รวมคนที่ไม่มีงาน)
     status_counts = db.query(
         Complaint.assigned_to,
+        Complaint.assigned_officer_id,
         Complaint.status,
         func.count(Complaint.id).label('count')
     ).filter(
-        Complaint.assigned_to.in_(staff_ids)
+        or_(
+            Complaint.assigned_to.in_(staff_ids),
+            Complaint.assigned_officer_id.in_([UUID(sid) for sid in staff_ids])
+        ),
+        Complaint.assigned_date.between(start_date, end_date)
     ).group_by(
         Complaint.assigned_to,
+        Complaint.assigned_officer_id,
         Complaint.status
     ).all()
-    
-    # จัดเรียงผลลัพธ์เป็น dictionary
-    for staff_id in staff_ids:
-        results[staff_id] = {status.value: 0 for status in ComplaintStatus}
-    
-    for assigned_to, status, count in status_counts:
-        if assigned_to in results:
-            results[assigned_to][status.value] = count
-    
-    return results
 
-def _calculate_summary_stats(db: Session) -> Dict:
-    """
-    คำนวณสถิติโดยรวมทั้งหมด
-    """
-    total_count = db.query(func.count(Complaint.id)).scalar()
-    
-    # นับจำนวน complaint แยกตามสถานะทั้งหมด
-    status_counts_query = db.query(
-        Complaint.status,
-        func.count(Complaint.id).label('count')
-    ).group_by(Complaint.status).all()
-    
-    status_counts = {status.value: 0 for status in ComplaintStatus}
-    for status, count in status_counts_query:
-        status_counts[status.value] = count
-    
-    return {
-        "total_complaints": total_count,
-        "status_counts": status_counts
-    }
+    # เตรียม dict สำหรับทุก staff_id
+    status_counts_by_staff = {staff_id: {status.value: 0 for status in ComplaintStatus} for staff_id in staff_ids}
+    for assigned_to, assigned_officer_id, status, count in status_counts:
+        for staff_id in staff_ids:
+            if (assigned_to == staff_id) or (str(assigned_officer_id) == staff_id):
+                status_counts_by_staff[staff_id][status.value] += count
 
-def get_staff_workload(db: Session, skip: int = 0, limit: int = 100, date_from: Optional[str] = None, date_to: Optional[str] = None):
-    """
-    ดึงข้อมูลภาระงานของเจ้าหน้าที่แต่ละคน แยกตามสถานะของเรื่องร้องทุกข์
-    สามารถระบุช่วงเวลาที่ต้องการดูข้อมูลได้
-    """
-    # แปลงวันที่
-    try:
-        if date_from:
-            start_date = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
-        else:
-            # ถ้าไม่ระบุ ใช้ข้อมูลตั้งแต่ต้นปีปัจจุบัน
-            current_year = datetime.now().year
-            start_date = datetime(current_year, 1, 1)
-            
-        if date_to:
-            end_date = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
-        else:
-            end_date = datetime.now()
-    except ValueError as e:
-        logger.error(f"Invalid date format: {str(e)}")
-        # ถ้าไม่ระบุ ใช้ข้อมูลตั้งแต่ต้นปีปัจจุบัน
-        current_year = datetime.now().year
-        start_date = datetime(current_year, 1, 1)
-        end_date = datetime.now()
-    
-    # 1. ดึงรายชื่อเจ้าหน้าที่
-    staff_ids = _get_staff_list(db)
-    
-    # 2. คำนวณสถิติโดยรวมตามช่วงเวลา
-    summary_stats = _calculate_summary_stats_by_date(db, start_date, end_date)
-    total_count = summary_stats["total_complaints"]
-    
-    # 3. ดึงจำนวนเรื่องตามสถานะแยกตามเจ้าหน้าที่ (ทำครั้งเดียว)
-    status_counts_by_staff = _get_status_counts_by_staff_and_date(db, staff_ids, start_date, end_date)
-    
-    # 4. สร้างผลลัพธ์
-    result = {
-        "date_range": {
-            "from": start_date.isoformat(),
-            "to": end_date.isoformat()
-        },
-        "summary": {
-            "total_staff": len(staff_ids),
-            "total_complaints": total_count,
-            "status_counts": summary_stats["status_counts"]
-        },
-        "staff_data": []
-    }
-    
-    # 5. ดึงข้อมูลเรื่องร้องทุกข์ล่าสุดแยกตามเจ้าหน้าที่ (ใช้ window function)
+    # 3. ดึงข้อมูลเรื่องล่าสุด (5 เรื่อง) ของแต่ละเจ้าหน้าที่
     latest_complaints_by_staff = {}
-    
     for staff_id in staff_ids:
         latest_complaints = db.query(Complaint).filter(
-            Complaint.assigned_to == staff_id,
+            or_(
+                Complaint.assigned_to == staff_id,
+                Complaint.assigned_officer_id == UUID(staff_id)
+            ),
             Complaint.assigned_date.between(start_date, end_date)
         ).order_by(Complaint.updated_at.desc()).limit(5).all()
-        
         latest_list = []
         for complaint in latest_complaints:
             latest_list.append({
@@ -296,106 +161,59 @@ def get_staff_workload(db: Session, skip: int = 0, limit: int = 100, date_from: 
                 "updated_at": complaint.updated_at,
                 "created_at": complaint.created_at
             })
-        
         latest_complaints_by_staff[staff_id] = latest_list
-    
-    # 6. วนลูปสร้างข้อมูลเจ้าหน้าที่
-    for staff_id in staff_ids:
-        try:
-            # ดึงข้อมูลพื้นฐานของเจ้าหน้าที่
-            staff_info = _get_user_info(db, staff_id)
-            
-            # ดึงจำนวนเรื่องและสถานะ
-            staff_status_counts = status_counts_by_staff.get(staff_id, {})
-            total_assigned = sum(staff_status_counts.values())
-            
-            # คำนวณสัดส่วน workload
-            workload_percentage = round((total_assigned / total_count * 100), 2) if total_count > 0 else 0
-            
-            # คำนวณความคืบหน้า
-            completed_count = staff_status_counts.get(ComplaintStatus.COMPLETED.value, 0)
-            reviewed_count = staff_status_counts.get(ComplaintStatus.REVIEWED.value, 0)
-            progress_percentage = round(((completed_count + reviewed_count) / total_assigned * 100), 2) if total_assigned > 0 else 0
-            
-            # สร้างข้อมูลสรุปของเจ้าหน้าที่
-            staff_data = {
-                "staff_info": staff_info,
-                "workload": {
-                    "total_assigned": total_assigned,
-                    "workload_percentage": workload_percentage,
-                    "progress_percentage": progress_percentage,
-                    "status_counts": staff_status_counts
-                },
-                "latest_complaints": latest_complaints_by_staff.get(staff_id, [])
-            }
-            
-            result["staff_data"].append(staff_data)
-            
-        except Exception as e:
-            logger.error(f"Error processing staff {staff_id}: {str(e)}")
-            continue
-    
-    # เรียงลำดับตามจำนวนงานที่รับผิดชอบ (มากไปน้อย)
-    result["staff_data"].sort(key=lambda x: x["workload"]["total_assigned"], reverse=True)
-    
-    # จำกัดจำนวนเจ้าหน้าที่ตาม pagination
-    result["staff_data"] = result["staff_data"][skip:skip+limit]
-    
-    return result
 
-def _calculate_summary_stats_by_date(db: Session, start_date: datetime, end_date: datetime) -> Dict:
-    """
-    คำนวณสถิติโดยรวมทั้งหมดตามช่วงวันที่กำหนด
-    """
+    # 4. สรุปข้อมูลรวม
     total_count = db.query(func.count(Complaint.id)).filter(
         Complaint.created_at.between(start_date, end_date)
     ).scalar()
-    
-    # นับจำนวน complaint แยกตามสถานะทั้งหมด
     status_counts_query = db.query(
         Complaint.status,
         func.count(Complaint.id).label('count')
     ).filter(
         Complaint.created_at.between(start_date, end_date)
     ).group_by(Complaint.status).all()
-    
-    status_counts = {status.value: 0 for status in ComplaintStatus}
+    summary_status_counts = {status.value: 0 for status in ComplaintStatus}
     for status, count in status_counts_query:
-        status_counts[status.value] = count
-    
+        summary_status_counts[status.value] = count
+
+    # 5. สร้างข้อมูล staff_data
+    staff_data = []
+    for staff_id in staff_ids:
+        staff_info = _get_user_info(db, staff_id)
+        staff_status_counts = status_counts_by_staff.get(staff_id, {})
+        total_assigned = sum(staff_status_counts.values())
+        completed_count = staff_status_counts.get(ComplaintStatus.COMPLETED.value, 0)
+        reviewed_count = staff_status_counts.get(ComplaintStatus.REVIEWED.value, 0)
+        progress_percentage = round(((completed_count + reviewed_count) / total_assigned * 100), 2) if total_assigned > 0 else 0
+        staff_data.append({
+            "staff_info": staff_info,
+            "workload": {
+                "total_assigned": total_assigned,
+                "workload_percentage": round((total_assigned / total_count * 100), 2) if total_count > 0 else 0,
+                "progress_percentage": progress_percentage,
+                "status_counts": staff_status_counts
+            },
+            "latest_complaints": latest_complaints_by_staff.get(staff_id, [])
+        })
+
+    # เรียงลำดับตามจำนวนงานที่รับผิดชอบ (มากไปน้อย)
+    staff_data.sort(key=lambda x: x["workload"]["total_assigned"], reverse=True)
+    staff_data = staff_data[skip:skip+limit]
+
     return {
-        "total_complaints": total_count,
-        "status_counts": status_counts
+        "date_range": {
+            "from": start_date.isoformat(),
+            "to": end_date.isoformat()
+        },
+        "summary": {
+            "total_staff": len(staff_ids),
+            "total_complaints": total_count,
+            "status_counts": summary_status_counts
+        },
+        "staff_data": staff_data
     }
 
-def _get_status_counts_by_staff_and_date(db: Session, staff_ids: List[str], start_date: datetime, end_date: datetime) -> Dict[str, Dict[str, int]]:
-    """
-    ดึงจำนวนเรื่องตามสถานะแยกตามเจ้าหน้าที่ตามช่วงวันที่ (ทำครั้งเดียว)
-    """
-    results = {}
-    
-    # ใช้ GROUP BY เพื่อลดจำนวน queries
-    status_counts = db.query(
-        Complaint.assigned_to,
-        Complaint.status,
-        func.count(Complaint.id).label('count')
-    ).filter(
-        Complaint.assigned_to.in_(staff_ids),
-        Complaint.assigned_date.between(start_date, end_date)
-    ).group_by(
-        Complaint.assigned_to,
-        Complaint.status
-    ).all()
-    
-    # จัดเรียงผลลัพธ์เป็น dictionary
-    for staff_id in staff_ids:
-        results[staff_id] = {status.value: 0 for status in ComplaintStatus}
-    
-    for assigned_to, status, count in status_counts:
-        if assigned_to in results:
-            results[assigned_to][status.value] = count
-    
-    return results
 def get_staff_performance(db: Session, date_from: Optional[str] = None, date_to: Optional[str] = None):
     """
     ดึงข้อมูลประสิทธิภาพการทำงานของเจ้าหน้าที่
