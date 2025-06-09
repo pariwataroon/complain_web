@@ -28,19 +28,32 @@ class User(Base):
     phone = Column(NVARCHAR(10))
     address = Column(NVARCHAR(1024))
     address_other = Column(NVARCHAR(1024))
+    
+    # ✅ แก้ไขฟิลด์ภูมิศาสตร์ให้อ้างอิงถูกต้อง
+    province_id = Column(Integer, nullable=True)  # ไม่ใช้ FK ก่อน
+    district_id = Column(Integer, nullable=True)   # ไม่ใช้ FK ก่อน
+    subdistrict_id = Column(NVARCHAR(10), nullable=True)  # ไม่ใช้ FK ก่อน
+    zipcode = Column(Integer, nullable=True)
+    
+    # เพิ่มฟิลด์ภูมิศาสตร์สำหรับที่อยู่อื่น
+    province2_id = Column(Integer, nullable=True)
+    district2_id = Column(Integer, nullable=True)
+    subdistrict2_id = Column(NVARCHAR(10), nullable=True)
+    zipcode2 = Column(Integer, nullable=True)
+    
+    # ฟิลด์เพิ่มเติม
+    profile_image = Column(NVARCHAR(255), nullable=True)
+    sync_address = Column(Boolean, default=False)
+    group_type = Column(NVARCHAR(50), nullable=True)  # officer, people, etc.
+    
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
+    # Relationships
     tokens = relationship("Token", back_populates="users", cascade="all, delete-orphan")
-
-    # เพิ่ม relationship เพื่อให้เข้าถึง title ได้ง่าย (มีเพียงอันเดียว)
     title = relationship("Title", back_populates="users", foreign_keys=[title_id])
-
-    # เพิ่มความสัมพันธ์กับ UserRole
     roles = relationship("UserRole", back_populates="user", lazy="selectin")
-    
-    # เพิ่มความสัมพันธ์กับตำแหน่ง
     positions = relationship("UserPosition", back_populates="user", lazy="selectin")
 
     # เพิ่มความสัมพันธ์กับการแจ้งเตือนที่ผู้ใช้ได้เห็น

@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
+from datetime import datetime
 
 from app.api.v1.schemas.user import UserCreate, UserUpdate
 from lib.logger import get_logger
@@ -11,6 +12,7 @@ from models.title import Title
 from models.user import User
 from models.user_role import UserRole
 from models.user_positions import UserPosition
+from models.position import Position
 
 logger = get_logger("user_repository", console_output=False)
 
@@ -48,7 +50,7 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).options(joinedload(User.title)).order_by(User.id).offset(skip).limit(limit).all()
 
 
-def create_user(db: Session, user: UserCreate, roles: list = None):
+def create_user(db: Session, user: UserCreate, roles: list = None, position_ids: list = None, primary_position_id: UUID = None):
     try:
         # Check if user already exists
         existing_email = get_user_by_email(db, user.email)
@@ -67,7 +69,6 @@ def create_user(db: Session, user: UserCreate, roles: list = None):
         hashed_password = get_password_hash(user.password)
 
         # สร้าง user object พร้อมข้อมูลใหม่
-        # ตั้งค่า is_active เป็น False จนกว่าจะยืนยันอีเมล
         db_user = User(
             citizen_id=user.citizen_id,
             email=user.email,
@@ -77,19 +78,34 @@ def create_user(db: Session, user: UserCreate, roles: list = None):
             phone=user.phone if hasattr(user, 'phone') else None,
             address=user.address if hasattr(user, 'address') else None,
             address_other=user.address_other if hasattr(user, 'address_other') else None,
+            
+            # เพิ่มข้อมูลภูมิศาสตร์
+            province_id=user.province_id if hasattr(user, 'province_id') else None,
+            district_id=user.district_id if hasattr(user, 'district_id') else None,
+            subdistrict_id=user.subdistrict_id if hasattr(user, 'subdistrict_id') else None,
+            zipcode=user.zipcode if hasattr(user, 'zipcode') else None,
+            
+            province2_id=user.province2_id if hasattr(user, 'province2_id') else None,
+            district2_id=user.district2_id if hasattr(user, 'district2_id') else None,
+            subdistrict2_id=user.subdistrict2_id if hasattr(user, 'subdistrict2_id') else None,
+            zipcode2=user.zipcode2 if hasattr(user, 'zipcode2') else None,
+            
+            # ฟิลด์เพิ่มเติม
+            profile_image=user.profile_image if hasattr(user, 'profile_image') else None,
+            sync_address=user.sync_address if hasattr(user, 'sync_address') else False,
+            group_type=user.group if hasattr(user, 'group') else None,
+            
             is_active=False  # ตั้งค่าเริ่มต้นเป็น inactive
         )
 
         # จัดการเรื่องคำนำหน้า
         if hasattr(user, 'title_id') and user.title_id:
-            # กรณีเลือกคำนำหน้าที่มีอยู่ในระบบ
             title = db.query(Title).filter(Title.title_id == user.title_id).first()
             if title:
                 db_user.title_id = title.title_id
 
         # กรณีเลือก "อื่นๆ" และระบุคำนำหน้าเอง
         if hasattr(user, 'prefix_other') and user.prefix_other:
-            # ถ้า title_id ตรงกับ "อื่นๆ" (title_id = 1 ตามข้อมูล seed)
             other_title_id = 1  # ID ของ "อื่น ๆ" ตามข้อมูล seed
             db_user.title_id = other_title_id
             db_user.prefix_other = user.prefix_other
@@ -98,43 +114,19 @@ def create_user(db: Session, user: UserCreate, roles: list = None):
         db.commit()
         db.refresh(db_user)
         
-        # กำหนดบทบาทตามที่ระบุ หรือใช้บทบาทเริ่มต้น
-        from models.role import Role
+        # กำหนดบทบาท
+        assign_user_roles(db, db_user.id, roles)
         
-        roles_to_assign = []
+        # กำหนดตำแหน่ง (ถ้ามี)
+        if position_ids:
+            assign_user_positions(db, db_user.id, position_ids, primary_position_id)
         
-        # ตรวจสอบว่ามีการระบุบทบาทมาหรือไม่
-        if roles and len(roles) > 0:
-            # ดึงบทบาทตามที่ระบุ
-            roles_to_assign = db.query(Role).filter(Role.name.in_(roles)).order_by(Role.order_index).all()
-        
-        # ถ้าไม่มีบทบาทที่ระบุหรือไม่พบบทบาทที่ระบุ ใช้บทบาทเริ่มต้น "people"
-        if not roles_to_assign:
-            default_role = db.query(Role).filter(Role.name == "people").first()
-            if default_role:
-                roles_to_assign = [default_role]
-        
-        # เพิ่มบทบาทให้กับผู้ใช้
-        for role in roles_to_assign:
-            new_user_role = UserRole(
-                user_id=db_user.id,
-                role_id=role.id
-            )
-            db.add(new_user_role)
-        
-        db.commit()
-        
-        # สร้าง verification token และส่งอีเมลยืนยัน
+        # ส่งอีเมลยืนยัน
         if VERIFY_PATH:
             from app.api.v1.controllers.email_controller import generate_verification_token, send_verification_email
             
-            # สร้าง token
             token = generate_verification_token(db, db_user.id)
-            
-            # สร้าง verification URL
             verification_url = f"{VERIFY_PATH}/verify-email?token={token}"
-            
-            # ส่งอีเมลยืนยัน
             user_full_name = f"{db_user.first_name} {db_user.last_name}"
             send_verification_email(db_user.email, user_full_name, verification_url)
         
@@ -151,6 +143,63 @@ def create_user(db: Session, user: UserCreate, roles: list = None):
         logger.error(f"Error creating user: {str(e)}")
         raise
 
+def assign_user_roles(db: Session, user_id: UUID, roles: list):
+    """กำหนดบทบาทให้กับผู้ใช้"""
+    from models.role import Role
+    
+    roles_to_assign = []
+    
+    if roles and len(roles) > 0:
+        # ตรวจสอบว่า roles เป็น UUID หรือ name
+        for role in roles:
+            if isinstance(role, str):
+                try:
+                    # ลองแปลงเป็น UUID ก่อน
+                    role_uuid = UUID(role)
+                    role_obj = db.query(Role).filter(Role.id == role_uuid).first()
+                    if role_obj:
+                        roles_to_assign.append(role_obj)
+                except ValueError:
+                    # ถ้าแปลงไม่ได้ ให้ถือว่าเป็น role name
+                    role_obj = db.query(Role).filter(Role.name == role).first()
+                    if role_obj:
+                        roles_to_assign.append(role_obj)
+    
+    # ถ้าไม่มีบทบาทที่ระบุ ใช้บทบาทเริ่มต้น "people"
+    if not roles_to_assign:
+        default_role = db.query(Role).filter(Role.name == "people").first()
+        if default_role:
+            roles_to_assign = [default_role]
+    
+    # เพิ่มบทบาทให้กับผู้ใช้
+    for role in roles_to_assign:
+        new_user_role = UserRole(
+            user_id=user_id,
+            role_id=role.id
+        )
+        db.add(new_user_role)
+    
+    db.commit()
+
+def assign_user_positions(db: Session, user_id: UUID, position_ids: list, primary_position_id: UUID = None):
+    """กำหนดตำแหน่งให้กับผู้ใช้"""
+    from models.position import Position
+    
+    for position_id in position_ids:
+        # ตรวจสอบว่าตำแหน่งมีอยู่จริง
+        position = db.query(Position).filter(Position.id == position_id).first()
+        if position:
+            is_primary = (position_id == primary_position_id) if primary_position_id else (position_id == position_ids[0])
+            
+            user_position = UserPosition(
+                user_id=user_id,
+                position_id=position_id,
+                is_primary=is_primary,
+                start_date=datetime.now()
+            )
+            db.add(user_position)
+    
+    db.commit()
 
 def update_user(db: Session, user_id: int, user_data: UserUpdate):
     db_user = get_user(db, user_id)

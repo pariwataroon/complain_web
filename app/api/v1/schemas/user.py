@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional, List
-from uuid import UUID
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr, Field, validator
+from uuid import UUID
 
 from app.api.v1.schemas.user_position import UserPosition
 
@@ -18,24 +18,61 @@ class UserLogin(BaseModel):
     citizen_id: str
     password: str
 
-class UserCreate(UserBase):
-    password: str = Field(..., min_length=8)
-    title_id: int
+class UserCreate(BaseModel):
+    citizen_id: str
+    title_id: Optional[int] = None
     prefix_other: Optional[str] = None
-    position_id: Optional[UUID] = None  # เพิ่มตำแหน่งเริ่มต้น
-    department_name: Optional[str] = None  # เพิ่มหน่วยงาน
-
-    @validator('citizen_id')
-    def validate_citizen_id(cls, v):
-        if not v or len(v) != 13:
-            raise ValueError('Citizen ID must be 13 digits')
-        return v
+    first_name: str
+    last_name: str
+    email: EmailStr
+    password: str
+    phone: Optional[str] = None
     
-    @validator('phone')
-    def validate_phone(cls, v):
-        if v and (len(v) < 9 or len(v) > 10):
-            raise ValueError('Phone number must be 9-10 digits')
+    # เพิ่มฟิลด์ที่อยู่
+    address: Optional[str] = None
+    address_other: Optional[str] = None  # address2 จาก frontend
+    
+    # เพิ่มข้อมูลภูมิศาสตร์ที่อยู่หลัก
+    province_id: Optional[int] = None
+    district_id: Optional[int] = None
+    subdistrict_id: Optional[str] = None
+    zipcode: Optional[int] = None
+    
+    # เพิ่มข้อมูลภูมิศาสตร์ที่อยู่อื่น
+    province2_id: Optional[int] = None
+    district2_id: Optional[int] = None
+    subdistrict2_id: Optional[str] = None
+    zipcode2: Optional[int] = None
+    
+    # เพิ่มฟิลด์อื่นๆ
+    profile_image: Optional[str] = None
+    sync_address: Optional[bool] = False
+    group: Optional[str] = None
+    
+    # เพิ่มฟิลด์สำหรับตำแหน่ง
+    position_ids: Optional[List[UUID]] = None
+    primary_position_id: Optional[UUID] = None
+    
+    # เพิ่มฟิลด์สำหรับบทบาท (รองรับทั้ง format เก่าและใหม่)
+    roles: Optional[List[Dict[str, Any]]] = None
+
+    @validator('roles', pre=True)
+    def parse_roles(cls, v):
+        """Parse roles from different formats"""
+        if not v:
+            return None
+        
+        # ถ้าเป็น list ของ dict ที่มี id
+        if isinstance(v, list) and len(v) > 0:
+            if isinstance(v[0], dict) and 'id' in v[0]:
+                return [role['id'] for role in v]
+            elif isinstance(v[0], str):
+                return v
+        
         return v
+
+    class Config:
+        from_attributes = True
 
 class UserUpdate(BaseModel):
     first_name: Optional[str] = None

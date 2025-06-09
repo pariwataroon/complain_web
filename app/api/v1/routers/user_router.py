@@ -1,8 +1,8 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
 from app.api.v1.controllers.user_controller import (DuplicateKeyError,
@@ -68,22 +68,119 @@ async def read_user(
 # POST /api/v1/users/?roles=admin&roles=supervisor
 @router.post("", response_model=FormatResponseModel)
 async def create_new_user(
-    user: UserCreate, 
-    roles: Optional[list[str]] = Query(default=None),
+    user_data: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
     current_user: str = Depends(can_create("setting_users"))
 ):
     try:
-        # ถ้าไม่ได้ระบุบทบาทมา ให้ใช้ staff เป็นค่าเริ่มต้น
-        if not roles:
-            roles = ["staff"]
+        # แปลงข้อมูลจาก frontend format เป็น UserCreate format
+        processed_data = process_frontend_user_data(user_data)
         
-        db_user = create_user(db, user, roles)
+        # สร้าง UserCreate object
+        user = UserCreate(**processed_data)
+        
+        # ดึง roles จากข้อมูลที่ประมวลผลแล้ว
+        roles = processed_data.get('processed_roles', ['staff'])
+        
+        # ดึง position_ids
+        position_ids = processed_data.get('position_ids')
+        primary_position_id = processed_data.get('primary_position_id')
+        
+        db_user = create_user(db, user, roles, position_ids, primary_position_id)
         result = UserResponse.model_validate(db_user).model_dump()
         return format_response("0001", result)
     except DuplicateKeyError as e:
         print(f"DuplicateKeyError: {str(e)}")
         return format_response("4090", {"error": str(e)})
+    except Exception as e:
+        print(f"Error creating user: {str(e)}")
+        return format_response("5000", {"error": str(e)})
+
+def process_frontend_user_data(data: Dict[str, Any]) -> Dict[str, Any]:
+    """แปลงข้อมูลจาก frontend format เป็น backend format"""
+    processed = {}
+    
+    # ข้อมูลพื้นฐาน
+    processed['citizen_id'] = data.get('citizen_id')
+    processed['title_id'] = data.get('title_id')
+    processed['prefix_other'] = data.get('prefix_other')
+    processed['first_name'] = data.get('first_name')
+    processed['last_name'] = data.get('last_name')
+    processed['email'] = data.get('email')
+    processed['password'] = data.get('password')
+    processed['phone'] = data.get('phone')
+    
+    # ที่อยู่
+    processed['address'] = data.get('address')
+    processed['address_other'] = data.get('address2')  # address2 -> address_other
+    processed['sync_address'] = data.get('syncAddress', False)
+    processed['profile_image'] = data.get('profileImage')
+    processed['group'] = data.get('group')
+    
+    # ประมวลผลข้อมูลภูมิศาสตร์ที่อยู่หลัก
+    province = data.get('province', {})
+    district = data.get('districts', {})  # frontend ใช้ 'districts'
+    subdistrict = data.get('subdistricts', {})
+    zipcode = data.get('zipcode', {})
+    
+    if isinstance(province, dict) and 'value' in province:
+        processed['province_id'] = int(province['value']) if province['value'] else None
+    
+    if isinstance(district, dict) and 'value' in district:
+        processed['district_id'] = int(district['value']) if district['value'] else None
+    
+    if isinstance(subdistrict, dict) and 'value' in subdistrict:
+        processed['subdistrict_id'] = str(subdistrict['value']) if subdistrict['value'] else None
+    
+    if isinstance(zipcode, dict) and 'value' in zipcode:
+        processed['zipcode'] = int(zipcode['value']) if zipcode['value'] else None
+    
+    # ประมวลผลข้อมูลภูมิศาสตร์ที่อยู่อื่น
+    province2 = data.get('province2', {})
+    district2 = data.get('districts2', {})
+    subdistrict2 = data.get('subdistricts2', {})
+    zipcode2 = data.get('zipcode2', {})
+    
+    if isinstance(province2, dict) and 'value' in province2:
+        processed['province2_id'] = int(province2['value']) if province2['value'] else None
+    
+    if isinstance(district2, dict) and 'value' in district2:
+        processed['district2_id'] = int(district2['value']) if district2['value'] else None
+    
+    if isinstance(subdistrict2, dict) and 'value' in subdistrict2:
+        processed['subdistrict2_id'] = str(subdistrict2['value']) if subdistrict2['value'] else None
+    
+    if isinstance(zipcode2, dict) and 'value' in zipcode2:
+        processed['zipcode2'] = int(zipcode2['value']) if zipcode2['value'] else None
+    
+    # ประมวลผลบทบาท
+    roles = data.get('roles', [])
+    processed_roles = []
+    
+    if roles:
+        for role in roles:
+            if isinstance(role, dict) and 'id' in role:
+                # แปลง role ID เป็น role name
+                processed_roles.append(role['id'])
+            elif isinstance(role, str):
+                processed_roles.append(role)
+    
+    if not processed_roles:
+        # ใช้ group เป็นพื้นฐานสำหรับกำหนด role เริ่มต้น
+        group = data.get('group', 'people')
+        if group == 'officer':
+            processed_roles = ['staff']
+        else:
+            processed_roles = ['people']
+    
+    processed['processed_roles'] = processed_roles
+    
+    # ประมวลผลตำแหน่ง (ถ้ามี)
+    # จะต้องเพิ่มในอนาคตเมื่อ frontend ส่งข้อมูลตำแหน่งมา
+    processed['position_ids'] = data.get('position_ids')
+    processed['primary_position_id'] = data.get('primary_position_id')
+    
+    return processed
 
 
 @router.post("/register", response_model=FormatResponseModel)
