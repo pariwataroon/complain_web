@@ -1167,6 +1167,48 @@
 					"response": []
 				},
 				{
+					"name": "Create User (Enhanced)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"citizen_id\": \"1111111111111\",\n    \"title_id\": 3,\n    \"prefix_other\": \"นักวิเคราะห์นโยบายและแผน\",\n    \"first_name\": \"ทดสอบ\",\n    \"last_name\": \"ระบบการทำงาน\",\n    \"email\": \"vampirebeam.test@example.com\",\n    \"password\": \"TempPass2025!\",\n    \"phone\": \"0864703371\",\n    \"address\": \"123/45 หมู่ 6 ตำบลบางกรวย อำเภอบางกรวย\",\n    \"address2\": \"123/45 หมู่ 6 ตำบลบางกรวย อำเภอบางกรวย\",\n    \"syncAddress\": true,\n    \"profileImage\": \"vampirebeam_profile_20250609200140.jpg\",\n    \"group\": \"officer\",\n    \"province\": {\n        \"value\": \"13\",\n        \"label\": \"กรุงเทพมหานคร\"\n    },\n    \"districts\": {\n        \"value\": 160,\n        \"label\": \"เมืองจันทบุรี\"\n    },\n    \"subdistricts\": {\n        \"value\": \"220103\",\n        \"label\": \"คลองนารายณ์\"\n    },\n    \"zipcode\": {\n        \"value\": 22000,\n        \"label\": 22000\n    },\n    \"province2\": {\n        \"value\": \"13\",\n        \"label\": \"กรุงเทพมหานคร\"\n    },\n    \"districts2\": {\n        \"value\": 160,\n        \"label\": \"เมืองจันทบุรี\"\n    },\n    \"subdistricts2\": {\n        \"value\": \"220103\",\n        \"label\": \"คลองนารายณ์\"\n    },\n    \"zipcode2\": {\n        \"value\": 22000,\n        \"label\": 22000\n    },\n    \"roles\": [\n        {\n            \"id\": \"79342847-20ce-411a-8f4e-42cd7aeab407\"\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users"
+							]
+						},
+						"description": "สร้างผู้ใช้ใหม่พร้อมข้อมูลครบถ้วน รวมที่อยู่, ภูมิศาสตร์, บทบาท และตำแหน่ง\n\n**รองรับข้อมูล:**\n- ข้อมูลพื้นฐาน: citizen_id, title_id, prefix_other, first_name, last_name, email, password, phone\n- ที่อยู่: address, address2 (ที่อยู่อื่น)\n- ภูมิศาสตร์: province, districts, subdistricts, zipcode (ทั้งหลักและอื่น)\n- อื่นๆ: profileImage, group, syncAddress\n- บทบาท: roles (array ของ objects ที่มี id)\n- ตำแหน่ง: position_ids, primary_position_id (สำหรับอนาคต)\n\n**ตัวอย่าง Response:**\n```json\n{\n  \"res_code\": \"0001\",\n  \"res_message\": \"CREATE_DATA_SUCCESSFULLY\",\n  \"res_data\": {\n    \"id\": \"uuid\",\n    \"citizen_id\": \"1111111111111\",\n    \"email\": \"vampirebeam.test@example.com\",\n    \"full_name_with_title\": \"นักวิเคราะห์นโยบายและแผน ทดสอบ ระบบการทำงาน\",\n    \"roles\": [...],\n    \"positions\": [...]\n  }\n}\n```"
+					},
+					"response": []
+				},
+				{
 					"name": "users/UUID",
 					"event": [
 						{
