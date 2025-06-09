@@ -38,10 +38,10 @@ class User(Base):
     title = relationship("Title", back_populates="users", foreign_keys=[title_id])
 
     # เพิ่มความสัมพันธ์กับ UserRole
-    roles = relationship("UserRole", back_populates="user")
+    roles = relationship("UserRole", back_populates="user", lazy="selectin")
     
     # เพิ่มความสัมพันธ์กับตำแหน่ง
-    positions = relationship("UserPosition", back_populates="user")
+    positions = relationship("UserPosition", back_populates="user", lazy="selectin")
 
     # เพิ่มความสัมพันธ์กับการแจ้งเตือนที่ผู้ใช้ได้เห็น
     seen_notifications = relationship("Notification", secondary=notification_seen_table, back_populates="seen_by_users")

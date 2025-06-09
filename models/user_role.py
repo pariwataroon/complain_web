@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, ForeignKey, DateTime
+from sqlalchemy import Column, ForeignKey, DateTime, Index
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -8,7 +8,10 @@ from config.database import Base
 
 class UserRole(Base):
     __tablename__ = "user_roles"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        Index('ix_user_role_userid_roleid', "user_id", "role_id"),
+        {'extend_existing': True},
+    )
     
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
     # แก้ไขชื่อตารางให้ตรงกับ User model

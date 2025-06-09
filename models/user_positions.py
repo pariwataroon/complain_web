@@ -11,8 +11,8 @@ class UserPosition(Base):
     __tablename__ = "user_positions"
 
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
-    user_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), nullable=False)
-    position_id = Column(UNIQUEIDENTIFIER, ForeignKey("positions.id"), nullable=False)
+    user_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), nullable=False, index=True)
+    position_id = Column(UNIQUEIDENTIFIER, ForeignKey("positions.id"), nullable=False, index=True)
     start_date = Column(DateTime, nullable=True)
     end_date = Column(DateTime, nullable=True)  # สำหรับเก็บประวัติตำแหน่ง
     is_primary = Column(Boolean, default=True)  # ตำแหน่งหลักหรือไม่

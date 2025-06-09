@@ -78,6 +78,7 @@ class Complaint(Base):
         Enum(ComplaintStatus), 
         default=ComplaintStatus.SUBMITTED, 
         nullable=False,
+        index=True,
         comment="สถานะการร้องเรียน: submitted=ส่งคำร้อง, sent_to_agency=ส่งหน่วยงาน, in_process=อยู่ระหว่างดำเนินการ, in_review=อยู่ระหว่างการพิจารณา, tracking=ติดตามผลการพิจารณา, reviewed=แจ้งผลการพิจารณา, completed=เสร็จสิ้น, cancelled=ยกเลิก"
     )
     
@@ -101,7 +102,7 @@ class Complaint(Base):
     terms_accepted = Column(Boolean, default=True)
     
     # เวลาที่บันทึก
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=func.now(), index=True)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # ข้อมูลหน่วยงานที่รับผิดชอบ
