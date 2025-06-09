@@ -4,8 +4,8 @@ import { createPortal } from "react-dom";
 import styles from "./DateThaiPickerService.module.scss";
 
 const DateThaiPickerService = ({
-  label, // แบบด้านนอก
-  inputLabel, // แบบใน TextField
+  label,
+  inputLabel,
   value,
   onChange,
   name,
@@ -14,10 +14,13 @@ const DateThaiPickerService = ({
   minDate = null,
   maxDate = null,
   InputProps = {},
+  time = false, // เพิ่ม prop สำหรับการเลือกเวลา
   ...props
 }) => {
   const [selectedDate, setSelectedDate] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
+  const [showTimeSelector, setShowTimeSelector] = useState(false); // เพิ่ม state สำหรับแสดง time selector
+
   // แก้ไขการตั้งค่า initial month และ year
   const [currentMonth, setCurrentMonth] = useState(() => {
     if (value && value.month) {
@@ -36,7 +39,6 @@ const DateThaiPickerService = ({
     top: 0,
     left: 0,
     width: 0,
-    // ← เพิ่ม properties สำหรับการปรับตำแหน่ง
     isRightAligned: false,
     availableSpace: {
       left: 0,
@@ -80,10 +82,7 @@ const DateThaiPickerService = ({
       setIsSmallScreen(window.innerWidth <= 460);
     };
 
-    // ตรวจสอบครั้งแรก
     checkScreenSize();
-
-    // เพิ่ม event listener สำหรับ resize
     window.addEventListener("resize", checkScreenSize);
 
     return () => {
@@ -108,6 +107,17 @@ const DateThaiPickerService = ({
     return years;
   };
 
+  // สร้างรายการชั่วโมงและนาที
+  const generateTimeOptions = () => {
+    const hours = Array.from({ length: 24 }, (_, i) =>
+      i.toString().padStart(2, '0')
+    );
+    const minutes = Array.from({ length: 60 }, (_, i) =>
+      i.toString().padStart(2, '0')
+    );
+    return { hours, minutes };
+  };
+
   // ตรวจสอบว่าวันที่สามารถเลือกได้หรือไม่
   const isDateSelectable = (year, month, day) => {
     const dateToCheck = new Date(year, month, day);
@@ -129,7 +139,7 @@ const DateThaiPickerService = ({
     return true;
   };
 
-  // ← แก้ไขฟังก์ชันคำนวณตำแหน่งให้เป็น dynamic
+  // คำนวณตำแหน่งให้เป็น dynamic
   const calculatePosition = () => {
     if (inputRef.current && !isSmallScreen) {
       const rect = inputRef.current.getBoundingClientRect();
@@ -138,15 +148,13 @@ const DateThaiPickerService = ({
       const scrollLeft =
         window.pageXOffset || document.documentElement.scrollLeft;
 
-      // ขนาดของ popup calendar (ประมาณ)
-      const popupWidth = Math.max(rect.width, 320);
-      const popupHeight = 400; // ประมาณความสูงของ popup
+      // ขนาดของ popup calendar (ประมาณ) - เพิ่มขนาดเมื่อมี time picker
+      const popupWidth = Math.max(rect.width, time ? 360 : 320);
+      const popupHeight = time ? 500 : 400; // เพิ่มความสูงเมื่อมี time picker
 
-      // ขนาดของ viewport
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
 
-      // คำนวณพื้นที่ว่างรอบๆ input
       const availableSpace = {
         left: rect.left,
         right: viewportWidth - rect.right,
@@ -154,33 +162,25 @@ const DateThaiPickerService = ({
         bottom: viewportHeight - rect.bottom,
       };
 
-      // กำหนดตำแหน่ง left
       let left = rect.left + scrollLeft;
       let isRightAligned = false;
 
-      // ตรวจสอบว่าทะลุขอบขวาหรือไม่
       if (left + popupWidth > viewportWidth) {
-        // ถ้าทะลุ ให้จัดชิดขวาของ input
         left = rect.right + scrollLeft - popupWidth;
         isRightAligned = true;
 
-        // ถ้ายังทะลุซ้าย ให้จัดให้อยู่ในขอบจอ
         if (left < scrollLeft) {
-          left = scrollLeft + 10; // เว้นระยะจากขอบ 10px
+          left = scrollLeft + 10;
         }
       }
 
-      // กำหนดตำแหน่ง top
       let top = rect.bottom + scrollTop + 8;
 
-      // ตรวจสอบว่าทะลุขอบล่างหรือไม่
       if (top + popupHeight > viewportHeight + scrollTop) {
-        // ถ้าทะลุ ให้แสดงด้านบนของ input
         top = rect.top + scrollTop - popupHeight - 8;
 
-        // ถ้ายังทะลุด้านบน ให้จัดให้อยู่ในขอบจอ
         if (top < scrollTop) {
-          top = scrollTop + 10; // เว้นระยะจากขอบ 10px
+          top = scrollTop + 10;
         }
       }
 
@@ -218,14 +218,49 @@ const DateThaiPickerService = ({
         month: currentMonth + 1,
         year: currentYear,
         buddhistYear: toBuddhistYear(currentYear),
+        // เพิ่มเวลาถ้ามี time prop
+        ...(time && {
+          hour: selectedDate?.hour || new Date().getHours().toString().padStart(2, '0'),
+          minute: selectedDate?.minute || new Date().getMinutes().toString().padStart(2, '0')
+        })
       };
 
       setSelectedDate(thaiDate);
-      if (onChange) {
-        onChange(thaiDate);
+
+      if (time) {
+        // ถ้ามี time picker ให้แสดง time selector
+        setShowTimeSelector(true);
+        setShowYearSelector(false);
+      } else {
+        // ถ้าไม่มี time picker ให้ปิด popup ทันที
+        if (onChange) {
+          onChange(thaiDate);
+        }
+        setIsOpen(false);
       }
-      setIsOpen(false);
     }
+  };
+
+  // ฟังก์ชันจัดการการเปลี่ยนเวลา
+  const handleTimeChange = (type, value) => {
+    if (selectedDate) {
+      const updatedDate = {
+        ...selectedDate,
+        [type]: value
+      };
+
+      setSelectedDate(updatedDate);
+
+      if (onChange) {
+        onChange(updatedDate);
+      }
+    }
+  };
+
+  // ฟังก์ชันยืนยันการเลือกเวลา
+  const confirmTimeSelection = () => {
+    setShowTimeSelector(false);
+    setIsOpen(false);
   };
 
   const goToPreviousMonth = () => {
@@ -258,13 +293,20 @@ const DateThaiPickerService = ({
 
   const toggleYearSelector = () => {
     setShowYearSelector(!showYearSelector);
+    setShowTimeSelector(false); // ปิด time selector เมื่อเปิด year selector
   };
 
   const formatSelectedDate = (date) => {
     if (!date) return "";
-    return `${date.day} ${thaiMonths[date.month - 1]} พ.ศ. ${
-      date.buddhistYear
-    }`;
+
+    let dateStr = `${date.day} ${thaiMonths[date.month - 1]} พ.ศ. ${date.buddhistYear}`;
+
+    // เพิ่มเวลาถ้ามี
+    if (time && date.hour !== undefined && date.minute !== undefined) {
+      dateStr += ` ${date.hour}:${date.minute} น.`;
+    }
+
+    return dateStr;
   };
 
   const isToday = (day) => {
@@ -308,10 +350,9 @@ const DateThaiPickerService = ({
     setCurrentYear(today.getFullYear());
   };
 
-  // เพิ่ม function สำหรับไปที่วันที่ที่เลือก
   const goToSelectedDate = () => {
     if (selectedDate && selectedDate.month && selectedDate.year) {
-      setCurrentMonth(selectedDate.month - 1); // แปลงจาก 1-12 เป็น 0-11
+      setCurrentMonth(selectedDate.month - 1);
       setCurrentYear(selectedDate.year);
     }
   };
@@ -327,6 +368,7 @@ const DateThaiPickerService = ({
       ) {
         setIsOpen(false);
         setShowYearSelector(false);
+        setShowTimeSelector(false);
       }
     };
 
@@ -334,10 +376,10 @@ const DateThaiPickerService = ({
       if (event.key === "Escape" && isOpen) {
         setIsOpen(false);
         setShowYearSelector(false);
+        setShowTimeSelector(false);
       }
     };
 
-    // ← แก้ไขการจัดการ scroll และ resize ให้คำนวณตำแหน่งใหม่
     const handleScroll = () => {
       if (isOpen && !isSmallScreen) {
         calculatePosition();
@@ -354,7 +396,6 @@ const DateThaiPickerService = ({
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleEscKey);
 
-      // เฉพาะหน้าจอเล็กถึงจะป้องกัน body scroll
       if (isSmallScreen) {
         document.body.style.overflow = "hidden";
       } else {
@@ -372,19 +413,16 @@ const DateThaiPickerService = ({
     };
   }, [isOpen, isSmallScreen]);
 
-  // แก้ไข useEffect สำหรับอัพเดต selectedDate และ currentMonth/Year
   useEffect(() => {
     setSelectedDate(value);
-    // ถ้ามี value ให้ปรับ currentMonth และ currentYear ไปตาม value
     if (value && value.month && value.year) {
-      setCurrentMonth(value.month - 1); // แปลงจาก 1-12 เป็น 0-11
+      setCurrentMonth(value.month - 1);
       setCurrentYear(value.year);
     }
   }, [value]);
 
   const handleInputClick = () => {
     if (!disabled && !isReadOnly) {
-      // เมื่อเปิด popup ให้ไปที่วันที่ที่เลือกไว้ (ถ้ามี)
       if (selectedDate && selectedDate.month && selectedDate.year) {
         setCurrentMonth(selectedDate.month - 1);
         setCurrentYear(selectedDate.year);
@@ -395,169 +433,225 @@ const DateThaiPickerService = ({
       }
       setIsOpen(!isOpen);
       setShowYearSelector(false);
+      setShowTimeSelector(false);
     }
   };
 
-  // ← แก้ไข renderPopupCalendar ให้ใช้ตำแหน่งที่คำนวณแล้ว
+  // Render Time Selector
+  const renderTimeSelector = () => {
+    if (!showTimeSelector || !time) return null;
+
+    const { hours, minutes } = generateTimeOptions();
+
+    return (
+      <div className={styles.timeSelectorContainer}>
+        <div className={styles.timeSelectorHeader}>
+          <h4 className={styles.selectorTitle}>เลือกเวลา</h4>
+        </div>
+
+        <div className={styles.timeSelectors}>
+          <div className={styles.timeGroup}>
+            <label className={styles.timeLabel}>ชั่วโมง</label>
+            <select
+              className={styles.timeSelect}
+              value={selectedDate?.hour || '00'}
+              onChange={(e) => handleTimeChange('hour', e.target.value)}
+            >
+              {hours.map(hour => (
+                <option key={hour} value={hour}>{hour}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.timeSeparator}>:</div>
+
+          <div className={styles.timeGroup}>
+            <label className={styles.timeLabel}>นาที</label>
+            <select
+              className={styles.timeSelect}
+              value={selectedDate?.minute || '00'}
+              onChange={(e) => handleTimeChange('minute', e.target.value)}
+            >
+              {minutes.map(minute => (
+                <option key={minute} value={minute}>{minute}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className={styles.timeActions}>
+          <button
+            className={styles.timeBackButton}
+            onClick={() => setShowTimeSelector(false)}
+          >
+            ← กลับ
+          </button>
+          <button
+            className={styles.timeConfirmButton}
+            onClick={confirmTimeSelection}
+          >
+            ยืนยัน
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   const renderPopupCalendar = () => {
     if (!isOpen || !isMounted || typeof window === "undefined") return null;
 
     return createPortal(
       <>
-        {/* Backdrop/Overlay เฉพาะหน้าจอเล็ก */}
         {isSmallScreen && <div className={styles.backdrop} />}
 
-        {/* Calendar popup */}
         <div
           className={
             isSmallScreen ? styles.centeredPopup : styles.portalOverlay
           }
           style={
             isSmallScreen
-              ? {} // ใช้ CSS สำหรับกลางจอ
+              ? {}
               : {
-                  position: "absolute",
-                  top: inputPosition.top,
-                  left: inputPosition.left,
-                  width: inputPosition.width,
-                  zIndex: 99999,
-                  // ← เพิ่ม maxWidth เพื่อป้องกันการทะลุ
-                  maxWidth: `${window.innerWidth - 20}px`,
-                }
+                position: "absolute",
+                top: inputPosition.top,
+                left: inputPosition.left,
+                width: inputPosition.width,
+                zIndex: 99999,
+                maxWidth: `${window.innerWidth - 20}px`,
+              }
           }
         >
           <div ref={popupRef} className={styles.popupCalendar}>
-            <div className={styles.calendarHeader}>
-              <button className={styles.navButton} onClick={goToPreviousMonth}>
-                ‹
-              </button>
-              <div className={styles.monthYearSelector}>
-                <button
-                  className={styles.monthYearButton}
-                  onClick={toggleYearSelector}
-                >
-                  {thaiMonths[currentMonth]} {toBuddhistYear(currentYear)}
-                </button>
-              </div>
-              <button className={styles.navButton} onClick={goToNextMonth}>
-                ›
-              </button>
-            </div>
-
-            {/* Month and Year Selector */}
-            {showYearSelector && (
-              <div className={styles.selectorContainer}>
-                {/* Month Selector */}
-                <div className={styles.monthSelector}>
-                  <h4 className={styles.selectorTitle}>เลือกเดือน</h4>
-                  <div className={styles.monthGrid}>
-                    {thaiMonths.map((month, index) => (
-                      <button
-                        key={index}
-                        className={`${styles.monthItem} ${
-                          index === currentMonth ? styles.selected : ""
-                        }`}
-                        onClick={() => handleMonthSelect(index)}
-                      >
-                        {month}
-                      </button>
-                    ))}
+            {/* แสดง Time Selector หรือ Calendar */}
+            {showTimeSelector ? (
+              renderTimeSelector()
+            ) : (
+              <>
+                <div className={styles.calendarHeader}>
+                  <button className={styles.navButton} onClick={goToPreviousMonth}>
+                    ‹
+                  </button>
+                  <div className={styles.monthYearSelector}>
+                    <button
+                      className={styles.monthYearButton}
+                      onClick={toggleYearSelector}
+                    >
+                      {thaiMonths[currentMonth]} {toBuddhistYear(currentYear)}
+                    </button>
                   </div>
+                  <button className={styles.navButton} onClick={goToNextMonth}>
+                    ›
+                  </button>
                 </div>
 
-                {/* Year Selector */}
-                <div className={styles.yearSelector}>
-                  <h4 className={styles.selectorTitle}>เลือกปี</h4>
-                  <div className={styles.yearSelectWrapper}>
-                    <select
-                      className={styles.yearSelect}
-                      value={currentYear}
-                      onChange={(e) =>
-                        handleYearSelect(parseInt(e.target.value))
-                      }
-                    >
-                      {generateYearOptions().map((yearOption) => (
-                        <option key={yearOption.value} value={yearOption.value}>
-                          {yearOption.label}
-                        </option>
+                {/* Month and Year Selector */}
+                {showYearSelector && (
+                  <div className={styles.selectorContainer}>
+                    <div className={styles.monthSelector}>
+                      <h4 className={styles.selectorTitle}>เลือกเดือน</h4>
+                      <div className={styles.monthGrid}>
+                        {thaiMonths.map((month, index) => (
+                          <button
+                            key={index}
+                            className={`${styles.monthItem} ${index === currentMonth ? styles.selected : ""
+                              }`}
+                            onClick={() => handleMonthSelect(index)}
+                          >
+                            {month}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className={styles.yearSelector}>
+                      <h4 className={styles.selectorTitle}>เลือกปี</h4>
+                      <div className={styles.yearSelectWrapper}>
+                        <select
+                          className={styles.yearSelect}
+                          value={currentYear}
+                          onChange={(e) =>
+                            handleYearSelect(parseInt(e.target.value))
+                          }
+                        >
+                          {generateYearOptions().map((yearOption) => (
+                            <option key={yearOption.value} value={yearOption.value}>
+                              {yearOption.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Calendar Grid */}
+                {!showYearSelector && (
+                  <div className={styles.calendarGrid}>
+                    <div className={styles.daysHeader}>
+                      {thaiDays.map((day, index) => (
+                        <div key={index} className={styles.dayHeader}>
+                          {day}
+                        </div>
                       ))}
-                    </select>
+                    </div>
+
+                    <div className={styles.daysGrid}>
+                      {generateCalendar().map((day, index) => (
+                        <div
+                          key={index}
+                          className={getDayCellClasses(day)}
+                          onClick={() => handleDateClick(day)}
+                        >
+                          {day}
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                )}
+
+                {/* Footer with buttons */}
+                <div className={styles.popupFooter}>
+                  <button
+                    className={styles.todayButton}
+                    onClick={() => {
+                      const today = new Date();
+                      if (
+                        isDateSelectable(
+                          today.getFullYear(),
+                          today.getMonth(),
+                          today.getDate()
+                        )
+                      ) {
+                        setCurrentMonth(today.getMonth());
+                        setCurrentYear(today.getFullYear());
+                        setShowYearSelector(false);
+                        handleDateClick(today.getDate());
+                      }
+                    }}
+                  >
+                    วันนี้
+                  </button>
+
+                  
+
+                  <button
+                    className={styles.clearButton}
+                    onClick={() => {
+                      setSelectedDate(null);
+                      if (onChange) {
+                        onChange(null);
+                      }
+                      goToCurrentMonth();
+                      setIsOpen(false);
+                      setShowYearSelector(false);
+                      setShowTimeSelector(false);
+                    }}
+                  >
+                    ล้าง
+                  </button>
                 </div>
-              </div>
+              </>
             )}
-
-            {/* Calendar Grid */}
-            {!showYearSelector && (
-              <div className={styles.calendarGrid}>
-                <div className={styles.daysHeader}>
-                  {thaiDays.map((day, index) => (
-                    <div key={index} className={styles.dayHeader}>
-                      {day}
-                    </div>
-                  ))}
-                </div>
-
-                <div className={styles.daysGrid}>
-                  {generateCalendar().map((day, index) => (
-                    <div
-                      key={index}
-                      className={getDayCellClasses(day)}
-                      onClick={() => handleDateClick(day)}
-                    >
-                      {day}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Footer with today button */}
-            <div className={styles.popupFooter}>
-              <button
-                className={styles.todayButton}
-                onClick={() => {
-                  const today = new Date();
-                  if (
-                    isDateSelectable(
-                      today.getFullYear(),
-                      today.getMonth(),
-                      today.getDate()
-                    )
-                  ) {
-                    setCurrentMonth(today.getMonth());
-                    setCurrentYear(today.getFullYear());
-                    setShowYearSelector(false);
-                    handleDateClick(today.getDate());
-                  }
-                }}
-              >
-                วันนี้
-              </button>
-              {/* ปุ่มไปที่วันที่ที่เลือก */}
-              {selectedDate && (
-                <button
-                  className={styles.goToSelectedButton}
-                  onClick={goToSelectedDate}
-                >
-                  ไปที่วันที่เลือก
-                </button>
-              )}
-              <button
-                className={styles.clearButton}
-                onClick={() => {
-                  setSelectedDate(null);
-                  if (onChange) {
-                    onChange(null);
-                  }
-                  goToCurrentMonth();
-                  setIsOpen(false);
-                  setShowYearSelector(false);
-                }}
-              >
-                ล้าง
-              </button>
-            </div>
           </div>
         </div>
       </>,
@@ -577,18 +671,16 @@ const DateThaiPickerService = ({
       )}
 
       <div className={styles.datePickerContainer}>
-        {/* Input Field */}
         <div
           ref={inputRef}
-          className={`${styles.inputField} ${
-            selectedDate ? styles.hasValue : ""
-          } ${disabled ? styles.disabled : ""}`}
+          className={`${styles.inputField} ${selectedDate ? styles.hasValue : ""
+            } ${disabled ? styles.disabled : ""}`}
           onClick={handleInputClick}
         >
           <input
             type="text"
             value={selectedDate ? formatSelectedDate(selectedDate) : ""}
-            placeholder={placeholder}
+            placeholder={time ? "กรุณาเลือกวันที่และเวลา....." : placeholder}
             readOnly
             disabled={disabled}
             name={name}
@@ -598,10 +690,11 @@ const DateThaiPickerService = ({
               fontWeight: selectedDate ? 500 : 400,
             }}
           />
-          <div className={styles.calendarIcon}>📅</div>
+          <div className={styles.calendarIcon}>
+            {time ? "🕒" : "📅"}
+          </div>
         </div>
 
-        {/* Render popup calendar using portal */}
         {renderPopupCalendar()}
       </div>
     </FormControl>

@@ -4,7 +4,7 @@ import styles from "./TabNav.module.scss";
 
 import InputText from "@services/InputText/InputText";
 import SelectFieldType from "@services/SelectFieldType/SelectFieldType";
-import InputDate from "@services/InputDate/InputDate";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import InputFile from "@services/InputFile/InputFile";
 import InputTextarea from "@services/InputTextarea/InputTextarea";
 
@@ -132,13 +132,14 @@ const Tab3 = ({
             </Grid>
 
             <Grid item xs={12}>
-              <InputDate
+              <DateThaiPickerService
                 label="วันและเวลาที่เกิดเหตุ"
                 name="incidentDate"
                 value={form.incidentDate || ""}
                 onChange={handleChange("incidentDate")}
                 error={hasFieldError("incidentDate")}
                 helperText={getFieldError("incidentDate")}
+                time={true}
                 required
               />
             </Grid>

@@ -117,7 +117,7 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   pointer-events: none;
 }
 
-// ← เพิ่ม Backdrop สำหรับ overlay
+// Backdrop สำหรับ overlay
 .backdrop {
   position: fixed;
   top: 0;
@@ -129,7 +129,7 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(2px);
 }
 
-// ← Container สำหรับจัดกลางจอ
+// Container สำหรับจัดกลางจอ
 .centeredPopup {
   position: fixed;
   top: 0;
@@ -164,13 +164,13 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   padding: 16px;
   animation: modalSlideIn 0.3s ease-out;
   width: 100%;
-  max-width: 380px; // ← เพิ่มขนาดเล็กน้อย
+  max-width: 380px;
   min-width: 320px;
   font-family: "Roboto", "Helvetica", "Arial", sans-serif;
   box-sizing: border-box;
   position: relative;
-  max-height: 90vh; // ← จำกัดความสูงไม่ให้เกิน viewport
-  overflow-y: auto; // ← เพิ่ม scroll ถ้าจำเป็น
+  max-height: 90vh;
+  overflow-y: auto;
 
   @media (max-width: 599px) {
     max-width: calc(100vw - 32px);
@@ -301,7 +301,7 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   }
 }
 
-// Month Selector - แก้ไขหลัก
+// Month Selector
 .monthSelector {
   margin-bottom: 16px;
   width: 100%;
@@ -489,6 +489,275 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   }
 }
 
+// Time Selector Styles - เพิ่มใหม่
+.timeSelectorContainer {
+  width: 100%;
+}
+
+.timeSelectorHeader {
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 12px;
+
+  @media (max-width: 599px) {
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+  }
+}
+
+.timeSelectors {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 20px;
+
+  @media (max-width: 599px) {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 460px) {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+}
+
+.timeGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+
+  @media (max-width: 460px) {
+    min-width: 70px;
+  }
+
+  @media (max-width: 360px) {
+    min-width: 60px;
+  }
+}
+
+.timeLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+  text-align: center;
+  font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+
+  @media (max-width: 599px) {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  @media (max-width: 360px) {
+    font-size: 10px;
+    margin-bottom: 3px;
+  }
+}
+
+.timeSelect {
+  width: 100%;
+  height: 40px;
+  padding: 8px 24px 8px 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  color: #333;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 8px center;
+  background-repeat: no-repeat;
+  background-size: 12px;
+  text-align: center;
+  box-sizing: border-box;
+
+  &:hover {
+    border-color: #0f67b1;
+    box-shadow: 0 2px 4px rgba(15, 103, 177, 0.1);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #0f67b1;
+    box-shadow: 0 0 0 3px rgba(15, 103, 177, 0.1);
+  }
+
+  @media (max-width: 599px) {
+    height: 36px;
+    font-size: 14px;
+    padding: 6px 20px 6px 6px;
+    background-size: 10px;
+    background-position: right 6px center;
+  }
+
+  @media (max-width: 460px) {
+    height: 32px;
+    font-size: 13px;
+    padding: 4px 18px 4px 4px;
+    background-size: 9px;
+    background-position: right 5px center;
+  }
+
+  @media (max-width: 360px) {
+    height: 28px;
+    font-size: 12px;
+    padding: 3px 16px 3px 3px;
+    background-size: 8px;
+    background-position: right 4px center;
+  }
+
+  option {
+    padding: 6px 8px;
+    font-size: 14px;
+    font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+    color: #333;
+    background: white;
+    text-align: center;
+
+    &:hover {
+      background: $hover-color;
+    }
+
+    &:checked {
+      background: #0f67b1;
+      color: white;
+    }
+
+    @media (max-width: 599px) {
+      font-size: 13px;
+      padding: 4px 6px;
+    }
+
+    @media (max-width: 360px) {
+      font-size: 12px;
+      padding: 3px 4px;
+    }
+  }
+}
+
+.timeSeparator {
+  font-size: 24px;
+  font-weight: bold;
+  color: #0f67b1;
+  margin: 0 8px;
+  align-self: center;
+  margin-top: 20px;
+
+  @media (max-width: 599px) {
+    font-size: 20px;
+    margin: 0 6px;
+    margin-top: 16px;
+  }
+
+  @media (max-width: 460px) {
+    font-size: 18px;
+    margin: 0 4px;
+    margin-top: 14px;
+  }
+
+  @media (max-width: 360px) {
+    font-size: 16px;
+    margin: 0 3px;
+    margin-top: 12px;
+  }
+}
+
+.timeActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+
+  @media (max-width: 599px) {
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 12px;
+  }
+
+  @media (max-width: 460px) {
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 10px;
+  }
+}
+
+.timeBackButton {
+  flex: 1;
+  padding: 8px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+
+  &:hover {
+    background: $hover-color;
+    border-color: #0f67b1;
+    color: #0f67b1;
+  }
+
+  @media (max-width: 599px) {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+
+  @media (max-width: 460px) {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  @media (max-width: 360px) {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+}
+
+.timeConfirmButton {
+  flex: 1;
+  padding: 8px 16px;
+  border: 1px solid #0f67b1;
+  border-radius: 8px;
+  background: #0f67b1;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+
+  &:hover {
+    background: color.scale(#0f67b1, $lightness: -10%);
+  }
+
+  @media (max-width: 599px) {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+
+  @media (max-width: 460px) {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  @media (max-width: 360px) {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+}
+
 .calendarGrid {
   width: 100%;
 }
@@ -640,7 +909,8 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .todayButton,
-.clearButton {
+.clearButton,
+.goToSelectedButton {
   flex: 1;
   padding: 6px 12px;
   border: 1px solid #e0e0e0;
@@ -685,12 +955,13 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   }
 }
 
-// Animations - แก้ไข animation ใหม่
+// Animations
 @keyframes modalSlideIn {
   from {
     opacity: 0;
     transform: scale(0.9) translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -707,9 +978,13 @@ $shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 .dayCell.clickable:focus,
 .todayButton:focus,
 .clearButton:focus,
+.goToSelectedButton:focus,
 .monthYearButton:focus,
 .monthItem:focus,
-.yearSelect:focus {
+.yearSelect:focus,
+.timeSelect:focus,
+.timeBackButton:focus,
+.timeConfirmButton:focus {
   outline: 2px solid #0f67b1;
   outline-offset: 2px;
 }
