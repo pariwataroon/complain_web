@@ -6,8 +6,8 @@ import {
   Stack,
   Avatar,
   TextField,
+  Input,
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CallIcon from '@mui/icons-material/Call';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -15,7 +15,8 @@ import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
 import MicIcon from '@mui/icons-material/Mic';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import SendIcon from '@mui/icons-material/Send';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { emojiService } from '@services/Emoji/Emoji';
 
 const mockChatData = {
   0: [
@@ -25,10 +26,10 @@ const mockChatData = {
     {
       type: 'bot',
       text: `ที่อยู่: 90 ซอยอารีย์, กรุงเทพฯ, ประเทศไทย, 10400
-             เว็บไซต์: http://www.rd.go.th/
-             เพจFB: https://www.facebook.com/TheRevenueDepartment/about
-             เบอร์โทรศัพท์: 02-272-8000
-             สายด่วน: 1161`,
+            เว็บไซต์: http://www.rd.go.th/
+            เพจFB: https://www.facebook.com/TheRevenueDepartment/about
+            เบอร์โทรศัพท์: 02-272-8000
+            สายด่วน: 1161`,
       time: '10:30 น.',
       username: 'Chat bot สำนักงานปลัดกระทรวงการคลัง',
     },
@@ -53,6 +54,12 @@ const ComplainantquestionsChatbot = () => {
 
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
+  const [file, setFile] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioURL, setAudioURL] = useState(null);
+  const chunksRef = useRef([]);
+  const [showEmoji, setShowEmoji] = useState(false);
 
   useEffect(() => {
     if (id && mockChatData[id]) {
@@ -61,54 +68,145 @@ const ComplainantquestionsChatbot = () => {
   }, [id]);
 
   const handleSend = () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && !file && !audioURL) return;
+
     const now = new Date();
-    const time =
-      now.toLocaleTimeString('th-TH', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }) + ' น.';
-    const newMsg = {
-      type: 'user',
-      text: inputText,
-      time,
-      username: 'นายสุรวีย์ วงศ์สวัสดิ์',
-    };
-    setMessages((prev) => [...prev, newMsg]);
-    setInputText('');
+    const time = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', }) + ' น.';
+
+    if (inputText.trim()) {
+      const newBotMsg = {
+        type: 'bot',
+        text: inputText,
+        time,
+        username: 'Chat bot สำนักงานปลัดกระทรวงการคลัง',
+      };
+      setMessages((prev) => [...prev, newBotMsg]);
+      setInputText('');
+
+      setTimeout(() => {
+        const userReply = {
+          type: 'user',
+          text: 'ขอบคุณครับ/ค่ะ สำหรับข้อมูล',
+          time,
+          username: 'นายสุรวีย์ วงศ์สวัสดิ์',
+        };
+        setMessages((prev) => [...prev, userReply]);
+      }, 1000);
+    }
+
+    if (file) {
+      const fileMsg = {
+        type: 'bot',
+        text: (
+          <span>
+            <b>ไฟล์แนบ:</b> <a href={URL.createObjectURL(file)} target="_blank" rel="noopener noreferrer">{file.name}</a>
+          </span>
+        ),
+        time,
+        username: 'Chat bot สำนักงานปลัดกระทรวงการคลัง',
+        isFile: true
+      };
+      setMessages((prev) => [...prev, fileMsg]);
+      setFile(null);
+
+      setTimeout(() => {
+        const userReply = {
+          type: 'user',
+          text: 'ได้รับไฟล์แล้ว ขอบคุณครับ/ค่ะ',
+          time,
+          username: 'นายสุรวีย์ วงศ์สวัสดิ์',
+        };
+        setMessages((prev) => [...prev, userReply]);
+      }, 1000);
+    }
+
+    if (audioURL) {
+      const audioMsg = {
+        type: 'bot',
+        text: (
+          <span>
+            <b>ไฟล์เสียง:</b> <audio controls src={audioURL}></audio>
+          </span>
+        ),
+        time,
+        username: 'Chat bot สำนักงานปลัดกระทรวงการคลัง',
+        isAudio: true,
+      };
+      setMessages((prev) => [...prev, audioMsg]);
+      setAudioURL(null);
+
+      setTimeout(() => {
+        const userReply = {
+          type: 'user',
+          text: 'ได้รับเสียงแล้ว ขอบคุณครับ/ค่ะ',
+          time,
+          username: 'นายสุรวีย์ วงศ์สวัสดิ์',
+        };
+        setMessages((prev) => [...prev, userReply]);
+      }, 1000);
+    }
   };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleMicClick = async () => {
+    if (isRecording) {
+      mediaRecorder && mediaRecorder.stop();
+      setIsRecording(false);
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new window.MediaRecorder(stream);
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        chunksRef.current.push(e.data);
+      }
+    };
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      const url = URL.createObjectURL(blob);
+      setAudioURL(url);
+      chunksRef.current = [];
+    };
+
+    chunksRef.current = [];
+    recorder.start();
+    setMediaRecorder(recorder);
+    setIsRecording(true);
+  };
+
+  // เพิ่มฟังก์ชันสำหรับเลือกอิโมจิ
+  const handleAddEmoji = (emoji) => setInputText((prev) => prev + emoji);
 
   return (
     <Box sx={{ background: '#E8F1FB', minHeight: '100vh' }}>
-      {/* Header */}
       <Stack
         direction="row"
         alignItems="center"
         justifyContent="space-between"
         px={4}
         py={2}
-        sx={{ background: '#fff' }}
-      >
+        sx={{ background: '#fff' }}>
         <Stack direction="row" alignItems="center" spacing={10}>
           <Stack direction="row" alignItems="center" spacing={1}>
             <IconButton
               onClick={() =>
-                router.push('/admin/homepage/complainant-questions')
-              }
-              sx={{ p: 0 }}
-            >
-              <ArrowBackIcon />
+                router.push('/admin/homepage/complainant-questions')}
+              sx={{ p: 0 }}>
+              <img src="/icons/Arrow_Left_C.png" alt="" />
             </IconButton>
             <Typography fontSize={16} color="#1120A3" fontWeight="bold">
               กลับหน้าหลัก
             </Typography>
           </Stack>
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Avatar
-              src="/logo_blue.png"
-              alt="logo"
-              sx={{ width: 32, height: 32 }}
-            />
+            <Avatar src="/logo_blue.png" alt="logo" sx={{ width: 32, height: 32 }} />
             <Typography fontSize={16}>
               Chat bot สำนักงานปลัดกระทรวงการคลัง
             </Typography>
@@ -124,85 +222,80 @@ const ComplainantquestionsChatbot = () => {
       {/* Chat Area */}
       <Box sx={{ px: 4, pt: 4, pb: 8, maxWidth: 1000, mx: 'auto' }}>
         {messages.map((msg, idx) => (
-  <Box
-    key={idx}
-    sx={{
-      display: 'flex',
-      flexDirection: msg.type === 'bot' ? 'row-reverse' : 'row',
-      alignItems: 'flex-start',
-      mb: 3,
-    }}
-  >
-    <Avatar
-      src={
-        msg.type === 'bot'
-          ? '/logo_blue.png'
-          : '/images/Ellipse 2.png'
-      }
-      sx={{ width: 36, height: 36, mx: 1 }}
-    />
-    <Box>
-      <Typography
-        variant="caption"
-        sx={{
-          color: '#888',
-          textAlign: msg.type === 'bot' ? 'right' : 'left',
-          display: 'block',
-          mb: 0.5,
-        }}
-      >
-        {msg.type === 'user'
-          ? `${msg.time} ${msg.username}`
-          : `${msg.username} ${msg.time}`}
-      </Typography>
-
-      {/* Bubble Message */}
-      <Box
-        sx={{
-          background: msg.type === 'bot' ? '#ffffff' : '#3B82F6',
-          color: msg.type === 'bot' ? '#000' : '#fff',
-          px: 2,
-          py: 1.2,
-          borderRadius: 2,
-          boxShadow:
-            msg.type === 'user'
-              ? '0 1px 4px rgba(0,0,0,0.1)'
-              : 'none',
-          maxWidth: 450,
-          whiteSpace: 'pre-line',
-        }}
-      >
-        {msg.text}
-      </Box>
-    </Box>
-  </Box>
+          <Box key={idx} sx={{ display: 'flex', flexDirection: msg.type === 'bot' ? 'row-reverse' : 'row', alignItems: 'flex-start', mb: 3,}}>
+            <Avatar src={ msg.type === 'bot' ? '/logo_blue.png' : '/images/Ellipse 2.png' } sx={{ width: 36, height: 36, mx: 1 }}/>
+            <Box>
+              <Typography variant="caption" sx={{  color: '#888',  textAlign: msg.type === 'bot' ? 'right' : 'left',  display: 'block',  mb: 0.5, }}>
+                {msg.type === 'user' ? `${msg.time} ${msg.username}` : `${msg.username} ${msg.time}`}
+              </Typography>
+              <Box
+                sx={{
+                  background: msg.type === 'bot' ? '#ffffff' : '#3B82F6',
+                  color: msg.type === 'bot' ? '#000' : '#fff',
+                  px: 2,
+                  py: 1.2,
+                  borderRadius: 2,
+                  boxShadow:
+                    msg.type === 'user'
+                      ? '0 1px 4px rgba(0,0,0,0.1)'
+                      : 'none',
+                  maxWidth: 450,
+                  whiteSpace: 'pre-line'
+                }}>
+                {typeof msg.text === 'string' ? msg.text : msg.text}
+              </Box>
+            </Box>
+          </Box>
         ))}
       </Box>
 
       {/* Input */}
-      <Box
-        sx={{
-          position: 'fixed',
-          bottom: 0,
-          width: '100%',
-          background: '#fff',
-          borderTop: '1px solid #E5E7EB',
-        }}
-      >
-        <Box
-          sx={{
-            maxWidth: 1000,
-            mx: 'auto',
-            px: 4,
-            py: 1.5,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* Input Bar */}
+      <Box sx={{ position: 'fixed', bottom: 0, width: '100%', background: '#fff', borderTop: '1px solid #E5E7EB', zIndex: 2 }}>
+        <Box sx={{ maxWidth: 1000, mx: 'auto', px: 4, py: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Stack direction="row" alignItems="center" spacing={1.5} flex={1}>
-            <InsertEmoticonIcon sx={{ color: '#9E9E9E' }} />
+            <Box sx={{ position: "relative" }}>
+              <InsertEmoticonIcon
+                sx={{ color: '#9E9E9E', cursor: 'pointer' }}
+                onClick={() => setShowEmoji((prev) => !prev)}/>
+              {showEmoji && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    bottom: 32,
+                    left: 0,
+                    background: "#fff",
+                    border: "1px solid #eee",
+                    borderRadius: 2,
+                    p: 1,
+                    zIndex: 999,
+                    boxShadow: 2,
+                    width: 320,
+                    maxHeight: 200,
+                    overflowY: "auto",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "4px"
+                  }}>
+                  {emojiService.getEmojiList().map((emoji, idx) => (
+                    <Box
+                      key={idx}
+                      sx={{
+                        fontSize: "1.5rem",
+                        cursor: "pointer",
+                        p: 0.5,
+                        borderRadius: 1,
+                        ":hover": { background: "#E8F1FB" }
+                      }}
+                      onClick={() => {
+                        handleAddEmoji(emoji);
+                        setShowEmoji(false);
+                      }}>
+                      {emoji}
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Box>
             <TextField
               fullWidth
               placeholder="พิมพ์ข้อความ..."
@@ -213,14 +306,35 @@ const ComplainantquestionsChatbot = () => {
                 disableUnderline: true,
                 sx: { fontSize: 14 },
               }}
-            />
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSend();
+              }}/>
           </Stack>
 
           <Stack direction="row" alignItems="center" spacing={2}>
-            <MicIcon sx={{ color: '#9E9E9E' }} />
-            <AttachFileIcon
-              sx={{ color: '#9E9E9E', transform: 'rotate(45deg)' }}
-            />
+            <Box
+              onClick={handleMicClick}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                background: isRecording ? '#FEF08A' : 'transparent',
+                borderRadius: '50%',
+                width: 40,
+                height: 40,
+                mr: 1}}>
+              <MicIcon sx={{ color: isRecording ? '#F59E42' : '#9E9E9E' }} />
+            </Box>
+            <label htmlFor="file-upload">
+              <AttachFileIcon
+                sx={{ color: file ? '#00AEEF' : '#9E9E9E', transform: 'rotate(45deg)', cursor: 'pointer' }}/>
+              <Input
+                id="file-upload"
+                type="file"
+                sx={{ display: 'none' }}
+                onChange={handleFileChange}/>
+            </label>
             <Box
               sx={{
                 backgroundColor: '#00AEEF',
@@ -231,15 +345,32 @@ const ComplainantquestionsChatbot = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
-                cursor: 'pointer',
-              }}
-              onClick={handleSend}
-            >
+                cursor: 'pointer' }}
+              onClick={handleSend}>
               <Typography fontSize={14}>ส่ง</Typography>
               <SendIcon sx={{ fontSize: 18 }} />
             </Box>
           </Stack>
         </Box>
+        
+        {/* แสดงชื่อไฟล์ถ้ามีการเลือก */}
+        {file && (
+          <Box sx={{ px: 4, pb: 1, fontSize: 14, color: '#374151' }}>
+            ไฟล์ที่เลือก: {file.name}
+          </Box>
+        )}
+        {/* แสดงสถานะบันทึกเสียง */}
+        {isRecording && (
+          <Box sx={{ px: 4, pb: 1, fontSize: 14, color: '#F59E42' }}>
+            กำลังบันทึกเสียง...
+          </Box>
+        )}
+        {/* แสดงปุ่มเล่นเสียงถ้ามีไฟล์เสียง */}
+        {audioURL && !isRecording && (
+          <Box sx={{ px: 4, pb: 1 }}>
+            <audio controls src={audioURL}></audio>
+          </Box>
+        )}
       </Box>
     </Box>
   );
