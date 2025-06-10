@@ -38,6 +38,35 @@ export const showConfirm = (
   return Swal.fire(options).then((result) => result.isConfirmed);
 };
 
+export const showConfirm2 = (
+  title = "คุณแน่ใจหรือไม่?",
+  content = "",
+  confirmText = "ยืนยัน",
+  cancelText = "ยกเลิก",
+  width = "400px"
+) => {
+  const isHtml = /<\/?[a-z][\s\S]*>/i.test(content);
+
+  const options = {
+    title: `<div style="font-size: 16px; font-weight: bold; color: #dc2626;">${title}</div>`,
+    showCancelButton: true,
+    confirmButtonColor: "#dc2626",
+    cancelButtonColor: "#dc2626",
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+    width,
+    
+    buttonsStyling: false
+  };
+
+  if (isHtml) {
+    options.html = `<div style="font-size: 11px; font-weight: bold; color: #dc2626;">${content}</div>`;
+  } else {
+    options.text = content;
+  }
+
+  return Swal.fire(options).then((result) => result.isConfirmed);
+};
 
 
 export const showLoading = (title = "กำลังโหลด...") => {
