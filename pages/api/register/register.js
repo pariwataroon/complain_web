@@ -5,7 +5,10 @@ const registerCard = async (data) => {
     const response = await axiosInstance.post("/users/register", data);
     if (response && response.data) {
       const registerData = response.data;
-      if (registerData?.res_code === "0001" || registerData?.res_code === "0000") {
+      if (
+        registerData?.res_code === "0001" ||
+        registerData?.res_code === "0000"
+      ) {
         try {
           await resendVerification({ email: data.email });
         } catch (verificationError) {

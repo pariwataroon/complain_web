@@ -1,6 +1,11 @@
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 
-export const showAlert = (type = "info", title = "แจ้งเตือน", text = "", isHtml = false) => {
+export const showAlert = (
+  type = "info",
+  title = "แจ้งเตือน",
+  text = "",
+  isHtml = false
+) => {
   return Swal.fire({
     icon: type,
     title,
@@ -9,7 +14,6 @@ export const showAlert = (type = "info", title = "แจ้งเตือน", 
     confirmButtonText: "ตกลง",
   });
 };
-
 
 export const showConfirm = (
   title = "คุณแน่ใจหรือไม่?",
@@ -38,8 +42,6 @@ export const showConfirm = (
   return Swal.fire(options).then((result) => result.isConfirmed);
 };
 
-
-
 export const showLoading = (title = "กำลังโหลด...") => {
   Swal.fire({
     title,
@@ -49,7 +51,6 @@ export const showLoading = (title = "กำลังโหลด...") => {
     },
   });
 };
-
 
 export const closeAlert = () => {
   Swal.close();
@@ -70,7 +71,11 @@ export const alertSuccess = (title, text, isHtml = false) => {
   });
 };
 
-export const alertError = (title, text, isHtml = false) => showAlert("error", title, text, isHtml);
-export const alertWarning = (title, text, isHtml = false) => showAlert("warning", title, text, isHtml);
-export const alertInfo = (title, text, isHtml = false) => showAlert("info", title, text, isHtml);
-export const alertQuestion = (title, text, isHtml = false) => showAlert("question", title, text, isHtml);
+export const alertError = (title, text, isHtml = false) =>
+  showAlert("error", title, text, isHtml);
+export const alertWarning = (title, text, isHtml = false) =>
+  showAlert("warning", title, text, isHtml);
+export const alertInfo = (title, text, isHtml = false) =>
+  showAlert("info", title, text, isHtml);
+export const alertQuestion = (title, text, isHtml = false) =>
+  showAlert("question", title, text, isHtml);
