@@ -77,7 +77,6 @@ const GetToken = async (password) => {
     Cookies.set("opm_token", tokenData.token_id, { expires: 3 });
     Cookies.set("org_id", tokenData.org_id, { expires: 3 });
 
-    // console.log("Token ID saved to cookie:", tokenData.token_id);
 
     return tokenData;
   } catch (error) {
@@ -294,7 +293,7 @@ const SetOrgSummaryResult = async (submitData) => {
   }
 };
 
-const AddCase = async () => {
+const AddCase = async (submitData) => {
   try {
     const token_id = Cookies.get("opm_token");
     if (!token_id) {
@@ -317,13 +316,13 @@ const AddCase = async () => {
               <organization_id>${org_id}</organization_id>
               <channel_id>2</channel_id>
               <detail>ทดสอบ</detail>
-              <province_id>{{province_id}}</province_id>
-              <district_id>{{district_id}}</district_id>
-              <subdistrict_id>{{subdistrict_id}}</subdistrict_id>
+              <province_id>${province_id}</province_id>
+              <district_id>${district_id}</district_id>
+              <subdistrict_id>${subdistrict_id}</subdistrict_id>
               <contact_citizen_id></contact_citizen_id>
-              <contact_name>ปริสุทธิ์</contact_name>
-              <contact_lastname>บัวแก้ว</contact_lastname>
-              <contact_telephone>0864603371</contact_telephone>
+              <contact_name>${contact_name}</contact_name>
+              <contact_lastname>${contact_lastname}</contact_lastname>
+              <contact_telephone>${contact_telephone}</contact_telephone>
               <created_date>${created_date}</created_date>
               <updated_date>${updated_date}</updated_date>
             </AddCase>
@@ -343,6 +342,143 @@ const AddCase = async () => {
   }
 };
 
+
+const GetDistricts = async (provinceId) => {
+  try {
+
+    const response = await soapInstance.post(
+      process.env.NEXT_PUBLIC_OPM_API_LISTOFVALUES,
+      `<?xml version="1.0" encoding="utf-8"?>
+      <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+        <soap:Body>
+          <GetDistricts xmlns="http://tempuri.org/">
+            <province_id>${provinceId}</province_id>
+            <is_thai>true</is_thai>
+          </GetDistricts>
+        </soap:Body>
+      </soap:Envelope>`,
+      {
+        soapActionSuffix: "GetDistricts",
+      }
+    );
+
+
+    let xmlString = response.data;
+
+    if (typeof xmlString === "string") {
+      if (typeof window !== "undefined") {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+        const resultElement =
+          xmlDoc.getElementsByTagName("GetDistrictsResult")[0];
+
+        if (resultElement && resultElement.textContent) {
+          const districts = JSON.parse(resultElement.textContent);
+
+          return {
+            success: true,
+            data: Array.isArray(districts) ? districts : [],
+          };
+        }
+      } else {
+        const match = xmlString.match(
+          /<GetDistrictsResult>(.*?)<\/GetDistrictsResult>/
+        );
+        if (match && match[1]) {
+          const districts = JSON.parse(match[1]);
+
+          return {
+            success: true,
+            data: Array.isArray(districts) ? districts : [],
+          };
+        }
+      }
+    }
+
+    return {
+      success: false,
+      message: "No data received",
+      data: [],
+    };
+  } catch (error) {
+    console.error("Error fetching districts:", error);
+    return {
+      success: false,
+      message: error.message || "Unknown error",
+      data: [],
+    };
+  }
+};
+
+const GetSubDistricts = async (districtId) => {
+  try {
+
+    const response = await soapInstance.post(
+      process.env.NEXT_PUBLIC_OPM_API_LISTOFVALUES,
+      `<?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+            <GetSubDistricts xmlns="http://tempuri.org/">
+              <district_id>${districtId}</district_id>
+              <is_thai>true</is_thai>
+            </GetSubDistricts>
+          </soap:Body>
+        </soap:Envelope>`,
+      {
+        soapActionSuffix: "GetSubDistricts",
+      }
+    );
+
+
+    let xmlString = response.data;
+
+    if (typeof xmlString === "string") {
+      if (typeof window !== "undefined") {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+        const resultElement = xmlDoc.getElementsByTagName(
+          "GetSubDistrictsResult"
+        )[0];
+
+        if (resultElement && resultElement.textContent) {
+          const subDistricts = JSON.parse(resultElement.textContent);
+
+          return {
+            success: true,
+            data: Array.isArray(subDistricts) ? subDistricts : [],
+          };
+        }
+      } else {
+        const match = xmlString.match(
+          /<GetSubDistrictsResult>(.*?)<\/GetSubDistrictsResult>/
+        );
+        if (match && match[1]) {
+          const subDistricts = JSON.parse(match[1]);
+          console.log("Parsed sub-districts:", subDistricts);
+
+          return {
+            success: true,
+            data: Array.isArray(subDistricts) ? subDistricts : [],
+          };
+        }
+      }
+    }
+
+    return {
+      success: false,
+      message: "No data received",
+      data: [],
+    };
+  } catch (error) {
+    console.error("Error fetching sub-districts:", error);
+    return {
+      success: false,
+      message: error.message || "Unknown error",
+      data: [],
+    };
+  }
+};
+
 export {
   Encode,
   GetTimelineHeader,
@@ -350,4 +486,6 @@ export {
   AddOperating,
   SetOrgSummaryResult,
   AddCase,
+  GetDistricts,
+  GetSubDistricts,
 };
