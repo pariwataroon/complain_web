@@ -84,13 +84,11 @@ const TableListWebComplaints = ({
 
   // เมื่อคลิกปุ่มค้นหา
   const handleSearchClick = useCallback(() => {
-    console.log("🔍 Search clicked with filters:", filters);
     onSearch(filters);
   }, [filters, onSearch]);
 
   // เมื่อคลิกปุ่มเคลียร์การค้นหา
   const handleClearSearch = useCallback(() => {
-    console.log("🧹 Clear search clicked");
     const cleared = {
       claimantName: "",
       issueType: "",

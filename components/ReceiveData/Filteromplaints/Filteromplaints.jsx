@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableFilterList from "@services/TableFilterList/TableFilterList";
+import { GetComplaintsGroupedbyChannel } from "@pages/api/complaint/complaint";
 
 const breadcrumbItems = [
   {
@@ -20,127 +21,213 @@ const breadcrumbItems = [
   { label: "คัดกรองเรื่องร้องเรียน" },
 ];
 
-const group1 = [
-  {
-    id: 1,
-    name: "บริษัท ดีพี เทคโนโลยี จำกัด",
-    issueType: "การค้า",
-    subject: "การดำเนินการล่าช้า",
-    respondentName: "กรมพาณิชย์",
-    docNo: "12.3457.56 (14 ก.พ. 2568)",
-    docNo2: "16.4825.56 (14 ก.พ. 2568)",
-    docNo3: "15.5992.45 (14 ก.พ. 2568)",
-    docNo4: "24/68",
-  },
-  {
-    id: 2,
-    name: "บริษัท เอ็ม เทรดดิ้ง อินเตอร์เนชั่นแนล จำกัด",
-    issueType: "การค้า",
-    subject: "การประสานงานกับหน่วยงานล่าช้า",
-    respondentName: "กรมบัญชีกลาง",
-    docNo: "13.4678.88 (13 ก.พ. 2568)",
-    docNo2: "14.6543.21 (13 ก.พ. 2568)",
-    docNo3: "15.9213.88 (13 ก.พ. 2568)",
-    docNo4: "29/68",
-  },
-];
-
-const group2 = [
-  {
-    id: 1,
-    name: "บริษัท เทค ซัพพลาย จำกัด",
-    issueType: "ภาครัฐ",
-    subject: "ปัญหาในการยื่นเอกสารประกวดราคา",
-    respondentName: "กรมจัดซื้อ",
-    docNo: "11.1234.22 (12 ก.พ. 2568)",
-    docNo2: "12.5678.33 (12 ก.พ. 2568)",
-    docNo3: "13.7890.44 (12 ก.พ. 2568)",
-    docNo4: "31/68",
-  },
-  {
-    id: 2,
-    name: "หจก. ซัพพลายพลัส",
-    issueType: "ภาครัฐ",
-    subject: "เจ้าหน้าที่แสดงกิริยาไม่เหมาะสม",
-    respondentName: "กรมการเงิน",
-    docNo: "12.2222.55 (11 ก.พ. 2568)",
-    docNo2: "13.3333.66 (11 ก.พ. 2568)",
-    docNo3: "14.4444.77 (11 ก.พ. 2568)",
-    docNo4: "33/68",
-  },
-];
-
-const group3 = [
-  {
-    id: 1,
-    name: "บริษัท โอพีเอ็ม คอร์ปอเรชั่น",
-    issueType: "ร้องเรียน",
-    subject: "ความล่าช้าในการดำเนินงาน",
-    respondentName: "กระทรวงการคลัง",
-    docNo: "10.1111.22 (10 ก.พ. 2568)",
-    docNo2: "11.2222.33 (10 ก.พ. 2568)",
-    docNo3: "12.3333.44 (10 ก.พ. 2568)",
-    docNo4: "44/68",
-  },
-  {
-    id: 2,
-    name: "บริษัท ระบบราชการดีเยี่ยม จำกัด",
-    issueType: "ร้องเรียน",
-    subject: "ขอข้อมูลเพิ่มเติมจากเจ้าหน้าที่",
-    respondentName: "กรมสารสนเทศ",
-    docNo: "09.9999.88 (9 ก.พ. 2568)",
-    docNo2: "08.8888.77 (9 ก.พ. 2568)",
-    docNo3: "07.7777.66 (9 ก.พ. 2568)",
-    docNo4: "45/68",
-  },
-];
-
-// สร้าง Options แยกออกมาแบบ Static
-const ISSUE_TYPE_OPTIONS = [
-  { value: "", label: "เลือกประเภทเรื่อง" },
-  { value: "การค้า", label: "การค้า" },
-  { value: "ภาครัฐ", label: "ภาครัฐ" },
-  { value: "ร้องเรียน", label: "ร้องเรียน" },
-  { value: "ร้องทุกข์", label: "ร้องทุกข์" },
-  { value: "การเงิน", label: "การเงิน" },
-  { value: "การศึกษา", label: "การศึกษา" },
-  { value: "สาธารณสุข", label: "สาธารณสุข" },
-  { value: "การขนส่ง", label: "การขนส่ง" },
-  { value: "สิ่งแวดล้อม", label: "สิ่งแวดล้อม" },
-  { value: "สวัสดิการสังคม", label: "สวัสดิการสังคม" },
-  { value: "อื่นๆ", label: "อื่นๆ" },
-];
-
-const RESPONDENT_OPTIONS = [
-  { value: "", label: "เลือกผู้ถูกร้อง" },
-  { value: "กรมพาณิชย์", label: "กรมพาณิชย์" },
-  { value: "กรมบัญชีกลาง", label: "กรมบัญชีกลาง" },
-  { value: "กรมจัดซื้อ", label: "กรมจัดซื้อ" },
-  { value: "กรมการเงิน", label: "กรมการเงิน" },
-  { value: "กรมสารสนเทศ", label: "กรมสารสนเทศ" },
-  { value: "กระทรวงการคลัง", label: "กระทรวงการคลัง" },
-  { value: "กระทรวงมหาดไทย", label: "กระทรวงมหาดไทย" },
-  { value: "กระทรวงศึกษาธิการ", label: "กระทรวงศึกษาธิการ" },
-  { value: "กระทรวงสาธารณสุข", label: "กระทรวงสาธารณสุข" },
-  { value: "กระทรวงแรงงาน", label: "กระทรวงแรงงาน" },
-  { value: "กระทรวงพาณิชย์", label: "กระทรวงพาณิชย์" },
-  { value: "จังหวัด", label: "จังหวัด" },
-  { value: "อำเภอ", label: "อำเภอ" },
-  { value: "เทศบาล", label: "เทศบาล" },
-  { value: "องค์การบริหารส่วนตำบล", label: "องค์การบริหารส่วนตำบล" },
-  { value: "องค์การบริหารส่วนจังหวัด", label: "องค์การบริหารส่วนจังหวัด" },
+// Define all possible channels - เพื่อให้แสดงทุกช่องทางแม้ไม่มีข้อมูล
+const ALL_CHANNELS = [
+  { key: "website", name: "เว็บไซต์" },
+  { key: "admin", name: "แอดมิน" },
+  { key: "opm1111", name: "เว็บไซต์ opm1111" },
 ];
 
 const Filteromplaints = () => {
-  const [allGroups] = useState([
-    { title: "ช่องทางการรับเรื่อง : เว็บไซต์", data: group1 },
-    { title: "ช่องทางการรับเรื่อง : ผู้ดูแลระบบ(แอดมิน)", data: group2 },
-    { title: "ช่องทางการรับเรื่อง : เว็บไซต์ OPM1111", data: group3 },
+  const [apiData, setApiData] = useState(null);
+  const [allGroups, setAllGroups] = useState([]);
+  const [filteredGroups, setFilteredGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Dynamic options from API
+  const [issueTypeOptions, setIssueTypeOptions] = useState([
+    { value: "", label: "เลือกประเภทเรื่อง" }
+  ]);
+  const [respondentOptions, setRespondentOptions] = useState([
+    { value: "", label: "เลือกผู้ถูกร้อง" }
   ]);
 
-  const [filteredGroups, setFilteredGroups] = useState(allGroups);
+  // Current user and datetime
+  const currentUser = "vampirebeam";
+  const currentDateTime = "2025-06-10 03:57:05";
 
-  // Helper function สำหรับการค้นหาแบบ safe
+  // Utility function to format date
+  const formatDate = (isoString) => {
+    if (!isoString) return "";
+    try {
+      const date = new Date(isoString);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = (date.getFullYear() + 543);
+      return `${day}.${month}.${year}`;
+    } catch {
+      return "";
+    }
+  };
+
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        console.log(`[${currentDateTime}] ${currentUser}: Fetching complaints list...`);
+
+        const response = await GetComplaintsGroupedbyChannel({
+          limit: 100,
+          skip: 0
+        });
+
+        if (response?.res_code === "0000" && response?.res_data) {
+          const data = response.res_data;
+          setApiData(data);
+
+          // สร้าง Map ของข้อมูลที่มี
+          const dataMap = new Map();
+          data.groups.forEach((group) => {
+            const channelName = group.complaint_channel_name.toLowerCase();
+            dataMap.set(channelName, {
+              title: `ช่องทางการรับเรื่อง : ${group.complaint_channel_name}`,
+              complaint_channel_id: group.complaint_channel_id,
+              data: group.items.map((item) => ({
+                id: item.id,
+                name: item.complainant_name || "-",
+                issueType: item.complaint_type || "-",
+                subject: item.subject || "-",
+                respondentName: item.respondent_name || "-",
+                docNo: item.reference_number ?
+                  `${item.reference_number} (${formatDate(item.reference_date)})` :
+                  "-",
+                docNo2: item.reference_number2 ?
+                  `${item.reference_number2} (${formatDate(item.reference_date2)})` :
+                  "-",
+                docNo3: item.reference_number3 ?
+                  `${item.reference_number3} (${formatDate(item.reference_date3)})` :
+                  "-",
+                docNo4: item.reference_number4 ?
+                  `${item.reference_number4} (${formatDate(item.reference_date4)})` :
+                  "-",
+                complaint_number: item.complaint_number,
+                status: item.status,
+                created_at: item.created_at,
+                incident_location: item.incident_location,
+                urgency_level: item.urgency_level,
+                severity_level: item.severity_level,
+                complaint_subtype: item.complaint_subtype,
+                assigned_to: item.assigned_to
+              }))
+            });
+          });
+
+          // สร้างกลุ่มทั้งหมด รวมทั้งที่ไม่มีข้อมูล
+          const allChannelGroups = ALL_CHANNELS.map(channel => {
+            const existingData = dataMap.get(channel.name.toLowerCase()) ||
+              dataMap.get(channel.key.toLowerCase());
+
+            if (existingData) {
+              return existingData;
+            } else {
+              // สร้างกลุ่มว่างสำหรับ channel ที่ไม่มีข้อมูล
+              return {
+                title: `ช่องทางการรับเรื่อง : ${channel.name}`,
+                complaint_channel_id: channel.key,
+                data: []
+              };
+            }
+          });
+
+          // เพิ่มข้อมูลจาก API ที่ไม่อยู่ใน ALL_CHANNELS
+          data.groups.forEach((group) => {
+            const channelName = group.complaint_channel_name.toLowerCase();
+            const exists = ALL_CHANNELS.some(ch =>
+              ch.name.toLowerCase() === channelName ||
+              ch.key.toLowerCase() === channelName
+            );
+
+            if (!exists) {
+              allChannelGroups.push({
+                title: `ช่องทางการรับเรื่อง : ${group.complaint_channel_name}`,
+                complaint_channel_id: group.complaint_channel_id,
+                data: group.items.map((item) => ({
+                  id: item.id,
+                  name: item.complainant_name || "-",
+                  issueType: item.complaint_type || "-",
+                  subject: item.subject || "-",
+                  respondentName: item.respondent_name || "-",
+                  docNo: item.reference_number ?
+                    `${item.reference_number} (${formatDate(item.reference_date)})` :
+                    "-",
+                  docNo2: item.reference_number2 ?
+                    `${item.reference_number2} (${formatDate(item.reference_date2)})` :
+                    "-",
+                  docNo3: item.reference_number3 ?
+                    `${item.reference_number3} (${formatDate(item.reference_date3)})` :
+                    "-",
+                  docNo4: item.reference_number4 ?
+                    `${item.reference_number4} (${formatDate(item.reference_date4)})` :
+                    "-",
+                  complaint_number: item.complaint_number,
+                  status: item.status,
+                  created_at: item.created_at,
+                  incident_location: item.incident_location,
+                  urgency_level: item.urgency_level,
+                  severity_level: item.severity_level,
+                  complaint_subtype: item.complaint_subtype,
+                  assigned_to: item.assigned_to
+                }))
+              });
+            }
+          });
+
+          setAllGroups(allChannelGroups);
+          setFilteredGroups(allChannelGroups);
+
+          // Set options from API filters
+          if (data.filters) {
+            const typeOptions = [
+              { value: "", label: "เลือกประเภทเรื่อง" },
+              ...(data.filters.available_types || [])
+            ];
+            setIssueTypeOptions(typeOptions);
+
+            // Generate respondent options from unique respondent names
+            const uniqueRespondents = [...new Set(
+              data.groups.flatMap(g =>
+                g.items.map(item => item.respondent_name)
+              ).filter(Boolean)
+            )];
+
+            const respondentOpts = [
+              { value: "", label: "เลือกผู้ถูกร้อง" },
+              ...uniqueRespondents.map(name => ({ value: name, label: name }))
+            ];
+            setRespondentOptions(respondentOpts);
+          }
+
+          console.log(`[${currentDateTime}] ${currentUser}: Data loaded successfully:`, allChannelGroups.length, "groups");
+        } else {
+          throw new Error(response?.res_message || "ไม่สามารถดึงข้อมูลได้");
+        }
+      } catch (error) {
+        console.error(`[${currentDateTime}] ${currentUser}: Error fetching complaints:`, error);
+        setError(error.message || "เกิดข้อผิดพลาดในการโหลดข้อมูล");
+
+        // Fallback to empty structure with all channels
+        const emptyChannelGroups = ALL_CHANNELS.map(channel => ({
+          title: `ช่องทางการรับเรื่อง : ${channel.name}`,
+          complaint_channel_id: channel.key,
+          data: []
+        }));
+
+        setAllGroups(emptyChannelGroups);
+        setFilteredGroups(emptyChannelGroups);
+        setIssueTypeOptions([{ value: "", label: "เลือกประเภทเรื่อง" }]);
+        setRespondentOptions([{ value: "", label: "เลือกผู้ถูกร้อง" }]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [currentDateTime, currentUser]);
+
   const safeIncludes = (text, query) => {
     if (!query || query === "") return true;
     if (!text) return false;
@@ -151,12 +238,10 @@ const Filteromplaints = () => {
     return textStr.includes(queryStr);
   };
 
-  // Helper function สำหรับการตรวจสอบค่าว่าง
   const isEmpty = (value) => {
     return value === "" || value === null || value === undefined;
   };
 
-  // Helper function สำหรับการเปรียบเทียบ exact match
   const exactMatch = (text, query) => {
     if (isEmpty(query)) return true;
     if (!text) return false;
@@ -164,15 +249,12 @@ const Filteromplaints = () => {
     const textStr = String(text).trim();
     const queryStr = String(query).trim();
 
-    console.log(
-      `🎯 Exact match: "${textStr}" === "${queryStr}" = ${textStr === queryStr}`
-    );
     return textStr === queryStr;
   };
 
   const handleSearch = useCallback(
     (filters) => {
-      console.log("🔍 Search started with filters:", filters);
+      console.log(`[${currentDateTime}] ${currentUser}: Searching with filters:`, filters);
 
       const { claimantName, subject, issueType, respondentName } = filters;
 
@@ -184,87 +266,113 @@ const Filteromplaints = () => {
         !isEmpty(respondentName);
 
       if (!hasFilters) {
-        console.log("✅ No filters, showing all data");
         setFilteredGroups(allGroups);
         return;
       }
 
-      console.log("🔍 Applying filters:");
-      console.log("- claimantName:", claimantName);
-      console.log("- subject:", subject);
-      console.log("- issueType:", issueType);
-      console.log("- respondentName:", respondentName);
+      const filteredData = allGroups.map((group) => ({
+        ...group,
+        data: group.data.filter((item) => {
+          // ชื่อผู้ร้อง - partial match
+          if (
+            !isEmpty(claimantName) &&
+            !safeIncludes(item.name, claimantName)
+          ) {
+            return false;
+          }
 
-      const filteredData = allGroups
-        .map((group) => ({
-          ...group,
-          data: group.data.filter((item) => {
-            console.log(
-              "🔍 Testing item:",
-              item.name,
-              "- issueType:",
-              item.issueType
-            );
+          // ชื่อเรื่อง - partial match
+          if (!isEmpty(subject) && !safeIncludes(item.subject, subject)) {
+            return false;
+          }
 
-            // ชื่อผู้ร้อง - partial match
-            if (
-              !isEmpty(claimantName) &&
-              !safeIncludes(item.name, claimantName)
-            ) {
-              console.log("❌ Name filter failed");
-              return false;
-            }
+          // ประเภทเรื่อง - exact match
+          if (!isEmpty(issueType) && !exactMatch(item.issueType, issueType)) {
+            return false;
+          }
 
-            // ชื่อเรื่อง - partial match
-            if (!isEmpty(subject) && !safeIncludes(item.subject, subject)) {
-              console.log("❌ Subject filter failed");
-              return false;
-            }
+          // ชื่อผู้ถูกร้อง - partial match
+          if (
+            !isEmpty(respondentName) &&
+            !safeIncludes(item.respondentName, respondentName)
+          ) {
+            return false;
+          }
 
-            // ประเภทเรื่อง - exact match
-            if (!isEmpty(issueType) && !exactMatch(item.issueType, issueType)) {
-              console.log("❌ IssueType filter failed");
-              return false;
-            }
-
-            // ชื่อผู้ถูกร้อง - partial match
-            if (
-              !isEmpty(respondentName) &&
-              !safeIncludes(item.respondentName, respondentName)
-            ) {
-              console.log("❌ Respondent filter failed");
-              return false;
-            }
-
-            console.log("✅ Item passed all filters");
-            return true;
-          }),
-        }))
-        .filter((group) => group.data.length > 0);
-
-      console.log("📋 Filtered result:", filteredData);
-      console.log(
-        `🎯 Found ${filteredData.reduce(
-          (total, group) => total + group.data.length,
-          0
-        )} items`
-      );
+          return true;
+        }),
+      }));
+      // ไม่กรองกลุ่มออก - แสดงทุกกลุ่มแม้ไม่มีข้อมูลหลังการกรอง
 
       setFilteredGroups(filteredData);
     },
-    [allGroups]
+    [allGroups, currentDateTime, currentUser]
   );
+
+  if (loading) {
+    return (
+      <>
+        <BreadcrumbsService items={breadcrumbItems} />
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '400px',
+          fontSize: '18px'
+        }}>
+          กำลังโหลดข้อมูล...
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <BreadcrumbsService items={breadcrumbItems} />
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '400px',
+          fontSize: '18px',
+          color: '#dc3545'
+        }}>
+          <div>เกิดข้อผิดพลาด: {error}</div>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop: '16px',
+              padding: '8px 16px',
+              backgroundColor: '#0f67b1',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            ลองใหม่
+          </button>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
       <BreadcrumbsService items={breadcrumbItems} />
       <TableFilterList
         title="คัดกรองเรื่องร้องเรียน"
-        navigateTo="/admin/edit/search/Filteromplaints/edit"
+        navigateTo="/admin/edit/website-complaints/SearchComplaints"
         groups={filteredGroups}
-        issueTypeOptions={ISSUE_TYPE_OPTIONS}
-        respondentOptions={RESPONDENT_OPTIONS}
+        issueTypeOptions={issueTypeOptions}
+        respondentOptions={respondentOptions}
         onSearch={handleSearch}
+        loading={loading}
+        totalCount={apiData?.pagination?.total || 0}
+        currentUser={currentUser}
+        currentDateTime={currentDateTime}
       />
     </>
   );

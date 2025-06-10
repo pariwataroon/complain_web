@@ -10,26 +10,30 @@ const DateThaiPickerService = ({
   onChange,
   name,
   disabled,
+  dis, // เพิ่ม prop dis สำหรับ disabled
   placeholder = "กรุณาเลือกวันที่.....",
   minDate = null,
   maxDate = null,
   InputProps = {},
-  time = false, // เพิ่ม prop สำหรับการเลือกเวลา
+  time = false,
   ...props
 }) => {
-  const [selectedDate, setSelectedDate] = useState(value);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [showTimeSelector, setShowTimeSelector] = useState(false); // เพิ่ม state สำหรับแสดง time selector
+  const [showTimeSelector, setShowTimeSelector] = useState(false);
+
+  // ตรวจสอบ disabled state
+  const isDisabled = disabled || dis;
 
   // แก้ไขการตั้งค่า initial month และ year
   const [currentMonth, setCurrentMonth] = useState(() => {
-    if (value && value.month) {
+    if (value && typeof value === 'object' && value.month) {
       return value.month - 1; // แปลงจาก 1-12 เป็น 0-11
     }
     return new Date().getMonth();
   });
   const [currentYear, setCurrentYear] = useState(() => {
-    if (value && value.year) {
+    if (value && typeof value === 'object' && value.year) {
       return value.year;
     }
     return new Date().getFullYear();
@@ -71,6 +75,87 @@ const DateThaiPickerService = ({
 
   const thaiDays = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
 
+  // ฟังก์ชันแปลงวันที่จาก API
+  const parseApiDate = (apiDate) => {
+    if (!apiDate) return null;
+
+    try {
+      let dateObj;
+
+      // ถ้าเป็น string ที่มี T (ISO format)
+      if (typeof apiDate === 'string' && apiDate.includes('T')) {
+        dateObj = new Date(apiDate);
+      }
+      // ถ้าเป็น string ธรรมดา
+      else if (typeof apiDate === 'string') {
+        dateObj = new Date(apiDate);
+      }
+      // ถ้าเป็น Date object
+      else if (apiDate instanceof Date) {
+        dateObj = apiDate;
+      }
+      // ถ้าเป็น object ที่มี format ของเราอยู่แล้ว
+      else if (typeof apiDate === 'object' && apiDate.day && apiDate.month && apiDate.year) {
+        return apiDate;
+      }
+      else {
+        return null;
+      }
+
+      // ตรวจสอบว่า Date ถูกต้องหรือไม่
+      if (isNaN(dateObj.getTime())) {
+        return null;
+      }
+
+      const thaiDate = {
+        day: dateObj.getDate(),
+        month: dateObj.getMonth() + 1,
+        year: dateObj.getFullYear(),
+        buddhistYear: dateObj.getFullYear() + 543,
+      };
+
+      // เพิ่มเวลาถ้ามี time prop
+      if (time) {
+        thaiDate.hour = dateObj.getHours().toString().padStart(2, '0');
+        thaiDate.minute = dateObj.getMinutes().toString().padStart(2, '0');
+      }
+
+      return thaiDate;
+    } catch (error) {
+      console.error('Error parsing API date:', error);
+      return null;
+    }
+  };
+
+  // ฟังก์ชันแปลงวันที่กลับเป็น API format
+  const formatToApiDate = (thaiDate) => {
+    if (!thaiDate || !thaiDate.day || !thaiDate.month || !thaiDate.year) {
+      return null;
+    }
+
+    try {
+      const year = thaiDate.year;
+      const month = thaiDate.month - 1; // แปลงจาก 1-12 เป็น 0-11
+      const day = thaiDate.day;
+
+      let dateObj;
+
+      if (time && thaiDate.hour !== undefined && thaiDate.minute !== undefined) {
+        const hour = parseInt(thaiDate.hour) || 0;
+        const minute = parseInt(thaiDate.minute) || 0;
+        dateObj = new Date(year, month, day, hour, minute, 0, 0);
+      } else {
+        dateObj = new Date(year, month, day, 0, 0, 0, 0);
+      }
+
+      // Return ISO string format
+      return dateObj.toISOString();
+    } catch (error) {
+      console.error('Error formatting to API date:', error);
+      return null;
+    }
+  };
+
   // ตรวจสอบ client-side mounting
   useEffect(() => {
     setIsMounted(true);
@@ -89,6 +174,17 @@ const DateThaiPickerService = ({
       window.removeEventListener("resize", checkScreenSize);
     };
   }, []);
+
+  // อัปเดต selectedDate เมื่อ value เปลี่ยน
+  useEffect(() => {
+    const parsedDate = parseApiDate(value);
+    setSelectedDate(parsedDate);
+
+    if (parsedDate && parsedDate.month && parsedDate.year) {
+      setCurrentMonth(parsedDate.month - 1);
+      setCurrentYear(parsedDate.year);
+    }
+  }, [value]);
 
   // แปลงปี ค.ศ. เป็น พ.ศ.
   const toBuddhistYear = (gregorianYear) => {
@@ -234,7 +330,8 @@ const DateThaiPickerService = ({
       } else {
         // ถ้าไม่มี time picker ให้ปิด popup ทันที
         if (onChange) {
-          onChange(thaiDate);
+          const apiDate = formatToApiDate(thaiDate);
+          onChange(apiDate);
         }
         setIsOpen(false);
       }
@@ -252,7 +349,8 @@ const DateThaiPickerService = ({
       setSelectedDate(updatedDate);
 
       if (onChange) {
-        onChange(updatedDate);
+        const apiDate = formatToApiDate(updatedDate);
+        onChange(apiDate);
       }
     }
   };
@@ -413,16 +511,8 @@ const DateThaiPickerService = ({
     };
   }, [isOpen, isSmallScreen]);
 
-  useEffect(() => {
-    setSelectedDate(value);
-    if (value && value.month && value.year) {
-      setCurrentMonth(value.month - 1);
-      setCurrentYear(value.year);
-    }
-  }, [value]);
-
   const handleInputClick = () => {
-    if (!disabled && !isReadOnly) {
+    if (!isDisabled && !isReadOnly) {
       if (selectedDate && selectedDate.month && selectedDate.year) {
         setCurrentMonth(selectedDate.month - 1);
         setCurrentYear(selectedDate.year);
@@ -632,8 +722,6 @@ const DateThaiPickerService = ({
                     วันนี้
                   </button>
 
-                  
-
                   <button
                     className={styles.clearButton}
                     onClick={() => {
@@ -674,7 +762,7 @@ const DateThaiPickerService = ({
         <div
           ref={inputRef}
           className={`${styles.inputField} ${selectedDate ? styles.hasValue : ""
-            } ${disabled ? styles.disabled : ""}`}
+            } ${isDisabled ? styles.disabled : ""}`}
           onClick={handleInputClick}
         >
           <input
@@ -682,7 +770,7 @@ const DateThaiPickerService = ({
             value={selectedDate ? formatSelectedDate(selectedDate) : ""}
             placeholder={time ? "กรุณาเลือกวันที่และเวลา....." : placeholder}
             readOnly
-            disabled={disabled}
+            disabled={isDisabled}
             name={name}
             className={styles.dateInput}
             style={{

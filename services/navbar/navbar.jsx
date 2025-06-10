@@ -3,6 +3,7 @@ import styles from "./Navbar.module.scss";
 import { useRouter } from "next/router";
 import Cookies from "js-cookie";
 import MobileModal from "./MobileModal";
+import { showConfirm, alertSuccess, alertError } from '@utils/Alerts.js';
 
 export default function Navbar() {
   const [isMobileModalOpen, setMobileModalOpen] = useState(false);
@@ -30,16 +31,32 @@ export default function Navbar() {
     setIsDropdownOpen(false);
   };
 
-  const handleLogoutClick = () => {
-    Cookies.remove("access_token");
-    Cookies.remove("refresh_token");
-    Cookies.remove("info");
-    Cookies.remove("permission_paths");
+  const handleLogoutClick = async () => {
+    const confirmed = await showConfirm(
+      "ออกจากระบบ",
+      "คุณต้องการออกจากระบบหรือไม่?",
+      "ออกจากระบบ",
+      "ยกเลิก"
+    );
 
-    setUserInfo(null);
-    setIsDropdownOpen(false);
+    if (confirmed) {
+      try {
+        Cookies.remove("access_token");
+        Cookies.remove("refresh_token");
+        Cookies.remove("info");
+        Cookies.remove("permission_paths");
 
-    router.push("/");
+        setIsLoggedIn(false);
+        setUserInfo(null);
+        setProfileDropdownOpen(false);
+
+        await alertSuccess("สำเร็จ", "ออกจากระบบเรียบร้อยแล้ว");
+
+        router.push("/");
+      } catch (error) {
+        await alertError("ข้อผิดพลาด", "ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง");
+      }
+    }
   };
 
   const isAdminUser = () => {
@@ -143,7 +160,7 @@ export default function Navbar() {
             <a href="#" className={styles.menuItem}>
               ข่าวสาร
             </a>
-            <a href="#" className={styles.menuItem} onClick={handleStepsClickAsk}> 
+            <a href="#" className={styles.menuItem} onClick={handleStepsClickAsk}>
               คำถามที่พบบ่อย
             </a>
           </div>

@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import Cookies from "js-cookie";
 import styles from "./NavbarMain.module.scss";
 import { useRouter } from "next/router";
-import MobileModal from "./MobileModal"; // ✅ Import MobileModal
+import MobileModal from "./MobileModal";
+import { showConfirm, alertSuccess, alertError } from '@utils/Alerts.js';
 
 export default function NavbarMain() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isMobileModalOpen, setMobileModalOpen] = useState(false); // ✅ เปลี่ยนเป็น Modal
+  const [isMobileModalOpen, setMobileModalOpen] = useState(false);
   const [isProfileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const profileRef = useRef(null);
@@ -36,15 +37,32 @@ export default function NavbarMain() {
     setMobileModalOpen(false);
   };
 
-  const handleLogout = () => {
-    Cookies.remove("access_token");
-    Cookies.remove("refresh_token");
-    Cookies.remove("info");
-    Cookies.remove("permission_paths");
-    setIsLoggedIn(false);
-    setUserInfo(null);
-    setProfileDropdownOpen(false);
-    router.push("/");
+  const handleLogout = async () => {
+    const confirmed = await showConfirm(
+      "ออกจากระบบ",
+      "คุณต้องการออกจากระบบหรือไม่?",
+      "ออกจากระบบ",
+      "ยกเลิก"
+    );
+
+    if (confirmed) {
+      try {
+        Cookies.remove("access_token");
+        Cookies.remove("refresh_token");
+        Cookies.remove("info");
+        Cookies.remove("permission_paths");
+
+        setIsLoggedIn(false);
+        setUserInfo(null);
+        setProfileDropdownOpen(false);
+
+        await alertSuccess("สำเร็จ", "ออกจากระบบเรียบร้อยแล้ว");
+
+        router.push("/");
+      } catch (error) {
+        await alertError("ข้อผิดพลาด", "ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง");
+      }
+    }
   };
 
   const isAdminUser = () => {

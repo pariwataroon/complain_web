@@ -32,6 +32,22 @@ const GetMeAllComplaints = async ({
   }
 };
 
+const GetComplaintsGroupedbyChannel = async ({
+  skip = 0,
+  limit = 10,
+  status = "SUBMITTED",
+}) => {
+  try {
+    const response = await axiosInstance.get("/complaints/group-by-channel", {
+      params: { skip, limit, status },
+    });
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching complaints:", error);
+    throw error;
+  }
+};
+
 const GetComplaintByID = async (id) => {
   try {
     const response = await axiosInstance.get(`/complaints/${id}`);
@@ -98,4 +114,5 @@ export {
   GetMeAllComplaints,
   GetComplaintMeByID,
   GetComplaintTaskStatus,
+  GetComplaintsGroupedbyChannel,
 };

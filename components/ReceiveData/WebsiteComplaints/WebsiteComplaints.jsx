@@ -30,23 +30,14 @@ const WebsiteComplaints = () => {
 
   // สร้าง issueTypeOptions จาก API response
   const issueTypeOptions = useMemo(() => {
-    console.log("🔍 Creating issueTypeOptions");
-    console.log("Available types length:", availableTypes.length);
-    console.log("Available types content:", availableTypes);
 
-    // ตรวจสอบ format ของข้อมูล
-    if (availableTypes.length > 0) {
-      console.log("First item type:", typeof availableTypes[0]);
-      console.log("First item:", availableTypes[0]);
-    }
 
     const options = [
       { value: "", label: "เลือกประเภทเรื่อง" },
       ...availableTypes,
     ];
 
-    console.log("Final options:", options);
-    console.log("Final options length:", options.length);
+    
 
     return options;
   }, [availableTypes]);
@@ -74,29 +65,17 @@ const WebsiteComplaints = () => {
     const skip = page * limit;
     try {
       const res = await GetAllComplaints({ skip, limit });
-      console.log("🔄 API Response full:", res);
-      console.log("🔄 Items:", res?.res_data?.items);
-      console.log("🔄 Filters:", res?.res_data?.filters);
-      console.log(
-        "🔄 Available types raw:",
-        res?.res_data?.filters?.available_types
-      );
+      
 
-      // ตั้งค่าข้อมูล complaints
       setAllComplaints(res?.res_data?.items || []);
       setFilteredComplaints(res?.res_data?.items || []);
       setTotalCount(res?.res_data?.pagination?.total || 0);
 
-      // ตั้งค่า available_types จาก API
       const types = res?.res_data?.filters?.available_types || [];
-      console.log("🔄 Setting available types:", types);
-      console.log("🔄 Types length:", types.length);
 
       setAvailableTypes(types);
 
-      // ตรวจสอบหลังจาก set state
       setTimeout(() => {
-        console.log("🔄 After setState - availableTypes:", availableTypes);
       }, 100);
     } catch (error) {
       console.error("❌ Load complaints failed", error);
@@ -107,14 +86,9 @@ const WebsiteComplaints = () => {
     fetchComplaints();
   }, [page, limit]);
 
-  // เพิ่ม useEffect เพื่อตรวจสอบ availableTypes เมื่อมีการเปลี่ยนแปลง
-  useEffect(() => {
-    console.log("🔄 availableTypes changed:", availableTypes);
-    console.log("🔄 availableTypes length:", availableTypes?.length);
-  }, [availableTypes]);
+ 
 
   const handleSearch = (filters) => {
-    console.log("🔍 Search filters:", filters);
 
     const {
       claimantName,
@@ -174,18 +148,10 @@ const WebsiteComplaints = () => {
       return true;
     });
 
-    console.log(`🎯 Found ${result.length} items after filtering`);
     setFilteredComplaints(result);
   };
 
   const handleNavigateTo = () => router.push("/admin/edit/website-complaints");
-
-  // เพิ่ม debug component
-  console.log("🔄 Component render - issueTypeOptions:", issueTypeOptions);
-  console.log(
-    "🔄 Component render - issueTypeOptions length:",
-    issueTypeOptions?.length
-  );
 
   return (
     <>

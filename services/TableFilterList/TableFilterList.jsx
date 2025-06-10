@@ -347,31 +347,32 @@ const TableFilterList = ({
                         <TableCell
                           colSpan={9}
                           align="center"
-                          sx={{ py: 3, color: "#999" }}
+                          sx={{ py: 3, color: "#999", fontSize: '16px' }}
                         >
-                          ไม่พบข้อมูลในกลุ่มนี้
+                          💬 ยังไม่พบข้อมูลในช่องทางนี้
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
 
-                <TablePagination
-                  component="div"
-                  rowsPerPageOptions={[5, 10, 25, 50]}
-                  count={group.data.length}
-                  rowsPerPage={rowsPerPage}
-                  page={page}
-                  onPageChange={handlePageChange(groupIdx)}
-                  onRowsPerPageChange={handleRowsPerPageChange(groupIdx)}
-                  labelRowsPerPage="แถวต่อหน้า:"
-                  labelDisplayedRows={({ from, to, count }) =>
-                    `${from}-${to} จาก ${
-                      count !== -1 ? count : `มากกว่า ${to}`
-                    }`
-                  }
-                  sx={{ borderTop: "1px solid #eee" }}
-                />
+                {group.data.length > 0 && (
+                  <TablePagination
+                    component="div"
+                    rowsPerPageOptions={[5, 10, 25, 50]}
+                    count={group.data.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handlePageChange(groupIdx)}
+                    onRowsPerPageChange={handleRowsPerPageChange(groupIdx)}
+                    labelRowsPerPage="แถวต่อหน้า:"
+                    labelDisplayedRows={({ from, to, count }) =>
+                      `${from}-${to} จาก ${count !== -1 ? count : `มากกว่า ${to}`
+                      }`
+                    }
+                    sx={{ borderTop: "1px solid #eee" }}
+                  />
+                )}
               </Box>
             </Box>
           );
