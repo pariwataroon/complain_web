@@ -1,0 +1,257 @@
+.userManagement {
+  width: 100%;
+}
+
+.headerRow {
+  display: grid;
+  grid-template-columns: 21% 19% 21% 19% 20%;
+  background-color: #2499ff;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.headerCell {
+  padding: 4px 0;
+}
+
+.section {
+  margin-bottom: 8px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #91cbff; /* Updated background color */
+  color: #1120a3;
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+
+  border: 2px solid #2499ff; /* Updated border color */
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+}
+
+.circleIcon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.addButton {
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.addButton img {
+  width: 24px; /* Adjust the width as needed */
+  height: 24px; /* Adjust the height as needed */
+}
+
+.userRow {
+  margin-left: 32px;
+  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: 20% 80%;
+}
+
+.userContainer {
+  grid-column: 2 / span 1;
+  border: 1px solid #ffd700;
+  border-radius: 8px;
+  background-color: white;
+  overflow: hidden;
+}
+
+.userInfo {
+  display: grid;
+  grid-template-columns: 23% 27% 25% 26%;
+  padding: 8px 16px;
+}
+
+.userCell {
+  padding: 4px 0;
+}
+
+.roleActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.role {
+  font-size: 14px;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 4px;
+}
+
+.actionButton {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: row;
+  border-top: 1px solid #ffd700;
+  padding: 8px;
+}
+
+.detailsColumn {
+  flex: 1;
+  padding: 8px;
+}
+
+.detailRow {
+  display: flex;
+  margin-bottom: 8px;
+}
+
+.detailLabel {
+  color: #3366cc;
+  font-weight: bold;
+  margin-right: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.detailValue {
+  font-size: 14px;
+  word-break: break-word;
+}
+
+/* Responsive styles */
+@media screen and (max-width: 1200px) {
+  .userInfo {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+  }
+}
+
+@media screen and (max-width: 992px) {
+  .headerRow {
+    grid-template-columns: 25% 25% 25% 25%;
+  }
+
+  .headerRow .headerCell:nth-child(5) {
+    display: none;
+  }
+
+  .userInfo {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .userInfo .userCell:nth-child(3) {
+    grid-column: span 3;
+  }
+
+  .roleActions {
+    grid-column: span 3;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .headerRow {
+    grid-template-columns: 50% 50%;
+  }
+
+  .headerRow .headerCell:nth-child(3),
+  .headerRow .headerCell:nth-child(4),
+  .headerRow .headerCell:nth-child(5) {
+    display: none;
+  }
+
+  .userRow {
+    margin-left: 16px;
+    grid-template-columns: 100%;
+  }
+
+  .userContainer {
+    grid-column: 1 / span 1;
+  }
+
+  .userInfo {
+    grid-template-columns: 1fr;
+  }
+
+  .userInfo .userCell {
+    grid-column: 1;
+  }
+
+  .roleActions {
+    grid-column: 1;
+    margin-top: 8px;
+  }
+
+  .userDetails {
+    flex-direction: column;
+  }
+
+  .detailRow {
+    flex-direction: column;
+  }
+
+  .detailLabel {
+    margin-bottom: 4px;
+  }
+}
+
+@media screen and (max-width: 576px) {
+  .userManagement {
+    padding: 8px;
+  }
+
+  .headerRow {
+    grid-template-columns: 100%;
+  }
+
+  .headerRow .headerCell:nth-child(2),
+  .headerRow .headerCell:nth-child(3),
+  .headerRow .headerCell:nth-child(4),
+  .headerRow .headerCell:nth-child(5) {
+    display: none;
+  }
+
+  .sectionHeader {
+    padding: 8px;
+  }
+
+  .userRow {
+    margin-left: 8px;
+  }
+
+  .userInfo {
+    padding: 8px;
+  }
+}
+.iconWrapper {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center; /* Ensures the icon is vertically centered */
+  margin-right: 8px; /* Adjust space between the icon and text */
+  transition: transform 0.3s ease; /* Animation for rotating */
+  cursor: pointer;
+}
+
+.iconRotate {
+  transform: rotate(180deg); /* Rotate the icon when section is expanded */
+}

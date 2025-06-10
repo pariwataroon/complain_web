@@ -19,10 +19,16 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ReorderIcon from '@mui/icons-material/Reorder';
 import CloseIcon from '@mui/icons-material/Close';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
 import { useRouter } from 'next/router';
+import {
+  closeAlert,
+  alertError,
+  alertSuccess,
+  showConfirm2,
 
+} from "@utils/Alerts";
+import Image from "next/image";
 const initialData = [
   { title: 'ขอความช่วยเหลือเกี่ยวกับการคืนภาษีล่าช้า', detail: 'สอบถามข้อมูลเกี่ยวกับเรียนระดับการศึกษาระดับอาชีวศึกษา โทร 1161', date: '17 ม.ค. 2568' },
   { title: 'ร้องเรียนพฤติกรรม/การดำเนินงานของเจ้าหน้าที่หน่วยงานในสังกัดกระทรวงการคลัง', detail: '', date: '17 ม.ค. 2568' },
@@ -52,18 +58,31 @@ const ChatbotComponents = () => {
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
-  const handleDeleteClick = (index) => {
-    setDeleteIndex(index);
-    setOpenDialog(true);
-  };
+  const handleDeleteClick = async (index) => {
+  const confirm = await showConfirm2(
+    "ลบคำถาม",
+    `การลบคำถามจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
+    ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก<br /><br />
+    ยืนยันการลบคำถามนี้หรือไม่?`
+  );
 
-  const confirmDelete = () => {
-    const newData = [...newsData];
-    newData.splice(deleteIndex, 1);
-    setNewsData(newData);
-    setOpenDialog(false);
-    setDeleteIndex(null);
-  };
+  if (confirm) {
+    try {
+      const newData = [...newsData];
+      newData.splice(index, 1);
+      setNewsData(newData);
+
+      closeAlert();
+      alertSuccess("ลบคำถามสำเร็จ");
+      
+    } catch (err) {
+      closeAlert();
+      alertError("เกิดข้อผิดพลาด", "ไม่สามารถลบคำถามได้");
+      
+    }
+  }
+};
+
 
   const handleAdd = () => {
     const newItem = { ...form, date: new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) };
@@ -86,14 +105,30 @@ const ChatbotComponents = () => {
     setForm({ title: newsData[index].title, detail: newsData[index].detail });
     setOpenEditDialog(true);
   };
+  const breadcrumbItems = [
+  {
+    label: (
+      <span style={{ color: "#1120A3" }}>
+        กำหนดคำถาม Chat Bot
+      </span>
+    ),
+    icon: (
+      <img
+        src="/icons/config.png"
+        alt="Settings Icon"
+        style={{ width: "20px", height: "20px", marginBottom: "-8px" ,borderRadius: "50%", border: "2px solid #1120A3" ,padding: "2px" }}
+      />
+    ),
+    url:"/admin",
+  },
+];
 
   return (
     <Box sx={{ background: '#F5F7FB', minHeight: '100vh', py: 3 }}>
+      <BreadcrumbsService items={breadcrumbItems} />
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ fontWeight: 'bold', fontSize: 18, color: '#1120A3', mb: 2, maxWidth: '1500px', mx: 'auto', px: 2 }}>
-        <Box component="img" src="/icons/config.png" alt="" sx={{ width: 24, height: 24 }} />
-        <Typography component="span" sx={{ fontWeight: 'bold', fontSize: 18 }}>
-          กำหนดคำถาม Chat Bot
-        </Typography>
+        
+        
       </Stack>
 
       <Box sx={{ maxWidth: '1200px', mx: 'auto', px: 2 }}>
@@ -103,7 +138,7 @@ const ChatbotComponents = () => {
           </Typography>
           <Button
             onClick={() => {
-              setForm({ title: '', detail: '' }); 
+              setForm({ title: '', detail: '' });
               setOpenAddDialog(true);
             }}
             variant="contained"
@@ -117,81 +152,164 @@ const ChatbotComponents = () => {
         <Grid container spacing={2}>
           {newsData.map((item, index) => (
             <Grid item xs={12} key={index}>
-              <Box sx={{ background: '#fff', borderRadius: 3, px: 2, py: 2.5, display: 'flex', alignItems: 'center', minHeight: 60, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.07)' }}>
-                <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
-                  <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1 }}>
-                    <ReorderIcon sx={{ color: '#9CA3AF' }} />
+              <Box
+                sx={{
+                  background: '#fff',
+                  borderRadius: 3,
+                  px: { xs: 2, sm: 3 },
+                  py: { xs: 2, sm: 2.5 },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.07)',
+                  minHeight: 60,
+                }}
+              >
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={2}
+                  alignItems={{ sm: 'center' }}
+                  justifyContent="space-between"
+                  sx={{ width: '100%' }}
+                >
+                  {/* Content */}
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    alignItems="flex-start"
+                    sx={{ flex: 1 }}
+                  >
+                    <ReorderIcon sx={{ color: '#9CA3AF', mt: 0.5 }} />
                     <Box>
-                      <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                        <Typography sx={{ fontWeight: 'bold', fontSize: 16, color: expandedIndex === index ? '#1120A3' : '#000', transition: 'color 0.2s' }}>
+                      <Box
+                        display="flex"
+                        alignItems="center"
+                        gap={1}
+                        flexWrap="wrap"
+                      >
+                        <Typography
+                          sx={{
+                            fontWeight: 'bold',
+                            fontSize: 16,
+                            color: expandedIndex === index ? '#1120A3' : '#000',
+                            transition: 'color 0.2s',
+                          }}
+                        >
                           {item.title}
                         </Typography>
-                        <Box display="flex" alignItems="center" gap={0.5}>
-                          <img src="/icons/Edit.png" alt="" style={{ width: 16, height: 16 }} />
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          gap={0.5}
+                          flexWrap="wrap"
+                        >
+                          <img
+                            src="/icons/Edit.png"
+                            alt=""
+                            style={{ width: 16, height: 16 }}
+                          />
                           <Typography sx={{ fontSize: 12, color: '#9CA3AF' }}>
                             วันที่นำเข้าข้อมูล {item.date}
                           </Typography>
                         </Box>
                       </Box>
                       <Collapse in={expandedIndex === index}>
-                        <Typography sx={{ fontSize: 13, mt: 0.5 }}>{item.detail}</Typography>
+                        <Typography sx={{ fontSize: 13, mt: 0.5 }}>
+                          {item.detail}
+                        </Typography>
                       </Collapse>
                     </Box>
                   </Stack>
 
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                  {/* Buttons */}
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={0.5}
+                    mt={{ xs: 2, sm: 0 }}
+                    ml={{ sm: 2 }}
+                    justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}
+                  >
+                    {/* Expand Button */}
                     <IconButton
                       onClick={() => handleToggle(index)}
                       sx={{
                         width: 32,
                         height: 32,
-                        backgroundColor: expandedIndex === index ? '#ffffff' : '#FACC15',
-                        border: '1px solid #FACC15',
+                        backgroundColor:
+                          expandedIndex === index ? '#ffffff' : '#EDC458',
+                        border: '1px solid #EDC458',
                         borderRadius: '8px',
                         padding: 0,
                         '&:hover': {
-                          backgroundColor: expandedIndex === index ? '#ffffff' : '#FDE68A',
+                          backgroundColor:
+                            expandedIndex === index ? '#ffffff' : '#FDE68A',
                         },
-                      }}>
+                      }}
+                    >
                       {expandedIndex === index ? (
-                        <ExpandLessIcon sx={{ color: '#FACC15', fontSize: 20 }} />
+                        <ExpandLessIcon
+                          sx={{ color: '#FACC15', fontSize: 20 }}
+                        />
                       ) : (
-                        <ExpandMoreIcon sx={{ color: '#ffffff', fontSize: 20 }} />
+                        <ExpandMoreIcon
+                          sx={{ color: '#ffffff', fontSize: 20 }}
+                        />
                       )}
                     </IconButton>
+
+                    {/* Edit Button */}
                     <Tooltip title="แก้ไข">
                       <IconButton
                         onClick={() => openEdit(index)}
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          border: '1px solid #FACC15',
-                          borderRadius: '8px',
-                          backgroundColor: '#FACC15',
-                          padding: 0,
-                          '&:hover': {
-                            backgroundColor: '#FDE68A',
-                          },
-                        }}
+                        style={{
+                                    backgroundColor: "transparent",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    padding: "4px",
+                                    width: "40px",
+                                    height: "40px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    marginLeft: "8px",
+                                  }}
                       >
-                        <EditIcon sx={{ fontSize: 18, color: '#ffffff' }} />
+                        <Image
+                                    src="/icons/PencilWhite.png"
+                                    alt="Delete User"
+                                    width={36}
+                                    height={36}
+                                  />
                       </IconButton>
                     </Tooltip>
+
+                    {/* Delete Button */}
                     <Tooltip title="ลบ">
-                      <IconButton
-                        onClick={() => handleDeleteClick(index)}
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          backgroundColor: '#FACC15',
-                          borderRadius: '8px',
-                          padding: 0,
-                          '&:hover': {
-                            backgroundColor: '#FDE68A',
-                          },
-                        }} >
-                        <DeleteIcon sx={{ fontSize: 18, color: '#ffffff' }} />
-                      </IconButton>
+                      <button
+                                  onClick={() => handleDeleteClick(index)}
+                                  style={{
+                                    backgroundColor: "transparent",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    padding: "4px",
+                                    width: "40px",
+                                    height: "40px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    // marginLeft: "1px",
+                                  }}
+                                  
+                                >
+                                  <Image
+                                    src="/icons/binWhite.png"
+                                    alt="Delete User"
+                                    width={36}
+                                    height={36}
+                                  />
+                                </button>
                     </Tooltip>
                   </Stack>
                 </Stack>
@@ -200,66 +318,6 @@ const ChatbotComponents = () => {
           ))}
         </Grid>
       </Box>
-
-      {/* Popup Dialog Delate */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle sx={{ fontWeight: 'bold', color: '#991B1B', textAlign: 'center' }}>
-          ลบคำถาม
-        </DialogTitle>
-        <DialogContent>  
-          <Typography sx={{ mb: 1, textAlign: 'center', color: '#991B1B', fontWeight: 'bold', fontSize: 14}}>
-            การลบคำถามจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก
-          </Typography>
-          <Typography sx={{ textAlign: 'center', color: '#991B1B', fontWeight: 'bold', fontSize: 14}}> 
-            ยืนยันการลบคำถามนี้หรือไม่?
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
-          <Button
-            onClick={() => setOpenDialog(false)}
-            variant="outlined"
-            size="large"
-            sx={{
-              borderColor: '#DC2626',
-              color: '#DC2626',
-              fontSize: 18,
-              fontWeight: 'bold',
-              borderRadius: '10px',
-              minWidth: 120,
-              height: 50,
-              px: 4,
-              py: 2,
-              '&:hover': { backgroundColor: '#FEE2E2', borderColor: '#DC2626' },
-            }}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <img src="/icons/Cross.png" alt="" style={{ width: 22, height: 22, marginRight: 10 }} />
-              ยกเลิก
-            </span>
-          </Button>
-          <Button
-            onClick={confirmDelete}
-            variant="contained"
-            size="large"
-            sx={{
-              backgroundColor: '#DC2626',
-              color: '#fff',
-              fontSize: 18,
-              fontWeight: 'bold',
-              borderRadius: '10px',
-              minWidth: 120,
-              height: 50,
-              px: 4,
-              py: 2,
-              '&:hover': { backgroundColor: '#B91C1C' },
-            }}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              ยืนยัน
-              <img src="/icons/Tick.png" alt="" style={{ width: 22, height: 22, marginLeft: 10 }} />
-            </span>
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Dialog: เพิ่มคำถาม */}
       <Dialog
         open={openAddDialog}
@@ -277,7 +335,7 @@ const ChatbotComponents = () => {
         <IconButton
           onClick={() => setOpenAddDialog(false)}
           sx={{ position: 'absolute', top: 12, right: 12 }}>
-          <CloseIcon/>
+          <CloseIcon />
         </IconButton>
         <DialogTitle
           sx={{
@@ -290,7 +348,7 @@ const ChatbotComponents = () => {
           เพิ่มคำถามในระบบ
         </DialogTitle>
         <DialogContent sx={{ px: 6, pt: 1 }}>
-          <Typography sx={{color:'#1120A3'}}>คำถาม</Typography>
+          <Typography sx={{ color: '#1120A3' }}>คำถาม</Typography>
           <TextField
             fullWidth
             margin="normal"
@@ -308,8 +366,8 @@ const ChatbotComponents = () => {
                 fontWeight: 'bold',
                 color: '#2563EB',
               },
-            }}/>
-          <Typography sx={{color:'#1120A3'}}>คำตอบ</Typography>
+            }} />
+          <Typography sx={{ color: '#1120A3' }}>คำตอบ</Typography>
           <TextField
             fullWidth
             margin="normal"
@@ -329,8 +387,8 @@ const ChatbotComponents = () => {
                 fontWeight: 'bold',
                 color: '#2563EB',
               },
-            }}/>
-            <Typography sx={{color:'#1120A3'}}>คีย์เวิร์ด</Typography>
+            }} />
+          <Typography sx={{ color: '#1120A3' }}>คีย์เวิร์ด</Typography>
           <TextField
             fullWidth
             margin="normal"
@@ -348,7 +406,7 @@ const ChatbotComponents = () => {
                 fontWeight: 'bold',
                 color: '#2563EB',
               },
-            }}/>
+            }} />
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 4 }}>
           <Button
@@ -364,7 +422,7 @@ const ChatbotComponents = () => {
               borderRadius: '10px',
               '&:hover': { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' },
             }}>
-            <CloseIcon/>
+            <CloseIcon />
             ยกเลิก
           </Button>
           <Button
@@ -403,7 +461,7 @@ const ChatbotComponents = () => {
         <IconButton
           onClick={() => setOpenEditDialog(false)}
           sx={{ position: 'absolute', top: 12, right: 12 }}>
-          <CloseIcon/>
+          <CloseIcon />
         </IconButton>
         <DialogTitle
           sx={{
@@ -415,7 +473,7 @@ const ChatbotComponents = () => {
           แก้ไขคำถามในระบบ
         </DialogTitle>
         <DialogContent sx={{ px: 6, pt: 1 }}>
-        <Typography sx={{color:'#1120A3'}}>คำถาม</Typography>
+          <Typography sx={{ color: '#1120A3' }}>คำถาม</Typography>
           <TextField
             fullWidth
             margin="normal"
@@ -433,8 +491,8 @@ const ChatbotComponents = () => {
                 fontWeight: 'bold',
                 color: '#2563EB',
               },
-            }}/>
-            <Typography sx={{color:'#1120A3'}}>คำตอบ</Typography>
+            }} />
+          <Typography sx={{ color: '#1120A3' }}>คำตอบ</Typography>
           <TextField
             fullWidth
             margin="normal"
@@ -454,8 +512,8 @@ const ChatbotComponents = () => {
                 fontWeight: 'bold',
                 color: '#2563EB',
               },
-            }}/>
-            <Typography sx={{color:'#1120A3'}}>คีย์เวิร์ด</Typography>
+            }} />
+          <Typography sx={{ color: '#1120A3' }}>คีย์เวิร์ด</Typography>
           <TextField
             fullWidth
             margin="normal"
@@ -473,7 +531,7 @@ const ChatbotComponents = () => {
                 fontWeight: 'bold',
                 color: '#2563EB',
               },
-            }}/>
+            }} />
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 4 }}>
           <Button
@@ -489,7 +547,7 @@ const ChatbotComponents = () => {
               borderRadius: '10px',
               '&:hover': { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' },
             }}>
-            <CloseIcon/>
+            <CloseIcon />
             ยกเลิก
           </Button>
           <Button

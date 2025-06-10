@@ -1,6 +1,11 @@
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 
-export const showAlert = (type = "info", title = "แจ้งเตือน", text = "", isHtml = false) => {
+export const showAlert = (
+  type = "info",
+  title = "แจ้งเตือน",
+  text = "",
+  isHtml = false
+) => {
   return Swal.fire({
     icon: type,
     title,
@@ -9,7 +14,6 @@ export const showAlert = (type = "info", title = "แจ้งเตือน", 
     confirmButtonText: "ตกลง",
   });
 };
-
 
 export const showConfirm = (
   title = "คุณแน่ใจหรือไม่?",
@@ -49,7 +53,6 @@ export const showLoading = (title = "กำลังโหลด...") => {
     },
   });
 };
-
 
 export const closeAlert = () => {
   Swal.close();
