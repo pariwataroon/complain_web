@@ -19,19 +19,15 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ReorderIcon from '@mui/icons-material/Reorder';
 import CloseIcon from '@mui/icons-material/Close';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
 import { useRouter } from 'next/router';
 import {
-  showLoading,
   closeAlert,
   alertError,
   alertSuccess,
-  showConfirm,
   showConfirm2,
 
 } from "@utils/Alerts";
-import styles from "./UserManagement.module.scss";
 import Image from "next/image";
 const initialData = [
   { title: 'ขอความช่วยเหลือเกี่ยวกับการคืนภาษีล่าช้า', detail: 'สอบถามข้อมูลเกี่ยวกับเรียนระดับการศึกษาระดับอาชีวศึกษา โทร 1161', date: '17 ม.ค. 2568' },
@@ -72,14 +68,9 @@ const ChatbotComponents = () => {
 
   if (confirm) {
     try {
-      // showLoading("กำลังลบคำถาม...");
-      // Mock data
       const newData = [...newsData];
       newData.splice(index, 1);
       setNewsData(newData);
-
-      // ถ้าใช้ API จริง
-      // await fetch(`/api/delete-question/${item.id}`, { method: 'DELETE' });
 
       closeAlert();
       alertSuccess("ลบคำถามสำเร็จ");
@@ -92,16 +83,6 @@ const ChatbotComponents = () => {
   }
 };
 
-
-
-
-  // const confirmDelete = () => {
-  //   const newData = [...newsData];
-  //   newData.splice(deleteIndex, 1);
-  //   setNewsData(newData);
-  //   setOpenDialog(false);
-  //   setDeleteIndex(null);
-  // };
 
   const handleAdd = () => {
     const newItem = { ...form, date: new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) };
@@ -124,14 +105,30 @@ const ChatbotComponents = () => {
     setForm({ title: newsData[index].title, detail: newsData[index].detail });
     setOpenEditDialog(true);
   };
+  const breadcrumbItems = [
+  {
+    label: (
+      <span style={{ color: "#1120A3" }}>
+        กำหนดคำถาม Chat Bot
+      </span>
+    ),
+    icon: (
+      <img
+        src="/icons/config.png"
+        alt="Settings Icon"
+        style={{ width: "20px", height: "20px", marginBottom: "-8px" ,borderRadius: "50%", border: "2px solid #1120A3" ,padding: "2px" }}
+      />
+    ),
+    url:"/admin",
+  },
+];
 
   return (
     <Box sx={{ background: '#F5F7FB', minHeight: '100vh', py: 3 }}>
+      <BreadcrumbsService items={breadcrumbItems} />
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ fontWeight: 'bold', fontSize: 18, color: '#1120A3', mb: 2, maxWidth: '1500px', mx: 'auto', px: 2 }}>
-        <Box component="img" src="/icons/config.png" alt="" sx={{ width: 24, height: 24 }} />
-        <Typography component="span" sx={{ fontWeight: 'bold', fontSize: 18 }}>
-          กำหนดคำถาม Chat Bot
-        </Typography>
+        
+        
       </Stack>
 
       <Box sx={{ maxWidth: '1200px', mx: 'auto', px: 2 }}>
@@ -321,66 +318,6 @@ const ChatbotComponents = () => {
           ))}
         </Grid>
       </Box>
-
-      {/* Popup Dialog Delate */}
-      {/* <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle sx={{ fontWeight: 'bold', color: '#991B1B', textAlign: 'center' }}>
-          ลบคำถาม
-        </DialogTitle>
-        <DialogContent>  
-          <Typography sx={{ mb: 1, textAlign: 'center', color: '#991B1B', fontWeight: 'bold', fontSize: 14}}>
-            การลบคำถามจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก
-          </Typography>
-          <Typography sx={{ textAlign: 'center', color: '#991B1B', fontWeight: 'bold', fontSize: 14}}> 
-            ยืนยันการลบคำถามนี้หรือไม่?
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
-          <Button
-            onClick={() => setOpenDialog(false)}
-            variant="outlined"
-            size="large"
-            sx={{
-              borderColor: '#DC2626',
-              color: '#DC2626',
-              fontSize: 18,
-              fontWeight: 'bold',
-              borderRadius: '10px',
-              minWidth: 120,
-              height: 50,
-              px: 4,
-              py: 2,
-              '&:hover': { backgroundColor: '#FEE2E2', borderColor: '#DC2626' },
-            }}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <img src="/icons/Cross.png" alt="" style={{ width: 22, height: 22, marginRight: 10 }} />
-              ยกเลิก
-            </span>
-          </Button>
-          <Button
-            onClick={confirmDelete}
-            variant="contained"
-            size="large"
-            sx={{
-              backgroundColor: '#DC2626',
-              color: '#fff',
-              fontSize: 18,
-              fontWeight: 'bold',
-              borderRadius: '10px',
-              minWidth: 120,
-              height: 50,
-              px: 4,
-              py: 2,
-              '&:hover': { backgroundColor: '#B91C1C' },
-            }}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              ยืนยัน
-              <img src="/icons/Tick.png" alt="" style={{ width: 22, height: 22, marginLeft: 10 }} />
-            </span>
-          </Button>
-        </DialogActions>
-      </Dialog> */}
-
       {/* Dialog: เพิ่มคำถาม */}
       <Dialog
         open={openAddDialog}
