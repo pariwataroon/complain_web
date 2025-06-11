@@ -1,16 +1,16 @@
-// SendComplaintOPM.module.scss
+// SendComplaintOPM.module.scss - Government Theme
 
 .container {
   padding: 24px;
-  background-color: #f8fafc;
+  background-color: #f8f9fa;
   min-height: 100vh;
 }
 
 .formCard {
   background: #ffffff !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
-  border: 1px solid #e5e7eb;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid #dee2e6;
   margin-top: 24px;
   max-width: 1200px;
   margin-left: auto;
@@ -29,11 +29,11 @@
   margin-bottom: 32px;
   text-align: center;
   padding-bottom: 24px;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 2px solid #e9ecef;
 }
 
 .title {
-  color: #1e293b !important;
+  color: #495057 !important;
   font-weight: 600 !important;
   margin-bottom: 8px !important;
   font-size: 28px !important;
@@ -44,28 +44,45 @@
 }
 
 .subtitle {
-  color: #64748b !important;
+  color: #6c757d !important;
   font-size: 16px !important;
   margin-bottom: 0 !important;
 }
 
 .formFields {
   margin-bottom: 32px;
+
+  .sectionTitle:not(:first-child) {
+    margin-top: 24px !important;
+  }
+}
+
+.sectionTitle {
+  color: #495057 !important;
+  font-weight: 600 !important;
+  font-size: 18px !important;
+  margin-bottom: 16px !important;
+  padding-bottom: 8px !important;
+  border-bottom: 2px solid #e9ecef !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
 }
 
 .summaryBox {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 1px solid #bae6fd;
-  border-radius: 12px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #ced4da;
+  border-radius: 8px;
   padding: 24px;
   margin-bottom: 32px;
-  box-shadow: inset 0 2px 4px 0 rgba(59, 130, 246, 0.06);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+  animation: slideInUp 0.3s ease-out;
 }
 
 .summaryTitle {
-  color: #0c4a6e !important;
+  color: #495057 !important;
   font-weight: 600 !important;
-  margin-bottom: 16px !important;
+  margin-bottom: 20px !important;
   font-size: 18px !important;
   display: flex;
   align-items: center;
@@ -77,12 +94,24 @@
   }
 }
 
+.summaryValue {
+  font-weight: 600 !important;
+  color: #212529 !important;
+  margin-top: 4px !important;
+  padding: 4px 8px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 4px;
+  display: inline-block;
+  min-width: 100px;
+  border: 1px solid #e9ecef;
+}
+
 .actionButtons {
   display: flex;
   gap: 16px;
   justify-content: center;
   padding-top: 24px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid #e9ecef;
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -93,33 +122,57 @@
 .resetButton {
   min-width: 120px !important;
   height: 48px !important;
-  border-radius: 12px !important;
+  border-radius: 6px !important;
   font-weight: 600 !important;
-  border: 2px solid #6b7280 !important;
-  color: #6b7280 !important;
+  border: 2px solid #6c757d !important;
+  color: #6c757d !important;
+  background-color: #ffffff !important;
   transition: all 0.2s ease-in-out !important;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(108, 117, 125, 0.1), transparent);
+    transition: left 0.5s ease;
+  }
 
   &:hover {
-    background-color: #6b7280 !important;
+    background-color: #6c757d !important;
     color: #ffffff !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4) !important;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3) !important;
+
+    &::before {
+      left: 100%;
+    }
   }
 
   &:disabled {
     opacity: 0.6 !important;
     transform: none !important;
     box-shadow: none !important;
+    cursor: not-allowed !important;
+
+    &::before {
+      display: none;
+    }
   }
 }
 
 .submitButton {
   min-width: 140px !important;
   height: 48px !important;
-  border-radius: 12px !important;
+  border-radius: 6px !important;
   font-weight: 600 !important;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
   color: #ffffff !important;
+  border: none !important;
   transition: all 0.2s ease-in-out !important;
   position: relative;
   overflow: hidden;
@@ -136,9 +189,9 @@
   }
 
   &:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+    background: linear-gradient(135deg, #218838 0%, #1e7e34 100%) !important;
     transform: translateY(-1px);
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4) !important;
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4) !important;
 
     &::before {
       left: 100%;
@@ -146,8 +199,8 @@
   }
 
   &:disabled {
-    background: #d1d5db !important;
-    color: #9ca3af !important;
+    background: #adb5bd !important;
+    color: #6c757d !important;
     transform: none !important;
     box-shadow: none !important;
     cursor: not-allowed !important;
@@ -167,7 +220,7 @@
   }
 
   50% {
-    opacity: 0.5;
+    opacity: 0.7;
   }
 }
 
@@ -176,6 +229,104 @@
     .formFields {
       animation: pulse 2s infinite;
     }
+  }
+}
+
+// Animation for summary box
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Fade in animation
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+// Slide in from left
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// Card entrance animation
+.formCard {
+  animation: slideInUp 0.5s ease-out;
+}
+
+// Form fields animation
+.formFields {
+  animation: fadeIn 0.8s ease-out 0.2s both;
+}
+
+// Header animation
+.header {
+  animation: slideInLeft 0.6s ease-out;
+}
+
+// Button hover effects enhancements
+.resetButton,
+.submitButton {
+  &:active {
+    transform: translateY(0) !important;
+    transition: transform 0.1s ease !important;
+  }
+}
+
+// Enhanced focus states - Government accessible colors
+.resetButton:focus,
+.submitButton:focus {
+  outline: 3px solid rgba(40, 167, 69, 0.3) !important;
+  outline-offset: 2px !important;
+}
+
+// Loading state enhancements
+.submitButton {
+  &.loading {
+    &::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      margin: auto;
+      border: 2px solid transparent;
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 }
 
@@ -188,6 +339,14 @@
   .formCard {
     margin-top: 16px;
   }
+
+  .title {
+    font-size: 26px !important;
+  }
+
+  .sectionTitle {
+    font-size: 16px !important;
+  }
 }
 
 @media (max-width: 768px) {
@@ -198,21 +357,226 @@
   .summaryTitle {
     font-size: 16px !important;
   }
-}
 
-// Animation for summary box
-.summaryBox {
-  animation: slideInUp 0.3s ease-out;
-}
-
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+  .sectionTitle {
+    font-size: 15px !important;
   }
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  .actionButtons {
+    gap: 12px;
+  }
+
+  .resetButton,
+  .submitButton {
+    height: 44px !important;
+    font-size: 14px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 12px;
+  }
+
+  .cardContent {
+    padding: 16px 12px !important;
+  }
+
+  .header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+  }
+
+  .title {
+    font-size: 22px !important;
+  }
+
+  .subtitle {
+    font-size: 14px !important;
+  }
+
+  .formFields {
+    margin-bottom: 24px;
+  }
+
+  .summaryBox {
+    padding: 12px;
+    margin-bottom: 24px;
+  }
+
+  .actionButtons {
+    padding-top: 16px;
+    gap: 8px;
+  }
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+  .formCard {
+    border: 2px solid #000000 !important;
+  }
+
+  .resetButton {
+    border: 3px solid #6c757d !important;
+  }
+
+  .submitButton {
+    background: #198754 !important;
+  }
+
+  .summaryBox {
+    border: 2px solid #495057 !important;
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+
+  .formCard,
+  .formFields,
+  .header,
+  .summaryBox {
+    animation: none !important;
+  }
+
+  .resetButton,
+  .submitButton {
+    transition: none !important;
+
+    &:hover {
+      transform: none !important;
+    }
+
+    &::before {
+      display: none !important;
+    }
+  }
+}
+
+// Print styles
+@media print {
+  .container {
+    background: white !important;
+    padding: 0 !important;
+  }
+
+  .formCard {
+    box-shadow: none !important;
+    border: 1px solid #000000 !important;
+    margin: 0 !important;
+  }
+
+  .actionButtons {
+    display: none !important;
+  }
+
+  .summaryBox {
+    background: white !important;
+    border: 1px solid #000000 !important;
+  }
+}
+
+// Error states
+.formFields {
+  .error {
+    .sectionTitle {
+      color: #dc3545 !important;
+      border-bottom-color: #dc3545 !important;
+    }
+  }
+}
+
+// Success states
+.formFields {
+  .success {
+    .sectionTitle {
+      color: #28a745 !important;
+      border-bottom-color: #28a745 !important;
+    }
+  }
+}
+
+// Focus trap for accessibility
+.formCard:focus-within {
+  outline: 2px solid rgba(40, 167, 69, 0.3);
+  outline-offset: 4px;
+}
+
+// Custom scrollbar for webkit browsers
+.cardContent {
+  scrollbar-width: thin;
+  scrollbar-color: #ced4da #f8f9fa;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f8f9fa;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #ced4da;
+    border-radius: 4px;
+
+    &:hover {
+      background: #adb5bd;
+    }
+  }
+}
+
+// Additional government-friendly styling
+.header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  margin: -32px -32px 32px -32px;
+  padding: 32px 32px 24px 32px;
+  border-bottom: 3px solid #dee2e6;
+
+  @media (max-width: 768px) {
+    margin: -24px -16px 24px -16px;
+    padding: 24px 16px 16px 16px;
+  }
+}
+
+// Government seal/logo area (if needed)
+.governmentSeal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+
+  img {
+    max-height: 60px;
+    width: auto;
+  }
+}
+
+// Official document styling
+.officialDocument {
+  border-left: 4px solid #28a745;
+  padding-left: 16px;
+  margin: 16px 0;
+  background-color: #f8f9fa;
+  padding: 16px;
+  border-radius: 0 6px 6px 0;
+}
+
+// Status indicators
+.statusIndicator {
+  &.pending {
+    color: #ffc107;
+  }
+
+  &.approved {
+    color: #28a745;
+  }
+
+  &.rejected {
+    color: #dc3545;
+  }
+
+  &.processing {
+    color: #17a2b8;
   }
 }
