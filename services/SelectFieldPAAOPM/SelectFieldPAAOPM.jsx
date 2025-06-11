@@ -31,6 +31,7 @@ const SelectFieldPAAOPM = ({
   const [districts, setDistricts] = useState([]);
   const [subDistricts, setSubDistricts] = useState([]);
   const [operatingChannels, setOperatingChannels] = useState([]);
+  const [caseStatuses, setCaseStatuses] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const provinceData = useMemo(() => [
@@ -204,6 +205,36 @@ const SelectFieldPAAOPM = ({
     }
   }, [name]);
 
+  // เรียก API ดึงข้อมูล Case Status
+  useEffect(() => {
+    if (name === "status") {
+      const fetchCaseStatuses = async () => {
+        try {
+          setLoading(true);
+          console.log("Fetching case statuses...");
+
+          const result = await GetCaseStatus();
+          if (result && result.success && result.data && Array.isArray(result.data)) {
+            setCaseStatuses(result.data);
+            console.log("Case statuses loaded:", result.data.length, "items");
+          } else {
+            setCaseStatuses([]);
+            console.error("Failed to fetch case statuses:", result?.message);
+          }
+        } catch (error) {
+          console.error("Error fetching case statuses:", error);
+          setCaseStatuses([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchCaseStatuses();
+    } else if (name === "status") {
+      setCaseStatuses([]);
+    }
+  }, [name]);
+
   // จัดการข้อมูล options ตาม name
   const allOptions = useMemo(() => {
     switch (name) {
@@ -224,15 +255,27 @@ const SelectFieldPAAOPM = ({
         }));
       case "channel":
         return operatingChannels
-          .sort((a, b) => (a.seq || 0) - (b.seq || 0)) // เพิ่ม fallback สำหรับ seq
+          .sort((a, b) => (a.seq || 0) - (b.seq || 0))
           .map(channel => ({
             value: channel.val,
             label: channel.text
           }));
+      case "status":
+        const apiStatuses = caseStatuses
+          .sort((a, b) => (a.seq || 0) - (b.seq || 0))
+          .map(status => ({
+            value: status.val || status.value || status.ID,
+            label: status.text || status.label || status.Name
+          }));
+        const additionalStatuses = [
+          { value: "88", label: "อยู่ระหว่างดำเนินการ" },
+          { value: "99", label: "ยุติเรื่อง" }
+        ];
+        return [...apiStatuses, ...additionalStatuses];
       default:
         return options;
     }
-  }, [name, provinceData, districts, subDistricts, operatingChannels, options]);
+  }, [name, provinceData, districts, subDistricts, operatingChannels, caseStatuses, options]);
 
   const isFieldDisabled = disabled || loading;
 
@@ -246,6 +289,8 @@ const SelectFieldPAAOPM = ({
           return "กำลังโหลดข้อมูลตำบล...";
         case "channel":
           return "กำลังโหลดข้อมูลช่องทาง...";
+        case "status":
+          return "กำลังโหลดข้อมูลสถานะ...";
         default:
           return "กำลังโหลด...";
       }
@@ -262,6 +307,8 @@ const SelectFieldPAAOPM = ({
         return selectedDistrict ? "เลือกตำบล" : "กรุณาเลือกอำเภอก่อน";
       case "channel":
         return "เลือกช่องทางดำเนินการ";
+      case "status":
+        return "เลือกสถานะการดำเนินการ";
       default:
         return `เลือก${label || ""}`;
     }
@@ -306,7 +353,7 @@ const SelectFieldPAAOPM = ({
         error={error}
         size={size}
         placeholder={placeholderText}
-        className={styles.selectTextField} // เพิ่ม class
+        className={styles.selectTextField}
         SelectProps={{
           displayEmpty: true,
           renderValue: (selected) => {

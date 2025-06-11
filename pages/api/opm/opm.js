@@ -314,8 +314,8 @@ const AddCase = async (submitData) => {
               <type_id>404</type_id>
               <status_id>1</status_id>
               <organization_id>${org_id}</organization_id>
-              <channel_id>2</channel_id>
-              <detail>ทดสอบ</detail>
+              <channel_id>${channel_id}</channel_id>
+              <detail>${detail}</detail>
               <province_id>${province_id}</province_id>
               <district_id>${district_id}</district_id>
               <subdistrict_id>${subdistrict_id}</subdistrict_id>
@@ -508,7 +508,6 @@ const GetOperatingChannel = async () => {
         
         if (resultElement && resultElement.textContent) {
           const channels = JSON.parse(resultElement.textContent);
-          console.log("Parsed operating channels:", channels);
           
           return {
             success: true,
@@ -520,7 +519,6 @@ const GetOperatingChannel = async () => {
         const match = xmlString.match(/<GetOperatingChannelResult>(.*?)<\/GetOperatingChannelResult>/);
         if (match && match[1]) {
           const channels = JSON.parse(match[1]);
-          console.log("Parsed operating channels:", channels);
           
           return {
             success: true,
@@ -530,7 +528,6 @@ const GetOperatingChannel = async () => {
       }
     }
 
-    console.log("No operating channels data found in response");
     return {
       success: false,
       message: "No data received",
@@ -560,7 +557,7 @@ const GetCaseStatus = async () => {
           </soap:Body>
         </soap:Envelope>`,
       {
-        soapActionSuffix: "GetOperatingChannel",
+        soapActionSuffix: "GetCaseStatus",
       }
     );
 
@@ -571,43 +568,39 @@ const GetCaseStatus = async () => {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlString, "text/xml");
         const resultElement = xmlDoc.getElementsByTagName(
-          "GetOperatingChannelResult"
+          "GetCaseStatusResult"
         )[0];
 
         if (resultElement && resultElement.textContent) {
-          const channels = JSON.parse(resultElement.textContent);
-          console.log("Parsed operating channels:", channels);
+          const statuses = JSON.parse(resultElement.textContent);
 
           return {
             success: true,
-            data: Array.isArray(channels) ? channels : [],
+            data: Array.isArray(statuses) ? statuses : [],
           };
         }
       } else {
-        // Server-side environment
         const match = xmlString.match(
-          /<GetOperatingChannelResult>(.*?)<\/GetOperatingChannelResult>/
+          /<GetCaseStatusResult>(.*?)<\/GetCaseStatusResult>/
         );
         if (match && match[1]) {
-          const channels = JSON.parse(match[1]);
-          console.log("Parsed operating channels:", channels);
+          const statuses = JSON.parse(match[1]);
 
           return {
             success: true,
-            data: Array.isArray(channels) ? channels : [],
+            data: Array.isArray(statuses) ? statuses : [],
           };
         }
       }
     }
 
-    console.log("No operating channels data found in response");
     return {
       success: false,
       message: "No data received",
       data: [],
     };
   } catch (error) {
-    console.error("Error fetching operating channels:", error);
+    console.error("Error fetching case statuses:", error);
     return {
       success: false,
       message: error.message || "Unknown error",
