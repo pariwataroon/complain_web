@@ -15,7 +15,13 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import { useRouter } from 'next/router';
 import BreadcrumbsService from '@services/BreadCrumbs/breadcrumbs';
+import {
+  closeAlert,
+  alertError,
+  alertSuccess,
+  showConfirm,
 
+} from "@utils/Alerts";
 const DefineNewsComponents = () => {
   const router = useRouter();
   const [newsList, setNewsList] = useState([]);
@@ -76,12 +82,16 @@ const DefineNewsComponents = () => {
 
   const breadcrumbItems = [
     {
-      label: "กำหนดข่าวสาร",
+      label: (
+        <span style={{ color: "#1120A3" }}>
+        กำหนดข่าวสาร
+      </span>
+      ),
       icon: (
         <img
           src="/icons/config.png"
           alt="icon"
-          style={{ width: "24px", height: "24px", marginBottom: "-8px" }}
+          style={{ width: "24px", height: "24px", marginBottom: "-8px",borderRadius: "50%", border: "2px solid #1120A3" ,padding: "2px" }}
         />
       ),url: "/admin"
     }
@@ -109,10 +119,37 @@ const DefineNewsComponents = () => {
     });
   };
 
-  const openDeleteDialog = (index) => {
-    setSelectedIndex(index);
-    setOpenDialog(true);
+  // const openDeleteDialog = async(index) => {
+
+  //   setSelectedIndex(index);
+  //   setOpenDialog(true);
+  // };
+
+  const openDeleteDialog = async (index) => {
+    const confirm = await showConfirm(
+      "ยกเลิกการแสดงข่าวสาร",
+      `การลบข่าวสารจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
+      ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก<br /><br />
+      ยืนยันการลบคำถามนี้หรือไม่?`
+    );
+  
+    if (confirm) {
+      try {
+        const newData = [...newsData];
+        newData.splice(index, 1);
+        setNewsData(newData);
+  
+        closeAlert();
+        alertSuccess("ลบข่าวสารสำเร็จ");
+        
+      } catch (err) {
+        closeAlert();
+        alertError("เกิดข้อผิดพลาด", "ไม่สามารถลบข่าวสารได้");
+        
+      }
+    }
   };
+  
 
   const confirmDelete = () => {
     const updated = [...newsList];
@@ -289,7 +326,7 @@ const DefineNewsComponents = () => {
       </Box>
 
       {/* Popup Confirm Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="xs">
+      {/* <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ fontWeight: 'bold', color: '#991B1B', textAlign: 'center' }}>
           ยกเลิกการแสดงข่าวสาร
         </DialogTitle>
@@ -345,7 +382,7 @@ const DefineNewsComponents = () => {
             </span>
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog> */}
     </Box>
   );
 };
