@@ -291,7 +291,7 @@ const SelectFieldPAAOPM = ({
         >
           {label}
           {required && !isFieldDisabled && (
-            <span className={styles.requiredAsterisk}>*</span>
+            <span className={styles.requiredAsterisk}> *</span>
           )}
         </Typography>
       )}
