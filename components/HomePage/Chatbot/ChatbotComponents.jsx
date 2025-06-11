@@ -25,22 +25,24 @@ import {
   closeAlert,
   alertError,
   alertSuccess,
-  showConfirm2,
+  showConfirm,
 
 } from "@utils/Alerts";
 import Image from "next/image";
+import InputTags from '@services/InputTags/InputTags';
+
 const initialData = [
-  { title: 'ขอความช่วยเหลือเกี่ยวกับการคืนภาษีล่าช้า', detail: 'สอบถามข้อมูลเกี่ยวกับเรียนระดับการศึกษาระดับอาชีวศึกษา โทร 1161', date: '17 ม.ค. 2568' },
-  { title: 'ร้องเรียนพฤติกรรม/การดำเนินงานของเจ้าหน้าที่หน่วยงานในสังกัดกระทรวงการคลัง', detail: '', date: '17 ม.ค. 2568' },
-  { title: 'ขอความช่วยเหลือเกี่ยวกับการปรับโครงสร้างหนี้', detail: '', date: '17 ม.ค. 2568' },
-  { title: 'ขอความช่วยเหลือเกี่ยวกับปัญหาหนี้สิน สำหรับบุคลากรภาครัฐ', detail: '', date: '17 ม.ค. 2568' },
-  { title: 'แจ้งเบาะแสการหลีกเลี่ยงภาษี', detail: '', date: '17 ม.ค. 2568' },
-  { title: 'ขอความช่วยเหลือเกี่ยวกับแหล่งเงินทุนสำหรับการประกอบอาชีพ', detail: '', date: '17 ม.ค. 2568' },
-  { title: 'ขอความช่วยเหลือเกี่ยวกับปัญหาหนี้สิน', detail: '', date: '17 ม.ค. 2568' },
-  { title: 'โครงการคุณสู้ เราช่วย', detail: '', date: '17 ม.ค. 2568' },
-  { title: 'แนวทางจัดการหนี้สาธารณะอย่างไรให้เกิดความยั่งยืน', detail: '', date: '17 ม.ค. 2568' },
-  { title: 'กระทรวงการคลังมีแนวทางกระตุ้นเศรษฐกิจปีนี้อย่างไร', detail: '', date: '17 ม.ค. 2568' },
-  { title: 'มีแนวทางสนับสนุนการลงทุนจากต่างประเทศเพิ่มเติมหรือไม่', detail: '', date: '17 ม.ค. 2568' },
+  { title: 'ขอความช่วยเหลือเกี่ยวกับการคืนภาษีล่าช้า', detail: 'สอบถามข้อมูลเกี่ยวกับเรียนระดับการศึกษาระดับอาชีวศึกษา โทร 1161', keyword: ['ภาษี', 'คืนภาษี', 'ล่าช้า'], date: '17 ม.ค. 2568' },
+  { title: 'ร้องเรียนพฤติกรรม/การดำเนินงานของเจ้าหน้าที่หน่วยงานในสังกัดกระทรวงการคลัง', detail: '', keyword: ['ร้องเรียน', 'เจ้าหน้าที่', 'กระทรวงการคลัง'], date: '17 ม.ค. 2568' },
+  { title: 'ขอความช่วยเหลือเกี่ยวกับการปรับโครงสร้างหนี้', detail: '', keyword: ['หนี้', 'โครงสร้างหนี้', 'ปรับโครงสร้าง'], date: '17 ม.ค. 2568' },
+  { title: 'ขอความช่วยเหลือเกี่ยวกับปัญหาหนี้สิน สำหรับบุคลากรภาครัฐ', detail: '', keyword: ['หนี้สิน', 'บุคลากรภาครัฐ', 'ข้าราชการ'], date: '17 ม.ค. 2568' },
+  { title: 'แจ้งเบาะแสการหลีกเลี่ยงภาษี', detail: '', keyword: ['เบาะแส', 'หลีกเลี่ยงภาษี', 'แจ้ง'], date: '17 ม.ค. 2568' },
+  { title: 'ขอความช่วยเหลือเกี่ยวกับแหล่งเงินทุนสำหรับการประกอบอาชีพ', detail: '', keyword: ['เงินทุน', 'ประกอบอาชีพ', 'แหล่งเงินทุน'], date: '17 ม.ค. 2568' },
+  { title: 'ขอความช่วยเหลือเกี่ยวกับปัญหาหนี้สิน', detail: '', keyword: ['หนี้สิน', 'ปัญหาหนี้'], date: '17 ม.ค. 2568' },
+  { title: 'โครงการคุณสู้ เราช่วย', detail: '', keyword: ['โครงการ', 'คุณสู้เราช่วย'], date: '17 ม.ค. 2568' },
+  { title: 'แนวทางจัดการหนี้สาธารณะอย่างไรให้เกิดความยั่งยืน', detail: '', keyword: ['หนี้สาธารณะ', 'ความยั่งยืน', 'จัดการหนี้'], date: '17 ม.ค. 2568' },
+  { title: 'กระทรวงการคลังมีแนวทางกระตุ้นเศรษฐกิจปีนี้อย่างไร', detail: '', keyword: ['กระตุ้นเศรษฐกิจ', 'เศรษฐกิจ', 'นโยบาย'], date: '17 ม.ค. 2568' },
+  { title: 'มีแนวทางสนับสนุนการลงทุนจากต่างประเทศเพิ่มเติมหรือไม่', detail: '', keyword: ['ลงทุน', 'ต่างประเทศ', 'FDI'], date: '17 ม.ค. 2568' },
 ];
 
 const ChatbotComponents = () => {
@@ -52,14 +54,15 @@ const ChatbotComponents = () => {
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
-  const [form, setForm] = useState({ title: '', detail: '', keyword: '' });
+  const [form, setForm] = useState({ title: '', detail: '', keyword: [], });
+
 
   const handleToggle = (index) => {
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
   const handleDeleteClick = async (index) => {
-  const confirm = await showConfirm2(
+  const confirm = await showConfirm(
     "ลบคำถาม",
     `การลบคำถามจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
     ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก<br /><br />
@@ -102,7 +105,11 @@ const ChatbotComponents = () => {
 
   const openEdit = (index) => {
     setEditIndex(index);
-    setForm({ title: newsData[index].title, detail: newsData[index].detail });
+    setForm({ 
+      title: newsData[index].title, 
+      detail: newsData[index].detail,
+      keyword: newsData[index].keyword || []
+    });
     setOpenEditDialog(true);
   };
   const breadcrumbItems = [
@@ -273,8 +280,11 @@ const ChatbotComponents = () => {
                                     justifyContent: "center",
                                     cursor: "pointer",
                                     marginLeft: "8px",
+                                    '&:hover': {
+                                      backgroundColor: '#FDE68A',
+                                    },
                                   }}
-                      >
+                                  >
                         <Image
                                     src="/icons/PencilWhite.png"
                                     alt="Delete User"
@@ -299,7 +309,9 @@ const ChatbotComponents = () => {
                                     alignItems: "center",
                                     justifyContent: "center",
                                     cursor: "pointer",
-                                    // marginLeft: "1px",
+                                    '&:hover': {
+                                      backgroundColor: '#FDE68A',
+                                    },
                                   }}
                                   
                                 >
@@ -388,25 +400,13 @@ const ChatbotComponents = () => {
                 color: '#2563EB',
               },
             }} />
-          <Typography sx={{ color: '#1120A3' }}>คีย์เวิร์ด</Typography>
-          <TextField
-            fullWidth
-            margin="normal"
-            value={form.keyword || ''}
-            onChange={(e) => setForm({ ...form, keyword: e.target.value })}
-            inputProps={{ style: { fontSize: 16 } }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2,
-                '& fieldset': {
-                  borderColor: '#93C5FD',
-                },
-              },
-              '& label': {
-                fontWeight: 'bold',
-                color: '#2563EB',
-              },
-            }} />
+          <InputTags
+          label="คีย์เวิร์ด"
+          value={form.keyword || []}
+          onChange={(e) => setForm({ ...form, keyword: e.target.value })}
+          name="keyword"
+          />
+
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 4 }}>
           <Button
@@ -513,33 +513,21 @@ const ChatbotComponents = () => {
                 color: '#2563EB',
               },
             }} />
-          <Typography sx={{ color: '#1120A3' }}>คีย์เวิร์ด</Typography>
-          <TextField
-            fullWidth
-            margin="normal"
-            value={form.keyword || ''}
-            onChange={(e) => setForm({ ...form, keyword: e.target.value })}
-            inputProps={{ style: { fontSize: 16 } }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2,
-                '& fieldset': {
-                  borderColor: '#93C5FD',
-                },
-              },
-              '& label': {
-                fontWeight: 'bold',
-                color: '#2563EB',
-              },
-            }} />
+          <InputTags
+          label="คีย์เวิร์ด"
+          value={form.keyword || []}
+          onChange={(e) => setForm({ ...form, keyword: e.target.value })}
+          name="keyword"
+          />
+
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 4 }}>
           <Button
             onClick={() => setOpenEditDialog(false)}
             variant="outlined"
             sx={{
-              borderColor: '#BFDBFE',
-              color: '#2563EB',
+              borderColor: '#50ADFF',
+              color: '#50ADFF',
               fontSize: 16,
               fontWeight: 'bold',
               px: 4,
@@ -554,7 +542,7 @@ const ChatbotComponents = () => {
             onClick={handleEdit}
             variant="contained"
             sx={{
-              backgroundColor: '#2563EB',
+              backgroundColor: '#50ADFF',
               color: '#fff',
               fontSize: 16,
               fontWeight: 'bold',
