@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListOPM from "@services/TableListOPM/TableListOPM";
 import Cookies from "js-cookie";
-import { Encode, GetTimelineHeader } from "@pages/api/opm/omp";
+import { Encode, GetTimelineHeader } from "@pages/api/opm/opm";
 import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 
 const Opm1111Components = () => {
@@ -18,7 +18,7 @@ const Opm1111Components = () => {
     const initializeData = async () => {
       try {
         showLoading("กำลังรับรองตัวตน...");
-        Cookies.remove("omp_token");
+        Cookies.remove("opm_token");
         Cookies.remove("org_id");
 
         const tokenData = await Encode();
@@ -197,7 +197,7 @@ const Opm1111Components = () => {
       <TableListOPM
         data={filteredComplaints}
         title="เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ OPM1111"
-        navigateTo="/admin/edit/omp1111"
+        navigateTo="/admin/edit/opm1111"
         onSearch={handleSearch}
         handleNavigateTo={handleNavigateTo}
         onRowsPerPageChange={(newRowsPerPage) => setRowsPerPage(newRowsPerPage)}

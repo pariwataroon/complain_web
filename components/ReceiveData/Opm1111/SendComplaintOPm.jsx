@@ -9,6 +9,8 @@ const SendComplaintOPM = () => {
   const [selectedProvince, setSelectedProvince] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedSubDistrict, setSelectedSubDistrict] = useState("");
+  const [selectedChannel, setSelectedChannel] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
 
   const handleProvinceChange = useCallback((event) => {
     const newValue = event.target.value;
@@ -27,7 +29,18 @@ const SendComplaintOPM = () => {
     const newValue = event.target.value;
     setSelectedSubDistrict(newValue);
   }, []);
+
+  const handleChannelChange = useCallback((event) => {
+    const newValue = event.target.value;
+    setSelectedChannel(newValue);
+  }, []);
   
+  const handleStatusChange = useCallback((event) => {
+    const newValue = event.target.value;
+    setSelectedStatus(newValue);
+    console.log("Selected Status ID:", newValue);
+  }, []);
+
   return (
     <>
       <BreadcrumbsService
@@ -58,6 +71,7 @@ const SendComplaintOPM = () => {
         placeholder="เลือกจังหวัด"
         value={selectedProvince}
         onChange={handleProvinceChange}
+        required={true}
       />
 
       <SelectFieldPAAOPM
@@ -67,8 +81,8 @@ const SendComplaintOPM = () => {
         value={selectedDistrict}
         onChange={handleDistrictChange}
         disabled={!selectedProvince}
-        required={true}
         selectedProvince={selectedProvince}
+        required={true}
       />
 
       <SelectFieldPAAOPM
@@ -78,9 +92,27 @@ const SendComplaintOPM = () => {
         value={selectedSubDistrict}
         onChange={handleSubDistrictChange}
         disabled={!selectedDistrict}
-        required={true}
         selectedProvince={selectedProvince}
         selectedDistrict={selectedDistrict}
+        required={true}
+      />
+
+      <SelectFieldPAAOPM
+        label="ช่องทางดำเนินการ"
+        name="channel"
+        placeholder="เลือกช่องทางดำเนินการ"
+        value={selectedChannel}
+        onChange={handleChannelChange}
+        required={true}
+      />
+
+      <SelectFieldPAAOPM
+        label="สถานะการดำเนินการ"
+        name="status"
+        placeholder="เลือกสถานะการดำเนินการ"
+        value={selectedStatus}
+        onChange={handleStatusChange}
+        required={true}
       />
 
     </>

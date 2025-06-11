@@ -310,7 +310,7 @@ const AddCase = async (submitData) => {
           <soap:Body>
             <AddCase xmlns="http://tempuri.org/">
               <token_id>${token_id}</token_id>
-              <case_code>{{case_id}}</case_code>
+              <case_code>${case_code}</case_code>
               <type_id>404</type_id>
               <status_id>1</status_id>
               <organization_id>${org_id}</organization_id>
@@ -479,6 +479,143 @@ const GetSubDistricts = async (districtId) => {
   }
 };
 
+const GetOperatingChannel = async () => {
+  try {
+    const response = await soapInstance.post(
+      process.env.NEXT_PUBLIC_OPM_API_LISTOFVALUES,
+      `<?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+            <GetOperatingChannel xmlns="http://tempuri.org/">
+              <is_thai>true</is_thai>
+            </GetOperatingChannel>
+          </soap:Body>
+        </soap:Envelope>`,
+      {
+        soapActionSuffix: "GetOperatingChannel",
+      }
+    );
+
+    // Parse XML response
+    let xmlString = response.data;
+    
+    if (typeof xmlString === 'string') {
+      if (typeof window !== 'undefined') {
+        // Browser environment
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+        const resultElement = xmlDoc.getElementsByTagName("GetOperatingChannelResult")[0];
+        
+        if (resultElement && resultElement.textContent) {
+          const channels = JSON.parse(resultElement.textContent);
+          console.log("Parsed operating channels:", channels);
+          
+          return {
+            success: true,
+            data: Array.isArray(channels) ? channels : [],
+          };
+        }
+      } else {
+        // Server-side environment
+        const match = xmlString.match(/<GetOperatingChannelResult>(.*?)<\/GetOperatingChannelResult>/);
+        if (match && match[1]) {
+          const channels = JSON.parse(match[1]);
+          console.log("Parsed operating channels:", channels);
+          
+          return {
+            success: true,
+            data: Array.isArray(channels) ? channels : [],
+          };
+        }
+      }
+    }
+
+    console.log("No operating channels data found in response");
+    return {
+      success: false,
+      message: "No data received",
+      data: [],
+    };
+  } catch (error) {
+    console.error("Error fetching operating channels:", error);
+    return {
+      success: false,
+      message: error.message || "Unknown error",
+      data: [],
+    };
+  }
+};
+
+const GetCaseStatus = async () => {
+  try {
+    const response = await soapInstance.post(
+      process.env.NEXT_PUBLIC_OPM_API_LISTOFVALUES,
+      `<?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+            <GetCaseStatus xmlns="http://tempuri.org/">
+              <ref_id>88</ref_id>
+              <is_thai>true</is_thai>
+            </GetCaseStatus>
+          </soap:Body>
+        </soap:Envelope>`,
+      {
+        soapActionSuffix: "GetOperatingChannel",
+      }
+    );
+
+    let xmlString = response.data;
+
+    if (typeof xmlString === "string") {
+      if (typeof window !== "undefined") {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+        const resultElement = xmlDoc.getElementsByTagName(
+          "GetOperatingChannelResult"
+        )[0];
+
+        if (resultElement && resultElement.textContent) {
+          const channels = JSON.parse(resultElement.textContent);
+          console.log("Parsed operating channels:", channels);
+
+          return {
+            success: true,
+            data: Array.isArray(channels) ? channels : [],
+          };
+        }
+      } else {
+        // Server-side environment
+        const match = xmlString.match(
+          /<GetOperatingChannelResult>(.*?)<\/GetOperatingChannelResult>/
+        );
+        if (match && match[1]) {
+          const channels = JSON.parse(match[1]);
+          console.log("Parsed operating channels:", channels);
+
+          return {
+            success: true,
+            data: Array.isArray(channels) ? channels : [],
+          };
+        }
+      }
+    }
+
+    console.log("No operating channels data found in response");
+    return {
+      success: false,
+      message: "No data received",
+      data: [],
+    };
+  } catch (error) {
+    console.error("Error fetching operating channels:", error);
+    return {
+      success: false,
+      message: error.message || "Unknown error",
+      data: [],
+    };
+  }
+};
+
 export {
   Encode,
   GetTimelineHeader,
@@ -488,4 +625,6 @@ export {
   AddCase,
   GetDistricts,
   GetSubDistricts,
+  GetOperatingChannel,
+  GetCaseStatus,
 };

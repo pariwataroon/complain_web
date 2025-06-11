@@ -7,7 +7,7 @@ import {
   FormHelperText,
 } from "@mui/material";
 import styles from "./SelectFieldPAAOPM.module.scss";
-import { GetDistricts, GetSubDistricts } from "@pages/api/opm/opm";
+import { GetDistricts, GetSubDistricts, GetOperatingChannel, GetCaseStatus } from "@pages/api/opm/opm";
 
 const SelectFieldPAAOPM = ({
   name,
@@ -23,13 +23,14 @@ const SelectFieldPAAOPM = ({
   size = "medium",
   options = [],
   placeholder,
-  selectedProvince, // รับ provinceId สำหรับดึงข้อมูลอำเภอ
-  selectedDistrict, // รับ districtId สำหรับดึงข้อมูลตำบล
+  selectedProvince,
+  selectedDistrict,
   ...otherProps
 }) => {
   // State สำหรับเก็บข้อมูลจาก API
   const [districts, setDistricts] = useState([]);
   const [subDistricts, setSubDistricts] = useState([]);
+  const [operatingChannels, setOperatingChannels] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const provinceData = useMemo(() => [
@@ -119,9 +120,12 @@ const SelectFieldPAAOPM = ({
       const fetchDistricts = async () => {
         try {
           setLoading(true);
+          console.log("Fetching districts for province:", selectedProvince); // Debug log
+
           const result = await GetDistricts(selectedProvince);
-          if (result && result.success && result.data) {
+          if (result && result.success && result.data && Array.isArray(result.data)) {
             setDistricts(result.data);
+            console.log("Districts loaded:", result.data.length, "items"); // Debug log
           } else {
             setDistricts([]);
             console.error("Failed to fetch districts:", result?.message);
@@ -146,9 +150,12 @@ const SelectFieldPAAOPM = ({
       const fetchSubDistricts = async () => {
         try {
           setLoading(true);
+          console.log("Fetching sub-districts for district:", selectedDistrict); // Debug log
+
           const result = await GetSubDistricts(selectedDistrict);
-          if (result && result.success && result.data) {
+          if (result && result.success && result.data && Array.isArray(result.data)) {
             setSubDistricts(result.data);
+            console.log("Sub-districts loaded:", result.data.length, "items"); // Debug log
           } else {
             setSubDistricts([]);
             console.error("Failed to fetch sub-districts:", result?.message);
@@ -167,6 +174,36 @@ const SelectFieldPAAOPM = ({
     }
   }, [name, selectedDistrict]);
 
+  // เรียก API ดึงข้อมูล Operating Channel
+  useEffect(() => {
+    if (name === "channel") {
+      const fetchOperatingChannels = async () => {
+        try {
+          setLoading(true);
+          console.log("Fetching operating channels...");
+
+          const result = await GetOperatingChannel();
+          if (result && result.success && result.data && Array.isArray(result.data)) {
+            setOperatingChannels(result.data);
+            console.log("Operating channels loaded:", result.data.length, "items");
+          } else {
+            setOperatingChannels([]);
+            console.error("Failed to fetch operating channels:", result?.message);
+          }
+        } catch (error) {
+          console.error("Error fetching operating channels:", error);
+          setOperatingChannels([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchOperatingChannels();
+    } else if (name === "channel") {
+      setOperatingChannels([]);
+    }
+  }, [name]);
+
   // จัดการข้อมูล options ตาม name
   const allOptions = useMemo(() => {
     switch (name) {
@@ -177,18 +214,25 @@ const SelectFieldPAAOPM = ({
         }));
       case "district":
         return districts.map(district => ({
-          value: district.ID,        // ใช้ ID
-          label: district.Name       // ใช้ Name
+          value: district.ID,
+          label: district.Name
         }));
       case "subdistrict":
         return subDistricts.map(subDistrict => ({
-          value: subDistrict.ID,     // ใช้ ID
-          label: subDistrict.Name    // ใช้ Name
+          value: subDistrict.ID,
+          label: subDistrict.Name
         }));
+      case "channel":
+        return operatingChannels
+          .sort((a, b) => (a.seq || 0) - (b.seq || 0)) // เพิ่ม fallback สำหรับ seq
+          .map(channel => ({
+            value: channel.val,
+            label: channel.text
+          }));
       default:
         return options;
     }
-  }, [name, provinceData, districts, subDistricts, options]);
+  }, [name, provinceData, districts, subDistricts, operatingChannels, options]);
 
   const isFieldDisabled = disabled || loading;
 
@@ -200,6 +244,8 @@ const SelectFieldPAAOPM = ({
           return "กำลังโหลดข้อมูลอำเภอ...";
         case "subdistrict":
           return "กำลังโหลดข้อมูลตำบล...";
+        case "channel":
+          return "กำลังโหลดข้อมูลช่องทาง...";
         default:
           return "กำลังโหลด...";
       }
@@ -214,6 +260,8 @@ const SelectFieldPAAOPM = ({
         return selectedProvince ? "เลือกอำเภอ" : "กรุณาเลือกจังหวัดก่อน";
       case "subdistrict":
         return selectedDistrict ? "เลือกตำบล" : "กรุณาเลือกอำเภอก่อน";
+      case "channel":
+        return "เลือกช่องทางดำเนินการ";
       default:
         return `เลือก${label || ""}`;
     }
@@ -228,7 +276,7 @@ const SelectFieldPAAOPM = ({
       error={error}
       disabled={isFieldDisabled}
       sx={{ mb: 2 }}
-      className={styles.selectFormControl}
+      className={`${styles.selectFormControl} ${loading ? styles.loading : ''}`}
     >
       {label && (
         <Typography
@@ -243,7 +291,7 @@ const SelectFieldPAAOPM = ({
         >
           {label}
           {required && !isFieldDisabled && (
-            <span className={styles.requiredAsterisk}> *</span>
+            <span className={styles.requiredAsterisk}>*</span>
           )}
         </Typography>
       )}
@@ -258,6 +306,7 @@ const SelectFieldPAAOPM = ({
         error={error}
         size={size}
         placeholder={placeholderText}
+        className={styles.selectTextField} // เพิ่ม class
         SelectProps={{
           displayEmpty: true,
           renderValue: (selected) => {
@@ -314,19 +363,21 @@ const SelectFieldPAAOPM = ({
         {...otherProps}
       >
         {allOptions.length === 0 && !loading && (
-          <MenuItem disabled>
+          <MenuItem disabled className={`${styles.selectMenuItem} ${styles.empty}`}>
             <span style={{ color: "#9ca3af", fontStyle: "italic" }}>
               {name === "district" && !selectedProvince && "กรุณาเลือกจังหวัดก่อน"}
               {name === "subdistrict" && !selectedDistrict && "กรุณาเลือกอำเภอก่อน"}
               {name === "district" && selectedProvince && "ไม่พบข้อมูลอำเภอ"}
               {name === "subdistrict" && selectedDistrict && "ไม่พบข้อมูลตำบล"}
+              {name === "channel" && "ไม่พบข้อมูลช่องทางดำเนินการ"}
               {name === "province" && "ไม่พบข้อมูลจังหวัด"}
+              {!["province", "district", "subdistrict", "channel"].includes(name) && "ไม่พบข้อมูล"}
             </span>
           </MenuItem>
         )}
 
         {loading && (
-          <MenuItem disabled>
+          <MenuItem disabled className={`${styles.selectMenuItem} ${styles.loading}`}>
             <span style={{ color: "#6b7280", fontStyle: "italic" }}>
               กำลังโหลดข้อมูล...
             </span>
@@ -341,7 +392,7 @@ const SelectFieldPAAOPM = ({
 
           return (
             <MenuItem
-              key={`${optionValue}-${idx}`}
+              key={`${name}-${optionValue}-${idx}`} // เพิ่ม name ใน key เพื่อป้องกัน conflict
               value={optionValue}
               disabled={isDisabled}
               className={styles.selectMenuItem}
