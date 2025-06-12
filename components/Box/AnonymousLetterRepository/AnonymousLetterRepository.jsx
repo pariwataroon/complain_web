@@ -5,7 +5,6 @@ import TableListBox from "@services/TableListBox/TableListBox";
 
 // 1) เตรียม option arrays
 const issueTypeOptions = [
-  { value: "", label: "ทั้งหมด" },
   { value: "ภารกิจ", label: "ภารกิจ" },
   { value: "การแก้ไขปัญหาหนี้สิน", label: "การแก้ไขปัญหาหนี้สิน" },
   {
@@ -16,7 +15,6 @@ const issueTypeOptions = [
 ];
 
 const subIssueTypeOptions = [
-  { value: "", label: "ทั้งหมด" },
   {
     value: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
     label: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
@@ -32,7 +30,6 @@ const subIssueTypeOptions = [
 ];
 
 const agencyOptions = [
-  { value: "", label: "ทั้งหมด" },
   { value: "กรมสรรพากร", label: "กรมสรรพากร" },
   { value: "กรมศุลกากร", label: "กรมศุลกากร" },
   { value: "กรมบัญชีกลาง", label: "กรมบัญชีกลาง" },
@@ -42,14 +39,12 @@ const agencyOptions = [
 ];
 
 const officerOptions = [
-  { value: "", label: "ทั้งหมด" },
   { value: "นายกานต์ วรากร", label: "นายกานต์ วรากร" },
   { value: "นางกานต์รวี วรานี", label: "นางกานต์รวี วรานี" },
   { value: "นายปิยภา ภูมิศา", label: "นายปิยภา ภูมิศา" },
 ];
 
 const statusOptions = [
-  { value: "", label: "ทั้งหมด" },
   { value: "กำลังดำเนินการ", label: "กำลังดำเนินการ" },
   { value: "ยุติ", label: "ยุติ" },
 ];

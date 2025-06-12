@@ -8,6 +8,12 @@ import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
+import {
+  alertSuccess,
+  alertError,
+  showLoading,
+  closeAlert,
+} from "@utils/Alerts";
 
 const InitialNotificationComplainantAgency = () => {
   const router = useRouter();
@@ -29,7 +35,10 @@ const InitialNotificationComplainantAgency = () => {
   // ใช้ useCallback เพื่อป้องกัน re-render loop
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    // แก้ไข: ตรวจสอบว่า value ไม่ใช่ object
+    const finalValue =
+      typeof value === "object" && value !== null ? value.value || "" : value;
+    setForm((prev) => ({ ...prev, [name]: finalValue }));
   }, []);
 
   // Handler สำหรับ DateThaiPickerService - ใช้ useCallback
@@ -64,31 +73,146 @@ const InitialNotificationComplainantAgency = () => {
     });
   }, []);
 
-  // Save form handler - ใช้ useCallback
-  const handleSave = useCallback(() => {
+  // ฟังก์ชันตรวจสอบข้อมูลที่จำเป็น
+  const validateRequiredFields = () => {
+    const requiredFields = [
+      { field: "salutation", label: "เรียน" },
+      { field: "refNo", label: "เลขที่หนังสือ" },
+      { field: "date", label: "วันที่" },
+      { field: "subject", label: "เรื่อง" },
+      { field: "department", label: "หน่วยงาน / ผู้ร้อง" },
+      { field: "signer", label: "ผู้ลงนาม" },
+      { field: "confidentiality", label: "ชั้นความลับ" },
+      { field: "urgency", label: "ชั้นความเร่งด่วน" },
+      { field: "attachment", label: "เอกสารแนบ" },
+    ];
+
+    const missingFields = requiredFields.filter(({ field }) => {
+      const value = form[field];
+      return !value || value === "" || value === null;
+    });
+
+    return missingFields;
+  };
+
+  // Save form handler - ใช้ useCallback และเพิ่ม validation + alerts
+  const handleSave = useCallback(async () => {
     console.log("Form data:", form);
-    // TODO: save form
-  }, [form]);
+
+    // ตรวจสอบฟิลด์ที่จำเป็น
+    const missingFields = validateRequiredFields();
+
+    if (missingFields.length > 0) {
+      const missingFieldNames = missingFields
+        .map(({ label }) => label)
+        .join(", ");
+      alertError(
+        "ข้อมูลไม่ครบถ้วน",
+        `กรุณากรอกข้อมูลในฟิลด์: ${missingFieldNames}`
+      );
+      return;
+    }
+
+    try {
+      // แสดง loading
+      showLoading("กำลังบันทึกข้อมูล...");
+
+      // จำลองการส่งข้อมูลไปยัง API (ใช้ setTimeout เพื่อจำลอง)
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // ปิด loading
+      closeAlert();
+
+      // แสดงความสำเร็จ
+      await alertSuccess(
+        "บันทึกสำเร็จ",
+        "บันทึกแบบรายงานแจ้งผู้ร้องเรียน / ส่วนราชการเรียบร้อยแล้ว"
+      );
+
+      // TODO: เปลี่ยนเส้นทางหรือ refresh ข้อมูลหลังจากบันทึกสำเร็จ
+      // router.push('/some-success-page');
+    } catch (error) {
+      // ปิด loading
+      closeAlert();
+
+      // แสดงข้อผิดพลาด
+      console.error("Save error:", error);
+      alertError(
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง"
+      );
+    }
+  }, [form, router]);
 
   // Options สำหรับ SelectField
   const salutationOptions = [
+    { value: "director_general", label: "อธิบดี" },
+    { value: "deputy_director_general", label: "รองอธิบดี" },
     { value: "director", label: "ผู้อำนวยการ" },
-    { value: "manager", label: "ผู้จัดการ" },
-    { value: "head", label: "หัวหน้า" },
+    { value: "deputy_director", label: "รองผู้อำนวยการ" },
+    { value: "secretary_general", label: "เลขาธิการ" },
+    { value: "deputy_secretary_general", label: "รองเลขาธิการ" },
     { value: "minister", label: "รัฐมนตรี" },
+    { value: "deputy_minister", label: "รองรัฐมนตรี" },
   ];
 
   const departmentOptions = [
+    // ผู้ร้องเรียน
     { value: "complainant", label: "ผู้ร้องเรียน" },
-    { value: "transport_land", label: "กรมการขนส่งทางบก" },
-    { value: "transport_water", label: "กรมการขนส่งทางน้ำ" },
-    { value: "transport_air", label: "กรมการขนส่งทางอากาศ" },
+
+    // กระทรวงคมนาคม
+    { value: "dlt", label: "กรมการขนส่งทางบก" },
+    { value: "dmt", label: "กรมการขนส่งทางน้ำและพาณิชยนาวี" },
+    { value: "caat", label: "การบินพลเรือนแห่งประเทศไทย" },
+    { value: "doh", label: "กรมทางหลวง" },
+    { value: "rrd", label: "กรมทางหลวงชนบท" },
+    { value: "srt", label: "การรถไฟแห่งประเทศไทย" },
+    { value: "port_authority", label: "การท่าเรือแห่งประเทศไทย" },
+    { value: "expressway", label: "การทางพิเศษแห่งประเทศไทย" },
+
+    // กระทรวงมหาดไทย
+    { value: "dopa", label: "กรมการปกครอง" },
+    { value: "dpt", label: "กรมส่งเสริมการปกครองท้องถิ่น" },
+    { value: "dpw", label: "กรมโยธาธิการและผังเมือง" },
+    { value: "disaster_prevention", label: "กรมป้องกันและบรรเทาสาธารณภัย" },
+
+    // กระทรวงการคลัง
+    { value: "rd", label: "กรมสรรพากร" },
+    { value: "customs", label: "กรมศุลกากร" },
+    { value: "treasury", label: "กรมบัญชีกลาง" },
+    { value: "excise", label: "กรมสรรพสามิต" },
+    { value: "lands", label: "กรมธนารักษ์" },
+
+    // กระทรวงศึกษาธิการ
+    { value: "moe", label: "สำนักงานปลัดกระทรวงศึกษาธิการ" },
+    { value: "obec", label: "สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน" },
+    { value: "ohec", label: "สำนักงานคณะกรรมการการอุดมศึกษา" },
+    { value: "ovec", label: "สำนักงานคณะกรรมการการอาชีวศึกษา" },
+
+    // กระทรวงสาธารณสุข
+    { value: "moph", label: "สำนักงานปลัดกระทรวงสาธารณสุข" },
+    { value: "ddc", label: "กรมควบคุมโรค" },
+    { value: "fda", label: "สำนักงานคณะกรรมการอาหารและยา" },
+    { value: "dmh", label: "กรมสุขภาพจิต" },
+
+    // หน่วยงานอื่น ๆ
+    { value: "ombudsman", label: "สำนักงานผู้ตรวจการแผ่นดิน" },
+    {
+      value: "nacc",
+      label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ",
+    },
+    { value: "nhrct", label: "สำนักงานคณะกรรมการสิทธิมนุษยชนแห่งชาติ" },
   ];
 
   const signerOptions = [
-    { value: "signer1", label: "ผู้ลงนาม 1" },
-    { value: "signer2", label: "ผู้ลงนาม 2" },
-    { value: "signer3", label: "ผู้ลงนาม 3" },
+    { value: "signer1", label: "นายสมชาย ใจดี" },
+    { value: "signer2", label: "นางสุดา มีสุข" },
+    { value: "signer3", label: "นายอนุชา เจริญ" },
+    { value: "signer4", label: "นางสาวปิยะดา สมศรี" },
+    { value: "signer5", label: "นายวิชัย รุ่งเรือง" },
+    { value: "signer6", label: "นางวิไล สุขสมบูรณ์" },
+    { value: "signer7", label: "นายธนาคาร เจริญรุ่งเรือง" },
+    { value: "signer8", label: "นางสาวจิราพร มั่งคั่ง" },
   ];
 
   const confidentialityOptions = [

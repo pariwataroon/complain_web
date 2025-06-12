@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
@@ -8,9 +8,17 @@ import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
+import {
+  alertSuccess,
+  alertError,
+  showLoading,
+  closeAlert,
+} from "@utils/Alerts";
 
 const RequestResultProgress = () => {
-  const { id } = useRouter().query;
+  const router = useRouter();
+  const { id } = router.query;
+
   const [form, setForm] = useState({
     salutation: "",
     refNo: "",
@@ -24,15 +32,117 @@ const RequestResultProgress = () => {
     note: "",
   });
 
-  const handleChange = (e) => {
+  // ใช้ useCallback เพื่อป้องกัน re-render loop
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    // แก้ไข: ตรวจสอบว่า value ไม่ใช่ object
+    const finalValue =
+      typeof value === "object" && value !== null ? value.value || "" : value;
+    setForm((prev) => ({ ...prev, [name]: finalValue }));
+  }, []);
+
+  // Handler สำหรับ DateThaiPickerService - ใช้ useCallback
+  const handleDateChange = useCallback((thaiDate) => {
+    setForm((prev) => ({ ...prev, date: thaiDate }));
+  }, []);
+
+  // Handler สำหรับ file upload - ใช้ useCallback
+  const handleFileChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setForm((prev) => ({
+        ...prev,
+        attachment: file.name,
+      }));
+    }
+  }, []);
+
+  // Clear form handler - ใช้ useCallback
+  const handleClear = useCallback(() => {
+    setForm({
+      salutation: "",
+      refNo: "",
+      date: null,
+      subject: "",
+      department: "",
+      signer: "",
+      confidentiality: "",
+      urgency: "",
+      attachment: "",
+      note: "",
+    });
+  }, []);
+
+  // ฟังก์ชันตรวจสอบข้อมูลที่จำเป็น
+  const validateRequiredFields = () => {
+    const requiredFields = [
+      { field: "salutation", label: "เรียน" },
+      { field: "refNo", label: "เลขที่หนังสือ" },
+      { field: "date", label: "วันที่" },
+      { field: "subject", label: "เรื่อง" },
+      { field: "department", label: "หน่วยงาน / ผู้ร้อง" },
+      { field: "signer", label: "ผู้ลงนาม" },
+      { field: "confidentiality", label: "ชั้นความลับ" },
+      { field: "urgency", label: "ชั้นความเร่งด่วน" },
+      { field: "attachment", label: "เอกสารแนบ" },
+    ];
+
+    const missingFields = requiredFields.filter(({ field }) => {
+      const value = form[field];
+      return !value || value === "" || value === null;
+    });
+
+    return missingFields;
   };
 
-  // Handler สำหรับ DateThaiPickerService
-  const handleDateChange = (thaiDate) => {
-    setForm((prev) => ({ ...prev, date: thaiDate }));
-  };
+  // Save form handler - ใช้ useCallback และเพิ่ม validation + alerts
+  const handleSave = useCallback(async () => {
+    console.log("Form data:", form);
+
+    // ตรวจสอบฟิลด์ที่จำเป็น
+    const missingFields = validateRequiredFields();
+
+    if (missingFields.length > 0) {
+      const missingFieldNames = missingFields
+        .map(({ label }) => label)
+        .join(", ");
+      alertError(
+        "ข้อมูลไม่ครบถ้วน",
+        `กรุณากรอกข้อมูลในฟิลด์: ${missingFieldNames}`
+      );
+      return;
+    }
+
+    try {
+      // แสดง loading
+      showLoading("กำลังบันทึกข้อมูล...");
+
+      // จำลองการส่งข้อมูลไปยัง API (ใช้ setTimeout เพื่อจำลอง)
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // ปิด loading
+      closeAlert();
+
+      // แสดงความสำเร็จ
+      await alertSuccess(
+        "บันทึกสำเร็จ",
+        "บันทึกแบบรายงานขอทราบผลการพิจารณา / ผลความคืบหน้าเรียบร้อยแล้ว"
+      );
+
+      // TODO: เปลี่ยนเส้นทางหรือ refresh ข้อมูลหลังจากบันทึกสำเร็จ
+      // router.push('/some-success-page');
+    } catch (error) {
+      // ปิด loading
+      closeAlert();
+
+      // แสดงข้อผิดพลาด
+      console.error("Save error:", error);
+      alertError(
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง"
+      );
+    }
+  }, [form, router]);
 
   // Options สำหรับ SelectField
   const salutationOptions = [
@@ -187,7 +297,11 @@ const RequestResultProgress = () => {
             }}
           >
             <SelectField
-              label="เรียน*"
+              label={
+                <span>
+                  เรียน<span style={{ color: "red", marginLeft: 4 }}>*</span>
+                </span>
+              }
               name="salutation"
               value={form.salutation}
               onChange={handleChange}
@@ -237,8 +351,12 @@ const RequestResultProgress = () => {
           {/* Row 3: หน่วยงาน / ผู้ร้อง* */}
           <Box>
             <SelectField
-              label="หน่วยงาน / ผู้ร้อง*"
-              inputLabel="เลือกหน่วยงาน / ผู้ร้อง"
+              label={
+                <span>
+                  หน่วยงาน / ผู้ร้อง
+                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
+                </span>
+              }
               name="department"
               value={form.department}
               onChange={handleChange}
@@ -249,8 +367,11 @@ const RequestResultProgress = () => {
           {/* Row 4: ผู้ลงนาม* */}
           <Box>
             <SelectField
-              label="ผู้ลงนาม*"
-              inputLabel="เลือกผู้ลงนาม"
+              label={
+                <span>
+                  ผู้ลงนาม<span style={{ color: "red", marginLeft: 2 }}>*</span>
+                </span>
+              }
               name="signer"
               value={form.signer}
               onChange={handleChange}
@@ -267,16 +388,24 @@ const RequestResultProgress = () => {
             }}
           >
             <SelectField
-              label="ชั้นความลับ*"
-              inputLabel="เลือกชั้นความลับ"
+              label={
+                <span>
+                  ชั้นความลับ
+                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
+                </span>
+              }
               name="confidentiality"
               value={form.confidentiality}
               onChange={handleChange}
               options={confidentialityOptions}
             />
             <SelectField
-              label="ชั้นความเร่งด่วน*"
-              inputLabel="เลือกชั้นความเร่งด่วน"
+              label={
+                <span>
+                  ชั้นความเร่งด่วน
+                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
+                </span>
+              }
               name="urgency"
               value={form.urgency}
               onChange={handleChange}
@@ -299,15 +428,7 @@ const RequestResultProgress = () => {
                       type="file"
                       id="attachment-upload"
                       style={{ display: "none" }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setForm((prev) => ({
-                            ...prev,
-                            attachment: file.name,
-                          }));
-                        }
-                      }}
+                      onChange={handleFileChange}
                     />
                     <label
                       htmlFor="attachment-upload"
@@ -355,20 +476,7 @@ const RequestResultProgress = () => {
               label="ล้าง"
               variant="outlined"
               iconLeft={<CloseIcon />}
-              onClick={() => {
-                setForm({
-                  salutation: "",
-                  refNo: "",
-                  date: null,
-                  subject: "",
-                  department: "",
-                  signer: "",
-                  confidentiality: "",
-                  urgency: "",
-                  attachment: "",
-                  note: "",
-                });
-              }}
+              onClick={handleClear}
               sx={{
                 borderColor: "#50ADFF",
                 color: "#50ADFF",
@@ -384,10 +492,7 @@ const RequestResultProgress = () => {
               label="บันทึก"
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
-              onClick={() => {
-                console.log("Form data:", form);
-                /* TODO: save form */
-              }}
+              onClick={handleSave}
               sx={{
                 backgroundColor: "#2196F3",
                 color: "#FFF",

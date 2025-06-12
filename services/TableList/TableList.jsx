@@ -19,7 +19,7 @@ import styles from "./TableList.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
-import SearchOffIcon from "@mui/icons-material/SearchOff";
+import CleaningServicesIcon from "@mui/icons-material/CleaningServices"; // เปลี่ยนเป็น icon ไม้กวาด
 import { formatCitizenId_null } from "@utils/Formats";
 
 const TableList = ({
@@ -193,7 +193,7 @@ const TableList = ({
                     }}
                     title="ล้างการค้นหา"
                   >
-                    <SearchOffIcon />
+                    <CleaningServicesIcon />
                   </IconButton>
                 </Box>
 
@@ -261,7 +261,7 @@ const TableList = ({
                       }}
                       title="ล้างการค้นหา"
                     >
-                      <SearchOffIcon />
+                      <CleaningServicesIcon />
                     </IconButton>
                   </Box>
 
@@ -373,7 +373,7 @@ const TableList = ({
                 }}
                 title="ล้างการค้นหา"
               >
-                <SearchOffIcon />
+                <CleaningServicesIcon />
               </IconButton>
 
               <Button

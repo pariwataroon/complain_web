@@ -13,7 +13,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import SearchOffIcon from "@mui/icons-material/SearchOff";
+import CleaningServicesIcon from "@mui/icons-material/CleaningServices"; // เปลี่ยนเป็น icon ไม้กวาด
 
 import styles from "./TableListBox.module.scss";
 import InputText from "@services/InputText/InputText";
@@ -25,6 +25,7 @@ import ExportButton from "@services/ExportButton/ExportButton";
  * - data: array of objects
  * - title: table title
  * - navigateTo: base path for row click (item.id appended)
+ * - onRowClick: custom function for row click (optional)
  * - onSearch: function(filters) => void
  * - filterFields: [{ name, label, type, options? }]
  */
@@ -32,6 +33,7 @@ const TableListBox = ({
   data = [],
   title = "",
   navigateTo = "",
+  onRowClick, // เพิ่ม prop สำหรับ custom row click
   onSearch = () => {},
   filterFields = [],
 }) => {
@@ -77,9 +79,16 @@ const TableListBox = ({
     onSearch(initialFilters);
   };
 
-  // row click
-  const handleRowClick = (item) =>
-    navigateTo && router.push(`${navigateTo}/${item.id}`);
+  // row click - แก้ไขให้รองรับ custom onRowClick
+  const handleRowClick = (item) => {
+    if (onRowClick) {
+      // ถ้ามี custom onRowClick ให้ใช้แทน
+      onRowClick(item);
+    } else if (navigateTo) {
+      // ถ้าไม่มี custom onRowClick ให้ใช้ navigateTo แบบเดิม
+      router.push(`${navigateTo}/${item.id}`);
+    }
+  };
 
   const columns = [
     { name: "claimantName", label: "ชื่อผู้ร้อง", width: 200 },
@@ -286,22 +295,24 @@ const TableListBox = ({
                   borderRadius: "50%",
                   transition: "all 0.2s ease-in-out",
                 }}
+                title="ค้นหา"
               >
                 <SearchIcon fontSize="small" />
               </IconButton>
               <IconButton
                 onClick={handleClearSearch}
                 sx={{
-                  bgcolor: "#1120A3",
+                  bgcolor: "#dc3545", // เปลี่ยนเป็นสีแดง
                   color: "#fff",
-                  "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                  "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" }, // สีแดงเข้มเมื่อ hover
                   width: layoutConfig.iconSize,
                   height: layoutConfig.iconSize,
                   borderRadius: "50%",
                   transition: "all 0.2s ease-in-out",
                 }}
+                title="ล้างการค้นหา"
               >
-                <SearchOffIcon fontSize="small" />
+                <CleaningServicesIcon fontSize="small" />
               </IconButton>
             </Box>
           </>
@@ -364,23 +375,25 @@ const TableListBox = ({
                     transition: "all 0.2s ease-in-out",
                     mt: 1,
                   }}
+                  title="ค้นหา"
                 >
                   <SearchIcon fontSize="small" />
                 </IconButton>
                 <IconButton
                   onClick={handleClearSearch}
                   sx={{
-                    bgcolor: "#1120A3",
+                    bgcolor: "#dc3545", // เปลี่ยนเป็นสีแดง
                     color: "#fff",
-                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                    "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" }, // สีแดงเข้มเมื่อ hover
                     width: layoutConfig.iconSize,
                     height: layoutConfig.iconSize,
                     borderRadius: "50%",
                     transition: "all 0.2s ease-in-out",
                     mt: 1,
                   }}
+                  title="ล้างการค้นหา"
                 >
-                  <SearchOffIcon fontSize="small" />
+                  <CleaningServicesIcon fontSize="small" />
                 </IconButton>
               </Box>
             </Box>
@@ -453,16 +466,17 @@ const TableListBox = ({
                       transition: "all 0.2s ease-in-out",
                       mt: 1,
                     }}
+                    title="ค้นหา"
                   >
                     <SearchIcon fontSize="small" />
                   </IconButton>
                   <IconButton
                     onClick={handleClearSearch}
                     sx={{
-                      bgcolor: "#1120A3",
+                      bgcolor: "#dc3545", // เปลี่ยนเป็นสีแดง
                       color: "#fff",
                       "&:hover": {
-                        bgcolor: "#0b1580",
+                        bgcolor: "#c82333", // สีแดงเข้มเมื่อ hover
                         transform: "scale(1.05)",
                       },
                       width: layoutConfig.iconSize,
@@ -471,8 +485,9 @@ const TableListBox = ({
                       transition: "all 0.2s ease-in-out",
                       mt: 1,
                     }}
+                    title="ล้างการค้นหา"
                   >
-                    <SearchOffIcon fontSize="small" />
+                    <CleaningServicesIcon fontSize="small" />
                   </IconButton>
                 </Box>
               </Box>
@@ -492,22 +507,24 @@ const TableListBox = ({
                     borderRadius: "50%",
                     transition: "all 0.2s ease-in-out",
                   }}
+                  title="ค้นหา"
                 >
                   <SearchIcon fontSize="small" />
                 </IconButton>
                 <IconButton
                   onClick={handleClearSearch}
                   sx={{
-                    bgcolor: "#1120A3",
+                    bgcolor: "#dc3545", // เปลี่ยนเป็นสีแดง
                     color: "#fff",
-                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                    "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" }, // สีแดงเข้มเมื่อ hover
                     width: layoutConfig.iconSize,
                     height: layoutConfig.iconSize,
                     borderRadius: "50%",
                     transition: "all 0.2s ease-in-out",
                   }}
+                  title="ล้างการค้นหา"
                 >
-                  <SearchOffIcon fontSize="small" />
+                  <CleaningServicesIcon fontSize="small" />
                 </IconButton>
               </Box>
             )}
@@ -551,23 +568,25 @@ const TableListBox = ({
                   transition: "all 0.2s ease-in-out",
                   mt: 1,
                 }}
+                title="ค้นหา"
               >
                 <SearchIcon fontSize="small" />
               </IconButton>
               <IconButton
                 onClick={handleClearSearch}
                 sx={{
-                  bgcolor: "#1120A3",
+                  bgcolor: "#dc3545", // เปลี่ยนเป็นสีแดง
                   color: "#fff",
-                  "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                  "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" }, // สีแดงเข้มเมื่อ hover
                   width: layoutConfig.iconSize,
                   height: layoutConfig.iconSize,
                   borderRadius: "50%",
                   transition: "all 0.2s ease-in-out",
                   mt: 1,
                 }}
+                title="ล้างการค้นหา"
               >
-                <SearchOffIcon fontSize="small" />
+                <CleaningServicesIcon fontSize="small" />
               </IconButton>
             </Box>
           </Box>

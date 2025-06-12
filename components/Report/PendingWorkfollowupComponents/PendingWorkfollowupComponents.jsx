@@ -187,7 +187,6 @@ const PendingWorkfollowupComponents = () => {
 
     // สร้าง options โดยเริ่มจาก "ทั้งหมด" แล้วตามด้วยประเภทที่พบ
     const options = [
-      { value: "", label: "ทั้งหมด" },
       ...uniqueIssueTypes
         .filter((type) => type && type.trim() !== "") // กรองค่าว่าง
         .sort() // เรียงตามลำดับ A-Z
