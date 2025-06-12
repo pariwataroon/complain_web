@@ -1,9 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import NavbarMain from "@services/navbarMain/navbarMain";
 import { Container, Box } from "@mui/material";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import CheckIcon from "@mui/icons-material/Check";
-import UploadOutlinedIcon from "@mui/icons-material/UploadOutlined";
 import ButtonService from "@services/ButtonService/ButtonService";
 import StepperComponent from "./StepperComponent";
 import Tab1 from "./Tabs/tab1";
@@ -12,8 +11,8 @@ import Tab3 from "./Tabs/tab3";
 import Tab4 from "./Tabs/tab4";
 import Tab5 from "./Tabs/tab5";
 import useComplaintForm from "@hooks/user/complaint/useComplaintForm";
-import { exportElementToPDF } from "@utils/exportPDF";
 import { alertError } from "@utils/Alerts";
+import { validateEmail } from "@utils/emailValidation";
 
 const processComponents = [Tab1, Tab2, Tab3, Tab4, Tab5];
 const stepLabels = ["ข้อมูลผู้ร้องทุกข์", "ข้อมูลผู้ถูกร้องทุกข์", "รายละเอียดเรื่องร้องทุกข์"];
@@ -25,8 +24,8 @@ export default function ComplaintComponent() {
   const [shouldShowValidation, setShouldShowValidation] = useState(false);
 
   const [tabStates, setTabStates] = useState({
-    step1: 0, 
-    step2: 0, 
+    step1: 0,
+    step2: 0,
   });
 
   const StepComponent = processComponents[activeStep];
@@ -40,33 +39,72 @@ export default function ComplaintComponent() {
     handleSubmitForm,
   } = useComplaintForm();
 
-  const hasValue = (value) => {
-    if (!value) return false;
-    if (typeof value === "object" && (!value.value)) return false;
-    if (typeof value === "string" && value.trim() === "") return false;
-    return true;
-  };
+  const hasValue = useCallback((value) => {
+   
+
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        return false;
+      }
+
+      const validFiles = value.filter(file => {
+        const isFile = file instanceof File;
+        const isValidObject = file &&
+          typeof file === 'object' &&
+          (file.name || file.size) &&
+          Object.keys(file).length > 1;
+
+
+        return isFile || isValidObject;
+      });
+
+      const result = validFiles.length > 0;
+     
+      return result;
+    }
+
+    // **เพิ่ม: Single File object check**
+    if (value instanceof File) {
+      return true;
+    }
+
+    if (typeof value === "string") {
+      const result = value.trim() !== "";
+      return result;
+    }
+
+    if (typeof value === "object") {
+      // **ตรวจสอบ File-like object**
+      if (value.name || value.size) {
+        const result = Object.keys(value).length > 1;
+        return result;
+      }
+
+      const result = Object.keys(value).length > 0;
+      return result;
+    }
+
+    const result = !!value;
+    return result;
+  }, []);
 
   const validateCurrentStep = () => {
     const stepKey = `step${activeStep + 1}`;
-    const data = getStepTabData(stepKey, "general");
+
+    let data;
+    if (activeStep === 2) {
+      data = formData?.[stepKey]?.general || {};
+    } else {
+      data = getStepTabData(stepKey, "general");
+    }
+
     const errors = {};
 
     // STEP 1: ข้อมูลผู้ร้องทุกข์
     if (activeStep === 0) {
-      const currentTab = tabStates.step1; // 0 = บุคคลทั่วไป, 1 = นิติบุคคล
-
-      console.log('=== Validation Debug ===', {
-        activeStep,
-        currentTab,
-        stepKey,
-        data: data
-      });
+      const currentTab = tabStates.step1 || 0;
 
       if (currentTab === 0) {
-        // ตรวจสอบเฉพาะ tab บุคคลทั่วไป
-        console.log('Validating บุคคลทั่วไป tab');
-
         const idCardValue = data?.general?.idCard;
         if (!hasValue(idCardValue)) {
           errors[`general.idCard`] = "กรุณากรอก เลขบัตรประชาชน ของผู้ร้องทุกข์";
@@ -76,7 +114,6 @@ export default function ComplaintComponent() {
           errors[`general.idCard`] = "เลขบัตรประจำตัวประชาชนต้องเป็นตัวเลขเท่านั้น ของผู้ร้องทุกข์";
         }
 
-        // Validation ฟิลด์อื่นๆ ของบุคคลทั่วไป
         const generalFields = [
           { key: "name", label: "ชื่อ - นามสกุล" },
           { key: "address", label: "ที่อยู่" },
@@ -95,10 +132,17 @@ export default function ComplaintComponent() {
           }
         });
 
-      } else if (currentTab === 1) {
-        // ตรวจสอบเฉพาะ tab นิติบุคคล
-        console.log('Validating นิติบุคคล tab');
+        const emailValue = data?.general?.email;
+        if (emailValue) {
+          const emailErrors = validateEmail(emailValue);
+          if (emailErrors.length > 0) {
+            errors[`general.email`] = emailErrors[0];
+          }
+        } else {
+          errors[`general.email`] = "กรุณากรอกอีเมล ของผู้ร้องทุกข์";
+        }
 
+      } else if (currentTab === 1) {
         const corpIdCardValue = data?.corporate?.idCard;
         if (!hasValue(corpIdCardValue)) {
           errors[`corporate.idCard`] = "กรุณากรอก เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคล ของนิติบุคคล";
@@ -109,8 +153,8 @@ export default function ComplaintComponent() {
         }
 
         const corpFields = [
-          { key: "name", label: "ชื่อองค์กร/บริษัท" },
-          { key: "address", label: "ที่อยู่องค์กร" },
+          { key: "name", label: "ชื่อ - นามสกุล" },
+          { key: "address", label: "ที่อยู่ที่สามารถติดต่อได้" },
           { key: "phone", label: "หมายเลขโทรศัพท์" },
           { key: "province", label: "จังหวัด" },
           { key: "districts", label: "อำเภอ/เขต" },
@@ -125,6 +169,16 @@ export default function ComplaintComponent() {
             errors[`corporate.${field.key}`] = `กรุณากรอก ${field.label} ของนิติบุคคล`;
           }
         });
+
+        const emailValue = data?.corporate?.email;
+        if (emailValue) {
+          const emailErrors = validateEmail(emailValue);
+          if (emailErrors.length > 0) {
+            errors[`corporate.email`] = emailErrors[0];
+          }
+        } else {
+          errors[`corporate.email`] = "กรุณากรอกอีเมล ของนิติบุคคล";
+        }
       }
     }
 
@@ -134,16 +188,11 @@ export default function ComplaintComponent() {
       const typeMap = ["individual", "corporate", "government"];
       const activeType = typeMap[currentTab];
 
-      console.log('=== Step 2 Validation ===', {
-        currentTab,
-        activeType,
-        data: data[activeType]
-      });
-
       if (!activeType) {
         errors.activeType = "กรุณาเลือกประเภทผู้ถูกร้องทุกข์";
       } else {
         const current = data[activeType] || {};
+
         const requiredFieldsMap = {
           individual: [
             { key: "idCard", label: "เลขบัตรประชาชน" },
@@ -157,6 +206,7 @@ export default function ComplaintComponent() {
             { key: "email", label: "อีเมล" },
           ],
           corporate: [
+            { key: "idCard", label: "เลขทะเบียนนิติบุคคล" },
             { key: "companyName", label: "ชื่อบริษัท" },
             { key: "signatoryName", label: "ชื่อผู้มีอำนาจลงนาม" },
             { key: "address", label: "ที่อยู่บริษัท" },
@@ -182,16 +232,16 @@ export default function ComplaintComponent() {
         };
 
         const requiredFields = requiredFieldsMap[activeType] || [];
+
         requiredFields.forEach(field => {
           const value = current[field.key];
 
-          // เพิ่ม validation สำหรับ ID Card ใน step 2 ด้วย
           if (field.key === 'idCard') {
             if (!hasValue(value)) {
               errors[`${activeType}.${field.key}`] = `กรุณากรอก ${field.label}`;
-            } else if (value.length !== 13) {
+            } else if (typeof value === 'string' && value.length !== 13) {
               errors[`${activeType}.${field.key}`] = `กรุณากรอก${field.label}ให้ครบ 13 หลัก`;
-            } else if (!/^\d{13}$/.test(value)) {
+            } else if (typeof value === 'string' && !/^\d{13}$/.test(value)) {
               errors[`${activeType}.${field.key}`] = `${field.label}ต้องเป็นตัวเลขเท่านั้น`;
             }
           } else {
@@ -200,35 +250,62 @@ export default function ComplaintComponent() {
             }
           }
         });
+
+        const emailValue = current.email;
+        if (emailValue) {
+          const emailErrors = validateEmail(emailValue);
+          if (emailErrors.length > 0) {
+            errors[`${activeType}.email`] = emailErrors[0];
+          }
+        } else {
+          errors[`${activeType}.email`] = "กรุณากรอกอีเมล";
+        }
       }
     }
 
     // STEP 3: รายละเอียดเรื่องร้องทุกข์
     if (activeStep === 2) {
-      const detail = data || {};
-      if (!hasValue(detail.subject)) {
-        errors.subject = "กรุณากรอกหัวข้อเรื่อง";
+      
+
+      if (!hasValue(data.subject)) {
+        errors.subject = "กรุณากรอกชื่อเรื่อง";
       }
-      if (!hasValue(detail.description)) {
-        errors.description = "กรุณากรอกรายละเอียดเรื่องร้องทุกข์";
+
+      if (!hasValue(data.description)) {
+        errors.description = "กรุณากรอกรายละเอียดเหตุการณ์";
+      }
+
+      if (!hasValue(data.incidentDate)) {
+        errors.incidentDate = "กรุณาเลือกวันและเวลาที่เกิดเหตุ";
+      }
+
+      if (!hasValue(data.complaintType)) {
+        errors.complaintType = "กรุณาเลือกประเภทเรื่องราวร้องทุกข์";
+      }
+
+      // **Debug hasValue function กับ attachment**
+      const attachmentHasValue = hasValue(data.attachment);
+     
+
+      if (!attachmentHasValue) {
+        errors.attachment = "กรุณาแนบเอกสารประกอบการร้องเรียน";
+      } else if (Array.isArray(data.attachment) && data.attachment.length > 3) {
+        errors.attachment = "สามารถแนบไฟล์ได้สูงสุด 3 ไฟล์";
+      } else {
       }
     }
 
-    console.log('=== Final Validation Result ===', {
-      errors,
-      hasErrors: Object.keys(errors).length > 0
-    });
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
+    return { errors, isValid: Object.keys(errors).length === 0 };
   };
 
-  const validateStepForSubmit = async () => {
+  const validateStepForSubmit = useCallback(async () => {
     setShouldShowValidation(true);
-    const isValid = validateCurrentStep();
+
+    const { errors, isValid } = validateCurrentStep();
+    setValidationErrors(errors);
 
     if (!isValid) {
-      const firstError = Object.values(validationErrors)[0];
+      const firstError = Object.values(errors)[0];
       if (firstError) {
         await alertError("ข้อมูลไม่ครบ", firstError);
       }
@@ -236,13 +313,8 @@ export default function ComplaintComponent() {
     }
 
     return true;
-  };
+  }, [activeStep, tabStates, formData, hasValue]);
 
-  React.useEffect(() => {
-    if (shouldShowValidation) {
-      validateCurrentStep();
-    }
-  }, [formData, activeStep, shouldShowValidation, tabStates]);
 
   const handleNext = async () => {
     const isValid = await validateStepForSubmit();
@@ -250,11 +322,13 @@ export default function ComplaintComponent() {
 
     setActiveStep((prev) => Math.min(prev + 1, processComponents.length - 1));
     setShouldShowValidation(false);
+    setValidationErrors({});
   };
 
   const handleBack = () => {
     setActiveStep((prev) => Math.max(prev - 1, 0));
     setShouldShowValidation(false);
+    setValidationErrors({});
   };
 
   const handleSubmit = async () => {
@@ -265,6 +339,7 @@ export default function ComplaintComponent() {
     if (stepIndex <= activeStep) {
       setActiveStep(stepIndex);
       setShouldShowValidation(false);
+      setValidationErrors({});
     }
   };
 
@@ -273,6 +348,10 @@ export default function ComplaintComponent() {
       ...prev,
       [stepKey]: tabIndex
     }));
+    if (shouldShowValidation) {
+      setShouldShowValidation(false);
+      setValidationErrors({});
+    }
   };
 
   return (

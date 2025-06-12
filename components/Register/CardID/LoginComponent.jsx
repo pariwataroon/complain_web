@@ -140,7 +140,7 @@ export default function CardIDLoginPage() {
 
           {/* Register */}
           <p className={styles.registerLink}>
-            ไม่มีบัญชี?{" "}
+            ไม่มีบัญชี?
             <a href="#" className={styles.registerLinkText}
               onClick={(e) => {
                 e.preventDefault();

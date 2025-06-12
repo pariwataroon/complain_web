@@ -10,6 +10,11 @@ const SelectFieldType = ({
   onChange = () => { },
   options: externalOptions = [],
   optionMapper = null,
+  required = false, // เพิ่ม prop required
+  error = false,    // เพิ่ม prop error
+  helperText = "",  // เพิ่ม prop helperText
+  disabled = false, // เพิ่ม prop disabled
+  ...props          // รองรับ props อื่นๆ
 }) => {
   const [options, setOptions] = useState([]);
 
@@ -20,8 +25,6 @@ const SelectFieldType = ({
     setOptions(mapped);
   }, [externalOptions, optionMapper]);
 
- 
-
   const allOptions = [
     { value: "", label: label || inputLabel, disabled: true },
     ...options,
@@ -30,22 +33,38 @@ const SelectFieldType = ({
   const selectedValue =
     allOptions.find(opt => opt.label === value)?.value ?? "";
 
+  const renderLabel = () => {
+    if (!label) return null;
+
+    return (
+      <Typography
+        variant="subtitle2"
+        sx={{
+          color: "#1120A3",
+          fontWeight: 600,
+          mb: 1,
+          display: "block"
+        }}
+      >
+        {label}
+        {required && (
+          <span style={{ color: "#f44336", marginLeft: "4px" }}>*</span>
+        )}
+      </Typography>
+    );
+  };
+
   return (
     <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
-      {label && (
-        <Typography
-          variant="subtitle2"
-          sx={{ color: "#1120A3", fontWeight: 600, mb: 1 }}
-        >
-          {label}
-        </Typography>
-      )}
+      {renderLabel()}
 
       <TextField
         select
         displayEmpty
         name={name}
         value={selectedValue}
+        disabled={disabled}
+        error={error}
         onChange={(e) => {
           const picked = allOptions.find((opt) =>
             typeof opt === "object"
@@ -74,9 +93,18 @@ const SelectFieldType = ({
             height: "40px",
             borderRadius: "10px",
             color: "#1120A3",
-            "& fieldset": { borderColor: "#1120A3" },
+            "& fieldset": {
+              borderColor: error ? "#f44336" : "#1120A3"
+            },
+            "&:hover fieldset": {
+              borderColor: error ? "#f44336" : "#1120A3"
+            },
+            "&.Mui-focused fieldset": {
+              borderColor: error ? "#f44336" : "#1120A3"
+            }
           },
         }}
+        {...props} // ส่ง props อื่นๆ ต่อไป
       >
         {allOptions.map((opt, idx) => (
           <MenuItem
@@ -88,6 +116,21 @@ const SelectFieldType = ({
           </MenuItem>
         ))}
       </TextField>
+
+      {/* แสดง helper text (error message) */}
+      {helperText && (
+        <Typography
+          variant="caption"
+          sx={{
+            color: error ? "#f44336" : "#666",
+            mt: 0.5,
+            fontSize: "12px",
+            display: "block"
+          }}
+        >
+          {helperText}
+        </Typography>
+      )}
     </FormControl>
   );
 };

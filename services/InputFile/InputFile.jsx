@@ -19,6 +19,8 @@ const InputFile = ({
     maxFiles = 1,
     maxSizeMB = 10,
     error,
+    required = false,
+    ...props
 }) => {
     const fileRef = useRef();
     const [selectedFiles, setSelectedFiles] = useState([]);
@@ -98,9 +100,33 @@ const InputFile = ({
     const isMaxReached = selectedFiles.length >= maxFiles;
     const currentTotalSizeMB = calculateTotalSize(selectedFiles);
 
+    // สร้าง label แบบ custom ที่มี * สีแดง
+    const renderLabel = () => {
+        if (!label) return null;
+
+        return (
+            <Typography
+                variant="subtitle2"
+                sx={{
+                    color: "#1120A3",
+                    fontWeight: 600,
+                    mb: 1,
+                    display: "block"
+                }}
+            >
+                {label}
+                {required && (
+                    <span style={{ color: "#f44336", marginLeft: "4px" }}>*</span>
+                )}
+            </Typography>
+        );
+    };
+
     return (
         <Box>
-            <FormLabel>{label}</FormLabel>
+            {/* แสดง label แบบ custom แทน FormLabel */}
+            {renderLabel()}
+
             <Box
                 onClick={!isMaxReached ? handleClick : undefined}
                 sx={{
@@ -135,6 +161,7 @@ const InputFile = ({
                             },
                         },
                     }}
+                    {...props} // ส่ง props อื่นๆ ต่อไป
                 />
             </Box>
 

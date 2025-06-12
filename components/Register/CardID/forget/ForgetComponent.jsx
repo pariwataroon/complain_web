@@ -76,7 +76,7 @@ export default function ForgetPage() {
           className={styles.forgotForm}
         >
           <label className={styles.inputLabel}>
-            อีเมล <span>*</span>
+            อีเมล์ <span>*</span>
             {errors.email && (
               <span className={styles.errorText}>{errors.email.message}</span>
             )}
@@ -96,17 +96,17 @@ export default function ForgetPage() {
 
           <button
             type="submit"
-            disabled={countdown > 0}  // ปิดการใช้งานเมื่อ countdown > 0
+            disabled={countdown > 0}
             className={styles.submitButton}
             style={{
-              backgroundColor: countdown > 0 ? "#ccc" : "#1e40af",  // เปลี่ยนสีปุ่มเมื่อ countdown > 0
+              backgroundColor: countdown > 0 ? "#ccc" : "#1e40af",
               color: "#fff",
-              cursor: countdown > 0 ? "not-allowed" : "pointer",  // ปิดการใช้งานเมื่อ countdown > 0
+              cursor: countdown > 0 ? "not-allowed" : "pointer",
               marginTop: "1rem",
             }}
           >
             {countdown > 0
-              ? `กรุณารอเพื่อส่งซ้ำ (${countdown})`  // แสดงข้อความ countdown
+              ? `กรุณารอเพื่อส่งซ้ำ (${countdown})`
               : submitted
                 ? "รับรหัสอีกครั้ง"
                 : "ยืนยัน"}

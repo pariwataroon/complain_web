@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Box, Grid, Typography } from "@mui/material";
 import IDCardInput from "@services/IDCardInput/IDCardInput";
 import InputText from "@services/InputText/InputText";
 import InputPhone from "@services/InputPhone/InputPhone";
 import SelectFieldPAA from "@services/SelectFieldPAA/SelectFieldPAA";
 import styles from "./ComplaintPersonalForm.module.scss";
+import { validateEmail, validateEmailRealtime } from "@utils/emailValidation";
 
 const ComplaintPersonalForm = ({
     data = {},
@@ -15,39 +16,91 @@ const ComplaintPersonalForm = ({
     fieldPrefix = "",
     formType = "mandatory",
 }) => {
-    const handleChange = (field) => (value) => {
+    const [emailRealtimeError, setEmailRealtimeError] = useState("");
+    const [lastEmailValue, setLastEmailValue] = useState("");
+
+    const handleChange = useCallback((field) => (value) => {
         let finalValue = value;
 
         if (typeof value === "object" && value?.target) {
             finalValue = value.target.value;
         }
 
-        onChange(field, finalValue);
-    };
+        if (field === "email") {
+            const thaiPattern = /[\u0E00-\u0E7F]/;
+            if (thaiPattern.test(finalValue)) {
+                setEmailRealtimeError("อีเมลต้องเป็นภาษาอังกฤษเท่านั้น ไม่สามารถใช้ภาษาไทยได้");
+                return;
+            }
 
-    const getFieldError = (fieldName) => {
+            const realtimeError = validateEmailRealtime(finalValue);
+            setEmailRealtimeError(realtimeError || "");
+            setLastEmailValue(finalValue);
+        }
+
+        onChange(field, finalValue);
+    }, [onChange]);
+
+    const handleEmailPaste = useCallback((event) => {
+        const pastedText = event.clipboardData.getData('text');
+        const thaiPattern = /[\u0E00-\u0E7F]/;
+
+        if (thaiPattern.test(pastedText)) {
+            event.preventDefault();
+            setEmailRealtimeError("อีเมลต้องเป็นภาษาอังกฤษเท่านั้น ไม่สามารถใช้ภาษาไทยได้");
+            return false;
+        }
+
+        // ตรวจสอบ format หลัง paste
+        setTimeout(() => {
+            const realtimeError = validateEmailRealtime(pastedText);
+            setEmailRealtimeError(realtimeError || "");
+        }, 0);
+    }, []);
+
+    // Handle email key press
+    const handleEmailKeyPress = useCallback((event) => {
+        const thaiPattern = /[\u0E00-\u0E7F]/;
+        if (thaiPattern.test(event.key)) {
+            event.preventDefault();
+            setEmailRealtimeError("อีเมลต้องเป็นภาษาอังกฤษเท่านั้น ไม่สามารถใช้ภาษาไทยได้");
+            return false;
+        }
+    }, []);
+
+    // Reset email error when data.email changes from outside
+    useEffect(() => {
+        if (data.email !== lastEmailValue) {
+            setLastEmailValue(data.email || "");
+            if (data.email) {
+                const realtimeError = validateEmailRealtime(data.email);
+                setEmailRealtimeError(realtimeError || "");
+            } else {
+                setEmailRealtimeError("");
+            }
+        }
+    }, [data.email, lastEmailValue]);
+
+    const getFieldError = useCallback((fieldName) => {
+        if (fieldName === "email") {
+            if (emailRealtimeError) {
+                return emailRealtimeError;
+            }
+        }
+
         const errorKey = fieldPrefix ? `${fieldPrefix}.${fieldName}` : fieldName;
         const error = shouldShowValidation ? validationErrors[errorKey] : "";
 
-        // Debug สำหรับ ID Card
-        // if (fieldName === 'idCard') {
-        //     console.log('ID Card Debug:', {
-        //         fieldName,
-        //         errorKey,
-        //         shouldShowValidation,
-        //         validationErrors,
-        //         error,
-        //         currentValue: data.idCard,
-        //         valueLength: data.idCard?.length
-        //     });
-        // }
-
         return error;
-    };
+    }, [shouldShowValidation, validationErrors, fieldPrefix, emailRealtimeError]);
 
-    const hasFieldError = (fieldName) => {
+    const hasFieldError = useCallback((fieldName) => {
+        if (fieldName === "email") {
+            return !!emailRealtimeError || (shouldShowValidation && !!getFieldError(fieldName));
+        }
+
         return shouldShowValidation && !!getFieldError(fieldName);
-    };
+    }, [shouldShowValidation, getFieldError, emailRealtimeError]);
 
     const formatLabel = (baseLabel) => {
         return (
@@ -59,6 +112,10 @@ const ComplaintPersonalForm = ({
             </>
         );
     };
+
+    const handleEmailChange = useCallback((value) => {
+        handleChange("email")(value);
+    }, [handleChange]);
 
     return (
         <Box className={styles.formContainer}>
@@ -134,12 +191,18 @@ const ComplaintPersonalForm = ({
 
                 <Grid item xs={12} sm={6}>
                     <InputText
-                        label={formatLabel("อีเมล")}
-                        placeholder="อีเมล"
-                        value={data.email}
-                        onChange={handleChange("email")}
+                        label={formatLabel("อีเมล์")}
+                        placeholder="อีเมล์ เช่น example@domain.com"
+                        value={data.email || ""}
+                        onChange={handleEmailChange}
                         error={hasFieldError("email")}
-                        helperText={getFieldError("email")}
+                        helperText={getFieldError("email") || "กรุณากรอกอีเมลให้ถูกรูปแบบ ภาษาอังกฤษเท่านั้น"}
+                        type="email"
+                        autoComplete="email"
+                        inputProps={{
+                            onKeyPress: handleEmailKeyPress,
+                            onPaste: handleEmailPaste,
+                        }}
                     />
                 </Grid>
 

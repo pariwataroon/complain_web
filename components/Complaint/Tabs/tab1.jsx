@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import styles from "./TabNav.module.scss";
 import ComplaintPersonalForm from "@services/ComplaintPersonal/ComplaintPersonalForm";
 
@@ -14,80 +14,77 @@ const Tab1 = ({
   onTabChange,
   currentTab = 0
 }) => {
-  const [active, setActive] = useState(0);
-
-  useEffect(() => {
-    setActive(currentTab);
-  }, [currentTab]);
 
   const handleTabChange = (newTab) => {
-    console.log('=== Tab Change ===', {
-      from: active,
-      to: newTab,
-      stepKey
-    });
-
-    setActive(newTab);
-
+    
     if (onTabChange) {
       onTabChange('step1', newTab);
     }
   };
 
+  const handleUpdate = useMemo(() => {
+    return (type) => (name, value) => {
+      const prev = tabData[type] || {};
+      const updated = {
+        ...prev,
+        [name]: value,
+      };
 
-  const handleUpdate = (type) => (name, value) => {
-    const prev = tabData[type] || {};
-    const updated = {
-      ...prev,
-      [name]: value,
+      let updatedData = {};
+
+      if (currentTab === 0) {
+        updatedData = {
+          general: type === "general" ? updated : tabData.general || {},
+          delegate: type === "delegate" ? updated : tabData.delegate || {},
+        };
+      } else {
+        updatedData = {
+          corporate: type === "corporate" ? updated : tabData.corporate || {},
+          signer: type === "signer" ? updated : tabData.signer || {},
+        };
+      }
+
+      updateStepData(stepKey, "general", updatedData);
+    };
+  }, [stepKey, tabData, currentTab, updateStepData]);
+
+  // แยก Logic การรีเซ็ต address fields
+  useEffect(() => {
+    const resetAddressFields = (type, provinceName) => {
+      const currentData = tabData[type] || {};
+
+      if (currentData.province?.value !== provinceName) {
+        handleUpdate(type)("districts", "");
+        handleUpdate(type)("subdistricts", "");
+        handleUpdate(type)("zipcode", "");
+      }
     };
 
-    let updatedData = {};
-
-    if (active === 0) {
-      updatedData = {
-        general: type === "general" ? updated : tabData.general || {},
-        delegate: type === "delegate" ? updated : tabData.delegate || {},
-      };
+    if (currentTab === 0) {
+      // บุคคลทั่วไป
+      if (tabData.general?.province) {
+        resetAddressFields("general", tabData.general.province.value);
+      }
+      if (tabData.delegate?.province) {
+        resetAddressFields("delegate", tabData.delegate.province.value);
+      }
     } else {
-      updatedData = {
-        corporate: type === "corporate" ? updated : tabData.corporate || {},
-        signer: type === "signer" ? updated : tabData.signer || {},
-      };
-    }
-
-    updateStepData(stepKey, "general", updatedData);
-  };
-
-  const getFieldError = (fieldType, fieldName) => {
-    const errorKey = `${fieldType}.${fieldName}`;
-    return shouldShowValidation ? validationErrors[errorKey] : "";
-  };
-
-  const hasFieldError = (fieldType, fieldName) => {
-    return shouldShowValidation && !!getFieldError(fieldType, fieldName);
-  };
-
-  useEffect(() => {
-    const general = tabData.general || {};
-    const delegate = tabData.delegate || {};
-
-    if (general.province) {
-      if (!general.districts || general.districts.value !== general.province.value) {
-        handleUpdate("general")("districts", "");
-        handleUpdate("general")("subdistricts", "");
-        handleUpdate("general")("zipcode", "");
+      // นิติบุคคล
+      if (tabData.corporate?.province) {
+        resetAddressFields("corporate", tabData.corporate.province.value);
+      }
+      if (tabData.signer?.province) {
+        resetAddressFields("signer", tabData.signer.province.value);
       }
     }
-
-    if (delegate.province) {
-      if (!delegate.districts || delegate.districts.value !== delegate.province.value) {
-        handleUpdate("delegate")("districts", "");
-        handleUpdate("delegate")("subdistricts", "");
-        handleUpdate("delegate")("zipcode", "");
-      }
-    }
-  }, [tabData.general?.province?.value, tabData.delegate?.province?.value]);
+  }, [
+    tabData.general?.province?.value,
+    tabData.delegate?.province?.value,
+    tabData.corporate?.province?.value,
+    tabData.signer?.province?.value,
+    currentTab,
+    handleUpdate
+  ]);
 
   return (
     <div className={styles.container}>
@@ -95,19 +92,20 @@ const Tab1 = ({
         {tabs.map((label, idx) => (
           <div
             key={idx}
-            className={`${styles.tab} ${styles[`tab${idx}`]} ${active === idx ? styles.active : ""}`}
-            onClick={() => setActive(idx)}
+            className={`${styles.tab} ${styles[`tab${idx}`]} ${currentTab === idx ? styles.active : ""}`}
+            onClick={() => handleTabChange(idx)}
           >
             {label}
           </div>
         ))}
         <div
           className={styles.underlineBar}
-          style={{ backgroundColor: underlineColors[active] }}
+          style={{ backgroundColor: underlineColors[currentTab] }}
         />
       </div>
 
-      {active === 0 && (
+      {/* ใช้ currentTab แทน active */}
+      {currentTab === 0 && (
         <>
           <div className={styles.formContainer}>
             <ComplaintPersonalForm
@@ -134,7 +132,7 @@ const Tab1 = ({
         </>
       )}
 
-      {active === 1 && (
+      {currentTab === 1 && (
         <>
           <div className={styles.formContainer}>
             <ComplaintPersonalForm

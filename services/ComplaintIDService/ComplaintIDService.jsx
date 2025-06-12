@@ -10,6 +10,7 @@ import ButtonService from "@services/ButtonService/ButtonService";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ImageIcon from "@mui/icons-material/Image";
+import DownloadIcon from "@mui/icons-material/Download";
 import Image from "next/image";
 import {
     formatThaiDate,
@@ -71,8 +72,26 @@ const ComplaintIDService = ({ complaint }) => {
                 return <DescriptionIcon sx={{ color: "#757575", mr: 1 }} />;
         }
     };
+
     const getFileExt = (filename) =>
         filename.slice(filename.lastIndexOf(".")).toLowerCase();
+
+    // ฟังก์ชันสำหรับดาวน์โหลดไฟล์
+    const handleDownloadFile = (fileUrl, fileName) => {
+        if (!fileUrl) return;
+
+        // สร้าง URL แบบเต็มถ้าเป็น relative path
+        const downloadUrl = fileUrl.startsWith('http') ? fileUrl : `${window.location.origin}${fileUrl}`;
+
+        // สร้าง element a สำหรับดาวน์โหลด
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = fileName || 'download';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     return (
         <Box>
@@ -241,29 +260,56 @@ const ComplaintIDService = ({ complaint }) => {
                     <Box mb={3}>
                         {files.length > 0 ? (
                             files.map((file, idx) => {
-                                const ext = getFileExt(file.name || "");
+                                const ext = getFileExt(file.fileName || file.name || "");
+                                const fileName = file.fileName || file.name || `ไฟล์แนบ ${idx + 1}`;
+
                                 return (
                                     <Box
                                         key={idx}
                                         sx={{
                                             display: "flex",
                                             alignItems: "center",
+                                            justifyContent: "space-between",
                                             border: "1px solid #ccc",
                                             borderRadius: "8px",
                                             px: 2,
                                             py: 1,
                                             mb: 1,
+                                            cursor: file.fileUrl ? "pointer" : "default",
+                                            "&:hover": file.fileUrl ? {
+                                                backgroundColor: "#f5f5f5",
+                                                borderColor: "#999"
+                                            } : {}
                                         }}
+                                        onClick={() => file.fileUrl && handleDownloadFile(file.fileUrl, fileName)}
                                     >
-                                        {getFileIcon(ext)}
-                                        <Typography fontSize={14} color="text.secondary">
-                                            {file.name || `ไฟล์แนบ ${idx + 1}`}
-                                        </Typography>
+                                        <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
+                                            {getFileIcon(ext)}
+                                            <Typography fontSize={14} color="text.secondary">
+                                                {fileName}
+                                            </Typography>
+                                        </Box>
+
+                                        {file.fileUrl && (
+                                            <Box sx={{ display: "flex", alignItems: "center", ml: 2 }}>
+                                                <DownloadIcon
+                                                    sx={{
+                                                        color: "#1976d2",
+                                                        fontSize: 20,
+                                                        "&:hover": {
+                                                            color: "#1565c0"
+                                                        }
+                                                    }}
+                                                />
+                                            </Box>
+                                        )}
                                     </Box>
                                 );
                             })
                         ) : (
-                            <Typography fontSize={14}>ไม่มีไฟล์แนบ</Typography>
+                            <Typography fontSize={14} color="text.secondary">
+                                ไม่มีไฟล์แนบ
+                            </Typography>
                         )}
                     </Box>
 
@@ -330,6 +376,7 @@ const Section = ({ title, children }) => (
         <Divider />
     </>
 );
+
 const Divider = () => (
     <Box
         component="hr"

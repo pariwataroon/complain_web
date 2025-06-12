@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import styles from "./TabNav.module.scss";
 import ComplaintPersonalForm from "@services/ComplaintPersonal/ComplaintPersonalForm";
 import ComplaintCustomerForm from "@services/ComplaintCustomer/ComplaintCustomerForm";
@@ -12,9 +12,16 @@ const Tab2 = ({
   tabData,
   updateStepData,
   validationErrors = {},
-  shouldShowValidation = false
+  shouldShowValidation = false,
+  onTabChange,
+  currentTab = 0 
 }) => {
-  const [active, setActive] = useState(0);
+
+  const handleTabChange = (newTab) => {
+    if (onTabChange) {
+      onTabChange('step2', newTab);
+    }
+  };
 
   const handleChange = (type) => (name, value) => {
     const updatedTypeData = {
@@ -31,10 +38,23 @@ const Tab2 = ({
     updateStepData(stepKey, "general", updatedData);
   };
 
-  // Helper function to get current active type
+  useEffect(() => {
+    const typeMap = ["individual", "corporate", "government"];
+    const activeType = typeMap[currentTab];
+
+    if (activeType && tabData.activeType !== activeType) {
+      const updatedData = {
+        ...tabData,
+        activeType: activeType,
+      };
+      updateStepData(stepKey, "general", updatedData);
+
+    }
+  }, [currentTab, stepKey, tabData, updateStepData]);
+
   const getCurrentType = () => {
     const typeMap = ["individual", "corporate", "government"];
-    return typeMap[active];
+    return typeMap[currentTab];
   };
 
   return (
@@ -43,20 +63,20 @@ const Tab2 = ({
         {tabs.map((label, idx) => (
           <div
             key={idx}
-            className={`${styles.tab} ${styles[`tab${idx}`]} ${active === idx ? styles.active : ""}`}
-            onClick={() => setActive(idx)}
+            className={`${styles.tab} ${styles[`tab${idx}`]} ${currentTab === idx ? styles.active : ""}`}
+            onClick={() => handleTabChange(idx)}
           >
             {label}
           </div>
         ))}
         <div
           className={styles.underlineBar}
-          style={{ backgroundColor: underlineColors[active] }}
+          style={{ backgroundColor: underlineColors[currentTab] }}
         />
       </div>
 
       {/* บุคคลทั่วไป */}
-      {active === 0 && (
+      {currentTab === 0 && (
         <div className={styles.formContainer}>
           <ComplaintPersonalForm
             data={tabData.individual || {}}
@@ -65,13 +85,13 @@ const Tab2 = ({
             validationErrors={validationErrors}
             shouldShowValidation={shouldShowValidation}
             fieldPrefix="individual"
-            required
+            formType="mandatory"
           />
         </div>
       )}
 
       {/* นิติบุคคล */}
-      {active === 1 && (
+      {currentTab === 1 && (
         <div className={styles.formContainer}>
           <ComplaintCustomerForm
             data={tabData.corporate || {}}
@@ -80,13 +100,13 @@ const Tab2 = ({
             validationErrors={validationErrors}
             shouldShowValidation={shouldShowValidation}
             fieldPrefix="corporate"
-            required
+            formType="mandatory"
           />
         </div>
       )}
 
       {/* หน่วยงานของรัฐ */}
-      {active === 2 && (
+      {currentTab === 2 && (
         <div className={styles.formContainer}>
           <ComplaintMinistryForm
             data={tabData.government || {}}
@@ -95,7 +115,7 @@ const Tab2 = ({
             validationErrors={validationErrors}
             shouldShowValidation={shouldShowValidation}
             fieldPrefix="government"
-            required
+            formType="mandatory"
           />
         </div>
       )}

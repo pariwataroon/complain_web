@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   alertSuccess,
@@ -23,17 +23,26 @@ export default function useComplaintForm() {
   });
 
   const updateStepData = (stepKey, tabKey, data) => {
-    setFormData((prev) => ({
-      ...prev,
-      [stepKey]: {
-        ...prev[stepKey],
-        [tabKey]: data,
-      },
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [stepKey]: {
+          ...prev[stepKey],
+          [tabKey]: data,
+        },
+      };
+      return updated;
+    });
   };
 
-  const getStepTabData = (stepKey, tabKey) => formData[stepKey]?.[tabKey] || {};
-  const getFormData = () => formData;
+  const getStepTabData = (stepKey, tabKey) => {
+    const result = formData[stepKey]?.[tabKey] || {};
+    return result;
+  };
+
+  const getFormData = () => {
+    return formData;
+  };
 
   const handleSubmitForm = async () => {
     const { step1, step2, step3, step4 } = formData;
@@ -56,41 +65,195 @@ export default function useComplaintForm() {
 
     try {
       showLoading("กำลังส่งข้อมูล...");
-      const body = {
-        step1,
-        step2,
-        step3,
-        step4,
+
+      const originalAttachments = step3?.general?.attachment || [];
+
+      const restructuredBody = {
+        step1: {
+          general: {
+            general: step1?.general?.general || step1?.general || {},
+            delegate: step1?.general?.delegate || {},
+          },
+        },
+        step2: {
+          general: {
+            ...(step2?.general?.individual && {
+              individual: {
+                idCard: step2.general.individual.idCard,
+                name: step2.general.individual.name,
+                address: step2.general.individual.address,
+                phone: step2.general.individual.phone,
+                province: step2.general.individual.province,
+                districts: step2.general.individual.districts,
+                subdistricts: step2.general.individual.subdistricts,
+                zipcode: step2.general.individual.zipcode,
+                email: step2.general.individual.email,
+              },
+            }),
+            ...(step2?.general?.corporate && {
+              corporate: {
+                idCard: step2.general.corporate.idCard,
+                companyName: step2.general.corporate.companyName,
+                signatoryName: step2.general.corporate.signatoryName,
+                address: step2.general.corporate.address,
+                phone: step2.general.corporate.phone,
+                province: step2.general.corporate.province,
+                districts: step2.general.corporate.districts,
+                subdistricts: step2.general.corporate.subdistricts,
+                zipcode: step2.general.corporate.zipcode,
+              },
+            }),
+            ...(step2?.general?.government && {
+              government: {
+                idCard: step2.general.government.idCard,
+                agencyName: step2.general.government.agencyName,
+                fullName: step2.general.government.fullName,
+                address: step2.general.government.address,
+                phone: step2.general.government.phone,
+                province: step2.general.government.province,
+                districts: step2.general.government.districts,
+                subdistricts: step2.general.government.subdistricts,
+                zipcode: step2.general.government.zipcode,
+              },
+            }),
+            activeType: step2?.general?.activeType || "individual",
+            email:
+              step2?.general?.email ||
+              step2?.general?.individual?.email ||
+              step2?.general?.corporate?.email ||
+              step2?.general?.government?.email ||
+              "",
+          },
+        },
+        step3: {
+          general: {
+            complaintType: step3?.general?.complaintType || "",
+            subject: step3?.general?.subject || "",
+            incidentDate: step3?.general?.incidentDate || "",
+            description: step3?.general?.description || "",
+            attachment: [],
+          },
+        },
+        step4: {
+          general: {
+            accepted: step4?.general?.accepted || false,
+          },
+        },
       };
-      const res = await Addcomplaints(body);
+
+
+      const res = await Addcomplaints(restructuredBody);
       const { res_code, res_message, res_data } = res;
 
+      
+
       if (res_code === "0001") {
-        const complaint_id = res_data?.complaint_id;
         const task_id = res_data?.task_id;
-        const attachments = body.step3?.general?.attachment || [];
 
-        if (complaint_id && attachments.length > 0) {
-          const formDataUpload = new FormData();
-          attachments.forEach((file) => {
-            formDataUpload.append("file", file);
+        if (!task_id) {
+          throw new Error("ไม่ได้รับ task_id จาก API");
+        }
+
+
+        // **แก้ไข: ใช้ Promise-based polling แทน loop**
+        const waitForTaskCompletion = async (taskId, maxWaitTime = 30000) => {
+          const startTime = Date.now();
+          const pollInterval = 2000; // เช็คทุก 2 วินาที
+
+          return new Promise(async (resolve, reject) => {
+            const poll = async () => {
+              try {
+                const elapsed = Date.now() - startTime;
+
+                if (elapsed > maxWaitTime) {
+                  reject(new Error("Timeout: Task completion took too long"));
+                  return;
+                }
+
+               
+
+                const taskStatusRes = await GetComplaintTaskStatus(taskId);
+
+                if (taskStatusRes?.res_code === "0000") {
+                  const statusData = taskStatusRes.res_data;
+
+                 
+
+                  if (
+                    statusData?.status === "completed" &&
+                    statusData?.complaint_id
+                  ) {
+                    resolve(statusData.complaint_id);
+                    return;
+                  } else if (statusData?.status === "failed") {
+                    reject(
+                      new Error(
+                        `Task failed: ${statusData.message || "Unknown error"}`
+                      )
+                    );
+                    return;
+                  }
+                  // ถ้ายัง queued หรือ processing ให้รอต่อ
+                }
+
+                // รอแล้วเช็คใหม่
+                setTimeout(poll, pollInterval);
+              } catch (error) {
+                console.error("=== Task polling error ===", error);
+                // รอแล้วลองใหม่
+                setTimeout(poll, pollInterval);
+              }
+            };
+
+            // เริ่ม polling
+            poll();
           });
+        };
 
-          await UploadAttachments(complaint_id, formDataUpload);
+        // **รอให้ task เสร็จ**
+        const complaint_id = await waitForTaskCompletion(task_id);
+
+
+        // **STEP 3: อัปโหลดไฟล์**
+        if (originalAttachments.length > 0) {
+          try {
+            
+
+            const formDataUpload = new FormData();
+            let validFileCount = 0;
+
+            originalAttachments.forEach((file, index) => {
+              if (
+                file instanceof File ||
+                (file && typeof file === "object" && file.name)
+              ) {
+                formDataUpload.append("file", file);
+                validFileCount++;
+              } else {
+                console.warn(`=== File ${index + 1} skipped ===`, file);
+              }
+            });
+
+            if (validFileCount > 0) {
+              // **เปลี่ยน loading message**
+              showLoading("กำลังอัปโหลดไฟล์...");
+
+              const uploadResult = await UploadAttachments(
+                complaint_id,
+                formDataUpload
+              );
+            }
+          } catch (uploadError) {
+            console.error("=== File upload failed ===", uploadError);
+            // ไม่ให้ upload error หยุดกระบวนการ
+          }
         }
 
         closeAlert();
         await alertSuccess("ส่งเรื่องสำเร็จ", "ระบบได้รับข้อมูลของคุณแล้ว");
 
-        const taskStatusRes = await GetComplaintTaskStatus(task_id);
-        const { res_code: statusCode, res_data: statusData } = taskStatusRes;
-
-        if (statusCode === "0000") {
-          const complaintId = statusData?.complaint_id; 
-          router.push(`/followup/${complaintId}`); 
-        } else {
-          alertError("เกิดข้อผิดพลาด", "ไม่สามารถดึงข้อมูลสถานะคำร้องได้");
-        }
+        // **นำไปหน้า followup**
+        router.push(`/followup/${complaint_id}`);
       } else if (res_code === "5000" && res_data?.error) {
         closeAlert();
         alertError("ข้อมูลไม่ครบ", res_data.error);
@@ -100,13 +263,12 @@ export default function useComplaintForm() {
       }
     } catch (error) {
       closeAlert();
-      alertError(
-        "เกิดข้อผิดพลาด",
-        error?.response?.data?.message || "ไม่สามารถส่งเรื่องได้"
-      );
-      console.error("ส่งข้อมูลไม่สำเร็จ:", error);
+      alertError("เกิดข้อผิดพลาด", error?.message || "ไม่สามารถส่งเรื่องได้");
+      console.error("=== Submit Form Error ===", error);
     }
   };
+
+  useEffect(() => {}, [formData]);
 
   return {
     formData,

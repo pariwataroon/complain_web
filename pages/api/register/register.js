@@ -31,7 +31,6 @@ const resendVerification = async (payload) => {
     );
 
     if (response && response.data) {
-      // console.log("Verification successful:", response.data);
       return response.data;
     }
   } catch (error) {
@@ -40,4 +39,19 @@ const resendVerification = async (payload) => {
   }
 };
 
-export { registerCard, resendVerification };
+const forgotPassword = async (email) => {
+  console.log({ email });
+
+  try {
+    const response = await axiosInstance.post("/auth/forgot-password", email);
+
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error during resend-verification:", error);
+    throw error;
+  }
+};
+
+export { registerCard, resendVerification, forgotPassword };

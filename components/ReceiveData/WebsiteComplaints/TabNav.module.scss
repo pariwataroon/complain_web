@@ -930,3 +930,30 @@
     grid-template-columns: 1fr;
   }
 }
+
+.errorField {
+  border: 2px solid #f44336 !important;
+  background-color: #fff5f5 !important;
+}
+
+.errorText {
+  color: #f44336;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.fieldGroup {
+  position: relative;
+
+  .errorText {
+    position: absolute;
+    bottom: -18px;
+    left: 0;
+  }
+}
+
+.required {
+  color: #f44336;
+  font-weight: bold;
+}

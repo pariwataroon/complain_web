@@ -3,3 +3,25 @@
   color: #aaa !important;
   opacity: 1 !important;
 }
+
+.errorField {
+  .MuiOutlinedInput-root {
+    &.Mui-error fieldset {
+      border-color: #f44336 !important;
+    }
+
+    &.Mui-error:hover fieldset {
+      border-color: #f44336 !important;
+    }
+
+    &.Mui-error.Mui-focused fieldset {
+      border-color: #f44336 !important;
+    }
+  }
+}
+
+.requiredAsterisk {
+  color: #f44336;
+  margin-left: 4px;
+  font-weight: bold;
+}

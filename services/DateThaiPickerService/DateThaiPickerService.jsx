@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FormControl, Typography } from "@mui/material";
 import { createPortal } from "react-dom";
+import { Controller } from "react-hook-form"; // เพิ่ม import นี้
 import styles from "./DateThaiPickerService.module.scss";
 
 const DateThaiPickerService = ({
@@ -10,12 +11,17 @@ const DateThaiPickerService = ({
   onChange,
   name,
   disabled,
-  dis, // เพิ่ม prop dis สำหรับ disabled
+  dis,
   placeholder = "กรุณาเลือกวันที่.....",
   minDate = null,
   maxDate = null,
   InputProps = {},
   time = false,
+  required = false,
+  error = false,
+  helperText = "",
+  control, // ใช้สำหรับ Controller wrapper
+  defaultValue, // เพิ่ม prop นี้
   ...props
 }) => {
   const [selectedDate, setSelectedDate] = useState(null);
@@ -177,14 +183,23 @@ const DateThaiPickerService = ({
 
   // อัปเดต selectedDate เมื่อ value เปลี่ยน
   useEffect(() => {
-    const parsedDate = parseApiDate(value);
+    const parsedDate = parseApiDate(value || defaultValue);
     setSelectedDate(parsedDate);
 
     if (parsedDate && parsedDate.month && parsedDate.year) {
       setCurrentMonth(parsedDate.month - 1);
       setCurrentYear(parsedDate.year);
     }
-  }, [value]);
+  }, [value, defaultValue]);
+
+  // ลบ useEffect ที่มี control.setValue ออก
+  // useEffect(() => {
+  //   if (control && name) {
+  //     const fieldValue = selectedDate ? formatToApiDate(selectedDate) : "";
+  //     control.register(name);
+  //     control.setValue(name, fieldValue);
+  //   }
+  // }, [selectedDate, control, name]);
 
   // แปลงปี ค.ศ. เป็น พ.ศ.
   const toBuddhistYear = (gregorianYear) => {
@@ -752,7 +767,17 @@ const DateThaiPickerService = ({
       {label && (
         <Typography
           variant="subtitle2"
-          sx={{ color: "#1120A3", fontWeight: 600, mb: 1 }}
+          sx={{
+            color: "#1120A3",
+            fontWeight: 600,
+            mb: 1,
+            // เพิ่ม * สำหรับ required field
+            "&::after": required ? {
+              content: '" *"',
+              color: "#f44336",
+              fontWeight: "bold"
+            } : {}
+          }}
         >
           {label}
         </Typography>
@@ -762,7 +787,7 @@ const DateThaiPickerService = ({
         <div
           ref={inputRef}
           className={`${styles.inputField} ${selectedDate ? styles.hasValue : ""
-            } ${isDisabled ? styles.disabled : ""}`}
+            } ${isDisabled ? styles.disabled : ""} ${error ? styles.error : ""}`} // เพิ่ม error class
           onClick={handleInputClick}
         >
           <input
@@ -772,10 +797,12 @@ const DateThaiPickerService = ({
             readOnly
             disabled={isDisabled}
             name={name}
-            className={styles.dateInput}
+            className={`${styles.dateInput} ${error ? styles.errorInput : ""}`} // เพิ่ม error class
             style={{
               color: selectedDate ? "#1120A3" : "#999",
               fontWeight: selectedDate ? 500 : 400,
+              // เพิ่ม border สีแดงเมื่อมี error
+              borderColor: error ? "#f44336" : undefined,
             }}
           />
           <div className={styles.calendarIcon}>
@@ -783,9 +810,53 @@ const DateThaiPickerService = ({
           </div>
         </div>
 
+        {/* แสดง helper text (error message) */}
+        {helperText && (
+          <Typography
+            variant="caption"
+            sx={{
+              color: error ? "#f44336" : "#666",
+              mt: 0.5,
+              fontSize: "12px"
+            }}
+          >
+            {helperText}
+          </Typography>
+        )}
+
         {renderPopupCalendar()}
       </div>
     </FormControl>
+  );
+};
+
+export const ControlledDateThaiPickerService = ({
+  control,
+  name,
+  defaultValue = "",
+  rules = {},
+  ...props
+}) => {
+  if (!control || !name) {
+    return <DateThaiPickerService {...props} />;
+  }
+
+  return (
+    <Controller
+      name={name}
+      control={control}
+      defaultValue={defaultValue}
+      rules={rules}
+      render={({ field: { onChange, value }, fieldState: { error } }) => (
+        <DateThaiPickerService
+          {...props}
+          value={value}
+          onChange={onChange}
+          error={!!error}
+          helperText={error?.message}
+        />
+      )}
+    />
   );
 };
 
