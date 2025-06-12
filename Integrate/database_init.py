@@ -1,6 +1,7 @@
 import os
 import sys
 import urllib.parse
+import uuid
 
 from sqlalchemy import create_engine, inspect, text, MetaData, Table, Column, Integer, String, DateTime, Float, Text, ForeignKey
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER

@@ -3,6 +3,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from uuid import UUID
+from functools import lru_cache
+import time
 
 from config.dotenv import ALGORITHM, JWT_SECRET_KEY
 from config.database import get_db
@@ -10,8 +12,33 @@ from models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+# ✅ แก้ไข cache structure
+_user_cache = {}
+
+def _get_cache_time():
+    """Get current time in 5-minute intervals for caching"""
+    return int(time.time() // 300)  # 5 minutes = 300 seconds
+
+def _is_user_cached(user_id: str) -> bool:
+    """Check if user is cached and valid"""
+    cache_time = _get_cache_time()
+    cache_key = f"{user_id}_{cache_time}"
+    return cache_key in _user_cache
+
+def _cache_user(user_id: str):
+    """Cache user validation"""
+    cache_time = _get_cache_time()
+    cache_key = f"{user_id}_{cache_time}"
+    _user_cache[cache_key] = True
+    
+    # ✅ Clean old cache entries
+    current_keys = [k for k in _user_cache.keys() if k.startswith(f"{user_id}_")]
+    for key in current_keys:
+        if key != cache_key:
+            _user_cache.pop(key, None)
+
 def verify_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    """✅ แก้ไข: เพิ่ม db parameter แทนการสร้าง session ใหม่"""
+    """✅ แก้ไข JWT verification logic"""
     try:
         if token.startswith("Bearer "):
             token = token[7:]
@@ -28,6 +55,7 @@ def verify_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_
                 detail="Invalid token type",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        
         if username is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -45,7 +73,11 @@ def verify_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        # ✅ ตรวจสอบ user ในฐานข้อมูล
+        # ✅ ตรวจสอบ cache ก่อน
+        if _is_user_cached(str(user_id)):
+            return str(user_id)
+        
+        # ✅ Query database เฉพาะเมื่อไม่มี cache
         user = db.query(User).filter(
             User.id == user_id, 
             User.is_active == True
@@ -57,6 +89,9 @@ def verify_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_
                 detail="User not found or inactive",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        
+        # ✅ Cache ผลลัพธ์
+        _cache_user(str(user_id))
         
         return str(user_id)
             
@@ -71,4 +106,11 @@ def verify_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    except Exception as e:
+        # ✅ เพิ่ม rollback สำหรับ unexpected errors
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during authentication"
         )

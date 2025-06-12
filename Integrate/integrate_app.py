@@ -6,6 +6,8 @@ from globals.exception_handler import setup_exception_handlers
 from lib.logger import get_logger, HourlyRotatingFileHandler
 from .database_init import init_database
 from config.dotenv import PROJECT_NAME, ENVIRONMENT, SWAGGER_USERNAME, SWAGGER_PASSWORD
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 # Create a logger for application startup
 logger = get_logger("app", console_output=False)
@@ -108,11 +110,46 @@ def create_application() -> FastAPI:
     # เพิ่ม event handler เพื่อเริ่มต้นฐานข้อมูลเมื่อแอพเริ่มทำงาน
     @app.on_event("startup")
     async def startup_db_client():
-        """Initialize database on application startup"""
-        db_initialized = init_database()
-        if db_initialized:
-            logger.info("Database connection established and tables initialized")
-        else:
-            logger.warning("Failed to initialize database - check connection settings")
+        """Initialize database on application startup with proper health check"""
+        import asyncio
+        
+        max_retries = 10  # เพิ่มจำนวน retry
+        initial_delay = 1
+        max_delay = 30
+        
+        for i in range(max_retries):
+            try:
+                # ✅ ตรวจสอบ connection ก่อน
+                from config.database import engine
+                with engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+                
+                # ✅ ถ้า connection สำเร็จ ค่อย init database
+                db_initialized = init_database()
+                if db_initialized:
+                    logger.info("Database connection established and tables initialized")
+                    
+                    # ✅ รอให้ระบบพร้อมสมบูรณ์
+                    await asyncio.sleep(2)
+                    return
+                    
+            except Exception as e:
+                delay = min(initial_delay * (2 ** i), max_delay)  # Exponential backoff
+                logger.warning(f"Database init attempt {i+1}/{max_retries} failed: {e}")
+                
+                if i < max_retries - 1:
+                    logger.info(f"Retrying in {delay} seconds...")
+                    await asyncio.sleep(delay)
+        
+        logger.error("Failed to initialize database after all retries - API may be unstable")
+
+    def check_database_health(db: Session) -> bool:
+        """ตรวจสอบสถานะการเชื่อมต่อฐานข้อมูล"""
+        try:
+            db.execute(text("SELECT 1"))
+            return True
+        except Exception as e:
+            logger.error(f"Database health check failed: {e}")
+            return False
     
     return app

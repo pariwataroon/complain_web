@@ -3,11 +3,14 @@ from datetime import datetime, timedelta
 import bcrypt
 import jwt
 from sqlalchemy.orm import Session
+from lib.logger import get_logger
 
 import app.api.v1.controllers.user_controller as user_controller
 import config.dotenv as env
 from models.token import Token
 
+
+logger = get_logger("api", console_output=False)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against a hashed password."""
@@ -16,22 +19,24 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def authenticate_user(db: Session, citizen_id: str, password: str):
     """ตรวจสอบการเข้าสู่ระบบด้วย citizen_id และ password"""
-    user = user_controller.get_user_by_pid(db, citizen_id)
-    
-    # กรณีไม่พบผู้ใช้
-    if not user:
-        return None, "invalid_credentials"
-    
-    # กรณีรหัสผ่านไม่ถูกต้อง
-    if not verify_password(password, user.hashed_password):
-        return None, "invalid_credentials"
-    
-    # กรณีผู้ใช้ยังไม่ได้ยืนยันอีเมล
-    if not user.is_active:
-        return None, "email_not_verified"
-    
-    # กรณีเข้าสู่ระบบสำเร็จ
-    return user, None
+    try:
+        user = user_controller.get_user_by_pid(db, citizen_id)
+        
+        if not user:
+            return None, "invalid_credentials"
+        
+        if not verify_password(password, user.hashed_password):
+            return None, "invalid_credentials"
+        
+        if not user.is_active:
+            return None, "email_not_verified"
+        
+        return user, None
+        
+    except Exception as e:
+        logger.error(f"Authentication error: {e}")
+        db.rollback()
+        raise
 
 
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=float(env.JWT_EXPIRATION_DELTA_MIN))):

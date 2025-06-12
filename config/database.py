@@ -25,16 +25,17 @@ try:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
         poolclass=QueuePool,
-        pool_size=15,        # จำนวน connections ที่รักษาไว้
-        max_overflow=25,     # connections เพิ่มเติมเมื่อ pool เต็ม
-        pool_pre_ping=True,  # ตรวจสอบ connection ก่อนใช้
-        pool_recycle=3600,   # รีไซเคิล connections ทุก 1 ชั่วโมง
-        pool_timeout=60,     # timeout 60 วินาที
-        echo=False,          # เปิดเป็น True เมื่อต้องการดู SQL logs
+        pool_size=20,
+        max_overflow=30,
+        pool_pre_ping=False,
+        pool_recycle=7200,
+        pool_timeout=30,
+        echo=False,
         connect_args={
             "TrustServerCertificate": "yes",
             "Encrypt": "yes",
-            "charset": "utf8"
+            "charset": "utf8",
+            "timeout": 20
         }
     )
     logger.info("Database engine created successfully with optimized connection pool and indexing support")
@@ -58,8 +59,15 @@ def get_db():
     db = SessionLocal()
     try:
         yield db
+    except Exception as e:
+        logger.error(f"Database session error: {e}")
+        db.rollback()
+        raise
     finally:
-        db.close()
+        try:
+            db.close()
+        except Exception as e:
+            logger.error(f"Error closing database session: {e}")
 
 # Function to get a database session (for workers and scripts)
 def get_db_session():
