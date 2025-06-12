@@ -1003,30 +1003,6 @@ def get_filter_options(db: Session) -> Dict:
 def create_complaint_list_item(complaint: Complaint, db: Session = None) -> ComplaintListItem:
     """สร้างข้อมูลแบบย่อสำหรับแสดงในรายการ"""
     try:
-        complainant_data = ensure_dict(complaint.complainant_data)
-        delegate_data = ensure_dict(complaint.delegate_data) if complaint.delegate_data else None
-        
-        # แสดงชื่อผู้ร้องเรียน - รวม delegate และ signer
-        complainant_name = get_display_complainant_name(complainant_data, delegate_data)
-        
-        respondent_data = ensure_dict(complaint.respondent_data)
-        
-        # แสดงชื่อผู้ถูกร้องเรียน
-        respondent_name = get_display_respondent_name(complaint.respondent_type, respondent_data)
-        
-        # ประเภทเรื่องร้องเรียนภาษาไทย
-        complaint_type_thai = get_thai_complaint_type(complaint.complaint_type)
-        
-        # สถานที่เกิดเหตุ
-        incident_location = get_display_incident_location(complaint)
-        
-        # ผู้รับผิดชอบ
-        assigned_info = get_display_assigned_info(complaint, db)
-        
-        # สถานะภาษาไทย
-        status_thai = get_thai_status(complaint.status)
-        
-        # เพิ่มดึง complaint_subtype
         complaint_subtype_name = ""
         if db and hasattr(complaint, "complaint_subtype_id") and complaint.complaint_subtype_id:
             from models.comp_complaint_types import ComplaintSubType
@@ -1045,9 +1021,10 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
             respondent_name=get_display_respondent_name(complaint.respondent_type, ensure_dict(complaint.respondent_data)),
             incident_location=get_display_incident_location(complaint),
             assigned_to=get_display_assigned_info(complaint, db),
+            assigned_remark=complaint.assigned_remark or "",
             urgency_level=complaint.urgency_level.lower() if complaint.urgency_level else "low",
             severity_level=complaint.severity_level.lower() if complaint.severity_level else "low",
-            complaint_subtype=complaint_subtype_name  # เพิ่มตรงนี้
+            complaint_subtype=complaint_subtype_name
         )
         
     except Exception as e:
@@ -1062,6 +1039,7 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
             respondent_name="ข้อมูลไม่สมบูรณ์",
             incident_location="",
             assigned_to="",
+            assigned_remark=complaint.assigned_remark or "",
             urgency_level="low",
             severity_level="low"
         )
@@ -2355,7 +2333,8 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
             "assigned_to": complaint.assigned_to,
             "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
-            
+            "assigned_remark": complaint.assigned_remark,
+
             # Complaint Categories
             "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
             "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
@@ -2590,7 +2569,6 @@ def create_grouped_complaint_item(db: Session, complaint: Complaint) -> Dict:
             "reference_number4": None,
             "reference_date4": None,
         }
-
 
 def get_channel_name_for_notification(db: Session, channel_id: UUID) -> str:
     """ดึงชื่อช่องทางการร้องเรียนจาก ID สำหรับ notification"""

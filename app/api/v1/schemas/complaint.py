@@ -64,6 +64,7 @@ class ComplaintListItem(BaseModel):
     # เพิ่มฟิลด์ใหม่
     incident_location: Optional[str] = ""
     assigned_to: Optional[str] = ""
+    assigned_remark: Optional[str] = ""
     urgency_level: Optional[str] = "LOW"
     severity_level: Optional[str] = "LOW"
     

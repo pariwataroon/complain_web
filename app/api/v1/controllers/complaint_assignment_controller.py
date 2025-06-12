@@ -113,6 +113,12 @@ def update_complaint_assignment_data(
             except ValueError:
                 return {"success": False, "message": "รูปแบบวันที่มอบหมายไม่ถูกต้อง"}
 
+        if "assigned_remark" in assignment_data:
+            old_remark = complaint.assigned_remark
+            complaint.assigned_remark = assignment_data["assigned_remark"]
+            if assignment_data["assigned_remark"] != old_remark:
+                changes.append(f"หมายเหตุการมอบหมาย: {old_remark or 'ไม่มี'} → {assignment_data['assigned_remark'] or 'ไม่มี'}")
+
         # ✅ บันทึก complaint_type_id, complaint_subtype_id, complaint_channel_id
         if "complaint_type_id" in assignment_data and assignment_data["complaint_type_id"]:
             try:
@@ -362,6 +368,7 @@ def update_complaint_assignment_data(
             "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
             "assigned_to": complaint.assigned_to,
             "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
+            "assigned_remark": complaint.assigned_remark,
             "confidentiality_level": complaint.confidentiality_level,
             "urgency_level": complaint.urgency_level,
             "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
@@ -429,7 +436,8 @@ def get_assignment_form_data(db: Session, complaint_id: UUID) -> Dict:
             "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
             "assigned_to": complaint.assigned_to,
             "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
-            
+            "assigned_remark": complaint.assigned_remark,
+
             # ✅ Complaint Categories (ฟิลด์ที่ขาดหายไป)
             "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
             "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,

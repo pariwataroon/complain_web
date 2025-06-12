@@ -108,6 +108,7 @@ class Complaint(Base):
     # ข้อมูลหน่วยงานที่รับผิดชอบ
     assigned_to = Column(NVARCHAR(200), nullable=True, comment="หน่วยงานที่รับผิดชอบ")
     assigned_date = Column(DateTime, nullable=True)
+    assigned_remark = Column(NVARCHAR(2000), nullable=True, comment="หมายเหตุการมอบหมาย/ข้อความส่งต่อ")
     
     # ข้อมูลการแก้ไขปัญหา
     resolution_summary = Column(NVARCHAR(2000), nullable=True)
