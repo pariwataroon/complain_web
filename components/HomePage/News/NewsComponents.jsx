@@ -19,9 +19,11 @@ import {
   closeAlert,
   alertError,
   alertSuccess,
-  showConfirm,
+  showConfirm2,
 
 } from "@utils/Alerts";
+
+import Image from "next/image";
 const DefineNewsComponents = () => {
   const router = useRouter();
   const [newsList, setNewsList] = useState([]);
@@ -119,25 +121,24 @@ const DefineNewsComponents = () => {
     });
   };
 
-  // const openDeleteDialog = async(index) => {
-
-  //   setSelectedIndex(index);
-  //   setOpenDialog(true);
-  // };
-
-  const openDeleteDialog = async (index) => {
-    const confirm = await showConfirm(
-      "ยกเลิกการแสดงข่าวสาร",
-      `การลบข่าวสารจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
+  const openDeleteDialog = async (selectedIndex) => {
+    const confirm = await showConfirm2(
+      `<span style="color:#932626;">ลบข่าวสาร</span>`,
+      `<div><strong style="color:#932626;">การลบข่าวสารจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
       ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก<br /><br />
-      ยืนยันการลบคำถามนี้หรือไม่?`
+      ยืนยันการลบข่าวสารนี้หรือไม่?</strong>
+        </div>`,
+        "ยืนยัน",
+        "ยกเลิก",
+        800
     );
   
     if (confirm) {
       try {
-        const newData = [...newsData];
-        newData.splice(index, 1);
-        setNewsData(newData);
+        const updated = [...newsList];
+        updated.splice(selectedIndex, 1);
+        setNewsList(updated);
+        sessionStorage.setItem('newsList', JSON.stringify(updated));
   
         closeAlert();
         alertSuccess("ลบข่าวสารสำเร็จ");
@@ -150,14 +151,6 @@ const DefineNewsComponents = () => {
     }
   };
   
-
-  const confirmDelete = () => {
-    const updated = [...newsList];
-    updated.splice(selectedIndex, 1);
-    setNewsList(updated);
-    sessionStorage.setItem('newsList', JSON.stringify(updated));
-    setOpenDialog(false);
-  };
 
   return (
     <Box sx={{ background: '#EAF3FF', minHeight: '100vh', py: 3 }}>
@@ -293,7 +286,7 @@ const DefineNewsComponents = () => {
 
                 <Stack
                   direction="row"
-                  spacing={1}
+                  spacing={0.5}
                   alignItems="center"
                   ml={{ sm: 2, xs: 0 }}
                   mt={{ xs: 1.5, sm: 0 }}
@@ -304,19 +297,39 @@ const DefineNewsComponents = () => {
                   }}>
                   <Tooltip title="แก้ไข">
                     <img
-                      src="/icons/PencilYellow.png"
+                      src="/icons/PencilWhite.png"
                       alt=""
                       style={{ cursor: 'pointer', width: 28, height: 28 }}
                       onClick={() => handleEditNews(index)}
                     />
                   </Tooltip>
+                  
                   <Tooltip title="ลบ">
-                    <img
-                      src="/icons/DeleteYellow.png"
-                      alt=""
-                      style={{ cursor: 'pointer', width: 28, height: 28 }}
-                      onClick={() => openDeleteDialog(index)}
-                    />
+                    <button
+                                  onClick={() => openDeleteDialog(index)}
+                                  style={{
+                                    backgroundColor: "transparent",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    width: "40px",
+                                    height: "40px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    '&:hover': {
+                                      backgroundColor: '#FDE68A',
+                                    },
+                                  }}
+                                  
+                                >
+                                  <Image
+                                  src="/icons/DeleteYellow.png"
+                                  alt=""
+                                  width={30}
+                                  height={30}
+                                  />
+                    </button>
                   </Tooltip>
                 </Stack>
               </Box>
@@ -324,65 +337,6 @@ const DefineNewsComponents = () => {
           ))}
         </Grid>
       </Box>
-
-      {/* Popup Confirm Dialog */}
-      {/* <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ fontWeight: 'bold', color: '#991B1B', textAlign: 'center' }}>
-          ยกเลิกการแสดงข่าวสาร
-        </DialogTitle>
-        <DialogContent>
-          <Typography sx={{ mb: 1, textAlign: 'center', color: '#991B1B', fontWeight: 'bold', fontSize: 14 }}>
-            การยกเลิกแสดงข่าวสารจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก
-          </Typography>
-          <Typography sx={{ textAlign: 'center', color: '#991B1B', fontWeight: 'bold', fontSize: 14 }}>
-            ยืนยันการยกเลิกแสดงข่าวสารนี้หรือไม่?
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
-          <Button
-            onClick={() => setOpenDialog(false)}
-            variant="outlined"
-            size="large"
-            sx={{
-              borderColor: '#DC2626',
-              color: '#DC2626',
-              fontSize: 18,
-              fontWeight: 'bold',
-              borderRadius: '10px',
-              minWidth: 120,
-              height: 50,
-              px: 4,
-              py: 2,
-              '&:hover': { backgroundColor: '#FEE2E2', borderColor: '#DC2626' },
-            }}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <img src="/icons/Cross.png" alt="" style={{ width: 22, height: 22, marginRight: 10 }} />
-              ยกเลิก
-            </span>
-          </Button>
-          <Button
-            onClick={confirmDelete}
-            variant="contained"
-            size="large"
-            sx={{
-              backgroundColor: '#DC2626',
-              color: '#fff',
-              fontSize: 18,
-              fontWeight: 'bold',
-              borderRadius: '10px',
-              minWidth: 120,
-              height: 50,
-              px: 4,
-              py: 2,
-              '&:hover': { backgroundColor: '#B91C1C' },
-            }}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              ยืนยัน
-              <img src="/icons/Tick.png" alt="" style={{ width: 22, height: 22, marginLeft: 10 }} />
-            </span>
-          </Button>
-        </DialogActions>
-      </Dialog> */}
     </Box>
   );
 };
