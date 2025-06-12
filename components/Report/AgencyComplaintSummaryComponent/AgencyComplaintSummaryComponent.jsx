@@ -1,5 +1,3 @@
-// pages/admin/ComplaintArchives.jsx
-
 import React, { useState } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
@@ -8,7 +6,6 @@ import TableListAgency from "@services/TableListAgency/TableListAgency";
 // ─── option arrays ──────────────────────────────────────────────────────────
 
 const agencyOptions = [
-  { value: "", label: "ทั้งหมด" },
   { value: "กรมสรรพากร", label: "กรมสรรพากร" },
   { value: "กรมศุลกากร", label: "กรมศุลกากร" },
   { value: "กรมบัญชีกลาง", label: "กรมบัญชีกลาง" },
@@ -17,21 +14,79 @@ const agencyOptions = [
   { value: "ธนาคารแห่งประเทศไทย", label: "ธนาคารแห่งประเทศไทย" },
 ];
 
-// สกัดรายชื่อเจ้าหน้าที่ผู้รับผิดชอบจาก mockComplaints แล้วทำให้เป็น unique list
 const responsibleOfficerOptions = [
-  { value: "", label: "ทั้งหมด" },
   { value: "นายกานต์ วรากร", label: "นายกานต์ วรากร" },
   { value: "นางกานต์รวี วรานี", label: "นางกานต์รวี วรานี" },
   { value: "นายปิยภา ภูมิศา", label: "นายปิยภา ภูมิศา" },
 ];
 
 const statusOptions = [
-  { value: "", label: "ทั้งหมด" },
   { value: "กำลังดำเนินการ", label: "กำลังดำเนินการ" },
   { value: "ยุติ", label: "ยุติ" },
 ];
 
-// ─── mock data (20 รายการ) ─────────────────────────────────────────────────
+// ─── ฟังก์ชันแปลงวันที่ไทยเป็น Date object ─────────────────────────────────
+const parseThaiDate = (thaiDateStr) => {
+  if (!thaiDateStr) return null;
+
+  const thaiMonths = {
+    "ม.ค.": 0,
+    "ก.พ.": 1,
+    "มี.ค.": 2,
+    "เม.ย.": 3,
+    "พ.ค.": 4,
+    "มิ.ย.": 5,
+    "ก.ค.": 6,
+    "ส.ค.": 7,
+    "ก.ย.": 8,
+    "ต.ค.": 9,
+    "พ.ย.": 10,
+    "ธ.ค.": 11,
+  };
+
+  // แยกส่วนวันที่ (รูปแบบ: "01 ก.พ. 2568")
+  const parts = thaiDateStr.trim().split(" ");
+  if (parts.length !== 3) return null;
+
+  const day = parseInt(parts[0]);
+  const thaiMonth = parts[1];
+  const buddhistYear = parseInt(parts[2]);
+
+  const month = thaiMonths[thaiMonth];
+  if (month === undefined) return null;
+
+  // แปลงปี พ.ศ. เป็น ค.ศ.
+  const year = buddhistYear - 543;
+
+  return new Date(year, month, day);
+};
+
+// ─── ฟังก์ชันแปลง Date object เป็นวันที่ไทย ─────────────────────────────────
+const formatToThaiDate = (date) => {
+  if (!date) return "";
+
+  const thaiMonths = [
+    "ม.ค.",
+    "ก.พ.",
+    "มี.ค.",
+    "เม.ย.",
+    "พ.ค.",
+    "มิ.ย.",
+    "ก.ค.",
+    "ส.ค.",
+    "ก.ย.",
+    "ต.ค.",
+    "พ.ย.",
+    "ธ.ค.",
+  ];
+
+  const day = date.getDate().toString().padStart(2, "0");
+  const month = thaiMonths[date.getMonth()];
+  const year = date.getFullYear() + 543;
+
+  return `${day} ${month} ${year}`;
+};
+
 // ─── mock data (20 รายการ) ─────────────────────────────────────────────────
 const mockComplaints = [
   {
@@ -314,20 +369,34 @@ const AgencyComplaintSummary = () => {
     } = filters;
 
     const result = allComplaints.filter((item) => {
-      // date range
-      if (
-        receiveDateFrom &&
-        new Date(item.receiveDate) < new Date(receiveDateFrom)
-      )
-        return false;
-      if (receiveDateTo && new Date(item.receiveDate) > new Date(receiveDateTo))
-        return false;
+      // แปลงวันที่รับเรื่องจาก string เป็น Date object
+      const itemReceiveDate = parseThaiDate(item.receiveDate);
+
+      // ตรวจสอบช่วงวันที่
+      if (receiveDateFrom) {
+        const fromDate =
+          receiveDateFrom instanceof Date
+            ? receiveDateFrom
+            : new Date(receiveDateFrom);
+        if (itemReceiveDate && itemReceiveDate < fromDate) return false;
+      }
+
+      if (receiveDateTo) {
+        const toDate =
+          receiveDateTo instanceof Date
+            ? receiveDateTo
+            : new Date(receiveDateTo);
+        if (itemReceiveDate && itemReceiveDate > toDate) return false;
+      }
+
+      // ตรวจสอบเงื่อนไขอื่น ๆ
       if (fAgency && item.agency !== fAgency) return false;
       if (fName && !item.claimantName.includes(fName)) return false;
       if (fIssueType && item.issueType !== fIssueType) return false;
       if (fSubIssueType && item.subIssueType !== fSubIssueType) return false;
       if (fOfficer && item.responsibleOfficer !== fOfficer) return false;
       if (fStatus && item.status !== fStatus) return false;
+
       return true;
     });
 

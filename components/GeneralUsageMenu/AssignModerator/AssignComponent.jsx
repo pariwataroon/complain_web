@@ -4,7 +4,7 @@ import { Box, Typography, Grid, IconButton } from "@mui/material";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import TextfieldService from "@services/TextfieldService/TextfieldService";
 import ButtonService from "@services/ButtonService/ButtonService";
-import { Search } from "@mui/icons-material";
+import { Search, Visibility, VisibilityOff } from "@mui/icons-material";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import AddCircleOutlineOutlinedIcon from "@mui/icons-material/AddCircleOutlineOutlined";
 import RemoveCircleOutlineOutlinedIcon from "@mui/icons-material/RemoveCircleOutlineOutlined";
@@ -12,6 +12,7 @@ import AddUserModal from "./modal/AddUserModal";
 import {
   GetDetailedStatsbyRole,
   DelUsers,
+  GetTitleDetails,
 } from "@pages/api/settinggeneral/users";
 import {
   formatThaiDateTime,
@@ -152,6 +153,28 @@ const formatMaskedCitizenId = (citizenId) => {
   return `${maskedPart}${lastFour}`;
 };
 
+// Function to format full citizen ID with dashes
+const formatFullCitizenId = (citizenId) => {
+  if (!citizenId) return "-";
+
+  // Remove existing dashes
+  const cleanId = citizenId.replace(/-/g, "");
+
+  // Format as X-XXXX-XXXXX-XX-X for 13 digits
+  if (cleanId.length === 13) {
+    return `${cleanId.substring(0, 1)}-${cleanId.substring(
+      1,
+      5
+    )}-${cleanId.substring(5, 10)}-${cleanId.substring(
+      10,
+      12
+    )}-${cleanId.substring(12, 13)}`;
+  }
+
+  // Return original if not 13 digits
+  return citizenId;
+};
+
 export default function UserManagementUI() {
   const [stats, setStats] = useState([]);
   const [originalStats, setOriginalStats] = useState([]);
@@ -159,24 +182,54 @@ export default function UserManagementUI() {
   const [hasSearched, setHasSearched] = useState(false);
   const [userDetailsExpanded, setUserDetailsExpanded] = useState({}); // Track user details expansion
 
+  // State สำหรับควบคุมการแสดง/ซ่อนเลขบัตรประชาชน
+  const [citizenIdVisibility, setCitizenIdVisibility] = useState({});
+
+  // เพิ่ม state สำหรับ titleOptions
+  const [titleOptions, setTitleOptions] = useState([
+    { value: 1, label: "อื่น ๆ" },
+    { value: 2, label: "นาย" },
+    { value: 3, label: "นาง" },
+    { value: 4, label: "นางสาว" },
+  ]);
+
+  // โหลดข้อมูลเริ่มต้น
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchInitialData = async () => {
       try {
-        const data = await GetDetailedStatsbyRole();
-        setStats(data);
-        setOriginalStats(data);
+        // โหลดข้อมูลผู้ใช้
+        const statsData = await GetDetailedStatsbyRole();
+        setStats(statsData);
+        setOriginalStats(statsData);
+
         // Initialize expanded sections - all collapsed by default (false)
-        if (data?.res_data) {
-          setExpandedSections(new Array(data.res_data.length).fill(false));
+        if (statsData?.res_data) {
+          setExpandedSections(new Array(statsData.res_data.length).fill(false));
+        }
+
+        // โหลดข้อมูลคำนำหน้า
+        const titleData = await GetTitleDetails();
+        if (
+          titleData &&
+          titleData.res_data &&
+          Array.isArray(titleData.res_data)
+        ) {
+          const formattedOptions = titleData.res_data.map((item) => ({
+            value: item.title_id,
+            label: item.title_name || item.short_name,
+          }));
+          setTitleOptions(formattedOptions);
+          console.log("Title options loaded:", formattedOptions); // Debug log
         }
       } catch (err) {
         console.error("โหลดข้อมูลไม่สำเร็จ:", err);
+        alertError("เกิดข้อผิดพลาด", "ไม่สามารถโหลดข้อมูลได้");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    fetchInitialData();
   }, []);
 
   const fetchStats = async () => {
@@ -191,6 +244,7 @@ export default function UserManagementUI() {
       }
       setHasSearched(false); // Reset search state
       setUserDetailsExpanded({}); // Reset user details expansion
+      setCitizenIdVisibility({}); // Reset citizen ID visibility
     } catch (err) {
       console.error("โหลดข้อมูลไม่สำเร็จ:", err);
       alertError("เกิดข้อผิดพลาด", "ไม่สามารถโหลดข้อมูลได้");
@@ -198,6 +252,10 @@ export default function UserManagementUI() {
       closeAlert();
       setLoading(false);
     }
+  };
+
+  const handleReopenModal = () => {
+    setOpenModal(true);
   };
 
   const handleDeleteUser = async (user) => {
@@ -231,14 +289,6 @@ export default function UserManagementUI() {
     district: "",
   });
 
-  const handleInputChange = (event) => {
-    const { name, value } = event.target;
-    setFormData((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
-  };
-
   const toggleSection = (index) => {
     const newExpandedSections = [...expandedSections];
     newExpandedSections[index] = !newExpandedSections[index];
@@ -253,6 +303,14 @@ export default function UserManagementUI() {
     }));
   };
 
+  // Toggle citizen ID visibility
+  const toggleCitizenIdVisibility = (userId) => {
+    setCitizenIdVisibility((prev) => ({
+      ...prev,
+      [userId]: !prev[userId],
+    }));
+  };
+
   const [permission, setPermission] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [fullName, setFullName] = useState("");
@@ -260,7 +318,6 @@ export default function UserManagementUI() {
 
   // Options for the dropdown
   const permissionOptions = [
-    { value: "all", label: "ทั้งหมด" },
     { value: "admin", label: "ผู้ดูแลระบบ" },
     { value: "people", label: "ประชาชน" },
     { value: "admin_home", label: "ผู้ดูแลหน้าหลัก" },
@@ -452,48 +509,80 @@ export default function UserManagementUI() {
     }, 300);
   };
 
-  // Handle Open Modal for Edit User
-  const handleEditUser = (user) => {
-    showLoading("กำลังโหลดข้อมูล...");
-    setTimeout(() => {
-      // สร้าง object ที่มีข้อมูลครบสำหรับ Modal
-      const completeUserData = {
-        id: user.id,
-        citizen_id: user.citizen_id,
-        username:
-          user.username ||
-          (user.citizen_id ? user.citizen_id.replace(/-/g, "") : ""),
-        full_name: user.full_name,
-        full_name_with_title: user.full_name_with_title,
+  // ฟังก์ชันสำหรับแยกคำนำหน้าจาก full_name_with_title
+  const extractTitleId = (fullNameWithTitle, titleOptions) => {
+    if (!fullNameWithTitle || !Array.isArray(titleOptions)) return "3";
 
-        // แมป role_name ให้ตรงกับ section.role_name ที่มาจาก API
-        role_name: getRoleNameFromSection(user, stats), // ดึงจาก section ที่ user อยู่
+    // หาคำนำหน้าที่ตรงกัน
+    for (const option of titleOptions) {
+      if (fullNameWithTitle.startsWith(option.label)) {
+        return option.value.toString();
+      }
+    }
 
-        // ตำแหน่ง - ลองหาจากหลายๆ field
-        position:
-          user.position ||
-          user.job_title ||
-          user.title ||
-          roleNameMap[getRoleNameFromSection(user, stats)] ||
-          "ไม่ระบุ",
+    // ถ้าไม่เจอให้ใช้ค่าเริ่มต้น
+    return "3"; // นาง (default)
+  };
 
-        phone: user.phone,
-        email: user.email,
-        address: user.address || "",
-        contact_address: user.contact_address || user.address || "",
-        profile_image: user.profile_image || "",
-        last_login: user.last_login,
-        updated_at: user.updated_at,
+  // ฟังก์ชันสำหรับแยกชื่อจาก full_name_with_title
+  const extractFirstName = (fullNameWithTitle) => {
+    if (!fullNameWithTitle) return "";
 
-        // ข้อมูลเพิ่มเติมที่อาจจะใช้
-        address_card: user.address_card || user.address || "",
-        address_contact: user.address_contact || user.contact_address || "",
-      };
+    // แยกโดยการตัดคำนำหน้าออก
+    const titlePrefixes = [
+      "นาย",
+      "นาง",
+      "นางสาว",
+      "เด็กชาย",
+      "เด็กหญิง",
+      "ดร.",
+      "ศ.",
+      "รศ.",
+      "ผศ.",
+    ];
+    let nameWithoutTitle = fullNameWithTitle;
 
-      setEditingUser(completeUserData); // ส่งข้อมูลที่ครบถ้วน
-      setOpenModal(true);
-      closeAlert();
-    }, 300);
+    for (const prefix of titlePrefixes) {
+      if (fullNameWithTitle.startsWith(prefix)) {
+        nameWithoutTitle = fullNameWithTitle.substring(prefix.length).trim();
+        break;
+      }
+    }
+
+    // แยกชื่อและนามสกุล
+    const nameParts = nameWithoutTitle.split(" ");
+    return nameParts[0] || "";
+  };
+
+  // ฟังก์ชันสำหรับแยกนามสกุลจาก full_name_with_title
+  const extractLastName = (fullNameWithTitle) => {
+    if (!fullNameWithTitle) return "";
+
+    // แยกโดยการตัดคำนำหน้าออก
+    const titlePrefixes = [
+      "นาย",
+      "นาง",
+      "นางสาว",
+      "เด็กชาย",
+      "เด็กหญิง",
+      "ดร.",
+      "ศ.",
+      "รศ.",
+      "ผศ.",
+    ];
+    let nameWithoutTitle = fullNameWithTitle;
+
+    for (const prefix of titlePrefixes) {
+      if (fullNameWithTitle.startsWith(prefix)) {
+        nameWithoutTitle = fullNameWithTitle.substring(prefix.length).trim();
+        break;
+      }
+    }
+
+    // แยกชื่อและนามสกุล
+    const nameParts = nameWithoutTitle.split(" ");
+    // รวมส่วนที่เหลือเป็นนามสกุล (กรณีมีนามสกุลหลายคำ)
+    return nameParts.slice(1).join(" ") || "";
   };
 
   // Helper function เพื่อหา role_name จาก section ที่ user อยู่
@@ -507,6 +596,81 @@ export default function UserManagementUI() {
       }
     }
     return "";
+  };
+
+  // แก้ไขฟังก์ชัน handleEditUser ให้ส่งข้อมูลครบถ้วน
+  const handleEditUser = (user) => {
+    showLoading("กำลังโหลดข้อมูล...");
+    setTimeout(() => {
+      console.log("Title options available:", titleOptions); // Debug log
+      console.log("User to edit:", user); // Debug log
+
+      // สร้าง object ที่มีข้อมูลครบสำหรับ Modal
+      const completeUserData = {
+        id: user.id,
+        citizen_id: user.citizen_id,
+        username:
+          user.username ||
+          (user.citizen_id ? user.citizen_id.replace(/-/g, "") : ""),
+
+        // ข้อมูลชื่อ
+        full_name: user.full_name,
+        full_name_with_title: user.full_name_with_title,
+
+        // แยกคำนำหน้า ชื่อ นามสกุล จาก full_name_with_title - ส่ง titleOptions เข้าไป
+        title_id:
+          user.title_id?.toString() ||
+          extractTitleId(
+            user.full_name_with_title || user.full_name,
+            titleOptions
+          ),
+        first_name:
+          user.first_name ||
+          extractFirstName(user.full_name_with_title || user.full_name),
+        last_name:
+          user.last_name ||
+          extractLastName(user.full_name_with_title || user.full_name),
+
+        // แมป role_name ให้ตรงกับ section.role_name ที่มาจาก API
+        role_name: getRoleNameFromSection(user, stats),
+
+        // ตำแหน่ง - ลองหาจากหลายๆ field
+        position: user.position || user.job_title || user.title || "",
+
+        // ข้อมูลติดต่อ
+        phone: user.phone || "",
+        email: user.email || "",
+
+        // ข้อมูลที่อยู่
+        address: user.address || user.address_card || "",
+        contact_address: user.contact_address || user.address_contact || "",
+        address_card: user.address_card || user.address || "",
+        address_contact: user.address_contact || user.contact_address || "",
+
+        // ข้อมูลเพิ่มเติม
+        profile_image: user.profile_image || "",
+        last_login: user.last_login,
+        updated_at: user.updated_at,
+
+        // ข้อมูลจังหวัด/อำเภอ/ตำบล (ถ้ามี)
+        province: user.province || null,
+        districts: user.districts || user.district || null,
+        subdistricts: user.subdistricts || user.subdistrict || null,
+        zipcode: user.zipcode || user.zip_code || null,
+
+        // ที่อยู่ติดต่อ
+        province2: user.province2 || user.contact_province || null,
+        districts2: user.districts2 || user.contact_district || null,
+        subdistricts2: user.subdistricts2 || user.contact_subdistrict || null,
+        zipcode2: user.zipcode2 || user.contact_zipcode || null,
+      };
+
+      console.log("Complete User Data for Edit:", completeUserData); // Debug log
+
+      setEditingUser(completeUserData);
+      setOpenModal(true);
+      closeAlert();
+    }, 300);
   };
 
   // Handle Close Modal
@@ -688,7 +852,38 @@ export default function UserManagementUI() {
                         <div className={styles.userContainer}>
                           <div className={styles.userInfo}>
                             <div className={styles.userCell}>
-                              {formatMaskedCitizenId(user.citizen_id)}
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                }}
+                              >
+                                <span>
+                                  {citizenIdVisibility[user.id]
+                                    ? formatFullCitizenId(user.citizen_id)
+                                    : formatMaskedCitizenId(user.citizen_id)}
+                                </span>
+                                <IconButton
+                                  onClick={() =>
+                                    toggleCitizenIdVisibility(user.id)
+                                  }
+                                  size="small"
+                                  sx={{
+                                    padding: "2px",
+                                    color: "#1120A3",
+                                    "&:hover": {
+                                      backgroundColor: "rgba(17, 32, 163, 0.1)",
+                                    },
+                                  }}
+                                >
+                                  {citizenIdVisibility[user.id] ? (
+                                    <VisibilityOff fontSize="small" />
+                                  ) : (
+                                    <Visibility fontSize="small" />
+                                  )}
+                                </IconButton>
+                              </div>
                             </div>
                             <div className={styles.userCell}>
                               {user.full_name}
@@ -803,7 +998,41 @@ export default function UserManagementUI() {
                                   <span className={styles.detailLabel}>
                                     เลขบัตรประชาชน:
                                   </span>{" "}
-                                  {formatMaskedCitizenId(user.citizen_id)}
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "8px",
+                                    }}
+                                  >
+                                    <span>
+                                      {citizenIdVisibility[user.id]
+                                        ? formatFullCitizenId(user.citizen_id)
+                                        : formatMaskedCitizenId(
+                                            user.citizen_id
+                                          )}
+                                    </span>
+                                    <IconButton
+                                      onClick={() =>
+                                        toggleCitizenIdVisibility(user.id)
+                                      }
+                                      size="small"
+                                      sx={{
+                                        padding: "2px",
+                                        color: "#1120A3",
+                                        "&:hover": {
+                                          backgroundColor:
+                                            "rgba(17, 32, 163, 0.1)",
+                                        },
+                                      }}
+                                    >
+                                      {citizenIdVisibility[user.id] ? (
+                                        <VisibilityOff fontSize="small" />
+                                      ) : (
+                                        <Visibility fontSize="small" />
+                                      )}
+                                    </IconButton>
+                                  </div>
                                 </div>
                                 <div className={styles.detailRow}>
                                   <span className={styles.detailLabel}>
@@ -856,6 +1085,7 @@ export default function UserManagementUI() {
         onClose={handleCloseModal}
         editingUser={editingUser} // ส่งข้อมูลผู้ใช้ที่จะแก้ไข
         onUserUpdated={fetchStats} // Callback เมื่อบันทึกข้อมูลสำเร็จ
+        onReopen={handleReopenModal}
       />
     </Box>
   );

@@ -109,7 +109,6 @@ const mockComplaints = [
 ];
 
 const departmentOptions = [
-  { value: "", label: "ทั้งหมด" },
   { value: "ภาษีอากร", label: "ภาษีอากร" },
   { value: "ค่ารักษาพยาบาล", label: "ค่ารักษาพยาบาล" },
   { value: "การจัดซื้อจัดจ้าง", label: "การจัดซื้อจัดจ้าง" },
@@ -122,7 +121,6 @@ const departmentOptions = [
 ];
 
 const responsibleOfficerOptions = [
-  { value: "", label: "ทั้งหมด" },
   { value: "กรมสรรพากร", label: "กรมสรรพากร" },
   { value: "สำนักงานเศรษฐกิจการคลัง", label: "สำนักงานเศรษฐกิจการคลัง" },
   { value: "กรมบัญชีกลาง", label: "กรมบัญชีกลาง" },
@@ -135,7 +133,6 @@ const responsibleOfficerOptions = [
 ];
 
 const statusOptions = [
-  { value: "", label: "ทั้งหมด" },
   { value: "รอดำเนินการ", label: "รอดำเนินการ" },
   { value: "กำลังดำเนินการ", label: "กำลังดำเนินการ" },
   { value: "เสร็จสิ้น", label: "เสร็จสิ้น" },

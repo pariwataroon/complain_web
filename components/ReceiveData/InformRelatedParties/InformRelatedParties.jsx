@@ -8,6 +8,12 @@ import ButtonService from "@services/ButtonService/ButtonService";
 import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
+import {
+  alertSuccess,
+  alertError,
+  showLoading,
+  closeAlert,
+} from "@utils/Alerts";
 
 // Constants สำหรับ options (ย้ายออกมาข้างนอกเพื่อ performance)
 const SIGNER_OPTIONS = [
@@ -108,7 +114,8 @@ const DECISION_OPTIONS = [
 ];
 
 const InformRelatedParties = () => {
-  const { id } = useRouter().query;
+  const router = useRouter();
+  const { id } = router.query;
 
   // Initial form state
   const initialFormState = useMemo(
@@ -130,10 +137,36 @@ const InformRelatedParties = () => {
 
   const [form, setForm] = useState(initialFormState);
 
+  // ฟังก์ชันตรวจสอบข้อมูลที่จำเป็น
+  const validateRequiredFields = useCallback(() => {
+    const requiredFields = [
+      { field: "refNo", label: "เลขที่ สป.กค." },
+      { field: "date", label: "วันที่" },
+      { field: "subject", label: "เรื่อง" },
+      { field: "signer", label: "ผู้ลงนาม" },
+      { field: "department", label: "หน่วยงาน / ผู้ร้อง / อื่นๆ" },
+      { field: "confidentiality", label: "ชั้นความลับ" },
+      { field: "urgency", label: "ชั้นความเร่งด่วน" },
+      { field: "proposeFor", label: "เสนอเพื่อ" },
+      { field: "decision", label: "ผลการพิจารณา" },
+      { field: "attachment", label: "เอกสารแนบ" },
+    ];
+
+    const missingFields = requiredFields.filter(({ field }) => {
+      const value = form[field];
+      return !value || value === "" || value === null;
+    });
+
+    return missingFields;
+  }, [form]);
+
   // Memoized handlers
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    // แก้ไข: ตรวจสอบว่า value ไม่ใช่ object
+    const finalValue =
+      typeof value === "object" && value !== null ? value.value || "" : value;
+    setForm((prev) => ({ ...prev, [name]: finalValue }));
   }, []);
 
   // Handler สำหรับ DateThaiPickerService
@@ -145,10 +178,54 @@ const InformRelatedParties = () => {
     setForm(initialFormState);
   }, [initialFormState]);
 
-  const handleSave = useCallback(() => {
+  // Save form handler - เพิ่ม validation + alerts
+  const handleSave = useCallback(async () => {
     console.log("Form data:", form);
-    // TODO: save form
-  }, [form]);
+
+    // ตรวจสอบฟิลด์ที่จำเป็น
+    const missingFields = validateRequiredFields();
+
+    if (missingFields.length > 0) {
+      const missingFieldNames = missingFields
+        .map(({ label }) => label)
+        .join(", ");
+      alertError(
+        "ข้อมูลไม่ครบถ้วน",
+        `กรุณากรอกข้อมูลในฟิลด์: ${missingFieldNames}`
+      );
+      return;
+    }
+
+    try {
+      // แสดง loading
+      showLoading("กำลังบันทึกข้อมูล...");
+
+      // จำลองการส่งข้อมูลไปยัง API (ใช้ setTimeout เพื่อจำลอง)
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // ปิด loading
+      closeAlert();
+
+      // แสดงความสำเร็จ
+      await alertSuccess(
+        "บันทึกสำเร็จ",
+        "บันทึกแบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบเรียบร้อยแล้ว"
+      );
+
+      // TODO: เปลี่ยนเส้นทางหรือ refresh ข้อมูลหลังจากบันทึกสำเร็จ
+      // router.push('/some-success-page');
+    } catch (error) {
+      // ปิด loading
+      closeAlert();
+
+      // แสดงข้อผิดพลาด
+      console.error("Save error:", error);
+      alertError(
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง"
+      );
+    }
+  }, [form, router, validateRequiredFields]);
 
   const handleFileChange = useCallback((e) => {
     const file = e.target.files?.[0];
@@ -220,7 +297,12 @@ const InformRelatedParties = () => {
             }}
           >
             <InputText
-              label="เลขที่ สป.กค.*"
+              label={
+                <span>
+                  เลขที่ สป.กค.
+                  <span style={{ color: "red", marginLeft: 4 }}>*</span>
+                </span>
+              }
               inputLabel="กรอกเลขที่ สป.กค."
               name="refNo"
               value={form.refNo}
@@ -228,7 +310,11 @@ const InformRelatedParties = () => {
             />
             <Box sx={{ position: "relative", zIndex: 1 }}>
               <DateThaiPickerService
-                label="วันที่*"
+                label={
+                  <span>
+                    วันที่<span style={{ color: "red", marginLeft: 4 }}>*</span>
+                  </span>
+                }
                 value={form.date}
                 onChange={handleDateChange}
                 placeholder="เลือกวันที่"
@@ -239,7 +325,11 @@ const InformRelatedParties = () => {
           {/* row 2: เรื่อง */}
           <Box>
             <InputText
-              label="เรื่อง*"
+              label={
+                <span>
+                  เรื่อง<span style={{ color: "red", marginLeft: 2 }}>*</span>
+                </span>
+              }
               inputLabel="กรอกเรื่อง"
               name="subject"
               value={form.subject}
@@ -256,16 +346,23 @@ const InformRelatedParties = () => {
             }}
           >
             <SelectField
-              label="ผู้ลงนาม*"
-              inputLabel="เลือกผู้ลงนาม"
+              label={
+                <span>
+                  ผู้ลงนาม<span style={{ color: "red", marginLeft: 2 }}>*</span>
+                </span>
+              }
               name="signer"
               value={form.signer}
               onChange={handleChange}
               options={SIGNER_OPTIONS}
             />
             <SelectField
-              label="หน่วยงาน / ผู้ร้อง / อื่นๆ*"
-              inputLabel="เลือกหน่วยงาน / ผู้ร้อง / อื่นๆ"
+              label={
+                <span>
+                  หน่วยงาน / ผู้ร้อง / อื่นๆ
+                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
+                </span>
+              }
               name="department"
               value={form.department}
               onChange={handleChange}
@@ -282,16 +379,24 @@ const InformRelatedParties = () => {
             }}
           >
             <SelectField
-              label="ชั้นความลับ*"
-              inputLabel="เลือกชั้นความลับ"
+              label={
+                <span>
+                  ชั้นความลับ
+                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
+                </span>
+              }
               name="confidentiality"
               value={form.confidentiality}
               onChange={handleChange}
               options={CONFIDENTIALITY_OPTIONS}
             />
             <SelectField
-              label="ชั้นความเร่งด่วน*"
-              inputLabel="เลือกชั้นความเร่งด่วน"
+              label={
+                <span>
+                  ชั้นความเร่งด่วน
+                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
+                </span>
+              }
               name="urgency"
               value={form.urgency}
               onChange={handleChange}
@@ -308,16 +413,24 @@ const InformRelatedParties = () => {
             }}
           >
             <SelectField
-              label="เสนอเพื่อ*"
-              inputLabel="เลือกเสนอเพื่อ"
+              label={
+                <span>
+                  เสนอเพื่อ
+                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
+                </span>
+              }
               name="proposeFor"
               value={form.proposeFor}
               onChange={handleChange}
               options={PROPOSE_FOR_OPTIONS}
             />
             <SelectField
-              label="ผลการพิจารณา*"
-              inputLabel="เลือกผลการพิจารณา"
+              label={
+                <span>
+                  ผลการพิจารณา
+                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
+                </span>
+              }
               name="decision"
               value={form.decision}
               onChange={handleChange}

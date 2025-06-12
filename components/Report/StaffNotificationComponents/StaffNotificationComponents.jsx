@@ -115,30 +115,25 @@ const StaffNotificationComponents = () => {
   // สร้าง options ออกมาก่อน
   const responsibleOfficerOptions = useMemo(() => {
     const unique = [...new Set(allComplaints.map((c) => c.responsibleOfficer))];
-    return [
-      { value: "", label: "ทั้งหมด" },
-      ...unique.map((v) => ({ value: v, label: v })),
-    ];
+    return [...unique.map((v) => ({ value: v, label: v }))];
   }, [allComplaints]);
 
   const issueTypeOptions = useMemo(() => {
     const unique = [...new Set(allComplaints.map((c) => c.issueType))];
-    return [
-      { value: "", label: "ทั้งหมด" },
-      ...unique.map((v) => ({ value: v, label: v })),
-    ];
+    return [...unique.map((v) => ({ value: v, label: v }))];
   }, [allComplaints]);
 
   // คอนฟิกฟิลด์เดียว ใช้ทั้ง render และ search
   const filterFields = useMemo(
     () => [
-      { name: "claimantName", label: "ชื่อ - สกุล (ผู้ร้อง)", type: "text" },
       {
         name: "responsibleOfficer",
         label: "เจ้าหน้าที่ผู้รับผิดชอบ",
         type: "select",
         options: responsibleOfficerOptions,
       },
+      { name: "claimantName", label: "ชื่อ - สกุล (ผู้ร้อง)", type: "text" },
+
       { name: "receiptNumber", label: "เลขรับ สรร.", type: "text" },
       { name: "issue", label: "ชื่อเรื่อง", type: "text" },
       {

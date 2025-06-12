@@ -23,69 +23,20 @@ import {
   alertWarning,
   alertInfo,
   showConfirm,
-  showLoading,
   closeAlert,
 } from "@utils/Alerts";
 import styles from "./AddUserModal.module.scss";
 import { AddUsers, GetTitleDetails } from "@pages/api/settinggeneral/users";
 
-// 🧪 Mockup Data - Updated to 2025-06-10 04:11:25 UTC by vampirebeam
-const mockupUserData = {
-  citizen_id: "1111111111111",
-  title_id: 3,
-  prefix_other: "นักวิเคราะห์นโยบายและแผน",
-  first_name: "ทดสอบ",
-  last_name: "ระบบการทำงาน",
-  email: "vampirebeam.test@example.com",
-  password: "TempPass2025!",
-  phone: "0864703371",
-  address: "123/45 หมู่ 6 ตำบลบางกรวย อำเภอบางกรวย",
-  address2: "123/45 หมู่ 6 ตำบลบางกรวย อำเภอบางกรวย",
-  syncAddress: true,
-  profileImage: "vampirebeam_profile_20250610041125.jpg",
-  group: "officer",
-  province: {
-    value: "13",
-    label: "กรุงเทพมหานคร",
-  },
-  districts: {
-    value: 160,
-    label: "เมืองจันทบุรี",
-  },
-  subdistricts: {
-    value: "220103",
-    label: "คลองนารายณ์",
-  },
-  zipcode: {
-    value: 22000,
-    label: 22000,
-  },
-  province2: {
-    value: "13",
-    label: "กรุงเทพมหานคร",
-  },
-  districts2: {
-    value: 160,
-    label: "เมืองจันทบุรี",
-  },
-  subdistricts2: {
-    value: "220103",
-    label: "คลองนารายณ์",
-  },
-  zipcode2: {
-    value: 22000,
-    label: 22000,
-  },
-  roles: [
-    {
-      id: "79342847-20ce-411a-8f4e-42cd7aeab407",
-    },
-  ],
-};
-
-const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
+const AddUserModal = ({
+  open,
+  onClose,
+  onReopen,
+  editingUser,
+  onUserUpdated,
+}) => {
   const [titleOptions, setTitleOptions] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(open);
+  const [isFormReset, setIsFormReset] = useState(false);
 
   const {
     register,
@@ -96,7 +47,6 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
     watch,
     isSubmitting,
     setValue,
-    reset,
     getValues,
   } = useCRUDFormUsers(editingUser, onUserUpdated);
 
@@ -108,52 +58,35 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
 
   const syncAddress = watch("syncAddress");
 
-  // Sync modal state
-  useEffect(() => {
-    setIsModalOpen(open);
-  }, [open]);
-
-  // Function to close modal
-  const closeModal = () => {
-    setIsModalOpen(false);
-    onClose();
-  };
-
-  // Function to reopen modal
-  const reopenModal = () => {
-    setIsModalOpen(true);
-  };
-
-  // 🧪 ฟังก์ชันกรอกข้อมูลทดสอบ
-  const fillMockupData = async () => {
-    // Map API structure to form fields
-    setValue("citizen_id", mockupUserData.citizen_id);
-    setValue("email", mockupUserData.email);
-    setValue("first_name", mockupUserData.first_name);
-    setValue("last_name", mockupUserData.last_name);
-    setValue("password", mockupUserData.password);
-    setValue("phone", mockupUserData.phone);
-    setValue("prefix_other", mockupUserData.prefix_other);
-    setValue("title_id", mockupUserData.title_id);
-
-    // Additional form fields
-    setValue(
+  // ฟังก์ชันสำหรับ reset ฟอร์มทั้งหมด
+  const resetAllFormFields = () => {
+    const fieldsToReset = [
+      "citizen_id",
+      "email",
+      "first_name",
+      "last_name",
+      "password",
+      "phone",
+      "prefix_other",
+      "title_id",
       "full_name",
-      `${mockupUserData.first_name} ${mockupUserData.last_name}`
-    );
-    setValue("group", mockupUserData.group);
-    setValue("profileImage", mockupUserData.profileImage);
-    setValue("address", mockupUserData.address);
-    setValue("province", mockupUserData.province);
-    setValue("districts", mockupUserData.districts);
-    setValue("subdistricts", mockupUserData.subdistricts);
-    setValue("zipcode", mockupUserData.zipcode);
-    setValue("address2", mockupUserData.address2);
-    setValue("province2", mockupUserData.province2);
-    setValue("districts2", mockupUserData.districts2);
-    setValue("subdistricts2", mockupUserData.subdistricts2);
-    setValue("zipcode2", mockupUserData.zipcode2);
-    setValue("syncAddress", mockupUserData.syncAddress);
+      "group",
+      "profileImage",
+      "address",
+      "address2",
+      "province",
+      "districts",
+      "subdistricts",
+      "zipcode",
+      "province2",
+      "districts2",
+      "subdistricts2",
+      "zipcode2",
+    ];
+
+    fieldsToReset.forEach((field) => setValue(field, ""));
+    setValue("syncAddress", false);
+    setIsFormReset(true);
   };
 
   // Fetch title options when modal opens
@@ -161,10 +94,7 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
     const fetchTitleOptions = async () => {
       if (open) {
         try {
-          showLoading("กำลังโหลดข้อมูลคำนำหน้า...");
-
           const titleData = await GetTitleDetails();
-          closeAlert(); // ปิด loading
 
           if (
             titleData &&
@@ -172,39 +102,55 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
             Array.isArray(titleData.res_data)
           ) {
             const formattedOptions = titleData.res_data.map((item) => ({
-              value: item.title_id,
+              value: String(item.title_id), // แปลงเป็น string
               label: item.title_name || item.short_name,
             }));
             setTitleOptions(formattedOptions);
+            console.log("Formatted title options:", formattedOptions); // Debug log
           }
         } catch (error) {
-          closeAlert(); // ปิด loading
+          console.error("Error loading title options:", error);
 
-          // 🚪 ปิด Modal ก่อนแจ้งเตือน warning
-          closeModal();
+          // ปิด Modal ก่อนแสดง warning
+          onClose();
 
-          await alertWarning(
-            "ไม่สามารถโหลดข้อมูลคำนำหน้าได้",
-            "ระบบจะใช้ข้อมูลค่าเริ่มต้น"
-          );
+          setTimeout(async () => {
+            await alertWarning(
+              "ไม่สามารถโหลดข้อมูลคำนำหน้าได้",
+              "ระบบจะใช้ข้อมูลค่าเริ่มต้น"
+            );
 
-          // ⚠️ กรณี Warning: เปิด Modal กลับมา
-          reopenModal();
+            // เปิด Modal ใหม่หลังแจ้งเตือน
+            if (onReopen) {
+              onReopen();
+            }
+          }, 100);
 
+          // ใช้ข้อมูลค่าเริ่มต้นแทน
           setTitleOptions([
-            { value: 1, label: "อื่น ๆ" },
-            { value: 2, label: "นาย" },
-            { value: 3, label: "นาง" },
-            { value: 4, label: "นางสาว" },
+            { value: "1", label: "อื่น ๆ" }, // แปลงเป็น string
+            { value: "2", label: "นาย" },
+            { value: "3", label: "นาง" },
+            { value: "4", label: "นางสาว" },
           ]);
         }
       }
     };
 
     fetchTitleOptions();
-  }, [open]);
+  }, [open, onClose, onReopen]);
 
-  // ฟังก์ชันสำหรับจัดรูปแบบข้อมูลก่อนส่ง API - Updated for new format
+  // Reset form เมื่อเปิด Modal สำหรับสร้างใหม่
+  useEffect(() => {
+    if (open && !editingUser) {
+      // รอให้ Modal เปิดสมบูรณ์ก่อนแล้วค่อย reset
+      setTimeout(() => {
+        resetAllFormFields();
+      }, 100);
+    }
+  }, [open, editingUser]);
+
+  // ฟังก์ชันสำหรับจัดรูปแบบข้อมูลก่อนส่ง API
   const formatDataForAPI = (formData) => {
     // Clean citizen_id: remove dashes and keep only numbers
     const cleanCitizenId = formData.citizen_id
@@ -228,7 +174,7 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
     const apiData = {
       citizen_id: cleanCitizenId,
       title_id: parseInt(formData.title_id) || 3,
-      prefix_other: formData.prefix_other || "นักวิเคราะห์นโยบายและแผน",
+      prefix_other: formData.prefix_other || "",
       first_name: formData.first_name || "",
       last_name: formData.last_name || "",
       email: formData.email || "",
@@ -260,10 +206,10 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
   // แก้ไขฟังก์ชัน handleFormSubmit
   const handleFormSubmit = async () => {
     try {
-      // 🚪 ปิด Modal ก่อนแสดง confirmation dialog
-      closeModal();
+      // ปิด Modal ก่อนแสดง confirmation dialog
+      onClose();
 
-      // แสดง confirmation dialog หลังปิด Modal
+      // แสดง confirmation dialog
       const isConfirmed = await showConfirm(
         editingUser ? "ยืนยันการแก้ไข" : "ยืนยันการเพิ่มข้อมูล",
         editingUser
@@ -275,16 +221,19 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
 
       if (!isConfirmed) {
         await alertInfo("ยกเลิก", "การดำเนินการถูกยกเลิก");
-        // ℹ️ กรณี Info: เปิด Modal กลับมา
-        reopenModal();
+
+        // เปิด Modal ใหม่หลังจากยกเลิก
+        if (onReopen) {
+          setTimeout(() => {
+            onReopen();
+          }, 100);
+        }
         return;
       }
 
       const formData = getValues();
 
       if (!editingUser) {
-        showLoading("กำลังเพิ่มข้อมูลผู้ใช้งาน...");
-
         const apiData = formatDataForAPI(formData);
 
         // Validate required fields before API call
@@ -297,32 +246,31 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
         const missingFields = requiredFields.filter((field) => !apiData[field]);
 
         if (missingFields.length > 0) {
-          closeAlert(); // ปิด loading
-
-          const result = await showConfirm(
+          await alertWarning(
             "ข้อมูลไม่ครบถ้วน",
             `กรุณากรอกข้อมูลให้ครบถ้วน:\n\n${missingFields
               .map((field) => {
                 const fieldNames = {
-                  citizen_id: "• Username",
+                  citizen_id: "• เลขบัตรประชาชน",
                   title_id: "• คำนำหน้า",
                   first_name: "• ชื่อ",
                   email: "• อีเมล",
                 };
                 return fieldNames[field] || `• ${field}`;
               })
-              .join("\n")}\n\nกรุณากรอกข้อมูลให้ครบถ้วนแล้วลองใหม่อีกครั้ง`,
-            "ตกลง",
-            "ปิด"
+              .join("\n")}\n\nกรุณากรอกข้อมูลให้ครบถ้วนแล้วลองใหม่อีกครั้ง`
           );
 
-          // ✅ เปิด Modal กลับมาเสมอ
-          reopenModal();
+          // เปิด Modal ใหม่หลังจากแจ้งเตือน
+          if (onReopen) {
+            setTimeout(() => {
+              onReopen();
+            }, 100);
+          }
           return;
         }
 
         const result = await AddUsers(apiData);
-        closeAlert(); // ปิด loading
 
         // Check API response status
         if (
@@ -334,7 +282,8 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
           }
 
           await alertSuccess("สำเร็จ", "เพิ่มข้อมูลผู้ใช้งานสำเร็จ");
-          // ✅ กรณีสำเร็จ: ไม่เปิด Modal กลับมา
+
+          // ไม่เปิด Modal ใหม่หลังจากสำเร็จ
           return;
         } else if (result && result.res_code === "4090") {
           // Handle duplicate user error
@@ -345,8 +294,12 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
 
           await alertWarning("ไม่สามารถเพิ่มข้อมูลได้", errorMessage);
 
-          // ⚠️ กรณี Warning: เปิด Modal กลับมา
-          reopenModal();
+          // เปิด Modal ใหม่หลังจากแจ้งเตือน error
+          if (onReopen) {
+            setTimeout(() => {
+              onReopen();
+            }, 100);
+          }
           return;
         } else {
           await alertWarning(
@@ -354,26 +307,42 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
             `ได้รับการตอบกลับที่ไม่คาดคิด: ${result?.res_code || "ไม่ทราบ"}`
           );
 
-          // ⚠️ กรณี Warning: เปิด Modal กลับมา
-          reopenModal();
+          // เปิด Modal ใหม่หลังจากแจ้งเตือน error
+          if (onReopen) {
+            setTimeout(() => {
+              onReopen();
+            }, 100);
+          }
           return;
         }
       } else {
-        showLoading("กำลังแก้ไขข้อมูลผู้ใช้งาน...");
+        try {
+          await originalOnSubmit(formData);
 
-        await originalOnSubmit(formData);
-        closeAlert(); // ปิด loading
+          if (onUserUpdated) {
+            onUserUpdated();
+          }
 
-        if (onUserUpdated) {
-          onUserUpdated();
+          await alertSuccess("สำเร็จ", "แก้ไขข้อมูลผู้ใช้งานสำเร็จ");
+
+          // ไม่เปิด Modal ใหม่หลังจากสำเร็จ
+        } catch (error) {
+          await alertError(
+            "เกิดข้อผิดพลาด",
+            `เกิดข้อผิดพลาดในการแก้ไขข้อมูล: ${
+              error.message || "ไม่ทราบสาเหตุ"
+            }`
+          );
+
+          // เปิด Modal ใหม่หลังจากแจ้งเตือน error
+          if (onReopen) {
+            setTimeout(() => {
+              onReopen();
+            }, 100);
+          }
         }
-
-        await alertSuccess("สำเร็จ", "แก้ไขข้อมูลผู้ใช้งานสำเร็จ");
-        // ✅ กรณีสำเร็จ: ไม่เปิด Modal กลับมา
       }
     } catch (error) {
-      closeAlert(); // ปิด loading ในกรณี error
-
       await alertError(
         "เกิดข้อผิดพลาด",
         editingUser
@@ -385,14 +354,21 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
             }`
       );
 
-      // ❌ กรณี Error: เปิด Modal กลับมา
-      reopenModal();
+      // เปิด Modal ใหม่หลังจากแจ้งเตือน error
+      if (onReopen) {
+        setTimeout(() => {
+          onReopen();
+        }, 100);
+      }
     }
   };
 
   // Helper function to clear form
   const clearForm = async () => {
-    // แสดง confirmation dialog ก่อนล้างข้อมูล
+    // ปิด Modal ก่อนแสดง confirmation dialog
+    onClose();
+
+    // แสดง confirmation dialog
     const isConfirmed = await showConfirm(
       "ล้างข้อมูลฟอร์ม",
       "คุณต้องการล้างข้อมูลทั้งหมดในฟอร์มใช่หรือไม่?",
@@ -401,65 +377,77 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
     );
 
     if (!isConfirmed) {
+      // เปิด Modal ใหม่ถ้ายกเลิก
+      if (onReopen) {
+        setTimeout(() => {
+          onReopen();
+        }, 100);
+      }
       return;
     }
 
-    const fieldsToReset = [
-      "citizen_id",
-      "email",
-      "first_name",
-      "last_name",
-      "password",
-      "phone",
-      "prefix_other",
-      "title_id",
-      "full_name",
-      "group",
-      "profileImage",
-      "address",
-      "address2",
-      "province",
-      "districts",
-      "subdistricts",
-      "zipcode",
-      "province2",
-      "districts2",
-      "subdistricts2",
-      "zipcode2",
-    ];
-
-    fieldsToReset.forEach((field) => setValue(field, ""));
-    setValue("syncAddress", false);
-
-    // 🚪 ปิด Modal ก่อนแจ้งเตือนสำเร็จ
-    closeModal();
+    // Reset ฟอร์ม
+    resetAllFormFields();
 
     await alertSuccess("สำเร็จ", "ล้างข้อมูลฟอร์มเรียบร้อยแล้ว");
-    // ✅ กรณีสำเร็จ: ไม่เปิด Modal กลับมา
+
+    // เปิด Modal ใหม่หลังจากล้างข้อมูลสำเร็จ
+    if (onReopen) {
+      setTimeout(() => {
+        onReopen();
+      }, 100);
+    }
   };
 
   // Handle modal close with confirmation
-  const handleModalClose = async () => {
-    const formData = getValues();
-    const hasData = Object.values(formData).some(
-      (value) =>
-        value !== "" && value !== null && value !== undefined && value !== false
-    );
-
-    if (hasData && !editingUser) {
-      const isConfirmed = await showConfirm(
-        "ปิดหน้าต่าง",
-        "คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างใช่หรือไม่?",
-        "ปิด",
-        "ยกเลิก"
+  const handleModalClose = async (event, reason) => {
+    // หากปิดจาก backdrop หรือ escape key
+    if (reason === "backdropClick" || reason === "escapeKeyDown") {
+      const formData = getValues();
+      const hasData = Object.values(formData).some(
+        (value) =>
+          value !== "" &&
+          value !== null &&
+          value !== undefined &&
+          value !== false
       );
 
-      if (!isConfirmed) {
+      if (hasData && !editingUser) {
+        // ปิด Modal ก่อนแสดง confirmation dialog
+        onClose();
+
+        const isConfirmed = await showConfirm(
+          "ปิดหน้าต่าง",
+          "คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างใช่หรือไม่?",
+          "ปิด",
+          "ยกเลิก"
+        );
+
+        if (!isConfirmed) {
+          // ถ้ากดยกเลิก ให้เปิด Modal ใหม่
+          if (onReopen) {
+            setTimeout(() => {
+              onReopen();
+            }, 100);
+          } else {
+            // fallback ถ้าไม่มี onReopen function
+            setTimeout(() => {
+              window.location.reload();
+            }, 100);
+          }
+          return;
+        }
+        // ถ้ากดปิด ให้ Modal ปิดไปเลย (ปิดไปแล้วด้านบน)
+        return;
+      } else {
+        // ถ้าไม่มีข้อมูลหรือเป็นการแก้ไข ให้ปิดเลย
+        onClose();
         return;
       }
     }
 
-    closeModal();
+    // ปิด Modal สำหรับกรณีอื่น ๆ
+    onClose();
   };
 
   // Function to map role_name to our option values
@@ -493,21 +481,122 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
     return result;
   };
 
-  // Pre-fill form when editing user
+  // ฟังก์ชันสำหรับแยกคำนำหน้าจาก full_name_with_title
+  const extractTitleId = (fullNameWithTitle) => {
+    if (!fullNameWithTitle || !Array.isArray(titleOptions)) return "3";
+
+    // หาคำนำหน้าที่ตรงกัน
+    for (const option of titleOptions) {
+      if (fullNameWithTitle.startsWith(option.label)) {
+        return option.value;
+      }
+    }
+
+    return "3"; // ค่าเริ่มต้น (นาง)
+  };
+
+  // ฟังก์ชันสำหรับแยกชื่อจาก full_name_with_title
+  const extractFirstName = (fullNameWithTitle) => {
+    if (!fullNameWithTitle) return "";
+
+    const titlePrefixes = [
+      "นาย",
+      "นาง",
+      "นางสาว",
+      "เด็กชาย",
+      "เด็กหญิง",
+      "ดร.",
+      "ศ.",
+      "รศ.",
+      "ผศ.",
+    ];
+    let nameWithoutTitle = fullNameWithTitle;
+
+    for (const prefix of titlePrefixes) {
+      if (fullNameWithTitle.startsWith(prefix)) {
+        nameWithoutTitle = fullNameWithTitle.substring(prefix.length).trim();
+        break;
+      }
+    }
+
+    const nameParts = nameWithoutTitle.split(" ");
+    return nameParts[0] || "";
+  };
+
+  // ฟังก์ชันสำหรับแยกนามสกุลจาก full_name_with_title
+  const extractLastName = (fullNameWithTitle) => {
+    if (!fullNameWithTitle) return "";
+
+    const titlePrefixes = [
+      "นาย",
+      "นาง",
+      "นางสาว",
+      "เด็กชาย",
+      "เด็กหญิง",
+      "ดร.",
+      "ศ.",
+      "รศ.",
+      "ผศ.",
+    ];
+    let nameWithoutTitle = fullNameWithTitle;
+
+    for (const prefix of titlePrefixes) {
+      if (fullNameWithTitle.startsWith(prefix)) {
+        nameWithoutTitle = fullNameWithTitle.substring(prefix.length).trim();
+        break;
+      }
+    }
+
+    const nameParts = nameWithoutTitle.split(" ");
+    return nameParts.slice(1).join(" ") || "";
+  };
+
+  // Pre-fill form when editing user หรือ reset เมื่อสร้างใหม่
   useEffect(() => {
     if (editingUser && open) {
+      console.log("Editing User Data:", editingUser); // Debug log
+
+      // กรณีแก้ไขผู้ใช้ - กรอกข้อมูลจาก editingUser
       const mappedGroup = mapRoleNameToValue(editingUser.role_name);
 
+      // ข้อมูลพื้นฐาน
       setValue("citizen_id", editingUser.citizen_id || "");
       setValue("full_name", editingUser.full_name || "");
       setValue("group", mappedGroup);
-      setValue("prefix_other", editingUser.position || "ไม่ระบุ");
-      setValue("title_id", editingUser.title_id?.toString() || "");
-      setValue("first_name", editingUser.first_name || "");
-      setValue("last_name", editingUser.last_name || "");
+      setValue("prefix_other", editingUser.position || "");
+
+      // แยกข้อมูลชื่อ-นามสกุลจาก full_name_with_title หรือใช้ข้อมูลที่มีอยู่
+      const titleId = String(
+        editingUser.title_id ||
+          extractTitleId(
+            editingUser.full_name_with_title || editingUser.full_name
+          ) ||
+          "3"
+      ); // แปลงเป็น string เสมอ
+
+      const firstName =
+        editingUser.first_name ||
+        extractFirstName(
+          editingUser.full_name_with_title || editingUser.full_name
+        );
+      const lastName =
+        editingUser.last_name ||
+        extractLastName(
+          editingUser.full_name_with_title || editingUser.full_name
+        );
+
+      console.log("Setting title_id:", titleId); // Debug log
+
+      setValue("title_id", titleId);
+      setValue("first_name", firstName);
+      setValue("last_name", lastName);
+
+      // ข้อมูลติดต่อ
       setValue("phone", editingUser.phone || "");
       setValue("email", editingUser.email || "");
       setValue("password", "TempPass2025!");
+
+      // ข้อมูลที่อยู่
       setValue(
         "address",
         editingUser.address || editingUser.address_card || ""
@@ -516,47 +605,51 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
         "address2",
         editingUser.contact_address || editingUser.address_contact || ""
       );
+
+      // ข้อมูลจังหวัด/อำเภอ/ตำบล
+      if (editingUser.province) setValue("province", editingUser.province);
+      if (editingUser.districts) setValue("districts", editingUser.districts);
+      if (editingUser.subdistricts)
+        setValue("subdistricts", editingUser.subdistricts);
+      if (editingUser.zipcode) setValue("zipcode", editingUser.zipcode);
+
+      // ข้อมูลที่อยู่ติดต่อ
+      if (editingUser.province2) setValue("province2", editingUser.province2);
+      if (editingUser.districts2)
+        setValue("districts2", editingUser.districts2);
+      if (editingUser.subdistricts2)
+        setValue("subdistricts2", editingUser.subdistricts2);
+      if (editingUser.zipcode2) setValue("zipcode2", editingUser.zipcode2);
+
+      // รูปโปรไฟล์
       setValue("profileImage", editingUser.profile_image || "");
 
+      // ใช้ setTimeout เพื่อให้แน่ใจว่า component อัปเดตแล้ว
       setTimeout(() => {
         setValue("group", mappedGroup, { shouldValidate: true });
-        setValue("prefix_other", editingUser.position || "ไม่ระบุ", {
+        setValue("prefix_other", editingUser.position || "", {
           shouldValidate: true,
         });
-        setValue("title_id", editingUser.title_id?.toString() || "", {
-          shouldValidate: true,
-        });
-      }, 100);
-    } else if (!editingUser && open) {
-      // ไม่เรียก clearForm() เพราะจะมี confirmation dialog
-      const fieldsToReset = [
-        "citizen_id",
-        "email",
-        "first_name",
-        "last_name",
-        "password",
-        "phone",
-        "prefix_other",
-        "title_id",
-        "full_name",
-        "group",
-        "profileImage",
-        "address",
-        "address2",
-        "province",
-        "districts",
-        "subdistricts",
-        "zipcode",
-        "province2",
-        "districts2",
-        "subdistricts2",
-        "zipcode2",
-      ];
-      fieldsToReset.forEach((field) => setValue(field, ""));
-      setValue("syncAddress", false);
-    }
-  }, [editingUser, setValue, open]);
+        setValue("title_id", titleId, { shouldValidate: true });
+        setValue("first_name", firstName, { shouldValidate: true });
+        setValue("last_name", lastName, { shouldValidate: true });
+      }, 200);
 
+      setIsFormReset(false); // ไม่ใช่การ reset สำหรับสร้างใหม่
+    } else if (!editingUser && open && !isFormReset) {
+      // กรณีสร้างผู้ใช้ใหม่ - reset ทันทีถ้ายังไม่ได้ reset
+      resetAllFormFields();
+    }
+  }, [editingUser, setValue, open, isFormReset, titleOptions]);
+
+  // Reset state เมื่อปิด Modal
+  useEffect(() => {
+    if (!open) {
+      setIsFormReset(false);
+    }
+  }, [open]);
+
+  // Sync address effect
   useEffect(() => {
     if (syncAddress) {
       const province = watch("province");
@@ -571,11 +664,11 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
       setValue("subdistricts2", subdistrict);
       setValue("zipcode2", zipcode);
     }
-  }, [syncAddress, setValue]);
+  }, [syncAddress, setValue, watch]);
 
   return (
     <Dialog
-      open={isModalOpen}
+      open={open}
       onClose={handleModalClose}
       maxWidth="lg"
       fullWidth
@@ -617,22 +710,14 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
                 color="#1120A3"
                 sx={{ fontWeight: "bold" }}
               >
-                Username
+                Username <span style={{ color: "red" }}>*</span>
               </Typography>
               <TextfieldService
                 fullWidth
-                placeholder="กรุณากรอกชื่อผู้ใช้งาน"
+                placeholder="กรุณากรอก Username"
                 {...register("citizen_id")}
               />
-              {!editingUser && (
-                <Typography
-                  variant="caption"
-                  color="#2499FF"
-                  sx={{ fontSize: "12px", mt: 0.5 }}
-                >
-                  แนะนำ: ใช้เลขบัตรประชาชน (ไม่มีขีด) หรือชื่อผู้ใช้ที่ต้องการ
-                </Typography>
-              )}
+
               {errors.citizen_id && (
                 <Typography color="error">
                   {errors.citizen_id.message}
@@ -646,7 +731,7 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
                 color="#1120A3"
                 sx={{ fontWeight: "bold" }}
               >
-                ชื่อผู้ใช้งาน
+                ชื่อผู้ใช้งาน <span style={{ color: "red" }}>*</span>
               </Typography>
               <TextfieldService
                 fullWidth
@@ -666,7 +751,7 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
                 color="#1120A3"
                 sx={{ fontWeight: "bold" }}
               >
-                กลุ่มสิทธิ์
+                กลุ่มสิทธิ์ <span style={{ color: "red" }}>*</span>
               </Typography>
               <Controller
                 name="group"
@@ -789,46 +874,61 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
                       render={({ field }) => <IDCardInput {...field} />}
                     />
                   </Grid>
-                  {/* เพิ่ม Title Select Field */}
+                  {/* แถวคำนำหน้า ชื่อ นามสกุล */}
                   <Grid item xs={12} sm={3}>
-                    <Typography
-                      variant="body2"
-                      color="#1120A3"
-                      sx={{ fontWeight: "bold", mb: 1 }}
-                    >
-                      คำนำหน้า
-                    </Typography>
-                    <Controller
-                      name="title_id"
-                      control={control}
-                      render={({ field: { value, onChange, ...field } }) => (
-                        <SelectMenuService
-                          {...field}
-                          value={value || ""}
-                          handleChange={(event) => {
-                            onChange(event.target.value);
-                          }}
-                          options={titleOptions}
-                          width="100%"
-                          name="title_id"
-                          placeholder="เลือกคำนำหน้า"
-                        />
-                      )}
-                    />
-                    {errors.title_id && (
-                      <Typography color="error">
-                        {errors.title_id.message}
+                    <Box>
+                      <Typography
+                        variant="body2"
+                        color="#1120A3"
+                        sx={{ fontWeight: "bold", mb: 1 }}
+                      >
+                        คำนำหน้า <span style={{ color: "red" }}>*</span>
                       </Typography>
-                    )}
+                      <Controller
+                        name="title_id"
+                        control={control}
+                        render={({ field: { value, onChange, ...field } }) => {
+                          // Debug logs
+                          console.log("Title field value:", value);
+                          console.log("Title options:", titleOptions);
+
+                          return (
+                            <SelectMenuService
+                              {...field}
+                              value={String(value || "")} // แปลงเป็น string เสมอ
+                              handleChange={(event) => {
+                                console.log(
+                                  "Title changed to:",
+                                  event.target.value
+                                );
+                                onChange(event.target.value);
+                              }}
+                              options={titleOptions}
+                              width="100%"
+                              name="title_id"
+                            />
+                          );
+                        }}
+                      />
+                      {errors.title_id && (
+                        <Typography color="error">
+                          {errors.title_id.message}
+                        </Typography>
+                      )}
+                    </Box>
                   </Grid>
-                  <Grid item xs={12} sm={9}>
+                  <Grid item xs={12} sm={4.5}>
                     <InputText
-                      label="ชื่อ"
+                      label={
+                        <>
+                          ชื่อ <span style={{ color: "red" }}>*</span>
+                        </>
+                      }
                       placeholder="ชื่อ"
                       {...register("first_name")}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={9}>
+                  <Grid item xs={12} sm={4.5}>
                     <InputText
                       label="นามสกุล"
                       placeholder="นามสกุล"
@@ -852,7 +952,11 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <InputText
-                      label="อีเมล"
+                      label={
+                        <>
+                          อีเมล <span style={{ color: "red" }}>*</span>
+                        </>
+                      }
                       placeholder="อีเมล"
                       {...register("email")}
                     />
@@ -1029,7 +1133,7 @@ const AddUserModal = ({ open, onClose, editingUser, onUserUpdated }) => {
                 label="ยกเลิก"
                 variant="outlined"
                 color="#2499FF"
-                onClick={handleModalClose}
+                onClick={() => onClose()}
                 disabled={isSubmitting}
                 sx={{
                   borderRadius: "15px",

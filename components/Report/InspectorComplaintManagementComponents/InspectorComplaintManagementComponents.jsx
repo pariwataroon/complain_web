@@ -415,7 +415,6 @@ const getProvinceCellStyle = (value) => {
 
 // ย้าย inspectorOptions ออกมาเป็น constant เพื่อไม่ให้เกิด re-render
 const INSPECTOR_OPTIONS = [
-  { value: "", label: "กรุณาเลือกผู้ตรวจ", disabled: true },
   { value: "inspector1", label: "นายสมชาย ใจดี" },
   { value: "inspector2", label: "นางสาวอรทัย แซ่ลิ้ม" },
   { value: "inspector3", label: "นายวิทยา ศรีสุข" },

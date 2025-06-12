@@ -113,7 +113,6 @@ const mockComplaints = [
 
 // ─── filter options ─────────────────────────────────────────────────────────
 const claimantOptions = [
-  { value: "", label: "ทั้งหมด" },
   ...mockComplaints.map((c) => ({
     value: c.claimantName,
     label: c.claimantName,
@@ -174,7 +173,6 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
         data={filteredComplaints}
         title="รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ"
         reportTitle="รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจ"
-        reportSubTitle=""
         dateRange="ประจำปีงบประมาณ พ.ศ.2568"
         onSearch={handleSearch}
         filterFields={[

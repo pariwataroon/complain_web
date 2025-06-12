@@ -8,6 +8,12 @@ import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
+import {
+  alertSuccess,
+  alertError,
+  showLoading,
+  closeAlert,
+} from "@utils/Alerts";
 
 const ForwardtoagencyComponents = () => {
   const router = useRouter();
@@ -74,11 +80,78 @@ const ForwardtoagencyComponents = () => {
     });
   }, []);
 
-  // Save form handler - ใช้ useCallback
-  const handleSave = useCallback(() => {
+  // ฟังก์ชันตรวจสอบข้อมูลที่จำเป็น
+  const validateRequiredFields = () => {
+    const requiredFields = [
+      { field: "salutation", label: "เรียน" },
+      { field: "refNo", label: "เลข สป.กค." },
+      { field: "date1", label: "วันที่ (แรก)" },
+      { field: "subject", label: "เรื่อง" },
+      { field: "bookNo", label: "เลขที่หนังสือ" },
+      { field: "date2", label: "วันที่ (สอง)" },
+      { field: "signer", label: "ผู้ลงนาม" },
+      { field: "department", label: "หน่วยงาน" },
+      { field: "confidentiality", label: "ชั้นความลับ" },
+      { field: "urgency", label: "ชั้นความเร่งด่วน" },
+      { field: "attachment", label: "เอกสารแนบ" },
+    ];
+
+    const missingFields = requiredFields.filter(({ field }) => {
+      const value = form[field];
+      return !value || value === "" || value === null;
+    });
+
+    return missingFields;
+  };
+
+  // Save form handler - ใช้ useCallback และเพิ่ม validation + alerts
+  const handleSave = useCallback(async () => {
     console.log("Form data:", form);
-    // TODO: save form
-  }, [form]);
+
+    // ตรวจสอบฟิลด์ที่จำเป็น
+    const missingFields = validateRequiredFields();
+
+    if (missingFields.length > 0) {
+      const missingFieldNames = missingFields
+        .map(({ label }) => label)
+        .join(", ");
+      alertError(
+        "ข้อมูลไม่ครบถ้วน",
+        `กรุณากรอกข้อมูลในฟิลด์: ${missingFieldNames}`
+      );
+      return;
+    }
+
+    try {
+      // แสดง loading
+      showLoading("กำลังบันทึกข้อมูล...");
+
+      // จำลองการส่งข้อมูลไปยัง API (ใช้ setTimeout เพื่อจำลอง)
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // ปิด loading
+      closeAlert();
+
+      // แสดงความสำเร็จ
+      await alertSuccess(
+        "บันทึกสำเร็จ",
+        "บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว"
+      );
+
+      // TODO: เปลี่ยนเส้นทางหรือ refresh ข้อมูลหลังจากบันทึกสำเร็จ
+      // router.push('/some-success-page');
+    } catch (error) {
+      // ปิด loading
+      closeAlert();
+
+      // แสดงข้อผิดพลาด
+      console.error("Save error:", error);
+      alertError(
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง"
+      );
+    }
+  }, [form, router]);
 
   // Options สำหรับ SelectField - แก้ไขให้แน่ใจว่าเป็น format ที่ถูกต้อง
   const salutationOptions = [

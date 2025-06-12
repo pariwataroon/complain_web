@@ -18,7 +18,7 @@ import styles from "./TableListWebComplaints.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
-import SearchOffIcon from "@mui/icons-material/SearchOff";
+import CleaningServicesIcon from "@mui/icons-material/CleaningServices"; // เปลี่ยนเป็น icon ไม้กวาด
 
 const TableListWebComplaints = ({
   data = [],
@@ -221,7 +221,7 @@ const TableListWebComplaints = ({
                     }}
                     title="ล้างการค้นหา"
                   >
-                    <SearchOffIcon />
+                    <CleaningServicesIcon />
                   </IconButton>
                 </Box>
 
@@ -266,7 +266,7 @@ const TableListWebComplaints = ({
                     }}
                     title="ล้างการค้นหา"
                   >
-                    <SearchOffIcon />
+                    <CleaningServicesIcon />
                   </IconButton>
                 </Box>
 
@@ -373,7 +373,7 @@ const TableListWebComplaints = ({
                 }}
                 title="ล้างการค้นหา"
               >
-                <SearchOffIcon />
+                <CleaningServicesIcon />
               </IconButton>
             </Box>
 

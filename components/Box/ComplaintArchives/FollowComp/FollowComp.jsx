@@ -29,14 +29,25 @@ const breadcrumbItems = [
   {
     label: "เมนูคลังเอกสาร",
     icon: <Inventory2Icon sx={{ width: 24, height: 24, mb: -1 }} />,
+    url: "/admin/box/list",
   },
   { label: "คลังเรื่องราวร้องทุกข์" },
 ];
 
-// Mock header info
-const mockHeader = {
-  responsibleOfficer: "นายเป็นสุข เป็นสุขเถิด",
-  complainantName: "กิติศักดิ์ รัตนเกษม",
+// ฟังก์ชันแปลงสถานะอังกฤษเป็นไทย
+const getThaiStatus = (englishStatus) => {
+  const statusMap = {
+    pending: "อยู่ระหว่างการแจ้งผล",
+    waiting: "รอหน่วยงานตอบกลับ",
+    stop: "ยุติ",
+    received: "รับเรื่องแล้ว",
+    investigating: "กำลังตรวจสอบ",
+    processing: "กำลังดำเนินการ",
+    awaiting_info: "รอข้อมูลเพิ่มเติม",
+    forwarded: "ส่งต่อหน่วยงาน",
+    completed: "ดำเนินการเสร็จสิ้น",
+  };
+  return statusMap[englishStatus] || englishStatus;
 };
 
 // แก้ไข: ใช้ PDF จาก W3Schools
@@ -47,6 +58,63 @@ const handleOpenDocument = (documentName) => {
 
   // เปิด PDF ในแท็บใหม่
   window.open(w3schoolsPDF, "_blank");
+};
+
+// ฟังก์ชันดักสถานะจาก query parameters
+const getStatusFromQuery = (query) => {
+  console.log("🔍 Full query object:", query); // Debug log
+
+  // ตรวจสอบ query parameters ทั้งหมดเพื่อหาสถานะ
+  const statusKeys = [
+    "waiting",
+    "pending",
+    "stop",
+    "received",
+    "investigating",
+    "processing",
+    "awaiting_info",
+    "forwarded",
+    "completed",
+  ];
+
+  for (const status of statusKeys) {
+    if (query.hasOwnProperty(status)) {
+      console.log(`✅ Found status in query: ${status}`); // Debug log
+      return status;
+    }
+  }
+
+  // ถ้าไม่เจอสถานะใน query parameters ให้ใช้ค่าเริ่มต้น
+  console.log("❌ No status found in query, using default: received"); // Debug log
+  return "received";
+};
+
+const getIconForStatus = (englishStatus) => {
+  console.log("🎯 Getting icon for status:", englishStatus); // Debug log
+
+  // เฉพาะสถานะที่ยังรอการดำเนินการเท่านั้นที่ใช้ folder icon
+  const pendingStatuses = ["pending", "waiting"];
+
+  if (pendingStatuses.includes(englishStatus)) {
+    console.log("📁 Using Folder icon for:", englishStatus); // Debug log
+    return <FolderIcon sx={{ color: "#1223A5", fontSize: 24 }} />; // ✅ pending, waiting ใช้ Folder icon สี #1223A5
+  } else {
+    console.log("✏️ Using Edit icon for:", englishStatus); // Debug log
+    // สถานะอื่น ๆ รวมทั้ง "stop" ใช้ Edit icon สี #1223A5
+    return (
+      <img
+        src="/icons/Edit.png"
+        alt="Edit"
+        style={{
+          width: 35,
+          height: 35,
+          // CSS filter ที่แปลงสีรูปภาพเป็น #1223A5 (สีน้ำเงินเข้ม)
+          filter:
+            "brightness(0) saturate(100%) invert(9%) sepia(89%) saturate(7495%) hue-rotate(230deg) brightness(94%) contrast(106%)",
+        }}
+      />
+    );
+  }
 };
 
 // 2. Sections array with status + matching header/row keys
@@ -216,7 +284,25 @@ const sections = [
 ];
 
 const FollowComp = () => {
-  const { id } = useRouter().query;
+  const router = useRouter();
+  console.log("🌐 Router query:", router.query); // Debug log
+
+  // ดักสถานะจาก query parameters
+  const englishStatus = getStatusFromQuery(router.query);
+  const id = router.query.id || "unknown";
+
+  console.log("🆔 ID:", id);
+  console.log("📊 Detected Status:", englishStatus);
+
+  // Mock header info - ใช้สถานะที่ดักได้จาก query และแปลงเป็นไทย
+  const mockHeader = {
+    responsibleOfficer: "นายเป็นสุข เป็นสุขเถิด",
+    complainantName: "กิติศักดิ์ รัตนเกษม",
+    status: getThaiStatus(englishStatus), // แปลงเป็นไทยเพื่อแสดงผล
+    englishStatus: englishStatus, // เก็บสถานะอังกฤษไว้ใช้กับ icon
+  };
+
+  console.log("📋 Mock Header:", mockHeader); // Debug log
 
   const firstPhases = sections.filter((s) => s.status < STATUS.FINAL_NOTIFY);
   const finalPhase = sections.find((s) => s.status === STATUS.FINAL_NOTIFY);
@@ -243,7 +329,7 @@ const FollowComp = () => {
       </Box>
 
       {/* Info rows */}
-      {/* แก้ไข: เพิ่มไอคอนโฟลเดอร์ข้างเจ้าหน้าที่ */}
+      {/* แก้ไข: ใช้ icon ตามสถานะภาษาอังกฤษ */}
       <Box
         sx={{
           background: "#EDF7EA",
@@ -265,7 +351,7 @@ const FollowComp = () => {
             },
           }}
         >
-          <FolderIcon />
+          {getIconForStatus(mockHeader.englishStatus)}
         </IconButton>
       </Box>
 
@@ -322,7 +408,7 @@ const FollowComp = () => {
                             },
                           }}
                         >
-                          <FolderIcon />
+                          {getIconForStatus(mockHeader.englishStatus)}
                         </IconButton>
                       ) : (
                         row[h] ?? "-"
@@ -384,7 +470,7 @@ const FollowComp = () => {
                             },
                           }}
                         >
-                          <FolderIcon />
+                          {getIconForStatus(mockHeader.englishStatus)}
                         </IconButton>
                       ) : (
                         row[h] ?? "-"

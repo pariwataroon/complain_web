@@ -8,6 +8,9 @@ import {
   IconButton,
   Paper,
   Typography,
+  Tabs,
+  Tab,
+  Badge,
 } from "@mui/material";
 import {
   Settings,
@@ -30,8 +33,8 @@ import {
 } from "@pages/api/notifications/notifications";
 import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 import { formatElapsedThaiTime } from "@utils/Formats";
-import LayersIcon from '@mui/icons-material/Layers';
-import TuneIcon from '@mui/icons-material/Tune';
+import LayersIcon from "@mui/icons-material/Layers";
+import TuneIcon from "@mui/icons-material/Tune";
 import Cookies from "js-cookie";
 
 export default function Sidebar() {
@@ -44,11 +47,99 @@ export default function Sidebar() {
   const [showNotificationBell, setShowNotificationBell] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [menuData, setMenuData] = useState([]);
+  const [notificationFilter, setNotificationFilter] = useState(0); // 0: ทั้งหมด, 1: เรื่องร้องเรียนใหม่, 2: ผู้ใช้ลงทะเบียนใหม่
   const sidebarRef = useRef(null);
   const notifArr = Array.isArray(notifications) ? notifications : [];
   const unreadExists = notifArr.some((n) => !n.is_read);
 
-  const toggleBell = () => setShowNotifications((p) => !p);
+  const toggleBell = () => {
+    setShowNotifications((p) => !p);
+    // Reset filter เมื่อเปิด notification panel
+    if (!showNotifications) {
+      setNotificationFilter(0);
+    }
+  };
+
+  // ฟังก์ชันสำหรับกรองการแจ้งเตือนตามประเภท
+  const getFilteredNotifications = () => {
+    if (notificationFilter === 0) return notifArr; // ทั้งหมด
+
+    if (notificationFilter === 1) {
+      // เรื่องร้องเรียนใหม่ - กรองตาม title หรือ message ที่ไม่ใช่ผู้ใช้ใหม่
+      return notifArr.filter(
+        (n) =>
+          !(
+            n.title?.includes("ลงทะเบียน") ||
+            n.title?.includes("สมัคร") ||
+            n.title?.includes("ผู้ใช้ใหม่") ||
+            n.message?.includes("ลงทะเบียน") ||
+            n.message?.includes("สมัคร") ||
+            n.message?.includes("ผู้ใช้ใหม่") ||
+            n.type === "user_registration" ||
+            n.category === "registration"
+          )
+      );
+    }
+
+    if (notificationFilter === 2) {
+      // ผู้ใช้ลงทะเบียนใหม่ - กรองตาม title หรือ message ที่มีคำว่า "ลงทะเบียน", "สมัคร", "ผู้ใช้ใหม่"
+      return notifArr.filter(
+        (n) =>
+          n.title?.includes("ลงทะเบียน") ||
+          n.title?.includes("สมัคร") ||
+          n.title?.includes("ผู้ใช้ใหม่") ||
+          n.message?.includes("ลงทะเบียน") ||
+          n.message?.includes("สมัคร") ||
+          n.message?.includes("ผู้ใช้ใหม่") ||
+          n.type === "user_registration" || // หากมี field type
+          n.category === "registration" // หากมี field category
+      );
+    }
+
+    return notifArr;
+  };
+
+  // นับจำนวนการแจ้งเตือนแต่ละประเภท
+  const getNotificationCounts = () => {
+    const total = notifArr.length;
+    const newUsers = notifArr.filter(
+      (n) =>
+        n.title?.includes("ลงทะเบียน") ||
+        n.title?.includes("สมัคร") ||
+        n.title?.includes("ผู้ใช้ใหม่") ||
+        n.message?.includes("ลงทะเบียน") ||
+        n.message?.includes("สมัคร") ||
+        n.message?.includes("ผู้ใช้ใหม่") ||
+        n.type === "user_registration" ||
+        n.category === "registration"
+    ).length;
+    const complaints = total - newUsers;
+
+    // นับ unread สำหรับแต่ละประเภท
+    const unreadTotal = notifArr.filter((n) => !n.is_read).length;
+    const unreadNewUsers = notifArr.filter(
+      (n) =>
+        !n.is_read &&
+        (n.title?.includes("ลงทะเบียน") ||
+          n.title?.includes("สมัคร") ||
+          n.title?.includes("ผู้ใช้ใหม่") ||
+          n.message?.includes("ลงทะเบียน") ||
+          n.message?.includes("สมัคร") ||
+          n.message?.includes("ผู้ใช้ใหม่") ||
+          n.type === "user_registration" ||
+          n.category === "registration")
+    ).length;
+    const unreadComplaints = unreadTotal - unreadNewUsers;
+
+    return {
+      total: { count: total, unread: unreadTotal },
+      complaints: { count: complaints, unread: unreadComplaints },
+      newUsers: { count: newUsers, unread: unreadNewUsers },
+    };
+  };
+
+  const filteredNotifications = getFilteredNotifications();
+  const notificationCounts = getNotificationCounts();
 
   const groupIcons = {
     homepage: Settings,
@@ -155,14 +246,18 @@ export default function Sidebar() {
 
   const renderMenuItem = (key, IconC, submenu = []) => {
     return (
-      <Box key={key} onMouseEnter={() => setOpenSubmenu(null)} style={{ position: "relative" }}>
+      <Box
+        key={key}
+        onMouseEnter={() => setOpenSubmenu(null)}
+        style={{ position: "relative" }}
+      >
         <ListItemButton
-        onClick={(e) => {
-          setOpenSubmenu(openSubmenu === key ? null : key);
-          setActiveMenu(key);
-          const sidebarRect = sidebarRef.current.getBoundingClientRect();
-          const submenuHeight = 320;
-        }}
+          onClick={(e) => {
+            setOpenSubmenu(openSubmenu === key ? null : key);
+            setActiveMenu(key);
+            const sidebarRect = sidebarRef.current.getBoundingClientRect();
+            const submenuHeight = 320;
+          }}
         >
           <ListItemIcon className={activeMenu === key ? styles.activeIcon : ""}>
             <IconC />
@@ -171,8 +266,13 @@ export default function Sidebar() {
 
         {submenu.length > 0 && openSubmenu === key && (
           <Box
-          className={`${styles.submenu} ${openSubmenu === key ? styles.submenuVisible : ""}`}
-          style={{ left: "80px" }}  
+            className={`${styles.submenu} ${
+              openSubmenu === key ? styles.submenuVisible : ""
+            }`}
+            style={{
+              left: "80px",
+              zIndex: 999, // เพิ่ม z-index สำหรับ submenu
+            }}
             onMouseEnter={() => setOpenSubmenu(key)}
             onMouseLeave={() => setOpenSubmenu(null)}
           >
@@ -288,11 +388,19 @@ export default function Sidebar() {
               <Paper
                 ref={notificationRef}
                 className={`${stylesNoti.notificationBox} ${stylesNoti.show}`}
+                sx={{
+                  zIndex: 9999, // ให้ notification box อยู่หน้าสุด
+                  width: 380, // เพิ่มความกว้างเพื่อรองรับ tabs
+                  minHeight: 400, // กำหนดความสูงขั้นต่ำ
+                  maxHeight: 500, // กำหนดความสูงสูงสุด
+                  display: "flex",
+                  flexDirection: "column",
+                }}
               >
                 {/* Header */}
-                <Box className={stylesNoti.notifHeader}>
+                <Box className={stylesNoti.notifHeader} sx={{ flexShrink: 0 }}>
                   <Typography variant="h6">การแจ้งเตือน</Typography>
-                  {unreadExists && (
+                  {filteredNotifications.some((n) => !n.is_read) && (
                     <Typography
                       variant="body2"
                       sx={{
@@ -302,7 +410,7 @@ export default function Sidebar() {
                       }}
                       onClick={async () => {
                         try {
-                          const unread = notifications.filter(
+                          const unread = filteredNotifications.filter(
                             (n) => !n.is_read
                           );
                           if (!unread.length) return;
@@ -322,47 +430,160 @@ export default function Sidebar() {
                   )}
                 </Box>
 
-                <hr style={{ margin: "8px 0", borderColor: "#d1d5db" }} />
+                {/* Filter Tabs */}
+                <Box
+                  sx={{
+                    borderBottom: 1,
+                    borderColor: "divider",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Tabs
+                    value={notificationFilter}
+                    onChange={(e, newValue) => setNotificationFilter(newValue)}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    sx={{
+                      minHeight: 36,
+                      "& .MuiTab-root": {
+                        minHeight: 36,
+                        fontSize: "11px",
+                        textTransform: "none",
+                        minWidth: "auto",
+                        padding: "6px 8px",
+                      },
+                    }}
+                  >
+                    <Tab
+                      label={
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <span>ทั้งหมด</span>
+                          {notificationCounts.total.unread > 0 && (
+                            <Badge
+                              badgeContent={notificationCounts.total.unread}
+                              color="error"
+                              sx={{
+                                "& .MuiBadge-badge": {
+                                  fontSize: "10px",
+                                  height: 16,
+                                  minWidth: 16,
+                                },
+                              }}
+                            />
+                          )}
+                        </Box>
+                      }
+                    />
+                    <Tab
+                      label={
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <span>เรื่องร้องเรียน</span>
+                          {notificationCounts.complaints.unread > 0 && (
+                            <Badge
+                              badgeContent={
+                                notificationCounts.complaints.unread
+                              }
+                              color="error"
+                              sx={{
+                                "& .MuiBadge-badge": {
+                                  fontSize: "10px",
+                                  height: 16,
+                                  minWidth: 16,
+                                },
+                              }}
+                            />
+                          )}
+                        </Box>
+                      }
+                    />
+                    <Tab
+                      label={
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <span>ผู้ใช้ใหม่</span>
+                          {notificationCounts.newUsers.unread > 0 && (
+                            <Badge
+                              badgeContent={notificationCounts.newUsers.unread}
+                              color="error"
+                              sx={{
+                                "& .MuiBadge-badge": {
+                                  fontSize: "10px",
+                                  height: 16,
+                                  minWidth: 16,
+                                },
+                              }}
+                            />
+                          )}
+                        </Box>
+                      }
+                    />
+                  </Tabs>
+                </Box>
 
                 {/* Notifications List */}
-                {notifications.length > 0 ? (
-                  notifications.map((n, i) => (
-                    <React.Fragment key={n.id ?? i}>
-                      <Box
-                        className={stylesNoti.notifItem}
-                        onClick={() => {
-                          if (n.redirect_url) {
-                            router.push(n.redirect_url);
-                            setShowNotifications(false);
-                          }
-                        }}
-                      >
-                        {!n.is_read && <Box className={stylesNoti.notifDot} />}
-                        <Box className={stylesNoti.notifContent}>
-                          <div className={stylesNoti.notifTitle}>{n.title}</div>
-                          <div className={stylesNoti.notifMessage}>
-                            {n.message}
-                          </div>
-                          <div className={stylesNoti.notifTime}>
-                            {formatElapsedThaiTime(n.created_at)}
-                          </div>
+                <Box
+                  sx={{
+                    flex: 1, // ใช้พื้นที่ที่เหลือทั้งหมด
+                    overflowY: "auto",
+                    minHeight: 280, // ความสูงขั้นต่ำของรายการ
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  {filteredNotifications.length > 0 ? (
+                    filteredNotifications.map((n, i) => (
+                      <React.Fragment key={n.id ?? i}>
+                        <Box
+                          className={stylesNoti.notifItem}
+                          onClick={() => {
+                            if (n.redirect_url) {
+                              router.push(n.redirect_url);
+                              setShowNotifications(false);
+                            }
+                          }}
+                        >
+                          {!n.is_read && (
+                            <Box className={stylesNoti.notifDot} />
+                          )}
+                          <Box className={stylesNoti.notifContent}>
+                            <div className={stylesNoti.notifTitle}>
+                              {n.title}
+                            </div>
+                            <div className={stylesNoti.notifMessage}>
+                              {n.message}
+                            </div>
+                            <div className={stylesNoti.notifTime}>
+                              {formatElapsedThaiTime(n.created_at)}
+                            </div>
+                          </Box>
                         </Box>
-                      </Box>
-                      {i < notifications.length - 1 && (
-                        <hr
-                          style={{ margin: "8px 0", borderColor: "#e0e0e0" }}
-                        />
-                      )}
-                    </React.Fragment>
-                  ))
-                ) : (
-                  <Typography
-                    variant="body2"
-                    sx={{ mt: 2, textAlign: "center", color: "#aaa" }}
-                  >
-                    ไม่พบข้อมูลการแจ้งเตือน
-                  </Typography>
-                )}
+                        {i < filteredNotifications.length - 1 && (
+                          <hr
+                            style={{ margin: "8px 0", borderColor: "#e0e0e0" }}
+                          />
+                        )}
+                      </React.Fragment>
+                    ))
+                  ) : (
+                    <Box
+                      sx={{
+                        flex: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minHeight: 200,
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ textAlign: "center", color: "#aaa" }}
+                      >
+                        {notificationFilter === 0 && "ไม่พบข้อมูลการแจ้งเตือน"}
+                        {notificationFilter === 1 && "ไม่พบเรื่องร้องเรียนใหม่"}
+                        {notificationFilter === 2 && "ไม่พบผู้ใช้ลงทะเบียนใหม่"}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
               </Paper>
             )}
           </Box>
