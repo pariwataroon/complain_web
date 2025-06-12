@@ -90,7 +90,9 @@
     font-size: 1rem;
     margin-bottom: 8px;
     letter-spacing: 0.1px;
+    
 }
+
 
 .required {
     color: #ef4444;
@@ -99,35 +101,36 @@
 }
 
 .selectField {
-    .MuiOutlinedInput-root {
-        border-radius: 16px;
-        background: #ffffff;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  :global(.MuiOutlinedInput-root) {
+    border-radius: 16px;
+    background: #ffffff;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
-        &:hover:not(.Mui-disabled) {
-            border-color: #93c5fd;
-            box-shadow: 0 4px 12px rgba(10, 44, 189, 0.08);
-            transform: translateY(-1px);
-        }
-
-        &.Mui-focused:not(.Mui-disabled) {
-            border-color: #0a2cbd;
-            box-shadow: 0 0 0 3px rgba(10, 44, 189, 0.1), 0 6px 20px rgba(10, 44, 189, 0.15);
-            transform: translateY(-1px);
-        }
-
-        &.Mui-disabled {
-            background-color: #f8fafc;
-            border-color: #e2e8f0;
-            opacity: 0.7;
-        }
-
-        .MuiOutlinedInput-notchedOutline {
-            border: none;
-        }
+    &:hover:not(.Mui-disabled) {
+      border-color: #93c5fd;
+      box-shadow: 0 4px 12px rgba(10, 44, 189, 0.08);
+      transform: translateY(-1px);
     }
+
+    &.Mui-focused:not(.Mui-disabled) {
+      border-color: #0a2cbd;
+      box-shadow: 0 0 0 3px rgba(10, 44, 189, 0.1),
+        0 6px 20px rgba(10, 44, 189, 0.15);
+      transform: translateY(-1px);
+    }
+
+    &.Mui-disabled {
+      background-color: #f8fafc;
+      border-color: #e2e8f0;
+      opacity: 0.7;
+    }
+
+    .MuiOutlinedInput-notchedOutline {
+      border: none;
+    }
+  }
 
     .MuiSelect-select {
         padding: 18px 20px;
@@ -167,63 +170,35 @@
 }
 
 .textAreaField {
-    .MuiOutlinedInput-root {
-        border-radius: 16px;
-        background: #ffffff;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  :global(.MuiOutlinedInput-root) {
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-        &:hover:not(.Mui-disabled) {
-            border-color: #93c5fd;
-            box-shadow: 0 4px 12px rgba(10, 44, 189, 0.08);
-            transform: translateY(-1px);
-        }
-
-        &.Mui-focused:not(.Mui-disabled) {
-            border-color: #0a2cbd;
-            box-shadow: 0 0 0 3px rgba(10, 44, 189, 0.1), 0 6px 20px rgba(10, 44, 189, 0.15);
-            transform: translateY(-1px);
-        }
-
-        &.Mui-disabled {
-            background-color: #f8fafc;
-            border-color: #e2e8f0;
-            opacity: 0.7;
-        }
-
-        .MuiOutlinedInput-notchedOutline {
-            border: none;
-        }
+    &:hover:not(.Mui-disabled) {
+      border-color: #93c5fd;
+      box-shadow: 0 4px 12px rgba(10, 44, 189, 0.08);
+      transform: translateY(-1px);
     }
 
-    .MuiInputBase-input {
-        padding: 18px 20px;
-        font-size: 1rem;
-        color: #1e293b;
-        line-height: 1.7;
-        font-weight: 400;
-        resize: none;
-
-        &::placeholder {
-            color: #94a3b8;
-            opacity: 1;
-            font-style: italic;
-        }
-
-        &.Mui-disabled {
-            color: #64748b;
-
-            &::placeholder {
-                color: #94a3b8;
-            }
-        }
+    &.Mui-focused:not(.Mui-disabled) {
+      border-color: #0a2cbd;
+      box-shadow: 0 0 0 3px rgba(10, 44, 189, 0.1),
+        0 6px 20px rgba(10, 44, 189, 0.15);
+      transform: translateY(-1px);
     }
 
-    .MuiInputLabel-root {
-        display: none;
+    &.Mui-disabled {
+      background-color: #f8fafc;
+      border-color: #e2e8f0;
+      opacity: 0.7;
     }
 
+    .MuiOutlinedInput-notchedOutline {
+      border: none;
+    }
     .MuiFormHelperText-root {
         color: #ef4444;
         font-weight: 500;
@@ -231,7 +206,9 @@
         margin-top: 8px;
         font-size: 0.875rem;
     }
+  }
 }
+
 
 .errorText {
     color: #ef4444 !important;
@@ -251,23 +228,29 @@
 }
 
 .cancelButton {
-    min-width: 120px;
-    padding: 14px 32px;
-    border-radius: 50px;
-    font-weight: 600;
+    min-width: 160px;
+    padding: 14px 36px;
+    border-radius: 16px;
+    font-weight: 500;
     font-size: 1rem;
     text-transform: none;
-    border: 2px solid #0a2cbd;
-    color: #0a2cbd;
-    background: #ffffff;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    letter-spacing: 0.2px;
+    background: #ffffff; // สีพื้นหลังขาว
+    color: #0ea5e9; // ตัวหนังสือสีน้ำเงิน
+    border: 2px solid #0ea5e9; // ขอบสีน้ำเงิน
+    transition: all 0.2s ease;
+    letter-spacing: 0.1px;
+    box-shadow: 0 2px 8px rgba(10, 44, 189, 0.1); // เงาบางๆ
 
     &:hover:not(:disabled) {
         background: #f0f9ff;
-        border-color: #0920a5;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(10, 44, 189, 0.15);
+        border-color: #0284c7;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(10, 44, 189, 0.2);
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(0);
+        background: #e0ecff;
     }
 
     &:disabled {
@@ -283,36 +266,37 @@
 .submitButton {
     min-width: 160px;
     padding: 14px 36px;
-    border-radius: 8px; // เปลี่ยนจาก 50px เป็น 8px ให้ดูเป็นทางการ
-    font-weight: 500; // ลดจาก 600 ให้ดูไม่หนักเกินไป
+    border-radius: 16px;
+    font-weight: 500;
     font-size: 1rem;
     text-transform: none;
-    background: #2563eb; // สีน้ำเงินเรียบๆ แบบราชการ
+    background: #2563eb;
     color: #ffffff;
     border: none;
-    transition: all 0.2s ease; // ลดเวลา transition ให้ดูเรียบ
-    letter-spacing: 0.1px; // ลดระยะห่างตัวอักษร
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15); // เงาเบาๆ
+    transition: all 0.2s ease;
+    letter-spacing: 0.1px;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
 
     &:hover:not(:disabled) {
-        background: #c8d5f8; // สีเข้มขึ้นนิดหน่อยตอน hover
-        transform: translateY(-1px); // ลดการเคลื่อนไหว
+        background: #c8d5f8;
+        transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
 
     &:active:not(:disabled) {
         transform: translateY(0);
-        background: #1e40af; // สีเข้มอีกนิดตอนกด
+        background: #1e40af;
     }
 
     &:disabled {
-        background: #94a3b8; // สีเทาตอน disabled
+        background: #94a3b8;
         color: #f8fafc;
         cursor: not-allowed;
         transform: none;
         box-shadow: 0 1px 4px rgba(148, 163, 184, 0.15);
     }
 }
+
 
 // Enhanced focus styles for accessibility
 .selectField .MuiOutlinedInput-root.Mui-focused,
