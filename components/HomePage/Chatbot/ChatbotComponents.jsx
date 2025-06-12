@@ -25,7 +25,7 @@ import {
   closeAlert,
   alertError,
   alertSuccess,
-  showConfirm,
+  showConfirm2,
 
 } from "@utils/Alerts";
 import Image from "next/image";
@@ -62,11 +62,15 @@ const ChatbotComponents = () => {
   };
 
   const handleDeleteClick = async (index) => {
-  const confirm = await showConfirm(
-    "ลบคำถาม",
-    `การลบคำถามจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
+  const confirm = await showConfirm2(
+    `<span style="color:#932626;">ลบคำถาม</span>`,
+    `<div><strong style="color:#932626;">การลบคำถามจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
     ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก<br /><br />
-    ยืนยันการลบคำถามนี้หรือไม่?`
+    ยืนยันการลบคำถามนี้หรือไม่?</strong>
+        </div>`,
+    "ยืนยัน",
+    "ยกเลิก",
+    800
   );
 
   if (confirm) {
@@ -287,7 +291,7 @@ const ChatbotComponents = () => {
                                   >
                         <Image
                                     src="/icons/PencilWhite.png"
-                                    alt="Delete User"
+                                    alt=""
                                     width={36}
                                     height={36}
                                   />
@@ -317,7 +321,7 @@ const ChatbotComponents = () => {
                                 >
                                   <Image
                                     src="/icons/binWhite.png"
-                                    alt="Delete User"
+                                    alt=""
                                     width={36}
                                     height={36}
                                   />

@@ -1,25 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
-  Box,
-  Button,
-  Container,
-  Stack,
-  Typography,
-  TextField,
-  Checkbox,
-  FormControlLabel,
-  Grid,
-  useMediaQuery,
-  useTheme,
+  Box, Button, Container, Stack, Typography, TextField, Checkbox, FormControlLabel,
+  Grid, useMediaQuery, useTheme, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions
 } from '@mui/material';
 import { useRouter } from 'next/router';
 import dayjs from 'dayjs';
 import DateThaiPickerService from '@services/DateThaiPickerService/DateThaiPickerService';
-import BreadcrumbsService from '@services/BreadCrumbs/breadcrumbs';
+import BreadcrumbsServiceF from '@services/BreadCrumbs/breadcrumbsFunction';
 import RichTextEditor from '@services/RichTextEditor/RichTextEditor';
 import ImageUpload from '@services/ImageUpload/ImageUpload';
-
-export default function NewDetails() {
+import { showConfirm2, } from "@utils/Alerts";
+export default function NewsDetails() {
   const router = useRouter();
   const { query, isReady } = router;
   const { id, method, title: qTitle, content: qContent, url: qUrl, pinTop: qPinTop, publish: qPublish, expireDate: qExpireDate, img: qImg } = query;
@@ -34,7 +25,7 @@ export default function NewDetails() {
   const [publish, setPublish] = useState(true);
   const [expireDate, setExpireDate] = useState(dayjs().add(21, 'day'));
   const [images, setImages] = useState([]);
-
+  const [isDirty, setIsDirty] = useState(false);
   useEffect(() => {
     if (method === 'EditNew' && isReady) {
       setTitle(qTitle || '');
@@ -46,6 +37,69 @@ export default function NewDetails() {
       setImages(qImg ? [qImg] : []);
     }
   }, [method, isReady]);
+
+  useEffect(() => {
+    if (method === 'EditNew' && isReady) {
+      const isChanged =
+        title !== (qTitle || '') ||
+        content !== (qContent || '') ||
+        url !== (qUrl || '') ||
+        pinTop !== (qPinTop === 'true' || qPinTop === true) ||
+        publish !== (qPublish === 'true' || qPublish === true) ||
+        !dayjs(expireDate).isSame(qExpireDate ? dayjs(qExpireDate) : dayjs().add(21, 'day'), 'day') ||
+        JSON.stringify(images) !== JSON.stringify(qImg ? [qImg] : []);
+      setIsDirty(isChanged);
+    }
+  }, [title, content, url, pinTop, publish, expireDate, images]);
+
+  useEffect(() => {
+  if (method !== 'EditNew') return;
+
+  const handleRouteChangeStart = (url) => {
+    if (!isDirty) return;
+
+    router.events.off('routeChangeStart', handleRouteChangeStart);
+
+    showConfirm2(
+      `<span style="color:#932626;">ยกเลิกการแสดงข่าวสาร</span>`,
+      `<div><strong style="color:#932626;">การยกเลิกแสดงข่าวสารจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
+       ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก<br /><br />
+       ยืนยันการยกเลิกแสดงข่าวสารนี้หรือไม่?</strong>
+        </div>`,
+        "ยืนยัน",
+        "ยกเลิก",
+        800
+    ).then((confirmed) => {
+      if (confirmed) {
+        setIsDirty(false);
+        router.push(url);
+      } else {
+        router.events.on('routeChangeStart', handleRouteChangeStart);
+      }
+    });
+
+    router.events.emit('routeChangeError');
+    throw 'Route change aborted due to unsaved changes';
+  };
+
+  router.events.on('routeChangeStart', handleRouteChangeStart);
+  return () => {
+    router.events.off('routeChangeStart', handleRouteChangeStart);
+  };
+}, [isDirty, method, router.events]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isDirty]);
+
 
   const handleSubmit = () => {
     const formattedExpire = dayjs(expireDate).isValid() ? dayjs(expireDate).format('D MMM YYYY') : '-';
@@ -73,31 +127,72 @@ export default function NewDetails() {
     }
 
     sessionStorage.setItem('newsList', JSON.stringify(existing));
+    setIsDirty(false);
     router.push('/admin/homepage/news');
   };
 
-  const breadcrumbItems = [
-    {
-      label: "กำหนดข่าวสาร",
-      icon: (
-        <img
-          src="/icons/config.png"
-          alt="icon"
-          style={{ width: "24px", height: "24px", marginBottom: "-8px" }}
-        />
-      ),
-      url: "/admin/homepage/news",
-    },
-    {
-      label: method === "EditNew" ? "แก้ไขข่าวสาร" : "เพิ่มข่าวสาร",
-    },
-  ];
+  const handleBreadcrumbClick = async (url) => {
+  if (!isDirty) {
+    router.push(url);
+    return;
+  }
+
+  const confirmed = await showConfirm2(
+    `<span style="color:#932626;">ยกเลิกการแสดงข่าวสาร</span>`,
+    `<div><strong style="color:#932626;">การยกเลิกแสดงข่าวสารจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
+    ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก<br /><br />
+    ยืนยันการยกเลิกแสดงข่าวสารนี้หรือไม่?</strong>
+        </div>`,
+        "ยืนยัน",
+        "ยกเลิก",
+        800
+  );
+
+  if (confirmed) {
+    setIsDirty(false);
+    router.push(url);
+  }
+};
+
+const breadcrumbItems = [
+  {
+    label: (
+      <span style={{ color: "#1120A3" }}>
+        กำหนดข่าวสาร
+      </span>
+    ),
+    icon: (
+      <img
+        src="/icons/config.png"
+        alt="icon"
+        style={{
+          width: "24px",
+          height: "24px",
+          marginBottom: "-8px",
+          borderRadius: "50%",
+          border: "2px solid #1120A3",
+          padding: "2px",
+        }}
+      />
+    ),
+    onClick: () => handleBreadcrumbClick("/admin/homepage/news"),
+  },
+  {
+  label: (
+    <span style={{ color: "#1120A3" }}>
+      {method === "EditNew" ? "แก้ไขข่าวสาร" : "เพิ่มข่าวสาร"}
+    </span>
+  ),
+}
+
+];
+
 
   return (
     <Box sx={{ background: '#f5f7fb', py: isSmDown ? 2 : 4, minHeight: '100vh' }}>
       <Container maxWidth="lg" sx={{ maxWidth: { xs: '100%', md: '1400px' }, px: { xs: 1, sm: 2, md: 4 } }}>
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: isSmDown ? 1 : 2 }}>
-          <BreadcrumbsService items={breadcrumbItems}/>
+          <BreadcrumbsServiceF items={breadcrumbItems}/>
         </Stack>
         <Box sx={{
           border: '2px solid #007AFF',

@@ -2,7 +2,7 @@ import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import DefineNewsComponents from "@components/HomePage/News/NewsComponents";
-import NewDetails from "@components/HomePage/News/NewDetails";
+import NewsDetails from "@components/HomePage/News/NewsDetails";
 
 const News = () => {
   const router = useRouter();
@@ -24,9 +24,9 @@ const News = () => {
     case "New":
       return <DefineNewsComponents />;
     case "CreateNew":
-      return <NewDetails mode="create" />;
+      return <NewsDetails mode="create" />;
     case "EditNew":
-      return <NewDetails mode="edit" />;
+      return <NewsDetails mode="edit" />;
     default:
       return null;
   }
