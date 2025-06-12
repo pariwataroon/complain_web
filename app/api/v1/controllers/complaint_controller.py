@@ -153,7 +153,7 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
             notification_message = create_complaint_notification_message(
                 new_complaint, complainant_name, channel_name, extracted_data.get("complaint_type", "")
             )
-            print(f"Notification message: {notification_message}")
+
             # สร้าง notification
             notification_data = NotificationCreate(
                 title="เรื่องร้องเรียนใหม่",
