@@ -310,21 +310,21 @@ const AddCase = async (submitData) => {
           <soap:Body>
             <AddCase xmlns="http://tempuri.org/">
               <token_id>${token_id}</token_id>
-              <case_code>${case_code}</case_code>
-              <type_id>404</type_id>
-              <status_id>1</status_id>
+              <case_code>${submitData.case_code}</case_code>
+              <type_id>${submitData.type_id}</type_id>
+              <status_id>${submitData.status_id}</status_id>
               <organization_id>${org_id}</organization_id>
-              <channel_id>${channel_id}</channel_id>
-              <detail>${detail}</detail>
-              <province_id>${province_id}</province_id>
-              <district_id>${district_id}</district_id>
-              <subdistrict_id>${subdistrict_id}</subdistrict_id>
+              <channel_id>${submitData.channel_id}</channel_id>
+              <detail>${submitData.complaint_detail}</detail>
+              <province_id>${submitData.province_id}</province_id>
+              <district_id>${submitData.district_id}</district_id>
+              <subdistrict_id>${submitData.subdistrict_id}</subdistrict_id>
               <contact_citizen_id></contact_citizen_id>
-              <contact_name>${contact_name}</contact_name>
-              <contact_lastname>${contact_lastname}</contact_lastname>
-              <contact_telephone>${contact_telephone}</contact_telephone>
-              <created_date>${created_date}</created_date>
-              <updated_date>${updated_date}</updated_date>
+              <contact_name>${submitData.reporter_first_name}</contact_name>
+              <contact_lastname>${submitData.reporter_last_name}</contact_lastname>
+              <contact_telephone>${submitData.reporter_phone}</contact_telephone>
+              <created_date>${submitData.created_date}</created_date>
+              <updated_date>${submitData.updated_date}</updated_date>
             </AddCase>
           </soap:Body>
         </soap:Envelope>`,
@@ -609,6 +609,76 @@ const GetCaseStatus = async () => {
   }
 };
 
+const GetCaseType = async () => {
+  try {
+    const response = await soapInstance.post(
+      process.env.NEXT_PUBLIC_OPM_API_LISTOFVALUES,
+      `<?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+            <GetCaseType xmlns="http://tempuri.org/">
+              <ref_id>1</ref_id>
+              <is_thai>true</is_thai>
+            </GetCaseType>
+          </soap:Body>
+        </soap:Envelope>`,
+      {
+        soapActionSuffix: "GetCaseType",
+      }
+    );
+
+    let xmlString = response.data;
+
+    if (typeof xmlString === "string") {
+      if (typeof window !== "undefined") {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+        const resultElement =
+          xmlDoc.getElementsByTagName("GetCaseTypeResult")[0];
+
+        if (resultElement && resultElement.textContent) {
+          const statuses = JSON.parse(resultElement.textContent);
+
+          return {
+            success: true,
+            data: Array.isArray(statuses)
+              ? statuses.map(({ val, text }) => ({ val, text }))
+              : [],
+          };
+        }
+      } else {
+        const match = xmlString.match(
+          /<GetCaseTypeResult>(.*?)<\/GetCaseTypeResult>/
+        );
+        if (match && match[1]) {
+          const statuses = JSON.parse(match[1]);
+
+          return {
+            success: true,
+            data: Array.isArray(statuses)
+              ? statuses.map(({ val, text }) => ({ val, text }))
+              : [],
+          };
+        }
+      }
+    }
+
+    return {
+      success: false,
+      message: "No data received",
+      data: [],
+    };
+  } catch (error) {
+    console.error("Error fetching case types:", error);
+    return {
+      success: false,
+      message: error.message || "Unknown error",
+      data: [],
+    };
+  }
+};
+
+
 export {
   Encode,
   GetTimelineHeader,
@@ -620,4 +690,5 @@ export {
   GetSubDistricts,
   GetOperatingChannel,
   GetCaseStatus,
+  GetCaseType,
 };

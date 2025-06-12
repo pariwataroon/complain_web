@@ -26,10 +26,16 @@
 }
 
 .header {
-  margin-bottom: 32px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  margin: -32px -32px 32px -32px;
+  padding: 32px 32px 24px 32px;
+  border-bottom: 3px solid #dee2e6;
   text-align: center;
-  padding-bottom: 24px;
-  border-bottom: 2px solid #e9ecef;
+
+  @media (max-width: 768px) {
+    margin: -24px -16px 24px -16px;
+    padding: 24px 16px 16px 16px;
+  }
 }
 
 .title {
@@ -67,6 +73,208 @@
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
+}
+
+// Enhanced Text field styles - matching SelectFieldPAAOPM exactly
+.textField {
+  width: 100%;
+  margin-bottom: 0;
+
+  .MuiInputBase-root {
+    height: 40px;
+    border-radius: 12px;
+    color: #000000;
+    background-color: #ffffff;
+    font-family: inherit;
+    border: none;
+
+    &.Mui-focused {
+      .MuiOutlinedInput-notchedOutline {
+        border-color: #1120A3;
+        border-width: 2px;
+        box-shadow: 0 0 0 3px rgba(17, 32, 163, 0.15);
+      }
+    }
+
+    .MuiOutlinedInput-notchedOutline {
+      border-color: #1120A3;
+      border-width: 1.5px;
+      border-radius: 12px;
+    }
+
+    &:hover {
+      .MuiOutlinedInput-notchedOutline {
+        border-color: #0d1a85;
+      }
+    }
+
+    &.Mui-error .MuiOutlinedInput-notchedOutline {
+      border-color: #ef4444;
+      border-width: 2px;
+    }
+
+    &.Mui-disabled {
+      background-color: #f8fafc;
+      opacity: 0.6;
+
+      .MuiOutlinedInput-notchedOutline {
+        border-color: #e2e8f0;
+      }
+    }
+  }
+
+  .MuiInputBase-input {
+    padding: 11px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #000000;
+    line-height: 1.4;
+
+    &::placeholder {
+      color: #9ca3af;
+      opacity: 1;
+      font-style: normal;
+    }
+
+    &:disabled {
+      color: #6b7280;
+      background-color: transparent;
+    }
+  }
+}
+
+// Enhanced Textarea field styles - matching SelectFieldPAAOPM exactly
+.textareaField {
+  width: 100%;
+  margin-bottom: 0;
+
+  .MuiInputBase-root {
+    border-radius: 12px;
+    color: #000000;
+    background-color: #ffffff;
+    font-family: inherit;
+    border: none;
+    align-items: flex-start;
+
+    &.Mui-focused {
+      .MuiOutlinedInput-notchedOutline {
+        border-color: #1120A3;
+        border-width: 2px;
+        box-shadow: 0 0 0 3px rgba(17, 32, 163, 0.15);
+      }
+    }
+
+    .MuiOutlinedInput-notchedOutline {
+      border-color: #1120A3;
+      border-width: 1.5px;
+      border-radius: 12px;
+    }
+
+    &:hover {
+      .MuiOutlinedInput-notchedOutline {
+        border-color: #0d1a85;
+      }
+    }
+
+    &.Mui-error .MuiOutlinedInput-notchedOutline {
+      border-color: #ef4444;
+      border-width: 2px;
+    }
+
+    &.Mui-disabled {
+      background-color: #f8fafc;
+      opacity: 0.6;
+
+      .MuiOutlinedInput-notchedOutline {
+        border-color: #e2e8f0;
+      }
+    }
+  }
+
+  .MuiInputBase-input {
+    padding: 12px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    line-height: 1.5;
+    color: #000000;
+    min-height: 100px !important;
+    resize: vertical;
+
+    &::placeholder {
+      color: #9ca3af;
+      opacity: 1;
+      font-style: normal;
+    }
+
+    &:disabled {
+      color: #6b7280;
+      background-color: transparent;
+    }
+  }
+}
+
+// Enhanced Field label styles - exactly matching SelectFieldPAAOPM
+.fieldLabel {
+  color: #334155;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: block;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.4;
+
+  &.disabled {
+    opacity: 0.6;
+  }
+}
+
+// Enhanced Required asterisk - exactly matching SelectFieldPAAOPM
+.requiredAsterisk {
+  color: #ef4444;
+  font-weight: bold;
+  margin-left: 4px;
+  font-size: 14px;
+}
+
+// Enhanced Form control wrapper - exactly matching SelectFieldPAAOPM spacing
+.formControl {
+  width: 100%;
+  margin-bottom: 16px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// Additional styling to match the SelectField appearance exactly
+.textField,
+.textareaField {
+  .MuiOutlinedInput-root {
+    &.MuiInputBase-sizeSmall {
+      font-size: 14px;
+    }
+  }
+
+  .MuiInputLabel-root {
+    display: none; // Hide Material-UI label since we use custom Typography
+  }
+
+  .MuiFormHelperText-root {
+    margin-left: 6px;
+    margin-top: 8px;
+    font-size: 0.875rem;
+
+    &.Mui-error {
+      color: #ef4444;
+      font-weight: 500;
+
+      &::before {
+        content: '⚠';
+        margin-right: 6px;
+        font-size: 1rem;
+      }
+    }
+  }
 }
 
 .summaryBox {
@@ -211,6 +419,44 @@
   }
 }
 
+// Focus states for accessibility - matching government standards
+.textField,
+.textareaField {
+  .MuiInputBase-root {
+    &:focus-within {
+      outline: none;
+    }
+  }
+}
+
+// Error state enhancements
+.formControl {
+  &.error {
+    .fieldLabel {
+      color: #ef4444;
+    }
+  }
+}
+
+// Success state
+.formControl {
+  &.success {
+    .fieldLabel {
+      color: #28a745;
+    }
+
+    .textField,
+    .textareaField {
+      .MuiInputBase-root {
+        .MuiOutlinedInput-notchedOutline {
+          border-color: #28a745;
+          border-width: 1.5px;
+        }
+      }
+    }
+  }
+}
+
 // Loading animation
 @keyframes pulse {
 
@@ -350,6 +596,22 @@
 }
 
 @media (max-width: 768px) {
+  .fieldLabel {
+    font-size: 13px;
+  }
+
+  .textField,
+  .textareaField {
+    .MuiInputBase-input {
+      font-size: 13px;
+      padding: 10px 12px;
+    }
+  }
+
+  .textField .MuiInputBase-root {
+    height: 38px;
+  }
+
   .summaryBox {
     padding: 16px;
   }
@@ -395,6 +657,27 @@
     font-size: 14px !important;
   }
 
+  .fieldLabel {
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+
+  .textField,
+  .textareaField {
+    .MuiInputBase-input {
+      font-size: 12px;
+      padding: 8px 10px;
+    }
+  }
+
+  .textField .MuiInputBase-root {
+    height: 36px;
+  }
+
+  .formControl {
+    margin-bottom: 14px;
+  }
+
   .formFields {
     margin-bottom: 24px;
   }
@@ -414,6 +697,21 @@
 @media (prefers-contrast: high) {
   .formCard {
     border: 2px solid #000000 !important;
+  }
+
+  .textField,
+  .textareaField {
+    .MuiInputBase-root {
+      .MuiOutlinedInput-notchedOutline {
+        border-width: 2px !important;
+        border-color: #000000 !important;
+      }
+    }
+  }
+
+  .fieldLabel {
+    color: #000000 !important;
+    font-weight: 700 !important;
   }
 
   .resetButton {
@@ -464,6 +762,18 @@
     box-shadow: none !important;
     border: 1px solid #000000 !important;
     margin: 0 !important;
+  }
+
+  .textField,
+  .textareaField {
+    .MuiInputBase-root {
+      border: 1px solid #000000 !important;
+      background: white !important;
+    }
+  }
+
+  .fieldLabel {
+    color: #000000 !important;
   }
 
   .actionButtons {
@@ -523,19 +833,6 @@
     &:hover {
       background: #adb5bd;
     }
-  }
-}
-
-// Additional government-friendly styling
-.header {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  margin: -32px -32px 32px -32px;
-  padding: 32px 32px 24px 32px;
-  border-bottom: 3px solid #dee2e6;
-
-  @media (max-width: 768px) {
-    margin: -24px -16px 24px -16px;
-    padding: 24px 16px 16px 16px;
   }
 }
 

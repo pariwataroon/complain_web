@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from 'next/router';
 import {
     Box,
     Typography,
@@ -30,13 +31,30 @@ import OPMModal from "./OPMModal";
 import CitizenModal from "./CitizenModal";
 import styles from "./DetailOPM.module.scss";
 
-const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
+const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
     const theme = useTheme();
+    const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
 
     const [opmModalOpen, setOpmModalOpen] = useState(false);
     const [citizenModalOpen, setCitizenModalOpen] = useState(false);
+    const [routerItemData, setRouterItemData] = useState(null);
+    const [currentItemData, setCurrentItemData] = useState(null);
+
+    // รับข้อมูลจาก router state
+    useEffect(() => {
+        if (router.isReady) {
+            const queryData = router.query;
+
+            if (queryData) {
+                setCurrentItemData(queryData);
+            } else {
+                console.log("No router query data found");
+            }
+        }
+    }, [router.isReady]);
+
 
     const handleRowSendOPM = () => {
         setOpmModalOpen(true);
@@ -47,6 +65,10 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
     };
 
     const getFieldValue = (fieldName) => {
+        if (currentItemData && currentItemData[fieldName]) {
+            return currentItemData[fieldName];
+        }
+
         const field = caseDetails?.find((item) => item.field === fieldName);
         return field?.value || "-";
     };
@@ -112,6 +134,13 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
         }
     };
 
+    const customerName = currentItemData?.customer_name || getFieldValue("customer_name");
+    const caseCode = currentItemData?.case_code || getFieldValue("case_code");
+    const typeText = currentItemData?.type_text || getFieldValue("type_text");
+    const statusText = currentItemData?.status_text || getFieldValue("status_text");
+    const mainStatusText = currentItemData?.main_status_text || getFieldValue("main_status_text");
+    const caseId = currentItemData?.case_id || params?.case_id;
+
     if (loading) {
         return (
             <Box className={styles.loadingContainer}>
@@ -123,26 +152,28 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
         );
     }
 
-    if (!caseDetails) {
+    if (!caseDetails && !currentItemData) {
         return (
             <Box className={styles.noDataContainer}>
                 <InfoIcon className={styles.noDataIcon} />
                 <Typography variant="h6" className={styles.noDataText}>
                     ไม่พบข้อมูลคำร้อง
                 </Typography>
+                <Typography variant="body2" color="text.secondary">
+                    กรุณาเข้าถึงหน้านี้ผ่านการคลิกจากตาราง
+                </Typography>
             </Box>
         );
     }
 
-    // Get org owner list safely
     const orgOwnerList = getFieldArrayValue("list_case_org_owner");
 
     return (
         <Box className={styles.detailContainer}>
+            {/* เพิ่มชื่อลูกค้าในหัวเรื่อง */}
             <Typography variant="h4" className={styles.title}>
-                รายละเอียดคำร้อง
+                รายละเอียดคำร้อง {customerName && `- ${customerName}`}
             </Typography>
-
             {/* Main Information Card */}
             <Card className={styles.mainCard}>
                 <CardContent className={styles.cardContent}>
@@ -151,7 +182,7 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
                             <AssignmentIcon />
                         </Avatar>
                         <Typography variant="h6" className={styles.sectionTitle}>
-                            ข้อมูลหลัก
+                            ข้อมูลหลัก 
                         </Typography>
                         <Box sx={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
                             <ButtonSent
@@ -174,7 +205,7 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
                                     รหัสคำร้อง
                                 </Typography>
                                 <Typography variant="body1" className={styles.value}>
-                                    {getFieldValue("ref_id")}
+                                    {getFieldValue("ref_id") || caseId}
                                 </Typography>
                             </Box>
                         </Grid>
@@ -182,10 +213,25 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
                         <Grid item xs={12} md={6}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
-                                    รหัสคำร้อง (Code)
+                                    รหัสเรื่อง
                                 </Typography>
                                 <Typography variant="body1" className={styles.value}>
-                                    {getFieldValue("case_code")}
+                                    {caseCode}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ชื่อ
+                                </Typography>
+                                <Typography variant="body1" className={styles.value} sx={{
+                                    color: '#1976d2',
+                                    fontWeight: 'medium',
+                                    fontSize: '1.1rem'
+                                }}>
+                                    {customerName}
                                 </Typography>
                             </Box>
                         </Grid>
@@ -196,7 +242,7 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
                                     วัตถุประสงค์
                                 </Typography>
                                 <Chip
-                                    label={getFieldValue("objective_text")}
+                                    label={getFieldValue("objective_text") || typeText}
                                     className={styles.objectiveChip}
                                     icon={<CategoryIcon />}
                                 />
@@ -209,7 +255,7 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
                                     ประเภท
                                 </Typography>
                                 <Typography variant="body1" className={styles.value}>
-                                    {getFieldValue("type_text")}
+                                    {typeText}
                                 </Typography>
                             </Box>
                         </Grid>
@@ -231,13 +277,27 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
                         <Grid item xs={12} md={6}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
+                                    สถานะ
+                                </Typography>
+                                <Chip
+                                    label={statusText}
+                                    color={getStatusColor(statusText)}
+                                    className={styles.statusChip}
+                                    icon={getStatusIcon(statusText)}
+                                />
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
                                     สถานะหลัก
                                 </Typography>
                                 <Chip
-                                    label={getFieldValue("status_text")}
-                                    color={getStatusColor(getFieldValue("status_text"))}
+                                    label={mainStatusText}
+                                    color={getStatusColor(mainStatusText)}
                                     className={styles.statusChip}
-                                    icon={getStatusIcon(getFieldValue("status_text"))}
+                                    icon={getStatusIcon(mainStatusText)}
                                 />
                             </Box>
                         </Grid>
@@ -255,7 +315,6 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
                         <Typography variant="h6" className={styles.sectionTitle}>
                             ขั้นตอนการดำเนินงาน
                         </Typography>
-                        
                     </Box>
 
                     {/* Show message if no org owner data */}
@@ -393,6 +452,7 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
                 onClose={() => setOpmModalOpen(false)}
                 params={params}
                 caseDetails={caseDetails}
+                itemData={currentItemData}
             />
 
             <CitizenModal
@@ -400,6 +460,7 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate }) => {
                 onClose={() => setCitizenModalOpen(false)}
                 params={params}
                 caseDetails={caseDetails}
+                itemData={currentItemData}
             />
         </Box>
     );

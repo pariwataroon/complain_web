@@ -7,7 +7,7 @@ import {
   FormHelperText,
 } from "@mui/material";
 import styles from "./SelectFieldPAAOPM.module.scss";
-import { GetDistricts, GetSubDistricts, GetOperatingChannel, GetCaseStatus } from "@pages/api/opm/opm";
+import { GetDistricts, GetSubDistricts, GetOperatingChannel, GetCaseStatus, GetCaseType } from "@pages/api/opm/opm";
 
 const SelectFieldPAAOPM = ({
   name,
@@ -32,6 +32,7 @@ const SelectFieldPAAOPM = ({
   const [subDistricts, setSubDistricts] = useState([]);
   const [operatingChannels, setOperatingChannels] = useState([]);
   const [caseStatuses, setCaseStatuses] = useState([]);
+  const [caseTypes, setCaseTypes] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const provinceData = useMemo(() => [
@@ -115,18 +116,44 @@ const SelectFieldPAAOPM = ({
     { "ID": "54", "Name": "แม่ฮ่องสอน" }
   ], []);
 
+  // เรียก API ดึงข้อมูลประเภทของเคสเมื่อ name === "type"
+  useEffect(() => {
+    if (name === "type") {
+      const fetchCaseTypes = async () => {
+        try {
+          setLoading(true);
+
+          const result = await GetCaseType();
+          if (result && result.success && result.data && Array.isArray(result.data)) {
+            setCaseTypes(result.data);
+          } else {
+            setCaseTypes([]);
+            console.error("Failed to fetch case types:", result?.message);
+          }
+        } catch (error) {
+          console.error("Error fetching case types:", error);
+          setCaseTypes([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchCaseTypes();
+    } else if (name === "type") {
+      setCaseTypes([]);
+    }
+  }, [name]);
+
   // เรียก API ดึงข้อมูลอำเภอเมื่อมีการเลือกจังหวัด
   useEffect(() => {
     if (name === "district" && selectedProvince) {
       const fetchDistricts = async () => {
         try {
           setLoading(true);
-          console.log("Fetching districts for province:", selectedProvince); // Debug log
 
           const result = await GetDistricts(selectedProvince);
           if (result && result.success && result.data && Array.isArray(result.data)) {
             setDistricts(result.data);
-            console.log("Districts loaded:", result.data.length, "items"); // Debug log
           } else {
             setDistricts([]);
             console.error("Failed to fetch districts:", result?.message);
@@ -151,12 +178,10 @@ const SelectFieldPAAOPM = ({
       const fetchSubDistricts = async () => {
         try {
           setLoading(true);
-          console.log("Fetching sub-districts for district:", selectedDistrict); // Debug log
 
           const result = await GetSubDistricts(selectedDistrict);
           if (result && result.success && result.data && Array.isArray(result.data)) {
             setSubDistricts(result.data);
-            console.log("Sub-districts loaded:", result.data.length, "items"); // Debug log
           } else {
             setSubDistricts([]);
             console.error("Failed to fetch sub-districts:", result?.message);
@@ -181,12 +206,10 @@ const SelectFieldPAAOPM = ({
       const fetchOperatingChannels = async () => {
         try {
           setLoading(true);
-          console.log("Fetching operating channels...");
 
           const result = await GetOperatingChannel();
           if (result && result.success && result.data && Array.isArray(result.data)) {
             setOperatingChannels(result.data);
-            console.log("Operating channels loaded:", result.data.length, "items");
           } else {
             setOperatingChannels([]);
             console.error("Failed to fetch operating channels:", result?.message);
@@ -211,12 +234,10 @@ const SelectFieldPAAOPM = ({
       const fetchCaseStatuses = async () => {
         try {
           setLoading(true);
-          console.log("Fetching case statuses...");
 
           const result = await GetCaseStatus();
           if (result && result.success && result.data && Array.isArray(result.data)) {
             setCaseStatuses(result.data);
-            console.log("Case statuses loaded:", result.data.length, "items");
           } else {
             setCaseStatuses([]);
             console.error("Failed to fetch case statuses:", result?.message);
@@ -234,6 +255,11 @@ const SelectFieldPAAOPM = ({
       setCaseStatuses([]);
     }
   }, [name]);
+
+  const handleDropdownChange = (event) => {
+    const selectedValue = event.target.value;
+    onChange(selectedValue);
+  };
 
   // จัดการข้อมูล options ตาม name
   const allOptions = useMemo(() => {
@@ -272,10 +298,15 @@ const SelectFieldPAAOPM = ({
           { value: "99", label: "ยุติเรื่อง" }
         ];
         return [...apiStatuses, ...additionalStatuses];
+      case "type":
+        return caseTypes.map(caseType => ({
+          value: caseType.val,
+          label: caseType.text
+        }));
       default:
         return options;
     }
-  }, [name, provinceData, districts, subDistricts, operatingChannels, caseStatuses, options]);
+  }, [name, provinceData, districts, subDistricts, operatingChannels, caseStatuses, caseTypes, options]);
 
   const isFieldDisabled = disabled || loading;
 
@@ -291,6 +322,8 @@ const SelectFieldPAAOPM = ({
           return "กำลังโหลดข้อมูลช่องทาง...";
         case "status":
           return "กำลังโหลดข้อมูลสถานะ...";
+        case "type":
+          return "กำลังโหลดข้อมูลประเภท...";
         default:
           return "กำลังโหลด...";
       }
@@ -309,6 +342,8 @@ const SelectFieldPAAOPM = ({
         return "เลือกช่องทางดำเนินการ";
       case "status":
         return "เลือกสถานะการดำเนินการ";
+      case "type":
+        return "เลือกประเภทของเคส";
       default:
         return `เลือก${label || ""}`;
     }
@@ -348,7 +383,7 @@ const SelectFieldPAAOPM = ({
         displayEmpty
         name={name}
         value={value || ""}
-        onChange={onChange}
+        onChange={onChange || handleDropdownChange}
         disabled={isFieldDisabled}
         error={error}
         size={size}
@@ -418,7 +453,8 @@ const SelectFieldPAAOPM = ({
               {name === "subdistrict" && selectedDistrict && "ไม่พบข้อมูลตำบล"}
               {name === "channel" && "ไม่พบข้อมูลช่องทางดำเนินการ"}
               {name === "province" && "ไม่พบข้อมูลจังหวัด"}
-              {!["province", "district", "subdistrict", "channel"].includes(name) && "ไม่พบข้อมูล"}
+              {name === "type" && "ไม่พบข้อมูลประเภท"}
+              {!["province", "district", "subdistrict", "channel", "type"].includes(name) && "ไม่พบข้อมูล"}
             </span>
           </MenuItem>
         )}

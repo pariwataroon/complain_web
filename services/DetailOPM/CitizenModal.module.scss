@@ -283,33 +283,34 @@
 .submitButton {
     min-width: 160px;
     padding: 14px 36px;
-    border-radius: 50px;
-    font-weight: 600;
+    border-radius: 8px; // เปลี่ยนจาก 50px เป็น 8px ให้ดูเป็นทางการ
+    font-weight: 500; // ลดจาก 600 ให้ดูไม่หนักเกินไป
     font-size: 1rem;
     text-transform: none;
-    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    background: #2563eb; // สีน้ำเงินเรียบๆ แบบราชการ
     color: #ffffff;
     border: none;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    letter-spacing: 0.2px;
-    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.25);
+    transition: all 0.2s ease; // ลดเวลา transition ให้ดูเรียบ
+    letter-spacing: 0.1px; // ลดระยะห่างตัวอักษร
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15); // เงาเบาๆ
 
     &:hover:not(:disabled) {
-        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 10px 30px rgba(14, 165, 233, 0.35);
+        background: #c8d5f8; // สีเข้มขึ้นนิดหน่อยตอน hover
+        transform: translateY(-1px); // ลดการเคลื่อนไหว
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
 
     &:active:not(:disabled) {
         transform: translateY(0);
+        background: #1e40af; // สีเข้มอีกนิดตอนกด
     }
 
     &:disabled {
-        background: #94a3b8;
+        background: #94a3b8; // สีเทาตอน disabled
         color: #f8fafc;
         cursor: not-allowed;
         transform: none;
-        box-shadow: 0 2px 8px rgba(148, 163, 184, 0.2);
+        box-shadow: 0 1px 4px rgba(148, 163, 184, 0.15);
     }
 }
 

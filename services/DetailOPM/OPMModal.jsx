@@ -313,7 +313,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                 render={({ field, fieldState: { error } }) => (
                                     <Box className={styles.fieldContainer}>
                                         <Typography className={styles.fieldLabel}>
-                                            รายละเอียดการติดต่อ (ไม่บังคับ)
+                                            รายละเอียดการติดต่อ
                                         </Typography>
                                         <TextField
                                             multiline
@@ -323,7 +323,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                             error={!!error}
                                             helperText={error?.message}
                                             className={styles.textAreaField}
-                                            placeholder="กรอกรายละเอียดการติดต่อ (ถ้ามี)..."
+                                            placeholder="กรอกรายละเอียดการติดต่อ"
                                             disabled={isSubmitting}
                                         />
                                     </Box>

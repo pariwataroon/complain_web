@@ -1,10 +1,11 @@
 import { useRouter } from "next/router";
 import { useState, useCallback } from "react";
-import { Card, CardContent, Typography, Box, Grid, Alert, Snackbar } from "@mui/material";
+import { Card, CardContent, Typography, Box, Grid, Alert, Snackbar, FormControl, TextField } from "@mui/material";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectFieldPAAOPM from "@services/SelectFieldPAAOPM/SelectFieldPAAOPM";
 import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
+import { showConfirm, showLoading, closeAlert, alertSuccess, alertError } from "@utils/Alerts";
 import { AddCase } from "@pages/api/opm/opm";
 import styles from "./SendComplaintOPM.module.scss";
 
@@ -12,16 +13,20 @@ const SendComplaintOPM = () => {
   const router = useRouter();
   const queryParams = router.query;
 
-  // Form states
   const [selectedProvince, setSelectedProvince] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedSubDistrict, setSelectedSubDistrict] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [createdDate, setCreatedDate] = useState(new Date()); // ตั้งค่าเริ่มต้นเป็นวันที่ปัจจุบัน
-  const [updatedDate, setUpdatedDate] = useState(new Date()); // ตั้งค่าเริ่มต้นเป็นวันที่ปัจจุบัน
+  const [selectedType, setselectedType] = useState("");
+  const [createdDate, setCreatedDate] = useState(new Date());
+  const [updatedDate, setUpdatedDate] = useState(new Date());
+  const [reporterFirstName, setReporterFirstName] = useState("");
+  const [reporterLastName, setReporterLastName] = useState("");
+  const [reporterPhone, setReporterPhone] = useState("");
+  const [caseCode, setCaseCode] = useState("");
+  const [complaintDetail, setComplaintDetail] = useState("");
 
-  // UI states
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -29,134 +34,340 @@ const SendComplaintOPM = () => {
     severity: "success"
   });
 
-  // Form validation
   const isFormValid = selectedProvince && selectedDistrict && selectedSubDistrict &&
-    selectedChannel && selectedStatus && createdDate && updatedDate;
+    selectedChannel && selectedStatus && selectedType && createdDate && updatedDate &&
+    reporterFirstName && reporterLastName && reporterPhone && caseCode && complaintDetail;
 
   const handleProvinceChange = useCallback((event) => {
     const newValue = event.target.value;
     setSelectedProvince(newValue);
     setSelectedDistrict("");
     setSelectedSubDistrict("");
-    console.log("Selected Province ID:", newValue);
   }, []);
 
   const handleDistrictChange = useCallback((event) => {
     const newValue = event.target.value;
     setSelectedDistrict(newValue);
     setSelectedSubDistrict("");
-    console.log("Selected District ID:", newValue);
   }, []);
 
   const handleSubDistrictChange = useCallback((event) => {
     const newValue = event.target.value;
     setSelectedSubDistrict(newValue);
-    console.log("Selected SubDistrict ID:", newValue);
   }, []);
 
   const handleChannelChange = useCallback((event) => {
     const newValue = event.target.value;
     setSelectedChannel(newValue);
-    console.log("Selected Channel ID:", newValue);
   }, []);
 
   const handleStatusChange = useCallback((event) => {
     const newValue = event.target.value;
     setSelectedStatus(newValue);
-    console.log("Selected Status ID:", newValue);
+  }, []);
+
+  const handleTypeChange = useCallback((event) => {
+    const newValue = event.target.value;
+    setselectedType(newValue);
   }, []);
 
   const handleCreatedDateChange = useCallback((date) => {
     setCreatedDate(date);
-    console.log("Selected Created Date:", date);
   }, []);
 
   const handleUpdatedDateChange = useCallback((date) => {
     setUpdatedDate(date);
-    console.log("Selected Updated Date:", date);
   }, []);
 
-  const handleReset = useCallback(() => {
-    setSelectedProvince("");
-    setSelectedDistrict("");
-    setSelectedSubDistrict("");
-    setSelectedChannel("");
-    setSelectedStatus("");
-    setCreatedDate(new Date());
-    setUpdatedDate(new Date());
-    console.log("Form reset completed");
+  const handleReporterFirstNameChange = useCallback((event) => {
+    setReporterFirstName(event.target.value);
+  }, []);
+
+  const handleReporterLastNameChange = useCallback((event) => {
+    setReporterLastName(event.target.value);
+  }, []);
+
+  const handleReporterPhoneChange = useCallback((event) => {
+    setReporterPhone(event.target.value);
+  }, []);
+
+  const handleCaseCodeChange = useCallback((event) => {
+    setCaseCode(event.target.value);
+  }, []);
+
+  const handleComplaintDetailChange = useCallback((event) => {
+    setComplaintDetail(event.target.value);
+  }, []);
+
+  const handleReset = useCallback(async () => {
+    const confirmed = await showConfirm(
+      "ยืนยันการล้างข้อมูล",
+      "คุณต้องการล้างข้อมูลทั้งหมดหรือไม่?",
+      "ใช่, ล้างข้อมูล",
+      "ยกเลิก"
+    );
+
+    if (confirmed) {
+      setSelectedProvince("");
+      setSelectedDistrict("");
+      setSelectedSubDistrict("");
+      setSelectedChannel("");
+      setSelectedStatus("");
+      setselectedType("");
+      setCreatedDate(new Date());
+      setUpdatedDate(new Date());
+      setReporterFirstName("");
+      setReporterLastName("");
+      setReporterPhone("");
+      setCaseCode("");
+      setComplaintDetail("");
+
+      await alertSuccess("สำเร็จ", "ล้างข้อมูลเรียบร้อยแล้ว");
+    }
   }, []);
 
   const handleSubmit = useCallback(async () => {
     if (!isFormValid) {
-      setSnackbar({
-        open: true,
-        message: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        severity: "error"
-      });
+      await alertError("ข้อมูลไม่ครบถ้วน", "กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง");
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmed = await showConfirm(
+      "ยืนยันการส่งข้อมูล",
+      "คุณต้องการส่งเรื่องร้องทุกข์ไปยัง สปน. หรือไม่?",
+      "ใช่, ส่งข้อมูล",
+      "ยกเลิก"
+    );
+
+    if (!confirmed) {
       return;
     }
 
     try {
       setLoading(true);
+      showLoading("กำลังส่งข้อมูลไปยัง สปน...");
 
-      // Format dates to ISO string
+      // Format dates to YYYY-MM-DD HH:MM:SS format (local time)
       const formatDate = (date) => {
         if (!date) return null;
-        return new Date(date).toISOString();
+        const d = new Date(date);
+
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const seconds = String(d.getSeconds()).padStart(2, '0');
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
       };
 
-      // Prepare submit data
+      const formatCurrentTimestamp = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      };
+
       const submitData = {
         province_id: selectedProvince,
         district_id: selectedDistrict,
         subdistrict_id: selectedSubDistrict,
         channel_id: selectedChannel,
         status_id: selectedStatus,
+        type_id: selectedType,
         created_date: formatDate(createdDate),
         updated_date: formatDate(updatedDate),
-        case_id: queryParams.id || "", // ถ้ามี case_id จาก query params
-        user_id: "vampirebeam", // ข้อมูลจาก current user
-        submitted_at: new Date().toISOString(),
-        // เพิ่มข้อมูลอื่นๆ ตามต้องการ
-        metadata: {
-          browser_info: navigator.userAgent,
-          timestamp_utc: "2025-06-11 03:32:55",
-          form_version: "1.0"
-        }
+        case_id: queryParams.id || "",
+        user_id: "",
+        submitted_at: formatCurrentTimestamp(),
+        reporter_first_name: reporterFirstName,
+        reporter_last_name: reporterLastName,
+        reporter_phone: reporterPhone,
+        case_code: caseCode,
+        complaint_detail: complaintDetail,
       };
 
-      console.log("Submitting data:", submitData);
 
       const result = await AddCase(submitData);
 
-      if (result && result.success) {
-        setSnackbar({
-          open: true,
-          message: "บันทึกข้อมูลสำเร็จ",
-          severity: "success"
-        });
+      closeAlert();
 
-        // รอ 2 วินาทีแล้ว redirect กลับไปหน้าเดิม
-        setTimeout(() => {
+
+      const extractAddCaseResult = (xmlString) => {
+        try {
+          const regexMatch = xmlString.match(/<AddCaseResult[^>]*>(.*?)<\/AddCaseResult>/s);
+          if (regexMatch && regexMatch[1]) {
+            let content = regexMatch[1].trim();
+            content = content.replace(/^"(.*)"$/, '$1');
+            return content;
+          }
+
+          if (typeof DOMParser !== 'undefined') {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+            const addCaseResult = xmlDoc.getElementsByTagName("AddCaseResult")[0];
+            if (addCaseResult) {
+              let content = addCaseResult.textContent || addCaseResult.innerText;
+              content = content.trim();
+              content = content.replace(/^"(.*)"$/, '$1');
+              return content;
+            }
+          }
+
+          return null;
+        } catch (error) {
+          console.error("Error extracting AddCaseResult:", error);
+          return null;
+        }
+      };
+
+      let isSuccess = false;
+      let responseData = null;
+      let addCaseResult = null;
+
+      if (result) {
+        if (typeof result === 'string' && result.includes('<AddCaseResult>')) {
+          addCaseResult = extractAddCaseResult(result);
+          isSuccess = !!addCaseResult;
+          responseData = result;
+        }
+        else if (result.data && typeof result.data === 'string' && result.data.includes('<AddCaseResult>')) {
+          addCaseResult = extractAddCaseResult(result.data);
+          isSuccess = !!addCaseResult;
+          responseData = result.data;
+        }
+        else if (result.success === true) {
+          isSuccess = true;
+          responseData = result.data || result.message || result;
+          if (typeof responseData === 'string' && responseData.includes('<AddCaseResult>')) {
+            addCaseResult = extractAddCaseResult(responseData);
+          }
+        }
+        else if (result.status === 'success' || result.status === 200 || result.statusCode === 200) {
+          isSuccess = true;
+          responseData = result.data || result.message || result;
+          if (typeof responseData === 'string' && responseData.includes('<AddCaseResult>')) {
+            addCaseResult = extractAddCaseResult(responseData);
+          }
+        }
+        else if (result.AddCaseResult) {
+          addCaseResult = result.AddCaseResult;
+          isSuccess = true;
+          responseData = result;
+        }
+        else if (typeof result === 'object' && JSON.stringify(result).includes('AddCaseResult')) {
+          isSuccess = true;
+          responseData = result;
+          const resultString = JSON.stringify(result);
+          if (resultString.includes('<AddCaseResult>')) {
+            addCaseResult = extractAddCaseResult(resultString);
+          }
+        }
+      }
+
+
+      if (isSuccess || addCaseResult) {
+        let referenceId = "";
+        let caseNumber = "";
+        let successTitle = "ส่งข้อมูลสำเร็จ!";
+        let successMessage = "บันทึกข้อมูลเรียบร้อยแล้ว";
+
+        if (addCaseResult) {
+          try {
+            let cleanData = addCaseResult.replace(/^Result:/, '');
+
+            const parts = cleanData.split('|');
+            if (parts.length === 2) {
+              referenceId = parts[0].trim();
+              caseNumber = parts[1].trim();
+
+              successMessage = `
+                <div style="text-align: left; line-height: 1.8;">
+                  <p style="margin-bottom: 15px; font-size: 16px;">ส่งเรื่องร้องทุกข์ไปยัง สปน. เรียบร้อยแล้ว</p>
+                  
+                  <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
+                    <p style="margin: 0 0 10px 0; font-weight: 600; color: #495057;">
+                      📝 <strong>รหัสอ้างอิง:</strong>
+                    </p>
+                    <p style="margin: 0 0 15px 20px; font-family: monospace; font-size: 14px; color: #007bff; background: white; padding: 8px; border-radius: 4px; border: 1px solid #dee2e6;">
+                      ${referenceId}
+                    </p>
+                    
+                    <p style="margin: 0 0 10px 0; font-weight: 600; color: #495057;">
+                      🎫 <strong>เลขเคส OPM:</strong>
+                    </p>
+                    <p style="margin: 0 0 0 20px; font-family: monospace; font-size: 14px; color: #28a745; background: white; padding: 8px; border-radius: 4px; border: 1px solid #dee2e6;">
+                      ${caseNumber}
+                    </p>
+                  </div>
+                  
+                  <p style="margin-top: 15px; font-size: 14px; color: #6c757d;">
+                    💡 กรุณาเก็บรหัสอ้างอิงและเลขเคสไว้สำหรับติดตามผล
+                  </p>
+                </div>
+              `;
+            } else {
+              successMessage = `
+                <div style="text-align: left; line-height: 1.8;">
+                  <p style="margin-bottom: 15px; font-size: 16px;">ส่งเรื่องร้องทุกข์ไปยัง สปน. เรียบร้อยแล้ว</p>
+                  
+                  <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
+                    <p style="margin: 0 0 10px 0; font-weight: 600; color: #495057;">
+                      📄 <strong>ข้อมูลตอบกลับ:</strong>
+                    </p>
+                    <p style="margin: 0 0 0 20px; font-family: monospace; font-size: 12px; color: #495057; background: white; padding: 8px; border-radius: 4px; border: 1px solid #dee2e6; word-break: break-all;">
+                      ${addCaseResult}
+                    </p>
+                  </div>
+                </div>
+              `;
+            }
+          } catch (parseError) {
+            console.warn("Could not parse AddCaseResult:", parseError);
+          }
+        }
+
+        await alertSuccess(successTitle, successMessage, true);
+   
+        const shouldRedirect = await showConfirm(
+          "เสร็จสิ้น",
+          "ต้องการกลับไปหน้ารายการเรื่องร้องทุกข์หรือไม่?",
+          "กลับไปหน้ารายการ",
+          "อยู่หน้านี้ต่อ"
+        );
+
+        if (shouldRedirect) {
           router.push("/admin/edit/opm1111");
-        }, 2000);
+        }
 
       } else {
-        throw new Error(result?.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+        throw new Error("ได้รับข้อมูลตอบกลับที่ไม่คาดคิดจากเซิร์ฟเวอร์");
       }
 
     } catch (error) {
+      closeAlert();
       console.error("Submit error:", error);
-      setSnackbar({
-        open: true,
-        message: error.message || "เกิดข้อผิดพลาดในการส่งข้อมูล",
-        severity: "error"
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
       });
+
+      await alertError(
+        "เกิดข้อผิดพลาด",
+        `ไม่สามารถส่งข้อมูลได้: ${error.message || "กรุณาลองใหม่อีกครั้ง"}`
+      );
     } finally {
       setLoading(false);
     }
-  }, [isFormValid, selectedProvince, selectedDistrict, selectedSubDistrict, selectedChannel, selectedStatus, createdDate, updatedDate, queryParams.id, router]);
+  }, [isFormValid, selectedProvince, selectedDistrict, selectedSubDistrict, selectedChannel, selectedStatus, selectedType, createdDate, updatedDate, reporterFirstName, reporterLastName, reporterPhone, caseCode, complaintDetail, queryParams.id, router]);
 
   const handleCloseSnackbar = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
@@ -213,10 +424,206 @@ const SendComplaintOPM = () => {
           {/* Form Fields */}
           <Box className={styles.formFields}>
             <Grid container spacing={3}>
+              {/* Process Fields */}
+              <Grid item xs={12}>
+                <Typography variant="h6" className={styles.sectionTitle}>
+                  ข้อมูลการดำเนินการ
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <SelectFieldPAAOPM
+                  label="ช่องทางดำเนินการ"
+                  name="channel"
+                  placeholder="เลือกช่องทางดำเนินการ"
+                  value={selectedChannel}
+                  onChange={handleChannelChange}
+                  required={true}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <SelectFieldPAAOPM
+                  label="สถานะการดำเนินการ"
+                  name="status"
+                  placeholder="เลือกสถานะการดำเนินการ"
+                  value={selectedStatus}
+                  onChange={handleStatusChange}
+                  required={true}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <SelectFieldPAAOPM
+                  label="ประเภทเรื่องร้องทุกข์"
+                  name="type"
+                  placeholder="เลือกประเภทเรื่องร้องทุกข์"
+                  value={selectedType}
+                  onChange={handleTypeChange}
+                  required={true}
+                />
+              </Grid>
+
+              {/* Reporter Information Section */}
+              <Grid item xs={12}>
+                <Typography variant="h6" className={styles.sectionTitle}>
+                  ข้อมูลผู้แจ้งเหตุ
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControl className={styles.formControl} sx={{ mb: 2 }}>
+                  <Typography
+                    variant="subtitle2"
+                    className={styles.fieldLabel}
+                    sx={{
+                      color: "#334155",
+                      fontWeight: 600,
+                      mb: 1,
+                    }}
+                  >
+                    ชื่อผู้แจ้งเหตุ
+                    <span className={styles.requiredAsterisk}>*</span>
+                  </Typography>
+                  <TextField
+                    name="reporterFirstName"
+                    value={reporterFirstName}
+                    onChange={handleReporterFirstNameChange}
+                    placeholder="กรอกชื่อผู้แจ้งเหตุ"
+                    variant="outlined"
+                    size="small"
+                    required
+                    fullWidth
+                    className={styles.textField}
+                  />
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControl className={styles.formControl} sx={{ mb: 2 }}>
+                  <Typography
+                    variant="subtitle2"
+                    className={styles.fieldLabel}
+                    sx={{
+                      color: "#334155",
+                      fontWeight: 600,
+                      mb: 1,
+                    }}
+                  >
+                    นามสกุลผู้แจ้งเหตุ
+                    <span className={styles.requiredAsterisk}>*</span>
+                  </Typography>
+                  <TextField
+                    name="reporterLastName"
+                    value={reporterLastName}
+                    onChange={handleReporterLastNameChange}
+                    placeholder="กรอกนามสกุลผู้แจ้งเหตุ"
+                    variant="outlined"
+                    size="small"
+                    required
+                    fullWidth
+                    className={styles.textField}
+                  />
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControl className={styles.formControl} sx={{ mb: 2 }}>
+                  <Typography
+                    variant="subtitle2"
+                    className={styles.fieldLabel}
+                    sx={{
+                      color: "#334155",
+                      fontWeight: 600,
+                      mb: 1,
+                    }}
+                  >
+                    เบอร์โทรศัพท์ผู้แจ้งเหตุ
+                    <span className={styles.requiredAsterisk}>*</span>
+                  </Typography>
+                  <TextField
+                    name="reporterPhone"
+                    value={reporterPhone}
+                    onChange={handleReporterPhoneChange}
+                    placeholder="กรอกเบอร์โทรศัพท์ผู้แจ้งเหตุ (เช่น 02-123-4567 หรือ 081-234-5678)"
+                    variant="outlined"
+                    size="small"
+                    required
+                    type="tel"
+                    fullWidth
+                    className={styles.textField}
+                  />
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControl className={styles.formControl} sx={{ mb: 2 }}>
+                  <Typography
+                    variant="subtitle2"
+                    className={styles.fieldLabel}
+                    sx={{
+                      color: "#334155",
+                      fontWeight: 600,
+                      mb: 1,
+                    }}
+                  >
+                    รหัสเคส
+                    <span className={styles.requiredAsterisk}>*</span>
+                  </Typography>
+                  <TextField
+                    name="caseCode"
+                    value={caseCode}
+                    onChange={handleCaseCodeChange}
+                    placeholder="กรอกรหัสเรื่อง"
+                    variant="outlined"
+                    size="small"
+                    required
+                    fullWidth
+                    className={styles.textField}
+                  />
+                </FormControl>
+              </Grid>
+
+              {/* Complaint Detail Section */}
+              <Grid item xs={12}>
+                <Typography variant="h6" className={styles.sectionTitle}>
+                  รายละเอียดเรื่องร้องทุกข์
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12}>
+                <FormControl className={styles.formControl} sx={{ mb: 2 }}>
+                  <Typography
+                    variant="subtitle2"
+                    className={styles.fieldLabel}
+                    sx={{
+                      color: "#334155",
+                      fontWeight: 600,
+                      mb: 1,
+                    }}
+                  >
+                    รายละเอียดเรื่องร้องทุกข์
+                    <span className={styles.requiredAsterisk}>*</span>
+                  </Typography>
+                  <TextField
+                    name="complaintDetail"
+                    value={complaintDetail}
+                    onChange={handleComplaintDetailChange}
+                    placeholder="กรอกรายละเอียดเรื่องร้องทุกข์อย่างละเอียด เช่น สถานที่เกิดเหตุ วันเวลาที่เกิดเหตุ ผู้เกี่ยวข้อง และรายละเอียดอื่นๆ ที่เกี่ยวข้อง"
+                    variant="outlined"
+                    multiline
+                    rows={6}
+                    required
+                    fullWidth
+                    className={styles.textareaField}
+                  />
+                </FormControl>
+              </Grid>
+
               {/* Location Fields */}
               <Grid item xs={12}>
                 <Typography variant="h6" className={styles.sectionTitle}>
-                  ข้อมูลที่ตั้ง 
+                  ข้อมูลที่ตั้ง
                 </Typography>
               </Grid>
 
@@ -258,35 +665,6 @@ const SendComplaintOPM = () => {
                 />
               </Grid>
 
-              {/* Process Fields */}
-              <Grid item xs={12}>
-                <Typography variant="h6" className={styles.sectionTitle}>
-                  ข้อมูลการดำเนินการ
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <SelectFieldPAAOPM
-                  label="ช่องทางดำเนินการ"
-                  name="channel"
-                  placeholder="เลือกช่องทางดำเนินการ"
-                  value={selectedChannel}
-                  onChange={handleChannelChange}
-                  required={true}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <SelectFieldPAAOPM
-                  label="สถานะการดำเนินการ"
-                  name="status"
-                  placeholder="เลือกสถานะการดำเนินการ"
-                  value={selectedStatus}
-                  onChange={handleStatusChange}
-                  required={true}
-                />
-              </Grid>
-
               {/* Date Fields */}
               <Grid item xs={12}>
                 <Typography variant="h6" className={styles.sectionTitle}>
@@ -317,45 +695,6 @@ const SendComplaintOPM = () => {
               </Grid>
             </Grid>
           </Box>
-
-          {/* Summary Box */}
-          {isFormValid && (
-            <Box className={styles.summaryBox}>
-              <Typography variant="h6" className={styles.summaryTitle}>
-                สรุปข้อมูลที่เลือก
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="textSecondary">จังหวัด:</Typography>
-                  <Typography variant="body1" className={styles.summaryValue}>{selectedProvince}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="textSecondary">อำเภอ:</Typography>
-                  <Typography variant="body1" className={styles.summaryValue}>{selectedDistrict}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="textSecondary">ตำบล:</Typography>
-                  <Typography variant="body1" className={styles.summaryValue}>{selectedSubDistrict}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="textSecondary">ช่องทาง:</Typography>
-                  <Typography variant="body1" className={styles.summaryValue}>{selectedChannel}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="textSecondary">สถานะ:</Typography>
-                  <Typography variant="body1" className={styles.summaryValue}>{selectedStatus}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="textSecondary">วันที่สร้าง:</Typography>
-                  <Typography variant="body1" className={styles.summaryValue}>{formatDisplayDate(createdDate)}</Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="textSecondary">วันที่แก้ไข:</Typography>
-                  <Typography variant="body1" className={styles.summaryValue}>{formatDisplayDate(updatedDate)}</Typography>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
 
           {/* Action Buttons */}
           <Box className={styles.actionButtons}>

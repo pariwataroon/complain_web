@@ -89,7 +89,6 @@ const TableListOPM = ({
   };
 
   const handleSearchClick = () => {
-    console.log("Filters applied:", filters);
 
     const newFilteredData = data.filter((item) => {
       return Object.keys(filters).every((key) => {
@@ -100,7 +99,6 @@ const TableListOPM = ({
       });
     });
 
-    console.log("Filtered Data:", newFilteredData);
     setFilteredData(newFilteredData);
     setPage(0);
     if (isMobile) setFilterDrawerOpen(false);
@@ -113,11 +111,12 @@ const TableListOPM = ({
     if (isMobile) setFilterDrawerOpen(false);
   };
 
+
   const handleRowClick = (item, data) => {
     if (navigateTo) {
       router.push({
         pathname: `${navigateTo}/${item.case_id}`,
-        query: { ...data },
+        query: { ...item },
       });
     }
   };
@@ -133,9 +132,9 @@ const TableListOPM = ({
 
   const columns = [
     { name: "case_id", label: "รหัสเคส", width: 200, priority: 1 },
-    { name: "case_code", label: "รหัสโค้ด", width: 100, priority: 3 },
+    { name: "case_code", label: "รหัสเรื่อง", width: 100, priority: 3 },
     { name: "customer_name", label: "ชื่อ", width: 180, priority: 2 },
-    { name: "type_text", label: "รายละเอียดประเภทเคส", width: 120, priority: 4 },
+    { name: "type_text", label: "ประเภทเรืองร้องทุกข์", width: 120, priority: 4 },
     { name: "secret_id", label: "ระดับความลับ", width: 80, priority: 5 },
     { name: "status_text", label: "สถานะเรื่อง", width: 80, priority: 4 },
     { name: "main_status_text", label: "สถานะ", width: 160, priority: 3 },
@@ -200,7 +199,7 @@ const TableListOPM = ({
       {pagedData.map((item, idx) => (
         <Card
           key={item.case_id}
-          onClick={() => handleRowClick(item)}
+          onClick={() => handleRowClick(item, router.query)}
           sx={{
             cursor: "pointer",
             "&:hover": { backgroundColor: "#f5f7ff" },
@@ -438,7 +437,7 @@ const TableListOPM = ({
               {pagedData.map((item, idx) => (
                 <TableRow
                   key={item.case_id}
-                  onClick={() => handleRowClick(item)}
+                  onClick={() => handleRowClick(item, router.query)}
                   sx={{
                     cursor: "pointer",
                     "&:hover": { backgroundColor: "#f5f7ff" },
