@@ -1,5 +1,6 @@
 from datetime import datetime, date
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from uuid import UUID
 from typing import List, Dict, Any, Optional
 import logging
@@ -894,7 +895,6 @@ def get_complaints(
 
     # ปรับ search ให้ค้นหา complainant_name, complaint_type, complaint_subtype
     if search:
-        from sqlalchemy import or_
         from models.comp_complaint_types import ComplaintSubType
         # join กับ ComplaintSubType เพื่อค้นหาด้วยชื่อ
         query = query.outerjoin(ComplaintSubType, Complaint.complaint_subtype_id == ComplaintSubType.id)
@@ -1331,34 +1331,57 @@ def delete_complaint(db: Session, complaint_id: uuid.UUID):
 
 def get_user_complaints(db: Session, user_id: UUID, skip: int = 0, limit: int = 100, status: Optional[str] = None):
     """ดึงรายการข้อร้องเรียนของผู้ใช้เฉพาะราย"""
-    query = db.query(Complaint).filter(Complaint.created_by == user_id)
-    
-    if status:
-        query = query.filter(Complaint.status == status)
-    
-    total_count = query.count()
-    query = query.order_by(Complaint.created_at.desc())
-    complaints = query.offset(skip).limit(limit).all()
-    
-    result = []
-    for complaint in complaints:
-        try:
-            list_item = create_complaint_list_item(complaint, db)  # ✅ ส่ง db parameter
-            result.append(list_item.__dict__)  # ✅ แปลงเป็น dict
-        except Exception as e:
-            if DEBUG_MODE:
-                print(f"Error processing complaint {complaint.id}: {str(e)}")
-            continue
-    
-    return {
-        "items": result,
-        "pagination": {
-            "total": total_count,
-            "skip": skip,
-            "limit": limit,
-            "has_more": total_count > (skip + limit)
+    try:
+        # ตรวจสอบ role ของผู้ใช้
+        user_roles = get_user_roles(db, user_id)
+        is_admin = any(role.name == "admin" for role in user_roles)
+        
+        # สร้าง query พื้นฐาน
+        query = db.query(Complaint)
+        
+        # ถ้าไม่ใช่ admin ให้กรองเฉพาะเรื่องที่เกี่ยวข้องกับผู้ใช้
+        if not is_admin:
+            query = query.filter(
+                or_(
+                    Complaint.created_by == user_id,           # เรื่องที่ตนเองสร้าง
+                    Complaint.assigned_officer_id == user_id   # เรื่องที่ได้รับมอบหมาย
+                )
+            )
+        
+        # กรองตาม status ถ้ามี
+        if status:
+            query = query.filter(Complaint.status == status)
+        
+        total_count = query.count()
+        query = query.order_by(Complaint.created_at.desc())
+        complaints = query.offset(skip).limit(limit).all()
+        
+        result = []
+        for complaint in complaints:
+            try:
+                list_item = create_complaint_list_item(complaint, db)
+                result.append(list_item.__dict__)
+            except Exception as e:
+                if DEBUG_MODE:
+                    print(f"Error creating list item for complaint {complaint.id}: {str(e)}")
+                continue
+        
+        return {
+            "items": result,
+            "pagination": {
+                "total": total_count,
+                "skip": skip,
+                "limit": limit,
+                "has_more": total_count > (skip + limit)
+            }
         }
-    }
+        
+    except Exception as e:
+        logger.error(f"Error getting user complaints: {str(e)}")
+        return {
+            "items": [],
+            "pagination": {"total": 0, "skip": skip, "limit": limit, "has_more": False}
+        }
 
 def map_complaint_type(db: Session, complaint_type_str: str) -> str:
     """แมปประเภทเรื่องร้องเรียนจากข้อความที่รับเข้ามาเป็นประเภทที่มีในฐานข้อมูล"""
@@ -2154,6 +2177,95 @@ def enrich_address_fields(data: dict, db: Session) -> dict:
         data["zipcode"] = {"value": data["zipcode"], "label": str(data["zipcode"])}
     return data
 
+def get_user_roles(db: Session, user_id: UUID):
+    """ดึง roles ของผู้ใช้"""
+    from models.user_role import UserRole
+    from models.role import Role
+    
+    try:
+        user_roles = db.query(Role).join(
+            UserRole, Role.id == UserRole.role_id
+        ).filter(
+            UserRole.user_id == user_id,
+            Role.is_active == True
+        ).all()
+        
+        return user_roles
+    except Exception as e:
+        logger.error(f"Error getting user roles: {str(e)}")
+        return []
+
+def get_complaint_by_id_with_assignment_data(db: Session, complaint: Complaint) -> Dict:
+    """แปลงข้อมูล complaint เป็นรูปแบบที่ต้องการ"""
+    try:
+        # แปลงข้อมูลตามรูปแบบเดิม
+        result = {
+            "id": str(complaint.id),
+            "complaint_number": complaint.complaint_number,
+            "step1": parse_complainant_data(complaint.complainant_data, db),
+            "step2": parse_respondent_data(complaint.respondent_data, db),
+            "step3": parse_incident_data(complaint),
+            "step4": {"general": {"accepted": complaint.terms_accepted}},
+            "status": complaint.status,
+            "status_history": format_status_history(complaint.status_history),
+            "created_at": complaint.created_at.isoformat(),
+            "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
+            "assigned_to": complaint.assigned_to,
+            "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
+            "resolution_summary": complaint.resolution_summary,
+            "resolved_date": complaint.resolved_date.isoformat() if complaint.resolved_date else None,
+        }
+        
+        # เพิ่มข้อมูล assignment_form
+        assignment_form = {
+            "id": str(complaint.id),
+            "complaint_number": complaint.complaint_number,
+            "subject": complaint.subject,
+            "complaint_type": complaint.complaint_type,
+            "status": complaint.status,
+            "reference_number": complaint.reference_number,
+            "reference_date": complaint.reference_date.isoformat() if complaint.reference_date else None,
+            "reference_number2": complaint.reference_number2,
+            "reference_date2": complaint.reference_date2.isoformat() if complaint.reference_date2 else None,
+            "reference_number3": complaint.reference_number3,
+            "reference_date3": complaint.reference_date3.isoformat() if complaint.reference_date3 else None,
+            "reference_number4": complaint.reference_number4,
+            "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
+            "document_number": complaint.document_number,
+            "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
+            "confidentiality_level": complaint.confidentiality_level,
+            "urgency_level": complaint.urgency_level,
+            "complaint_filing_type": complaint.complaint_filing_type,
+            "agency_sender": complaint.agency_sender,
+            "additional_reference_number1": complaint.additional_reference_number1,
+            "additional_reference_date1": complaint.additional_reference_date1.isoformat() if complaint.additional_reference_date1 else None,
+            "additional_reference_number2": complaint.additional_reference_number2,
+            "additional_reference_date2": complaint.additional_reference_date2.isoformat() if complaint.additional_reference_date2 else None,
+            "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
+            "assigned_to": complaint.assigned_to,
+            "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
+            "assigned_remark": complaint.assigned_remark,
+            "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
+            "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
+            "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
+            "registration_date": complaint.registration_date.isoformat() if complaint.registration_date else None,
+            "new_complaint": complaint.new_complaint,
+            "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
+            "group_work": complaint.group_work,
+            "regulation_reference": complaint.regulation_reference,
+            "created_at": complaint.created_at.isoformat(),
+            "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
+            "attachments": parse_incident_data(complaint)["general"]["attachment"]
+        }
+        
+        result["assignment_form"] = assignment_form
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error converting complaint data: {str(e)}")
+        return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
+
 def parse_complainant_data(complainant_data, db: Session = None):
     """แปลงข้อมูลผู้ร้องเรียนให้อยู่ในรูปแบบ step1 พร้อม enrich address"""
     try:
@@ -2250,17 +2362,29 @@ def format_status_history(status_history_list):
 def get_my_complaint_by_id(db: Session, complaint_id: UUID, user_id: UUID) -> Dict:
     """ดึงรายละเอียดเรื่องร้องเรียนของผู้ใช้คนนั้นๆ รวมข้อมูล assignment form"""
     try:
-        # ตรวจสอบว่าเรื่องร้องเรียนเป็นของผู้ใช้คนนี้
-        complaint = db.query(Complaint).filter(
-            Complaint.id == complaint_id,
-            Complaint.created_by == user_id  # ใช้ created_by แทน complainant_id
-        ).first()
+        # ตรวจสอบ role ของผู้ใช้
+        user_roles = get_user_roles(db, user_id)
+        is_admin = any(role.name == "admin" for role in user_roles)
+        
+        # สร้าง query พื้นฐาน
+        query = db.query(Complaint).filter(Complaint.id == complaint_id)
+        
+        # ถ้าไม่ใช่ admin ให้กรองเฉพาะเรื่องที่เกี่ยวข้องกับผู้ใช้
+        if not is_admin:
+            query = query.filter(
+                or_(
+                    Complaint.created_by == user_id,           # เรื่องที่ตนเองสร้าง
+                    Complaint.assigned_officer_id == user_id   # เรื่องที่ได้รับมอบหมาย
+                )
+            )
+        
+        complaint = query.first()
         
         if not complaint:
-            return {"error": "ไม่พบเรื่องร้องเรียนหรือคุณไม่มีสิทธิ์เข้าถึง"}
+            return {"error": "ไม่พบข้อร้องเรียนหรือไม่มีสิทธิ์เข้าถึง"}
         
-        # ใช้ฟังก์ชันเดียวกัน
-        return get_complaint_by_id_with_assignment(db, complaint_id)
+        # ใช้ฟังก์ชันเดิมในการแปลงข้อมูล
+        return get_complaint_by_id_with_assignment_data(db, complaint)
         
     except Exception as e:
         logger.error(f"Error getting my complaint: {str(e)}")
@@ -2382,7 +2506,6 @@ def get_complaints_grouped_by_channel(
 ):
     """ดึงรายการข้อร้องเรียนที่จัดกลุ่มตาม complaint_channel_id"""
     from models.comp_complaint_types import ComplaintChannel, ComplaintSubType
-    from sqlalchemy import or_
     
     try:
         # สร้าง query พื้นฐาน
