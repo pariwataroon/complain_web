@@ -28,6 +28,31 @@ const breadcrumbItems = [
   { label: "แบบรับคำร้องเรียน / ร้องทุกข์กระทรวง" },
 ];
 
+const getComplainantTypeAndData = (data) => {
+  if (data?.corporate) return { type: "corporate", data: data.corporate };
+  if (data?.individual) return { type: "individual", data: data.individual };
+  if (data?.idCard && data?.name) return { type: "individual", data };
+  return { type: "unknown", data: data || {} };
+};
+
+const getDelegateTypeAndData = (data) => {
+  if (data?.signer) return { type: "signer", data: data.signer };
+  if (data?.delegate) return { type: "delegate", data: data.delegate };
+  if (data?.idCard && (data?.name || data?.signatoryName)) return { type: "delegate", data };
+  return { type: "unknown", data: data || {} };
+};
+
+const getRespondentTypeAndData = (step2) => {
+  const activeType = step2?.activeType;
+  if (activeType) {
+    if (step2[activeType]) return { type: activeType, data: step2[activeType] };
+  }
+  if (step2?.individual) return { type: "individual", data: step2.individual };
+  if (step2?.corporate) return { type: "corporate", data: step2.corporate };
+  if (step2?.government) return { type: "government", data: step2.government };
+  return { type: "unknown", data: {} };
+};
+
 const SearchComplaints = () => {
   const router = useRouter();
   const { id } = router.query;
@@ -39,36 +64,27 @@ const SearchComplaints = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [showValidation, setShowValidation] = useState(false);
 
-  // Current user and datetime - ใช้ current datetime
-  const currentUser = "vampirebeam";
-  const currentDateTime = "2025-06-12 12:07:57";
+  // Form methods
+  const generalMethods = useForm({ mode: "onChange", defaultValues: {} });
+  const delegateMethods = useForm({ mode: "onChange", defaultValues: {} });
+  const step2Methods = useForm({ mode: "onChange", defaultValues: {} });
+  const step3Methods = useForm({ mode: "onChange", defaultValues: {} });
+  const step4Methods = useForm({ mode: "onChange", defaultValues: {} });
 
-  const generalMethods = useForm({
-    mode: "onChange",
-    defaultValues: {}
-  });
-  const delegateMethods = useForm({
-    mode: "onChange",
-    defaultValues: {}
-  });
-  const step2Methods = useForm({
-    mode: "onChange",
-    defaultValues: {}
-  });
-  const step3Methods = useForm({
-    mode: "onChange",
-    defaultValues: {}
-  });
-  const step4Methods = useForm({
-    mode: "onChange",
-    defaultValues: {}
-  });
-
+  // Default value refs
   const defaultGeneralRef = useRef({});
   const defaultDelegateRef = useRef({});
   const defaultStep2Ref = useRef({});
   const defaultStep3Ref = useRef({});
   const defaultStep4Ref = useRef({});
+
+  // --- Dynamic parse for complainant/delegate/respondent
+  const [complainantType, setComplainantType] = useState("individual");
+  const [complainantData, setComplainantData] = useState({});
+  const [delegateType, setDelegateType] = useState("delegate");
+  const [delegateData, setDelegateData] = useState({});
+  const [respondentType, setRespondentType] = useState("individual");
+  const [respondentData, setRespondentData] = useState({});
 
   useEffect(() => {
     if (id) {
@@ -86,37 +102,46 @@ const SearchComplaints = () => {
       setDefaultData(data);
       console.log({ data });
 
+      // Step1: General/Delegate
       const general = data?.step1?.general?.general || {};
-      const delegate = data?.step1?.general?.delegate || null;
-      const step2Data = data?.step2?.general?.individual || {};
+      const delegate = data?.step1?.general?.delegate || {};
+      const { type: cType, data: cData } = getComplainantTypeAndData(general);
+      setComplainantType(cType);
+      setComplainantData(cData);
+      defaultGeneralRef.current = cData;
+
+      const { type: dType, data: dData } = getDelegateTypeAndData(general);
+      setDelegateType(dType);
+      setDelegateData(dData);
+      defaultDelegateRef.current = dData;
+
+      // Step2: Respondent (บุคคล/นิติบุคคล/หน่วยงานรัฐ)
+      const step2General = data?.step2?.general || {};
+      const { type: rType, data: rData } = getRespondentTypeAndData(step2General);
+      setRespondentType(rType);
+      setRespondentData(rData);
+      defaultStep2Ref.current = rData;
+
+      // Step3, Step4
       const step3Data = data?.step3?.general || {};
       const step4Data = data?.step4?.general || {};
 
-      // เตรียม default values สำหรับวันที่
+      // วันที่
       const step3DataWithDefaults = {
         ...step3Data,
-        // ตั้งค่าเริ่มต้นสำหรับฟิลด์วันที่ที่ required
         referenceDate1: step3Data.referenceDate1 || "",
         referenceDate3: step3Data.referenceDate3 || "",
         referenceDate4: step3Data.referenceDate4 || "",
       };
 
-      defaultGeneralRef.current = general;
-      defaultDelegateRef.current = delegate;
-      defaultStep2Ref.current = step2Data;
       defaultStep3Ref.current = step3DataWithDefaults;
       defaultStep4Ref.current = step4Data;
 
-      generalMethods.reset(general);
-      if (delegate) delegateMethods.reset(delegate);
-      step2Methods.reset(step2Data);
+      generalMethods.reset(cData);
+      delegateMethods.reset(dData);
+      step2Methods.reset(rData);
       step3Methods.reset(step3DataWithDefaults);
       step4Methods.reset(step4Data);
-
-      console.log("=== Form Data Loaded ===", {
-        step3DataWithDefaults,
-        formValues: step3Methods.getValues()
-      });
 
     } catch (error) {
       console.error("Load complaints failed", error);
@@ -326,7 +351,6 @@ const SearchComplaints = () => {
       });
     }
   };
-
   // Loading state
   if (loading) {
     return (
@@ -380,19 +404,25 @@ const SearchComplaints = () => {
         {defaultData ? (
           <div className={styles.contentContainer}>
             {/* Tab Navigation - แสดงเพื่อความสวยงาม */}
-            <div className={styles.tabNav}>
-              <div className={`${styles.tab} ${styles.tab0} ${styles.active}`}>
+            <div className={styles.tabNavV2}>
+              <div className={`${styles.tabV2} ${complainantType === "individual" ? styles.activeV2 : ""}`}>
                 บุคคลทั่วไป
               </div>
-              <div className={`${styles.tab} ${styles.tab1}`}>
+              <div className={`${styles.tabV2} ${complainantType === "corporate" ? styles.activeV2 : ""}`}>
                 นิติบุคคล
               </div>
-              <div className={`${styles.tab} ${styles.tab2}`}>
+              <div className={`${styles.tabV2} ${complainantType === "government" ? styles.activeV2 : ""}`}>
                 หน่วยงานของรัฐ
               </div>
               <div
-                className={styles.underlineBar}
-                style={{ backgroundColor: "#0B1F8F" }}
+                className={styles.underlineBarV2}
+                style={{
+                  background: complainantType === "corporate"
+                    ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
+                    : complainantType === "government"
+                      ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
+                      : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)"
+                }}
               />
             </div>
 
@@ -401,12 +431,14 @@ const SearchComplaints = () => {
               <FormProvider {...generalMethods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>ข้อมูลผู้ร้องทุกข์</h3>
+                    <h3 className={styles.sectionTitle}>
+                      {complainantType === "corporate" ? "ข้อมูลผู้ร้องทุกข์ (นิติบุคคล)" : "ข้อมูลผู้ร้องทุกข์"}
+                    </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
-                      data={defaultGeneralRef.current}
-                      formType="complainant"
+                      data={complainantData}
+                      formType={complainantType === "corporate" ? "corporate" : "individual"}
                     />
                   </div>
                 </div>
@@ -416,31 +448,39 @@ const SearchComplaints = () => {
               <FormProvider {...delegateMethods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>ข้อมูลผู้รับมอบอำนาจร้องทุกข์</h3>
+                    <h3 className={styles.sectionTitle}>
+                      {delegateType === "signer" ? "ข้อมูลผู้มีอำนาจลงนาม" : "ข้อมูลผู้รับมอบอำนาจร้องทุกข์"}
+                    </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
-                      data={defaultDelegateRef.current}
-                      formType="delegate"
+                      data={delegateData}
+                      formType={delegateType === "signer" ? "signer" : "delegate"}
                     />
                   </div>
                 </div>
               </FormProvider>
 
               {/* Tab Navigation for Step 2 */}
-              <div className={styles.tabNav}>
-                <div className={`${styles.tab} ${styles.tab0}`}>
+              <div className={styles.tabNavV2}>
+                <div className={`${styles.tabV2} ${complainantType === "individual" ? styles.activeV2 : ""}`}>
                   บุคคลทั่วไป
                 </div>
-                <div className={`${styles.tab} ${styles.tab1} ${styles.active}`}>
+                <div className={`${styles.tabV2} ${complainantType === "corporate" ? styles.activeV2 : ""}`}>
                   นิติบุคคล
                 </div>
-                <div className={`${styles.tab} ${styles.tab2}`}>
+                <div className={`${styles.tabV2} ${complainantType === "government" ? styles.activeV2 : ""}`}>
                   หน่วยงานของรัฐ
                 </div>
                 <div
-                  className={styles.underlineBar}
-                  style={{ backgroundColor: "#3FA9F5" }}
+                  className={styles.underlineBarV2}
+                  style={{
+                    background: complainantType === "corporate"
+                      ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
+                      : complainantType === "government"
+                        ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
+                        : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)"
+                  }}
                 />
               </div>
 
@@ -448,12 +488,18 @@ const SearchComplaints = () => {
               <FormProvider {...step2Methods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>ข้อมูลผู้ถูกร้องเรียน</h3>
+                    <h3 className={styles.sectionTitle}>
+                      {respondentType === "corporate"
+                        ? "ข้อมูลผู้ถูกร้องเรียน (นิติบุคคล)"
+                        : respondentType === "government"
+                          ? "ข้อมูลหน่วยงานของรัฐที่ถูกร้องเรียน"
+                          : "ข้อมูลผู้ถูกร้องเรียน"}
+                    </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
-                      data={defaultStep2Ref.current}
-                      formType="complainee"
+                      data={respondentData}
+                      formType={respondentType}
                     />
                   </div>
                 </div>
@@ -841,7 +887,11 @@ const SearchComplaints = () => {
                               label="วันและเวลาที่เกิดเหตุ"
                               name="incidentDate"
                               control={step4Methods.control}
-                              defaultValue={defaultData?.step4?.general?.incidentDate}
+                              defaultValue={
+                                defaultData?.step4?.general?.incidentDate
+                                  ? new Date(defaultData.step4.general.incidentDate)
+                                  : undefined
+                              }
                               time={true}
                               disabled={true}
                             />
@@ -908,7 +958,6 @@ const SearchComplaints = () => {
                   </div>
                 </div>
               </FormProvider>
-
               {/* Action Buttons */}
               <div className={styles.actionButtons}>
                 <ButtonService
@@ -936,5 +985,6 @@ const SearchComplaints = () => {
     </>
   );
 };
+
 
 export default SearchComplaints;

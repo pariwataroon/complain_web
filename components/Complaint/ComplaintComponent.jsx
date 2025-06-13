@@ -378,6 +378,8 @@ export default function ComplaintComponent() {
                     updateStepData={updateStepData}
                     onAccepted={setAcceptSubmit}
                     formData={getFormData()}
+                    currentTab1={tabStates.step1}
+                    currentTab2={tabStates.step2}
                   />
                 </div>
               ) : (

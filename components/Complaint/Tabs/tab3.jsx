@@ -169,14 +169,9 @@ const Tab3 = ({
         return hasChanges ? merged : currentForm;
       });
     }
-  }, [tabData, isInitialized, forceSyncToParent]); // **แก้ไข: ลบ form ออก**
+  }, [tabData, isInitialized, forceSyncToParent]);
 
-  // **แก้ไข: ลบ useEffect ที่ทำให้เกิด infinite loop**
-  // useEffect(() => {
-  //   if (isInitialized && Object.keys(form).length > 0) {
-  //     forceSyncToParent(form, "formChange");
-  //   }
-  // }, [form, isInitialized, forceSyncToParent]);
+ 
 
   useEffect(() => {
     const fetchComplaintTypes = async () => {
@@ -195,19 +190,18 @@ const Tab3 = ({
     fetchComplaintTypes();
   }, []);
 
-  // **แก้ไข: DatePicker Force Check แบบ safe**
   useEffect(() => {
-    let isChecking = false; // **ป้องกัน concurrent check**
+    let isChecking = false;
 
     const checkDatePickerValue = () => {
-      if (isChecking) return; // **Skip ถ้ากำลัง check อยู่**
+      if (isChecking) return; 
 
       const dateInput = document.querySelector(`input[name="incidentDate"]`);
       if (dateInput && dateInput.value) {
         const displayValue = dateInput.value;
 
         if (displayValue && !form.incidentDate) {
-          isChecking = true; // **Set flag**
+          isChecking = true; 
 
           const fallbackDate = new Date().toISOString();
 

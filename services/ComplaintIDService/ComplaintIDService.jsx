@@ -19,8 +19,6 @@ import {
     formatCitizenId_null,
 } from "@utils/Formats";
 import { exportElementToPDF } from "@utils/exportPDF";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import CheckIcon from "@mui/icons-material/Check";
 import UploadOutlinedIcon from "@mui/icons-material/UploadOutlined";
 
 const ComplaintIDService = ({ complaint }) => {
@@ -32,15 +30,41 @@ const ComplaintIDService = ({ complaint }) => {
         );
 
     const step1 = complaint.step1?.general ?? {};
+    const generalMain = step1.general ?? {};
+    let complainant = {};
+    let complainantType = "individual";
+    if (generalMain.corporate) {
+        // new API: step1.general.general.corporate
+        complainant = generalMain.corporate;
+        complainantType = "corporate";
+    } else {
+        complainant = generalMain;
+        complainantType = "individual";
+    }
+    // delegate/ผู้รับมอบอำนาจ
+    const delegate = step1.delegate
+        || generalMain.signer
+        || {};
+
+    // ====== STEP2: Dynamic respondent (individual/corporate/government) ======
     const step2 = complaint.step2?.general ?? {};
+    const respondentType = step2.activeType || (
+        step2.individual ? "individual" : step2.corporate ? "corporate" : step2.government ? "government" : ""
+    );
+    let respondent = {};
+    if (respondentType === "corporate") {
+        respondent = step2.corporate || {};
+    } else if (respondentType === "government") {
+        respondent = step2.government || {};
+    } else {
+        respondent = step2.individual || {};
+    }
+    // respondent email: on step2.general.email
+    const respondentEmail = step2.email || respondent.email || "-";
+
+    // ====== STEP3: Complaint Detail ======
     const step3 = complaint.step3?.general ?? {};
-
-    const complainant = step1.general ?? {};
-    const delegate = step1.delegate ?? {};
-    const corporateCaller = step2.corporate ?? {};
-
-    const complaintInfo = step3 ?? {};
-    const files = complaintInfo.attachment ?? [];
+    const files = step3.attachment ?? [];
 
     const label = (obj) => (typeof obj === "object" ? obj?.label || "-" : obj || "-");
 
@@ -93,6 +117,117 @@ const ComplaintIDService = ({ complaint }) => {
         document.body.removeChild(link);
     };
 
+    // ====== Render Respondent By Type ======
+    const renderRespondentFields = () => {
+        if (respondentType === "individual") {
+            return (
+                <>
+                    <InfoItem labelText="หมายเลขบัตรประชาชน" value={formatCitizenId_null(respondent.idCard)} />
+                    <InfoItem labelText="ชื่อ - นามสกุล" value={respondent.name} />
+                    <InfoItem labelText="ที่อยู่ที่สามารถติดต่อได้" value={respondent.address} />
+                    <InfoItem labelText="จังหวัด" value={label(respondent.province)} />
+                    <InfoItem labelText="อำเภอ/เขต" value={label(respondent.districts)} />
+                    <InfoItem labelText="ตำบล/แขวง" value={label(respondent.subdistricts)} />
+                    <InfoItem labelText="รหัสไปรษณีย์" value={respondent.zipcode?.label || "-"} />
+                    <InfoItem labelText="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone)} />
+                    <InfoItem labelText="อีเมล์" value={respondentEmail} />
+                </>
+            );
+        }
+        if (respondentType === "corporate") {
+            return (
+                <>
+                    <InfoItem labelText="เลขทะเบียนนิติบุคคล" value={respondent.idCard} />
+                    <InfoItem labelText="ชื่อบริษัท/องค์กร" value={respondent.companyName} />
+                    <InfoItem labelText="ชื่อผู้มีอำนาจลงนาม" value={respondent.signatoryName} />
+                    <InfoItem labelText="ที่อยู่บริษัท/องค์กรที่ติดต่อได้" value={respondent.address} />
+                    <InfoItem labelText="จังหวัด" value={label(respondent.province)} />
+                    <InfoItem labelText="อำเภอ/เขต" value={label(respondent.districts)} />
+                    <InfoItem labelText="ตำบล/แขวง" value={label(respondent.subdistricts)} />
+                    <InfoItem labelText="รหัสไปรษณีย์" value={respondent.zipcode?.label || "-"} />
+                    <InfoItem labelText="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone)} />
+                    <InfoItem labelText="อีเมล์" value={respondentEmail} />
+                </>
+            );
+        }
+        if (respondentType === "government") {
+            return (
+                <>
+                    <InfoItem labelText="หมายเลขบัตรประชาชน" value={formatCitizenId_null(respondent.idCard)} />
+                    <InfoItem labelText="หน่วยงาน" value={respondent.agencyName} />
+                    <InfoItem labelText="ชื่อ - นามสกุล ผู้ติดต่อ" value={respondent.fullName} />
+                    <InfoItem labelText="ที่อยู่หน่วยงานที่ติดต่อได้" value={respondent.address} />
+                    <InfoItem labelText="จังหวัด" value={label(respondent.province)} />
+                    <InfoItem labelText="อำเภอ/เขต" value={label(respondent.districts)} />
+                    <InfoItem labelText="ตำบล/แขวง" value={label(respondent.subdistricts)} />
+                    <InfoItem labelText="รหัสไปรษณีย์" value={respondent.zipcode?.label || "-"} />
+                    <InfoItem labelText="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone)} />
+                    <InfoItem labelText="อีเมล์" value={respondentEmail} />
+                </>
+            );
+        }
+        return null;
+    };
+
+    // ====== Render Complainant By Type ======
+    const renderComplainantFields = () => {
+        if (complainantType === "corporate") {
+            return (
+                <>
+                    <InfoItem labelText="เลขทะเบียนนิติบุคคล" value={complainant.idCard} />
+                    <InfoItem labelText="ชื่อบริษัท/องค์กร" value={complainant.name} />
+                    <InfoItem labelText="ที่อยู่นิติบุคคล" value={complainant.address} />
+                    <InfoItem labelText="จังหวัด" value={label(complainant.province)} />
+                    <InfoItem labelText="อำเภอ/เขต" value={label(complainant.districts)} />
+                    <InfoItem labelText="ตำบล/แขวง" value={label(complainant.subdistricts)} />
+                    <InfoItem labelText="รหัสไปรษณีย์" value={complainant.zipcode?.label || "-"} />
+                    <InfoItem labelText="อีเมล์" value={complainant.email} />
+                    <InfoItem labelText="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(complainant.phone)} />
+                </>
+            );
+        }
+        // individual/default
+        return (
+            <>
+                <InfoItem labelText="หมายเลขประจำตัวประชาชน" value={formatCitizenId_null(complainant.idCard)} />
+                <InfoItem labelText="ชื่อ - นามสกุล" value={complainant.name} />
+                <InfoItem labelText="ที่อยู่ที่สามารถติดต่อได้" value={complainant.address} />
+                <InfoItem labelText="จังหวัด" value={label(complainant.province)} />
+                <InfoItem labelText="อำเภอ/เขต" value={label(complainant.districts)} />
+                <InfoItem labelText="ตำบล/แขวง" value={label(complainant.subdistricts)} />
+                <InfoItem labelText="รหัสไปรษณีย์" value={complainant.zipcode?.label || "-"} />
+                <InfoItem labelText="อีเมล์" value={complainant.email} />
+                <InfoItem labelText="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(complainant.phone)} />
+            </>
+        );
+    };
+
+    // ====== Render Delegate (ใช้ได้ทั้งบุคคล/นิติบุคคล) ======
+    const renderDelegateFields = () => {
+        // show only if at least 1 field exists
+        const hasData = delegate && Object.keys(delegate).some(
+            k => delegate[k]
+        );
+        if (!hasData) return null;
+        return (
+            <>
+                <Section title="ผู้รับมอบอำนาจร้องเรียน">
+                    <Grid container spacing={2} mb={3}>
+                        <InfoItem labelText="หมายเลขประจำตัวประชาชน" value={formatCitizenId_null(delegate.idCard)} />
+                        <InfoItem labelText="ชื่อ - นามสกุล" value={delegate.name || delegate.signatoryName} />
+                        <InfoItem labelText="ที่อยู่" value={delegate.address} />
+                        <InfoItem labelText="จังหวัด" value={label(delegate.province)} />
+                        <InfoItem labelText="อำเภอ/เขต" value={label(delegate.districts)} />
+                        <InfoItem labelText="ตำบล/แขวง" value={label(delegate.subdistricts)} />
+                        <InfoItem labelText="รหัสไปรษณีย์" value={delegate.zipcode?.label || "-"} />
+                        <InfoItem labelText="อีเมล์" value={delegate.email} />
+                        <InfoItem labelText="โทรศัพท์" value={formatPhoneNumber_null(delegate.phone)} />
+                    </Grid>
+                </Section>
+            </>
+        );
+    };
+
     return (
         <Box>
             <div ref={pdfRef}>
@@ -127,18 +262,18 @@ const ComplaintIDService = ({ complaint }) => {
                         />
                         <InfoItem
                             labelText="เลขที่คำร้อง"
-                            value={complaint.complaint_number}
+                            value={complaint.complaint_number || "-"}
                         />
                         <InfoItem
                             labelText="ประเภทเรื่องร้องทุกข์"
-                            value={complaintInfo.complaintType || "-"}
+                            value={step3.complaintType || "-"}
                         />
-                        <InfoItem labelText="เรื่อง" value={complaintInfo.subject || "-"} />
+                        <InfoItem labelText="เรื่อง" value={step3.subject || "-"} />
                         <InfoItem
                             labelText="วันเวลาที่เกิดเหตุ"
                             value={
-                                complaintInfo.incidentDate
-                                    ? formatThaiDateTime(complaintInfo.incidentDate)
+                                step3.incidentDate
+                                    ? formatThaiDateTime(step3.incidentDate)
                                     : "-"
                             }
                         />
@@ -148,107 +283,25 @@ const ComplaintIDService = ({ complaint }) => {
                     {/* ผู้ร้องทุกข์ */}
                     <Section title="ข้อมูลผู้ร้องทุกข์">
                         <Grid container spacing={2} mb={3}>
-                            <InfoItem
-                                labelText="หมายเลขประจำตัวประชาชน"
-                                value={formatCitizenId_null(
-                                    complainant.idCard || corporateCaller.idCard
-                                )}
-                            />
-                            <InfoItem
-                                labelText="ชื่อ - นามสกุล / บริษัท"
-                                value={
-                                    complainant.name ||
-                                    corporateCaller.companyName ||
-                                    "-"
-                                }
-                            />
-                            <InfoItem
-                                labelText="ที่อยู่"
-                                value={complainant.address || corporateCaller.address || "-"}
-                            />
-                            <InfoItem
-                                labelText="จังหวัด"
-                                value={
-                                    label(complainant.province) || label(corporateCaller.province)
-                                }
-                            />
-                            <InfoItem
-                                labelText="อำเภอ/เขต"
-                                value={
-                                    label(complainant.districts) ||
-                                    label(corporateCaller.districts)
-                                }
-                            />
-                            <InfoItem
-                                labelText="ตำบล/แขวง"
-                                value={
-                                    label(complainant.subdistricts) ||
-                                    label(corporateCaller.subdistricts)
-                                }
-                            />
-                            <InfoItem
-                                labelText="รหัสไปรษณีย์"
-                                value={
-                                    complainant.zipcode?.label ||
-                                    corporateCaller.zipcode?.label ||
-                                    "-"
-                                }
-                            />
-                            <InfoItem
-                                labelText="อีเมล์"
-                                value={complainant.email || corporateCaller.email || "-"}
-                            />
-                            <InfoItem
-                                labelText="โทรศัพท์"
-                                value={formatPhoneNumber_null(
-                                    complainant.phone || corporateCaller.phone
-                                )}
-                            />
+                            {renderComplainantFields()}
                         </Grid>
                     </Section>
 
                     {/* ผู้รับมอบอำนาจ (ถ้ามี) */}
-                    {Object.keys(delegate).length > 0 && (
-                        <>
-                            <Section title="ผู้รับมอบอำนาจร้องเรียน">
-                                <Grid container spacing={2} mb={3}>
-                                    <InfoItem
-                                        labelText="หมายเลขประจำตัวประชาชน"
-                                        value={formatCitizenId_null(delegate.idCard)}
-                                    />
-                                    <InfoItem labelText="ชื่อ - นามสกุล" value={delegate.name} />
-                                    <InfoItem labelText="ที่อยู่" value={delegate.address} />
-                                    <InfoItem
-                                        labelText="จังหวัด"
-                                        value={label(delegate.province)}
-                                    />
-                                    <InfoItem
-                                        labelText="อำเภอ/เขต"
-                                        value={label(delegate.districts)}
-                                    />
-                                    <InfoItem
-                                        labelText="ตำบล/แขวง"
-                                        value={label(delegate.subdistricts)}
-                                    />
-                                    <InfoItem
-                                        labelText="รหัสไปรษณีย์"
-                                        value={delegate.zipcode?.label || "-"}
-                                    />
-                                    <InfoItem labelText="อีเมล์" value={delegate.email} />
-                                    <InfoItem
-                                        labelText="โทรศัพท์"
-                                        value={formatPhoneNumber_null(delegate.phone)}
-                                    />
-                                </Grid>
-                            </Section>
-                        </>
-                    )}
+                    {renderDelegateFields()}
+
+                    {/* ผู้ถูกร้องทุกข์ */}
+                    <Section title="ข้อมูลผู้ถูกร้องทุกข์">
+                        <Grid container spacing={2} mb={3}>
+                            {renderRespondentFields()}
+                        </Grid>
+                    </Section>
 
                     {/* รายละเอียดเรื่องร้องทุกข์ */}
                     <Section title="รายละเอียดเรื่องร้องทุกข์">
                         <Grid container spacing={2} mb={3}>
                             <Grid item xs={12}>
-                                <Typography>{complaintInfo.description || "-"}</Typography>
+                                <Typography>{step3.description || "-"}</Typography>
                             </Grid>
                         </Grid>
                     </Section>
@@ -327,11 +380,11 @@ const ComplaintIDService = ({ complaint }) => {
                     <Grid container spacing={2} mb={3}>
                         <InfoItem
                             labelText="ลงชื่อผู้ร้องทุกข์"
-                            value={complainant.name || "-"}
+                            value={complainant.name || complainant.companyName || "-"}
                         />
                         <InfoItem
                             labelText="ลงชื่อผู้รับมอบอำนาจ"
-                            value={delegate.name || "-"}
+                            value={delegate.name || delegate.signatoryName || "-"}
                         />
                         <InfoItem labelText="วันที่" value={formatThaiDate()} />
                         <InfoItem labelText="วันที่" value={formatThaiDate()} />
@@ -343,18 +396,6 @@ const ComplaintIDService = ({ complaint }) => {
             <Box
                 sx={{ display: "flex", justifyContent: "center", mt: 4, gap: 2 }}
             >
-                {/* <ButtonService
-                    label="แก้ไข"
-                    color="แก้ไข"
-                    variant="outlined"
-                    iconLeft={<EditOutlinedIcon />}
-                />
-                <ButtonService
-                    label="ยืนยัน"
-                    color="ยืนยัน"
-                    variant="contained"
-                    iconRight={<CheckIcon />}
-                /> */}
                 <ButtonService
                     label="ส่งออก"
                     color="ส่งออก"
