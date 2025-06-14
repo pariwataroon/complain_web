@@ -143,8 +143,30 @@ def get_document_storage_by_channel(
                     ComplaintChannel.id == complaint.complaint_channel_id
                 ).first()
             
+            # 🔥 แก้ไข: ใช้ confirm_assigned_date แทน created_at สำหรับ "วันที่รับ"
+            # วันที่รับ = วันที่เจ้าหน้าที่ยืนยันรับงาน
+            received_date = ""
+            if complaint.confirm_assigned_date and complaint.confirm_assigned_status == True:
+                # มีการยืนยันรับงานแล้ว
+                received_date = complaint.confirm_assigned_date.strftime("%d %b %Y")
+            elif complaint.assigned_date:
+                # มีการมอบหมายแต่ยังไม่ได้ยืนยัน
+                received_date = f"มอบหมายแล้ว ({complaint.assigned_date.strftime('%d %b %Y')})"
+            else:
+                # ยังไม่ได้มอบหมาย
+                received_date = "ยังไม่ได้รับงาน"
+            
+            # 🔥 เพิ่มสถานะการยืนยันรับงาน
+            confirmation_status = "ยังไม่ได้รับงาน"
+            if complaint.confirm_assigned_status == True:
+                confirmation_status = "ยืนยันรับงานแล้ว"
+            elif complaint.confirm_assigned_status == False:
+                confirmation_status = "ปฏิเสธรับงาน"
+            elif complaint.assigned_officer_id:
+                confirmation_status = "รอการยืนยัน"
+            
             items.append({
-                "วันที่รับ": complaint.created_at.strftime("%d %b %Y") if complaint.created_at else "",
+                "วันที่รับ": received_date,  # 🔥 ใช้ confirm_assigned_date
                 "หมายเลข": complaint.complaint_number or "",
                 "ข้อมูลผู้ร้อง": complainant_data.get("name", "") or f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip(),
                 "เรื่อง": complaint.subject or "",
@@ -152,6 +174,7 @@ def get_document_storage_by_channel(
                 "ประเภทเรื่องย่อย": "",  # จะต้องเชื่อมโยงกับ complaint_subtype
                 "เจ้าหน้าที่ที่รับผิดชอบ": complaint.assigned_to or "",
                 "สถานะเรื่อง": complaint.status.value if complaint.status else "",
+                "สถานะการรับงาน": confirmation_status,  # 🔥 เพิ่มสถานะการยืนยัน
                 "หมายเหตุ": complaint.assigned_remark or "",
                 
                 # ข้อมูลเพิ่มเติมสำหรับ API
@@ -174,7 +197,13 @@ def get_document_storage_by_channel(
                 "created_at": complaint.created_at.isoformat() if complaint.created_at else None,
                 "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
                 "registration_date": complaint.registration_date.isoformat() if complaint.registration_date else None,
-                "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None
+                "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
+                
+                # 🔥 เพิ่มข้อมูลการยืนยันรับงาน
+                "confirm_assigned_status": complaint.confirm_assigned_status,
+                "confirm_assigned_date": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None,
+                "confirm_assigned_remark": complaint.confirm_assigned_remark,
+                "confirm_assigned_by": str(complaint.confirm_assigned_by) if complaint.confirm_assigned_by else None
             })
         
         # Calculate pagination info
@@ -198,7 +227,16 @@ def get_document_storage_by_channel(
                     "description": channel.description
                 } for channel in target_channels
             ],
-            "page_type": page_type
+            "page_type": page_type,
+            "legend": {
+                "วันที่รับ": "วันที่เจ้าหน้าที่ยืนยันรับงาน (ถ้ายังไม่ยืนยัน จะแสดงวันที่มอบหมาย)",
+                "สถานะการรับงาน": {
+                    "ยืนยันรับงานแล้ว": "เจ้าหน้าที่ยืนยันรับงานแล้ว",
+                    "ปฏิเสธรับงาน": "เจ้าหน้าที่ปฏิเสธรับงาน",
+                    "รอการยืนยัน": "มอบหมายแล้วแต่ยังไม่ได้ยืนยัน",
+                    "ยังไม่ได้รับงาน": "ยังไม่ได้มอบหมายให้ใคร"
+                }
+            }
         }
         
     except Exception as e:
