@@ -39,6 +39,11 @@
       "name": "แอดมิน",
       "description": "เพิ่มโดยแอดมิน",
       "is_active": true
+    },
+    {
+      "name": "บัตรสนเท่ห์",
+      "description": "ร้องเรียนผ่านบัตรสนเท่ห์",
+      "is_active": true
     }
   ]
 }
