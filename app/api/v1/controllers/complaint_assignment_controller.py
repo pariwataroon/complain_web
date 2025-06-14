@@ -1283,12 +1283,11 @@ def get_complaints_by_page_type_with_assignment_form(
                 "page_type": page_type,
                 "my_assignments": True
             }
-        
-        # ✅ สร้าง base query - กรองเฉพาะงานที่ได้รับมอบหมาย
+
         query = db.query(Complaint).filter(
             and_(
                 Complaint.complaint_channel_id.in_(channel_ids),
-                Complaint.assigned_officer_id == current_user_id  # ✅ เฉพาะงานที่มอบหมายให้ user นี้
+                Complaint.assigned_officer_id == current_user_id
             )
         )
         
@@ -1348,6 +1347,8 @@ def get_complaints_by_page_type_with_assignment_form(
         # สร้างข้อมูลในรูปแบบ assignment form
         items = []
         for complaint in complaints:
+            received_date_info = _get_received_date_info(complaint)
+            
             assignment_form = {
                 "id": str(complaint.id),
                 "complaint_number": complaint.complaint_number,
@@ -1389,6 +1390,12 @@ def get_complaints_by_page_type_with_assignment_form(
                 "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
                 "assigned_remark": complaint.assigned_remark,
 
+                # 🔥 เพิ่มข้อมูลการยืนยันรับงาน (ที่ขาดหายไป)
+                "confirm_assigned_status": complaint.confirm_assigned_status,
+                "confirm_assigned_date": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None,
+                "confirm_assigned_remark": complaint.confirm_assigned_remark,
+                "confirm_assigned_by": str(complaint.confirm_assigned_by) if complaint.confirm_assigned_by else None,
+
                 # Complaint Categories
                 "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
                 "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
@@ -1409,9 +1416,21 @@ def get_complaints_by_page_type_with_assignment_form(
                 "created_at": complaint.created_at.isoformat(),
                 "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
                 
+                # 🔥 เพิ่มข้อมูลสำหรับการแสดงผลในหน้าเว็บ
+                "received_date_display": received_date_info["display_text"],
+                "received_date_raw": received_date_info["raw_date"],
+                "confirmation_status": received_date_info["confirmation_status"],
+                "confirmation_status_text": received_date_info["confirmation_status_text"],
+                
                 # Page Type & Assignment Info
                 "page_type": page_type,
-                "is_my_assignment": True  # ✅ เพิ่ม flag ว่าเป็นงานของตัวเอง
+                "is_my_assignment": True,
+                
+                # 🔥 เพิ่ม metadata สำหรับ UI
+                "needs_confirmation": complaint.assigned_officer_id is not None and complaint.confirm_assigned_status is None,
+                "can_confirm": complaint.assigned_officer_id == current_user_id and complaint.confirm_assigned_status is None,
+                "is_confirmed": complaint.confirm_assigned_status == True,
+                "is_rejected": complaint.confirm_assigned_status == False
             }
             
             items.append({"complaint": assignment_form})
@@ -1438,8 +1457,19 @@ def get_complaints_by_page_type_with_assignment_form(
                 } for channel in target_channels
             ],
             "page_type": page_type,
-            "my_assignments": True,  # ✅ เพิ่ม flag ว่าเป็นงานที่ได้รับมอบหมาย
-            "assigned_user_id": str(current_user_id)  # ✅ เพิ่ม user ID ที่ได้รับมอบหมาย
+            "my_assignments": True,
+            "assigned_user_id": str(current_user_id),
+            
+            # 🔥 เพิ่ม legend สำหรับการแสดงผล
+            "legend": {
+                "received_date_display": "วันที่รับเรื่อง - แสดงวันที่เจ้าหน้าที่ยืนยันรับงาน หรือสถานะการมอบหมาย",
+                "confirmation_status": {
+                    "confirmed": "ยืนยันรับงานแล้ว",
+                    "rejected": "ปฏิเสธรับงาน",
+                    "pending": "รอการยืนยัน",
+                    "not_assigned": "ยังไม่ได้มอบหมาย"
+                }
+            }
         }
         
     except Exception as e:
@@ -1459,6 +1489,43 @@ def get_complaints_by_page_type_with_assignment_form(
             "my_assignments": True,
             "assigned_user_id": str(current_user_id),
             "error": str(e)
+        }
+
+def _get_received_date_info(complaint) -> Dict:
+    """สร้างข้อมูลวันที่รับเรื่องสำหรับการแสดงผล"""
+    
+    if complaint.confirm_assigned_date and complaint.confirm_assigned_status == True:
+        # ยืนยันรับงานแล้ว
+        return {
+            "display_text": complaint.confirm_assigned_date.strftime("%d %b %Y"),
+            "raw_date": complaint.confirm_assigned_date.isoformat(),
+            "confirmation_status": "confirmed",
+            "confirmation_status_text": "ยืนยันรับงานแล้ว"
+        }
+    elif complaint.confirm_assigned_status == False:
+        # ปฏิเสธรับงาน
+        reject_date = complaint.confirm_assigned_date.strftime("%d %b %Y") if complaint.confirm_assigned_date else "ไม่ทราบ"
+        return {
+            "display_text": f"ปฏิเสธแล้ว ({reject_date})",
+            "raw_date": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None,
+            "confirmation_status": "rejected",
+            "confirmation_status_text": "ปฏิเสธรับงาน"
+        }
+    elif complaint.assigned_date:
+        # มอบหมายแล้วแต่ยังไม่ได้ยืนยัน
+        return {
+            "display_text": f"รอการยืนยัน ({complaint.assigned_date.strftime('%d %b %Y')})",
+            "raw_date": complaint.assigned_date.isoformat(),
+            "confirmation_status": "pending",
+            "confirmation_status_text": "รอการยืนยัน"
+        }
+    else:
+        # ยังไม่ได้มอบหมาย
+        return {
+            "display_text": "ยังไม่ได้รับงาน",
+            "raw_date": None,
+            "confirmation_status": "not_assigned",
+            "confirmation_status_text": "ยังไม่ได้มอบหมาย"
         }
 
 def confirm_assignment(
