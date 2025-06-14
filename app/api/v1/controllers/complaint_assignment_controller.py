@@ -45,6 +45,20 @@ def validate_assignment_data(assignment_data: Dict[str, Any]) -> Dict:
         "errors": errors
     }
 
+def get_thai_status(status: str) -> str:
+    """แปลงสถานะเป็นภาษาไทย"""
+    status_mapping = {
+        "submitted": "รับเรื่อง",
+        "sent_to_agency": "ส่งหน่วยงาน", 
+        "in_process": "กำลังดำเนินการ",
+        "in_review": "อยู่ระหว่างพิจารณา",
+        "tracking": "ติดตามผล",
+        "reviewed": "แจ้งผลการพิจารณา",
+        "completed": "เสร็จสิ้น",
+        "cancelled": "ยกเลิก"
+    }
+    return status_mapping.get(status.lower(), status)
+
 def update_complaint_assignment_data(
     db: Session,
     complaint_id: UUID,
@@ -60,6 +74,28 @@ def update_complaint_assignment_data(
 
         changes = []
         assigned_officer = None
+        status_change_notes = []
+        new_status = None
+        old_status = complaint.status
+
+        # ✅ ตรวจสอบประเภทการ assignment และกำหนดสถานะใหม่
+        if "assigned_officer_id" in assignment_data and assignment_data["assigned_officer_id"]:
+            # มีการมอบหมายเจ้าหน้าที่
+            if complaint.status == ComplaintStatus.SUBMITTED:
+                new_status = ComplaintStatus.SENT_TO_AGENCY
+                status_change_notes.append("มอบหมายเรื่องให้เจ้าหน้าที่รับผิดชอบ")
+            
+        # ✅ ตรวจสอบการลงทะเบียน (มีเลขอ้างอิง/เอกสาร)
+        if any(key in assignment_data for key in ["reference_number1", "reference_number2", "document_number", "registration_date"]):
+            if complaint.status == ComplaintStatus.SUBMITTED and not new_status:
+                new_status = ComplaintStatus.IN_PROCESS
+                status_change_notes.append("ลงทะเบียนและเริ่มดำเนินการ")
+        
+        # ✅ ตรวจสอบการกำหนดระดับความลับ/เร่งด่วน
+        if any(key in assignment_data for key in ["confidentiality_level", "urgency_level"]):
+            if complaint.status in [ComplaintStatus.SUBMITTED, ComplaintStatus.IN_PROCESS] and not new_status:
+                new_status = ComplaintStatus.IN_REVIEW
+                status_change_notes.append("อยู่ระหว่างการพิจารณาและจัดลำดับความสำคัญ")
 
         # ✅ บันทึก assigned_officer_id และ assigned_date
         if "assigned_officer_id" in assignment_data and assignment_data["assigned_officer_id"]:
@@ -248,6 +284,9 @@ def update_complaint_assignment_data(
                 changes.append(f"ร้องเรียนใหม่: {old_value} → {complaint.new_complaint}")
             if complaint.new_complaint:
                 complaint_types_count += 1
+                if not new_status and complaint.status == ComplaintStatus.SUBMITTED:
+                    new_status = ComplaintStatus.IN_PROCESS
+                    status_change_notes.append("ลงทะเบียนเรื่องร้องเรียนใหม่")
 
         if "add_more_complaint_to_ref" in assignment_data:
             old_value = complaint.add_more_complaint_to_ref
@@ -256,6 +295,9 @@ def update_complaint_assignment_data(
                 changes.append(f"ร้องเรียนเพิ่มเติม: {old_value} → {complaint.add_more_complaint_to_ref}")
             if complaint.add_more_complaint_to_ref:
                 complaint_types_count += 1
+                if not new_status:
+                    new_status = ComplaintStatus.TRACKING
+                    status_change_notes.append("เพิ่มข้อมูลเรื่องร้องเรียนเพิ่มเติม")
 
         if "group_work" in assignment_data:
             old_value = complaint.group_work
@@ -264,6 +306,9 @@ def update_complaint_assignment_data(
                 changes.append(f"งานกลุ่ม: {old_value} → {complaint.group_work}")
             if complaint.group_work:
                 complaint_types_count += 1
+                if not new_status:
+                    new_status = ComplaintStatus.IN_REVIEW
+                    status_change_notes.append("รับเรื่องจากคณะทำงานบัตรสนเท่ห์")
 
         # ✅ ตรวจสอบว่าเลือกประเภทได้เพียงอย่างเดียว
         if complaint_types_count > 1:
@@ -351,6 +396,24 @@ def update_complaint_assignment_data(
                     complaint.processing_notes = f"เหตุผลการมอบหมาย: {assignment_data['assignment_reason']}"
                 changes.append(f"เหตุผลการมอบหมาย: {assignment_data['assignment_reason']}")
 
+        # ✅ อัปเดตสถานะใหม่พร้อมสร้าง status history
+        if new_status and new_status != complaint.status:
+            complaint.status = new_status
+            
+            # สร้าง status history
+            status_notes = " | ".join(status_change_notes) if status_change_notes else "อัพเดทข้อมูลการมอบหมาย"
+            
+            status_history = ComplaintStatusHistory(
+                complaint_id=complaint_id,
+                status=new_status,
+                notes=status_notes,
+                changed_by=updated_by,
+                changed_at=datetime.now()
+            )
+            db.add(status_history)
+            
+            changes.append(f"เปลี่ยนสถานะ: {get_thai_status(old_status.value)} → {get_thai_status(new_status.value)}")
+
         # บันทึกการเปลี่ยนแปลง
         complaint.updated_at = datetime.now()
         
@@ -414,12 +477,14 @@ def update_complaint_assignment_data(
             except Exception as e:
                 logger.error(f"Error sending assignment notification: {str(e)}")
 
-
         return {
             "success": True,
             "message": "อัพเดทข้อมูลการมอบหมายเรียบร้อย และได้ส่ง notification ไปยังผู้ที่เกี่ยวข้องแล้ว",
             "complaint_id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
+            "old_status": old_status.value,
+            "new_status": new_status.value if new_status else complaint.status.value,
+            "status_changed": new_status is not None,
             "complaint_type": {
                 "new_complaint": complaint.new_complaint,
                 "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
