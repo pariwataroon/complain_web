@@ -97,6 +97,77 @@ def update_complaint_assignment_data(
                 new_status = ComplaintStatus.IN_REVIEW
                 status_change_notes.append("อยู่ระหว่างการพิจารณาและจัดลำดับความสำคัญ")
 
+        # ✅ ตรวจสอบ 3 ประเภทการร้องเรียนและเงื่อนไขที่จำเป็น
+        complaint_type_flags = {
+            "new_complaint": assignment_data.get("new_complaint", False),
+            "add_more_complaint_to_ref": assignment_data.get("add_more_complaint_to_ref", False),
+            "group_work": assignment_data.get("group_work", False)
+        }
+        
+        # นับจำนวนประเภทที่เลือก
+        selected_types = sum(1 for v in complaint_type_flags.values() if v)
+        
+        if selected_types > 1:
+            return {
+                "success": False, 
+                "message": "กรุณาเลือกประเภทการร้องเรียนเพียงอย่างเดียว (new_complaint, add_more_complaint_to_ref, หรือ group_work)"
+            }
+        elif selected_types == 0:
+            return {
+                "success": False, 
+                "message": "กรุณาเลือกประเภทการร้องเรียนอย่างน้อย 1 ประเภท"
+            }
+
+        # ✅ 1. เรื่องร้องทุกข์ใหม่
+        if complaint_type_flags["new_complaint"]:
+            complaint.new_complaint = True
+            complaint.add_more_complaint_to_ref = False
+            complaint.group_work = False
+            
+            if not new_status and complaint.status == ComplaintStatus.SUBMITTED:
+                new_status = ComplaintStatus.IN_PROCESS
+                status_change_notes.append("ลงทะเบียนเรื่องร้องเรียนใหม่")
+            
+            changes.append("ประเภท: เรื่องร้องทุกข์ใหม่")
+
+        # ✅ 2. แนบเรื่องหรือเนื้อหาร้องทุกข์เพิ่มเติม - ต้องมี additional_reference_number1
+        elif complaint_type_flags["add_more_complaint_to_ref"]:
+            # ตรวจสอบว่ามี additional_reference_number1 หรือไม่
+            if not assignment_data.get("additional_reference_number1"):
+                return {
+                    "success": False,
+                    "message": "สำหรับเรื่องร้องทุกข์เพิ่มเติม จำเป็นต้องระบุ additional_reference_number1 เพื่ออ้างอิงเรื่องก่อนหน้า"
+                }
+            
+            complaint.new_complaint = False
+            complaint.add_more_complaint_to_ref = True
+            complaint.group_work = False
+            
+            if not new_status:
+                new_status = ComplaintStatus.TRACKING
+                status_change_notes.append("เพิ่มข้อมูลเรื่องร้องเรียนเพิ่มเติม")
+            
+            changes.append(f"ประเภท: แนบเรื่องร้องทุกข์เพิ่มเติม (อ้างอิง: {assignment_data['additional_reference_number1']})")
+
+        # ✅ 3. แนบเรื่องร้องทุกข์ผ่านบัตรสนเท่ห์ - ต้องมี additional_reference_number2
+        elif complaint_type_flags["group_work"]:
+            # ตรวจสอบว่ามี additional_reference_number2 หรือไม่
+            if not assignment_data.get("additional_reference_number2"):
+                return {
+                    "success": False,
+                    "message": "สำหรับเรื่องร้องทุกข์ผ่านบัตรสนเท่ห์ จำเป็นต้องระบุ additional_reference_number2 เพื่ออ้างอิงเรื่องก่อนหน้า"
+                }
+            
+            complaint.new_complaint = False
+            complaint.add_more_complaint_to_ref = False
+            complaint.group_work = True
+            
+            if not new_status:
+                new_status = ComplaintStatus.IN_REVIEW
+                status_change_notes.append("รับเรื่องจากคณะทำงานบัตรสนเท่ห์")
+            
+            changes.append(f"ประเภท: แนบเรื่องร้องทุกข์ผ่านบัตรสนเท่ห์ (อ้างอิง: {assignment_data['additional_reference_number2']})")
+
         # ✅ บันทึก assigned_officer_id และ assigned_date
         if "assigned_officer_id" in assignment_data and assignment_data["assigned_officer_id"]:
             try:
@@ -213,7 +284,7 @@ def update_complaint_assignment_data(
             except ValueError:
                 return {"success": False, "message": "รูปแบบวันที่ลงทะเบียนไม่ถูกต้อง"}
 
-        # ✅ 1. บันทึก reference_number1-4 (existing code)
+        # ✅ บันทึก reference_number1-4 (existing code)
         if "reference_number1" in assignment_data:
             old_value = complaint.reference_number
             complaint.reference_number = assignment_data["reference_number1"]
@@ -250,7 +321,7 @@ def update_complaint_assignment_data(
         if "reference_date4" in assignment_data and assignment_data["reference_date4"]:
             complaint.reference_date4 = datetime.fromisoformat(assignment_data["reference_date4"].replace('Z', '+00:00'))
 
-        # ✅ 2. บันทึก document_number และ document_date
+        # ✅ บันทึก document_number และ document_date
         if "document_number" in assignment_data:
             old_value = complaint.document_number
             complaint.document_number = assignment_data["document_number"]
@@ -260,66 +331,19 @@ def update_complaint_assignment_data(
         if "document_date" in assignment_data and assignment_data["document_date"]:
             complaint.document_date = datetime.fromisoformat(assignment_data["document_date"].replace('Z', '+00:00'))
 
-        # ✅ 3. บันทึก assigned_agency
+        # ✅ บันทึก assigned_agency
         if "assigned_agency" in assignment_data:
             old_value = complaint.agency_sender
             complaint.agency_sender = assignment_data["assigned_agency"]
             if assignment_data["assigned_agency"] != old_value:
                 changes.append(f"หน่วยงานที่ส่ง: {old_value} → {assignment_data['assigned_agency']}")
 
-        # ✅ 4. บันทึก complaint_filing_type
+        # ✅ บันทึก complaint_filing_type
         if "complaint_filing_type" in assignment_data:
             old_value = complaint.complaint_filing_type
             complaint.complaint_filing_type = assignment_data["complaint_filing_type"]
             if assignment_data["complaint_filing_type"] != old_value:
                 changes.append(f"ประเภทการยื่น: {old_value} → {assignment_data['complaint_filing_type']}")
-
-        # ✅ 5. ตรวจสอบและบันทึกประเภทการร้องเรียนใหม่
-        complaint_types_count = 0
-        
-        if "new_complaint" in assignment_data:
-            old_value = complaint.new_complaint
-            complaint.new_complaint = bool(assignment_data["new_complaint"])
-            if complaint.new_complaint != old_value:
-                changes.append(f"ร้องเรียนใหม่: {old_value} → {complaint.new_complaint}")
-            if complaint.new_complaint:
-                complaint_types_count += 1
-                if not new_status and complaint.status == ComplaintStatus.SUBMITTED:
-                    new_status = ComplaintStatus.IN_PROCESS
-                    status_change_notes.append("ลงทะเบียนเรื่องร้องเรียนใหม่")
-
-        if "add_more_complaint_to_ref" in assignment_data:
-            old_value = complaint.add_more_complaint_to_ref
-            complaint.add_more_complaint_to_ref = bool(assignment_data["add_more_complaint_to_ref"])
-            if complaint.add_more_complaint_to_ref != old_value:
-                changes.append(f"ร้องเรียนเพิ่มเติม: {old_value} → {complaint.add_more_complaint_to_ref}")
-            if complaint.add_more_complaint_to_ref:
-                complaint_types_count += 1
-                if not new_status:
-                    new_status = ComplaintStatus.TRACKING
-                    status_change_notes.append("เพิ่มข้อมูลเรื่องร้องเรียนเพิ่มเติม")
-
-        if "group_work" in assignment_data:
-            old_value = complaint.group_work
-            complaint.group_work = bool(assignment_data["group_work"])
-            if complaint.group_work != old_value:
-                changes.append(f"งานกลุ่ม: {old_value} → {complaint.group_work}")
-            if complaint.group_work:
-                complaint_types_count += 1
-                if not new_status:
-                    new_status = ComplaintStatus.IN_REVIEW
-                    status_change_notes.append("รับเรื่องจากคณะทำงานบัตรสนเท่ห์")
-
-        # ✅ ตรวจสอบว่าเลือกประเภทได้เพียงอย่างเดียว
-        if complaint_types_count > 1:
-            return {
-                "success": False, 
-                "message": "กรุณาเลือกประเภทการร้องเรียนเพียงอย่างเดียว"
-            }
-        elif complaint_types_count == 0:
-            complaint.new_complaint = True
-            complaint.add_more_complaint_to_ref = False
-            complaint.group_work = False
 
         # ✅ บันทึก regulation_reference
         if "regulation_reference" in assignment_data:
@@ -341,7 +365,7 @@ def update_complaint_assignment_data(
             if assignment_data["regulation_reference"] != old_value:
                 changes.append(f"อ้างอิงกฎหมาย: {old_value} → {complaint.regulation_reference}")
 
-        # ✅ 6. บันทึกข้อมูลอื่นๆ
+        # ✅ बันทึกข้อมูลอื่นๆ
         if "confidentiality_level" in assignment_data:
             old_value = complaint.confidentiality_level
             complaint.confidentiality_level = assignment_data["confidentiality_level"]
@@ -354,7 +378,7 @@ def update_complaint_assignment_data(
             if assignment_data["urgency_level"] != old_value:
                 changes.append(f"ระดับความเร่งด่วน: {old_value} → {assignment_data['urgency_level']}")
 
-        # ✅ 7. บันทึก additional_reference_number1-2 และ additional_reference_date1-2 (ที่ขาดหายไป)
+        # ✅ บันทึก additional_reference_number1-2 และ additional_reference_date1-2 (ตามเงื่อนไข)
         if "additional_reference_number1" in assignment_data:
             old_value = complaint.additional_reference_number1
             complaint.additional_reference_number1 = assignment_data["additional_reference_number1"]
@@ -385,7 +409,7 @@ def update_complaint_assignment_data(
             except ValueError:
                 return {"success": False, "message": "รูปแบบวันที่อ้างอิงเพิ่มเติม 2 ไม่ถูกต้อง"}
 
-        # ✅ 8. บันทึก assignment_reason (ถ้ามี)
+        # ✅ บันทึก assignment_reason (ถ้ามี)
         if "assignment_reason" in assignment_data:
             # สามารถเก็บใน processing_notes หรือสร้างฟิลด์ใหม่
             old_notes = complaint.processing_notes
@@ -420,6 +444,7 @@ def update_complaint_assignment_data(
         db.commit()
         db.refresh(complaint)
 
+        # ส่ง notification
         if assigned_officer:
             try:
                 from app.api.v1.controllers.notification_controller import create_notification
@@ -500,6 +525,12 @@ def update_complaint_assignment_data(
             "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
             "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
             "registration_date": complaint.registration_date.isoformat() if complaint.registration_date else None,
+            "additional_references": {
+                "additional_reference_number1": complaint.additional_reference_number1,
+                "additional_reference_date1": complaint.additional_reference_date1.isoformat() if complaint.additional_reference_date1 else None,
+                "additional_reference_number2": complaint.additional_reference_number2,
+                "additional_reference_date2": complaint.additional_reference_date2.isoformat() if complaint.additional_reference_date2 else None
+            },
             "notification_sent": assigned_officer is not None,
             "changes": changes,
             "updated_at": complaint.updated_at.isoformat()
