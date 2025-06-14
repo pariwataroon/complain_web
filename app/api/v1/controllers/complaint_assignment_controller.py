@@ -620,11 +620,8 @@ def get_assignment_form_data(db: Session, complaint_id: UUID) -> Dict:
         options = get_assignment_options(db)
         
         return {
-            "data": {
-                "complaint": complaint_data,
-                "options": options
-            },
-            "message": "GET_DATA_SUCCESSFULLY"
+            "complaint": complaint_data,
+            "options": options
         }
         
     except Exception as e:
@@ -1222,3 +1219,243 @@ def auto_assign_complaint(
     except Exception as e:
         logger.error(f"Error in auto assignment: {str(e)}")
         return {"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"}
+
+def get_complaints_by_page_type_with_assignment_form(
+    db: Session,
+    current_user_id: UUID,
+    page_type: str = "website",
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    complaint_type: Optional[str] = None,
+    complaint_subtype: Optional[str] = None,
+    assignee: Optional[str] = None,
+    location: Optional[str] = None,
+    urgency: Optional[str] = None,
+    search: Optional[str] = None,
+    complainant_name: Optional[str] = None
+) -> Dict:
+    """ดึงข้อมูลเรื่องร้องเรียนแบ่งตาม page_type ในรูปแบบ assignment form - เฉพาะงานที่ได้รับมอบหมาย"""
+    try:
+        from models.comp_complaint_types import ComplaintChannel, ComplaintSubType
+        from sqlalchemy import and_, or_, func
+        
+        # กำหนด channel ตาม page_type
+        if page_type == "website":
+            target_channels = db.query(ComplaintChannel).filter(
+                ComplaintChannel.is_active == True,
+                or_(
+                    ComplaintChannel.name.contains("เว็บไซต์"),
+                    ComplaintChannel.description.contains("ร้องเรียนผ่านเว็บไซต์"),
+                    ComplaintChannel.name.contains("ออนไลน์")
+                )
+            ).all()
+        elif page_type == "card":
+            target_channels = db.query(ComplaintChannel).filter(
+                ComplaintChannel.is_active == True,
+                or_(
+                    ComplaintChannel.name.contains("บัตรสนเท่ห์"),
+                    ComplaintChannel.description.contains("บัตรสนเท่ห์"),
+                    ComplaintChannel.name.contains("การ์ด")
+                )
+            ).all()
+        else:
+            target_channels = db.query(ComplaintChannel).filter(
+                ComplaintChannel.is_active == True
+            ).all()
+        
+        # ดึง channel IDs
+        channel_ids = [channel.id for channel in target_channels]
+        
+        if not channel_ids:
+            return {
+                "items": [],
+                "total": 0,
+                "page_info": {
+                    "current_page": 1,
+                    "page_size": limit,
+                    "total_pages": 0,
+                    "has_next": False,
+                    "has_prev": False
+                },
+                "channels": [],
+                "page_type": page_type,
+                "my_assignments": True
+            }
+        
+        # ✅ สร้าง base query - กรองเฉพาะงานที่ได้รับมอบหมาย
+        query = db.query(Complaint).filter(
+            and_(
+                Complaint.complaint_channel_id.in_(channel_ids),
+                Complaint.assigned_officer_id == current_user_id  # ✅ เฉพาะงานที่มอบหมายให้ user นี้
+            )
+        )
+        
+        # Apply filters (เหมือนเดิม)
+        if status:
+            query = query.filter(Complaint.status == status)
+        
+        if complaint_type:
+            query = query.filter(Complaint.complaint_type.ilike(f"%{complaint_type}%"))
+        
+        if complaint_subtype:
+            query = query.join(ComplaintSubType, Complaint.complaint_subtype_id == ComplaintSubType.id)
+            query = query.filter(ComplaintSubType.name.ilike(f"%{complaint_subtype}%"))
+        
+        if assignee:
+            query = query.filter(
+                or_(
+                    Complaint.assigned_to.ilike(f"%{assignee}%"),
+                    Complaint.assigned_officer_id.isnot(None)
+                )
+            )
+        
+        if location:
+            query = query.filter(
+                or_(
+                    Complaint.incident_province.ilike(f"%{location}%"),
+                    Complaint.incident_district.ilike(f"%{location}%"),
+                    Complaint.incident_subdistrict.ilike(f"%{location}%")
+                )
+            )
+        
+        if urgency:
+            query = query.filter(Complaint.urgency_level == urgency)
+        
+        if search:
+            query = query.outerjoin(ComplaintSubType, Complaint.complaint_subtype_id == ComplaintSubType.id)
+            query = query.filter(
+                or_(
+                    Complaint.complaint_number.ilike(f"%{search}%"),
+                    Complaint.subject.ilike(f"%{search}%"),
+                    Complaint.description.ilike(f"%{search}%"),
+                    Complaint.complaint_type.ilike(f"%{search}%"),
+                    ComplaintSubType.name.ilike(f"%{search}%"),
+                    Complaint.complainant_data.ilike(f"%{search}%")
+                )
+            )
+        
+        if complainant_name:
+            query = query.filter(Complaint.complainant_data.ilike(f"%{complainant_name}%"))
+        
+        # Get total count
+        total = query.count()
+        
+        # Apply pagination
+        complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
+        
+        # สร้างข้อมูลในรูปแบบ assignment form
+        items = []
+        for complaint in complaints:
+            assignment_form = {
+                "id": str(complaint.id),
+                "complaint_number": complaint.complaint_number,
+                "subject": complaint.subject,
+                "complaint_type": complaint.complaint_type,
+                "status": complaint.status,
+                
+                # Reference Numbers (1-4)
+                "reference_number": complaint.reference_number,
+                "reference_date": complaint.reference_date.isoformat() if complaint.reference_date else None,
+                "reference_number2": complaint.reference_number2,
+                "reference_date2": complaint.reference_date2.isoformat() if complaint.reference_date2 else None,
+                "reference_number3": complaint.reference_number3,
+                "reference_date3": complaint.reference_date3.isoformat() if complaint.reference_date3 else None,
+                "reference_number4": complaint.reference_number4,
+                "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
+                
+                # Document Info
+                "document_number": complaint.document_number,
+                "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
+                
+                # Levels & Classifications
+                "confidentiality_level": complaint.confidentiality_level,
+                "urgency_level": complaint.urgency_level,
+                "complaint_filing_type": complaint.complaint_filing_type,
+                
+                # Agency Info
+                "agency_sender": complaint.agency_sender,
+                
+                # Additional Reference Numbers
+                "additional_reference_number1": complaint.additional_reference_number1,
+                "additional_reference_date1": complaint.additional_reference_date1.isoformat() if complaint.additional_reference_date1 else None,
+                "additional_reference_number2": complaint.additional_reference_number2,
+                "additional_reference_date2": complaint.additional_reference_date2.isoformat() if complaint.additional_reference_date2 else None,
+                
+                # Assignment Info
+                "assigned_officer_id": str(complaint.assigned_officer_id) if complaint.assigned_officer_id else None,
+                "assigned_to": complaint.assigned_to,
+                "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
+                "assigned_remark": complaint.assigned_remark,
+
+                # Complaint Categories
+                "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
+                "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
+                "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
+                
+                # Registration Date
+                "registration_date": complaint.registration_date.isoformat() if complaint.registration_date else None,
+                
+                # Workflow Flags
+                "new_complaint": complaint.new_complaint,
+                "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
+                "group_work": complaint.group_work,
+                
+                # Legal Reference
+                "regulation_reference": complaint.regulation_reference,
+                
+                # Timestamps
+                "created_at": complaint.created_at.isoformat(),
+                "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
+                
+                # Page Type & Assignment Info
+                "page_type": page_type,
+                "is_my_assignment": True  # ✅ เพิ่ม flag ว่าเป็นงานของตัวเอง
+            }
+            
+            items.append({"complaint": assignment_form})
+        
+        # Calculate pagination info
+        total_pages = (total + limit - 1) // limit
+        current_page = (skip // limit) + 1
+        
+        return {
+            "items": items,
+            "total": total,
+            "page_info": {
+                "current_page": current_page,
+                "page_size": limit,
+                "total_pages": total_pages,
+                "has_next": current_page < total_pages,
+                "has_prev": current_page > 1
+            },
+            "channels": [
+                {
+                    "id": str(channel.id),
+                    "name": channel.name,
+                    "description": channel.description
+                } for channel in target_channels
+            ],
+            "page_type": page_type,
+            "my_assignments": True,  # ✅ เพิ่ม flag ว่าเป็นงานที่ได้รับมอบหมาย
+            "assigned_user_id": str(current_user_id)  # ✅ เพิ่ม user ID ที่ได้รับมอบหมาย
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting my assignments by page type: {str(e)}")
+        return {
+            "items": [],
+            "total": 0,
+            "page_info": {
+                "current_page": 1,
+                "page_size": limit,
+                "total_pages": 0,
+                "has_next": False,
+                "has_prev": False
+            },
+            "channels": [],
+            "page_type": page_type,
+            "my_assignments": True,
+            "assigned_user_id": str(current_user_id),
+            "error": str(e)
+        }
