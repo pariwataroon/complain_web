@@ -94,7 +94,7 @@ const ComplaintSummaryService = ({ data = {} }) => {
                         <InfoItem label="อำเภอ/เขต" value={complainant.label || corporate.label} />
                         <InfoItem label="จังหวัด" value={complainant.label || corporate.label} />
                         <InfoItem label="รหัสไปรษณีย์" value={complainant.zipcode || corporate.zipcode} />
-                        <InfoItem label="อีเมล์" value={complainant.email || corporate.email} />
+                        <InfoItem label="อีเมล" value={complainant.email || corporate.email} />
                         <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(complainant.phone || corporate.phone)} />
                     </Grid>
                 </Section>
@@ -108,7 +108,7 @@ const ComplaintSummaryService = ({ data = {} }) => {
                         <InfoItem label="อำเภอ/เขต" value={delegate.label || signer.label} />
                         <InfoItem label="จังหวัด" value={delegate.label || signer.label} />
                         <InfoItem label="รหัสไปรษณีย์" value={delegate.zipcode || signer.zipcode} />
-                        <InfoItem label="อีเมล์" value={delegate.email || signer.email} />
+                        <InfoItem label="อีเมล" value={delegate.email || signer.email} />
                         <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(delegate.phone || signer.phone)} />
                     </Grid>
                 </Section>
@@ -122,7 +122,7 @@ const ComplaintSummaryService = ({ data = {} }) => {
                         <InfoItem label="อำเภอ/เขต" value={respondent.label || corporateS2.label || government.label} />
                         <InfoItem label="จังหวัด" value={respondent.label || corporateS2.label || government.label} />
                         <InfoItem label="รหัสไปรษณีย์" value={respondent.zipcode || corporateS2.zipcode || government.zipcode} />
-                        <InfoItem label="อีเมล์" value={respondent.email || corporateS2.email || government.email} />
+                        <InfoItem label="อีเมล" value={respondent.email || corporateS2.email || government.email} />
                         <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone || corporateS2.phone || government.phone)} />
                     </Grid>
                 </Section>

@@ -191,8 +191,8 @@ const ComplaintPersonalForm = ({
 
                 <Grid item xs={12} sm={6}>
                     <InputText
-                        label={formatLabel("อีเมล์")}
-                        placeholder="อีเมล์ เช่น example@domain.com"
+                        label={formatLabel("อีเมล")}
+                        placeholder="อีเมล เช่น example@domain.com"
                         value={data.email || ""}
                         onChange={handleEmailChange}
                         error={hasFieldError("email")}

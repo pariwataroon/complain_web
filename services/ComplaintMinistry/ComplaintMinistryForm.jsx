@@ -218,8 +218,8 @@ const ComplaintMinistryForm = ({
 
                 <Grid item xs={12} sm={6}>
                     <InputText
-                        label={formatLabel("อีเมล์")}
-                        placeholder="อีเมล์ เช่น contact@ministry.go.th"
+                        label={formatLabel("อีเมล")}
+                        placeholder="อีเมล เช่น contact@ministry.go.th"
                         value={data.email || ""}
                         onChange={handleEmailChange}
                         error={hasFieldError("email")}

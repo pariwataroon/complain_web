@@ -106,6 +106,22 @@ const UploadAttachments = async (complaint_id, formDataUpload) => {
   }
 };
 
+const UpdateAssignmentCompleteByAdmin = async (complaint_id, formData) => {
+  try {
+    const response = await axiosInstance.put(
+      `/complaints-assignment/${complaint_id}/assignment`,
+      formData
+    );
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error adding complaint:", error);
+    throw error;
+  }
+};
+
+
 export {
   Addcomplaints,
   GetAllComplaints,
@@ -115,4 +131,5 @@ export {
   GetComplaintMeByID,
   GetComplaintTaskStatus,
   GetComplaintsGroupedbyChannel,
+  UpdateAssignmentCompleteByAdmin,
 };

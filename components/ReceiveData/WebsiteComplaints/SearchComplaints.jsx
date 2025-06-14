@@ -5,7 +5,8 @@ import { GetComplaintByID } from "@pages/api/complaint/complaint";
 import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/ComplaintPersonalFormAPI";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import ButtonService from "@services/ButtonService/ButtonService";
-import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
+import DateThaiPickerService, { ControlledDateThaiPickerService } from "@services/DateThaiPickerService/DateThaiPickerService"; 
+
 import { FormProvider, useForm } from "react-hook-form";
 import { alertError, alertSuccess } from "@utils/Alerts";
 import styles from "./TabNav.module.scss";
@@ -92,6 +93,7 @@ const SearchComplaints = () => {
     }
   }, [id]);
 
+  // เฉพาะส่วน fetchComplaints ที่เปลี่ยนแปลง
   const fetchComplaints = async (id) => {
     setLoading(true);
     setError(null);
@@ -100,9 +102,7 @@ const SearchComplaints = () => {
       const res = await GetComplaintByID(id);
       const data = res?.res_data;
       setDefaultData(data);
-      console.log({ data });
 
-      // Step1: General/Delegate
       const general = data?.step1?.general?.general || {};
       const delegate = data?.step1?.general?.delegate || {};
       const { type: cType, data: cData } = getComplainantTypeAndData(general);
@@ -115,24 +115,55 @@ const SearchComplaints = () => {
       setDelegateData(dData);
       defaultDelegateRef.current = dData;
 
-      // Step2: Respondent (บุคคล/นิติบุคคล/หน่วยงานรัฐ)
       const step2General = data?.step2?.general || {};
       const { type: rType, data: rData } = getRespondentTypeAndData(step2General);
       setRespondentType(rType);
       setRespondentData(rData);
       defaultStep2Ref.current = rData;
 
-      // Step3, Step4
       const step3Data = data?.step3?.general || {};
+      const assignmentForm = data?.assignment_form || {};
+
       const step4Data = data?.step4?.general || {};
 
-      // วันที่
       const step3DataWithDefaults = {
         ...step3Data,
-        referenceDate1: step3Data.referenceDate1 || "",
-        referenceDate3: step3Data.referenceDate3 || "",
-        referenceDate4: step3Data.referenceDate4 || "",
+        // ข้อมูลจาก assignment_form (จะ override ถ้ามีค่า)
+        referenceNumber1: assignmentForm.reference_number || step3Data.referenceNumber1 || "",
+        referenceDate1: assignmentForm.reference_date || step3Data.referenceDate1 || "",
+        referenceNumber2: assignmentForm.reference_number2 || step3Data.referenceNumber2 || "",
+        referenceDate2: assignmentForm.reference_date2 || step3Data.referenceDate2 || "",
+        referenceNumber3: assignmentForm.reference_number3 || step3Data.referenceNumber3 || "",
+        referenceDate3: assignmentForm.reference_date3 || step3Data.referenceDate3 || "",
+        // ใช้ complaint_number สำหรับ referenceNumber4 (เลข สรร. สารบัญ)
+        referenceNumber4: assignmentForm.complaint_number || assignmentForm.reference_number4 || step3Data.referenceNumber4 || "",
+        referenceDate4: assignmentForm.reference_date4 || step3Data.referenceDate4 || "",
+        documentNumber: assignmentForm.document_number || step3Data.documentNumber || "",
+        documentDate: assignmentForm.document_date || step3Data.documentDate || "",
+        senderAgency: assignmentForm.agency_sender || step3Data.senderAgency || "",
+        securityLevel: assignmentForm.confidentiality_level || step3Data.securityLevel || "normal",
+        urgencyLevel: assignmentForm.urgency_level || step3Data.urgencyLevel || "normal",
+        complaintType: assignmentForm.complaint_filing_type || step3Data.complaintType || "new",
+        // ข้อมูลเพิ่มเติม
+        additionalReference1: assignmentForm.additional_reference_number1 || step3Data.additionalReference1 || "",
+        additionalReferenceDate1: assignmentForm.additional_reference_date1 || step3Data.additionalReferenceDate1 || "",
+        additionalReference2: assignmentForm.additional_reference_number2 || step3Data.additionalReference2 || "",
+        additionalReferenceDate2: assignmentForm.additional_reference_date2 || step3Data.additionalReferenceDate2 || "",
+        // ข้อมูลเดิมจาก step3
+        complaintSubType: step3Data.complaintSubType || "",
+        subject: assignmentForm.subject || step3Data.subject || "",
+        complaintChannel: "เว็บไซต์ศูนย์เรื่องร้องทุกข์"
       };
+
+      // ตั้งค่า complaintType state จากข้อมูลที่ได้
+      if (assignmentForm.complaint_filing_type) {
+        const typeMap = {
+          "new": "new",
+          "additional": "additional",
+          "anonymous": "committee"
+        };
+        setComplaintType(typeMap[assignmentForm.complaint_filing_type] || "new");
+      }
 
       defaultStep3Ref.current = step3DataWithDefaults;
       defaultStep4Ref.current = step4Data;
@@ -143,6 +174,7 @@ const SearchComplaints = () => {
       step3Methods.reset(step3DataWithDefaults);
       step4Methods.reset(step4Data);
 
+
     } catch (error) {
       console.error("Load complaints failed", error);
       setError("เกิดข้อผิดพลาดในการโหลดข้อมูล");
@@ -151,21 +183,11 @@ const SearchComplaints = () => {
     }
   };
 
-  // Validation function
   const validateForm = () => {
     const errors = {};
     let hasErrors = false;
 
-    // Get all form values
     const step3Data = step3Methods.getValues();
-
-    console.log("=== Validation Debug ===", {
-      step3Data,
-      complaintType,
-      formState: step3Methods.formState
-    });
-
-    // Step 3 Validation - Required fields with red asterisk
 
     // ประเภทเรื่องร้องเรียน *
     if (!step3Data.complaintType || step3Data.complaintType.trim() === "") {
@@ -185,9 +207,9 @@ const SearchComplaints = () => {
       hasErrors = true;
     }
 
-    // เลข สป.กก. *
+    // เลข สป.กค. *
     if (!step3Data.referenceNumber1 || step3Data.referenceNumber1.trim() === "") {
-      errors.referenceNumber1 = "กรุณากรอกเลข สป.กก.";
+      errors.referenceNumber1 = "กรุณากรอกเลข สป.กค.";
       hasErrors = true;
     }
 
@@ -221,12 +243,6 @@ const SearchComplaints = () => {
       hasErrors = true;
     }
 
-    console.log("=== Validation Result ===", {
-      errors,
-      hasErrors,
-      errorCount: Object.keys(errors).length
-    });
-
     setValidationErrors(errors);
     setShowValidation(hasErrors);
 
@@ -248,8 +264,9 @@ const SearchComplaints = () => {
     setComplaintType("new");
   };
 
+
+
   const handleSubmit = () => {
-    console.log("=== Submit Clicked ===");
 
     const isValid = validateForm();
 
@@ -289,13 +306,7 @@ const SearchComplaints = () => {
       step4: {
         general: step4Data
       },
-      updated_by: currentUser,
-      updated_at: currentDateTime,
     };
-
-    console.log("Submitting data:", JSON.stringify(submitData, null, 2));
-
-    alertSuccess("บันทึกข้อมูลสำเร็จ", "ข้อมูลได้รับการบันทึกแล้ว");
 
     // ส่งข้อมูลไปหน้า SearchComplaintsPreview
     router.push({
@@ -586,7 +597,7 @@ const SearchComplaints = () => {
                     <div className={styles.fieldRowDate}>
                       <div className={styles.fieldGroup}>
                         <label>
-                          เลข สป.กก. <span className={styles.required}>*</span>
+                          เลข สป.กค. <span className={styles.required}>*</span>
                         </label>
                         <input
                           type="text"
@@ -594,7 +605,7 @@ const SearchComplaints = () => {
                             onChange: () => handleFieldChange("referenceNumber1")
                           })}
                           className={hasFieldError("referenceNumber1") ? styles.errorField : ""}
-                          placeholder="กรุณากรอกเลข สป.กก."
+                          placeholder="กรุณากรอกเลข สป.กค."
                         />
                         {hasFieldError("referenceNumber1") && (
                           <span className={styles.errorText}>{getFieldError("referenceNumber1")}</span>
@@ -604,15 +615,16 @@ const SearchComplaints = () => {
                         <label>
                           วันที่ <span className={styles.required}>*</span>
                         </label>
-                        <DateThaiPickerService
+                        <ControlledDateThaiPickerService
                           name="referenceDate1"
                           control={step3Methods.control}
                           placeholder="กรุณาเลือกวันที่"
                           error={hasFieldError("referenceDate1")}
                           helperText={getFieldError("referenceDate1")}
-                          required
                           onChange={() => handleFieldChange("referenceDate1")}
+                          required
                         />
+                        
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>เลข สป.สร.</label>
@@ -624,7 +636,7 @@ const SearchComplaints = () => {
                       </div>
                       <div className={styles.fieldGroupDate}>
                         <label>วันที่</label>
-                        <DateThaiPickerService
+                        <ControlledDateThaiPickerService
                           name="referenceDate2"
                           control={step3Methods.control}
                           placeholder="กรุณาเลือกวันที่"
@@ -655,7 +667,7 @@ const SearchComplaints = () => {
                           วันที่ <span className={styles.required}>*</span>
                         </label>
                         <div className={styles.datePickerWrapper}>
-                          <DateThaiPickerService
+                          <ControlledDateThaiPickerService
                             name="referenceDate3"
                             control={step3Methods.control}
                             placeholder="กรุณาเลือกวันที่"
@@ -687,7 +699,7 @@ const SearchComplaints = () => {
                           วันที่ <span className={styles.required}>*</span>
                         </label>
                         <div className={styles.datePickerWrapper}>
-                          <DateThaiPickerService
+                          <ControlledDateThaiPickerService
                             name="referenceDate4"
                             control={step3Methods.control}
                             placeholder="กรุณาเลือกวันที่"
@@ -713,7 +725,7 @@ const SearchComplaints = () => {
                       <div className={styles.fieldGroupDate}>
                         <label>วันที่</label>
                         <div className={styles.datePickerWrapper}>
-                          <DateThaiPickerService
+                          <ControlledDateThaiPickerService
                             name="documentDate"
                             control={step3Methods.control}
                             placeholder="กรุณาเลือกวันที่"
@@ -791,7 +803,7 @@ const SearchComplaints = () => {
                               <div className={styles.fieldWithLabelDate}>
                                 <label>วันที่</label>
                                 <div className={styles.datePickerWrapper}>
-                                  <DateThaiPickerService
+                                  <ControlledDateThaiPickerService
                                     name="additionalReferenceDate1"
                                     control={step3Methods.control}
                                     disabled={complaintType !== "additional"}
@@ -828,7 +840,7 @@ const SearchComplaints = () => {
                               <div className={styles.fieldWithLabelDate}>
                                 <label>วันที่</label>
                                 <div className={styles.datePickerWrapper}>
-                                  <DateThaiPickerService
+                                  <ControlledDateThaiPickerService
                                     name="additionalReferenceDate2"
                                     control={step3Methods.control}
                                     disabled={complaintType !== "committee"}
@@ -857,7 +869,7 @@ const SearchComplaints = () => {
                       <div className={styles.fieldRowDate}>
                         <div className={styles.fieldGroupDate}>
                           <div className={styles.datePickerWrapper}>
-                            <DateThaiPickerService
+                            <ControlledDateThaiPickerService
                               label="วันที่รับงานของเจ้าหน้าที่"
                               name="officerReceivedDate"
                               control={step4Methods.control}
@@ -868,7 +880,7 @@ const SearchComplaints = () => {
                         </div>
                         <div className={styles.fieldGroupDate}>
                           <div className={styles.datePickerWrapper}>
-                            <DateThaiPickerService
+                            <ControlledDateThaiPickerService
                               label="วันที่เสนองาน ผอ.สรร."
                               name="directorSubmittedDate"
                               control={step4Methods.control}
@@ -883,7 +895,7 @@ const SearchComplaints = () => {
                       <div className={styles.fieldRow}>
                         <div className={styles.fieldGroup}>
                           <div className={styles.datePickerWrapper}>
-                            <DateThaiPickerService
+                            <ControlledDateThaiPickerService
                               label="วันและเวลาที่เกิดเหตุ"
                               name="incidentDate"
                               control={step4Methods.control}

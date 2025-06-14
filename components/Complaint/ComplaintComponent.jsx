@@ -283,16 +283,7 @@ export default function ComplaintComponent() {
         errors.complaintType = "กรุณาเลือกประเภทเรื่องราวร้องทุกข์";
       }
 
-      // **Debug hasValue function กับ attachment**
-      const attachmentHasValue = hasValue(data.attachment);
      
-
-      if (!attachmentHasValue) {
-        errors.attachment = "กรุณาแนบเอกสารประกอบการร้องเรียน";
-      } else if (Array.isArray(data.attachment) && data.attachment.length > 3) {
-        errors.attachment = "สามารถแนบไฟล์ได้สูงสุด 3 ไฟล์";
-      } else {
-      }
     }
 
     return { errors, isValid: Object.keys(errors).length === 0 };

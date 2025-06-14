@@ -108,7 +108,7 @@ const Tab5 = ({
           <InfoItem label="ตำบล/แขวง" value={respondent.subdistricts} />
           <InfoItem label="รหัสไปรษณีย์" value={respondent.zipcode} />
           <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone)} />
-          <InfoItem label="อีเมล์" value={respondent.email} />
+          <InfoItem label="อีเมล" value={respondent.email} />
         </>
       );
     }
@@ -124,7 +124,7 @@ const Tab5 = ({
           <InfoItem label="ตำบล/แขวง" value={respondent.subdistricts} />
           <InfoItem label="รหัสไปรษณีย์" value={respondent.zipcode} />
           <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone)} />
-          <InfoItem label="อีเมล์" value={respondent.email} />
+          <InfoItem label="อีเมล" value={respondent.email} />
         </>
       );
     }
@@ -140,7 +140,7 @@ const Tab5 = ({
           <InfoItem label="ตำบล/แขวง" value={respondent.subdistricts} />
           <InfoItem label="รหัสไปรษณีย์" value={respondent.zipcode} />
           <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone)} />
-          <InfoItem label="อีเมล์" value={respondent.email} />
+          <InfoItem label="อีเมล" value={respondent.email} />
         </>
       );
     }
@@ -198,7 +198,7 @@ const Tab5 = ({
               <InfoItem label="อำเภอ/เขต" value={complainant.districts} />
               <InfoItem label="ตำบล/แขวง" value={complainant.subdistricts} />
               <InfoItem label="รหัสไปรษณีย์" value={complainant.zipcode} />
-              <InfoItem label="อีเมล์" value={complainant.email} />
+              <InfoItem label="อีเมล" value={complainant.email} />
               <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(complainant.phone)} />
             </>
           ) : (
@@ -210,7 +210,7 @@ const Tab5 = ({
               <InfoItem label="อำเภอ/เขต" value={complainant.districts} />
               <InfoItem label="ตำบล/แขวง" value={complainant.subdistricts} />
               <InfoItem label="รหัสไปรษณีย์" value={complainant.zipcode} />
-              <InfoItem label="อีเมล์" value={complainant.email} />
+              <InfoItem label="อีเมล" value={complainant.email} />
               <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(complainant.phone)} />
             </>
           )}
@@ -230,7 +230,7 @@ const Tab5 = ({
               <InfoItem label="อำเภอ/เขต" value={delegate.districts} />
               <InfoItem label="ตำบล/แขวง" value={delegate.subdistricts} />
               <InfoItem label="รหัสไปรษณีย์" value={delegate.zipcode} />
-              <InfoItem label="อีเมล์" value={delegate.email} />
+              <InfoItem label="อีเมล" value={delegate.email} />
               <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(delegate.phone)} />
             </>
           ) : (
@@ -242,7 +242,7 @@ const Tab5 = ({
               <InfoItem label="อำเภอ/เขต" value={delegate.districts} />
               <InfoItem label="ตำบล/แขวง" value={delegate.subdistricts} />
               <InfoItem label="รหัสไปรษณีย์" value={delegate.zipcode} />
-              <InfoItem label="อีเมล์" value={delegate.email} />
+              <InfoItem label="อีเมล" value={delegate.email} />
               <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(delegate.phone)} />
             </>
           )}

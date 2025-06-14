@@ -13,12 +13,12 @@ import Chart from "chart.js/auto";
 const chartDataByYear = {
   2567: [
     { name: "เว็บไซต์", count: 80, color: "#4A5CD6" },
-    { name: "อีเมล์", count: 40, color: "#E91E63" },
+    { name: "อีเมล", count: 40, color: "#E91E63" },
     { name: "จดหมาย", count: 26, color: "#87CEEB" },
   ],
   2568: [
     { name: "เว็บไซต์", count: 60, color: "#4A5CD6" },
-    { name: "อีเมล์", count: 30, color: "#E91E63" },
+    { name: "อีเมล", count: 30, color: "#E91E63" },
     { name: "จดหมาย", count: 0, color: "#87CEEB" },
   ],
 };

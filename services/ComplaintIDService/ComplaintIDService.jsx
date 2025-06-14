@@ -130,7 +130,7 @@ const ComplaintIDService = ({ complaint }) => {
                     <InfoItem labelText="ตำบล/แขวง" value={label(respondent.subdistricts)} />
                     <InfoItem labelText="รหัสไปรษณีย์" value={respondent.zipcode?.label || "-"} />
                     <InfoItem labelText="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone)} />
-                    <InfoItem labelText="อีเมล์" value={respondentEmail} />
+                    <InfoItem labelText="อีเมล" value={respondentEmail} />
                 </>
             );
         }
@@ -146,7 +146,7 @@ const ComplaintIDService = ({ complaint }) => {
                     <InfoItem labelText="ตำบล/แขวง" value={label(respondent.subdistricts)} />
                     <InfoItem labelText="รหัสไปรษณีย์" value={respondent.zipcode?.label || "-"} />
                     <InfoItem labelText="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone)} />
-                    <InfoItem labelText="อีเมล์" value={respondentEmail} />
+                    <InfoItem labelText="อีเมล" value={respondentEmail} />
                 </>
             );
         }
@@ -162,7 +162,7 @@ const ComplaintIDService = ({ complaint }) => {
                     <InfoItem labelText="ตำบล/แขวง" value={label(respondent.subdistricts)} />
                     <InfoItem labelText="รหัสไปรษณีย์" value={respondent.zipcode?.label || "-"} />
                     <InfoItem labelText="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(respondent.phone)} />
-                    <InfoItem labelText="อีเมล์" value={respondentEmail} />
+                    <InfoItem labelText="อีเมล" value={respondentEmail} />
                 </>
             );
         }
@@ -181,7 +181,7 @@ const ComplaintIDService = ({ complaint }) => {
                     <InfoItem labelText="อำเภอ/เขต" value={label(complainant.districts)} />
                     <InfoItem labelText="ตำบล/แขวง" value={label(complainant.subdistricts)} />
                     <InfoItem labelText="รหัสไปรษณีย์" value={complainant.zipcode?.label || "-"} />
-                    <InfoItem labelText="อีเมล์" value={complainant.email} />
+                    <InfoItem labelText="อีเมล" value={complainant.email} />
                     <InfoItem labelText="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(complainant.phone)} />
                 </>
             );
@@ -196,7 +196,7 @@ const ComplaintIDService = ({ complaint }) => {
                 <InfoItem labelText="อำเภอ/เขต" value={label(complainant.districts)} />
                 <InfoItem labelText="ตำบล/แขวง" value={label(complainant.subdistricts)} />
                 <InfoItem labelText="รหัสไปรษณีย์" value={complainant.zipcode?.label || "-"} />
-                <InfoItem labelText="อีเมล์" value={complainant.email} />
+                <InfoItem labelText="อีเมล" value={complainant.email} />
                 <InfoItem labelText="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(complainant.phone)} />
             </>
         );
@@ -220,7 +220,7 @@ const ComplaintIDService = ({ complaint }) => {
                         <InfoItem labelText="อำเภอ/เขต" value={label(delegate.districts)} />
                         <InfoItem labelText="ตำบล/แขวง" value={label(delegate.subdistricts)} />
                         <InfoItem labelText="รหัสไปรษณีย์" value={delegate.zipcode?.label || "-"} />
-                        <InfoItem labelText="อีเมล์" value={delegate.email} />
+                        <InfoItem labelText="อีเมล" value={delegate.email} />
                         <InfoItem labelText="โทรศัพท์" value={formatPhoneNumber_null(delegate.phone)} />
                     </Grid>
                 </Section>

@@ -51,15 +51,13 @@ export default function NavbarMain() {
         Cookies.remove("refresh_token");
         Cookies.remove("info");
         Cookies.remove("permission_paths");
-
-        setIsLoggedIn(false);
         setUserInfo(null);
-        setProfileDropdownOpen(false);
+        setIsDropdownOpen(false);
 
         await alertSuccess("สำเร็จ", "ออกจากระบบเรียบร้อยแล้ว");
-
         router.push("/");
       } catch (error) {
+        console.error("Logout error:", error);
         await alertError("ข้อผิดพลาด", "ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง");
       }
     }
@@ -162,7 +160,7 @@ export default function NavbarMain() {
                     จัดการระบบ
                   </button>
                 )}
-                
+
                 <button
                   className={styles.dropdownItem}
                   onClick={() => {
@@ -172,7 +170,7 @@ export default function NavbarMain() {
                 >
                   แจ้งเรื่องร้องทุกข์
                 </button>
-                
+
                 <button
                   className={styles.dropdownItem}
                   onClick={() => {
@@ -182,7 +180,7 @@ export default function NavbarMain() {
                 >
                   ติดตามผล
                 </button>
-                
+
                 <button
                   className={styles.dropdownItem}
                   onClick={handleLogout}

@@ -10,6 +10,7 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ImageIcon from "@mui/icons-material/Image";
 import Image from "next/image";
+import Cookies from "js-cookie";
 import ButtonService from "@services/ButtonService/ButtonService";
 import { GetComplaintByID } from "@pages/api/complaint/complaint";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
@@ -18,8 +19,14 @@ import {
 } from "@utils/Formats";
 import CheckIcon from "@mui/icons-material/Check";
 import { exportElementToPDF } from "@utils/exportPDF";
-
-
+import {
+  showLoading,
+  closeAlert,
+  alertError,
+  alertSuccess,
+  showConfirm,
+} from "@utils/Alerts";
+import useSearchComplaintsPreview from "@hooks/admin/websitecomplaints/useSearchComplaintsPreview";
 
 const SearchComplaintsPreview = () => {
   const router = useRouter();
@@ -28,11 +35,16 @@ const SearchComplaintsPreview = () => {
   const [formData, setFormData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
+
   const pdfRef = useRef();
 
-  const handleSave = () => {
-    alertSuccess("บันทึกสำเร็จ");
-  };
+  const {
+    handleUpdateAssignment,
+    isSubmitting,
+    preparedFormData
+  } = useSearchComplaintsPreview();
 
   const breadcrumbItems = [
     {
@@ -57,6 +69,18 @@ const SearchComplaintsPreview = () => {
   ];
 
   useEffect(() => {
+    const cookieInfo = Cookies.get("info");
+    if (cookieInfo) {
+      try {
+        const parsedInfo = JSON.parse(cookieInfo);
+        setUserInfo(parsedInfo);
+      } catch (err) {
+        console.error("Error parsing user info cookie:", err);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchData = async () => {
       if (!id) {
         setError("ไม่พบ ID เรื่องร้องทุกข์");
@@ -65,13 +89,11 @@ const SearchComplaintsPreview = () => {
       }
 
       try {
-        console.log("Fetching complaint data for ID:", id);
 
         // ลองดึงข้อมูลจาก query parameter ก่อน (กรณีส่งมาจากหน้าแก้ไข)
         if (router.query.data) {
           const data = JSON.parse(router.query.data);
           setFormData(data);
-          console.log("Using data from query:", data);
           setLoading(false);
           return;
         }
@@ -81,7 +103,6 @@ const SearchComplaintsPreview = () => {
 
         if (response?.res_code === "0001" && response?.res_data) {
           setFormData(response.res_data);
-          console.log("Fetched complaint data from API:", response.res_data);
         } else {
           throw new Error(response?.res_desc || "ไม่สามารถดึงข้อมูลได้");
         }
@@ -95,6 +116,46 @@ const SearchComplaintsPreview = () => {
 
     fetchData();
   }, [id, router.query.data]);
+
+  const handleSubmit = async () => {
+
+    if (!id) {
+      alertError("ข้อผิดพลาด", "ไม่พบ ID เรื่องร้องทุกข์");
+      return;
+    }
+
+    if (!formData) {
+      alertError("ข้อผิดพลาด", "ไม่พบข้อมูลที่จะส่ง");
+      return;
+    }
+
+    if (!userInfo) {
+      alertError("ข้อผิดพลาด", "ไม่พบข้อมูลผู้ใช้");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const currentDateTime = new Date().toISOString();
+      const currentUser = `${userInfo.first_name || ""} ${userInfo.last_name || ""}`.trim() || "ผู้ใช้ไม่ระบุชื่อ";
+
+
+      await handleUpdateAssignment(id, formData, userInfo);
+
+      alertSuccess("บันทึกสำเร็จ", "ข้อมูลได้รับการบันทึกและดำเนินการเสร็จสิ้นแล้ว");
+
+      setTimeout(() => {
+        router.push("/admin/edit/website-complaints");
+      }, 1500);
+
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alertError("ข้อผิดพลาด", error.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -209,6 +270,11 @@ const SearchComplaintsPreview = () => {
     return `${day}/${month}/${year}`;
   };
 
+  // Current user name for display
+  const currentUserName = userInfo ?
+    `${userInfo.first_name || ""} ${userInfo.last_name || ""}`.trim() || "ผู้ใช้ไม่ระบุชื่อ" :
+    "กำลังโหลด...";
+
   return (
     <>
       <BreadcrumbsService items={breadcrumbItems} />
@@ -315,7 +381,7 @@ const SearchComplaintsPreview = () => {
                 value={complainant.zipcode || "-"}
               />
               <InfoItem
-                label="อีเมล์"
+                label="อีเมล"
                 value={complainant.email || "-"}
               />
               <InfoItem
@@ -368,7 +434,7 @@ const SearchComplaintsPreview = () => {
                     value={delegate.zipcode || "-"}
                   />
                   <InfoItem
-                    label="อีเมล์"
+                    label="อีเมล"
                     value={delegate.email || "-"}
                   />
                   <InfoItem
@@ -431,7 +497,7 @@ const SearchComplaintsPreview = () => {
                 value={respondent.zipcode || "-"}
               />
               <InfoItem
-                label="อีเมล์"
+                label="อีเมล"
                 value={respondent.email || "-"}
               />
               <InfoItem
@@ -456,11 +522,11 @@ const SearchComplaintsPreview = () => {
             </Typography>
             <Grid container spacing={2} mb={3}>
               <InfoItem
-                label="เลข สป.กก."
+                label="เลข สป.กค."
                 value={complaint.referenceNumber1 || "-"}
               />
               <InfoItem
-                label="วันที่ สป.กก."
+                label="วันที่ สป.กค."
                 value={formatDate(complaint.referenceDate1)}
               />
               <InfoItem
@@ -480,7 +546,7 @@ const SearchComplaintsPreview = () => {
                 value={formatDate(complaint.referenceDate3)}
               />
               <InfoItem
-                label="เลข สรร. (สานต่อง)"
+                label="เลข สรร. (สารบัญ)"
                 value={complaint.referenceNumber4 || "-"}
               />
               <InfoItem
@@ -508,7 +574,7 @@ const SearchComplaintsPreview = () => {
                 value={complaint.urgencyLevel || "-"}
               />
               <InfoItem
-                label="ประเภทการร้องเรียน"
+                label="ประเภทเรื่องร้องเรียน"
                 value={complaint.complaintType || "-"}
               />
               <InfoItem
@@ -527,11 +593,11 @@ const SearchComplaintsPreview = () => {
             <Grid container spacing={2} mb={3}>
               <InfoItem
                 label="วันที่รับเรื่องของเจ้าพนักงาน"
-                value={formatThaiDateTime(additionalDetails.officerReceivedDate)}
+                value={formatThaiDateTime(additionalDetails.officerReceivedDate || "-")}
               />
               <InfoItem
                 label="วันที่เสนองาน ผอ.สรร."
-                value={formatThaiDateTime(additionalDetails.directorSubmittedDate)}
+                value={formatThaiDateTime(additionalDetails.directorSubmittedDate || "-")}
               />
             </Grid>
 
@@ -618,18 +684,19 @@ const SearchComplaintsPreview = () => {
             <Grid container spacing={2} mb={3}>
               <Grid item xs={6}>
                 <Typography fontSize={16} fontWeight="bold">
-                  ลงชื่อเจ้าหน้าที่บันทึกข้อมูล: {complainant.firstName} {complainant.lastName}
+                  ลงชื่อเจ้าหน้าที่บันทึกข้อมูล: {currentUserName}
                 </Typography>
                 <Typography fontSize={14} color="text.secondary">
-                  วันที่: {formatThaiDate(created_at || updated_at)}
+                  วันที่: {formatThaiDate(new Date().toISOString())}
                 </Typography>
               </Grid>
             </Grid>
 
-
           </Paper>
         </Box>
       </div>
+
+      {/* Action Buttons */}
       <Box
         sx={{
           display: "flex",
@@ -641,11 +708,11 @@ const SearchComplaintsPreview = () => {
         }}
       >
         <ButtonService
-          label="บันทึก"
+          label={submitting || isSubmitting ? "กำลังบันทึก..." : "บันทึก"}
           color="ยืนยัน"
           variant="contained"
-          // onClick={handleSubmit}
-          // disabled={!acceptSubmit}
+          onClick={handleSubmit}
+          disabled={submitting || isSubmitting}
           iconRight={<CheckIcon />}
         />
         <ButtonService
@@ -653,8 +720,7 @@ const SearchComplaintsPreview = () => {
           color="ส่งออก"
           variant="contained"
           onClick={() => exportElementToPDF(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
-          // onClick={handleSubmit}
-          // disabled={!acceptSubmit}
+          disabled={submitting || isSubmitting}
           iconRight={<CheckIcon />}
         />
       </Box>

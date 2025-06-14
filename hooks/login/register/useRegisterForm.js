@@ -35,7 +35,7 @@ export const useRegisterForm = () => {
           );
         } else if (response.res_code === "4090") {
           await alertInfo(
-            'อีเมล์หรือรหัสบัตรประชาชน<br>มีการใช้งานแล้ว',
+            'อีเมลหรือรหัสบัตรประชาชน<br>มีการใช้งานแล้ว',
             `หากลืมรหัสผ่านโปรดคลิก <a href="/register?method=Forget_CardID">ลืมรหัสผ่าน</a>`,
             true
           );

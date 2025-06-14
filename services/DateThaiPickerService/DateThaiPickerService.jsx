@@ -12,6 +12,7 @@ const DateThaiPickerService = ({
   name,
   disabled,
   dis,
+  displayValue,
   placeholder = "กรุณาเลือกวันที่.....",
   minDate = null,
   maxDate = null,
@@ -133,7 +134,6 @@ const DateThaiPickerService = ({
     }
   };
 
-  // ฟังก์ชันแปลงวันที่กลับเป็น API format
   const formatToApiDate = (thaiDate) => {
     if (!thaiDate || !thaiDate.day || !thaiDate.month || !thaiDate.year) {
       return null;
@@ -141,7 +141,7 @@ const DateThaiPickerService = ({
 
     try {
       const year = thaiDate.year;
-      const month = thaiDate.month - 1; // แปลงจาก 1-12 เป็น 0-11
+      const month = thaiDate.month - 1;
       const day = thaiDate.day;
 
       let dateObj;
@@ -154,7 +154,6 @@ const DateThaiPickerService = ({
         dateObj = new Date(year, month, day, 0, 0, 0, 0);
       }
 
-      // Return ISO string format
       return dateObj.toISOString();
     } catch (error) {
       console.error('Error formatting to API date:', error);
@@ -162,12 +161,10 @@ const DateThaiPickerService = ({
     }
   };
 
-  // ตรวจสอบ client-side mounting
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // เพิ่ม useEffect สำหรับตรวจสอบขนาดหน้าจอ
   useEffect(() => {
     const checkScreenSize = () => {
       setIsSmallScreen(window.innerWidth <= 460);
@@ -191,15 +188,6 @@ const DateThaiPickerService = ({
       setCurrentYear(parsedDate.year);
     }
   }, [value, defaultValue]);
-
-  // ลบ useEffect ที่มี control.setValue ออก
-  // useEffect(() => {
-  //   if (control && name) {
-  //     const fieldValue = selectedDate ? formatToApiDate(selectedDate) : "";
-  //     control.register(name);
-  //     control.setValue(name, fieldValue);
-  //   }
-  // }, [selectedDate, control, name]);
 
   // แปลงปี ค.ศ. เป็น พ.ศ.
   const toBuddhistYear = (gregorianYear) => {
@@ -363,10 +351,6 @@ const DateThaiPickerService = ({
 
       setSelectedDate(updatedDate);
 
-      if (onChange) {
-        const apiDate = formatToApiDate(updatedDate);
-        onChange(apiDate);
-      }
     }
   };
 
@@ -374,6 +358,10 @@ const DateThaiPickerService = ({
   const confirmTimeSelection = () => {
     setShowTimeSelector(false);
     setIsOpen(false);
+    if (onChange && selectedDate) {
+      const apiDate = formatToApiDate(selectedDate);
+      onChange(apiDate);
+    }
   };
 
   const goToPreviousMonth = () => {
@@ -835,6 +823,8 @@ export const ControlledDateThaiPickerService = ({
   name,
   defaultValue = "",
   rules = {},
+  error: customError,
+  helperText: customHelperText,
   ...props
 }) => {
   if (!control || !name) {
@@ -847,13 +837,13 @@ export const ControlledDateThaiPickerService = ({
       control={control}
       defaultValue={defaultValue}
       rules={rules}
-      render={({ field: { onChange, value }, fieldState: { error } }) => (
+      render={({ field: { onChange, value }, fieldState: { error: formError } }) => (
         <DateThaiPickerService
           {...props}
           value={value}
           onChange={onChange}
-          error={!!error}
-          helperText={error?.message}
+          error={customError !== undefined ? customError : !!formError}
+          helperText={customHelperText !== undefined ? customHelperText : formError?.message}
         />
       )}
     />

@@ -76,7 +76,7 @@ export default function ForgetPage() {
           className={styles.forgotForm}
         >
           <label className={styles.inputLabel}>
-            อีเมล์ <span>*</span>
+            อีเมล <span>*</span>
             {errors.email && (
               <span className={styles.errorText}>{errors.email.message}</span>
             )}

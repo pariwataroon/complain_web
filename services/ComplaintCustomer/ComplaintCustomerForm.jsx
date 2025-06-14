@@ -217,8 +217,8 @@ const ComplaintCustomerForm = ({
 
                 <Grid item xs={12} sm={6}>
                     <InputText
-                        label={formatLabel("อีเมล์")}
-                        placeholder="อีเมล์ เช่น company@domain.com"
+                        label={formatLabel("อีเมล")}
+                        placeholder="อีเมล เช่น company@domain.com"
                         value={data.email || ""}
                         onChange={handleEmailChange}
                         error={hasFieldError("email")}

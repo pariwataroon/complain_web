@@ -55,7 +55,6 @@ const Tab3 = ({
 
     setForm(currentForm => {
       const updated = { ...currentForm, [field]: value };
-      // **แก้ไข: Sync ทันทีใน setState**
       setTimeout(() => forceSyncToParent(updated, `handleChange-${field}`), 0);
       return updated;
     });
@@ -303,7 +302,6 @@ const Tab3 = ({
                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                 maxFiles={3}
                 maxSizeMB={10}
-                required
               />
             </Grid>
           </Grid>

@@ -44,8 +44,7 @@ const Filteromplaints = () => {
   ]);
 
   // Current user and datetime
-  const currentUser = "vampirebeam";
-  const currentDateTime = "2025-06-10 03:57:05";
+  
 
   // Utility function to format date
   const formatDate = (isoString) => {
@@ -68,7 +67,6 @@ const Filteromplaints = () => {
       setError(null);
 
       try {
-        console.log(`[${currentDateTime}] ${currentUser}: Fetching complaints list...`);
 
         const response = await GetComplaintsGroupedbyChannel({
           limit: 100,
@@ -201,12 +199,10 @@ const Filteromplaints = () => {
             setRespondentOptions(respondentOpts);
           }
 
-          console.log(`[${currentDateTime}] ${currentUser}: Data loaded successfully:`, allChannelGroups.length, "groups");
         } else {
           throw new Error(response?.res_message || "ไม่สามารถดึงข้อมูลได้");
         }
       } catch (error) {
-        console.error(`[${currentDateTime}] ${currentUser}: Error fetching complaints:`, error);
         setError(error.message || "เกิดข้อผิดพลาดในการโหลดข้อมูล");
 
         // Fallback to empty structure with all channels
@@ -226,7 +222,7 @@ const Filteromplaints = () => {
     };
 
     fetchData();
-  }, [currentDateTime, currentUser]);
+  }, []);
 
   const safeIncludes = (text, query) => {
     if (!query || query === "") return true;
@@ -254,7 +250,6 @@ const Filteromplaints = () => {
 
   const handleSearch = useCallback(
     (filters) => {
-      console.log(`[${currentDateTime}] ${currentUser}: Searching with filters:`, filters);
 
       const { claimantName, subject, issueType, respondentName } = filters;
 
@@ -306,7 +301,7 @@ const Filteromplaints = () => {
 
       setFilteredGroups(filteredData);
     },
-    [allGroups, currentDateTime, currentUser]
+    [allGroups ]
   );
 
   if (loading) {
@@ -364,15 +359,13 @@ const Filteromplaints = () => {
       <BreadcrumbsService items={breadcrumbItems} />
       <TableFilterList
         title="คัดกรองเรื่องร้องเรียน"
-        navigateTo="/admin/edit/website-complaints/SearchComplaints"
+        navigateTo="/admin/edit/search/Filteromplaints"
         groups={filteredGroups}
         issueTypeOptions={issueTypeOptions}
         respondentOptions={respondentOptions}
         onSearch={handleSearch}
         loading={loading}
         totalCount={apiData?.pagination?.total || 0}
-        currentUser={currentUser}
-        currentDateTime={currentDateTime}
       />
     </>
   );

@@ -45,15 +45,13 @@ export default function Navbar() {
         Cookies.remove("refresh_token");
         Cookies.remove("info");
         Cookies.remove("permission_paths");
-
-        setIsLoggedIn(false);
         setUserInfo(null);
-        setProfileDropdownOpen(false);
+        setIsDropdownOpen(false);
 
         await alertSuccess("สำเร็จ", "ออกจากระบบเรียบร้อยแล้ว");
-
         router.push("/");
       } catch (error) {
+        console.error("Logout error:", error);
         await alertError("ข้อผิดพลาด", "ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง");
       }
     }
