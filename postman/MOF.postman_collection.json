@@ -7211,7 +7211,46 @@
 				"response": []
 				},
 				{
-					"name": "Update Assignment (Complete)",
+				"name": "Confirm Assignment (ยืนยันรับงาน)",
+				"request": {
+					"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+						}
+					]
+					},
+					"method": "POST",
+					"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+					],
+					"body": {
+					"mode": "raw",
+					"raw": "{\n  \"confirm_status\": true,\n  \"remark\": \"ยืนยันรับงานและจะเริ่มดำเนินการ\"\n}"
+					},
+					"url": {
+					"raw": "{{API}}{{PREFIX}}/complaints-assignment/{{complaint_id}}/confirm-assignment",
+					"host": [
+						"{{API}}{{PREFIX}}"
+					],
+					"path": [
+						"complaints-assignment",
+						"{{complaint_id}}",
+						"confirm-assignment"
+					]
+					},
+					"description": "ยืนยันรับงานที่ได้รับมอบหมาย - เจ้าหน้าที่สามารถยืนยัน (true) หรือปฏิเสธ (false) งานที่ได้รับมอบหมาย"
+				},
+				"response": []
+				},
+				{
+					"name": "Update Assignment (Complete) By Admin",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -7250,7 +7289,7 @@
 					"response": []
 				},
 				{
-					"name": "Update Assignment (Basic)",
+					"name": "Update Assignment (Basic) By Admin",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -7289,7 +7328,7 @@
 					"response": []
 				},
 				{
-					"name": "Update Assignment (Additional References Only)",
+					"name": "Update Assignment (Additional References Only) By Admin",
 					"request": {
 						"auth": {
 							"type": "bearer",
