@@ -1,7 +1,7 @@
 import time
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from uuid import UUID
 from models.notification import Notification
 from models.user import User
@@ -42,18 +42,80 @@ def create_notification(db: Session, notification_data: NotificationCreate):
         logger.error(f"Error creating notification: {str(e)}")
         raise
 
+def get_user_notifications(db: Session, user_id: UUID, include_role_notifications: bool = True, skip: int = 0, limit: int = 10):
+    """ดึงการแจ้งเตือนสำหรับผู้ใช้คนหนึ่ง รวมทั้ง notification ส่วนบุคคลและตาม role"""
+    try:
+        from app.api.v1.controllers.permission_controller import get_user_roles
+        
+        conditions = []
+        
+        # ✅ 1. User-specific notifications
+        user_pattern = f"user_{user_id}"
+        user_match_sql = f"""
+            (
+                role_seeking_group = '{user_pattern}' OR
+                role_seeking_group LIKE '{user_pattern},%' OR
+                role_seeking_group LIKE '%,{user_pattern},%' OR
+                role_seeking_group LIKE '%,{user_pattern}'
+            )
+        """
+        conditions.append(text(user_match_sql))
+        
+        # ✅ 2. Role-based notifications (ถ้าต้องการ)
+        if include_role_notifications:
+            user_roles = get_user_roles(db, user_id)
+            for user_role in user_roles:
+                role = user_role.name
+                role_match_sql = f"""
+                    (
+                        role_seeking_group = '{role}' OR 
+                        role_seeking_group LIKE '{role},%' OR
+                        role_seeking_group LIKE '%,{role},%' OR
+                        role_seeking_group LIKE '%,{role}'
+                    )
+                """
+                conditions.append(text(role_match_sql))
+        
+        # สร้าง query
+        query = db.query(Notification)
+        
+        if conditions:
+            query = query.filter(or_(*conditions))
+        else:
+            # ถ้าไม่มีเงื่อนไขใด ๆ ให้ return empty
+            return []
+        
+        # ทำการ join, order และจำกัดจำนวน 
+        notifications = query.options(
+            joinedload(Notification.seen_by_users)
+        ).order_by(
+            Notification.created_at.desc()
+        ).offset(skip).limit(limit).all()
+        
+        # แปลงข้อมูลก่อนส่งคืน
+        return [format_notification_data(notification, user_id) for notification in notifications]
+        
+    except Exception as e:
+        logger.error(f"Error fetching user notifications: {str(e)}")
+        raise
+
 def get_notifications_by_role(db: Session, role: str, exclusive: bool = False, current_user_id: UUID = None, skip: int = 0, limit: int = 10):
-    """ดึงการแจ้งเตือนตามบทบาท (role) แบบยืดหยุ่น"""
+    """ดึงการแจ้งเตือนตามบทบาท (role) และการแจ้งเตือนส่วนบุคคล"""
     try:
         # สร้าง base query
         query = db.query(Notification)
         
+        # ✅ เพิ่มการค้นหา notification ส่วนบุคคล
+        user_specific_pattern = f"user_{current_user_id}" if current_user_id else None
+        
         if exclusive:
-            # เฉพาะการแจ้งเตือนที่มีบทบาทนี้เท่านั้น
+            # เฉพาะการแจ้งเตือนที่มีบทบาทนี้เท่านั้น (ไม่รวมส่วนบุคคล)
             query = query.filter(Notification.role_seeking_group == role)
         else:
-            # ใช้ SQL function ช่วยในการค้นหา
-            # คำสั่ง SQL ที่ตัวอย่างเป็น MS SQL Server
+            # ค้นหาทั้ง role และ notification ส่วนบุคคล
+            conditions = []
+            
+            # Role-based notifications
             role_match_sql = f"""
                 (
                     role_seeking_group = '{role}' OR 
@@ -62,10 +124,26 @@ def get_notifications_by_role(db: Session, role: str, exclusive: bool = False, c
                     role_seeking_group LIKE '%,{role}'
                 )
             """
+            conditions.append(text(role_match_sql))
             
-            # ใช้ text() จาก SQLAlchemy เพื่อใช้คำสั่ง SQL โดยตรง
-            from sqlalchemy import text
-            query = query.filter(text(role_match_sql))
+            # ✅ User-specific notifications
+            if user_specific_pattern:
+                user_match_sql = f"""
+                    (
+                        role_seeking_group = '{user_specific_pattern}' OR
+                        role_seeking_group LIKE '{user_specific_pattern},%' OR
+                        role_seeking_group LIKE '%,{user_specific_pattern},%' OR
+                        role_seeking_group LIKE '%,{user_specific_pattern}'
+                    )
+                """
+                conditions.append(text(user_match_sql))
+            
+            # รวมเงื่อนไขด้วย OR
+            from sqlalchemy import or_, text
+            if len(conditions) > 1:
+                query = query.filter(or_(*conditions))
+            elif len(conditions) == 1:
+                query = query.filter(conditions[0])
         
         # ทำการ join, order และจำกัดจำนวน 
         notifications = query.options(

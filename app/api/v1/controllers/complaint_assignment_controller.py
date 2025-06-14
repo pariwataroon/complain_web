@@ -59,6 +59,7 @@ def update_complaint_assignment_data(
             return {"success": False, "message": "ไม่พบเรื่องร้องเรียน"}
 
         changes = []
+        assigned_officer = None
 
         # ✅ บันทึก assigned_officer_id และ assigned_date
         if "assigned_officer_id" in assignment_data and assignment_data["assigned_officer_id"]:
@@ -73,7 +74,8 @@ def update_complaint_assignment_data(
                     
                     complaint.assigned_officer_id = officer_id
                     complaint.assigned_to = f"{officer.first_name} {officer.last_name}"
-                    
+                    assigned_officer = officer
+
                     # กำหนด assigned_date อัตโนมัติหากไม่ได้ระบุ
                     if "assigned_date" in assignment_data and assignment_data["assigned_date"]:
                         try:
@@ -355,9 +357,67 @@ def update_complaint_assignment_data(
         db.commit()
         db.refresh(complaint)
 
+        if assigned_officer:
+            try:
+                from app.api.v1.controllers.notification_controller import create_notification
+                from app.api.v1.schemas.notification import NotificationCreate
+                
+                # ดึงชื่อผู้ร้องเรียนสำหรับ notification
+                complainant_data = {}
+                try:
+                    import json
+                    complainant_data = json.loads(complaint.complainant_data) if complaint.complainant_data else {}
+                except:
+                    complainant_data = {}
+                
+                complainant_name = complainant_data.get("name", "ผู้ร้องเรียน")
+                if not complainant_name:
+                    first_name = complainant_data.get("firstName", "") or complainant_data.get("first_name", "")
+                    last_name = complainant_data.get("lastName", "") or complainant_data.get("last_name", "")
+                    if first_name and last_name:
+                        complainant_name = f"{first_name} {last_name}"
+                    elif first_name:
+                        complainant_name = first_name
+                    else:
+                        complainant_name = "ผู้ร้องเรียน"
+                
+                # สร้างข้อความ notification สำหรับเจ้าหน้าที่ที่ได้รับมอบหมาย
+                message = f"คุณได้รับมอบหมายเรื่องร้องเรียน {complaint.complaint_number} จาก {complainant_name}"
+                
+                if complaint.subject:
+                    message += f" เรื่อง: {complaint.subject[:50]}{'...' if len(complaint.subject) > 50 else ''}"
+                
+                if assignment_data.get("assignment_reason"):
+                    message += f" เหตุผล: {assignment_data['assignment_reason'][:50]}{'...' if len(assignment_data['assignment_reason']) > 50 else ''}"
+                
+                # สร้าง notification เฉพาะสำหรับเจ้าหน้าที่คนนั้น
+                notification_data = NotificationCreate(
+                    title="คุณได้รับมอบหมายเรื่องร้องเรียนใหม่",
+                    message=message,
+                    role_seeking_group=f"user_{assigned_officer.id}",
+                    redirect_url=f"/complaints/{complaint.id}"
+                )
+                
+                create_notification(db, notification_data)
+                logger.info(f"Assignment notification sent to officer: {assigned_officer.id} for complaint: {complaint.complaint_number}")
+                
+                # ✅ ส่ง notification ไปยัง admin/supervisor ด้วย (แจ้งว่ามีการมอบหมาย)
+                admin_notification_data = NotificationCreate(
+                    title="มีการมอบหมายเรื่องร้องเรียน",
+                    message=f"เรื่องร้องเรียน {complaint.complaint_number} ได้รับการมอบหมายให้ {assigned_officer.first_name} {assigned_officer.last_name}",
+                    role_seeking_group="admin,supervisor",
+                    redirect_url=f"/complaints/{complaint.id}"
+                )
+                
+                create_notification(db, admin_notification_data)
+                
+            except Exception as e:
+                logger.error(f"Error sending assignment notification: {str(e)}")
+
+
         return {
             "success": True,
-            "message": "อัพเดทข้อมูลการมอบหมายเรียบร้อย",
+            "message": "อัพเดทข้อมูลการมอบหมายเรียบร้อย และได้ส่ง notification ไปยังผู้ที่เกี่ยวข้องแล้ว",
             "complaint_id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
             "complaint_type": {
@@ -375,6 +435,7 @@ def update_complaint_assignment_data(
             "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
             "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
             "registration_date": complaint.registration_date.isoformat() if complaint.registration_date else None,
+            "notification_sent": assigned_officer is not None,
             "changes": changes,
             "updated_at": complaint.updated_at.isoformat()
         }

@@ -55,7 +55,7 @@ async def get_assignment_form(
 async def update_assignment(
     complaint_id: UUID,
     assignment_data: Dict[str, Any],
-    current_user: str = Depends(verify_token),  # ← เปลี่ยนกลับเป็น str
+    current_user: str = Depends(verify_token),
     db: Session = Depends(get_db)
 ):
     """อัพเดทการมอบหมายงาน"""

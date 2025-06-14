@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import List, Optional
 from uuid import UUID
 from models.notification import Notification 
@@ -9,6 +10,7 @@ from app.api.v1.schemas.notification import NotificationCreate, NotificationResp
 from app.api.v1.controllers.notification_controller import (
     create_notification,
     get_notifications_by_role,
+    get_user_notifications,
     mark_notification_as_seen,
 )
 from app.api.middleware.jwt_verify import verify_token
@@ -20,56 +22,41 @@ router = APIRouter(
     tags=["notifications"],
 )
 
-# @router.post("", response_model=FormatResponseModel)
-# async def create_new_notification(
-#     notification: NotificationCreate,
-#     db: Session = Depends(get_db),
-#     current_user: str = Depends(can_create("initial_notification"))
-# ):
-#     """สร้างการแจ้งเตือนใหม่"""
-#     try:
-#         result = create_notification(db, notification)
-#         return format_response("0001", result)
-#     except Exception as e:
-#         return format_response("5000", {"error": str(e)})
-
 @router.get("", response_model=FormatResponseModel)
 async def get_notifications(
     exclusive: bool = False,
     include_seen: bool = True,
+    include_personal: bool = True,
     skip: int = 0,
     limit: int = 10,
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("initial_notification"))
 ):
     try:
-        # แปลง current_user จาก string เป็น UUID
         user_id = UUID(current_user)
-        
-        # ดึงบทบาทของผู้ใช้
-        from app.api.v1.controllers.permission_controller import get_user_roles
-        user_role_objects = get_user_roles(db, user_id)
-        
-        if not user_role_objects:
-            return format_response("4030", {"error": "No roles found for current user"})
-        
-        # ใช้บทบาทแรกของผู้ใช้เสมอ (จาก token)
-        user_role = user_role_objects[0]
-        role = user_role.name
-        
-        # ดึงข้อมูลการแจ้งเตือนตามบทบาทที่ผู้ใช้มีสิทธิ์
-        notifications = get_notifications_by_role(db, role, exclusive, user_id, skip, limit)
-        
-        # ถ้าไม่ต้องการรวมการแจ้งเตือนที่เคยเห็นแล้ว ให้กรองออก
+        if include_personal:
+            notifications = get_user_notifications(
+                db, user_id, 
+                include_role_notifications=not exclusive,
+                skip=skip, 
+                limit=limit
+            )
+        else:
+            from app.api.v1.controllers.permission_controller import get_user_roles
+            user_role_objects = get_user_roles(db, user_id)
+            
+            if not user_role_objects:
+                return format_response("4030", {"error": "No roles found for current user"})
+            
+            user_role = user_role_objects[0]
+            role = user_role.name
+            
+            notifications = get_notifications_by_role(db, role, exclusive, user_id, skip, limit)
+
         if not include_seen:
             filtered_notifications = []
             for notification in notifications:
-                # ตรวจสอบว่า user_id ปัจจุบันอยู่ใน seen_by_users หรือไม่
-                user_has_seen = any(
-                    str(user["user_id"]) == str(user_id) 
-                    for user in notification["seen_by_users"]
-                )
-                if not user_has_seen:
+                if not notification.get("is_read", False):
                     filtered_notifications.append(notification)
             notifications = filtered_notifications
         
@@ -85,37 +72,33 @@ async def mark_as_seen(
 ):
     """ทำเครื่องหมายว่าแจ้งเตือนนี้ถูกเห็นแล้วโดยผู้ใช้ที่กำลัง login"""
     try:
-        # แปลง current_user จาก string เป็น UUID
         user_id = UUID(current_user)
-        
-        # ดึงข้อมูลการแจ้งเตือน
         notification = db.query(Notification).filter(Notification.id == notification_id).first()
         
         if not notification:
             return format_response("4040", {"error": "Notification not found"})
         
-        # ดึงบทบาทของผู้ใช้
-        from app.api.v1.controllers.permission_controller import get_user_roles
-        user_role_objects = get_user_roles(db, user_id)
-        
-        if not user_role_objects:
-            return format_response("4030", {"error": "No roles found for current user"})
-        
-        # ตรวจสอบว่าผู้ใช้มีบทบาทที่สามารถเข้าถึงการแจ้งเตือนนี้ได้หรือไม่
-        user_role_names = [role.name for role in user_role_objects]
+        can_access = False
+        user_pattern = f"user_{user_id}"
         notification_roles = notification.role_seeking_group.split(",")
         
-        # ตรวจสอบว่ามีบทบาทของผู้ใช้อยู่ใน role_seeking_group หรือไม่
-        role_matches = any(role in notification_roles for role in user_role_names)
+        if user_pattern in notification_roles:
+            can_access = True
+        else:
+            from app.api.v1.controllers.permission_controller import get_user_roles
+            user_role_objects = get_user_roles(db, user_id)
+            
+            if user_role_objects:
+                user_role_names = [role.name for role in user_role_objects]
+                role_matches = any(role in notification_roles for role in user_role_names)
+                if role_matches:
+                    can_access = True
         
-        if not role_matches:
+        if not can_access:
             return format_response("4030", {
-                "error": f"You don't have permission to access this notification",
-                "user_roles": user_role_names,
-                "notification_for": notification_roles
+                "error": "You don't have permission to access this notification"
             })
-        
-        # ถ้ามีสิทธิ์ ให้ทำเครื่องหมายว่าอ่านแล้ว
+
         notification_data = mark_notification_as_seen(db, notification_id, user_id)
         return format_response("0002", notification_data)
     except ValueError as e:
