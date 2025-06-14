@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "3cc99cea-5e12-47c0-bcca-0b2d24dc9beb",
+		"_postman_id": "77e9dc45-cfe7-4b41-ac93-e322c778bef8",
 		"name": "COMP_MOF_API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "2230736"
@@ -25,7 +25,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{API}}{{PREFIX}}/dashboard/staff-workload?skip=0&limit=100&date_from=2025-01-01&date_to=2025-05-22",
+							"raw": "{{API}}{{PREFIX}}/dashboard/staff-workload?skip=0&limit=100&date_from=2024-01-01&date_to=2026-05-22",
 							"host": [
 								"{{API}}{{PREFIX}}"
 							],
@@ -44,12 +44,12 @@
 								},
 								{
 									"key": "date_from",
-									"value": "2025-01-01",
+									"value": "2024-01-01",
 									"description": "Optional - วันที่เริ่มต้น"
 								},
 								{
 									"key": "date_to",
-									"value": "2025-05-22",
+									"value": "2026-05-22",
 									"description": "Optional - วันที่สิ้นสุด"
 								}
 							]
@@ -1124,13 +1124,12 @@
 							}
 						},
 						"url": {
-							"raw": "{{API}}{{PREFIX}}/users/",
+							"raw": "{{API}}{{PREFIX}}/users",
 							"host": [
 								"{{API}}{{PREFIX}}"
 							],
 							"path": [
-								"users",
-								""
+								"users"
 							]
 						}
 					},
@@ -1188,7 +1187,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"citizen_id\": \"1111111111111\",\n    \"title_id\": 3,\n    \"prefix_other\": \"นักวิเคราะห์นโยบายและแผน\",\n    \"first_name\": \"ทดสอบ\",\n    \"last_name\": \"ระบบการทำงาน\",\n    \"email\": \"vampirebeam.test@example.com\",\n    \"password\": \"TempPass2025!\",\n    \"phone\": \"0864703371\",\n    \"address\": \"123/45 หมู่ 6 ตำบลบางกรวย อำเภอบางกรวย\",\n    \"address2\": \"123/45 หมู่ 6 ตำบลบางกรวย อำเภอบางกรวย\",\n    \"syncAddress\": true,\n    \"profileImage\": \"vampirebeam_profile_20250609200140.jpg\",\n    \"group\": \"officer\",\n    \"province\": {\n        \"value\": \"13\",\n        \"label\": \"กรุงเทพมหานคร\"\n    },\n    \"districts\": {\n        \"value\": 160,\n        \"label\": \"เมืองจันทบุรี\"\n    },\n    \"subdistricts\": {\n        \"value\": \"220103\",\n        \"label\": \"คลองนารายณ์\"\n    },\n    \"zipcode\": {\n        \"value\": 22000,\n        \"label\": 22000\n    },\n    \"province2\": {\n        \"value\": \"13\",\n        \"label\": \"กรุงเทพมหานคร\"\n    },\n    \"districts2\": {\n        \"value\": 160,\n        \"label\": \"เมืองจันทบุรี\"\n    },\n    \"subdistricts2\": {\n        \"value\": \"220103\",\n        \"label\": \"คลองนารายณ์\"\n    },\n    \"zipcode2\": {\n        \"value\": 22000,\n        \"label\": 22000\n    },\n    \"roles\": [\n        {\n            \"id\": \"79342847-20ce-411a-8f4e-42cd7aeab407\"\n        }\n    ]\n}",
+							"raw": "{\n    \"citizen_id\": \"1111111112211\",\n    \"title_id\": 3,\n    \"prefix_other\": \"นักวิเคราะห์นโยบายและแผน\",\n    \"first_name\": \"ทดสอบ\",\n    \"last_name\": \"ระบบการทำงาน\",\n    \"email\": \"vampirebeam2.test@example.com\",\n    \"password\": \"TempPass2025!\",\n    \"phone\": \"0864703371\",\n    \"address\": \"123/45 หมู่ 6 ตำบลบางกรวย อำเภอบางกรวย\",\n    \"address2\": \"123/45 หมู่ 6 ตำบลบางกรวย อำเภอบางกรวย\",\n    \"syncAddress\": true,\n    \"profileImage\": \"vampirebeam_profile_20250609200140.jpg\",\n    \"group\": \"officer\",\n    \"province\": {\n        \"value\": \"13\",\n        \"label\": \"กรุงเทพมหานคร\"\n    },\n    \"districts\": {\n        \"value\": 160,\n        \"label\": \"เมืองจันทบุรี\"\n    },\n    \"subdistricts\": {\n        \"value\": \"220103\",\n        \"label\": \"คลองนารายณ์\"\n    },\n    \"zipcode\": {\n        \"value\": 22000,\n        \"label\": 22000\n    },\n    \"province2\": {\n        \"value\": \"13\",\n        \"label\": \"กรุงเทพมหานคร\"\n    },\n    \"districts2\": {\n        \"value\": 160,\n        \"label\": \"เมืองจันทบุรี\"\n    },\n    \"subdistricts2\": {\n        \"value\": \"220103\",\n        \"label\": \"คลองนารายณ์\"\n    },\n    \"zipcode2\": {\n        \"value\": 22000,\n        \"label\": 22000\n    },\n    \"roles\": [\n        {\n            \"id\": \"b18d6822-077e-49a7-ba44-523c08e602e4\"\n        }\n    ]\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -7089,43 +7088,35 @@
 								},
 								{
 									"key": "status",
-									"value": "SUBMITTED",
-									"description": "กรองตามสถานะ (Optional)"
+									"value": "SUBMITTED"
 								},
 								{
 									"key": "complaint_type",
-									"value": "",
-									"description": "กรองตามประเภทเรื่องร้องเรียน (Optional)"
+									"value": ""
 								},
 								{
 									"key": "complaint_subtype",
-									"value": "",
-									"description": "กรองตามประเภทเรื่องร้องเรียนย่อย (Optional)"
+									"value": ""
 								},
 								{
 									"key": "assignee",
-									"value": "",
-									"description": "กรองตามผู้รับผิดชอบ (Optional)"
+									"value": ""
 								},
 								{
 									"key": "location",
-									"value": "",
-									"description": "กรองตามสถานที่เกิดเหตุ (Optional)"
+									"value": ""
 								},
 								{
 									"key": "urgency",
-									"value": "",
-									"description": "กรองตามความเร่งด่วน (Optional)"
+									"value": ""
 								},
 								{
 									"key": "search",
-									"value": "",
-									"description": "ค้นหาในหลายฟิลด์ (Optional)"
+									"value": ""
 								},
 								{
 									"key": "complainant_name",
-									"value": "",
-									"description": "กรองตามชื่อผู้ร้องเรียน (Optional)"
+									"value": ""
 								}
 							]
 						},
@@ -7150,7 +7141,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"assigned_officer_id\": \"{{user_id}}\",\n    \"assigned_date\": \"2025-06-07T16:00:00Z\",\n    \"assignment_reason\": \"มีความเชี่ยวชาญด้านการทุจริตและมีประสบการณ์ในการจัดการเรื่องร้องเรียนประเภทนี้\",\n    \"complaint_type_id\": \"5f1f8deb-a30d-4021-842f-69f816b68529\",\n    \"complaint_subtype_id\": \"5f56b154-0bd5-4df6-9b35-4e27bdb99214\",\n    \"registration_date\": \"2025-06-07T00:00:00Z\",\n    \"confidentiality_level\": \"confidential\",\n    \"urgency_level\": \"high\",\n    \"reference_number1\": \"REF-2025-001\",\n    \"reference_date1\": \"2025-01-15T00:00:00Z\",\n    \"reference_number2\": \"REF-2025-002\",\n    \"reference_date2\": \"2025-01-16T00:00:00Z\",\n    \"reference_number3\": \"REF-2025-003\",\n    \"reference_date3\": \"2025-01-17T00:00:00Z\",\n    \"reference_number4\": \"REF-2025-004\",\n    \"reference_date4\": \"2025-01-18T00:00:00Z\",\n    \"complaint_filing_type\": \"new\",\n    \"document_number\": \"DOC-2025-12345\",\n    \"document_date\": \"2025-01-14T00:00:00Z\",\n    \"assigned_agency\": \"กรมการขนส่งทางบก\",\n    \"new_complaint\": true,\n    \"add_more_complaint_to_ref\": false,\n    \"group_work\": false,\n    \"regulation_reference\": \"มาตรา 18 แห่งพระราชบัญญัติระเบียบบริหารราชการแผ่นดิน\"\n}",
+							"raw": "{\n    \"assigned_officer_id\": \"{{user_id}}\",\n    \"assigned_remark\": \"ตั้งใจทำงาน\",\n    \"assigned_date\": \"2025-06-07T16:00:00Z\",\n    \"assignment_reason\": \"มีความเชี่ยวชาญด้านการทุจริตและมีประสบการณ์ในการจัดการเรื่องร้องเรียนประเภทนี้\",\n    \"complaint_type_id\": \"f48f6097-9731-48ec-8bcb-0cf40c8a9c98\",\n    \"complaint_subtype_id\": \"ae43cb1d-2ff8-476d-b4f5-bf847abcfdff\",\n    \"complaint_channel_id\": \"a44ea290-31df-4898-a6d0-4f4d25e129e3\",\n    \"registration_date\": \"2025-06-07T00:00:00Z\",\n    \"confidentiality_level\": \"confidential\",\n    \"urgency_level\": \"high\",\n    \"reference_number1\": \"REF-2025-001\",\n    \"reference_date1\": \"2025-01-15T00:00:00Z\",\n    \"reference_number2\": \"REF-2025-002\",\n    \"reference_date2\": \"2025-01-16T00:00:00Z\",\n    \"reference_number3\": \"REF-2025-003\",\n    \"reference_date3\": \"2025-01-17T00:00:00Z\",\n    \"reference_number4\": \"REF-2025-004\",\n    \"reference_date4\": \"2025-01-18T00:00:00Z\",\n    \"complaint_filing_type\": \"new\",\n    \"document_number\": \"DOC-2025-12345\",\n    \"document_date\": \"2025-01-14T00:00:00Z\",\n    \"assigned_agency\": \"กรมการขนส่งทางบก\",\n    \"new_complaint\": true,\n    \"add_more_complaint_to_ref\": false,\n    \"group_work\": false,\n    \"regulation_reference\": \"มาตรา 15 แห่งพระราชบัญญัติระเบียบบริหารราชการแผ่นดิน\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -7228,7 +7219,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"assigned_officer_id\": \"{{user_id}}\",\n    \"new_complaint\": true,\n    \"add_more_complaint_to_ref\": false,\n    \"group_work\": false,\n    \"additional_reference_number1\": \"ADD-REF-2025-001\",\n    \"additional_reference_date1\": \"2025-01-20T00:00:00Z\",\n    \"additional_reference_number2\": \"ADD-REF-2025-002\",\n    \"additional_reference_date2\": \"2025-01-21T00:00:00Z\"\n}",
+							"raw": "{\n    \"assigned_officer_id\": \"{{user_id}}\",\n    \"new_complaint\": false,\n    \"add_more_complaint_to_ref\": true,\n    \"group_work\": false,\n    \"additional_reference_number1\": \"ADD-REF-2025-001\",\n    \"additional_reference_date1\": \"2025-01-20T00:00:00Z\",\n    \"additional_reference_number2\": \"ADD-REF-2025-002\",\n    \"additional_reference_date2\": \"2025-01-21T00:00:00Z\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -7621,6 +7612,338 @@
 				}
 			],
 			"description": "API สำหรับดูข้อมูลอ้างอิงต่างๆ ของเรื่องร้องเรียน"
+		},
+		{
+			"name": "DOCUMENT STORAGE",
+			"item": [
+				{
+					"name": "Get Document Storage (Website)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/document-storage?page_type=website&skip=0&limit=100&status=SUBMITTED&complaint_type=&complaint_subtype=&assignee=&location=&urgency=&search=&complainant_name=",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"document-storage"
+							],
+							"query": [
+								{
+									"key": "page_type",
+									"value": "website",
+									"description": "ประเภทหน้า: 'website' หรือ 'card'"
+								},
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนที่ข้าม"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนต่อหน้า"
+								},
+								{
+									"key": "status",
+									"value": "SUBMITTED",
+									"description": "สถานะ (Optional)"
+								},
+								{
+									"key": "complaint_type",
+									"value": "",
+									"description": "ประเภทเรื่องร้องเรียน (Optional)"
+								},
+								{
+									"key": "complaint_subtype",
+									"value": "",
+									"description": "ประเภทเรื่องร้องเรียนย่อย (Optional)"
+								},
+								{
+									"key": "assignee",
+									"value": "",
+									"description": "ผู้รับผิดชอบ (Optional)"
+								},
+								{
+									"key": "location",
+									"value": "",
+									"description": "สถานที่ (Optional)"
+								},
+								{
+									"key": "urgency",
+									"value": "",
+									"description": "ความเร่งด่วน (Optional)"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "คำค้นหา (Optional)"
+								},
+								{
+									"key": "complainant_name",
+									"value": "",
+									"description": "ชื่อผู้ร้องเรียน (Optional)"
+								}
+							]
+						},
+						"description": "ดึงข้อมูลคลังเอกสารประเภทเว็บไซต์ - ช่องทางที่มี 'เว็บไซต์' ในชื่อหรือคำอธิบาย"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Document Storage (Card)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/document-storage?page_type=card&skip=0&limit=100&status=SUBMITTED&complaint_type=&complaint_subtype=&assignee=&location=&urgency=&search=&complainant_name=",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"document-storage"
+							],
+							"query": [
+								{
+									"key": "page_type",
+									"value": "card",
+									"description": "ประเภทหน้า: 'website' หรือ 'card'"
+								},
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนที่ข้าม"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนต่อหน้า"
+								},
+								{
+									"key": "status",
+									"value": "SUBMITTED",
+									"description": "สถานะ (Optional)"
+								},
+								{
+									"key": "complaint_type",
+									"value": "",
+									"description": "ประเภทเรื่องร้องเรียน (Optional)"
+								},
+								{
+									"key": "complaint_subtype",
+									"value": "",
+									"description": "ประเภทเรื่องร้องเรียนย่อย (Optional)"
+								},
+								{
+									"key": "assignee",
+									"value": "",
+									"description": "ผู้รับผิดชอบ (Optional)"
+								},
+								{
+									"key": "location",
+									"value": "",
+									"description": "สถานที่ (Optional)"
+								},
+								{
+									"key": "urgency",
+									"value": "",
+									"description": "ความเร่งด่วน (Optional)"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "คำค้นหา (Optional)"
+								},
+								{
+									"key": "complainant_name",
+									"value": "",
+									"description": "ชื่อผู้ร้องเรียน (Optional)"
+								}
+							]
+						},
+						"description": "ดึงข้อมูลคลังเอกสารประเภทบัตรสนเท่ห์ - ช่องทางที่มี 'บัตรสนเท่ห์' ในชื่อหรือคำอธิบาย"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Document Storage Statistics (Website)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/document-storage/statistics?page_type=website",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"document-storage",
+								"statistics"
+							],
+							"query": [
+								{
+									"key": "page_type",
+									"value": "website",
+									"description": "ประเภทหน้า: 'website' หรือ 'card'"
+								}
+							]
+						},
+						"description": "ดึงสถิติคลังเอกสารประเภทเว็บไซต์"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Document Storage Statistics (Card)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/document-storage/statistics?page_type=card",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"document-storage",
+								"statistics"
+							],
+							"query": [
+								{
+									"key": "page_type",
+									"value": "card",
+									"description": "ประเภทหน้า: 'website' หรือ 'card'"
+								}
+							]
+						},
+						"description": "ดึงสถิติคลังเอกสารประเภทบัตรสนเท่ห์"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Document Storage Filters",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/document-storage/filters",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"document-storage",
+								"filters"
+							]
+						},
+						"description": "ดึงตัวเลือกสำหรับ filter - รวมสถานะ, ระดับความเร่งด่วน, เจ้าหน้าที่, ประเภทเรื่องร้องเรียน"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Document Storage (All Channels)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/document-storage?page_type=all&skip=0&limit=100&status=SUBMITTED&search=พฤติกรรม",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"document-storage"
+							],
+							"query": [
+								{
+									"key": "page_type",
+									"value": "all",
+									"description": "แสดงทุกช่องทาง"
+								},
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนที่ข้าม"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนต่อหน้า"
+								},
+								{
+									"key": "status",
+									"value": "SUBMITTED",
+									"description": "กรองตามสถานะ"
+								},
+								{
+									"key": "search",
+									"value": "พฤติกรรม",
+									"description": "ค้นหาในเนื้อหาเรื่องร้องเรียน"
+								}
+							]
+						},
+						"description": "ดึงข้อมูลคลังเอกสารจากทุกช่องทาง - ใช้สำหรับทดสอบหรือดูข้อมูลรวม"
+					},
+					"response": []
+				}
+			],
+			"description": "API สำหรับคลังเอกสาร - จัดการข้อมูลเรื่องร้องเรียนแบ่งตาม 2 หน้า: เว็บไซต์ และบัตรสนเท่ห์"
 		}
 	],
 	"event": [
