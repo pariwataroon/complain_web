@@ -1459,7 +1459,7 @@ def get_complaints_by_page_type_with_assignment_form(
             "assigned_user_id": str(current_user_id),
             "error": str(e)
         }
-    
+
 def confirm_assignment(
     db: Session,
     complaint_id: UUID,
@@ -1478,11 +1478,32 @@ def confirm_assignment(
         if complaint.assigned_officer_id != current_user_id:
             return {"success": False, "message": "คุณไม่มีสิทธิ์ยืนยันงานนี้ เนื่องจากงานนี้ไม่ได้มอบหมายให้คุณ"}
         
-        # ตรวจสอบว่ายังไม่ได้ยืนยัน/ปฏิเสธแล้ว
-        if complaint.confirm_assigned_status is not None:
-            status_text = "ยืนยันแล้ว" if complaint.confirm_assigned_status else "ปฏิเสธแล้ว"
-            return {"success": False, "message": f"งานนี้{status_text}แล้วเมื่อ {complaint.confirm_assigned_date.strftime('%Y-%m-%d %H:%M') if complaint.confirm_assigned_date else 'ไม่ทราบ'}"}
+        # ✅ แก้ไข: ตรวจสอบว่ายืนยันรับงานแล้วหรือไม่ (เฉพาะกรณีที่ confirm_status = True)
+        if complaint.confirm_assigned_status == True:
+            return {
+                "success": False, 
+                "message": f"คุณได้ยืนยันรับงานนี้แล้วเมื่อ {complaint.confirm_assigned_date.strftime('%Y-%m-%d %H:%M') if complaint.confirm_assigned_date else 'ไม่ทราบ'}"
+            }
         
+        # ✅ สร้างข้อความตามสถานะปัจจุบันและการกระทำใหม่
+        previous_status = complaint.confirm_assigned_status
+        action_text = "ยืนยันรับงาน" if confirm_status else "ปฏิเสธรับงาน"
+        
+        if previous_status is not None:
+            previous_text = "ยืนยันรับงาน" if previous_status else "ปฏิเสธรับงาน"
+            if previous_status == confirm_status:
+                # ทำซ้ำ
+                return {
+                    "success": False,
+                    "message": f"คุณได้{action_text}นี้แล้วเมื่อ {complaint.confirm_assigned_date.strftime('%Y-%m-%d %H:%M') if complaint.confirm_assigned_date else 'ไม่ทราบ'}"
+                }
+            else:
+                # เปลี่ยนใจ
+                status_note = f"เจ้าหน้าที่เปลี่ยนจาก '{previous_text}' เป็น '{action_text}'"
+        else:
+            # ครั้งแรก
+            status_note = f"เจ้าหน้าที่{action_text}"
+
         # บันทึกการยืนยัน
         complaint.confirm_assigned_status = confirm_status
         complaint.confirm_assigned_date = datetime.now()
@@ -1494,14 +1515,13 @@ def confirm_assignment(
         if confirm_status:
             # ยืนยันรับงาน -> เปลี่ยนเป็น in_process
             complaint.status = ComplaintStatus.IN_PROCESS
-            status_note = f"เจ้าหน้าที่ยืนยันรับงาน"
         else:
             # ปฏิเสธงาน -> เปลี่ยนกลับเป็น submitted เพื่อให้มอบหมายใหม่
             complaint.status = ComplaintStatus.SUBMITTED
             complaint.assigned_officer_id = None
             complaint.assigned_to = None
             complaint.assigned_date = None
-            status_note = f"เจ้าหน้าที่ปฏิเสธรับงาน - ต้องมอบหมายใหม่"
+            status_note += " - ต้องมอบหมายใหม่"
         
         if remark:
             status_note += f" หมายเหตุ: {remark}"
@@ -1530,8 +1550,9 @@ def confirm_assignment(
             officer = db.query(User).filter(User.id == current_user_id).first()
             officer_name = f"{officer.first_name} {officer.last_name}" if officer else "เจ้าหน้าที่"
             
-            action_text = "ยืนยันรับงาน" if confirm_status else "ปฏิเสธรับงาน"
             message = f"{officer_name} {action_text} {complaint.complaint_number}"
+            if previous_status is not None:
+                message += f" (เปลี่ยนจาก '{previous_text}')"
             if remark:
                 message += f" หมายเหตุ: {remark}"
             
@@ -1549,7 +1570,7 @@ def confirm_assignment(
         
         return {
             "success": True,
-            "message": f"{'ยืนยันรับงาน' if confirm_status else 'ปฏิเสธรับงาน'}เรียบร้อยแล้ว",
+            "message": f"{action_text}เรียบร้อยแล้ว" + (f" (เปลี่ยนจาก '{previous_text}')" if previous_status is not None else ""),
             "complaint_id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
             "confirmed": confirm_status,
@@ -1557,7 +1578,8 @@ def confirm_assignment(
             "old_status": old_status.value,
             "new_status": complaint.status.value,
             "remark": remark,
-            "requires_reassignment": not confirm_status  # ถ้าปฏิเสธ ต้องมอบหมายใหม่
+            "requires_reassignment": not confirm_status,  # ถ้าปฏิเสธ ต้องมอบหมายใหม่
+            "changed_mind": previous_status is not None and previous_status != confirm_status
         }
         
     except Exception as e:
