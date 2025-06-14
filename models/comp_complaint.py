@@ -110,6 +110,12 @@ class Complaint(Base):
     assigned_date = Column(DateTime, nullable=True)
     assigned_remark = Column(NVARCHAR(2000), nullable=True, comment="หมายเหตุการมอบหมาย/ข้อความส่งต่อ")
     
+    # ข้อมูลการยืนยันการรับงาน
+    confirm_assigned_date = Column(DateTime, nullable=True, comment="วันที่เจ้าหน้าที่ยืนยันรับงาน")
+    confirm_assigned_by = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_users.id"), nullable=True, comment="เจ้าหน้าที่ที่ยืนยันรับงาน")
+    confirm_assigned_status = Column(Boolean, nullable=True, comment="สถานะการยืนยันรับงาน: True=ยืนยัน, False=ปฏิเสธ, NULL=รอการตอบรับ")
+    confirm_assigned_remark = Column(NVARCHAR(1000), nullable=True, comment="หมายเหตุการยืนยัน/ปฏิเสธรับงาน")
+
     # ข้อมูลการแก้ไขปัญหา
     resolution_summary = Column(NVARCHAR(2000), nullable=True)
     resolved_date = Column(DateTime, nullable=True)
@@ -197,7 +203,8 @@ class Complaint(Base):
     # Relationships
     parent_complaint = relationship("Complaint", remote_side=[id], backref="child_complaints", foreign_keys=[parent_complaint_id])
     assigned_officer = relationship("User", back_populates="assigned_complaints", foreign_keys=[assigned_officer_id])
-    
+    confirm_assigned_officer = relationship("User", back_populates="confirmed_assignments", foreign_keys=[confirm_assigned_by])
+
     # Relationships
     complaint_type_relation = relationship("ComplaintType", back_populates="complaints")
     complaint_subtype_relation = relationship("ComplaintSubType", back_populates="complaints")
