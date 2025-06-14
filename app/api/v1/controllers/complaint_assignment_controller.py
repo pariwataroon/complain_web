@@ -918,7 +918,7 @@ def get_complaint_assignment_history(
     complaint_id: UUID,
     limit: int = 20
 ) -> List[Dict]:
-    """ดูประวัติการเปลี่ยนแปลงการมอบหมาย"""
+    """ดูประวัติการเปลี่ยนแปลงการมอบหมาย - เรียงใหม่ล่าสุดก่อน"""
     try:
         history = db.query(ComplaintStatusHistory).filter(
             ComplaintStatusHistory.complaint_id == complaint_id
@@ -934,6 +934,7 @@ def get_complaint_assignment_history(
             results.append({
                 "id": str(record.id),
                 "status": record.status,
+                "status_thai": get_thai_status(record.status),
                 "notes": record.notes,
                 "changed_at": record.changed_at.isoformat(),
                 "changed_by": {

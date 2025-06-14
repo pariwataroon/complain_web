@@ -1185,13 +1185,17 @@ def get_complaint_attachments(complaint: Complaint) -> List[Dict]:
     return attachment_list
 
 def get_complaint_status_history(db: Session, complaint_id: UUID) -> List[Dict]:
-    """ดึงประวัติสถานะของข้อร้องเรียน"""
+    """ดึงประวัติสถานะของข้อร้องเรียน - เรียงใหม่ล่าสุดก่อน"""
     status_history = []
-    for history in db.query(ComplaintStatusHistory).filter(
+
+    history_records = db.query(ComplaintStatusHistory).filter(
         ComplaintStatusHistory.complaint_id == complaint_id
-    ).order_by(ComplaintStatusHistory.changed_at).all():
+    ).order_by(ComplaintStatusHistory.changed_at.desc()).all()
+    
+    for history in history_records:
         status_history.append({
             "status": history.status,
+            "status_thai": get_thai_status(history.status),
             "notes": history.notes,
             "changed_at": history.changed_at,
             "changed_by": history.changed_by
@@ -2196,9 +2200,8 @@ def get_user_roles(db: Session, user_id: UUID):
         return []
 
 def get_complaint_by_id_with_assignment_data(db: Session, complaint: Complaint) -> Dict:
-    """แปลงข้อมูล complaint เป็นรูปแบบที่ต้องการ"""
+    """แปลงข้อมูล complaint เป็นรูปแบบที่ต้องการ - แก้ไข status_history"""
     try:
-        # แปลงข้อมูลตามรูปแบบเดิม
         result = {
             "id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
@@ -2340,15 +2343,18 @@ def parse_incident_data(complaint):
         }
 
 def format_status_history(status_history_list):
-    """จัดรูปแบบประวัติสถานะ"""
+    """จัดรูปแบบประวัติสถานะ - เรียงใหม่ล่าสุดก่อน"""
     try:
         if not status_history_list:
             return []
+
+        sorted_history = sorted(status_history_list, key=lambda x: x.changed_at, reverse=True)
         
         formatted_history = []
-        for history in status_history_list:
+        for history in sorted_history:
             formatted_history.append({
                 "status": history.status,
+                "status_thai": get_thai_status(history.status),
                 "notes": history.notes,
                 "changed_at": history.changed_at.isoformat() if history.changed_at else None,
                 "changed_by": str(history.changed_by) if history.changed_by else None
@@ -2393,19 +2399,17 @@ def get_my_complaint_by_id(db: Session, complaint_id: UUID, user_id: UUID) -> Di
 def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict:
     """ดึงรายละเอียดเรื่องร้องเรียนใดๆ รวมข้อมูล assignment form (ไม่จำกัดเฉพาะเจ้าของ)"""
     try:
-        # ดึงข้อมูลเรื่องร้องเรียนพร้อม attachments
         complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
         
         if not complaint:
             return {"error": "ไม่พบเรื่องร้องเรียน"}
-        
-        # แปลงข้อมูลตามรูปแบบเดิม
+
         result = {
             "id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
             "step1": parse_complainant_data(complaint.complainant_data, db),
             "step2": parse_respondent_data(complaint.respondent_data, db),
-            "step3": parse_incident_data(complaint),  # ฟังก์ชันนี้ดึง attachments แล้ว
+            "step3": parse_incident_data(complaint),
             "step4": {"general": {"accepted": complaint.terms_accepted}},
             "status": complaint.status,
             "status_history": format_status_history(complaint.status_history),
@@ -2416,8 +2420,7 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             "resolution_summary": complaint.resolution_summary,
             "resolved_date": complaint.resolved_date.isoformat() if complaint.resolved_date else None,
         }
-        
-        # เพิ่มข้อมูล assignment_form ครบถ้วนทุกฟิลด์
+
         assignment_form = {
             "id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
@@ -2489,7 +2492,7 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
         
     except Exception as e:
         logger.error(f"Error getting complaint with assignment: {str(e)}")
-        return {"error": f"เกิดข้อผิดพลาด: {str(e)}"} 
+        return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
 
 def get_complaints_grouped_by_channel(
     db: Session, 
