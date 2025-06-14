@@ -7125,6 +7125,92 @@
 					"response": []
 				},
 				{
+				"name": "Get Complaints by Page Type (Assignment Form)",
+				"request": {
+					"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+						}
+					]
+					},
+					"method": "GET",
+					"header": [],
+					"url": {
+					"raw": "{{API}}{{PREFIX}}/complaints-assignment/by-page-type?page_type=website&skip=0&limit=100&status=SUBMITTED&complaint_type=&complaint_subtype=&assignee=&location=&urgency=&search=&complainant_name=",
+					"host": [
+						"{{API}}{{PREFIX}}"
+					],
+					"path": [
+						"complaints-assignment",
+						"by-page-type"
+					],
+					"query": [
+						{
+						"key": "page_type",
+						"value": "website",
+						"description": "ประเภทหน้า: 'website' หรือ 'card'"
+						},
+						{
+						"key": "skip",
+						"value": "0",
+						"description": "จำนวนที่ข้าม"
+						},
+						{
+						"key": "limit",
+						"value": "100",
+						"description": "จำนวนต่อหน้า"
+						},
+						{
+						"key": "status",
+						"value": "SUBMITTED",
+						"description": "สถานะ (Optional)"
+						},
+						{
+						"key": "complaint_type",
+						"value": "",
+						"description": "ประเภทเรื่องร้องเรียน (Optional)"
+						},
+						{
+						"key": "complaint_subtype",
+						"value": "",
+						"description": "ประเภทเรื่องร้องเรียนย่อย (Optional)"
+						},
+						{
+						"key": "assignee",
+						"value": "",
+						"description": "ผู้รับผิดชอบ (Optional)"
+						},
+						{
+						"key": "location",
+						"value": "",
+						"description": "สถานที่ (Optional)"
+						},
+						{
+						"key": "urgency",
+						"value": "",
+						"description": "ความเร่งด่วน (Optional)"
+						},
+						{
+						"key": "search",
+						"value": "",
+						"description": "คำค้นหา (Optional)"
+						},
+						{
+						"key": "complainant_name",
+						"value": "",
+						"description": "ชื่อผู้ร้องเรียน (Optional)"
+						}
+					]
+					},
+					"description": "ดึงข้อมูลเรื่องร้องเรียนแบ่งตามประเภทหน้า (website/card) ในรูปแบบ assignment form - แสดงข้อมูลครบถ้วนเหมือน /complaints-assignment/{complaint_id}/assignment-form แต่เป็นรายการ"
+				},
+				"response": []
+				},
+				{
 					"name": "Update Assignment (Complete)",
 					"request": {
 						"auth": {
