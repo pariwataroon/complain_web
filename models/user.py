@@ -63,5 +63,6 @@ class User(Base):
 
     complaints = relationship("Complaint", back_populates="creator", foreign_keys="[Complaint.created_by]")
     assigned_complaints = relationship("Complaint", back_populates="assigned_officer", foreign_keys="[Complaint.assigned_officer_id]")
-    
+    confirmed_assignments = relationship("Complaint", back_populates="confirm_assigned_officer", foreign_keys="[Complaint.confirm_assigned_by]")
+
     api_logs = relationship("ApiLog", back_populates="user", lazy="dynamic")
