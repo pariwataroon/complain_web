@@ -91,12 +91,16 @@ const TableListBox = ({
   };
 
   const columns = [
-    { name: "claimantName", label: "ชื่อผู้ร้อง", width: 200 },
-    { name: "issue", label: "ชื่อเรื่อง", width: 300 },
+    { name: "receiveDate", label: "วันที่ร้อง", width: 100 },
+    { name: "agency", label: "หน่วยงาน", width: 180 },
+    { name: "claimantName", label: "ชื่อสกุลผู้ร้อง", width: 200 },
+    { name: "issue", label: "เรื่อง", width: 300 },
     { name: "issueType", label: "ประเภทเรื่อง", width: 180 },
-    { name: "agency", label: "หน่วยงาน", width: 200 },
+    { name: "issueSubType", label: "ประเภทเรื่องย่อย", width: 180 },
     { name: "responsibleOfficer", label: "เจ้าหน้าที่รับผิดชอบ", width: 180 },
-    { name: "status", label: "สถานะ", width: 150 },
+    { name: "status", label: "สถานะเรื่อง", width: 150 },
+    { name: "note", label: "หมายเหตุ", width: 100 },
+
   ];
 
   // Updated dynamic layout configuration with new breakpoint
@@ -626,7 +630,7 @@ const TableListBox = ({
         >
           <TableHead>
             <TableRow>
-              <TableCell
+              {/* <TableCell
                 align="center"
                 sx={{
                   width: 80,
@@ -640,7 +644,7 @@ const TableListBox = ({
                 }}
               >
                 ลำดับ
-              </TableCell>
+              </TableCell> */}
               {columns.map((col) => (
                 <TableCell
                   key={col.name}
@@ -677,7 +681,7 @@ const TableListBox = ({
                   },
                 }}
               >
-                <TableCell
+                {/* <TableCell
                   align="center"
                   sx={{
                     width: 80,
@@ -690,7 +694,7 @@ const TableListBox = ({
                   }}
                 >
                   {page * rowsPerPage + idx + 1}
-                </TableCell>
+                </TableCell> */}
                 {columns.map((col) => (
                   <TableCell
                     key={col.name}
