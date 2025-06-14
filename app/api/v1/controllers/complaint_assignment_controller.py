@@ -1459,3 +1459,108 @@ def get_complaints_by_page_type_with_assignment_form(
             "assigned_user_id": str(current_user_id),
             "error": str(e)
         }
+    
+def confirm_assignment(
+    db: Session,
+    complaint_id: UUID,
+    current_user_id: UUID,
+    confirm_status: bool,
+    remark: Optional[str] = None
+) -> Dict:
+    """ยืนยันรับงานที่ได้รับมอบหมาย"""
+    try:
+        complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+        
+        if not complaint:
+            return {"success": False, "message": "ไม่พบเรื่องร้องเรียน"}
+        
+        # ตรวจสอบว่างานนี้ถูกมอบหมายให้ผู้ใช้นี้หรือไม่
+        if complaint.assigned_officer_id != current_user_id:
+            return {"success": False, "message": "คุณไม่มีสิทธิ์ยืนยันงานนี้ เนื่องจากงานนี้ไม่ได้มอบหมายให้คุณ"}
+        
+        # ตรวจสอบว่ายังไม่ได้ยืนยัน/ปฏิเสธแล้ว
+        if complaint.confirm_assigned_status is not None:
+            status_text = "ยืนยันแล้ว" if complaint.confirm_assigned_status else "ปฏิเสธแล้ว"
+            return {"success": False, "message": f"งานนี้{status_text}แล้วเมื่อ {complaint.confirm_assigned_date.strftime('%Y-%m-%d %H:%M') if complaint.confirm_assigned_date else 'ไม่ทราบ'}"}
+        
+        # บันทึกการยืนยัน
+        complaint.confirm_assigned_status = confirm_status
+        complaint.confirm_assigned_date = datetime.now()
+        complaint.confirm_assigned_by = current_user_id
+        complaint.confirm_assigned_remark = remark
+        
+        # เปลี่ยนสถานะตามการยืนยัน
+        old_status = complaint.status
+        if confirm_status:
+            # ยืนยันรับงาน -> เปลี่ยนเป็น in_process
+            complaint.status = ComplaintStatus.IN_PROCESS
+            status_note = f"เจ้าหน้าที่ยืนยันรับงาน"
+        else:
+            # ปฏิเสธงาน -> เปลี่ยนกลับเป็น submitted เพื่อให้มอบหมายใหม่
+            complaint.status = ComplaintStatus.SUBMITTED
+            complaint.assigned_officer_id = None
+            complaint.assigned_to = None
+            complaint.assigned_date = None
+            status_note = f"เจ้าหน้าที่ปฏิเสธรับงาน - ต้องมอบหมายใหม่"
+        
+        if remark:
+            status_note += f" หมายเหตุ: {remark}"
+        
+        complaint.updated_at = datetime.now()
+        
+        # สร้าง status history
+        status_history = ComplaintStatusHistory(
+            complaint_id=complaint_id,
+            status=complaint.status,
+            notes=status_note,
+            changed_by=current_user_id,
+            changed_at=datetime.now()
+        )
+        db.add(status_history)
+        
+        db.commit()
+        db.refresh(complaint)
+        
+        # ส่ง notification ไปยัง admin/supervisor
+        try:
+            from app.api.v1.controllers.notification_controller import create_notification
+            from app.api.v1.schemas.notification import NotificationCreate
+            
+            # ดึงข้อมูลเจ้าหน้าที่
+            officer = db.query(User).filter(User.id == current_user_id).first()
+            officer_name = f"{officer.first_name} {officer.last_name}" if officer else "เจ้าหน้าที่"
+            
+            action_text = "ยืนยันรับงาน" if confirm_status else "ปฏิเสธรับงาน"
+            message = f"{officer_name} {action_text} {complaint.complaint_number}"
+            if remark:
+                message += f" หมายเหตุ: {remark}"
+            
+            notification_data = NotificationCreate(
+                title=f"เจ้าหน้าที่{action_text}",
+                message=message,
+                role_seeking_group="admin,supervisor",
+                redirect_url=f"/complaints/{complaint.id}"
+            )
+            
+            create_notification(db, notification_data)
+            
+        except Exception as e:
+            logger.error(f"Error sending confirmation notification: {str(e)}")
+        
+        return {
+            "success": True,
+            "message": f"{'ยืนยันรับงาน' if confirm_status else 'ปฏิเสธรับงาน'}เรียบร้อยแล้ว",
+            "complaint_id": str(complaint.id),
+            "complaint_number": complaint.complaint_number,
+            "confirmed": confirm_status,
+            "confirmed_at": complaint.confirm_assigned_date.isoformat(),
+            "old_status": old_status.value,
+            "new_status": complaint.status.value,
+            "remark": remark,
+            "requires_reassignment": not confirm_status  # ถ้าปฏิเสธ ต้องมอบหมายใหม่
+        }
+        
+    except Exception as e:
+        logger.error(f"Error confirming assignment: {str(e)}")
+        db.rollback()
+        return {"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"}

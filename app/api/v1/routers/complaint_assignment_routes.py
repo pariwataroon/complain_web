@@ -19,7 +19,8 @@ from app.api.v1.controllers.complaint_assignment_controller import (
     auto_assign_complaint,
     validate_officer_assignment,
     get_complaint_assignment_history,
-    get_complaints_by_page_type_with_assignment_form
+    get_complaints_by_page_type_with_assignment_form,
+    confirm_assignment
 )
 import lib.format_data as format_data
 
@@ -28,7 +29,7 @@ router = APIRouter(prefix="/complaints-assignment", tags=["complaint_assignment"
 @router.get("/{complaint_id}/assignment-form")
 async def get_assignment_form(
     complaint_id: UUID,
-    current_user: str = Depends(verify_token),  # ✅ แก้ไขเป็น str
+    current_user: str = Depends(verify_token),
     db: Session = Depends(get_db)
 ):
     """ดึงข้อมูลสำหรับฟอร์ม Assignment"""
@@ -405,3 +406,51 @@ async def get_complaints_by_page_type(
         return format_data.format_response("4000", {"error": "Invalid user ID format"})
     except Exception as e:
         return format_data.format_response("5000", str(e))
+    
+@router.post("/{complaint_id}/confirm-assignment")
+async def confirm_assignment_endpoint(
+    complaint_id: UUID,
+    confirm_data: Dict[str, Any],
+    current_user: str = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+    """ยืนยันรับงานที่ได้รับมอบหมาย"""
+    try:
+        current_user_id = UUID(current_user)
+        
+        # ตรวจสอบข้อมูลที่จำเป็น
+        if "confirm_status" not in confirm_data:
+            return format_data.format_response("4000", {
+                "error": "กรุณาระบุสถานะการยืนยัน (confirm_status)",
+                "message": "MISSING_CONFIRM_STATUS"
+            })
+        
+        result = confirm_assignment(
+            db=db,
+            complaint_id=complaint_id,
+            current_user_id=current_user_id,
+            confirm_status=confirm_data["confirm_status"],
+            remark=confirm_data.get("remark")
+        )
+        
+        if result.get("success"):
+            return format_data.format_response("0000", {
+                "data": result,
+                "message": "CONFIRM_ASSIGNMENT_SUCCESS"
+            })
+        else:
+            return format_data.format_response("4000", {
+                "error": result.get("message"),
+                "message": "CONFIRM_ASSIGNMENT_FAILED"
+            })
+        
+    except ValueError:
+        return format_data.format_response("4000", {
+            "error": "Invalid user ID format",
+            "message": "INVALID_USER_ID"
+        })
+    except Exception as e:
+        return format_data.format_response("5000", {
+            "error": str(e),
+            "message": "INTERNAL_SERVER_ERROR"
+        })
