@@ -6,7 +6,7 @@ import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/Complai
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService, { ControlledDateThaiPickerService } from "@services/DateThaiPickerService/DateThaiPickerService"; 
-
+import { GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
 import { FormProvider, useForm } from "react-hook-form";
 import { alertError, alertSuccess } from "@utils/Alerts";
 import styles from "./TabNav.module.scss";
@@ -64,7 +64,8 @@ const SearchComplaints = () => {
   const [complaintType, setComplaintType] = useState("new");
   const [validationErrors, setValidationErrors] = useState({});
   const [showValidation, setShowValidation] = useState(false);
-
+  const [complaintTypes, setComplaintTypes] = useState([]);
+  
   // Form methods
   const generalMethods = useForm({ mode: "onChange", defaultValues: {} });
   const delegateMethods = useForm({ mode: "onChange", defaultValues: {} });
@@ -86,6 +87,23 @@ const SearchComplaints = () => {
   const [delegateData, setDelegateData] = useState({});
   const [respondentType, setRespondentType] = useState("individual");
   const [respondentData, setRespondentData] = useState({});
+
+  useEffect(() => {
+    const fetchComplaintTypes = async () => {
+      try {
+        const response = await GetAllSelectComplaintTypes();
+        if (response?.res_code === "0000") {
+          const activeTypes = response.res_data
+            .filter((t) => t.is_active)
+            .map((t) => ({ value: t.id, label: t.name }));
+          setComplaintTypes(activeTypes);
+        }
+      } catch (err) {
+        console.error("Error fetching complaint types:", err);
+      }
+    };
+    fetchComplaintTypes();
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -536,9 +554,11 @@ const SearchComplaints = () => {
                           className={hasFieldError("complaintType") ? styles.errorField : ""}
                         >
                           <option value="">เลือกประเภทเรื่องร้องเรียน</option>
-                          <option value="corruption">การทุจริต</option>
-                          <option value="misconduct">การประพฤติมิชอบ</option>
-                          <option value="inefficiency">ความไม่มีประสิทธิภาพ</option>
+                          {complaintTypes.map((type) => (
+                          <option key={type.value} value={type.value}>
+                            {type.label}
+                          </option>
+                        ))}
                         </select>
                         {hasFieldError("complaintType") && (
                           <span className={styles.errorText}>{getFieldError("complaintType")}</span>

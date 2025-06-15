@@ -118,14 +118,9 @@ const TableFilterList = ({
     }
   }, [onSearch, groups]);
 
-  const handleRowClick = (item, groupKey) => {
-    if (navigateTo) {
-      router.push({
-        pathname: `${navigateTo}/${item.id}`,
-        query: { group: groupKey },
-      });
-    }
-  };
+
+  const handleRowClick = (item) =>
+    navigateTo && router.push(`${navigateTo}/${item.id}`);
 
   const handleNavigateTo = () => router.push("/admin/AccountBox");
 

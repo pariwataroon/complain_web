@@ -21,7 +21,6 @@ const breadcrumbItems = [
   { label: "คัดกรองเรื่องร้องเรียน" },
 ];
 
-// Define all possible channels - เพื่อให้แสดงทุกช่องทางแม้ไม่มีข้อมูล
 const ALL_CHANNELS = [
   { key: "website", name: "เว็บไซต์" },
   { key: "admin", name: "แอดมิน" },
@@ -43,10 +42,7 @@ const Filteromplaints = () => {
     { value: "", label: "เลือกผู้ถูกร้อง" }
   ]);
 
-  // Current user and datetime
-  
 
-  // Utility function to format date
   const formatDate = (isoString) => {
     if (!isoString) return "";
     try {

@@ -21,8 +21,8 @@ const DateThaiPickerService = ({
   required = false,
   error = false,
   helperText = "",
-  control, // ใช้สำหรับ Controller wrapper
-  defaultValue, // เพิ่ม prop นี้
+  control,
+  defaultValue,
   ...props
 }) => {
   const [selectedDate, setSelectedDate] = useState(null);

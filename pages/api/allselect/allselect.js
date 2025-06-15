@@ -16,7 +16,7 @@ const GetAllSelect = async () => {
 
 const GetAllSelectComplaintTypes = async ({
   skip = 0,
-  limit = 10,
+  limit = 100,
   active_only = "true",
 } = {}) => {
   try {
@@ -120,6 +120,36 @@ const GetZipcodeSelect = async (districtNameTH) => {
   }
 };
 
+//  All UsersSearchByRole
+const UsersSearchByRole = async () => {
+  try {
+    const response = await axiosInstance.get(
+      `/users/search/by-role?role_name=staff`
+    );
+
+    const results = response?.data?.res_data;
+
+    if (response?.data?.res_code === "0000" && results) {
+      const formattedUsers = results
+        .filter((user) => user.is_active)
+        .map((user) => ({
+          value: user.id,
+          label: user.full_name_with_title,
+          fullName: user.full_name,
+          email: user.email,
+          roles: user.roles,
+        }));
+
+      return formattedUsers;
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Error fetching users by role:", error);
+    return [];
+  }
+};
+
 export {
   GetAllSelect,
   GetProvincesSelect,
@@ -127,4 +157,5 @@ export {
   GetDistrictsSelect,
   GetZipcodeSelect,
   GetAllSelectComplaintTypes,
+  UsersSearchByRole,
 };
