@@ -24,6 +24,7 @@ from .project_api_key import ProjectApiKey
 from .signature_authorities import SignatureAuthority
 from .comp_complaint import Complaint, ComplaintAttachment, ComplaintStatusHistory
 from .comp_complaint_types import ComplaintType, ComplaintSubType, ComplaintChannel
+from .outgoing_reports import OutgoingReport, OutgoingReportAttachment
 
 
 # ระบุโมเดลที่สามารถนำเข้าเมื่อใช้ from models import *
@@ -34,4 +35,5 @@ __all__ = [
     'Geography', 'Province', 'Amphure', 'District', 'ProjectApiKey',
     'SignatureAuthority', 'Complaint', 'ComplaintAttachment',
     'ComplaintStatusHistory', 'ComplaintType', 'ComplaintSubType', 'ComplaintChannel',
+    'OutgoingReport', 'OutgoingReportAttachment'
 ]

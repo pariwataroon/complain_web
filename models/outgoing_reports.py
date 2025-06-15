@@ -34,7 +34,7 @@ class OutgoingReport(Base):
     position = relationship("Position", foreign_keys=[position_id])
     signature_authority_user = relationship("User", foreign_keys=[signature_authority_user_id])
     department = relationship("Department", foreign_keys=[department_id])
-    complaint = relationship("Complaint", back_populates="outgoing_reports")
+    complaint = relationship("Complaint", back_populates="outgoing_reports", foreign_keys=[complaint_id])
     creator = relationship("User", foreign_keys=[created_by])
     updater = relationship("User", foreign_keys=[updated_by])
     
