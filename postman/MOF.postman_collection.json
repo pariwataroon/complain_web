@@ -8069,7 +8069,424 @@
 				}
 			],
 			"description": "API สำหรับคลังเอกสาร - จัดการข้อมูลเรื่องร้องเรียนแบ่งตาม 2 หน้า: เว็บไซต์ และบัตรสนเท่ห์"
-		}
+		},
+		{
+            "name": "OUTGOING REPORTS",
+            "item": [
+                {
+                    "name": "Get All Outgoing Reports",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/outgoing-reports?skip=0&limit=100&search=&position_id=&department_id=&signature_authority_user_id=&urgency_level=&date_from=&date_to=",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "outgoing-reports"
+                            ],
+                            "query": [
+                                {
+                                    "key": "skip",
+                                    "value": "0",
+                                    "description": "จำนวนรายการที่ข้าม"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "100",
+                                    "description": "จำนวนรายการต่อหน้า"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "ค้นหาจากเลข สป.กค, เรื่อง, หมายเลขข้อร้องเรียน"
+                                },
+                                {
+                                    "key": "position_id",
+                                    "value": "",
+                                    "description": "ตำแหน่งที่เกี่ยวข้อง (UUID)"
+                                },
+                                {
+                                    "key": "department_id",
+                                    "value": "",
+                                    "description": "หน่วยงาน (UUID)"
+                                },
+                                {
+                                    "key": "signature_authority_user_id",
+                                    "value": "",
+                                    "description": "ผู้มีอำนาจลงนาม (UUID)"
+                                },
+                                {
+                                    "key": "urgency_level",
+                                    "value": "",
+                                    "description": "ระดับความเร่งด่วน"
+                                },
+                                {
+                                    "key": "date_from",
+                                    "value": "",
+                                    "description": "วันที่เริ่มต้น (YYYY-MM-DD)"
+                                },
+                                {
+                                    "key": "date_to",
+                                    "value": "",
+                                    "description": "วันที่สิ้นสุด (YYYY-MM-DD)"
+                                }
+                            ]
+                        },
+                        "description": "ดึงรายการรายงานส่งออกทั้งหมด พร้อมการกรองและค้นหา"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Outgoing Report Options",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/outgoing-reports/options",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "outgoing-reports",
+                                "options"
+                            ]
+                        },
+                        "description": "ดึงตัวเลือกสำหรับ dropdown ต่างๆ ในฟอร์ม - รวมรายการตำแหน่ง, หน่วยงาน, ผู้มีอำนาจลงนาม, ระดับความลับ, ระดับความเร่งด่วน"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Auto Fill from Complaint",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/outgoing-reports/auto-fill/{{complaint_id}}",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "outgoing-reports",
+                                "auto-fill",
+                                "{{complaint_id}}"
+                            ]
+                        },
+                        "description": "ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์ม - จะได้ข้อมูล complaint_number, reference_number, reference_date, subject"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Outgoing Report",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"position_id\": \"{{position_id}}\",\n  \"reference_number\": \"สป.กค 1234/2568\",\n  \"reference_date\": \"2025-06-14T10:00:00Z\",\n  \"subject\": \"ร้องเรียนเรื่องความเป็นธรรมในการจัดเก็บภาษี\",\n  \"complaint_number\": \"COMP-001-2568\",\n  \"complaint_number_date\": \"2025-06-10T09:30:00Z\",\n  \"signature_authority_user_id\": \"{{signature_user_id}}\",\n  \"department_id\": \"{{department_id}}\",\n  \"confidentiality_level\": \"ปกติ\",\n  \"urgency_level\": \"เร่งด่วน\",\n  \"remarks\": \"หมายเหตุเพิ่มเติม\",\n  \"complaint_id\": \"{{complaint_id}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/outgoing-reports",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "outgoing-reports"
+                            ]
+                        },
+                        "description": "สร้างรายงานส่งออกใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- position_id: ตำแหน่งที่เกี่ยวข้อง (UUID)\n- reference_number: เลข สป.กค\n- reference_date: วันที่เอกสาร สป.กค\n- subject: เรื่อง\n- complaint_number: หมายเลขข้อร้องเรียน\n- complaint_number_date: วันที่ของข้อร้องเรียน\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- department_id: หน่วยงาน (UUID)\n- confidentiality_level: ระดับความลับ (ปกติ, ลับ, ลับมาก, ลับที่สุด)\n- urgency_level: ระดับความเร่งด่วน (ปกติ, เร่งด่วน, เร่งด่วนมาก, เร่งด่วนที่สุด)\n\n**ฟิลด์ที่ไม่บังคับ:**\n- remarks: หมายเหตุ\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Outgoing Report by ID",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/outgoing-reports/{{outgoing_report_id}}",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "outgoing-reports",
+                                "{{outgoing_report_id}}"
+                            ]
+                        },
+                        "description": "ดึงรายงานส่งออกตาม ID พร้อมข้อมูลครบถ้วน รวมข้อมูลตำแหน่ง, หน่วยงาน, ผู้มีอำนาจลงนาม, และไฟล์แนบ"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Upload Outgoing Report Attachments",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "files",
+                                    "type": "file",
+                                    "src": [],
+                                    "description": "ไฟล์แนบ (สามารถเลือกหลายไฟล์)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/outgoing-reports/{{outgoing_report_id}}/attachments",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "outgoing-reports",
+                                "{{outgoing_report_id}}",
+                                "attachments"
+                            ]
+                        },
+                        "description": "อัปโหลดไฟล์แนบสำหรับรายงานส่งออกที่สร้างแล้ว - รองรับการอัปโหลดหลายไฟล์พร้อมกัน\n\n**วิธีใช้:**\n1. สร้างรายงานก่อนด้วย Create Outgoing Report\n2. Copy ID ของรายงานที่สร้างไปใส่ในตัวแปร {{outgoing_report_id}}\n3. เลือกไฟล์ที่ต้องการอัปโหลดในฟิลด์ files"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Outgoing Report",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"position_id\": \"{{position_id}}\",\n  \"reference_number\": \"สป.กค 1234/2568 (แก้ไข)\",\n  \"reference_date\": \"2025-06-14T11:00:00Z\",\n  \"subject\": \"ร้องเรียนเรื่องความเป็นธรรมในการจัดเก็บภาษี (แก้ไข)\",\n  \"complaint_number\": \"COMP-001-2568\",\n  \"complaint_number_date\": \"2025-06-10T09:30:00Z\",\n  \"signature_authority_user_id\": \"{{signature_user_id}}\",\n  \"department_id\": \"{{department_id}}\",\n  \"confidentiality_level\": \"ลับ\",\n  \"urgency_level\": \"เร่งด่วนมาก\",\n  \"remarks\": \"หมายเหตุที่แก้ไขแล้ว\",\n  \"complaint_id\": \"{{complaint_id}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/outgoing-reports/{{outgoing_report_id}}",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "outgoing-reports",
+                                "{{outgoing_report_id}}"
+                            ]
+                        },
+                        "description": "อัปเดตรายงานส่งออก - สามารถแก้ไขข้อมูลทุกฟิลด์ ยกเว้นไฟล์แนบ (ใช้ endpoint แยกต่างหาก)\n\n**หมายเหตุ:** ฟิลด์ใดที่ไม่ส่งมาจะไม่ถูกแก้ไข (Partial Update)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Outgoing Report",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/outgoing-reports/{{outgoing_report_id}}",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "outgoing-reports",
+                                "{{outgoing_report_id}}"
+                            ]
+                        },
+                        "description": "ลบรายงานส่งออก (soft delete) - เปลี่ยน is_active เป็น false\n\n**หมายเหตุ:** การลบจะเป็น soft delete เท่านั้น ข้อมูลจะยังคงอยู่ในฐานข้อมูลแต่จะไม่แสดงในรายการ"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Reports by Complaint",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/outgoing-reports/by-complaint/{{complaint_id}}",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "outgoing-reports",
+                                "by-complaint",
+                                "{{complaint_id}}"
+                            ]
+                        },
+                        "description": "ดึงรายงานส่งออกที่เกี่ยวข้องกับข้อร้องเรียนใดๆ - แสดงประวัติการส่งออกเอกสารของข้อร้องเรียนนั้น\n\n**ใช้สำหรับ:** ดูประวัติการส่งออกเอกสารของข้อร้องเรียนแต่ละเรื่อง"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Attachment",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/outgoing-reports/{{outgoing_report_id}}/attachments/{{attachment_id}}",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "outgoing-reports",
+                                "{{outgoing_report_id}}",
+                                "attachments",
+                                "{{attachment_id}}"
+                            ]
+                        },
+                        "description": "ลบไฟล์แนบ - ลบไฟล์แนบออกจากรายงานส่งออก\n\n**หมายเหตุ:** การลบจะเป็น soft delete (is_active = false)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Download Attachment",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{API}}{{PREFIX}}/outgoing-reports/{{outgoing_report_id}}/attachments/{{attachment_id}}/download",
+                            "host": [
+                                "{{API}}{{PREFIX}}"
+                            ],
+                            "path": [
+                                "outgoing-reports",
+                                "{{outgoing_report_id}}",
+                                "attachments",
+                                "{{attachment_id}}",
+                                "download"
+                            ]
+                        },
+                        "description": "ดาวน์โหลดไฟล์แนบ - ดาวน์โหลดไฟล์แนบจากรายงานส่งออก"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "API สำหรับจัดการแบบรายงานส่งหน่วยงานที่เกี่ยวข้อง - เชื่อมโยงกับข้อร้องเรียน, ตำแหน่ง, หน่วยงาน, และผู้มีอำนาจลงนาม"
+        }
 	],
 	"event": [
 		{
