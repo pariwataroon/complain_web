@@ -209,6 +209,7 @@ class Complaint(Base):
     complaint_type_relation = relationship("ComplaintType", back_populates="complaints")
     complaint_subtype_relation = relationship("ComplaintSubType", back_populates="complaints")
     complaint_channel_relation = relationship("ComplaintChannel", back_populates="complaints")
+    outgoing_reports = relationship("OutgoingReport", back_populates="complaint")
 
 class ComplaintAttachment(Base):
     __tablename__ = "comp_complaint_attachments"
