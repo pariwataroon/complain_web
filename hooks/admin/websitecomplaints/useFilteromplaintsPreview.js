@@ -6,15 +6,6 @@ const useFilteromplaintsPreview = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleUpdateAssignment = async (complaint_id, formData, userInfo) => {
-    console.log("=== Hook: handleUpdateAssignment called ===");
-    console.log("Complaint ID:", complaint_id);
-    console.log(
-      "Raw Form Data from SearchComplaints:",
-      JSON.stringify(formData, null, 2)
-    );
-    console.log("User Info:", userInfo);
-
-    // Validation
     if (!complaint_id) {
       throw new Error("ไม่พบ ID เรื่องร้องทุกข์");
     }
@@ -32,25 +23,25 @@ const useFilteromplaintsPreview = () => {
           "ผู้ใช้ไม่ระบุชื่อ"
         : "ผู้ใช้ไม่ระบุชื่อ";
 
-      // Get user ID for assigned_officer_id
-      const assignedOfficerId = userInfo?.user_id || userInfo?.id || "";
-
-      console.log("Current User:", currentUser);
-      console.log("Current DateTime:", currentDateTime);
-      console.log("Assigned Officer ID:", assignedOfficerId);
-
       // เตรียมข้อมูลตาม API Body format และ Database Schema
       const step3Data = formData.step3?.general || {};
+
       const additionalDetails = formData.step4?.general || {};
+      // ดึง assigned_officer_id จาก responsibleOfficer object
+      const assignedOfficerId =
+        additionalDetails.responsibleOfficer?.id ||
+        additionalDetails.responsibleOfficerId ||
+        additionalDetails.responsibleOfficer ||
+        "";
 
       const preparedData = {};
 
       // ข้อมูลเลขที่อ้างอิงจากระบบอื่น (ส่งเฉพาะที่มีค่า)
       if (step3Data.referenceNumber1) {
-        preparedData.reference_number1 = step3Data.referenceNumber1;
+        preparedData.reference_number = step3Data.referenceNumber1;
       }
       if (step3Data.referenceDate1) {
-        preparedData.reference_date1 = step3Data.referenceDate1;
+        preparedData.reference_date = step3Data.referenceDate1;
       }
       if (step3Data.referenceNumber2) {
         preparedData.reference_number2 = step3Data.referenceNumber2;
@@ -65,7 +56,7 @@ const useFilteromplaintsPreview = () => {
         preparedData.reference_date3 = step3Data.referenceDate3;
       }
       if (step3Data.referenceNumber4) {
-        preparedData.reference_number4 = step3Data.referenceNumber4;
+        preparedData.complaint_number = step3Data.referenceNumber4;
       }
       if (step3Data.referenceDate4) {
         preparedData.reference_date4 = step3Data.referenceDate4;
@@ -82,6 +73,11 @@ const useFilteromplaintsPreview = () => {
       // หน่วยงานที่ส่งเรื่องมาถึง กค.
       if (step3Data.senderAgency) {
         preparedData.agency_sender = step3Data.senderAgency;
+      }
+
+      // เรื่อง
+      if (step3Data.subject) {
+        preparedData.subject = step3Data.subject;
       }
 
       // ความลับและความเร่งด่วน (map ค่าให้ตรงกับ enum)
@@ -106,33 +102,67 @@ const useFilteromplaintsPreview = () => {
           urgencyMap[step3Data.urgencyLevel] || "low";
       }
 
-      // ประเภทการร้องเรียน
-      if (step3Data.complaintType) {
+      // ประเภทการร้องเรียน - จาก complaintFilingType
+      if (step3Data.complaintFilingType) {
         const complaintFilingMap = {
           new: "new",
           additional: "additional",
           committee: "anonymous",
         };
         preparedData.complaint_filing_type =
-          complaintFilingMap[step3Data.complaintType] || "new";
+          complaintFilingMap[step3Data.complaintFilingType] || "new";
+      } else {
+        preparedData.complaint_filing_type = "new"; // default
       }
 
+      // ข้อมูล checkbox สำหรับการร้องเรียน
+      preparedData.new_complaint = step3Data.new_complaint || false;
+      preparedData.add_more_complaint_to_ref =
+        step3Data.add_more_complaint_to_ref || false;
+      preparedData.group_work = step3Data.group_work || false;
+
       // เลขที่อ้างอิงเพิ่มเติม
-      if (step3Data.additionalReference1) {
+      if (
+        step3Data.additional_reference_number1 ||
+        step3Data.additionalReference1
+      ) {
         preparedData.additional_reference_number1 =
+          step3Data.additional_reference_number1 ||
           step3Data.additionalReference1;
       }
-      if (step3Data.additionalReferenceDate1) {
+      if (
+        step3Data.additional_reference_date1 ||
+        step3Data.additionalReferenceDate1
+      ) {
         preparedData.additional_reference_date1 =
+          step3Data.additional_reference_date1 ||
           step3Data.additionalReferenceDate1;
       }
-      if (step3Data.additionalReference2) {
+      if (
+        step3Data.additional_reference_number2 ||
+        step3Data.additionalReference2
+      ) {
         preparedData.additional_reference_number2 =
+          step3Data.additional_reference_number2 ||
           step3Data.additionalReference2;
       }
-      if (step3Data.additionalReferenceDate2) {
+      if (
+        step3Data.additional_reference_date2 ||
+        step3Data.additionalReferenceDate2
+      ) {
         preparedData.additional_reference_date2 =
+          step3Data.additional_reference_date2 ||
           step3Data.additionalReferenceDate2;
+      }
+
+      // ประเภทเรื่องร้องเรียน
+      if (step3Data.complaintType) {
+        preparedData.complaint_type_id = step3Data.complaintType;
+      }
+
+      // ประเภทเรื่องย่อย
+      if (step3Data.complaintSubType) {
+        preparedData.complaint_type = step3Data.complaintSubType;
       }
 
       // วันที่รับเรื่องและเสนองาน
@@ -147,22 +177,25 @@ const useFilteromplaintsPreview = () => {
       if (additionalDetails.incidentDate) {
         preparedData.incident_date = additionalDetails.incidentDate;
       }
-      if (additionalDetails.additionalDescription) {
-        preparedData.additional_description =
-          additionalDetails.additionalDescription;
+
+      // หมายเหตุการคัดกรอง
+      if (additionalDetails.screeningRemarks) {
+        preparedData.assigned_remark = additionalDetails.screeningRemarks;
       }
 
-      // ข้อมูลการประมวลผล
+      // ข้อมูลการประมวลผล - ใช้ assigned_officer_id จาก responsibleOfficer
       preparedData.registration_date = currentDateTime || "";
-      preparedData.assigned_officer_id = assignedOfficerId || "";
-      preparedData.assigned_remark = "";
+      preparedData.assigned_officer_id = assignedOfficerId;
+      preparedData.assigned_remark = additionalDetails.screeningRemarks || "";
       preparedData.assigned_date = currentDateTime;
       preparedData.assignment_reason = "";
 
-      console.log(
-        "Prepared Data for API:",
-        JSON.stringify(preparedData, null, 2)
-      );
+      // ตรวจสอบข้อมูลจำเป็น
+      if (!preparedData.assigned_officer_id) {
+        throw new Error("กรุณาเลือกเจ้าหน้าที่ผู้รับผิดชอบ");
+      }
+
+    
 
       // เรียก API
       const response = await UpdateAssignmentCompleteByAdmin(
@@ -170,23 +203,18 @@ const useFilteromplaintsPreview = () => {
         preparedData
       );
 
-      console.log("✅ API call completed");
-      console.log("=== API Response ===", response);
+     
 
       // ตรวจสอบผลลัพธ์
       if (response?.res_code === "0000") {
-        console.log("✅ API Success - res_code: 0000");
         alertSuccess("บันทึกข้อมูลเรียบร้อยแล้ว");
         return response;
       } else if (response?.res_code === "4000") {
-        console.log("⚠️ API Error - res_code: 4000");
-        console.log("ข้อมูลที่ส่งมาไม่ถูกต้อง:", response?.res_desc);
         alertError(
           `ข้อมูลไม่ถูกต้อง: ${response?.res_desc || "กรุณาตรวจสอบข้อมูล"}`
         );
         throw new Error(response?.res_desc || "ข้อมูลที่ส่งมาไม่ถูกต้อง");
       } else {
-        console.log("❌ API Error - Unexpected response:", response);
         alertError(
           `เกิดข้อผิดพลาด: ${response?.res_desc || "การส่งข้อมูลไม่สำเร็จ"}`
         );
@@ -198,7 +226,8 @@ const useFilteromplaintsPreview = () => {
       // แสดง error message ที่เหมาะสม
       if (
         !error.message.includes("ข้อมูลไม่ถูกต้อง") &&
-        !error.message.includes("การส่งข้อมูลไม่สำเร็จ")
+        !error.message.includes("การส่งข้อมูลไม่สำเร็จ") &&
+        !error.message.includes("กรุณาเลือกเจ้าหน้าที่ผู้รับผิดชอบ")
       ) {
         alertError("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
       }

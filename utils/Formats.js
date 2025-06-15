@@ -122,3 +122,162 @@ export function formatThaiBuddhistYear(date) {
   const thaiYear = d.year() + 543;
   return `${d.format("D MMM")} ${thaiYear}`;
 }
+
+// แปลง ISO เป็นวันที่ไทยเต็มรูปแบบ
+export function formatThaiFullDate(isoString) {
+  if (
+    !isoString ||
+    isoString === null ||
+    isoString === undefined ||
+    isoString === ""
+  ) {
+    return null;
+  }
+
+  const d = dayjs(isoString).tz("Asia/Bangkok");
+  if (!d.isValid()) {
+    return null;
+  }
+
+  return `วัน${d.format("dddd")}ที่ ${d.format("D MMMM")} พ.ศ. ${
+    d.year() + 543
+  }`;
+}
+
+// แปลง ISO เป็นรูปแบบสั้น (DD/MM/YYYY)
+export function formatThaiShortDate(isoString) {
+  if (
+    !isoString ||
+    isoString === null ||
+    isoString === undefined ||
+    isoString === ""
+  ) {
+    return null;
+  }
+  const d = dayjs(isoString).tz("Asia/Bangkok");
+  if (!d.isValid()) {
+    return null;
+  }
+
+  return `${d.format("DD/MM/")}${d.year() + 543}`;
+}
+
+// แปลง ISO เป็นรูปแบบราชการไทย
+export function formatThaiOfficialDate(isoString) {
+  if (
+    !isoString ||
+    isoString === null ||
+    isoString === undefined ||
+    isoString === ""
+  ) {
+    return null;
+  }
+  const d = dayjs(isoString).tz("Asia/Bangkok");
+  if (!d.isValid()) {
+    return null;
+  }
+
+  return `${d.format("D MMMM")} พ.ศ. ${d.year() + 543}`;
+}
+
+// แปลง ISO เป็นวันที่และเวลาไทยเต็มรูปแบบ
+export function formatThaiFullDateTime(isoString) {
+  if (
+    !isoString ||
+    isoString === null ||
+    isoString === undefined ||
+    isoString === ""
+  ) {
+    return null;
+  }
+
+  const d = dayjs(isoString).tz("Asia/Bangkok");
+  if (!d.isValid()) {
+    return null;
+  }
+
+  return `วัน${d.format("dddd")}ที่ ${d.format("D MMMM")} พ.ศ. ${
+    d.year() + 543
+  } เวลา ${d.format("HH:mm")} น.`;
+}
+
+// แปลง ISO เป็นรูปแบบสั้นพร้อมเวลา (DD/MM/YYYY HH:MM)
+export function formatThaiShortDateTime(isoString) {
+  if (
+    !isoString ||
+    isoString === null ||
+    isoString === undefined ||
+    isoString === ""
+  ) {
+    return null;
+  }
+
+  const d = dayjs(isoString).tz("Asia/Bangkok");
+  if (!d.isValid()) {
+    return null;
+  }
+
+  return `${d.format("DD/MM/")}${d.year() + 543} ${d.format("HH:mm")}`;
+}
+
+// แปลง ISO เป็นรูปแบบราชการไทยพร้อมเวลา
+export function formatThaiOfficialDateTime(isoString) {
+  if (
+    !isoString ||
+    isoString === null ||
+    isoString === undefined ||
+    isoString === ""
+  ) {
+    return null;
+  }
+
+  const d = dayjs(isoString).tz("Asia/Bangkok");
+  if (!d.isValid()) {
+    return null;
+  }
+
+  return `${d.format("D MMMM")} พ.ศ. ${d.year() + 543} เวลา ${d.format("HH:mm")} น.`;
+}
+
+// แปลงเป็นแค่เวลา (HH:MM น.)
+export function formatThaiTime(isoString) {
+  if (
+    !isoString ||
+    isoString === null ||
+    isoString === undefined ||
+    isoString === ""
+  ) {
+    return null;
+  }
+
+  const d = dayjs(isoString).tz("Asia/Bangkok");
+  if (!d.isValid()) {
+    return null;
+  }
+
+  return `${d.format("HH:mm")} น.`;
+}
+
+// แปลงเป็นเวลาแบบ 12 ชั่วโมง (เช้า/บ่าย)
+export function formatThaiTime12Hour(isoString) {
+  if (
+    !isoString ||
+    isoString === null ||
+    isoString === undefined ||
+    isoString === ""
+  ) {
+    return null;
+  }
+
+  const d = dayjs(isoString).tz("Asia/Bangkok");
+  if (!d.isValid()) {
+    return null;
+  }
+
+  const hour = d.hour();
+  const minute = d.format("mm");
+  const period = hour < 12 ? "เช้า" : "บ่าย";
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+
+  return `${displayHour}:${minute} ${period}`;
+}

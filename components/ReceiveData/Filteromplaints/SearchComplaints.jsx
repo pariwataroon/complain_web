@@ -61,6 +61,7 @@ const getRespondentTypeAndData = (step2) => {
 
 const SearchComplaints = () => {
   const router = useRouter();
+
   const id = useMemo(() => {
     if (router.query.id) {
       return router.query.id;
@@ -78,10 +79,12 @@ const SearchComplaints = () => {
 
     return null;
   }, [router.query.id, router.query.data]);
+
+  // State variables
   const [defaultData, setDefaultData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [complaintType, setComplaintType] = useState("new");
+  const [complaintFilingType, setComplaintFilingType] = useState("new");
   const [validationErrors, setValidationErrors] = useState({});
   const [showValidation, setShowValidation] = useState(false);
   const [complaintTypes, setComplaintTypes] = useState([]);
@@ -101,7 +104,7 @@ const SearchComplaints = () => {
   const defaultStep3Ref = useRef({});
   const defaultStep4Ref = useRef({});
 
-  // --- Dynamic parse for complainant/delegate/respondent
+  // Dynamic parse for complainant/delegate/respondent
   const [complainantType, setComplainantType] = useState("individual");
   const [complainantData, setComplainantData] = useState({});
   const [delegateType, setDelegateType] = useState("delegate");
@@ -109,6 +112,7 @@ const SearchComplaints = () => {
   const [respondentType, setRespondentType] = useState("individual");
   const [respondentData, setRespondentData] = useState({});
 
+  // Fetch complaint types
   useEffect(() => {
     const fetchComplaintTypes = async () => {
       try {
@@ -126,16 +130,11 @@ const SearchComplaints = () => {
     fetchComplaintTypes();
   }, []);
 
-  useEffect(() => {
-    if (id) {
-      fetchComplaints(id);
-    }
-  }, [id]);
-
+  // Fetch staff users
   useEffect(() => {
     const fetchStaffUsers = async () => {
       try {
-        const users = await UsersSearchByRole("");
+        const users = await UsersSearchByRole("staff");
         setStaffUsers(users);
       } catch (err) {
         console.error("Error fetching staff users:", err);
@@ -144,24 +143,22 @@ const SearchComplaints = () => {
     fetchStaffUsers();
   }, []);
 
+  // Fetch complaint data when ID changes
   useEffect(() => {
     if (id) {
       fetchComplaints(id);
     }
   }, [id]);
 
-  // เฉพาะส่วน fetchComplaints ที่เปลี่ยนแปลง
   const fetchComplaints = async (id) => {
     setLoading(true);
     setError(null);
-
 
     try {
       const res = await GetComplaintByID(id);
       const data = res?.res_data;
       setDefaultData(data);
-      // console.log({ data });
-      
+
       const general = data?.step1?.general?.general || {};
       const delegate = data?.step1?.general?.delegate || {};
       const { type: cType, data: cData } = getComplainantTypeAndData(general);
@@ -182,19 +179,25 @@ const SearchComplaints = () => {
 
       const step3Data = data?.step3?.general || {};
       const assignmentForm = data?.assignment_form || {};
-
       const step4Data = data?.step4?.general || {};
+
+      const getComplaintTypeText = (id) => {
+        if (!id || !complaintTypes.length) return "";
+        const type = complaintTypes.find(t => t.value === id);
+        return type ? type.label : "";
+      };
+
+      const complaintTypeId = assignmentForm.complaint_type_id || step3Data.complaintType || "";
+      const complaintTypeText = getComplaintTypeText(complaintTypeId);
 
       const step3DataWithDefaults = {
         ...step3Data,
-        // ข้อมูลจาก assignment_form (จะ override ถ้ามีค่า)
         referenceNumber1: assignmentForm.reference_number || step3Data.referenceNumber1 || "",
         referenceDate1: assignmentForm.reference_date || step3Data.referenceDate1 || "",
         referenceNumber2: assignmentForm.reference_number2 || step3Data.referenceNumber2 || "",
         referenceDate2: assignmentForm.reference_date2 || step3Data.referenceDate2 || "",
         referenceNumber3: assignmentForm.reference_number3 || step3Data.referenceNumber3 || "",
         referenceDate3: assignmentForm.reference_date3 || step3Data.referenceDate3 || "",
-        // ใช้ complaint_number สำหรับ referenceNumber4 (เลข สรร. สารบัญ)
         referenceNumber4: assignmentForm.complaint_number || assignmentForm.reference_number4 || step3Data.referenceNumber4 || "",
         referenceDate4: assignmentForm.reference_date4 || step3Data.referenceDate4 || "",
         documentNumber: assignmentForm.document_number || step3Data.documentNumber || "",
@@ -202,28 +205,33 @@ const SearchComplaints = () => {
         senderAgency: assignmentForm.agency_sender || step3Data.senderAgency || "",
         securityLevel: assignmentForm.confidentiality_level || step3Data.securityLevel || "normal",
         urgencyLevel: assignmentForm.urgency_level || step3Data.urgencyLevel || "normal",
-        complaintType: assignmentForm.complaint_filing_type || step3Data.complaintType || "new",
-        // ใช้ complaint_type จาก assignment_form หรือ step3 สำหรับ complaintSubType
-        complaintSubType: assignmentForm.complaint_type || step3Data.complaintType || "",
-        // ข้อมูลเพิ่มเติม
+
+        complaintType: complaintTypeId,
+        complaintTypeName: complaintTypeText,
+        complaintTypeData: {
+          id: complaintTypeId,
+          name: complaintTypeText,
+          ...(complaintTypes.find(t => t.value === complaintTypeId) || {})
+        },
+
+        complaintSubType: assignmentForm.complaint_type || step3Data.complaintSubType || "",
         additionalReference1: assignmentForm.additional_reference_number1 || step3Data.additionalReference1 || "",
         additionalReferenceDate1: assignmentForm.additional_reference_date1 || step3Data.additionalReferenceDate1 || "",
         additionalReference2: assignmentForm.additional_reference_number2 || step3Data.additionalReference2 || "",
         additionalReferenceDate2: assignmentForm.additional_reference_date2 || step3Data.additionalReferenceDate2 || "",
-        // ข้อมูลเดิมจาก step3
         subject: assignmentForm.subject || step3Data.subject || "",
         complaintChannel: "เว็บไซต์ศูนย์เรื่องร้องทุกข์"
       };
 
-      // ตั้งค่า complaintType state จากข้อมูลที่ได้
       if (assignmentForm.complaint_filing_type) {
         const typeMap = {
           "new": "new",
           "additional": "additional",
           "anonymous": "committee"
         };
-        setComplaintType(typeMap[assignmentForm.complaint_filing_type] || "new");
+        setComplaintFilingType(typeMap[assignmentForm.complaint_filing_type] || "new");
       }
+
 
       defaultStep3Ref.current = step3DataWithDefaults;
       defaultStep4Ref.current = step4Data;
@@ -233,7 +241,6 @@ const SearchComplaints = () => {
       step2Methods.reset(rData);
       step3Methods.reset(step3DataWithDefaults);
       step4Methods.reset(step4Data);
-
 
     } catch (error) {
       console.error("Load complaints failed", error);
@@ -325,16 +332,12 @@ const SearchComplaints = () => {
     step3Methods.reset(defaultStep3Ref.current);
     step4Methods.reset(defaultStep4Ref.current);
 
-    // Reset validation
     setValidationErrors({});
     setShowValidation(false);
-    setComplaintType("new");
+    setComplaintFilingType("new");
   };
 
-
-
   const handleSubmit = () => {
-
     const isValid = validateForm();
 
     if (!isValid) {
@@ -350,6 +353,40 @@ const SearchComplaints = () => {
     const step2Data = step2Methods.getValues();
     const step3Data = step3Methods.getValues();
     const step4Data = step4Methods.getValues();
+
+
+    const selectedOfficer = staffUsers.find(user => user.value === step4Data.responsibleOfficer);
+
+    const responsibleOfficerData = selectedOfficer ? {
+      id: selectedOfficer.value,
+      name: selectedOfficer.label,
+      fullName: selectedOfficer.fullName || "",
+      email: selectedOfficer.email || "",
+      roles: selectedOfficer.roles || []
+    } : {
+      id: step4Data.responsibleOfficer || "",
+      name: "",
+      fullName: "",
+      email: "",
+      roles: []
+    };
+
+
+    const enhancedStep4Data = {
+      ...step4Data,
+      responsibleOfficer: responsibleOfficerData,
+      responsibleOfficerId: step4Data.responsibleOfficer
+    };
+
+    const complaintFilingData = {
+      new_complaint: complaintFilingType === "new",
+      add_more_complaint_to_ref: complaintFilingType === "additional",
+      group_work: complaintFilingType === "committee",
+      additional_reference_number1: step3Data.additionalReference1 || "",
+      additional_reference_date1: step3Data.additionalReferenceDate1 || "",
+      additional_reference_number2: step3Data.additionalReference2 || "",
+      additional_reference_date2: step3Data.additionalReferenceDate2 || ""
+    };
 
     const submitData = {
       id: defaultData?.id,
@@ -367,15 +404,18 @@ const SearchComplaints = () => {
       step3: {
         general: {
           ...step3Data,
-          complaintType: complaintType
+          complaintType: step3Data.complaintType,
+          complaintFilingType: complaintFilingType,
+          ...complaintFilingData
         }
       },
       step4: {
-        general: step4Data
+        general: enhancedStep4Data
       },
     };
 
-    // ส่งข้อมูลไปหน้า SearchComplaintsPreview
+
+
     router.push({
       pathname: "/admin/edit/search/Filteromplaints/SearchComplaintsPreview",
       query: {
@@ -385,8 +425,9 @@ const SearchComplaints = () => {
     });
   };
 
-  const handleComplaintTypeChange = (type) => {
-    setComplaintType(type);
+  // เปลี่ยนชื่อฟังก์ชันเพื่อแยกจาก dropdown
+  const handleComplaintFilingTypeChange = (type) => {
+    setComplaintFilingType(type);
 
     // Clear validation errors when changing
     if (showValidation) {
@@ -410,7 +451,7 @@ const SearchComplaints = () => {
     }
   };
 
-  // Helper function to show field error
+  // Helper functions
   const getFieldError = (fieldName) => {
     return showValidation ? validationErrors[fieldName] : "";
   };
@@ -419,7 +460,6 @@ const SearchComplaints = () => {
     return showValidation && !!validationErrors[fieldName];
   };
 
-  // Helper function to clear validation error when field changes
   const handleFieldChange = (fieldName) => {
     if (showValidation && validationErrors[fieldName]) {
       setValidationErrors(prev => {
@@ -429,6 +469,7 @@ const SearchComplaints = () => {
       });
     }
   };
+
   // Loading state
   if (loading) {
     return (
@@ -541,21 +582,21 @@ const SearchComplaints = () => {
 
               {/* Tab Navigation for Step 2 */}
               <div className={styles.tabNavV2}>
-                <div className={`${styles.tabV2} ${complainantType === "individual" ? styles.activeV2 : ""}`}>
+                <div className={`${styles.tabV2} ${respondentType === "individual" ? styles.activeV2 : ""}`}>
                   บุคคลทั่วไป
                 </div>
-                <div className={`${styles.tabV2} ${complainantType === "corporate" ? styles.activeV2 : ""}`}>
+                <div className={`${styles.tabV2} ${respondentType === "corporate" ? styles.activeV2 : ""}`}>
                   นิติบุคคล
                 </div>
-                <div className={`${styles.tabV2} ${complainantType === "government" ? styles.activeV2 : ""}`}>
+                <div className={`${styles.tabV2} ${respondentType === "government" ? styles.activeV2 : ""}`}>
                   หน่วยงานของรัฐ
                 </div>
                 <div
                   className={styles.underlineBarV2}
                   style={{
-                    background: complainantType === "corporate"
+                    background: respondentType === "corporate"
                       ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
-                      : complainantType === "government"
+                      : respondentType === "government"
                         ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
                         : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)"
                   }}
@@ -598,7 +639,9 @@ const SearchComplaints = () => {
                         </label>
                         <select
                           {...step3Methods.register("complaintType", {
-                            onChange: () => handleFieldChange("complaintType")
+                            onChange: (e) => {
+                              handleFieldChange("complaintType");
+                            }
                           })}
                           className={hasFieldError("complaintType") ? styles.errorField : ""}
                         >
@@ -662,7 +705,7 @@ const SearchComplaints = () => {
                       </div>
                     </div>
 
-                    {/* Row 3: เลข สป.กก., วันที่, เลข สป.สร., วันที่ */}
+                    {/* Row 3: เลข สป.กค., วันที่, เลข สป.สร., วันที่ */}
                     <div className={styles.fieldRowDate}>
                       <div className={styles.fieldGroup}>
                         <label>
@@ -693,7 +736,6 @@ const SearchComplaints = () => {
                           onChange={() => handleFieldChange("referenceDate1")}
                           required
                         />
-
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>เลข สป.สร.</label>
@@ -781,7 +823,7 @@ const SearchComplaints = () => {
                       </div>
                     </div>
 
-                    {/* Row 5: เลขที่หนังสือ, วันที่, หน่วยงานอื่นที่ส่งเรื่องมา กก. */}
+                    {/* Row 5: เลขที่หนังสือ, วันที่, หน่วยงานอื่นที่ส่งเรื่องมา กค. */}
                     <div className={styles.fieldRowDate}>
                       <div className={styles.fieldGroup}>
                         <label>เลขที่หนังสือ</label>
@@ -802,7 +844,7 @@ const SearchComplaints = () => {
                         </div>
                       </div>
                       <div className={styles.fieldGroup}>
-                        <label>หน่วยงานอื่นที่ส่งเรื่องมา กก.</label>
+                        <label>หน่วยงานอื่นที่ส่งเรื่องมา กค.</label>
                         <select {...step3Methods.register("senderAgency")}>
                           <option value="">เลือกหน่วยงาน</option>
                           <option value="ministry1">กระทรวงการคลัง</option>
@@ -832,16 +874,18 @@ const SearchComplaints = () => {
                       </div>
                     </div>
 
-                    {/* Checkboxes - ตามภาพ 12 (แนวตั้ง) */}
+                    {/* Checkboxes - แยกจาก dropdown ประเภทเรื่องร้องเรียน */}
                     <div className={styles.checkboxSection}>
                       <div className={styles.checkboxGroupVertical}>
                         {/* เรื่องร้องเรียนใหม่ */}
                         <div className={styles.checkboxRowSingle}>
-                          <label className={`${styles.checkboxItem} ${complaintType === "new" ? styles.checked : ""}`}>
+                          <label className={`${styles.checkboxItem} ${complaintFilingType === "new" ? styles.checked : ""}`}>
                             <input
                               type="checkbox"
-                              checked={complaintType === "new"}
-                              onChange={() => handleComplaintTypeChange("new")}
+                              checked={complaintFilingType === "new"}
+                              onChange={() => {
+                                handleComplaintFilingTypeChange("new");
+                              }}
                             />
                             เรื่องร้องเรียนใหม่
                           </label>
@@ -850,11 +894,13 @@ const SearchComplaints = () => {
                         {/* เรื่องร้องเรียนเพิ่มเติม */}
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
-                            <label className={`${styles.checkboxItem} ${complaintType === "additional" ? styles.checked : ""}`}>
+                            <label className={`${styles.checkboxItem} ${complaintFilingType === "additional" ? styles.checked : ""}`}>
                               <input
                                 type="checkbox"
-                                checked={complaintType === "additional"}
-                                onChange={() => handleComplaintTypeChange("additional")}
+                                checked={complaintFilingType === "additional"}
+                                onChange={() => {
+                                  handleComplaintFilingTypeChange("additional");
+                                }}
                               />
                               เรื่องร้องเรียนเพิ่มเติม
                             </label>
@@ -865,7 +911,7 @@ const SearchComplaints = () => {
                                 <label>เลขที่อ้างอิง(เลข สรร.สารบัญ)</label>
                                 <input
                                   type="text"
-                                  disabled={complaintType !== "additional"}
+                                  disabled={complaintFilingType !== "additional"}
                                   {...step3Methods.register("additionalReference1")}
                                 />
                               </div>
@@ -875,7 +921,7 @@ const SearchComplaints = () => {
                                   <ControlledDateThaiPickerService
                                     name="additionalReferenceDate1"
                                     control={step3Methods.control}
-                                    disabled={complaintType !== "additional"}
+                                    disabled={complaintFilingType !== "additional"}
                                     placeholder="กรุณาเลือกวันที่"
                                   />
                                 </div>
@@ -887,11 +933,13 @@ const SearchComplaints = () => {
                         {/* รับเรื่องจากคณะทำงานนักตรวจสอบ */}
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
-                            <label className={`${styles.checkboxItem} ${complaintType === "committee" ? styles.checked : ""}`}>
+                            <label className={`${styles.checkboxItem} ${complaintFilingType === "committee" ? styles.checked : ""}`}>
                               <input
                                 type="checkbox"
-                                checked={complaintType === "committee"}
-                                onChange={() => handleComplaintTypeChange("committee")}
+                                checked={complaintFilingType === "committee"}
+                                onChange={() => {
+                                  handleComplaintFilingTypeChange("committee");
+                                }}
                               />
                               รับเรื่องจากคณะทำงานนักตรวจสอบ
                             </label>
@@ -902,7 +950,7 @@ const SearchComplaints = () => {
                                 <label>เลขที่อ้างอิง(เลข สรร.สารบัญ)</label>
                                 <input
                                   type="text"
-                                  disabled={complaintType !== "committee"}
+                                  disabled={complaintFilingType !== "committee"}
                                   {...step3Methods.register("additionalReference2")}
                                 />
                               </div>
@@ -912,7 +960,7 @@ const SearchComplaints = () => {
                                   <ControlledDateThaiPickerService
                                     name="additionalReferenceDate2"
                                     control={step3Methods.control}
-                                    disabled={complaintType !== "committee"}
+                                    disabled={complaintFilingType !== "committee"}
                                     placeholder="กรุณาเลือกวันที่"
                                   />
                                 </div>
@@ -997,10 +1045,7 @@ const SearchComplaints = () => {
                         <h4>เอกสารประกอบการร้องเรียน</h4>
                         <div className={styles.attachmentList}>
                           {defaultData?.step3?.general?.attachment?.map((file, index) => {
-                            // แปลงขนาดไฟล์จาก bytes เป็น MB
                             const fileSizeMB = (file.fileSize / (1024 * 1024)).toFixed(2);
-
-                            // แปลงวันที่จาก ISO string เป็นรูปแบบไทย
                             const formatDate = (isoString) => {
                               const date = new Date(isoString);
                               const day = date.getDate().toString().padStart(2, '0');
@@ -1023,7 +1068,6 @@ const SearchComplaints = () => {
                               </div>
                             );
                           }) || (
-                              // กรณีไม่มีไฟล์แนบ
                               <div className={styles.attachmentItem}>
                                 <span className={styles.pdfIcon}>📄</span>
                                 ไม่มีเอกสารประกอบ
@@ -1034,13 +1078,11 @@ const SearchComplaints = () => {
                           หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ หมายศาล
                         </p>
                       </div>
-
                     </div>
                   </div>
                 </div>
               </FormProvider>
 
-              {/* Section 6: คัดกรองเรื่องราวร้องทุกข์ */}
               {/* Section 6: คัดกรองเรื่องราวร้องทุกข์ */}
               <FormProvider {...step4Methods}>
                 <div className={styles.formSection}>
@@ -1048,7 +1090,6 @@ const SearchComplaints = () => {
                     <h3 className={styles.sectionTitle}>คัดกรองเรื่องราวร้องทุกข์ <span className={styles.required}>*</span></h3>
                   </div>
                   <div className={styles.sectionContent}>
-                    {/* คัดกรองเรื่องราวร้องทุกข์ */}
                     <div className={styles.screeningSection}>
                       {/* เจ้าหน้าที่ผู้รับผิดชอบ */}
                       <div className={styles.fieldRow}>
@@ -1058,7 +1099,17 @@ const SearchComplaints = () => {
                           </label>
                           <select
                             {...step4Methods.register("responsibleOfficer", {
-                              onChange: () => handleFieldChange("responsibleOfficer")
+                              onChange: (e) => {
+                                const selectedOfficer = staffUsers.find(user => user.value === e.target.value);
+                                if (selectedOfficer) {
+                                  step4Methods.setValue("responsibleOfficerId", selectedOfficer.value);
+                                  step4Methods.setValue("responsibleOfficerName", selectedOfficer.label);
+                                } else {
+                                  step4Methods.setValue("responsibleOfficerId", "");
+                                  step4Methods.setValue("responsibleOfficerName", "");
+                                }
+                                handleFieldChange("responsibleOfficer");
+                              }
                             })}
                             className={hasFieldError("responsibleOfficer") ? styles.errorField : ""}
                           >
@@ -1119,6 +1170,5 @@ const SearchComplaints = () => {
     </>
   );
 };
-
 
 export default SearchComplaints;

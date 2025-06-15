@@ -15,7 +15,7 @@ import ButtonService from "@services/ButtonService/ButtonService";
 import { GetComplaintByID } from "@pages/api/complaint/complaint";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import {
-  formatThaiDate, formatThaiDateTime, formatPhoneNumber_null, formatCitizenId_null
+  formatThaiDate, formatThaiDateTime, formatPhoneNumber_null, formatCitizenId_null, formatThaiFullDate, formatThaiFullDateTime
 } from "@utils/Formats";
 import CheckIcon from "@mui/icons-material/Check";
 import { exportElementToPDF } from "@utils/exportPDF";
@@ -27,10 +27,12 @@ import {
   showConfirm,
 } from "@utils/Alerts";
 import useFilteromplaintsPreview from "@hooks/admin/websitecomplaints/useFilteromplaintsPreview";
+import { GetAllSelectComplaintTypes, UsersSearchByRole } from "@pages/api/allselect/allselect";
+
 
 const SearchComplaintsPreview = () => {
   const router = useRouter();
-  
+
   const id = useMemo(() => {
     if (router.query.id) {
       return router.query.id;
@@ -54,6 +56,8 @@ const SearchComplaintsPreview = () => {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
+  const [complaintTypes, setComplaintTypes] = useState([]);
+  const [staffUsers, setStaffUsers] = useState([]);
 
   const pdfRef = useRef();
 
@@ -89,6 +93,37 @@ const SearchComplaintsPreview = () => {
     { label: "ตัวอย่างเอกสาร" },
   ];
 
+  // เพิ่ม useEffect สำหรับดึงข้อมูล complaint types
+  useEffect(() => {
+    const fetchComplaintTypes = async () => {
+      try {
+        const response = await GetAllSelectComplaintTypes();
+        if (response?.res_code === "0000") {
+          const activeTypes = response.res_data
+            .filter((t) => t.is_active)
+            .map((t) => ({ value: t.id, label: t.name }));
+          setComplaintTypes(activeTypes);
+        }
+      } catch (err) {
+        console.error("Error fetching complaint types:", err);
+      }
+    };
+    fetchComplaintTypes();
+  }, []);
+
+  // เพิ่ม useEffect สำหรับดึงข้อมูล staff users
+  useEffect(() => {
+    const fetchStaffUsers = async () => {
+      try {
+        const users = await UsersSearchByRole("staff");
+        setStaffUsers(users);
+      } catch (err) {
+        console.error("Error fetching staff users:", err);
+      }
+    };
+    fetchStaffUsers();
+  }, []);
+
   useEffect(() => {
     const cookieInfo = Cookies.get("info");
     if (cookieInfo) {
@@ -114,7 +149,7 @@ const SearchComplaintsPreview = () => {
         // ลองดึงข้อมูลจาก query parameter ก่อน (กรณีส่งมาจากหน้าแก้ไข)
         if (router.query.data) {
           const data = JSON.parse(router.query.data);
-          
+
           setFormData(data);
           setLoading(false);
           return;
@@ -138,6 +173,7 @@ const SearchComplaintsPreview = () => {
 
     fetchData();
   }, [id, router.query.data]);
+
 
   const handleSubmit = async () => {
 
@@ -237,6 +273,7 @@ const SearchComplaintsPreview = () => {
 
   // ข้อมูลจาก step3 (เรื่องร้องทุกข์)
   const complaint = step3.general || {};
+
   const files = complaint.attachment || [];
 
   // ข้อมูลจาก step4 (รายละเอียดเพิ่มเติม)
@@ -280,15 +317,6 @@ const SearchComplaintsPreview = () => {
     return (bytes / (1024 * 1024)).toFixed(2);
   };
 
-  // แปลงวันที่จาก ISO string เป็นรูปแบบไทย
-  const formatDate = (isoString) => {
-    if (!isoString) return "-";
-    const date = new Date(isoString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = (date.getFullYear() + 543).toString().slice(-2);
-    return `${day}/${month}/${year}`;
-  };
 
   // Current user name for display
   const currentUserName = userInfo ?
@@ -332,11 +360,11 @@ const SearchComplaintsPreview = () => {
                 />
                 <InfoItem
                   label="ประเภทเรื่องร้องทุกข์"
-                  value={complaint.complaintType || "-"}
+                  value={complaint.complaintTypeData?.id || "-"}
                 />
                 <InfoItem
                   label="ประเภทเรื่องย่อย"
-                  value={complaint.complaintSubType || "-"}
+                  value={complaint.complaintTypeData?.id || "-"}
                 />
                 <InfoItem
                   label="เรื่อง"
@@ -547,7 +575,7 @@ const SearchComplaintsPreview = () => {
               />
               <InfoItem
                 label="วันที่ สป.กค."
-                value={formatDate(complaint.referenceDate1)}
+                value={formatThaiFullDate(complaint.referenceDate1)}
               />
               <InfoItem
                 label="เลข สป.สร."
@@ -555,7 +583,7 @@ const SearchComplaintsPreview = () => {
               />
               <InfoItem
                 label="วันที่ สป.สร."
-                value={formatDate(complaint.referenceDate2)}
+                value={formatThaiFullDate(complaint.referenceDate2) || "-"}
               />
               <InfoItem
                 label="เลข สตป."
@@ -563,7 +591,7 @@ const SearchComplaintsPreview = () => {
               />
               <InfoItem
                 label="วันที่ สตป."
-                value={formatDate(complaint.referenceDate3)}
+                value={formatThaiFullDate(complaint.referenceDate3)}
               />
               <InfoItem
                 label="เลข สรร. (สารบัญ)"
@@ -571,7 +599,7 @@ const SearchComplaintsPreview = () => {
               />
               <InfoItem
                 label="วันที่ สรร."
-                value={formatDate(complaint.referenceDate4)}
+                value={formatThaiFullDate(complaint.referenceDate4)}
               />
               <InfoItem
                 label="เลขที่หนังสือ"
@@ -579,7 +607,7 @@ const SearchComplaintsPreview = () => {
               />
               <InfoItem
                 label="วันที่หนังสือ"
-                value={formatDate(complaint.documentDate)}
+                value={formatThaiFullDate(complaint.documentDate)}
               />
               <InfoItem
                 label="หน่วยงานอื่นที่ส่งเรื่องมา"
@@ -595,29 +623,30 @@ const SearchComplaintsPreview = () => {
               />
               <InfoItem
                 label="ประเภทเรื่องร้องเรียน"
-                value={complaint.complaintType || "-"}
+                value={complaint.complaintTypeData?.id || "-" }
               />
               <InfoItem
                 label="วันและเวลาที่เกิดเหตุ"
                 value={formatThaiDateTime(additionalDetails.incidentDateTime)}
               />
-              <Grid item xs={12}>
-                <InfoItem
-                  label="รายละเอียดเรื่องร้องทุกข์"
-                  value={additionalDetails.additionalDescription || "-"}
-                />
-              </Grid>
+
+            </Grid>
+            <Grid item xs={12} mb={3}>
+              <InfoItem
+                label="รายละเอียดเรื่องร้องทุกข์"
+                value={additionalDetails.additionalDescription || "-"}
+              />
             </Grid>
 
             {/* วันที่รับเรื่องและเสนองาน */}
             <Grid container spacing={2} mb={3}>
               <InfoItem
                 label="วันที่รับเรื่องของเจ้าพนักงาน"
-                value={formatThaiDateTime(additionalDetails.officerReceivedDate || "-")}
+                value={formatThaiFullDateTime(additionalDetails.officerReceivedDate || "-")}
               />
               <InfoItem
                 label="วันที่เสนองาน ผอ.สรร."
-                value={formatThaiDateTime(additionalDetails.directorSubmittedDate || "-")}
+                value={formatThaiFullDateTime(additionalDetails.directorSubmittedDate || "-")}
               />
             </Grid>
 
@@ -692,7 +721,7 @@ const SearchComplaintsPreview = () => {
               {delegate && Object.keys(delegate).length > 0 && (
                 <Grid item xs={6}>
                   <Typography fontSize={16} fontWeight="bold">
-                    ลงชื่อผู้รับมอบอำนาจ: {delegate.firstName} {delegate.lastName} 
+                    ลงชื่อผู้รับมอบอำนาจ: {delegate.firstName} {delegate.lastName}
                   </Typography>
                   <Typography fontSize={14} color="text.secondary">
                     วันที่: {formatThaiDate(created_at || updated_at)}
@@ -712,7 +741,7 @@ const SearchComplaintsPreview = () => {
               </Grid>
               <Grid item xs={6}>
                 <Typography fontSize={16} fontWeight="bold">
-                  ลงชื่อเจ้าหน้าที่ผู้รับผิดชอบ: 
+                  ลงชื่อเจ้าหน้าที่ผู้รับผิดชอบ: {additionalDetails.responsibleOfficer?.fullName || ""}
                 </Typography>
                 <Typography fontSize={14} color="text.secondary">
                   วันที่: {formatThaiDate(new Date().toISOString())}
