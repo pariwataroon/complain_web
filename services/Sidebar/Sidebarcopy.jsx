@@ -55,7 +55,7 @@ const submenuItems = {
     },
   ],
   edit: [
-    { label: "รับเข้าข้อมูล", type: "header" },
+    { label: "จัดการข้อมูลในระบบ", type: "header" },
     { label: "สืบค้นเรื่องร้องเรียน", type: "item", to: "/admin/edit/search" },
     {
       label: "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์",

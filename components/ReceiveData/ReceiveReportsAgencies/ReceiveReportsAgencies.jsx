@@ -131,7 +131,7 @@ const ReceiveReportsAgencies = () => {
       <BreadcrumbsService
         items={[
           {
-            label: "รับเข้าข้อมูล",
+            label: "จัดการข้อมูลในระบบ",
             icon: (
               <img
                 src="/icons/Pencil.png"

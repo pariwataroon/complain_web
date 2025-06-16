@@ -157,14 +157,14 @@ const TableListWebComplaints = ({
                 name="issueType"
               />
 
-              <SelectField
+              {/* <SelectField
                 label="ประเภทเรื่องย่อย"
                 inputLabel="เลือกประเภทเรื่องย่อย"
                 options={issueSubTypeOptions}
                 value={String(filters.issueSubType || "")}
                 onChange={handleSelectChange("issueSubType")}
                 name="issueSubType"
-              />
+              /> */}
 
               <InputText
                 label="เลขที่ สรร"
@@ -314,14 +314,14 @@ const TableListWebComplaints = ({
                 name="issueType"
               />
 
-              <SelectField
+              {/* <SelectField
                 label="ประเภทเรื่องย่อย"
                 inputLabel="เลือกประเภทเรื่องย่อย"
                 options={issueSubTypeOptions}
                 value={String(filters.issueSubType || "")}
                 onChange={handleSelectChange("issueSubType")}
                 name="issueSubType"
-              />
+              /> */}
 
               <InputText
                 label="เลขที่ สรร"
