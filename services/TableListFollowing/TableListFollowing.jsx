@@ -10,35 +10,26 @@ import {
   TablePagination,
   Container,
   IconButton,
+  Typography,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import CleaningServicesIcon from "@mui/icons-material/CleaningServices"; // เปลี่ยนเป็น icon ไม้กวาด
+import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
 
 import styles from "./TableListFollowing.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 
-/* ----------------------------------------------------------------------------
- *  TableListFollowing
- *  - data            : array ของออบเจ็กต์รายการ
- *  - title           : ชื่อหัวตาราง / กล่อง
- *  - navigateTo      : path สำหรับกดแถวเพื่อไปหน้า รายละเอียด (เช่น "/detail")
- *  - statusOptions   : ตัวเลือก "สถานะการดำเนินการ" สำหรับ <SelectField>
- *  - onSearch        : ฟังก์ชันค้นหา (filters) → void
- * -------------------------------------------------------------------------- */
 const TableListFollowing = ({
   data = [],
   title = "",
   navigateTo = "",
   statusOptions = [],
-  onSearch = () => {},
+  onSearch = () => { },
+  emptyMessage = "ไม่มีข้อมูล",
 }) => {
   const router = useRouter();
 
-  /* ---------------------------------------------------------------------- */
-  /*  filters (ตรงกับหัวตารางภาษาไทย)                                     */
-  /* ---------------------------------------------------------------------- */
   const [filters, setFilters] = useState({
     claimantName: "", // ชื่อผู้ร้อง
     agency: "", // หน่วยงานที่เกี่ยวข้อง
@@ -69,7 +60,10 @@ const TableListFollowing = ({
   /* ---------------------------------------------------------------------- */
   /*  search handlers                                                       */
   /* ---------------------------------------------------------------------- */
-  const handleSearchClick = () => onSearch(filters);
+  const handleSearchClick = () => {
+    setPage(0); // รีเซ็ตหน้าเมื่อค้นหา
+    onSearch(filters);
+  };
 
   const handleClearSearch = () => {
     const cleared = { claimantName: "", agency: "", ssoNo: "", status: "" };
@@ -81,8 +75,11 @@ const TableListFollowing = ({
   /* ---------------------------------------------------------------------- */
   /*  row click                                                             */
   /* ---------------------------------------------------------------------- */
-  const handleRowClick = (item) =>
-    navigateTo && router.push(`${navigateTo}/${item.id}`);
+  const handleRowClick = (item) => {
+    if (navigateTo && item.id) {
+      router.push(`${navigateTo}/${item.id}`);
+    }
+  };
 
   /* ---------------------------------------------------------------------- */
   /*  render                                                                */
@@ -125,16 +122,19 @@ const TableListFollowing = ({
             label="ชื่อผู้ร้อง"
             value={filters.claimantName}
             onChange={handleChange("claimantName")}
+            placeholder="ค้นหาชื่อผู้ร้อง"
           />
           <InputText
             label="หน่วยงาน"
             value={filters.agency}
             onChange={handleChange("agency")}
+            placeholder="ค้นหาหน่วยงาน"
           />
           <InputText
             label="เลขสรร."
             value={filters.ssoNo}
             onChange={handleChange("ssoNo")}
+            placeholder="ค้นหาเลขสรร."
           />
           <SelectField
             label="สถานะการดำเนินการ"
@@ -164,10 +164,10 @@ const TableListFollowing = ({
           <IconButton
             onClick={handleClearSearch}
             sx={{
-              bgcolor: "#dc3545", // เปลี่ยนเป็นสีแดง
+              bgcolor: "#dc3545",
               color: "#fff",
               "&:hover": {
-                bgcolor: "#c82333", // สีแดงเข้มเมื่อ hover
+                bgcolor: "#c82333",
                 transform: "scale(1.05)",
               },
               borderRadius: "50%",
@@ -176,7 +176,7 @@ const TableListFollowing = ({
             }}
             title="ล้างการค้นหา"
           >
-            <CleaningServicesIcon /> {/* เปลี่ยนเป็น icon ไม้กวาด */}
+            <CleaningServicesIcon />
           </IconButton>
         </Box>
 
@@ -264,7 +264,7 @@ const TableListFollowing = ({
               </TableCell>
               <TableCell
                 sx={{
-                  width: 180,
+                  width: 250,
                   backgroundColor: "#e8e9f6",
                   fontWeight: 600,
                   color: "#1120a3",
@@ -330,141 +330,165 @@ const TableListFollowing = ({
           </TableHead>
 
           <TableBody>
-            {pagedData.map((item, idx) => (
-              <TableRow
-                key={item.id}
-                onClick={() => handleRowClick(item)}
-                sx={{
-                  cursor: "pointer",
-                  "&:hover": {
-                    backgroundColor: "#f5f7ff",
-                    transform: "scale(1.001)",
-                    transition: "all 0.2s ease-in-out",
-                  },
-                }}
-              >
+            {data.length === 0 ? (
+              // กรณีไม่มีข้อมูล
+              <TableRow>
                 <TableCell
+                  colSpan={8}
                   align="center"
                   sx={{
-                    fontWeight: 600,
-                    color: "#1120A3",
-                    border: "1px solid #e0e0e0",
-                    fontSize: "14px",
-                    padding: "14px 12px",
+                    padding: "40px 20px",
+                    color: "#666",
+                    fontSize: "16px",
+                    fontStyle: "italic"
                   }}
                 >
-                  {page * rowsPerPage + idx + 1}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    border: "1px solid #e0e0e0",
-                    fontSize: "14px",
-                    padding: "14px 12px",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {item?.claimantName ?? "-"}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    border: "1px solid #e0e0e0",
-                    fontSize: "14px",
-                    padding: "14px 12px",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {item?.agency ?? "-"}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    border: "1px solid #e0e0e0",
-                    fontSize: "14px",
-                    padding: "14px 12px",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {item?.ssoNo ?? "-"}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    border: "1px solid #e0e0e0",
-                    fontSize: "14px",
-                    padding: "14px 12px",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {item?.issue ?? "-"}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    border: "1px solid #e0e0e0",
-                    fontSize: "14px",
-                    padding: "14px 12px",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {item?.issueType ?? "-"}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    border: "1px solid #e0e0e0",
-                    fontSize: "14px",
-                    padding: "14px 12px",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {item?.receiveDate ?? "-"}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    border: "1px solid #e0e0e0",
-                    fontSize: "14px",
-                    padding: "14px 12px",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {item?.status ?? "-"}
+                  <Typography variant="h6" color="text.secondary">
+                    {emptyMessage}
+                  </Typography>
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              pagedData.map((item, idx) => (
+                <TableRow
+                  key={item.id || idx}
+                  onClick={() => handleRowClick(item)}
+                  sx={{
+                    cursor: navigateTo ? "pointer" : "default",
+                    "&:hover": navigateTo ? {
+                      backgroundColor: "#f5f7ff",
+                      transform: "scale(1.001)",
+                      transition: "all 0.2s ease-in-out",
+                    } : {},
+                  }}
+                >
+                  <TableCell
+                    align="center"
+                    sx={{
+                      fontWeight: 600,
+                      color: "#1120A3",
+                      border: "1px solid #e0e0e0",
+                      fontSize: "14px",
+                      padding: "14px 12px",
+                    }}
+                  >
+                    {page * rowsPerPage + idx + 1}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      border: "1px solid #e0e0e0",
+                      fontSize: "14px",
+                      padding: "14px 12px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {item?.claimantName || "-"}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      border: "1px solid #e0e0e0",
+                      fontSize: "14px",
+                      padding: "14px 12px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {item?.agency || "-"}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      border: "1px solid #e0e0e0",
+                      fontSize: "14px",
+                      padding: "14px 12px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {item?.ssoNo || "-"}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      border: "1px solid #e0e0e0",
+                      fontSize: "14px",
+                      padding: "14px 12px",
+                      maxWidth: "250px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                    title={item?.issue} // แสดง tooltip เมื่อ hover
+                  >
+                    {item?.issue || "-"}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      border: "1px solid #e0e0e0",
+                      fontSize: "14px",
+                      padding: "14px 12px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {item?.issueType || "-"}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      border: "1px solid #e0e0e0",
+                      fontSize: "14px",
+                      padding: "14px 12px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {item?.receiveDate || "-"}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      border: "1px solid #e0e0e0",
+                      fontSize: "14px",
+                      padding: "14px 12px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {item?.status || "-"}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
 
         {/* pagination */}
-        <TablePagination
-          component="div"
-          rowsPerPageOptions={[5, 10, 25]}
-          count={data.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          sx={{
-            borderTop: "1px solid #eee",
-            "& .MuiTablePagination-toolbar": {
-              fontSize: "14px",
-              padding: "16px",
-            },
-            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
+        {data.length > 0 && (
+          <TablePagination
+            component="div"
+            rowsPerPageOptions={[5, 10, 25]}
+            count={data.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            sx={{
+              borderTop: "1px solid #eee",
+              "& .MuiTablePagination-toolbar": {
+                fontSize: "14px",
+                padding: "16px",
+              },
+              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
               {
                 fontSize: "14px",
               },
-          }}
-        />
+            }}
+          />
+        )}
       </Box>
     </Container>
   );

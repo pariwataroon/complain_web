@@ -281,3 +281,86 @@ export function formatThaiTime12Hour(isoString) {
 
   return `${displayHour}:${minute} ${period}`;
 }
+
+export function formatTableDate(isoString) {
+  if (
+    !isoString ||
+    isoString === null ||
+    isoString === undefined ||
+    isoString === ""
+  ) {
+    return "-";
+  }
+
+  const d = dayjs(isoString).tz("Asia/Bangkok");
+  if (!d.isValid()) {
+    return "-";
+  }
+
+  return `${d.format("DD/MM/")}${d.year() + 543}`;
+}
+
+// แปลงรูปแบบวันที่สำหรับการแสดงสถานะ
+export function formatStatusDate(isoString) {
+  if (
+    !isoString ||
+    isoString === null ||
+    isoString === undefined ||
+    isoString === ""
+  ) {
+    return "-";
+  }
+
+  const d = dayjs(isoString).tz("Asia/Bangkok");
+  if (!d.isValid()) {
+    return "-";
+  }
+
+  return `${d.format("D MMM")} ${d.year() + 543}`;
+}
+
+// ฟังก์ชันสำหรับแปลงข้อความสถานะวันที่แบบผสม
+export function formatMixedStatusDate(dateString) {
+  if (!dateString) return "-";
+
+  try {
+    // กรณีที่มีรูปแบบ "รอการยืนยัน (16 Jun 2025)"
+    if (dateString.includes("(") && dateString.includes(")")) {
+      const statusPart = dateString.split("(")[0].trim();
+      const datePart = dateString.match(/\((.*?)\)/)?.[1];
+
+      if (datePart) {
+        const thaiDate = formatStatusDate(new Date(datePart));
+        return `${statusPart} (${thaiDate})`;
+      }
+      return dateString;
+    }
+
+    // กรณีวันที่ปกติ
+    return formatTableDate(dateString);
+  } catch (error) {
+    console.error("Error formatting mixed status date:", error);
+    return dateString;
+  }
+}
+
+// ฟังก์ชันตรวจสอบและแปลงเลขเอกสาร
+export function formatDocumentNumber(number) {
+  if (!number || number === null || number === undefined || number === "") {
+    return "-";
+  }
+  return String(number);
+}
+
+// ฟังก์ชันตัดข้อความยาวให้สั้นลง
+export function truncateText(text, maxLength = 50) {
+  if (!text) return "-";
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + "...";
+}
+
+// ฟังก์ชันจัดรูปแบบชื่อคน
+export function formatPersonName(title = "", firstName = "", lastName = "") {
+  const fullName = `${title} ${firstName} ${lastName}`.trim();
+  return fullName || "ไม่ระบุชื่อ";
+}

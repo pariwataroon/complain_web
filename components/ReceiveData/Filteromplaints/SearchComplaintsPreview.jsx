@@ -152,6 +152,8 @@ const SearchComplaintsPreview = () => {
 
           setFormData(data);
           setLoading(false);
+          console.log({ data });
+          
           return;
         }
 
@@ -659,7 +661,6 @@ const SearchComplaintsPreview = () => {
                 files.map((file, index) => {
                   const ext = getFileExt(file.fileName || "");
                   const fileSizeMB = formatFileSize(file.fileSize);
-                  const createdDate = formatDate(file.created_at);
 
                   return (
                     <Box
@@ -681,7 +682,7 @@ const SearchComplaintsPreview = () => {
                     >
                       {getFileIcon(ext)}
                       <Typography fontSize={14} color="text.secondary">
-                        {file.fileName} {fileSizeMB} MB ({createdDate})
+                        {file.fileName} {fileSizeMB} MB 
                       </Typography>
                     </Box>
                   );
