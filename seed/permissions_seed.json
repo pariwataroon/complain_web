@@ -511,6 +511,16 @@
       "override_role": false
     },
     {
+      "role_name": "staff",
+      "user_citizen_id": null,
+      "resource_name": "setting_users",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
       "role_name": "supervisor",
       "user_citizen_id": null,
       "resource_name": "search_complaints",
