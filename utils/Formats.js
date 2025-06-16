@@ -364,3 +364,123 @@ export function formatPersonName(title = "", firstName = "", lastName = "") {
   const fullName = `${title} ${firstName} ${lastName}`.trim();
   return fullName || "ไม่ระบุชื่อ";
 }
+
+export function formatComplaintReceiveDate(dateString) {
+  if (!dateString) return "-";
+
+  try {
+    if (dateString.includes("(") && dateString.includes(")")) {
+      const statusPart = dateString.split("(")[0].trim();
+      const datePart = dateString.match(/\((.*?)\)/)?.[1];
+
+      if (datePart) {
+        const date = dayjs(datePart).tz("Asia/Bangkok");
+        if (date.isValid()) {
+          const thaiDate = formatThaiOfficialDate(date.toISOString());
+          const result = `${statusPart} (${thaiDate})`;
+          return result;
+        }
+      }
+      return dateString;
+    }
+
+    const date = dayjs(dateString).tz("Asia/Bangkok");
+    if (date.isValid()) {
+      return formatThaiOfficialDate(dateString);
+    }
+
+    return dateString;
+  } catch (error) {
+    return dateString;
+  }
+}
+
+// ฟังก์ชันสำหรับจัดรูปแบบชื่อผู้ร้องเรียน
+export function formatComplainantName(complainant, fallbackName = null) {
+
+  if (complainant && typeof complainant === "object") {
+    const { title = "", first_name = "", last_name = "" } = complainant;
+    const fullName = `${title} ${first_name} ${last_name}`.trim();
+
+    if (fullName) {
+      return fullName;
+    }
+  }
+
+  if (fallbackName && fallbackName.trim()) {
+    return fallbackName.trim();
+  }
+
+  return "ไม่ระบุชื่อ";
+}
+
+// ฟังก์ชันสำหรับจัดรูปแบบหมายเลขเรื่องร้องเรียน
+export function formatComplaintNumber(number) {
+  if (!number || number === null || number === undefined || number === "") {
+    return "-";
+  }
+
+  const formatted = String(number).toUpperCase();
+
+  return formatted;
+}
+
+// ฟังก์ชันสำหรับจัดรูปแบบชื่อหน่วยงาน
+export function formatAgencyName(agencyName) {
+  if (
+    !agencyName ||
+    agencyName === null ||
+    agencyName === undefined ||
+    agencyName === ""
+  ) {
+    return "ยังไม่ได้มอบหมาย";
+  }
+
+  const formatted = String(agencyName).trim();
+
+
+  return formatted;
+}
+
+// ฟังก์ชันสำหรับจัดรูปแบบประเภทเรื่องร้องเรียน
+export function formatComplaintType(type) {
+  if (!type || type === null || type === undefined || type === "") {
+    return "ไม่ระบุประเภท";
+  }
+
+  const formatted = String(type).trim();
+  return formatted;
+}
+
+// ฟังก์ชันสำหรับจัดรูปแบบหัวข้อเรื่องร้องเรียน
+export function formatComplaintSubject(subject, maxLength = 100) {
+  if (!subject || subject === null || subject === undefined || subject === "") {
+    return "ไม่ระบุหัวข้อ";
+  }
+
+  let formatted = String(subject).trim();
+  if (formatted.length > maxLength) {
+    formatted = formatted.substring(0, maxLength) + "...";
+  }
+
+  return formatted;
+}
+
+// ฟังก์ชันสำหรับจัดรูปแบบสถานะการยืนยัน
+export function formatConfirmationStatus(status, statusText = null) {
+  if (statusText && statusText.trim()) {
+    return statusText.trim();
+  }
+
+  const statusMap = {
+    confirmed: "ยืนยันรับงานแล้ว",
+    rejected: "ปฏิเสธรับงาน",
+    pending: "รอการยืนยัน",
+    not_assigned: "ยังไม่ได้มอบหมาย",
+    sent_to_agency: "ส่งให้หน่วยงาน",
+  };
+
+  const result = statusMap[status] || status || "ไม่ระบุสถานะ";
+ 
+  return result;
+}

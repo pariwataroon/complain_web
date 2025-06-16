@@ -12,6 +12,7 @@ import {
   IconButton,
   Typography,
   Chip,
+  Alert,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
@@ -38,45 +39,40 @@ const TableListFollowing = ({
     status: "",
   });
 
+  const [debugMode, setDebugMode] = useState(true);
+
   const handleChange = (field) => (e) => {
     const value = e?.target ? e.target.value : e;
-    console.log("🔍 Filter changed:", {
-      user: "vampirebeam",
-      timestamp: "2025-06-16 14:22:16",
-      field,
-      value,
-      previousValue: filters[field],
-      allFilters: { ...filters, [field]: value }
-    });
     setFilters({ ...filters, [field]: value });
   };
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Debug: แสดงข้อมูลทั้งหมดเพื่อตรวจสอบ
-  React.useEffect(() => {
-    console.log("📊 TableListFollowing Debug Info:", {
-      user: "vampirebeam",
-      timestamp: "2025-06-16 14:22:16",
-      totalDataCount: data.length,
-      statusOptionsCount: statusOptions.length,
-      sampleData: data.slice(0, 3),
-      statusOptions: statusOptions,
-      uniqueStatusesInData: [...new Set(data.map(item => item.status))],
-      currentFilters: filters
-    });
-  }, [data, statusOptions, filters]);
+  const enhancedStatusOptions = useMemo(() => {
+    const actualStatuses = [...new Set(data.map(item => item.status).filter(Boolean))];
+
+    if (statusOptions && statusOptions.length > 0) {
+      return [
+        ...statusOptions
+      ];
+    } else {
+      const autoOptions = actualStatuses.map(status => ({
+        value: status,
+        label: status
+      }));
+
+      return [
+        { value: "", label: "— ทุกสถานะ —" },
+        ...autoOptions
+      ];
+    }
+  }, [statusOptions, data]);
 
   const filteredData = useMemo(() => {
     let filtered = [...data];
 
-    console.log("🔍 Starting filter process:", {
-      user: "vampirebeam",
-      timestamp: "2025-06-16 14:22:16",
-      originalCount: data.length,
-      filters: filters
-    });
+
 
     // กรองตามชื่อผู้ร้อง
     if (filters.claimantName && filters.claimantName.trim() !== "") {
@@ -85,7 +81,6 @@ const TableListFollowing = ({
       filtered = filtered.filter((item) =>
         item.claimantName && item.claimantName.toLowerCase().includes(searchTerm)
       );
-      console.log(`📝 Filtered by claimantName "${searchTerm}": ${beforeCount} → ${filtered.length}`);
     }
 
     // กรองตามหน่วยงาน
@@ -95,7 +90,6 @@ const TableListFollowing = ({
       filtered = filtered.filter((item) =>
         item.agency && item.agency.toLowerCase().includes(searchTerm)
       );
-      console.log(`🏢 Filtered by agency "${searchTerm}": ${beforeCount} → ${filtered.length}`);
     }
 
     // กรองตามเลขสรร.
@@ -105,51 +99,36 @@ const TableListFollowing = ({
       filtered = filtered.filter((item) =>
         item.ssoNo && item.ssoNo.toLowerCase().includes(searchTerm)
       );
-      console.log(`🔢 Filtered by ssoNo "${searchTerm}": ${beforeCount} → ${filtered.length}`);
     }
 
-    // กรองตามสถานะ - ปรับปรุงการเปรียบเทียบ
+    // กรองตามสถานะ - ปรับปรุงการเปรียบเทียบให้ครอบคลุมทุกกรณี
     if (filters.status && filters.status !== "") {
       const beforeCount = filtered.length;
+      const filterValue = filters.status;
 
-      // ลองหาทั้งแบบตรงกันแน่นอนและแบบ contains
-      const exactMatches = filtered.filter((item) => item.status === filters.status);
-      const containsMatches = filtered.filter((item) =>
-        item.status && item.status.toLowerCase().includes(filters.status.toLowerCase())
-      );
+      filtered = filtered.filter((item) => {
+        const itemStatus = item.status;
 
-      console.log(`📊 Status filter analysis for "${filters.status}":`, {
-        user: "vampirebeam",
-        timestamp: "2025-06-16 14:22:16",
-        beforeCount,
-        exactMatches: exactMatches.length,
-        containsMatches: containsMatches.length,
-        sampleDataStatuses: data.slice(0, 5).map(item => ({
-          id: item.id,
-          status: item.status,
-          statusType: typeof item.status
-        })),
-        filterValue: filters.status,
-        filterValueType: typeof filters.status
+        if (itemStatus === filterValue) return true;
+
+        if (String(itemStatus).trim() === String(filterValue).trim()) return true;
+
+        if (String(itemStatus).toLowerCase().trim() === String(filterValue).toLowerCase().trim()) return true;
+
+        if (String(itemStatus).toLowerCase().includes(String(filterValue).toLowerCase())) return true;
+
+        return false;
       });
 
-      // ใช้ exact match ก่อน ถ้าไม่เจอให้ลอง contains
-      filtered = exactMatches.length > 0 ? exactMatches : containsMatches;
 
-      console.log(`📊 Filtered by status "${filters.status}": ${beforeCount} → ${filtered.length}`);
+      if (filtered.length > 0) {
+      } else {
+      }
     }
 
-    console.log("✅ Final filtered result:", {
-      user: "vampirebeam",
-      timestamp: "2025-06-16 14:22:16",
-      finalCount: filtered.length,
-      originalCount: data.length,
-      appliedFilters: Object.entries(filters).filter(([_, value]) => value && value !== ""),
-      sampleFilteredData: filtered.slice(0, 3)
-    });
 
     return filtered;
-  }, [data, filters]);
+  }, [data, filters, enhancedStatusOptions]);
 
   const pagedData = useMemo(
     () => filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
@@ -167,23 +146,14 @@ const TableListFollowing = ({
   }, [filteredData.length]);
 
   const handleSearchClick = () => {
-    console.log("🔍 Manual search triggered:", {
-      user: "vampirebeam",
-      timestamp: "2025-06-16 14:22:16",
-      filters: filters,
-      resultCount: filteredData.length
-    });
+    
 
     setPage(0);
     onSearch(filters);
   };
 
   const handleClearSearch = () => {
-    console.log("🧹 Clear search triggered:", {
-      user: "vampirebeam",
-      timestamp: "2025-06-16 14:22:16",
-      previousFilters: filters
-    });
+    
 
     const cleared = { claimantName: "", agency: "", ssoNo: "", status: "" };
     setFilters(cleared);
@@ -192,18 +162,29 @@ const TableListFollowing = ({
   };
 
   const handleRowClick = (item) => {
-    console.log("👆 Row clicked:", {
-      user: "vampirebeam",
-      timestamp: "2025-06-16 14:22:16",
-      itemId: item.id,
-      navigateTo: navigateTo,
-      itemStatus: item.status
-    });
+   
 
     if (navigateTo && item.id) {
       router.push(`${navigateTo}/${item.id}`);
     }
   };
+
+  // ข้อมูลสำหรับ debug
+  const debugInfo = useMemo(() => {
+    const allStatuses = [...new Set(data.map(item => item.status).filter(Boolean))];
+    const statusCounts = allStatuses.map(status => ({
+      status,
+      count: data.filter(item => item.status === status).length
+    }));
+
+    return {
+      totalData: data.length,
+      allStatuses,
+      statusCounts,
+      currentFilter: filters.status,
+      enhancedStatusOptionsCount: enhancedStatusOptions.length
+    };
+  }, [data, filters.status, enhancedStatusOptions]);
 
   return (
     <Container
@@ -216,10 +197,6 @@ const TableListFollowing = ({
       }}
     >
       <Box className={styles.headerBar}>{title}</Box>
-
-      {/* ------------------------------------------------------------------ */}
-      {/*  search bar                                                       */}
-      {/* ------------------------------------------------------------------ */}
       <Box
         display="flex"
         justifyContent="space-between"
@@ -262,10 +239,7 @@ const TableListFollowing = ({
           />
           <SelectField
             label="สถานะการดำเนินการ"
-            options={[
-              { value: "", label: "— ทุกสถานะ —" },
-              ...statusOptions
-            ]}
+            options={enhancedStatusOptions}
             value={filters.status}
             onChange={handleChange("status")}
             sx={{ minWidth: "200px" }}
@@ -311,94 +285,18 @@ const TableListFollowing = ({
           <ExportButton
             label="Export PDF"
             onClick={() => {
-              console.log("📄 PDF Export clicked:", {
-                user: "vampirebeam",
-                timestamp: "2025-06-16 14:22:16",
-                dataCount: filteredData.length,
-                filters: filters
-              });
+              
             }}
           />
           <ExportButton
             label="Export Excel"
             onClick={() => {
-              console.log("📊 Excel Export clicked:", {
-                user: "vampirebeam",
-                timestamp: "2025-06-16 14:22:16",
-                dataCount: filteredData.length,
-                filters: filters
-              });
+              
             }}
           />
         </Box>
       </Box>
-
-      {/* แสดงสถิติการค้นหาและ Debug Info */}
-      {(filters.claimantName || filters.agency || filters.ssoNo || filters.status) && (
-        <Box
-          sx={{
-            mx: 2,
-            mt: 2,
-            p: 2,
-            bgcolor: '#f8f9fa',
-            borderRadius: 2,
-            border: '1px solid #dee2e6'
-          }}
-        >
-          <Typography variant="body2" sx={{ color: '#495057', mb: 1 }}>
-            📊 <strong>ผลการค้นหา:</strong> พบ {filteredData.length} รายการ จากทั้งหมด {data.length} รายการ
-          </Typography>
-
-          <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
-            {filters.claimantName && (
-              <Chip
-                label={`ชื่อผู้ร้อง: "${filters.claimantName}"`}
-                size="small"
-                sx={{ bgcolor: '#e3f2fd', color: '#1976d2' }}
-                onDelete={() => setFilters({ ...filters, claimantName: "" })}
-              />
-            )}
-            {filters.agency && (
-              <Chip
-                label={`หน่วยงาน: "${filters.agency}"`}
-                size="small"
-                sx={{ bgcolor: '#e8f5e8', color: '#2e7d32' }}
-                onDelete={() => setFilters({ ...filters, agency: "" })}
-              />
-            )}
-            {filters.ssoNo && (
-              <Chip
-                label={`เลขสรร.: "${filters.ssoNo}"`}
-                size="small"
-                sx={{ bgcolor: '#fff3e0', color: '#f57c00' }}
-                onDelete={() => setFilters({ ...filters, ssoNo: "" })}
-              />
-            )}
-            {filters.status && (
-              <Chip
-                label={`สถานะ: "${filters.status}"`}
-                size="small"
-                sx={{ bgcolor: '#f3e5f5', color: '#9c27b0' }}
-                onDelete={() => setFilters({ ...filters, status: "" })}
-              />
-            )}
-          </Box>
-
-          {/* Debug: แสดงสถานะที่มีในข้อมูล */}
-          <Typography variant="caption" sx={{ color: '#6c757d', display: 'block', mb: 1 }}>
-            🔧 <strong>Debug:</strong> สถานะที่มีในข้อมูล: [
-            {[...new Set(data.map(item => item.status))].join(', ')}]
-          </Typography>
-
-          {filters.status && (
-            <Typography variant="caption" sx={{ color: '#6c757d', display: 'block' }}>
-              🎯 <strong>กำลังค้นหาสถานะ:</strong> "{filters.status}"
-              (จำนวนที่ตรงกัน: {data.filter(item => item.status === filters.status).length} รายการ)
-            </Typography>
-          )}
-        </Box>
-      )}
-
+      
       <Box
         className={styles.tableWrapper}
         id="table-results"
@@ -679,10 +577,14 @@ const TableListFollowing = ({
                       label={item?.status || "-"}
                       size="small"
                       sx={{
-                        backgroundColor: item?.status === "รอการยืนยัน" ? "#fff3cd" :
-                          item?.status === "รอการยืนยัน" ? "#f8d7da" : "#e2e3e5",
-                        color: item?.status === "รอการยืนยัน" ? "#856404" :
-                          item?.status === "รอการยืนยัน" ? "#721c24" : "#495057",
+                        backgroundColor:
+                          item?.status === "รอการยืนยัน" ? "#fff3cd" :
+                            item?.status === "รับเรื่อง" ? "#d4edda" :
+                              item?.status === "ดำเนินการแล้ว" ? "#cce5ff" : "#e2e3e5",
+                        color:
+                          item?.status === "รอการยืนยัน" ? "#856404" :
+                            item?.status === "รับเรื่อง" ? "#155724" :
+                              item?.status === "ดำเนินการแล้ว" ? "#004085" : "#495057",
                         fontWeight: 500,
                         fontSize: "12px"
                       }}

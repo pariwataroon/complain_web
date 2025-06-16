@@ -17,7 +17,6 @@ const ForwardtoagencyComponents = () => {
   const router = useRouter();
   const { id } = router.query;
 
-  // State สำหรับเก็บข้อมูลผู้ลงนามที่เลือก
   const [selectedSigner, setSelectedSigner] = useState(null);
 
   const {
@@ -37,16 +36,6 @@ const ForwardtoagencyComponents = () => {
 
   // ฟังก์ชันจัดการเมื่อมีการเลือกผู้ลงนาม
   const handleSignerSelect = (userInfo) => {
-    console.log("✍️ Signer selected:", {
-      user: "vampirebeam",
-      timestamp: "2025-06-16 13:55:05",
-      selectedSigner: userInfo ? {
-        id: userInfo.value,
-        name: userInfo.label,
-        fullName: userInfo.fullName,
-        email: userInfo.email
-      } : null
-    });
     setSelectedSigner(userInfo);
   };
 

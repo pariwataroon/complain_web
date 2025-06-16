@@ -1,148 +1,29 @@
-import React, { useState, useCallback } from "react";
-import { useRouter } from "next/router";
+import React from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
 import ButtonService from "@services/ButtonService/ButtonService";
+import InputFile from "@services/InputFile/InputFile";
 import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
-import {
-  alertSuccess,
-  alertError,
-  showLoading,
-  closeAlert,
-} from "@utils/Alerts";
+import useInitialNotificationComplainantAgency from "@hooks/admin/InitialNotificationComplainantAgency/useInitialNotificationComplainantAgency";
 
 const InitialNotificationComplainantAgency = () => {
-  const router = useRouter();
-  const { id } = router.query;
-
-  const [form, setForm] = useState({
-    salutation: "",
-    refNo: "",
-    date: null,
-    subject: "",
-    department: "",
-    signer: "",
-    confidentiality: "",
-    urgency: "",
-    attachment: "",
-    note: "",
-  });
-
-  // ใช้ useCallback เพื่อป้องกัน re-render loop
-  const handleChange = useCallback((e) => {
-    const { name, value } = e.target;
-    // แก้ไข: ตรวจสอบว่า value ไม่ใช่ object
-    const finalValue =
-      typeof value === "object" && value !== null ? value.value || "" : value;
-    setForm((prev) => ({ ...prev, [name]: finalValue }));
-  }, []);
-
-  // Handler สำหรับ DateThaiPickerService - ใช้ useCallback
-  const handleDateChange = useCallback((thaiDate) => {
-    setForm((prev) => ({ ...prev, date: thaiDate }));
-  }, []);
-
-  // Handler สำหรับ file upload - ใช้ useCallback
-  const handleFileChange = useCallback((e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setForm((prev) => ({
-        ...prev,
-        attachment: file.name,
-      }));
-    }
-  }, []);
-
-  // Clear form handler - ใช้ useCallback
-  const handleClear = useCallback(() => {
-    setForm({
-      salutation: "",
-      refNo: "",
-      date: null,
-      subject: "",
-      department: "",
-      signer: "",
-      confidentiality: "",
-      urgency: "",
-      attachment: "",
-      note: "",
-    });
-  }, []);
-
-  // ฟังก์ชันตรวจสอบข้อมูลที่จำเป็น
-  const validateRequiredFields = () => {
-    const requiredFields = [
-      { field: "salutation", label: "เรียน" },
-      { field: "refNo", label: "เลขที่หนังสือ" },
-      { field: "date", label: "วันที่" },
-      { field: "subject", label: "เรื่อง" },
-      { field: "department", label: "หน่วยงาน / ผู้ร้อง" },
-      { field: "signer", label: "ผู้ลงนาม" },
-      { field: "confidentiality", label: "ชั้นความลับ" },
-      { field: "urgency", label: "ชั้นความเร่งด่วน" },
-      { field: "attachment", label: "เอกสารแนบ" },
-    ];
-
-    const missingFields = requiredFields.filter(({ field }) => {
-      const value = form[field];
-      return !value || value === "" || value === null;
-    });
-
-    return missingFields;
-  };
-
-  // Save form handler - ใช้ useCallback และเพิ่ม validation + alerts
-  const handleSave = useCallback(async () => {
-    console.log("Form data:", form);
-
-    // ตรวจสอบฟิลด์ที่จำเป็น
-    const missingFields = validateRequiredFields();
-
-    if (missingFields.length > 0) {
-      const missingFieldNames = missingFields
-        .map(({ label }) => label)
-        .join(", ");
-      alertError(
-        "ข้อมูลไม่ครบถ้วน",
-        `กรุณากรอกข้อมูลในฟิลด์: ${missingFieldNames}`
-      );
-      return;
-    }
-
-    try {
-      // แสดง loading
-      showLoading("กำลังบันทึกข้อมูล...");
-
-      // จำลองการส่งข้อมูลไปยัง API (ใช้ setTimeout เพื่อจำลอง)
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // ปิด loading
-      closeAlert();
-
-      // แสดงความสำเร็จ
-      await alertSuccess(
-        "บันทึกสำเร็จ",
-        "บันทึกแบบรายงานแจ้งผู้ร้องเรียน / ส่วนราชการเรียบร้อยแล้ว"
-      );
-
-      // TODO: เปลี่ยนเส้นทางหรือ refresh ข้อมูลหลังจากบันทึกสำเร็จ
-      // router.push('/some-success-page');
-    } catch (error) {
-      // ปิด loading
-      closeAlert();
-
-      // แสดงข้อผิดพลาด
-      console.error("Save error:", error);
-      alertError(
-        "เกิดข้อผิดพลาด",
-        "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง"
-      );
-    }
-  }, [form, router]);
+  const {
+    form,
+    errors,
+    isLoading,
+    createLabel,
+    getFieldError,
+    handleChange,
+    handleDateChange,
+    handleFileUpload,
+    handleClear,
+    handleSave,
+    isFormValid,
+  } = useInitialNotificationComplainantAgency();
 
   // Options สำหรับ SelectField
   const salutationOptions = [
@@ -157,10 +38,7 @@ const InitialNotificationComplainantAgency = () => {
   ];
 
   const departmentOptions = [
-    // ผู้ร้องเรียน
     { value: "complainant", label: "ผู้ร้องเรียน" },
-
-    // กระทรวงคมนาคม
     { value: "dlt", label: "กรมการขนส่งทางบก" },
     { value: "dmt", label: "กรมการขนส่งทางน้ำและพาณิชยนาวี" },
     { value: "caat", label: "การบินพลเรือนแห่งประเทศไทย" },
@@ -169,38 +47,25 @@ const InitialNotificationComplainantAgency = () => {
     { value: "srt", label: "การรถไฟแห่งประเทศไทย" },
     { value: "port_authority", label: "การท่าเรือแห่งประเทศไทย" },
     { value: "expressway", label: "การทางพิเศษแห่งประเทศไทย" },
-
-    // กระทรวงมหาดไทย
     { value: "dopa", label: "กรมการปกครอง" },
     { value: "dpt", label: "กรมส่งเสริมการปกครองท้องถิ่น" },
     { value: "dpw", label: "กรมโยธาธิการและผังเมือง" },
     { value: "disaster_prevention", label: "กรมป้องกันและบรรเทาสาธารณภัย" },
-
-    // กระทรวงการคลัง
     { value: "rd", label: "กรมสรรพากร" },
     { value: "customs", label: "กรมศุลกากร" },
     { value: "treasury", label: "กรมบัญชีกลาง" },
     { value: "excise", label: "กรมสรรพสามิต" },
     { value: "lands", label: "กรมธนารักษ์" },
-
-    // กระทรวงศึกษาธิการ
     { value: "moe", label: "สำนักงานปลัดกระทรวงศึกษาธิการ" },
     { value: "obec", label: "สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน" },
     { value: "ohec", label: "สำนักงานคณะกรรมการการอุดมศึกษา" },
     { value: "ovec", label: "สำนักงานคณะกรรมการการอาชีวศึกษา" },
-
-    // กระทรวงสาธารณสุข
     { value: "moph", label: "สำนักงานปลัดกระทรวงสาธารณสุข" },
     { value: "ddc", label: "กรมควบคุมโรค" },
     { value: "fda", label: "สำนักงานคณะกรรมการอาหารและยา" },
     { value: "dmh", label: "กรมสุขภาพจิต" },
-
-    // หน่วยงานอื่น ๆ
     { value: "ombudsman", label: "สำนักงานผู้ตรวจการแผ่นดิน" },
-    {
-      value: "nacc",
-      label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ",
-    },
+    { value: "nacc", label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ" },
     { value: "nhrct", label: "สำนักงานคณะกรรมการสิทธิมนุษยชนแห่งชาติ" },
   ];
 
@@ -290,38 +155,31 @@ const InitialNotificationComplainantAgency = () => {
             }}
           >
             <SelectField
-              label={
-                <span>
-                  เรียน<span style={{ color: "red", marginLeft: 4 }}>*</span>
-                </span>
-              }
+              label={createLabel("เรียน", "salutation")}
               name="salutation"
               value={form.salutation}
               onChange={handleChange}
               options={salutationOptions}
+              error={!!getFieldError("salutation")}
+              helperText={getFieldError("salutation")}
             />
             <InputText
-              label={
-                <span>
-                  เลขที่หนังสือ
-                  <span style={{ color: "red", marginLeft: 4 }}>*</span>
-                </span>
-              }
+              label={createLabel("เลขที่หนังสือ", "refNo")}
               inputLabel="กรอกเลขที่หนังสือ"
               name="refNo"
               value={form.refNo}
               onChange={handleChange}
+              error={!!getFieldError("refNo")}
+              helperText={getFieldError("refNo")}
             />
             <Box sx={{ position: "relative", zIndex: 1 }}>
               <DateThaiPickerService
-                label={
-                  <span>
-                    วันที่<span style={{ color: "red", marginLeft: 4 }}>*</span>
-                  </span>
-                }
+                label={createLabel("วันที่", "date")}
                 value={form.date}
                 onChange={handleDateChange}
                 placeholder="เลือกวันที่"
+                error={!!getFieldError("date")}
+                helperText={getFieldError("date")}
               />
             </Box>
           </Box>
@@ -329,46 +187,39 @@ const InitialNotificationComplainantAgency = () => {
           {/* Row 2: เรื่อง* */}
           <Box>
             <InputText
-              label={
-                <span>
-                  เรื่อง<span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label={createLabel("เรื่อง", "subject")}
               inputLabel="กรอกเรื่อง"
               name="subject"
               value={form.subject}
               onChange={handleChange}
+              error={!!getFieldError("subject")}
+              helperText={getFieldError("subject")}
             />
           </Box>
 
           {/* Row 3: หน่วยงาน / ผู้ร้อง* */}
           <Box>
             <SelectField
-              label={
-                <span>
-                  หน่วยงาน / ผู้ร้อง
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}
               name="department"
               value={form.department}
               onChange={handleChange}
               options={departmentOptions}
+              error={!!getFieldError("department")}
+              helperText={getFieldError("department")}
             />
           </Box>
 
           {/* Row 4: ผู้ลงนาม* */}
           <Box>
             <SelectField
-              label={
-                <span>
-                  ผู้ลงนาม<span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label={createLabel("ผู้ลงนาม", "signer")}
               name="signer"
               value={form.signer}
               onChange={handleChange}
               options={signerOptions}
+              error={!!getFieldError("signer")}
+              helperText={getFieldError("signer")}
             />
           </Box>
 
@@ -381,61 +232,36 @@ const InitialNotificationComplainantAgency = () => {
             }}
           >
             <SelectField
-              label={
-                <span>
-                  ชั้นความลับ
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label={createLabel("ชั้นความลับ", "confidentiality")}
               name="confidentiality"
               value={form.confidentiality}
               onChange={handleChange}
               options={confidentialityOptions}
+              error={!!getFieldError("confidentiality")}
+              helperText={getFieldError("confidentiality")}
             />
             <SelectField
-              label={
-                <span>
-                  ชั้นความเร่งด่วน
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+              label={createLabel("ชั้นความเร่งด่วน", "urgency")}
               name="urgency"
               value={form.urgency}
               onChange={handleChange}
               options={urgencyOptions}
+              error={!!getFieldError("urgency")}
+              helperText={getFieldError("urgency")}
             />
           </Box>
 
           {/* Row 6: เอกสารแนบ* */}
           <Box sx={{ position: "relative" }}>
-            <InputText
-              label="เอกสารแนบ*"
-              inputLabel="เลือกไฟล์"
+            <InputFile
+              label={createLabel("เอกสารประกอบการร้องเรียน", "attachment")}
               name="attachment"
-              value={form.attachment}
-              onChange={handleChange}
-              InputProps={{
-                endAdornment: (
-                  <>
-                    <input
-                      type="file"
-                      id="attachment-upload"
-                      style={{ display: "none" }}
-                      onChange={handleFileChange}
-                    />
-                    <label
-                      htmlFor="attachment-upload"
-                      style={{ cursor: "pointer" }}
-                    >
-                      <img
-                        src="/icons/Add.png"
-                        alt="add"
-                        style={{ width: 24, height: 24, marginTop: 6 }}
-                      />
-                    </label>
-                  </>
-                ),
-              }}
+              onChange={handleFileUpload}
+              error={!!getFieldError("attachment")}
+              helperText={getFieldError("attachment") || "หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"}
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              maxFiles={3}
+              maxSizeMB={10}
             />
           </Box>
 
@@ -470,6 +296,7 @@ const InitialNotificationComplainantAgency = () => {
               variant="outlined"
               iconLeft={<CloseIcon />}
               onClick={handleClear}
+              disabled={isLoading}
               sx={{
                 borderColor: "#50ADFF",
                 color: "#50ADFF",
@@ -482,16 +309,18 @@ const InitialNotificationComplainantAgency = () => {
 
           <Box sx={{ width: { xs: "100%", md: "18%" } }}>
             <ButtonService
-              label="บันทึก"
+              label={isLoading ? "กำลังบันทึก..." : "บันทึก"}
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={handleSave}
+              disabled={isLoading || !isFormValid()}
               sx={{
                 backgroundColor: "#2196F3",
                 color: "#FFF",
                 width: "100%",
                 height: "55px",
                 fontSize: "24px",
+                opacity: isLoading || !isFormValid() ? 0.6 : 1,
               }}
             />
           </Box>

@@ -4,9 +4,13 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListFollowing from "@services/TableListFollowing/TableListFollowing";
 import { GetComplaintsbyPageTypeAssignmentForm } from "@pages/api/stackedLineChart/stackedLineChart";
 import {
-  formatThaiShortDate,
-  formatThaiDateTime,
-  formatThaiOfficialDate
+  formatComplaintReceiveDate,
+  formatComplainantName,
+  formatComplaintNumber,
+  formatAgencyName,
+  formatComplaintType,
+  formatComplaintSubject,
+  formatConfirmationStatus
 } from "@utils/Formats";
 
 const breadcrumbItems = [
@@ -22,85 +26,86 @@ const breadcrumbItems = [
   },
 ];
 
-const statusOptions = [
-  { value: "", label: "ทั้งหมด" },
-  { value: "sent_to_agency", label: "ส่งให้หน่วยงาน" },
-  { value: "confirmed", label: "ยืนยันรับงานแล้ว" },
-  { value: "rejected", label: "ปฏิเสธรับงาน" },
-  { value: "pending", label: "รอการยืนยัน" },
-  { value: "not_assigned", label: "ยังไม่ได้มอบหมาย" },
-];
-
 const StackedLineChartComponents = () => {
   const [allComplaints, setAllComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [statusOptions, setStatusOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
 
+  // ฟังก์ชันแปลงข้อมูล API เป็นข้อมูลสำหรับตาราง
   const transformComplaintData = (apiData) => {
     if (!apiData?.items) return [];
 
     return apiData.items.map((item, index) => {
       const complaint = item.complaint;
+      const claimantName = formatComplainantName(
+        complaint.complainant,
+        complaint.claimant_name
+      );
 
-      return {
+      const agencyName = formatAgencyName(complaint.assigned_to);
+      const complaintNumber = formatComplaintNumber(complaint.complaint_number);
+      const complaintType = formatComplaintType(complaint.complaint_type);
+      const complaintSubject = formatComplaintSubject(complaint.subject, 80);
+      const receiveDate = formatComplaintReceiveDate(complaint.received_date_display);
+      const status = formatConfirmationStatus(
+        complaint.confirmation_status || complaint.status,
+        complaint.confirmation_status_text
+      );
+
+      const transformedItem = {
         id: complaint.id,
-        claimantName: getClaimantNameDisplay(complaint),
-        agency: complaint.assigned_to || "-",
-        ssoNo: complaint.complaint_number || "-",
-        issue: complaint.subject || "-",
-        issueType: complaint.complaint_type || "-",
-        receiveDate: formatReceiveDate(complaint.received_date_display || complaint.assigned_date),
-        status: getStatusText(complaint.confirmation_status || complaint.status),
+        claimantName,
+        agency: agencyName,
+        ssoNo: complaintNumber,
+        issue: complaintSubject,
+        issueType: complaintType,
+        receiveDate,
+        status,
+        originalStatus: complaint.confirmation_status || complaint.status,
         rawData: complaint
       };
+      return transformedItem;
     });
   };
 
-  const getClaimantNameDisplay = (complaint) => {
-    if (complaint.complainant) {
-      const { first_name, last_name, title } = complaint.complainant;
-      return `${title || ""} ${first_name || ""} ${last_name || ""}`.trim() || "ไม่ระบุชื่อ";
+  const generateStatusOptions = (apiData) => {
+    const legend = apiData?.legend?.confirmation_status;
+
+    if (legend) {
+      const options = Object.entries(legend).map(([key, value]) => ({
+        value: value,
+        label: value
+      }));
+
+      const result = [
+        ...options
+      ];
+
+
+      return result;
     }
 
-    return complaint.claimant_name || "ไม่ระบุชื่อ";
-  };
+    // fallback: สร้างจากข้อมูลที่มีในตาราง
+    const actualStatuses = [...new Set(
+      apiData?.items?.map(item =>
+        formatConfirmationStatus(
+          item.complaint.confirmation_status || item.complaint.status,
+          item.complaint.confirmation_status_text
+        )
+      ).filter(Boolean)
+    )];
 
-  const formatReceiveDate = (dateString) => {
-    if (!dateString) return "-";
+    const options = actualStatuses.map(status => ({
+      value: status,
+      label: status
+    }));
 
-    try {
-      if (dateString.includes("(") && dateString.includes(")")) {
-        const statusPart = dateString.split("(")[0].trim();
-        const datePart = dateString.match(/\((.*?)\)/)?.[1];
-
-        if (datePart) {
-          const thaiDate = formatThaiOfficialDate(new Date(datePart));
-          return `${statusPart} (${thaiDate})`;
-        }
-        return dateString;
-      }
-
-      // กรณีวันที่ปกติ
-      return formatThaiShortDate(dateString) || formatThaiDateTime(dateString) || dateString;
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return dateString;
-    }
-  };
-
-  // ฟังก์ชันแปลงสถานะเป็นภาษาไทย
-  const getStatusText = (status) => {
-    const statusMap = {
-      "confirmed": "ยืนยันรับงานแล้ว",
-      "rejected": "ปฏิเสธรับงาน",
-      "pending": "รอการยืนยัน",
-      "not_assigned": "ยังไม่ได้มอบหมาย",
-      "sent_to_agency": "ส่งให้หน่วยงาน"
-    };
-
-    return statusMap[status] || status || "-";
+    return [
+      ...options
+    ];
   };
 
   // ดึงข้อมูลจาก API
@@ -110,28 +115,30 @@ const StackedLineChartComponents = () => {
       setError(null);
 
       try {
+
         const response = await GetComplaintsbyPageTypeAssignmentForm({
           page: 1,
           page_size: 100,
           page_type: "website",
         });
 
-        console.log("API Response:", response);
-
         if (response?.res_code === "0000") {
-          const transformedData = transformComplaintData(response.res_data);
-          console.log("Transformed Data:", transformedData);
-
+          const apiData = response.res_data;
+          const transformedData = transformComplaintData(apiData);
+          const generatedStatusOptions = generateStatusOptions(apiData);
           setAllComplaints(transformedData);
           setFilteredComplaints(transformedData);
+          setStatusOptions(generatedStatusOptions);
+
         } else {
           throw new Error(response?.res_message || "ไม่สามารถดึงข้อมูลได้");
         }
       } catch (error) {
-        console.error("Error fetching complaints:", error);
+       
         setError(error.message);
         setAllComplaints([]);
         setFilteredComplaints([]);
+        setStatusOptions([{ value: "", label: "— ทุกสถานะ —" }]);
       } finally {
         setLoading(false);
       }
@@ -142,30 +149,31 @@ const StackedLineChartComponents = () => {
 
   // ฟังก์ชันค้นหาที่ปรับปรุงแล้ว
   const handleSearch = ({ claimantName, agency, ssoNo, status }) => {
-    console.log("=== 🔍 SEARCH FILTERS ===");
-    console.log({ claimantName, agency, ssoNo, status });
-
+    
     const result = allComplaints.filter((item) => {
-      // ค้นหาชื่อผู้ร้อง (case-insensitive)
-      if (claimantName && !item.claimantName.toLowerCase().includes(claimantName.toLowerCase())) {
-        return false;
+      if (claimantName && claimantName.trim() !== "") {
+        const searchTerm = claimantName.toLowerCase().trim();
+        if (!item.claimantName.toLowerCase().includes(searchTerm)) {
+          return false;
+        }
       }
 
-      // ค้นหาหน่วยงาน
-      if (agency && !item.agency.toLowerCase().includes(agency.toLowerCase())) {
-        return false;
+      if (agency && agency.trim() !== "") {
+        const searchTerm = agency.toLowerCase().trim();
+        if (!item.agency.toLowerCase().includes(searchTerm)) {
+          return false;
+        }
       }
 
-      // ค้นหาเลข สรร.
-      if (ssoNo && !item.ssoNo.toLowerCase().includes(ssoNo.toLowerCase())) {
-        return false;
+      if (ssoNo && ssoNo.trim() !== "") {
+        const searchTerm = ssoNo.toLowerCase().trim();
+        if (!item.ssoNo.toLowerCase().includes(searchTerm)) {
+          return false;
+        }
       }
 
-      // ค้นหาสถานะ (ตรวจสอบทั้งใน confirmation_status และ status)
-      if (status) {
-        const itemConfirmStatus = item.rawData?.confirmation_status;
-        const itemGeneralStatus = item.rawData?.status;
-        if (itemConfirmStatus !== status && itemGeneralStatus !== status) {
+      if (status && status !== "") {
+        if (item.status !== status) {
           return false;
         }
       }
@@ -173,7 +181,6 @@ const StackedLineChartComponents = () => {
       return true;
     });
 
-    console.log(`Search Results: ${result.length} items found`);
     setFilteredComplaints(result);
   };
 
@@ -229,11 +236,13 @@ const StackedLineChartComponents = () => {
           <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>
             เกิดข้อผิดพลาด
           </div>
-          <div style={{ fontSize: '14px', marginBottom: '20px', maxWidth: '400px' }}>
+          <div style={{ fontSize: '14px', marginBottom: '10px', maxWidth: '400px' }}>
             {error}
           </div>
+          <div style={{ fontSize: '12px', color: '#666', marginBottom: '20px' }}>
+            User: vampirebeam | Time: 2025-06-16 14:34:45
+          </div>
           <button
-            onClick={() => window.location.reload()}
             style={{
               padding: '10px 20px',
               backgroundColor: '#1120A3',
