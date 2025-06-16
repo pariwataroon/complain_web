@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
@@ -9,103 +9,9 @@ import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import useInformRelatedParties from "@hooks/admin/InformRelatedParties/useInformRelatedParties";
-
-const SIGNER_OPTIONS = [
-  { value: "ปลัดกระทรวงมหาดไทย", label: "ปลัดกระทรวงมหาดไทย" },
-  { value: "รองปลัดกระทรวงมหาดไทย", label: "รองปลัดกระทรวงมหาดไทย" },
-  {
-    value: "อธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
-    label: "อธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
-  },
-  {
-    value: "รองอธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
-    label: "รองอธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
-  },
-  {
-    value: "ผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
-    label: "ผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
-  },
-  {
-    value: "รองผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
-    label: "รองผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
-  },
-  { value: "ผู้ว่าราชการจังหวัด", label: "ผู้ว่าราชการจังหวัด" },
-  { value: "รองผู้ว่าราชการจังหวัด", label: "รองผู้ว่าราชการจังหวัด" },
-  { value: "อธิบดีกรมการปกครอง", label: "อธิบดีกรมการปกครอง" },
-  { value: "รองอธิบดีกรมการปกครอง", label: "รองอธิบดีกรมการปกครอง" },
-  {
-    value: "ผู้อำนวยการกองกิจการท้องถิ่น",
-    label: "ผู้อำนวยการกองกิจการท้องถิ่น",
-  },
-  { value: "ผู้อำนวยการกองนิติการ", label: "ผู้อำนวยการกองนิติการ" },
-];
-
-const DEPARTMENT_OPTIONS = [
-  { value: "กระทรวงมหาดไทย", label: "กระทรวงมหาดไทย" },
-  {
-    value: "กรมส่งเสริมการปกครองท้องถิ่น",
-    label: "กรมส่งเสริมการปกครองท้องถิ่น",
-  },
-  { value: "กรมการปกครอง", label: "กรมการปกครอง" },
-  {
-    value: "กรมป้องกันและบรรเทาสาธารณภัย",
-    label: "กรมป้องกันและบรรเทาสาธารณภัย",
-  },
-  { value: "จังหวัด", label: "จังหวัด" },
-  { value: "อำเภอ", label: "อำเภอ" },
-  { value: "องค์การบริหารส่วนจังหวัด", label: "องค์การบริหารส่วนจังหวัด" },
-  { value: "เทศบาลเมือง", label: "เทศบาลเมือง" },
-  { value: "เทศบาลตำบล", label: "เทศบาลตำบล" },
-  { value: "องค์การบริหารส่วนตำบล", label: "องค์การบริหารส่วนตำบล" },
-  { value: "กรุงเทพมหานคร", label: "กรุงเทพมหานคร" },
-  { value: "เมืองพัทยา", label: "เมืองพัทยา" },
-  {
-    value: "สำนักงานคณะกรรมการการเลือกตั้ง",
-    label: "สำนักงานคณะกรรมการการเลือกตั้ง",
-  },
-  { value: "สำนักงานตำรวจแห่งชาติ", label: "สำนักงานตำรวจแห่งชาติ" },
-  { value: "ประชาชน", label: "ประชาชน" },
-  { value: "นิติบุคคล", label: "นิติบุคคล" },
-  { value: "อื่นๆ", label: "อื่นๆ" },
-];
-
-const CONFIDENTIALITY_OPTIONS = [
-  { value: "ปกติ", label: "ปกติ" },
-  { value: "ลับ", label: "ลับ" },
-  { value: "ลับมาก", label: "ลับมาก" },
-  { value: "ลับที่สุด", label: "ลับที่สุด" },
-];
-
-const URGENCY_OPTIONS = [
-  { value: "ปกติ", label: "ปกติ" },
-  { value: "เร่งด่วน", label: "เร่งด่วน" },
-  { value: "เร่งด่วนมาก", label: "เร่งด่วนมาก" },
-  { value: "เร่งด่วนที่สุด", label: "เร่งด่วนที่สุด" },
-];
-
-const PROPOSE_FOR_OPTIONS = [
-  { value: "ทราบ", label: "ทราบ" },
-  { value: "พิจารณา", label: "พิจารณา" },
-  { value: "อนุมัติ", label: "อนุมัติ" },
-  { value: "ดำเนินการ", label: "ดำเนินการ" },
-  { value: "ตรวจสอบ", label: "ตรวจสอบ" },
-  { value: "ติดตาม", label: "ติดตาม" },
-  { value: "ประสานงาน", label: "ประสานงาน" },
-  { value: "รายงาน", label: "รายงาน" },
-];
-
-const DECISION_OPTIONS = [
-  { value: "อนุมัติ", label: "อนุมัติ" },
-  { value: "ไม่อนุมัติ", label: "ไม่อนุมัติ" },
-  { value: "พิจารณาแล้ว", label: "พิจารณาแล้ว" },
-  { value: "ทราบแล้ว", label: "ทราบแล้ว" },
-  { value: "ดำเนินการแล้ว", label: "ดำเนินการแล้ว" },
-  { value: "ส่งต่อ", label: "ส่งต่อ" },
-  { value: "ชี้แจง", label: "ชี้แจง" },
-  { value: "แก้ไข", label: "แก้ไข" },
-  { value: "ยกเลิก", label: "ยกเลิก" },
-  { value: "รอการพิจารณา", label: "รอการพิจารณา" },
-];
+import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
+import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
+import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
 
 const InformRelatedParties = () => {
   const {
@@ -121,6 +27,108 @@ const InformRelatedParties = () => {
     handleSave,
     isFormValid,
   } = useInformRelatedParties();
+
+  // State สำหรับ dynamic data
+  const [selectedSigner, setSelectedSigner] = useState(null);
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [confidentialityOptions, setConfidentialityOptions] = useState([]);
+  const [urgencyOptions, setUrgencyOptions] = useState([]);
+  const [proposeForOptions, setProposeForOptions] = useState([]);
+  const [decisionOptions, setDecisionOptions] = useState([]);
+  const [optionsLoading, setOptionsLoading] = useState(true);
+
+  // ฟังก์ชันจัดการเมื่อมีการเลือกผู้ลงนาม
+  const handleSignerSelect = (userInfo) => {
+    
+
+    setSelectedSigner(userInfo);
+    // ล้างหน่วยงานที่เลือกไว้เมื่อเปลี่ยนผู้ลงนาม
+    setSelectedDepartment(null);
+    // อัพเดทค่าใน form
+    handleChange({ target: { name: "department", value: "" } });
+  };
+
+  const handleDepartmentSelect = (department) => {
+    
+
+    setSelectedDepartment(department);
+  };
+
+  const fetchOptions = async () => {
+    try {
+      setOptionsLoading(true);
+
+      const confidentialityData = await GetOutgoingReportOptions("confidentiality_levels");
+      const urgencyData = await GetOutgoingReportOptions("urgency_levels");
+
+      setConfidentialityOptions(confidentialityData);
+      setUrgencyOptions(urgencyData);
+
+      setProposeForOptions([
+        { value: "ทราบ", label: "ทราบ" },
+        { value: "พิจารณา", label: "พิจารณา" },
+        { value: "อนุมัติ", label: "อนุมัติ" },
+        { value: "ดำเนินการ", label: "ดำเนินการ" },
+      ]);
+
+      setDecisionOptions([
+        { value: "รับทราบ", label: "รับทราบ" },
+        { value: "อนุมัติ", label: "อนุมัติ" },
+        { value: "ไม่อนุมัติ", label: "ไม่อนุมัติ" },
+        { value: "เพิ่มเติม", label: "ต้องการข้อมูลเพิ่มเติม" },
+      ]);
+
+      
+
+    } catch (error) {
+      
+
+      // ใช้ default options ถ้า API ไม่สามารถเรียกได้
+      setConfidentialityOptions([
+        { value: "ปกติ", label: "ปกติ" },
+        { value: "ลับ", label: "ลับ" },
+        { value: "ลับมาก", label: "ลับมาก" },
+        { value: "ลับที่สุด", label: "ลับที่สุด" },
+      ]);
+
+      setUrgencyOptions([
+        { value: "ปกติ", label: "ปกติ" },
+        { value: "เร่งด่วน", label: "เร่งด่วน" },
+        { value: "เร่งด่วนมาก", label: "เร่งด่วนมาก" },
+        { value: "เร่งด่วนที่สุด", label: "เร่งด่วนที่สุด" },
+      ]);
+
+      setProposeForOptions([
+        { value: "ทราบ", label: "ทราบ" },
+        { value: "พิจารณา", label: "พิจารณา" },
+        { value: "อนุมัติ", label: "อนุมัติ" },
+        { value: "ดำเนินการ", label: "ดำเนินการ" },
+      ]);
+
+      setDecisionOptions([
+        { value: "รับทราบ", label: "รับทราบ" },
+        { value: "อนุมัติ", label: "อนุมัติ" },
+        { value: "ไม่อนุมัติ", label: "ไม่อนุมัติ" },
+        { value: "เพิ่มเติม", label: "ต้องการข้อมูลเพิ่มเติม" },
+      ]);
+    } finally {
+      setOptionsLoading(false);
+    }
+  };
+
+  // โหลดข้อมูล options เมื่อ component mount
+  useEffect(() => {
+    fetchOptions();
+  }, []);
+
+  // ฟังก์ชันล้างข้อมูลที่อัพเดทแล้ว
+  const handleClearExtended = () => {
+   
+
+    handleClear();
+    setSelectedSigner(null);
+    setSelectedDepartment(null);
+  };
 
   return (
     <Box
@@ -156,7 +164,7 @@ const InformRelatedParties = () => {
         {/* subtitle */}
         <Box sx={{ textAlign: "center", py: 2 }}>
           <Typography variant="h5" fontWeight="bold" color="#1120A3">
-            ข้อมูลเรื่องร้องทุกข์
+            แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ
           </Typography>
         </Box>
 
@@ -190,6 +198,7 @@ const InformRelatedParties = () => {
               error={!!getFieldError("refNo")}
               helperText={getFieldError("refNo")}
             />
+
             <Box sx={{ position: "relative", zIndex: 1 }}>
               <DateThaiPickerService
                 label={createLabel("วันที่", "date")}
@@ -223,23 +232,29 @@ const InformRelatedParties = () => {
               gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
-            <SelectField
+            <SelectFieldSignatureAuthority
               label={createLabel("ผู้ลงนาม", "signer")}
               name="signer"
               value={form.signer}
               onChange={handleChange}
-              options={SIGNER_OPTIONS}
+              onUserSelect={handleSignerSelect}
               error={!!getFieldError("signer")}
               helperText={getFieldError("signer")}
+              placeholder="เลือกผู้ลงนาม"
+              showUserInfo={false}
             />
-            <SelectField
+
+            <SelectFieldDepartment
               label={createLabel("หน่วยงาน / ผู้ร้อง / อื่นๆ", "department")}
               name="department"
               value={form.department}
               onChange={handleChange}
-              options={DEPARTMENT_OPTIONS}
+              onDepartmentSelect={handleDepartmentSelect}
+              filterBySignerId={selectedSigner?.value}
               error={!!getFieldError("department")}
               helperText={getFieldError("department")}
+              disabled={!selectedSigner}
+              placeholder={selectedSigner ? "เลือกหน่วยงาน" : "เลือกผู้ลงนามก่อน"}
             />
           </Box>
 
@@ -256,18 +271,23 @@ const InformRelatedParties = () => {
               name="confidentiality"
               value={form.confidentiality}
               onChange={handleChange}
-              options={CONFIDENTIALITY_OPTIONS}
+              options={confidentialityOptions}
               error={!!getFieldError("confidentiality")}
               helperText={getFieldError("confidentiality")}
+              disabled={optionsLoading}
+              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความลับ"}
             />
+
             <SelectField
               label={createLabel("ชั้นความเร่งด่วน", "urgency")}
               name="urgency"
               value={form.urgency}
               onChange={handleChange}
-              options={URGENCY_OPTIONS}
+              options={urgencyOptions}
               error={!!getFieldError("urgency")}
               helperText={getFieldError("urgency")}
+              disabled={optionsLoading}
+              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความเร่งด่วน"}
             />
           </Box>
 
@@ -284,18 +304,23 @@ const InformRelatedParties = () => {
               name="proposeFor"
               value={form.proposeFor}
               onChange={handleChange}
-              options={PROPOSE_FOR_OPTIONS}
+              options={proposeForOptions}
               error={!!getFieldError("proposeFor")}
               helperText={getFieldError("proposeFor")}
+              disabled={optionsLoading}
+              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกวัตถุประสงค์"}
             />
+
             <SelectField
               label={createLabel("ผลการพิจารณา", "decision")}
               name="decision"
               value={form.decision}
               onChange={handleChange}
-              options={DECISION_OPTIONS}
+              options={decisionOptions}
               error={!!getFieldError("decision")}
               helperText={getFieldError("decision")}
+              disabled={optionsLoading}
+              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกผลการพิจารณา"}
             />
           </Box>
 
@@ -317,12 +342,13 @@ const InformRelatedParties = () => {
           <Box>
             <InputText
               label="รายละเอียด"
-              inputLabel="กรอกรายละเอียด"
+              inputLabel="กรอกรายละเอียด (ถ้ามี)"
               name="details"
               value={form.details}
               onChange={handleChange}
               multiline
               rows={4}
+              helperText="ระบุข้อมูลเพิ่มเติมที่ต้องการแจ้ง"
             />
           </Box>
         </Box>
@@ -343,31 +369,51 @@ const InformRelatedParties = () => {
               label="ล้าง"
               variant="outlined"
               iconLeft={<CloseIcon />}
-              onClick={handleClear}
-              disabled={isLoading}
+              onClick={handleClearExtended}
+              disabled={isLoading || optionsLoading}
               sx={{
                 borderColor: "#50ADFF",
                 color: "#50ADFF",
                 width: "100%",
                 height: "55px",
-                fontSize: "24px",
+                fontSize: "20px",
+                fontWeight: "600",
+                "&:hover": {
+                  backgroundColor: "#50ADFF",
+                  color: "#ffffff",
+                  transform: "translateY(-1px)",
+                  boxShadow: "0 4px 12px rgba(80, 173, 255, 0.3)",
+                },
+                transition: "all 0.2s ease-in-out",
               }}
             />
           </Box>
+
           <Box sx={{ width: { xs: "100%", md: "18%" } }}>
             <ButtonService
               label={isLoading ? "กำลังบันทึก..." : "บันทึก"}
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={handleSave}
-              disabled={isLoading || !isFormValid()}
+              disabled={isLoading || !isFormValid() || optionsLoading}
               sx={{
-                backgroundColor: "#2196F3",
+                backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
                 color: "#FFF",
                 width: "100%",
                 height: "55px",
-                fontSize: "24px",
-                opacity: isLoading || !isFormValid() ? 0.6 : 1,
+                fontSize: "20px",
+                fontWeight: "600",
+                "&:hover": {
+                  backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
+                  transform: isFormValid() && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
+                  boxShadow: isFormValid() && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
+                },
+                "&:disabled": {
+                  backgroundColor: "#cccccc",
+                  color: "#999999",
+                  cursor: "not-allowed",
+                },
+                transition: "all 0.2s ease-in-out",
               }}
             />
           </Box>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
@@ -9,6 +9,10 @@ import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import useInitialNotificationComplainantAgency from "@hooks/admin/InitialNotificationComplainantAgency/useInitialNotificationComplainantAgency";
+import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsalutation";
+import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
+import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
+import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
 
 const InitialNotificationComplainantAgency = () => {
   const {
@@ -25,74 +29,82 @@ const InitialNotificationComplainantAgency = () => {
     isFormValid,
   } = useInitialNotificationComplainantAgency();
 
-  // Options สำหรับ SelectField
-  const salutationOptions = [
-    { value: "director_general", label: "อธิบดี" },
-    { value: "deputy_director_general", label: "รองอธิบดี" },
-    { value: "director", label: "ผู้อำนวยการ" },
-    { value: "deputy_director", label: "รองผู้อำนวยการ" },
-    { value: "secretary_general", label: "เลขาธิการ" },
-    { value: "deputy_secretary_general", label: "รองเลขาธิการ" },
-    { value: "minister", label: "รัฐมนตรี" },
-    { value: "deputy_minister", label: "รองรัฐมนตรี" },
-  ];
+  // State สำหรับ dynamic data
+  const [selectedSigner, setSelectedSigner] = useState(null);
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [confidentialityOptions, setConfidentialityOptions] = useState([]);
+  const [urgencyOptions, setUrgencyOptions] = useState([]);
+  const [optionsLoading, setOptionsLoading] = useState(true);
 
-  const departmentOptions = [
-    { value: "complainant", label: "ผู้ร้องเรียน" },
-    { value: "dlt", label: "กรมการขนส่งทางบก" },
-    { value: "dmt", label: "กรมการขนส่งทางน้ำและพาณิชยนาวี" },
-    { value: "caat", label: "การบินพลเรือนแห่งประเทศไทย" },
-    { value: "doh", label: "กรมทางหลวง" },
-    { value: "rrd", label: "กรมทางหลวงชนบท" },
-    { value: "srt", label: "การรถไฟแห่งประเทศไทย" },
-    { value: "port_authority", label: "การท่าเรือแห่งประเทศไทย" },
-    { value: "expressway", label: "การทางพิเศษแห่งประเทศไทย" },
-    { value: "dopa", label: "กรมการปกครอง" },
-    { value: "dpt", label: "กรมส่งเสริมการปกครองท้องถิ่น" },
-    { value: "dpw", label: "กรมโยธาธิการและผังเมือง" },
-    { value: "disaster_prevention", label: "กรมป้องกันและบรรเทาสาธารณภัย" },
-    { value: "rd", label: "กรมสรรพากร" },
-    { value: "customs", label: "กรมศุลกากร" },
-    { value: "treasury", label: "กรมบัญชีกลาง" },
-    { value: "excise", label: "กรมสรรพสามิต" },
-    { value: "lands", label: "กรมธนารักษ์" },
-    { value: "moe", label: "สำนักงานปลัดกระทรวงศึกษาธิการ" },
-    { value: "obec", label: "สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน" },
-    { value: "ohec", label: "สำนักงานคณะกรรมการการอุดมศึกษา" },
-    { value: "ovec", label: "สำนักงานคณะกรรมการการอาชีวศึกษา" },
-    { value: "moph", label: "สำนักงานปลัดกระทรวงสาธารณสุข" },
-    { value: "ddc", label: "กรมควบคุมโรค" },
-    { value: "fda", label: "สำนักงานคณะกรรมการอาหารและยา" },
-    { value: "dmh", label: "กรมสุขภาพจิต" },
-    { value: "ombudsman", label: "สำนักงานผู้ตรวจการแผ่นดิน" },
-    { value: "nacc", label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ" },
-    { value: "nhrct", label: "สำนักงานคณะกรรมการสิทธิมนุษยชนแห่งชาติ" },
-  ];
+  // ฟังก์ชันจัดการเมื่อมีการเลือกผู้ลงนาม
+  const handleSignerSelect = (userInfo) => {
+    
 
-  const signerOptions = [
-    { value: "signer1", label: "นายสมชาย ใจดี" },
-    { value: "signer2", label: "นางสุดา มีสุข" },
-    { value: "signer3", label: "นายอนุชา เจริญ" },
-    { value: "signer4", label: "นางสาวปิยะดา สมศรี" },
-    { value: "signer5", label: "นายวิชัย รุ่งเรือง" },
-    { value: "signer6", label: "นางวิไล สุขสมบูรณ์" },
-    { value: "signer7", label: "นายธนาคาร เจริญรุ่งเรือง" },
-    { value: "signer8", label: "นางสาวจิราพร มั่งคั่ง" },
-  ];
+    setSelectedSigner(userInfo);
+    // ล้างหน่วยงานที่เลือกไว้เมื่อเปลี่ยนผู้ลงนาม
+    setSelectedDepartment(null);
+    // อัพเดทค่าใน form
+    handleChange({ target: { name: "department", value: "" } });
+  };
 
-  const confidentialityOptions = [
-    { value: "normal", label: "ปกติ" },
-    { value: "confidential", label: "ลับ" },
-    { value: "secret", label: "ลับมาก" },
-    { value: "top_secret", label: "ลับที่สุด" },
-  ];
+  const handleDepartmentSelect = (department) => {
+    
 
-  const urgencyOptions = [
-    { value: "normal", label: "ปกติ" },
-    { value: "urgent", label: "ด่วน" },
-    { value: "very_urgent", label: "ด่วนมาก" },
-    { value: "extremely_urgent", label: "ด่วนที่สุด" },
-  ];
+    setSelectedDepartment(department);
+  };
+
+  // ฟังก์ชันดึงข้อมูล options
+  const fetchOptions = async () => {
+    try {
+      setOptionsLoading(true);
+
+     
+
+      // ดึงข้อมูลชั้นความลับ
+      const confidentialityData = await GetOutgoingReportOptions("confidentiality_levels");
+
+      // ดึงข้อมูลชั้นความเร่งด่วน
+      const urgencyData = await GetOutgoingReportOptions("urgency_levels");
+
+      setConfidentialityOptions(confidentialityData);
+      setUrgencyOptions(urgencyData);
+
+     
+
+    } catch (error) {
+      
+
+      // ใช้ default options ถ้า API ไม่สามารถเรียกได้
+      setConfidentialityOptions([
+        { value: "ปกติ", label: "ปกติ" },
+        { value: "ลับ", label: "ลับ" },
+        { value: "ลับมาก", label: "ลับมาก" },
+        { value: "ลับที่สุด", label: "ลับที่สุด" },
+      ]);
+
+      setUrgencyOptions([
+        { value: "ปกติ", label: "ปกติ" },
+        { value: "เร่งด่วน", label: "เร่งด่วน" },
+        { value: "เร่งด่วนมาก", label: "เร่งด่วนมาก" },
+        { value: "เร่งด่วนที่สุด", label: "เร่งด่วนที่สุด" },
+      ]);
+    } finally {
+      setOptionsLoading(false);
+    }
+  };
+
+  // โหลดข้อมูล options เมื่อ component mount
+  useEffect(() => {
+    fetchOptions();
+  }, []);
+
+  // ฟังก์ชันล้างข้อมูลที่อัพเดทแล้ว
+  const handleClearExtended = () => {
+    
+    handleClear();
+    setSelectedSigner(null);
+    setSelectedDepartment(null);
+  };
 
   return (
     <Box
@@ -129,7 +141,7 @@ const InitialNotificationComplainantAgency = () => {
         {/* Centered form title */}
         <Box sx={{ textAlign: "center", py: 2 }}>
           <Typography variant="h5" fontWeight="bold" color="#1120A3">
-            ข้อมูลเรื่องร้องทุกข์
+            แบบรายงานแจ้งผู้ร้องเรียน / ส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น
           </Typography>
         </Box>
 
@@ -154,15 +166,15 @@ const InitialNotificationComplainantAgency = () => {
               },
             }}
           >
-            <SelectField
+            <SelectFieldsalutation
               label={createLabel("เรียน", "salutation")}
               name="salutation"
               value={form.salutation}
               onChange={handleChange}
-              options={salutationOptions}
               error={!!getFieldError("salutation")}
               helperText={getFieldError("salutation")}
             />
+
             <InputText
               label={createLabel("เลขที่หนังสือ", "refNo")}
               inputLabel="กรอกเลขที่หนังสือ"
@@ -172,6 +184,7 @@ const InitialNotificationComplainantAgency = () => {
               error={!!getFieldError("refNo")}
               helperText={getFieldError("refNo")}
             />
+
             <Box sx={{ position: "relative", zIndex: 1 }}>
               <DateThaiPickerService
                 label={createLabel("วันที่", "date")}
@@ -197,29 +210,36 @@ const InitialNotificationComplainantAgency = () => {
             />
           </Box>
 
-          {/* Row 3: หน่วยงาน / ผู้ร้อง* */}
+          
+          {/* Row 3: ผู้ลงนาม* */}
           <Box>
-            <SelectField
-              label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}
-              name="department"
-              value={form.department}
-              onChange={handleChange}
-              options={departmentOptions}
-              error={!!getFieldError("department")}
-              helperText={getFieldError("department")}
-            />
-          </Box>
-
-          {/* Row 4: ผู้ลงนาม* */}
-          <Box>
-            <SelectField
+            <SelectFieldSignatureAuthority
               label={createLabel("ผู้ลงนาม", "signer")}
               name="signer"
               value={form.signer}
               onChange={handleChange}
-              options={signerOptions}
+              onUserSelect={handleSignerSelect}
               error={!!getFieldError("signer")}
               helperText={getFieldError("signer")}
+              placeholder="เลือกผู้ลงนาม"
+              showUserInfo={false}
+            />
+          </Box>
+         
+
+          {/* Row 4: หน่วยงาน / ผู้ร้อง* */}
+          <Box>
+            <SelectFieldDepartment
+              label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}
+              name="department"
+              value={form.department}
+              onChange={handleChange}
+              onDepartmentSelect={handleDepartmentSelect}
+              filterBySignerId={selectedSigner?.value}
+              error={!!getFieldError("department")}
+              helperText={getFieldError("department")}
+              disabled={!selectedSigner}
+              placeholder={selectedSigner ? "เลือกหน่วยงาน" : "เลือกผู้ลงนามก่อน"}
             />
           </Box>
 
@@ -239,7 +259,10 @@ const InitialNotificationComplainantAgency = () => {
               options={confidentialityOptions}
               error={!!getFieldError("confidentiality")}
               helperText={getFieldError("confidentiality")}
+              disabled={optionsLoading}
+              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความลับ"}
             />
+
             <SelectField
               label={createLabel("ชั้นความเร่งด่วน", "urgency")}
               name="urgency"
@@ -248,6 +271,8 @@ const InitialNotificationComplainantAgency = () => {
               options={urgencyOptions}
               error={!!getFieldError("urgency")}
               helperText={getFieldError("urgency")}
+              disabled={optionsLoading}
+              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความเร่งด่วน"}
             />
           </Box>
 
@@ -275,6 +300,7 @@ const InitialNotificationComplainantAgency = () => {
               onChange={handleChange}
               multiline
               rows={4}
+              helperText="ระบุข้อมูลเพิ่มเติมที่ต้องการแจ้ง"
             />
           </Box>
         </Box>
@@ -295,14 +321,22 @@ const InitialNotificationComplainantAgency = () => {
               label="ล้าง"
               variant="outlined"
               iconLeft={<CloseIcon />}
-              onClick={handleClear}
-              disabled={isLoading}
+              onClick={handleClearExtended}
+              disabled={isLoading || optionsLoading}
               sx={{
                 borderColor: "#50ADFF",
                 color: "#50ADFF",
                 width: "100%",
                 height: "55px",
-                fontSize: "24px",
+                fontSize: "20px",
+                fontWeight: "600",
+                "&:hover": {
+                  backgroundColor: "#50ADFF",
+                  color: "#ffffff",
+                  transform: "translateY(-1px)",
+                  boxShadow: "0 4px 12px rgba(80, 173, 255, 0.3)",
+                },
+                transition: "all 0.2s ease-in-out",
               }}
             />
           </Box>
@@ -313,14 +347,25 @@ const InitialNotificationComplainantAgency = () => {
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={handleSave}
-              disabled={isLoading || !isFormValid()}
+              disabled={isLoading || !isFormValid() || optionsLoading}
               sx={{
-                backgroundColor: "#2196F3",
+                backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
                 color: "#FFF",
                 width: "100%",
                 height: "55px",
-                fontSize: "24px",
-                opacity: isLoading || !isFormValid() ? 0.6 : 1,
+                fontSize: "20px",
+                fontWeight: "600",
+                "&:hover": {
+                  backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
+                  transform: isFormValid() && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
+                  boxShadow: isFormValid() && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
+                },
+                "&:disabled": {
+                  backgroundColor: "#cccccc",
+                  color: "#999999",
+                  cursor: "not-allowed",
+                },
+                transition: "all 0.2s ease-in-out",
               }}
             />
           </Box>

@@ -179,6 +179,93 @@ const UsersSearchByRolesupervisor = async () => {
   }
 };
 
+const GetOutgoingReportOptions = async (type) => {
+  try {
+    const response = await axiosInstance.get(`/outgoing-reports/options`);
+
+    const results = response?.data?.res_data;
+
+    if (response?.data?.res_code === "0000" && results) {
+      switch (type) {
+        case "positions":
+          return results.positions.map((position) => ({
+            value: position.id,
+            label: `${position.description} (${position.level})`,
+            name: position.name,
+            level: position.level,
+            description: position.description,
+          }));
+
+        case "departments":
+          return results.departments.map((department) => ({
+            value: department.id,
+            label: department.name,
+            code: department.code,
+            shortName: department.short_name,
+          }));
+
+        case "signature_authorities":
+          return results.signature_authorities.map((authority) => ({
+            value: authority.id,
+            label: authority.name,
+            email: authority.email,
+            userId: authority.user_id,
+          }));
+
+        case "confidentiality_levels":
+          return results.confidentiality_levels.map((level, index) => ({
+            value: index,
+            label: level,
+          }));
+
+        case "urgency_levels":
+          return results.urgency_levels.map((level, index) => ({
+            value: index,
+            label: level,
+          }));
+
+        default:
+          return [];
+      }
+    }
+
+    return [];
+  } catch (error) {
+    console.error(`Error fetching ${type}:`, error);
+    return [];
+  }
+};
+
+
+const GetAllSignatureAuthorities = async () => {
+  try {
+    const response = await axiosInstance.get(`/signature-authorities`);
+
+    const results = response?.data?.res_data;
+
+    if (response?.data?.res_code === "0000" && results) {
+      const formattedUsers = results
+        .filter((item) => item.is_active)
+        .map((item) => ({
+          value: item.user.id,
+          label: item.user.name,
+          fullName: item.user.name,
+          email: item.user.email,
+          department: item.department,
+          departmentId: item.department.id,
+          departmentName: item.department.name,
+        }));
+
+      return formattedUsers;
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Error fetching signature authorities:", error);
+    return [];
+  }
+};
+
 export {
   GetAllSelect,
   GetProvincesSelect,
@@ -188,4 +275,6 @@ export {
   GetAllSelectComplaintTypes,
   UsersSearchByRole,
   UsersSearchByRolesupervisor,
+  GetOutgoingReportOptions,
+  GetAllSignatureAuthorities,
 };

@@ -10,32 +10,28 @@ import {
     Box,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import {
-    UsersSearchByRolesupervisor,
-} from "@pages/api/allselect/allselect";
-import styles from "./SelectFieldsupervisor.module.scss";
+import { GetAllSignatureAuthorities } from "@pages/api/allselect/allselect";
 
-const SelectFieldsupervisor = ({
-    label = "ผู้ลงนาม",
-    inputLabel = "เลือกผู้ลงนาม",
+const SelectFieldDepartment = ({
+    label = "หน่วยงาน",
+    inputLabel = "เลือกหน่วยงาน",
     value,
     onChange = () => { },
-    name = "supervisor",
+    name = "department",
     error = false,
     helperText = "",
     required = false,
     disabled = false,
-    onUserSelect = () => { },
-    showUserInfo = false,
+    onDepartmentSelect = () => { },
+    filterBySignerId = null, // ID ของผู้ลงนามที่เลือก
+    showDepartmentInfo = false,
     ...props
 }) => {
-    // State สำหรับจัดการข้อมูล
     const [options, setOptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [apiError, setApiError] = useState(null);
-    const [selectedUser, setSelectedUser] = useState(null);
+    const [selectedDepartment, setSelectedDepartment] = useState(null);
 
-    // แก้ไข: กรอง options ให้แน่ใจว่าไม่มี invalid objects
     const validOptions = options.filter((opt) => {
         if (typeof opt === "object" && opt !== null) {
             return opt.value !== undefined && opt.label !== undefined;
@@ -43,126 +39,129 @@ const SelectFieldsupervisor = ({
         return false;
     });
 
-    // แก้ไขการจัดการ selectedValue
     const selectedValue = (() => {
         if (value === null || value === undefined) return "";
-
-        // ถ้า value เป็น object ให้ใช้ value.value
         if (typeof value === "object" && value !== null) {
             return value.value || "";
         }
-
-        // ถ้า value เป็น string ให้ใช้เลย
         return String(value);
     })();
 
-    // ตรวจสอบว่ามีค่าที่เลือกหรือไม่ (สำหรับแสดงปุ่มลบ)
     const hasValue = selectedValue && selectedValue !== "";
 
-    // ฟังก์ชันลบค่า
     const handleClear = (e) => {
-        e.stopPropagation(); // ป้องกันไม่ให้เปิด dropdown
+        e.stopPropagation();
 
-        console.log("🧹 SelectFieldsupervisor: Clear button clicked", {
-            user: "vampirebeam",
-            timestamp: "2025-06-16 14:06:44",
-            component: "SelectFieldsupervisor",
-            previousValue: selectedValue
-        });
-
-        setSelectedUser(null);
+        setSelectedDepartment(null);
         onChange({
             target: {
                 name,
                 value: "",
             },
         });
-        onUserSelect(null);
+        onDepartmentSelect(null);
     };
 
-    // ฟังก์ชันสำหรับ retry การโหลดข้อมูล
     const handleRetry = () => {
-        console.log("🔄 SelectFieldsupervisor: Retrying data fetch", {
-            user: "vampirebeam",
-            timestamp: "2025-06-16 14:06:44",
-            component: "SelectFieldsupervisor",
-            action: "RETRY"
-        });
-
         setApiError(null);
         setLoading(true);
-        fetchSupervisors();
+        fetchDepartments();
     };
 
-    // ฟังก์ชันดึงข้อมูลผู้ลงนาม
-    const fetchSupervisors = async () => {
+    const fetchDepartments = async () => {
         try {
             setLoading(true);
             setApiError(null);
 
-            console.log("🔄 SelectFieldsupervisor: Fetching supervisor data", {
-                user: "vampirebeam",
-                timestamp: "2025-06-16 14:06:44",
-                component: "SelectFieldsupervisor",
-                action: "FETCH_SUPERVISORS"
-            });
+          
+            // ดึงข้อมูลจาก GetAllSignatureAuthorities
+            const signatureAuthorities = await GetAllSignatureAuthorities();
 
-            const users = await UsersSearchByRolesupervisor();
+            if (signatureAuthorities && signatureAuthorities.length > 0) {
+                let departmentOptions = [];
 
-            if (users && users.length > 0) {
-                // แปลงข้อมูลให้อยู่ในรูปแบบที่ component ใช้ได้
-                const formattedUsers = users.map((user) => ({
-                    value: user.value, // user.id จาก API
-                    label: user.label, // user.full_name_with_title จาก API
-                    fullName: user.fullName,
-                    email: user.email,
-                    roles: user.roles,
-                    phone: user.phone,
-                    titleName: user.titleName,
-                    citizenId: user.citizenId
-                }));
+                if (filterBySignerId) {
+                    // กรองหน่วยงานตาม signer ID ที่เลือก
+                    const filteredAuthorities = signatureAuthorities.filter(auth =>
+                        auth.value === filterBySignerId // auth.value คือ user.id
+                    );
 
-                setOptions(formattedUsers);
+                    // สร้างรายการหน่วยงานจากผู้ลงนามที่เลือก
+                    departmentOptions = filteredAuthorities.map(auth => ({
+                        value: auth.departmentId, // department.id
+                        label: auth.departmentName, // department.name
+                        code: auth.department?.code || "", // ถ้ามี code
+                        shortName: auth.department?.shortName || "", // ถ้ามี shortName
+                        authority: auth // เก็บข้อมูล authority ไว้ด้วย
+                    }));
 
-                console.log("✅ SelectFieldsupervisor: Data loaded successfully", {
-                    user: "vampirebeam",
-                    timestamp: "2025-06-16 14:06:44",
-                    component: "SelectFieldsupervisor",
-                    count: formattedUsers.length,
-                    supervisors: formattedUsers.map(u => ({
-                        id: u.value,
-                        name: u.label
-                    }))
-                });
+                    const uniqueDepartments = departmentOptions.filter((dept, index, self) =>
+                        index === self.findIndex(d => d.value === dept.value)
+                    );
+
+                    setOptions(uniqueDepartments);
+
+                } else {
+                    // ถ้าไม่ได้เลือกผู้ลงนาม ให้แสดงหน่วยงานทั้งหมด
+                    const allDepartments = signatureAuthorities.map(auth => ({
+                        value: auth.departmentId,
+                        label: auth.departmentName,
+                        code: auth.department?.code || "",
+                        shortName: auth.department?.shortName || "",
+                        authority: auth
+                    }));
+
+                    // ลบ duplicate departments
+                    const uniqueDepartments = allDepartments.filter((dept, index, self) =>
+                        index === self.findIndex(d => d.value === dept.value)
+                    );
+
+                    setOptions(uniqueDepartments);
+
+                }
             } else {
-                console.warn("⚠️ SelectFieldsupervisor: No supervisor data found", {
+                console.warn("⚠️ SelectFieldDepartment: No signature authorities data found", {
                     user: "vampirebeam",
-                    timestamp: "2025-06-16 14:06:44",
-                    component: "SelectFieldsupervisor",
-                    response: users
+                    timestamp: "2025-06-16 18:17:39",
+                    component: "SelectFieldDepartment",
+                    response: signatureAuthorities
                 });
                 setOptions([]);
             }
         } catch (error) {
-            console.error("❌ SelectFieldsupervisor: Error fetching data", {
+            console.error("❌ SelectFieldDepartment: Error fetching departments data", {
                 user: "vampirebeam",
-                timestamp: "2025-06-16 14:06:44",
-                component: "SelectFieldsupervisor",
+                timestamp: "2025-06-16 18:17:39",
+                component: "SelectFieldDepartment",
                 error: error.message,
                 stack: error.stack
             });
 
-            setApiError("ไม่สามารถโหลดข้อมูลผู้ลงนามได้");
+            setApiError("ไม่สามารถโหลดข้อมูลหน่วยงานได้");
             setOptions([]);
         } finally {
             setLoading(false);
         }
     };
 
-    // ดึงข้อมูลเมื่อ component mount
+    // เมื่อ filterBySignerId เปลี่ยน ให้โหลดข้อมูลใหม่
     useEffect(() => {
-        fetchSupervisors();
-    }, []);
+        fetchDepartments();
+    }, [filterBySignerId]);
+
+    // ล้างค่าเมื่อ filterBySignerId เปลี่ยน
+    useEffect(() => {
+        if (filterBySignerId) {
+            setSelectedDepartment(null);
+            onChange({
+                target: {
+                    name,
+                    value: "",
+                },
+            });
+            onDepartmentSelect(null);
+        }
+    }, [filterBySignerId]);
 
     return (
         <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
@@ -178,7 +177,7 @@ const SelectFieldsupervisor = ({
                 >
                     {label}
                     {required && (
-                        <span style={{ color: "#d32f2f", marginLeft: 4 }}>*</span>
+                        <span style={{ color: "#d32f2f", marginLeft: 4 }}></span>
                     )}
                 </Typography>
             )}
@@ -188,55 +187,40 @@ const SelectFieldsupervisor = ({
                 displayEmpty
                 name={name}
                 value={selectedValue}
-                disabled={disabled || loading}
+                disabled={disabled || loading || !filterBySignerId}
                 error={error || !!apiError}
                 onChange={(e) => {
                     const selectedVal = e.target.value;
-                    const selectedSupervisor = validOptions.find(opt => opt.value === selectedVal);
+                    const selectedDept = validOptions.find(opt => opt.value === selectedVal);
 
-                    console.log("✍️ SelectFieldsupervisor: Value changed", {
-                        user: "vampirebeam",
-                        timestamp: "2025-06-16 14:06:44",
-                        component: "SelectFieldsupervisor",
-                        selectedValue: selectedVal,
-                        selectedSupervisor: selectedSupervisor ? {
-                            id: selectedSupervisor.value,
-                            name: selectedSupervisor.label,
-                            fullName: selectedSupervisor.fullName,
-                            email: selectedSupervisor.email
-                        } : null
-                    });
 
-                    setSelectedUser(selectedSupervisor);
+                    setSelectedDepartment(selectedDept);
 
-                    // ส่งค่าเป็น string ไม่ใช่ object
                     onChange({
                         target: {
                             name,
-                            value: selectedVal, // ส่งเป็น string value ตรงๆ
+                            value: selectedVal,
                         },
                     });
 
-                    // เรียก callback เมื่อเลือกผู้ใช้
-                    onUserSelect(selectedSupervisor);
+                    onDepartmentSelect(selectedDept);
                 }}
                 renderValue={(selected) => {
-                    // หา option ที่ตรงกับ selected value
                     const selectedOption = validOptions.find((opt) => {
                         const optValue = typeof opt === "object" ? opt.value : opt;
                         return optValue === selected;
                     });
 
-                    // ถ้าไม่เจอหรือเป็นค่าว่าง แสดง placeholder
                     if (!selectedOption || selected === "") {
                         return (
-                            <span className={styles.selectPlaceholder}>
-                                {loading ? "กำลังโหลดข้อมูล..." : (inputLabel || label)}
+                            <span style={{ color: "#999" }}>
+                                {loading ? "กำลังโหลดข้อมูล..." :
+                                    !filterBySignerId ? "เลือกผู้ลงนามก่อน" :
+                                        (inputLabel || label)}
                             </span>
                         );
                     }
 
-                    // แสดง label ของ option ที่เลือก
                     return selectedOption.label || String(selectedOption);
                 }}
                 InputProps={{
@@ -302,7 +286,6 @@ const SelectFieldsupervisor = ({
                 }}
                 {...props}
             >
-                {/* แสดง Loading หรือ Error State */}
                 {loading && (
                     <MenuItem disabled>
                         <Box sx={{
@@ -313,12 +296,11 @@ const SelectFieldsupervisor = ({
                             fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif"
                         }}>
                             <CircularProgress size={16} />
-                            กำลังโหลดรายชื่อผู้ลงนาม...
+                            กำลังโหลดรายการหน่วยงาน...
                         </Box>
                     </MenuItem>
                 )}
 
-                {/* แสดง Error State */}
                 {apiError && (
                     <MenuItem disabled>
                         <Box sx={{
@@ -346,8 +328,7 @@ const SelectFieldsupervisor = ({
                     </MenuItem>
                 )}
 
-                {/* แสดง No Data State */}
-                {!loading && !apiError && validOptions.length === 0 && (
+                {!loading && !apiError && !filterBySignerId && (
                     <MenuItem disabled>
                         <Box sx={{
                             color: "#666666",
@@ -358,22 +339,37 @@ const SelectFieldsupervisor = ({
                             fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
                         }}>
                             <Typography variant="body2" sx={{ mb: 1 }}>
-                                ไม่พบรายชื่อผู้ลงนาม
+                                กรุณาเลือกผู้ลงนามก่อน
                             </Typography>
                             <Typography variant="caption" sx={{ color: "#999999" }}>
-                                กรุณาติดต่อผู้ดูแลระบบหากเกิดปัญหา
+                                เพื่อแสดงหน่วยงานที่เกี่ยวข้อง
                             </Typography>
                         </Box>
                     </MenuItem>
                 )}
 
-                {/* แสดงรายการผู้ลงนาม */}
-                {!loading && validOptions.map((opt, idx) => {
+                {!loading && !apiError && filterBySignerId && validOptions.length === 0 && (
+                    <MenuItem disabled>
+                        <Box sx={{
+                            color: "#666666",
+                            fontStyle: "italic",
+                            textAlign: "center",
+                            width: "100%",
+                            py: 2,
+                            fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
+                        }}>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                                ไม่พบหน่วยงานสำหรับผู้ลงนามที่เลือก
+                            </Typography>
+                        </Box>
+                    </MenuItem>
+                )}
+
+                {!loading && filterBySignerId && validOptions.map((opt, idx) => {
                     const optionValue = String(opt.value || "");
                     const optionLabel = String(opt.label || opt.value || "");
                     const isDisabled = opt.disabled ?? false;
 
-                    // ไม่แสดง option ที่เป็น "[object Object]"
                     if (
                         optionLabel === "[object Object]" ||
                         optionValue === "[object Object]"
@@ -415,7 +411,7 @@ const SelectFieldsupervisor = ({
                                 >
                                     {optionLabel}
                                 </Typography>
-                                {showUserInfo && opt.email && (
+                                {showDepartmentInfo && opt.code && (
                                     <Typography
                                         variant="caption"
                                         sx={{
@@ -426,7 +422,7 @@ const SelectFieldsupervisor = ({
                                             fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
                                         }}
                                     >
-                                        {opt.email}
+                                        รหัส: {opt.code}
                                     </Typography>
                                 )}
                             </Box>
@@ -435,7 +431,6 @@ const SelectFieldsupervisor = ({
                 })}
             </TextField>
 
-            {/* Helper Text */}
             {(helperText || apiError) && (
                 <Typography
                     variant="caption"
@@ -464,61 +459,18 @@ const SelectFieldsupervisor = ({
                             </Typography>
                         </Box>
                     ) : loading ? (
-                        "กำลังโหลดรายชื่อผู้ลงนาม..."
+                        "กำลังโหลดรายการหน่วยงาน..."
+                    ) : !filterBySignerId ? (
+                        "เลือกผู้ลงนามเพื่อแสดงหน่วยงาน"
                     ) : validOptions.length === 0 ? (
-                        "ไม่พบรายชื่อผู้ลงนาม"
+                        "ไม่พบหน่วยงานสำหรับผู้ลงนามที่เลือก"
                     ) : (
-                        helperText || `พบผู้ลงนาม ${validOptions.length} คน`
+                        helperText || `พบหน่วยงาน ${validOptions.length} หน่วยงาน`
                     )}
                 </Typography>
-            )}
-
-            {/* แสดงข้อมูลผู้ใช้ที่เลือก (ถ้าเปิดใช้งาน) */}
-            {showUserInfo && selectedUser && (
-                <Box
-                    sx={{
-                        mt: 2,
-                        p: 2,
-                        bgcolor: "#f8f9fa",
-                        borderRadius: 1,
-                        border: "1px solid #e0e0e0"
-                    }}
-                >
-                    <Typography
-                        variant="subtitle2"
-                        sx={{
-                            fontWeight: 500,
-                            mb: 1,
-                            fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
-                            color: "#333333"
-                        }}
-                    >
-                        ข้อมูลผู้ลงนาม:
-                    </Typography>
-                    <Box sx={{
-                        fontSize: "14px",
-                        color: "#555555",
-                        lineHeight: 1.6,
-                        fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
-                    }}>
-                        <div><strong>ชื่อเต็ม:</strong> {selectedUser.fullName}</div>
-                        {selectedUser.email && (
-                            <div><strong>อีเมล:</strong> {selectedUser.email}</div>
-                        )}
-                        {selectedUser.phone && (
-                            <div><strong>เบอร์โทร:</strong> {selectedUser.phone}</div>
-                        )}
-                        {selectedUser.titleName && (
-                            <div><strong>คำนำหน้า:</strong> {selectedUser.titleName}</div>
-                        )}
-                        {selectedUser.roles && selectedUser.roles.length > 0 && (
-                            <div><strong>ตำแหน่ง:</strong> {selectedUser.roles[0].role_description}</div>
-                        )}
-                    </Box>
-                </Box>
             )}
         </FormControl>
     );
 };
 
-export default SelectFieldsupervisor;
+export default SelectFieldDepartment;

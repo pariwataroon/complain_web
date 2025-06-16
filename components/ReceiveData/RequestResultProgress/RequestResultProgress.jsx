@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
@@ -9,6 +9,10 @@ import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import useRequestResultProgress from "@hooks/admin/useRequestResultProgress/useRequestResultProgress";
+import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsalutation";
+import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
+import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
+import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
 
 const RequestResultProgress = () => {
   const {
@@ -25,98 +29,71 @@ const RequestResultProgress = () => {
     isFormValid,
   } = useRequestResultProgress();
 
-  // Options สำหรับ SelectField
-  const salutationOptions = [
-    { value: "นายกรัฐมนตรี", label: "นายกรัฐมนตรี" },
-    {
-      value: "รัฐมนตรีว่าการกระทรวงมหาดไทย",
-      label: "รัฐมนตรีว่าการกระทรวงมหาดไทย",
-    },
-    { value: "ปลัดกระทรวงมหาดไทย", label: "ปลัดกระทรวงมหาดไทย" },
-    {
-      value: "อธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
-      label: "อธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
-    },
-    { value: "ผู้ว่าราชการจังหวัด", label: "ผู้ว่าราชการจังหวัด" },
-    { value: "นายอำเภอ", label: "นายอำเภอ" },
-    { value: "ปลัดอำเภอ", label: "ปลัดอำเภอ" },
-    { value: "หัวหน้าส่วนราชการ", label: "หัวหน้าส่วนราชการ" },
-    { value: "ผู้บัญชาการตำรวจแห่งชาติ", label: "ผู้บัญชาการตำรวจแห่งชาติ" },
-    {
-      value: "ผู้อำนวยการสำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ",
-      label: "ผู้อำนวยการสำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ",
-    },
-  ];
+  const [selectedSigner, setSelectedSigner] = useState(null);
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [confidentialityOptions, setConfidentialityOptions] = useState([]);
+  const [urgencyOptions, setUrgencyOptions] = useState([]);
+  const [optionsLoading, setOptionsLoading] = useState(true);
 
-  const departmentOptions = [
-    { value: "กระทรวงมหาดไทย", label: "กระทรวงมหาดไทย" },
-    {
-      value: "กรมส่งเสริมการปกครองท้องถิ่น",
-      label: "กรมส่งเสริมการปกครองท้องถิ่น",
-    },
-    { value: "กรมการปกครอง", label: "กรมการปกครอง" },
-    {
-      value: "กรมป้องกันและบรรเทาสาธารณภัย",
-      label: "กรมป้องกันและบรรเทาสาธารณภัย",
-    },
-    { value: "จังหวัด", label: "จังหวัด" },
-    { value: "อำเภอ", label: "อำเภอ" },
-    { value: "องค์การบริหารส่วนจังหวัด", label: "องค์การบริหารส่วนจังหวัด" },
-    { value: "เทศบาลเมือง", label: "เทศบาลเมือง" },
-    { value: "เทศบาลตำบล", label: "เทศบาลตำบล" },
-    { value: "องค์การบริหารส่วนตำบล", label: "องค์การบริหารส่วนตำบล" },
-    { value: "กรุงเทพมหานคร", label: "กรุงเทพมหานคร" },
-    { value: "เมืองพัทยา", label: "เมืองพัทยา" },
-    {
-      value: "สำนักงานคณะกรรมการการเลือกตั้ง",
-      label: "สำนักงานคณะกรรมการการเลือกตั้ง",
-    },
-    { value: "สำนักงานตำรวจแห่งชาติ", label: "สำนักงานตำรวจแห่งชาติ" },
-  ];
+  const handleSignerSelect = (userInfo) => {
+    setSelectedSigner(userInfo);
+    setSelectedDepartment(null);
+    handleChange({ target: { name: "department", value: "" } });
+  };
 
-  const signerOptions = [
-    { value: "ปลัดกระทรวงมหาดไทย", label: "ปลัดกระทรวงมหาดไทย" },
-    { value: "รองปลัดกระทรวงมหาดไทย", label: "รองปลัดกระทรวงมหาดไทย" },
-    {
-      value: "อธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
-      label: "อธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
-    },
-    {
-      value: "รองอธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
-      label: "รองอธิบดีกรมส่งเสริมการปกครองท้องถิ่น",
-    },
-    {
-      value: "ผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
-      label: "ผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
-    },
-    {
-      value: "รองผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
-      label: "รองผู้อำนวยการสำนักงานตรวจสอบการปกครองท้องถิ่น",
-    },
-    { value: "ผู้ว่าราชการจังหวัด", label: "ผู้ว่าราชการจังหวัด" },
-    { value: "รองผู้ว่าราชการจังหวัด", label: "รองผู้ว่าราชการจังหวัด" },
-    { value: "อธิบดีกรมการปกครอง", label: "อธิบดีกรมการปกครอง" },
-    { value: "รองอธิบดีกรมการปกครอง", label: "รองอธิบดีกรมการปกครอง" },
-    {
-      value: "ผู้อำนวยการกองกิจการท้องถิ่น",
-      label: "ผู้อำนวยการกองกิจการท้องถิ่น",
-    },
-    { value: "ผู้อำนวยการกองนิติการ", label: "ผู้อำนวยการกองนิติการ" },
-  ];
+  const handleDepartmentSelect = (department) => {
+    setSelectedDepartment(department);
+  };
 
-  const confidentialityOptions = [
-    { value: "ปกติ", label: "ปกติ" },
-    { value: "ลับ", label: "ลับ" },
-    { value: "ลับมาก", label: "ลับมาก" },
-    { value: "ลับที่สุด", label: "ลับที่สุด" },
-  ];
+  const fetchOptions = async () => {
+    try {
+      setOptionsLoading(true);
 
-  const urgencyOptions = [
-    { value: "ปกติ", label: "ปกติ" },
-    { value: "เร่งด่วน", label: "เร่งด่วน" },
-    { value: "เร่งด่วนมาก", label: "เร่งด่วนมาก" },
-    { value: "เร่งด่วนที่สุด", label: "เร่งด่วนที่สุด" },
-  ];
+      const confidentialityData = await GetOutgoingReportOptions("confidentiality_levels");
+      const urgencyData = await GetOutgoingReportOptions("urgency_levels");
+
+      setConfidentialityOptions(confidentialityData);
+      setUrgencyOptions(urgencyData);
+
+    } catch (error) {
+      console.error("❌ Error fetching options:", {
+        user: "vampirebeam",
+        timestamp: "2025-06-16 18:31:49",
+        component: "RequestResultProgress",
+        error: error.message,
+        stack: error.stack
+      });
+
+      setConfidentialityOptions([
+        { value: "ปกติ", label: "ปกติ" },
+        { value: "ลับ", label: "ลับ" },
+        { value: "ลับมาก", label: "ลับมาก" },
+        { value: "ลับที่สุด", label: "ลับที่สุด" },
+      ]);
+
+      setUrgencyOptions([
+        { value: "ปกติ", label: "ปกติ" },
+        { value: "เร่งด่วน", label: "เร่งด่วน" },
+        { value: "เร่งด่วนมาก", label: "เร่งด่วนมาก" },
+        { value: "เร่งด่วนที่สุด", label: "เร่งด่วนที่สุด" },
+      ]);
+    } finally {
+      setOptionsLoading(false);
+    }
+  };
+
+  // โหลดข้อมูล options เมื่อ component mount
+  useEffect(() => {
+    fetchOptions();
+  }, []);
+
+  // ฟังก์ชันล้างข้อมูลที่อัพเดทแล้ว
+  const handleClearExtended = () => {
+   
+    handleClear();
+    setSelectedSigner(null);
+    setSelectedDepartment(null);
+  };
 
   return (
     <Box
@@ -152,7 +129,7 @@ const RequestResultProgress = () => {
         {/* Centered form title */}
         <Box sx={{ textAlign: "center", py: 2 }}>
           <Typography variant="h5" fontWeight="bold" color="#1120A3">
-            ข้อมูลเรื่องร้องทุกข์
+            แบบรายงานขอทราบผลการพิจารณา / ผลความคืบหน้า
           </Typography>
         </Box>
 
@@ -177,15 +154,15 @@ const RequestResultProgress = () => {
               },
             }}
           >
-            <SelectField
+            <SelectFieldsalutation
               label={createLabel("เรียน", "salutation")}
               name="salutation"
               value={form.salutation}
               onChange={handleChange}
-              options={salutationOptions}
               error={!!getFieldError("salutation")}
               helperText={getFieldError("salutation")}
             />
+
             <InputText
               label={createLabel("เลขที่หนังสือ", "refNo")}
               inputLabel="กรอกเลขที่หนังสือ"
@@ -195,6 +172,7 @@ const RequestResultProgress = () => {
               error={!!getFieldError("refNo")}
               helperText={getFieldError("refNo")}
             />
+
             <Box sx={{ position: "relative", zIndex: 1 }}>
               <DateThaiPickerService
                 label={createLabel("วันที่", "date")}
@@ -220,29 +198,34 @@ const RequestResultProgress = () => {
             />
           </Box>
 
-          {/* Row 3: หน่วยงาน / ผู้ร้อง* */}
+          {/* Row 3: ผู้ลงนาม* */}
           <Box>
-            <SelectField
-              label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}
-              name="department"
-              value={form.department}
-              onChange={handleChange}
-              options={departmentOptions}
-              error={!!getFieldError("department")}
-              helperText={getFieldError("department")}
-            />
-          </Box>
-
-          {/* Row 4: ผู้ลงนาม* */}
-          <Box>
-            <SelectField
+            <SelectFieldSignatureAuthority
               label={createLabel("ผู้ลงนาม", "signer")}
               name="signer"
               value={form.signer}
               onChange={handleChange}
-              options={signerOptions}
+              onUserSelect={handleSignerSelect}
               error={!!getFieldError("signer")}
               helperText={getFieldError("signer")}
+              placeholder="เลือกผู้ลงนาม"
+              showUserInfo={false}
+            />
+          </Box>
+
+          {/* Row 4: หน่วยงาน / ผู้ร้อง* */}
+          <Box>
+            <SelectFieldDepartment
+              label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}
+              name="department"
+              value={form.department}
+              onChange={handleChange}
+              onDepartmentSelect={handleDepartmentSelect}
+              filterBySignerId={selectedSigner?.value}
+              error={!!getFieldError("department")}
+              helperText={getFieldError("department")}
+              disabled={!selectedSigner}
+              placeholder={selectedSigner ? "เลือกหน่วยงาน" : "เลือกผู้ลงนามก่อน"}
             />
           </Box>
 
@@ -262,7 +245,10 @@ const RequestResultProgress = () => {
               options={confidentialityOptions}
               error={!!getFieldError("confidentiality")}
               helperText={getFieldError("confidentiality")}
+              disabled={optionsLoading}
+              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความลับ"}
             />
+
             <SelectField
               label={createLabel("ชั้นความเร่งด่วน", "urgency")}
               name="urgency"
@@ -271,6 +257,8 @@ const RequestResultProgress = () => {
               options={urgencyOptions}
               error={!!getFieldError("urgency")}
               helperText={getFieldError("urgency")}
+              disabled={optionsLoading}
+              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความเร่งด่วน"}
             />
           </Box>
 
@@ -292,12 +280,13 @@ const RequestResultProgress = () => {
           <Box>
             <InputText
               label="หมายเหตุ"
-              inputLabel="กรอกหมายเหตุ"
+              inputLabel="กรอกหมายเหตุ (ถ้ามี)"
               name="note"
               value={form.note}
               onChange={handleChange}
               multiline
               rows={4}
+              helperText="ระบุข้อมูลเพิ่มเติมที่ต้องการแจ้ง"
             />
           </Box>
         </Box>
@@ -318,14 +307,22 @@ const RequestResultProgress = () => {
               label="ล้าง"
               variant="outlined"
               iconLeft={<CloseIcon />}
-              onClick={handleClear}
-              disabled={isLoading}
+              onClick={handleClearExtended}
+              disabled={isLoading || optionsLoading}
               sx={{
                 borderColor: "#50ADFF",
                 color: "#50ADFF",
                 width: "100%",
                 height: "55px",
-                fontSize: "24px",
+                fontSize: "20px",
+                fontWeight: "600",
+                "&:hover": {
+                  backgroundColor: "#50ADFF",
+                  color: "#ffffff",
+                  transform: "translateY(-1px)",
+                  boxShadow: "0 4px 12px rgba(80, 173, 255, 0.3)",
+                },
+                transition: "all 0.2s ease-in-out",
               }}
             />
           </Box>
@@ -336,14 +333,25 @@ const RequestResultProgress = () => {
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={handleSave}
-              disabled={isLoading || !isFormValid()}
+              disabled={isLoading || !isFormValid() || optionsLoading}
               sx={{
-                backgroundColor: "#2196F3",
+                backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
                 color: "#FFF",
                 width: "100%",
                 height: "55px",
-                fontSize: "24px",
-                opacity: isLoading || !isFormValid() ? 0.6 : 1,
+                fontSize: "20px",
+                fontWeight: "600",
+                "&:hover": {
+                  backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
+                  transform: isFormValid() && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
+                  boxShadow: isFormValid() && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
+                },
+                "&:disabled": {
+                  backgroundColor: "#cccccc",
+                  color: "#999999",
+                  cursor: "not-allowed",
+                },
+                transition: "all 0.2s ease-in-out",
               }}
             />
           </Box>

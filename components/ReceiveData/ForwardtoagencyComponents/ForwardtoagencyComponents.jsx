@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Controller } from "react-hook-form";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
@@ -6,22 +6,31 @@ import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
 import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, TextField } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import InputFile from "@services/InputFile/InputFile";
 import { useForwardToAgencyForm } from "@hooks/admin/forwardtoagency/useForwardToAgencyForm";
-import SelectFieldsupervisor from "@services/SelectFieldSupervisor/SelectFieldSupervisor";
+import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
+import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsalutation";
+import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
+import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
+
 
 const ForwardtoagencyComponents = () => {
   const router = useRouter();
   const { id } = router.query;
 
   const [selectedSigner, setSelectedSigner] = useState(null);
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [confidentialityOptions, setConfidentialityOptions] = useState([]);
+  const [urgencyOptions, setUrgencyOptions] = useState([]);
+  const [optionsLoading, setOptionsLoading] = useState(true);
 
   const {
     control,
     handleSubmit,
+    setValue,
     errors,
     isValid,
     isDirty,
@@ -34,171 +43,12 @@ const ForwardtoagencyComponents = () => {
     getCurrentFormData,
   } = useForwardToAgencyForm();
 
-  // ฟังก์ชันจัดการเมื่อมีการเลือกผู้ลงนาม
   const handleSignerSelect = (userInfo) => {
     setSelectedSigner(userInfo);
+    setSelectedDepartment(null);
+    setValue("department", "");
   };
 
-  // Options data
-  const salutationOptions = [
-    { value: "director_general", label: "อธิบดี" },
-    { value: "deputy_director_general", label: "รองอธิบดี" },
-    { value: "director", label: "ผู้อำนวยการ" },
-    { value: "deputy_director", label: "รองผู้อำนวยการ" },
-    { value: "secretary_general", label: "เลขาธิการ" },
-    { value: "deputy_secretary_general", label: "รองเลขาธิการ" },
-    { value: "minister", label: "รัฐมนตรี" },
-    { value: "deputy_minister", label: "รองรัฐมนตรี" },
-  ];
-
-  const departmentOptions = [
-    // กระทรวงคมนาคม
-    { value: "dlt", label: "กรมการขนส่งทางบก" },
-    { value: "dmt", label: "กรมการขนส่งทางน้ำและพาณิชยนาวี" },
-    { value: "caat", label: "การบินพลเรือนแห่งประเทศไทย" },
-    { value: "doh", label: "กรมทางหลวง" },
-    { value: "rrd", label: "กรมทางหลวงชนบท" },
-    { value: "srt", label: "การรถไฟแห่งประเทศไทย" },
-    { value: "port_authority", label: "การท่าเรือแห่งประเทศไทย" },
-    { value: "expressway", label: "การทางพิเศษแห่งประเทศไทย" },
-    { value: "airports", label: "ท่าอากาศยานแห่งประเทศไทย" },
-    { value: "transport_ministry", label: "สำนักงานปลัดกระทรวงคมนาคม" },
-
-    // กระทรวงมหาดไทย
-    { value: "dopa", label: "กรมการปกครอง" },
-    { value: "dpt", label: "กรมส่งเสริมการปกครองท้องถิ่น" },
-    { value: "dpw", label: "กรมโยธาธิการและผังเมือง" },
-    { value: "disaster_prevention", label: "กรมป้องกันและบรรเทาสาธารณภัย" },
-    { value: "interior_ministry", label: "สำนักงานปลัดกระทรวงมหาดไทย" },
-    { value: "provincial_admin", label: "กรมการปกครองส่วนท้องถิ่น" },
-
-    // กระทรวงการคลัง
-    { value: "rd", label: "กรมสรรพากร" },
-    { value: "customs", label: "กรมศุลกากร" },
-    { value: "treasury", label: "กรมบัญชีกลาง" },
-    { value: "excise", label: "กรมสรรพสามิต" },
-    { value: "lands", label: "กรมธนารักษ์" },
-    { value: "finance_ministry", label: "สำนักงานปลัดกระทรวงการคลัง" },
-    { value: "public_debt", label: "สำนักงานบริหารหนี้สาธารณะ" },
-
-    // กระทรวงศึกษาธิการ
-    { value: "moe", label: "สำนักงานปลัดกระทรวงศึกษาธิการ" },
-    { value: "obec", label: "สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน" },
-    { value: "ohec", label: "สำนักงานคณะกรรมการการอุดมศึกษา" },
-    { value: "ovec", label: "สำนักงานคณะกรรมการการอาชีวศึกษา" },
-    { value: "onec", label: "สำนักงานคณะกรรมการการศึกษาแห่งชาติ" },
-
-    // กระทรวงสาธารณสุข
-    { value: "moph", label: "สำนักงานปลัดกระทรวงสาธารณสุข" },
-    { value: "ddc", label: "กรมควบคุมโรค" },
-    { value: "fda", label: "สำนักงานคณะกรรมการอาหารและยา" },
-    { value: "dmh", label: "กรมสุขภาพจิต" },
-    { value: "health_service", label: "กรมการแพทย์" },
-    { value: "medical_science", label: "กรมวิทยาศาสตร์การแพทย์" },
-
-    // กระทรวงแรงงาน
-    { value: "doe", label: "กรมการจัดหางาน" },
-    { value: "dlpw", label: "กรมสวัสดิการและคุ้มครองแรงงาน" },
-    { value: "dsd", label: "กรมพัฒนาฝีมือแรงงาน" },
-    { value: "labor_ministry", label: "สำนักงานปลัดกระทรวงแรงงาน" },
-
-    // กระทรวงยุติธรรม
-    { value: "corrections", label: "กรมราชทัณฑ์" },
-    { value: "probation", label: "กรมคุมประพฤติ" },
-    { value: "legal_execution", label: "กรมบังคับคดี" },
-    { value: "rights_liberty", label: "กรมคุ้มครองสิทธิและเสรีภาพ" },
-    { value: "justice_ministry", label: "สำนักงานปลัดกระทรวงยุติธรรม" },
-
-    // กระทรวงเกษตรและสหกรณ์
-    { value: "doa", label: "กรมส่งเสริมการเกษตร" },
-    { value: "fisheries", label: "กรมประมง" },
-    { value: "livestock", label: "กรมปศุสัตว์" },
-    { value: "cooperatives", label: "กรมส่งเสริมสหกรณ์" },
-    { value: "agriculture_ministry", label: "สำนักงานปลัดกระทรวงเกษตรและสหกรณ์" },
-    { value: "irrigation", label: "กรมชลประทาน" },
-
-    // กระทรวงพาณิชย์
-    { value: "dbd", label: "กรมพัฒนาธุรกิจการค้า" },
-    { value: "dit", label: "กรมการค้าต่างประเทศ" },
-    { value: "dip", label: "กรมทรัพย์สินทางปัญญา" },
-    { value: "commerce_ministry", label: "สำนักงานปลัดกระทรวงพาณิชย์" },
-
-    // กระทรวงอุตสาหกรรม
-    { value: "diw", label: "กรมโรงงานอุตสาหกรรม" },
-    { value: "tisi", label: "สำนักงานมาตรฐานผลิตภัณฑ์อุตสาหกรรม" },
-    { value: "industry_ministry", label: "สำนักงานปลัดกระทรวงอุตสาหกรรม" },
-
-    // กระทรวงพลังงาน
-    { value: "doae", label: "กรมพัฒนาพลังงานทดแทนและอนุรักษ์พลังงาน" },
-    { value: "dmf", label: "กรมเชื้อเพลิงธรรมชาติ" },
-    { value: "energy_ministry", label: "สำนักงานปลัดกระทรวงพลังงาน" },
-
-    // กระทรวงทรัพยากรธรรมชาติและสิ่งแวดล้อม
-    { value: "pcd", label: "กรมควบคุมมลพิษ" },
-    { value: "dnp", label: "กรมอุทยานแห่งชาติ สัตว์ป่า และพันธุ์พืช" },
-    { value: "marine", label: "กรมทรัพยากรทางทะเลและชายฝั่ง" },
-    { value: "environment_ministry", label: "สำนักงานปลัดกระทรวงทรัพยากรธรรมชาติและสิ่งแวดล้อม" },
-    { value: "groundwater", label: "กรมทรัพยากรน้ำบาดาล" },
-
-    // กระทรวงการท่องเที่ยวและกีฬา
-    { value: "tat", label: "การท่องเที่ยวแห่งประเทศไทย" },
-    { value: "sports_authority", label: "การกีฬาแห่งประเทศไทย" },
-    { value: "tourism_ministry", label: "สำนักงานปลัดกระทรวงการท่องเที่ยวและกีฬา" },
-
-    // กระทรวงเทคโนโลยีสารสนเทศและการสื่อสาร
-    { value: "nbtc", label: "สำนักงานคณะกรรมการกิจการกระจายเสียง กิจการโทรทัศน์ และกิจการโทรคมนาคมแห่งชาติ" },
-    { value: "etda", label: "สำนักงานพัฒนาเศรษฐกิจดิจิทัลแห่งชาติ" },
-    { value: "ict_ministry", label: "สำนักงานปลัดกระทรวงเทคโนโลยีสารสนเทศและการสื่อสาร" },
-
-    // กระทรวงวัฒนธรรม
-    { value: "culture", label: "กรมส่งเสริมวัฒนธรรม" },
-    { value: "fine_arts", label: "กรมศิลปากร" },
-    { value: "culture_ministry", label: "สำนักงานปลัดกระทรวงวัฒนธรรม" },
-
-    // กระทรวงการพัฒนาสังคมและความมั่นคงของมนุษย์
-    { value: "dop", label: "กรมพัฒนาสังคมและสวัสดิการ" },
-    { value: "dosa", label: "กรมกิจการผู้สูงอายุ" },
-    { value: "social_ministry", label: "สำนักงานปลัดกระทรวงการพัฒนาสังคมและความมั่นคงของมนุษย์" },
-
-    // หน่วยงานอิสระ และหน่วยงานพิเศษ
-    { value: "ombudsman", label: "สำนักงานผู้ตรวจการแผ่นดิน" },
-    { value: "nacc", label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ" },
-    { value: "nhrct", label: "สำนักงานคณะกรรมการสิทธิมนุษยชนแห่งชาติ" },
-    { value: "election_commission", label: "สำนักงานคณะกรรมการการเลือกตั้ง" },
-    { value: "audit_commission", label: "สำนักงานการตรวจเงินแผ่นดิน" },
-    { value: "civil_service", label: "สำนักงานคณะกรรมการข้าราชการพลเรือน" },
-
-    // กรุงเทพมหานคร และ หน่วยงานท้องถิ่น
-    { value: "bangkok", label: "กรุงเทพมหานคร" },
-    { value: "pattaya", label: "เมืองพัทยา" },
-
-    // หน่วยงานภายใต้สำนักนายกรัฐมนตรี
-    { value: "cabinet_secretariat", label: "สำนักเลขาธิการคณะรัฐมนตรี" },
-    { value: "national_security", label: "สำนักงานสภาความมั่นคงแห่งชาติ" },
-    { value: "budget_bureau", label: "สำนักงบประมาณ" },
-    { value: "civil_service_commission", label: "สำนักงานคณะกรรมการข้าราชการพลเรือน" },
-
-    // หน่วยงานตำรวจ และ ทหาร
-    { value: "royal_thai_police", label: "สำนักงานตำรวจแห่งชาติ" },
-    { value: "defense_ministry", label: "กระทรวงกลาโหม" },
-    { value: "army", label: "กองทัพบก" },
-    { value: "navy", label: "กองทัพเรือ" },
-    { value: "air_force", label: "กองทัพอากาศ" },
-  ];
-
-  const confidentialityOptions = [
-    { value: "normal", label: "ปกติ" },
-    { value: "confidential", label: "ลับ" },
-    { value: "secret", label: "ลับมาก" },
-    { value: "top_secret", label: "ลับที่สุด" },
-  ];
-
-  const urgencyOptions = [
-    { value: "normal", label: "ปกติ" },
-    { value: "urgent", label: "ด่วน" },
-    { value: "very_urgent", label: "ด่วนมาก" },
-    { value: "extremely_urgent", label: "ด่วนที่สุด" },
-  ];
 
   const createLabel = (text, fieldName) => {
     return (
@@ -215,6 +65,50 @@ const ForwardtoagencyComponents = () => {
     handleFileChange(files);
   };
 
+  const handleDepartmentChange = (department) => {
+    setSelectedDepartment(department);
+    if (department) {
+      setValue("department", department.id);
+    } else {
+      setValue("department", "");
+    }
+  };
+
+  const handleDepartmentSelect = (department) => {
+    setSelectedDepartment(department);
+  };
+
+  const fetchOptions = async () => {
+    try {
+      setOptionsLoading(true);
+      const confidentialityData = await GetOutgoingReportOptions("confidentiality_levels");
+      const urgencyData = await GetOutgoingReportOptions("urgency_levels");
+      setConfidentialityOptions(confidentialityData);
+      setUrgencyOptions(urgencyData);
+
+    } catch (error) {
+
+      setConfidentialityOptions([
+        { value: ปกติ, label: "ปกติ" },
+        { value: ลับ, label: "ลับ" },
+        { value: ลับมาก, label: "ลับมาก" },
+        { value: ลับที่สุด, label: "ลับที่สุด" },
+      ]);
+
+      setUrgencyOptions([
+        { value: ปกติ, label: "ปกติ" },
+        { value: เร่งด่วน, label: "เร่งด่วน" },
+        { value: เร่งด่วนมาก, label: "เร่งด่วนมาก" },
+        { value: เร่งด่วนที่สุด, label: "เร่งด่วนที่สุด" },
+      ]);
+    } finally {
+      setOptionsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOptions();
+  }, []);
 
   return (
     <Box
@@ -284,12 +178,11 @@ const ForwardtoagencyComponents = () => {
               name="salutation"
               control={control}
               render={({ field }) => (
-                <SelectField
+                <SelectFieldsalutation
                   label={createLabel("เรียน", "salutation")}
                   name="salutation"
                   value={field.value}
                   onChange={(e) => field.onChange(e.target.value)}
-                  options={salutationOptions}
                   error={!!getFieldError("salutation")}
                   helperText={getFieldError("salutation")}
                 />
@@ -396,22 +289,22 @@ const ForwardtoagencyComponents = () => {
               />
             </Box>
 
-            {/* ใช้ SelectFieldsupervisor Service */}
             <Controller
               name="signer"
               control={control}
               render={({ field }) => (
-                <SelectFieldsupervisor
+                <SelectFieldSignatureAuthority
                   label="ผู้ลงนาม"
                   name="signer"
                   value={field.value}
                   onChange={(e) => field.onChange(e.target.value)}
                   onUserSelect={handleSignerSelect}
+                  onDepartmentChange={handleDepartmentChange}
                   error={!!getFieldError("signer")}
                   helperText={getFieldError("signer")}
                   required={isRequired("signer")}
                   placeholder="เลือกผู้ลงนาม"
-                  showUserInfo={false} 
+                  showUserInfo={false}
                   size="small"
                 />
               )}
@@ -424,14 +317,18 @@ const ForwardtoagencyComponents = () => {
               name="department"
               control={control}
               render={({ field }) => (
-                <SelectField
+                <SelectFieldDepartment
                   label={createLabel("หน่วยงาน", "department")}
                   name="department"
                   value={field.value}
                   onChange={(e) => field.onChange(e.target.value)}
-                  options={departmentOptions}
+                  onDepartmentSelect={handleDepartmentSelect}
+                  filterBySignerId={selectedSigner?.value}
                   error={!!getFieldError("department")}
                   helperText={getFieldError("department")}
+                  required={isRequired("department")}
+                  disabled={!selectedSigner}
+                  placeholder={selectedSigner ? "เลือกหน่วยงาน" : "เลือกผู้ลงนามก่อน"}
                 />
               )}
             />
@@ -457,6 +354,8 @@ const ForwardtoagencyComponents = () => {
                   options={confidentialityOptions}
                   error={!!getFieldError("confidentiality")}
                   helperText={getFieldError("confidentiality")}
+                  disabled={optionsLoading}
+                  placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความลับ"}
                 />
               )}
             />
@@ -473,6 +372,8 @@ const ForwardtoagencyComponents = () => {
                   options={urgencyOptions}
                   error={!!getFieldError("urgency")}
                   helperText={getFieldError("urgency")}
+                  disabled={optionsLoading}
+                  placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความเร่งด่วน"}
                 />
               )}
             />
