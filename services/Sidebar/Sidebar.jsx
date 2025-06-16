@@ -153,7 +153,7 @@ export default function Sidebar() {
 
   const headerTextMap = {
     setting: "กำหนดการใช้งานทั่วไป",
-    edit: "รับเข้าข้อมูล",
+    edit: "จัดการข้อมูลในระบบ",
     box: "คลังเอกสาร",
     homepage: "จัดการข้อมูล",
     document: "รายงาน",

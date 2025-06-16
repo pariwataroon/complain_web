@@ -5,10 +5,8 @@ import { GetComplaintByID } from "@pages/api/complaint/complaint";
 import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/ComplaintPersonalFormAPI";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import ButtonService from "@services/ButtonService/ButtonService";
-import DateThaiPickerService, { ControlledDateThaiPickerService } from "@services/DateThaiPickerService/DateThaiPickerService"; 
-import { GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { FormProvider, useForm } from "react-hook-form";
-import { alertError, alertSuccess } from "@utils/Alerts";
 import styles from "./TabNav.module.scss";
 
 const breadcrumbItems = [
@@ -29,31 +27,6 @@ const breadcrumbItems = [
   { label: "แบบรับคำร้องเรียน / ร้องทุกข์กระทรวง" },
 ];
 
-const getComplainantTypeAndData = (data) => {
-  if (data?.corporate) return { type: "corporate", data: data.corporate };
-  if (data?.individual) return { type: "individual", data: data.individual };
-  if (data?.idCard && data?.name) return { type: "individual", data };
-  return { type: "unknown", data: data || {} };
-};
-
-const getDelegateTypeAndData = (data) => {
-  if (data?.signer) return { type: "signer", data: data.signer };
-  if (data?.delegate) return { type: "delegate", data: data.delegate };
-  if (data?.idCard && (data?.name || data?.signatoryName)) return { type: "delegate", data };
-  return { type: "unknown", data: data || {} };
-};
-
-const getRespondentTypeAndData = (step2) => {
-  const activeType = step2?.activeType;
-  if (activeType) {
-    if (step2[activeType]) return { type: activeType, data: step2[activeType] };
-  }
-  if (step2?.individual) return { type: "individual", data: step2.individual };
-  if (step2?.corporate) return { type: "corporate", data: step2.corporate };
-  if (step2?.government) return { type: "government", data: step2.government };
-  return { type: "unknown", data: {} };
-};
-
 const SearchComplaints = () => {
   const router = useRouter();
   const { id } = router.query;
@@ -61,49 +34,23 @@ const SearchComplaints = () => {
   const [defaultData, setDefaultData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [complaintType, setComplaintType] = useState("new");
-  const [validationErrors, setValidationErrors] = useState({});
-  const [showValidation, setShowValidation] = useState(false);
-  const [complaintTypes, setComplaintTypes] = useState([]);
-  
-  // Form methods
-  const generalMethods = useForm({ mode: "onChange", defaultValues: {} });
-  const delegateMethods = useForm({ mode: "onChange", defaultValues: {} });
-  const step2Methods = useForm({ mode: "onChange", defaultValues: {} });
-  const step3Methods = useForm({ mode: "onChange", defaultValues: {} });
-  const step4Methods = useForm({ mode: "onChange", defaultValues: {} });
+  const [complaintType, setComplaintType] = useState("new"); // "new", "additional", "committee"
 
-  // Default value refs
+  // Current user and datetime from provided UTC data
+  const currentUser = "vampirebeam";
+  const currentDateTime = "2025-06-09 19:25:47";
+
+  const generalMethods = useForm();
+  const delegateMethods = useForm();
+  const step2Methods = useForm();
+  const step3Methods = useForm();
+  const step4Methods = useForm();
+
   const defaultGeneralRef = useRef({});
   const defaultDelegateRef = useRef({});
   const defaultStep2Ref = useRef({});
   const defaultStep3Ref = useRef({});
   const defaultStep4Ref = useRef({});
-
-  // --- Dynamic parse for complainant/delegate/respondent
-  const [complainantType, setComplainantType] = useState("individual");
-  const [complainantData, setComplainantData] = useState({});
-  const [delegateType, setDelegateType] = useState("delegate");
-  const [delegateData, setDelegateData] = useState({});
-  const [respondentType, setRespondentType] = useState("individual");
-  const [respondentData, setRespondentData] = useState({});
-
-  useEffect(() => {
-    const fetchComplaintTypes = async () => {
-      try {
-        const response = await GetAllSelectComplaintTypes();
-        if (response?.res_code === "0000") {
-          const activeTypes = response.res_data
-            .filter((t) => t.is_active)
-            .map((t) => ({ value: t.id, label: t.name }));
-          setComplaintTypes(activeTypes);
-        }
-      } catch (err) {
-        console.error("Error fetching complaint types:", err);
-      }
-    };
-    fetchComplaintTypes();
-  }, []);
 
   useEffect(() => {
     if (id) {
@@ -111,7 +58,6 @@ const SearchComplaints = () => {
     }
   }, [id]);
 
-  // เฉพาะส่วน fetchComplaints ที่เปลี่ยนแปลง
   const fetchComplaints = async (id) => {
     setLoading(true);
     setError(null);
@@ -120,151 +66,31 @@ const SearchComplaints = () => {
       const res = await GetComplaintByID(id);
       const data = res?.res_data;
       setDefaultData(data);
+      console.log({ data });
 
       const general = data?.step1?.general?.general || {};
-      const delegate = data?.step1?.general?.delegate || {};
-      const { type: cType, data: cData } = getComplainantTypeAndData(general);
-      setComplainantType(cType);
-      setComplainantData(cData);
-      defaultGeneralRef.current = cData;
-
-      const { type: dType, data: dData } = getDelegateTypeAndData(general);
-      setDelegateType(dType);
-      setDelegateData(dData);
-      defaultDelegateRef.current = dData;
-
-      const step2General = data?.step2?.general || {};
-      const { type: rType, data: rData } = getRespondentTypeAndData(step2General);
-      setRespondentType(rType);
-      setRespondentData(rData);
-      defaultStep2Ref.current = rData;
-
+      const delegate = data?.step1?.general?.delegate || null;
+      const step2Data = data?.step2?.general?.individual || {};
       const step3Data = data?.step3?.general || {};
-      const assignmentForm = data?.assignment_form || {};
-
       const step4Data = data?.step4?.general || {};
 
-      const step3DataWithDefaults = {
-        ...step3Data,
-        // ข้อมูลจาก assignment_form (จะ override ถ้ามีค่า)
-        referenceNumber1: assignmentForm.reference_number || step3Data.referenceNumber1 || "",
-        referenceDate1: assignmentForm.reference_date || step3Data.referenceDate1 || "",
-        referenceNumber2: assignmentForm.reference_number2 || step3Data.referenceNumber2 || "",
-        referenceDate2: assignmentForm.reference_date2 || step3Data.referenceDate2 || "",
-        referenceNumber3: assignmentForm.reference_number3 || step3Data.referenceNumber3 || "",
-        referenceDate3: assignmentForm.reference_date3 || step3Data.referenceDate3 || "",
-        // ใช้ complaint_number สำหรับ referenceNumber4 (เลข สรร. สารบัญ)
-        referenceNumber4: assignmentForm.complaint_number || assignmentForm.reference_number4 || step3Data.referenceNumber4 || "",
-        referenceDate4: assignmentForm.reference_date4 || step3Data.referenceDate4 || "",
-        documentNumber: assignmentForm.document_number || step3Data.documentNumber || "",
-        documentDate: assignmentForm.document_date || step3Data.documentDate || "",
-        senderAgency: assignmentForm.agency_sender || step3Data.senderAgency || "",
-        securityLevel: assignmentForm.confidentiality_level || step3Data.securityLevel || "normal",
-        urgencyLevel: assignmentForm.urgency_level || step3Data.urgencyLevel || "normal",
-        complaintType: assignmentForm.complaint_filing_type || step3Data.complaintType || "new",
-        // ข้อมูลเพิ่มเติม
-        additionalReference1: assignmentForm.additional_reference_number1 || step3Data.additionalReference1 || "",
-        additionalReferenceDate1: assignmentForm.additional_reference_date1 || step3Data.additionalReferenceDate1 || "",
-        additionalReference2: assignmentForm.additional_reference_number2 || step3Data.additionalReference2 || "",
-        additionalReferenceDate2: assignmentForm.additional_reference_date2 || step3Data.additionalReferenceDate2 || "",
-        // ข้อมูลเดิมจาก step3
-        complaintSubType: step3Data.complaintSubType || "",
-        subject: assignmentForm.subject || step3Data.subject || "",
-        complaintChannel: "เว็บไซต์ศูนย์เรื่องร้องทุกข์"
-      };
-
-      // ตั้งค่า complaintType state จากข้อมูลที่ได้
-      if (assignmentForm.complaint_filing_type) {
-        const typeMap = {
-          "new": "new",
-          "additional": "additional",
-          "anonymous": "committee"
-        };
-        setComplaintType(typeMap[assignmentForm.complaint_filing_type] || "new");
-      }
-
-      defaultStep3Ref.current = step3DataWithDefaults;
+      defaultGeneralRef.current = general;
+      defaultDelegateRef.current = delegate;
+      defaultStep2Ref.current = step2Data;
+      defaultStep3Ref.current = step3Data;
       defaultStep4Ref.current = step4Data;
 
-      generalMethods.reset(cData);
-      delegateMethods.reset(dData);
-      step2Methods.reset(rData);
-      step3Methods.reset(step3DataWithDefaults);
+      generalMethods.reset(general);
+      if (delegate) delegateMethods.reset(delegate);
+      step2Methods.reset(step2Data);
+      step3Methods.reset(step3Data);
       step4Methods.reset(step4Data);
-
-
     } catch (error) {
       console.error("Load complaints failed", error);
       setError("เกิดข้อผิดพลาดในการโหลดข้อมูล");
     } finally {
       setLoading(false);
     }
-  };
-
-  const validateForm = () => {
-    const errors = {};
-    let hasErrors = false;
-
-    const step3Data = step3Methods.getValues();
-
-    // ประเภทเรื่องร้องเรียน *
-    if (!step3Data.complaintType || step3Data.complaintType.trim() === "") {
-      errors.complaintType = "กรุณาเลือกประเภทเรื่องร้องเรียน";
-      hasErrors = true;
-    }
-
-    // ประเภทเรื่องย่อย *
-    if (!step3Data.complaintSubType || step3Data.complaintSubType.trim() === "") {
-      errors.complaintSubType = "กรุณาเลือกประเภทเรื่องย่อย";
-      hasErrors = true;
-    }
-
-    // เรื่อง *
-    if (!step3Data.subject || step3Data.subject.trim() === "") {
-      errors.subject = "กรุณากรอกเรื่อง";
-      hasErrors = true;
-    }
-
-    // เลข สป.กค. *
-    if (!step3Data.referenceNumber1 || step3Data.referenceNumber1.trim() === "") {
-      errors.referenceNumber1 = "กรุณากรอกเลข สป.กค.";
-      hasErrors = true;
-    }
-
-    // วันที่ (referenceDate1) *
-    if (!step3Data.referenceDate1 || step3Data.referenceDate1.trim() === "") {
-      errors.referenceDate1 = "กรุณาเลือกวันที่";
-      hasErrors = true;
-    }
-
-    // เลข สตป. *
-    if (!step3Data.referenceNumber3 || step3Data.referenceNumber3.trim() === "") {
-      errors.referenceNumber3 = "กรุณากรอกเลข สตป.";
-      hasErrors = true;
-    }
-
-    // วันที่ (referenceDate3) *
-    if (!step3Data.referenceDate3 || step3Data.referenceDate3.trim() === "") {
-      errors.referenceDate3 = "กรุณาเลือกวันที่";
-      hasErrors = true;
-    }
-
-    // เลข สรร. (สารบัญ) *
-    if (!step3Data.referenceNumber4 || step3Data.referenceNumber4.trim() === "") {
-      errors.referenceNumber4 = "กรุณากรอกเลข สรร. (สารบัญ)";
-      hasErrors = true;
-    }
-
-    // วันที่ (referenceDate4) *
-    if (!step3Data.referenceDate4 || step3Data.referenceDate4.trim() === "") {
-      errors.referenceDate4 = "กรุณาเลือกวันที่";
-      hasErrors = true;
-    }
-
-    setValidationErrors(errors);
-    setShowValidation(hasErrors);
-
-    return !hasErrors;
   };
 
   const handleReset = () => {
@@ -275,27 +101,9 @@ const SearchComplaints = () => {
     step2Methods.reset(defaultStep2Ref.current);
     step3Methods.reset(defaultStep3Ref.current);
     step4Methods.reset(defaultStep4Ref.current);
-
-    // Reset validation
-    setValidationErrors({});
-    setShowValidation(false);
-    setComplaintType("new");
   };
 
-
-
   const handleSubmit = () => {
-
-    const isValid = validateForm();
-
-    if (!isValid) {
-      alertError(
-        "ข้อมูลไม่ครบถ้วน",
-        "กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (ฟิลด์ที่มีเครื่องหมาย *)"
-      );
-      return;
-    }
-
     const generalData = generalMethods.getValues();
     const delegateData = delegateMethods.getValues();
     const step2Data = step2Methods.getValues();
@@ -324,7 +132,11 @@ const SearchComplaints = () => {
       step4: {
         general: step4Data
       },
+      updated_by: "vampirebeam",
+      updated_at: "2025-06-10 03:31:02",
     };
+
+    console.log("Submitting data:", JSON.stringify(submitData, null, 2));
 
     // ส่งข้อมูลไปหน้า SearchComplaintsPreview
     router.push({
@@ -338,16 +150,6 @@ const SearchComplaints = () => {
 
   const handleComplaintTypeChange = (type) => {
     setComplaintType(type);
-
-    // Clear validation errors when changing
-    if (showValidation) {
-      setValidationErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.complaintType;
-        return newErrors;
-      });
-    }
-
     // Clear other radio buttons when one is selected
     if (type === "new") {
       step3Methods.setValue("isAdditionalComplaint", false);
@@ -361,25 +163,6 @@ const SearchComplaints = () => {
     }
   };
 
-  // Helper function to show field error
-  const getFieldError = (fieldName) => {
-    return showValidation ? validationErrors[fieldName] : "";
-  };
-
-  const hasFieldError = (fieldName) => {
-    return showValidation && !!validationErrors[fieldName];
-  };
-
-  // Helper function to clear validation error when field changes
-  const handleFieldChange = (fieldName) => {
-    if (showValidation && validationErrors[fieldName]) {
-      setValidationErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[fieldName];
-        return newErrors;
-      });
-    }
-  };
   // Loading state
   if (loading) {
     return (
@@ -433,25 +216,19 @@ const SearchComplaints = () => {
         {defaultData ? (
           <div className={styles.contentContainer}>
             {/* Tab Navigation - แสดงเพื่อความสวยงาม */}
-            <div className={styles.tabNavV2}>
-              <div className={`${styles.tabV2} ${complainantType === "individual" ? styles.activeV2 : ""}`}>
+            <div className={styles.tabNav}>
+              <div className={`${styles.tab} ${styles.tab0} ${styles.active}`}>
                 บุคคลทั่วไป
               </div>
-              <div className={`${styles.tabV2} ${complainantType === "corporate" ? styles.activeV2 : ""}`}>
+              <div className={`${styles.tab} ${styles.tab1}`}>
                 นิติบุคคล
               </div>
-              <div className={`${styles.tabV2} ${complainantType === "government" ? styles.activeV2 : ""}`}>
+              <div className={`${styles.tab} ${styles.tab2}`}>
                 หน่วยงานของรัฐ
               </div>
               <div
-                className={styles.underlineBarV2}
-                style={{
-                  background: complainantType === "corporate"
-                    ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
-                    : complainantType === "government"
-                      ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
-                      : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)"
-                }}
+                className={styles.underlineBar}
+                style={{ backgroundColor: "#0B1F8F" }}
               />
             </div>
 
@@ -460,14 +237,12 @@ const SearchComplaints = () => {
               <FormProvider {...generalMethods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>
-                      {complainantType === "corporate" ? "ข้อมูลผู้ร้องทุกข์ (นิติบุคคล)" : "ข้อมูลผู้ร้องทุกข์"}
-                    </h3>
+                    <h3 className={styles.sectionTitle}>ข้อมูลผู้ร้องทุกข์</h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
-                      data={complainantData}
-                      formType={complainantType === "corporate" ? "corporate" : "individual"}
+                      data={defaultGeneralRef.current}
+                      formType="complainant"
                     />
                   </div>
                 </div>
@@ -477,39 +252,31 @@ const SearchComplaints = () => {
               <FormProvider {...delegateMethods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>
-                      {delegateType === "signer" ? "ข้อมูลผู้มีอำนาจลงนาม" : "ข้อมูลผู้รับมอบอำนาจร้องทุกข์"}
-                    </h3>
+                    <h3 className={styles.sectionTitle}>ข้อมูลผู้รับมอบอำนาจร้องทุกข์</h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
-                      data={delegateData}
-                      formType={delegateType === "signer" ? "signer" : "delegate"}
+                      data={defaultDelegateRef.current}
+                      formType="delegate"
                     />
                   </div>
                 </div>
               </FormProvider>
 
               {/* Tab Navigation for Step 2 */}
-              <div className={styles.tabNavV2}>
-                <div className={`${styles.tabV2} ${complainantType === "individual" ? styles.activeV2 : ""}`}>
+              <div className={styles.tabNav}>
+                <div className={`${styles.tab} ${styles.tab0}`}>
                   บุคคลทั่วไป
                 </div>
-                <div className={`${styles.tabV2} ${complainantType === "corporate" ? styles.activeV2 : ""}`}>
+                <div className={`${styles.tab} ${styles.tab1} ${styles.active}`}>
                   นิติบุคคล
                 </div>
-                <div className={`${styles.tabV2} ${complainantType === "government" ? styles.activeV2 : ""}`}>
+                <div className={`${styles.tab} ${styles.tab2}`}>
                   หน่วยงานของรัฐ
                 </div>
                 <div
-                  className={styles.underlineBarV2}
-                  style={{
-                    background: complainantType === "corporate"
-                      ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
-                      : complainantType === "government"
-                        ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
-                        : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)"
-                  }}
+                  className={styles.underlineBar}
+                  style={{ backgroundColor: "#3FA9F5" }}
                 />
               </div>
 
@@ -517,18 +284,12 @@ const SearchComplaints = () => {
               <FormProvider {...step2Methods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>
-                      {respondentType === "corporate"
-                        ? "ข้อมูลผู้ถูกร้องเรียน (นิติบุคคล)"
-                        : respondentType === "government"
-                          ? "ข้อมูลหน่วยงานของรัฐที่ถูกร้องเรียน"
-                          : "ข้อมูลผู้ถูกร้องเรียน"}
-                    </h3>
+                    <h3 className={styles.sectionTitle}>ข้อมูลผู้ถูกร้องเรียน</h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
-                      data={respondentData}
-                      formType={respondentType}
+                      data={defaultStep2Ref.current}
+                      formType="complainee"
                     />
                   </div>
                 </div>
@@ -547,40 +308,22 @@ const SearchComplaints = () => {
                         <label>
                           ประเภทเรื่องร้องเรียน <span className={styles.required}>*</span>
                         </label>
-                        <select
-                          {...step3Methods.register("complaintType", {
-                            onChange: () => handleFieldChange("complaintType")
-                          })}
-                          className={hasFieldError("complaintType") ? styles.errorField : ""}
-                        >
-                          <option value="">เลือกประเภทเรื่องร้องเรียน</option>
-                          {complaintTypes.map((type) => (
-                          <option key={type.value} value={type.value}>
-                            {type.label}
-                          </option>
-                        ))}
+                        <select {...step3Methods.register("complaintType")}>
+                          <option value="">ความไม่มีประสิทธิภาพ</option>
+                          <option value="corruption">การทุจริต</option>
+                          <option value="misconduct">การประพฤติมิชอบ</option>
+                          <option value="inefficiency">ความไม่มีประสิทธิภาพ</option>
                         </select>
-                        {hasFieldError("complaintType") && (
-                          <span className={styles.errorText}>{getFieldError("complaintType")}</span>
-                        )}
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>
                           ประเภทเรื่องย่อย <span className={styles.required}>*</span>
                         </label>
-                        <select
-                          {...step3Methods.register("complaintSubType", {
-                            onChange: () => handleFieldChange("complaintSubType")
-                          })}
-                          className={hasFieldError("complaintSubType") ? styles.errorField : ""}
-                        >
-                          <option value="">เลือกประเภทเรื่องย่อย</option>
+                        <select {...step3Methods.register("complaintSubType")}>
+                          <option value="">ข้อคิดแก้/ข้อเสนอแนะ...</option>
                           <option value="suggestion">ข้อเสนอแนะ</option>
                           <option value="complaint">ข้อร้องเรียน</option>
                         </select>
-                        {hasFieldError("complaintSubType") && (
-                          <span className={styles.errorText}>{getFieldError("complaintSubType")}</span>
-                        )}
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>ช่องทางเรื่องร้องเรียน</label>
@@ -588,7 +331,6 @@ const SearchComplaints = () => {
                           type="text"
                           defaultValue="เว็บไซต์ศูนย์เรื่องร้องทุกข์"
                           {...step3Methods.register("complaintChannel")}
-                          disabled
                         />
                       </div>
                     </div>
@@ -601,15 +343,9 @@ const SearchComplaints = () => {
                         </label>
                         <input
                           type="text"
-                          {...step3Methods.register("subject", {
-                            onChange: () => handleFieldChange("subject")
-                          })}
-                          className={hasFieldError("subject") ? styles.errorField : ""}
-                          placeholder="กรุณากรอกเรื่อง"
+                          defaultValue="อุทดลลทดให้โดยเจื้นอื่นสิ่งสะดวกไว้"
+                          {...step3Methods.register("subject")}
                         />
-                        {hasFieldError("subject") && (
-                          <span className={styles.errorText}>{getFieldError("subject")}</span>
-                        )}
                       </div>
                     </div>
 
@@ -617,46 +353,35 @@ const SearchComplaints = () => {
                     <div className={styles.fieldRowDate}>
                       <div className={styles.fieldGroup}>
                         <label>
-                          เลข สป.กค. <span className={styles.required}>*</span>
+                          เลข สป.กก. <span className={styles.required}>*</span>
                         </label>
                         <input
                           type="text"
-                          {...step3Methods.register("referenceNumber1", {
-                            onChange: () => handleFieldChange("referenceNumber1")
-                          })}
-                          className={hasFieldError("referenceNumber1") ? styles.errorField : ""}
-                          placeholder="กรุณากรอกเลข สป.กค."
+                          defaultValue="12-1507-15"
+                          {...step3Methods.register("referenceNumber1")}
                         />
-                        {hasFieldError("referenceNumber1") && (
-                          <span className={styles.errorText}>{getFieldError("referenceNumber1")}</span>
-                        )}
                       </div>
                       <div className={styles.fieldGroupDate}>
                         <label>
                           วันที่ <span className={styles.required}>*</span>
                         </label>
-                        <ControlledDateThaiPickerService
-                          name="referenceDate1"
+                        <DateThaiPickerService
+                          name="referenceDate2"
                           control={step3Methods.control}
                           placeholder="กรุณาเลือกวันที่"
-                          error={hasFieldError("referenceDate1")}
-                          helperText={getFieldError("referenceDate1")}
-                          onChange={() => handleFieldChange("referenceDate1")}
-                          required
                         />
-                        
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>เลข สป.สร.</label>
                         <input
                           type="text"
+                          defaultValue="16-4925-56"
                           {...step3Methods.register("referenceNumber2")}
-                          placeholder="เลข สป.สร."
                         />
                       </div>
                       <div className={styles.fieldGroupDate}>
                         <label>วันที่</label>
-                        <ControlledDateThaiPickerService
+                        <DateThaiPickerService
                           name="referenceDate2"
                           control={step3Methods.control}
                           placeholder="กรุณาเลือกวันที่"
@@ -664,7 +389,7 @@ const SearchComplaints = () => {
                       </div>
                     </div>
 
-                    {/* Row 4: เลข สตป., วันที่, เลข สรร. (สารบัญ), วันที่ */}
+                    {/* Row 4: เลข สตป., วันที่, เลข สรร. (สานต่อง), วันที่ */}
                     <div className={styles.fieldRowDate}>
                       <div className={styles.fieldGroup}>
                         <label>
@@ -672,80 +397,58 @@ const SearchComplaints = () => {
                         </label>
                         <input
                           type="text"
-                          {...step3Methods.register("referenceNumber3", {
-                            onChange: () => handleFieldChange("referenceNumber3")
-                          })}
-                          className={hasFieldError("referenceNumber3") ? styles.errorField : ""}
-                          placeholder="กรุณากรอกเลข สตป."
+                          defaultValue="15-9909-45"
+                          {...step3Methods.register("referenceNumber3")}
                         />
-                        {hasFieldError("referenceNumber3") && (
-                          <span className={styles.errorText}>{getFieldError("referenceNumber3")}</span>
-                        )}
                       </div>
                       <div className={styles.fieldGroupDate}>
                         <label>
                           วันที่ <span className={styles.required}>*</span>
                         </label>
                         <div className={styles.datePickerWrapper}>
-                          <ControlledDateThaiPickerService
+                          <DateThaiPickerService
                             name="referenceDate3"
                             control={step3Methods.control}
                             placeholder="กรุณาเลือกวันที่"
-                            error={hasFieldError("referenceDate3")}
-                            helperText={getFieldError("referenceDate3")}
-                            required
-                            onChange={() => handleFieldChange("referenceDate3")}
                           />
                         </div>
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>
-                          เลข สรร. (สารบัญ) <span className={styles.required}>*</span>
+                          เลข สรร. (สานต่อง) <span className={styles.required}>*</span>
                         </label>
                         <input
                           type="text"
-                          {...step3Methods.register("referenceNumber4", {
-                            onChange: () => handleFieldChange("referenceNumber4")
-                          })}
-                          className={hasFieldError("referenceNumber4") ? styles.errorField : ""}
-                          placeholder="กรุณากรอกเลข สรร. (สารบัญ)"
+                          {...step3Methods.register("referenceNumber4")}
                         />
-                        {hasFieldError("referenceNumber4") && (
-                          <span className={styles.errorText}>{getFieldError("referenceNumber4")}</span>
-                        )}
                       </div>
                       <div className={styles.fieldGroupDate}>
                         <label>
                           วันที่ <span className={styles.required}>*</span>
                         </label>
                         <div className={styles.datePickerWrapper}>
-                          <ControlledDateThaiPickerService
+                          <DateThaiPickerService
                             name="referenceDate4"
                             control={step3Methods.control}
                             placeholder="กรุณาเลือกวันที่"
-                            error={hasFieldError("referenceDate4")}
-                            helperText={getFieldError("referenceDate4")}
-                            onChange={() => handleFieldChange("referenceDate4")}
-                            required
                           />
                         </div>
                       </div>
                     </div>
 
-                    {/* Row 5: เลขที่หนังสือ, วันที่, หน่วยงานอื่นที่ส่งเรื่องมา กก. */}
+                    {/* Row 5: เลขที่หนังสือ, วันที่, หน่วยงานอื่นที่ส่งเรื่องมาขึ่ง กก. */}
                     <div className={styles.fieldRowDate}>
                       <div className={styles.fieldGroup}>
                         <label>เลขที่หนังสือ</label>
                         <input
                           type="text"
                           {...step3Methods.register("documentNumber")}
-                          placeholder="เลขที่หนังสือ"
                         />
                       </div>
                       <div className={styles.fieldGroupDate}>
                         <label>วันที่</label>
                         <div className={styles.datePickerWrapper}>
-                          <ControlledDateThaiPickerService
+                          <DateThaiPickerService
                             name="documentDate"
                             control={step3Methods.control}
                             placeholder="กรุณาเลือกวันที่"
@@ -753,7 +456,7 @@ const SearchComplaints = () => {
                         </div>
                       </div>
                       <div className={styles.fieldGroup}>
-                        <label>หน่วยงานอื่นที่ส่งเรื่องมา กก.</label>
+                        <label>หน่วยงานอื่นที่ส่งเรื่องมาขึ่ง กก.</label>
                         <select {...step3Methods.register("senderAgency")}>
                           <option value="">เลือกหน่วยงาน</option>
                           <option value="ministry1">กระทรวงการคลัง</option>
@@ -767,7 +470,7 @@ const SearchComplaints = () => {
                       <div className={styles.fieldGroup}>
                         <label>ชั้นความลับ</label>
                         <select {...step3Methods.register("securityLevel")}>
-                          <option value="normal">ธรรมดา</option>
+                          <option value="normal">ลับ</option>
                           <option value="confidential">ลับ</option>
                           <option value="secret">ลับมาก</option>
                           <option value="top_secret">ลับที่สุด</option>
@@ -776,7 +479,7 @@ const SearchComplaints = () => {
                       <div className={styles.fieldGroup}>
                         <label>ชั้นความเร่งด่วน</label>
                         <select {...step3Methods.register("urgencyLevel")}>
-                          <option value="normal">ธรรมดา</option>
+                          <option value="normal">ไม่เร่งด่วน</option>
                           <option value="urgent">เร่งด่วน</option>
                           <option value="very_urgent">เร่งด่วนมาก</option>
                         </select>
@@ -813,7 +516,7 @@ const SearchComplaints = () => {
                           <div className={styles.fieldsColumn}>
                             <div className={styles.fieldPair}>
                               <div className={styles.fieldWithLabel}>
-                                <label>เลขที่อ้างอิง(เลข สรร.สารบัญ)</label>
+                                <label>เลขที่อ้างอิง(เลข สรร.สานต่อง)</label>
                                 <input
                                   type="text"
                                   disabled={complaintType !== "additional"}
@@ -823,7 +526,7 @@ const SearchComplaints = () => {
                               <div className={styles.fieldWithLabelDate}>
                                 <label>วันที่</label>
                                 <div className={styles.datePickerWrapper}>
-                                  <ControlledDateThaiPickerService
+                                  <DateThaiPickerService
                                     name="additionalReferenceDate1"
                                     control={step3Methods.control}
                                     disabled={complaintType !== "additional"}
@@ -835,7 +538,7 @@ const SearchComplaints = () => {
                           </div>
                         </div>
 
-                        {/* รับเรื่องจากคณะทำงานนักตรวจสอบ */}
+                        {/* รับเรื่องจากคณะทำงานนักตรวจสอบภ */}
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
                             <label className={`${styles.checkboxItem} ${complaintType === "committee" ? styles.checked : ""}`}>
@@ -844,13 +547,13 @@ const SearchComplaints = () => {
                                 checked={complaintType === "committee"}
                                 onChange={() => handleComplaintTypeChange("committee")}
                               />
-                              รับเรื่องจากคณะทำงานนักตรวจสอบ
+                              รับเรื่องจากคณะทำงานนักตรวจสอบภ
                             </label>
                           </div>
                           <div className={styles.fieldsColumn}>
                             <div className={styles.fieldPair}>
                               <div className={styles.fieldWithLabel}>
-                                <label>เลขที่อ้างอิง(เลข สรร.สารบัญ)</label>
+                                <label>เลขที่อ้างอิง(เลข สรร.สานต่อง)</label>
                                 <input
                                   type="text"
                                   disabled={complaintType !== "committee"}
@@ -860,7 +563,7 @@ const SearchComplaints = () => {
                               <div className={styles.fieldWithLabelDate}>
                                 <label>วันที่</label>
                                 <div className={styles.datePickerWrapper}>
-                                  <ControlledDateThaiPickerService
+                                  <DateThaiPickerService
                                     name="additionalReferenceDate2"
                                     control={step3Methods.control}
                                     disabled={complaintType !== "committee"}
@@ -877,7 +580,7 @@ const SearchComplaints = () => {
                 </div>
               </FormProvider>
 
-              {/* Section 5: ข้อมูลเรื่องร้องทุกข์ (รายละเอียด) */}
+              {/* Section 5: ข้อมูลเรื่องร้องทุกข์ (รายละเอียด) - ปรับปรุงตามภาพ */}
               <FormProvider {...step4Methods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
@@ -889,22 +592,20 @@ const SearchComplaints = () => {
                       <div className={styles.fieldRowDate}>
                         <div className={styles.fieldGroupDate}>
                           <div className={styles.datePickerWrapper}>
-                            <ControlledDateThaiPickerService
-                              label="วันที่รับงานของเจ้าหน้าที่"
-                              name="officerReceivedDate"
-                              control={step4Methods.control}
-                              defaultValue={defaultData?.step4?.general?.officerReceivedDate}
+                            <DateThaiPickerService
+                              label="วันที่รับเรื่องของเจ้าพนักงาน"
+                              value={defaultData?.step4?.general?.officerReceivedDate || ""}
+                              onChange={() => { }}
                               time={true}
                             />
                           </div>
                         </div>
                         <div className={styles.fieldGroupDate}>
                           <div className={styles.datePickerWrapper}>
-                            <ControlledDateThaiPickerService
+                            <DateThaiPickerService
                               label="วันที่เสนองาน ผอ.สรร."
-                              name="directorSubmittedDate"
-                              control={step4Methods.control}
-                              defaultValue={defaultData?.step4?.general?.directorSubmittedDate}
+                              value={defaultData?.step4?.general?.directorSubmittedDate || ""}
+                              onChange={() => { }}
                               time={true}
                             />
                           </div>
@@ -915,17 +616,12 @@ const SearchComplaints = () => {
                       <div className={styles.fieldRow}>
                         <div className={styles.fieldGroup}>
                           <div className={styles.datePickerWrapper}>
-                            <ControlledDateThaiPickerService
+                            <DateThaiPickerService
                               label="วันและเวลาที่เกิดเหตุ"
-                              name="incidentDate"
-                              control={step4Methods.control}
-                              defaultValue={
-                                defaultData?.step4?.general?.incidentDate
-                                  ? new Date(defaultData.step4.general.incidentDate)
-                                  : undefined
-                              }
+                              value={defaultData?.step4?.general?.incidentDateTime || "2023-11-01T14:37:00"}
+                              onChange={() => { }}
                               time={true}
-                              disabled={true}
+                              dis={true}
                             />
                           </div>
                         </div>
@@ -936,7 +632,7 @@ const SearchComplaints = () => {
                         <label>รายละเอียดเพิ่มเติม</label>
                         <textarea
                           rows={8}
-                          defaultValue={defaultData?.step3?.general?.description}
+                          defaultValue="บริษัท พีพี เพราคติส จำกัด ได้บอกบนาคาร-ผื่นนี้แล้วส่วนรวบอำนาจเพิ่ม (VAT) ประจำเดือนธันวาคม 2568 แต่มาเสียงปิดบนชิปปิบไม่ได้รับงบแจ้งเวียนอีกแล้วโปรแกรมการต้องเป็นดำเนินอธุรกิจ แน่นงไม่เข้าชำนะดังเดิมนั้นคือแต่งข่าว จะติดต่อมาเมื่อไหร่ แต่กรกฎาคมที่ได้ประมาณการกิจการยังไม่ได้รับการแจ้งเก็บ สรรพากรที่เกี่ยวข้องกับยอดเพาะมารบาศุกก์ แต่ถึงปิดแจ้งแล้วใบใรมสำยาพารขอรายอ่าค่าที่รุงแต่ไม่ได้ราคิดความเสียหายในการปิดเพลิม บราแต่ประเจ่าแก้ข่าย รองรับใหะพอรัดการบริโภคความเสือมได้หมองทางการขี้นแพทิ์่วเพี้ยมาจะเสีสูงมีมันแข่นหาซะการมจังหลายการคาเป็นเวลา สารในข้อมูลใเพื่อนประชาลบไวดยหายแรงกะ 30-60 วัดเป็นลาดยมมายรายละเอียดกิจกรรม แดผงสำนึกต่อขชำห้างทรัพ รับมหลงคนคาเคียกิจกำนองการซิษณีการสุาม สํารองข้องงข่าทนคะกิจและล้วนานด้วยพอมชันใช่ใบสีแนบรประง่ายในมายทางเพาะมายโส ฟอร์มเคล็ทคิบัง คิงแสานเทปในพรวม ทำให้ไม่เก็ดผลการดทอด์อารุโนบายราม."
                           disabled
                           className={styles.disabledTextarea}
                           {...step4Methods.register("additionalDescription")}
@@ -990,6 +686,7 @@ const SearchComplaints = () => {
                   </div>
                 </div>
               </FormProvider>
+
               {/* Action Buttons */}
               <div className={styles.actionButtons}>
                 <ButtonService
@@ -1017,6 +714,5 @@ const SearchComplaints = () => {
     </>
   );
 };
-
 
 export default SearchComplaints;
