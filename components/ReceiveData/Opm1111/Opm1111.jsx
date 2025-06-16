@@ -181,7 +181,7 @@ const Opm1111Components = () => {
       <BreadcrumbsService
         items={[
           {
-            label: "รับเข้าข้อมูล",
+            label: "จัดการข้อมูลในระบบ",
             icon: (
               <img
                 src="/icons/Pencil.png"

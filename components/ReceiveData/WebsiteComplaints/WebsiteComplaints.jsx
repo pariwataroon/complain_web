@@ -6,7 +6,7 @@ import { GetAllComplaints } from "@pages/api/complaint/complaint";
 
 const breadcrumbItems = [
   {
-    label: "รับเข้าข้อมูล",
+    label: "จัดการข้อมูลในระบบ",
     icon: (
       <img
         src="/icons/Pencil.png"

@@ -10,7 +10,7 @@ import styles from "./TabNav.module.scss";
 
 const breadcrumbItems = [
   {
-    label: "รับเข้าข้อมูล",
+    label: "จัดการข้อมูลในระบบ",
     icon: (
       <img
         src="/icons/Pencil.png"
