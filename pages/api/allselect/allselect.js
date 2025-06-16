@@ -150,6 +150,35 @@ const UsersSearchByRole = async () => {
   }
 };
 
+const UsersSearchByRolesupervisor = async () => {
+  try {
+    const response = await axiosInstance.get(
+      `/users/search/by-role?role_name=supervisor`
+    );
+
+    const results = response?.data?.res_data;
+
+    if (response?.data?.res_code === "0000" && results) {
+      const formattedUsers = results
+        .filter((user) => user.is_active)
+        .map((user) => ({
+          value: user.id,
+          label: user.full_name_with_title,
+          fullName: user.full_name,
+          email: user.email,
+          roles: user.roles,
+        }));
+
+      return formattedUsers;
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Error fetching users by role:", error);
+    return [];
+  }
+};
+
 export {
   GetAllSelect,
   GetProvincesSelect,
@@ -158,4 +187,5 @@ export {
   GetZipcodeSelect,
   GetAllSelectComplaintTypes,
   UsersSearchByRole,
+  UsersSearchByRolesupervisor,
 };

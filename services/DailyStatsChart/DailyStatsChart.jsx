@@ -1,4 +1,4 @@
-import React, { useState, forwardRef } from "react";
+import React, { useState, useMemo } from "react";
 import styles from "./DailyStatsChart.module.scss";
 import {
   BarChart,
@@ -10,29 +10,56 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { th } from "date-fns/locale";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
-import { formatThaiBuddhistYear, formatThaiDateRange } from "@utils/Formats";
+import { formatThaiDateRange } from "@utils/Formats";
 import { Box, Typography } from "@mui/material";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 
-const chartData = [
-  { date: "1 ม.ค.", value: 7, color: "#0a2cbd" },
-  { date: "2 ม.ค.", value: 12, color: "#8686cc" },
-  { date: "3 ม.ค.", value: 3, color: "#4299f3" },
-  { date: "4 ม.ค.", value: 12, color: "#99ccff" },
-  { date: "5 ม.ค.", value: 6, color: "#e6c266" },
-  { date: "6 ม.ค.", value: 11, color: "#f4e6a4" },
-  { date: "7 ม.ค.", value: 7, color: "#e18d85" },
-];
+const generateRandomColor = () => {
+  const colors = [
+    "#0a2cbd", "#8686cc", "#4299f3", "#99ccff",
+    "#e6c266", "#f4e6a4", "#e18d85", "#a8e6a3",
+    "#ff9999", "#ffcc99", "#cc99ff", "#99ffcc"
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
+};
 
-const DateInput = forwardRef(({ value, onOpen }, ref) => (
-  <div className={styles.inputBox} onClick={onOpen} ref={ref}>
-    <span className={styles.dateText}>{value}</span>
-    <CalendarMonthIcon className={styles.icon} />
-  </div>
-));
+const generateChartData = (startDate, endDate) => {
+  if (!startDate || !endDate) return [];
+
+  const data = [];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
+
+  const current = new Date(start);
+
+  while (current <= end) {
+    const day = current.getDate();
+    const month = current.getMonth() + 1;
+
+    const thaiMonths = [
+      "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+      "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
+    ];
+
+    const dateLabel = `${day} ${thaiMonths[month - 1]}`;
+
+    const value = Math.floor(Math.random() * 20) + 1;
+
+    data.push({
+      date: dateLabel,
+      value: value,
+      color: generateRandomColor(),
+      fullDate: new Date(current)
+    });
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  return data;
+};
 
 const CustomTooltip = ({ active, payload, label }) =>
   active && payload?.length ? (
@@ -42,53 +69,82 @@ const CustomTooltip = ({ active, payload, label }) =>
     </div>
   ) : null;
 
+const getInitialDates = () => {
+  const today = new Date();
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(today.getDate() - 6);
+
+  return {
+    startDate: sevenDaysAgo.toISOString(),
+    endDate: today.toISOString()
+  };
+};
+
 export default function DailyStatsChart() {
-  const [start, setStart] = useState(new Date("2025-01-01"));
-  const [end, setEnd] = useState(new Date("2025-01-07"));
-  const [openStart, setOpenStart] = useState(false);
-  const [openEnd, setOpenEnd] = useState(false);
+  const initialDates = getInitialDates();
+  const [startDate, setStartDate] = useState(initialDates.startDate);
+  const [endDate, setEndDate] = useState(initialDates.endDate);
+
+  const chartData = useMemo(() => {
+    return generateChartData(startDate, endDate);
+  }, [startDate, endDate]);
+
+  const getDisplayDate = (isoString) => {
+    if (!isoString) return null;
+    return new Date(isoString);
+  };
+
+  const handleStartDateChange = (newDate) => {
+    setStartDate(newDate);
+  };
+
+  const handleEndDateChange = (newDate) => {
+    setEndDate(newDate);
+  };
+
+  // ฟังก์ชันสำหรับจำกัด maxDate ของ startDate
+  const getStartDateMaxDate = () => {
+    const today = new Date().toISOString();
+    const selectedEndDate = endDate;
+
+    // ใช้วันที่น้อยกว่าระหว่างวันปัจจุบันกับ endDate
+    return new Date(today) < new Date(selectedEndDate) ? today : selectedEndDate;
+  };
 
   return (
     <div className={styles.dailyStats}>
-      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={th}>
-        <div className={styles.dateGroup}>
-          <div className={styles.dateRow}>
-            <span className={styles.rowLabel}>ตั้งแต่</span>
-            <DatePicker
-              value={start}
-              onChange={(d) => d && setStart(d)}
-              renderInput={({ inputRef }) => (
-                <DateInput
-                  value={formatThaiBuddhistYear(start)}
-                  onOpen={() => setOpenStart(true)}
-                  ref={inputRef}
-                />
-              )}
-            />
-          </div>
-          <div className={styles.dateRow}>
-            <span className={styles.rowLabel}>ถึง</span>
-            <DatePicker
-              value={end}
-              onChange={(d) => d && setEnd(d)}
-              renderInput={({ inputRef }) => (
-                <DateInput
-                  value={formatThaiBuddhistYear(end)}
-                  onOpen={() => setOpenEnd(true)}
-                  ref={inputRef}
-                />
-              )}
+      <div className={styles.dateGroup}>
+        <div className={styles.dateRow}>
+          <span className={styles.rowLabel}>ตั้งแต่</span>
+          <div className={styles.datePickerWrapper}>
+            <DateThaiPickerService
+              value={startDate}
+              onChange={handleStartDateChange}
+              placeholder="เลือกวันที่เริ่มต้น"
+              maxDate={getStartDateMaxDate()}
             />
           </div>
         </div>
-      </LocalizationProvider>
+        <div className={styles.dateRow}>
+          <span className={styles.rowLabel}>ถึง</span>
+          <div className={styles.datePickerWrapper}>
+            <DateThaiPickerService
+              value={endDate}
+              onChange={handleEndDateChange}
+              placeholder="เลือกวันที่สิ้นสุด"
+              minDate={startDate}
+              maxDate={new Date().toISOString()}
+            />
+          </div>
+        </div>
+      </div>
 
       <div className={styles.header}>
         <Typography variant="h6" fontWeight="bold" className={styles.main}>
           สถิติการเข้าชมเว็บไซต์รายวัน
         </Typography>
         <Typography variant="subtitle1" className={styles.sub}>
-          {formatThaiDateRange(start, end)}
+          {startDate && endDate && formatThaiDateRange(getDisplayDate(startDate), getDisplayDate(endDate))}
         </Typography>
       </div>
 

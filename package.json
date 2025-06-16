@@ -13,6 +13,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@highcharts/map-collection": "^2.3.0",
+    "@hookform/resolvers": "^5.1.1",
     "@mui/icons-material": "^5.0.0",
     "@mui/lab": "^7.0.0-beta.13",
     "@mui/material": "^5.17.1",
@@ -35,12 +36,13 @@
     "react-color": "^2.19.3",
     "react-datepicker": "^8.3.0",
     "react-dom": "latest",
-    "react-hook-form": "^7.0.0",
+    "react-hook-form": "^7.58.0",
     "react-id-swiper": "^4.0.0",
     "recharts": "^2.15.3",
     "sass": "^1.86.0",
     "sweetalert2": "^11.0.0",
-    "swiper": "^11.2.8"
+    "swiper": "^11.2.8",
+    "yup": "^1.6.1"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",

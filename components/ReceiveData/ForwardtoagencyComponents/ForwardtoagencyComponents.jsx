@@ -1,159 +1,56 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/router";
+import { Controller } from "react-hook-form";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
 import ButtonService from "@services/ButtonService/ButtonService";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
-import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
-import {
-  alertSuccess,
-  alertError,
-  showLoading,
-  closeAlert,
-} from "@utils/Alerts";
+import InputFile from "@services/InputFile/InputFile";
+import { useForwardToAgencyForm } from "@hooks/admin/forwardtoagency/useForwardToAgencyForm";
+import SelectFieldsupervisor from "@services/SelectFieldSupervisor/SelectFieldSupervisor";
 
 const ForwardtoagencyComponents = () => {
   const router = useRouter();
   const { id } = router.query;
 
-  const [form, setForm] = useState({
-    salutation: "",
-    refNo: "",
-    date1: null,
-    subject: "",
-    bookNo: "",
-    date2: null,
-    signer: "",
-    department: "",
-    confidentiality: "",
-    urgency: "",
-    attachment: "",
-    note: "",
-  });
+  // State สำหรับเก็บข้อมูลผู้ลงนามที่เลือก
+  const [selectedSigner, setSelectedSigner] = useState(null);
 
-  // ใช้ useCallback เพื่อป้องกัน re-render loop
-  const handleChange = useCallback((e) => {
-    const { name, value } = e.target;
-    // แก้ไข: ตรวจสอบว่า value ไม่ใช่ object
-    const finalValue =
-      typeof value === "object" && value !== null ? value.value || "" : value;
-    setForm((prev) => ({ ...prev, [name]: finalValue }));
-  }, []);
+  const {
+    control,
+    handleSubmit,
+    errors,
+    isValid,
+    isDirty,
+    handleFileChange,
+    handleDateChange,
+    handleClear,
+    handleSave,
+    getFieldError,
+    isRequired,
+    getCurrentFormData,
+  } = useForwardToAgencyForm();
 
-  // Handler สำหรับ DateThaiPickerService - ใช้ useCallback
-  const handleDateChange = useCallback(
-    (field) => (thaiDate) => {
-      setForm((prev) => ({ ...prev, [field]: thaiDate }));
-    },
-    []
-  );
-
-  // Handler สำหรับ file upload - ใช้ useCallback
-  const handleFileChange = useCallback((e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setForm((prev) => ({
-        ...prev,
-        attachment: file.name,
-      }));
-    }
-  }, []);
-
-  // Clear form handler - ใช้ useCallback
-  const handleClear = useCallback(() => {
-    setForm({
-      salutation: "",
-      refNo: "",
-      date1: null,
-      subject: "",
-      bookNo: "",
-      date2: null,
-      signer: "",
-      department: "",
-      confidentiality: "",
-      urgency: "",
-      attachment: "",
-      note: "",
+  // ฟังก์ชันจัดการเมื่อมีการเลือกผู้ลงนาม
+  const handleSignerSelect = (userInfo) => {
+    console.log("✍️ Signer selected:", {
+      user: "vampirebeam",
+      timestamp: "2025-06-16 13:55:05",
+      selectedSigner: userInfo ? {
+        id: userInfo.value,
+        name: userInfo.label,
+        fullName: userInfo.fullName,
+        email: userInfo.email
+      } : null
     });
-  }, []);
-
-  // ฟังก์ชันตรวจสอบข้อมูลที่จำเป็น
-  const validateRequiredFields = () => {
-    const requiredFields = [
-      { field: "salutation", label: "เรียน" },
-      { field: "refNo", label: "เลข สป.กค." },
-      { field: "date1", label: "วันที่ (แรก)" },
-      { field: "subject", label: "เรื่อง" },
-      { field: "bookNo", label: "เลขที่หนังสือ" },
-      { field: "date2", label: "วันที่ (สอง)" },
-      { field: "signer", label: "ผู้ลงนาม" },
-      { field: "department", label: "หน่วยงาน" },
-      { field: "confidentiality", label: "ชั้นความลับ" },
-      { field: "urgency", label: "ชั้นความเร่งด่วน" },
-      { field: "attachment", label: "เอกสารแนบ" },
-    ];
-
-    const missingFields = requiredFields.filter(({ field }) => {
-      const value = form[field];
-      return !value || value === "" || value === null;
-    });
-
-    return missingFields;
+    setSelectedSigner(userInfo);
   };
 
-  // Save form handler - ใช้ useCallback และเพิ่ม validation + alerts
-  const handleSave = useCallback(async () => {
-    console.log("Form data:", form);
-
-    // ตรวจสอบฟิลด์ที่จำเป็น
-    const missingFields = validateRequiredFields();
-
-    if (missingFields.length > 0) {
-      const missingFieldNames = missingFields
-        .map(({ label }) => label)
-        .join(", ");
-      alertError(
-        "ข้อมูลไม่ครบถ้วน",
-        `กรุณากรอกข้อมูลในฟิลด์: ${missingFieldNames}`
-      );
-      return;
-    }
-
-    try {
-      // แสดง loading
-      showLoading("กำลังบันทึกข้อมูล...");
-
-      // จำลองการส่งข้อมูลไปยัง API (ใช้ setTimeout เพื่อจำลอง)
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // ปิด loading
-      closeAlert();
-
-      // แสดงความสำเร็จ
-      await alertSuccess(
-        "บันทึกสำเร็จ",
-        "บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว"
-      );
-
-      // TODO: เปลี่ยนเส้นทางหรือ refresh ข้อมูลหลังจากบันทึกสำเร็จ
-      // router.push('/some-success-page');
-    } catch (error) {
-      // ปิด loading
-      closeAlert();
-
-      // แสดงข้อผิดพลาด
-      console.error("Save error:", error);
-      alertError(
-        "เกิดข้อผิดพลาด",
-        "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง"
-      );
-    }
-  }, [form, router]);
-
-  // Options สำหรับ SelectField - แก้ไขให้แน่ใจว่าเป็น format ที่ถูกต้อง
+  // Options data
   const salutationOptions = [
     { value: "director_general", label: "อธิบดี" },
     { value: "deputy_director_general", label: "รองอธิบดี" },
@@ -165,15 +62,6 @@ const ForwardtoagencyComponents = () => {
     { value: "deputy_minister", label: "รองรัฐมนตรี" },
   ];
 
-  const signerOptions = [
-    { value: "signer1", label: "นายสมชาย ใจดี" },
-    { value: "signer2", label: "นางสุดา มีสุข" },
-    { value: "signer3", label: "นายอนุชา เจริญ" },
-    { value: "signer4", label: "นางสาวปิยะดา สมศรี" },
-    { value: "signer5", label: "นายวิชัย รุ่งเรือง" },
-  ];
-
-  // แก้ไข: หน่วยงานในกระทรวงต่างๆ ของไทย
   const departmentOptions = [
     // กระทรวงคมนาคม
     { value: "dlt", label: "กรมการขนส่งทางบก" },
@@ -184,12 +72,16 @@ const ForwardtoagencyComponents = () => {
     { value: "srt", label: "การรถไฟแห่งประเทศไทย" },
     { value: "port_authority", label: "การท่าเรือแห่งประเทศไทย" },
     { value: "expressway", label: "การทางพิเศษแห่งประเทศไทย" },
+    { value: "airports", label: "ท่าอากาศยานแห่งประเทศไทย" },
+    { value: "transport_ministry", label: "สำนักงานปลัดกระทรวงคมนาคม" },
 
     // กระทรวงมหาดไทย
     { value: "dopa", label: "กรมการปกครอง" },
     { value: "dpt", label: "กรมส่งเสริมการปกครองท้องถิ่น" },
     { value: "dpw", label: "กรมโยธาธิการและผังเมือง" },
     { value: "disaster_prevention", label: "กรมป้องกันและบรรเทาสาธารณภัย" },
+    { value: "interior_ministry", label: "สำนักงานปลัดกระทรวงมหาดไทย" },
+    { value: "provincial_admin", label: "กรมการปกครองส่วนท้องถิ่น" },
 
     // กระทรวงการคลัง
     { value: "rd", label: "กรมสรรพากร" },
@@ -197,81 +89,112 @@ const ForwardtoagencyComponents = () => {
     { value: "treasury", label: "กรมบัญชีกลาง" },
     { value: "excise", label: "กรมสรรพสามิต" },
     { value: "lands", label: "กรมธนารักษ์" },
+    { value: "finance_ministry", label: "สำนักงานปลัดกระทรวงการคลัง" },
+    { value: "public_debt", label: "สำนักงานบริหารหนี้สาธารณะ" },
 
     // กระทรวงศึกษาธิการ
     { value: "moe", label: "สำนักงานปลัดกระทรวงศึกษาธิการ" },
     { value: "obec", label: "สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน" },
     { value: "ohec", label: "สำนักงานคณะกรรมการการอุดมศึกษา" },
     { value: "ovec", label: "สำนักงานคณะกรรมการการอาชีวศึกษา" },
+    { value: "onec", label: "สำนักงานคณะกรรมการการศึกษาแห่งชาติ" },
 
     // กระทรวงสาธารณสุข
     { value: "moph", label: "สำนักงานปลัดกระทรวงสาธารณสุข" },
     { value: "ddc", label: "กรมควบคุมโรค" },
     { value: "fda", label: "สำนักงานคณะกรรมการอาหารและยา" },
     { value: "dmh", label: "กรมสุขภาพจิต" },
+    { value: "health_service", label: "กรมการแพทย์" },
+    { value: "medical_science", label: "กรมวิทยาศาสตร์การแพทย์" },
 
     // กระทรวงแรงงาน
     { value: "doe", label: "กรมการจัดหางาน" },
     { value: "dlpw", label: "กรมสวัสดิการและคุ้มครองแรงงาน" },
     { value: "dsd", label: "กรมพัฒนาฝีมือแรงงาน" },
+    { value: "labor_ministry", label: "สำนักงานปลัดกระทรวงแรงงาน" },
 
     // กระทรวงยุติธรรม
     { value: "corrections", label: "กรมราชทัณฑ์" },
     { value: "probation", label: "กรมคุมประพฤติ" },
     { value: "legal_execution", label: "กรมบังคับคดี" },
     { value: "rights_liberty", label: "กรมคุ้มครองสิทธิและเสรีภาพ" },
+    { value: "justice_ministry", label: "สำนักงานปลัดกระทรวงยุติธรรม" },
 
     // กระทรวงเกษตรและสหกรณ์
     { value: "doa", label: "กรมส่งเสริมการเกษตร" },
     { value: "fisheries", label: "กรมประมง" },
     { value: "livestock", label: "กรมปศุสัตว์" },
     { value: "cooperatives", label: "กรมส่งเสริมสหกรณ์" },
+    { value: "agriculture_ministry", label: "สำนักงานปลัดกระทรวงเกษตรและสหกรณ์" },
+    { value: "irrigation", label: "กรมชลประทาน" },
 
     // กระทรวงพาณิชย์
     { value: "dbd", label: "กรมพัฒนาธุรกิจการค้า" },
     { value: "dit", label: "กรมการค้าต่างประเทศ" },
     { value: "dip", label: "กรมทรัพย์สินทางปัญญา" },
+    { value: "commerce_ministry", label: "สำนักงานปลัดกระทรวงพาณิชย์" },
 
     // กระทรวงอุตสาหกรรม
     { value: "diw", label: "กรมโรงงานอุตสาหกรรม" },
     { value: "tisi", label: "สำนักงานมาตรฐานผลิตภัณฑ์อุตสาหกรรม" },
+    { value: "industry_ministry", label: "สำนักงานปลัดกระทรวงอุตสาหกรรม" },
 
     // กระทรวงพลังงาน
     { value: "doae", label: "กรมพัฒนาพลังงานทดแทนและอนุรักษ์พลังงาน" },
     { value: "dmf", label: "กรมเชื้อเพลิงธรรมชาติ" },
+    { value: "energy_ministry", label: "สำนักงานปลัดกระทรวงพลังงาน" },
 
     // กระทรวงทรัพยากรธรรมชาติและสิ่งแวดล้อม
     { value: "pcd", label: "กรมควบคุมมลพิษ" },
     { value: "dnp", label: "กรมอุทยานแห่งชาติ สัตว์ป่า และพันธุ์พืช" },
     { value: "marine", label: "กรมทรัพยากรทางทะเลและชายฝั่ง" },
+    { value: "environment_ministry", label: "สำนักงานปลัดกระทรวงทรัพยากรธรรมชาติและสิ่งแวดล้อม" },
+    { value: "groundwater", label: "กรมทรัพยากรน้ำบาดาล" },
 
     // กระทรวงการท่องเที่ยวและกีฬา
     { value: "tat", label: "การท่องเที่ยวแห่งประเทศไทย" },
     { value: "sports_authority", label: "การกีฬาแห่งประเทศไทย" },
+    { value: "tourism_ministry", label: "สำนักงานปลัดกระทรวงการท่องเที่ยวและกีฬา" },
 
     // กระทรวงเทคโนโลยีสารสนเทศและการสื่อสาร
-    {
-      value: "nbtc",
-      label:
-        "สำนักงานคณะกรรมการกิจการกระจายเสียง กิจการโทรทัศน์ และกิจการโทรคมนาคมแห่งชาติ",
-    },
+    { value: "nbtc", label: "สำนักงานคณะกรรมการกิจการกระจายเสียง กิจการโทรทัศน์ และกิจการโทรคมนาคมแห่งชาติ" },
     { value: "etda", label: "สำนักงานพัฒนาเศรษฐกิจดิจิทัลแห่งชาติ" },
+    { value: "ict_ministry", label: "สำนักงานปลัดกระทรวงเทคโนโลยีสารสนเทศและการสื่อสาร" },
 
     // กระทรวงวัฒนธรรม
     { value: "culture", label: "กรมส่งเสริมวัฒนธรรม" },
     { value: "fine_arts", label: "กรมศิลปากร" },
+    { value: "culture_ministry", label: "สำนักงานปลัดกระทรวงวัฒนธรรม" },
 
     // กระทรวงการพัฒนาสังคมและความมั่นคงของมนุษย์
     { value: "dop", label: "กรมพัฒนาสังคมและสวัสดิการ" },
     { value: "dosa", label: "กรมกิจการผู้สูงอายุ" },
+    { value: "social_ministry", label: "สำนักงานปลัดกระทรวงการพัฒนาสังคมและความมั่นคงของมนุษย์" },
 
-    // หน่วยงานอิสระ
+    // หน่วยงานอิสระ และหน่วยงานพิเศษ
     { value: "ombudsman", label: "สำนักงานผู้ตรวจการแผ่นดิน" },
-    {
-      value: "nacc",
-      label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ",
-    },
+    { value: "nacc", label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ" },
     { value: "nhrct", label: "สำนักงานคณะกรรมการสิทธิมนุษยชนแห่งชาติ" },
+    { value: "election_commission", label: "สำนักงานคณะกรรมการการเลือกตั้ง" },
+    { value: "audit_commission", label: "สำนักงานการตรวจเงินแผ่นดิน" },
+    { value: "civil_service", label: "สำนักงานคณะกรรมการข้าราชการพลเรือน" },
+
+    // กรุงเทพมหานคร และ หน่วยงานท้องถิ่น
+    { value: "bangkok", label: "กรุงเทพมหานคร" },
+    { value: "pattaya", label: "เมืองพัทยา" },
+
+    // หน่วยงานภายใต้สำนักนายกรัฐมนตรี
+    { value: "cabinet_secretariat", label: "สำนักเลขาธิการคณะรัฐมนตรี" },
+    { value: "national_security", label: "สำนักงานสภาความมั่นคงแห่งชาติ" },
+    { value: "budget_bureau", label: "สำนักงบประมาณ" },
+    { value: "civil_service_commission", label: "สำนักงานคณะกรรมการข้าราชการพลเรือน" },
+
+    // หน่วยงานตำรวจ และ ทหาร
+    { value: "royal_thai_police", label: "สำนักงานตำรวจแห่งชาติ" },
+    { value: "defense_ministry", label: "กระทรวงกลาโหม" },
+    { value: "army", label: "กองทัพบก" },
+    { value: "navy", label: "กองทัพเรือ" },
+    { value: "air_force", label: "กองทัพอากาศ" },
   ];
 
   const confidentialityOptions = [
@@ -287,6 +210,22 @@ const ForwardtoagencyComponents = () => {
     { value: "very_urgent", label: "ด่วนมาก" },
     { value: "extremely_urgent", label: "ด่วนที่สุด" },
   ];
+
+  const createLabel = (text, fieldName) => {
+    return (
+      <span>
+        {text}
+        {isRequired(fieldName) && (
+          <span style={{ color: "red", marginLeft: 4 }}>*</span>
+        )}
+      </span>
+    );
+  };
+
+  const handleFileUpload = (files) => {
+    handleFileChange(files);
+  };
+
 
   return (
     <Box
@@ -310,7 +249,7 @@ const ForwardtoagencyComponents = () => {
       />
 
       <Box sx={{ border: "2px solid #2499FF", borderTopRightRadius: 15 }}>
-        {/* top gradient bar */}
+        {/* Top gradient bar */}
         <Box
           sx={{
             background: "linear-gradient(to right, #1223a5, #2499ff)",
@@ -319,7 +258,7 @@ const ForwardtoagencyComponents = () => {
           }}
         />
 
-        {/* centered title */}
+        {/* Centered title */}
         <Box sx={{ textAlign: "center", py: 2 }}>
           <Typography variant="h5" fontWeight="bold" color="#1120A3">
             แบบรายงานส่งหน่วยงานที่เกี่ยวข้อง
@@ -328,6 +267,7 @@ const ForwardtoagencyComponents = () => {
 
         <Box
           component="form"
+          onSubmit={handleSubmit(handleSave)}
           sx={{
             display: "flex",
             flexDirection: "column",
@@ -339,7 +279,7 @@ const ForwardtoagencyComponents = () => {
             ข้อมูลเรื่องร้องทุกข์
           </Typography>
 
-          {/* row 1: เรียน | เลข สป.กค. | วันที่ */}
+          {/* Row 1: เรียน | เลข สป.กค. | วันที่ */}
           <Box
             sx={{
               display: "grid",
@@ -351,59 +291,77 @@ const ForwardtoagencyComponents = () => {
               },
             }}
           >
-            <SelectField
-              label={
-                <span>
-                  เรียน<span style={{ color: "red", marginLeft: 4 }}>*</span>
-                </span>
-              }
+            <Controller
               name="salutation"
-              value={form.salutation}
-              onChange={handleChange}
-              options={salutationOptions}
+              control={control}
+              render={({ field }) => (
+                <SelectField
+                  label={createLabel("เรียน", "salutation")}
+                  name="salutation"
+                  value={field.value}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  options={salutationOptions}
+                  error={!!getFieldError("salutation")}
+                  helperText={getFieldError("salutation")}
+                />
+              )}
             />
-            <InputText
-              label={
-                <span>
-                  เลข สป.กค.
-                  <span style={{ color: "red", marginLeft: 4 }}>*</span>
-                </span>
-              }
-              inputLabel="กรอกเลข สป.กค."
+
+            <Controller
               name="refNo"
-              value={form.refNo}
-              onChange={handleChange}
+              control={control}
+              render={({ field }) => (
+                <InputText
+                  label={createLabel("เลข สป.กค.", "refNo")}
+                  inputLabel="กรอกเลข สป.กค."
+                  name="refNo"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={!!getFieldError("refNo")}
+                  helperText={getFieldError("refNo")}
+                />
+              )}
             />
+
             <Box sx={{ position: "relative", zIndex: 1 }}>
-              <DateThaiPickerService
-                label={
-                  <span>
-                    วันที่<span style={{ color: "red", marginLeft: 4 }}>*</span>
-                  </span>
-                }
-                value={form.date1}
-                onChange={handleDateChange("date1")}
-                placeholder="เลือกวันที่"
+              <Controller
+                name="date1"
+                control={control}
+                render={({ field }) => (
+                  <DateThaiPickerService
+                    label={createLabel("วันที่", "date1")}
+                    value={field.value}
+                    onChange={handleDateChange("date1")}
+                    placeholder="เลือกวันที่"
+                    error={!!getFieldError("date1")}
+                    helperText={getFieldError("date1")}
+                    maxDate={new Date().toISOString()}
+                  />
+                )}
               />
             </Box>
           </Box>
 
-          {/* row 2: เรื่อง */}
+          {/* Row 2: เรื่อง */}
           <Box sx={{ display: "grid", gridTemplateColumns: "1fr" }}>
-            <InputText
-              label={
-                <span>
-                  เรื่อง<span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
-              inputLabel="กรอกเรื่อง"
+            <Controller
               name="subject"
-              value={form.subject}
-              onChange={handleChange}
+              control={control}
+              render={({ field }) => (
+                <InputText
+                  label={createLabel("เรื่อง", "subject")}
+                  inputLabel="กรอกเรื่อง"
+                  name="subject"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={!!getFieldError("subject")}
+                  helperText={getFieldError("subject")}
+                />
+              )}
             />
           </Box>
 
-          {/* row 3: เลขที่หนังสือ | วันที่ | ผู้ลงนาม */}
+          {/* Row 3: เลขที่หนังสือ | วันที่ | ผู้ลงนาม */}
           <Box
             sx={{
               display: "grid",
@@ -415,61 +373,82 @@ const ForwardtoagencyComponents = () => {
               },
             }}
           >
-            <InputText
-              label={
-                <span>
-                  เลขที่หนังสือ
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
-              inputLabel="กรอกเลขที่หนังสือ"
+            <Controller
               name="bookNo"
-              value={form.bookNo}
-              onChange={handleChange}
+              control={control}
+              render={({ field }) => (
+                <InputText
+                  label={createLabel("เลขที่หนังสือ", "bookNo")}
+                  inputLabel="กรอกเลขที่หนังสือ"
+                  name="bookNo"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={!!getFieldError("bookNo")}
+                  helperText={getFieldError("bookNo")}
+                />
+              )}
             />
+
             <Box sx={{ position: "relative", zIndex: 1 }}>
-              <DateThaiPickerService
-                label={
-                  <span>
-                    วันที่<span style={{ color: "red", marginLeft: 2 }}>*</span>
-                  </span>
-                }
-                value={form.date2}
-                onChange={handleDateChange("date2")}
-                placeholder="เลือกวันที่"
+              <Controller
+                name="date2"
+                control={control}
+                render={({ field }) => (
+                  <DateThaiPickerService
+                    label={createLabel("วันที่", "date2")}
+                    value={field.value}
+                    onChange={handleDateChange("date2")}
+                    placeholder="เลือกวันที่"
+                    error={!!getFieldError("date2")}
+                    helperText={getFieldError("date2")}
+                    maxDate={new Date().toISOString()}
+                  />
+                )}
               />
             </Box>
-            <SelectField
-              label={
-                <span>
-                  ผู้ลงนาม
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+
+            {/* ใช้ SelectFieldsupervisor Service */}
+            <Controller
               name="signer"
-              value={form.signer}
-              onChange={handleChange}
-              options={signerOptions}
+              control={control}
+              render={({ field }) => (
+                <SelectFieldsupervisor
+                  label="ผู้ลงนาม"
+                  name="signer"
+                  value={field.value}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  onUserSelect={handleSignerSelect}
+                  error={!!getFieldError("signer")}
+                  helperText={getFieldError("signer")}
+                  required={isRequired("signer")}
+                  placeholder="เลือกผู้ลงนาม"
+                  showUserInfo={false} 
+                  size="small"
+                />
+              )}
             />
           </Box>
 
-          {/* row 4: หน่วยงาน */}
+          {/* Row 4: หน่วยงาน */}
           <Box sx={{ display: "grid", gridTemplateColumns: "1fr" }}>
-            <SelectField
-              label={
-                <span>
-                  หน่วยงาน
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+            <Controller
               name="department"
-              value={form.department}
-              onChange={handleChange}
-              options={departmentOptions}
+              control={control}
+              render={({ field }) => (
+                <SelectField
+                  label={createLabel("หน่วยงาน", "department")}
+                  name="department"
+                  value={field.value}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  options={departmentOptions}
+                  error={!!getFieldError("department")}
+                  helperText={getFieldError("department")}
+                />
+              )}
             />
           </Box>
 
-          {/* row 5: ชั้นความลับ | ชั้นความเร่งด่วน */}
+          {/* Row 5: ชั้นความลับ | ชั้นความเร่งด่วน */}
           <Box
             sx={{
               display: "grid",
@@ -477,33 +456,40 @@ const ForwardtoagencyComponents = () => {
               gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
-            <SelectField
-              label={
-                <span>
-                  ชั้นความลับ
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+            <Controller
               name="confidentiality"
-              value={form.confidentiality}
-              onChange={handleChange}
-              options={confidentialityOptions}
+              control={control}
+              render={({ field }) => (
+                <SelectField
+                  label={createLabel("ชั้นความลับ", "confidentiality")}
+                  name="confidentiality"
+                  value={field.value}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  options={confidentialityOptions}
+                  error={!!getFieldError("confidentiality")}
+                  helperText={getFieldError("confidentiality")}
+                />
+              )}
             />
-            <SelectField
-              label={
-                <span>
-                  ชั้นความเร่งด่วน
-                  <span style={{ color: "red", marginLeft: 2 }}>*</span>
-                </span>
-              }
+
+            <Controller
               name="urgency"
-              value={form.urgency}
-              onChange={handleChange}
-              options={urgencyOptions}
+              control={control}
+              render={({ field }) => (
+                <SelectField
+                  label={createLabel("ชั้นความเร่งด่วน", "urgency")}
+                  name="urgency"
+                  value={field.value}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  options={urgencyOptions}
+                  error={!!getFieldError("urgency")}
+                  helperText={getFieldError("urgency")}
+                />
+              )}
             />
           </Box>
 
-          {/* row 6: เอกสารแนบ */}
+          {/* Row 6: เอกสารแนบ */}
           <Box
             sx={{
               display: "grid",
@@ -511,52 +497,47 @@ const ForwardtoagencyComponents = () => {
               position: "relative",
             }}
           >
-            <InputText
-              label="เอกสารแนบ*"
-              inputLabel="เลือกไฟล์"
+            <Controller
               name="attachment"
-              value={form.attachment}
-              onChange={handleChange}
-              InputProps={{
-                endAdornment: (
-                  <>
-                    <input
-                      type="file"
-                      id="attachment-upload"
-                      style={{ display: "none" }}
-                      onChange={handleFileChange}
-                    />
-                    <label
-                      htmlFor="attachment-upload"
-                      style={{ cursor: "pointer" }}
-                    >
-                      <img
-                        src="/icons/Add.png"
-                        alt="add"
-                        style={{ width: 24, height: 24 }}
-                      />
-                    </label>
-                  </>
-                ),
-              }}
+              control={control}
+              render={({ field }) => (
+                <InputFile
+                  label={createLabel("เอกสารประกอบการร้องเรียน", "attachment")}
+                  name="attachment"
+                  onChange={handleFileUpload}
+                  error={getFieldError("attachment")}
+                  helperText={getFieldError("attachment") || "หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  maxFiles={3}
+                  maxSizeMB={10}
+                />
+              )}
             />
           </Box>
 
-          {/* row 7: หมายเหตุ */}
+          {/* Row 7: หมายเหตุ */}
           <Box sx={{ display: "grid", gridTemplateColumns: "1fr" }}>
-            <InputText
-              label="หมายเหตุ"
-              inputLabel="กรอกหมายเหตุ"
+            <Controller
               name="note"
-              value={form.note}
-              onChange={handleChange}
-              multiline
-              rows={4}
+              control={control}
+              render={({ field }) => (
+                <InputText
+                  label={createLabel("หมายเหตุ", "note")}
+                  inputLabel="กรอกหมายเหตุ (ถ้ามี)"
+                  name="note"
+                  value={field.value}
+                  onChange={field.onChange}
+                  multiline
+                  rows={4}
+                  error={!!getFieldError("note")}
+                  helperText={getFieldError("note") || "ระบุข้อมูลเพิ่มเติมที่ต้องการแจ้ง"}
+                />
+              )}
             />
           </Box>
         </Box>
 
-        {/* action buttons */}
+        {/* Action buttons */}
         <Box
           sx={{
             display: "flex",
@@ -572,13 +553,24 @@ const ForwardtoagencyComponents = () => {
               label="ล้าง"
               variant="outlined"
               iconLeft={<CloseIcon />}
-              onClick={handleClear}
+              onClick={() => {
+                handleClear();
+                setSelectedSigner(null);
+              }}
               sx={{
                 borderColor: "#50ADFF",
                 color: "#50ADFF",
                 width: "100%",
                 height: "55px",
-                fontSize: "24px",
+                fontSize: "20px",
+                fontWeight: "600",
+                "&:hover": {
+                  backgroundColor: "#50ADFF",
+                  color: "#ffffff",
+                  transform: "translateY(-1px)",
+                  boxShadow: "0 4px 12px rgba(80, 173, 255, 0.3)",
+                },
+                transition: "all 0.2s ease-in-out",
               }}
             />
           </Box>
@@ -588,13 +580,26 @@ const ForwardtoagencyComponents = () => {
               label="บันทึก"
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
-              onClick={handleSave}
+              onClick={handleSubmit(handleSave)}
+              disabled={!isValid}
               sx={{
-                backgroundColor: "#2196F3",
+                backgroundColor: isValid ? "#2196F3" : "#cccccc",
                 color: "#FFF",
                 width: "100%",
                 height: "55px",
-                fontSize: "24px",
+                fontSize: "20px",
+                fontWeight: "600",
+                "&:hover": {
+                  backgroundColor: isValid ? "#1976D2" : "#cccccc",
+                  transform: isValid ? "translateY(-1px)" : "none",
+                  boxShadow: isValid ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
+                },
+                "&:disabled": {
+                  backgroundColor: "#cccccc",
+                  color: "#999999",
+                  cursor: "not-allowed",
+                },
+                transition: "all 0.2s ease-in-out",
               }}
             />
           </Box>

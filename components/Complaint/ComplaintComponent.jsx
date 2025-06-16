@@ -183,85 +183,85 @@ export default function ComplaintComponent() {
     }
 
     // STEP 2: ข้อมูลผู้ถูกร้องทุกข์
-    if (activeStep === 1) {
-      const currentTab = tabStates.step2;
-      const typeMap = ["individual", "corporate", "government"];
-      const activeType = typeMap[currentTab];
+    // if (activeStep === 1) {
+    //   const currentTab = tabStates.step2;
+    //   const typeMap = ["individual", "corporate", "government"];
+    //   const activeType = typeMap[currentTab];
 
-      if (!activeType) {
-        errors.activeType = "กรุณาเลือกประเภทผู้ถูกร้องทุกข์";
-      } else {
-        const current = data[activeType] || {};
+    //   if (!activeType) {
+    //     errors.activeType = "กรุณาเลือกประเภทผู้ถูกร้องทุกข์";
+    //   } else {
+    //     const current = data[activeType] || {};
 
-        const requiredFieldsMap = {
-          individual: [
-            { key: "idCard", label: "เลขบัตรประชาชน" },
-            { key: "name", label: "ชื่อ - นามสกุล" },
-            { key: "address", label: "ที่อยู่" },
-            { key: "phone", label: "หมายเลขโทรศัพท์" },
-            { key: "province", label: "จังหวัด" },
-            { key: "districts", label: "อำเภอ/เขต" },
-            { key: "subdistricts", label: "ตำบล/แขวง" },
-            { key: "zipcode", label: "รหัสไปรษณีย์" },
-            { key: "email", label: "อีเมล" },
-          ],
-          corporate: [
-            { key: "idCard", label: "เลขทะเบียนนิติบุคคล" },
-            { key: "companyName", label: "ชื่อบริษัท" },
-            { key: "signatoryName", label: "ชื่อผู้มีอำนาจลงนาม" },
-            { key: "address", label: "ที่อยู่บริษัท" },
-            { key: "phone", label: "หมายเลขโทรศัพท์" },
-            { key: "province", label: "จังหวัด" },
-            { key: "districts", label: "อำเภอ/เขต" },
-            { key: "subdistricts", label: "ตำบล/แขวง" },
-            { key: "zipcode", label: "รหัสไปรษณีย์" },
-            { key: "email", label: "อีเมล" },
-          ],
-          government: [
-            { key: "idCard", label: "เลขบัตรประชาชน" },
-            { key: "agencyName", label: "หน่วยงาน" },
-            { key: "fullName", label: "ชื่อ - นามสกุล" },
-            { key: "address", label: "ที่อยู่ที่สามารถติดต่อได้" },
-            { key: "phone", label: "หมายเลขโทรศัพท์" },
-            { key: "province", label: "จังหวัด" },
-            { key: "districts", label: "อำเภอ/เขต" },
-            { key: "subdistricts", label: "ตำบล/แขวง" },
-            { key: "zipcode", label: "รหัสไปรษณีย์" },
-            { key: "email", label: "อีเมล" },
-          ],
-        };
+    //     const requiredFieldsMap = {
+    //       individual: [
+    //         { key: "idCard", label: "เลขบัตรประชาชน" },
+    //         { key: "name", label: "ชื่อ - นามสกุล" },
+    //         { key: "address", label: "ที่อยู่" },
+    //         { key: "phone", label: "หมายเลขโทรศัพท์" },
+    //         { key: "province", label: "จังหวัด" },
+    //         { key: "districts", label: "อำเภอ/เขต" },
+    //         { key: "subdistricts", label: "ตำบล/แขวง" },
+    //         { key: "zipcode", label: "รหัสไปรษณีย์" },
+    //         { key: "email", label: "อีเมล" },
+    //       ],
+    //       corporate: [
+    //         { key: "idCard", label: "เลขทะเบียนนิติบุคคล" },
+    //         { key: "companyName", label: "ชื่อบริษัท" },
+    //         { key: "signatoryName", label: "ชื่อผู้มีอำนาจลงนาม" },
+    //         { key: "address", label: "ที่อยู่บริษัท" },
+    //         { key: "phone", label: "หมายเลขโทรศัพท์" },
+    //         { key: "province", label: "จังหวัด" },
+    //         { key: "districts", label: "อำเภอ/เขต" },
+    //         { key: "subdistricts", label: "ตำบล/แขวง" },
+    //         { key: "zipcode", label: "รหัสไปรษณีย์" },
+    //         { key: "email", label: "อีเมล" },
+    //       ],
+    //       government: [
+    //         { key: "idCard", label: "เลขบัตรประชาชน" },
+    //         { key: "agencyName", label: "หน่วยงาน" },
+    //         { key: "fullName", label: "ชื่อ - นามสกุล" },
+    //         { key: "address", label: "ที่อยู่ที่สามารถติดต่อได้" },
+    //         { key: "phone", label: "หมายเลขโทรศัพท์" },
+    //         { key: "province", label: "จังหวัด" },
+    //         { key: "districts", label: "อำเภอ/เขต" },
+    //         { key: "subdistricts", label: "ตำบล/แขวง" },
+    //         { key: "zipcode", label: "รหัสไปรษณีย์" },
+    //         { key: "email", label: "อีเมล" },
+    //       ],
+    //     };
 
-        const requiredFields = requiredFieldsMap[activeType] || [];
+    //     const requiredFields = requiredFieldsMap[activeType] || [];
 
-        requiredFields.forEach(field => {
-          const value = current[field.key];
+    //     requiredFields.forEach(field => {
+    //       const value = current[field.key];
 
-          if (field.key === 'idCard') {
-            if (!hasValue(value)) {
-              errors[`${activeType}.${field.key}`] = `กรุณากรอก ${field.label}`;
-            } else if (typeof value === 'string' && value.length !== 13) {
-              errors[`${activeType}.${field.key}`] = `กรุณากรอก${field.label}ให้ครบ 13 หลัก`;
-            } else if (typeof value === 'string' && !/^\d{13}$/.test(value)) {
-              errors[`${activeType}.${field.key}`] = `${field.label}ต้องเป็นตัวเลขเท่านั้น`;
-            }
-          } else {
-            if (!hasValue(value)) {
-              errors[`${activeType}.${field.key}`] = `กรุณากรอก ${field.label}`;
-            }
-          }
-        });
+    //       if (field.key === 'idCard') {
+    //         if (!hasValue(value)) {
+    //           errors[`${activeType}.${field.key}`] = `กรุณากรอก ${field.label}`;
+    //         } else if (typeof value === 'string' && value.length !== 13) {
+    //           errors[`${activeType}.${field.key}`] = `กรุณากรอก${field.label}ให้ครบ 13 หลัก`;
+    //         } else if (typeof value === 'string' && !/^\d{13}$/.test(value)) {
+    //           errors[`${activeType}.${field.key}`] = `${field.label}ต้องเป็นตัวเลขเท่านั้น`;
+    //         }
+    //       } else {
+    //         if (!hasValue(value)) {
+    //           errors[`${activeType}.${field.key}`] = `กรุณากรอก ${field.label}`;
+    //         }
+    //       }
+    //     });
 
-        const emailValue = current.email;
-        if (emailValue) {
-          const emailErrors = validateEmail(emailValue);
-          if (emailErrors.length > 0) {
-            errors[`${activeType}.email`] = emailErrors[0];
-          }
-        } else {
-          errors[`${activeType}.email`] = "กรุณากรอกอีเมล";
-        }
-      }
-    }
+    //     const emailValue = current.email;
+    //     if (emailValue) {
+    //       const emailErrors = validateEmail(emailValue);
+    //       if (emailErrors.length > 0) {
+    //         errors[`${activeType}.email`] = emailErrors[0];
+    //       }
+    //     } else {
+    //       errors[`${activeType}.email`] = "กรุณากรอกอีเมล";
+    //     }
+    //   }
+    // }
 
     // STEP 3: รายละเอียดเรื่องร้องทุกข์
     if (activeStep === 2) {

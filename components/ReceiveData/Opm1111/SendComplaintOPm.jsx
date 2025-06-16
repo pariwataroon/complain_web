@@ -13,14 +13,15 @@ const SendComplaintOPM = () => {
   const router = useRouter();
   const queryParams = router.query;
 
+  // State variables
   const [selectedProvince, setSelectedProvince] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedSubDistrict, setSelectedSubDistrict] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedType, setselectedType] = useState("");
-  const [createdDate, setCreatedDate] = useState(new Date());
-  const [updatedDate, setUpdatedDate] = useState(new Date());
+  const [createdDate, setCreatedDate] = useState(new Date().toISOString());
+  const [updatedDate, setUpdatedDate] = useState(new Date().toISOString());
   const [reporterFirstName, setReporterFirstName] = useState("");
   const [reporterLastName, setReporterLastName] = useState("");
   const [reporterPhone, setReporterPhone] = useState("");
@@ -34,10 +35,24 @@ const SendComplaintOPM = () => {
     severity: "success"
   });
 
+  // Validation functions
+  const validatePhoneNumber = (phone) => {
+    if (!phone) return false;
+    // ตรวจสอบเบอร์มือถือ (08x, 09x) และเบอร์บ้าน (02x-07x)
+    const mobileRegex = /^(08|09)\d{8}$/;
+    const landlineRegex = /^(02|03|04|05|06|07)\d{7,8}$/;
+
+    return mobileRegex.test(phone) || landlineRegex.test(phone);
+  };
+
+  const isPhoneValid = validatePhoneNumber(reporterPhone);
+
   const isFormValid = selectedProvince && selectedDistrict && selectedSubDistrict &&
     selectedChannel && selectedStatus && selectedType && createdDate && updatedDate &&
-    reporterFirstName && reporterLastName && reporterPhone && caseCode && complaintDetail;
+    reporterFirstName && reporterLastName && reporterPhone && caseCode &&
+    complaintDetail && isPhoneValid;
 
+  // Event handlers
   const handleProvinceChange = useCallback((event) => {
     const newValue = event.target.value;
     setSelectedProvince(newValue);
@@ -80,15 +95,28 @@ const SendComplaintOPM = () => {
   }, []);
 
   const handleReporterFirstNameChange = useCallback((event) => {
-    setReporterFirstName(event.target.value);
+    const value = event.target.value;
+    // อนุญาตเฉพาะตัวอักษรไทย อังกฤษ และช่องว่าง
+    const nameValue = value.replace(/[^a-zA-Zก-๙\s]/g, '');
+    setReporterFirstName(nameValue);
   }, []);
 
   const handleReporterLastNameChange = useCallback((event) => {
-    setReporterLastName(event.target.value);
+    const value = event.target.value;
+    // อนุญาตเฉพาะตัวอักษรไทย อังกฤษ และช่องว่าง
+    const nameValue = value.replace(/[^a-zA-Zก-๙\s]/g, '');
+    setReporterLastName(nameValue);
   }, []);
 
-  const handleReporterPhoneChange = useCallback((event) => {
-    setReporterPhone(event.target.value);
+  const handleReporterPhoneChange = useCallback((e) => {
+    const value = e.target.value;
+    // อนุญาตเฉพาะตัวเลข 0-9
+    const numericValue = value.replace(/[^0-9]/g, '');
+
+    // จำกัดความยาวไม่เกิน 10 ตัว
+    if (numericValue.length <= 10) {
+      setReporterPhone(numericValue);
+    }
   }, []);
 
   const handleCaseCodeChange = useCallback((event) => {
@@ -114,8 +142,8 @@ const SendComplaintOPM = () => {
       setSelectedChannel("");
       setSelectedStatus("");
       setselectedType("");
-      setCreatedDate(new Date());
-      setUpdatedDate(new Date());
+      setCreatedDate(new Date().toISOString());
+      setUpdatedDate(new Date().toISOString());
       setReporterFirstName("");
       setReporterLastName("");
       setReporterPhone("");
@@ -127,8 +155,23 @@ const SendComplaintOPM = () => {
   }, []);
 
   const handleSubmit = useCallback(async () => {
+    // ตรวจสอบข้อมูลครบถ้วน
     if (!isFormValid) {
+      if (!reporterPhone) {
+        await alertError("ข้อมูลไม่ครบถ้วน", "กรุณากรอกเบอร์โทรศัพท์ผู้แจ้งเหตุ");
+        return;
+      }
+      if (!isPhoneValid) {
+        await alertError("เบอร์โทรไม่ถูกต้อง", "กรุณากรอกเบอร์โทรศัพท์ในรูปแบบที่ถูกต้อง เช่น 0812345678 หรือ 0212345678");
+        return;
+      }
       await alertError("ข้อมูลไม่ครบถ้วน", "กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง");
+      return;
+    }
+
+    // ตรวจสอบเบอร์โทรเพิ่มเติม
+    if (reporterPhone.length < 9) {
+      await alertError("เบอร์โทรไม่ถูกต้อง", "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก");
       return;
     }
 
@@ -185,7 +228,7 @@ const SendComplaintOPM = () => {
         created_date: formatDate(createdDate),
         updated_date: formatDate(updatedDate),
         case_id: queryParams.id || "",
-        user_id: "",
+        user_id: "vampirebeam", // Current user
         submitted_at: formatCurrentTimestamp(),
         reporter_first_name: reporterFirstName,
         reporter_last_name: reporterLastName,
@@ -194,11 +237,11 @@ const SendComplaintOPM = () => {
         complaint_detail: complaintDetail,
       };
 
+      console.log("Submitting data:", submitData);
 
       const result = await AddCase(submitData);
 
       closeAlert();
-
 
       const extractAddCaseResult = (xmlString) => {
         try {
@@ -272,7 +315,6 @@ const SendComplaintOPM = () => {
         }
       }
 
-
       if (isSuccess || addCaseResult) {
         let referenceId = "";
         let caseNumber = "";
@@ -311,6 +353,12 @@ const SendComplaintOPM = () => {
                   <p style="margin-top: 15px; font-size: 14px; color: #6c757d;">
                     💡 กรุณาเก็บรหัสอ้างอิงและเลขเคสไว้สำหรับติดตามผล
                   </p>
+                  
+                  <div style="margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 4px; border-left: 4px solid #2196f3;">
+                    <p style="margin: 0; font-size: 12px; color: #1565c0;">
+                      ⏰ ส่งข้อมูลเมื่อ: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })} (ผู้ส่ง: vampirebeam)
+                    </p>
+                  </div>
                 </div>
               `;
             } else {
@@ -326,6 +374,12 @@ const SendComplaintOPM = () => {
                       ${addCaseResult}
                     </p>
                   </div>
+                  
+                  <div style="margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 4px; border-left: 4px solid #2196f3;">
+                    <p style="margin: 0; font-size: 12px; color: #1565c0;">
+                      ⏰ ส่งข้อมูลเมื่อ: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })} (ผู้ส่ง: vampirebeam)
+                    </p>
+                  </div>
                 </div>
               `;
             }
@@ -335,7 +389,7 @@ const SendComplaintOPM = () => {
         }
 
         await alertSuccess(successTitle, successMessage, true);
-   
+
         const shouldRedirect = await showConfirm(
           "เสร็จสิ้น",
           "ต้องการกลับไปหน้ารายการเรื่องร้องทุกข์หรือไม่?",
@@ -367,7 +421,7 @@ const SendComplaintOPM = () => {
     } finally {
       setLoading(false);
     }
-  }, [isFormValid, selectedProvince, selectedDistrict, selectedSubDistrict, selectedChannel, selectedStatus, selectedType, createdDate, updatedDate, reporterFirstName, reporterLastName, reporterPhone, caseCode, complaintDetail, queryParams.id, router]);
+  }, [isFormValid, selectedProvince, selectedDistrict, selectedSubDistrict, selectedChannel, selectedStatus, selectedType, createdDate, updatedDate, reporterFirstName, reporterLastName, reporterPhone, caseCode, complaintDetail, queryParams.id, router, isPhoneValid]);
 
   const handleCloseSnackbar = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
@@ -495,6 +549,7 @@ const SendComplaintOPM = () => {
                     required
                     fullWidth
                     className={styles.textField}
+                    helperText="ใส่ได้เฉพาะตัวอักษรไทย-อังกฤษเท่านั้น"
                   />
                 </FormControl>
               </Grid>
@@ -523,6 +578,7 @@ const SendComplaintOPM = () => {
                     required
                     fullWidth
                     className={styles.textField}
+                    helperText="ใส่ได้เฉพาะตัวอักษรไทย-อังกฤษเท่านั้น"
                   />
                 </FormControl>
               </Grid>
@@ -545,13 +601,24 @@ const SendComplaintOPM = () => {
                     name="reporterPhone"
                     value={reporterPhone}
                     onChange={handleReporterPhoneChange}
-                    placeholder="กรอกเบอร์โทรศัพท์ผู้แจ้งเหตุ (เช่น 02-123-4567 หรือ 081-234-5678)"
+                    placeholder="กรอกเบอร์โทรศัพท์ผู้แจ้งเหตุ เช่น 0812345678"
                     variant="outlined"
                     size="small"
                     required
                     type="tel"
                     fullWidth
                     className={styles.textField}
+                    helperText={
+                      reporterPhone && !isPhoneValid
+                        ? "รูปแบบเบอร์โทรไม่ถูกต้อง เช่น 0812345678 หรือ 0212345678"
+                        : "ใส่ได้เฉพาะตัวเลข 0-9 (9-10 หลัก)"
+                    }
+                    error={reporterPhone && !isPhoneValid}
+                    inputProps={{
+                      inputMode: 'numeric',
+                      pattern: '[0-9]*',
+                      maxLength: 10
+                    }}
                   />
                 </FormControl>
               </Grid>
@@ -680,6 +747,7 @@ const SendComplaintOPM = () => {
                   onChange={handleCreatedDateChange}
                   time={true}
                   required={true}
+                  maxDate={new Date().toISOString()}
                 />
               </Grid>
 
@@ -691,6 +759,7 @@ const SendComplaintOPM = () => {
                   onChange={handleUpdatedDateChange}
                   time={true}
                   required={true}
+                  maxDate={new Date().toISOString()}
                 />
               </Grid>
             </Grid>

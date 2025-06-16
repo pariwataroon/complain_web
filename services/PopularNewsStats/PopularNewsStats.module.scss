@@ -1,100 +1,247 @@
 .popularNewsStats {
-  background: linear-gradient(135deg, #a2c2ff, #dceeff);
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  max-width: 100%;
+  background: #ffffff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  max-width: 900px;
   margin: 0 auto;
 
-  .title {
-    color: #1120a3;
-    font-size: 22px;
-    font-weight: 700;
-    margin-bottom: 16px;
+  .header {
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+    padding: 20px 24px;
     text-align: center;
-  }
 
-  .newsList {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .newsItem {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 8px 0;
-    border-bottom: 1px solid #c1c1c1;
-
-    &:last-child {
-      border-bottom: none;
+    .title {
+      color: white;
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+      line-height: 1.4;
     }
+  }
 
-    .rankWrapper {
+  .content {
+    background: linear-gradient(180deg, #e0f2fe 0%, #b3e5fc 50%, #81d4fa 100%);
+    padding: 20px 24px;
+
+    .monthSelector {
       display: flex;
-      justify-content: center;
+      justify-content: flex-end;
       align-items: center;
-      width: 40px;
-      height: 40px;
-      background-color: #1e3a8a;
-      border-radius: 50%;
-      flex-shrink: 0;
+      margin-bottom: 20px;
+      gap: 12px;
 
-      .rank {
-        font-weight: 700;
-        color: white;
-        font-size: 18px;
+      .monthLabel {
+        color: #1e40af;
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .selectControl {
+        min-width: 140px;
+
+        .monthSelect {
+          background: white;
+          border-radius: 8px;
+          font-size: 14px;
+
+          .MuiOutlinedInput-notchedOutline {
+            border-color: #e0e0e0;
+          }
+
+          &:hover .MuiOutlinedInput-notchedOutline {
+            border-color: #1e40af;
+          }
+
+          &.Mui-focused .MuiOutlinedInput-notchedOutline {
+            border-color: #1e40af;
+          }
+        }
       }
     }
 
-    .newsTitle {
-      flex-grow: 1;
-      color: #333;
-      font-size: 16px;
-    }
-
-    .viewCount {
-      font-size: 14px;
-      color: #333;
-      font-weight: 500;
-      flex-shrink: 0;
-      text-align: right;
-      min-width: 60px;
-    }
-  }
-}
-
-@media (max-width: 768px) {
-  .popularNewsStats {
-    padding: 12px;
-
-    .title {
-      font-size: 18px;
-    }
-
     .newsList {
-      gap: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
     .newsItem {
-      gap: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 0;
 
       .rankWrapper {
-        width: 32px;
-        height: 32px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 4px;
 
         .rank {
-          font-size: 16px;
+          font-weight: 700;
+          color: white;
+          font-size: 20px;
+          margin: 0;
+        }
+
+        &.rank1 {
+          background: #1e40af;
+        }
+
+        &.rank2 {
+          background: #3b82f6;
+        }
+
+        &.rank3 {
+          background: #60a5fa;
+        }
+
+        &.rank4 {
+          background: #93c5fd;
+        }
+
+        &.rank5 {
+          background: #bfdbfe;
+
+          .rank {
+            color: #1e40af;
+          }
         }
       }
 
       .newsTitle {
-        font-size: 14px;
+        flex-grow: 1;
+        color: #1f2937;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1.5;
+        margin: 0;
+        padding-right: 16px;
       }
 
       .viewCount {
-        font-size: 12px;
+        font-size: 16px;
+        color: #1f2937;
+        font-weight: 700;
+        flex-shrink: 0;
+        text-align: right;
+        min-width: 60px;
+        margin: 0;
+        padding-top: 2px;
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .popularNewsStats {
+    margin: 0 16px;
+    border-radius: 16px;
+
+    .header {
+      padding: 16px 20px;
+
+      .title {
+        font-size: 16px;
+      }
+    }
+
+    .content {
+      padding: 16px 20px;
+
+      .monthSelector {
+        margin-bottom: 16px;
+        gap: 8px;
+
+        .monthLabel {
+          font-size: 14px;
+        }
+
+        .selectControl {
+          min-width: 120px;
+        }
+      }
+
+      .newsList {
+        gap: 12px;
+      }
+
+      .newsItem {
+        gap: 12px;
+
+        .rankWrapper {
+          width: 36px;
+          height: 36px;
+
+          .rank {
+            font-size: 16px;
+          }
+        }
+
+        .newsTitle {
+          font-size: 14px;
+          padding-right: 12px;
+        }
+
+        .viewCount {
+          font-size: 14px;
+          min-width: 50px;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .popularNewsStats {
+    .header {
+      padding: 12px 16px;
+
+      .title {
+        font-size: 14px;
+      }
+    }
+
+    .content {
+      padding: 12px 16px;
+
+      .monthSelector {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+
+        .selectControl {
+          min-width: 140px;
+        }
+      }
+
+      .newsItem {
+        gap: 10px;
+
+        .rankWrapper {
+          width: 32px;
+          height: 32px;
+
+          .rank {
+            font-size: 14px;
+          }
+        }
+
+        .newsTitle {
+          font-size: 13px;
+          padding-right: 8px;
+        }
+
+        .viewCount {
+          font-size: 13px;
+          min-width: 45px;
+        }
       }
     }
   }
