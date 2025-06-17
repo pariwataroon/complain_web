@@ -4,7 +4,13 @@ from fastapi.staticfiles import StaticFiles
 from router.root import rootRouter 
 from router import test_errors
 
+# เพิ่ม import Security Middleware
+from app.api.middleware.security_middleware import SecurityHeadersMiddleware
+
 app = create_application()
+
+# เพิ่ม Security Headers Middleware (ไว้ก่อน CORS)
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Include routers
 app.include_router(rootRouter)
