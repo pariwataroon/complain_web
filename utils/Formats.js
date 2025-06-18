@@ -231,12 +231,34 @@ export function formatThaiOfficialDateTime(isoString) {
     return null;
   }
 
-  const d = dayjs(isoString).tz("Asia/Bangkok");
+  const d = dayjs.utc(isoString).tz("Asia/Bangkok");
   if (!d.isValid()) {
     return null;
   }
 
-  return `${d.format("D MMMM")} พ.ศ. ${d.year() + 543} เวลา ${d.format("HH:mm")} น.`;
+  return `${d.format("D MMMM")} พ.ศ. ${d.year() + 543} เวลา ${d.format(
+    "HH:mm"
+  )} น.`;
+}
+
+export function formatThaiOfficialDateTimeTimeseven(isoString) {
+  if (
+    !isoString ||
+    isoString === null ||
+    isoString === undefined ||
+    isoString === ""
+  ) {
+    return null;
+  }
+
+  const d = dayjs.utc(isoString).tz("Asia/Bangkok");
+  if (!d.isValid()) {
+    return null;
+  }
+
+  return `${d.format("D MMMM")} พ.ศ. ${d.year() + 543} เวลา ${d.format(
+    "HH:mm"
+  )} น.`;
 }
 
 // แปลงเป็นแค่เวลา (HH:MM น.)
@@ -397,7 +419,6 @@ export function formatComplaintReceiveDate(dateString) {
 
 // ฟังก์ชันสำหรับจัดรูปแบบชื่อผู้ร้องเรียน
 export function formatComplainantName(complainant, fallbackName = null) {
-
   if (complainant && typeof complainant === "object") {
     const { title = "", first_name = "", last_name = "" } = complainant;
     const fullName = `${title} ${first_name} ${last_name}`.trim();
@@ -437,7 +458,6 @@ export function formatAgencyName(agencyName) {
   }
 
   const formatted = String(agencyName).trim();
-
 
   return formatted;
 }
@@ -481,6 +501,6 @@ export function formatConfirmationStatus(status, statusText = null) {
   };
 
   const result = statusMap[status] || status || "ไม่ระบุสถานะ";
- 
+
   return result;
 }

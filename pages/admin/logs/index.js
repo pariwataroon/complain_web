@@ -1,7 +1,8 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
+import LogsComponents from "@components/LogsComponents/LogsComponents";
 
 const Logs = () => {
-  return <div>Logs</div>;
+  return <LogsComponents />;
 };
 
 Logs.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;

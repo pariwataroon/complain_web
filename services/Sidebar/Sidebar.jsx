@@ -149,6 +149,7 @@ export default function Sidebar() {
     dashboard: Dashboard,
     stacked_line_chart: LayersIcon,
     account_box: AccountBox,
+    admin: HistoryIcon,
   };
 
   const headerTextMap = {
@@ -157,6 +158,7 @@ export default function Sidebar() {
     box: "คลังเอกสาร",
     homepage: "จัดการข้อมูล",
     document: "รายงาน",
+    admin: "บันทึกการใช้งาน",
   };
 
   useEffect(() => {
