@@ -6,6 +6,7 @@ const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
+    "X-API-Key": "cap_mof_live_frontend_web_2025@minerta",
   },
 });
 
