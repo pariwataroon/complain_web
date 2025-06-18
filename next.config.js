@@ -6,16 +6,15 @@ const withTM = require("next-transpile-modules")([
 ]);
 
 const isDev = process.env.NEXT_PUBLIC_ENV_MODE === "development";
+const isStaticExport = process.env.BUILD_MODE === "static"; // ✅ ใหม่
 
 const getEnv = (key) => {
   return process.env[key];
 };
 
-const nextConfig = {
+// ✅ Base config
+const baseConfig = {
   trailingSlash: true,
-
-  output: "export",
-  distDir: "out",
 
   images: {
     unoptimized: true,
@@ -56,6 +55,20 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 };
+
+const staticConfig = {
+  ...baseConfig,
+  output: "export",
+  distDir: "out",
+};
+
+const ssrConfig = {
+  ...baseConfig,
+  distDir: ".next",
+};
+
+const nextConfig = isStaticExport ? staticConfig : ssrConfig;
+
 
 module.exports = withTM(nextConfig);
 
