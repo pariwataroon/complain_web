@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Table,
@@ -24,29 +24,23 @@ import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPicke
 
 dayjs.locale("th");
 
-/**
- * @param {Array} rows - Array of filtered data objects to display
- * @param {Function} handleRowClick - External row click handler from parent
- * @param {Function} onSearch - Search handler function
- * @param {String} title - Table title
- */
 const TableAssignedComp = ({
   rows = [],
   handleRowClick,
-  onSearch = () => {},
-  title = "รายการข้อมูล", // Default title
+  onSearch = () => { },
+  onClearSearch = () => { },
+  searchFilters = {
+    claimantName: "",
+    subject: "",
+    docNo4: "",
+    receiveDate: null,
+  },
+  onFilterChange = () => { },
+  title = "รายการข้อมูล",
 }) => {
   // Pagination state
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-
-  // Filter state
-  const [filters, setFilters] = useState({
-    claimantName: "",
-    subject: "",
-    docNo4: "",
-    receiveDate: "",
-  });
 
   // Custom breakpoint สำหรับ 1350px
   const isBelow1350 = useMediaQuery("(max-width: 1350px)");
@@ -60,27 +54,25 @@ const TableAssignedComp = ({
     setPage(0);
   };
 
-  // Filter handlers
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [rows]);
+
+  // Filter handlers - ส่งกลับไปยัง parent
   const handleFilterChange = (field) => (e) => {
     const value = e?.target ? e.target.value : e;
-    setFilters({ ...filters, [field]: value });
+    onFilterChange(field, value);
   };
 
   const handleSearchClick = () => {
     setPage(0);
-    onSearch(filters);
+    onSearch();
   };
 
   const handleClearSearch = () => {
-    const clearedFilters = {
-      claimantName: "",
-      subject: "",
-      docNo4: "",
-      receiveDate: "",
-    };
-    setFilters(clearedFilters);
     setPage(0);
-    onSearch(clearedFilters);
+    onClearSearch();
   };
 
   // Dynamic layout configuration
@@ -143,7 +135,7 @@ const TableAssignedComp = ({
     const commonProps = {
       fullWidth: true,
       label: label,
-      value: filters[field],
+      value: searchFilters[field] || "",
       onChange: handleFilterChange(field),
       size: "small",
       sx: getFilterFieldStyles(),
@@ -153,6 +145,7 @@ const TableAssignedComp = ({
       return (
         <DateThaiPickerService
           {...commonProps}
+          value={searchFilters[field]}
           placeholder="กรุณาเลือกวันที่....."
         />
       );
@@ -169,8 +162,8 @@ const TableAssignedComp = ({
         backgroundColor: "#fff",
         borderRadius: 2,
         boxShadow: "0 6px 18px rgba(0,0,0,.06)",
-        overflow: "visible", // เพิ่ม overflow visible สำหรับ DatePicker
-        position: "relative", // เพิ่ม position relative
+        overflow: "visible",
+        position: "relative",
       }}
     >
       {/* Header Bar */}
@@ -466,7 +459,7 @@ const TableAssignedComp = ({
           mt: 2,
           // Responsive overflow handling
           overflowX: isBelow1350 ? "auto" : "visible",
-          overflowY: "visible", // ยังคง visible สำหรับ DatePicker popup
+          overflowY: "visible",
           position: "relative",
           px: isExtraSmall ? 1 : 2,
           pb: 1,
@@ -642,138 +635,148 @@ const TableAssignedComp = ({
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((item, idx) => (
-                <TableRow
-                  key={item.id}
-                  onClick={() => handleRowClick(item)}
-                  sx={{
-                    cursor: "pointer",
-                    "&:hover": {
-                      backgroundColor: "#f5f7ff",
-                      transform: "scale(1.001)",
-                      transition: "all 0.2s ease-in-out",
-                    },
-                  }}
-                  className={styles.tableRow}
-                >
-                  <TableCell
-                    align="center"
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center" sx={{ padding: "40px" }}>
+                  <Typography variant="body1" color="textSecondary">
+                    ไม่พบข้อมูลที่ค้นหา
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((item, idx) => (
+                  <TableRow
+                    key={item.id}
+                    onClick={() => handleRowClick(item)}
                     sx={{
-                      width: 80,
-                      minWidth: 80,
-                      fontWeight: 600,
-                      color: "#1120A3",
-                      border: "1px solid #e0e0e0",
-                      fontSize: "14px",
-                      padding: "14px 12px",
+                      cursor: "pointer",
+                      "&:hover": {
+                        backgroundColor: "#f5f7ff",
+                        transform: "scale(1.001)",
+                        transition: "all 0.2s ease-in-out",
+                      },
                     }}
+                    className={styles.tableRow}
                   >
-                    {page * rowsPerPage + idx + 1}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      width: isBelow1350 ? 200 : "auto",
-                      minWidth: isBelow1350 ? 200 : "auto",
-                      border: "1px solid #e0e0e0",
-                      fontSize: "14px",
-                      padding: "14px 12px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {item.name ?? "-"}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      width: isBelow1350 ? 300 : "auto",
-                      minWidth: isBelow1350 ? 300 : "auto",
-                      border: "1px solid #e0e0e0",
-                      fontSize: "14px",
-                      padding: "14px 12px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {item.subject ?? "-"}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      width: isBelow1350 ? 160 : "auto",
-                      minWidth: isBelow1350 ? 160 : "auto",
-                      border: "1px solid #e0e0e0",
-                      fontSize: "14px",
-                      padding: "14px 12px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {item.docNo4 ?? "-"}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      width: isBelow1350 ? 180 : "auto",
-                      minWidth: isBelow1350 ? 180 : "auto",
-                      border: "1px solid #e0e0e0",
-                      fontSize: "14px",
-                      padding: "14px 12px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {item.docNo ?? "-"}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      width: isBelow1350 ? 180 : "auto",
-                      minWidth: isBelow1350 ? 180 : "auto",
-                      border: "1px solid #e0e0e0",
-                      fontSize: "14px",
-                      padding: "14px 12px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {item.docNo2 ?? "-"}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      width: isBelow1350 ? 180 : "auto",
-                      minWidth: isBelow1350 ? 180 : "auto",
-                      border: "1px solid #e0e0e0",
-                      fontSize: "14px",
-                      padding: "14px 12px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {item.docNo3 ?? "-"}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      width: isBelow1350 ? 160 : "auto",
-                      minWidth: isBelow1350 ? 160 : "auto",
-                      border: "1px solid #e0e0e0",
-                      fontSize: "14px",
-                      padding: "14px 12px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {item.receiveDate
-                      ? dayjs(item.receiveDate).format("D MMM YYYY")
-                      : "-"}
-                  </TableCell>
-                </TableRow>
-              ))}
+                    <TableCell
+                      align="center"
+                      sx={{
+                        width: 80,
+                        minWidth: 80,
+                        fontWeight: 600,
+                        color: "#1120A3",
+                        border: "1px solid #e0e0e0",
+                        fontSize: "14px",
+                        padding: "14px 12px",
+                      }}
+                    >
+                      {page * rowsPerPage + idx + 1}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        width: isBelow1350 ? 200 : "auto",
+                        minWidth: isBelow1350 ? 200 : "auto",
+                        border: "1px solid #e0e0e0",
+                        fontSize: "14px",
+                        padding: "14px 12px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {item.name ?? "-"}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        width: isBelow1350 ? 300 : "auto",
+                        minWidth: isBelow1350 ? 300 : "auto",
+                        border: "1px solid #e0e0e0",
+                        fontSize: "14px",
+                        padding: "14px 12px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {item.subject ?? "-"}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        width: isBelow1350 ? 160 : "auto",
+                        minWidth: isBelow1350 ? 160 : "auto",
+                        border: "1px solid #e0e0e0",
+                        fontSize: "14px",
+                        padding: "14px 12px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {item.docNo4 ?? "-"}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        width: isBelow1350 ? 180 : "auto",
+                        minWidth: isBelow1350 ? 180 : "auto",
+                        border: "1px solid #e0e0e0",
+                        fontSize: "14px",
+                        padding: "14px 12px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {item.docNo ?? "-"}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        width: isBelow1350 ? 180 : "auto",
+                        minWidth: isBelow1350 ? 180 : "auto",
+                        border: "1px solid #e0e0e0",
+                        fontSize: "14px",
+                        padding: "14px 12px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {item.docNo2 ?? "-"}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        width: isBelow1350 ? 180 : "auto",
+                        minWidth: isBelow1350 ? 180 : "auto",
+                        border: "1px solid #e0e0e0",
+                        fontSize: "14px",
+                        padding: "14px 12px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {item.docNo3 ?? "-"}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        width: isBelow1350 ? 160 : "auto",
+                        minWidth: isBelow1350 ? 160 : "auto",
+                        border: "1px solid #e0e0e0",
+                        fontSize: "14px",
+                        padding: "14px 12px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {item.receiveDate
+                        ? dayjs(item.receiveDate).format("D MMM YYYY")
+                        : "-"}
+                    </TableCell>
+                  </TableRow>
+                ))
+            )}
           </TableBody>
         </Table>
 
@@ -792,9 +795,9 @@ const TableAssignedComp = ({
               padding: "16px",
             },
             "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
-              {
-                fontSize: "14px",
-              },
+            {
+              fontSize: "14px",
+            },
           }}
         />
       </Box>

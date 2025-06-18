@@ -14,7 +14,7 @@ const breadcrumbItems = [
       />
     ),
   },
-  { label: "สืบค้นเรื่องร้องเรียน" },
+  { label: "รับเข้าเรื่องราวร้องทุกข์" },
 ];
 
 const mockComplaints = [
@@ -200,7 +200,6 @@ const SearchComplaints = () => {
       docStp,
     } = filters;
 
-    console.log("Search filters:", filters); // Debug log
 
     const result = allComplaints.filter((item) => {
       // ชื่อผู้ร้อง
@@ -246,7 +245,7 @@ const SearchComplaints = () => {
       return true;
     });
 
-    console.log("Search result:", result); // Debug log
+    console.log("Search result:", result);
     setFilteredComplaints(result);
   };
 
@@ -256,7 +255,7 @@ const SearchComplaints = () => {
 
       <TableList
         data={filteredComplaints}
-        title="สืบค้นเรื่องร้องเรียน"
+        title="รับเข้าเรื่องราวร้องทุกข์"
         navigateTo="/admin/edit/search"
         onSearch={handleSearch}
         handleNavigateTo={handleNavigateTo}

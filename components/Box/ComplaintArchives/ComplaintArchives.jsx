@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import { useRouter } from "next/router";
-import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs"; // Fixed: Changed BreadCrumbs to Breadcrumbs
+import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
 import TableListBox from "@services/TableListBox/TableListBox";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 
-// 1) สร้าง option arrays มาจาก mockComplaints
 const issueTypeOptions = [
   { value: "ภารกิจ", label: "ภารกิจ" },
   { value: "การแก้ไขปัญหาหนี้สิน", label: "การแก้ไขปัญหาหนี้สิน" },

@@ -319,8 +319,7 @@ const AssignedAnonymousComponents = () => {
     );
     console.log(
       "  - Thai:",
-      `${thaiDate.getDate()}/${
-        thaiDate.getMonth() + 1
+      `${thaiDate.getDate()}/${thaiDate.getMonth() + 1
       }/${thaiDate.getFullYear()}`
     );
 
@@ -332,9 +331,7 @@ const AssignedAnonymousComponents = () => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Handler สำหรับ DateThaiPickerService
   const handleDateChange = (thaiDate) => {
-    console.log("🔍 Date changed to:", thaiDate);
     setFilters((prev) => ({ ...prev, receiveDate: thaiDate }));
   };
 
@@ -373,12 +370,15 @@ const AssignedAnonymousComponents = () => {
       return matches;
     });
 
-    console.log("🔍 Filtered results:", filtered);
     setFilteredRows(filtered);
   };
 
+  const handleFilterChange = (field, value) => {
+    setFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
+
   const handleClearSearch = () => {
-    console.log("🧹 Clearing search");
     const cleared = {
       claimantName: "",
       subject: "",
@@ -386,7 +386,7 @@ const AssignedAnonymousComponents = () => {
       receiveDate: null,
     };
     setFilters(cleared);
-    setFilteredRows(mockData); // รีเซ็ตข้อมูลกลับเป็นทั้งหมด
+    setFilteredRows(mockData);
   };
 
   const handleRowClick = (item) => {
@@ -397,344 +397,22 @@ const AssignedAnonymousComponents = () => {
     <>
       <BreadcrumbsService items={breadcrumbItems} />
 
-      {/* Container สำหรับ Header และ Filters */}
       <Box
         sx={{
-          backgroundColor: "#fff",
-          borderRadius: 2,
-          boxShadow: "0 6px 18px rgba(0,0,0,.06)",
-          mb: 2,
-          overflow: "visible",
+          overflowX: isTablet ? "auto" : "visible",
+          overflowY: "visible",
           position: "relative",
-          mx: isMobile ? 1 : 0,
         }}
       >
-        {/* Header */}
-        <Box
-          className={styles.headerBar}
-          sx={{
-            height: isMobile ? 40 : 50,
-            fontSize: isMobile ? "14px" : "18px",
-            padding: isMobile ? "0 16px" : "0 24px",
-          }}
+        <TableAssignedComp
+          rows={filteredRows}
+          handleRowClick={handleRowClick}
+          onSearch={handleSearch}
+          onClearSearch={handleClearSearch}
+          searchFilters={filters}
+          onFilterChange={handleFilterChange}
+          title="บัตรสนเท่ห์ที่ได้รับมอบหมาย"
         />
-        <Box
-          className={styles.headerBar2}
-          sx={{
-            height: isMobile ? 40 : 50,
-            fontSize: isMobile ? "16px" : "18px",
-            padding: isMobile ? "0 16px" : "0 24px",
-          }}
-        >
-          บัตรสนเท่ห์ที่ได้รับมอบหมาย ({filteredRows.length} รายการ)
-        </Box>
-
-        {/* Filters */}
-        <Box
-          sx={{
-            px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
-            pb: { xs: 1.5, sm: 2, md: 2 },
-            pt: { xs: 0.5, sm: 1, md: 1 },
-            display: "flex",
-            flexDirection: isBelow1350 || isMobile ? "column" : "row",
-            gap: { xs: 2, sm: 1.5, md: 1 },
-            justifyContent: "space-between",
-            alignItems: isBelow1350 || isMobile ? "stretch" : "flex-end",
-          }}
-        >
-          {/* Filter Controls */}
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "column", sm: "row" },
-              flexWrap: isBelow1350
-                ? "wrap"
-                : { xs: "nowrap", sm: "wrap", lg: "nowrap" },
-              gap: { xs: 1.5, sm: 1.2, md: 1 },
-              width: { xs: "100%" },
-              alignItems: isBelow1350
-                ? "stretch"
-                : { xs: "stretch", lg: "flex-end" },
-              justifyContent: { xs: "stretch", sm: "flex-start" },
-            }}
-          >
-            {/* Input Fields Container */}
-            <Box
-              sx={{
-                display: isMobile
-                  ? "flex"
-                  : isBelow1350
-                  ? "grid"
-                  : { xs: "flex", sm: "grid", lg: "flex" },
-                flexDirection: isMobile
-                  ? "column"
-                  : { xs: "column", lg: "row" },
-                gridTemplateColumns:
-                  isBelow1350 && !isMobile
-                    ? "repeat(2, 1fr)"
-                    : {
-                        sm: "repeat(2, 1fr)",
-                        md: "repeat(2, minmax(140px, 1fr))",
-                        lg: "none",
-                      },
-                gap: { xs: 1.5, sm: 1.2, md: 1, lg: 1 },
-                width: { xs: "100%" },
-                alignItems: isBelow1350
-                  ? "stretch"
-                  : { xs: "stretch", lg: "flex-end" },
-              }}
-            >
-              {/* ชื่อผู้ร้อง */}
-              <Box
-                sx={{
-                  width: isBelow1350 ? "100%" : { xs: "100%" },
-                  minWidth: isBelow1350
-                    ? "100%"
-                    : { sm: 140, md: 160, lg: 180 },
-                  maxWidth: isBelow1350
-                    ? "100%"
-                    : { sm: 200, md: 220, lg: 240 },
-                  gridColumn: isMobile
-                    ? "unset"
-                    : isBelow1350
-                    ? "auto"
-                    : { sm: "auto", md: "auto" },
-                }}
-              >
-                <InputText
-                  label="ชื่อผู้ร้อง"
-                  value={filters.claimantName}
-                  onChange={handleChange("claimantName")}
-                  placeholder="กรอกชื่อผู้ร้อง"
-                />
-              </Box>
-
-              {/* ชื่อเรื่อง */}
-              <Box
-                sx={{
-                  width: isBelow1350 ? "100%" : { xs: "100%" },
-                  minWidth: isBelow1350
-                    ? "100%"
-                    : { sm: 140, md: 160, lg: 180 },
-                  maxWidth: isBelow1350
-                    ? "100%"
-                    : { sm: 200, md: 220, lg: 240 },
-                  gridColumn: isMobile
-                    ? "unset"
-                    : isBelow1350
-                    ? "auto"
-                    : { sm: "auto", md: "auto" },
-                }}
-              >
-                <InputText
-                  label="ชื่อเรื่อง"
-                  value={filters.subject}
-                  onChange={handleChange("subject")}
-                  placeholder="กรอกชื่อเรื่อง"
-                />
-              </Box>
-
-              {/* เลขที่ สรร. */}
-              <Box
-                sx={{
-                  width: isBelow1350 ? "100%" : { xs: "100%" },
-                  minWidth: isBelow1350
-                    ? "100%"
-                    : { sm: 120, md: 140, lg: 160 },
-                  maxWidth: isBelow1350
-                    ? "100%"
-                    : { sm: 180, md: 200, lg: 220 },
-                  gridColumn: isMobile
-                    ? "unset"
-                    : isBelow1350
-                    ? "1"
-                    : { sm: "1", md: "1" },
-                }}
-              >
-                <InputText
-                  label="เลขที่ สรร."
-                  value={filters.docNo4}
-                  onChange={handleChange("docNo4")}
-                  placeholder="กรอกเลขที่ สรร."
-                />
-              </Box>
-
-              {/* วันที่รับเรื่อง */}
-              <Box
-                sx={{
-                  width: isBelow1350 ? "100%" : { xs: "100%" },
-                  minWidth: isBelow1350
-                    ? "100%"
-                    : { sm: 160, md: 180, lg: 200 },
-                  maxWidth: isBelow1350
-                    ? "100%"
-                    : { sm: 220, md: 240, lg: 280 },
-                  position: "relative",
-                  zIndex: 1,
-                  gridColumn: isMobile
-                    ? "unset"
-                    : isBelow1350
-                    ? "2"
-                    : { sm: "2", md: "2" },
-                }}
-              >
-                <DateThaiPickerService
-                  label="วันที่รับเรื่อง"
-                  value={filters.receiveDate}
-                  onChange={handleDateChange}
-                  placeholder="เลือกวันที่รับเรื่อง"
-                />
-              </Box>
-            </Box>
-
-            {/* Search Buttons */}
-            <Box
-              sx={{
-                display: "flex",
-                gap: { xs: 1.5, sm: 1, md: 1 },
-                alignItems: isBelow1350
-                  ? "center"
-                  : { xs: "center", lg: "flex-end" },
-                justifyContent: isBelow1350
-                  ? "center"
-                  : {
-                      xs: "center",
-                      sm: "flex-start",
-                      lg: "flex-start",
-                    },
-                width: isBelow1350 ? "100%" : { xs: "100%", sm: "auto" },
-                mt: { xs: 1, sm: 0 },
-                mb: isBelow1350 ? 0 : { xs: 0, sm: 0, lg: "16px" },
-                gridColumn: isBelow1350
-                  ? "1 / -1"
-                  : { sm: "1 / -1", lg: "auto" },
-                order: isBelow1350 ? 1 : { sm: 1, lg: 0 },
-              }}
-            >
-              <IconButton
-                onClick={handleSearch}
-                sx={{
-                  bgcolor: "#1120A3",
-                  color: "#fff",
-                  "&:hover": { bgcolor: "#0b1580" },
-                  width: isBelow1350 ? 44 : { xs: 56, sm: 44, md: 42, lg: 40 },
-                  height: isBelow1350 ? 44 : { xs: 56, sm: 44, md: 42, lg: 40 },
-                }}
-              >
-                <SearchIcon fontSize={isMobile ? "large" : "medium"} />
-              </IconButton>
-              <IconButton
-                onClick={handleClearSearch}
-                sx={{
-                  bgcolor: "#1120A3",
-                  color: "#fff",
-                  "&:hover": { bgcolor: "#0b1580" },
-                  width: isBelow1350 ? 44 : { xs: 56, sm: 44, md: 42, lg: 40 },
-                  height: isBelow1350 ? 44 : { xs: 56, sm: 44, md: 42, lg: 40 },
-                }}
-              >
-                <SearchOffIcon fontSize={isMobile ? "large" : "medium"} />
-              </IconButton>
-            </Box>
-          </Box>
-
-          {/* Export Buttons */}
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: isMobile ? "column" : "row",
-              gap: { xs: 1.5, sm: 1, md: 1.2 },
-              justifyContent: isBelow1350
-                ? "center"
-                : { xs: "center", sm: "center", lg: "flex-end" },
-              width: isBelow1350
-                ? "100%"
-                : { xs: "100%", sm: "100%", lg: "auto" },
-              alignItems: isBelow1350
-                ? "center"
-                : { xs: "center", lg: "flex-end" },
-              mt: { xs: 1, sm: 1 },
-              mb: isBelow1350 ? 0 : { xs: 0, sm: 0, lg: "16px" },
-              flexWrap: { xs: "nowrap", sm: "wrap", lg: "nowrap" },
-              maxWidth: isBelow1350 ? "none" : { lg: "300px" },
-            }}
-          >
-            <ExportButton
-              label={
-                isMobile
-                  ? "PDF"
-                  : isBelow1350 || isTablet
-                  ? "PDF"
-                  : "Export PDF"
-              }
-              sx={{
-                minWidth: isBelow1350
-                  ? "120px"
-                  : { xs: "100%", sm: "120px", md: "100px", lg: "auto" },
-                fontSize: isBelow1350
-                  ? "12px"
-                  : { xs: "14px", sm: "12px", md: "13px", lg: "14px" },
-                padding: isBelow1350
-                  ? "8px 14px"
-                  : {
-                      xs: "12px 16px",
-                      sm: "8px 14px",
-                      md: "9px 16px",
-                      lg: "8px 16px",
-                    },
-                fontWeight: 600,
-                height: isBelow1350
-                  ? "40px"
-                  : { xs: "auto", sm: "40px", lg: "40px" },
-                flex: isBelow1350 ? 0 : { xs: 0, sm: 0, lg: 0 },
-              }}
-            />
-            <ExportButton
-              label={
-                isMobile
-                  ? "Excel"
-                  : isBelow1350 || isTablet
-                  ? "Excel"
-                  : "Export Excel"
-              }
-              sx={{
-                minWidth: isBelow1350
-                  ? "120px"
-                  : { xs: "100%", sm: "120px", md: "100px", lg: "auto" },
-                fontSize: isBelow1350
-                  ? "12px"
-                  : { xs: "14px", sm: "12px", md: "13px", lg: "14px" },
-                padding: isBelow1350
-                  ? "8px 14px"
-                  : {
-                      xs: "12px 16px",
-                      sm: "8px 14px",
-                      md: "9px 16px",
-                      lg: "8px 16px",
-                    },
-                fontWeight: 600,
-                height: isBelow1350
-                  ? "40px"
-                  : { xs: "auto", sm: "40px", lg: "40px" },
-                flex: isBelow1350 ? 0 : { xs: 0, sm: 0, lg: 0 },
-              }}
-            />
-          </Box>
-        </Box>
-
-        {/* Table Component */}
-        <Box
-          sx={{
-            overflowX: isTablet ? "auto" : "visible",
-            overflowY: "visible",
-            position: "relative",
-          }}
-        >
-          <TableAssignedComp
-            rows={filteredRows}
-            handleRowClick={handleRowClick}
-          />
-        </Box>
       </Box>
     </>
   );
