@@ -13,7 +13,7 @@ from app.api.v1.schemas.user import (TitleResponse, UserCreate, UserResponse,
                                     UserUpdate)
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
-from app.api.middleware.jwt_verify import verify_token
+from app.api.middleware.jwt_verify import verify_token, verify_token_simple
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 router = APIRouter(
@@ -242,13 +242,24 @@ async def delete_existing_user(
 async def get_titles_midleware(request: Request, db: Session = Depends(get_db)):
     """
     ดึงข้อมูลคำนำหน้าชื่อทั้งหมด
-    - ไม่ต้องยืนยันตัวตนเพราะเป็นข้อมูลสาธารณะ
+    - ต้องมี Project API Key หรือ Valid Token
     - มี rate limiting ผ่าน middleware
     """
     try:
+        # ตรวจสอบ API Key หรือ Token
+        is_authenticated = await verify_api_key_or_token(request, db)
+        
+        if not is_authenticated:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid API key/token"
+            )
+        
         data = get_titles(db)
         titles = [TitleResponse.model_validate(title).model_dump() for title in data]
         return format_response("0000", titles)
+    except HTTPException:
+        raise  # ส่งต่อ HTTP exceptions
     except Exception as e:
         from lib.logger import get_logger
         logger = get_logger("user")
@@ -258,38 +269,69 @@ async def get_titles_midleware(request: Request, db: Session = Depends(get_db)):
             "message": "เกิดข้อผิดพลาดในการดึงข้อมูล"
         })
 
-@router.get("/search/by-role", response_model=FormatResponseModel)
-async def search_users_by_role_endpoint(
-    role_name: Optional[str] = None,
-    skip: int = 0, 
-    limit: int = 100, 
-    db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
-):
-    from app.api.v1.controllers.user_controller import search_users_by_role
-    
-    users = search_users_by_role(db, role_name=role_name, skip=skip, limit=limit)
-    return format_response("0000", users)
+async def verify_api_key_or_token(request: Request, db: Session) -> bool:
+    """
+    ตรวจสอบ API Key หรือ Token
+    รองรับหลายรูปแบบ:
+    1. X-API-Key header
+    2. X-Project-Key header  
+    3. Authorization: Bearer <token>
+    4. Authorization: ApiKey <key>
+    """
+    try:
+        # ตรวจสอบ API Key headers
+        api_key = (
+            request.headers.get("X-API-Key") or 
+            request.headers.get("X-Project-Key") or
+            request.headers.get("X-Client-Key")
+        )
+        
+        if api_key:
+            # ตรวจสอบ API key กับรายการที่อนุญาต
+            return verify_project_api_key(api_key)
+        
+        # ตรวจสอบ Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        
+        if auth_header.startswith("ApiKey "):
+            api_key = auth_header.replace("ApiKey ", "")
+            return verify_project_api_key(api_key)
+        
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.replace("Bearer ", "")
+            # ตรวจสอบ JWT token (ถ้าเป็น valid JWT)
+            return await verify_jwt_token(token, db)
+        
+        return False
+        
+    except Exception as e:
+        from lib.logger import get_logger
+        logger = get_logger("user")
+        logger.warning(f"Error verifying API key/token: {str(e)}")
+        return False
 
-
-@router.get("/stats/by-role", response_model=FormatResponseModel)
-async def get_user_counts_by_role(
-    db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
-):
-    from app.api.v1.controllers.user_controller import get_users_count_by_roles
+def verify_project_api_key(api_key: str) -> bool:
+    """
+    ตรวจสอบ Project API Key แบบง่าย
+    """
+    # รายการ API Keys ที่อนุญาต (ในอนาคตอาจเก็บในฐานข้อมูล)
+    allowed_api_keys = [
+        "cap_mof_live_frontend_web_2025@minerta",
+        # เพิ่ม keys ตามต้องการ
+    ]
     
-    role_stats = get_users_count_by_roles(db)
-    return format_response("0000", role_stats)
+    return api_key in allowed_api_keys
 
-@router.get("/detailed-stats/by-role", response_model=FormatResponseModel)
-async def get_detailed_users_by_roles_endpoint(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
-):
-    from app.api.v1.controllers.user_controller import get_detailed_users_by_roles
-    
-    detailed_data = get_detailed_users_by_roles(db, skip=skip, limit=limit)
-    return format_response("0000", detailed_data)
+async def verify_jwt_token(token: str, db: Session) -> bool:
+    """
+    ตรวจสอบ JWT Token (optional)
+    """
+    try:
+        from app.api.middleware.jwt_verify import verify_token_simple
+        
+        # ใช้ฟังก์ชันตรวจสอบ token ที่มีอยู่แล้ว
+        user_id = verify_token_simple(token)
+        return user_id is not None
+        
+    except Exception:
+        return False

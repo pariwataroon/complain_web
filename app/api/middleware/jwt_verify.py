@@ -114,3 +114,45 @@ def verify_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error during authentication"
         )
+    
+def verify_token_simple(token: str) -> str:
+    """
+    ตรวจสอบ JWT token แบบง่าย (ไม่ raise exception)
+    
+    Args:
+        token: JWT token string
+        
+    Returns:
+        user_id ถ้า valid, None ถ้า invalid
+    """
+    try:
+        # ✅ ใช้ import เดียวกันกับส่วนอื่น
+        import jwt
+        from config.dotenv import JWT_SECRET_KEY, ALGORITHM
+        
+        # ✅ ใช้ config เดียวกัน
+        algorithm_to_use = ALGORITHM if ALGORITHM else "HS256"
+        
+        # ✅ ลบ Bearer prefix ถ้ามี
+        if token.startswith("Bearer "):
+            token = token[7:]
+        
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[algorithm_to_use])
+        user_id = payload.get("sub")
+        token_type = payload.get("type")
+        
+        # ✅ ตรวจสอบ token type เหมือนฟังก์ชันหลัก
+        if token_type != "access":
+            return None
+        
+        if user_id is None:
+            return None
+            
+        return user_id
+        
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.PyJWTError:
+        return None
+    except Exception:
+        return None
