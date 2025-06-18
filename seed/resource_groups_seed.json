@@ -55,6 +55,13 @@
       "description": "สถิติการทำงานของเจ้าหน้าที่ในระบบ",
       "order_index": 8,
       "is_active": true
+    },
+    {
+      "name": "admin",
+      "display_name": "ผู้ดูแลระบบ",
+      "description": "การจัดการและดูแลระบบโดยผู้ดูแล",
+      "order_index": 9,
+      "is_active": true
     }
   ]
 }
