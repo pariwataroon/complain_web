@@ -1,10 +1,10 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any
 
-from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
+from app.api.middleware.permission_middleware import can_create, can_read, can_delete
 from app.api.v1.controllers.user_controller import (DuplicateKeyError,
                                                    create_user, delete_user,
                                                    get_titles, get_users_with_titles,
@@ -239,11 +239,24 @@ async def delete_existing_user(
 
 
 @router.get("/title/details", response_model=FormatResponseModel)
-async def get_titles_midleware(db: Session = Depends(get_db)):
-    # ไม่ต้องตรวจสอบสิทธิ์สำหรับ endpoint นี้
-    data = get_titles(db)
-    titles = [TitleResponse.model_validate(title).model_dump() for title in data]
-    return format_response("0000", titles)
+async def get_titles_midleware(request: Request, db: Session = Depends(get_db)):
+    """
+    ดึงข้อมูลคำนำหน้าชื่อทั้งหมด
+    - ไม่ต้องยืนยันตัวตนเพราะเป็นข้อมูลสาธารณะ
+    - มี rate limiting ผ่าน middleware
+    """
+    try:
+        data = get_titles(db)
+        titles = [TitleResponse.model_validate(title).model_dump() for title in data]
+        return format_response("0000", titles)
+    except Exception as e:
+        from lib.logger import get_logger
+        logger = get_logger("user")
+        logger.error(f"Error fetching titles: {str(e)}")
+        return format_response("5000", {
+            "error": "Service temporarily unavailable",
+            "message": "เกิดข้อผิดพลาดในการดึงข้อมูล"
+        })
 
 @router.get("/search/by-role", response_model=FormatResponseModel)
 async def search_users_by_role_endpoint(

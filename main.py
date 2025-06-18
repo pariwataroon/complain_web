@@ -3,13 +3,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from router.root import rootRouter 
 from router import test_errors
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
-# เพิ่ม import Security Middleware
+# เพิ่ม imports
 from app.api.middleware.security_middleware import SecurityHeadersMiddleware
+from app.api.middleware.rate_limit import RateLimitMiddleware, rate_limiter, get_client_ip
 
 app = create_application()
 
-# เพิ่ม Security Headers Middleware (ไว้ก่อน CORS)
+# เพิ่ม Rate Limit Middleware (ต้องไว้ก่อน Security Headers)
+app.add_middleware(RateLimitMiddleware)
+
+# เพิ่ม Security Headers Middleware
 app.add_middleware(SecurityHeadersMiddleware)
 
 # Include routers
@@ -51,3 +57,8 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 # @app.on_event("shutdown")
 # def shutdown_scheduler():
 #     scheduler.shutdown()
+# เพิ่ม shutdown handler
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    rate_limiter.shutdown()

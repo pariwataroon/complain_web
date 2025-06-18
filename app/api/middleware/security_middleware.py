@@ -10,21 +10,25 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
-        # เพิ่ม headers อื่นๆ ที่ช่วยเพิ่มความปลอดภัย
         response.headers["X-Download-Options"] = "noopen"
         response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
         
+        # เพิ่ม Cache Control สำหรับ sensitive responses
+        if request.url.path.startswith("/api/v1/auth"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        
         # ถ้าเป็น HTTPS ให้เพิ่ม HSTS
         if request.url.scheme == "https":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         
         # CSP สำหรับ API - อนุญาตให้เฉพาะ same-origin
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'none'; object-src 'none';"
-        
-        # ปรับแต่งสำหรับ Swagger UI (ถ้าต้องการ)
-        if request.url.path in ["/docs", "/redoc"]:
-            # ให้ CSP หลวมขึ้นสำหรับหน้า documentation
-            response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+        if request.url.path in ["/docs", "/redoc", "/openapi.json"]:
+            # CSP หลวมขึ้นสำหรับหน้า documentation
+            response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;"
+        else:
+            # CSP เข้มงวดสำหรับ API endpoints
+            response.headers["Content-Security-Policy"] = "default-src 'none'; script-src 'none'; object-src 'none'; base-uri 'none';"
         
         return response

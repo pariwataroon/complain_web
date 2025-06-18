@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -20,46 +20,66 @@ router = APIRouter(
 )
 
 @router.post("/login", response_model=format_data.FormatResponseModel)
-async def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
-    result = auth_controller.authenticate_user(db, user.citizen_id, user.password)
-    db_user, error_type = result
+async def login(request: Request, user: schemas.UserLogin, db: Session = Depends(get_db)):
+    try:
+        result = auth_controller.authenticate_user(db, user.citizen_id, user.password)
+        db_user, error_type = result
 
-    if not db_user:
-        if error_type == "email_not_verified":
-            return format_data.format_response("4010", {
-                "error": "Email not verified", 
-                "message": "โปรดยืนยันอีเมลของคุณก่อนเข้าสู่ระบบ ตรวจสอบกล่องจดหมายของคุณสำหรับลิงก์ยืนยัน"
-            })
-        else:  # invalid_credentials
-            return format_data.format_response("4010", {"error": "Invalid credentials"})
-    
-    # ดึงข้อมูลผู้ใช้พร้อมบทบาท
-    user_with_roles = user_controller.get_user_with_roles_and_titles(db, db_user.id)
-    
-    # ดึงข้อมูลบทบาทของผู้ใช้
-    roles = []
-    if 'roles' in user_with_roles:
-        roles = [role.get('role_name') for role in user_with_roles['roles']]
-    
-    # สร้าง token payload ที่มีข้อมูลเพิ่มเติม
-    token_data = {
-        "sub": str(db_user.id),
-        "first_name": user_with_roles.get('first_name') or db_user.first_name,
-        "last_name": user_with_roles.get('last_name') or db_user.last_name,
-        "roles": roles
-    }
-    
-    # สร้าง JWT token สำหรับผู้ใช้
-    access_token = auth_controller.create_access_token(data=token_data)
-    refresh_token = auth_controller.create_refresh_token(data=token_data)
-    
-    # บันทึก token ลงฐานข้อมูล
-    auth_controller.refresh_access_token_mapping(db, db_user.id, access_token, refresh_token)
-    
-    return format_data.format_response("0000", {"access_token": access_token, "refresh_token": refresh_token})
+        if not db_user:
+            if error_type == "email_not_verified":
+                return format_data.format_response("4010", {
+                    "error": "Email verification required",
+                    "message": "โปรดยืนยันอีเมลของคุณก่อนเข้าสู่ระบบ"
+                })
+            else:
+                return format_data.format_response("4010", {
+                    "error": "Invalid credentials",
+                    "message": "ข้อมูลการเข้าสู่ระบบไม่ถูกต้อง"
+                })
+        
+        # ดึงข้อมูลผู้ใช้พร้อมบทบาท
+        user_with_roles = user_controller.get_user_with_roles_and_titles(db, db_user.id)
+        
+        # ดึงข้อมูลบทบาทของผู้ใช้
+        roles = []
+        if 'roles' in user_with_roles:
+            roles = [role.get('role_name') for role in user_with_roles['roles']]
+        
+        # สร้าง token payload ที่มีข้อมูลเพิ่มเติม
+        token_data = {
+            "sub": str(db_user.id),
+            "first_name": user_with_roles.get('first_name') or db_user.first_name,
+            "last_name": user_with_roles.get('last_name') or db_user.last_name,
+            "roles": roles
+        }
+        
+        # สร้าง JWT token สำหรับผู้ใช้
+        access_token = auth_controller.create_access_token(data=token_data)
+        refresh_token = auth_controller.create_refresh_token(data=token_data)
+        
+        # บันทึก token ลงฐานข้อมูล
+        auth_controller.refresh_access_token_mapping(db, db_user.id, access_token, refresh_token)
+        
+        return format_data.format_response("0000", {
+            "access_token": access_token, 
+            "refresh_token": refresh_token
+        })
+        
+    except Exception as e:
+        # Log detailed error but return generic message
+        from lib.logger import get_logger
+        logger = get_logger("auth")
+        logger.error(f"Login error for user {user.citizen_id}: {str(e)}")
+        
+        # Return generic error message
+        return format_data.format_response("5000", {
+            "error": "Service temporarily unavailable",
+            "message": "เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง"
+        })
 
 @router.get("/me", response_model=format_data.FormatResponseModel)
 async def get_current_user_profile(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
@@ -94,6 +114,7 @@ async def get_current_user_profile(
 
 @router.get("/verify-email")
 async def verify_email_endpoint(
+    request: Request,
     token: str,
     db: Session = Depends(get_db)
 ):
@@ -110,12 +131,13 @@ async def verify_email_endpoint(
         # ถ้ายืนยันสำเร็จ ให้ redirect ไปยังหน้า login พร้อมแสดง success message
         return RedirectResponse(f"{LOGIN_URL}?verified=true", status_code=302)
     except Exception as e:
-        # กรณีเกิด error ให้ redirect ไปยังหน้า login พร้อมแสดง error message
+        # กรณีเกิด error ให้ redirect ไปยangหน้า login พร้อมแสดง error message
         return RedirectResponse(f"{LOGIN_URL}?error=verification_failed", status_code=302)
 
 @router.post("/resend-verification", response_model=format_data.FormatResponseModel)
 async def resend_verification_endpoint(
-    request: schemas.ResendVerificationEmail,
+    request: Request,
+    email_request: schemas.ResendVerificationEmail,
     db: Session = Depends(get_db)
 ):
     """ส่งอีเมลยืนยันใหม่ในกรณีที่อีเมลเดิมหมดอายุหรือได้รับไม่ถึง"""
@@ -123,7 +145,7 @@ async def resend_verification_endpoint(
     
     success, message, error_code = resend_verification_email(
         db=db, 
-        email=request.email
+        email=email_request.email
     )
     
     if not success and error_code:
@@ -137,11 +159,15 @@ async def resend_verification_endpoint(
     })
 
 @router.post("/forgot-password", response_model=format_data.FormatResponseModel)
-async def forgot_password_endpoint(request: schemas.ForgotPasswordRequest, db: Session = Depends(get_db)):
+async def forgot_password_endpoint(
+    request: Request, 
+    forgot_request: schemas.ForgotPasswordRequest, 
+    db: Session = Depends(get_db)
+):
     """ส่งอีเมลลิงก์รีเซ็ตรหัสผ่านให้กับผู้ใช้"""
     from app.api.v1.controllers.email_controller import send_password_reset_email
     
-    success, message = send_password_reset_email(db, request.email)
+    success, message = send_password_reset_email(db, forgot_request.email)
     
     if not success:
         return format_data.format_response("5000", {"error": message})
@@ -149,11 +175,15 @@ async def forgot_password_endpoint(request: schemas.ForgotPasswordRequest, db: S
     return format_data.format_response("0000", {"message": message})
 
 @router.post("/reset-password", response_model=format_data.FormatResponseModel)
-async def reset_password_endpoint(request: schemas.ResetPasswordRequest, db: Session = Depends(get_db)):
+async def reset_password_endpoint(
+    request: Request,
+    reset_request: schemas.ResetPasswordRequest, 
+    db: Session = Depends(get_db)
+):
     """รีเซ็ตรหัสผ่านโดยใช้ token"""
     from app.api.v1.controllers.email_controller import reset_password_with_token
     
-    success, message = reset_password_with_token(db, request.token, request.new_password)
+    success, message = reset_password_with_token(db, reset_request.token, reset_request.new_password)
     
     if not success:
         return format_data.format_response("4000", {"error": message})
@@ -161,7 +191,11 @@ async def reset_password_endpoint(request: schemas.ResetPasswordRequest, db: Ses
     return format_data.format_response("0000", {"message": message})
 
 @router.get("/verify-reset-token", response_model=format_data.FormatResponseModel)
-async def verify_reset_token_endpoint(token: str, db: Session = Depends(get_db)):
+async def verify_reset_token_endpoint(
+    request: Request,
+    token: str, 
+    db: Session = Depends(get_db)
+):
     """ตรวจสอบว่า token รีเซ็ตรหัสผ่านยังใช้งานได้หรือไม่"""
     from app.api.v1.controllers.email_controller import verify_reset_token
     
@@ -179,7 +213,11 @@ async def verify_reset_token_endpoint(token: str, db: Session = Depends(get_db))
     })
 
 @router.post("/verify-employee", response_model=format_data.FormatResponseModel)
-async def verify_employee(request: schemas.VerifyEmployeeRequest, db: Session = Depends(get_db)):
+async def verify_employee(
+    request: Request,
+    verify_request: schemas.VerifyEmployeeRequest, 
+    db: Session = Depends(get_db)
+):
     """
     ตรวจสอบว่าผู้ใช้ที่เข้าสู่ระบบด้วย ThaiID จากระบบอื่นเป็นพนักงาน/เจ้าหน้าที่ในระบบนี้หรือไม่
     
@@ -192,14 +230,14 @@ async def verify_employee(request: schemas.VerifyEmployeeRequest, db: Session = 
     from app.api.v1.controllers.project_api_key_controller import verify_project_api_key
     
     # ตรวจสอบ API Key ของโปรเจค
-    if not verify_project_api_key(db, request.project_api_key):
+    if not verify_project_api_key(db, verify_request.project_api_key):
         return format_data.format_response("4030", {
             "error": "Invalid or inactive project API key",
             "message": "API key ไม่ถูกต้องหรือไม่มีสิทธิ์ในการเข้าถึงข้อมูล"
         })
     
     # ตรวจสอบว่ามีผู้ใช้ที่มีเลขบัตรประชาชนตรงกัน
-    user = user_controller.get_user_by_pid(db, request.citizen_id)
+    user = user_controller.get_user_by_pid(db, verify_request.citizen_id)
     
     if not user:
         return format_data.format_response("0000", {
