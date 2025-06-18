@@ -33,7 +33,7 @@ async def read_api_logs(
     from_date: Optional[datetime] = None,
     to_date: Optional[datetime] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("admin_logs"))
 ):
     """Get API logs with optional filters"""
     # Convert user_id string to UUID if provided
@@ -76,7 +76,7 @@ async def read_api_logs(
 async def read_api_log_details(
     log_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("admin_logs"))
 ):
     """Get detailed information for a specific API log"""
     log = get_log_by_id(db, log_id)
@@ -107,7 +107,7 @@ async def read_api_log_statistics(
     days: int = Query(7, ge=1, le=90),
     user_id: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("admin_logs"))
 ):
     """Get statistics for API logs"""
     # Convert user_id string to UUID if provided
@@ -123,7 +123,7 @@ async def read_user_activity_logs(
     skip: int = 0, 
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("admin_logs"))
 ):
     """Get activity logs for a specific user"""
     logs, total_count = get_user_activity_logs(db, user_id, skip, limit)
@@ -153,7 +153,7 @@ async def read_user_activity_logs(
 async def cleanup_old_logs(
     days: int = Query(90, ge=30),
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("admin_logs"))
 ):
     """Delete logs older than specified days"""
     deleted_count = delete_old_logs(db, days)
