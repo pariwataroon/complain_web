@@ -335,3 +335,39 @@ async def verify_jwt_token(token: str, db: Session) -> bool:
         
     except Exception:
         return False
+    
+@router.get("/search/by-role", response_model=FormatResponseModel)
+async def search_users_by_role_endpoint(
+    role_name: Optional[str] = None,
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_users"))
+):
+    from app.api.v1.controllers.user_controller import search_users_by_role
+    
+    users = search_users_by_role(db, role_name=role_name, skip=skip, limit=limit)
+    return format_response("0000", users)
+
+
+@router.get("/stats/by-role", response_model=FormatResponseModel)
+async def get_user_counts_by_role(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_users"))
+):
+    from app.api.v1.controllers.user_controller import get_users_count_by_roles
+    
+    role_stats = get_users_count_by_roles(db)
+    return format_response("0000", role_stats)
+
+@router.get("/detailed-stats/by-role", response_model=FormatResponseModel)
+async def get_detailed_users_by_roles_endpoint(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_users"))
+):
+    from app.api.v1.controllers.user_controller import get_detailed_users_by_roles
+    
+    detailed_data = get_detailed_users_by_roles(db, skip=skip, limit=limit)
+    return format_response("0000", detailed_data)
