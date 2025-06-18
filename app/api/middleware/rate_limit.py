@@ -120,26 +120,26 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # กำหนด rate limit rules สำหรับแต่ละ endpoint
         self.rate_rules = {
             # Authentication endpoints (เข้มงวดที่สุด)
-            r'^/api/v1/auth/login$': {'limit': 5, 'window': 1, 'methods': ['POST']},
-            r'^/api/v1/auth/resend-verification$': {'limit': 3, 'window': 5, 'methods': ['POST']},  # 5 นาที
-            r'^/api/v1/auth/forgot-password$': {'limit': 3, 'window': 5, 'methods': ['POST']},      # 5 นาที
-            r'^/api/v1/auth/reset-password$': {'limit': 5, 'window': 5, 'methods': ['POST']},       # 5 นาที
-            r'^/api/v1/auth/verify-reset-token$': {'limit': 10, 'window': 1, 'methods': ['GET']},
-            r'^/api/v1/auth/verify-employee$': {'limit': 10, 'window': 1, 'methods': ['POST']},
+            r'^/api/v1/auth/login$': {'limit': 50, 'window': 1, 'methods': ['POST']},
+            r'^/api/v1/auth/resend-verification$': {'limit': 20, 'window': 5, 'methods': ['POST']},
+            r'^/api/v1/auth/forgot-password$': {'limit': 20, 'window': 5, 'methods': ['POST']},
+            r'^/api/v1/auth/reset-password$': {'limit': 30, 'window': 5, 'methods': ['POST']},
+            r'^/api/v1/auth/verify-reset-token$': {'limit': 100, 'window': 1, 'methods': ['GET']},
+            r'^/api/v1/auth/verify-employee$': {'limit': 100, 'window': 1, 'methods': ['POST']},
             
-            # Public data endpoints (หลวมกว่า)
-            r'^/api/v1/users/title/details$': {'limit': 100, 'window': 1, 'methods': ['GET']},
-            r'^/health$': {'limit': 120, 'window': 1, 'methods': ['GET']},
-            r'^/docs.*$': {'limit': 50, 'window': 1, 'methods': ['GET']},
-            r'^/redoc.*$': {'limit': 50, 'window': 1, 'methods': ['GET']},
-            r'^/openapi.json$': {'limit': 30, 'window': 1, 'methods': ['GET']},
+            # Public data endpoints (เพิ่มเป็นสองเท่า)
+            r'^/api/v1/users/title/details$': {'limit': 500, 'window': 1, 'methods': ['GET']},
+            r'^/health$': {'limit': 1000, 'window': 1, 'methods': ['GET']},
+            r'^/docs.*$': {'limit': 200, 'window': 1, 'methods': ['GET']},
+            r'^/redoc.*$': {'limit': 200, 'window': 1, 'methods': ['GET']},
+            r'^/openapi.json$': {'limit': 150, 'window': 1, 'methods': ['GET']},
             
-            # General category limits (ถ้าไม่ตรง specific rules ข้างบน)
-            r'^/api/v1/auth/.*$': {'limit': 20, 'window': 1, 'methods': ['GET', 'POST']},
-            r'^/api/v1/users/.*$': {'limit': 60, 'window': 1, 'methods': ['GET', 'POST', 'PUT', 'DELETE']},
+            # General category limits (เพิ่มอย่างมาก)
+            r'^/api/v1/auth/.*$': {'limit': 100, 'window': 1, 'methods': ['GET', 'POST']},
+            r'^/api/v1/users/.*$': {'limit': 300, 'window': 1, 'methods': ['GET', 'POST', 'PUT', 'DELETE']},
             
-            # Global catch-all (สุดท้าย)
-            r'^/api/.*$': {'limit': 200, 'window': 1, 'methods': ['GET', 'POST', 'PUT', 'DELETE']},
+            # Global catch-all (เพิ่มมาก)
+            r'^/api/.*$': {'limit': 1000, 'window': 1, 'methods': ['GET', 'POST', 'PUT', 'DELETE']},
         }
     
     async def dispatch(self, request: Request, call_next):
