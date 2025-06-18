@@ -51,16 +51,6 @@
       "override_role": false
     },
     {
-      "role_name": "department",
-      "user_citizen_id": null,
-      "resource_name": "homepage_chatbot",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false,
-      "override_role": false
-    },
-    {
       "role_name": "people",
       "user_citizen_id": null,
       "resource_name": "homepage_news",
@@ -102,16 +92,6 @@
     },
     {
       "role_name": "supervisor",
-      "user_citizen_id": null,
-      "resource_name": "homepage_news",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false,
-      "override_role": false
-    },
-    {
-      "role_name": "department",
       "user_citizen_id": null,
       "resource_name": "homepage_news",
       "can_create": false,
@@ -198,6 +178,16 @@
       "can_read": true,
       "can_update": false,
       "can_delete": false,
+      "override_role": false
+    },
+    {
+      "role_name": "admin",
+      "user_citizen_id": null,
+      "resource_name": "admin_logs",
+      "can_create": true,
+      "can_read": true,
+      "can_update": true,
+      "can_delete": true,
       "override_role": false
     },
     {
@@ -478,26 +468,6 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
-    },
-    {
-      "role_name": "staff",
-      "user_citizen_id": null,
-      "resource_name": "homepage_chatbot",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false,
-      "override_role": false
-    },
-    {
-      "role_name": "staff",
-      "user_citizen_id": null,
-      "resource_name": "homepage_news",
-      "can_create": false,
-      "can_read": true,
-      "can_update": false,
-      "can_delete": false,
       "override_role": false
     },
     {
@@ -949,17 +919,6 @@
       "can_update": true,
       "can_delete": true,
       "override_role": true
-    },
-    {
-      "role_name": "admin",
-      "user_citizen_id": null,
-      "resource_name": "admin_logs",
-      "can_create": true,
-      "can_read": true,
-      "can_update": true,
-      "can_delete": true,
-      "override_role": false
     }
-
   ]
 }
