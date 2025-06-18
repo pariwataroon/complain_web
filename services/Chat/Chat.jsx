@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/router"; // ✅ เพิ่มตรงนี้
 import { Phone, ChatBubbleOutline, ArrowUpward } from "@mui/icons-material";
 import styles from "./Chat.module.scss";
 
 const Chat = () => {
+  const router = useRouter();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const chatContentRef = useRef(null);
 
   const toggleChat = () => {
     setIsChatOpen((prev) => !prev);
@@ -25,7 +28,6 @@ const Chat = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-
   return (
     <div>
       <div className={styles.phoneIcon} onClick={() => alert("Dialing...")}>
@@ -41,18 +43,26 @@ const Chat = () => {
       </div>
 
       {isChatOpen && (
-        <div className={styles.chatBox}>
-          
-          <div className={styles.chatContent} ref={chatContentRef}>
-            <p>เรายินดีให้บริการ</p>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <p key={i}>ข้อความเพิ่มเติม {i + 1}</p>
-            ))}
-          </div>
-          <textarea placeholder="พิมพ์ข้อความของคุณที่นี่..." />
-          <button className={styles.sendButton}>คุยกับเรา</button>
-        </div>
-      )}
+  <div className={styles.chatBox}>
+    <div className={styles.chatContent} ref={chatContentRef}>
+  <p className={styles.chatTitle}>เรายินดีให้บริการ</p>
+  <p className={styles.chatDescription}>
+    ถ้าหากมีเรื่องที่ต้องการถาม <br />
+    สามารถคุยกับโปรแกรม Chat Bot <br />
+    ของเราเพิ่มเติมได้
+  </p>
+</div>
+
+    <button
+  className={styles.sendButton}
+  // onClick={() => router.push("/chatbotUser")}
+>
+  คุยกับเรา
+</button>
+
+  </div>
+)}
+
     </div>
   );
 };
