@@ -881,7 +881,14 @@
 							"type": "noauth"
 						},
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "",
+								"type": "text",
+								"description": "Project API Key สำหรับ Frontend"
+							}
+						],
 						"url": {
 							"raw": "{{API}}{{PREFIX}}/users/title/details",
 							"host": [
@@ -892,7 +899,8 @@
 								"title",
 								"details"
 							]
-						}
+						},
+						"description": "ดึงข้อมูลคำนำหน้าชื่อทั้งหมด - ใช้ API Key สำหรับ authentication"
 					},
 					"response": []
 				},
