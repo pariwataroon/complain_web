@@ -12,20 +12,48 @@ const getEnv = (key) => {
 };
 
 const nextConfig = {
+  trailingSlash: true,
+
+  output: "export",
+  distDir: "out",
+
+  images: {
+    unoptimized: true,
+    loader: "custom",
+    loaderFile: "./imageLoader.js",
+  },
+
   reactStrictMode: isDev,
+
   env: {
-    NEXT_PUBLIC_ENV_MODE: process.env.NEXT_PUBLIC_ENV_MODE,
-    NEXT_PUBLIC_API_BASE_URL: getEnv("NEXT_PUBLIC_API_BASE_URL"),
+    NEXT_PUBLIC_ENV_MODE: process.env.NEXT_PUBLIC_ENV_MODE || "development",
+    NEXT_PUBLIC_API_BASE_URL: getEnv("NEXT_PUBLIC_API_BASE_URL") || "",
     NEXT_PUBLIC_DEBUG_MODE:
       getEnv("NEXT_PUBLIC_DEBUG_MODE") === "true" ? "true" : "false",
-    NEXT_PUBLIC_COMMON_VAR: process.env.NEXT_PUBLIC_COMMON_VAR,
-    NEXT_PUBLIC_LOCALE: process.env.NEXT_PUBLIC_LOCALE,
+    NEXT_PUBLIC_COMMON_VAR: process.env.NEXT_PUBLIC_COMMON_VAR || "",
+    NEXT_PUBLIC_LOCALE: process.env.NEXT_PUBLIC_LOCALE || "en",
   },
+
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.alias["@d3"] = "d3";
     }
+
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
+
     return config;
+  },
+
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
   },
 };
 

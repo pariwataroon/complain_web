@@ -35,6 +35,7 @@ import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 import { formatElapsedThaiTime } from "@utils/Formats";
 import LayersIcon from "@mui/icons-material/Layers";
 import TuneIcon from "@mui/icons-material/Tune";
+import HistoryIcon from '@mui/icons-material/History';
 import Cookies from "js-cookie";
 
 export default function Sidebar() {
@@ -47,14 +48,13 @@ export default function Sidebar() {
   const [showNotificationBell, setShowNotificationBell] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [menuData, setMenuData] = useState([]);
-  const [notificationFilter, setNotificationFilter] = useState(0); // 0: ทั้งหมด, 1: เรื่องร้องเรียนใหม่, 2: ผู้ใช้ลงทะเบียนใหม่
+  const [notificationFilter, setNotificationFilter] = useState(0);
   const sidebarRef = useRef(null);
   const notifArr = Array.isArray(notifications) ? notifications : [];
   const unreadExists = notifArr.some((n) => !n.is_read);
 
   const toggleBell = () => {
     setShowNotifications((p) => !p);
-    // Reset filter เมื่อเปิด notification panel
     if (!showNotifications) {
       setNotificationFilter(0);
     }

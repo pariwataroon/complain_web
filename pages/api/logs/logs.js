@@ -1,6 +1,6 @@
 import axiosInstance from "@pages/api/axiosInstance";
 
-export const GetAllLogs = async ({ skip = 0, limit, path="/api/v1/auth"}) => {
+const GetAllLogs = async ({ skip = 0, limit, path = "/api/v1/auth" }) => {
   try {
     const { data } = await axiosInstance.get("/notifications", {
       params: { skip, limit, path },
@@ -12,7 +12,7 @@ export const GetAllLogs = async ({ skip = 0, limit, path="/api/v1/auth"}) => {
   }
 };
 
-export const GetLogDetails = async () => {
+const GetLogDetails = async () => {
   try {
     const { data } = await axiosInstance.get("/notifications");
     return data;
@@ -22,7 +22,7 @@ export const GetLogDetails = async () => {
   }
 };
 
-export const GetLogStatistics = async () => {
+const GetLogStatistics = async () => {
   try {
     const { data } = await axiosInstance.get("/notifications");
     return data;
@@ -32,7 +32,7 @@ export const GetLogStatistics = async () => {
   }
 };
 
-export const GetUserActivityLogs = async () => {
+const GetUserActivityLogs = async () => {
   try {
     const { data } = await axiosInstance.get("/notifications");
     return data;
@@ -42,7 +42,7 @@ export const GetUserActivityLogs = async () => {
   }
 };
 
-export const CleanupOldLogs = async () => {
+const CleanupOldLogs = async () => {
   try {
     const { data } = await axiosInstance.DELETE("/api-logs/cleanup?days=90");
     return data;
@@ -52,5 +52,10 @@ export const CleanupOldLogs = async () => {
   }
 };
 
-
-export { GetAllLogs, GetLogDetails, GetLogStatistics, GetUserActivityLogs };
+export {
+  GetAllLogs,
+  GetLogDetails,
+  GetLogStatistics,
+  GetUserActivityLogs,
+  CleanupOldLogs,
+};

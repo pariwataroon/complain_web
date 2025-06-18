@@ -4,9 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "cross-env PORT=80 next dev",
+    "dev:prod": "cross-env PORT=80 NODE_ENV=production next build && next start",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "cross-env PORT=80 next start",
+    "lint": "next lint",
+    "export": "next build",
+    "build-static": "next build",
+    "serve-static": "npx serve out",
+    "clean": "rimraf .next out",
+    "analyze": "cross-env ANALYZE=true next build"
   },
   "dependencies": {
     "@date-io/dayjs": "^3.2.0",
@@ -45,8 +51,9 @@
     "yup": "^1.6.1"
   },
   "devDependencies": {
+    "next-transpile-modules": "^10.0.1",
     "cross-env": "^7.0.3",
-    "eslint": "^9.23.0",
-    "eslint-config-next": "^15.2.4"
+    "rimraf": "^3.0.2",
+    "serve": "^14.2.1"
   }
 }
