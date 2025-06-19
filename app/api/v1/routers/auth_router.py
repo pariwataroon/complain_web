@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -215,65 +215,79 @@ async def verify_reset_token_endpoint(
 @router.post("/verify-employee", response_model=format_data.FormatResponseModel)
 async def verify_employee(
     request: Request,
-    verify_request: schemas.VerifyEmployeeRequest, 
+    verify_data: dict = Body(...),
     db: Session = Depends(get_db)
 ):
-    """
-    ตรวจสอบว่าผู้ใช้ที่เข้าสู่ระบบด้วย ThaiID จากระบบอื่นเป็นพนักงาน/เจ้าหน้าที่ในระบบนี้หรือไม่
-    
-    - ตรวจสอบ API Key ของโปรเจคที่ส่งคำขอมา
-    - รับเลขบัตรประชาชน หรือข้อมูลอื่นๆ ที่ได้จาก ThaiID เพื่อตรวจสอบ
-    - ตรวจสอบว่ามีผู้ใช้ในระบบที่มีเลขบัตรประชาชนตรงกัน
-    - ตรวจสอบว่าผู้ใช้นั้นมีบทบาทที่ไม่ใช่แค่ "people" (คือเป็นพนักงานหรือเจ้าหน้าที่)
-    """
-    # นำเข้าตัวควบคุม API Key
-    from app.api.v1.controllers.project_api_key_controller import verify_project_api_key
-    
-    # ตรวจสอบ API Key ของโปรเจค
-    if not verify_project_api_key(db, verify_request.project_api_key):
-        return format_data.format_response("4030", {
-            "error": "Invalid or inactive project API key",
-            "message": "API key ไม่ถูกต้องหรือไม่มีสิทธิ์ในการเข้าถึงข้อมูล"
-        })
-    
-    # ตรวจสอบว่ามีผู้ใช้ที่มีเลขบัตรประชาชนตรงกัน
-    user = user_controller.get_user_by_pid(db, verify_request.citizen_id)
-    
-    if not user:
+    """ตรวจสอบว่าผู้ใช้เป็นพนักงาน/เจ้าหน้าที่หรือไม่ - ต้องมี API Key เพื่อความปลอดภัย"""
+    try:
+        # Get API Key from headers
+        api_key = (request.headers.get("X-API-Key") or 
+                   request.headers.get("X-Project-Key"))
+        if not api_key:
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("ApiKey "):
+                api_key = auth_header[7:]
+        
+        if not api_key or not verify_employee_api_key(api_key):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid API key for employee verification"
+            )
+        
+        # Validate citizen_id
+        citizen_id = verify_data.get("citizen_id", "").strip()
+        if not citizen_id or len(citizen_id) != 13 or not citizen_id.isdigit():
+            return format_data.format_response("4000", {
+                "error": "Invalid citizen_id format",
+                "message": "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก"
+            })
+        
+        # ตรวจสอบพนักงาน
+        user = user_controller.get_user_by_pid(db, citizen_id)
+        
+        if not user:
+            return format_data.format_response("0000", {
+                "is_employee": False,
+                "message": "ไม่พบข้อมูลพนักงานในระบบ"
+            })
+        
+        # ตรวจสอบบทบาท
+        user_with_roles = user_controller.get_user_with_roles_and_titles(db, user.id)
+        roles = [role.get('role_name') for role in user_with_roles.get('roles', [])]
+        employee_roles = [role for role in roles if role != "people"]
+        is_employee = len(employee_roles) > 0
+        
         return format_data.format_response("0000", {
-            "is_employee": False,
-            "message": "ไม่พบข้อมูลพนักงาน/เจ้าหน้าที่ในระบบ"
+            "is_employee": is_employee,
+            "user_info": {
+                "id": str(user.id),
+                "full_name": user_with_roles.get('full_name_with_title', ''),
+                "email": user.email,
+                "roles": employee_roles
+            } if is_employee else None
         })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        from lib.logger import get_logger
+        logger = get_logger("auth")
+        logger.error(f"Error verifying employee: {str(e)}")
+        return format_data.format_response("5000", {
+            "error": "Employee verification failed",
+            "message": "เกิดข้อผิดพลาดในการตรวจสอบข้อมูลพนักงาน"
+        })
+
+def verify_employee_api_key(api_key: str) -> bool:
+    """ตรวจสอบ API Key สำหรับ employee verification"""
+    import os
     
-    # ตรวจสอบว่าเป็นพนักงาน/เจ้าหน้าที่หรือไม่ โดยดูจากบทบาท
-    user_with_roles = user_controller.get_user_with_roles_and_titles(db, user.id)
+    allowed_keys = [
+        os.getenv("FRONTEND_API_KEY", "cap_mof_live_frontend_web_2025@minerta"),
+        os.getenv("MOBILE_API_KEY", "cap_mof_live_mobile_app_2025@minerta"),
+        os.getenv("EXTERNAL_API_KEY", "cap_mof_live_external_api_2025@minerta"),
+        "cap_mof_live_frontend_web_2025@minerta",
+        "cap_mof_live_mobile_app_2025@minerta",
+    ]
     
-    # ดึงรายการบทบาทของผู้ใช้
-    roles = []
-    if 'roles' in user_with_roles:
-        roles = [role.get('role_name') for role in user_with_roles['roles']]
-    
-    # ตรวจสอบว่าผู้ใช้มีบทบาทนอกเหนือจาก "people" หรือไม่
-    # หรือมีบทบาทเฉพาะที่ระบุว่าเป็นพนักงาน
-    employee_roles = [role for role in roles if role != "people"]
-    is_employee = len(employee_roles) > 0
-    
-    # ข้อมูลตำแหน่งงานที่จะส่งกลับ (ถ้ามี)
-    position_info = None
-    if is_employee and user_with_roles.get('primary_position'):
-        position_info = {
-            "position_name": user_with_roles['primary_position'].get('position_name', ''),
-            "position_level": user_with_roles['primary_position'].get('position_level', ''),
-        }
-    
-    # ส่งข้อมูลกลับ
-    return format_data.format_response("0000", {
-        "is_employee": is_employee,
-        "user_info": {
-            "id": str(user.id),
-            "full_name": user_with_roles.get('full_name_with_title', ''),
-            "email": user.email,
-            "roles": employee_roles,
-            "position": position_info
-        } if is_employee else None
-    })
+    return api_key in [k for k in allowed_keys if k and k.strip()]

@@ -1,3 +1,4 @@
+import os
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -13,22 +14,24 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Download-Options"] = "noopen"
         response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
         
+        # Force HSTS for all responses (แก้ปัญหา OWASP)
+        is_https = request.url.scheme == "https"
+        is_production = os.getenv("ENVIRONMENT", "development").lower() in ["production", "staging"]
+        force_hsts = os.getenv("FORCE_HSTS", "false").lower() == "true"
+        
+        if is_https or is_production or force_hsts or True:  # Force HSTS ทุกครั้ง
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+        
         # เพิ่ม Cache Control สำหรับ sensitive responses
         if request.url.path.startswith("/api/v1/auth"):
             response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
         
-        # ถ้าเป็น HTTPS ให้เพิ่ม HSTS
-        if request.url.scheme == "https":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
-        
-        # CSP สำหรับ API - อนุญาตให้เฉพาะ same-origin
+        # CSP สำหรับ API endpoints
         if request.url.path in ["/docs", "/redoc", "/openapi.json"]:
-            # CSP หลวมขึ้นสำหรับหน้า documentation
             response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;"
         else:
-            # CSP เข้มงวดสำหรับ API endpoints
             response.headers["Content-Security-Policy"] = "default-src 'none'; script-src 'none'; object-src 'none'; base-uri 'none';"
         
         return response
