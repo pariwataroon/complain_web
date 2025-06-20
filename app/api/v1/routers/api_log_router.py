@@ -55,6 +55,10 @@ async def read_api_logs(
     # Format logs for response
     formatted_logs = []
     for log in logs:
+        user_name = None
+        if log.user and log.user.first_name and log.user.last_name:
+            user_name = f"{log.user.first_name} {log.user.last_name}"
+        
         formatted_log = {
             "id": log.id,
             "request_id": log.request_id,
@@ -65,6 +69,7 @@ async def read_api_logs(
             "status_code": log.status_code,
             "process_time_ms": log.process_time_ms,
             "user_id": log.user_id,
+            "user_name": user_name,
             "created_at": log.created_at,
         }
         formatted_logs.append(formatted_log)
@@ -83,6 +88,10 @@ async def read_api_log_details(
     if not log:
         raise HTTPException(status_code=404, detail="Log not found")
     
+    user_name = None
+    if log.user and log.user.first_name and log.user.last_name:
+        user_name = f"{log.user.first_name} {log.user.last_name}"
+    
     # Format log for response with all details
     log_data = {
         "id": log.id,
@@ -96,6 +105,7 @@ async def read_api_log_details(
         "request_body": log.request_body,
         "request_headers": log.request_headers,
         "user_id": log.user_id,
+        "user_name": user_name,
         "created_at": log.created_at,
     }
     
