@@ -215,6 +215,18 @@ const LogsComponentsDetail = () => {
                                 {logData.user_id || "ไม่ระบุผู้ใช้"}
                             </div>
                         </div>
+
+                        {/* เพิ่ม User Name ตรงนี้ */}
+                        <div className={styles.infoItem}>
+                            <div className={styles.infoLabel}>
+                                <UserIcon className={styles.iconSm} />
+                                User Name
+                            </div>
+                            <div className={styles.infoValue}>
+                                {logData.user_name || "ไม่ระบุชื่อผู้ใช้"}
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>

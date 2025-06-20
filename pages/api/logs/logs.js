@@ -9,7 +9,8 @@ const GetAllLogs = async ({ skip = 0, limit = 10, filters = {} }) => {
     if (filters.clientIp) params.client_ip = filters.clientIp;
     if (filters.statusCode) params.status_code = filters.statusCode;
     if (filters.userId) params.user_id = filters.userId;
-
+    if (filters.userName) params.user_name = filters.userName;
+    
     const { data } = await axiosInstance.get("/api-logs", {
       params,
     });

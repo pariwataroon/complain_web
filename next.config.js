@@ -6,13 +6,12 @@ const withTM = require("next-transpile-modules")([
 ]);
 
 const isDev = process.env.NEXT_PUBLIC_ENV_MODE === "development";
-const isStaticExport = process.env.BUILD_MODE === "static"; // ✅ ใหม่
+const isStaticExport = process.env.BUILD_MODE === "static";
 
 const getEnv = (key) => {
   return process.env[key];
 };
 
-// ✅ Base config
 const baseConfig = {
   trailingSlash: true,
 

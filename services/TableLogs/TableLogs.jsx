@@ -10,7 +10,6 @@ import {
   TablePagination,
   Container,
   IconButton,
-  Button,
   useMediaQuery,
   useTheme,
   Chip,
@@ -19,8 +18,8 @@ import SearchIcon from "@mui/icons-material/Search";
 import styles from "./TableLogs.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
-import ExportButton from "@services/ExportButton/ExportButton";
 import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
+import { formatThaiOfficialDateTimeTimeseven } from "@utils/Formats";
 
 const TableLogs = ({
   data = [],
@@ -37,13 +36,13 @@ const TableLogs = ({
   const isSmallScreen = useMediaQuery("(max-width:1200px)");
   const isExtraSmallScreen = useMediaQuery("(max-width:600px)");
 
-  /* ฟิลเตอร์ที่ผู้ใช้กรอก */
   const [filters, setFilters] = useState({
     method: "",
     path: "",
     clientIp: "",
     statusCode: "",
     userId: "",
+    userName: "",
   });
 
   const handleChange = (field) => (e) => {
@@ -51,11 +50,9 @@ const TableLogs = ({
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
-  /* pagination */
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // เมื่อ pagination เปลี่ยน ให้ส่งข้อมูลไปยัง parent component
   useEffect(() => {
     const skip = page * rowsPerPage;
     onPaginationChange({
@@ -70,12 +67,11 @@ const TableLogs = ({
   const handleRowsPerPageChange = (e) => {
     const newRowsPerPage = parseInt(e.target.value, 10);
     setRowsPerPage(newRowsPerPage);
-    setPage(0); // Reset to first page
+    setPage(0);
   };
 
   const handleSearchClick = () => {
-    console.log("Searching with filters:", filters);
-    setPage(0); // Reset to first page when searching
+    setPage(0);
     onSearch(filters);
   };
 
@@ -86,6 +82,7 @@ const TableLogs = ({
       clientIp: "",
       statusCode: "",
       userId: "",
+      userName: "",
     };
     setFilters(cleared);
     setPage(0);
@@ -102,19 +99,35 @@ const TableLogs = ({
     }
   };
 
-  // Format date
-  const formatDateTime = (dateString) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleString("th-TH", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-  };
+  // Filter data on frontend for userName (case-insensitive contains)
+  const filteredData = useMemo(() => {
+    let res = data;
+    if (filters.userName?.trim()) {
+      res = res.filter((item) =>
+        (item.user_name || "")
+          .toLowerCase()
+          .includes(filters.userName.trim().toLowerCase())
+      );
+    }
+    if (filters.method) {
+      res = res.filter((item) => item.method === filters.method);
+    }
+    if (filters.path?.trim()) {
+      res = res.filter((item) =>
+        (item.path || "")
+          .toLowerCase()
+          .includes(filters.path.trim().toLowerCase())
+      );
+    }
+    if (filters.statusCode) {
+      res = res.filter(
+        (item) =>
+          String(item.status_code) === String(filters.statusCode)
+      );
+    }
+    // ถ้าต้องการ filter อื่นๆ (clientIp, userId) ให้เพิ่มตรงนี้
+    return res;
+  }, [data, filters]);
 
   // Get status color
   const getStatusColor = (statusCode) => {
@@ -160,9 +173,7 @@ const TableLogs = ({
       {/* Search Bar - Responsive Layout */}
       <Box sx={{ px: 2, py: 2 }}>
         {isSmallScreen ? (
-          // Mobile/Tablet Layout (< 1200px)
           <Box display="flex" flexDirection="column" gap={2}>
-            {/* Search Fields Grid */}
             <Box
               display="grid"
               gridTemplateColumns={{
@@ -186,13 +197,6 @@ const TableLogs = ({
                 onChange={handleChange("path")}
                 onKeyPress={handleKeyPress}
               />
-              {/* <InputText
-                label="Client IP"
-                inputLabel="กรอก IP Address"
-                value={filters.clientIp}
-                onChange={handleChange("clientIp")}
-                onKeyPress={handleKeyPress}
-              /> */}
               <SelectField
                 label="Status Code"
                 inputLabel="เลือก Status Code"
@@ -200,20 +204,16 @@ const TableLogs = ({
                 value={filters.statusCode}
                 onChange={handleChange("statusCode")}
               />
-              {/* <InputText
-                label="User ID"
-                inputLabel="กรอก User ID"
-                value={filters.userId}
-                onChange={handleChange("userId")}
+              <InputText
+                label="User Name"
+                inputLabel="กรอก User Name"
+                value={filters.userName}
+                onChange={handleChange("userName")}
                 onKeyPress={handleKeyPress}
-              /> */}
+              />
             </Box>
-
-            {/* Action Buttons - Responsive Layout */}
             {isExtraSmallScreen ? (
-              // Extra Small (xs) - แยกบรรทัดและเรียงแนวตั้ง
               <Box display="flex" flexDirection="column" gap={2}>
-                {/* Search & Clear Buttons */}
                 <Box display="flex" justifyContent="center" gap={1}>
                   <IconButton
                     onClick={handleSearchClick}
@@ -246,17 +246,9 @@ const TableLogs = ({
                     <CleaningServicesIcon />
                   </IconButton>
                 </Box>
-
-                {/* Export Buttons - แยกบรรทัด */}
-                <Box display="flex" flexDirection="column" gap={1}>
-                  <ExportButton label="Export PDF" />
-                  <ExportButton label="Export Excel" />
-                </Box>
               </Box>
             ) : (
-              // Small and up (sm+) - จัดเป็น 2 แถว
               <Box display="flex" flexDirection="column" gap={2}>
-                {/* แถวที่ 1: Search, Clear */}
                 <Box
                   display="flex"
                   justifyContent="space-between"
@@ -297,17 +289,10 @@ const TableLogs = ({
                     </IconButton>
                   </Box>
                 </Box>
-
-                {/* แถวที่ 2: Export Buttons */}
-                <Box display="flex" justifyContent="center" gap={1}>
-                  <ExportButton label="Export PDF" />
-                  <ExportButton label="Export Excel" />
-                </Box>
               </Box>
             )}
           </Box>
         ) : (
-          // Desktop Layout (>= 1200px)
           <Box
             display="flex"
             justifyContent="space-between"
@@ -339,13 +324,6 @@ const TableLogs = ({
                 onChange={handleChange("path")}
                 onKeyPress={handleKeyPress}
               />
-              {/* <InputText
-                label="Client IP"
-                inputLabel="กรอก IP Address"
-                value={filters.clientIp}
-                onChange={handleChange("clientIp")}
-                onKeyPress={handleKeyPress}
-              /> */}
               <SelectField
                 label="Status Code"
                 inputLabel="เลือก Status Code"
@@ -353,14 +331,13 @@ const TableLogs = ({
                 value={filters.statusCode}
                 onChange={handleChange("statusCode")}
               />
-              {/* <InputText
-                label="User ID"
-                inputLabel="กรอก User ID"
-                value={filters.userId}
-                onChange={handleChange("userId")}
+              <InputText
+                label="User Name"
+                inputLabel="กรอก User Name"
+                value={filters.userName}
+                onChange={handleChange("userName")}
                 onKeyPress={handleKeyPress}
-              /> */}
-
+              />
               <IconButton
                 onClick={handleSearchClick}
                 disabled={loading}
@@ -394,17 +371,6 @@ const TableLogs = ({
                 <CleaningServicesIcon />
               </IconButton>
             </Box>
-
-            {/* Export buttons */}
-            <Box
-              display="flex"
-              flexDirection={isExtraSmallScreen ? "column" : "row"}
-              gap={1}
-              sx={{ flexShrink: 0 }}
-            >
-              <ExportButton label="Export PDF" />
-              <ExportButton label="Export Excel" />
-            </Box>
           </Box>
         )}
       </Box>
@@ -412,7 +378,7 @@ const TableLogs = ({
       {/* Results Summary */}
       <Box sx={{ px: 2, py: 1 }}>
         <Box sx={{ color: "#666", fontSize: "0.9rem" }}>
-          พบข้อมูล {total} รายการ
+          พบข้อมูล {filteredData.length} รายการ
           {loading && " (กำลังโหลด...)"}
         </Box>
       </Box>
@@ -456,6 +422,9 @@ const TableLogs = ({
               <TableCell sx={{ width: 250, fontWeight: "bold" }}>
                 User ID
               </TableCell>
+              <TableCell sx={{ width: 250, fontWeight: "bold" }}>
+                User Name
+              </TableCell>
               <TableCell sx={{ width: 180, fontWeight: "bold" }}>
                 Created At
               </TableCell>
@@ -466,72 +435,81 @@ const TableLogs = ({
             {loading ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   align="center"
                   sx={{ py: 3, color: "#999" }}
                 >
                   กำลังโหลดข้อมูล...
                 </TableCell>
               </TableRow>
-            ) : data.length > 0 ? (
-              data.map((item, idx) => (
-                <TableRow
-                  key={item.id}
-                  onClick={() => handleRowClick(item)}
-                  sx={{
-                    cursor: "pointer",
-                    "&:hover": { backgroundColor: "#f5f7ff" },
-                    "&:nth-of-type(even)": { backgroundColor: "#fafafa" },
-                  }}
-                >
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: 600, color: "#1120A3" }}
+            ) : filteredData.length > 0 ? (
+              filteredData
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((item, idx) => (
+                  <TableRow
+                    key={item.id}
+                    onClick={() => handleRowClick(item)}
+                    sx={{
+                      cursor: "pointer",
+                      "&:hover": { backgroundColor: "#f5f7ff" },
+                      "&:nth-of-type(even)": { backgroundColor: "#fafafa" },
+                    }}
                   >
-                    {page * rowsPerPage + idx + 1}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={item?.method ?? "-"}
-                      size="small"
-                      variant="outlined"
-                      color={
-                        item?.method === "GET"
-                          ? "primary"
-                          : item?.method === "POST"
-                            ? "success"
-                            : item?.method === "PUT"
-                              ? "warning"
-                              : item?.method === "DELETE"
-                                ? "error"
-                                : "default"
-                      }
-                    />
-                  </TableCell>
-                  <TableCell className={styles.ellipsisCell}>
-                    {item?.path ?? "-"}
-                  </TableCell>
-                  <TableCell>{item?.client_ip ?? "-"}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={item?.status_code ?? "-"}
-                      size="small"
-                      color={getStatusColor(item?.status_code)}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    {item?.process_time_ms ? item.process_time_ms.toFixed(2) : "-"}
-                  </TableCell>
-                  <TableCell className={styles.ellipsisCell}>
-                    {item?.user_id ?? "-"}
-                  </TableCell>
-                  <TableCell>{formatDateTime(item?.created_at)}</TableCell>
-                </TableRow>
-              ))
+                    <TableCell
+                      align="center"
+                      sx={{ fontWeight: 600, color: "#1120A3" }}
+                    >
+                      {page * rowsPerPage + idx + 1}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={item?.method ?? "-"}
+                        size="small"
+                        variant="outlined"
+                        color={
+                          item?.method === "GET"
+                            ? "primary"
+                            : item?.method === "POST"
+                              ? "success"
+                              : item?.method === "PUT"
+                                ? "warning"
+                                : item?.method === "DELETE"
+                                  ? "error"
+                                  : "default"
+                        }
+                      />
+                    </TableCell>
+                    <TableCell className={styles.ellipsisCell}>
+                      {item?.path ?? "-"}
+                    </TableCell>
+                    <TableCell>{item?.client_ip ?? "-"}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={item?.status_code ?? "-"}
+                        size="small"
+                        color={getStatusColor(item?.status_code)}
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      {item?.process_time_ms
+                        ? item.process_time_ms.toFixed(2)
+                        : "-"}
+                    </TableCell>
+                    <TableCell className={styles.ellipsisCell}>
+                      {item?.user_id ?? "-"}
+                    </TableCell>
+                    <TableCell className={styles.ellipsisCell}>
+                      {item?.user_name ?? "-"}
+                    </TableCell>
+                    <TableCell>
+                      {formatThaiOfficialDateTimeTimeseven(item?.created_at)}
+                    </TableCell>
+                  </TableRow>
+                ))
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   align="center"
                   sx={{ py: 3, color: "#999" }}
                 >
@@ -546,7 +524,7 @@ const TableLogs = ({
         <TablePagination
           component="div"
           rowsPerPageOptions={[5, 10, 25, 50, 100]}
-          count={total}
+          count={filteredData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handlePageChange}
