@@ -8514,16 +8514,33 @@
 							"query": [
 								{"key": "skip", "value": "0", "description": "จำนวนรายการที่ข้าม"},
 								{"key": "limit", "value": "100", "description": "จำนวนรายการต่อหน้า"},
-								{"key": "search", "value": "", "description": "ค้นหาจากเลขหนังสือ, เรื่อง, หมายเลขข้อร้องเรียน"},
-								{"key": "position_id", "value": "", "description": "ตำแหน่งที่เกี่ยวข้อง"},
-								{"key": "department_id", "value": "", "description": "หน่วยงาน"},
-								{"key": "signature_authority_user_id", "value": "", "description": "ผู้มีอำนาจลงนาม"},
+								{"key": "search", "value": "", "description": "ค้นหาจากหมายเลขข้อร้องเรียน, เรื่อง, หมายเหตุ"},
+								{"key": "position_id", "value": "", "description": "ตำแหน่งที่เกี่ยวข้อง (UUID)"},
+								{"key": "department_id", "value": "", "description": "หน่วยงาน (UUID)"},
+								{"key": "signature_authority_user_id", "value": "", "description": "ผู้มีอำนาจลงนาม (UUID)"},
 								{"key": "urgency_level", "value": "", "description": "ระดับความเร่งด่วน"},
-								{"key": "date_from", "value": "", "description": "วันที่เริ่มต้น"},
-								{"key": "date_to", "value": "", "description": "วันที่สิ้นสุด"}
+								{"key": "date_from", "value": "", "description": "วันที่เริ่มต้น (YYYY-MM-DD)"},
+								{"key": "date_to", "value": "", "description": "วันที่สิ้นสุด (YYYY-MM-DD)"}
 							]
 						},
 						"description": "ดึงรายการรายงานแจ้งผู้ร้องเรียนทั้งหมด พร้อมการกรองและค้นหา"
+					}
+				},
+				{
+					"name": "Get Outgoing Report 2 Options",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports2/options",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports2", "options"]
+						},
+						"description": "ดึงตัวเลือกสำหรับ dropdown ต่างๆ ในฟอร์ม - รวมรายการตำแหน่ง, หน่วยงาน, ผู้มีอำนาจลงนาม, ผู้ใช้, ระดับความลับ, ระดับความเร่งด่วน"
 					}
 				},
 				{
@@ -8540,7 +8557,7 @@
 							"host": ["{{API}}{{PREFIX}}"],
 							"path": ["outgoing-reports2", "auto-fill", "{{complaint_id}}"]
 						},
-						"description": "ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์มรายงานแจ้งผู้ร้องเรียน"
+						"description": "ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์มรายงานแจ้งผู้ร้องเรียน - จะได้ข้อมูล complaint_id, complaint_number, complaint_number_date, subject"
 					}
 				},
 				{
@@ -8554,7 +8571,7 @@
 						"header": [{"key": "Content-Type", "value": "application/json"}],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"position_id\": \"uuid\",\n    \"reference_number\": \"เลขหนังสือ\",\n    \"reference_date\": \"2024-01-15\",\n    \"subject\": \"เรื่อง แจ้งผลการพิจารณาเรื่องร้องเรียน\",\n    \"complaint_number\": \"COMP-2024-001\",\n    \"complaint_number_date\": \"2024-01-10\",\n    \"signature_authority_user_id\": \"uuid\",\n    \"department_id\": \"uuid\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"complaint_id\": \"uuid\",\n    \"remarks\": \"หมายเหตุ\"\n}",
+							"raw": "{\n    \"position_id\": \"38a64e67-5df6-4370-a46b-7c160c5b92f7\",\n    \"complaint_number\": \"MOF-20250624-00002\",\n    \"complaint_number_date\": \"2025-06-24\",\n    \"subject\": \"เรื่อง แจ้งผลการพิจารณาเรื่องร้องเรียน\",\n    \"signature_authority_user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"department_id\": \"85c5547d-a0d4-4ea5-a4e3-e55d94837ddd\",\n    \"user_id\": null,\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"complaint_id\": \"81edc778-d618-4bc7-ad21-8ab81b14d4e7\",\n    \"remarks\": \"หมายเหตุ\"\n}",
 							"options": {"raw": {"language": "json"}}
 						},
 						"url": {
@@ -8562,7 +8579,7 @@
 							"host": ["{{API}}{{PREFIX}}"],
 							"path": ["outgoing-reports2"]
 						},
-						"description": "สร้างรายงานแจ้งผู้ร้องเรียนใหม่"
+						"description": "สร้างรายงานแจ้งผู้ร้องเรียนใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- position_id: ตำแหน่งที่เกี่ยวข้อง (UUID)\n- complaint_number: หมายเลขข้อร้องเรียน\n- complaint_number_date: วันที่ของข้อร้องเรียน\n- subject: เรื่อง\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- confidentiality_level: ระดับความลับ\n- urgency_level: ระดับความเร่งด่วน\n\n**ฟิลด์ที่ไม่บังคับ:**\n- department_id: หน่วยงาน (UUID)\n- user_id: ผู้ใช้ที่เกี่ยวข้อง (UUID)\n- remarks: หมายเหตุ\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง"
 					}
 				},
 				{
@@ -8575,15 +8592,15 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{API}}{{PREFIX}}/outgoing-reports2/{{report_id}}",
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports2/{{report2_id}}",
 							"host": ["{{API}}{{PREFIX}}"],
-							"path": ["outgoing-reports2", "{{report_id}}"]
+							"path": ["outgoing-reports2", "{{report2_id}}"]
 						},
-						"description": "ดึงรายงานแจ้งผู้ร้องเรียนตาม ID"
+						"description": "ดึงรายงานแจ้งผู้ร้องเรียนตาม ID พร้อมข้อมูลครบถ้วน รวมข้อมูลตำแหน่ง, หน่วยงาน, ผู้มีอำนาจลงนาม, ผู้ใช้ที่เกี่ยวข้อง, และไฟล์แนบ"
 					}
 				}
 			],
-			"description": "API สำหรับจัดการรายงานแจ้งผู้ร้องเรียน"
+			"description": "API สำหรับจัดการรายงานแจ้งผู้ร้องเรียน - เชื่อมโยงกับข้อร้องเรียน, ตำแหน่ง, หน่วยงาน, ผู้มีอำนาจลงนาม, และผู้ใช้ที่เกี่ยวข้อง"
 		},
 		{
 			"name": "OUTGOING REPORTS 3 (ขอทราบผลการพิจารณา)",
@@ -8602,18 +8619,35 @@
 							"host": ["{{API}}{{PREFIX}}"],
 							"path": ["outgoing-reports3"],
 							"query": [
-								{"key": "skip", "value": "0"},
-								{"key": "limit", "value": "100"},
-								{"key": "search", "value": ""},
-								{"key": "position_id", "value": ""},
-								{"key": "department_id", "value": ""},
-								{"key": "signature_authority_user_id", "value": ""},
-								{"key": "urgency_level", "value": ""},
-								{"key": "date_from", "value": ""},
-								{"key": "date_to", "value": ""}
+								{"key": "skip", "value": "0", "description": "จำนวนรายการที่ข้าม"},
+								{"key": "limit", "value": "100", "description": "จำนวนรายการต่อหน้า"},
+								{"key": "search", "value": "", "description": "ค้นหาจากหมายเลขข้อร้องเรียน, เรื่อง, หมายเหตุ"},
+								{"key": "position_id", "value": "", "description": "ตำแหน่งที่เกี่ยวข้อง (UUID)"},
+								{"key": "department_id", "value": "", "description": "หน่วยงาน (UUID)"},
+								{"key": "signature_authority_user_id", "value": "", "description": "ผู้มีอำนาจลงนาม (UUID)"},
+								{"key": "urgency_level", "value": "", "description": "ระดับความเร่งด่วน"},
+								{"key": "date_from", "value": "", "description": "วันที่เริ่มต้น (YYYY-MM-DD)"},
+								{"key": "date_to", "value": "", "description": "วันที่สิ้นสุด (YYYY-MM-DD)"}
 							]
 						},
-						"description": "ดึงรายการรายงานขอทราบผลการพิจารณาทั้งหมด"
+						"description": "ดึงรายการรายงานขอทราบผลการพิจารณาทั้งหมด พร้อมการกรองและค้นหา"
+					}
+				},
+				{
+					"name": "Get Outgoing Report 3 Options",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports3/options",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports3", "options"]
+						},
+						"description": "ดึงตัวเลือกสำหรับ dropdown ต่างๆ ในฟอร์ม - รวมรายการตำแหน่ง, หน่วยงาน, ผู้มีอำนาจลงนาม, ระดับความลับ, ระดับความเร่งด่วน"
 					}
 				},
 				{
@@ -8630,7 +8664,7 @@
 							"host": ["{{API}}{{PREFIX}}"],
 							"path": ["outgoing-reports3", "auto-fill", "{{complaint_id}}"]
 						},
-						"description": "ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์ม"
+						"description": "ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์มรายงานขอทราบผลการพิจารณา - จะได้ข้อมูล complaint_id, complaint_number, complaint_number_date, subject"
 					}
 				},
 				{
@@ -8644,7 +8678,7 @@
 						"header": [{"key": "Content-Type", "value": "application/json"}],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"position_id\": \"uuid\",\n    \"reference_number\": \"เลขหนังสือ\",\n    \"reference_date\": \"2024-01-15\",\n    \"subject\": \"เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน\",\n    \"complaint_number\": \"COMP-2024-001\",\n    \"complaint_number_date\": \"2024-01-10\",\n    \"signature_authority_user_id\": \"uuid\",\n    \"department_id\": \"uuid\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"complaint_id\": \"uuid\",\n    \"remarks\": \"หมายเหตุ\"\n}",
+							"raw": "{\n    \"position_id\": \"38a64e67-5df6-4370-a46b-7c160c5b92f7\",\n    \"complaint_number\": \"MOF-20250624-00001\",\n    \"complaint_number_date\": \"2025-06-24\",\n    \"subject\": \"เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน\",\n    \"signature_authority_user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"department_id\": \"85c5547d-a0d4-4ea5-a4e3-e55d94837ddd\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"complaint_id\": \"81edc778-d618-4bc7-ad21-8ab81b14d4e7\",\n    \"remarks\": \"หมายเหตุ\"\n}",
 							"options": {"raw": {"language": "json"}}
 						},
 						"url": {
@@ -8652,11 +8686,28 @@
 							"host": ["{{API}}{{PREFIX}}"],
 							"path": ["outgoing-reports3"]
 						},
-						"description": "สร้างรายงานขอทราบผลการพิจารณาใหม่"
+						"description": "สร้างรายงานขอทราบผลการพิจารณาใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- position_id: ตำแหน่งที่เกี่ยวข้อง (UUID)\n- complaint_number: หมายเลขข้อร้องเรียน\n- complaint_number_date: วันที่ของข้อร้องเรียน\n- subject: เรื่อง\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- department_id: หน่วยงาน (UUID)\n- confidentiality_level: ระดับความลับ\n- urgency_level: ระดับความเร่งด่วน\n\n**ฟิลด์ที่ไม่บังคับ:**\n- remarks: หมายเหตุ\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง"
+					}
+				},
+				{
+					"name": "Get Outgoing Report 3 by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports3/{{report3_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports3", "{{report3_id}}"]
+						},
+						"description": "ดึงรายงานขอทราบผลการพิจารณาตาม ID พร้อมข้อมูลครบถ้วน รวมข้อมูลตำแหน่ง, หน่วยงาน, ผู้มีอำนาจลงนาม, และไฟล์แนบ"
 					}
 				}
 			],
-			"description": "API สำหรับจัดการรายงานขอทราบผลการพิจารณา"
+			"description": "API สำหรับจัดการรายงานขอทราบผลการพิจารณา - เชื่อมโยงกับข้อร้องเรียน, ตำแหน่ง, หน่วยงาน, และผู้มีอำนาจลงนาม"
 		},
 		{
 			"name": "OUTGOING REPORTS 4 (แจ้งผลการให้ผู้เกี่ยวข้องทราบ)",
@@ -8675,17 +8726,34 @@
 							"host": ["{{API}}{{PREFIX}}"],
 							"path": ["outgoing-reports4"],
 							"query": [
-								{"key": "skip", "value": "0"},
-								{"key": "limit", "value": "100"},
-								{"key": "search", "value": ""},
-								{"key": "department_id", "value": ""},
-								{"key": "signature_authority_user_id", "value": ""},
-								{"key": "urgency_level", "value": ""},
-								{"key": "date_from", "value": ""},
-								{"key": "date_to", "value": ""}
+								{"key": "skip", "value": "0", "description": "จำนวนรายการที่ข้าม"},
+								{"key": "limit", "value": "100", "description": "จำนวนรายการต่อหน้า"},
+								{"key": "search", "value": "", "description": "ค้นหาจากเลขอ้างอิง, เรื่อง, หน่วยงานอื่นๆ, หมายเหตุ"},
+								{"key": "department_id", "value": "", "description": "หน่วยงาน (UUID)"},
+								{"key": "signature_authority_user_id", "value": "", "description": "ผู้มีอำนาจลงนาม (UUID)"},
+								{"key": "urgency_level", "value": "", "description": "ระดับความเร่งด่วน"},
+								{"key": "date_from", "value": "", "description": "วันที่เริ่มต้น (YYYY-MM-DD)"},
+								{"key": "date_to", "value": "", "description": "วันที่สิ้นสุด (YYYY-MM-DD)"}
 							]
 						},
-						"description": "ดึงรายการรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบทั้งหมด"
+						"description": "ดึงรายการรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบทั้งหมด พร้อมการกรองและค้นหา"
+					}
+				},
+				{
+					"name": "Get Outgoing Report 4 Options",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports4/options",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports4", "options"]
+						},
+						"description": "ดึงตัวเลือกสำหรับ dropdown ต่างๆ ในฟอร์ม - รวมรายการหน่วยงาน, ผู้มีอำนาจลงนาม, ผู้ใช้, ระดับความลับ, ระดับความเร่งด่วน"
 					}
 				},
 				{
@@ -8702,7 +8770,7 @@
 							"host": ["{{API}}{{PREFIX}}"],
 							"path": ["outgoing-reports4", "auto-fill", "{{complaint_id}}"]
 						},
-						"description": "ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์ม"
+						"description": "ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์มรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ - จะได้ข้อมูล complaint_id, subject, reference_number"
 					}
 				},
 				{
@@ -8716,7 +8784,7 @@
 						"header": [{"key": "Content-Type", "value": "application/json"}],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"reference_number\": \"เลขอ้างอิง\",\n    \"reference_date\": \"2024-01-15\",\n    \"subject\": \"เรื่อง แจ้งผลการให้ผู้เกี่ยวข้องทราบ\",\n    \"complaint_number\": \"COMP-2024-001\",\n    \"complaint_number_date\": \"2024-01-10\",\n    \"signature_authority_user_id\": \"uuid\",\n    \"department_id\": \"uuid\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"complaint_id\": \"uuid\",\n    \"remarks\": \"หมายเหตุ\"\n}",
+							"raw": "{\n    \"reference_number\": \"เลขอ้างอิง-2025-001\",\n    \"reference_date\": \"2025-06-24\",\n    \"subject\": \"เรื่อง แจ้งผลการให้ผู้เกี่ยวข้องทราบ\",\n    \"signature_authority_user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"department_id\": \"85c5547d-a0d4-4ea5-a4e3-e55d94837ddd\",\n    \"user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"other_department\": \"หน่วยงานอื่นๆ\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"remarks\": \"หมายเหตุ\",\n    \"proposal_purpose\": \"เสนอเพื่อทราบ\",\n    \"consideration_result\": \"ผลการพิจารณา\",\n    \"complaint_id\": \"81edc778-d618-4bc7-ad21-8ab81b14d4e7\"\n}",
 							"options": {"raw": {"language": "json"}}
 						},
 						"url": {
@@ -8724,11 +8792,28 @@
 							"host": ["{{API}}{{PREFIX}}"],
 							"path": ["outgoing-reports4"]
 						},
-						"description": "สร้างรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบใหม่"
+						"description": "สร้างรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- reference_number: เลขอ้างอิง\n- reference_date: วันที่เอกสาร\n- subject: เรื่อง\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- confidentiality_level: ระดับความลับ\n- urgency_level: ระดับความเร่งด่วน\n\n**ฟิลด์ที่ไม่บังคับ:**\n- department_id: หน่วยงาน (UUID)\n- user_id: ผู้ใช้ที่เกี่ยวข้อง (UUID)\n- other_department: หน่วยงานอื่นๆ (ข้อความ)\n- remarks: หมายเหตุ\n- proposal_purpose: เสนอเพื่อ\n- consideration_result: ผลการพิจารณา\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง"
+					}
+				},
+				{
+					"name": "Get Outgoing Report 4 by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports4/{{report4_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports4", "{{report4_id}}"]
+						},
+						"description": "ดึงรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบตาม ID พร้อมข้อมูลครบถ้วน รวมข้อมูลหน่วยงาน, ผู้มีอำนาจลงนาม, ผู้ใช้ที่เกี่ยวข้อง, และไฟล์แนบ"
 					}
 				}
 			],
-			"description": "API สำหรับจัดการรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ"
+			"description": "API สำหรับจัดการรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ - เชื่อมโยงกับข้อร้องเรียน, หน่วยงาน, ผู้มีอำนาจลงนาม, และผู้ใช้ที่เกี่ยวข้อง (ไม่มี position_id)"
 		},
 		{
 			"name": "USER PERMISSIONS (สิทธิ์เฉพาะผู้ใช้)",
