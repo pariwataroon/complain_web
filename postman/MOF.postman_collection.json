@@ -8893,6 +8893,90 @@
 				}
 			],
 			"description": "API สำหรับจัดการสิทธิ์เฉพาะของผู้ใช้รายบุคคล (นอกเหนือจากสิทธิ์ที่ได้จากบทบาท)"
+		},
+		{
+			"name": "CONSOLIDATED REPORTS (รายงานรวม)",
+			"item": [
+				{
+					"name": "Get All Consolidated Reports",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/consolidated-reports?skip=0&limit=100&search=&status=&department_id=&report_type=&date_from=&date_to=",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["consolidated-reports"],
+							"query": [
+								{"key": "skip", "value": "0", "description": "จำนวนรายการที่ข้าม"},
+								{"key": "limit", "value": "100", "description": "จำนวนรายการต่อหน้า"},
+								{"key": "search", "value": "", "description": "ค้นหาจากหมายเลขข้อร้องเรียน, เรื่อง, เลขอ้างอิง"},
+								{"key": "status", "value": "", "description": "สถานะเรื่องร้องเรียน"},
+								{"key": "department_id", "value": "", "description": "หน่วยงาน (UUID)"},
+								{"key": "report_type", "value": "", "description": "ประเภทรายงาน (all, with_reports, with_additional_refs)"},
+								{"key": "date_from", "value": "", "description": "วันที่เริ่มต้น (YYYY-MM-DD)"},
+								{"key": "date_to", "value": "", "description": "วันที่สิ้นสุด (YYYY-MM-DD)"}
+							]
+						},
+						"description": "ดึงรายการรายงานรวมทั้งหมด - รวมเรื่องร้องเรียน, เอกสารส่งออกทั้ง 4 ประเภท, และเลขอ้างอิงเพิ่มเติม"
+					}
+				},
+				{
+					"name": "Get Consolidated Report Options",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/consolidated-reports/options",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["consolidated-reports", "options"]
+						},
+						"description": "ดึงตัวเลือกสำหรับ dropdown ต่างๆ ในหน้ากรองข้อมูล - รวมหน่วยงาน, ผู้ใช้, สถานะ, ประเภทรายงาน"
+					}
+				},
+				{
+					"name": "Get Consolidated Report by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/consolidated-reports/{{complaint_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["consolidated-reports", "{{complaint_id}}"]
+						},
+						"description": "ดึงรายละเอียดรายงานรวมตาม ID เรื่องร้องเรียน - รวมเอกสารส่งออกทั้งหมด, เลขอ้างอิงเพิ่มเติม, และเรื่องร้องเรียนที่เกี่ยวข้อง"
+					}
+				},
+				{
+					"name": "Get Complaint Document Timeline",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/consolidated-reports/{{complaint_id}}/timeline",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["consolidated-reports", "{{complaint_id}}", "timeline"]
+						},
+						"description": "ดึง Timeline ของเอกสารทั้งหมดที่เกี่ยวข้องกับเรื่องร้องเรียน - เรียงตามวันที่ใหม่ล่าสุดก่อน"
+					}
+				}
+			],
+			"description": "API สำหรับรายงานรวม - รวบรวมข้อมูลเรื่องร้องเรียน, เอกสารส่งออกทั้ง 4 ประเภท, เลขอ้างอิงเพิ่มเติม, และเรื่องร้องเรียนที่เกี่ยวข้อง"
 		}
 	],
 	"event": [
