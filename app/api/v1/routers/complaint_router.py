@@ -358,7 +358,7 @@ async def update_status(
     complaint_id: UUID,
     status_update: StatusUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("complaints"))
+    current_user: str = Depends(can_update("setting_access"))
 ):
     """Update the status of a complaint"""
     try:
@@ -386,7 +386,7 @@ async def assign_complaint(
     complaint_id: UUID,
     assigned_to: str = Body(...),
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("complaints"))
+    current_user: str = Depends(can_update("setting_access"))
 ):
     """Assign complaint to an agency"""
     complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
@@ -429,7 +429,7 @@ async def add_resolution(
     complaint_id: UUID,
     resolution_summary: str = Body(...),
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("complaints"))
+    current_user: str = Depends(can_update("setting_access"))
 ):
     """Add resolution details to a complaint"""
     complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
@@ -470,7 +470,7 @@ async def add_resolution(
 async def delete_existing_complaint(
     complaint_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_delete("complaints"))
+    current_user: str = Depends(can_delete("setting_access"))
 ):
     """Delete a complaint"""
     success = delete_complaint(db, complaint_id)
@@ -551,7 +551,7 @@ async def update_complaint_additional_details(
     complaint_id: UUID,
     update_data: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("complaints"))
+    current_user: str = Depends(can_update("setting_access"))
 ):
     """อัพเดทข้อมูลเพิ่มเติมของเรื่องร้องเรียน เช่น ความลับ ความเร่งด่วน พื้นที่เกิดเหตุ"""
     try:
@@ -577,7 +577,7 @@ async def add_related_complaint_connection(
     complaint_id: UUID,
     related_complaint_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("complaints"))
+    current_user: str = Depends(can_update("setting_access"))
 ):
     """เพิ่มความสัมพันธ์ระหว่างเรื่องร้องเรียน"""
     success = add_related_complaint(db, complaint_id, related_complaint_id)
@@ -596,7 +596,7 @@ async def update_complaint_severity(
     complaint_id: UUID,
     severity_level: SeverityLevel,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("complaints"))
+    current_user: str = Depends(can_update("setting_access"))
 ):
     """อัพเดทระดับความรุนแรงของเรื่องร้องเรียน"""
     complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()

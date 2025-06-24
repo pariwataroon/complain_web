@@ -44,7 +44,7 @@ async def read_complaint_types(
 async def create_type(
     type_data: ComplaintTypeCreate,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_create("complaint_metadata"))  # ✅ แก้ไข permission
+    current_user: str = Depends(can_create("setting_access"))  # ✅ แก้ไข permission
 ):
     """สร้างประเภทเรื่องร้องเรียนหลักใหม่"""
     new_type = create_complaint_type(db, type_data.dict())
@@ -67,7 +67,7 @@ async def update_type(
     type_id: UUID,
     type_data: ComplaintTypeUpdate,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("complaint_metadata"))  # ✅ แก้ไข permission
+    current_user: str = Depends(can_update("setting_access"))  # ✅ แก้ไข permission
 ):
     """อัพเดทข้อมูลประเภทเรื่องร้องเรียนหลัก"""
     updated_type = update_complaint_type(db, type_id, type_data.dict(exclude_unset=True))
@@ -79,7 +79,7 @@ async def update_type(
 async def delete_type(
     type_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_delete("complaint_metadata"))  # ✅ แก้ไข permission
+    current_user: str = Depends(can_delete("setting_access"))  # ✅ แก้ไข permission
 ):
     """ลบประเภทเรื่องร้องเรียนหลัก"""
     success = delete_complaint_type(db, type_id)
@@ -106,7 +106,7 @@ async def read_complaint_subtypes(  # ✅ แก้ไขชื่อ function
 async def create_subtype(
     subtype_data: ComplaintSubTypeCreate,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_create("complaint_metadata"))  # ✅ แก้ไข permission
+    current_user: str = Depends(can_create("setting_access"))  # ✅ แก้ไข permission
 ):
     """สร้างประเภทเรื่องร้องเรียนย่อยใหม่"""
     parent_type = get_complaint_type(db, subtype_data.parent_type_id)
@@ -133,7 +133,7 @@ async def update_subtype(
     subtype_id: UUID,
     subtype_data: ComplaintSubTypeUpdate,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("complaint_metadata"))  # ✅ แก้ไข permission
+    current_user: str = Depends(can_update("setting_access"))  # ✅ แก้ไข permission
 ):
     """อัพเดทข้อมูลประเภทเรื่องร้องเรียนย่อย"""
     if subtype_data.parent_type_id:
@@ -150,7 +150,7 @@ async def update_subtype(
 async def delete_subtype(
     subtype_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_delete("complaint_metadata"))  # ✅ แก้ไข permission
+    current_user: str = Depends(can_delete("setting_access"))  # ✅ แก้ไข permission
 ):
     """ลบประเภทเรื่องร้องเรียนย่อย"""
     success = delete_complaint_subtype(db, subtype_id)
@@ -176,7 +176,7 @@ async def read_complaint_channels(  # ✅ แก้ไขชื่อ function
 async def create_channel(
     channel_data: ComplaintChannelCreate,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_create("complaint_metadata"))  # ✅ แก้ไข permission
+    current_user: str = Depends(can_create("setting_access"))  # ✅ แก้ไข permission
 ):
     """สร้างช่องทางการร้องเรียนใหม่"""
     new_channel = create_complaint_channel(db, channel_data.dict())
@@ -199,7 +199,7 @@ async def update_channel(
     channel_id: UUID,
     channel_data: ComplaintChannelUpdate,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("complaint_metadata"))  # ✅ แก้ไข permission
+    current_user: str = Depends(can_update("setting_access"))  # ✅ แก้ไข permission
 ):
     """อัพเดทข้อมูลช่องทางการร้องเรียน"""
     updated_channel = update_complaint_channel(db, channel_id, channel_data.dict(exclude_unset=True))
@@ -211,7 +211,7 @@ async def update_channel(
 async def delete_channel(
     channel_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_delete("complaint_metadata"))  # ✅ แก้ไข permission
+    current_user: str = Depends(can_delete("setting_access"))  # ✅ แก้ไข permission
 ):
     """ลบช่องทางการร้องเรียน"""
     success = delete_complaint_channel(db, channel_id)
