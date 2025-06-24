@@ -25,6 +25,9 @@ from .signature_authorities import SignatureAuthority
 from .comp_complaint import Complaint, ComplaintAttachment, ComplaintStatusHistory
 from .comp_complaint_types import ComplaintType, ComplaintSubType, ComplaintChannel
 from .outgoing_reports import OutgoingReport, OutgoingReportAttachment
+from .outgoing_reports2 import OutgoingReport2, OutgoingReportAttachment2
+from .outgoing_reports3 import OutgoingReport3, OutgoingReportAttachment3
+from .outgoing_reports4 import OutgoingReport4, OutgoingReportAttachment4
 
 
 # ระบุโมเดลที่สามารถนำเข้าเมื่อใช้ from models import *
@@ -35,5 +38,6 @@ __all__ = [
     'Geography', 'Province', 'Amphure', 'District', 'ProjectApiKey',
     'SignatureAuthority', 'Complaint', 'ComplaintAttachment',
     'ComplaintStatusHistory', 'ComplaintType', 'ComplaintSubType', 'ComplaintChannel',
-    'OutgoingReport', 'OutgoingReportAttachment'
+    'OutgoingReport', 'OutgoingReportAttachment', 'OutgoingReport2', 'OutgoingReportAttachment2',
+    'OutgoingReport3', 'OutgoingReportAttachment3', 'OutgoingReport4', 'OutgoingReportAttachment4'
 ]

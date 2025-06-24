@@ -8,7 +8,7 @@ from datetime import datetime
 from config.database import Base
 
 class OutgoingReport(Base):
-    __tablename__ = "outgoing_reports"
+    __tablename__ = "outgoing_reports" # แบบรายงานส่งหน่วยงานที่เกี่ยวข้อง
     
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4, index=True)
     

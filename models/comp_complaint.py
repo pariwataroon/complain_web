@@ -209,7 +209,10 @@ class Complaint(Base):
     complaint_type_relation = relationship("ComplaintType", back_populates="complaints")
     complaint_subtype_relation = relationship("ComplaintSubType", back_populates="complaints")
     complaint_channel_relation = relationship("ComplaintChannel", back_populates="complaints")
-    outgoing_reports = relationship("OutgoingReport", back_populates="complaint")
+    outgoing_reports = relationship("OutgoingReport", back_populates="complaint") # แบบรายงานส่งหน่วยงานที่เกี่ยวข้อง
+    outgoing_reports2 = relationship("OutgoingReport2", back_populates="complaint") # แบบรายงานแจ้งผู้ร้องเรียน / ส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น
+    outgoing_reports3 = relationship("OutgoingReport3", back_populates="complaint") # แบบรายงานขอทราบผลการพิจารณา / ผลความคืบหน้า
+    outgoing_reports4 = relationship("OutgoingReport4", back_populates="complaint") # แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ
 
 class ComplaintAttachment(Base):
     __tablename__ = "comp_complaint_attachments"
