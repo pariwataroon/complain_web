@@ -381,9 +381,46 @@ def update_complaint_assignment_data(
         # ✅ บันทึก additional_reference_number1-2 และ additional_reference_date1-2 (ตามเงื่อนไข)
         if "additional_reference_number1" in assignment_data:
             old_value = complaint.additional_reference_number1
-            complaint.additional_reference_number1 = assignment_data["additional_reference_number1"]
-            if assignment_data["additional_reference_number1"] != old_value:
-                changes.append(f"เลขอ้างอิงเพิ่มเติม 1: {old_value} → {assignment_data['additional_reference_number1']}")
+            new_reference_number = assignment_data["additional_reference_number1"]
+            
+            # ✅ ตรวจสอบการอ้างอิงตัวเอง - เพิ่มการตรวจสอบที่เข้มงวดขึ้น
+            if new_reference_number and new_reference_number == complaint.complaint_number:
+                return {"success": False, "message": f"ไม่สามารถอ้างอิงตัวเองได้ ({complaint.complaint_number})"}
+            
+            # ✅ ตรวจสอบว่าเลขอ้างอิงซ้ำในฟิลด์อื่นหรือไม่
+            if new_reference_number and new_reference_number == complaint.additional_reference_number2:
+                return {"success": False, "message": f"เลขอ้างอิง {new_reference_number} ถูกใช้ใน additional_reference_number2 แล้ว"}
+            
+            complaint.additional_reference_number1 = new_reference_number
+            
+            # ✅ เพิ่มการหา parent complaint และบันทึก parent_complaint_id
+            if new_reference_number != old_value and new_reference_number:
+                # หา complaint ที่ถูกอ้างอิง
+                reference_complaint = db.query(Complaint).filter(
+                    Complaint.complaint_number == new_reference_number
+                ).first()
+                
+                if reference_complaint:
+                    # ✅ ตรวจสอบการอ้างอิงตัวเองอีกครั้ง (double check)
+                    if reference_complaint.id == complaint.id:
+                        return {"success": False, "message": f"ไม่สามารถอ้างอิงตัวเองได้ - {new_reference_number} คือเรื่องเดียวกัน"}
+                    
+                    complaint.parent_complaint_id = reference_complaint.id
+                    changes.append(f"เลขอ้างอิงเพิ่มเติม 1: {old_value or 'ไม่มี'} → {new_reference_number} (ผูกกับ {reference_complaint.complaint_number})")
+                    logger.info(f"Set parent_complaint_id: {complaint.parent_complaint_id} for complaint: {complaint.complaint_number}")
+                else:
+                    # ถ้าไม่พบเรื่องอ้างอิง ให้คืนค่า parent_complaint_id เป็น None
+                    complaint.parent_complaint_id = None
+                    changes.append(f"เลขอ้างอิงเพิ่มเติม 1: {old_value or 'ไม่มี'} → {new_reference_number} (ไม่พบเรื่องอ้างอิง)")
+                    logger.warning(f"Reference complaint not found: {new_reference_number}")
+            elif not new_reference_number and old_value:
+                # ถ้าลบเลขอ้างอิง ให้คืนค่า parent_complaint_id เป็น None (ถ้าไม่มี reference อื่น)
+                if not complaint.additional_reference_number2:
+                    complaint.parent_complaint_id = None
+                    logger.info(f"Cleared parent_complaint_id for complaint: {complaint.complaint_number}")
+                changes.append(f"เลขอ้างอิงเพิ่มเติม 1: {old_value} → ไม่มี")
+            elif new_reference_number != old_value:
+                changes.append(f"เลขอ้างอิงเพิ่มเติม 1: {old_value or 'ไม่มี'} → {new_reference_number or 'ไม่มี'}")
 
         if "additional_reference_date1" in assignment_data and assignment_data["additional_reference_date1"]:
             try:
@@ -396,9 +433,46 @@ def update_complaint_assignment_data(
 
         if "additional_reference_number2" in assignment_data:
             old_value = complaint.additional_reference_number2
-            complaint.additional_reference_number2 = assignment_data["additional_reference_number2"]
-            if assignment_data["additional_reference_number2"] != old_value:
-                changes.append(f"เลขอ้างอิงเพิ่มเติม 2: {old_value} → {assignment_data['additional_reference_number2']}")
+            new_reference_number = assignment_data["additional_reference_number2"]
+            
+            # ✅ ตรวจสอบการอ้างอิงตัวเอง
+            if new_reference_number and new_reference_number == complaint.complaint_number:
+                return {"success": False, "message": f"ไม่สามารถอ้างอิงตัวเองได้ ({complaint.complaint_number})"}
+            
+            # ✅ ตรวจสอบว่าเลขอ้างอิงซ้ำในฟิลด์อื่นหรือไม่
+            if new_reference_number and new_reference_number == complaint.additional_reference_number1:
+                return {"success": False, "message": f"เลขอ้างอิง {new_reference_number} ถูกใช้ใน additional_reference_number1 แล้ว"}
+            
+            complaint.additional_reference_number2 = new_reference_number
+            
+            # ✅ เพิ่มการหา parent complaint และบันทึก parent_complaint_id (สำหรับ reference 2)
+            if new_reference_number != old_value and new_reference_number:
+                # หา complaint ที่ถูกอ้างอิง
+                reference_complaint = db.query(Complaint).filter(
+                    Complaint.complaint_number == new_reference_number
+                ).first()
+                
+                if reference_complaint:
+                    # ✅ ตรวจสอบการอ้างอิงตัวเองอีกครั้ง (double check)
+                    if reference_complaint.id == complaint.id:
+                        return {"success": False, "message": f"ไม่สามารถอ้างอิงตัวเองได้ - {new_reference_number} คือเรื่องเดียวกัน"}
+                    
+                    # ถ้ายังไม่มี parent ให้เซ็ต (อันดับแรกคือ reference_number1)
+                    if not complaint.parent_complaint_id:
+                        complaint.parent_complaint_id = reference_complaint.id
+                        logger.info(f"Set parent_complaint_id from reference2: {complaint.parent_complaint_id} for complaint: {complaint.complaint_number}")
+                    changes.append(f"เลขอ้างอิงเพิ่มเติม 2: {old_value or 'ไม่มี'} → {new_reference_number} (ผูกกับ {reference_complaint.complaint_number})")
+                else:
+                    changes.append(f"เลขอ้างอิงเพิ่มเติม 2: {old_value or 'ไม่มี'} → {new_reference_number} (ไม่พบเรื่องอ้างอิง)")
+                    logger.warning(f"Reference complaint not found: {new_reference_number}")
+            elif not new_reference_number and old_value:
+                # ถ้าลบเลขอ้างอิง 2 และไม่มี reference 1 ให้คืนค่า parent_complaint_id เป็น None
+                if not complaint.additional_reference_number1:
+                    complaint.parent_complaint_id = None
+                    logger.info(f"Cleared parent_complaint_id for complaint: {complaint.complaint_number}")
+                changes.append(f"เลขอ้างอิงเพิ่มเติม 2: {old_value} → ไม่มี")
+            elif new_reference_number != old_value:
+                changes.append(f"เลขอ้างอิงเพิ่มเติม 2: {old_value or 'ไม่มี'} → {new_reference_number or 'ไม่มี'}")
 
         if "additional_reference_date2" in assignment_data and assignment_data["additional_reference_date2"]:
             try:
@@ -877,6 +951,15 @@ def add_additional_complaint_reference(
         if not reference_complaint:
             return {"success": False, "message": "ไม่พบเรื่องร้องเรียนอ้างอิง"}
         
+        # ✅ เพิ่มการตรวจสอบการอ้างอิงตัวเอง
+        if reference_complaint.id == complaint.id:
+            return {"success": False, "message": "ไม่สามารถอ้างอิงตัวเองได้"}
+        
+        # ✅ ตรวจสอบว่าอ้างอิงซ้ำหรือไม่
+        if (complaint.additional_reference_number1 == reference_complaint.complaint_number or 
+            complaint.additional_reference_number2 == reference_complaint.complaint_number):
+            return {"success": False, "message": f"เลขอ้างอิง {reference_complaint.complaint_number} ถูกใช้แล้ว"}
+        
         # บันทึกลง additional_reference_number
         current_time = datetime.now()
         
@@ -891,7 +974,7 @@ def add_additional_complaint_reference(
         else:
             return {"success": False, "message": "ช่องเลขอ้างอิงเต็มแล้ว"}
         
-        # อัพเดท parent relationship
+        # ✅ อัพเดท parent relationship (แก้ไขให้ถูกต้อง)
         complaint.parent_complaint_id = reference_complaint.id
         complaint.updated_at = current_time
         
@@ -904,7 +987,8 @@ def add_additional_complaint_reference(
             "reference_complaint_id": str(reference_complaint.id),
             "reference_complaint_number": reference_complaint.complaint_number,
             "reference_field": reference_field,
-            "reference_date": current_time.isoformat()
+            "reference_date": current_time.isoformat(),
+            "parent_complaint_id": str(complaint.parent_complaint_id)  # ✅ เพิ่มข้อมูลนี้
         }
         
     except Exception as e:
