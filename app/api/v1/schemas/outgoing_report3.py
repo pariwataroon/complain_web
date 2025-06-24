@@ -23,11 +23,9 @@ class OutgoingReport3Attachment(OutgoingReport3AttachmentBase):
 
 class OutgoingReport3Base(BaseModel):
     position_id: UUID = Field(..., description="ตำแหน่งที่เกี่ยวข้อง")
-    reference_number: str = Field(..., description="เลข สป.กค")
-    reference_date: datetime = Field(..., description="วันที่เอกสาร สป.กค")
+    complaint_number: str = Field(..., description="หมายเลขข้อร้องเรียน")  # ตาม model
+    complaint_number_date: datetime = Field(..., description="วันที่ของข้อร้องเรียน")  # ตาม model
     subject: str = Field(..., description="เรื่อง")
-    complaint_number: str = Field(..., description="หมายเลขข้อร้องเรียน")
-    complaint_number_date: datetime = Field(..., description="วันที่ของข้อร้องเรียน")
     signature_authority_user_id: UUID = Field(..., description="ผู้มีอำนาจลงนาม")
     department_id: UUID = Field(..., description="หน่วยงาน")
     confidentiality_level: str = Field(..., description="ระดับความลับ")
@@ -37,11 +35,9 @@ class OutgoingReport3Base(BaseModel):
 
 class OutgoingReport3Create(BaseModel):
     position_id: UUID
-    reference_number: str = Field(..., max_length=50)
-    reference_date: datetime
+    complaint_number: str = Field(..., max_length=50)  # ตาม model
+    complaint_number_date: datetime  # ตาม model
     subject: str = Field(..., max_length=500)
-    complaint_number: str = Field(..., max_length=50)
-    complaint_number_date: datetime
     signature_authority_user_id: UUID
     department_id: UUID
     confidentiality_level: str = Field(..., max_length=50)
@@ -57,11 +53,9 @@ class OutgoingReport3Create(BaseModel):
 
 class OutgoingReport3Update(BaseModel):
     position_id: Optional[UUID] = None
-    reference_number: Optional[str] = None
-    reference_date: Optional[datetime] = None
-    subject: Optional[str] = None
     complaint_number: Optional[str] = None
     complaint_number_date: Optional[datetime] = None
+    subject: Optional[str] = None
     signature_authority_user_id: Optional[UUID] = None
     department_id: Optional[UUID] = None
     confidentiality_level: Optional[str] = None

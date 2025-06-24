@@ -22,30 +22,34 @@ class OutgoingReport4Attachment(OutgoingReport4AttachmentBase):
         from_attributes = True
 
 class OutgoingReport4Base(BaseModel):
-    # หมายเหตุ: OutgoingReport4 ไม่มี position_id ตาม model
+    # ตาม model ไม่มี position_id, complaint_number, complaint_number_date
     reference_number: str = Field(..., description="เลขอ้างอิง")
     reference_date: datetime = Field(..., description="วันที่เอกสาร")
     subject: str = Field(..., description="เรื่อง")
-    complaint_number: str = Field(..., description="หมายเลขข้อร้องเรียน")
-    complaint_number_date: datetime = Field(..., description="วันที่ของข้อร้องเรียน")
     signature_authority_user_id: UUID = Field(..., description="ผู้มีอำนาจลงนาม")
-    department_id: UUID = Field(..., description="หน่วยงาน")
+    department_id: Optional[UUID] = Field(None, description="หน่วยงาน")  # ตาม model nullable=True
+    user_id: Optional[UUID] = Field(None, description="ผู้ใช้ที่เกี่ยวข้อง")  # ตาม model
+    other_department: Optional[str] = Field(None, description="หน่วยงานอื่นๆ")  # ตาม model
     confidentiality_level: str = Field(..., description="ระดับความลับ")
     urgency_level: str = Field(..., description="ระดับความเร่งด่วน")
     remarks: Optional[str] = Field(None, description="หมายเหตุ")
+    proposal_purpose: Optional[str] = Field(None, description="เสนอเพื่อ")  # ตาม model
+    consideration_result: Optional[str] = Field(None, description="ผลการพิจารณา")  # ตาม model
     complaint_id: Optional[UUID] = Field(None, description="ID ของข้อร้องเรียนที่เกี่ยวข้อง")
 
 class OutgoingReport4Create(BaseModel):
     reference_number: str = Field(..., max_length=50)
     reference_date: datetime
     subject: str = Field(..., max_length=500)
-    complaint_number: str = Field(..., max_length=50)
-    complaint_number_date: datetime
     signature_authority_user_id: UUID
-    department_id: UUID
+    department_id: Optional[UUID] = None  # ตาม model
+    user_id: Optional[UUID] = None  # ตาม model
+    other_department: Optional[str] = None  # ตาม model
     confidentiality_level: str = Field(..., max_length=50)
     urgency_level: str = Field(..., max_length=50)
     remarks: Optional[str] = None
+    proposal_purpose: Optional[str] = None  # ตาม model
+    consideration_result: Optional[str] = None  # ตาม model
     complaint_id: Optional[UUID] = None
     
     class Config:
@@ -58,13 +62,15 @@ class OutgoingReport4Update(BaseModel):
     reference_number: Optional[str] = None
     reference_date: Optional[datetime] = None
     subject: Optional[str] = None
-    complaint_number: Optional[str] = None
-    complaint_number_date: Optional[datetime] = None
     signature_authority_user_id: Optional[UUID] = None
     department_id: Optional[UUID] = None
+    user_id: Optional[UUID] = None
+    other_department: Optional[str] = None
     confidentiality_level: Optional[str] = None
     urgency_level: Optional[str] = None
     remarks: Optional[str] = None
+    proposal_purpose: Optional[str] = None
+    consideration_result: Optional[str] = None
     complaint_id: Optional[UUID] = None
 
 class OutgoingReport4(OutgoingReport4Base):
@@ -78,6 +84,7 @@ class OutgoingReport4(OutgoingReport4Base):
     # ข้อมูลเพิ่มเติมจาก relationships
     signature_authority_user_name: Optional[str] = Field(None, description="ชื่อผู้มีอำนาจลงนาม")
     department_name: Optional[str] = Field(None, description="ชื่อหน่วยงาน")
+    user_name: Optional[str] = Field(None, description="ชื่อผู้ใช้ที่เกี่ยวข้อง")  # ตาม model
     creator_name: Optional[str] = Field(None, description="ชื่อผู้สร้าง")
     
     # ไฟล์แนบ
@@ -90,5 +97,6 @@ class OutgoingReport4Options(BaseModel):
     """ตัวเลือกสำหรับ dropdown ต่างๆ"""
     signature_authorities: List[dict] = Field(default=[], description="รายการผู้มีอำนาจลงนาม")
     departments: List[dict] = Field(default=[], description="รายการหน่วยงาน")
+    users: List[dict] = Field(default=[], description="รายการผู้ใช้")  # ตาม model
     confidentiality_levels: List[str] = Field(default=["ปกติ", "ลับ", "ลับมาก", "ลับที่สุด"], description="ระดับความลับ")
     urgency_levels: List[str] = Field(default=["ปกติ", "เร่งด่วน", "เร่งด่วนมาก", "เร่งด่วนที่สุด"], description="ระดับความเร่งด่วน")

@@ -37,15 +37,28 @@ def create_outgoing_report2(
         if existing:
             raise DuplicateKeyError(f"เลขหนังสือ {report_data.complaint_number} มีอยู่แล้ว")
         
-        # สร้าง object
+        # ตรวจสอบความสอดคล้องระหว่าง complaint_id และ complaint_number
+        if report_data.complaint_id:
+            complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+            if not complaint:
+                raise HTTPException(status_code=400, detail="ไม่พบข้อร้องเรียนที่ระบุ")
+            
+            # ตรวจสอบว่า complaint_number ตรงกันหรือไม่
+            if complaint.complaint_number != report_data.complaint_number:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"หมายเลขข้อร้องเรียน '{report_data.complaint_number}' ไม่ตรงกับข้อร้องเรียน ID ที่ระบุ (ควรเป็น '{complaint.complaint_number}')"
+                )
+        
+        # สร้าง object ตาม model ที่ถูกต้อง
         db_report = OutgoingReport2(
             position_id=report_data.position_id,
             complaint_number=report_data.complaint_number,
             complaint_number_date=report_data.complaint_number_date,
             subject=report_data.subject,
+            signature_authority_user_id=report_data.signature_authority_user_id,
             department_id=report_data.department_id,
             user_id=report_data.user_id,
-            signature_authority_user_id=report_data.signature_authority_user_id,
             confidentiality_level=report_data.confidentiality_level,
             urgency_level=report_data.urgency_level,
             remarks=report_data.remarks,
@@ -61,6 +74,9 @@ def create_outgoing_report2(
         return get_outgoing_report2_by_id(db, db_report.id)
         
     except DuplicateKeyError:
+        db.rollback()
+        raise
+    except HTTPException:
         db.rollback()
         raise
     except Exception as e:

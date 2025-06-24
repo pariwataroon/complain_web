@@ -28,23 +28,34 @@ def create_outgoing_report3(
     try:
         logger.info(f"Creating OutgoingReport3: {report_data.complaint_number}")
         
-        # ตรวจสอบ reference_number ซ้ำ (แก้ไขจาก complaint_number)
+        # ตรวจสอบ complaint_number ซ้ำ (ตาม model)
         existing = db.query(OutgoingReport3).filter(
-            OutgoingReport3.reference_number == report_data.reference_number,
+            OutgoingReport3.complaint_number == report_data.complaint_number,
             OutgoingReport3.is_active == True
         ).first()
         
         if existing:
-            raise DuplicateKeyError(f"เลขหนังสือ {report_data.reference_number} มีอยู่แล้ว")
+            raise DuplicateKeyError(f"เลขหนังสือ {report_data.complaint_number} มีอยู่แล้ว")
         
-        # สร้าง object ตาม schema ที่ถูกต้อง
+        # ตรวจสอบความสอดคล้องระหว่าง complaint_id และ complaint_number
+        if report_data.complaint_id:
+            complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+            if not complaint:
+                raise HTTPException(status_code=400, detail="ไม่พบข้อร้องเรียนที่ระบุ")
+            
+            # ตรวจสอบว่า complaint_number ตรงกันหรือไม่
+            if complaint.complaint_number != report_data.complaint_number:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"หมายเลขข้อร้องเรียน '{report_data.complaint_number}' ไม่ตรงกับข้อร้องเรียน ID ที่ระบุ (ควรเป็น '{complaint.complaint_number}')"
+                )
+        
+        # สร้าง object ตาม model ที่ถูกต้อง
         db_report = OutgoingReport3(
             position_id=report_data.position_id,
-            reference_number=report_data.reference_number,
-            reference_date=report_data.reference_date,
+            complaint_number=report_data.complaint_number,  # ตาม model
+            complaint_number_date=report_data.complaint_number_date,  # ตาม model
             subject=report_data.subject,
-            complaint_number=report_data.complaint_number,
-            complaint_number_date=report_data.complaint_number_date,
             signature_authority_user_id=report_data.signature_authority_user_id,
             department_id=report_data.department_id,
             confidentiality_level=report_data.confidentiality_level,
@@ -62,6 +73,9 @@ def create_outgoing_report3(
         return get_outgoing_report3_by_id(db, db_report.id)
         
     except DuplicateKeyError:
+        db.rollback()
+        raise
+    except HTTPException:
         db.rollback()
         raise
     except Exception as e:
@@ -93,11 +107,9 @@ def get_outgoing_report3_by_id(db: Session, report_id: UUID) -> Dict:
                 "id": str(report.position_id),
                 "name": report.position.name if report.position else "N/A"
             },
-            "reference_number": report.reference_number,
-            "reference_date": report.reference_date.isoformat() if report.reference_date else None,
+            "complaint_number": report.complaint_number,  # ตาม model
+            "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,  # ตาม model
             "subject": report.subject,
-            "complaint_number": report.complaint_number,
-            "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,
             "department": {
                 "id": str(report.department_id) if report.department_id else None,
                 "name": report.department.name if report.department else "N/A"
@@ -154,8 +166,7 @@ def get_outgoing_reports3(
         if search:
             query = query.filter(
                 or_(
-                    OutgoingReport3.reference_number.ilike(f"%{search}%"),
-                    OutgoingReport3.complaint_number.ilike(f"%{search}%"),
+                    OutgoingReport3.complaint_number.ilike(f"%{search}%"),  # ตาม model
                     OutgoingReport3.subject.ilike(f"%{search}%"),
                     OutgoingReport3.remarks.ilike(f"%{search}%")
                 )
@@ -170,9 +181,9 @@ def get_outgoing_reports3(
         if urgency_level:
             query = query.filter(OutgoingReport3.urgency_level == urgency_level)
         if date_from:
-            query = query.filter(OutgoingReport3.reference_date >= date_from)
+            query = query.filter(OutgoingReport3.complaint_number_date >= date_from)  # ตาม model
         if date_to:
-            query = query.filter(OutgoingReport3.reference_date <= date_to)
+            query = query.filter(OutgoingReport3.complaint_number_date <= date_to)  # ตาม model
         
         total = query.count()
         reports = query.order_by(OutgoingReport3.created_at.desc()).offset(skip).limit(limit).all()
@@ -181,9 +192,8 @@ def get_outgoing_reports3(
         for report in reports:
             items.append({
                 "id": str(report.id),
-                "reference_number": report.reference_number,
-                "reference_date": report.reference_date.isoformat() if report.reference_date else None,
-                "complaint_number": report.complaint_number,
+                "complaint_number": report.complaint_number,  # ตาม model
+                "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,  # ตาม model
                 "subject": report.subject,
                 "position_name": report.position.name if report.position else "N/A",
                 "department_name": report.department.name if report.department else "N/A",

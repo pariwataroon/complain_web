@@ -36,21 +36,28 @@ def create_outgoing_report4(
         if existing:
             raise DuplicateKeyError(f"เลขอ้างอิง {report_data.reference_number} มีอยู่แล้ว")
         
-        # สร้าง object
+        # ไม่ต้องตรวจสอบ complaint_id เพราะ outgoing_reports4 ไม่มี complaint_number
+        # แต่ถ้ามี complaint_id ก็ยังตรวจสอบได้ว่ามีอยู่จริงหรือไม่
+        if report_data.complaint_id:
+            complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+            if not complaint:
+                raise HTTPException(status_code=400, detail="ไม่พบข้อร้องเรียนที่ระบุ")
+        
+        # สร้าง object ตาม model ที่ถูกต้อง
         db_report = OutgoingReport4(
             reference_number=report_data.reference_number,
             reference_date=report_data.reference_date,
             subject=report_data.subject,
             signature_authority_user_id=report_data.signature_authority_user_id,
-            department_id=report_data.department_id,
-            user_id=report_data.user_id,
-            other_department=report_data.other_department,
+            department_id=report_data.department_id,  # Optional ตาม model
+            user_id=report_data.user_id,  # ตาม model
+            other_department=report_data.other_department,  # ตาม model
             confidentiality_level=report_data.confidentiality_level,
             urgency_level=report_data.urgency_level,
             remarks=report_data.remarks,
-            proposal_purpose=report_data.proposal_purpose,
-            consideration_result=report_data.consideration_result,
-            complaint_id=report_data.complaint_id,
+            proposal_purpose=report_data.proposal_purpose,  # ตาม model
+            consideration_result=report_data.consideration_result,  # ตาม model
+            complaint_id=report_data.complaint_id,  # ยังคงมีได้ แต่ไม่บังคับ
             created_by=current_user_id
         )
         
@@ -64,6 +71,9 @@ def create_outgoing_report4(
     except DuplicateKeyError:
         db.rollback()
         raise
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Error creating outgoing report4: {str(e)}")
@@ -75,7 +85,7 @@ def get_outgoing_report4_by_id(db: Session, report_id: UUID) -> Dict:
         report = db.query(OutgoingReport4).options(
             joinedload(OutgoingReport4.signature_authority_user),
             joinedload(OutgoingReport4.department),
-            joinedload(OutgoingReport4.user),
+            joinedload(OutgoingReport4.user),  # ตาม model
             joinedload(OutgoingReport4.creator),
             joinedload(OutgoingReport4.complaint),
             joinedload(OutgoingReport4.attachments)
@@ -100,18 +110,19 @@ def get_outgoing_report4_by_id(db: Session, report_id: UUID) -> Dict:
                 "id": str(report.department_id) if report.department_id else None,
                 "name": report.department.name if report.department else "N/A"
             },
-            "user": {
+            "user": {  # ตาม model
                 "id": str(report.user_id) if report.user_id else None,
                 "name": f"{report.user.first_name} {report.user.last_name}" if report.user else "N/A"
             },
-            "other_department": report.other_department,
+            "other_department": report.other_department,  # ตาม model
             "confidentiality_level": report.confidentiality_level,
             "urgency_level": report.urgency_level,
             "remarks": report.remarks,
-            "proposal_purpose": report.proposal_purpose,
-            "consideration_result": report.consideration_result,
+            "proposal_purpose": report.proposal_purpose,  # ตาม model
+            "consideration_result": report.consideration_result,  # ตาม model
             "complaint_id": str(report.complaint_id) if report.complaint_id else None,
             "created_at": report.created_at.isoformat() if report.created_at else None,
+            "creator_name": f"{report.creator.first_name} {report.creator.last_name}" if report.creator else "N/A",
             "attachments": [
                 {
                     "id": str(att.id),
@@ -209,6 +220,7 @@ def get_outgoing_report4_options(db: Session) -> Dict:
         
         return {
             "departments": [{"id": str(dept.id), "name": dept.name} for dept in departments],
+            "signature_authorities": [{"id": str(user.id), "name": f"{user.first_name} {user.last_name}"} for user in users],  # เพิ่ม
             "users": [{"id": str(user.id), "name": f"{user.first_name} {user.last_name}"} for user in users],
             "confidentiality_levels": ["ปกติ", "ลับ", "ลับมาก", "ลับที่สุด"],
             "urgency_levels": ["ปกติ", "เร่งด่วน", "เร่งด่วนมาก", "เร่งด่วนที่สุด"]
@@ -226,10 +238,11 @@ def auto_fill_from_complaint4(db: Session, complaint_id: UUID) -> Dict:
         if not complaint:
             raise HTTPException(status_code=404, detail="ไม่พบข้อร้องเรียนที่ระบุ")
         
+        # สำหรับ outgoing_reports4 ไม่มี complaint_number เลยไม่ใส่
         return {
             "complaint_id": str(complaint.id),
-            "subject": complaint.subject,
-            "reference_number": complaint.complaint_number if hasattr(complaint, 'complaint_number') else None
+            "subject": f"แจ้งผลการให้ผู้เกี่ยวข้องทราบ - {complaint.subject}",
+            "reference_number": f"อ้างอิง-{complaint.complaint_number}" if hasattr(complaint, 'complaint_number') else None
         }
         
     except HTTPException:
