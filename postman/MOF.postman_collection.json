@@ -8494,7 +8494,321 @@
                 }
             ],
             "description": "API สำหรับจัดการแบบรายงานส่งหน่วยงานที่เกี่ยวข้อง - เชื่อมโยงกับข้อร้องเรียน, ตำแหน่ง, หน่วยงาน, และผู้มีอำนาจลงนาม"
-        }
+        },
+		{
+			"name": "OUTGOING REPORTS 2 (แจ้งผู้ร้องเรียน)",
+			"item": [
+				{
+					"name": "Get All Outgoing Reports 2",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports2?skip=0&limit=100&search=&position_id=&department_id=&signature_authority_user_id=&urgency_level=&date_from=&date_to=",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports2"],
+							"query": [
+								{"key": "skip", "value": "0", "description": "จำนวนรายการที่ข้าม"},
+								{"key": "limit", "value": "100", "description": "จำนวนรายการต่อหน้า"},
+								{"key": "search", "value": "", "description": "ค้นหาจากเลขหนังสือ, เรื่อง, หมายเลขข้อร้องเรียน"},
+								{"key": "position_id", "value": "", "description": "ตำแหน่งที่เกี่ยวข้อง"},
+								{"key": "department_id", "value": "", "description": "หน่วยงาน"},
+								{"key": "signature_authority_user_id", "value": "", "description": "ผู้มีอำนาจลงนาม"},
+								{"key": "urgency_level", "value": "", "description": "ระดับความเร่งด่วน"},
+								{"key": "date_from", "value": "", "description": "วันที่เริ่มต้น"},
+								{"key": "date_to", "value": "", "description": "วันที่สิ้นสุด"}
+							]
+						},
+						"description": "ดึงรายการรายงานแจ้งผู้ร้องเรียนทั้งหมด พร้อมการกรองและค้นหา"
+					}
+				},
+				{
+					"name": "Auto Fill from Complaint 2",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports2/auto-fill/{{complaint_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports2", "auto-fill", "{{complaint_id}}"]
+						},
+						"description": "ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์มรายงานแจ้งผู้ร้องเรียน"
+					}
+				},
+				{
+					"name": "Create Outgoing Report 2",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"position_id\": \"uuid\",\n    \"reference_number\": \"เลขหนังสือ\",\n    \"reference_date\": \"2024-01-15\",\n    \"subject\": \"เรื่อง แจ้งผลการพิจารณาเรื่องร้องเรียน\",\n    \"complaint_number\": \"COMP-2024-001\",\n    \"complaint_number_date\": \"2024-01-10\",\n    \"signature_authority_user_id\": \"uuid\",\n    \"department_id\": \"uuid\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"complaint_id\": \"uuid\",\n    \"remarks\": \"หมายเหตุ\"\n}",
+							"options": {"raw": {"language": "json"}}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports2",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports2"]
+						},
+						"description": "สร้างรายงานแจ้งผู้ร้องเรียนใหม่"
+					}
+				},
+				{
+					"name": "Get Outgoing Report 2 by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports2/{{report_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports2", "{{report_id}}"]
+						},
+						"description": "ดึงรายงานแจ้งผู้ร้องเรียนตาม ID"
+					}
+				}
+			],
+			"description": "API สำหรับจัดการรายงานแจ้งผู้ร้องเรียน"
+		},
+		{
+			"name": "OUTGOING REPORTS 3 (ขอทราบผลการพิจารณา)",
+			"item": [
+				{
+					"name": "Get All Outgoing Reports 3",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports3?skip=0&limit=100&search=&position_id=&department_id=&signature_authority_user_id=&urgency_level=&date_from=&date_to=",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports3"],
+							"query": [
+								{"key": "skip", "value": "0"},
+								{"key": "limit", "value": "100"},
+								{"key": "search", "value": ""},
+								{"key": "position_id", "value": ""},
+								{"key": "department_id", "value": ""},
+								{"key": "signature_authority_user_id", "value": ""},
+								{"key": "urgency_level", "value": ""},
+								{"key": "date_from", "value": ""},
+								{"key": "date_to", "value": ""}
+							]
+						},
+						"description": "ดึงรายการรายงานขอทราบผลการพิจารณาทั้งหมด"
+					}
+				},
+				{
+					"name": "Auto Fill from Complaint 3",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports3/auto-fill/{{complaint_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports3", "auto-fill", "{{complaint_id}}"]
+						},
+						"description": "ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์ม"
+					}
+				},
+				{
+					"name": "Create Outgoing Report 3",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"position_id\": \"uuid\",\n    \"reference_number\": \"เลขหนังสือ\",\n    \"reference_date\": \"2024-01-15\",\n    \"subject\": \"เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน\",\n    \"complaint_number\": \"COMP-2024-001\",\n    \"complaint_number_date\": \"2024-01-10\",\n    \"signature_authority_user_id\": \"uuid\",\n    \"department_id\": \"uuid\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"complaint_id\": \"uuid\",\n    \"remarks\": \"หมายเหตุ\"\n}",
+							"options": {"raw": {"language": "json"}}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports3",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports3"]
+						},
+						"description": "สร้างรายงานขอทราบผลการพิจารณาใหม่"
+					}
+				}
+			],
+			"description": "API สำหรับจัดการรายงานขอทราบผลการพิจารณา"
+		},
+		{
+			"name": "OUTGOING REPORTS 4 (แจ้งผลการให้ผู้เกี่ยวข้องทราบ)",
+			"item": [
+				{
+					"name": "Get All Outgoing Reports 4",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports4?skip=0&limit=100&search=&department_id=&signature_authority_user_id=&urgency_level=&date_from=&date_to=",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports4"],
+							"query": [
+								{"key": "skip", "value": "0"},
+								{"key": "limit", "value": "100"},
+								{"key": "search", "value": ""},
+								{"key": "department_id", "value": ""},
+								{"key": "signature_authority_user_id", "value": ""},
+								{"key": "urgency_level", "value": ""},
+								{"key": "date_from", "value": ""},
+								{"key": "date_to", "value": ""}
+							]
+						},
+						"description": "ดึงรายการรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบทั้งหมด"
+					}
+				},
+				{
+					"name": "Auto Fill from Complaint 4",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports4/auto-fill/{{complaint_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports4", "auto-fill", "{{complaint_id}}"]
+						},
+						"description": "ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์ม"
+					}
+				},
+				{
+					"name": "Create Outgoing Report 4",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reference_number\": \"เลขอ้างอิง\",\n    \"reference_date\": \"2024-01-15\",\n    \"subject\": \"เรื่อง แจ้งผลการให้ผู้เกี่ยวข้องทราบ\",\n    \"complaint_number\": \"COMP-2024-001\",\n    \"complaint_number_date\": \"2024-01-10\",\n    \"signature_authority_user_id\": \"uuid\",\n    \"department_id\": \"uuid\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"complaint_id\": \"uuid\",\n    \"remarks\": \"หมายเหตุ\"\n}",
+							"options": {"raw": {"language": "json"}}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports4",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports4"]
+						},
+						"description": "สร้างรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบใหม่"
+					}
+				}
+			],
+			"description": "API สำหรับจัดการรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ"
+		},
+		{
+			"name": "USER PERMISSIONS (สิทธิ์เฉพาะผู้ใช้)",
+			"item": [
+				{
+					"name": "Create User Permission",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": \"uuid\",\n    \"resource_id\": \"uuid\",\n    \"can_create\": true,\n    \"can_read\": true,\n    \"can_update\": true,\n    \"can_delete\": false\n}",
+							"options": {"raw": {"language": "json"}}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/user-permissions/create",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["user-permissions", "create"]
+						},
+						"description": "สร้างสิทธิ์เฉพาะสำหรับผู้ใช้รายบุคคล"
+					}
+				},
+				{
+					"name": "Get User Permissions by User ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/user-permissions/user/{{user_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["user-permissions", "user", "{{user_id}}"]
+						},
+						"description": "ดึงข้อมูลสิทธิ์เฉพาะทั้งหมดของผู้ใช้รายบุคคล"
+					}
+				},
+				{
+					"name": "Get Resource User Permissions",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/user-permissions/resource/{{resource_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["user-permissions", "resource", "{{resource_id}}"]
+						},
+						"description": "ดึงข้อมูลสิทธิ์เฉพาะของผู้ใช้ทั้งหมดสำหรับทรัพยากรที่ระบุ"
+					}
+				},
+				{
+					"name": "Delete User Permission",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/user-permissions/{{permission_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["user-permissions", "{{permission_id}}"]
+						},
+						"description": "ลบสิทธิ์เฉพาะของผู้ใช้รายบุคคล"
+					}
+				}
+			],
+			"description": "API สำหรับจัดการสิทธิ์เฉพาะของผู้ใช้รายบุคคล (นอกเหนือจากสิทธิ์ที่ได้จากบทบาท)"
+		}
 	],
 	"event": [
 		{
