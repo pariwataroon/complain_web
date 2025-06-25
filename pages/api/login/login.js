@@ -1,6 +1,6 @@
 import axiosInstance from "@pages/api/axiosInstance";
 import Cookies from "js-cookie";
-import { DecodeJWT } from "@utils/decodeJWT";
+import { DecodeJWT } from "@utils/DecodeJWT";
 
 const loginThaID = async (authCode) => {
   try {

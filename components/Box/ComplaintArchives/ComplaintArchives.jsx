@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useRouter } from "next/router";
-import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
+import BreadcrumbsService from "@services/Breadcrumbs/Breadcrumbs";
 import TableListBox from "@services/TableListBox/TableListBox";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 

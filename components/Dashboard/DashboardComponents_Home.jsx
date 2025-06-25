@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Box, Container } from "@mui/material";
-import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
+import BreadcrumbsService from "@services/Breadcrumbs/Breadcrumbs";
 import DailyStatsChart from "@services/DailyStatsChart/DailyStatsChart";
 import HourlyStatsChart from "@services/HourlyStatsChart/HourlyStatsChart";
 import PopularNewsStats from "@services/PopularNewsStats/PopularNewsStats";

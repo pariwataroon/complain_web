@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Box, Grid } from "@mui/material";
-import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
+import BreadcrumbsService from "@services/Breadcrumbs/Breadcrumbs";
 import TopLeftService from "@services/DashBoardTopLeftService/DashBoardTopLeftService";
 import TopRightService from "@services/DashBoardTopRightService/DashBoardTopRightService";
 import BottomLeftService from "@services/DashBoardBottomLeftService/DashBoardBottomLeftService";
