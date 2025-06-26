@@ -155,7 +155,7 @@ def extract_user_id_from_token(authorization_header: str) -> str:
         token = authorization_header.replace("Bearer ", "", 1)
         
         # ถอดรหัส JWT token
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["RS256"])
         
         # ดึง user_id จาก payload (ตามโครงสร้าง JWT ที่ใช้)
         return payload.get("sub")  # sub คือ subject ใน JWT ที่เก็บ user_id

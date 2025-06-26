@@ -43,7 +43,7 @@ def verify_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_
         if token.startswith("Bearer "):
             token = token[7:]
         
-        algorithm_to_use = ALGORITHM if ALGORITHM else "HS256"
+        algorithm_to_use = ALGORITHM if ALGORITHM else "RS256"
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[algorithm_to_use])
         
         username = payload.get("sub")
@@ -131,7 +131,7 @@ def verify_token_simple(token: str) -> str:
         from config.dotenv import JWT_SECRET_KEY, ALGORITHM
         
         # ✅ ใช้ config เดียวกัน
-        algorithm_to_use = ALGORITHM if ALGORITHM else "HS256"
+        algorithm_to_use = ALGORITHM if ALGORITHM else "RS256"
         
         # ✅ ลบ Bearer prefix ถ้ามี
         if token.startswith("Bearer "):
