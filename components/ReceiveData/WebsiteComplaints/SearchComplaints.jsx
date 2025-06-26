@@ -116,21 +116,21 @@ const SearchComplaints = () => {
         general: {
           general: generalData,
           delegate: defaultDelegateRef.current ? delegateData : null,
-        }
+        },
       },
       step2: {
         general: {
-          individual: step2Data
-        }
+          individual: step2Data,
+        },
       },
       step3: {
         general: {
           ...step3Data,
-          complaintType: complaintType
-        }
+          complaintType: complaintType,
+        },
       },
       step4: {
-        general: step4Data
+        general: step4Data,
       },
       updated_by: "vampirebeam",
       updated_at: "2025-06-10 03:31:02",
@@ -220,9 +220,7 @@ const SearchComplaints = () => {
               <div className={`${styles.tab} ${styles.tab0} ${styles.active}`}>
                 บุคคลทั่วไป
               </div>
-              <div className={`${styles.tab} ${styles.tab1}`}>
-                นิติบุคคล
-              </div>
+              <div className={`${styles.tab} ${styles.tab1}`}>นิติบุคคล</div>
               <div className={`${styles.tab} ${styles.tab2}`}>
                 หน่วยงานของรัฐ
               </div>
@@ -252,7 +250,9 @@ const SearchComplaints = () => {
               <FormProvider {...delegateMethods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>ข้อมูลผู้รับมอบอำนาจร้องทุกข์</h3>
+                    <h3 className={styles.sectionTitle}>
+                      ข้อมูลผู้รับมอบอำนาจร้องทุกข์
+                    </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
@@ -268,7 +268,9 @@ const SearchComplaints = () => {
                 <div className={`${styles.tab} ${styles.tab0}`}>
                   บุคคลทั่วไป
                 </div>
-                <div className={`${styles.tab} ${styles.tab1} ${styles.active}`}>
+                <div
+                  className={`${styles.tab} ${styles.tab1} ${styles.active}`}
+                >
                   นิติบุคคล
                 </div>
                 <div className={`${styles.tab} ${styles.tab2}`}>
@@ -284,7 +286,9 @@ const SearchComplaints = () => {
               <FormProvider {...step2Methods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>ข้อมูลผู้ถูกร้องเรียน</h3>
+                    <h3 className={styles.sectionTitle}>
+                      ข้อมูลผู้ถูกร้องเรียน
+                    </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
@@ -299,25 +303,31 @@ const SearchComplaints = () => {
               <FormProvider {...step3Methods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>ข้อมูลเรื่องร้องทุกข์</h3>
+                    <h3 className={styles.sectionTitle}>
+                      ข้อมูลเรื่องร้องทุกข์
+                    </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     {/* Row 1: ประเภทเรื่องร้องเรียน, ประเภทเรื่องย่อย, ช่องทางเรื่องร้องเรียน */}
                     <div className={styles.fieldRow}>
                       <div className={styles.fieldGroup}>
                         <label>
-                          ประเภทเรื่องร้องเรียน <span className={styles.required}>*</span>
+                          ประเภทเรื่องร้องเรียน{" "}
+                          <span className={styles.required}>*</span>
                         </label>
                         <select {...step3Methods.register("complaintType")}>
                           <option value="">ความไม่มีประสิทธิภาพ</option>
                           <option value="corruption">การทุจริต</option>
                           <option value="misconduct">การประพฤติมิชอบ</option>
-                          <option value="inefficiency">ความไม่มีประสิทธิภาพ</option>
+                          <option value="inefficiency">
+                            ความไม่มีประสิทธิภาพ
+                          </option>
                         </select>
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>
-                          ประเภทเรื่องย่อย <span className={styles.required}>*</span>
+                          ประเภทเรื่องย่อย{" "}
+                          <span className={styles.required}>*</span>
                         </label>
                         <select {...step3Methods.register("complaintSubType")}>
                           <option value="">ข้อคิดแก้/ข้อเสนอแนะ...</option>
@@ -415,7 +425,8 @@ const SearchComplaints = () => {
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>
-                          เลข สรร. (สานต่อง) <span className={styles.required}>*</span>
+                          เลข สรร. (สานต่อง){" "}
+                          <span className={styles.required}>*</span>
                         </label>
                         <input
                           type="text"
@@ -491,7 +502,11 @@ const SearchComplaints = () => {
                       <div className={styles.checkboxGroupVertical}>
                         {/* เรื่องร้องเรียนใหม่ */}
                         <div className={styles.checkboxRowSingle}>
-                          <label className={`${styles.checkboxItem} ${complaintType === "new" ? styles.checked : ""}`}>
+                          <label
+                            className={`${styles.checkboxItem} ${
+                              complaintType === "new" ? styles.checked : ""
+                            }`}
+                          >
                             <input
                               type="checkbox"
                               checked={complaintType === "new"}
@@ -504,11 +519,19 @@ const SearchComplaints = () => {
                         {/* เรื่องร้องเรียนเพิ่มเติม */}
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
-                            <label className={`${styles.checkboxItem} ${complaintType === "additional" ? styles.checked : ""}`}>
+                            <label
+                              className={`${styles.checkboxItem} ${
+                                complaintType === "additional"
+                                  ? styles.checked
+                                  : ""
+                              }`}
+                            >
                               <input
                                 type="checkbox"
                                 checked={complaintType === "additional"}
-                                onChange={() => handleComplaintTypeChange("additional")}
+                                onChange={() =>
+                                  handleComplaintTypeChange("additional")
+                                }
                               />
                               เรื่องร้องเรียนเพิ่มเติม
                             </label>
@@ -520,7 +543,9 @@ const SearchComplaints = () => {
                                 <input
                                   type="text"
                                   disabled={complaintType !== "additional"}
-                                  {...step3Methods.register("additionalReference1")}
+                                  {...step3Methods.register(
+                                    "additionalReference1"
+                                  )}
                                 />
                               </div>
                               <div className={styles.fieldWithLabelDate}>
@@ -541,11 +566,19 @@ const SearchComplaints = () => {
                         {/* รับเรื่องจากคณะทำงานนักตรวจสอบ */}
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
-                            <label className={`${styles.checkboxItem} ${complaintType === "committee" ? styles.checked : ""}`}>
+                            <label
+                              className={`${styles.checkboxItem} ${
+                                complaintType === "committee"
+                                  ? styles.checked
+                                  : ""
+                              }`}
+                            >
                               <input
                                 type="checkbox"
                                 checked={complaintType === "committee"}
-                                onChange={() => handleComplaintTypeChange("committee")}
+                                onChange={() =>
+                                  handleComplaintTypeChange("committee")
+                                }
                               />
                               รับเรื่องจากคณะทำงานนักตรวจสอบ
                             </label>
@@ -557,7 +590,9 @@ const SearchComplaints = () => {
                                 <input
                                   type="text"
                                   disabled={complaintType !== "committee"}
-                                  {...step3Methods.register("additionalReference2")}
+                                  {...step3Methods.register(
+                                    "additionalReference2"
+                                  )}
                                 />
                               </div>
                               <div className={styles.fieldWithLabelDate}>
@@ -584,7 +619,10 @@ const SearchComplaints = () => {
               <FormProvider {...step4Methods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>ข้อมูลเรื่องร้องทุกข์ <span className={styles.required}>*</span></h3>
+                    <h3 className={styles.sectionTitle}>
+                      ข้อมูลเรื่องร้องทุกข์{" "}
+                      <span className={styles.required}>*</span>
+                    </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <div className={styles.complaintDescriptionSection}>
@@ -594,8 +632,11 @@ const SearchComplaints = () => {
                           <div className={styles.datePickerWrapper}>
                             <DateThaiPickerService
                               label="วันที่รับเรื่องของเจ้าพนักงาน"
-                              value={defaultData?.step4?.general?.officerReceivedDate || ""}
-                              onChange={() => { }}
+                              value={
+                                defaultData?.step4?.general
+                                  ?.officerReceivedDate || ""
+                              }
+                              onChange={() => {}}
                               time={true}
                             />
                           </div>
@@ -604,8 +645,11 @@ const SearchComplaints = () => {
                           <div className={styles.datePickerWrapper}>
                             <DateThaiPickerService
                               label="วันที่เสนองาน ผอ.สรร."
-                              value={defaultData?.step4?.general?.directorSubmittedDate || ""}
-                              onChange={() => { }}
+                              value={
+                                defaultData?.step4?.general
+                                  ?.directorSubmittedDate || ""
+                              }
+                              onChange={() => {}}
                               time={true}
                             />
                           </div>
@@ -618,8 +662,11 @@ const SearchComplaints = () => {
                           <div className={styles.datePickerWrapper}>
                             <DateThaiPickerService
                               label="วันและเวลาที่เกิดเหตุ"
-                              value={defaultData?.step4?.general?.incidentDateTime || "2023-11-01T14:37:00"}
-                              onChange={() => { }}
+                              value={
+                                defaultData?.step4?.general?.incidentDateTime ||
+                                "2023-11-01T14:37:00"
+                              }
+                              onChange={() => {}}
                               time={true}
                               dis={true}
                             />
@@ -643,45 +690,64 @@ const SearchComplaints = () => {
                       <div className={styles.attachmentSection}>
                         <h4>เอกสารประกอบการร้องเรียน</h4>
                         <div className={styles.attachmentList}>
-                          {defaultData?.step3?.general?.attachment?.map((file, index) => {
-                            // แปลงขนาดไฟล์จาก bytes เป็น MB
-                            const fileSizeMB = (file.fileSize / (1024 * 1024)).toFixed(2);
+                          {defaultData?.step3?.general?.attachment?.map(
+                            (file, index) => {
+                              // แปลงขนาดไฟล์จาก bytes เป็น MB
+                              const fileSizeMB = (
+                                file.fileSize /
+                                (1024 * 1024)
+                              ).toFixed(2);
 
-                            // แปลงวันที่จาก ISO string เป็นรูปแบบไทย
-                            const formatDate = (isoString) => {
-                              const date = new Date(isoString);
-                              const day = date.getDate().toString().padStart(2, '0');
-                              const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                              const year = (date.getFullYear() + 543).toString().slice(-2);
-                              return `${day}/${month}/${year}`;
-                            };
+                              // แปลงวันที่จาก ISO string เป็นรูปแบบไทย
+                              const formatDate = (isoString) => {
+                                const date = new Date(isoString);
+                                const day = date
+                                  .getDate()
+                                  .toString()
+                                  .padStart(2, "0");
+                                const month = (date.getMonth() + 1)
+                                  .toString()
+                                  .padStart(2, "0");
+                                const year = (date.getFullYear() + 543)
+                                  .toString()
+                                  .slice(-2);
+                                return `${day}/${month}/${year}`;
+                              };
 
-                            return (
-                              <div key={file.id || index} className={styles.attachmentItem}>
-                                <span className={styles.pdfIcon}>📄</span>
-                                <a
-                                  href={file.fileUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{ color: 'inherit', textDecoration: 'none' }}
+                              return (
+                                <div
+                                  key={file.id || index}
+                                  className={styles.attachmentItem}
                                 >
-                                  {file.fileName} {fileSizeMB} MB ({formatDate(file.created_at)})
-                                </a>
-                              </div>
-                            );
-                          }) || (
-                              // กรณีไม่มีไฟล์แนบ
-                              <div className={styles.attachmentItem}>
-                                <span className={styles.pdfIcon}>📄</span>
-                                ไม่มีเอกสารประกอบ
-                              </div>
-                            )}
+                                  <span className={styles.pdfIcon}>📄</span>
+                                  <a
+                                    href={file.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      color: "inherit",
+                                      textDecoration: "none",
+                                    }}
+                                  >
+                                    {file.fileName} {fileSizeMB} MB (
+                                    {formatDate(file.created_at)})
+                                  </a>
+                                </div>
+                              );
+                            }
+                          ) || (
+                            // กรณีไม่มีไฟล์แนบ
+                            <div className={styles.attachmentItem}>
+                              <span className={styles.pdfIcon}>📄</span>
+                              ไม่มีเอกสารประกอบ
+                            </div>
+                          )}
                         </div>
                         <p className={styles.attachmentNote}>
-                          หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ หมายศาล
+                          หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ
+                          หมายศาล
                         </p>
                       </div>
-
                     </div>
                   </div>
                 </div>

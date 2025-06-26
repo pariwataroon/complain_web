@@ -34,8 +34,7 @@ import {
 import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 import { formatElapsedThaiTime } from "@utils/Formats";
 import LayersIcon from "@mui/icons-material/Layers";
-import TuneIcon from "@mui/icons-material/Tune";
-import HistoryIcon from '@mui/icons-material/History';
+import HistoryIcon from "@mui/icons-material/History";
 import Cookies from "js-cookie";
 
 export default function Sidebar() {
@@ -247,18 +246,15 @@ export default function Sidebar() {
   }
 
   const renderMenuItem = (key, IconC, submenu = []) => {
+    const submenuItems = submenu.filter((item) => item.type !== "header");
     return (
-      <Box
-        key={key}
-        onMouseEnter={() => setOpenSubmenu(null)}
-        style={{ position: "relative" }}
-      >
+      <Box key={key} style={{ position: "relative" }}>
         <ListItemButton
-          onClick={(e) => {
-            setOpenSubmenu(openSubmenu === key ? null : key);
+          onClick={() => {
+            if (submenuItems.length > 0) {
+              setOpenSubmenu(openSubmenu === key ? null : key);
+            }
             setActiveMenu(key);
-            const sidebarRect = sidebarRef.current.getBoundingClientRect();
-            const submenuHeight = 320;
           }}
         >
           <ListItemIcon className={activeMenu === key ? styles.activeIcon : ""}>
@@ -266,14 +262,14 @@ export default function Sidebar() {
           </ListItemIcon>
         </ListItemButton>
 
-        {submenu.length > 0 && openSubmenu === key && (
+        {submenuItems.length > 0 && openSubmenu === key && (
           <Box
             className={`${styles.submenu} ${
               openSubmenu === key ? styles.submenuVisible : ""
             }`}
             style={{
               left: "80px",
-              zIndex: 999, // เพิ่ม z-index สำหรับ submenu
+              zIndex: 999,
             }}
             onMouseEnter={() => setOpenSubmenu(key)}
             onMouseLeave={() => setOpenSubmenu(null)}
@@ -295,6 +291,7 @@ export default function Sidebar() {
                           const target = item.to || item.path;
                           if (target) {
                             router.push(target);
+                            setOpenSubmenu(null);
                           }
                         }}
                       >
@@ -391,10 +388,10 @@ export default function Sidebar() {
                 ref={notificationRef}
                 className={`${stylesNoti.notificationBox} ${stylesNoti.show}`}
                 sx={{
-                  zIndex: 9999, // ให้ notification box อยู่หน้าสุด
-                  width: 380, // เพิ่มความกว้างเพื่อรองรับ tabs
-                  minHeight: 400, // กำหนดความสูงขั้นต่ำ
-                  maxHeight: 500, // กำหนดความสูงสูงสุด
+                  zIndex: 9999,
+                  width: 380,
+                  minHeight: 400,
+                  maxHeight: 500,
                   display: "flex",
                   flexDirection: "column",
                 }}
@@ -453,6 +450,9 @@ export default function Sidebar() {
                         textTransform: "none",
                         minWidth: "auto",
                         padding: "6px 8px",
+                      },
+                      "& .MuiTabs-flexContainer": {
+                        gap: 1.5, // เพิ่มระยะห่างระหว่างแท็บ (1.5*8px=12px)
                       },
                     }}
                   >
@@ -524,9 +524,9 @@ export default function Sidebar() {
                 {/* Notifications List */}
                 <Box
                   sx={{
-                    flex: 1, // ใช้พื้นที่ที่เหลือทั้งหมด
+                    flex: 1,
                     overflowY: "auto",
-                    minHeight: 280, // ความสูงขั้นต่ำของรายการ
+                    minHeight: 280,
                     display: "flex",
                     flexDirection: "column",
                   }}
