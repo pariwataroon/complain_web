@@ -6,44 +6,50 @@ import "swiper/css";
 import "swiper/css/pagination";
 import styles from "./TopStatsSwiper.module.scss";
 
+// รับ { day, month, year }
+const formatThaiDate = (dateObj) => {
+  if (
+    !dateObj ||
+    typeof dateObj.day !== "number" ||
+    typeof dateObj.month !== "number" ||
+    typeof dateObj.year !== "number"
+  )
+    return "-";
+  const thaiMonths = [
+    "มกราคม",
+    "กุมภาพันธ์",
+    "มีนาคม",
+    "เมษายน",
+    "พฤษภาคม",
+    "มิถุนายน",
+    "กรกฎาคม",
+    "สิงหาคม",
+    "กันยายน",
+    "ตุลาคม",
+    "พฤศจิกายน",
+    "ธันวาคม",
+  ];
+  return `${dateObj.day} ${thaiMonths[dateObj.month - 1]} พ.ศ. ${
+    dateObj.year + 543
+  }`;
+};
+
 const TopStatsSwiper = ({
   title,
   data,
-  startDate,
-  endDate,
+  startDate, // { day, month, year }
+  endDate, // { day, month, year }
   variant = "high",
 }) => {
-  // Helper function สำหรับ format Thai date
-  const formatThaiDate = (dateObj) => {
-    if (!dateObj) return "";
-
-    const thaiMonths = [
-      "มกราคม",
-      "กุมภาพันธ์",
-      "มีนาคม",
-      "เมษายน",
-      "พฤษภาคม",
-      "มิถุนายน",
-      "กรกฎาคม",
-      "สิงหาคม",
-      "กันยายน",
-      "ตุลาคม",
-      "พฤศจิกายน",
-      "ธันวาคม",
-    ];
-
-    return `${dateObj.day} ${thaiMonths[dateObj.month - 1]} พ.ศ. ${
-      dateObj.buddhistYear
-    }`;
-  };
-
-  // สร้าง date range text และ fiscal year
   const dateRangeText =
     startDate && endDate
       ? `ณ ${formatThaiDate(startDate)} - ${formatThaiDate(endDate)}`
       : "";
 
-  const fiscalYear = endDate?.buddhistYear || new Date().getFullYear() + 543;
+  const fiscalYear =
+    endDate && typeof endDate.year === "number"
+      ? endDate.year + 543
+      : new Date().getFullYear() + 543;
 
   const isHigh = variant === "high";
 

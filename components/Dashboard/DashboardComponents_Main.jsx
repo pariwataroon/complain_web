@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Box, Grid } from "@mui/material";
 import BreadcrumbsService from "@services/Breadcrumbs/Breadcrumbs";
 import TopLeftService from "@services/DashBoardTopLeftService/DashBoardTopLeftService";
@@ -13,25 +13,36 @@ const DashboardComponents_Main = () => {
   const [selectedYear, setSelectedYear] = useState("2567");
   const data = [selectedYear] || [];
 
-  // เปลี่ยนเป็น Thai date format
+  // State เป็น object เสมอ
   const [startDate, setStartDate] = useState({
     day: 31,
     month: 1,
     year: 2025,
-    buddhistYear: 2568,
   });
 
   const [endDate, setEndDate] = useState({
     day: 2,
     month: 4,
     year: 2025,
-    buddhistYear: 2568,
   });
 
-  // สร้าง helper function สำหรับ format วันที่
-  const formatThaiDate = (dateObj) => {
-    if (!dateObj) return "";
+  // Log state update
+  useEffect(() => {
+    console.log("state startDate (updated):", startDate);
+  }, [startDate]);
+  useEffect(() => {
+    console.log("state endDate (updated):", endDate);
+  }, [endDate]);
 
+  // Helper function สำหรับ format วันที่แบบไทย (year + 543)
+  const formatThaiDate = (dateObj) => {
+    if (
+      !dateObj ||
+      typeof dateObj.day !== "number" ||
+      typeof dateObj.month !== "number" ||
+      typeof dateObj.year !== "number"
+    )
+      return "-";
     const thaiMonths = [
       "มกราคม",
       "กุมภาพันธ์",
@@ -46,15 +57,38 @@ const DashboardComponents_Main = () => {
       "พฤศจิกายน",
       "ธันวาคม",
     ];
-
-    return `${dateObj.day} ${thaiMonths[dateObj.month - 1]} พ.ศ. ${
-      dateObj.buddhistYear
-    }`;
+    const buddhistYear = dateObj.year + 543;
+    return `${dateObj.day} ${
+      thaiMonths[dateObj.month - 1]
+    } พ.ศ. ${buddhistYear}`;
   };
 
-  const dateRangeText = `ณ ${formatThaiDate(startDate)} - ${formatThaiDate(
-    endDate
-  )}`;
+  const dateRangeText =
+    startDate && endDate
+      ? `ณ ${formatThaiDate(startDate)} - ${formatThaiDate(endDate)}`
+      : "";
+
+  // สำหรับส่งเข้า DateThaiPickerService (object + buddhistYear)
+  const startDateWithBuddhist = startDate
+    ? { ...startDate, buddhistYear: startDate.year + 543 }
+    : null;
+
+  const endDateWithBuddhist = endDate
+    ? { ...endDate, buddhistYear: endDate.year + 543 }
+    : null;
+
+  // แปลง string (ISO) เป็น object ถ้าเกิดกรณี onChange ส่ง string
+  const parseDateStringToObj = (value) => {
+    if (typeof value === "string") {
+      const d = new Date(value);
+      return {
+        day: d.getDate(),
+        month: d.getMonth() + 1,
+        year: d.getFullYear(),
+      };
+    }
+    return value;
+  };
 
   const breadcrumbItems = [
     {
@@ -92,7 +126,7 @@ const DashboardComponents_Main = () => {
         {/* กลาง - Charts และ Cards - ปรับให้เท่ากับ 860px */}
         <Grid item xs={12} lg={4}>
           {/* Cards - ลดขนาดลง */}
-          <Box sx={{ height: { xs: "auto", md: "80px" }, mb: 2 }}>
+          <Box sx={{ height: { xs: "auto", md: "80px" }, mb: 9.5 }}>
             <DashBoardCard />
           </Box>
 
@@ -101,7 +135,7 @@ const DashboardComponents_Main = () => {
             sx={{
               backgroundColor: "#fff",
               p: { xs: 0.5, md: 1 },
-              height: { xs: "250px", md: "300px", lg: "380px" },
+              height: { xs: "250px", md: "300px", lg: "320px" },
               borderRadius: 1,
               boxShadow: 1,
               mb: 1,
@@ -187,12 +221,32 @@ const DashboardComponents_Main = () => {
                 >
                   <DateThaiPickerService
                     label="วันที่เริ่มต้น"
-                    value={startDate}
-                    onChange={(newValue) => setStartDate(newValue)}
+                    value={startDateWithBuddhist}
+                    onChange={(newValue) => {
+                      console.log(
+                        "เลือกวันที่เริ่มต้น:",
+                        newValue,
+                        typeof newValue
+                      );
+                      let parsed = parseDateStringToObj(newValue);
+                      // ถ้าเป็น buddhistYear ให้แปลงกลับเป็น year
+                      if (parsed && parsed.buddhistYear) {
+                        setStartDate({
+                          ...parsed,
+                          year: parsed.buddhistYear - 543,
+                        });
+                      } else {
+                        setStartDate(parsed);
+                      }
+                    }}
                     placeholder="เลือกวันที่เริ่มต้น"
                     maxDate={
-                      endDate
-                        ? new Date(endDate.year, endDate.month - 1, endDate.day)
+                      endDateWithBuddhist
+                        ? new Date(
+                            endDateWithBuddhist.year,
+                            endDateWithBuddhist.month - 1,
+                            endDateWithBuddhist.day
+                          )
                         : null
                     }
                   />
@@ -225,15 +279,30 @@ const DashboardComponents_Main = () => {
                 >
                   <DateThaiPickerService
                     label="วันที่สิ้นสุด"
-                    value={endDate}
-                    onChange={(newValue) => setEndDate(newValue)}
+                    value={endDateWithBuddhist}
+                    onChange={(newValue) => {
+                      console.log(
+                        "เลือกวันที่สิ้นสุด:",
+                        newValue,
+                        typeof newValue
+                      );
+                      let parsed = parseDateStringToObj(newValue);
+                      if (parsed && parsed.buddhistYear) {
+                        setEndDate({
+                          ...parsed,
+                          year: parsed.buddhistYear - 543,
+                        });
+                      } else {
+                        setEndDate(parsed);
+                      }
+                    }}
                     placeholder="เลือกวันที่สิ้นสุด"
                     minDate={
-                      startDate
+                      startDateWithBuddhist
                         ? new Date(
-                            startDate.year,
-                            startDate.month - 1,
-                            startDate.day
+                            startDateWithBuddhist.year,
+                            startDateWithBuddhist.month - 1,
+                            startDateWithBuddhist.day
                           )
                         : null
                     }
