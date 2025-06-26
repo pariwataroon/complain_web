@@ -948,7 +948,7 @@ export default function UserManagementUI() {
                                   }}
                                 >
                                   <Image
-                                    src="/icons/pencilyellow.png"
+                                    src="/icons/Pencilyellow.png"
                                     alt="Edit User"
                                     width={25}
                                     height={26}

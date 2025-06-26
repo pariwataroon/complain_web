@@ -13,7 +13,7 @@ soapInstance.interceptors.request.use(
     const baseSoapAction = process.env.NEXT_PUBLIC_OPM_API_ACTION_URL;
     if (config.soapActionSuffix) {
       config.headers.SOAPAction = `${baseSoapAction}${config.soapActionSuffix}`; 
-      console.log("SOAPAction:", config.headers.SOAPAction);
+      // console.log("SOAPAction:", config.headers.SOAPAction);
     } else {
       throw new Error("SOAPAction suffix is required for SOAP requests.");
     }
