@@ -190,14 +190,6 @@ const AddUserModal = ({
     // Clean phone: remove dashes and keep only numbers
     const cleanPhone = formData.phone ? formData.phone.replace(/-/g, "") : "";
 
-    // เตรียม roles array ตาม group ที่เลือก
-    let roleId =
-      roleMap[formData.group] ||
-      roleMap["officer"] ||
-      roleMap["people"] ||
-      Object.values(roleMap)[0] ||
-      "";
-
     const apiData = {
       citizen_id: cleanCitizenId,
       title_id: parseInt(formData.title_id) || 3,
@@ -222,7 +214,7 @@ const AddUserModal = ({
       zipcode2: formData.zipcode2 || null,
       roles: [
         {
-          id: roleId,
+          id: formData.group,
         },
       ],
     };
