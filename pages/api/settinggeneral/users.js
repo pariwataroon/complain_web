@@ -24,6 +24,18 @@ const GetTitleDetails = async () => {
   }
 };
 
+const GetRoles = async () => {
+  try {
+    const response = await axiosInstance.get("/permissions/roles");
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error fetching title details:", error);
+    throw error;
+  }
+};
+
 const AddUsers = async (data) => {
   try {
     const response = await axiosInstance.post("/users", data);
@@ -80,4 +92,5 @@ export {
   AddUsers,
   DelUsers,
   resendVerification,
+  GetRoles,
 };

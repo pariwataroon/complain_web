@@ -26,7 +26,11 @@ import {
   closeAlert,
 } from "@utils/Alerts";
 import styles from "./AddUserModal.module.scss";
-import { AddUsers, GetTitleDetails } from "@pages/api/settinggeneral/users";
+import {
+  AddUsers,
+  GetTitleDetails,
+  GetRoles,
+} from "@pages/api/settinggeneral/users";
 
 const AddUserModal = ({
   open,
@@ -37,7 +41,8 @@ const AddUserModal = ({
 }) => {
   const [titleOptions, setTitleOptions] = useState([]);
   const [isFormReset, setIsFormReset] = useState(false);
-
+  const [roleMap, setRoleMap] = useState({});
+  const [roleOptions, setRoleOptions] = useState([]);
   const {
     register,
     handleSubmit,
@@ -106,7 +111,6 @@ const AddUserModal = ({
               label: item.title_name || item.short_name,
             }));
             setTitleOptions(formattedOptions);
-            console.log("Formatted title options:", formattedOptions); // Debug log
           }
         } catch (error) {
           console.error("Error loading title options:", error);
@@ -137,6 +141,32 @@ const AddUserModal = ({
       }
     };
 
+    const fetchRolesMap = async () => {
+      if (open) {
+        try {
+          const rolesData = await GetRoles();
+          if (rolesData && Array.isArray(rolesData.res_data)) {
+            // สร้าง roleMap: { [name]: id }
+            const map = {};
+            const options = rolesData.res_data.map((role) => ({
+              value: role.id,
+              label: role.description || role.name,
+            }));
+            rolesData.res_data.forEach((role) => {
+              map[role.name] = role.id;
+            });
+            setRoleMap(map);
+            setRoleOptions(options);
+            // console.log("roleMap", map); // DEBUG
+            // console.log("roleOptions", options); // DEBUG
+          }
+        } catch (err) {
+          console.error("Error fetching roles from API:", err);
+        }
+      }
+    };
+
+    fetchRolesMap();
     fetchTitleOptions();
   }, [open, onClose, onReopen]);
 
@@ -161,15 +191,12 @@ const AddUserModal = ({
     const cleanPhone = formData.phone ? formData.phone.replace(/-/g, "") : "";
 
     // เตรียม roles array ตาม group ที่เลือก
-    const roleMapping = {
-      admin: "79342847-20ce-411a-8f4e-42cd7aeab407",
-      people: "79342847-20ce-411a-8f4e-42cd7aeab408",
-      executive: "79342847-20ce-411a-8f4e-42cd7aeab409",
-      agency: "79342847-20ce-411a-8f4e-42cd7aeab410",
-      officer: "79342847-20ce-411a-8f4e-42cd7aeab407", // Default to officer role
-    };
-
-    const roleId = roleMapping[formData.group] || roleMapping.officer;
+    let roleId =
+      roleMap[formData.group] ||
+      roleMap["officer"] ||
+      roleMap["people"] ||
+      Object.values(roleMap)[0] ||
+      "";
 
     const apiData = {
       citizen_id: cleanCitizenId,
@@ -554,8 +581,6 @@ const AddUserModal = ({
   // Pre-fill form when editing user หรือ reset เมื่อสร้างใหม่
   useEffect(() => {
     if (editingUser && open) {
-      console.log("Editing User Data:", editingUser); // Debug log
-
       // กรณีแก้ไขผู้ใช้ - กรอกข้อมูลจาก editingUser
       const mappedGroup = mapRoleNameToValue(editingUser.role_name);
 
@@ -584,8 +609,6 @@ const AddUserModal = ({
         extractLastName(
           editingUser.full_name_with_title || editingUser.full_name
         );
-
-      console.log("Setting title_id:", titleId); // Debug log
 
       setValue("title_id", titleId);
       setValue("first_name", firstName);
@@ -762,15 +785,13 @@ const AddUserModal = ({
                       {...field}
                       value={value || ""}
                       handleChange={(event) => {
+                        console.log(
+                          "Selected group value:",
+                          event.target.value
+                        ); // <-- log ที่นี่
                         onChange(event.target.value);
                       }}
-                      options={[
-                        { value: "admin", label: "ผู้ดูแลระบบ" },
-                        { value: "people", label: "ประชาชน" },
-                        { value: "executive", label: "ผู้บริหาร" },
-                        { value: "agency", label: "หน่วยงานในสังกัด" },
-                        { value: "officer", label: "เจ้าหน้าที่" },
-                      ]}
+                      options={roleOptions}
                       width="100%"
                       name="group"
                     />
