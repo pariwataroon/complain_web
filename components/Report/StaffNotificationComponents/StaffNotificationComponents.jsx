@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useRouter } from "next/router";
-import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs"; // Fixed: Changed BreadCrumbs to Breadcrumbs
+import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs.jsx";
 import TableListStaffNoti from "@services/TableListStaffNoti/TableListStaffNoti";
 
 // ─── mock data (20 รายการ) ─────────────────────────────────────────────────

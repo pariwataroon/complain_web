@@ -1,13 +1,29 @@
 import { useRouter } from "next/router";
 import { useState, useCallback } from "react";
-import { Card, CardContent, Typography, Box, Grid, Alert, Snackbar, FormControl, TextField } from "@mui/material";
+import {
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  Grid,
+  Alert,
+  Snackbar,
+  FormControl,
+  TextField,
+} from "@mui/material";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectFieldPAAOPM from "@services/SelectFieldPAAOPM/SelectFieldPAAOPM";
 import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
-import { showConfirm, showLoading, closeAlert, alertSuccess, alertError } from "@utils/Alerts";
+import {
+  showConfirm,
+  showLoading,
+  closeAlert,
+  alertSuccess,
+  alertError,
+} from "@utils/Alerts";
 import { AddCase } from "@pages/api/opm/opm";
-import styles from "./SendComplaintOPM.module.scss";
+import styles from "./SendComplaintOPm.module.scss";
 
 const SendComplaintOPM = () => {
   const router = useRouter();
@@ -32,7 +48,7 @@ const SendComplaintOPM = () => {
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
-    severity: "success"
+    severity: "success",
   });
 
   // Validation functions
@@ -47,10 +63,21 @@ const SendComplaintOPM = () => {
 
   const isPhoneValid = validatePhoneNumber(reporterPhone);
 
-  const isFormValid = selectedProvince && selectedDistrict && selectedSubDistrict &&
-    selectedChannel && selectedStatus && selectedType && createdDate && updatedDate &&
-    reporterFirstName && reporterLastName && reporterPhone && caseCode &&
-    complaintDetail && isPhoneValid;
+  const isFormValid =
+    selectedProvince &&
+    selectedDistrict &&
+    selectedSubDistrict &&
+    selectedChannel &&
+    selectedStatus &&
+    selectedType &&
+    createdDate &&
+    updatedDate &&
+    reporterFirstName &&
+    reporterLastName &&
+    reporterPhone &&
+    caseCode &&
+    complaintDetail &&
+    isPhoneValid;
 
   // Event handlers
   const handleProvinceChange = useCallback((event) => {
@@ -97,21 +124,21 @@ const SendComplaintOPM = () => {
   const handleReporterFirstNameChange = useCallback((event) => {
     const value = event.target.value;
     // อนุญาตเฉพาะตัวอักษรไทย อังกฤษ และช่องว่าง
-    const nameValue = value.replace(/[^a-zA-Zก-๙\s]/g, '');
+    const nameValue = value.replace(/[^a-zA-Zก-๙\s]/g, "");
     setReporterFirstName(nameValue);
   }, []);
 
   const handleReporterLastNameChange = useCallback((event) => {
     const value = event.target.value;
     // อนุญาตเฉพาะตัวอักษรไทย อังกฤษ และช่องว่าง
-    const nameValue = value.replace(/[^a-zA-Zก-๙\s]/g, '');
+    const nameValue = value.replace(/[^a-zA-Zก-๙\s]/g, "");
     setReporterLastName(nameValue);
   }, []);
 
   const handleReporterPhoneChange = useCallback((e) => {
     const value = e.target.value;
     // อนุญาตเฉพาะตัวเลข 0-9
-    const numericValue = value.replace(/[^0-9]/g, '');
+    const numericValue = value.replace(/[^0-9]/g, "");
 
     // จำกัดความยาวไม่เกิน 10 ตัว
     if (numericValue.length <= 10) {
@@ -158,11 +185,17 @@ const SendComplaintOPM = () => {
     // ตรวจสอบข้อมูลครบถ้วน
     if (!isFormValid) {
       if (!reporterPhone) {
-        await alertError("ข้อมูลไม่ครบถ้วน", "กรุณากรอกเบอร์โทรศัพท์ผู้แจ้งเหตุ");
+        await alertError(
+          "ข้อมูลไม่ครบถ้วน",
+          "กรุณากรอกเบอร์โทรศัพท์ผู้แจ้งเหตุ"
+        );
         return;
       }
       if (!isPhoneValid) {
-        await alertError("เบอร์โทรไม่ถูกต้อง", "กรุณากรอกเบอร์โทรศัพท์ในรูปแบบที่ถูกต้อง เช่น 0812345678 หรือ 0212345678");
+        await alertError(
+          "เบอร์โทรไม่ถูกต้อง",
+          "กรุณากรอกเบอร์โทรศัพท์ในรูปแบบที่ถูกต้อง เช่น 0812345678 หรือ 0212345678"
+        );
         return;
       }
       await alertError("ข้อมูลไม่ครบถ้วน", "กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง");
@@ -171,7 +204,10 @@ const SendComplaintOPM = () => {
 
     // ตรวจสอบเบอร์โทรเพิ่มเติม
     if (reporterPhone.length < 9) {
-      await alertError("เบอร์โทรไม่ถูกต้อง", "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก");
+      await alertError(
+        "เบอร์โทรไม่ถูกต้อง",
+        "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก"
+      );
       return;
     }
 
@@ -197,11 +233,11 @@ const SendComplaintOPM = () => {
         const d = new Date(date);
 
         const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const hours = String(d.getHours()).padStart(2, '0');
-        const minutes = String(d.getMinutes()).padStart(2, '0');
-        const seconds = String(d.getSeconds()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        const hours = String(d.getHours()).padStart(2, "0");
+        const minutes = String(d.getMinutes()).padStart(2, "0");
+        const seconds = String(d.getSeconds()).padStart(2, "0");
 
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
       };
@@ -209,11 +245,11 @@ const SendComplaintOPM = () => {
       const formatCurrentTimestamp = () => {
         const now = new Date();
         const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        const hours = String(now.getHours()).padStart(2, "0");
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        const seconds = String(now.getSeconds()).padStart(2, "0");
 
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
       };
@@ -245,21 +281,25 @@ const SendComplaintOPM = () => {
 
       const extractAddCaseResult = (xmlString) => {
         try {
-          const regexMatch = xmlString.match(/<AddCaseResult[^>]*>(.*?)<\/AddCaseResult>/s);
+          const regexMatch = xmlString.match(
+            /<AddCaseResult[^>]*>(.*?)<\/AddCaseResult>/s
+          );
           if (regexMatch && regexMatch[1]) {
             let content = regexMatch[1].trim();
-            content = content.replace(/^"(.*)"$/, '$1');
+            content = content.replace(/^"(.*)"$/, "$1");
             return content;
           }
 
-          if (typeof DOMParser !== 'undefined') {
+          if (typeof DOMParser !== "undefined") {
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(xmlString, "text/xml");
-            const addCaseResult = xmlDoc.getElementsByTagName("AddCaseResult")[0];
+            const addCaseResult =
+              xmlDoc.getElementsByTagName("AddCaseResult")[0];
             if (addCaseResult) {
-              let content = addCaseResult.textContent || addCaseResult.innerText;
+              let content =
+                addCaseResult.textContent || addCaseResult.innerText;
               content = content.trim();
-              content = content.replace(/^"(.*)"$/, '$1');
+              content = content.replace(/^"(.*)"$/, "$1");
               return content;
             }
           }
@@ -276,40 +316,52 @@ const SendComplaintOPM = () => {
       let addCaseResult = null;
 
       if (result) {
-        if (typeof result === 'string' && result.includes('<AddCaseResult>')) {
+        if (typeof result === "string" && result.includes("<AddCaseResult>")) {
           addCaseResult = extractAddCaseResult(result);
           isSuccess = !!addCaseResult;
           responseData = result;
-        }
-        else if (result.data && typeof result.data === 'string' && result.data.includes('<AddCaseResult>')) {
+        } else if (
+          result.data &&
+          typeof result.data === "string" &&
+          result.data.includes("<AddCaseResult>")
+        ) {
           addCaseResult = extractAddCaseResult(result.data);
           isSuccess = !!addCaseResult;
           responseData = result.data;
-        }
-        else if (result.success === true) {
+        } else if (result.success === true) {
           isSuccess = true;
           responseData = result.data || result.message || result;
-          if (typeof responseData === 'string' && responseData.includes('<AddCaseResult>')) {
+          if (
+            typeof responseData === "string" &&
+            responseData.includes("<AddCaseResult>")
+          ) {
             addCaseResult = extractAddCaseResult(responseData);
           }
-        }
-        else if (result.status === 'success' || result.status === 200 || result.statusCode === 200) {
+        } else if (
+          result.status === "success" ||
+          result.status === 200 ||
+          result.statusCode === 200
+        ) {
           isSuccess = true;
           responseData = result.data || result.message || result;
-          if (typeof responseData === 'string' && responseData.includes('<AddCaseResult>')) {
+          if (
+            typeof responseData === "string" &&
+            responseData.includes("<AddCaseResult>")
+          ) {
             addCaseResult = extractAddCaseResult(responseData);
           }
-        }
-        else if (result.AddCaseResult) {
+        } else if (result.AddCaseResult) {
           addCaseResult = result.AddCaseResult;
           isSuccess = true;
           responseData = result;
-        }
-        else if (typeof result === 'object' && JSON.stringify(result).includes('AddCaseResult')) {
+        } else if (
+          typeof result === "object" &&
+          JSON.stringify(result).includes("AddCaseResult")
+        ) {
           isSuccess = true;
           responseData = result;
           const resultString = JSON.stringify(result);
-          if (resultString.includes('<AddCaseResult>')) {
+          if (resultString.includes("<AddCaseResult>")) {
             addCaseResult = extractAddCaseResult(resultString);
           }
         }
@@ -323,9 +375,9 @@ const SendComplaintOPM = () => {
 
         if (addCaseResult) {
           try {
-            let cleanData = addCaseResult.replace(/^Result:/, '');
+            let cleanData = addCaseResult.replace(/^Result:/, "");
 
-            const parts = cleanData.split('|');
+            const parts = cleanData.split("|");
             if (parts.length === 2) {
               referenceId = parts[0].trim();
               caseNumber = parts[1].trim();
@@ -356,7 +408,9 @@ const SendComplaintOPM = () => {
                   
                   <div style="margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 4px; border-left: 4px solid #2196f3;">
                     <p style="margin: 0; font-size: 12px; color: #1565c0;">
-                      ⏰ ส่งข้อมูลเมื่อ: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })} (ผู้ส่ง: vampirebeam)
+                      ⏰ ส่งข้อมูลเมื่อ: ${new Date().toLocaleString("th-TH", {
+                        timeZone: "Asia/Bangkok",
+                      })} (ผู้ส่ง: vampirebeam)
                     </p>
                   </div>
                 </div>
@@ -377,7 +431,9 @@ const SendComplaintOPM = () => {
                   
                   <div style="margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 4px; border-left: 4px solid #2196f3;">
                     <p style="margin: 0; font-size: 12px; color: #1565c0;">
-                      ⏰ ส่งข้อมูลเมื่อ: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })} (ผู้ส่ง: vampirebeam)
+                      ⏰ ส่งข้อมูลเมื่อ: ${new Date().toLocaleString("th-TH", {
+                        timeZone: "Asia/Bangkok",
+                      })} (ผู้ส่ง: vampirebeam)
                     </p>
                   </div>
                 </div>
@@ -400,18 +456,16 @@ const SendComplaintOPM = () => {
         if (shouldRedirect) {
           router.push("/admin/edit/opm1111");
         }
-
       } else {
         throw new Error("ได้รับข้อมูลตอบกลับที่ไม่คาดคิดจากเซิร์ฟเวอร์");
       }
-
     } catch (error) {
       closeAlert();
       console.error("Submit error:", error);
       console.error("Error details:", {
         message: error.message,
         stack: error.stack,
-        name: error.name
+        name: error.name,
       });
 
       await alertError(
@@ -421,21 +475,39 @@ const SendComplaintOPM = () => {
     } finally {
       setLoading(false);
     }
-  }, [isFormValid, selectedProvince, selectedDistrict, selectedSubDistrict, selectedChannel, selectedStatus, selectedType, createdDate, updatedDate, reporterFirstName, reporterLastName, reporterPhone, caseCode, complaintDetail, queryParams.id, router, isPhoneValid]);
+  }, [
+    isFormValid,
+    selectedProvince,
+    selectedDistrict,
+    selectedSubDistrict,
+    selectedChannel,
+    selectedStatus,
+    selectedType,
+    createdDate,
+    updatedDate,
+    reporterFirstName,
+    reporterLastName,
+    reporterPhone,
+    caseCode,
+    complaintDetail,
+    queryParams.id,
+    router,
+    isPhoneValid,
+  ]);
 
   const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
   // Format date for display
   const formatDisplayDate = (date) => {
     if (!date) return "";
-    return new Date(date).toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(date).toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -615,9 +687,9 @@ const SendComplaintOPM = () => {
                     }
                     error={reporterPhone && !isPhoneValid}
                     inputProps={{
-                      inputMode: 'numeric',
-                      pattern: '[0-9]*',
-                      maxLength: 10
+                      inputMode: "numeric",
+                      pattern: "[0-9]*",
+                      maxLength: 10,
                     }}
                   />
                 </FormControl>
@@ -789,13 +861,13 @@ const SendComplaintOPM = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={handleCloseSnackbar}
           severity={snackbar.severity}
           variant="filled"
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           {snackbar.message}
         </Alert>

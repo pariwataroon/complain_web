@@ -19,7 +19,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ReorderIcon from "@mui/icons-material/Reorder";
 import CloseIcon from "@mui/icons-material/Close";
-import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
+import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs.jsx";
 import { useRouter } from "next/router";
 import {
   closeAlert,
