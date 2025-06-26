@@ -44,13 +44,15 @@ router = APIRouter(
 #         return format_response("5000", {"error": "Internal server error"})
 
 # เพิ่ม endpoint ใหม่
-@router.post("/auth", response_model=format_data.FormatResponseModel)
-async def thaid_authentication(
+@router.post("/auth", response_model=FormatResponseModel)
+async def thaid_auth(
     request: Request,
-    auth_data: dict = Body(...),
+    auth_data: ThaiIDAuthCode,
     db: Session = Depends(get_db)
-):
-    """ThaiID Authentication endpoint - ต้องมี API Key เพื่อความปลอดภัย"""
+    ):
+    """
+    รับ authorization code จาก Thai Digital ID และสร้าง JWT token สำหรับระบบเรา
+    """
     try:
         # Get API Key from headers
         api_key = (request.headers.get("X-API-Key") or 
@@ -65,30 +67,30 @@ async def thaid_authentication(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Missing or invalid API key for ThaiID integration"
             )
+
+        # ตรวจสอบ auth_code และสร้างหรือค้นหาผู้ใช้
+        result = process_thaid_auth_code(db, auth_data.auth_code)
         
-        # Validate citizen_id
-        citizen_id = auth_data.get("citizen_id", "").strip()
-        if not citizen_id or len(citizen_id) != 13 or not citizen_id.isdigit():
-            return format_data.format_response("4000", {
-                "error": "Invalid citizen_id format",
-                "message": "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก"
-            })
+        if not result:
+            return format_response("4010", {"error": "Invalid Thai Digital ID authorization code"})
         
-        return format_data.format_response("0000", {
-            "message": "ThaiID authentication successful",
-            "citizen_id": citizen_id[:3] + "****" + citizen_id[-3:]
-        })
+        # สร้าง response
+        response_data: ThaiIDLoginResponse = {
+            "is_new_user": result["is_new_user"],
+            "access_token": result["access_token"],
+            "refresh_token": result["refresh_token"]
+        }
         
-    except HTTPException:
-        raise
+        # ถ้าเป็นผู้ใช้ใหม่ ส่งรหัส 0001 (CREATED_SUCCESSFULLY)
+        # ถ้าเป็นผู้ใช้เดิม ส่งรหัส 0000 (GET_DATA_SUCCESSFULLY)
+        res_code = "0001" if result["is_new_user"] else "0000"
+        
+        return format_response(res_code, response_data)
+    
     except Exception as e:
-        from lib.logger import get_logger
-        logger = get_logger("thaid")
-        logger.error(f"Error in ThaiID auth: {str(e)}")
-        return format_data.format_response("5000", {
-            "error": "ThaiID authentication failed",
-            "message": "เกิดข้อผิดพลาดในการยืนยันตัวตนผ่าน ThaiID"
-        })
+        # จัดการข้อผิดพลาด
+        print(f"Thai ID auth error: {str(e)}")
+        return format_response("5000", {"error": f"Internal server error: {str(e)}"})
 
 def verify_thaid_api_key(api_key: str) -> bool:
     """ตรวจสอบ API Key สำหรับ ThaiID integration"""
