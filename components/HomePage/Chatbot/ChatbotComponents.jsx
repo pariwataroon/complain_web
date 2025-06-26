@@ -404,7 +404,7 @@ const ChatbotComponents = () => {
                         }}
                       >
                         <Image
-                          src="/icons/binWhite.png"
+                          src="/icons/BinWhite.png"
                           alt=""
                           width={36}
                           height={36}
