@@ -130,29 +130,43 @@ async def save_upload_file(
         
         # Get date-based folder path
         today = datetime.now()
-        upload_folder = get_date_folder_path(folder, today)
-        
+        year = str(today.year)
+        month = str(today.month).zfill(2)
+        day = str(today.day).zfill(2)
+        # If this is a complaint file, expect folder to be like 'complaints/{complaint_id}'
+        if folder.startswith("complaints/"):
+            # Save under uploads/{year}/{month}/{day}/complaints/{complaint_id}/filename
+            parts = folder.split("/", 1)
+            complaint_id = parts[1] if len(parts) > 1 else "unknown"
+            upload_folder = os.path.join(BASE_UPLOAD_DIR, year, month, day, "complaints", complaint_id)
+            os.makedirs(upload_folder, exist_ok=True)
+            relative_path = f"{year}/{month}/{day}/complaints/{complaint_id}/{new_filename}"
+        elif folder.startswith("users/"):
+            # Save under uploads/{year}/{month}/{day}/users/{user_id}/filename
+            parts = folder.split("/", 1)
+            user_id = parts[1] if len(parts) > 1 else "unknown"
+            upload_folder = os.path.join(BASE_UPLOAD_DIR, year, month, day, "users", user_id)
+            os.makedirs(upload_folder, exist_ok=True)
+            relative_path = f"{year}/{month}/{day}/users/{user_id}/{new_filename}"
+        else:
+            # Default: uploads/{year}/{month}/{day}/{folder}/filename
+            upload_folder = os.path.join(BASE_UPLOAD_DIR, year, month, day, folder)
+            os.makedirs(upload_folder, exist_ok=True)
+            relative_path = f"{year}/{month}/{day}/{folder}/{new_filename}"
+
         # Create full path
         file_path = os.path.join(upload_folder, new_filename)
-        
+
         # Save the file
         async with aiofiles.open(file_path, "wb") as out_file:
             # Reset file position
             await file.seek(0)
-            
             # Copy the file content
             while True:
                 chunk = await file.read(chunk_size)
                 if not chunk:
                     break
                 await out_file.write(chunk)
-        
-        # Calculate relative path for URL
-        # Format: folder/year/month/day/filename
-        year = str(today.year)
-        month = str(today.month).zfill(2)
-        day = str(today.day).zfill(2)
-        relative_path = f"{folder}/{year}/{month}/{day}/{new_filename}"
         
         # Create metadata file for additional info
         metadata = {
