@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Container, Box } from "@mui/material";
 import NavbarMain from "@services/navbarMain/navbarMain";
-import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
+import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs.jsx";
 import TableAll from "@services/table/TableAll";
 import { GetMeAllComplaints } from "@pages/api/complaint/complaint";
 

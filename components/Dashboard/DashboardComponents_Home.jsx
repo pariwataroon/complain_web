@@ -4,7 +4,7 @@ import DailyStatsChart from "@services/DailyStatsChart/DailyStatsChart";
 import HourlyStatsChart from "@services/HourlyStatsChart/HourlyStatsChart";
 import PopularNewsStats from "@services/PopularNewsStats/PopularNewsStats";
 import PopularQuestionsStats from "@services/PopularQuestionsStats/PopularQuestionsStats";
-import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
+import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs.jsx";
 
 const DashboardComponents_Home = () => {
   const breadcrumbItems = [

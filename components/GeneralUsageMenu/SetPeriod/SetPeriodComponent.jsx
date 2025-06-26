@@ -5,7 +5,7 @@ import { Paper, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
-import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
+import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs.jsx";
 import ButtonService from "@services/ButtonService/ButtonService";
 import { alertSuccess } from "@utils/Alerts";
 
