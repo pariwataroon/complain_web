@@ -686,6 +686,7 @@ export {
   AddOperating,
   SetOrgSummaryResult,
   AddCase,
+  GetOperatings,
   GetDistricts,
   GetSubDistricts,
   GetOperatingChannel,

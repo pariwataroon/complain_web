@@ -183,7 +183,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                         </Box>
 
                         {/* Severity ID */}
-                        <Box className={styles.fieldGroup}>
+                        {/* <Box className={styles.fieldGroup}>
                             <Controller
                                 name="severity_id"
                                 control={control}
@@ -212,10 +212,10 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                     </Box>
                                 )}
                             />
-                        </Box>
+                        </Box> */}
 
                         {/* Secret ID */}
-                        <Box className={styles.fieldGroup}>
+                        {/* <Box className={styles.fieldGroup}>
                             <Controller
                                 name="secret_id"
                                 control={control}
@@ -244,7 +244,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                     </Box>
                                 )}
                             />
-                        </Box>
+                        </Box> */}
 
                         {/* Date Opened */}
                         <Box className={styles.fieldGroup}>
@@ -305,7 +305,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                         </Box>
 
                         {/* Contact Detail (Optional) */}
-                        <Box className={styles.fieldGroup}>
+                        {/* <Box className={styles.fieldGroup}>
                             <Controller
                                 name="contact_detail"
                                 control={control}
@@ -329,7 +329,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                     </Box>
                                 )}
                             />
-                        </Box>
+                        </Box> */}
 
                         {/* Detail */}
                         <Box className={styles.fieldGroup}>

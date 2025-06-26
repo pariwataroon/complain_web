@@ -131,13 +131,12 @@ const TableListOPM = ({
   };
 
   const columns = [
-    { name: "case_id", label: "รหัสเคส", width: 200, priority: 1 },
     { name: "case_code", label: "รหัสเรื่อง", width: 100, priority: 3 },
     { name: "customer_name", label: "ชื่อ", width: 180, priority: 2 },
     { name: "type_text", label: "ประเภทเรืองร้องทุกข์", width: 120, priority: 4 },
     { name: "secret_id", label: "ระดับความลับ", width: 80, priority: 5 },
-    { name: "status_text", label: "สถานะเรื่อง", width: 80, priority: 4 },
-    { name: "main_status_text", label: "สถานะ", width: 160, priority: 3 },
+    { name: "status_text", label: "สถานะหลักของเรื่อง", width: 80, priority: 4 },
+    { name: "main_status_text", label: "สถานะดำเนินการ", width: 160, priority: 3 },
   ];
 
   const getVisibleColumns = () => {

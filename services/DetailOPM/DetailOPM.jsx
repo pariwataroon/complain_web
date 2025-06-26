@@ -313,7 +313,7 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
                             <BusinessIcon />
                         </Avatar>
                         <Typography variant="h6" className={styles.sectionTitle}>
-                            ขั้นตอนการดำเนินงาน
+                            หน่วยงานที่เกี่ยวข้อง
                         </Typography>
                     </Box>
 
@@ -326,10 +326,10 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
                         }}>
                             <BusinessIcon sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
                             <Typography variant="h6" gutterBottom>
-                                ไม่มีข้อมูลขั้นตอนการดำเนินงาน
+                                ไม่มีข้อมูลหน่วยงานที่เกี่ยวข้อง
                             </Typography>
                             <Typography variant="body2">
-                                ยังไม่มีการกำหนดขั้นตอนการดำเนินงานสำหรับคำร้องนี้
+                                ยังไม่มีการกำหนดหน่วยงานที่เกี่ยวข้องสำหรับคำร้องนี้
                             </Typography>
                         </Box>
                     ) : (
@@ -349,7 +349,7 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
                                         }
                                     >
                                         <Typography variant="h6" className={styles.stepTitle}>
-                                            ขั้นตอนที่ {org.line || index + 1}
+                                            หน่วยงานที่ {org.line || index + 1}
                                         </Typography>
                                     </StepLabel>
                                     <StepContent>

@@ -349,11 +349,11 @@ const SearchComplaints = () => {
                       </div>
                     </div>
 
-                    {/* Row 3: เลข สป.กก., วันที่, เลข สป.สร., วันที่ */}
+                    {/* Row 3: เลข สป.กค., วันที่, เลข สป.สร., วันที่ */}
                     <div className={styles.fieldRowDate}>
                       <div className={styles.fieldGroup}>
                         <label>
-                          เลข สป.กก. <span className={styles.required}>*</span>
+                          เลข สป.กค. <span className={styles.required}>*</span>
                         </label>
                         <input
                           type="text"
@@ -538,7 +538,7 @@ const SearchComplaints = () => {
                           </div>
                         </div>
 
-                        {/* รับเรื่องจากคณะทำงานนักตรวจสอบภ */}
+                        {/* รับเรื่องจากคณะทำงานนักตรวจสอบ */}
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
                             <label className={`${styles.checkboxItem} ${complaintType === "committee" ? styles.checked : ""}`}>
@@ -547,7 +547,7 @@ const SearchComplaints = () => {
                                 checked={complaintType === "committee"}
                                 onChange={() => handleComplaintTypeChange("committee")}
                               />
-                              รับเรื่องจากคณะทำงานนักตรวจสอบภ
+                              รับเรื่องจากคณะทำงานนักตรวจสอบ
                             </label>
                           </div>
                           <div className={styles.fieldsColumn}>
