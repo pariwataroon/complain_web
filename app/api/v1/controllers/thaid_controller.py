@@ -102,7 +102,9 @@ def get_or_create_user_from_thaid(db: Session, thaid_data: ThaiIDTokenResponse):
             user_obj = user_controller.get_user(db, user_id)
             if user_obj and not user_obj.is_active:
                 user_obj.is_active = True
+                db.add(user_obj)
                 db.commit()
+                db.refresh(user_obj)
         except Exception as e:
             print(f"Error updating is_active for ThaiD user: {str(e)}")
         # เพิ่มการส่ง notification เมื่อมีการลงทะเบียนใหม่ผ่าน ThaiID
