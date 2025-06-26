@@ -1,5 +1,5 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-import Opm1111Components from "@components/ReceiveData/Opm1111/opm1111";
+import Opm1111Components from "@components/ReceiveData/Opm1111/Opm1111";
 
 const Opm1111 = () => {
   return (
