@@ -11,8 +11,9 @@ from config.database import get_db
 from app.api.middleware.jwt_verify import verify_token
 from uuid import UUID
 
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-LOGIN_URL = f"{FRONTEND_URL}/login"
+# FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+# LOGIN_URL = f"{FRONTEND_URL}/login"
+LOGIN_URL = "https://complaint.minertatech.com/register/?method=CardID"
 
 router = APIRouter(
     prefix="/auth",
@@ -126,13 +127,13 @@ async def verify_email_endpoint(
         
         if not user_id:
             # ถ้า token ไม่ถูกต้อง ให้ redirect ไปยังหน้า login พร้อมแสดง error message
-            return RedirectResponse(f"{LOGIN_URL}?error=invalid_token", status_code=302)
+            return RedirectResponse(f"{LOGIN_URL}&error=invalid_token", status_code=302)
         
         # ถ้ายืนยันสำเร็จ ให้ redirect ไปยังหน้า login พร้อมแสดง success message
-        return RedirectResponse(f"{LOGIN_URL}?verified=true", status_code=302)
+        return RedirectResponse(f"{LOGIN_URL}&verified=true", status_code=302)
     except Exception as e:
         # กรณีเกิด error ให้ redirect ไปยangหน้า login พร้อมแสดง error message
-        return RedirectResponse(f"{LOGIN_URL}?error=verification_failed", status_code=302)
+        return RedirectResponse(f"{LOGIN_URL}&error=verification_failed", status_code=302)
 
 @router.post("/resend-verification", response_model=format_data.FormatResponseModel)
 async def resend_verification_endpoint(
