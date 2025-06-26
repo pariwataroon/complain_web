@@ -14,6 +14,7 @@ from app.api.v1.controllers.api_log_controller import (
 )
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
+from lib.mask_sensitive import mask_sensitive
 
 router = APIRouter(
     prefix="/api-logs",
@@ -102,8 +103,8 @@ async def read_api_log_details(
         "client_ip": log.client_ip,
         "status_code": log.status_code,
         "process_time_ms": log.process_time_ms,
-        "request_body": log.request_body,
-        "request_headers": log.request_headers,
+        "request_body": mask_sensitive(log.request_body),
+        "request_headers": mask_sensitive(log.request_headers),
         "user_id": log.user_id,
         "user_name": user_name,
         "created_at": log.created_at,
