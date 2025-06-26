@@ -78,42 +78,43 @@ def get_or_create_user_from_thaid(db: Session, thaid_data: ThaiIDTokenResponse):
     if not existing_user:
         # ถ้าไม่พบผู้ใช้ สร้างผู้ใช้ใหม่
         is_new_user = True
-        
         # แปลงข้อมูลจาก Thai ID เป็น UserCreate model
-        # ต้องกำหนด password เริ่มต้น (ควรสร้างรหัสสุ่ม)
         import secrets
         random_password = secrets.token_urlsafe(12)
-        
-        # แปลงค่า title จาก titleTh เป็น title_id (ตามที่กำหนดในระบบของคุณ)
         title_id = get_title_id_from_name(db, thaid_data.titleTh)
-        
         new_user = UserCreate(
             citizen_id=thaid_data.pid,
-            email=f"{thaid_data.pid}@example.com",  # สร้าง email เริ่มต้น หรืออาจให้ผู้ใช้กรอกภายหลัง
+            email=f"{thaid_data.pid}@example.com",
             first_name=thaid_data.given_name,
             last_name=thaid_data.family_name,
             password=random_password,
             title_id=title_id,
             address=thaid_data.address.formatted if thaid_data.address else "",
             address_other=thaid_data.address_other.formatted if hasattr(thaid_data, 'address_other') and thaid_data.address_other else "",
-            prefix_other=None if title_id != 1 else thaid_data.titleTh,  # ถ้า title_id เป็น 1 (อื่นๆ) ให้เก็บ titleTh
-            is_active=True,
+            prefix_other=None if title_id != 1 else thaid_data.titleTh,
         )
-        
-        # สร้างผู้ใช้ใหม่
+        # สร้างผู้ใช้ใหม่ (is_active จะเป็น False ถ้าเป็น people)
         existing_user = user_controller.create_user(db, new_user)
-        
+        # อัปเดต is_active=True หลังสร้าง (เฉพาะ ThaiD)
+        try:
+            # รองรับทั้ง dict และ object
+            user_id = existing_user['id'] if isinstance(existing_user, dict) else existing_user.id
+            user_obj = user_controller.get_user(db, user_id)
+            if user_obj and not user_obj.is_active:
+                user_obj.is_active = True
+                db.commit()
+        except Exception as e:
+            print(f"Error updating is_active for ThaiD user: {str(e)}")
         # เพิ่มการส่ง notification เมื่อมีการลงทะเบียนใหม่ผ่าน ThaiID
         try:
             notification_controller.create_notification(
                 db=db,
                 title="มีการลงทะเบียนผู้ใช้ใหม่ผ่าน ThaiID",
                 message=f"ผู้ใช้ {thaid_data.given_name} {thaid_data.family_name} ได้ลงทะเบียนผ่าน ThaiID",
-                role_seeking_group="admin",  # ส่งให้แอดมินทุกคน
-                redirect_url=f"/users/{existing_user['id'] if isinstance(existing_user, dict) else existing_user.id}"
+                role_seeking_group="admin",
+                redirect_url=f"/users/{user_id}"
             )
         except Exception as e:
-            # ถ้าส่ง notification ไม่สำเร็จ ให้บันทึกข้อผิดพลาดแต่ไม่ทำให้กระบวนการทั้งหมดล้มเหลว
             print(f"Error sending notification: {str(e)}")
     
     # ดึงข้อมูล roles ของผู้ใช้
