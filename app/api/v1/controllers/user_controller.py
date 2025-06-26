@@ -68,10 +68,30 @@ def create_user(db: Session, user: UserCreate, roles: list = None, position_ids:
         # Create new user
         hashed_password = get_password_hash(user.password)
 
-        # ตรวจสอบว่ามี role 'staff' หรือไม่ ถ้ามีให้ is_active=True
-        is_staff = False
+        # ตรวจสอบว่ามี role 'people' หรือไม่ ถ้ามีหรือหา role ไม่ได้ ให้ is_active=False, ถ้าไม่มี people เลย ให้ is_active=True
+        is_active = None
+        role_names = []
         if roles and isinstance(roles, list):
-            is_staff = any(str(role).lower() == 'staff' for role in roles)
+            for role in roles:
+                try:
+                    # ลองแปลงเป็น UUID ก่อน ถ้าใช่จะไปหา name จาก DB
+                    role_uuid = UUID(str(role))
+                    from models.role import Role
+                    role_obj = db.query(Role).filter(Role.id == role_uuid).first()
+                    if role_obj:
+                        role_names.append(role_obj.name)
+                except Exception:
+                    # ถ้าไม่ใช่ UUID ให้ถือว่าเป็นชื่อ role
+                    role_names.append(str(role).lower())
+
+        # ถ้าไม่มี role ที่หาได้เลย ให้ถือว่าเป็น people
+        if not role_names:
+            role_names = ['people']
+
+        if 'people' in [r.lower() for r in role_names]:
+            is_active = False
+        else:
+            is_active = True
 
         db_user = User(
             citizen_id=user.citizen_id,
@@ -95,7 +115,7 @@ def create_user(db: Session, user: UserCreate, roles: list = None, position_ids:
             profile_image=user.profile_image if hasattr(user, 'profile_image') else None,
             sync_address=user.sync_address if hasattr(user, 'sync_address') else False,
             group_type=user.group if hasattr(user, 'group') else None,
-            is_active=True if is_staff else False  # ถ้าเป็น staff ให้ active ทันที
+            is_active=is_active
         )
 
         # จัดการเรื่องคำนำหน้า
@@ -113,7 +133,6 @@ def create_user(db: Session, user: UserCreate, roles: list = None, position_ids:
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
-        
         # กำหนดบทบาท
         assign_user_roles(db, db_user.id, roles)
         

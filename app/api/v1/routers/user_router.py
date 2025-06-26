@@ -156,30 +156,28 @@ def process_frontend_user_data(data: Dict[str, Any]) -> Dict[str, Any]:
     # ประมวลผลบทบาท
     roles = data.get('roles', [])
     processed_roles = []
-    
+    processed_role_ids = []
+
     if roles:
         for role in roles:
             if isinstance(role, dict) and 'id' in role:
-                # แปลง role ID เป็น role name
-                processed_roles.append(role['id'])
+                processed_role_ids.append(role['id'])
             elif isinstance(role, str):
                 processed_roles.append(role)
-    
-    if not processed_roles:
-        # ใช้ group เป็นพื้นฐานสำหรับกำหนด role เริ่มต้น
+
+    # เลือกส่ง id ถ้ามี, ถ้าไม่มีให้ส่งชื่อ, ถ้าไม่มีอะไรเลยให้ default
+    if processed_role_ids:
+        processed['processed_roles'] = processed_role_ids
+    elif processed_roles:
+        processed['processed_roles'] = processed_roles
+    else:
         group = data.get('group', 'officer')
-        if group == 'officer':
-            processed_roles = ['staff']
-        else:
-            processed_roles = ['people']
-    
-    processed['processed_roles'] = processed_roles
-    
+        processed['processed_roles'] = ['staff'] if group == 'officer' else ['people']
+
     # ประมวลผลตำแหน่ง (ถ้ามี)
-    # จะต้องเพิ่มในอนาคตเมื่อ frontend ส่งข้อมูลตำแหน่งมา
     processed['position_ids'] = data.get('position_ids')
     processed['primary_position_id'] = data.get('primary_position_id')
-    
+
     return processed
 
 
