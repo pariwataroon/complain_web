@@ -725,12 +725,22 @@ const AddUserModal = ({
                 color="#1120A3"
                 sx={{ fontWeight: "bold" }}
               >
-                Username <span style={{ color: "red" }}>*</span>
+                เลขบัตรประชาชน <span style={{ color: "red" }}>*</span>
               </Typography>
               <TextfieldService
                 fullWidth
-                placeholder="กรุณากรอก Username"
-                {...register("citizen_id")}
+                placeholder="กรุณากรอก เลขบัตรประชาชน"
+                onInput={(e) => {
+                  e.target.value = e.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 13);
+                }}
+                {...register("citizen_id", {
+                  required: true,
+                  minLength: 13,
+                  maxLength: 13,
+                  pattern: /^[0-9]+$/,
+                })}
               />
 
               {errors.citizen_id && (
