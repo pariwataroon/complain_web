@@ -6,7 +6,7 @@ import Homepage3 from "@services/homepage3/homepage3";
 import Homepage4 from "@services/homepage4/homepage4";
 import Homepage5 from "@services/homepage5/homepage5";
 import Homepage6 from "@services/homepage6/homepage6";
-import Chat from "@services/chat/chat";
+import Chat from "@services/Chat/Chat";
 
 export default function HomeComponent() {
   return (

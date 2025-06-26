@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env PORT=80 next dev",
-    "dev:prod": "cross-env PORT=80 NODE_ENV=production next build && next start",
+    "dev": "cross-env PORT=3000 next dev",
+    "dev:prod": "cross-env PORT=3000 NODE_ENV=production next build && next start",
     "build": "next build",
-    "start": "cross-env PORT=80 next start",
+    "start": "cross-env PORT=3000 next start",
     "lint": "next lint",
     "export": "npm run clean && npm run build:static",
     "build-static": "next build",

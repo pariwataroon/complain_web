@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from "react";
-import {
-  Container,
-  Box,
-} from "@mui/material";
+import { Container, Box } from "@mui/material";
 import NavbarMain from "@services/navbarMain/navbarMain";
-import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
+import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs.jsx";
 import TableAll from "@services/table/TableAll";
 import { GetMeAllComplaints } from "@pages/api/complaint/complaint";
 
@@ -16,7 +13,7 @@ export default function FollowupComponent() {
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(10);
-  
+
   const breadcrumbItems = [
     {
       label: "เมนูติดตามผลการดำเนินการ",
@@ -62,13 +59,10 @@ export default function FollowupComponent() {
 
     setFilteredComplaints(filtered);
   }, [search, statusFilter, allComplaints]);
-  
 
-  
   useEffect(() => {
     fetchComplaints();
   }, [page, limit]);
-
 
   return (
     <>
@@ -87,8 +81,6 @@ export default function FollowupComponent() {
           onStatusChange={setStatusFilter}
           navigateTo="/followup"
         />
-
-
       </Box>
     </>
   );

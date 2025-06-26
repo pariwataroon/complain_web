@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { Box, Typography, Grid, IconButton } from "@mui/material";
-import BreadcrumbsService from "@services/Breadcrumbs/breadcrumbs";
+import React from "react";
+
+import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs.jsx";
 import styles from "./HolidaysComponent.module.scss";
 
 const breadcrumbItems = [
