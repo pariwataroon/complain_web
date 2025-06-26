@@ -68,7 +68,11 @@ def create_user(db: Session, user: UserCreate, roles: list = None, position_ids:
         # Create new user
         hashed_password = get_password_hash(user.password)
 
-        # สร้าง user object พร้อมข้อมูลใหม่
+        # ตรวจสอบว่ามี role 'staff' หรือไม่ ถ้ามีให้ is_active=True
+        is_staff = False
+        if roles and isinstance(roles, list):
+            is_staff = any(str(role).lower() == 'staff' for role in roles)
+
         db_user = User(
             citizen_id=user.citizen_id,
             email=user.email,
@@ -78,24 +82,20 @@ def create_user(db: Session, user: UserCreate, roles: list = None, position_ids:
             phone=user.phone if hasattr(user, 'phone') else None,
             address=user.address if hasattr(user, 'address') else None,
             address_other=user.address_other if hasattr(user, 'address_other') else None,
-            
             # เพิ่มข้อมูลภูมิศาสตร์
             province_id=user.province_id if hasattr(user, 'province_id') else None,
             district_id=user.district_id if hasattr(user, 'district_id') else None,
             subdistrict_id=user.subdistrict_id if hasattr(user, 'subdistrict_id') else None,
             zipcode=user.zipcode if hasattr(user, 'zipcode') else None,
-            
             province2_id=user.province2_id if hasattr(user, 'province2_id') else None,
             district2_id=user.district2_id if hasattr(user, 'district2_id') else None,
             subdistrict2_id=user.subdistrict2_id if hasattr(user, 'subdistrict2_id') else None,
             zipcode2=user.zipcode2 if hasattr(user, 'zipcode2') else None,
-            
             # ฟิลด์เพิ่มเติม
             profile_image=user.profile_image if hasattr(user, 'profile_image') else None,
             sync_address=user.sync_address if hasattr(user, 'sync_address') else False,
             group_type=user.group if hasattr(user, 'group') else None,
-            
-            is_active=False  # ตั้งค่าเริ่มต้นเป็น inactive
+            is_active=True if is_staff else False  # ถ้าเป็น staff ให้ active ทันที
         )
 
         # จัดการเรื่องคำนำหน้า

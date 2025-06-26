@@ -167,7 +167,7 @@ def process_frontend_user_data(data: Dict[str, Any]) -> Dict[str, Any]:
     
     if not processed_roles:
         # ใช้ group เป็นพื้นฐานสำหรับกำหนด role เริ่มต้น
-        group = data.get('group', 'people')
+        group = data.get('group', 'officer')
         if group == 'officer':
             processed_roles = ['staff']
         else:
