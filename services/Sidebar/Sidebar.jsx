@@ -538,7 +538,22 @@ export default function Sidebar() {
                           className={stylesNoti.notifItem}
                           onClick={() => {
                             if (n.redirect_url) {
-                              router.push(n.redirect_url);
+                              if (n.redirect_url.startsWith("/complaints/")) {
+                                // เดิม: กรณี complaints
+                                const complaintId = n.redirect_url.replace(
+                                  "/complaints/",
+                                  ""
+                                );
+                                router.push(
+                                  `/admin/edit/website-complaints/${complaintId}/`
+                                );
+                              } else if (n.redirect_url.startsWith("/users/")) {
+                                // ใหม่: กรณี users
+                                router.push("/admin/settinggeneral/users/");
+                              } else {
+                                // กรณีอื่น
+                                router.push(n.redirect_url);
+                              }
                               setShowNotifications(false);
                             }
                           }}
