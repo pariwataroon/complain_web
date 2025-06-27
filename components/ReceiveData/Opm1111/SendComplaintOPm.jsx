@@ -410,7 +410,7 @@ const SendComplaintOPM = () => {
                     <p style="margin: 0; font-size: 12px; color: #1565c0;">
                       ⏰ ส่งข้อมูลเมื่อ: ${new Date().toLocaleString("th-TH", {
                         timeZone: "Asia/Bangkok",
-                      })} (ผู้ส่ง: vampirebeam)
+                      })} 
                     </p>
                   </div>
                 </div>
@@ -433,7 +433,7 @@ const SendComplaintOPM = () => {
                     <p style="margin: 0; font-size: 12px; color: #1565c0;">
                       ⏰ ส่งข้อมูลเมื่อ: ${new Date().toLocaleString("th-TH", {
                         timeZone: "Asia/Bangkok",
-                      })} (ผู้ส่ง: vampirebeam)
+                      })} 
                     </p>
                   </div>
                 </div>
