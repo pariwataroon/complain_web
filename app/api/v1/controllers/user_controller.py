@@ -705,3 +705,85 @@ def get_detailed_users_by_roles(db: Session, role_id: UUID = None, skip: int = 0
         result.append(role_entry)
     
     return result
+
+def update_user_admin(db: Session, user_id: UUID, user_data: dict, roles: list = None, position_ids: list = None, primary_position_id: UUID = None):
+    """
+    Admin function to update user with roles and positions management
+    """
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        return None
+
+    try:
+        # ตรวจสอบความซ้ำซ้อนของอีเมล
+        if "email" in user_data and user_data["email"] != db_user.email:
+            existing_email = get_user_by_email(db, user_data["email"])
+            if existing_email:
+                raise DuplicateKeyError(f"User with email {user_data['email']} already exists")
+
+        # ตรวจสอบความซ้ำซ้อนของ citizen_id
+        if "citizen_id" in user_data and user_data["citizen_id"] != db_user.citizen_id:
+            existing_citizen = get_user_by_pid(db, user_data["citizen_id"])
+            if existing_citizen:
+                raise DuplicateKeyError(f"User with citizen ID {user_data['citizen_id']} already exists")
+
+        # จัดการเรื่องคำนำหน้าเมื่อมีการอัพเดต
+        if "title_id" in user_data and user_data["title_id"]:
+            title = db.query(Title).filter(Title.title_id == user_data["title_id"]).first()
+            if title:
+                # ถ้าไม่ใช่ "อื่นๆ" ให้ล้างค่า prefix_other
+                if title.title_name != "อื่น ๆ" and "prefix_other" not in user_data:
+                    user_data["prefix_other"] = None
+
+        # กรณีเลือก "อื่นๆ" และระบุคำนำหน้าเอง
+        if "prefix_other" in user_data and user_data["prefix_other"]:
+            if "title_id" not in user_data:
+                other_title_id = 1  # ID ของ "อื่น ๆ"
+                user_data["title_id"] = other_title_id
+
+        # Hash password ถ้ามีการอัพเดต
+        if "password" in user_data and user_data["password"]:
+            user_data["hashed_password"] = get_password_hash(user_data["password"])
+            del user_data["password"]
+
+        # อัพเดตข้อมูลผู้ใช้
+        for key, value in user_data.items():
+            if hasattr(db_user, key):
+                setattr(db_user, key, value)
+
+        # อัพเดต timestamp
+        db_user.updated_at = datetime.utcnow()
+
+        # จัดการ roles ถ้ามีการส่งมา
+        if roles is not None:
+            # ลบ roles เก่าทั้งหมด
+            db.query(UserRole).filter(UserRole.user_id == user_id).delete()
+            
+            # เพิ่ม roles ใหม่
+            if roles:
+                assign_user_roles(db, user_id, roles)
+
+        # จัดการ positions ถ้ามีการส่งมา
+        if position_ids is not None:
+            # ลบ positions เก่าทั้งหมด
+            db.query(UserPosition).filter(UserPosition.user_id == user_id).delete()
+            
+            # เพิ่ม positions ใหม่
+            if position_ids:
+                assign_user_positions(db, user_id, position_ids, primary_position_id)
+
+        db.commit()
+        db.refresh(db_user)
+        
+        # รับข้อมูลผู้ใช้พร้อมบทบาทและตำแหน่งเพื่อส่งกลับ
+        user_with_details = get_user_with_roles_and_titles(db, user_id)
+        return user_with_details
+        
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"Database integrity error during admin update: {str(e)}")
+        raise DuplicateKeyError("Update would result in duplicate data")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating user (admin): {str(e)}")
+        raise

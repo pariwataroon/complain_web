@@ -8,9 +8,9 @@ from app.api.middleware.permission_middleware import can_create, can_read, can_d
 from app.api.v1.controllers.user_controller import (DuplicateKeyError,
                                                    create_user, delete_user,
                                                    get_titles, get_users_with_titles,
-                                                   update_user, get_user_with_roles_and_titles)
+                                                   update_user, update_user_admin, get_user_with_roles_and_titles)
 from app.api.v1.schemas.user import (TitleResponse, UserCreate, UserResponse,
-                                    UserUpdate)
+                                    UserUpdate, UserAdminUpdate)
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
 from app.api.middleware.jwt_verify import verify_token, verify_token_simple
@@ -109,13 +109,14 @@ def process_frontend_user_data(data: Dict[str, Any]) -> Dict[str, Any]:
     processed['email'] = data.get('email')
     processed['password'] = data.get('password')
     processed['phone'] = data.get('phone')
+    processed['is_active'] = data.get('is_active')
     
     # ที่อยู่
     processed['address'] = data.get('address')
     processed['address_other'] = data.get('address2')  # address2 -> address_other
     processed['sync_address'] = data.get('syncAddress', False)
     processed['profile_image'] = data.get('profileImage')
-    processed['group'] = data.get('group')
+    processed['group_type'] = data.get('group')  # แก้ไขจาก 'group' เป็น 'group_type' ให้ตรงกับ model
     
     # ประมวลผลข้อมูลภูมิศาสตร์ที่อยู่หลัก
     province = data.get('province', {})
@@ -171,14 +172,24 @@ def process_frontend_user_data(data: Dict[str, Any]) -> Dict[str, Any]:
     elif processed_roles:
         processed['processed_roles'] = processed_roles
     else:
-        group = data.get('group', 'officer')
-        processed['processed_roles'] = ['staff'] if group == 'officer' else ['people']
+        # ถ้าไม่มี roles มาให้ กำหนด default ตาม group
+        group = data.get('group', 'people')
+        if group == 'officer':
+            processed['processed_roles'] = ['staff']
+        else:
+            processed['processed_roles'] = ['people']
 
     # ประมวลผลตำแหน่ง (ถ้ามี)
     processed['position_ids'] = data.get('position_ids')
     processed['primary_position_id'] = data.get('primary_position_id')
 
-    return processed
+    # กรองข้อมูลที่เป็น None ออก (ยกเว้น processed_roles ที่ต้องการส่งไปเสมอ)
+    filtered_processed = {}
+    for key, value in processed.items():
+        if key == 'processed_roles' or value is not None:
+            filtered_processed[key] = value
+
+    return filtered_processed
 
 
 @router.post("/register", response_model=FormatResponseModel)
@@ -369,3 +380,43 @@ async def get_detailed_users_by_roles_endpoint(
     
     detailed_data = get_detailed_users_by_roles(db, skip=skip, limit=limit)
     return format_response("0000", detailed_data)
+
+@router.put("/admin/{user_id}", response_model=FormatResponseModel)
+async def admin_update_user(
+    user_id: UUID,
+    user_data: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_create("setting_users"))  # ใช้สิทธิ์ create เนื่องจาก admin level
+):
+    """
+    Admin endpoint to update user with full privileges including roles and positions
+    Similar to POST /users but for updating existing users
+    """
+    try:
+        # แปลงข้อมูลจาก frontend format เป็น backend format
+        processed_data = process_frontend_user_data(user_data)
+        
+        # แยกข้อมูลสำหรับ roles และ positions
+        roles = processed_data.pop('processed_roles', None)
+        position_ids = processed_data.pop('position_ids', None)
+        primary_position_id = processed_data.pop('primary_position_id', None)
+        
+        # เรียกใช้ฟังก์ชัน admin update
+        updated_user = update_user_admin(
+            db=db, 
+            user_id=user_id, 
+            user_data=processed_data,
+            roles=roles,
+            position_ids=position_ids,
+            primary_position_id=primary_position_id
+        )
+        
+        if updated_user is None:
+            raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")
+
+        return format_response("0002", updated_user)
+        
+    except DuplicateKeyError as e:
+        return format_response("4090", {"error": str(e)})
+    except Exception as e:
+        return format_response("5000", {"error": f"Failed to update user: {str(e)}"})

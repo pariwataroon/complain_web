@@ -1108,7 +1108,7 @@
 					"response": []
 				},
 				{
-					"name": "users/",
+					"name": "users/ - Create User (Admin)",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -1124,7 +1124,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"citizen_id\": \"1234567980139\",\r\n    \"title_id\": 3,\r\n    \"first_name\": \"as11\",\r\n    \"last_name\": \"afsa1\",\r\n    \"email\": \"buddyibeam89@gmail.com\",\r\n    \"phone\": \"0864703371\",\r\n    \"password\": \"test123!Z\",\r\n    \"prefix_other\": \"test\"\r\n}\r\n",
+							"raw": "{\n    \"citizen_id\": \"1234567980139\",\n    \"title_id\": 2,\n    \"prefix_other\": \"นักวิเคราะห์นโยบายและแผน\",\n    \"first_name\": \"ทดสอบ\",\n    \"last_name\": \"ระบบการทำงาน\",\n    \"email\": \"vampirebeam.test@example.com\",\n    \"password\": \"test123!Z\",\n    \"phone\": \"0864703371\",\n    \"address\": \"123 ถนนสุขุมวิท\",\n    \"address2\": \"คอนโด ABC ชั้น 15\",\n    \"syncAddress\": false,\n    \"profileImage\": \"profile.jpg\",\n    \"group\": \"officer\",\n    \"province\": {\n        \"value\": 1,\n        \"label\": \"กรุงเทพมหานครฯ\"\n    },\n    \"districts\": {\n        \"value\": 17,\n        \"label\": \"เขตห้วยขวาง\"\n    },\n    \"subdistricts\": {\n        \"value\": \"101702\",\n        \"label\": \"บางกะปิ\"\n    },\n    \"zipcode\": {\n        \"value\": 10310,\n        \"label\": 10310\n    },\n    \"province2\": {\n        \"value\": 11,\n        \"label\": \"ชลบุรี\"\n    },\n    \"districts2\": {\n        \"value\": 141,\n        \"label\": \"พนัสนิคม\"\n    },\n    \"subdistricts2\": {\n        \"value\": \"200610\",\n        \"label\": \"หัวถนน\"\n    },\n    \"zipcode2\": {\n        \"value\": 20140,\n        \"label\": 20140\n    },\n    \"roles\": [\n        {\n            \"id\": \"33F97B62-C288-4D32-9B49-7F46A261FE7B\"\n        }\n    ]\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1216,7 +1216,7 @@
 					"response": []
 				},
 				{
-					"name": "users/UUID",
+					"name": "users/UUID - Update User (Basic)",
 					"event": [
 						{
 							"listen": "test",
@@ -1260,7 +1260,86 @@
 								"users",
 								"46734501-357f-4227-b427-b25824cfc21e"
 							]
-						}
+						},
+						"description": "อัพเดตข้อมูลผู้ใช้แบบพื้นฐาน สำหรับ user อัพเดตข้อมูลตัวเอง หรือ admin ที่มีสิทธิ์\n\n**ฟิลด์ที่อัพเดตได้:**\n- first_name, last_name, phone\n- title_id, prefix_other\n- is_active (admin เท่านั้น)\n- password\n\n**ข้อจำกัด:**\n- ไม่สามารถเปลี่ยน citizen_id, email\n- ไม่สามารถจัดการ roles หรือ positions\n\n**สิทธิ์:** ตัวเอง หรือ admin ที่มี setting_users:update"
+					},
+					"response": []
+				},
+				{
+					"name": "users/admin/UUID - Admin Update User",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"citizen_id\": \"faun_test3\",\n    \"title_id\": 2,\n    \"prefix_other\": \"position_d3\",\n    \"first_name\": \"ศรศักดิ์\",\n    \"last_name\": \"มานาดี\",\n    \"email\": \"fannakab998@gmail.com\",\n    \"password\": \"Faun@1234\",\n    \"phone\": \"0988885585\",\n    \"address\": \"555/888\",\n    \"address2\": \"555/888\",\n    \"syncAddress\": false,\n    \"profileImage\": \"cat.png\",\n    \"group\": \"officer\",\n    \"province\": {\n        \"value\": 1,\n        \"label\": \"กรุงเทพมหานครฯ\"\n    },\n    \"districts\": {\n        \"value\": 17,\n        \"label\": \"เขตห้วยขวาง\"\n    },\n    \"subdistricts\": {\n        \"value\": \"101702\",\n        \"label\": \"บางกะปิ\"\n    },\n    \"zipcode\": {\n        \"value\": 10310,\n        \"label\": 10310\n    },\n    \"province2\": {\n        \"value\": 11,\n        \"label\": \"ชลบุรี\"\n    },\n    \"districts2\": {\n        \"value\": 141,\n        \"label\": \"พนัสนิคม\"\n    },\n    \"subdistricts2\": {\n        \"value\": \"200610\",\n        \"label\": \"หัวถนน\"\n    },\n    \"zipcode2\": {\n        \"value\": 20140,\n        \"label\": 20140\n    },\n    \"roles\": [\n        {\n            \"id\": \"33F97B62-C288-4D32-9B49-7F46A261FE7B\"\n        }\n    ],\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/admin/46734501-357f-4227-b427-b25824cfc21e",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								"admin",
+								"46734501-357f-4227-b427-b25824cfc21e"
+							]
+						},
+						"description": "Admin endpoint สำหรับอัพเดตผู้ใช้แบบเต็มรูปแบบ รวมการจัดการ roles และ positions\n\n**คุณสมบัติ:**\n- อัพเดตข้อมูลพื้นฐานได้ทั้งหมด (citizen_id, email, password, ชื่อ-นามสกุล, etc.)\n- จัดการ roles ได้ (ลบ roles เก่า เพิ่ม roles ใหม่)\n- จัดการ positions ได้ (สำหรับอนาคต)\n- อัพเดตข้อมูลภูมิศาสตร์ (province, district, subdistrict, zipcode)\n- อัพเดตที่อยู่ทั้งหลักและอื่น\n- ใช้ body format เดียวกับ POST /users\n\n**สิทธิ์:** ต้องมีสิทธิ์ `setting_users:create` (admin level)\n\n**ตัวอย่าง Response:**\n```json\n{\n  \"res_code\": \"0002\",\n  \"res_message\": \"UPDATE_DATA_SUCCESSFULLY\",\n  \"res_data\": {\n    \"id\": \"uuid\",\n    \"citizen_id\": \"faun_test3\",\n    \"email\": \"fannakab998@gmail.com\",\n    \"full_name_with_title\": \"position_d3 ศรศักดิ์ มานาดี\",\n    \"roles\": [...],\n    \"positions\": [...],\n    \"is_active\": true\n  }\n}\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "users/admin/UUID - Update with Multiple Roles",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"ผู้ดูแลระบบ\",\n    \"last_name\": \"หลัก\",\n    \"email\": \"admin@example.com\",\n    \"phone\": \"0812345678\",\n    \"is_active\": true,\n    \"roles\": [\n        {\n            \"id\": \"admin-role-uuid\"\n        },\n        {\n            \"id\": \"staff-role-uuid\"\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/admin/46734501-357f-4227-b427-b25824cfc21e",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								"admin",
+								"46734501-357f-4227-b427-b25824cfc21e"
+							]
+						},
+						"description": "ตัวอย่างการอัพเดตผู้ใช้ด้วยหลาย roles พร้อมกัน"
 					},
 					"response": []
 				},

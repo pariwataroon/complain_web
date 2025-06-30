@@ -154,3 +154,61 @@ class VerifyEmployeeRequest(BaseModel):
                 "project_api_key": "comp_mof_1a2b3c4d5e6f7g8h9i0j"
             }
         }
+
+class UserAdminUpdate(BaseModel):
+    """Schema for admin to update user with full access including roles and positions"""
+    citizen_id: Optional[str] = None
+    title_id: Optional[int] = None
+    prefix_other: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = Field(None, min_length=8)
+    phone: Optional[str] = None
+    
+    # เพิ่มฟิลด์ที่อยู่
+    address: Optional[str] = None
+    address_other: Optional[str] = None
+    
+    # เพิ่มข้อมูลภูมิศาสตร์ที่อยู่หลัก
+    province_id: Optional[int] = None
+    district_id: Optional[int] = None
+    subdistrict_id: Optional[str] = None
+    zipcode: Optional[int] = None
+    
+    # เพิ่มข้อมูลภูมิศาสตร์ที่อยู่อื่น
+    province2_id: Optional[int] = None
+    district2_id: Optional[int] = None
+    subdistrict2_id: Optional[str] = None
+    zipcode2: Optional[int] = None
+    
+    # เพิ่มฟิลด์อื่นๆ
+    profile_image: Optional[str] = None
+    sync_address: Optional[bool] = None
+    group_type: Optional[str] = None
+    is_active: Optional[bool] = None
+    
+    # เพิ่มฟิลด์สำหรับตำแหน่ง
+    position_ids: Optional[List[UUID]] = None
+    primary_position_id: Optional[UUID] = None
+    
+    # เพิ่มฟิลด์สำหรับบทบาท
+    roles: Optional[List[Dict[str, Any]]] = None
+
+    @validator('roles', pre=True)
+    def parse_roles(cls, v):
+        """Parse roles from different formats"""
+        if not v:
+            return None
+        
+        # ถ้าเป็น list ของ dict ที่มี id
+        if isinstance(v, list) and len(v) > 0:
+            if isinstance(v[0], dict) and 'id' in v[0]:
+                return [role['id'] for role in v]
+            elif isinstance(v[0], str):
+                return v
+        
+        return v
+
+    class Config:
+        from_attributes = True
