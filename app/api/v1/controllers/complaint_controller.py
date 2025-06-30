@@ -1114,8 +1114,13 @@ def get_complaints(
                 subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
                 if subtype:
                     complaint_subtype_name = subtype.name
+            
             list_item_dict = list_item.__dict__
             list_item_dict["complaint_subtype"] = complaint_subtype_name
+            
+            # ✅ เพิ่ม is_master key เพื่อบอกสถานะ parent/child (คำนวณง่ายๆ)
+            list_item_dict["is_master"] = complaint.parent_complaint_id is None
+            
             result.append(list_item_dict)
         except Exception as e:
             if DEBUG_MODE:
