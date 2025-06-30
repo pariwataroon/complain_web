@@ -51,10 +51,8 @@ const SendComplaintOPM = () => {
     severity: "success",
   });
 
-  // Validation functions
   const validatePhoneNumber = (phone) => {
     if (!phone) return false;
-    // ตรวจสอบเบอร์มือถือ (08x, 09x) และเบอร์บ้าน (02x-07x)
     const mobileRegex = /^(08|09)\d{8}$/;
     const landlineRegex = /^(02|03|04|05|06|07)\d{7,8}$/;
 
@@ -123,24 +121,20 @@ const SendComplaintOPM = () => {
 
   const handleReporterFirstNameChange = useCallback((event) => {
     const value = event.target.value;
-    // อนุญาตเฉพาะตัวอักษรไทย อังกฤษ และช่องว่าง
     const nameValue = value.replace(/[^a-zA-Zก-๙\s]/g, "");
     setReporterFirstName(nameValue);
   }, []);
 
   const handleReporterLastNameChange = useCallback((event) => {
     const value = event.target.value;
-    // อนุญาตเฉพาะตัวอักษรไทย อังกฤษ และช่องว่าง
     const nameValue = value.replace(/[^a-zA-Zก-๙\s]/g, "");
     setReporterLastName(nameValue);
   }, []);
 
   const handleReporterPhoneChange = useCallback((e) => {
     const value = e.target.value;
-    // อนุญาตเฉพาะตัวเลข 0-9
     const numericValue = value.replace(/[^0-9]/g, "");
 
-    // จำกัดความยาวไม่เกิน 10 ตัว
     if (numericValue.length <= 10) {
       setReporterPhone(numericValue);
     }
@@ -227,7 +221,6 @@ const SendComplaintOPM = () => {
       setLoading(true);
       showLoading("กำลังส่งข้อมูลไปยัง สปน...");
 
-      // Format dates to YYYY-MM-DD HH:MM:SS format (local time)
       const formatDate = (date) => {
         if (!date) return null;
         const d = new Date(date);
@@ -264,7 +257,6 @@ const SendComplaintOPM = () => {
         created_date: formatDate(createdDate),
         updated_date: formatDate(updatedDate),
         case_id: queryParams.id || "",
-        user_id: "vampirebeam", // Current user
         submitted_at: formatCurrentTimestamp(),
         reporter_first_name: reporterFirstName,
         reporter_last_name: reporterLastName,

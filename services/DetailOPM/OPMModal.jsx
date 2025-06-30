@@ -24,22 +24,23 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
         }
     };
 
-    const formatThaiDateToMySQL = (thaiDate) => {
-        if (!thaiDate) return null;
+    const formatThaiDateToMySQL = (isoString) => {
+        if (!isoString) return null;
+        const date = new Date(isoString);
+        if (isNaN(date)) return null;
 
-        const year = thaiDate.year;
-        const month = String(thaiDate.month).padStart(2, '0');
-        const day = String(thaiDate.day).padStart(2, '0');
-        const currentTime = new Date();
-        const hours = String(currentTime.getHours()).padStart(2, '0');
-        const minutes = String(currentTime.getMinutes()).padStart(2, '0');
-        const seconds = String(currentTime.getSeconds()).padStart(2, '0');
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
 
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    };
+      }
 
     const handleFormSubmit = async (data) => {
-        if (isSubmitting) return; 
+        if (isSubmitting) return;
 
         try {
             setIsSubmitting(true);
@@ -57,7 +58,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
 
             const created_by = caseDetails.find(
                 (detail) => detail.field === "created_by"
-            )?.value || "vampirebeam";
+            )?.value ;
 
             const errors = [];
 
@@ -65,13 +66,13 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                 errors.push("• กรุณาเลือกประเภทเรื่อง");
             }
 
-            if (!data.severity_id && data.severity_id !== 0) {
-                errors.push("• กรุณาเลือกระดับความสำคัญ");
-            }
+            // if (!data.severity_id && data.severity_id !== 0) {
+            //     errors.push("• กรุณาเลือกระดับความสำคัญ");
+            // }
 
-            if (!data.secret_id && data.secret_id !== 0) {
-                errors.push("• กรุณาเลือกระดับความลับ");
-            }
+            // if (!data.secret_id && data.secret_id !== 0) {
+            //     errors.push("• กรุณาเลือกระดับความลับ");
+            // }
 
             if (!data.date_opened) {
                 errors.push("• กรุณาเลือกวันที่เปิดเรื่อง");
@@ -183,7 +184,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                         </Box>
 
                         {/* Severity ID */}
-                        <Box className={styles.fieldGroup}>
+                        {/* <Box className={styles.fieldGroup}>
                             <Controller
                                 name="severity_id"
                                 control={control}
@@ -212,10 +213,10 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                     </Box>
                                 )}
                             />
-                        </Box>
+                        </Box> */}
 
                         {/* Secret ID */}
-                        <Box className={styles.fieldGroup}>
+                        {/* <Box className={styles.fieldGroup}>
                             <Controller
                                 name="secret_id"
                                 control={control}
@@ -244,7 +245,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                     </Box>
                                 )}
                             />
-                        </Box>
+                        </Box> */}
 
                         {/* Date Opened */}
                         <Box className={styles.fieldGroup}>
@@ -264,6 +265,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                             name={field.name}
                                             placeholder="กรุณาเลือกวันที่เปิดเรื่อง..."
                                             disabled={isSubmitting}
+                                            time={true}
                                         />
                                         {error && (
                                             <Typography className={styles.errorText}>
@@ -293,6 +295,7 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                                             name={field.name}
                                             placeholder="กรุณาเลือกวันที่ปิดเรื่อง..."
                                             disabled={isSubmitting}
+                                            time={true}
                                         />
                                         {error && (
                                             <Typography className={styles.errorText}>

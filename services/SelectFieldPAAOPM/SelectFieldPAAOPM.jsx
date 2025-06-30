@@ -34,7 +34,8 @@ const SelectFieldPAAOPM = ({
   const [caseStatuses, setCaseStatuses] = useState([]);
   const [caseTypes, setCaseTypes] = useState([]);
   const [loading, setLoading] = useState(false);
-
+  const isChannelLocked = name === "channel";
+  
   const provinceData = useMemo(() => [
     { "ID": "11", "Name": "กระบี่" },
     { "ID": "12", "Name": "กรุงเทพมหานคร" },
@@ -281,7 +282,7 @@ const SelectFieldPAAOPM = ({
         }));
       case "channel":
         return operatingChannels
-          .sort((a, b) => (a.seq || 0) - (b.seq || 0))
+          .filter(channel => channel.val === "6")
           .map(channel => ({
             value: channel.val,
             label: channel.text
@@ -382,9 +383,9 @@ const SelectFieldPAAOPM = ({
         select
         displayEmpty
         name={name}
-        value={value || ""}
-        onChange={onChange || handleDropdownChange}
-        disabled={isFieldDisabled}
+        value={isChannelLocked ? "6" : (value || "")}
+        onChange={isChannelLocked ? undefined : (onChange || handleDropdownChange)}
+        disabled={isChannelLocked ? true : isFieldDisabled}
         error={error}
         size={size}
         placeholder={placeholderText}

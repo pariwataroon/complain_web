@@ -223,7 +223,8 @@ const AddOperating = async (submitData) => {
     if (!org_id) {
       throw new Error("Token not found in cookies. Please authenticate first.");
     }
-
+    console.log({ submitData });
+    
     const response = await soapInstance.post(
       process.env.NEXT_PUBLIC_OPM_API_OFFICER,
       `<?xml version="1.0" encoding="utf-8"?>
@@ -241,8 +242,8 @@ const AddOperating = async (submitData) => {
               <date_opened>${submitData.date_opened}</date_opened>
               <date_closed>${submitData.date_closed}</date_closed>
               <detail>${submitData.detail}</detail>
-              <severity_id>${submitData.severity_id}</severity_id>
-              <secret_id>${submitData.secret_id}</secret_id>
+              <severity_id>1</severity_id>
+              <secret_id>1</secret_id>
             </AddOperating>
           </soap:Body>
         </soap:Envelope>`,

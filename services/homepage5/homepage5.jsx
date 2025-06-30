@@ -27,9 +27,9 @@ export default function Homepage5() {
         <div
           style={{
             position: "absolute",
-            bottom: "20px", // ขยับข้อความให้ห่างจากขอบด้านล่างเล็กน้อย
+            bottom: "20px",
             left: "20px",
-            width: "calc(100% - 40px)", // ให้ข้อความไม่ชิดขอบ
+            width: "calc(100% - 40px)",
             color: "#fff",
             background: "rgba(0, 0, 0, 0.5)",
             padding: "10px",

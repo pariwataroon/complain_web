@@ -114,10 +114,10 @@ const ComplaintMinistryForm = ({
     const formatLabel = (baseLabel) => {
         return (
             <>
-                {baseLabel}{" "}
-                {formType === "mandatory" && (
+                {baseLabel}
+                {/* {formType === "mandatory" && (
                     <span className={styles.requiredAsterisk}>*</span>
-                )}
+                )} */}
             </>
         );
     };
