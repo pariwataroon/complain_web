@@ -825,18 +825,33 @@ def convert_to_db_json(data):
     return json.dumps(data)
 
 def generate_complaint_number(db: Session) -> str:
-    """สร้างเลขที่ข้อร้องเรียนแบบอัตโนมัติ"""
-    today = datetime.now()
-    date_part = today.strftime("%Y%m%d")
+    """สร้างเลขที่ข้อร้องเรียนแบบอัตโนมัติ - ใช้เวลาไทยและรีเซ็ต sequence ทุกปี"""
+    from datetime import timezone, timedelta
     
-    today_start = datetime.combine(today.date(), datetime.min.time())
-    today_end = datetime.combine(today.date(), datetime.max.time())
+    # สร้าง timezone สำหรับไทย (UTC+7)
+    bangkok_tz = timezone(timedelta(hours=7))
     
-    today_count = db.query(Complaint).filter(
-        Complaint.created_at.between(today_start, today_end)
+    # ใช้เวลาไทย
+    now_bangkok = datetime.now(bangkok_tz)
+    
+    # แปลงเป็นปีพุทธศักราช (ค.ศ. + 543)
+    buddhist_year = now_bangkok.year + 543
+    
+    # สร้าง date_part ในรูปแบบ พศ-เดือน-วัน
+    date_part = f"{buddhist_year}{now_bangkok.strftime('%m%d')}"
+    
+    # คำนวณช่วงเวลาของปีปัจจุบัน (ใช้ปี ค.ศ. สำหรับการค้นหาใน database)
+    year_start = datetime(now_bangkok.year, 1, 1, 0, 0, 0)
+    year_end = datetime(now_bangkok.year, 12, 31, 23, 59, 59)
+    
+    # นับจำนวนเรื่องร้องเรียนในปีนี้
+    year_count = db.query(Complaint).filter(
+        Complaint.created_at.between(year_start, year_end)
     ).count()
     
-    sequence = str(today_count + 1).zfill(5)
+    # sequence รีเซ็ตทุกปี เริ่มจาก 1
+    sequence = str(year_count + 1).zfill(5)
+    
     return f"MOF-{date_part}-{sequence}"
 
 def create_status_history(db: Session, complaint_id: UUID, status: ComplaintStatus, notes: str, user_id: Optional[UUID] = None):
