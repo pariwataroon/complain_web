@@ -60,16 +60,18 @@ const Opm1111Components = () => {
       const timelineData = await GetTimelineHeader(take);
       const parsedData = Array.isArray(timelineData) ? timelineData : timelineData;
 
-      const mappedComplaints = parsedData.map((item) => ({
-        case_id: item.case_id,
-        case_code: item.case_code,
-        customer_name: item.customer_name,
-        type_text: item.type_text,
-        secret_id: item.secret_id,
-        status_text: item.status_text,
-        main_status_text: item.main_status_text,
-        Action: "View Details",
-      }));
+      const mappedComplaints = parsedData.map((item) => {
+        // console.log({ item }); 
+        return {
+          case_id: item.case_id,
+          case_code: item.case_code,
+          customer_name: item.customer_name,
+          type_text: item.type_text,
+          status_text: item.status_text,
+          main_status_text: item.main_status_text,
+          ShowDateTime: item.ShowDateTime,
+        };
+      });
 
       setComplaints(mappedComplaints);
       setFilteredComplaints(mappedComplaints);

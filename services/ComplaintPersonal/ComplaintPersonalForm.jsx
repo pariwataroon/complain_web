@@ -105,7 +105,7 @@ const ComplaintPersonalForm = ({
     const formatLabel = (baseLabel) => {
         return (
             <>
-                {baseLabel}{" "}
+                {baseLabel}
                 {formType === "mandatory" && (
                     <span className={styles.requiredAsterisk}>*</span>
                 )}

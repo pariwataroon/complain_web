@@ -43,7 +43,7 @@ const TableListOPM = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
-  
+
   const initialFilters = useMemo(
     () =>
       filterFields.reduce((acc, field) => {
@@ -120,7 +120,7 @@ const TableListOPM = ({
       });
     }
   };
-  
+
   const handleRowSend = (data) => {
     if (navigateTo) {
       router.push({
@@ -134,14 +134,14 @@ const TableListOPM = ({
     { name: "case_code", label: "รหัสเรื่อง", width: 100, priority: 3 },
     { name: "customer_name", label: "ชื่อ", width: 180, priority: 2 },
     { name: "type_text", label: "ประเภทเรืองร้องทุกข์", width: 120, priority: 4 },
-    { name: "secret_id", label: "ระดับความลับ", width: 80, priority: 5 },
+    { name: "ShowDateTime", label: "วันที่และเวลา", width: 120, priority: 4 },
     { name: "status_text", label: "สถานะหลักของเรื่อง", width: 80, priority: 4 },
     { name: "main_status_text", label: "สถานะดำเนินการ", width: 160, priority: 3 },
   ];
 
   const getVisibleColumns = () => {
     if (isMobile) {
-      return columns.filter((col) => col.priority <= 2); 
+      return columns.filter((col) => col.priority <= 2);
     }
     if (isTablet) {
       return columns.filter((col) => col.priority <= 3);
@@ -275,7 +275,7 @@ const TableListOPM = ({
       {/* Search Bar - Desktop */}
       {!isMobile && (
         <Box width="100%" px={2} py={1}>
-          <Box display="flex" alignItems="center" justifyContent="space-between" gap={1}>
+          <Box display="flex" alignItems="center" justifyContent="space-between" gap={1} sx={{ flexWrap: "wrap" }}>
             {/* Filters */}
             <Box
               display="flex"
@@ -284,7 +284,8 @@ const TableListOPM = ({
               sx={{
                 flexGrow: 1,
                 overflowX: "auto",
-                maxWidth: isTablet ? "60%" : "70%"
+                maxWidth: isTablet ? "60%" : "70%",
+                minWidth: 0,
               }}
             >
               {visibleColumns.map((col) => (
@@ -321,10 +322,15 @@ const TableListOPM = ({
               >
                 <SearchOffIcon />
               </IconButton>
+              <ButtonSent
+                label={isTablet ? "ส่งเรื่อง" : "ส่งผลการพิจราณาไปยัง สปน."}
+                size={isTablet ? "small" : "medium"}
+                onClick={() => handleRowSend(selectedItem)}
+              />
             </Box>
 
             {/* Action Buttons */}
-            <Box
+            {/* <Box
               display="flex"
               alignItems="center"
               gap={1}
@@ -332,22 +338,23 @@ const TableListOPM = ({
               sx={{
                 flexDirection: isTablet ? "column" : "row",
                 alignItems: isTablet ? "flex-end" : "center",
+                minWidth: isTablet ? "unset" : 250,
               }}
             >
               <ButtonSent
-                label={isTablet ? "ส่งเรื่อง" : "ส่งเรื่องร้องทุกข์ สปน."}
+                label={isTablet ? "ส่งเรื่อง" : "ส่งผลการพิจราณาไปยัง สปน."}
                 size={isTablet ? "small" : "medium"}
                 onClick={() => handleRowSend(selectedItem)}
-              />
-              <ExportButton
+              /> */}
+            {/* <ExportButton
                 label={isTablet ? "PDF" : "Export PDF"}
                 size={isTablet ? "small" : "medium"}
               />
               <ExportButton
                 label={isTablet ? "Excel" : "Export Excel"}
                 size={isTablet ? "small" : "medium"}
-              />
-            </Box>
+              /> 
+            </Box> */}
           </Box>
         </Box>
       )}

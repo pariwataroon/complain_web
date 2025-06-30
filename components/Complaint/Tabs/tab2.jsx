@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import styles from "./TabNav.module.scss";
-import ComplaintPersonalForm from "@services/ComplaintPersonal/ComplaintPersonalForm";
+import ComplaintPersonalForm from "@services/ComplaintPersonalTab2/ComplaintPersonalForm";
 import ComplaintCustomerForm from "@services/ComplaintCustomer/ComplaintCustomerForm";
 import ComplaintMinistryForm from "@services/ComplaintMinistry/ComplaintMinistryForm";
 
