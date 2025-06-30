@@ -8,6 +8,7 @@ import traceback
 import copy
 import json
 import uuid
+import threading
 
 from models.comp_complaint import (
     Complaint, ComplaintStatus, ComplainantType, RespondentType, 
@@ -824,35 +825,206 @@ def convert_to_db_json(data):
         
     return json.dumps(data)
 
-def generate_complaint_number(db: Session) -> str:
-    """สร้างเลขที่ข้อร้องเรียนแบบอัตโนมัติ - ใช้เวลาไทยและรีเซ็ต sequence ทุกปี"""
+# Simple in-memory cache สำหรับ sequence
+import threading
+_complaint_sequence_cache = {}
+_cache_lock = threading.Lock()
+
+def get_cache_info() -> dict:
+    """ดูข้อมูล cache - ง่ายๆ"""
+    with _cache_lock:
+        return dict(_complaint_sequence_cache)
+
+def sync_cache_with_database(db: Session, year: Optional[int] = None) -> dict:
+    """Sync cache กับ database - สำหรับกรณีฉุกเฉิน"""
+    global _complaint_sequence_cache
+    
     from datetime import timezone, timedelta
+    
+    bangkok_tz = timezone(timedelta(hours=7))
+    current_year = year if year else datetime.now(bangkok_tz).year
+    
+    with _cache_lock:
+        year_start = datetime(current_year, 1, 1, 0, 0, 0)
+        year_end = datetime(current_year, 12, 31, 23, 59, 59)
+        
+        actual_count = db.query(Complaint).filter(
+            Complaint.created_at.between(year_start, year_end)
+        ).count()
+        
+        old_count = _complaint_sequence_cache.get(current_year, 0)
+        _complaint_sequence_cache[current_year] = actual_count
+        
+        logger.info(f"Cache synced for year {current_year}: {old_count} -> {actual_count}")
+        
+        return {
+            "year": current_year,
+            "old_count": old_count,
+            "new_count": actual_count,
+            "synced_at": datetime.now().isoformat()
+        }
+
+def clear_cache() -> dict:
+    """เคลียร์ cache ทั้งหมด - สำหรับกรณีฉุกเฉิน"""
+    global _complaint_sequence_cache
+    
+    with _cache_lock:
+        old_cache = dict(_complaint_sequence_cache)
+        _complaint_sequence_cache.clear()
+        
+        logger.warning("All cache cleared!")
+        
+        return {
+            "message": "Cache cleared successfully",
+            "old_cache": old_cache,
+            "cleared_at": datetime.now().isoformat()
+        }
+
+def test_complaint_number_generation(db: Session, count: int = 10) -> dict:
+    """ทดสอบการสร้างเลขที่ข้อร้องเรียน - สำหรับ testing"""
+    results = []
+    errors = []
+    
+    for i in range(count):
+        try:
+            complaint_number = generate_complaint_number(db)
+            results.append({
+                "iteration": i + 1,
+                "complaint_number": complaint_number,
+                "timestamp": datetime.now().isoformat()
+            })
+        except Exception as e:
+            errors.append({
+                "iteration": i + 1,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            })
+    
+    return {
+        "total_attempts": count,
+        "successful": len(results),
+        "failed": len(errors),
+        "results": results,
+        "errors": errors,
+        "cache_status": get_cache_info()
+    }
+
+def generate_complaint_number(db: Session) -> str:
+    """สร้างเลขที่ข้อร้องเรียนแบบอัตโนมัติ - ใช้ cache เพื่อประสิทธิภาพ"""
+    global _complaint_sequence_cache
+    
+    from datetime import timezone, timedelta
+    from sqlalchemy.exc import IntegrityError
+    import time
     
     # สร้าง timezone สำหรับไทย (UTC+7)
     bangkok_tz = timezone(timedelta(hours=7))
     
     # ใช้เวลาไทย
     now_bangkok = datetime.now(bangkok_tz)
+    current_year = now_bangkok.year
     
     # แปลงเป็นปีพุทธศักราช (ค.ศ. + 543)
-    buddhist_year = now_bangkok.year + 543
+    buddhist_year = current_year + 543
     
     # สร้าง date_part ในรูปแบบ พศ-เดือน-วัน
     date_part = f"{buddhist_year}{now_bangkok.strftime('%m%d')}"
     
-    # คำนวณช่วงเวลาของปีปัจจุบัน (ใช้ปี ค.ศ. สำหรับการค้นหาใน database)
-    year_start = datetime(now_bangkok.year, 1, 1, 0, 0, 0)
-    year_end = datetime(now_bangkok.year, 12, 31, 23, 59, 59)
+    max_attempts = 5  # ลองสูงสุด 5 ครั้ง
+    attempt = 0
     
-    # นับจำนวนเรื่องร้องเรียนในปีนี้
-    year_count = db.query(Complaint).filter(
-        Complaint.created_at.between(year_start, year_end)
-    ).count()
+    while attempt < max_attempts:
+        try:
+            # Thread-safe cache handling
+            with _cache_lock:
+                # ตรวจสอบ cache สำหรับปีนี้
+                if current_year not in _complaint_sequence_cache:
+                    # ถ้าไม่มีใน cache ให้นับจาก database
+                    year_start = datetime(current_year, 1, 1, 0, 0, 0)
+                    year_end = datetime(current_year, 12, 31, 23, 59, 59)
+                    
+                    year_count = db.query(Complaint).filter(
+                        Complaint.created_at.between(year_start, year_end)
+                    ).count()
+                    
+                    _complaint_sequence_cache[current_year] = year_count
+                    logger.info(f"Cache initialized for year {current_year}: {year_count}")
+                
+                # เพิ่ม sequence
+                _complaint_sequence_cache[current_year] += 1
+                sequence_number = _complaint_sequence_cache[current_year]
+            
+            sequence = str(sequence_number).zfill(5)
+            complaint_number = f"MOF-{date_part}-{sequence}"
+            
+            # ตรวจสอบว่าเลขนี้มีในระบบหรือไม่ (double check)
+            existing = db.query(Complaint).filter(
+                Complaint.complaint_number == complaint_number
+            ).first()
+            
+            if existing:
+                # ถ้าเลขซ้ำ ให้ sync cache ใหม่และลองอีกครั้ง
+                logger.warning(f"Duplicate complaint number detected: {complaint_number}, re-syncing cache (attempt {attempt + 1})")
+                with _cache_lock:
+                    # Re-sync cache จาก database
+                    year_start = datetime(current_year, 1, 1, 0, 0, 0)
+                    year_end = datetime(current_year, 12, 31, 23, 59, 59)
+                    
+                    actual_count = db.query(Complaint).filter(
+                        Complaint.created_at.between(year_start, year_end)
+                    ).count()
+                    
+                    _complaint_sequence_cache[current_year] = actual_count
+                    logger.info(f"Cache re-synced for year {current_year}: {actual_count}")
+                
+                attempt += 1
+                time.sleep(0.1 * attempt)  # รอนานขึ้นเรื่อยๆ
+                continue
+            
+            # ถ้าไม่ซ้ำ return เลย
+            logger.info(f"Generated complaint number: {complaint_number}")
+            return complaint_number
+            
+        except IntegrityError as e:
+            # ถ้าเกิด database constraint error (เลขซ้ำที่ database level)
+            logger.warning(f"Database integrity error on attempt {attempt + 1}: {str(e)}")
+            db.rollback()
+            
+            # Sync cache ใหม่
+            with _cache_lock:
+                year_start = datetime(current_year, 1, 1, 0, 0, 0)
+                year_end = datetime(current_year, 12, 31, 23, 59, 59)
+                
+                actual_count = db.query(Complaint).filter(
+                    Complaint.created_at.between(year_start, year_end)
+                ).count()
+                
+                _complaint_sequence_cache[current_year] = actual_count
+                logger.info(f"Cache re-synced after integrity error for year {current_year}: {actual_count}")
+            
+            attempt += 1
+            time.sleep(0.1 * attempt)  # Exponential backoff
+            continue
+            
+        except Exception as e:
+            logger.error(f"Unexpected error generating complaint number: {str(e)}")
+            attempt += 1
+            time.sleep(0.1 * attempt)
+            continue
     
-    # sequence รีเซ็ตทุกปี เริ่มจาก 1
-    sequence = str(year_count + 1).zfill(5)
+    # ถ้าลองหมดแล้วยังไม่ได้ ใช้ timestamp + random เป็น fallback
+    logger.error("Failed to generate unique complaint number after max attempts, using fallback method")
     
-    return f"MOF-{date_part}-{sequence}"
+    # ใช้ microsecond + random เป็น fallback เพื่อป้องกันเลขซ้ำ
+    import random
+    timestamp_ms = int(time.time() * 1000000) % 100000  # เอา 5 หลักสุดท้าย
+    random_suffix = random.randint(10, 99)  # random 2 หลัก
+    fallback_sequence = f"{timestamp_ms:05d}{random_suffix:02d}"[-5:]  # เอาแค่ 5 หลักสุดท้าย
+    
+    fallback_number = f"MOF-{date_part}-{fallback_sequence}"
+    logger.warning(f"Using fallback complaint number: {fallback_number}")
+    
+    return fallback_number
 
 def create_status_history(db: Session, complaint_id: UUID, status: ComplaintStatus, notes: str, user_id: Optional[UUID] = None):
     """สร้างประวัติสถานะใหม่"""
