@@ -344,32 +344,47 @@ export default function UserManagementUI() {
 
     let filteredData,
       foundUserIds = [];
+    const hasDisplayName = displayName && displayName.trim() !== "";
+    const hasFullName = fullName && fullName.trim() !== "";
+
+    // ฟังก์ชันกรองที่รวมทุกช่อง
+    const userFilterFn = (user) => {
+      // เงื่อนไขวัน/เวลาเข้าใช้
+      const matchesLoginDate =
+        !loginDate ||
+        (user.updated_at &&
+          getDateString(user.updated_at) === getDateString(loginDate));
+      // เงื่อนไขชื่อผู้ใช้งานในระบบ (full_name)
+      const matchesDisplayName =
+        !hasDisplayName ||
+        (user.full_name &&
+          user.full_name.toLowerCase().includes(displayName.toLowerCase()));
+      // เงื่อนไขชื่อที่ลงทะเบียน (full_name_with_title)
+      const matchesFullName =
+        !hasFullName ||
+        (user.full_name_with_title &&
+          user.full_name_with_title
+            .toLowerCase()
+            .includes(fullName.toLowerCase()));
+
+      const allMatch =
+        matchesLoginDate && matchesDisplayName && matchesFullName;
+      if (allMatch) foundUserIds.push(user.id);
+      return allMatch;
+    };
+
     if (permission && permission !== "all") {
       filteredData = originalStats.res_data
         .filter((section) => section.role_name === permission)
         .map((section) => {
-          const filteredUsers = section.users.filter((user) => {
-            const matchesLoginDate =
-              !loginDate ||
-              (user.updated_at &&
-                getDateString(user.updated_at) === getDateString(loginDate));
-            if (matchesLoginDate) foundUserIds.push(user.id);
-            return matchesLoginDate;
-          });
+          const filteredUsers = section.users.filter(userFilterFn);
           return { ...section, users: filteredUsers };
         })
         .filter((section) => section.users.length > 0);
     } else {
       filteredData = originalStats.res_data
         .map((section) => {
-          const filteredUsers = section.users.filter((user) => {
-            const matchesLoginDate =
-              !loginDate ||
-              (user.updated_at &&
-                getDateString(user.updated_at) === getDateString(loginDate));
-            if (matchesLoginDate) foundUserIds.push(user.id);
-            return matchesLoginDate;
-          });
+          const filteredUsers = section.users.filter(userFilterFn);
           return { ...section, users: filteredUsers };
         })
         .filter((section) => section.users.length > 0);
