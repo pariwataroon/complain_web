@@ -30,6 +30,7 @@ import {
   AddUsers,
   GetTitleDetails,
   GetRoles,
+  PutUser,
 } from "@pages/api/settinggeneral/users";
 
 const AddUserModal = ({
@@ -39,6 +40,7 @@ const AddUserModal = ({
   editingUser,
   onUserUpdated,
 }) => {
+  console.log("editingUser", editingUser);
   const [titleOptions, setTitleOptions] = useState([]);
   const [isFormReset, setIsFormReset] = useState(false);
   const [roleMap, setRoleMap] = useState({});
@@ -222,7 +224,8 @@ const AddUserModal = ({
     return apiData;
   };
 
-  // แก้ไขฟังก์ชัน handleFormSubmit
+  // ฟังก์ชัน handleFormSubmit แบบใหม่: กรณีแก้ไขจะยิง PutUser, กรณีเพิ่มใหม่จะ AddUsers
+
   const handleFormSubmit = async () => {
     try {
       // ปิด Modal ก่อนแสดง confirmation dialog
@@ -335,8 +338,18 @@ const AddUserModal = ({
           return;
         }
       } else {
+        // กรณีแก้ไข: ยิง PutUser
         try {
-          await originalOnSubmit(formData);
+          const apiData = formatDataForAPI(formData);
+
+          // สมมติ userId => editingUser.id, หากโครงสร้างต่างออกไปให้แก้ไขตรงนี้
+          const userId =
+            editingUser.id || editingUser._id || editingUser.user_id;
+          if (!userId) {
+            throw new Error("ไม่พบ user ID ที่จะใช้แก้ไข");
+          }
+
+          await PutUser(userId, apiData);
 
           if (onUserUpdated) {
             onUserUpdated();
@@ -574,12 +587,11 @@ const AddUserModal = ({
   useEffect(() => {
     if (editingUser && open) {
       // กรณีแก้ไขผู้ใช้ - กรอกข้อมูลจาก editingUser
-      const mappedGroup = mapRoleNameToValue(editingUser.role_name);
 
       // ข้อมูลพื้นฐาน
       setValue("citizen_id", editingUser.citizen_id || "");
       setValue("full_name", editingUser.full_name || "");
-      setValue("group", mappedGroup);
+      setValue("group", editingUser.role_id || "");
       setValue("prefix_other", editingUser.position || "");
 
       // แยกข้อมูลชื่อ-นามสกุลจาก full_name_with_title หรือใช้ข้อมูลที่มีอยู่
@@ -641,7 +653,6 @@ const AddUserModal = ({
 
       // ใช้ setTimeout เพื่อให้แน่ใจว่า component อัปเดตแล้ว
       setTimeout(() => {
-        setValue("group", mappedGroup, { shouldValidate: true });
         setValue("prefix_other", editingUser.position || "", {
           shouldValidate: true,
         });

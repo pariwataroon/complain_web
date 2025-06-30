@@ -8,11 +8,13 @@ import { Search, Visibility, VisibilityOff } from "@mui/icons-material";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import AddCircleOutlineOutlinedIcon from "@mui/icons-material/AddCircleOutlineOutlined";
 import RemoveCircleOutlineOutlinedIcon from "@mui/icons-material/RemoveCircleOutlineOutlined";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import AddUserModal from "./modal/AddUserModal";
 import {
   GetDetailedStatsbyRole,
   DelUsers,
   GetTitleDetails,
+  GetRoles,
 } from "@pages/api/settinggeneral/users";
 import {
   formatThaiDateTime,
@@ -90,29 +92,6 @@ const mockData = {
   officer: [],
 };
 
-const sections = [
-  {
-    title: "ผู้ดูแลระบบ (แอดมิน)",
-    users: mockData.admin,
-  },
-  {
-    title: "ประชาชน",
-    users: mockData.public,
-  },
-  {
-    title: "ผู้บริหาร / ผู้สนงาน",
-    users: mockData.executive,
-  },
-  {
-    title: "หน่วยงานในสังกัด",
-    users: mockData.agency,
-  },
-  {
-    title: "เจ้าหน้าที่ สรร.",
-    users: mockData.officer,
-  },
-];
-
 const breadcrumbItems = [
   {
     label: "เมนูการใช้งานทั่วไป",
@@ -181,10 +160,11 @@ export default function UserManagementUI() {
   const [loading, setLoading] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
   const [userDetailsExpanded, setUserDetailsExpanded] = useState({}); // Track user details expansion
-
+  const [roles, setRoles] = useState([]);
+  console.log("roles", roles);
   // State สำหรับควบคุมการแสดง/ซ่อนเลขบัตรประชาชน
   const [citizenIdVisibility, setCitizenIdVisibility] = useState({});
-
+  const [roleOptions, setRoleOptions] = useState([]);
   // เพิ่ม state สำหรับ titleOptions
   const [titleOptions, setTitleOptions] = useState([
     { value: 1, label: "อื่น ๆ" },
@@ -200,7 +180,15 @@ export default function UserManagementUI() {
         // โหลดข้อมูลผู้ใช้
         const statsData = await GetDetailedStatsbyRole();
         setStats(statsData);
+
         setOriginalStats(statsData);
+        console.log("statsData", statsData.res_data);
+        const roles = statsData.res_data.map((item) => ({
+          role_id: item.role_id,
+          role_name: item.role_name,
+          role_description: item.role_description,
+        }));
+        setRoles(roles);
 
         // Initialize expanded sections - all collapsed by default (false)
         if (statsData?.res_data) {
@@ -219,7 +207,6 @@ export default function UserManagementUI() {
             label: item.title_name || item.short_name,
           }));
           setTitleOptions(formattedOptions);
-          console.log("Title options loaded:", formattedOptions); // Debug log
         }
       } catch (err) {
         console.error("โหลดข้อมูลไม่สำเร็จ:", err);
@@ -278,16 +265,6 @@ export default function UserManagementUI() {
   };
 
   const [expandedSections, setExpandedSections] = useState([]);
-  const [formData, setFormData] = useState({
-    password: "",
-    group: "",
-    fullName: "",
-    phone: "",
-    email: "",
-    address: "",
-    city: "",
-    district: "",
-  });
 
   const toggleSection = (index) => {
     const newExpandedSections = [...expandedSections];
@@ -326,17 +303,20 @@ export default function UserManagementUI() {
     { value: "officer", label: "เจ้าหน้าที่" },
   ];
 
-  const roleNameMap = {
-    admin: "ผู้ดูแลระบบ",
-    people: "ประชาชน",
-    admin_home: "ผู้ดูแลหน้าหลัก",
-    executive: "ผู้บริหาร",
-    agency: "หน่วยงานในสังกัด",
-    officer: "เจ้าหน้าที่",
-    staff: "เจ้าหน้าที่ สรร.",
-    supervisor: "ผู้บริหาร / ผู้สั่งงาน",
-    department: "หน่วยงานในสังกัด",
-  };
+  useEffect(() => {
+    const fetchRoles = async () => {
+      const roleApi = await GetRoles();
+      if (roleApi && Array.isArray(roleApi.res_data)) {
+        setRoleOptions(
+          roleApi.res_data.map((r) => ({
+            value: r.name,
+            label: r.description ? r.description : r.name,
+          }))
+        );
+      }
+    };
+    fetchRoles();
+  }, []);
 
   // Handle change events
   const handlePermissionChange = (event) => {
@@ -351,148 +331,50 @@ export default function UserManagementUI() {
     setFullName(event.target.value);
   };
 
-  const handleLoginDateChange = (event) => {
-    setLoginDate(event.target.value);
-  };
+  useEffect(() => {
+    console.log("loginDate state:", loginDate);
+  }, [loginDate]);
 
-  // Search function
+  // ฟังก์ชันค้นหา user
   const handleSearch = () => {
-    showLoading("กำลังค้นหา...");
-    setHasSearched(true); // Mark that user has searched
+    const getDateString = (isoString) => {
+      if (!isoString) return "";
+      return isoString.slice(0, 10);
+    };
 
-    setTimeout(() => {
-      if (!originalStats?.res_data) {
-        closeAlert();
-        return;
-      }
-
-      let filteredData;
-      let foundUserIds = []; // เก็บ ID ของผู้ใช้ที่เจอ
-
-      // ถ้าเลือกสิทธิ์เฉพาะ (ไม่ใช่ "ทั้งหมด")
-      if (permission && permission !== "all") {
-        // แสดงเฉพาะกลุ่มสิทธิ์ที่เลือก
-        filteredData = originalStats.res_data
-          .filter((section) => section.role_name === permission)
-          .map((section) => {
-            const filteredUsers = section.users.filter((user) => {
-              // Filter by display name (full_name)
-              const matchesDisplayName =
-                !displayName ||
-                (user.full_name &&
-                  user.full_name
-                    .toLowerCase()
-                    .includes(displayName.toLowerCase()));
-
-              // Filter by full name (full_name_with_title)
-              const matchesFullName =
-                !fullName ||
-                (user.full_name_with_title &&
-                  user.full_name_with_title
-                    .toLowerCase()
-                    .includes(fullName.toLowerCase()));
-
-              // Filter by login date
-              const matchesLoginDate =
-                !loginDate ||
-                (user.last_login && user.last_login.includes(loginDate)) ||
-                (user.updated_at &&
-                  formatThaiDateTime(user.updated_at).includes(loginDate));
-
-              const matches =
-                matchesDisplayName && matchesFullName && matchesLoginDate;
-
-              // เก็บ ID ของผู้ใช้ที่เจอ
-              if (matches) {
-                foundUserIds.push(user.id);
-              }
-
-              return matches;
-            });
-
-            return {
-              ...section,
-              users: filteredUsers,
-            };
-          })
-          .filter((section) => section.users.length > 0); // แสดงเฉพาะกลุ่มที่มีข้อมูล
-
-        // เปิด collapse สำหรับกลุ่มที่แสดง
-        setExpandedSections(new Array(filteredData.length).fill(true));
-      } else {
-        // แสดงทั้งหมด (เหมือนเดิม)
-        filteredData = originalStats.res_data
-          .map((section) => {
-            const filteredUsers = section.users.filter((user) => {
-              // Filter by display name (full_name)
-              const matchesDisplayName =
-                !displayName ||
-                (user.full_name &&
-                  user.full_name
-                    .toLowerCase()
-                    .includes(displayName.toLowerCase()));
-
-              // Filter by full name (full_name_with_title)
-              const matchesFullName =
-                !fullName ||
-                (user.full_name_with_title &&
-                  user.full_name_with_title
-                    .toLowerCase()
-                    .includes(fullName.toLowerCase()));
-
-              // Filter by login date
-              const matchesLoginDate =
-                !loginDate ||
-                (user.last_login && user.last_login.includes(loginDate)) ||
-                (user.updated_at &&
-                  formatThaiDateTime(user.updated_at).includes(loginDate));
-
-              const matches =
-                matchesDisplayName && matchesFullName && matchesLoginDate;
-
-              // เก็บ ID ของผู้ใช้ที่เจอ
-              if (matches) {
-                foundUserIds.push(user.id);
-              }
-
-              return matches;
-            });
-
-            return {
-              ...section,
-              users: filteredUsers,
-            };
-          })
-          .filter((section) => section.users.length > 0); // แสดงเฉพาะกลุ่มที่มีข้อมูล
-
-        // เปิด collapse ทั้งหมด
-        setExpandedSections(new Array(filteredData.length).fill(true));
-      }
-
-      // เปิด user details ของผู้ใช้ที่เจอทั้งหมด
-      const newUserDetailsExpanded = {};
-      foundUserIds.forEach((userId) => {
-        newUserDetailsExpanded[userId] = true;
-      });
-      setUserDetailsExpanded(newUserDetailsExpanded);
-
-      setStats({ ...originalStats, res_data: filteredData });
-      closeAlert();
-    }, 800);
-  };
-
-  // State for showing/hiding passwords
-  const [userPasswordVisibility, setUserPasswordVisibility] = useState(() => {
-    return sections.map(
-      (section) => section.users.map(() => false) // Default all users' password hidden
-    );
-  });
-
-  const togglePasswordVisibility = (sectionIndex, userIdx) => {
-    const updatedVisibility = [...userPasswordVisibility];
-    updatedVisibility[sectionIndex][userIdx] =
-      !updatedVisibility[sectionIndex][userIdx];
-    setUserPasswordVisibility(updatedVisibility);
+    let filteredData,
+      foundUserIds = [];
+    if (permission && permission !== "all") {
+      filteredData = originalStats.res_data
+        .filter((section) => section.role_name === permission)
+        .map((section) => {
+          const filteredUsers = section.users.filter((user) => {
+            const matchesLoginDate =
+              !loginDate ||
+              (user.updated_at &&
+                getDateString(user.updated_at) === getDateString(loginDate));
+            if (matchesLoginDate) foundUserIds.push(user.id);
+            return matchesLoginDate;
+          });
+          return { ...section, users: filteredUsers };
+        })
+        .filter((section) => section.users.length > 0);
+    } else {
+      filteredData = originalStats.res_data
+        .map((section) => {
+          const filteredUsers = section.users.filter((user) => {
+            const matchesLoginDate =
+              !loginDate ||
+              (user.updated_at &&
+                getDateString(user.updated_at) === getDateString(loginDate));
+            if (matchesLoginDate) foundUserIds.push(user.id);
+            return matchesLoginDate;
+          });
+          return { ...section, users: filteredUsers };
+        })
+        .filter((section) => section.users.length > 0);
+    }
+    setStats({ ...originalStats, res_data: filteredData });
   };
 
   // Modal States
@@ -585,25 +467,31 @@ export default function UserManagementUI() {
     return nameParts.slice(1).join(" ") || "";
   };
 
-  // Helper function เพื่อหา role_name จาก section ที่ user อยู่
-  const getRoleNameFromSection = (user, statsData) => {
-    if (!statsData?.res_data) return "";
+  const getRoleInfoFromSection = (user, statsData) => {
+    if (!statsData?.res_data)
+      return { role_id: "", role_name: "", role_description: "" };
 
     for (const section of statsData.res_data) {
       const foundUser = section.users.find((u) => u.id === user.id);
       if (foundUser) {
-        return section.role_name;
+        return {
+          role_id: section.role_id,
+          role_name: section.role_name,
+          role_description: section.role_description,
+        };
       }
     }
-    return "";
+    return { role_id: "", role_name: "", role_description: "" };
   };
-
-  // แก้ไขฟังก์ชัน handleEditUser ให้ส่งข้อมูลครบถ้วน
   const handleEditUser = (user) => {
     showLoading("กำลังโหลดข้อมูล...");
     setTimeout(() => {
-      console.log("Title options available:", titleOptions); // Debug log
-      console.log("User to edit:", user); // Debug log
+      // หา role info เพิ่มเติมจาก roles state
+      const userRole =
+        roles.find((role) => role.role_id === user.role_id) || {};
+
+      // Fallback หา role info จาก section ด้วย getRoleInfoFromSection
+      const sectionRole = getRoleInfoFromSection(user, stats);
 
       // สร้าง object ที่มีข้อมูลครบสำหรับ Modal
       const completeUserData = {
@@ -631,11 +519,18 @@ export default function UserManagementUI() {
           user.last_name ||
           extractLastName(user.full_name_with_title || user.full_name),
 
-        // แมป role_name ให้ตรงกับ section.role_name ที่มาจาก API
-        role_name: getRoleNameFromSection(user, stats),
+        // แมป role_name, role_id, role_description ให้ตรงกับ roles หรือ section
+        role_id: userRole.role_id || sectionRole.role_id || user.role_id || "",
+        role_name:
+          userRole.role_name || sectionRole.role_name || user.role_name || "",
+        role_description:
+          userRole.role_description ||
+          sectionRole.role_description ||
+          user.role_description ||
+          "",
 
         // ตำแหน่ง - ลองหาจากหลายๆ field
-        position: user.position || user.job_title || user.title || "",
+        position: user.role_id || "",
 
         // ข้อมูลติดต่อ
         phone: user.phone || "",
@@ -696,8 +591,8 @@ export default function UserManagementUI() {
             สิทธิการใช้งาน
           </Typography>
           <SelectMenuService
-            options={permissionOptions}
-            handleChange={handlePermissionChange}
+            options={roleOptions}
+            handleChange={(e) => setPermission(e.target.value)}
             value={permission}
             width="100%"
           />
@@ -742,10 +637,14 @@ export default function UserManagementUI() {
           >
             วัน / เวลาที่เข้าใช้
           </Typography>
-          <TextfieldService
-            placeholder="วัน / เวลาที่เข้าใช้"
+          <DateThaiPickerService
             value={loginDate}
-            onChange={handleLoginDateChange}
+            onChange={(val) => {
+              console.log("Date picker onChange value:", val);
+              setLoginDate(val);
+            }}
+            time
+            placeholder="วัน / เวลาที่เข้าใช้"
           />
         </Grid>
 
@@ -893,7 +792,9 @@ export default function UserManagementUI() {
                             </div>
                             <div className={styles.roleActions}>
                               <div className={styles.role}>
-                                {roleNameMap[section.role_name]}
+                                {roles.find(
+                                  (role) => role.role_name === section.role_name
+                                )?.role_description || section.role_name}
                               </div>
 
                               <div className={styles.actionButtons}>

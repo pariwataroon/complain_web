@@ -85,7 +85,17 @@ const resendVerification = async (payload) => {
     throw error;
   }
 };
-
+const PutUser = async (userId, data) => {
+  try {
+    const response = await axiosInstance.put(`/users/admin/${userId}`, data);
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error updating user:", error);
+    throw error;
+  }
+};
 export {
   GetDetailedStatsbyRole,
   GetTitleDetails,
@@ -93,4 +103,5 @@ export {
   DelUsers,
   resendVerification,
   GetRoles,
+  PutUser,
 };
