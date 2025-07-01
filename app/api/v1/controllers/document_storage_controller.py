@@ -219,9 +219,8 @@ def get_related_complaints(db: Session, complaint_id: UUID) -> Dict:
             descendants = get_all_descendants(master_id)
             all_related_complaints.extend(descendants)
             
-            # เรียงตาม complaint_number และแปลงเป็น dict
-            all_related_complaints.sort(key=lambda x: x.complaint_number or "")
-            result["all_related"] = [
+            # แปลงเป็น dict แบบง่ายๆ ไม่เรียงก่อน
+            all_related_list = [
                 {
                     "id": str(complaint.id),
                     "complaint_number": complaint.complaint_number,
@@ -234,6 +233,9 @@ def get_related_complaints(db: Session, complaint_id: UUID) -> Dict:
                     "complainant_name": get_complainant_name_from_data(complaint.complainant_data)
                 } for complaint in all_related_complaints
             ]
+            
+            # เก็บไว้ใน result โดยไม่เรียงก่อน - จะเรียงตอน response
+            result["all_related"] = all_related_list
     
     except Exception as e:
         logger.error(f"Error getting related complaints for {complaint_id}: {str(e)}")
@@ -382,6 +384,7 @@ def get_bulk_related_complaints(db: Session, complaint_ids: List[UUID]) -> Dict[
                 } for sibling in siblings
             ],
             
+            # สร้าง all_related แบบง่ายๆ ไม่เรียงก่อน - จะเรียงตอน response
             "all_related": [
                 {
                     "id": str(c.id),
@@ -447,6 +450,122 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             channel_info = db.query(ComplaintChannel).filter(
                 ComplaintChannel.id == complaint.complaint_channel_id
             ).first()
+        
+        # 🔥 ดึงข้อมูลประวัติสถานะของเรื่องร้องเรียน
+        status_history = []
+        try:
+            # ดึงจาก table comp_complaint_status_history โดยตรง
+            from models.comp_complaint import ComplaintStatusHistory
+            status_history_records = db.query(ComplaintStatusHistory).filter(
+                ComplaintStatusHistory.complaint_id == complaint_id
+            ).order_by(ComplaintStatusHistory.changed_at.desc()).all()
+            
+            if status_history_records:
+                # แปลงจาก SQLAlchemy objects เป็น dictionaries
+                status_history = []
+                for record in status_history_records:
+                    # ดึงข้อมูลผู้ทำการเปลี่ยนแปลง
+                    changed_by_user = None
+                    if record.changed_by:
+                        changed_by_user = db.query(User).filter(User.id == record.changed_by).first()
+                    
+                    status_history.append({
+                        "status": record.status.value if hasattr(record.status, 'value') else str(record.status),
+                        "changed_at": record.changed_at.isoformat() if record.changed_at else None,
+                        "changed_by": str(record.changed_by) if record.changed_by else None,
+                        "changed_by_name": f"{changed_by_user.first_name} {changed_by_user.last_name}".strip() if changed_by_user else "ระบบ",
+                        "remark": record.notes or ""
+                    })
+            
+            # ถ้าไม่มีข้อมูลในตาราง status_history ให้ fallback
+            elif hasattr(complaint, 'status_history') and complaint.status_history:
+                # ถ้ามี status_history field ใน model และเป็น relationship
+                if isinstance(complaint.status_history, list):
+                    # ถ้าเป็น SQLAlchemy relationship objects ให้แปลงเป็น dict
+                    status_history = []
+                    for history_item in complaint.status_history:
+                        try:
+                            status_history.append({
+                                "status": history_item.status.value if hasattr(history_item.status, 'value') else str(history_item.status),
+                                "changed_at": history_item.changed_at.isoformat() if history_item.changed_at else None,
+                                "changed_by": str(history_item.changed_by) if history_item.changed_by else None,
+                                "remark": history_item.remark or ""
+                            })
+                        except Exception as e:
+                            logger.warning(f"Error converting status history item: {str(e)}")
+                            continue
+                elif isinstance(complaint.status_history, str):
+                    # ถ้าเป็น JSON string
+                    try:
+                        status_history = json.loads(complaint.status_history)
+                    except (json.JSONDecodeError, TypeError) as e:
+                        logger.warning(f"Error parsing status_history JSON for complaint {complaint.id}: {str(e)}")
+                        status_history = []
+                else:
+                    # ถ้าเป็น object อื่นๆ ให้ลองแปลง
+                    try:
+                        status_history = list(complaint.status_history) if complaint.status_history else []
+                    except Exception as e:
+                        logger.warning(f"Error converting status_history for complaint {complaint.id}: {str(e)}")
+                        status_history = []
+            else:
+                # ถ้าไม่มี status_history field ให้สร้างประวัติเบื้องต้นจากข้อมูลที่มี
+                status_history = []
+                
+                # 1. เรื่องถูกสร้างขึ้น
+                if complaint.created_at:
+                    status_history.append({
+                        "status": "submitted",
+                        "changed_at": complaint.created_at.isoformat(),
+                        "changed_by": str(complaint.created_by) if complaint.created_by else None,
+                        "remark": "เรื่องร้องเรียนถูกสร้างขึ้น"
+                    })
+                
+                # 2. ถ้ามีการมอบหมายงาน
+                if complaint.assigned_date and complaint.assigned_officer_id:
+                    status_history.append({
+                        "status": "assigned",
+                        "changed_at": complaint.assigned_date.isoformat(),
+                        "changed_by": None,  # ระบบมอบหมายงาน
+                        "remark": f"มอบหมายงานให้ {complaint.assigned_to or 'เจ้าหน้าที่'}"
+                    })
+                
+                # 3. ถ้ามีการยืนยัน/ปฏิเสธรับงาน
+                if complaint.confirm_assigned_date and complaint.confirm_assigned_status == True:
+                    status_history.append({
+                        "status": "confirmed",
+                        "changed_at": complaint.confirm_assigned_date.isoformat(),
+                        "changed_by": str(complaint.confirm_assigned_by) if complaint.confirm_assigned_by else None,
+                        "remark": "ยืนยันรับงาน"
+                    })
+                elif complaint.confirm_assigned_status == False:
+                    status_history.append({
+                        "status": "rejected",
+                        "changed_at": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None,
+                        "changed_by": str(complaint.confirm_assigned_by) if complaint.confirm_assigned_by else None,
+                        "remark": "ปฏิเสธรับงาน"
+                    })
+                
+                # 4. สถานะปัจจุบัน (ถ้าแตกต่างจาก submitted)
+                if complaint.status and complaint.status.value != "submitted":
+                    status_history.append({
+                        "status": complaint.status.value,
+                        "changed_at": complaint.updated_at.isoformat() if complaint.updated_at else complaint.created_at.isoformat(),
+                        "changed_by": None,
+                        "remark": f"สถานะปัจจุบัน: {get_thai_status(complaint.status.value)}"
+                    })
+                
+                # ถ้าไม่มี status_history เลย ให้สร้างอย่างน้อย 1 รายการ
+                if not status_history and complaint.created_at:
+                    status_history.append({
+                        "status": complaint.status.value if complaint.status else "unknown",
+                        "changed_at": complaint.created_at.isoformat(),
+                        "changed_by": str(complaint.created_by) if complaint.created_by else None,
+                        "remark": "เรื่องร้องเรียนในระบบ"
+                    })
+        except Exception as e:
+            logger.warning(f"Error building status_history for complaint {complaint.id}: {str(e)}")
+            status_history = []
         
         # วันที่รับงาน
         received_date = ""
@@ -531,7 +650,10 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                     "new_complaint": complaint.new_complaint,
                     "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
                     "group_work": complaint.group_work
-                }
+                },
+                
+                # 🔥 ประวัติการเปลี่ยนแปลงสถานะ (สำหรับเจ้าหน้าที่ดูประวัติ)
+                "status_history": status_history
             },
             
             # 🔥 ข้อมูลความสัมพันธ์เต็มรูปแบบ (เฉพาะใน detail endpoint)
@@ -552,6 +674,23 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 }
             }
         }
+        
+        # 🔥 เรียงลำดับ all_related ตาม created_at (ใหม่สุดก่อน) โดยไม่ย้าย current ไปด้านบน
+        if result.get("relationships") and result["relationships"].get("all_related"):
+            all_related = result["relationships"]["all_related"]
+            
+            # เรียงทั้งหมดตาม created_at (ใหม่สุดก่อน)
+            def parse_datetime(date_str):
+                if not date_str:
+                    return datetime.min
+                try:
+                    return datetime.fromisoformat(date_str.replace('T', ' ').replace('Z', ''))
+                except:
+                    return datetime.min
+            
+            all_related.sort(key=lambda x: parse_datetime(x.get("created_at", "")), reverse=True)
+            
+            result["relationships"]["all_related"] = all_related
         
         return result
         
