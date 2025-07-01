@@ -1,19 +1,25 @@
-from fastapi import APIRouter, Depends, Query
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, Dict, Any
 
-from config.database import get_db
+from datetime import datetime
+
 from app.api.middleware.jwt_verify import verify_token
 from app.api.v1.controllers.document_storage_controller import (
     get_document_storage_by_channel,
     get_document_storage_statistics,
     get_document_storage_filters
 )
-import lib.format_data as format_data
+from config.database import get_db
+from lib.format_data import FormatResponseModel, format_response
 
-router = APIRouter(prefix="/document-storage", tags=["document_storage"])
+router = APIRouter(
+    prefix="/document-storage",
+    tags=["document_storage"],
+)
 
-@router.get("")
+@router.get("", response_model=FormatResponseModel)
 async def get_document_storage(
     page_type: str = Query("website", description="ประเภทหน้า: 'website' หรือ 'card'"),
     skip: int = Query(0, description="จำนวนที่ข้าม"),
@@ -26,8 +32,8 @@ async def get_document_storage(
     urgency: Optional[str] = Query(None, description="ความเร่งด่วน"),
     search: Optional[str] = Query(None, description="คำค้นหา"),
     complainant_name: Optional[str] = Query(None, description="ชื่อผู้ร้องเรียน"),
-    current_user: str = Depends(verify_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
 ):
     """ดึงข้อมูลคลังเอกสารแบ่งตามช่องทาง"""
     try:
@@ -46,72 +52,40 @@ async def get_document_storage(
             complainant_name=complainant_name
         )
         
-        if "error" in result:
-            return format_data.format_response("5000", {
-                "error": result["error"],
-                "message": "INTERNAL_SERVER_ERROR"
-            })
-        
-        return format_data.format_response("0000", {
-            "data": result,
-            "message": "GET_DATA_SUCCESSFULLY"
-        })
+        return format_response("0000", result)
         
     except Exception as e:
-        return format_data.format_response("5000", {
-            "error": str(e),
-            "message": "INTERNAL_SERVER_ERROR"
+        return format_response("5000", {
+            "error": str(e)
         })
 
-@router.get("/statistics")
+@router.get("/statistics", response_model=FormatResponseModel)
 async def get_statistics(
     page_type: str = Query("website", description="ประเภทหน้า: 'website' หรือ 'card'"),
-    current_user: str = Depends(verify_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
 ):
     """ดึงสถิติคลังเอกสาร"""
     try:
         result = get_document_storage_statistics(db=db, page_type=page_type)
-        
-        if "error" in result:
-            return format_data.format_response("5000", {
-                "error": result["error"],
-                "message": "INTERNAL_SERVER_ERROR"
-            })
-        
-        return format_data.format_response("0000", {
-            "data": result,
-            "message": "GET_STATISTICS_SUCCESSFULLY"
-        })
+        return format_response("0000", result)
         
     except Exception as e:
-        return format_data.format_response("5000", {
-            "error": str(e),
-            "message": "INTERNAL_SERVER_ERROR"
+        return format_response("5000", {
+            "error": str(e)
         })
 
-@router.get("/filters")
+@router.get("/filters", response_model=FormatResponseModel)
 async def get_filters(
-    current_user: str = Depends(verify_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
 ):
     """ดึงตัวเลือกสำหรับ filter"""
     try:
         result = get_document_storage_filters(db=db)
-        
-        if "error" in result:
-            return format_data.format_response("5000", {
-                "error": result["error"],
-                "message": "INTERNAL_SERVER_ERROR"
-            })
-        
-        return format_data.format_response("0000", {
-            "data": result,
-            "message": "GET_FILTERS_SUCCESSFULLY"
-        })
+        return format_response("0000", result)
         
     except Exception as e:
-        return format_data.format_response("5000", {
-            "error": str(e),
-            "message": "INTERNAL_SERVER_ERROR"
+        return format_response("5000", {
+            "error": str(e)
         })

@@ -183,6 +183,7 @@ def get_document_storage_by_channel(
                 "status": complaint.status.value if complaint.status else "",
                 "urgency_level": complaint.urgency_level,
                 "confidentiality_level": complaint.confidentiality_level,
+                "is_master": complaint.parent_complaint_id is None,
                 "assigned_officer": {
                     "id": str(assigned_officer.id) if assigned_officer else None,
                     "name": f"{assigned_officer.first_name} {assigned_officer.last_name}" if assigned_officer else None
