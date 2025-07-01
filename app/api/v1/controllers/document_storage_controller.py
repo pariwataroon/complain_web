@@ -12,6 +12,222 @@ from models.user import User
 import logging
 logger = logging.getLogger(__name__)
 
+def get_parent_chain(db: Session, complaint_id: UUID, visited_ids: set = None) -> List[Dict]:
+    """
+    ตามหา parent chain แบบ recursive จนถึง master complaint สูงสุด
+    Returns: รายการ parent complaints จากใกล้ที่สุดไปไกลที่สุด
+    """
+    if visited_ids is None:
+        visited_ids = set()
+    
+    # ป้องกัน infinite loop
+    if complaint_id in visited_ids:
+        return []
+    
+    visited_ids.add(complaint_id)
+    
+    # หา parent complaint
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not complaint or not complaint.parent_complaint_id:
+        return []
+    
+    parent = db.query(Complaint).filter(Complaint.id == complaint.parent_complaint_id).first()
+    if not parent:
+        return []
+    
+    # สร้างข้อมูล parent
+    parent_info = {
+        "id": str(parent.id),
+        "complaint_number": parent.complaint_number,
+        "subject": parent.subject,
+        "status": parent.status.value if parent.status else None,
+        "is_master": parent.parent_complaint_id is None
+    }
+    
+    # เรียก recursive เพื่อหา parent ของ parent
+    grandparents = get_parent_chain(db, parent.id, visited_ids.copy())
+    
+    # ส่งกลับ parent chain (ใกล้ไปไกล)
+    return [parent_info] + grandparents
+
+def get_master_complaint(db: Session, complaint_id: UUID) -> Optional[Dict]:
+    """
+    หา master complaint สูงสุดของเส้นทาง
+    """
+    parent_chain = get_parent_chain(db, complaint_id)
+    if not parent_chain:
+        # ถ้าไม่มี parent แสดงว่าตัวเองคือ master
+        complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+        if complaint:
+            return {
+                "id": str(complaint.id),
+                "complaint_number": complaint.complaint_number,
+                "subject": complaint.subject,
+                "status": complaint.status.value if complaint.status else None,
+                "is_master": True
+            }
+        return None
+    
+    # หา master จากท้าย chain
+    for parent in reversed(parent_chain):
+        if parent["is_master"]:
+            return parent
+    
+    # ถ้าไม่เจอ master ใน chain ให้ใช้ตัวสุดท้าย
+    return parent_chain[-1] if parent_chain else None
+
+def get_related_complaints(db: Session, complaint_id: UUID) -> Dict:
+    """
+    หาเรื่องร้องเรียนที่เกี่ยวข้องทั้งหมดในกลุ่มเดียวกัน
+    รวมทั้ง master, parent, children, และ siblings
+    Returns: {
+        "master_complaint": {...},
+        "parent_complaint": {...},
+        "parent_chain": [...],
+        "child_complaints": [...],
+        "sibling_complaints": [...],
+        "all_related": [...] # เรื่องทั้งหมดในกลุ่ม เรียงตาม complaint_number
+    }
+    """
+    result = {
+        "master_complaint": None,
+        "parent_complaint": None,
+        "parent_chain": [],
+        "child_complaints": [],
+        "sibling_complaints": [],
+        "all_related": []
+    }
+    
+    try:
+        current_complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+        if not current_complaint:
+            return result
+        
+        # 1. หา master complaint
+        master_complaint = get_master_complaint(db, complaint_id)
+        result["master_complaint"] = master_complaint
+        
+        # 2. หา parent chain
+        parent_chain = get_parent_chain(db, complaint_id)
+        result["parent_chain"] = parent_chain
+        
+        # 3. หา parent complaint ตรงๆ
+        if current_complaint.parent_complaint_id:
+            parent = db.query(Complaint).filter(
+                Complaint.id == current_complaint.parent_complaint_id
+            ).first()
+            if parent:
+                result["parent_complaint"] = {
+                    "id": str(parent.id),
+                    "complaint_number": parent.complaint_number,
+                    "subject": parent.subject,
+                    "status": parent.status.value if parent.status else None,
+                    "is_master": parent.parent_complaint_id is None
+                }
+        
+        # 4. หา master complaint ID สำหรับ query
+        master_id = None
+        if master_complaint:
+            master_id = UUID(master_complaint["id"])
+        elif current_complaint.parent_complaint_id is None:
+            # ตัวเองคือ master
+            master_id = complaint_id
+        
+        if master_id:
+            # 5. หา children ของ complaint ปัจจุบัน
+            children = db.query(Complaint).filter(
+                Complaint.parent_complaint_id == complaint_id
+            ).order_by(Complaint.complaint_number).all()
+            
+            result["child_complaints"] = [
+                {
+                    "id": str(child.id),
+                    "complaint_number": child.complaint_number,
+                    "subject": child.subject,
+                    "status": child.status.value if child.status else None,
+                    "is_master": child.parent_complaint_id is None
+                } for child in children
+            ]
+            
+            # 6. หา siblings (เรื่องที่มี parent เดียวกัน)
+            if current_complaint.parent_complaint_id:
+                siblings = db.query(Complaint).filter(
+                    Complaint.parent_complaint_id == current_complaint.parent_complaint_id,
+                    Complaint.id != complaint_id  # ไม่รวมตัวเอง
+                ).order_by(Complaint.complaint_number).all()
+                
+                result["sibling_complaints"] = [
+                    {
+                        "id": str(sibling.id),
+                        "complaint_number": sibling.complaint_number,
+                        "subject": sibling.subject,
+                        "status": sibling.status.value if sibling.status else None,
+                        "is_master": sibling.parent_complaint_id is None
+                    } for sibling in siblings
+                ]
+            
+            # 7. หาเรื่องทั้งหมดในกลุ่มเดียวกัน (ทั้ง master และ descendants)
+            all_related_complaints = []
+            
+            # เพิ่ม master complaint
+            master_complaint_obj = db.query(Complaint).filter(Complaint.id == master_id).first()
+            if master_complaint_obj:
+                all_related_complaints.append(master_complaint_obj)
+            
+            # เพิ่ม descendants ทั้งหมดของ master
+            def get_all_descendants(parent_id: UUID, visited: set = None):
+                if visited is None:
+                    visited = set()
+                if parent_id in visited:
+                    return []
+                visited.add(parent_id)
+                
+                descendants = []
+                children = db.query(Complaint).filter(
+                    Complaint.parent_complaint_id == parent_id
+                ).all()
+                
+                for child in children:
+                    descendants.append(child)
+                    # เรียกแบบ recursive เพื่อหา grandchildren
+                    descendants.extend(get_all_descendants(child.id, visited.copy()))
+                
+                return descendants
+            
+            descendants = get_all_descendants(master_id)
+            all_related_complaints.extend(descendants)
+            
+            # เรียงตาม complaint_number และแปลงเป็น dict
+            all_related_complaints.sort(key=lambda x: x.complaint_number or "")
+            result["all_related"] = [
+                {
+                    "id": str(complaint.id),
+                    "complaint_number": complaint.complaint_number,
+                    "subject": complaint.subject,
+                    "status": complaint.status.value if complaint.status else None,
+                    "is_master": complaint.parent_complaint_id is None,
+                    "is_current": complaint.id == complaint_id,  # บอกว่าเป็นเรื่องปัจจุบันหรือไม่
+                    "parent_complaint_id": str(complaint.parent_complaint_id) if complaint.parent_complaint_id else None,
+                    "created_at": complaint.created_at.isoformat() if complaint.created_at else None,
+                    "complainant_name": get_complainant_name_from_data(complaint.complainant_data)
+                } for complaint in all_related_complaints
+            ]
+    
+    except Exception as e:
+        logger.error(f"Error getting related complaints for {complaint_id}: {str(e)}")
+    
+    return result
+
+def get_complainant_name_from_data(complainant_data_str: str) -> str:
+    """แยกชื่อผู้ร้องเรียนจาก JSON string"""
+    try:
+        if complainant_data_str:
+            data = json.loads(complainant_data_str)
+            return data.get("name", "") or f"{data.get('firstName', '')} {data.get('lastName', '')}".strip()
+    except:
+        pass
+    return ""
+
 def get_document_storage_by_channel(
     db: Session,
     page_type: str = "website",  # "website" หรือ "card"
@@ -121,20 +337,37 @@ def get_document_storage_by_channel(
             complainant_data = {}
             try:
                 complainant_data = json.loads(complaint.complainant_data) if complaint.complainant_data else {}
-            except:
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.warning(f"Error parsing complainant_data for complaint {complaint.id}: {str(e)}")
                 complainant_data = {}
             
             # ดึงข้อมูลผู้ถูกร้องเรียน
             respondent_data = {}
             try:
                 respondent_data = json.loads(complaint.respondent_data) if complaint.respondent_data else {}
-            except:
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.warning(f"Error parsing respondent_data for complaint {complaint.id}: {str(e)}")
                 respondent_data = {}
             
             # ดึงข้อมูลเจ้าหน้าที่ที่รับผิดชอบ
             assigned_officer = None
             if complaint.assigned_officer_id:
                 assigned_officer = db.query(User).filter(User.id == complaint.assigned_officer_id).first()
+            
+            # ดึงข้อมูลผู้สร้างเรื่องร้องเรียน (created_by)
+            creator = None
+            if complaint.created_by:
+                creator = db.query(User).filter(User.id == complaint.created_by).first()
+            
+            # ดึงข้อมูลเรื่องร้องเรียนที่เกี่ยวข้องทั้งหมด
+            related_info = get_related_complaints(db, complaint.id)
+            
+            parent_complaint = related_info["parent_complaint"]
+            parent_chain = related_info["parent_chain"]
+            master_complaint = related_info["master_complaint"]
+            child_complaints_data = related_info["child_complaints"]
+            sibling_complaints = related_info["sibling_complaints"]
+            all_related = related_info["all_related"]
             
             # ดึงข้อมูล channel
             channel_info = None
@@ -165,6 +398,15 @@ def get_document_storage_by_channel(
             elif complaint.assigned_officer_id:
                 confirmation_status = "รอการยืนยัน"
             
+            # ประเภทการร้องเรียน
+            complaint_category = "เรื่องร้องเรียนใหม่"  # default
+            if complaint.group_work:
+                complaint_category = "รับเรื่องจากคณะบัตรสนเท่ห์"
+            elif complaint.add_more_complaint_to_ref:
+                complaint_category = "เรื่องร้องเรียนเพิ่มเติม"
+            elif complaint.new_complaint:
+                complaint_category = "เรื่องร้องเรียนใหม่"
+            
             items.append({
                 "วันที่รับ": received_date,  # 🔥 ใช้ confirm_assigned_date
                 "หมายเลข": complaint.complaint_number or "",
@@ -175,6 +417,8 @@ def get_document_storage_by_channel(
                 "เจ้าหน้าที่ที่รับผิดชอบ": complaint.assigned_to or "",
                 "สถานะเรื่อง": complaint.status.value if complaint.status else "",
                 "สถานะการรับงาน": confirmation_status,  # 🔥 เพิ่มสถานะการยืนยัน
+                "ประเภทการร้องเรียน": complaint_category,  # 🔥 เพิ่มประเภทการร้องเรียน
+                "ผู้สร้างเรื่อง": f"{creator.first_name} {creator.last_name}".strip() if creator else "ไม่ระบุ",
                 "หมายเหตุ": complaint.assigned_remark or "",
                 
                 # ข้อมูลเพิ่มเติมสำหรับ API
@@ -188,6 +432,22 @@ def get_document_storage_by_channel(
                     "id": str(assigned_officer.id) if assigned_officer else None,
                     "name": f"{assigned_officer.first_name} {assigned_officer.last_name}" if assigned_officer else None
                 } if assigned_officer else None,
+                "creator": {
+                    "id": str(creator.id) if creator else None,
+                    "name": f"{creator.first_name} {creator.last_name}".strip() if creator else None,
+                    "email": creator.email if creator else None
+                } if creator else None,
+                "parent_complaint": parent_complaint,
+                "parent_chain": parent_chain,  # 🔥 เพิ่ม parent chain ทั้งหมด
+                "master_complaint": master_complaint,  # 🔥 เพิ่ม master complaint สูงสุด
+                "child_complaints": child_complaints_data,  # 🔥 ใช้ข้อมูลจาก related_info
+                "sibling_complaints": sibling_complaints,  # 🔥 เพิ่ม sibling complaints
+                "all_related": all_related,  # 🔥 เพิ่มเรื่องทั้งหมดในกลุ่ม
+                "complaint_type_flags": {
+                    "new_complaint": complaint.new_complaint,
+                    "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
+                    "group_work": complaint.group_work
+                },
                 "channel": {
                     "id": str(channel_info.id) if channel_info else None,
                     "name": channel_info.name if channel_info else None,
