@@ -9,7 +9,8 @@ from app.api.middleware.jwt_verify import verify_token
 from app.api.v1.controllers.document_storage_controller import (
     get_document_storage_by_channel,
     get_document_storage_statistics,
-    get_document_storage_filters
+    get_document_storage_filters,
+    get_document_storage_detail
 )
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
@@ -35,7 +36,11 @@ async def get_document_storage(
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
-    """ดึงข้อมูลคลังเอกสารแบ่งตามช่องทาง"""
+    """ดึงข้อมูลคลังเอกสารแบ่งตามช่องทาง (แบบสรุป - สำหรับ listing)
+    
+    หมายเหตุ: endpoint นี้ให้ข้อมูลสรุปเท่านั้น ไม่รวม all_related เพื่อ performance
+    สำหรับรายละเอียดเต็มของแต่ละเรื่อง ให้ใช้ GET /document-storage/{complaint_id}
+    """
     try:
         result = get_document_storage_by_channel(
             db=db,
@@ -83,6 +88,29 @@ async def get_filters(
     """ดึงตัวเลือกสำหรับ filter"""
     try:
         result = get_document_storage_filters(db=db)
+        return format_response("0000", result)
+        
+    except Exception as e:
+        return format_response("5000", {
+            "error": str(e)
+        })
+
+@router.get("/{complaint_id}", response_model=FormatResponseModel)
+async def get_document_storage_detail_by_id(
+    complaint_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """ดึงรายละเอียดเต็มของ complaint เดียว รวมถึงความสัมพันธ์ทั้งหมด"""
+    try:
+        result = get_document_storage_detail(db=db, complaint_id=complaint_id)
+        
+        if "error" in result and result["detail"] is None:
+            return format_response("4000", {
+                "error": result["error"],
+                "message": "ไม่พบข้อมูลเรื่องร้องเรียนที่ระบุ"
+            })
+        
         return format_response("0000", result)
         
     except Exception as e:

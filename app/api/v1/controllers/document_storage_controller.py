@@ -12,6 +12,28 @@ from models.user import User
 import logging
 logger = logging.getLogger(__name__)
 
+
+def get_document_storage_by_channel(
+    db: Session,
+    page_type: str = "website",  # "website" หรือ "card"
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    complaint_type: Optional[str] = None,
+    complaint_subtype: Optional[str] = None,
+    assignee: Optional[str] = None,
+    location: Optional[str] = None,
+    urgency: Optional[str] = None,
+    search: Optional[str] = None,
+    complainant_name: Optional[str] = None
+) -> Dict:
+    """
+    ดึงข้อมูลคลังเอกสารแบ่งตามช่องทาง (สำหรับ listing/summary เท่านั้น)
+    
+    หมายเหตุ: endpoint นี้ให้ข้อมูลสรุปเท่านั้น ไม่รวม all_related เพื่อ performance
+    สำหรับรายละเอียดเต็มของแต่ละเรื่อง ให้ใช้ get_document_storage_detail()
+    """
+
 def get_parent_chain(db: Session, complaint_id: UUID, visited_ids: set = None) -> List[Dict]:
     """
     ตามหา parent chain แบบ recursive จนถึง master complaint สูงสุด
@@ -379,6 +401,168 @@ def get_bulk_related_complaints(db: Session, complaint_ids: List[UUID]) -> Dict[
     
     return result
 
+def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
+    """
+    ดึงรายละเอียดเต็มของ complaint เดียว รวมถึงข้อมูลความสัมพันธ์ทั้งหมด
+    ใช้สำหรับ detail view ที่ต้องการข้อมูลครบถ้วน
+    """
+    try:
+        # ดึงข้อมูล complaint หลัก
+        complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+        if not complaint:
+            return {"error": "Complaint not found", "detail": None}
+        
+        # ดึงข้อมูลความสัมพันธ์ทั้งหมด
+        related_info = get_related_complaints(db, complaint_id)
+        
+        # ดึงข้อมูลผู้ร้องเรียน
+        complainant_data = {}
+        try:
+            complainant_data = json.loads(complaint.complainant_data) if complaint.complainant_data else {}
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(f"Error parsing complainant_data for complaint {complaint.id}: {str(e)}")
+            complainant_data = {}
+        
+        # ดึงข้อมูลผู้ถูกร้องเรียน
+        respondent_data = {}
+        try:
+            respondent_data = json.loads(complaint.respondent_data) if complaint.respondent_data else {}
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(f"Error parsing respondent_data for complaint {complaint.id}: {str(e)}")
+            respondent_data = {}
+        
+        # ดึงข้อมูลเจ้าหน้าที่ที่รับผิดชอบ
+        assigned_officer = None
+        if complaint.assigned_officer_id:
+            assigned_officer = db.query(User).filter(User.id == complaint.assigned_officer_id).first()
+        
+        # ดึงข้อมูลผู้สร้างเรื่องร้องเรียน
+        creator = None
+        if complaint.created_by:
+            creator = db.query(User).filter(User.id == complaint.created_by).first()
+        
+        # ดึงข้อมูล channel
+        channel_info = None
+        if complaint.complaint_channel_id:
+            channel_info = db.query(ComplaintChannel).filter(
+                ComplaintChannel.id == complaint.complaint_channel_id
+            ).first()
+        
+        # วันที่รับงาน
+        received_date = ""
+        if complaint.confirm_assigned_date and complaint.confirm_assigned_status == True:
+            received_date = complaint.confirm_assigned_date.strftime("%d %b %Y")
+        elif complaint.assigned_date:
+            received_date = f"มอบหมายแล้ว ({complaint.assigned_date.strftime('%d %b %Y')})"
+        else:
+            received_date = "ยังไม่ได้รับงาน"
+        
+        # สถานะการยืนยันรับงาน
+        confirmation_status = "ยังไม่ได้รับงาน"
+        if complaint.confirm_assigned_status == True:
+            confirmation_status = "ยืนยันรับงานแล้ว"
+        elif complaint.confirm_assigned_status == False:
+            confirmation_status = "ปฏิเสธรับงาน"
+        elif complaint.assigned_officer_id:
+            confirmation_status = "รอการยืนยัน"
+        
+        # ประเภทการร้องเรียน
+        complaint_category = "เรื่องร้องเรียนใหม่"
+        if complaint.group_work:
+            complaint_category = "รับเรื่องจากคณะบัตรสนเท่ห์"
+        elif complaint.add_more_complaint_to_ref:
+            complaint_category = "เรื่องร้องเรียนเพิ่มเติม"
+        elif complaint.new_complaint:
+            complaint_category = "เรื่องร้องเรียนใหม่"
+        
+        # จัดรูปแบบผลลัพธ์
+        result = {
+            "detail": {
+                "วันที่รับ": received_date,
+                "หมายเลข": complaint.complaint_number or "",
+                "ข้อมูลผู้ร้อง": complainant_data.get("name", "") or f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip(),
+                "เรื่อง": complaint.subject or "",
+                "คำอธิบาย": complaint.description or "",
+                "ประเภทเรื่อง": complaint.complaint_type or "",
+                "ประเภทเรื่องย่อย": "",  # จะต้องเชื่อมโยงกับ complaint_subtype
+                "เจ้าหน้าที่ที่รับผิดชอบ": complaint.assigned_to or "",
+                "สถานะเรื่อง": complaint.status.value if complaint.status else "",
+                "สถานะการรับงาน": confirmation_status,
+                "ประเภทการร้องเรียน": complaint_category,
+                "ผู้สร้างเรื่อง": f"{creator.first_name} {creator.last_name}".strip() if creator else "ไม่ระบุ",
+                "หมายเหตุ": complaint.assigned_remark or "",
+                
+                # ข้อมูลเพิ่มเติมสำหรับ API
+                "id": str(complaint.id),
+                "complaint_id": str(complaint.id),
+                "status": complaint.status.value if complaint.status else "",
+                "urgency_level": complaint.urgency_level,
+                "confidentiality_level": complaint.confidentiality_level,
+                "is_master": complaint.parent_complaint_id is None,
+                "assigned_officer": {
+                    "id": str(assigned_officer.id) if assigned_officer else None,
+                    "name": f"{assigned_officer.first_name} {assigned_officer.last_name}" if assigned_officer else None,
+                    "email": assigned_officer.email if assigned_officer else None
+                } if assigned_officer else None,
+                "creator": {
+                    "id": str(creator.id) if creator else None,
+                    "name": f"{creator.first_name} {creator.last_name}".strip() if creator else None,
+                    "email": creator.email if creator else None
+                } if creator else None,
+                "channel": {
+                    "id": str(channel_info.id) if channel_info else None,
+                    "name": channel_info.name if channel_info else None,
+                    "description": channel_info.description if channel_info else None
+                } if channel_info else None,
+                "complainant": complainant_data,
+                "respondent": respondent_data,
+                "created_at": complaint.created_at.isoformat() if complaint.created_at else None,
+                "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
+                "registration_date": complaint.registration_date.isoformat() if complaint.registration_date else None,
+                "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
+                
+                # ข้อมูลการยืนยันรับงาน
+                "confirm_assigned_status": complaint.confirm_assigned_status,
+                "confirm_assigned_date": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None,
+                "confirm_assigned_remark": complaint.confirm_assigned_remark,
+                "confirm_assigned_by": str(complaint.confirm_assigned_by) if complaint.confirm_assigned_by else None,
+                
+                "complaint_type_flags": {
+                    "new_complaint": complaint.new_complaint,
+                    "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
+                    "group_work": complaint.group_work
+                }
+            },
+            
+            # 🔥 ข้อมูลความสัมพันธ์เต็มรูปแบบ (เฉพาะใน detail endpoint)
+            "relationships": {
+                "parent_complaint": related_info.get("parent_complaint"),
+                "parent_chain": related_info.get("parent_chain", []),
+                "master_complaint": related_info.get("master_complaint"),
+                "child_complaints": related_info.get("child_complaints", []),
+                "sibling_complaints": related_info.get("sibling_complaints", []),
+                "all_related": related_info.get("all_related", []),  # 🔥 ข้อมูลเต็มสำหรับ detail
+                "total_related_count": len(related_info.get("all_related", [])),
+                "relationship_summary": {
+                    "is_master": complaint.parent_complaint_id is None,
+                    "has_parent": related_info.get("parent_complaint") is not None,
+                    "children_count": len(related_info.get("child_complaints", [])),
+                    "siblings_count": len(related_info.get("sibling_complaints", [])),
+                    "total_in_group": len(related_info.get("all_related", []))
+                }
+            }
+        }
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error getting document storage detail for {complaint_id}: {str(e)}")
+        return {
+            "error": str(e),
+            "detail": None,
+            "relationships": None
+        }
+
 def get_document_storage_by_channel(
     db: Session,
     page_type: str = "website",  # "website" หรือ "card"
@@ -393,7 +577,7 @@ def get_document_storage_by_channel(
     search: Optional[str] = None,
     complainant_name: Optional[str] = None
 ) -> Dict:
-    """ดึงข้อมูลคลังเอกสารแบ่งตามช่องทาง"""
+    """ดึงข้อมูลคลังเอกสารแบ่งตามช่องทาง (สำหรับ listing - ข้อมูลสรุป)"""
     try:
         # กำหนด channel ตาม page_type
         if page_type == "website":
@@ -481,11 +665,8 @@ def get_document_storage_by_channel(
         # Apply pagination
         complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
         
-        # 🚀 Performance Optimization: Batch-load all relationships once
-        # แทนที่จะเรียก get_related_complaints() ในแต่ละ complaint (N+1 queries)
-        # เราจะ batch-load ความสัมพันธ์ทั้งหมดในครั้งเดียว
-        complaint_ids = [complaint.id for complaint in complaints]
-        bulk_relationships = get_bulk_related_complaints(db, complaint_ids) if complaint_ids else {}
+        # � สำหรับ summary listing ไม่ต้องโหลด relationships เพื่อ performance
+        # สำหรับ detail ให้ใช้ get_document_storage_detail() แทน
         
         # Format response
         items = []
@@ -516,15 +697,81 @@ def get_document_storage_by_channel(
             if complaint.created_by:
                 creator = db.query(User).filter(User.id == complaint.created_by).first()
             
-            # ดึงข้อมูลเรื่องร้องเรียนที่เกี่ยวข้องทั้งหมด (from pre-computed bulk data)
-            related_info = bulk_relationships.get(complaint.id, {})
+            # 📝 สำหรับ summary: ข้อมูลพื้นฐานเท่านั้น ไม่รวม detailed relationships
+            # หาก parent/master พื้นฐานเพื่อแสดงสถานะ is_master
+            has_parent = complaint.parent_complaint_id is not None
+            parent_complaint_basic = None
+            master_complaint_basic = None
             
-            parent_complaint = related_info["parent_complaint"]
-            parent_chain = related_info["parent_chain"]
-            master_complaint = related_info["master_complaint"]
-            child_complaints_data = related_info["child_complaints"]
-            sibling_complaints = related_info["sibling_complaints"]
-            all_related = related_info["all_related"]
+            if has_parent:
+                # ดึงข้อมูล parent พื้นฐาน
+                parent = db.query(Complaint).filter(Complaint.id == complaint.parent_complaint_id).first()
+                if parent:
+                    parent_complaint_basic = {
+                        "id": str(parent.id),
+                        "complaint_number": parent.complaint_number,
+                        "subject": parent.subject,
+                        "status": parent.status.value if parent.status else None,
+                        "is_master": parent.parent_complaint_id is None
+                    }
+                    
+                    # หา master ถ้า parent ไม่ใช่ master
+                    if parent.parent_complaint_id is not None:
+                        # ถ้า parent ไม่ใช่ master ให้หา master ต่อไป (แค่ 1 ระดับเพื่อ performance)
+                        master = db.query(Complaint).filter(Complaint.id == parent.parent_complaint_id).first()
+                        if master and master.parent_complaint_id is None:
+                            master_complaint_basic = {
+                                "id": str(master.id),
+                                "complaint_number": master.complaint_number,
+                                "subject": master.subject,
+                                "status": master.status.value if master.status else None,
+                                "is_master": True
+                            }
+                    else:
+                        master_complaint_basic = parent_complaint_basic
+            else:
+                # ตัวเองเป็น master
+                master_complaint_basic = {
+                    "id": str(complaint.id),
+                    "complaint_number": complaint.complaint_number,
+                    "subject": complaint.subject,
+                    "status": complaint.status.value if complaint.status else None,
+                    "is_master": True
+                }
+            
+            # ดึงจำนวน children พื้นฐาน (แค่นับ ไม่ดึงรายละเอียด)
+            children_count = db.query(Complaint).filter(Complaint.parent_complaint_id == complaint.id).count()
+            child_complaints_basic = []
+            if children_count > 0:
+                children = db.query(Complaint).filter(
+                    Complaint.parent_complaint_id == complaint.id
+                ).order_by(Complaint.complaint_number).all()
+                child_complaints_basic = [
+                    {
+                        "id": str(child.id),
+                        "complaint_number": child.complaint_number,
+                        "subject": child.subject,
+                        "status": child.status.value if child.status else None,
+                        "is_master": False
+                    } for child in children
+                ]
+            
+            # หา siblings พื้นฐาน (ถ้ามี parent เดียวกัน)
+            sibling_complaints_basic = []
+            if has_parent:
+                siblings = db.query(Complaint).filter(
+                    Complaint.parent_complaint_id == complaint.parent_complaint_id,
+                    Complaint.id != complaint.id
+                ).order_by(Complaint.complaint_number).all()
+                sibling_complaints_basic = [
+                    {
+                        "id": str(sibling.id),
+                        "complaint_number": sibling.complaint_number,
+                        "subject": sibling.subject,
+                        "status": sibling.status.value if sibling.status else None,
+                        "is_master": False
+                    } for sibling in siblings
+                ]
             
             # ดึงข้อมูล channel
             channel_info = None
@@ -594,12 +841,12 @@ def get_document_storage_by_channel(
                     "name": f"{creator.first_name} {creator.last_name}".strip() if creator else None,
                     "email": creator.email if creator else None
                 } if creator else None,
-                "parent_complaint": parent_complaint,
-                "parent_chain": parent_chain,  # 🔥 เพิ่ม parent chain ทั้งหมด
-                "master_complaint": master_complaint,  # 🔥 เพิ่ม master complaint สูงสุด
-                "child_complaints": child_complaints_data,  # 🔥 ใช้ข้อมูลจาก related_info
-                "sibling_complaints": sibling_complaints,  # 🔥 เพิ่ม sibling complaints
-                "all_related": all_related,  # 🔥 เพิ่มเรื่องทั้งหมดในกลุ่ม
+                "parent_complaint": parent_complaint_basic,
+                "master_complaint": master_complaint_basic,
+                "child_complaints": child_complaints_basic,
+                "sibling_complaints": sibling_complaints_basic,
+                # 📝 หมายเหตุ: ลบ all_related ออกจาก listing เพื่อ performance 
+                # ใช้ GET /document-storage/{complaint_id} สำหรับข้อมูลครบถ้วน
                 "complaint_type_flags": {
                     "new_complaint": complaint.new_complaint,
                     "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
@@ -654,7 +901,8 @@ def get_document_storage_by_channel(
                     "รอการยืนยัน": "มอบหมายแล้วแต่ยังไม่ได้ยืนยัน",
                     "ยังไม่ได้รับงาน": "ยังไม่ได้มอบหมายให้ใคร"
                 }
-            }
+            },
+            "performance_note": "📝 นี่คือ summary listing ที่ปรับปรุงแล้วเพื่อ performance - ไม่รวม all_related ครบถ้วน ใช้ GET /document-storage/{complaint_id} สำหรับรายละเอียดเต็ม"
         }
         
     except Exception as e:

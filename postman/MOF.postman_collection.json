@@ -7909,7 +7909,7 @@
 								}
 							]
 						},
-						"description": "ดึงข้อมูลคลังเอกสารประเภทเว็บไซต์ - ช่องทางที่มี 'เว็บไซต์' ในชื่อหรือคำอธิบาย"
+						"description": "ดึงข้อมูลคลังเอกสารประเภทเว็บไซต์ (Summary Listing) - ช่องทางที่มี 'เว็บไซต์' ในชื่อหรือคำอธิบาย\n\n**Performance Optimized:** ให้ข้อมูลสรุปเท่านั้น ไม่รวม all_related ครบถ้วน\n**สำหรับรายละเอียดเต็ม:** ใช้ GET /document-storage/{complaint_id}"
 					},
 					"response": []
 				},
@@ -7994,7 +7994,7 @@
 								}
 							]
 						},
-						"description": "ดึงข้อมูลคลังเอกสารประเภทบัตรสนเท่ห์ - ช่องทางที่มี 'บัตรสนเท่ห์' ในชื่อหรือคำอธิบาย"
+						"description": "ดึงข้อมูลคลังเอกสารประเภทบัตรสนเท่ห์ (Summary Listing) - ช่องทางที่มี 'บัตรสนเท่ห์' ในชื่อหรือคำอธิบาย\n\n**Performance Optimized:** ให้ข้อมูลสรุปเท่านั้น ไม่รวม all_related ครบถ้วน\n**สำหรับรายละเอียดเต็ม:** ใช้ GET /document-storage/{complaint_id}"
 					},
 					"response": []
 				},
@@ -8150,12 +8150,41 @@
 								}
 							]
 						},
-						"description": "ดึงข้อมูลคลังเอกสารจากทุกช่องทาง - ใช้สำหรับทดสอบหรือดูข้อมูลรวม"
+						"description": "ดึงข้อมูลคลังเอกสารจากทุกช่องทาง (Summary Listing) - ใช้สำหรับทดสอบหรือดูข้อมูลรวม\n\n**Performance Optimized:** ให้ข้อมูลสรุปเท่านั้น ไม่รวม all_related ครบถ้วน\n**สำหรับรายละเอียดเต็ม:** ใช้ GET /document-storage/{complaint_id}"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Document Storage Detail by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/document-storage/{{complaint_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"document-storage",
+								"{{complaint_id}}"
+							]
+						},
+						"description": "ดึงรายละเอียดเต็มของ complaint เดียว รวมถึงความสัมพันธ์ทั้งหมด (all_related)\n\n**ใช้งาน:**\n- สำหรับดูข้อมูลครบถ้วนของเรื่องร้องเรียนแต่ละเรื่อง\n- รวม all_related ที่ครบถ้วนของกลุ่มเรื่องร้องเรียน\n- แสดงข้อมูลรายละเอียดทั้งหมดสำหรับเจ้าหน้าที่\n\n**Response Structure:**\n- detail: ข้อมูลรายละเอียดของ complaint\n- relationships: ความสัมพันธ์ทั้งหมด (parent, children, siblings, all_related)\n- relationship_summary: สรุปข้อมูลความสัมพันธ์"
 					},
 					"response": []
 				}
 			],
-			"description": "API สำหรับคลังเอกสาร - จัดการข้อมูลเรื่องร้องเรียนแบ่งตาม 2 หน้า: เว็บไซต์ และบัตรสนเท่ห์"
+			"description": "API สำหรับคลังเอกสาร - จัดการข้อมูลเรื่องร้องเรียนแบ่งตาม 2 หน้า: เว็บไซต์ และบัตรสนเท่ห์\n\n**Performance Optimization:**\n- GET /document-storage - Summary listing (เร็ว, ไม่รวม all_related ครบถ้วน)\n- GET /document-storage/{complaint_id} - Full detail (ครบถ้วน, รวม all_related ทั้งหมด)"
 		},
 		{
             "name": "OUTGOING REPORTS",
