@@ -8,6 +8,10 @@ import json
 from models.comp_complaint import Complaint, ComplaintStatus
 from models.comp_complaint_types import ComplaintChannel
 from models.user import User
+from models.outgoing_reports import OutgoingReport
+from models.outgoing_reports2 import OutgoingReport2
+from models.outgoing_reports3 import OutgoingReport3
+from models.outgoing_reports4 import OutgoingReport4
 
 import logging
 logger = logging.getLogger(__name__)
@@ -567,6 +571,118 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             logger.warning(f"Error building status_history for complaint {complaint.id}: {str(e)}")
             status_history = []
         
+        # 🔥 ดึงข้อมูล outgoing reports ที่เกี่ยวข้องกับ complaint นี้
+        outgoing_reports_data = {}
+        try:
+            # ดึง outgoing reports ประเภทที่ 1 (ส่งหน่วยงานที่เกี่ยวข้อง)
+            outgoing_reports1 = db.query(OutgoingReport).filter(
+                OutgoingReport.complaint_id == complaint_id,
+                OutgoingReport.is_active == True
+            ).all()
+            
+            outgoing_reports_data["type1"] = []
+            for report in outgoing_reports1:
+                outgoing_reports_data["type1"].append({
+                    "id": str(report.id),
+                    "reference_number": report.reference_number,
+                    "reference_date": report.reference_date.isoformat() if report.reference_date else None,
+                    "subject": report.subject,
+                    "complaint_number": report.complaint_number,
+                    "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,
+                    "confidentiality_level": report.confidentiality_level,
+                    "urgency_level": report.urgency_level,
+                    "remarks": report.remarks,
+                    "created_at": report.created_at.isoformat() if report.created_at else None,
+                    "type_description": "รายงานส่งหน่วยงานที่เกี่ยวข้อง"
+                })
+            
+            # ดึง outgoing reports ประเภทที่ 2 (แจ้งผู้ร้องเรียน)
+            outgoing_reports2 = db.query(OutgoingReport2).filter(
+                OutgoingReport2.complaint_id == complaint_id,
+                OutgoingReport2.is_active == True
+            ).all()
+            
+            outgoing_reports_data["type2"] = []
+            for report in outgoing_reports2:
+                outgoing_reports_data["type2"].append({
+                    "id": str(report.id),
+                    "complaint_number": report.complaint_number,
+                    "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,
+                    "subject": report.subject,
+                    "confidentiality_level": report.confidentiality_level,
+                    "urgency_level": report.urgency_level,
+                    "remarks": report.remarks,
+                    "created_at": report.created_at.isoformat() if report.created_at else None,
+                    "type_description": "รายงานแจ้งผู้ร้องเรียน"
+                })
+            
+            # ดึง outgoing reports ประเภทที่ 3 (ขอทราบผลการพิจารณา)
+            outgoing_reports3 = db.query(OutgoingReport3).filter(
+                OutgoingReport3.complaint_id == complaint_id,
+                OutgoingReport3.is_active == True
+            ).all()
+            
+            outgoing_reports_data["type3"] = []
+            for report in outgoing_reports3:
+                outgoing_reports_data["type3"].append({
+                    "id": str(report.id),
+                    "complaint_number": report.complaint_number,
+                    "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,
+                    "subject": report.subject,
+                    "confidentiality_level": report.confidentiality_level,
+                    "urgency_level": report.urgency_level,
+                    "remarks": report.remarks,
+                    "created_at": report.created_at.isoformat() if report.created_at else None,
+                    "type_description": "รายงานขอทราบผลการพิจารณา"
+                })
+            
+            # ดึง outgoing reports ประเภทที่ 4 (แจ้งผลการให้ผู้เกี่ยวข้องทราบ)
+            outgoing_reports4 = db.query(OutgoingReport4).filter(
+                OutgoingReport4.complaint_id == complaint_id,
+                OutgoingReport4.is_active == True
+            ).all()
+            
+            outgoing_reports_data["type4"] = []
+            for report in outgoing_reports4:
+                outgoing_reports_data["type4"].append({
+                    "id": str(report.id),
+                    "reference_number": report.reference_number,
+                    "reference_date": report.reference_date.isoformat() if report.reference_date else None,
+                    "subject": report.subject,
+                    "proposal_purpose": report.proposal_purpose,
+                    "consideration_result": report.consideration_result,
+                    "confidentiality_level": report.confidentiality_level,
+                    "urgency_level": report.urgency_level,
+                    "remarks": report.remarks,
+                    "created_at": report.created_at.isoformat() if report.created_at else None,
+                    "type_description": "รายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ"
+                })
+            
+            # รวม outgoing reports ทั้งหมด
+            all_outgoing_reports = []
+            for report_type, reports in outgoing_reports_data.items():
+                all_outgoing_reports.extend(reports)
+            
+            # เรียงตาม created_at (ใหม่สุดก่อน)
+            all_outgoing_reports.sort(
+                key=lambda x: datetime.fromisoformat(x["created_at"]) if x.get("created_at") else datetime.min,
+                reverse=True
+            )
+            
+            outgoing_reports_data["all"] = all_outgoing_reports
+            outgoing_reports_data["total_count"] = len(all_outgoing_reports)
+            
+        except Exception as e:
+            logger.warning(f"Error getting outgoing reports for complaint {complaint.id}: {str(e)}")
+            outgoing_reports_data = {
+                "type1": [],
+                "type2": [],
+                "type3": [],
+                "type4": [],
+                "all": [],
+                "total_count": 0
+            }
+        
         # วันที่รับงาน
         received_date = ""
         if complaint.confirm_assigned_date and complaint.confirm_assigned_status == True:
@@ -672,7 +788,10 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                     "siblings_count": len(related_info.get("sibling_complaints", [])),
                     "total_in_group": len(related_info.get("all_related", []))
                 }
-            }
+            },
+            
+            # 🔥 ข้อมูล outgoing reports ที่เกี่ยวข้อง
+            "outgoing_reports": outgoing_reports_data
         }
         
         # 🔥 เรียงลำดับ all_related ตาม created_at (ใหม่สุดก่อน) โดยไม่ย้าย current ไปด้านบน
