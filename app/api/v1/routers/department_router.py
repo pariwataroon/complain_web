@@ -2,6 +2,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
+import bleach
 
 from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
 from app.api.v1.controllers.department_controller import (
@@ -83,15 +84,20 @@ async def create_department_endpoint(
     db: Session = Depends(get_db),
     current_user: str = Depends(can_create("setting_department"))
 ):
-    """สร้างหน่วยงานใหม่"""
     try:
-        department_data = department.model_dump()
-        db_department = create_department(db, department_data)
-        return format_response("0001", db_department)
+        data = department.model_dump()
+        data["name"] = bleach.clean(data.get("name", ""), tags=[], attributes={})
+
+        db_dept = create_department(db, data)
+
+        return format_response("0001", {
+            "id": db_dept.id,
+            "code": db_dept.code,
+            "created_at": db_dept.created_at
+        })
+
     except DuplicateKeyError as e:
-        return format_response("4090", {"error": str(e)})
-    except HTTPException as e:
-        return format_response(f"{e.status_code}", {"error": e.detail})
+        return format_response("4090", {"error": "ชื่อหน่วยงานซ้ำ"})
 
 @router.put("/{department_id}", response_model=FormatResponseModel)
 async def update_department_endpoint(
@@ -103,12 +109,23 @@ async def update_department_endpoint(
     """อัปเดตข้อมูลหน่วยงาน"""
     try:
         department_data = {k: v for k, v in department.model_dump().items() if v is not None}
+
+        if "name" in department_data:
+            department_data["name"] = bleach.clean(department_data["name"], tags=[], attributes={})
+
         db_department = update_department(db, department_id=department_id, department_data=department_data)
-        
+
         if db_department is None:
             raise HTTPException(status_code=404, detail=f"Department with ID {department_id} not found")
-            
-        return format_response("0002", db_department)
+
+        response_data = {
+            "id": db_department.id,
+            "code": db_department.code,
+            "updated_at": db_department.updated_at
+        }
+
+        return format_response("0002", response_data)
+
     except DuplicateKeyError as e:
         return format_response("4090", {"error": str(e)})
     except HTTPException as e:

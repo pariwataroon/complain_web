@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Request , Header
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any
@@ -192,8 +192,15 @@ def process_frontend_user_data(data: Dict[str, Any]) -> Dict[str, Any]:
     return filtered_processed
 
 
-@router.post("/register", response_model=FormatResponseModel)
-async def register_new_user(user: UserCreate, db: Session = Depends(get_db)):
+router.post("/register", response_model=FormatResponseModel)
+async def register_new_user(
+    user: UserCreate,
+    db: Session = Depends(get_db),
+    authorization: str = Header(default=None) 
+):
+    if authorization:
+        raise HTTPException(status_code=401, detail="Token should not be provided for public registration")
+
     try:
         db_user = create_user(db, user, ["people"])
         result = UserResponse.model_validate(db_user).model_dump()

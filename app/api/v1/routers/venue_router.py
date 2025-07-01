@@ -2,6 +2,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
+import bleach
 
 from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
 from app.api.v1.controllers.venue_controller import (
@@ -98,10 +99,22 @@ async def create_venue_endpoint(
     """สร้างสถานที่ใหม่"""
     try:
         venue_data = venue.model_dump()
+
+        if "name" in venue_data:
+            venue_data["name"] = bleach.clean(venue_data["name"], tags=[], attributes={})
+
         db_venue = create_venue(db, venue_data)
-        return format_response("0001", db_venue)
+
+        response_data = {
+            "id": db_venue.id,
+            "code": db_venue.code,
+            "created_at": db_venue.created_at
+        }
+
+        return format_response("0001", response_data)
+
     except DuplicateKeyError as e:
-        return format_response("4090", {"error": str(e)})
+        return format_response("4090", {"error": "ชื่อสถานที่ซ้ำ"})
     except HTTPException as e:
         return format_response(f"{e.status_code}", {"error": e.detail})
 
@@ -115,16 +128,28 @@ async def update_venue_endpoint(
     """อัปเดตข้อมูลสถานที่"""
     try:
         venue_data = {k: v for k, v in venue.model_dump().items() if v is not None}
+
+        if "name" in venue_data:
+            venue_data["name"] = bleach.clean(venue_data["name"], tags=[], attributes={})
+
         db_venue = update_venue(db, venue_id=venue_id, venue_data=venue_data)
-        
+
         if db_venue is None:
             raise HTTPException(status_code=404, detail=f"Venue with ID {venue_id} not found")
-            
-        return format_response("0002", db_venue)
+
+        response_data = {
+            "id": db_venue.id,
+            "code": db_venue.code,
+            "updated_at": db_venue.updated_at
+        }
+
+        return format_response("0002", response_data)
+
     except DuplicateKeyError as e:
         return format_response("4090", {"error": str(e)})
     except HTTPException as e:
         return format_response(f"{e.status_code}", {"error": e.detail})
+
 
 @router.delete("/{venue_id}", response_model=FormatResponseModel)
 async def delete_venue_endpoint(

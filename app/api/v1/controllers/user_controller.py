@@ -1,5 +1,6 @@
 import bcrypt
 import os
+import re   
 from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
@@ -16,11 +17,24 @@ from models.position import Position
 
 logger = get_logger("user_repository", console_output=False)
 
+ENV_VAR_PATTERN = re.compile(r"(\${[^}]+}|\$\w+|#\{ENV\[[^\]]+\]\})")
+
 VERIFY_PATH = os.environ.get("VERIFY_PATH", "http://localhost:8000/api/v1/auth")
 
 class DuplicateKeyError(Exception):
     pass
 
+def sanitize_input_fields(data: dict) -> dict:
+    sanitized = {}
+    for key, value in data.items():
+        if isinstance(value, str):
+            if ENV_VAR_PATTERN.search(value):
+                logger.warning(f"Blocked environment variable-like input: {key} = {value}")
+                raise ValueError(f"Environment variable-like pattern found in field '{key}': {value}")
+            sanitized[key] = value.strip()
+        else:
+            sanitized[key] = value
+    return sanitized
 
 def get_password_hash(password: str) -> str:
     """Hash a password for storage."""
@@ -52,18 +66,17 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
 
 def create_user(db: Session, user: UserCreate, roles: list = None, position_ids: list = None, primary_position_id: UUID = None):
     try:
-        # Check if user already exists
+        create_data = sanitize_input_fields(user.model_dump())
+
+        # ตรวจสอบซ้ำเรื่อง email และ citizen_id ตามปกติ
         existing_email = get_user_by_email(db, user.email)
         if existing_email:
-            raise DuplicateKeyError(
-                f"User with email {user.email} already exists")
+            raise DuplicateKeyError(f"User with email {user.email} already exists")
 
-        # ตรวจสอบ citizen_id ถ้ามี
         if hasattr(user, 'citizen_id') and user.citizen_id:
             existing_citizen = db.query(User).filter(User.citizen_id == user.citizen_id).first()
             if existing_citizen:
-                raise DuplicateKeyError(
-                    f"User with citizen ID {user.citizen_id} already exists")
+                raise DuplicateKeyError(f"User with citizen ID {user.citizen_id} already exists")
 
         # Create new user
         hashed_password = get_password_hash(user.password)
@@ -94,41 +107,39 @@ def create_user(db: Session, user: UserCreate, roles: list = None, position_ids:
             is_active = True
 
         db_user = User(
-            citizen_id=user.citizen_id,
-            email=user.email,
+            citizen_id=create_data.get('citizen_id'),
+            email=create_data.get('email'),
             hashed_password=hashed_password,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            phone=user.phone if hasattr(user, 'phone') else None,
-            address=user.address if hasattr(user, 'address') else None,
-            address_other=user.address_other if hasattr(user, 'address_other') else None,
-            # เพิ่มข้อมูลภูมิศาสตร์
-            province_id=user.province_id if hasattr(user, 'province_id') else None,
-            district_id=user.district_id if hasattr(user, 'district_id') else None,
-            subdistrict_id=user.subdistrict_id if hasattr(user, 'subdistrict_id') else None,
-            zipcode=user.zipcode if hasattr(user, 'zipcode') else None,
-            province2_id=user.province2_id if hasattr(user, 'province2_id') else None,
-            district2_id=user.district2_id if hasattr(user, 'district2_id') else None,
-            subdistrict2_id=user.subdistrict2_id if hasattr(user, 'subdistrict2_id') else None,
-            zipcode2=user.zipcode2 if hasattr(user, 'zipcode2') else None,
-            # ฟิลด์เพิ่มเติม
-            profile_image=user.profile_image if hasattr(user, 'profile_image') else None,
-            sync_address=user.sync_address if hasattr(user, 'sync_address') else False,
-            group_type=user.group if hasattr(user, 'group') else None,
+            first_name=create_data.get('first_name'),
+            last_name=create_data.get('last_name'),
+            phone=create_data.get('phone'),
+            address=create_data.get('address'),
+            address_other=create_data.get('address_other'),
+            province_id=create_data.get('province_id'),
+            district_id=create_data.get('district_id'),
+            subdistrict_id=create_data.get('subdistrict_id'),
+            zipcode=create_data.get('zipcode'),
+            province2_id=create_data.get('province2_id'),
+            district2_id=create_data.get('district2_id'),
+            subdistrict2_id=create_data.get('subdistrict2_id'),
+            zipcode2=create_data.get('zipcode2'),
+            profile_image=create_data.get('profile_image'),
+            sync_address=create_data.get('sync_address', False),
+            group_type=create_data.get('group'),
             is_active=is_active
         )
 
         # จัดการเรื่องคำนำหน้า
-        if hasattr(user, 'title_id') and user.title_id:
+        if create_data.get('title_id'):
             title = db.query(Title).filter(Title.title_id == user.title_id).first()
             if title:
                 db_user.title_id = title.title_id
 
         # กรณีเลือก "อื่นๆ" และระบุคำนำหน้าเอง
-        if hasattr(user, 'prefix_other') and user.prefix_other:
+        if create_data.get('prefix_other'):
             other_title_id = 1  # ID ของ "อื่น ๆ" ตามข้อมูล seed
             db_user.title_id = other_title_id
-            db_user.prefix_other = user.prefix_other
+            db_user.prefix_other = create_data.get('prefix_other')
 
         db.add(db_user)
         db.commit()
@@ -225,34 +236,22 @@ def update_user(db: Session, user_id: int, user_data: UserUpdate):
     if not db_user:
         return None
 
-    # ตรวจสอบความซ้ำซ้อนของอีเมล
-    update_data = user_data.model_dump(exclude_unset=True, exclude_none=True)
+    update_data = sanitize_input_fields(user_data.model_dump(exclude_unset=True, exclude_none=True))
 
-    # ตรวจสอบอีเมล์
     if "email" in update_data and update_data["email"] != db_user.email:
         existing_email = get_user_by_email(db, update_data["email"])
         if existing_email:
-            raise DuplicateKeyError(
-                f"User with email {update_data['email']} already exists")
+            raise DuplicateKeyError(f"User with email {update_data['email']} already exists")
 
-    # จัดการเรื่องคำนำหน้าเมื่อมีการอัพเดต
     if "title_id" in update_data and update_data["title_id"]:
-        # กรณีเลือกคำนำหน้าที่มีอยู่ในระบบ
-        title = db.query(Title).filter(Title.title_id ==
-                                       update_data["title_id"]).first()
-        if title:
-            # ถ้าไม่ใช่ "อื่นๆ" ให้ล้างค่า prefix_other
-            if title.title_name != "อื่น ๆ" and "prefix_other" not in update_data:
-                update_data["prefix_other"] = None
+        title = db.query(Title).filter(Title.title_id == update_data["title_id"]).first()
+        if title and title.title_name != "อื่น ๆ" and "prefix_other" not in update_data:
+            update_data["prefix_other"] = None
 
-    # กรณีเลือก "อื่นๆ" และระบุคำนำหน้าเอง
     if "prefix_other" in update_data and update_data["prefix_other"]:
-        # ถ้าไม่ได้ระบุ title_id มา ให้กำหนดเป็น ID ของ "อื่น ๆ"
         if "title_id" not in update_data:
-            other_title_id = 1  # ID ของ "อื่น ๆ" ตามข้อมูล seed
-            update_data["title_id"] = other_title_id
+            update_data["title_id"] = 1  
 
-    # อัปเดตข้อมูล
     for key, value in update_data.items():
         setattr(db_user, key, value)
 

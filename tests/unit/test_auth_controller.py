@@ -86,7 +86,7 @@ def create_access_token(data: dict, expires_delta=None):
         payload["exp"] = datetime.utcnow() + expires_delta
     else:
         payload["exp"] = datetime.utcnow() + timedelta(minutes=60)
-    return jwt.encode(payload, "test_secret", algorithm="RS256")
+    return jwt.encode(payload, "test_secret", algorithm="HS256")
 
 def create_refresh_token(data: dict, expires_delta=None):
     """Mock create_refresh_token function"""
@@ -96,7 +96,7 @@ def create_refresh_token(data: dict, expires_delta=None):
         payload["exp"] = datetime.utcnow() + expires_delta
     else:
         payload["exp"] = datetime.utcnow() + timedelta(days=30)
-    return jwt.encode(payload, "test_secret", algorithm="RS256")
+    return jwt.encode(payload, "test_secret", algorithm="HS256")
 
 # Test fixtures พร้อม reporter
 @pytest.fixture
@@ -325,7 +325,7 @@ class TestTokenSecurity:
             assert len(token) > 10  # JWT should be reasonably long
             
             # ลองถอดรหัส token (ไม่ตรวจสอบ signature ในการทดสอบ)
-            decoded = jwt.decode(token, "test_secret", algorithms=["RS256"])
+            decoded = jwt.decode(token, "test_secret", algorithms=["HS256"])
             assert decoded["sub"] == "1"
             assert decoded["type"] == "access"
             assert "exp" in decoded
@@ -358,7 +358,7 @@ class TestTokenSecurity:
             assert len(token) > 10  # JWT should be reasonably long
             
             # ลองถอดรหัส token (ไม่ตรวจสอบ signature ในการทดสอบ)
-            decoded = jwt.decode(token, "test_secret", algorithms=["RS256"])
+            decoded = jwt.decode(token, "test_secret", algorithms=["HS256"])
             assert decoded["sub"] == "1"
             assert decoded["type"] == "refresh"
             assert "exp" in decoded
