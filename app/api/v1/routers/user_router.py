@@ -192,7 +192,7 @@ def process_frontend_user_data(data: Dict[str, Any]) -> Dict[str, Any]:
     return filtered_processed
 
 
-router.post("/register", response_model=FormatResponseModel)
+@router.post("/register", response_model=FormatResponseModel)
 async def register_new_user(
     user: UserCreate,
     db: Session = Depends(get_db),
