@@ -67,18 +67,6 @@ const CommitteeCompositionSettings = () => {
     }));
   }
 
-  // Helper: แปลง res_data เป็น object { groupName: { label, options } }
-  function groupNameOptionsFromResData(res_data) {
-    const result = {};
-    res_data.forEach((group) => {
-      result[group.name] = {
-        label: group.name,
-        options: mapDepartmentsToOptions(group.departments),
-      };
-    });
-    return result;
-  }
-
   const [stateEnterpriseOptions, setStateEnterpriseOptions] = useState([]);
   const [governmentOptions, setGovernmentOptions] = useState([]);
   const [otherOptions, setOtherOptions] = useState([]);

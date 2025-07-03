@@ -23,7 +23,9 @@ export default function HomeComponent() {
         <Homepage3 />
       </div>
       <Homepage4 />
-      <Homepage5 />
+      <div id="steps-news">
+        <Homepage5 />
+      </div>
       <div id="steps-ask">
         <Homepage6 />
       </div>

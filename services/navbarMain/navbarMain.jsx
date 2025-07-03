@@ -3,7 +3,7 @@ import Cookies from "js-cookie";
 import styles from "./NavbarMain.module.scss";
 import { useRouter } from "next/router";
 import MobileModal from "./MobileModal";
-import { showConfirm, alertSuccess, alertError } from '@utils/Alerts.js';
+import { showConfirm, alertSuccess, alertError } from "@utils/Alerts.js";
 
 export default function NavbarMain() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -58,28 +58,101 @@ export default function NavbarMain() {
         router.push("/");
       } catch (error) {
         console.error("Logout error:", error);
-        await alertError("ข้อผิดพลาด", "ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง");
+        await alertError(
+          "ข้อผิดพลาด",
+          "ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง"
+        );
       }
     }
   };
 
   const isAdminUser = () => {
     if (!userInfo || !userInfo.roles) return false;
-    const adminRoles = ['admin', 'admin_home', 'staff', 'supervisor', 'department'];
-    return userInfo.roles.some(role => adminRoles.includes(role));
+    const adminRoles = [
+      "admin",
+      "admin_home",
+      "staff",
+      "supervisor",
+      "department",
+    ];
+    return userInfo.roles.some((role) => adminRoles.includes(role));
   };
 
-  const handleStepsClick = (e) => {
+  const handleStepsClick = async (e) => {
     e.preventDefault();
-    const stepsSection = document.getElementById('steps-section');
-    if (stepsSection) {
-      stepsSection.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
+    if (router.pathname !== "/") {
+      // ไปหน้าหลักก่อน แล้วค่อย scroll หลังเปลี่ยนเสร็จ
+      await router.push("/");
+      // ใช้ setTimeout เพื่อให้ scroll หลัง DOM โหลดแล้ว (ในบางกรณี)
+      setTimeout(() => {
+        const stepsSection = document.getElementById("steps-section");
+        if (stepsSection) {
+          stepsSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 300);
+    } else {
+      const stepsSection = document.getElementById("steps-section");
+      if (stepsSection) {
+        stepsSection.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
     }
   };
-
+  const handleStepsClickAsk = async (e) => {
+    e.preventDefault();
+    if (router.pathname !== "/") {
+      // ไปหน้าหลักก่อน แล้วค่อย scroll หลังเปลี่ยนเสร็จ
+      await router.push("/");
+      // ใช้ setTimeout เพื่อให้ scroll หลัง DOM โหลดแล้ว (ในบางกรณี)
+      setTimeout(() => {
+        const stepsSection = document.getElementById("steps-ask");
+        if (stepsSection) {
+          stepsSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 300);
+    } else {
+      const stepsSection = document.getElementById("steps-ask");
+      if (stepsSection) {
+        stepsSection.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }
+  };
+  const handleStepsClickNews = async (e) => {
+    e.preventDefault();
+    if (router.pathname !== "/") {
+      // ไปหน้าหลักก่อน แล้วค่อย scroll หลังเปลี่ยนเสร็จ
+      await router.push("/");
+      // ใช้ setTimeout เพื่อให้ scroll หลัง DOM โหลดแล้ว (ในบางกรณี)
+      setTimeout(() => {
+        const stepsSection = document.getElementById("steps-news");
+        if (stepsSection) {
+          stepsSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 300);
+    } else {
+      const stepsSection = document.getElementById("steps-news");
+      if (stepsSection) {
+        stepsSection.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }
+  };
   const handleClickOutside = (event) => {
     if (profileRef.current && !profileRef.current.contains(event.target)) {
       setProfileDropdownOpen(false);
@@ -115,13 +188,13 @@ export default function NavbarMain() {
 
   useEffect(() => {
     if (isMobileModalOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     }
 
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     };
   }, [isMobileModalOpen]);
 
@@ -181,10 +254,7 @@ export default function NavbarMain() {
                   ติดตามผล
                 </button>
 
-                <button
-                  className={styles.dropdownItem}
-                  onClick={handleLogout}
-                >
+                <button className={styles.dropdownItem} onClick={handleLogout}>
                   ออกจากระบบ
                 </button>
               </div>
@@ -211,7 +281,13 @@ export default function NavbarMain() {
       <div className={styles.navbarContainer}>
         <nav className={styles.navbar}>
           <div className={styles.logoGroup}>
-            <img src="/logomain.png" alt="ตราครุฑ" className={styles.logo} />
+            <img
+              src="/logomain.png"
+              alt="ตราครุฑ"
+              className={styles.logo}
+              style={{ cursor: "pointer" }}
+              onClick={() => router.push("/")}
+            />
             <div className={styles.hamburger} onClick={toggleMobileModal}>
               <div className={styles.bar}></div>
               <div className={styles.bar}></div>
@@ -220,17 +296,29 @@ export default function NavbarMain() {
           </div>
 
           <div className={styles.menu}>
-            <a href="/" className={styles.menuItem}>หน้าหลัก</a>
-            <a href="#steps-section" className={styles.menuItem} onClick={handleStepsClick}>
+            <a href="/" className={styles.menuItem}>
+              หน้าหลัก
+            </a>
+            <a href="/" className={styles.menuItem} onClick={handleStepsClick}>
               ขั้นตอนการแจ้งเรื่องร้องทุกข์
             </a>
-            <a href="#" className={styles.menuItem}>ข่าวสาร</a>
-            <a href="#" className={styles.menuItem}>คำถามที่พบบ่อย</a>
+            <a
+              href="/"
+              className={styles.menuItem}
+              onClick={handleStepsClickNews}
+            >
+              ข่าวสาร
+            </a>
+            <a
+              href="/"
+              className={styles.menuItem}
+              onClick={handleStepsClickAsk}
+            >
+              คำถามที่พบบ่อย
+            </a>
           </div>
 
-          <div className={styles.buttonContainer}>
-            {renderDesktopButtons()}
-          </div>
+          <div className={styles.buttonContainer}>{renderDesktopButtons()}</div>
         </nav>
       </div>
 

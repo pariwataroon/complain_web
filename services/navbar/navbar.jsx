@@ -3,7 +3,7 @@ import styles from "./Navbar.module.scss";
 import { useRouter } from "next/router";
 import Cookies from "js-cookie";
 import MobileModal from "./MobileModal";
-import { showConfirm, alertSuccess, alertError } from '@utils/Alerts.js';
+import { showConfirm, alertSuccess, alertError } from "@utils/Alerts.js";
 
 export default function Navbar() {
   const [isMobileModalOpen, setMobileModalOpen] = useState(false);
@@ -52,7 +52,10 @@ export default function Navbar() {
         router.push("/");
       } catch (error) {
         console.error("Logout error:", error);
-        await alertError("ข้อผิดพลาด", "ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง");
+        await alertError(
+          "ข้อผิดพลาด",
+          "ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง"
+        );
       }
     }
   };
@@ -60,34 +63,51 @@ export default function Navbar() {
   const isAdminUser = () => {
     if (!userInfo || !userInfo.roles) return false;
 
-    const adminRoles = ['admin', 'admin_home', 'staff', 'supervisor', 'department'];
-    return userInfo.roles.some(role => adminRoles.includes(role));
+    const adminRoles = [
+      "admin",
+      "admin_home",
+      "staff",
+      "supervisor",
+      "department",
+    ];
+    return userInfo.roles.some((role) => adminRoles.includes(role));
   };
 
   const handleStepsClick = (e) => {
     e.preventDefault();
-    const stepsSection = document.getElementById('steps-section');
+    const stepsSection = document.getElementById("steps-section");
     if (stepsSection) {
       stepsSection.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
+        behavior: "smooth",
+        block: "start",
       });
     }
   };
 
   const handleStepsClickAsk = (e) => {
     e.preventDefault();
-    const stepsSection = document.getElementById('steps-ask');
+    const stepsSection = document.getElementById("steps-ask");
     if (stepsSection) {
       stepsSection.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  };
+
+  const handleStepsClickNews = (e) => {
+    e.preventDefault();
+    const stepsSection = document.getElementById("steps-news");
+    if (stepsSection) {
+      stepsSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
       });
     }
   };
 
   const toggleDropdown = () => {
-    setIsDropdownOpen(prev => !prev);
+    setIsDropdownOpen((prev) => !prev);
   };
 
   const toggleMobileModal = () => {
@@ -105,9 +125,9 @@ export default function Navbar() {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -125,13 +145,13 @@ export default function Navbar() {
 
   useEffect(() => {
     if (isMobileModalOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     }
 
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     };
   }, [isMobileModalOpen]);
 
@@ -152,13 +172,25 @@ export default function Navbar() {
             <a href="/" className={styles.menuItem}>
               หน้าหลัก
             </a>
-            <a href="#steps-section" className={styles.menuItem} onClick={handleStepsClick}>
+            <a
+              href="#steps-section"
+              className={styles.menuItem}
+              onClick={handleStepsClick}
+            >
               ขั้นตอนการแจ้งเรื่องร้องทุกข์
             </a>
-            <a href="#" className={styles.menuItem}>
+            <a
+              href="#"
+              className={styles.menuItem}
+              onClick={handleStepsClickNews}
+            >
               ข่าวสาร
             </a>
-            <a href="#" className={styles.menuItem} onClick={handleStepsClickAsk}>
+            <a
+              href="#"
+              className={styles.menuItem}
+              onClick={handleStepsClickAsk}
+            >
               คำถามที่พบบ่อย
             </a>
           </div>
@@ -167,10 +199,7 @@ export default function Navbar() {
             {userInfo ? (
               // ✅ เปลี่ยนเป็น dropdown
               <div className={styles.userDropdown} ref={dropdownRef}>
-                <button
-                  className={styles.userToggle}
-                  onClick={toggleDropdown}
-                >
+                <button className={styles.userToggle} onClick={toggleDropdown}>
                   <img
                     src="/icons/userprofile.png"
                     alt="โปรไฟล์ผู้ใช้"
@@ -180,7 +209,9 @@ export default function Navbar() {
                     สวัสดี คุณ {userInfo.first_name}
                   </span>
                   <svg
-                    className={`${styles.dropdownArrow} ${isDropdownOpen ? styles.open : ''}`}
+                    className={`${styles.dropdownArrow} ${
+                      isDropdownOpen ? styles.open : ""
+                    }`}
                     width="16"
                     height="16"
                     viewBox="0 0 24 24"
@@ -198,7 +229,12 @@ export default function Navbar() {
                         className={styles.dropdownItem}
                         onClick={handleAdminClick}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
                           <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
                         </svg>
                         จัดการระบบ
@@ -209,7 +245,12 @@ export default function Navbar() {
                       className={styles.dropdownItem}
                       onClick={handleComplaintClick}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
                         <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
                       </svg>
                       แจ้งเรื่องร้องทุกข์
@@ -219,7 +260,12 @@ export default function Navbar() {
                       className={styles.dropdownItem}
                       onClick={handleFollowUpClick}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
                         <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" />
                       </svg>
                       ติดตามผล
@@ -231,7 +277,12 @@ export default function Navbar() {
                       className={styles.dropdownItem}
                       onClick={handleLogoutClick}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
                         <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.59L17 17l5-5z" />
                       </svg>
                       ออกจากระบบ
