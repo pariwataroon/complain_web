@@ -37,8 +37,8 @@ const breadcrumbItems = [
 // ฟังก์ชันแปลงสถานะอังกฤษเป็นไทย
 const getThaiStatus = (englishStatus) => {
   const statusMap = {
-    pending: "อยู่ระหว่างการแจ้งผล",
-    waiting: "รอหน่วยงานตอบกลับ",
+    submitted: "อยู่ระหว่างการแจ้งผล",
+    sent_to_agency: "รอหน่วยงานตอบกลับ",
     stop: "ยุติ",
     received: "รับเรื่องแล้ว",
     investigating: "กำลังตรวจสอบ",
@@ -66,8 +66,8 @@ const getStatusFromQuery = (query) => {
 
   // ตรวจสอบ query parameters ทั้งหมดเพื่อหาสถานะ
   const statusKeys = [
-    "waiting",
-    "pending",
+    "submitted",
+    "sent_to_agency",
     "stop",
     "received",
     "investigating",
@@ -92,15 +92,15 @@ const getStatusFromQuery = (query) => {
 const getIconForStatus = (englishStatus) => {
   console.log("🎯 Getting icon for status:", englishStatus); // Debug log
 
-  // เฉพาะสถานะที่ยังรอการดำเนินการเท่านั้นที่ใช้ folder icon
-  const pendingStatuses = ["pending", "waiting"];
+  // เฉพาะสถานะ submitted เท่านั้นที่ใช้ folder icon
+  const folderStatuses = ["submitted"];
 
-  if (pendingStatuses.includes(englishStatus)) {
+  if (folderStatuses.includes(englishStatus)) {
     console.log("📁 Using Folder icon for:", englishStatus); // Debug log
-    return <FolderIcon sx={{ color: "#1223A5", fontSize: 24 }} />; // ✅ pending, waiting ใช้ Folder icon สี #1223A5
+    return <FolderIcon sx={{ color: "#1223A5", fontSize: 24 }} />; // ✅ submitted ใช้ Folder icon สี #1223A5
   } else {
     console.log("✏️ Using Edit icon for:", englishStatus); // Debug log
-    // สถานะอื่น ๆ รวมทั้ง "stop" ใช้ Edit icon สี #1223A5
+    // สถานะอื่น ๆ รวมทั้ง "sent_to_agency" และ "stop" ใช้ Edit icon สี #1223A5
     return (
       <img
         src="/icons/Edit.png"
@@ -294,6 +294,15 @@ const FollowComp = () => {
   console.log("🆔 ID:", id);
   console.log("📊 Detected Status:", englishStatus);
 
+  const getHeadersForSection = (section, currentStatus) => {
+    // If current status is sent_to_agency, replace "เอกสารแนบ" with "การจัดการ"
+    if (currentStatus === "sent_to_agency") {
+      return section.headers.map((header) =>
+        header === "เอกสารแนบ" ? "การจัดการ" : header
+      );
+    }
+    return section.headers;
+  };
   // Mock header info - ใช้สถานะที่ดักได้จาก query และแปลงเป็นไทย
   const mockHeader = {
     responsibleOfficer: "นายเป็นสุข เป็นสุขเถิด",
@@ -310,7 +319,6 @@ const FollowComp = () => {
   return (
     <Box>
       <BreadcrumbsService items={breadcrumbItems} />
-
       {/* Top gradient bar */}
       <Box
         sx={{
@@ -327,7 +335,6 @@ const FollowComp = () => {
           ติดตามผลการดำเนินการ
         </Typography>
       </Box>
-
       {/* Info rows */}
       {/* แก้ไข: ใช้ icon ตามสถานะภาษาอังกฤษ */}
       <Box
@@ -354,7 +361,6 @@ const FollowComp = () => {
           {getIconForStatus(mockHeader.englishStatus)}
         </IconButton>
       </Box>
-
       <Box sx={{ background: "#FBEAE9", py: 2, px: 3 }}>
         ชื่อผู้ร้อง: {mockHeader.complainantName}
       </Box>
@@ -362,71 +368,119 @@ const FollowComp = () => {
         ขั้นตอนดำเนินการครั้งแรก
       </Box>
 
-      {/* First 5 dynamic sections */}
-      {firstPhases.map((section) => (
-        <Box
-          key={section.status}
-          sx={{ border: "1px solid #E0E0E0", borderRadius: 1 }}
-        >
+      {firstPhases.map((section) => {
+        // Get headers based on current status
+        const currentHeaders = getHeadersForSection(section, englishStatus);
+
+        return (
           <Box
-            sx={{
-              px: 3,
-              background: "#EAF5FF",
-              py: 1,
-            }}
+            key={section.status}
+            sx={{ border: "1px solid #E0E0E0", borderRadius: 1 }}
           >
-            <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
-              {section.title}
-            </Typography>
-          </Box>
-          <Table>
-            <TableHead>
-              <TableRow>
-                {section.headers.map((h) => (
-                  <TableCell
-                    key={h}
-                    sx={{ background: "#fff", fontWeight: "bold" }}
-                  >
-                    {h}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {section.rows.map((row, idx) => (
-                <TableRow key={idx}>
-                  {section.headers.map((h) => (
-                    <TableCell key={h}>
-                      {h === "เอกสารแนบ" ? (
-                        <IconButton
-                          size="small"
-                          onClick={() => handleOpenDocument(row[h])}
-                          sx={{
-                            color: "#1976d2",
-                            "&:hover": {
-                              backgroundColor: "rgba(25, 118, 210, 0.04)",
-                            },
-                          }}
-                        >
-                          {getIconForStatus(mockHeader.englishStatus)}
-                        </IconButton>
-                      ) : (
-                        row[h] ?? "-"
-                      )}
+            <Box
+              sx={{
+                px: 3,
+                background: "#EAF5FF",
+                py: 1,
+              }}
+            >
+              <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
+                {section.title}
+              </Typography>
+            </Box>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  {currentHeaders.map((h) => (
+                    <TableCell
+                      key={h}
+                      sx={{ background: "#fff", fontWeight: "bold" }}
+                    >
+                      {h}
                     </TableCell>
                   ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Box>
-      ))}
+              </TableHead>
+              <TableBody>
+                {section.rows.map((row, idx) => (
+                  <TableRow key={idx}>
+                    {currentHeaders.map((h, headerIdx) => {
+                      // Get the original header name to access row data
+                      const originalHeader = section.headers[headerIdx];
 
+                      return (
+                        <TableCell key={h}>
+                          {originalHeader === "เอกสารแนบ" ||
+                          h === "การจัดการ" ? (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                // Check if this is the "ส่งหน่วยงานที่เกี่ยวข้อง" section and status is sent_to_agency
+                                if (
+                                  section.status === STATUS.FORWARDED &&
+                                  englishStatus === "sent_to_agency"
+                                ) {
+                                  // Navigate to the forward-to-agency edit page
+                                  router.push("/admin/edit/forward-to-agency/");
+                                }
+                                // Check if this is the "แจ้งผู้ร้องเรียนส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น" section and status is sent_to_agency
+                                else if (
+                                  section.status === STATUS.INITIAL_NOTIFY &&
+                                  englishStatus === "sent_to_agency"
+                                ) {
+                                  // Navigate to the initial notification edit page
+                                  router.push(
+                                    "/admin/edit/initial-notification-to-complainant-or-agency/"
+                                  );
+                                }
+                                // Check if this is the "ขอทราบผลการพิจารณา / ผลความคืบหน้า" section and status is sent_to_agency
+                                else if (
+                                  section.status === STATUS.REQUEST_UPDATE &&
+                                  englishStatus === "sent_to_agency"
+                                ) {
+                                  // Navigate to the request result or progress edit page
+                                  router.push(
+                                    "/admin/edit/request-result-or-progress/"
+                                  );
+                                }
+                                // Check if this is the "หนังสือแจ้งผลพิจารณาหน่วยงาน" section and status is sent_to_agency
+                                else if (
+                                  section.status === STATUS.AGENCY_REPORT &&
+                                  englishStatus === "sent_to_agency"
+                                ) {
+                                  // Navigate to the report edit page
+                                  router.push("/admin/edit/report/");
+                                } else {
+                                  // Default behavior for other cases
+                                  handleOpenDocument(row[originalHeader]);
+                                }
+                              }}
+                              sx={{
+                                color: "#1976d2",
+                                "&:hover": {
+                                  backgroundColor: "rgba(25, 118, 210, 0.04)",
+                                },
+                              }}
+                            >
+                              {getIconForStatus(mockHeader.englishStatus)}
+                            </IconButton>
+                          ) : (
+                            row[originalHeader] ?? "-"
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        );
+      })}
       {/* Yellow in-progress bar */}
       <Box sx={{ background: "#FFF9C4", py: 2, px: 3, borderRadius: 1 }}>
         ขั้นตอนอยู่ระหว่างดำเนินการ
       </Box>
-
       {/* Final (status 6) section */}
       {finalPhase && (
         <Box sx={{ border: "1px solid #E0E0E0", borderRadius: 1 }}>
@@ -444,7 +498,7 @@ const FollowComp = () => {
           <Table>
             <TableHead>
               <TableRow>
-                {finalPhase.headers.map((h) => (
+                {getHeadersForSection(finalPhase, englishStatus).map((h) => (
                   <TableCell
                     key={h}
                     sx={{ background: "#E3F2FD", fontWeight: "bold" }}
@@ -457,26 +511,47 @@ const FollowComp = () => {
             <TableBody>
               {finalPhase.rows.map((row, idx) => (
                 <TableRow key={idx}>
-                  {finalPhase.headers.map((h) => (
-                    <TableCell key={h}>
-                      {h === "เอกสารแนบ" ? (
-                        <IconButton
-                          size="small"
-                          onClick={() => handleOpenDocument(row[h])}
-                          sx={{
-                            color: "#1976d2",
-                            "&:hover": {
-                              backgroundColor: "rgba(25, 118, 210, 0.04)",
-                            },
-                          }}
-                        >
-                          {getIconForStatus(mockHeader.englishStatus)}
-                        </IconButton>
-                      ) : (
-                        row[h] ?? "-"
-                      )}
-                    </TableCell>
-                  ))}
+                  {getHeadersForSection(finalPhase, englishStatus).map(
+                    (h, headerIdx) => {
+                      const originalHeader = finalPhase.headers[headerIdx];
+
+                      return (
+                        <TableCell key={h}>
+                          {originalHeader === "เอกสารแนบ" ||
+                          h === "การจัดการ" ? (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                // Check if this is the "แจ้งผลการให้ผู้เกี่ยวข้องทราบ" section and status is sent_to_agency
+                                if (
+                                  finalPhase.status === STATUS.FINAL_NOTIFY &&
+                                  englishStatus === "sent_to_agency"
+                                ) {
+                                  // Navigate to the inform related parties edit page
+                                  router.push(
+                                    "/admin/edit/inform-related-parties/"
+                                  );
+                                } else {
+                                  // Default behavior for other cases
+                                  handleOpenDocument(row[originalHeader]);
+                                }
+                              }}
+                              sx={{
+                                color: "#1976d2",
+                                "&:hover": {
+                                  backgroundColor: "rgba(25, 118, 210, 0.04)",
+                                },
+                              }}
+                            >
+                              {getIconForStatus(mockHeader.englishStatus)}
+                            </IconButton>
+                          ) : (
+                            row[originalHeader] ?? "-"
+                          )}
+                        </TableCell>
+                      );
+                    }
+                  )}
                 </TableRow>
               ))}
             </TableBody>

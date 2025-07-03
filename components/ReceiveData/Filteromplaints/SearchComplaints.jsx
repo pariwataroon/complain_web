@@ -5,8 +5,13 @@ import { GetComplaintByID } from "@pages/api/complaint/complaint";
 import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/ComplaintPersonalFormAPI";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import ButtonService from "@services/ButtonService/ButtonService";
-import { GetAllSelectComplaintTypes, UsersSearchByRole } from "@pages/api/allselect/allselect";
-import DateThaiPickerService, { ControlledDateThaiPickerService } from "@services/DateThaiPickerService/DateThaiPickerService";
+import {
+  GetAllSelectComplaintTypes,
+  UsersSearchByRole,
+} from "@pages/api/allselect/allselect";
+import DateThaiPickerService, {
+  ControlledDateThaiPickerService,
+} from "@services/DateThaiPickerService/DateThaiPickerService";
 
 import { FormProvider, useForm } from "react-hook-form";
 import { alertError, alertSuccess } from "@utils/Alerts";
@@ -44,7 +49,8 @@ const getComplainantTypeAndData = (data) => {
 const getDelegateTypeAndData = (data) => {
   if (data?.signer) return { type: "signer", data: data.signer };
   if (data?.delegate) return { type: "delegate", data: data.delegate };
-  if (data?.idCard && (data?.name || data?.signatoryName)) return { type: "delegate", data };
+  if (data?.idCard && (data?.name || data?.signatoryName))
+    return { type: "delegate", data };
   return { type: "unknown", data: data || {} };
 };
 
@@ -172,7 +178,8 @@ const SearchComplaints = () => {
       defaultDelegateRef.current = dData;
 
       const step2General = data?.step2?.general || {};
-      const { type: rType, data: rData } = getRespondentTypeAndData(step2General);
+      const { type: rType, data: rData } =
+        getRespondentTypeAndData(step2General);
       setRespondentType(rType);
       setRespondentData(rData);
       defaultStep2Ref.current = rData;
@@ -183,55 +190,88 @@ const SearchComplaints = () => {
 
       const getComplaintTypeText = (id) => {
         if (!id || !complaintTypes.length) return "";
-        const type = complaintTypes.find(t => t.value === id);
+        const type = complaintTypes.find((t) => t.value === id);
         return type ? type.label : "";
       };
 
-      const complaintTypeId = assignmentForm.complaint_type_id || step3Data.complaintType || "";
+      const complaintTypeId =
+        assignmentForm.complaint_type_id || step3Data.complaintType || "";
       const complaintTypeText = getComplaintTypeText(complaintTypeId);
 
       const step3DataWithDefaults = {
         ...step3Data,
-        referenceNumber1: assignmentForm.reference_number || step3Data.referenceNumber1 || "",
-        referenceDate1: assignmentForm.reference_date || step3Data.referenceDate1 || "",
-        referenceNumber2: assignmentForm.reference_number2 || step3Data.referenceNumber2 || "",
-        referenceDate2: assignmentForm.reference_date2 || step3Data.referenceDate2 || "",
-        referenceNumber3: assignmentForm.reference_number3 || step3Data.referenceNumber3 || "",
-        referenceDate3: assignmentForm.reference_date3 || step3Data.referenceDate3 || "",
-        referenceNumber4: assignmentForm.complaint_number || assignmentForm.reference_number4 || step3Data.referenceNumber4 || "",
-        referenceDate4: assignmentForm.reference_date4 || step3Data.referenceDate4 || "",
-        documentNumber: assignmentForm.document_number || step3Data.documentNumber || "",
-        documentDate: assignmentForm.document_date || step3Data.documentDate || "",
-        senderAgency: assignmentForm.agency_sender || step3Data.senderAgency || "",
-        securityLevel: assignmentForm.confidentiality_level || step3Data.securityLevel || "normal",
-        urgencyLevel: assignmentForm.urgency_level || step3Data.urgencyLevel || "normal",
+        referenceNumber1:
+          assignmentForm.reference_number || step3Data.referenceNumber1 || "",
+        referenceDate1:
+          assignmentForm.reference_date || step3Data.referenceDate1 || "",
+        referenceNumber2:
+          assignmentForm.reference_number2 || step3Data.referenceNumber2 || "",
+        referenceDate2:
+          assignmentForm.reference_date2 || step3Data.referenceDate2 || "",
+        referenceNumber3:
+          assignmentForm.reference_number3 || step3Data.referenceNumber3 || "",
+        referenceDate3:
+          assignmentForm.reference_date3 || step3Data.referenceDate3 || "",
+        referenceNumber4:
+          assignmentForm.complaint_number ||
+          assignmentForm.reference_number4 ||
+          step3Data.referenceNumber4 ||
+          "",
+        referenceDate4:
+          assignmentForm.reference_date4 || step3Data.referenceDate4 || "",
+        documentNumber:
+          assignmentForm.document_number || step3Data.documentNumber || "",
+        documentDate:
+          assignmentForm.document_date || step3Data.documentDate || "",
+        senderAgency:
+          assignmentForm.agency_sender || step3Data.senderAgency || "",
+        securityLevel:
+          assignmentForm.confidentiality_level ||
+          step3Data.securityLevel ||
+          "normal",
+        urgencyLevel:
+          assignmentForm.urgency_level || step3Data.urgencyLevel || "normal",
 
         complaintType: complaintTypeId,
         complaintTypeName: complaintTypeText,
         complaintTypeData: {
           id: complaintTypeId,
           name: complaintTypeText,
-          ...(complaintTypes.find(t => t.value === complaintTypeId) || {})
+          ...(complaintTypes.find((t) => t.value === complaintTypeId) || {}),
         },
 
-        complaintSubType: assignmentForm.complaint_type || step3Data.complaintSubType || "",
-        additionalReference1: assignmentForm.additional_reference_number1 || step3Data.additionalReference1 || "",
-        additionalReferenceDate1: assignmentForm.additional_reference_date1 || step3Data.additionalReferenceDate1 || "",
-        additionalReference2: assignmentForm.additional_reference_number2 || step3Data.additionalReference2 || "",
-        additionalReferenceDate2: assignmentForm.additional_reference_date2 || step3Data.additionalReferenceDate2 || "",
+        complaintSubType:
+          assignmentForm.complaint_type || step3Data.complaintSubType || "",
+        additionalReference1:
+          assignmentForm.additional_reference_number1 ||
+          step3Data.additionalReference1 ||
+          "",
+        additionalReferenceDate1:
+          assignmentForm.additional_reference_date1 ||
+          step3Data.additionalReferenceDate1 ||
+          "",
+        additionalReference2:
+          assignmentForm.additional_reference_number2 ||
+          step3Data.additionalReference2 ||
+          "",
+        additionalReferenceDate2:
+          assignmentForm.additional_reference_date2 ||
+          step3Data.additionalReferenceDate2 ||
+          "",
         subject: assignmentForm.subject || step3Data.subject || "",
-        complaintChannel: "เว็บไซต์ศูนย์เรื่องร้องทุกข์"
+        complaintChannel: "เว็บไซต์ศูนย์เรื่องร้องทุกข์",
       };
 
       if (assignmentForm.complaint_filing_type) {
         const typeMap = {
-          "new": "new",
-          "additional": "additional",
-          "anonymous": "committee"
+          new: "new",
+          additional: "additional",
+          anonymous: "committee",
         };
-        setComplaintFilingType(typeMap[assignmentForm.complaint_filing_type] || "new");
+        setComplaintFilingType(
+          typeMap[assignmentForm.complaint_filing_type] || "new"
+        );
       }
-
 
       defaultStep3Ref.current = step3DataWithDefaults;
       defaultStep4Ref.current = step4Data;
@@ -241,7 +281,6 @@ const SearchComplaints = () => {
       step2Methods.reset(rData);
       step3Methods.reset(step3DataWithDefaults);
       step4Methods.reset(step4Data);
-
     } catch (error) {
       console.error("Load complaints failed", error);
       setError("เกิดข้อผิดพลาดในการโหลดข้อมูล");
@@ -264,7 +303,10 @@ const SearchComplaints = () => {
     }
 
     // ประเภทเรื่องย่อย *
-    if (!step3Data.complaintSubType || step3Data.complaintSubType.trim() === "") {
+    if (
+      !step3Data.complaintSubType ||
+      step3Data.complaintSubType.trim() === ""
+    ) {
       errors.complaintSubType = "กรุณาเลือกประเภทเรื่องย่อย";
       hasErrors = true;
     }
@@ -276,7 +318,10 @@ const SearchComplaints = () => {
     }
 
     // เลข สป.กค. *
-    if (!step3Data.referenceNumber1 || step3Data.referenceNumber1.trim() === "") {
+    if (
+      !step3Data.referenceNumber1 ||
+      step3Data.referenceNumber1.trim() === ""
+    ) {
       errors.referenceNumber1 = "กรุณากรอกเลข สป.กค.";
       hasErrors = true;
     }
@@ -288,7 +333,10 @@ const SearchComplaints = () => {
     }
 
     // เลข สตป. *
-    if (!step3Data.referenceNumber3 || step3Data.referenceNumber3.trim() === "") {
+    if (
+      !step3Data.referenceNumber3 ||
+      step3Data.referenceNumber3.trim() === ""
+    ) {
       errors.referenceNumber3 = "กรุณากรอกเลข สตป.";
       hasErrors = true;
     }
@@ -300,7 +348,10 @@ const SearchComplaints = () => {
     }
 
     // เลข สรร. (สารบัญ) *
-    if (!step3Data.referenceNumber4 || step3Data.referenceNumber4.trim() === "") {
+    if (
+      !step3Data.referenceNumber4 ||
+      step3Data.referenceNumber4.trim() === ""
+    ) {
       errors.referenceNumber4 = "กรุณากรอกเลข สรร. (สารบัญ)";
       hasErrors = true;
     }
@@ -312,7 +363,10 @@ const SearchComplaints = () => {
     }
 
     // เจ้าหน้าที่ผู้รับผิดชอบ *
-    if (!step4Data.responsibleOfficer || step4Data.responsibleOfficer.trim() === "") {
+    if (
+      !step4Data.responsibleOfficer ||
+      step4Data.responsibleOfficer.trim() === ""
+    ) {
       errors.responsibleOfficer = "กรุณาเลือกเจ้าหน้าที่ผู้รับผิดชอบ";
       hasErrors = true;
     }
@@ -354,28 +408,30 @@ const SearchComplaints = () => {
     const step3Data = step3Methods.getValues();
     const step4Data = step4Methods.getValues();
 
+    const selectedOfficer = staffUsers.find(
+      (user) => user.value === step4Data.responsibleOfficer
+    );
 
-    const selectedOfficer = staffUsers.find(user => user.value === step4Data.responsibleOfficer);
-
-    const responsibleOfficerData = selectedOfficer ? {
-      id: selectedOfficer.value,
-      name: selectedOfficer.label,
-      fullName: selectedOfficer.fullName || "",
-      email: selectedOfficer.email || "",
-      roles: selectedOfficer.roles || []
-    } : {
-      id: step4Data.responsibleOfficer || "",
-      name: "",
-      fullName: "",
-      email: "",
-      roles: []
-    };
-
+    const responsibleOfficerData = selectedOfficer
+      ? {
+          id: selectedOfficer.value,
+          name: selectedOfficer.label,
+          fullName: selectedOfficer.fullName || "",
+          email: selectedOfficer.email || "",
+          roles: selectedOfficer.roles || [],
+        }
+      : {
+          id: step4Data.responsibleOfficer || "",
+          name: "",
+          fullName: "",
+          email: "",
+          roles: [],
+        };
 
     const enhancedStep4Data = {
       ...step4Data,
       responsibleOfficer: responsibleOfficerData,
-      responsibleOfficerId: step4Data.responsibleOfficer
+      responsibleOfficerId: step4Data.responsibleOfficer,
     };
 
     const complaintFilingData = {
@@ -385,7 +441,7 @@ const SearchComplaints = () => {
       additional_reference_number1: step3Data.additionalReference1 || "",
       additional_reference_date1: step3Data.additionalReferenceDate1 || "",
       additional_reference_number2: step3Data.additionalReference2 || "",
-      additional_reference_date2: step3Data.additionalReferenceDate2 || ""
+      additional_reference_date2: step3Data.additionalReferenceDate2 || "",
     };
 
     const submitData = {
@@ -394,27 +450,25 @@ const SearchComplaints = () => {
         general: {
           general: generalData,
           delegate: defaultDelegateRef.current ? delegateData : null,
-        }
+        },
       },
       step2: {
         general: {
-          individual: step2Data
-        }
+          individual: step2Data,
+        },
       },
       step3: {
         general: {
           ...step3Data,
           complaintType: step3Data.complaintType,
           complaintFilingType: complaintFilingType,
-          ...complaintFilingData
-        }
+          ...complaintFilingData,
+        },
       },
       step4: {
-        general: enhancedStep4Data
+        general: enhancedStep4Data,
       },
     };
-
-
 
     router.push({
       pathname: "/admin/edit/search/Filteromplaints/SearchComplaintsPreview",
@@ -431,7 +485,7 @@ const SearchComplaints = () => {
 
     // Clear validation errors when changing
     if (showValidation) {
-      setValidationErrors(prev => {
+      setValidationErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors.complaintType;
         return newErrors;
@@ -462,7 +516,7 @@ const SearchComplaints = () => {
 
   const handleFieldChange = (fieldName) => {
     if (showValidation && validationErrors[fieldName]) {
-      setValidationErrors(prev => {
+      setValidationErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[fieldName];
         return newErrors;
@@ -524,23 +578,36 @@ const SearchComplaints = () => {
           <div className={styles.contentContainer}>
             {/* Tab Navigation - แสดงเพื่อความสวยงาม */}
             <div className={styles.tabNavV2}>
-              <div className={`${styles.tabV2} ${complainantType === "individual" ? styles.activeV2 : ""}`}>
+              <div
+                className={`${styles.tabV2} ${
+                  complainantType === "individual" ? styles.activeV2 : ""
+                }`}
+              >
                 บุคคลทั่วไป
               </div>
-              <div className={`${styles.tabV2} ${complainantType === "corporate" ? styles.activeV2 : ""}`}>
+              <div
+                className={`${styles.tabV2} ${
+                  complainantType === "corporate" ? styles.activeV2 : ""
+                }`}
+              >
                 นิติบุคคล
               </div>
-              <div className={`${styles.tabV2} ${complainantType === "government" ? styles.activeV2 : ""}`}>
+              <div
+                className={`${styles.tabV2} ${
+                  complainantType === "government" ? styles.activeV2 : ""
+                }`}
+              >
                 หน่วยงานของรัฐ
               </div>
               <div
                 className={styles.underlineBarV2}
                 style={{
-                  background: complainantType === "corporate"
-                    ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
-                    : complainantType === "government"
+                  background:
+                    complainantType === "corporate"
+                      ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
+                      : complainantType === "government"
                       ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
-                      : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)"
+                      : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)",
                 }}
               />
             </div>
@@ -551,13 +618,19 @@ const SearchComplaints = () => {
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
                     <h3 className={styles.sectionTitle}>
-                      {complainantType === "corporate" ? "ข้อมูลผู้ร้องทุกข์ (นิติบุคคล)" : "ข้อมูลผู้ร้องทุกข์"}
+                      {complainantType === "corporate"
+                        ? "ข้อมูลผู้ร้องทุกข์ (นิติบุคคล)"
+                        : "ข้อมูลผู้ร้องทุกข์"}
                     </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
                       data={complainantData}
-                      formType={complainantType === "corporate" ? "corporate" : "individual"}
+                      formType={
+                        complainantType === "corporate"
+                          ? "corporate"
+                          : "individual"
+                      }
                     />
                   </div>
                 </div>
@@ -568,13 +641,17 @@ const SearchComplaints = () => {
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
                     <h3 className={styles.sectionTitle}>
-                      {delegateType === "signer" ? "ข้อมูลผู้มีอำนาจลงนาม" : "ข้อมูลผู้รับมอบอำนาจร้องทุกข์"}
+                      {delegateType === "signer"
+                        ? "ข้อมูลผู้มีอำนาจลงนาม"
+                        : "ข้อมูลผู้รับมอบอำนาจร้องทุกข์"}
                     </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
                       data={delegateData}
-                      formType={delegateType === "signer" ? "signer" : "delegate"}
+                      formType={
+                        delegateType === "signer" ? "signer" : "delegate"
+                      }
                     />
                   </div>
                 </div>
@@ -582,23 +659,36 @@ const SearchComplaints = () => {
 
               {/* Tab Navigation for Step 2 */}
               <div className={styles.tabNavV2}>
-                <div className={`${styles.tabV2} ${respondentType === "individual" ? styles.activeV2 : ""}`}>
+                <div
+                  className={`${styles.tabV2} ${
+                    respondentType === "individual" ? styles.activeV2 : ""
+                  }`}
+                >
                   บุคคลทั่วไป
                 </div>
-                <div className={`${styles.tabV2} ${respondentType === "corporate" ? styles.activeV2 : ""}`}>
+                <div
+                  className={`${styles.tabV2} ${
+                    respondentType === "corporate" ? styles.activeV2 : ""
+                  }`}
+                >
                   นิติบุคคล
                 </div>
-                <div className={`${styles.tabV2} ${respondentType === "government" ? styles.activeV2 : ""}`}>
+                <div
+                  className={`${styles.tabV2} ${
+                    respondentType === "government" ? styles.activeV2 : ""
+                  }`}
+                >
                   หน่วยงานของรัฐ
                 </div>
                 <div
                   className={styles.underlineBarV2}
                   style={{
-                    background: respondentType === "corporate"
-                      ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
-                      : respondentType === "government"
+                    background:
+                      respondentType === "corporate"
+                        ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
+                        : respondentType === "government"
                         ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
-                        : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)"
+                        : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)",
                   }}
                 />
               </div>
@@ -611,8 +701,8 @@ const SearchComplaints = () => {
                       {respondentType === "corporate"
                         ? "ข้อมูลผู้ถูกร้องเรียน (นิติบุคคล)"
                         : respondentType === "government"
-                          ? "ข้อมูลหน่วยงานของรัฐที่ถูกร้องเรียน"
-                          : "ข้อมูลผู้ถูกร้องเรียน"}
+                        ? "ข้อมูลหน่วยงานของรัฐที่ถูกร้องเรียน"
+                        : "ข้อมูลผู้ถูกร้องเรียน"}
                     </h3>
                   </div>
                   <div className={styles.sectionContent}>
@@ -628,22 +718,29 @@ const SearchComplaints = () => {
               <FormProvider {...step3Methods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>ข้อมูลเรื่องร้องทุกข์</h3>
+                    <h3 className={styles.sectionTitle}>
+                      ข้อมูลเรื่องร้องทุกข์
+                    </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     {/* Row 1: ประเภทเรื่องร้องเรียน, ประเภทเรื่องย่อย, ช่องทางเรื่องร้องเรียน */}
                     <div className={styles.fieldRow}>
                       <div className={styles.fieldGroup}>
                         <label>
-                          ประเภทเรื่องร้องเรียน <span className={styles.required}>*</span>
+                          ประเภทเรื่องร้องเรียน{" "}
+                          <span className={styles.required}>*</span>
                         </label>
                         <select
                           {...step3Methods.register("complaintType", {
                             onChange: (e) => {
                               handleFieldChange("complaintType");
-                            }
+                            },
                           })}
-                          className={hasFieldError("complaintType") ? styles.errorField : ""}
+                          className={
+                            hasFieldError("complaintType")
+                              ? styles.errorField
+                              : ""
+                          }
                         >
                           <option value="">เลือกประเภทเรื่องร้องเรียน</option>
                           {complaintTypes.map((type) => (
@@ -653,25 +750,35 @@ const SearchComplaints = () => {
                           ))}
                         </select>
                         {hasFieldError("complaintType") && (
-                          <span className={styles.errorText}>{getFieldError("complaintType")}</span>
+                          <span className={styles.errorText}>
+                            {getFieldError("complaintType")}
+                          </span>
                         )}
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>
-                          ประเภทเรื่องย่อย <span className={styles.required}>*</span>
+                          ประเภทเรื่องย่อย{" "}
+                          <span className={styles.required}>*</span>
                         </label>
                         <select
                           {...step3Methods.register("complaintSubType", {
-                            onChange: () => handleFieldChange("complaintSubType")
+                            onChange: () =>
+                              handleFieldChange("complaintSubType"),
                           })}
-                          className={hasFieldError("complaintSubType") ? styles.errorField : ""}
+                          className={
+                            hasFieldError("complaintSubType")
+                              ? styles.errorField
+                              : ""
+                          }
                         >
                           <option value="">เลือกประเภทเรื่องย่อย</option>
                           <option value="suggestion">ข้อเสนอแนะ</option>
                           <option value="complaint">ข้อร้องเรียน</option>
                         </select>
                         {hasFieldError("complaintSubType") && (
-                          <span className={styles.errorText}>{getFieldError("complaintSubType")}</span>
+                          <span className={styles.errorText}>
+                            {getFieldError("complaintSubType")}
+                          </span>
                         )}
                       </div>
                       <div className={styles.fieldGroup}>
@@ -694,13 +801,17 @@ const SearchComplaints = () => {
                         <input
                           type="text"
                           {...step3Methods.register("subject", {
-                            onChange: () => handleFieldChange("subject")
+                            onChange: () => handleFieldChange("subject"),
                           })}
-                          className={hasFieldError("subject") ? styles.errorField : ""}
+                          className={
+                            hasFieldError("subject") ? styles.errorField : ""
+                          }
                           placeholder="กรุณากรอกเรื่อง"
                         />
                         {hasFieldError("subject") && (
-                          <span className={styles.errorText}>{getFieldError("subject")}</span>
+                          <span className={styles.errorText}>
+                            {getFieldError("subject")}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -714,13 +825,20 @@ const SearchComplaints = () => {
                         <input
                           type="text"
                           {...step3Methods.register("referenceNumber1", {
-                            onChange: () => handleFieldChange("referenceNumber1")
+                            onChange: () =>
+                              handleFieldChange("referenceNumber1"),
                           })}
-                          className={hasFieldError("referenceNumber1") ? styles.errorField : ""}
+                          className={
+                            hasFieldError("referenceNumber1")
+                              ? styles.errorField
+                              : ""
+                          }
                           placeholder="กรุณากรอกเลข สป.กค."
                         />
                         {hasFieldError("referenceNumber1") && (
-                          <span className={styles.errorText}>{getFieldError("referenceNumber1")}</span>
+                          <span className={styles.errorText}>
+                            {getFieldError("referenceNumber1")}
+                          </span>
                         )}
                       </div>
                       <div className={styles.fieldGroupDate}>
@@ -764,13 +882,20 @@ const SearchComplaints = () => {
                         <input
                           type="text"
                           {...step3Methods.register("referenceNumber3", {
-                            onChange: () => handleFieldChange("referenceNumber3")
+                            onChange: () =>
+                              handleFieldChange("referenceNumber3"),
                           })}
-                          className={hasFieldError("referenceNumber3") ? styles.errorField : ""}
+                          className={
+                            hasFieldError("referenceNumber3")
+                              ? styles.errorField
+                              : ""
+                          }
                           placeholder="กรุณากรอกเลข สตป."
                         />
                         {hasFieldError("referenceNumber3") && (
-                          <span className={styles.errorText}>{getFieldError("referenceNumber3")}</span>
+                          <span className={styles.errorText}>
+                            {getFieldError("referenceNumber3")}
+                          </span>
                         )}
                       </div>
                       <div className={styles.fieldGroupDate}>
@@ -791,18 +916,26 @@ const SearchComplaints = () => {
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>
-                          เลข สรร. (สารบัญ) <span className={styles.required}>*</span>
+                          เลข สรร. (สารบัญ){" "}
+                          <span className={styles.required}>*</span>
                         </label>
                         <input
                           type="text"
                           {...step3Methods.register("referenceNumber4", {
-                            onChange: () => handleFieldChange("referenceNumber4")
+                            onChange: () =>
+                              handleFieldChange("referenceNumber4"),
                           })}
-                          className={hasFieldError("referenceNumber4") ? styles.errorField : ""}
+                          className={
+                            hasFieldError("referenceNumber4")
+                              ? styles.errorField
+                              : ""
+                          }
                           placeholder="กรุณากรอกเลข สรร. (สารบัญ)"
                         />
                         {hasFieldError("referenceNumber4") && (
-                          <span className={styles.errorText}>{getFieldError("referenceNumber4")}</span>
+                          <span className={styles.errorText}>
+                            {getFieldError("referenceNumber4")}
+                          </span>
                         )}
                       </div>
                       <div className={styles.fieldGroupDate}>
@@ -879,7 +1012,13 @@ const SearchComplaints = () => {
                       <div className={styles.checkboxGroupVertical}>
                         {/* เรื่องร้องเรียนใหม่ */}
                         <div className={styles.checkboxRowSingle}>
-                          <label className={`${styles.checkboxItem} ${complaintFilingType === "new" ? styles.checked : ""}`}>
+                          <label
+                            className={`${styles.checkboxItem} ${
+                              complaintFilingType === "new"
+                                ? styles.checked
+                                : ""
+                            }`}
+                          >
                             <input
                               type="checkbox"
                               checked={complaintFilingType === "new"}
@@ -894,7 +1033,13 @@ const SearchComplaints = () => {
                         {/* เรื่องร้องเรียนเพิ่มเติม */}
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
-                            <label className={`${styles.checkboxItem} ${complaintFilingType === "additional" ? styles.checked : ""}`}>
+                            <label
+                              className={`${styles.checkboxItem} ${
+                                complaintFilingType === "additional"
+                                  ? styles.checked
+                                  : ""
+                              }`}
+                            >
                               <input
                                 type="checkbox"
                                 checked={complaintFilingType === "additional"}
@@ -911,8 +1056,12 @@ const SearchComplaints = () => {
                                 <label>เลขที่อ้างอิง(เลข สรร.สารบัญ)</label>
                                 <input
                                   type="text"
-                                  disabled={complaintFilingType !== "additional"}
-                                  {...step3Methods.register("additionalReference1")}
+                                  disabled={
+                                    complaintFilingType !== "additional"
+                                  }
+                                  {...step3Methods.register(
+                                    "additionalReference1"
+                                  )}
                                 />
                               </div>
                               <div className={styles.fieldWithLabelDate}>
@@ -921,7 +1070,9 @@ const SearchComplaints = () => {
                                   <ControlledDateThaiPickerService
                                     name="additionalReferenceDate1"
                                     control={step3Methods.control}
-                                    disabled={complaintFilingType !== "additional"}
+                                    disabled={
+                                      complaintFilingType !== "additional"
+                                    }
                                     placeholder="กรุณาเลือกวันที่"
                                   />
                                 </div>
@@ -933,7 +1084,13 @@ const SearchComplaints = () => {
                         {/* รับเรื่องจากคณะทำงานนักตรวจสอบ */}
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
-                            <label className={`${styles.checkboxItem} ${complaintFilingType === "committee" ? styles.checked : ""}`}>
+                            <label
+                              className={`${styles.checkboxItem} ${
+                                complaintFilingType === "committee"
+                                  ? styles.checked
+                                  : ""
+                              }`}
+                            >
                               <input
                                 type="checkbox"
                                 checked={complaintFilingType === "committee"}
@@ -951,7 +1108,9 @@ const SearchComplaints = () => {
                                 <input
                                   type="text"
                                   disabled={complaintFilingType !== "committee"}
-                                  {...step3Methods.register("additionalReference2")}
+                                  {...step3Methods.register(
+                                    "additionalReference2"
+                                  )}
                                 />
                               </div>
                               <div className={styles.fieldWithLabelDate}>
@@ -960,7 +1119,9 @@ const SearchComplaints = () => {
                                   <ControlledDateThaiPickerService
                                     name="additionalReferenceDate2"
                                     control={step3Methods.control}
-                                    disabled={complaintFilingType !== "committee"}
+                                    disabled={
+                                      complaintFilingType !== "committee"
+                                    }
                                     placeholder="กรุณาเลือกวันที่"
                                   />
                                 </div>
@@ -978,7 +1139,10 @@ const SearchComplaints = () => {
               <FormProvider {...step4Methods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>ข้อมูลเรื่องร้องทุกข์ <span className={styles.required}>*</span></h3>
+                    <h3 className={styles.sectionTitle}>
+                      ข้อมูลเรื่องร้องทุกข์{" "}
+                      <span className={styles.required}>*</span>
+                    </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <div className={styles.complaintDescriptionSection}>
@@ -990,7 +1154,9 @@ const SearchComplaints = () => {
                               label="วันที่รับงานของเจ้าหน้าที่"
                               name="officerReceivedDate"
                               control={step4Methods.control}
-                              defaultValue={defaultData?.step4?.general?.officerReceivedDate}
+                              defaultValue={
+                                defaultData?.step4?.general?.officerReceivedDate
+                              }
                               time={true}
                             />
                           </div>
@@ -1001,7 +1167,10 @@ const SearchComplaints = () => {
                               label="วันที่เสนองาน ผอ.สรร."
                               name="directorSubmittedDate"
                               control={step4Methods.control}
-                              defaultValue={defaultData?.step4?.general?.directorSubmittedDate}
+                              defaultValue={
+                                defaultData?.step4?.general
+                                  ?.directorSubmittedDate
+                              }
                               time={true}
                             />
                           </div>
@@ -1018,7 +1187,9 @@ const SearchComplaints = () => {
                               control={step4Methods.control}
                               defaultValue={
                                 defaultData?.step4?.general?.incidentDate
-                                  ? new Date(defaultData.step4.general.incidentDate)
+                                  ? new Date(
+                                      defaultData.step4.general.incidentDate
+                                    )
                                   : undefined
                               }
                               time={true}
@@ -1033,7 +1204,9 @@ const SearchComplaints = () => {
                         <label>รายละเอียดเพิ่มเติม</label>
                         <textarea
                           rows={8}
-                          defaultValue={defaultData?.step3?.general?.description}
+                          defaultValue={
+                            defaultData?.step3?.general?.description
+                          }
                           disabled
                           className={styles.disabledTextarea}
                           {...step4Methods.register("additionalDescription")}
@@ -1044,38 +1217,58 @@ const SearchComplaints = () => {
                       <div className={styles.attachmentSection}>
                         <h4>เอกสารประกอบการร้องเรียน</h4>
                         <div className={styles.attachmentList}>
-                          {defaultData?.step3?.general?.attachment?.map((file, index) => {
-                            const fileSizeMB = (file.fileSize / (1024 * 1024)).toFixed(2);
-                            const formatDate = (isoString) => {
-                              const date = new Date(isoString);
-                              const day = date.getDate().toString().padStart(2, '0');
-                              const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                              const year = (date.getFullYear() + 543).toString().slice(-2);
-                              return `${day}/${month}/${year}`;
-                            };
+                          {defaultData?.step3?.general?.attachment?.map(
+                            (file, index) => {
+                              const fileSizeMB = (
+                                file.fileSize /
+                                (1024 * 1024)
+                              ).toFixed(2);
+                              const formatDate = (isoString) => {
+                                const date = new Date(isoString);
+                                const day = date
+                                  .getDate()
+                                  .toString()
+                                  .padStart(2, "0");
+                                const month = (date.getMonth() + 1)
+                                  .toString()
+                                  .padStart(2, "0");
+                                const year = (date.getFullYear() + 543)
+                                  .toString()
+                                  .slice(-2);
+                                return `${day}/${month}/${year}`;
+                              };
 
-                            return (
-                              <div key={file.id || index} className={styles.attachmentItem}>
-                                <span className={styles.pdfIcon}>📄</span>
-                                <a
-                                  href={file.fileUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{ color: 'inherit', textDecoration: 'none' }}
+                              return (
+                                <div
+                                  key={file.id || index}
+                                  className={styles.attachmentItem}
                                 >
-                                  {file.fileName} {fileSizeMB} MB ({formatDate(file.created_at)})
-                                </a>
-                              </div>
-                            );
-                          }) || (
-                              <div className={styles.attachmentItem}>
-                                <span className={styles.pdfIcon}>📄</span>
-                                ไม่มีเอกสารประกอบ
-                              </div>
-                            )}
+                                  <span className={styles.pdfIcon}>📄</span>
+                                  <a
+                                    href={file.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      color: "inherit",
+                                      textDecoration: "none",
+                                    }}
+                                  >
+                                    {file.fileName} {fileSizeMB} MB (
+                                    {formatDate(file.created_at)})
+                                  </a>
+                                </div>
+                              );
+                            }
+                          ) || (
+                            <div className={styles.attachmentItem}>
+                              <span className={styles.pdfIcon}>📄</span>
+                              ไม่มีเอกสารประกอบ
+                            </div>
+                          )}
                         </div>
                         <p className={styles.attachmentNote}>
-                          หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ หมายศาล
+                          หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ
+                          หมายศาล
                         </p>
                       </div>
                     </div>
@@ -1087,7 +1280,10 @@ const SearchComplaints = () => {
               <FormProvider {...step4Methods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
-                    <h3 className={styles.sectionTitle}>คัดกรองเรื่องราวร้องทุกข์ <span className={styles.required}>*</span></h3>
+                    <h3 className={styles.sectionTitle}>
+                      คัดกรองเรื่องราวร้องทุกข์{" "}
+                      <span className={styles.required}>*</span>
+                    </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <div className={styles.screeningSection}>
@@ -1095,25 +1291,46 @@ const SearchComplaints = () => {
                       <div className={styles.fieldRow}>
                         <div className={styles.fieldGroup}>
                           <label>
-                            เจ้าหน้าที่ผู้รับผิดชอบ <span className={styles.required}>*</span>
+                            เจ้าหน้าที่ผู้รับผิดชอบ{" "}
+                            <span className={styles.required}>*</span>
                           </label>
                           <select
                             {...step4Methods.register("responsibleOfficer", {
                               onChange: (e) => {
-                                const selectedOfficer = staffUsers.find(user => user.value === e.target.value);
+                                const selectedOfficer = staffUsers.find(
+                                  (user) => user.value === e.target.value
+                                );
                                 if (selectedOfficer) {
-                                  step4Methods.setValue("responsibleOfficerId", selectedOfficer.value);
-                                  step4Methods.setValue("responsibleOfficerName", selectedOfficer.label);
+                                  step4Methods.setValue(
+                                    "responsibleOfficerId",
+                                    selectedOfficer.value
+                                  );
+                                  step4Methods.setValue(
+                                    "responsibleOfficerName",
+                                    selectedOfficer.label
+                                  );
                                 } else {
-                                  step4Methods.setValue("responsibleOfficerId", "");
-                                  step4Methods.setValue("responsibleOfficerName", "");
+                                  step4Methods.setValue(
+                                    "responsibleOfficerId",
+                                    ""
+                                  );
+                                  step4Methods.setValue(
+                                    "responsibleOfficerName",
+                                    ""
+                                  );
                                 }
                                 handleFieldChange("responsibleOfficer");
-                              }
+                              },
                             })}
-                            className={hasFieldError("responsibleOfficer") ? styles.errorField : ""}
+                            className={
+                              hasFieldError("responsibleOfficer")
+                                ? styles.errorField
+                                : ""
+                            }
                           >
-                            <option value="">เลือกเจ้าหน้าที่ผู้รับผิดชอบ</option>
+                            <option value="">
+                              เลือกเจ้าหน้าที่ผู้รับผิดชอบ
+                            </option>
                             {staffUsers.map((user) => (
                               <option key={user.value} value={user.value}>
                                 {user.label}
@@ -1121,7 +1338,9 @@ const SearchComplaints = () => {
                             ))}
                           </select>
                           {hasFieldError("responsibleOfficer") && (
-                            <span className={styles.errorText}>{getFieldError("responsibleOfficer")}</span>
+                            <span className={styles.errorText}>
+                              {getFieldError("responsibleOfficer")}
+                            </span>
                           )}
                         </div>
                       </div>

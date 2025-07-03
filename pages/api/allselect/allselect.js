@@ -236,7 +236,6 @@ const GetOutgoingReportOptions = async (type) => {
   }
 };
 
-
 const GetAllSignatureAuthorities = async () => {
   try {
     const response = await axiosInstance.get(`/signature-authorities`);
@@ -244,7 +243,10 @@ const GetAllSignatureAuthorities = async () => {
     const results = response?.data?.res_data;
 
     if (response?.data?.res_code === "0000" && results) {
-      const formattedUsers = results
+      // Access the individuals array from the nested structure
+      const individuals = results.individuals || [];
+
+      const formattedUsers = individuals
         .filter((item) => item.is_active)
         .map((item) => ({
           value: item.user.id,

@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListBox from "@services/TableListBox/TableListBox";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import { getDocumentStorage } from "@pages/api/document/document";
 
 const issueTypeOptions = [
   { value: "ภารกิจ", label: "ภารกิจ" },
@@ -14,6 +15,11 @@ const issueTypeOptions = [
   { value: "นโยบายรัฐฯ ด้านสวัสดิการ", label: "นโยบายรัฐฯ ด้านสวัสดิการ" },
   { value: "การคอร์รัปชัน", label: "การคอร์รัปชัน" },
   { value: "การบริการสาธารณะ", label: "การบริการสาธารณะ" },
+  { value: "การเรียกรับผลประโยชน์", label: "การเรียกรับผลประโยชน์" },
+  { value: "ทุจริต", label: "ทุจริต" },
+  { value: "การซื้อขายออนไลน์", label: "การซื้อขายออนไลน์" },
+  { value: "ประพฤติมิชอบ", label: "ประพฤติมิชอบ" },
+  { value: "ฉ้อโกง", label: "ฉ้อโกง" },
 ];
 
 const subIssueTypeOptions = [
@@ -46,7 +52,6 @@ const agencyOptions = [
   { value: "การไฟฟ้าส่วนภูมิภาค", label: "การไฟฟ้าส่วนภูมิภาค" },
 ];
 
-// เพิ่ม options สำหรับเจ้าหน้าที่รับผิดชอบ
 const responsibleOfficerOptions = [
   { value: "นายสมชาย ใจดี", label: "นายสมชาย ใจดี" },
   { value: "นางสุนีย์ เรืองศรี", label: "นางสุนีย์ เรืองศรี" },
@@ -55,171 +60,218 @@ const responsibleOfficerOptions = [
   { value: "นายธนากร มั่นคง", label: "นายธนากร มั่นคง" },
 ];
 
-// อัปเดต options สำหรับสถานะเรื่อง
+// อัปเดต statusOptions ให้ใช้ status_mapping
 const statusOptions = [
-  { value: "รับเรื่องแล้ว", label: "รับเรื่องแล้ว" },
-  { value: "กำลังตรวจสอบ", label: "กำลังตรวจสอบ" },
+  { value: "รับเรื่อง", label: "รับเรื่อง" },
+  { value: "ส่งหน่วยงาน", label: "ส่งหน่วยงาน" },
   { value: "กำลังดำเนินการ", label: "กำลังดำเนินการ" },
-  { value: "รอข้อมูลเพิ่มเติม", label: "รอข้อมูลเพิ่มเติม" },
-  { value: "ส่งต่อหน่วยงาน", label: "ส่งต่อหน่วยงาน" },
-  { value: "อยู่ระหว่างการแจ้งผล", label: "อยู่ระหว่างการแจ้งผล" }, // pending
-  { value: "รอหน่วยงานตอบกลับ", label: "รอหน่วยงานตอบกลับ" }, // waiting
-  { value: "ดำเนินการเสร็จสิ้น", label: "ดำเนินการเสร็จสิ้น" },
-  { value: "ยุติ", label: "ยุติ" }, // stop
+  { value: "อยู่ระหว่างพิจารณา", label: "อยู่ระหว่างพิจารณา" },
+  { value: "ติดตามผล", label: "ติดตามผล" },
+  { value: "แจ้งผลการพิจารณา", label: "แจ้งผลการพิจารณา" },
+  { value: "เสร็จสิ้น", label: "เสร็จสิ้น" },
+  { value: "ยกเลิก", label: "ยกเลิก" },
 ];
 
-// ฟังก์ชันแปลงสถานะไทยเป็นอังกฤษ
-const getEnglishStatus = (thaiStatus) => {
-  const statusMap = {
-    อยู่ระหว่างการแจ้งผล: "pending",
-    รอหน่วยงานตอบกลับ: "waiting",
-    ยุติ: "stop",
-    รับเรื่องแล้ว: "received",
-    กำลังตรวจสอบ: "investigating",
-    กำลังดำเนินการ: "processing",
-    รอข้อมูลเพิ่มเติม: "awaiting_info",
-    ส่งต่อหน่วยงาน: "forwarded",
-    ดำเนินการเสร็จสิ้น: "completed",
+// ฟังก์ชันแปลงสถานะจาก API เป็นภาษาไทย
+const getThaiStatus = (englishStatus) => {
+  const statusMapping = {
+    submitted: "รับเรื่อง",
+    sent_to_agency: "ส่งหน่วยงาน",
+    in_process: "กำลังดำเนินการ",
+    in_review: "อยู่ระหว่างพิจารณา",
+    tracking: "ติดตามผล",
+    reviewed: "แจ้งผลการพิจารณา",
+    completed: "เสร็จสิ้น",
+    cancelled: "ยกเลิก",
   };
-  return statusMap[thaiStatus] || thaiStatus;
+  return statusMapping[englishStatus] || englishStatus;
 };
 
-// แก้ไข mock data ให้เป็นเรื่องราวร้องทุกข์จริง และเพิ่มสถานะใหม่
-const mockComplaints = [
-  {
-    id: 1,
-    receiveDate: "15 ม.ค. 2568",
-    agency: "กรมสรรพากร",
-    claimantName: "นายสมศักดิ์ ขยันทำงาน",
-    issue: "เจ้าหน้าที่เรียกเก็บค่าธรรมเนียมเกินกว่าที่กฎหมายกำหนด",
-    issueType: "การคอร์รัปชัน",
-    subIssueType: "การเรียกรับสินบน",
-    responsibleOfficer: "นายสมชาย ใจดี",
-    status: "อยู่ระหว่างการแจ้งผล", // จะส่งเป็น "pending"
-    note: "ส่งเอกสารหลักฐานการโอนเงินแล้ว",
-  },
-  {
-    id: 2,
-    receiveDate: "18 ม.ค. 2568",
-    agency: "กรมการปกครอง",
-    claimantName: "นางสาวรัตนา มีความหวัง",
-    issue: "การทำบัตรประชาชนใหม่ใช้เวลานานเกิน 30 วัน",
-    issueType: "การบริการสาธารณะ",
-    subIssueType: "การบริการล่าช้า",
-    responsibleOfficer: "นางสุนีย์ เรืองศรี",
-    status: "รอหน่วยงานตอบกลับ", // จะส่งเป็น "waiting"
-    note: "ส่งเรื่องไปยังสำนักงานเขตแล้ว",
-  },
-  {
-    id: 3,
-    receiveDate: "22 ม.ค. 2568",
-    agency: "กรมทางหลวง",
-    claimantName: "นายประยุทธ์ ห่วงใยประชาชน",
-    issue: "ถนนสายหลักชำรุดไม่ได้รับการซ่อมแซมมานานกว่า 1 ปี",
-    issueType: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
-    subIssueType: "โครงการสาธารณูปโภคพื้นฐาน",
-    responsibleOfficer: "นายอนุชา วงศ์ใหญ่",
-    status: "ยุติ", // จะส่งเป็น "stop"
-    note: "อนุมัติงบประมาณซ่อมแซมแล้ว คาดเริ่มงานเดือนหน้า",
-  },
-  {
-    id: 4,
-    receiveDate: "25 ม.ค. 2568",
-    agency: "การไฟฟ้าส่วนภูมิภาค",
-    claimantName: "นางอัมพร ไฟดับบ่อย",
-    issue: "ไฟฟ้าในหมู่บ้านดับบ่อย ส่งผลกระทบต่อการดำรงชีวิต",
-    issueType: "การบริการสาธารณะ",
-    subIssueType: "ข้อร้องเรียนทั่วไป",
-    responsibleOfficer: "นางปิยะดา สมศักดิ์",
-    status: "อยู่ระหว่างการแจ้งผล", // จะส่งเป็น "pending"
-    note: "รอทีมช่างสำรวจพื้นที่เพิ่มเติม",
-  },
-  {
-    id: 5,
-    receiveDate: "28 ม.ค. 2568",
-    agency: "สำนักงานบริหารหนี้สาธารณะ",
-    claimantName: "นายธนากร หนี้ท่วมตัว",
-    issue: "ขอความช่วยเหลือปรับโครงสร้างหนี้ครัวเรือน",
-    issueType: "การแก้ไขปัญหาหนี้สิน",
-    subIssueType: "หนี้และสภาพหนี้ระบบ",
-    responsibleOfficer: "นายธนากร มั่นคง",
-    status: "รอหน่วยงานตอบกลับ", // จะส่งเป็น "waiting"
-    note: "นัดหมายให้มาพบเจ้าหน้าที่ในวันที่ 5 ก.พ.",
-  },
-  {
-    id: 6,
-    receiveDate: "02 ก.พ. 2568",
-    agency: "กรมศุลกากร",
-    claimantName: "นายวิชัย ทำธุรกิจ",
-    issue: "เจ้าหน้าที่ศุลกากรปฏิบัติต่อผู้ประกอบการอย่างไม่เป็นธรรม",
-    issueType: "การคอร์รัปชัน",
-    subIssueType: "การปฏิบัติไม่เป็นธรรม",
-    responsibleOfficer: "นายสมชาย ใจดี",
-    status: "ยุติ", // จะส่งเป็น "stop"
-    note: "ตักเตือนเจ้าหน้าที่แล้ว และปรับปรุงขั้นตอนการทำงาน",
-  },
-  {
-    id: 7,
-    receiveDate: "05 ก.พ. 2568",
-    agency: "กรมบัญชีกลาง",
-    claimantName: "นางสาวจินตนา รอเงินเบี้ยยังชีพ",
-    issue: "เงินเบี้ยยังชีพผู้สูงอายุโอนช้ากว่าที่ประกาศไว้",
-    issueType: "นโยบายรัฐฯ ด้านสวัสดิการ",
-    subIssueType: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
-    responsibleOfficer: "นางสุนีย์ เรืองศรี",
-    status: "รับเรื่องแล้ว", // จะส่งเป็น "received"
-    note: "ตรวจสอบสถานะการโอนเงินและจะติดต่อกลับ",
-  },
-  {
-    id: 8,
-    receiveDate: "08 ก.พ. 2568",
-    agency: "สำนักงานเศรษฐกิจการคลัง",
-    claimantName: "นายศุภชัย กังวลเศรษฐกิจ",
-    issue: "ข้อเสนะแนะนโยบายช่วยเหลือ SME ในช่วงเศรษฐกิจตกต่ำ",
-    issueType: "ภารกิจ",
-    subIssueType: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
-    responsibleOfficer: "นายธนากร มั่นคง",
-    status: "ยุติ", // จะส่งเป็น "stop"
-    note: "ส่งต่อให้คณะกรรมการพิจารณานโยบาย",
-  },
-];
+// ฟังก์ชันแปลงสถานะเป็นอังกฤษ (สำหรับ URL)
+const getEnglishStatus = (status) => {
+  const statusMapping = {
+    submitted: "รับเรื่อง",
+    sent_to_agency: "ส่งหน่วยงาน",
+    in_process: "กำลังดำเนินการ",
+    in_review: "อยู่ระหว่างพิจารณา",
+    tracking: "ติดตามผล",
+    reviewed: "แจ้งผลการพิจารณา",
+    completed: "เสร็จสิ้น",
+    cancelled: "ยกเลิก",
+  };
+
+  // หา key จาก value
+  const englishStatus = Object.keys(statusMapping).find(
+    (key) => statusMapping[key] === status
+  );
+
+  return englishStatus || status;
+};
+
+// ฟังก์ชันสำหรับแปลงวันที่จาก ISO string เป็นรูปแบบไทย
+const formatThaiDate = (isoString) => {
+  if (!isoString) return "ไม่ระบุ";
+
+  const date = new Date(isoString);
+  const thaiMonths = [
+    "ม.ค.",
+    "ก.พ.",
+    "มี.ค.",
+    "เม.ย.",
+    "พ.ค.",
+    "มิ.ย.",
+    "ก.ค.",
+    "ส.ค.",
+    "ก.ย.",
+    "ต.ค.",
+    "พ.ย.",
+    "ธ.ค.",
+  ];
+
+  const day = date.getDate();
+  const month = thaiMonths[date.getMonth()];
+  const year = date.getFullYear() + 543; // แปลงเป็นปีพุทธศักราช
+
+  return `${day} ${month} ${year}`;
+};
+
+// ฟังก์ชันสำหรับแปลงข้อมูลจาก API response เป็นรูปแบบที่ใช้ในตาราง
+const transformComplaintData = (apiData) => {
+  return apiData.map((item, index) => ({
+    id: item.id || item.complaint_id,
+    receiveDate: formatThaiDate(item.created_at) || "-",
+    agency: item.respondent?.agency || "-",
+    claimantName: item["ข้อมูลผู้ร้อง"] || item.complainant?.name || "-",
+    issue: item["เรื่อง"] || item.master_complaint?.subject || "-",
+    issueType: item["ประเภทเรื่อง"] || "-",
+    subIssueType: item["ประเภทเรื่องย่อย"] || "-",
+    responsibleOfficer:
+      item["เจ้าหน้าที่ที่รับผิดชอบ"] ||
+      item.assigned_officer?.name ||
+      "ไม่ได้มอบหมาย",
+    // แปลงสถานะจาก API เป็นภาษาไทย
+    status: getThaiStatus(item.status) || item["สถานะเรื่อง"] || "-",
+    // เก็บสถานะภาษาอังกฤษไว้สำหรับ URL
+    statusEn: item.status || "-",
+    note: item["หมายเหตุ"] || "-",
+    complaintNumber:
+      item["หมายเลข"] || item.master_complaint?.complaint_number || "-",
+  }));
+};
 
 const ComplaintArchives = () => {
-  const [allComplaints] = useState(mockComplaints);
-  const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [documentStorage, setDocumentStorage] = useState(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // ปรับปรุงฟังก์ชัน handleSearch ให้ทำงานได้ดีขึ้น
   const handleSearch = (filters) => {
+    console.log("Search filters:", filters);
+
     const result = allComplaints.filter((item) => {
-      if (
-        filters.claimantName &&
-        !item.claimantName.includes(filters.claimantName)
-      )
-        return false;
-      if (filters.issueType && item.issueType !== filters.issueType)
-        return false;
-      if (filters.subIssueType && item.subIssueType !== filters.subIssueType)
-        return false;
-      if (filters.issue && !item.issue.includes(filters.issue)) return false;
-      if (filters.agency && item.agency !== filters.agency) return false;
-      if (
-        filters.responsibleOfficer &&
-        item.responsibleOfficer !== filters.responsibleOfficer
-      )
-        return false;
-      if (filters.status && item.status !== filters.status) return false;
-      return true;
+      let matchesFilter = true;
+
+      // ตรวจสอบแต่ละเงื่อนไข
+      if (filters.claimantName && filters.claimantName.trim() !== "") {
+        const searchTerm = filters.claimantName.toLowerCase();
+        const itemName = (item.claimantName || "").toLowerCase();
+        matchesFilter = matchesFilter && itemName.includes(searchTerm);
+      }
+
+      if (filters.issue && filters.issue.trim() !== "") {
+        const searchTerm = filters.issue.toLowerCase();
+        const itemIssue = (item.issue || "").toLowerCase();
+        matchesFilter = matchesFilter && itemIssue.includes(searchTerm);
+      }
+
+      if (filters.issueType && filters.issueType !== "") {
+        matchesFilter = matchesFilter && item.issueType === filters.issueType;
+      }
+
+      if (filters.subIssueType && filters.subIssueType !== "") {
+        matchesFilter =
+          matchesFilter && item.subIssueType === filters.subIssueType;
+      }
+
+      if (filters.agency && filters.agency !== "") {
+        matchesFilter = matchesFilter && item.agency === filters.agency;
+      }
+
+      if (filters.responsibleOfficer && filters.responsibleOfficer !== "") {
+        matchesFilter =
+          matchesFilter &&
+          item.responsibleOfficer === filters.responsibleOfficer;
+      }
+
+      if (filters.status && filters.status !== "") {
+        matchesFilter = matchesFilter && item.status === filters.status;
+      }
+
+      if (filters.complaintNumber && filters.complaintNumber.trim() !== "") {
+        const searchTerm = filters.complaintNumber.toLowerCase();
+        const itemNumber = (item.complaintNumber || "").toLowerCase();
+        matchesFilter = matchesFilter && itemNumber.includes(searchTerm);
+      }
+
+      return matchesFilter;
     });
+
+    console.log("Filtered results:", result);
     setFilteredComplaints(result);
   };
 
-  // Custom function สำหรับ handle row click เพื่อส่งสถานะภาษาอังกฤษไปใน URL path
+  // ฟังก์ชันสำหรับรีเซ็ตการค้นหา
+  const handleResetSearch = () => {
+    setFilteredComplaints(allComplaints);
+  };
+
   const handleRowClick = (item) => {
-    // แปลงสถานะเป็นภาษาอังกฤษ
-    const englishStatus = getEnglishStatus(item.status);
-    // ส่งสถานะใน URL path แทนที่จะเป็น query parameter
+    // ใช้สถานะภาษาอังกฤษที่เก็บไว้
+    const englishStatus = item.statusEn || getEnglishStatus(item.status);
     router.push(`/admin/box/list/${item.id}?${englishStatus}`);
   };
+
+  useEffect(() => {
+    const fetchDocumentStorage = async () => {
+      try {
+        setLoading(true);
+        const res = await getDocumentStorage();
+        setDocumentStorage(res.res_data.items);
+
+        // แปลงข้อมูลและตั้งค่าใน state
+        const transformedData = transformComplaintData(res.res_data.items);
+        setAllComplaints(transformedData);
+        setFilteredComplaints(transformedData);
+
+        console.log("Document Storage Data:", res.res_data.items);
+        console.log("Transformed Data:", transformedData);
+      } catch (err) {
+        console.error("Error fetching document storage:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDocumentStorage();
+  }, []);
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "200px",
+          fontSize: "18px",
+        }}
+      >
+        กำลังโหลดข้อมูล...
+      </div>
+    );
+  }
 
   return (
     <>
@@ -236,12 +288,14 @@ const ComplaintArchives = () => {
       <TableListBox
         data={filteredComplaints}
         title="คลังเรื่องราวร้องทุกข์"
-        navigateTo="" // เปลี่ยนเป็นค่าว่าง เพราะเราจะใช้ custom function
-        onRowClick={handleRowClick} // เพิ่ม custom row click handler
+        navigateTo=""
+        onRowClick={handleRowClick}
         onSearch={handleSearch}
+        onResetSearch={handleResetSearch}
         filterFields={[
           { name: "claimantName", label: "ชื่อผู้ร้อง", type: "text" },
           { name: "issue", label: "เรื่อง", type: "text" },
+          { name: "complaintNumber", label: "หมายเลขเรื่อง", type: "text" },
           {
             name: "issueType",
             label: "ประเภทเรื่อง",

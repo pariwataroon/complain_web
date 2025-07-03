@@ -96,11 +96,10 @@ const TableListBox = ({
     { name: "claimantName", label: "ชื่อสกุลผู้ร้อง", width: 200 },
     { name: "issue", label: "เรื่อง", width: 300 },
     { name: "issueType", label: "ประเภทเรื่อง", width: 180 },
-    { name: "issueSubType", label: "ประเภทเรื่องย่อย", width: 180 },
+    { name: "subIssueType", label: "ประเภทเรื่องย่อย", width: 180 }, // แก้จาก issueSubType → subIssueType
     { name: "responsibleOfficer", label: "เจ้าหน้าที่รับผิดชอบ", width: 180 },
     { name: "status", label: "สถานะเรื่อง", width: 150 },
     { name: "note", label: "หมายเหตุ", width: 100 },
-
   ];
 
   // Updated dynamic layout configuration with new breakpoint
