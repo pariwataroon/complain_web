@@ -500,8 +500,9 @@ const SearchComplaints = () => {
                         {/* เรื่องร้องเรียนใหม่ */}
                         <div className={styles.checkboxRowSingle}>
                           <label
-                            className={`${styles.checkboxItem} ${complaintType === "new" ? styles.checked : ""
-                              }`}
+                            className={`${styles.checkboxItem} ${
+                              complaintType === "new" ? styles.checked : ""
+                            }`}
                           >
                             <input
                               type="checkbox"
@@ -516,10 +517,11 @@ const SearchComplaints = () => {
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
                             <label
-                              className={`${styles.checkboxItem} ${complaintType === "additional"
+                              className={`${styles.checkboxItem} ${
+                                complaintType === "additional"
                                   ? styles.checked
                                   : ""
-                                }`}
+                              }`}
                             >
                               <input
                                 type="checkbox"
@@ -562,10 +564,11 @@ const SearchComplaints = () => {
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
                             <label
-                              className={`${styles.checkboxItem} ${complaintType === "committee"
+                              className={`${styles.checkboxItem} ${
+                                complaintType === "committee"
                                   ? styles.checked
                                   : ""
-                                }`}
+                              }`}
                             >
                               <input
                                 type="checkbox"
@@ -630,7 +633,7 @@ const SearchComplaints = () => {
                                 defaultData?.step4?.general
                                   ?.officerReceivedDate || ""
                               }
-                              onChange={() => { }}
+                              onChange={() => {}}
                               time={true}
                             />
                           </div>
@@ -643,7 +646,7 @@ const SearchComplaints = () => {
                                 defaultData?.step4?.general
                                   ?.directorSubmittedDate || ""
                               }
-                              onChange={() => { }}
+                              onChange={() => {}}
                               time={true}
                             />
                           </div>
@@ -660,7 +663,7 @@ const SearchComplaints = () => {
                                 defaultData?.step4?.general?.incidentDateTime ||
                                 "2023-11-01T14:37:00"
                               }
-                              onChange={() => { }}
+                              onChange={() => {}}
                               time={true}
                               dis={true}
                             />
@@ -684,37 +687,63 @@ const SearchComplaints = () => {
                       <div className={styles.attachmentSection}>
                         <h4>เอกสารประกอบการร้องเรียน</h4>
                         <div className={styles.attachmentList}>
-                          {defaultData?.step3?.general?.attachment?.length > 0 ? (
-                            defaultData.step3.general.attachment.map((file, index) => {
-                              const fileSizeMB = (file.fileSize / (1024 * 1024)).toFixed(2);
+                          {defaultData?.step3?.general?.attachment?.length >
+                          0 ? (
+                            defaultData.step3.general.attachment.map(
+                              (file, index) => {
+                                const fileSizeMB = (
+                                  file.fileSize /
+                                  (1024 * 1024)
+                                ).toFixed(2);
 
-                              const formatDate = (isoString) => {
-                                const date = new Date(isoString);
-                                const day = date.getDate().toString().padStart(2, "0");
-                                const month = (date.getMonth() + 1).toString().padStart(2, "0");
-                                const year = (date.getFullYear() + 543).toString().slice(-2);
-                                return `${day}/${month}/${year}`;
-                              };
+                                const formatDate = (isoString) => {
+                                  const date = new Date(isoString);
+                                  const day = date
+                                    .getDate()
+                                    .toString()
+                                    .padStart(2, "0");
+                                  const month = (date.getMonth() + 1)
+                                    .toString()
+                                    .padStart(2, "0");
+                                  const year = (date.getFullYear() + 543)
+                                    .toString()
+                                    .slice(-2);
+                                  return `${day}/${month}/${year}`;
+                                };
 
-                              const baseUrl = process.env.NEXT_PUBLIC_UPLOADS_BASE_URL?.replace(/\/$/, '') || '';
-                              const fileUrl = file.fileUrl?.startsWith('http')
-                                ? file.fileUrl
-                                : `${baseUrl}/${file.fileUrl?.replace(/^\//, '') || ''}`;
+                                const baseUrl =
+                                  process.env.NEXT_PUBLIC_UPLOADS_BASE_URL?.replace(
+                                    /\/$/,
+                                    ""
+                                  ) || "";
+                                const fileUrl = file.fileUrl?.startsWith("http")
+                                  ? file.fileUrl
+                                  : `${baseUrl}/${
+                                      file.fileUrl?.replace(/^\//, "") || ""
+                                    }`;
 
-                              return (
-                                <div key={file.id || index} className={styles.attachmentItem}>
-                                  <span className={styles.pdfIcon}>📄</span>
-                                  <a
-                                    href={fileUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{ color: "inherit", textDecoration: "none" }}
+                                return (
+                                  <div
+                                    key={file.id || index}
+                                    className={styles.attachmentItem}
                                   >
-                                    {file.fileName} {fileSizeMB} MB ({formatDate(file.created_at)})
-                                  </a>
-                                </div>
-                              );
-                            })
+                                    <span className={styles.pdfIcon}>📄</span>
+                                    <a
+                                      href={fileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        color: "inherit",
+                                        textDecoration: "none",
+                                      }}
+                                    >
+                                      {file.fileName} {fileSizeMB} MB (
+                                      {formatDate(file.created_at)})
+                                    </a>
+                                  </div>
+                                );
+                              }
+                            )
                           ) : (
                             <div className={styles.attachmentItem}>
                               <span className={styles.pdfIcon}>📄</span>
@@ -723,7 +752,8 @@ const SearchComplaints = () => {
                           )}
                         </div>
                         <p className={styles.attachmentNote}>
-                          หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ หมายศาล
+                          หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ
+                          หมายศาล
                         </p>
                       </div>
                     </div>

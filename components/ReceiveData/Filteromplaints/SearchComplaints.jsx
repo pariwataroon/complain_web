@@ -1217,49 +1217,64 @@ const SearchComplaints = () => {
                       <div className={styles.attachmentSection}>
                         <h4>เอกสารประกอบการร้องเรียน</h4>
                         <div className={styles.attachmentList}>
-                          {defaultData?.step3?.general?.attachment?.map(
-                            (file, index) => {
-                              const fileSizeMB = (
-                                file.fileSize /
-                                (1024 * 1024)
-                              ).toFixed(2);
-                              const formatDate = (isoString) => {
-                                const date = new Date(isoString);
-                                const day = date
-                                  .getDate()
-                                  .toString()
-                                  .padStart(2, "0");
-                                const month = (date.getMonth() + 1)
-                                  .toString()
-                                  .padStart(2, "0");
-                                const year = (date.getFullYear() + 543)
-                                  .toString()
-                                  .slice(-2);
-                                return `${day}/${month}/${year}`;
-                              };
+                          {defaultData?.step3?.general?.attachment?.length >
+                          0 ? (
+                            defaultData.step3.general.attachment.map(
+                              (file, index) => {
+                                const fileSizeMB = (
+                                  file.fileSize /
+                                  (1024 * 1024)
+                                ).toFixed(2);
 
-                              return (
-                                <div
-                                  key={file.id || index}
-                                  className={styles.attachmentItem}
-                                >
-                                  <span className={styles.pdfIcon}>📄</span>
-                                  <a
-                                    href={file.fileUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{
-                                      color: "inherit",
-                                      textDecoration: "none",
-                                    }}
+                                const formatDate = (isoString) => {
+                                  const date = new Date(isoString);
+                                  const day = date
+                                    .getDate()
+                                    .toString()
+                                    .padStart(2, "0");
+                                  const month = (date.getMonth() + 1)
+                                    .toString()
+                                    .padStart(2, "0");
+                                  const year = (date.getFullYear() + 543)
+                                    .toString()
+                                    .slice(-2);
+                                  return `${day}/${month}/${year}`;
+                                };
+
+                                const baseUrl =
+                                  process.env.NEXT_PUBLIC_UPLOADS_BASE_URL?.replace(
+                                    /\/$/,
+                                    ""
+                                  ) || "";
+                                const fileUrl = file.fileUrl?.startsWith("http")
+                                  ? file.fileUrl
+                                  : `${baseUrl}/${
+                                      file.fileUrl?.replace(/^\//, "") || ""
+                                    }`;
+
+                                return (
+                                  <div
+                                    key={file.id || index}
+                                    className={styles.attachmentItem}
                                   >
-                                    {file.fileName} {fileSizeMB} MB (
-                                    {formatDate(file.created_at)})
-                                  </a>
-                                </div>
-                              );
-                            }
-                          ) || (
+                                    <span className={styles.pdfIcon}>📄</span>
+                                    <a
+                                      href={fileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        color: "inherit",
+                                        textDecoration: "none",
+                                      }}
+                                    >
+                                      {file.fileName} {fileSizeMB} MB (
+                                      {formatDate(file.created_at)})
+                                    </a>
+                                  </div>
+                                );
+                              }
+                            )
+                          ) : (
                             <div className={styles.attachmentItem}>
                               <span className={styles.pdfIcon}>📄</span>
                               ไม่มีเอกสารประกอบ
