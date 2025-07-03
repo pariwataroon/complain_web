@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import { Box, Typography } from "@mui/material";
 import ButtonService from "@services/ButtonService/ButtonService";
 import AddIcon from "@mui/icons-material/Add";
 import { useRouter } from "next/router";
 import SelectField from "@services/SelectField/SelectField";
+import { getDepartmentGroup } from "@pages/api/department/department";
 
 const breadcrumbItems = [
   {
@@ -21,7 +22,6 @@ const breadcrumbItems = [
     label: "กำหนดหน่วยงานในสังกัด",
   },
 ];
-
 const CommitteeCompositionSettings = () => {
   const router = useRouter();
 
@@ -58,90 +58,61 @@ const CommitteeCompositionSettings = () => {
     { label: "นางสาวพิมพ์ใจ ซื่อสัตย์", value: "pimjai_suesat" },
   ];
 
-  // Options สำหรับรัฐวิสาหกิจ
-  const stateEnterpriseOptions = [
-    { label: "การไฟฟ้าฝ่ายผลิตแห่งประเทศไทย (กฟผ.)", value: "egat" },
-    { label: "การไฟฟ้านครหลวง (กฟน.)", value: "mea" },
-    { label: "การไฟฟ้าส่วนภูมิภาค (กฟภ.)", value: "pea" },
-    { label: "บริษัท ปตท. จำกัด (มหาชน)", value: "ptt" },
-    { label: "การประปานครหลวง", value: "mwa" },
-    { label: "การประปาส่วนภูมิภาค", value: "pwa" },
-    { label: "การทางพิเศษแห่งประเทศไทย", value: "exat" },
-    { label: "การรถไฟแห่งประเทศไทย", value: "srt" },
-    { label: "การรถไฟฟ้าขนส่งมวลชนแห่งประเทศไทย", value: "bmta" },
-    { label: "การท่าเรือแห่งประเทศไทย", value: "pat" },
-    { label: "บริษัท ทีโอที จำกัด (มหาชน)", value: "tot" },
-    { label: "บริษัท กสท โทรคมนาคม จำกัด (มหาชน)", value: "kat" },
-    { label: "ธนาคารกรุงไทย จำกัด (มหาชน)", value: "ktb" },
-    { label: "ธนาคารกรุงเทพ จำกัด (มหาชน)", value: "bbl" },
-    { label: "บริษัท ไปรษณีย์ไทย จำกัด", value: "thailand_post" },
-  ];
+  // Helper: แปลง departments array เป็น options
+  function mapDepartmentsToOptions(departments) {
+    if (!Array.isArray(departments)) return [];
+    return departments.map((dep) => ({
+      label: dep.name,
+      value: dep.id,
+    }));
+  }
 
-  // Options สำหรับส่วนราชการ
-  const governmentOptions = [
-    { label: "กระทรวงมหาดไทย", value: "ministry_interior" },
-    { label: "กระทรวงการคลัง", value: "ministry_finance" },
-    { label: "กระทรวงศึกษาธิการ", value: "ministry_education" },
-    { label: "กระทรวงสาธารณสุข", value: "ministry_health" },
-    { label: "กระทรวงคมนาคม", value: "ministry_transport" },
-    { label: "กระทรวงพาณิชย์", value: "ministry_commerce" },
-    { label: "กระทรวงอุตสาหกรรม", value: "ministry_industry" },
-    { label: "กระทรวงเกษตรและสหกรณ์", value: "ministry_agriculture" },
-    {
-      label: "กระทรวงทรัพยากรธรรมชาติและสิ่งแวดล้อม",
-      value: "ministry_environment",
-    },
-    { label: "กระทรวงพลังงาน", value: "ministry_energy" },
-    { label: "กระทรวงแรงงาน", value: "ministry_labour" },
-    { label: "กระทรวงวิทยาศาสตร์และเทคโนโลยี", value: "ministry_science" },
-    {
-      label: "กระทรวงการพัฒนาสังคมและความมั่นคงของมนุษย์",
-      value: "ministry_social",
-    },
-    { label: "กระทรวงวัฒนธรรม", value: "ministry_culture" },
-    { label: "กระทรวงการท่องเที่ยวและกีฬา", value: "ministry_tourism" },
-    { label: "กระทรวงดิจิทัลเพื่อเศรษฐกิจและสังคม", value: "ministry_digital" },
-    { label: "สำนักนายกรัฐมนตรี", value: "prime_minister_office" },
-    { label: "กรมการปกครอง", value: "department_provincial" },
-    { label: "กรมส่งเสริมการปกครองท้องถิ่น", value: "department_local_admin" },
-    { label: "กรมพัฒนาที่ดิน", value: "land_development_department" },
-  ];
+  // Helper: แปลง res_data เป็น object { groupName: { label, options } }
+  function groupNameOptionsFromResData(res_data) {
+    const result = {};
+    res_data.forEach((group) => {
+      result[group.name] = {
+        label: group.name,
+        options: mapDepartmentsToOptions(group.departments),
+      };
+    });
+    return result;
+  }
 
-  // Options สำหรับอื่นๆ
-  const otherOptions = [
-    {
-      label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ",
-      value: "nacc",
-    },
-    {
-      label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตในภาครัฐ",
-      value: "pacc",
-    },
-    { label: "สำนักงานอัยการสูงสุด", value: "attorney_general" },
-    { label: "สำนักงานตำรวจแห่งชาติ", value: "royal_police" },
-    { label: "สำนักงานผู้ตรวจการแผ่นดิน", value: "ombudsman" },
-    { label: "สำนักงานศาลยุติธรรม", value: "courts_justice" },
-    { label: "สำนักงานคณะกรรมการการเลือกตั้ง", value: "election_commission" },
-    {
-      label: "สำนักงานคณะกรรมการข้าราชการพลเรือน",
-      value: "civil_service_commission",
-    },
-    { label: "สำนักงานการตรวจเงินแผ่นดิน", value: "state_audit_office" },
-    { label: "ธนาคารแห่งประเทศไทย", value: "bank_of_thailand" },
-    {
-      label: "สำนักงานคณะกรรมการกำกับหลักทรัพย์และตลาดหลักทรัพย์",
-      value: "sec",
-    },
-    {
-      label: "สำนักงานคณะกรรมการคุ้มครองผู้บริโภค",
-      value: "consumer_protection",
-    },
-    { label: "องค์การบริหารส่วนจังหวัด", value: "provincial_admin" },
-    { label: "เทศบาลนคร", value: "city_municipality" },
-    { label: "เทศบาลเมือง", value: "town_municipality" },
-    { label: "เทศบาลตำบล", value: "subdistrict_municipality" },
-    { label: "องค์การบริหารส่วนตำบล", value: "subdistrict_admin" },
-  ];
+  const [stateEnterpriseOptions, setStateEnterpriseOptions] = useState([]);
+  const [governmentOptions, setGovernmentOptions] = useState([]);
+  const [otherOptions, setOtherOptions] = useState([]);
+  const [otherGroupOptions, setOtherGroupOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      const res = await getDepartmentGroup();
+      if (Array.isArray(res?.res_data)) {
+        // จัดกลุ่ม
+        const resData = res.res_data;
+        // รัฐวิสาหกิจ, ส่วนราชการ, อื่น ๆ
+        const stateEnterprise = resData.find(
+          (item) => item.name === "รัฐวิสาหกิจ"
+        );
+        const government = resData.find((item) => item.name === "ส่วนราชการ");
+        const others = resData.find((item) => item.name === "อื่น ๆ");
+
+        setStateEnterpriseOptions(
+          mapDepartmentsToOptions(stateEnterprise?.departments)
+        );
+        setGovernmentOptions(mapDepartmentsToOptions(government?.departments));
+        setOtherOptions(mapDepartmentsToOptions(others?.departments));
+        // กลุ่มอื่นๆ ตั้งแต่ตัวที่ 4 เป็นต้นไป
+        const otherGroups = resData.slice(3).map((group) => ({
+          groupName: group.name,
+          label: group.name,
+          options: mapDepartmentsToOptions(group.departments),
+        }));
+        setOtherGroupOptions(otherGroups);
+      }
+    };
+    fetchOptions();
+  }, []);
 
   // ← แก้ไข: เปลี่ยนจาก object เดียวเป็น object แยกตาม field
   const [formData, setFormData] = useState({});
@@ -176,11 +147,14 @@ const CommitteeCompositionSettings = () => {
     });
   };
 
-  // Department Button Component with functionality to add select menus
-  const DepartmentButton = ({ section, signatoryNumber }) => (
+  const DepartmentButton = ({
+    section,
+    signatoryNumber,
+    label = "เพิ่มหน่วยงาน",
+  }) => (
     <Box mt={1}>
       <ButtonService
-        label="เพิ่มหน่วยงาน"
+        label={label}
         color="#2499FF"
         iconRight={<AddIcon />}
         variant="outlined"
@@ -338,7 +312,11 @@ const CommitteeCompositionSettings = () => {
               name={`name_${number}`}
             />
             {renderAdditionalSelects("name", number)}
-            <DepartmentButton section="name" signatoryNumber={number} />
+            <DepartmentButton
+              section="name"
+              signatoryNumber={number}
+              label="เพิ่มผู้ลงนาม"
+            />
           </Box>
         </Box>
 
@@ -414,13 +392,27 @@ const CommitteeCompositionSettings = () => {
               name={`other1_${number}`}
             />
             <Box mt={1}>
-              <SelectField
-                label="เลือกหน่วยงานอื่นๆ (เพิ่มเติม)"
-                options={otherOptions}
-                value={formData[`other2_${number}`] || ""}
-                onChange={handleInputChange}
-                name={`other2_${number}`}
-              />
+              {/* ถ้าไม่มีกลุ่มอื่นๆเลย ให้ใช้ options ของ 'อื่น ๆ' แบบเดิม */}
+              {otherGroupOptions.length === 0 ? (
+                <SelectField
+                  label="เลือกหน่วยงานอื่นๆ (เพิ่มเติม)"
+                  options={otherOptions}
+                  value={formData[`other2_${number}`] || ""}
+                  onChange={handleInputChange}
+                  name={`other2_${number}`}
+                />
+              ) : (
+                otherGroupOptions.map((group, idx) => (
+                  <SelectField
+                    key={group.groupName}
+                    label={group.label}
+                    options={group.options}
+                    value={formData[`other_${group.groupName}_${number}`] || ""}
+                    onChange={handleInputChange}
+                    name={`other_${group.groupName}_${number}`}
+                  />
+                ))
+              )}
             </Box>
             {renderAdditionalSelects("other", number)}
             <DepartmentButton section="other" signatoryNumber={number} />

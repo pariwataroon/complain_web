@@ -224,210 +224,111 @@ const AddUserModal = ({
     return apiData;
   };
 
-  // ฟังก์ชัน handleFormSubmit แบบใหม่: กรณีแก้ไขจะยิง PutUser, กรณีเพิ่มใหม่จะ AddUsers
-
   const handleFormSubmit = async () => {
-    try {
-      // ปิด Modal ก่อนแสดง confirmation dialog
-      onClose();
-
-      // แสดง confirmation dialog
-      const isConfirmed = await showConfirm(
-        editingUser ? "ยืนยันการแก้ไข" : "ยืนยันการเพิ่มข้อมูล",
-        editingUser
-          ? "คุณต้องการแก้ไขข้อมูลผู้ใช้งานนี้ใช่หรือไม่?"
-          : "คุณต้องการเพิ่มผู้ใช้งานใหม่ใช่หรือไม่?",
-        "ยืนยัน",
-        "ยกเลิก"
-      );
-
-      if (!isConfirmed) {
-        await alertInfo("ยกเลิก", "การดำเนินการถูกยกเลิก");
-
-        // เปิด Modal ใหม่หลังจากยกเลิก
-        if (onReopen) {
-          setTimeout(() => {
-            onReopen();
-          }, 100);
-        }
-        return;
-      }
-
-      const formData = getValues();
-
-      if (!editingUser) {
-        const apiData = formatDataForAPI(formData);
-
-        // Validate required fields before API call
-        const requiredFields = [
-          "citizen_id",
-          "title_id",
-          "first_name",
-          "email",
-        ];
-        const missingFields = requiredFields.filter((field) => !apiData[field]);
-
-        if (missingFields.length > 0) {
-          await alertWarning(
-            "ข้อมูลไม่ครบถ้วน",
-            `กรุณากรอกข้อมูลให้ครบถ้วน:\n\n${missingFields
-              .map((field) => {
-                const fieldNames = {
-                  citizen_id: "• เลขบัตรประชาชน",
-                  title_id: "• คำนำหน้า",
-                  first_name: "• ชื่อ",
-                  email: "• อีเมล",
-                };
-                return fieldNames[field] || `• ${field}`;
-              })
-              .join("\n")}\n\nกรุณากรอกข้อมูลให้ครบถ้วนแล้วลองใหม่อีกครั้ง`
-          );
-
-          // เปิด Modal ใหม่หลังจากแจ้งเตือน
-          if (onReopen) {
-            setTimeout(() => {
-              onReopen();
-            }, 100);
-          }
-          return;
-        }
-
-        const result = await AddUsers(apiData);
-
-        // Check API response status
-        if (
-          result &&
-          (result.res_code === "0000" || result.res_code === "0001")
-        ) {
-          if (onUserUpdated) {
-            onUserUpdated();
-          }
-
-          await alertSuccess("สำเร็จ", "เพิ่มข้อมูลผู้ใช้งานสำเร็จ");
-
-          // ไม่เปิด Modal ใหม่หลังจากสำเร็จ
-          return;
-        } else if (result && result.res_code === "4090") {
-          // Handle duplicate user error
-          const errorMessage =
-            result.res_data?.error ||
-            result.error ||
-            "ผู้ใช้งานนี้มีอยู่ในระบบแล้ว";
-
-          await alertWarning("ไม่สามารถเพิ่มข้อมูลได้", errorMessage);
-
-          // เปิด Modal ใหม่หลังจากแจ้งเตือน error
-          if (onReopen) {
-            setTimeout(() => {
-              onReopen();
-            }, 100);
-          }
-          return;
-        } else {
-          await alertWarning(
-            "การดำเนินการไม่สำเร็จ",
-            `ได้รับการตอบกลับที่ไม่คาดคิด: ${result?.res_code || "ไม่ทราบ"}`
-          );
-
-          // เปิด Modal ใหม่หลังจากแจ้งเตือน error
-          if (onReopen) {
-            setTimeout(() => {
-              onReopen();
-            }, 100);
-          }
-          return;
-        }
-      } else {
-        // กรณีแก้ไข: ยิง PutUser
-        try {
-          const apiData = formatDataForAPI(formData);
-
-          // สมมติ userId => editingUser.id, หากโครงสร้างต่างออกไปให้แก้ไขตรงนี้
-          const userId =
-            editingUser.id || editingUser._id || editingUser.user_id;
-          if (!userId) {
-            throw new Error("ไม่พบ user ID ที่จะใช้แก้ไข");
-          }
-
-          await PutUser(userId, apiData);
-
-          if (onUserUpdated) {
-            onUserUpdated();
-          }
-
-          await alertSuccess("สำเร็จ", "แก้ไขข้อมูลผู้ใช้งานสำเร็จ");
-
-          // ไม่เปิด Modal ใหม่หลังจากสำเร็จ
-        } catch (error) {
-          await alertError(
-            "เกิดข้อผิดพลาด",
-            `เกิดข้อผิดพลาดในการแก้ไขข้อมูล: ${
-              error.message || "ไม่ทราบสาเหตุ"
-            }`
-          );
-
-          // เปิด Modal ใหม่หลังจากแจ้งเตือน error
-          if (onReopen) {
-            setTimeout(() => {
-              onReopen();
-            }, 100);
-          }
-        }
-      }
-    } catch (error) {
-      await alertError(
-        "เกิดข้อผิดพลาด",
-        editingUser
-          ? `เกิดข้อผิดพลาดในการแก้ไขข้อมูล: ${
-              error.message || "ไม่ทราบสาเหตุ"
-            }`
-          : `เกิดข้อผิดพลาดในการเพิ่มข้อมูล: ${
-              error.message || "ไม่ทราบสาเหตุ"
-            }`
-      );
-
-      // เปิด Modal ใหม่หลังจากแจ้งเตือน error
-      if (onReopen) {
-        setTimeout(() => {
-          onReopen();
-        }, 100);
-      }
-    }
-  };
-
-  // Helper function to clear form
-  const clearForm = async () => {
-    // ปิด Modal ก่อนแสดง confirmation dialog
-    onClose();
-
-    // แสดง confirmation dialog
+    // ยืนยันก่อน (แต่ยังไม่ปิด Modal)
     const isConfirmed = await showConfirm(
-      "ล้างข้อมูลฟอร์ม",
-      "คุณต้องการล้างข้อมูลทั้งหมดในฟอร์มใช่หรือไม่?",
-      "ล้างข้อมูล",
+      editingUser ? "ยืนยันการแก้ไข" : "ยืนยันการเพิ่มข้อมูล",
+      editingUser
+        ? "คุณต้องการแก้ไขข้อมูลผู้ใช้งานนี้ใช่หรือไม่?"
+        : "คุณต้องการเพิ่มผู้ใช้งานใหม่ใช่หรือไม่?",
+      "ยืนยัน",
       "ยกเลิก"
     );
 
     if (!isConfirmed) {
-      // เปิด Modal ใหม่ถ้ายกเลิก
-      if (onReopen) {
-        setTimeout(() => {
-          onReopen();
-        }, 100);
-      }
+      await alertInfo("ยกเลิก", "การดำเนินการถูกยกเลิก");
       return;
     }
 
-    // Reset ฟอร์ม
-    resetAllFormFields();
+    // ไม่ต้องปิด Modal ตรงนี้ ปล่อยให้ฟอร์มอยู่
 
-    await alertSuccess("สำเร็จ", "ล้างข้อมูลฟอร์มเรียบร้อยแล้ว");
+    const formData = getValues();
 
-    // เปิด Modal ใหม่หลังจากล้างข้อมูลสำเร็จ
-    if (onReopen) {
-      setTimeout(() => {
-        onReopen();
-      }, 100);
+    if (!formData.email || !formData.email.includes("@")) {
+      await alertWarning("รูปแบบอีเมลไม่ถูกต้อง", "อีเมลต้องมีเครื่องหมาย @");
+      return;
+    }
+
+    if (!editingUser) {
+      const apiData = formatDataForAPI(formData);
+
+      const requiredFields = ["citizen_id", "title_id", "first_name", "email"];
+      const missingFields = requiredFields.filter((field) => !apiData[field]);
+
+      if (missingFields.length > 0) {
+        await alertWarning(
+          "ข้อมูลไม่ครบถ้วน",
+          `กรุณากรอกข้อมูลให้ครบถ้วน:\n\n${missingFields
+            .map((field) => {
+              const fieldNames = {
+                citizen_id: "• เลขบัตรประชาชน",
+                title_id: "• คำนำหน้า",
+                first_name: "• ชื่อ",
+                email: "• อีเมล",
+              };
+              return fieldNames[field] || `• ${field}`;
+            })
+            .join("\n")}\n\nกรุณากรอกข้อมูลให้ครบถ้วนแล้วลองใหม่อีกครั้ง`
+        );
+        return;
+      }
+
+      const result = await AddUsers(apiData);
+
+      if (
+        result &&
+        (result.res_code === "0000" || result.res_code === "0001")
+      ) {
+        if (onUserUpdated) {
+          onUserUpdated();
+        }
+        await alertSuccess("สำเร็จ", "เพิ่มข้อมูลผู้ใช้งานสำเร็จ");
+        if (typeof resetAllFormFields === "function") {
+          resetAllFormFields();
+        }
+        onClose(); // ปิด Modal เมื่อสำเร็จเท่านั้น
+        return;
+      } else if (result && result.res_code === "4090") {
+        const errorMessage =
+          result.res_data?.error ||
+          result.error ||
+          "ผู้ใช้งานนี้มีอยู่ในระบบแล้ว";
+
+        await alertWarning("ไม่สามารถเพิ่มข้อมูลได้", errorMessage);
+        return;
+      } else {
+        await alertWarning(
+          "การดำเนินการไม่สำเร็จ",
+          `ได้รับการตอบกลับที่ไม่คาดคิด: ${result?.res_code || "ไม่ทราบ"}`
+        );
+        return;
+      }
+    } else {
+      // กรณีแก้ไข: ยิง PutUser
+      try {
+        const apiData = formatDataForAPI(formData);
+        const userId = editingUser.id || editingUser._id || editingUser.user_id;
+        if (!userId) {
+          throw new Error("ไม่พบ user ID ที่จะใช้แก้ไข");
+        }
+
+        await PutUser(userId, apiData);
+
+        if (onUserUpdated) {
+          onUserUpdated();
+        }
+
+        await alertSuccess("สำเร็จ", "แก้ไขข้อมูลผู้ใช้งานสำเร็จ");
+        if (typeof resetAllFormFields === "function") {
+          resetAllFormFields();
+        }
+        onClose(); // ปิด Modal เมื่อสำเร็จเท่านั้น
+      } catch (error) {
+        await alertError(
+          "เกิดข้อผิดพลาด",
+          `เกิดข้อผิดพลาดในการแก้ไขข้อมูล: ${error.message || "ไม่ทราบสาเหตุ"}`
+        );
+      }
     }
   };
 

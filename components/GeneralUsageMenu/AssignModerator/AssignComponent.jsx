@@ -9,6 +9,7 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import AddCircleOutlineOutlinedIcon from "@mui/icons-material/AddCircleOutlineOutlined";
 import RemoveCircleOutlineOutlinedIcon from "@mui/icons-material/RemoveCircleOutlineOutlined";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
+import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
 import AddUserModal from "./modal/AddUserModal";
 import {
   GetDetailedStatsbyRole,
@@ -582,7 +583,14 @@ export default function UserManagementUI() {
       closeAlert();
     }, 300);
   };
-
+  const handleClearFilters = () => {
+    setPermission("");
+    setDisplayName("");
+    setFullName("");
+    setLoginDate("");
+    setStats(originalStats); // รีเซตข้อมูล user table
+    setHasSearched(false);
+  };
   // Handle Close Modal
   const handleCloseModal = () => {
     setOpenModal(false);
@@ -663,7 +671,6 @@ export default function UserManagementUI() {
           />
         </Grid>
 
-        {/* แถวสุดท้าย: ปุ่มค้นหา */}
         <Grid item xs={12} sm={6} md={3} lg={2.4} xl={2.4}>
           <Box
             mt={{
@@ -675,6 +682,8 @@ export default function UserManagementUI() {
             }}
             sx={{
               width: "100%",
+              display: "flex",
+              gap: 1,
             }}
           >
             <ButtonService
@@ -686,11 +695,31 @@ export default function UserManagementUI() {
                 backgroundColor: "#2196F3",
                 color: "#FFF",
                 borderRadius: "15px",
-                width: "100%",
+                flex: 1, // ใช้ flex แทน width
+                minWidth: 120,
                 height: "42px",
                 fontSize: "20px",
+                whiteSpace: "nowrap",
                 "&:hover": {
                   backgroundColor: "#1E88E5",
+                },
+              }}
+            />
+            <ButtonService
+              iconRight={<CleaningServicesIcon />}
+              label="ล้างข้อมูล"
+              onClick={handleClearFilters}
+              sx={{
+                backgroundColor: "red",
+                color: "white",
+                borderRadius: "15px",
+                flex: 1, // ใช้ flex แทน width
+                minWidth: 120,
+                height: "42px",
+                fontSize: "20px",
+                whiteSpace: "nowrap",
+                "&:hover": {
+                  backgroundColor: "red",
                 },
               }}
             />

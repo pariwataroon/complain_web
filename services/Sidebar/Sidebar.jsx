@@ -52,6 +52,34 @@ export default function Sidebar() {
   const notifArr = Array.isArray(notifications) ? notifications : [];
   const unreadExists = notifArr.some((n) => !n.is_read);
 
+  const handleNotificationClick = async (n) => {
+    try {
+      // markNotificationAsSeen ทุกครั้งที่คลิก
+      if (!n.is_read) {
+        await markNotificationAsSeen(n.id);
+        setNotifications((prev) =>
+          prev.map((item) =>
+            item.id === n.id ? { ...item, is_read: true } : item
+          )
+        );
+      }
+
+      if (n.redirect_url) {
+        if (n.redirect_url.startsWith("/complaints/")) {
+          const complaintId = n.redirect_url.replace("/complaints/", "");
+          router.push(`/admin/edit/website-complaints/${complaintId}/`);
+        } else if (n.redirect_url.startsWith("/users/")) {
+          router.push("/admin/settinggeneral/users/");
+        } else {
+          router.push(n.redirect_url);
+        }
+        setShowNotifications(false);
+      }
+    } catch (err) {
+      console.error("Error marking notification as read:", err);
+    }
+  };
+
   // ฟังก์ชันสำหรับกรองการแจ้งเตือนตามประเภท
   const getFilteredNotifications = () => {
     if (notificationFilter === 0) return notifArr; // ทั้งหมด
@@ -315,7 +343,11 @@ export default function Sidebar() {
   return (
     <Box className={styles.sidebar} ref={sidebarRef}>
       {/* Logo */}
-      <Box className={styles.logo}>
+      <Box
+        className={styles.logo}
+        style={{ cursor: "pointer" }}
+        onClick={() => router.push("/")}
+      >
         <img src="/Logo_Gold.png" alt="กระทรวงการคลัง" />
       </Box>
 
@@ -543,24 +575,7 @@ export default function Sidebar() {
                     <React.Fragment key={n.id ?? i}>
                       <Box
                         className={stylesNoti.notifItem}
-                        onClick={() => {
-                          if (n.redirect_url) {
-                            if (n.redirect_url.startsWith("/complaints/")) {
-                              const complaintId = n.redirect_url.replace(
-                                "/complaints/",
-                                ""
-                              );
-                              router.push(
-                                `/admin/edit/website-complaints/${complaintId}/`
-                              );
-                            } else if (n.redirect_url.startsWith("/users/")) {
-                              router.push("/admin/settinggeneral/users/");
-                            } else {
-                              router.push(n.redirect_url);
-                            }
-                            setShowNotifications(false);
-                          }
-                        }}
+                        onClick={() => handleNotificationClick(n)}
                       >
                         {!n.is_read && <Box className={stylesNoti.notifDot} />}
                         <Box className={stylesNoti.notifContent}>
