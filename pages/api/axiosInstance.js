@@ -1,12 +1,12 @@
 import axios from "axios";
 import Cookies from "js-cookie";
-import { alertWarning } from "@utils/Alerts"; 
+import { alertWarning } from "@utils/Alerts";
 
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
-    "X-API-Key": "cap_mof_live_frontend_web_2025@minerta",
+    "X-API-Key": "thaid_integration_key_2025@mof",
   },
 });
 
@@ -22,7 +22,7 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => {
