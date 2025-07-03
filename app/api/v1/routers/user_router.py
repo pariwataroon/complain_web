@@ -333,6 +333,7 @@ def verify_project_api_key(api_key: str) -> bool:
     # รายการ API Keys ที่อนุญาต (ในอนาคตอาจเก็บในฐานข้อมูล)
     allowed_api_keys = [
         "cap_mof_live_frontend_web_2025@minerta",
+        "thaid_integration_key_2025@mof",
         # เพิ่ม keys ตามต้องการ
     ]
     
