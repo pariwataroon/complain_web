@@ -119,16 +119,18 @@ def get_or_create_user_from_thaid(db: Session, thaid_data: ThaiIDTokenResponse):
         except Exception as e:
             print(f"Error sending notification: {str(e)}")
     
-    # ดึงข้อมูล roles ของผู้ใช้
+    # ดึงข้อมูล roles ของผู้ใช้ (ใช้วิธีเดียวกับ auth_controller)
+    user_id = existing_user['id'] if isinstance(existing_user, dict) else existing_user.id
+    user_with_roles = user_controller.get_user_with_roles_and_titles(db, user_id)
     roles = []
-    if hasattr(existing_user, 'roles'):
-        roles = [role.get('role_name') for role in existing_user['roles']] if isinstance(existing_user, dict) else []
+    if 'roles' in user_with_roles:
+        roles = [role.get('role_name') for role in user_with_roles['roles']]
     
     # สร้าง token payload ที่มีข้อมูลเพิ่มเติม
     token_data = {
-        "sub": str(existing_user['id'] if isinstance(existing_user, dict) else existing_user.id),
-        "first_name": existing_user['first_name'] if isinstance(existing_user, dict) else existing_user.first_name,
-        "last_name": existing_user['last_name'] if isinstance(existing_user, dict) else existing_user.last_name,
+        "sub": str(user_id),
+        "first_name": user_with_roles.get('first_name') or (existing_user['first_name'] if isinstance(existing_user, dict) else existing_user.first_name),
+        "last_name": user_with_roles.get('last_name') or (existing_user['last_name'] if isinstance(existing_user, dict) else existing_user.last_name),
         "roles": roles
     }
     
@@ -139,7 +141,7 @@ def get_or_create_user_from_thaid(db: Session, thaid_data: ThaiIDTokenResponse):
     # บันทึก token ลงฐานข้อมูล
     auth_controller.refresh_access_token_mapping(
         db, 
-        existing_user['id'] if isinstance(existing_user, dict) else existing_user.id, 
+        user_id, 
         access_token, 
         refresh_token
     )
