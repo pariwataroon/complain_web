@@ -43,9 +43,16 @@ def get_password_hash(password: str) -> str:
     return hashed
 
 
-def get_user(db: Session, user_id: int):
+def get_user(db: Session, user_id: int, include_inactive: bool = False):
+    """Get user by ID with option to include inactive users"""
     # เพิ่ม options(joinedload(User.title)) เพื่อโหลดข้อมูล title พร้อมกัน
-    return db.query(User).options(joinedload(User.title)).filter(User.id == user_id).first()
+    query = db.query(User).options(joinedload(User.title)).filter(User.id == user_id)
+    
+    # ถ้าไม่ต้องการผู้ใช้ที่ไม่ active ให้เพิ่มเงื่อนไข
+    if not include_inactive:
+        query = query.filter(User.is_active == True)
+        
+    return query.first()
 
 
 def get_user_by_email(db: Session, email: str):
@@ -232,7 +239,8 @@ def assign_user_positions(db: Session, user_id: UUID, position_ids: list, primar
     db.commit()
 
 def update_user(db: Session, user_id: int, user_data: UserUpdate):
-    db_user = get_user(db, user_id)
+    """Update user data (can update inactive users too)"""
+    db_user = get_user(db, user_id, include_inactive=True)  # รวมผู้ใช้ที่ไม่ active ด้วย
     if not db_user:
         return None
 
@@ -270,12 +278,53 @@ def update_user(db: Session, user_id: int, user_data: UserUpdate):
 
 
 def delete_user(db: Session, user_id: int):
-    db_user = get_user(db, user_id)
+    """Soft delete user by setting is_active to False"""
+    db_user = get_user(db, user_id, include_inactive=True)  # รวมผู้ใช้ที่ไม่ active ด้วย
     if not db_user:
         return False
-    db.delete(db_user)
-    db.commit()
-    return True
+    
+    # ถ้าผู้ใช้ถูก soft delete ไปแล้ว
+    if not db_user.is_active:
+        logger.warning(f"User with ID {user_id} is already inactive")
+        return False
+    
+    # Soft delete: เปลี่ยน is_active เป็น False แทนการลบจริง
+    db_user.is_active = False
+    
+    try:
+        db.commit()
+        db.refresh(db_user)
+        logger.info(f"Soft deleted user with ID {user_id}: {db_user.email}")
+        return True
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error soft deleting user {user_id}: {str(e)}")
+        return False
+
+
+def restore_user(db: Session, user_id: int):
+    """Restore soft deleted user by setting is_active to True"""
+    db_user = get_user(db, user_id, include_inactive=True)  # รวมผู้ใช้ที่ไม่ active ด้วย
+    if not db_user:
+        return False
+    
+    # ถ้าผู้ใช้ยังคง active อยู่
+    if db_user.is_active:
+        logger.warning(f"User with ID {user_id} is already active")
+        return False
+    
+    # Restore: เปลี่ยน is_active เป็น True
+    db_user.is_active = True
+    
+    try:
+        db.commit()
+        db.refresh(db_user)
+        logger.info(f"Restored user with ID {user_id}: {db_user.email}")
+        return True
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error restoring user {user_id}: {str(e)}")
+        return False
 
 
 def get_titles(db: Session):
@@ -284,8 +333,10 @@ def get_titles(db: Session):
 
 
 def get_users_with_titles(db: Session, skip: int = 0, limit: int = 100):
-    """Get users with their titles in a simple, efficient way"""
-    users = db.query(User).options(joinedload(User.title)).order_by(User.id).offset(skip).limit(limit).all()
+    """Get users with their titles in a simple, efficient way (only active users)"""
+    users = db.query(User).options(joinedload(User.title))\
+        .filter(User.is_active == True)\
+        .order_by(User.id).offset(skip).limit(limit).all()
     result = []
     for user in users:
         # Basic user data
@@ -323,13 +374,13 @@ def get_users_with_titles(db: Session, skip: int = 0, limit: int = 100):
 
 
 def get_users_with_roles_and_titles(db: Session, skip: int = 0, limit: int = 100):
-    """Get users with their titles, roles and positions"""
+    """Get users with their titles, roles and positions (only active users)"""
     # ใช้ joinedload เพื่อโหลดข้อมูล title, roles และ positions พร้อมกับข้อมูลผู้ใช้
     users = db.query(User).options(
         joinedload(User.title),
         joinedload(User.roles).joinedload(UserRole.role),
         joinedload(User.positions).joinedload(UserPosition.position)
-    ).order_by(User.id).offset(skip).limit(limit).all()
+    ).filter(User.is_active == True).order_by(User.id).offset(skip).limit(limit).all()
     
     result = []
     for user in users:

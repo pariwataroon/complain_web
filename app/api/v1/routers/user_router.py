@@ -428,3 +428,17 @@ async def admin_update_user(
         return format_response("4090", {"error": str(e)})
     except Exception as e:
         return format_response("5000", {"error": f"Failed to update user: {str(e)}"})
+
+@router.patch("/restore/{user_id}", response_model=FormatResponseModel)
+async def restore_existing_user(
+    user_id: UUID, 
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_create("setting_users"))  # ใช้สิทธิ์ create เนื่องจากเป็นการ restore
+):
+    """Restore soft deleted user"""
+    from app.api.v1.controllers.user_controller import restore_user
+    
+    success = restore_user(db, user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found or already active")
+    return format_response("0002", {"id": user_id, "message": "User restored successfully"})
