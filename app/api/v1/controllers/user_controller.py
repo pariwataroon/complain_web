@@ -519,11 +519,11 @@ def search_users_by_role(db: Session, role_name: str = None, skip: int = 0, limi
     """
     from models.role import Role
     
-    # Base query with all necessary joins
+    # Base query with all necessary joins and filter for active users
     query = db.query(User).options(
         joinedload(User.title),
         joinedload(User.roles).joinedload(UserRole.role)
-    )
+    ).filter(User.is_active == True)
     
     # If role_name is provided, filter users by that role
     if role_name:
@@ -593,7 +593,7 @@ def get_users_count_by_roles(db: Session):
     from sqlalchemy import func, distinct
     from models.role import Role
     
-    # Query to count users by role
+    # Query to count users by role (only active users)
     result = (
         db.query(
             Role.name.label('role_name'), 
@@ -602,6 +602,7 @@ def get_users_count_by_roles(db: Session):
         )
         .join(UserRole, UserRole.role_id == Role.id)
         .join(User, User.id == UserRole.user_id)
+        .filter(User.is_active == True)
         .group_by(Role.name, Role.description)
         .all()
     )
@@ -633,22 +634,24 @@ def get_detailed_users_by_roles(db: Session, role_id: UUID = None, skip: int = 0
     
     result = []
     for role in roles:
-        # ใช้ count แยกต่างหากเพื่อประสิทธิภาพ
+        # ใช้ count แยกต่างหากเพื่อประสิทธิภาพ (only active users)
         total_users_count = (
             db.query(func.count(User.id))
             .join(UserRole, UserRole.user_id == User.id)
             .filter(UserRole.role_id == role.id)
+            .filter(User.is_active == True)
             .scalar()
         )
         
         # ดึงข้อมูล users ถ้ามีใน role นี้
         users_data = []
         if total_users_count > 0:
-            # ดึงเฉพาะข้อมูลที่จำเป็นโดยไม่ใช้ joinedload มากเกินไป
+            # ดึงเฉพาะข้อมูลที่จำเป็นโดยไม่ใช้ joinedload มากเกินไป (only active users)
             users_with_role = (
                 db.query(User)
                 .join(UserRole, UserRole.user_id == User.id)
                 .filter(UserRole.role_id == role.id)
+                .filter(User.is_active == True)
                 .options(joinedload(User.title))
                 .order_by(User.created_at.desc())
                 .offset(skip)
