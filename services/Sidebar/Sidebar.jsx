@@ -32,7 +32,7 @@ import {
   markNotificationAsSeen,
 } from "@pages/api/notifications/notifications";
 import { showLoading, closeAlert, alertError } from "@utils/Alerts";
-import { formatElapsedThaiTime } from "@utils/Formats";
+import { getElapsedTimeTH } from "@utils/Formats";
 import LayersIcon from "@mui/icons-material/Layers";
 import HistoryIcon from "@mui/icons-material/History";
 import Cookies from "js-cookie";
@@ -267,7 +267,9 @@ export default function Sidebar() {
 
         {submenuItems.length > 0 && (
           <Box
-            className={`${styles.submenu} ${openSubmenu === key ? styles.submenuVisible : ""}`}
+            className={`${styles.submenu} ${
+              openSubmenu === key ? styles.submenuVisible : ""
+            }`}
             onMouseEnter={() => setOpenSubmenu(key)}
             onMouseLeave={() => setOpenSubmenu(null)}
           >
@@ -275,7 +277,11 @@ export default function Sidebar() {
               {submenu.map((item, i) => (
                 <React.Fragment key={i}>
                   <li
-                    className={item.type === "header" ? styles.headerItem : styles.menuItem}
+                    className={
+                      item.type === "header"
+                        ? styles.headerItem
+                        : styles.menuItem
+                    }
                   >
                     {item.type === "header" ? (
                       <span className={styles.headerText}>
@@ -385,7 +391,9 @@ export default function Sidebar() {
 
             <Paper
               ref={notificationRef}
-              className={`${stylesNoti.notificationBox} ${showNotifications ? stylesNoti.show : ""}`}
+              className={`${stylesNoti.notificationBox} ${
+                showNotifications ? stylesNoti.show : ""
+              }`}
               onMouseEnter={() => setShowNotifications(true)}
               onMouseLeave={() => setShowNotifications(false)}
               sx={{
@@ -483,9 +491,7 @@ export default function Sidebar() {
                         <span>เรื่องร้องเรียน</span>
                         {notificationCounts.complaints.unread > 0 && (
                           <Badge
-                            badgeContent={
-                              notificationCounts.complaints.unread
-                            }
+                            badgeContent={notificationCounts.complaints.unread}
                             color="error"
                             sx={{
                               "& .MuiBadge-badge": {
@@ -556,18 +562,14 @@ export default function Sidebar() {
                           }
                         }}
                       >
-                        {!n.is_read && (
-                          <Box className={stylesNoti.notifDot} />
-                        )}
+                        {!n.is_read && <Box className={stylesNoti.notifDot} />}
                         <Box className={stylesNoti.notifContent}>
-                          <div className={stylesNoti.notifTitle}>
-                            {n.title}
-                          </div>
+                          <div className={stylesNoti.notifTitle}>{n.title}</div>
                           <div className={stylesNoti.notifMessage}>
                             {n.message}
                           </div>
                           <div className={stylesNoti.notifTime}>
-                            {formatElapsedThaiTime(n.created_at)}
+                            {getElapsedTimeTH(n.created_at)}
                           </div>
                         </Box>
                       </Box>

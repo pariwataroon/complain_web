@@ -95,6 +95,18 @@ export function formatElapsedThaiTime(createdAt) {
   return `${minutes} นาที`;
 }
 
+export function getElapsedTimeTH(inputDate) {
+  if (!inputDate) return "";
+  const thNow = dayjs().tz("Asia/Bangkok");
+  const thDate = dayjs(inputDate).tz("Asia/Bangkok");
+  const diffSec = thNow.diff(thDate, "second");
+
+  if (diffSec < 60) return "ไม่กี่วินาทีที่แล้ว";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} นาทีที่แล้ว`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} ชั่วโมงที่แล้ว`;
+  return `${Math.floor(diffSec / 86400)} วันที่แล้ว`;
+}
+
 export function formatThaiDateRange(start, end) {
   const startD = dayjs(start);
   const endD = dayjs(end);
