@@ -2,17 +2,26 @@
   position: absolute;
   bottom: 0;
   left: 61px;
-  width: 300px;
-  max-height: 400px;
+  width: 380px;
+  max-height: 500px;
   overflow-y: auto;
   background: #ffffff;
   border: 1px solid #cdd8f7;
   border-radius: 16px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   padding: 1rem;
-  animation: fadeInUp 0.3s ease;
+  opacity: 0;
+  transform: translateY(10px);
+  visibility: hidden;
+  transition: all 0.2s ease;
   scrollbar-width: thin;
   scrollbar-color: #91cbff #f0f4ff;
+
+  &.show {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+  }
 }
 
 /* Scrollbar สำหรับ Webkit (Chrome, Edge, Safari) */
