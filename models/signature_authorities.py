@@ -12,12 +12,14 @@ class SignatureAuthority(Base):
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
     user_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), nullable=False)
     department_id = Column(UNIQUEIDENTIFIER, ForeignKey("departments.id"), nullable=False)
+    group_signature_authorities_id = Column(UNIQUEIDENTIFIER, ForeignKey("group_signature_authorities.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     start_date = Column(DateTime, nullable=True)
     end_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
-    # ความสัมพันธ์กับ User และ Department
+    # ความสัมพันธ์กับ User, Department และ GroupSignatureAuthority
     user = relationship("User", foreign_keys=[user_id])
     department = relationship("Department", foreign_keys=[department_id])
+    group = relationship("GroupSignatureAuthority", back_populates="signature_authorities")

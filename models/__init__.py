@@ -22,6 +22,7 @@ from .comp_amphures import Amphure
 from .comp_districts import District
 from .project_api_key import ProjectApiKey
 from .signature_authorities import SignatureAuthority
+from .group_signature_authorities import GroupSignatureAuthority
 from .comp_complaint import Complaint, ComplaintAttachment, ComplaintStatusHistory
 from .comp_complaint_types import ComplaintType, ComplaintSubType, ComplaintChannel
 from .outgoing_reports import OutgoingReport, OutgoingReportAttachment
@@ -36,7 +37,7 @@ __all__ = [
     'DepartmentGroup', 'Department', 'Notification', 'Position', 
     'ResourceGroup', 'TimeSetting', 'UserPosition', 'Venue', 'VerificationToken',
     'Geography', 'Province', 'Amphure', 'District', 'ProjectApiKey',
-    'SignatureAuthority', 'Complaint', 'ComplaintAttachment',
+    'SignatureAuthority', 'GroupSignatureAuthority', 'Complaint', 'ComplaintAttachment',
     'ComplaintStatusHistory', 'ComplaintType', 'ComplaintSubType', 'ComplaintChannel',
     'OutgoingReport', 'OutgoingReportAttachment', 'OutgoingReport2', 'OutgoingReportAttachment2',
     'OutgoingReport3', 'OutgoingReportAttachment3', 'OutgoingReport4', 'OutgoingReportAttachment4'

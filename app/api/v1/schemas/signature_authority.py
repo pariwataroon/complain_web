@@ -36,6 +36,7 @@ class SignaturePosition(SignaturePositionBase):
 class SignatureAuthorityBase(BaseModel):
     user_id: UUID
     department_id: UUID
+    group_signature_authorities_id: Optional[UUID] = None
     is_active: Optional[bool] = True
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
@@ -43,6 +44,7 @@ class SignatureAuthorityBase(BaseModel):
 class SignatureAuthorityCreate(BaseModel):
     user_id: UUID
     department_id: UUID
+    group_signature_authorities_id: Optional[UUID] = None
     is_active: bool = True
     start_date: datetime
     end_date: Optional[datetime] = None
@@ -50,6 +52,7 @@ class SignatureAuthorityCreate(BaseModel):
 class SignatureAuthorityUpdate(BaseModel):
     user_id: Optional[UUID] = None
     department_id: Optional[UUID] = None
+    group_signature_authorities_id: Optional[UUID] = None
     is_active: Optional[bool] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
@@ -58,6 +61,7 @@ class SignatureAuthority(BaseModel):
     id: Optional[UUID] = None
     user_id: UUID
     department_id: UUID
+    group_signature_authorities_id: Optional[UUID] = None
     is_active: bool = True
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
