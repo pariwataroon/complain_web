@@ -1344,7 +1344,7 @@
 					"response": []
 				},
 				{
-					"name": "users/UUID",
+					"name": "users/UUID - Soft Delete User",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -1376,7 +1376,47 @@
 								"users",
 								"9F28F7E6-CF32-4B9D-852A-D95C9437CD97"
 							]
-						}
+						},
+						"description": "ลบผู้ใช้แบบ soft delete (ตั้งค่า is_active = false) - ผู้ใช้จะไม่แสดงในรายการต่างๆ แต่ยังคงข้อมูลไว้ในฐานข้อมูล\n\n**คุณสมบัติ:**\n- ไม่ได้ลบข้อมูลจริงจากฐานข้อมูล\n- ตั้งค่า is_active = false\n- ยังคงสามารถ restore ได้\n- ไม่แสดงในรายการผู้ใช้ต่างๆ\n\n**สิทธิ์:** ต้องมีสิทธิ์ `setting_users:delete` (admin level)\n\n**Response:**\n```json\n{\n  \"res_code\": \"0003\",\n  \"res_message\": \"DELETE_DATA_SUCCESSFULLY\",\n  \"res_data\": {\n    \"id\": \"uuid\",\n    \"is_active\": false,\n    \"deleted_at\": \"2025-01-01T00:00:00Z\"\n  }\n}\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "users/restore/UUID - Restore User",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/restore/9F28F7E6-CF32-4B9D-852A-D95C9437CD97",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								"restore",
+								"9F28F7E6-CF32-4B9D-852A-D95C9437CD97"
+							]
+						},
+						"description": "กู้คืนผู้ใช้ที่ถูก soft delete (ตั้งค่า is_active = true) - ผู้ใช้จะแสดงในรายการต่างๆ อีกครั้ง\n\n**คุณสมบัติ:**\n- ตั้งค่า is_active = true\n- ผู้ใช้จะแสดงในรายการต่างๆ อีกครั้ง\n- ไม่มีผลกระทบต่อ roles และ permissions ที่มีอยู่\n- สามารถ login ได้ตามปกติ\n\n**สิทธิ์:** ต้องมีสิทธิ์ `setting_users:create` (admin level)\n\n**Response:**\n```json\n{\n  \"res_code\": \"0002\",\n  \"res_message\": \"UPDATE_DATA_SUCCESSFULLY\",\n  \"res_data\": {\n    \"id\": \"uuid\",\n    \"is_active\": true,\n    \"restored_at\": \"2025-01-01T00:00:00Z\",\n    \"full_name_with_title\": \"นาย ทดสอบ ระบบ\"\n  }\n}\n```"
 					},
 					"response": []
 				}
