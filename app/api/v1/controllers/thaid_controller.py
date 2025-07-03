@@ -113,7 +113,7 @@ def get_or_create_user_from_thaid(db: Session, thaid_data: ThaiIDTokenResponse):
                 db=db,
                 title="มีการลงทะเบียนผู้ใช้ใหม่ผ่าน ThaiID",
                 message=f"ผู้ใช้ {thaid_data.given_name} {thaid_data.family_name} ได้ลงทะเบียนผ่าน ThaiID",
-                role_seeking_group="admin",
+                role_seeking_group="admin,staff,supervisor",
                 redirect_url=f"/users/{user_id}"
             )
         except Exception as e:
