@@ -4174,7 +4174,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"user_id\": \"{{user_id}}\",\n    \"department_id\": \"{{department_id}}\",\n    \"is_active\": true,\n    \"start_date\": \"2025-05-01T00:00:00Z\",\n    \"end_date\": null\n}",
+							"raw": "{\n    \"user_id\": \"{{user_id}}\",\n    \"department_id\": \"{{department_id}}\",\n    \"is_active\": true,\n    \"start_date\": \"2025-05-01T00:00:00Z\",\n    \"end_date\": null,\n    \"group_signature_authorities_id\": null\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -4190,7 +4190,7 @@
 								"signature-authorities"
 							]
 						},
-						"description": "กำหนดสิทธิการลงนามใหม่ให้กับผู้ใช้ในหน่วยงานที่ระบุ - ต้องมีสิทธิ์สร้างใน setting_users"
+						"description": "กำหนดสิทธิการลงนามใหม่ให้กับผู้ใช้ในหน่วยงานที่ระบุ - ต้องมีสิทธิ์สร้างใน setting_users\n\n**ฟิลด์ใหม่:**\n- group_signature_authorities_id (optional) - ระบุ ID ของกลุ่มผู้มีอำนาจลงนาม หากต้องการเชื่อมโยงกับกลุ่ม\n\n**คุณสมบัติ:**\n- สร้างสิทธิการลงนามแบบเดี่ยว\n- สามารถเชื่อมโยงกับกลุ่มผู้มีอำนาจลงนาม\n- รองรับการกำหนดวันที่เริ่มต้นและสิ้นสุด"
 					},
 					"response": []
 				},
@@ -4251,9 +4251,154 @@
 						"description": "ดึงรายการผู้ใช้ที่มีอำนาจลงนามจัดกลุ่มตามกลุ่มหน่วยงาน - ต้องมีสิทธิ์อ่านใน setting_users"
 					},
 					"response": []
+				},
+				{
+					"name": "Create Group Signature Authority",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"group_name\": \"ผู้อำนวยการกลุ่มงานพัฒนาระบบ\",\n    \"description\": \"กลุ่มผู้มีอำนาจลงนามสำหรับงานพัฒนาระบบและเทคโนโลยี\",\n    \"assignments\": [\n        {\n            \"user_id\": \"{{user_id_1}}\",\n            \"department_ids\": [\"{{department_id_1}}\", \"{{department_id_2}}\"]\n        },\n        {\n            \"user_id\": \"{{user_id_2}}\",\n            \"department_ids\": [\"{{department_id_1}}\", \"{{department_id_3}}\"]\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities/groups",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities",
+								"groups"
+							]
+						},
+						"description": "สร้างกลุ่มผู้มีอำนาจลงนาม - ช่วยในการจัดการผู้ใช้หลายคนให้มีอำนาจลงนามในหลายหน่วยงานพร้อมกัน\n\n**คุณสมบัติ:**\n- สร้างกลุ่มพร้อมกำหนดผู้ใช้และหน่วยงานในครั้งเดียว\n- ผู้ใช้หนึ่งคนสามารถมีอำนาจลงนามในหลายหน่วยงาน\n- หน่วยงานหนึ่งสามารถมีผู้ลงนามหลายคน\n- จัดเก็บประวัติการสร้างกลุ่ม\n\n**สิทธิ์:** ต้องมีสิทธิ์ `setting_users:create` (admin level)\n\n**Response:**\n```json\n{\n  \"res_code\": \"0001\",\n  \"res_message\": \"CREATE_DATA_SUCCESSFULLY\",\n  \"res_data\": {\n    \"group_id\": \"uuid\",\n    \"group_name\": \"ผู้อำนวยการกลุ่มงานพัฒนาระบบ\",\n    \"created_authorities\": 4,\n    \"assignments\": [...]\n  }\n}\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk Create Signature Authorities",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"assignments\": [\n        {\n            \"user_id\": \"{{user_id_1}}\",\n            \"department_id\": \"{{department_id_1}}\",\n            \"start_date\": \"2025-01-01T00:00:00Z\",\n            \"end_date\": null\n        },\n        {\n            \"user_id\": \"{{user_id_1}}\",\n            \"department_id\": \"{{department_id_2}}\",\n            \"start_date\": \"2025-01-01T00:00:00Z\",\n            \"end_date\": null\n        },\n        {\n            \"user_id\": \"{{user_id_2}}\",\n            \"department_id\": \"{{department_id_1}}\",\n            \"start_date\": \"2025-01-01T00:00:00Z\",\n            \"end_date\": null\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities/bulk",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities",
+								"bulk"
+							]
+						},
+						"description": "สร้างสิทธิการลงนามแบบจำนวนมาก - สำหรับการกำหนดสิทธิ์หลายรายการพร้อมกัน\n\n**คุณสมบัติ:**\n- สร้างสิทธิการลงนามหลายรายการในครั้งเดียว\n- ตรวจสอบความซ้ำซ้อน (duplicate) อัตโนมัติ\n- รองรับการกำหนดวันที่เริ่มต้นและสิ้นสุด\n- Transaction-safe - ถ้าข้อมูลส่วนใดผิดพลาด จะไม่สร้างรายการใดเลย\n\n**สิทธิ์:** ต้องมีสิทธิ์ `setting_users:create` (admin level)\n\n**Response:**\n```json\n{\n  \"res_code\": \"0001\",\n  \"res_message\": \"CREATE_DATA_SUCCESSFULLY\",\n  \"res_data\": {\n    \"created_count\": 3,\n    \"skipped_count\": 0,\n    \"authorities\": [...]\n  }\n}\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Group Signature Authorities",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities/groups?skip=0&limit=100",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities",
+								"groups"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "100"
+								}
+							]
+						},
+						"description": "ดึงรายการกลุ่มผู้มีอำนาจลงนามทั้งหมด พร้อมข้อมูลผู้ใช้และหน่วยงานที่เกี่ยวข้อง\n\n**คุณสมบัติ:**\n- แสดงรายการกลุ่มทั้งหมด\n- รองรับ pagination (skip, limit)\n- แสดงจำนวนผู้ใช้และหน่วยงานในแต่ละกลุ่ม\n- แสดงสถานะ active/inactive\n\n**สิทธิ์:** ต้องมีสิทธิ์ `setting_users:read` (admin level)\n\n**Response:**\n```json\n{\n  \"res_code\": \"0000\",\n  \"res_message\": \"LOAD_DATA_SUCCESSFULLY\",\n  \"res_data\": {\n    \"groups\": [\n      {\n        \"id\": \"uuid\",\n        \"group_name\": \"ผู้อำนวยการกลุ่มงานพัฒนาระบบ\",\n        \"description\": \"กลุ่มผู้มีอำนาจลงนาม...\",\n        \"user_count\": 3,\n        \"department_count\": 5,\n        \"active_authorities\": 12,\n        \"created_at\": \"2025-01-01T00:00:00Z\"\n      }\n    ],\n    \"total\": 1\n  }\n}\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Group Signature Authority Details",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities/groups/{{group_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities",
+								"groups",
+								"{{group_id}}"
+							]
+						},
+						"description": "ดึงรายละเอียดกลุ่มผู้มีอำนาจลงนาม รวมรายชื่อผู้ใช้และหน่วยงานทั้งหมด\n\n**คุณสมบัติ:**\n- แสดงข้อมูลกลุ่มแบบละเอียด\n- รายชื่อผู้ใช้ทั้งหมดในกลุ่ม\n- รายชื่อหน่วยงานทั้งหมด\n- รายละเอียดการกำหนดสิทธิ์แต่ละรายการ\n\n**สิทธิ์:** ต้องมีสิทธิ์ `setting_users:read` (admin level)"
+					},
+					"response": []
 				}
 			],
-			"description": "API สำหรับจัดการผู้มีอำนาจลงนามเอกสาร - เชื่อมโยงผู้ใช้กับหน่วยงานโดยตรง โดยใช้ข้อมูลตำแหน่งจาก user_positions"
+			"description": "API สำหรับจัดการผู้มีอำนาจลงนามเอกสาร - เชื่อมโยงผู้ใช้กับหน่วยงานโดยตรง โดยใช้ข้อมูลตำแหน่งจาก user_positions\n\n**คุณสมบัติใหม่:**\n- Group Signature Authority - จัดการผู้ใช้หลายคนในหลายหน่วยงานพร้อมกัน\n- Bulk Creation - สร้างสิทธิการลงนามจำนวนมากในครั้งเดียว\n- Group Management - จัดกลุ่มผู้มีอำนาจลงนามเพื่อความสะดวกในการบริหารจัดการ"
 		},
 		{
 			"name": "NOTIFICATIONS",
