@@ -4,7 +4,9 @@ export default function Homepage5() {
   return (
     <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
       {/* หัวข้อของหน้า */}
-      <h2 style={{ marginBottom: "20px", fontSize: "24px", fontWeight: "bold" }}>
+      <h2
+        style={{ marginBottom: "20px", fontSize: "24px", fontWeight: "bold" }}
+      >
         ข่าวสารและประชาสัมพันธ์
       </h2>
 
@@ -20,7 +22,12 @@ export default function Homepage5() {
         <img
           src="https://picsum.photos/1200/400?random=1"
           alt="ข่าวสารและประชาสัมพันธ์"
-          style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
+          style={{
+            width: "100%",
+            height: "auto",
+            display: "block",
+            objectFit: "cover",
+          }}
         />
 
         {/* กล่องข้อความซ้อนบนภาพ */}

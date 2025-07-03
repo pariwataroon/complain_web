@@ -1,190 +1,71 @@
 .container {
   position: relative;
-  min-height: 120vh;
-  width: 100%;
-  background-image: url('/images/bg02.png');
-  background-size: cover;
-  background-position: center;
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  background-image: url("/images/bg02.png");
+  background-size: cover; // ภาพเต็มจอเสมอ
   background-repeat: no-repeat;
+  background-position: center center; // กึ่งกลาง
   background-attachment: scroll;
-  z-index: 1;
-}
+  z-index: 0;
+  background-color: #f8f9fa;
+  transition: background-image 0.3s ease-in-out;
 
-/* Large Desktop - ภาพขนาดเดิม */
-@media (min-width: 1440px) {
-  .container {
-    min-height: 120vh;
-    background-size: cover;
-    background-position: center;
-  }
-}
-
-/* Desktop - ภาพขนาดเดิม */
-@media (max-width: 1439px) and (min-width: 1025px) {
-  .container {
-    min-height: 115vh;
-    background-size: cover;
-    background-position: center;
-  }
-}
-
-/* Tablet - เริ่มปรับเป็น hero */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .container {
+  // Responsive min-height for tall screens
+  @media (min-width: 1440px) {
     min-height: 100vh;
-    background-size: cover;
-    background-position: center;
-    background-attachment: scroll;
   }
-}
-
-/* Mobile Large - Hero Section */
-@media (max-width: 768px) and (min-width: 481px) {
-  .container {
+  @media (max-width: 1439px) and (min-width: 1025px) {
+    min-height: 100vh;
+  }
+  @media (max-width: 1024px) and (min-width: 769px) {
+    min-height: 100vh;
+  }
+  @media (max-width: 768px) and (min-width: 481px) {
     min-height: 80vh;
-    background-size: cover;
-    background-position: center top;
-    background-attachment: scroll;
   }
-}
-
-/* Mobile - Hero Section ปรับให้เห็นภาพดี */
-@media (max-width: 480px) {
-  .container {
+  @media (max-width: 480px) {
     min-height: 70vh;
-    background-size: cover;
-    background-position: center center;
-    background-attachment: scroll;
   }
-}
-
-/* Small Mobile - Hero Section ขนาดเล็ก */
-@media (max-width: 360px) {
-  .container {
+  @media (max-width: 360px) {
     min-height: 60vh;
-    background-size: cover;
-    background-position: center center;
   }
-}
-
-/* Portrait orientation สำหรับ mobile */
-@media (max-width: 768px) and (orientation: portrait) {
-  .container {
-    min-height: 70vh;
-    background-position: center top;
-  }
-}
-
-/* Landscape orientation สำหรับ mobile */
-@media (max-width: 768px) and (orientation: landscape) {
-  .container {
-    min-height: 100vh;
-    background-position: center center;
-  }
-}
-
-/* Very small screens */
-@media (max-width: 320px) {
-  .container {
+  @media (max-width: 320px) {
     min-height: 50vh;
-    background-position: center center;
   }
-}
 
-/* สำหรับหน้าจอที่มีความละเอียดสูง */
-@media (-webkit-min-device-pixel-ratio: 2),
-(min-resolution: 192dpi) {
-  .container {
-    background-image: url('/images/bg02.png');
-    /* ใช้ภาพเดิม */
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: optimize-contrast;
-  }
-}
-
-/* เพิ่ม subtle overlay สำหรับ mobile เพื่อให้ภาพเด่นขึ้น */
-@media (max-width: 768px) {
-  .container::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg,
+  // Mobile overlay
+  @media (max-width: 768px) {
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        135deg,
         rgba(0, 51, 102, 0.1) 0%,
         rgba(0, 0, 0, 0.05) 50%,
-        rgba(0, 51, 102, 0.1) 100%);
-    pointer-events: none;
-    z-index: 1;
+        rgba(0, 51, 102, 0.1) 100%
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
   }
-}
 
-/* Performance optimization */
-.container {
-  will-change: transform;
-  backface-visibility: hidden;
-  transform: translateZ(0);
-}
-
-/* Smooth loading */
-.container {
-  background-color: #f8f9fa;
-  /* Fallback color ขณะโหลดภาพ */
-  transition: background-image 0.3s ease-in-out;
-}
-
-/* สำหรับ slow network - แสดง placeholder */
-.container {
-  background-blend-mode: normal;
-}
-
-/* Alternative for very slow connections */
-@media (max-width: 480px) and (max-bandwidth: 1mbps) {
-  .container {
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-color: #e9ecef;
+  // Landscape mobile: ใช้ความสูงเต็ม
+  @media (max-width: 768px) and (orientation: landscape) {
+    min-height: 10vh;
+    background-position: center center;
   }
-}
 
-/* Print styles */
-@media print {
-  .container {
-    min-height: 50vh;
-    background: #ffffff;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  // Portrait mobile: รูปชิดบน
+  @media (max-width: 768px) and (orientation: portrait) {
+    background-position: center top;
   }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .container {
-    filter: brightness(0.9);
-  }
-}
-
-/* High contrast mode */
-@media (prefers-contrast: high) {
-  .container {
-    filter: contrast(1.2);
-  }
-}
-
-/* สำหรับการใช้งานแบบ full-width */
-.container.fullWidth {
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
-}
-
-/* สำหรับการปรับ aspect ratio */
-.container.aspectRatio16x9 {
-  aspect-ratio: 16 / 9;
-  min-height: auto;
-}
-
-.container.aspectRatio4x3 {
-  aspect-ratio: 4 / 3;
-  min-height: auto;
 }
