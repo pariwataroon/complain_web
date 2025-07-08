@@ -16,7 +16,6 @@ import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsa
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
 
-
 const ForwardtoagencyComponents = () => {
   const router = useRouter();
   const { id } = router.query;
@@ -26,7 +25,22 @@ const ForwardtoagencyComponents = () => {
   const [confidentialityOptions, setConfidentialityOptions] = useState([]);
   const [urgencyOptions, setUrgencyOptions] = useState([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
-
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const onSubmit = async (data) => {
+    const result = await handleSave(data);
+    if (result?.success) {
+      // Reset component-specific state
+      setSelectedSigner(null);
+      setSelectedDepartment(null);
+    }
+  };
+  useEffect(() => {
+    if (isSubmitted) {
+      setSelectedSigner(null);
+      setSelectedDepartment(null);
+      setIsSubmitted(false);
+    }
+  }, [isSubmitted]);
   const {
     control,
     handleSubmit,
@@ -41,6 +55,7 @@ const ForwardtoagencyComponents = () => {
     getFieldError,
     isRequired,
     getCurrentFormData,
+    fileInputKey, // Get the fileInputKey
   } = useForwardToAgencyForm();
 
   const handleSignerSelect = (userInfo) => {
@@ -48,7 +63,6 @@ const ForwardtoagencyComponents = () => {
     setSelectedDepartment(null);
     setValue("department", "");
   };
-
 
   const createLabel = (text, fieldName) => {
     return (
@@ -81,13 +95,13 @@ const ForwardtoagencyComponents = () => {
   const fetchOptions = async () => {
     try {
       setOptionsLoading(true);
-      const confidentialityData = await GetOutgoingReportOptions("confidentiality_levels");
+      const confidentialityData = await GetOutgoingReportOptions(
+        "confidentiality_levels"
+      );
       const urgencyData = await GetOutgoingReportOptions("urgency_levels");
       setConfidentialityOptions(confidentialityData);
       setUrgencyOptions(urgencyData);
-
     } catch (error) {
-
       setConfidentialityOptions([
         { value: ปกติ, label: "ปกติ" },
         { value: ลับ, label: "ลับ" },
@@ -328,7 +342,9 @@ const ForwardtoagencyComponents = () => {
                   helperText={getFieldError("department")}
                   required={isRequired("department")}
                   disabled={!selectedSigner}
-                  placeholder={selectedSigner ? "เลือกหน่วยงาน" : "เลือกผู้ลงนามก่อน"}
+                  placeholder={
+                    selectedSigner ? "เลือกหน่วยงาน" : "เลือกผู้ลงนามก่อน"
+                  }
                 />
               )}
             />
@@ -355,7 +371,9 @@ const ForwardtoagencyComponents = () => {
                   error={!!getFieldError("confidentiality")}
                   helperText={getFieldError("confidentiality")}
                   disabled={optionsLoading}
-                  placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความลับ"}
+                  placeholder={
+                    optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความลับ"
+                  }
                 />
               )}
             />
@@ -373,7 +391,9 @@ const ForwardtoagencyComponents = () => {
                   error={!!getFieldError("urgency")}
                   helperText={getFieldError("urgency")}
                   disabled={optionsLoading}
-                  placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความเร่งด่วน"}
+                  placeholder={
+                    optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความเร่งด่วน"
+                  }
                 />
               )}
             />
@@ -392,11 +412,15 @@ const ForwardtoagencyComponents = () => {
               control={control}
               render={({ field }) => (
                 <InputFile
+                  key={fileInputKey} // Use the key here to force re-render
                   label={createLabel("เอกสารประกอบการร้องเรียน", "attachment")}
                   name="attachment"
                   onChange={handleFileUpload}
                   error={getFieldError("attachment")}
-                  helperText={getFieldError("attachment") || "หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"}
+                  helperText={
+                    getFieldError("attachment") ||
+                    "หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"
+                  }
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   maxFiles={3}
                   maxSizeMB={10}
@@ -420,7 +444,9 @@ const ForwardtoagencyComponents = () => {
                   multiline
                   rows={4}
                   error={!!getFieldError("note")}
-                  helperText={getFieldError("note") || "ระบุข้อมูลเพิ่มเติมที่ต้องการแจ้ง"}
+                  helperText={
+                    getFieldError("note") || "ระบุข้อมูลเพิ่มเติมที่ต้องการแจ้ง"
+                  }
                 />
               )}
             />
@@ -470,7 +496,7 @@ const ForwardtoagencyComponents = () => {
               label="บันทึก"
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
-              onClick={handleSubmit(handleSave)}
+              onClick={handleSubmit(onSubmit)}
               disabled={!isValid}
               sx={{
                 backgroundColor: isValid ? "#2196F3" : "#cccccc",
@@ -482,7 +508,9 @@ const ForwardtoagencyComponents = () => {
                 "&:hover": {
                   backgroundColor: isValid ? "#1976D2" : "#cccccc",
                   transform: isValid ? "translateY(-1px)" : "none",
-                  boxShadow: isValid ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
+                  boxShadow: isValid
+                    ? "0 6px 16px rgba(33, 150, 243, 0.4)"
+                    : "none",
                 },
                 "&:disabled": {
                   backgroundColor: "#cccccc",

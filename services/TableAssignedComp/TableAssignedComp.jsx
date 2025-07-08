@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Table,
@@ -14,33 +14,45 @@ import {
 } from "@mui/material";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
+import buddhistEra from "dayjs/plugin/buddhistEra";
 import SearchIcon from "@mui/icons-material/Search";
 import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
 import styles from "./TableAssignedComp.module.scss";
 import ExportButton from "@services/ExportButton/ExportButton";
 import InputText from "@services/InputText/InputText";
-import SelectField from "@services/SelectField/SelectField";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
+import { exportElementToPDF } from "@utils/exportPDF";
 
+// Setup dayjs with Buddhist Era
+dayjs.extend(buddhistEra);
 dayjs.locale("th");
 
 const TableAssignedComp = ({
   rows = [],
   handleRowClick,
-  onSearch = () => { },
-  onClearSearch = () => { },
+  onSearch = () => {},
+  onClearSearch = () => {},
   searchFilters = {
     claimantName: "",
     subject: "",
     docNo4: "",
     receiveDate: null,
   },
-  onFilterChange = () => { },
+  onFilterChange = () => {},
   title = "รายการข้อมูล",
 }) => {
   // Pagination state
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // Ref สำหรับ export PDF
+  const tableRef = useRef(null);
+
+  const handleExportPDF = () => {
+    const today = new Date().toLocaleDateString("th-TH");
+    const filename = `รายงาน${title}_${today}.pdf`;
+    exportElementToPDF(tableRef, filename);
+  };
 
   // Custom breakpoint สำหรับ 1350px
   const isBelow1350 = useMediaQuery("(max-width: 1350px)");
@@ -59,15 +71,24 @@ const TableAssignedComp = ({
     setPage(0);
   }, [rows]);
 
-  // Filter handlers - ส่งกลับไปยัง parent
   const handleFilterChange = (field) => (e) => {
-    const value = e?.target ? e.target.value : e;
+    let value;
+
+    if (field === "receiveDate") {
+      // For date picker, pass the value directly
+      value = e;
+      console.log("DatePicker returned value:", e);
+    } else {
+      // For regular inputs, get the value from event target
+      value = e?.target ? e.target.value : e;
+    }
+
     onFilterChange(field, value);
   };
 
   const handleSearchClick = () => {
     setPage(0);
-    onSearch();
+    onSearch(searchFilters); // Pass the current searchFilters
   };
 
   const handleClearSearch = () => {
@@ -154,6 +175,16 @@ const TableAssignedComp = ({
     return <InputText {...commonProps} />;
   };
 
+  // Update the date formatting function in TableAssignedComp.jsx
+  const formatThaiDate = (dateString) => {
+    if (!dateString) return "-";
+
+    // Use dayjs with timezone
+    return dayjs(dateString)
+      .tz("Asia/Bangkok") // Ensure we're in Thai timezone
+      .format("D MMM BBBB"); // BBBB gives Buddhist Era year
+  };
+
   return (
     <Container
       maxWidth={false}
@@ -209,11 +240,13 @@ const TableAssignedComp = ({
         >
           <ExportButton
             label="Export PDF"
+            onClick={handleExportPDF}
             sx={{
               fontSize: isExtraSmall ? "12px" : "14px",
               minWidth: isExtraSmall ? "120px" : "auto",
             }}
           />
+
           <ExportButton
             label="Export Excel"
             sx={{
@@ -248,7 +281,7 @@ const TableAssignedComp = ({
                 width: "100%",
               }}
             >
-              {renderFilterField("claimantName", "ชื่อผู้ร้องเรียน")}
+              {renderFilterField("claimantName", "ชื่อผู้ร้อง")}
               {renderFilterField("subject", "ชื่อเรื่อง")}
               {renderFilterField("docNo4", "เลขที่ สรร.")}
               {renderFilterField("receiveDate", "วันที่รับเรื่อง", "date")}
@@ -302,7 +335,7 @@ const TableAssignedComp = ({
                 width: "100%",
               }}
             >
-              {renderFilterField("claimantName", "ชื่อผู้ร้องเรียน")}
+              {renderFilterField("claimantName", "ชื่อผู้ร้อง")}
               {renderFilterField("subject", "ชื่อเรื่อง")}
               {renderFilterField("docNo4", "เลขที่ สรร.")}
             </Box>
@@ -384,7 +417,7 @@ const TableAssignedComp = ({
                 maxWidth: "200px",
               }}
             >
-              {renderFilterField("claimantName", "ชื่อผู้ร้องเรียน")}
+              {renderFilterField("claimantName", "ชื่อผู้ร้อง")}
             </Box>
             <Box
               sx={{
@@ -453,74 +486,63 @@ const TableAssignedComp = ({
         )}
       </Box>
 
-      {/* Data Table */}
+      {/* Clean Modern Table */}
       <Box
+        ref={tableRef}
         sx={{
-          mt: 2,
+          mx: isExtraSmall ? 1 : 3,
+          mb: 3,
+          borderRadius: "16px",
+          overflow: "hidden",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+          border: "1px solid #f1f3f4",
           // Responsive overflow handling
           overflowX: isBelow1350 ? "auto" : "visible",
-          overflowY: "visible",
-          position: "relative",
-          px: isExtraSmall ? 1 : 2,
-          pb: 1,
-          // เพิ่ม scrollbar styling สำหรับ webkit browsers
           "&::-webkit-scrollbar": {
-            height: "8px",
+            height: "6px",
           },
           "&::-webkit-scrollbar-track": {
-            backgroundColor: "#f1f1f1",
-            borderRadius: "4px",
+            backgroundColor: "#f8f9fa",
           },
           "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#c1c1c1",
-            borderRadius: "4px",
+            backgroundColor: "#dee2e6",
+            borderRadius: "3px",
             "&:hover": {
-              backgroundColor: "#a8a8a8",
+              backgroundColor: "#adb5bd",
             },
           },
         }}
-        className={styles.tableWrapper}
       >
         <Table
           sx={{
             minWidth: isBelow1350 ? 1400 : "100%",
-            width: "100%",
-            tableLayout: isBelow1350 ? "auto" : "fixed",
+            backgroundColor: "#fff",
           }}
         >
-          <TableHead className={styles.tableHead}>
-            <TableRow>
-              <TableCell
-                align="center"
-                sx={{
-                  width: 80,
-                  minWidth: 80,
-                  backgroundColor: "#e8e9f6",
+          <TableHead>
+            <TableRow
+              sx={{
+                backgroundColor: "#f8f9fa",
+                "& th": {
+                  borderBottom: "1px solid #e9ecef",
+                  fontSize: "13px",
                   fontWeight: 600,
-                  color: "#1120a3",
-                  border: "1px solid #e0e0e0",
-                  fontSize: "14px",
-                  padding: "14px 12px",
-                }}
-                className={styles.headerCell}
-              >
+                  color: "#495057",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  padding: "16px 20px",
+                  whiteSpace: "nowrap",
+                },
+              }}
+            >
+              <TableCell align="center" sx={{ width: 80, minWidth: 80 }}>
                 ลำดับ
               </TableCell>
               <TableCell
                 sx={{
                   width: isBelow1350 ? 200 : "auto",
                   minWidth: isBelow1350 ? 200 : "auto",
-                  backgroundColor: "#e8e9f6",
-                  fontWeight: 600,
-                  color: "#1120a3",
-                  border: "1px solid #e0e0e0",
-                  fontSize: "14px",
-                  padding: "14px 12px",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
-                className={styles.headerCell}
               >
                 ชื่อผู้ร้อง
               </TableCell>
@@ -528,17 +550,7 @@ const TableAssignedComp = ({
                 sx={{
                   width: isBelow1350 ? 300 : "auto",
                   minWidth: isBelow1350 ? 300 : "auto",
-                  backgroundColor: "#e8e9f6",
-                  fontWeight: 600,
-                  color: "#1120a3",
-                  border: "1px solid #e0e0e0",
-                  fontSize: "14px",
-                  padding: "14px 12px",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
-                className={styles.headerCell}
               >
                 ชื่อเรื่อง
               </TableCell>
@@ -546,17 +558,7 @@ const TableAssignedComp = ({
                 sx={{
                   width: isBelow1350 ? 160 : "auto",
                   minWidth: isBelow1350 ? 160 : "auto",
-                  backgroundColor: "#e8e9f6",
-                  fontWeight: 600,
-                  color: "#1120a3",
-                  border: "1px solid #e0e0e0",
-                  fontSize: "14px",
-                  padding: "14px 12px",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
-                className={styles.headerCell}
               >
                 เลขที่ สรร.
               </TableCell>
@@ -564,17 +566,7 @@ const TableAssignedComp = ({
                 sx={{
                   width: isBelow1350 ? 180 : "auto",
                   minWidth: isBelow1350 ? 180 : "auto",
-                  backgroundColor: "#e8e9f6",
-                  fontWeight: 600,
-                  color: "#1120a3",
-                  border: "1px solid #e0e0e0",
-                  fontSize: "14px",
-                  padding: "14px 12px",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
-                className={styles.headerCell}
               >
                 เลขที่ สป.กค.
               </TableCell>
@@ -582,17 +574,7 @@ const TableAssignedComp = ({
                 sx={{
                   width: isBelow1350 ? 180 : "auto",
                   minWidth: isBelow1350 ? 180 : "auto",
-                  backgroundColor: "#e8e9f6",
-                  fontWeight: 600,
-                  color: "#1120a3",
-                  border: "1px solid #e0e0e0",
-                  fontSize: "14px",
-                  padding: "14px 12px",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
-                className={styles.headerCell}
               >
                 เลขที่ สป.สร.
               </TableCell>
@@ -600,17 +582,7 @@ const TableAssignedComp = ({
                 sx={{
                   width: isBelow1350 ? 180 : "auto",
                   minWidth: isBelow1350 ? 180 : "auto",
-                  backgroundColor: "#e8e9f6",
-                  fontWeight: 600,
-                  color: "#1120a3",
-                  border: "1px solid #e0e0e0",
-                  fontSize: "14px",
-                  padding: "14px 12px",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
-                className={styles.headerCell}
               >
                 เลขที่ สตป.
               </TableCell>
@@ -618,17 +590,7 @@ const TableAssignedComp = ({
                 sx={{
                   width: isBelow1350 ? 160 : "auto",
                   minWidth: isBelow1350 ? 160 : "auto",
-                  backgroundColor: "#e8e9f6",
-                  fontWeight: 600,
-                  color: "#1120a3",
-                  border: "1px solid #e0e0e0",
-                  fontSize: "14px",
-                  padding: "14px 12px",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
-                className={styles.headerCell}
               >
                 วันที่รับเรื่อง
               </TableCell>
@@ -637,10 +599,55 @@ const TableAssignedComp = ({
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ padding: "40px" }}>
-                  <Typography variant="body1" color="textSecondary">
-                    ไม่พบข้อมูลที่ค้นหา
-                  </Typography>
+                <TableCell
+                  colSpan={8}
+                  align="center"
+                  sx={{
+                    padding: "60px 20px",
+                    borderBottom: "none",
+                  }}
+                >
+                  <Box
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    gap={2}
+                  >
+                    <Box
+                      sx={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: "50%",
+                        backgroundColor: "#f8f9fa",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Typography sx={{ fontSize: "24px", color: "#6c757d" }}>
+                        📄
+                      </Typography>
+                    </Box>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        color: "#6c757d",
+                        fontWeight: 500,
+                        fontSize: "16px",
+                      }}
+                    >
+                      ไม่พบข้อมูลที่ค้นหา
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "#adb5bd",
+                        fontSize: "14px",
+                      }}
+                    >
+                      กรุณาลองปรับเปลี่ยนเงื่อนไขการค้นหา
+                    </Typography>
+                  </Box>
                 </TableCell>
               </TableRow>
             ) : (
@@ -652,13 +659,24 @@ const TableAssignedComp = ({
                     onClick={() => handleRowClick(item)}
                     sx={{
                       cursor: "pointer",
+                      borderBottom: "1px solid #f1f3f4",
+                      transition: "all 0.2s ease",
                       "&:hover": {
-                        backgroundColor: "#f5f7ff",
-                        transform: "scale(1.001)",
-                        transition: "all 0.2s ease-in-out",
+                        backgroundColor: "#f8f9fa",
+                      },
+                      "&:last-child": {
+                        borderBottom: "none",
+                      },
+                      "& td": {
+                        borderBottom: "none",
+                        padding: "16px 20px",
+                        fontSize: "14px",
+                        color: "#495057",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       },
                     }}
-                    className={styles.tableRow}
                   >
                     <TableCell
                       align="center"
@@ -667,9 +685,6 @@ const TableAssignedComp = ({
                         minWidth: 80,
                         fontWeight: 600,
                         color: "#1120A3",
-                        border: "1px solid #e0e0e0",
-                        fontSize: "14px",
-                        padding: "14px 12px",
                       }}
                     >
                       {page * rowsPerPage + idx + 1}
@@ -678,12 +693,6 @@ const TableAssignedComp = ({
                       sx={{
                         width: isBelow1350 ? 200 : "auto",
                         minWidth: isBelow1350 ? 200 : "auto",
-                        border: "1px solid #e0e0e0",
-                        fontSize: "14px",
-                        padding: "14px 12px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
                       }}
                     >
                       {item.name ?? "-"}
@@ -692,12 +701,6 @@ const TableAssignedComp = ({
                       sx={{
                         width: isBelow1350 ? 300 : "auto",
                         minWidth: isBelow1350 ? 300 : "auto",
-                        border: "1px solid #e0e0e0",
-                        fontSize: "14px",
-                        padding: "14px 12px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
                       }}
                     >
                       {item.subject ?? "-"}
@@ -706,12 +709,6 @@ const TableAssignedComp = ({
                       sx={{
                         width: isBelow1350 ? 160 : "auto",
                         minWidth: isBelow1350 ? 160 : "auto",
-                        border: "1px solid #e0e0e0",
-                        fontSize: "14px",
-                        padding: "14px 12px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
                       }}
                     >
                       {item.docNo4 ?? "-"}
@@ -720,12 +717,6 @@ const TableAssignedComp = ({
                       sx={{
                         width: isBelow1350 ? 180 : "auto",
                         minWidth: isBelow1350 ? 180 : "auto",
-                        border: "1px solid #e0e0e0",
-                        fontSize: "14px",
-                        padding: "14px 12px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
                       }}
                     >
                       {item.docNo ?? "-"}
@@ -734,12 +725,6 @@ const TableAssignedComp = ({
                       sx={{
                         width: isBelow1350 ? 180 : "auto",
                         minWidth: isBelow1350 ? 180 : "auto",
-                        border: "1px solid #e0e0e0",
-                        fontSize: "14px",
-                        padding: "14px 12px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
                       }}
                     >
                       {item.docNo2 ?? "-"}
@@ -748,12 +733,6 @@ const TableAssignedComp = ({
                       sx={{
                         width: isBelow1350 ? 180 : "auto",
                         minWidth: isBelow1350 ? 180 : "auto",
-                        border: "1px solid #e0e0e0",
-                        fontSize: "14px",
-                        padding: "14px 12px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
                       }}
                     >
                       {item.docNo3 ?? "-"}
@@ -762,17 +741,10 @@ const TableAssignedComp = ({
                       sx={{
                         width: isBelow1350 ? 160 : "auto",
                         minWidth: isBelow1350 ? 160 : "auto",
-                        border: "1px solid #e0e0e0",
-                        fontSize: "14px",
-                        padding: "14px 12px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
                       }}
                     >
-                      {item.receiveDate
-                        ? dayjs(item.receiveDate).format("D MMM YYYY")
-                        : "-"}
+                      {/* Use formatThaiDate to display date in Buddhist Era */}
+                      {formatThaiDate(item.receiveDate)}
                     </TableCell>
                   </TableRow>
                 ))
@@ -780,26 +752,65 @@ const TableAssignedComp = ({
           </TableBody>
         </Table>
 
-        <TablePagination
-          component="div"
-          rowsPerPageOptions={[5, 10, 25]}
-          count={rows.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
+        {/* Clean Modern Pagination */}
+        <Box
           sx={{
-            borderTop: "1px solid #eee",
-            "& .MuiTablePagination-toolbar": {
-              fontSize: "14px",
-              padding: "16px",
-            },
-            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
-            {
-              fontSize: "14px",
-            },
+            borderTop: "1px solid #f1f3f4",
+            backgroundColor: "#fafbfc",
           }}
-        />
+        >
+          <TablePagination
+            component="div"
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            count={rows.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            sx={{
+              "& .MuiTablePagination-toolbar": {
+                padding: "12px 20px",
+                minHeight: "auto",
+              },
+              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
+                {
+                  fontSize: "14px",
+                  color: "#6c757d",
+                  fontWeight: 500,
+                },
+              "& .MuiTablePagination-select": {
+                fontSize: "14px",
+                backgroundColor: "#fff",
+                border: "1px solid #e9ecef",
+                borderRadius: "6px",
+                padding: "4px 8px",
+                "&:focus": {
+                  backgroundColor: "#fff",
+                  borderColor: "#1120a3",
+                },
+              },
+              "& .MuiTablePagination-actions": {
+                marginLeft: "16px",
+                "& button": {
+                  padding: "6px",
+                  borderRadius: "6px",
+                  border: "1px solid #e9ecef",
+                  backgroundColor: "#fff",
+                  color: "#6c757d",
+                  "&:hover": {
+                    backgroundColor: "#f8f9fa",
+                    borderColor: "#1120a3",
+                  },
+                  "&.Mui-disabled": {
+                    backgroundColor: "#f8f9fa",
+                    borderColor: "#e9ecef",
+                    color: "#adb5bd",
+                  },
+                },
+              },
+            }}
+          />
+        </Box>
       </Box>
     </Container>
   );

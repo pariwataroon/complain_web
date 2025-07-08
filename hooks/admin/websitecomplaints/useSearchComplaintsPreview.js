@@ -39,85 +39,94 @@ const useSearchComplaintsPreview = () => {
       console.log("Current DateTime:", currentDateTime);
       console.log("Assigned Officer ID:", assignedOfficerId);
 
-      // เตรียมข้อมูลตาม API Body format และ Database Schema
+      // เตรียมข้อมูลตาม API Body format
       const step3Data = formData.step3?.general || {};
       const additionalDetails = formData.step4?.general || {};
 
-      const preparedData = {};
+      // สร้างข้อมูลตาม API schema ที่ต้องการ
+      const preparedData = {
+        // ข้อมูลผู้รับผิดชอบ
+        assigned_officer_id: assignedOfficerId || "",
+        assigned_remark: "",
+        assigned_date: currentDateTime,
+        assignment_reason: "",
 
-      // ข้อมูลเลขที่อ้างอิงจากระบบอื่น (ส่งเฉพาะที่มีค่า)
-      if (step3Data.referenceNumber1) {
-        preparedData.reference_number1 = step3Data.referenceNumber1;
-      }
-      if (step3Data.referenceDate1) {
-        preparedData.reference_date1 = step3Data.referenceDate1;
-      }
-      if (step3Data.referenceNumber2) {
-        preparedData.reference_number2 = step3Data.referenceNumber2;
-      }
-      if (step3Data.referenceDate2) {
-        preparedData.reference_date2 = step3Data.referenceDate2;
-      }
-      if (step3Data.referenceNumber3) {
-        preparedData.reference_number3 = step3Data.referenceNumber3;
-      }
-      if (step3Data.referenceDate3) {
-        preparedData.reference_date3 = step3Data.referenceDate3;
-      }
-      if (step3Data.referenceNumber4) {
-        preparedData.reference_number4 = step3Data.referenceNumber4;
-      }
-      if (step3Data.referenceDate4) {
-        preparedData.reference_date4 = step3Data.referenceDate4;
-      }
+        // ข้อมูลประเภทเรื่องร้องเรียน
+        complaint_type_id:
+          step3Data.complaintTypeID || step3Data.complaintType || "",
+        complaint_subtype_id: step3Data.complaintSubType || "",
+        complaint_channel_id: step3Data.complaintChannel || "",
 
-      // เลขที่หนังสือ
-      if (step3Data.documentNumber) {
-        preparedData.document_number = step3Data.documentNumber;
-      }
-      if (step3Data.documentDate) {
-        preparedData.document_date = step3Data.documentDate;
-      }
+        // วันที่ลงทะเบียน
+        registration_date: currentDateTime,
 
-      // หน่วยงานที่ส่งเรื่องมาถึง กค.
-      if (step3Data.senderAgency) {
-        preparedData.agency_sender = step3Data.senderAgency;
-      }
+        // ระดับความลับและความเร่งด่วน
+        confidentiality_level: (() => {
+          const confidentialityMap = {
+            normal: "normal",
+            confidential: "confidential",
+            secret: "secret",
+            top_secret: "top_secret",
+          };
+          return confidentialityMap[step3Data.securityLevel] || "normal";
+        })(),
 
-      // ความลับและความเร่งด่วน (map ค่าให้ตรงกับ enum)
-      if (step3Data.securityLevel) {
-        const confidentialityMap = {
-          normal: "normal",
-          confidential: "confidential",
-          secret: "secret",
-          top_secret: "top_secret",
-        };
-        preparedData.confidentiality_level =
-          confidentialityMap[step3Data.securityLevel] || "normal";
-      }
+        urgency_level: (() => {
+          const urgencyMap = {
+            normal: "low",
+            urgent: "medium",
+            very_urgent: "high",
+          };
+          return urgencyMap[step3Data.urgencyLevel] || "low";
+        })(),
 
-      if (step3Data.urgencyLevel) {
-        const urgencyMap = {
-          normal: "low",
-          urgent: "medium",
-          very_urgent: "high",
-        };
-        preparedData.urgency_level =
-          urgencyMap[step3Data.urgencyLevel] || "low";
-      }
+        // เลขที่อ้างอิงจากระบบต่างๆ
+        reference_number1: step3Data.referenceNumber1 || "",
+        reference_date1: step3Data.referenceDate1 || "",
+        reference_number2: step3Data.referenceNumber2 || "",
+        reference_date2: step3Data.referenceDate2 || "",
+        reference_number3: step3Data.referenceNumber3 || "",
+        reference_date3: step3Data.referenceDate3 || "",
+        reference_number4: step3Data.referenceNumber4 || "",
+        reference_date4: step3Data.referenceDate4 || "",
 
-      // ประเภทการร้องเรียน
-      if (step3Data.complaintType) {
-        const complaintFilingMap = {
-          new: "new",
-          additional: "additional",
-          committee: "anonymous",
-        };
-        preparedData.complaint_filing_type =
-          complaintFilingMap[step3Data.complaintType] || "new";
-      }
+        // ประเภทการยื่นเรื่อง
+        complaint_filing_type: (() => {
+          const currentType = step3Data.complaint_filing_type || "new";
+          const complaintFilingMap = {
+            new: "new",
+            additional: "additional",
+            committee: "anonymous",
+          };
+          return complaintFilingMap[currentType] || "new";
+        })(),
 
-      // เลขที่อ้างอิงเพิ่มเติม
+        // เลขที่หนังสือและวันที่
+        document_number: step3Data.documentNumber || "",
+        document_date: step3Data.documentDate || "",
+
+        // หน่วยงานที่ได้รับมอบหมาย
+        assigned_agency: step3Data.senderAgency || "",
+
+        // ประเภทเรื่องร้องเรียน (boolean)
+        new_complaint:
+          step3Data.complaint_filing_type === "new" ||
+          step3Data.isNewComplaint === true ||
+          !step3Data.complaint_filing_type, // default เป็น new
+
+        add_more_complaint_to_ref:
+          step3Data.complaint_filing_type === "additional" ||
+          step3Data.isAdditionalComplaint === true,
+
+        group_work:
+          step3Data.complaint_filing_type === "committee" ||
+          step3Data.isCommitteeComplaint === true,
+
+        // เลขที่กฎระเบียบอ้างอิง
+        regulation_reference: step3Data.regulationReference || "",
+      };
+
+      // เพิ่มข้อมูลเลขที่อ้างอิงเพิ่มเติมถ้ามี
       if (step3Data.additionalReference1) {
         preparedData.additional_reference_number1 =
           step3Data.additionalReference1;
@@ -135,7 +144,7 @@ const useSearchComplaintsPreview = () => {
           step3Data.additionalReferenceDate2;
       }
 
-      // วันที่รับเรื่องและเสนองาน
+      // เพิ่มข้อมูลจาก step4 ถ้ามี
       if (additionalDetails.officerReceivedDate) {
         preparedData.officer_received_date =
           additionalDetails.officerReceivedDate;
@@ -152,15 +161,8 @@ const useSearchComplaintsPreview = () => {
           additionalDetails.additionalDescription;
       }
 
-      // ข้อมูลการประมวลผล
-      preparedData.registration_date = currentDateTime || "";
-      preparedData.assigned_officer_id = assignedOfficerId || "";
-      preparedData.assigned_remark = "";
-      preparedData.assigned_date = currentDateTime;
-      preparedData.assignment_reason = "";
-
       console.log(
-        "Prepared Data for API:",
+        "Prepared Data for API (Complete):",
         JSON.stringify(preparedData, null, 2)
       );
 

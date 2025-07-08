@@ -1,15 +1,20 @@
 import React, { useState } from "react";
-import { Box, IconButton, useMediaQuery, useTheme } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
-import SearchOffIcon from "@mui/icons-material/SearchOff";
+import { Box, useMediaQuery, useTheme } from "@mui/material";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableAssignedComp from "@services/TableAssignedComp/TableAssignedComp";
-import InputText from "@services/InputText/InputText";
-import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
-import ExportButton from "@services/ExportButton/ExportButton";
 import { useRouter } from "next/router";
-import styles from "@services/TableAssignedComp/TableAssignedComp.module.scss";
+import dayjs from "dayjs";
+import "dayjs/locale/th";
+import buddhistEra from "dayjs/plugin/buddhistEra";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 
+// Setup dayjs with Buddhist Era
+dayjs.extend(buddhistEra);
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale("th");
+const THAILAND_TIMEZONE = "Asia/Bangkok";
 const breadcrumbItems = [
   {
     label: "บัตรสนเท่ห์ที่ได้รับมอบหมาย",
@@ -23,7 +28,7 @@ const breadcrumbItems = [
   },
 ];
 
-// Mock data updated to 2025 (ค.ศ.) / 2568 (พ.ศ.)
+// Define the mockData array here
 const mockData = [
   {
     id: 1,
@@ -163,7 +168,7 @@ const mockData = [
     docNo: "สป-กค-2568-6-014-136",
     docNo2: "สป-สร-2568-6-014-136",
     docNo3: "สตป-2568-014-136",
-    receiveDate: "2025-06-07T00:00:00.000Z", // 7 มิ.ย. 2568 (วันนี้)
+    receiveDate: "2025-06-07T00:00:00.000Z", // 7 มิ.ย. 2568
   },
   {
     id: 15,
@@ -173,77 +178,7 @@ const mockData = [
     docNo: "สป-กค-2568-6-015-137",
     docNo2: "สป-สร-2568-6-015-137",
     docNo3: "สตป-2568-015-137",
-    receiveDate: "2025-06-14T00:00:00.000Z", // 14 มิ.ย. 2568 ← เพิ่มวันที่นี้เพื่อทดสอบ
-  },
-  {
-    id: 16,
-    name: "นายวิทยา อัจฉริยะ",
-    subject: "ละเว้นการดูแลทรัพย์สินของรัฐ",
-    docNo4: "138/68",
-    docNo: "สป-กค-2568-4-016-138",
-    docNo2: "สป-สร-2568-4-016-138",
-    docNo3: "สตป-2568-016-138",
-    receiveDate: "2025-04-20T00:00:00.000Z", // 20 เม.ย. 2568
-  },
-  {
-    id: 17,
-    name: "นางนิภา สีสวย",
-    subject: "หลอกลวงการขายของออนไลน์",
-    docNo4: "139/68",
-    docNo: "สป-กค-2568-4-017-139",
-    docNo2: "สป-สร-2568-4-017-139",
-    docNo3: "สตป-2568-017-139",
-    receiveDate: "2025-04-25T00:00:00.000Z", // 25 เม.ย. 2568
-  },
-  {
-    id: 18,
-    name: "นายรัตนชัย สง่างาม",
-    subject: "การเรียกรับสินบนจากประชาชน",
-    docNo4: "140/68",
-    docNo: "สป-กค-2568-4-018-140",
-    docNo2: "สป-สร-2568-4-018-140",
-    docNo3: "สตป-2568-018-140",
-    receiveDate: "2025-04-30T00:00:00.000Z", // 30 เม.ย. 2568
-  },
-  {
-    id: 19,
-    name: "นางสาวชนิกานต์ รื่นเริง",
-    subject: "การให้บริการไม่เป็นธรรม",
-    docNo4: "141/68",
-    docNo: "สป-กค-2568-3-019-141",
-    docNo2: "สป-สร-2568-3-019-141",
-    docNo3: "สตป-2568-019-141",
-    receiveDate: "2025-03-18T00:00:00.000Z", // 18 มี.ค. 2568
-  },
-  {
-    id: 20,
-    name: "นายปราโมทย์ เจษฎาวรรณ",
-    subject: "ฉ้อโกงงบประมาณโครงการ",
-    docNo4: "142/68",
-    docNo: "สป-กค-2568-3-020-142",
-    docNo2: "สป-สร-2568-3-020-142",
-    docNo3: "สตป-2568-020-142",
-    receiveDate: "2025-03-22T00:00:00.000Z", // 22 มี.ค. 2568
-  },
-  {
-    id: 21,
-    name: "นางขวัญจิรา พร้อมจิต",
-    subject: "ประพฤติมิชอบในการปฏิบัติงาน",
-    docNo4: "143/68",
-    docNo: "สป-กค-2568-3-021-143",
-    docNo2: "สป-สร-2568-3-021-143",
-    docNo3: "สตป-2568-021-143",
-    receiveDate: "2025-03-25T00:00:00.000Z", // 25 มี.ค. 2568
-  },
-  {
-    id: 22,
-    name: "นายอภิชาติ มั่นคง",
-    subject: "ปัญหาสิ่งแวดล้อมในชุมชน",
-    docNo4: "144/68",
-    docNo: "สป-กค-2568-2-022-144",
-    docNo2: "สป-สร-2568-2-022-144",
-    docNo3: "สตป-2568-022-144",
-    receiveDate: "2025-02-14T00:00:00.000Z", // 14 ก.พ. 2568
+    receiveDate: "2025-06-14T00:00:00.000Z", // 14 มิ.ย. 2568
   },
 ];
 
@@ -252,15 +187,11 @@ const AssignedAnonymousComponents = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm")); // < 600px
   const isTablet = useMediaQuery(theme.breakpoints.down("md")); // < 900px
-  const isSmallLaptop = useMediaQuery(theme.breakpoints.down("lg")); // < 1200px
-
-  // Custom breakpoint สำหรับ 1350px
-  const isBelow1350 = useMediaQuery("(max-width: 1350px)");
 
   // state เก็บผลลัพธ์ที่กรองแล้ว
   const [filteredRows, setFilteredRows] = useState(mockData);
 
-  // Filter state (เก็บเฉพาะค่าที่กรอกใน form)
+  // Filter state
   const [filters, setFilters] = useState({
     claimantName: "",
     subject: "",
@@ -270,122 +201,92 @@ const AssignedAnonymousComponents = () => {
 
   const router = useRouter();
 
-  // ฟังก์ชันแปลงจาก Thai date object เป็น Date object (แก้ไขใหม่)
-  const convertThaiDateToDate = (thaiDateObj) => {
-    if (!thaiDateObj) return null;
+  const compareDates = (itemDateStr, filterDateStr) => {
+    if (!itemDateStr || !filterDateStr) return true;
 
-    console.log("🔍 Thai date object received:", thaiDateObj);
+    try {
+      console.log("🔍 Date comparison:");
+      console.log("  - Item date:", itemDateStr);
+      console.log("  - Filter date:", filterDateStr);
 
-    // ใช้ year (ค.ศ.) โดยตรงจาก DateThaiPickerService
-    // เพราะ DateThaiPickerService ส่งมาทั้ง year (ค.ศ.) และ buddhistYear (พ.ศ.)
-    const gregorianYear = thaiDateObj.year; // ใช้ year ที่เป็น ค.ศ. โดยตรง
+      // แปลง string date เป็น dayjs objects และตั้งค่า timezone เป็นของไทย
+      const itemDate = dayjs(itemDateStr).tz(THAILAND_TIMEZONE);
+      const filterDate = dayjs(filterDateStr).tz(THAILAND_TIMEZONE);
 
-    console.log(
-      `🔍 Converting: ${thaiDateObj.day}/${thaiDateObj.month}/${thaiDateObj.buddhistYear} (Thai) -> ${thaiDateObj.day}/${thaiDateObj.month}/${gregorianYear} (Gregorian)`
-    );
+      console.log(
+        `  - Item date in Thai time: ${itemDate.format("YYYY-MM-DD")}`
+      );
+      console.log(
+        `  - Filter date in Thai time: ${filterDate.format("YYYY-MM-DD")}`
+      );
 
-    // สร้าง Date object (เดือนใน JavaScript เริ่มจาก 0)
-    return new Date(gregorianYear, thaiDateObj.month - 1, thaiDateObj.day);
+      // เปรียบเทียบเฉพาะวันที่ (ไม่รวมเวลา)
+      const isMatch =
+        itemDate.format("YYYY-MM-DD") === filterDate.format("YYYY-MM-DD");
+
+      console.log(`  - Date match: ${isMatch}`);
+      return isMatch;
+    } catch (error) {
+      console.error("Error comparing dates:", error);
+      return true; // ถ้าเกิด error ให้แสดงข้อมูลทั้งหมด
+    }
   };
 
-  // ฟังก์ชันแปลง ISO date string เป็น Date object และเปรียบเทียบ
-  const isSameDate = (isoDateString, thaiDateObject) => {
-    if (!isoDateString || !thaiDateObject) return false;
-
-    console.log("🔍 Comparing dates:");
-    console.log("  - ISO string:", isoDateString);
-    console.log("  - Thai date object:", thaiDateObject);
-
-    // แปลง ISO string เป็น Date
-    const isoDate = new Date(isoDateString);
-    console.log("  - ISO date parsed:", isoDate);
-
-    // แปลง Thai date object เป็น Date
-    const thaiDate = convertThaiDateToDate(thaiDateObject);
-    console.log("  - Thai date converted:", thaiDate);
-
-    if (!thaiDate) return false;
-
-    // เปรียบเทียบเฉพาะวัน เดือน ปี (ไม่รวมเวลา)
-    const isSame =
-      isoDate.getFullYear() === thaiDate.getFullYear() &&
-      isoDate.getMonth() === thaiDate.getMonth() &&
-      isoDate.getDate() === thaiDate.getDate();
-
-    console.log("  - Are they the same?", isSame);
-    console.log(
-      "  - ISO: ",
-      `${isoDate.getDate()}/${isoDate.getMonth() + 1}/${isoDate.getFullYear()}`
-    );
-    console.log(
-      "  - Thai:",
-      `${thaiDate.getDate()}/${thaiDate.getMonth() + 1
-      }/${thaiDate.getFullYear()}`
-    );
-
-    return isSame;
+  const handleFilterChange = (field, value) => {
+    console.log(`Filter changed: ${field} = `, value);
+    setFilters((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
-  const handleChange = (field) => (e) => {
-    const value = e?.target ? e.target.value : e;
-    setFilters((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleDateChange = (thaiDate) => {
-    setFilters((prev) => ({ ...prev, receiveDate: thaiDate }));
-  };
-
-  // ฟังก์ชันกรองข้อมูล
   const handleSearch = () => {
     console.log("🔍 Searching with filters:", filters);
 
     const filtered = mockData.filter((item) => {
+      // กรองตามชื่อผู้ร้อง
       const matchName = filters.claimantName
         ? item.name.toLowerCase().includes(filters.claimantName.toLowerCase())
         : true;
 
+      // กรองตามชื่อเรื่อง
       const matchSubject = filters.subject
         ? item.subject.toLowerCase().includes(filters.subject.toLowerCase())
         : true;
 
+      // กรองตามเลขที่ สรร.
       const matchDocNo4 = filters.docNo4
-        ? item.docNo4.includes(filters.docNo4)
+        ? item.docNo4.toLowerCase().includes(filters.docNo4.toLowerCase())
         : true;
 
-      // แก้ไขการเปรียบเทียบวันที่
-      const matchDate = filters.receiveDate
-        ? isSameDate(item.receiveDate, filters.receiveDate)
-        : true;
+      // กรองตามวันที่รับเรื่อง - โดยคำนึงถึง timezone
+      const matchDate = compareDates(item.receiveDate, filters.receiveDate);
 
-      const matches = matchName && matchSubject && matchDocNo4 && matchDate;
+      const result = matchName && matchSubject && matchDocNo4 && matchDate;
 
-      console.log(`🔍 Item ${item.id} (${item.name}):`, {
-        matchName,
-        matchSubject,
-        matchDocNo4,
-        matchDate,
-        finalMatch: matches,
-      });
+      if (filters.receiveDate) {
+        console.log(
+          `Item ${item.id} (${item.name}): Date match = ${matchDate}`
+        );
+      }
 
-      return matches;
+      return result;
     });
 
+    console.log(
+      `🎯 Found ${filtered.length} items from ${mockData.length} total`
+    );
     setFilteredRows(filtered);
   };
 
-  const handleFilterChange = (field, value) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-  };
-
-
+  // ฟังก์ชันล้างการค้นหา
   const handleClearSearch = () => {
-    const cleared = {
+    setFilters({
       claimantName: "",
       subject: "",
       docNo4: "",
       receiveDate: null,
-    };
-    setFilters(cleared);
+    });
     setFilteredRows(mockData);
   };
 

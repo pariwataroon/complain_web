@@ -217,7 +217,7 @@
   margin-top: 0;
   /* ลดจาก 8px เป็น 0 */
 
-  >div {
+  > div {
     position: relative;
     z-index: 15;
   }
@@ -384,7 +384,8 @@
   background: linear-gradient(90deg, #2196f3 0%, #0f67b1 100%);
   z-index: 2;
   transform: translateY(-6px);
-  box-shadow: 0 10px 32px rgba(33, 150, 243, 0.18), 0 2px 8px rgba(33, 150, 243, 0.05);
+  box-shadow: 0 10px 32px rgba(33, 150, 243, 0.18),
+    0 2px 8px rgba(33, 150, 243, 0.05);
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
   border: 1.5px solid #2196f3;
@@ -928,7 +929,7 @@
     align-items: center;
     gap: 12px;
 
-    >* {
+    > * {
       width: 100%;
       max-width: 300px;
     }

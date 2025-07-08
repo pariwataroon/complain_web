@@ -1,13 +1,21 @@
 import { useRouter } from "next/router";
-import { useEffect, useState, useRef } from "react";
-import { Box } from "@mui/material";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { GetComplaintByID } from "@pages/api/complaint/complaint";
 import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/ComplaintPersonalFormAPI";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import ButtonService from "@services/ButtonService/ButtonService";
-import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
-import { FormProvider, useForm } from "react-hook-form";
+import DateThaiPickerService, {
+  ControlledDateThaiPickerService,
+} from "@services/DateThaiPickerService/DateThaiPickerService";
+import { FormProvider, useForm, Controller } from "react-hook-form";
 import styles from "./TabNav.module.scss";
+import SearchComplaintsPreview from "./SearchComplaintsPreview";
+import { alertWarning } from "@utils/Alerts";
+import {
+  GetAllSelectComplaintTypes,
+  getSubComplaintTypeById,
+  GetAllComplaintChannels,
+} from "@pages/api/allselect/allselect";
 
 const breadcrumbItems = [
   {
@@ -34,17 +42,255 @@ const SearchComplaints = () => {
   const [defaultData, setDefaultData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [complaintType, setComplaintType] = useState("new"); // "new", "additional", "committee"
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
 
-  // Current user and datetime from provided UTC data
-  const currentUser = "vampirebeam";
-  const currentDateTime = "2025-06-09 19:25:47";
+  const generalMethods = useForm({
+    mode: "onChange",
+  });
+  const delegateMethods = useForm({
+    mode: "onChange",
+  });
+  const step2Methods = useForm({
+    mode: "onChange",
+  });
+  const step3Methods = useForm({
+    mode: "onChange",
+  });
+  const step4Methods = useForm({
+    mode: "onChange",
+  });
 
-  const generalMethods = useForm();
-  const delegateMethods = useForm();
-  const step2Methods = useForm();
-  const step3Methods = useForm();
-  const step4Methods = useForm();
+  const [complaintTypes, setComplaintTypes] = useState([]);
+  const [subComplaintTypes, setSubComplaintTypes] = useState([]);
+  const [complaintChannels, setComplaintChannels] = useState([]); // เพิ่ม state สำหรับ channels
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [loadingSubTypes, setLoadingSubTypes] = useState(false);
+  const [loadingChannels, setLoadingChannels] = useState(false); // เพิ่ม loading state สำหรับ channels
+  const [selectedComplaintTypeId, setSelectedComplaintTypeId] = useState("");
+
+  // เพิ่ม refs เพื่อควบคุมการยิง API
+  const fetchSubTypesTimeoutRef = useRef(null);
+  const currentFetchPromiseRef = useRef(null);
+  const lastFetchedIdRef = useRef("");
+
+  // โหลด Complaint Types และ Channels เมื่อ component mount
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      setLoadingOptions(true);
+      setLoadingChannels(true);
+
+      try {
+        // โหลด complaint types และ channels พร้อมกัน
+        const [complaintTypesResponse, channelsResponse] = await Promise.all([
+          GetAllSelectComplaintTypes(),
+          GetAllComplaintChannels(),
+        ]);
+
+        console.log("Complaint Types Response:", complaintTypesResponse);
+        console.log("Complaint Channels Response:", channelsResponse);
+
+        // จัดการ complaint types
+        if (
+          complaintTypesResponse?.res_code === "0000" &&
+          complaintTypesResponse?.res_data
+        ) {
+          setComplaintTypes(complaintTypesResponse.res_data);
+        } else {
+          console.error(
+            "Failed to load complaint types:",
+            complaintTypesResponse?.res_desc
+          );
+        }
+
+        // จัดการ complaint channels
+        if (
+          channelsResponse?.res_code === "0000" &&
+          channelsResponse?.res_data
+        ) {
+          const channelsData = channelsResponse.res_data;
+
+          if (channelsData.items && Array.isArray(channelsData.items)) {
+            console.log("Found complaint channels:", channelsData.items.length);
+
+            // เอาเฉพาะ id และ name จาก items
+            const filteredChannels = channelsData.items.map((item) => ({
+              id: item.id,
+              name: item.name,
+            }));
+
+            console.log("Filtered channels:", filteredChannels);
+            setComplaintChannels(filteredChannels);
+          } else {
+            console.log("No channels items found in response data");
+            setComplaintChannels([]);
+          }
+        } else {
+          console.error(
+            "Failed to load complaint channels:",
+            channelsResponse?.res_message || channelsResponse?.res_desc
+          );
+          setComplaintChannels([]);
+        }
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+        setComplaintTypes([]);
+        setComplaintChannels([]);
+      } finally {
+        setLoadingOptions(false);
+        setLoadingChannels(false);
+      }
+    };
+
+    fetchInitialData();
+  }, []);
+
+  // ฟังก์ชันตรวจสอบว่า ID ถูกต้องหรือไม่
+  const isValidId = (id) => {
+    return (
+      id &&
+      id !== "" &&
+      id !== null &&
+      id !== undefined &&
+      typeof id === "string" &&
+      id.trim() !== ""
+    );
+  };
+
+  // ฟังก์ชันล้างการโหลด sub types
+  const clearSubTypes = () => {
+    // ยกเลิก timeout ที่รอค้างอยู่
+    if (fetchSubTypesTimeoutRef.current) {
+      clearTimeout(fetchSubTypesTimeoutRef.current);
+      fetchSubTypesTimeoutRef.current = null;
+    }
+
+    // ยกเลิก promise ที่รอค้างอยู่
+    if (currentFetchPromiseRef.current) {
+      currentFetchPromiseRef.current = null;
+    }
+
+    // ล้างข้อมูล
+    setSubComplaintTypes([]);
+    setLoadingSubTypes(false);
+    lastFetchedIdRef.current = "";
+  };
+
+  const fetchSubComplaintTypes = useCallback(async (complaintTypeId) => {
+    console.log("fetchSubComplaintTypes called with ID:", complaintTypeId);
+
+    // ตรวจสอบ ID
+    if (!isValidId(complaintTypeId)) {
+      console.log("Invalid ID, clearing sub types");
+      clearSubTypes();
+      return;
+    }
+
+    // ถ้า ID เดิม ไม่ต้องยิงใหม่
+    if (lastFetchedIdRef.current === complaintTypeId) {
+      console.log("Same ID as last fetch, skipping...");
+      return;
+    }
+
+    // ยกเลิกการเรียกก่อนหน้า
+    clearSubTypes();
+
+    // เริ่มโหลด
+    setLoadingSubTypes(true);
+    lastFetchedIdRef.current = complaintTypeId;
+
+    // สร้าง promise ใหม่
+    const fetchPromise = (async () => {
+      try {
+        console.log("Making API call with ID:", complaintTypeId);
+        const response = await getSubComplaintTypeById(complaintTypeId);
+        console.log("API Response:", response);
+
+        // ตรวจสอบว่า promise นี้ยังเป็น current promise หรือไม่
+        if (currentFetchPromiseRef.current !== fetchPromise) {
+          console.log("Promise cancelled, ignoring response");
+          return;
+        }
+
+        if (response?.res_code === "0000" && response?.res_data) {
+          // API ส่ง response เป็น object ที่มี items array
+          const responseData = response.res_data;
+
+          if (responseData.items && Array.isArray(responseData.items)) {
+            console.log(
+              "Found sub complaint types:",
+              responseData.items.length
+            );
+
+            // เอาเฉพาะ id และ name จาก items
+            const filteredSubTypes = responseData.items.map((item) => ({
+              id: item.id,
+              name: item.name,
+            }));
+
+            console.log("Filtered sub types:", filteredSubTypes);
+            setSubComplaintTypes(filteredSubTypes);
+          } else {
+            console.log("No items array found in response data");
+            setSubComplaintTypes([]);
+          }
+        } else {
+          console.error(
+            "Failed response:",
+            response?.res_message || response?.res_desc
+          );
+          setSubComplaintTypes([]);
+        }
+      } catch (error) {
+        // ตรวจสอบว่า promise นี้ยังเป็น current promise หรือไม่
+        if (currentFetchPromiseRef.current !== fetchPromise) {
+          console.log("Promise cancelled, ignoring error");
+          return;
+        }
+
+        console.error("Error fetching sub complaint types:", error);
+        if (error.response?.status === 404) {
+          console.log("404 - No sub types found for this complaint type");
+          setSubComplaintTypes([]);
+        } else if (error.response?.status === 400) {
+          console.log("400 - Bad request, possibly invalid parent_type_id");
+          setSubComplaintTypes([]);
+        } else {
+          console.error("Other error:", error.message);
+          setSubComplaintTypes([]);
+        }
+      } finally {
+        // ตรวจสอบว่า promise นี้ยังเป็น current promise หรือไม่
+        if (currentFetchPromiseRef.current === fetchPromise) {
+          setLoadingSubTypes(false);
+          currentFetchPromiseRef.current = null;
+        }
+      }
+    })();
+
+    currentFetchPromiseRef.current = fetchPromise;
+  }, []);
+
+  const handleComplaintTypeSelectChange = (event) => {
+    const value = event.target.value;
+    console.log("Complaint type changed to:", value);
+
+    // **ไม่ต้องใช้ setValue เพราะ register จะจัดการให้แล้ว**
+    // step3Methods.setValue("complaintType", value); // ลบบรรทัดนี้
+
+    step3Methods.setValue("complaintSubType", ""); // ล้าง sub type
+    setSelectedComplaintTypeId(value);
+
+    // ล้าง sub types เก่า
+    clearSubTypes();
+
+    // ถ้ามี ID ที่ถูกต้อง ให้โหลด sub types ใหม่
+    if (isValidId(value)) {
+      fetchSubTypesTimeoutRef.current = setTimeout(() => {
+        fetchSubComplaintTypes(value);
+      }, 300);
+    }
+  };
 
   const defaultGeneralRef = useRef({});
   const defaultDelegateRef = useRef({});
@@ -66,7 +312,7 @@ const SearchComplaints = () => {
       const res = await GetComplaintByID(id);
       const data = res?.res_data;
       setDefaultData(data);
-      console.log({ data });
+      console.log("Fetched complaint data:", data);
 
       const general = data?.step1?.general?.general || {};
       const delegate = data?.step1?.general?.delegate || null;
@@ -83,7 +329,40 @@ const SearchComplaints = () => {
       generalMethods.reset(general);
       if (delegate) delegateMethods.reset(delegate);
       step2Methods.reset(step2Data);
-      step3Methods.reset(step3Data);
+
+      step3Methods.reset({
+        ...step3Data,
+        complaintType: step3Data.complaintType || "",
+        complaintSubType: step3Data.complaintSubType || "",
+        complaintChannel: step3Data.complaintChannel || "", // เพิ่มการ reset complaint channel
+        complaint_filing_type: step3Data.complaint_filing_type || "new",
+      });
+
+      // ตั้งค่า selectedComplaintTypeId และโหลด sub types ถ้ามีข้อมูลเดิม
+      const existingComplaintType = step3Data.complaintType;
+      console.log("Existing complaint type:", existingComplaintType);
+
+      if (isValidId(existingComplaintType)) {
+        setSelectedComplaintTypeId(existingComplaintType);
+
+        // รอให้ complaint types โหลดเสร็จก่อน
+        const waitForComplaintTypes = setInterval(() => {
+          if (complaintTypes.length > 0) {
+            clearInterval(waitForComplaintTypes);
+            console.log("Loading sub types for existing complaint type");
+            fetchSubComplaintTypes(existingComplaintType);
+          }
+        }, 100);
+
+        // ตั้ง timeout เพื่อป้องกันการรอไม่สิ้นสุด
+        setTimeout(() => {
+          clearInterval(waitForComplaintTypes);
+        }, 5000);
+      } else {
+        setSelectedComplaintTypeId("");
+        clearSubTypes();
+      }
+
       step4Methods.reset(step4Data);
     } catch (error) {
       console.error("Load complaints failed", error);
@@ -94,6 +373,10 @@ const SearchComplaints = () => {
   };
 
   const handleReset = () => {
+    // ล้าง API calls ที่รอค้างอยู่
+    clearSubTypes();
+
+    // Reset forms
     generalMethods.reset(defaultGeneralRef.current);
     if (defaultDelegateRef.current) {
       delegateMethods.reset(defaultDelegateRef.current);
@@ -101,14 +384,102 @@ const SearchComplaints = () => {
     step2Methods.reset(defaultStep2Ref.current);
     step3Methods.reset(defaultStep3Ref.current);
     step4Methods.reset(defaultStep4Ref.current);
+
+    // Reset complaint type states
+    const originalComplaintType = defaultStep3Ref.current?.complaintType;
+
+    if (isValidId(originalComplaintType)) {
+      setSelectedComplaintTypeId(originalComplaintType);
+      // รอสักครู่แล้วค่อยโหลด sub types
+      setTimeout(() => {
+        fetchSubComplaintTypes(originalComplaintType);
+      }, 100);
+    } else {
+      setSelectedComplaintTypeId("");
+    }
   };
 
-  const handleSubmit = () => {
+  // Cleanup เมื่อ component unmount
+  useEffect(() => {
+    return () => {
+      clearSubTypes();
+    };
+  }, []);
+
+  // Helper functions
+  const getErrorMessage = (fieldName) => {
+    const formError = step3Methods.formState.errors[fieldName];
+    return formError ? (
+      <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>
+        {formError.message}
+      </div>
+    ) : null;
+  };
+
+  const getErrorStyle = (fieldName) => {
+    const formError = step3Methods.formState.errors[fieldName];
+    return formError ? { borderColor: "red", borderWidth: "2px" } : {};
+  };
+
+  const handleSubmit = async () => {
+    const fieldsToValidate = [
+      "complaintType",
+      "complaintSubType",
+      "complaintChannel",
+      "subject",
+      "referenceNumber1",
+      "referenceDate2",
+      "referenceNumber3",
+      "referenceDate3",
+      "referenceNumber4",
+      "referenceDate4",
+    ];
+
+    const isValid = await step3Methods.trigger(fieldsToValidate);
+
+    if (!isValid) {
+      const errors = step3Methods.formState.errors;
+      const errorMessages = Object.entries(errors).map(([field, error]) => {
+        return `• ${error.message}`;
+      });
+
+      alertWarning(
+        "ข้อมูลไม่ครบถ้วน",
+        `กรุณาแก้ไขข้อมูลดังต่อไปนี้:<br/><br/>${errorMessages.join("<br/>")}`,
+        true
+      );
+
+      return;
+    }
+
     const generalData = generalMethods.getValues();
     const delegateData = delegateMethods.getValues();
     const step2Data = step2Methods.getValues();
     const step3Data = step3Methods.getValues();
     const step4Data = step4Methods.getValues();
+
+    // Debug: ดูข้อมูลที่ได้
+    console.log("step3Data:", step3Data);
+    console.log("complaintTypes:", complaintTypes);
+    console.log("subComplaintTypes:", subComplaintTypes);
+    console.log("complaintChannels:", complaintChannels);
+
+    const selectedComplaintType = complaintTypes.find(
+      (type) => type.id === step3Data.complaintType
+    );
+
+    const selectedSubComplaintType = subComplaintTypes.find(
+      (subType) => subType.id === step3Data.complaintSubType
+    );
+
+    const selectedComplaintChannel = complaintChannels.find(
+      (channel) => channel.id === step3Data.complaintChannel
+    );
+
+    // Debug: ดูข้อมูลที่เลือก
+    console.log("selectedComplaintType:", selectedComplaintType);
+    console.log("selectedSubComplaintType:", selectedSubComplaintType);
+    console.log("selectedComplaintChannel:", selectedComplaintChannel);
 
     const submitData = {
       id: defaultData?.id,
@@ -126,7 +497,16 @@ const SearchComplaints = () => {
       step3: {
         general: {
           ...step3Data,
-          complaintType: complaintType,
+          complaintTypeID: step3Data.complaintType,
+          complaintTypeName: selectedComplaintType?.name || "",
+          complaintSubTypeID: step3Data.complaintSubType,
+          complaintSubTypeName: selectedSubComplaintType?.name || "",
+          complaintChannelID: step3Data.complaintChannel,
+          complaintChannelName: selectedComplaintChannel?.name || "", // เพิ่มบรรทัดนี้
+          // เพิ่มข้อมูลเพื่อความแน่ใจ
+          complaintTypeData: selectedComplaintType,
+          complaintSubTypeData: selectedSubComplaintType,
+          complaintChannelData: selectedComplaintChannel,
         },
       },
       step4: {
@@ -135,32 +515,47 @@ const SearchComplaints = () => {
     };
 
     console.log("Submitting data:", JSON.stringify(submitData, null, 2));
+    console.log("complaintSubTypeName value:", selectedSubComplaintType?.name);
+    console.log("complaintChannelName value:", selectedComplaintChannel?.name); // เพิ่มบรรทัดนี้
 
-    router.push({
-      pathname: "/admin/edit/website-complaints/SearchComplaintsPreview",
-      query: {
-        id: defaultData?.id,
-        data: JSON.stringify(submitData),
-      },
-    });
+    setPreviewData(submitData);
+    setShowPreview(true);
   };
 
   const handleComplaintTypeChange = (type) => {
-    setComplaintType(type);
-    // Clear other radio buttons when one is selected
+    step3Methods.setValue("isNewComplaint", false);
+    step3Methods.setValue("isAdditionalComplaint", false);
+    step3Methods.setValue("isCommitteeComplaint", false);
+
     if (type === "new") {
-      step3Methods.setValue("isAdditionalComplaint", false);
-      step3Methods.setValue("isCommitteeComplaint", false);
+      step3Methods.setValue("isNewComplaint", true);
     } else if (type === "additional") {
-      step3Methods.setValue("isNewComplaint", false);
-      step3Methods.setValue("isCommitteeComplaint", false);
+      step3Methods.setValue("isAdditionalComplaint", true);
     } else if (type === "committee") {
-      step3Methods.setValue("isNewComplaint", false);
-      step3Methods.setValue("isAdditionalComplaint", false);
+      step3Methods.setValue("isCommitteeComplaint", true);
     }
+
+    step3Methods.setValue("complaint_filing_type", type);
   };
 
-  // Loading state
+  const handleBackFromPreview = () => {
+    setShowPreview(false);
+    setPreviewData(null);
+  };
+
+  const currentComplaintFilingType =
+    step3Methods.watch("complaint_filing_type") || "new";
+
+  if (showPreview && previewData) {
+    return (
+      <SearchComplaintsPreview
+        id={defaultData?.id}
+        data={previewData}
+        onBack={handleBackFromPreview}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <>
@@ -178,7 +573,6 @@ const SearchComplaints = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <>
@@ -212,7 +606,7 @@ const SearchComplaints = () => {
 
         {defaultData ? (
           <div className={styles.contentContainer}>
-            {/* Tab Navigation - แสดงเพื่อความสวยงาม */}
+            {/* Tab Navigation */}
             <div className={styles.tabNav}>
               <div className={`${styles.tab} ${styles.tab0} ${styles.active}`}>
                 บุคคลทั่วไป
@@ -309,39 +703,87 @@ const SearchComplaints = () => {
                     <div className={styles.fieldRow}>
                       <div className={styles.fieldGroup}>
                         <label>
-                          ประเภทเรื่องร้องเรียน{" "}
+                          ประเภทเรื่องร้องเรียน
                           <span className={styles.required}>*</span>
                         </label>
-                        <select {...step3Methods.register("complaintType")}>
-                          <option value="">ความไม่มีประสิทธิภาพ</option>
-                          <option value="corruption">การทุจริต</option>
-                          <option value="misconduct">การประพฤติมิชอบ</option>
-                          <option value="inefficiency">
-                            ความไม่มีประสิทธิภาพ
-                          </option>
+                        <select
+                          {...step3Methods.register("complaintType", {
+                            required: "กรุณาเลือกประเภทเรื่องร้องเรียน",
+                            onChange: handleComplaintTypeSelectChange, // ใช้ onChange ใน register
+                          })}
+                          style={getErrorStyle("complaintType")}
+                          disabled={loadingOptions}
+                        >
+                          <option value="">เลือกประเภทเรื่องร้องเรียน</option>
+                          {complaintTypes.map((type) => (
+                            <option key={type.id} value={type.id}>
+                              {type.name}
+                            </option>
+                          ))}
                         </select>
+                        {getErrorMessage("complaintType")}
                       </div>
+
                       <div className={styles.fieldGroup}>
                         <label>
                           ประเภทเรื่องย่อย{" "}
                           <span className={styles.required}>*</span>
                         </label>
-                        <select {...step3Methods.register("complaintSubType")}>
-                          <option value="">ข้อคิดแก้/ข้อเสนอแนะ...</option>
-                          <option value="suggestion">ข้อเสนอแนะ</option>
-                          <option value="complaint">ข้อร้องเรียน</option>
+                        <select
+                          {...step3Methods.register("complaintSubType", {
+                            required: "กรุณาเลือกประเภทเรื่องย่อย",
+                          })}
+                          style={getErrorStyle("complaintSubType")}
+                          disabled={
+                            !isValidId(selectedComplaintTypeId) ||
+                            loadingSubTypes
+                          }
+                        >
+                          <option value="">
+                            {!isValidId(selectedComplaintTypeId)
+                              ? "กรุณาเลือกประเภทเรื่องร้องเรียนก่อน"
+                              : loadingSubTypes
+                              ? "กำลังโหลด..."
+                              : subComplaintTypes.length === 0
+                              ? "กรุณาเลือกประเภทเรื่องร้องเรียนก่อน"
+                              : "เลือกประเภทเรื่องย่อย"}
+                          </option>
+                          {subComplaintTypes.map((subType) => (
+                            <option key={subType.id} value={subType.id}>
+                              {subType.name}
+                            </option>
+                          ))}
                         </select>
+                        {getErrorMessage("complaintSubType")}
                       </div>
+
+                      {/* แก้ไขส่วนนี้ - เพิ่ม validation */}
                       <div className={styles.fieldGroup}>
-                        <label>ช่องทางเรื่องร้องเรียน</label>
-                        <input
-                          type="text"
-                          defaultValue="เว็บไซต์ศูนย์เรื่องร้องทุกข์"
-                          {...step3Methods.register("complaintChannel")}
-                        />
+                        <label>
+                          ช่องทางเรื่องร้องเรียน
+                          <span className={styles.required}>*</span>{" "}
+                          {/* เพิ่มเครื่องหมาย * */}
+                        </label>
+                        <select
+                          {...step3Methods.register("complaintChannel", {
+                            required: "กรุณาเลือกช่องทางเรื่องร้องเรียน", // เพิ่ม validation rule
+                          })}
+                          style={getErrorStyle("complaintChannel")} // เพิ่ม error style
+                          disabled={loadingChannels}
+                        >
+                          <option value="">เลือกช่องทางเรื่องร้องเรียน</option>
+                          {complaintChannels.map((channel) => (
+                            <option key={channel.id} value={channel.id}>
+                              {channel.name}
+                            </option>
+                          ))}
+                        </select>
+                        {getErrorMessage("complaintChannel")}{" "}
+                        {/* เพิ่มการแสดง error message */}
                       </div>
                     </div>
 
+                    {/* ส่วนอื่นๆ ยังคงเดิม... */}
                     {/* Row 2: เรื่อง */}
                     <div className={styles.fieldRow}>
                       <div className={styles.fieldGroupFull}>
@@ -350,9 +792,12 @@ const SearchComplaints = () => {
                         </label>
                         <input
                           type="text"
-                          defaultValue="อุทดลลทดให้โดยเจื้นอื่นสิ่งสะดวกไว้"
-                          {...step3Methods.register("subject")}
+                          {...step3Methods.register("subject", {
+                            required: "กรุณากรอกเรื่อง",
+                          })}
+                          style={getErrorStyle("subject")}
                         />
+                        {getErrorMessage("subject")}
                       </div>
                     </div>
 
@@ -364,18 +809,23 @@ const SearchComplaints = () => {
                         </label>
                         <input
                           type="text"
-                          defaultValue="12-1507-15"
-                          {...step3Methods.register("referenceNumber1")}
+                          {...step3Methods.register("referenceNumber1", {
+                            required: "กรุณากรอกเลข สป.กค.",
+                          })}
+                          style={getErrorStyle("referenceNumber1")}
                         />
+                        {getErrorMessage("referenceNumber1")}
                       </div>
                       <div className={styles.fieldGroupDate}>
                         <label>
                           วันที่ <span className={styles.required}>*</span>
                         </label>
-                        <DateThaiPickerService
+                        <ControlledDateThaiPickerService
                           name="referenceDate2"
                           control={step3Methods.control}
                           placeholder="กรุณาเลือกวันที่"
+                          rules={{ required: "กรุณาเลือกวันที่" }}
+                          required={true}
                         />
                       </div>
                       <div className={styles.fieldGroup}>
@@ -389,14 +839,14 @@ const SearchComplaints = () => {
                       <div className={styles.fieldGroupDate}>
                         <label>วันที่</label>
                         <DateThaiPickerService
-                          name="referenceDate2"
+                          name="referenceDate2Optional"
                           control={step3Methods.control}
                           placeholder="กรุณาเลือกวันที่"
                         />
                       </div>
                     </div>
 
-                    {/* Row 4: เลข สตป., วันที่, เลข สรร. (สานต่อง), วันที่ */}
+                    {/* Row 4: เลข สตป., วันที่, เลข สรร. (สานต่อ), วันที่ */}
                     <div className={styles.fieldRowDate}>
                       <div className={styles.fieldGroup}>
                         <label>
@@ -404,43 +854,50 @@ const SearchComplaints = () => {
                         </label>
                         <input
                           type="text"
-                          defaultValue="15-9909-45"
-                          {...step3Methods.register("referenceNumber3")}
+                          {...step3Methods.register("referenceNumber3", {
+                            required: "กรุณากรอกเลข สตป.",
+                          })}
+                          style={getErrorStyle("referenceNumber3")}
                         />
+                        {getErrorMessage("referenceNumber3")}
                       </div>
                       <div className={styles.fieldGroupDate}>
                         <label>
                           วันที่ <span className={styles.required}>*</span>
                         </label>
-                        <div className={styles.datePickerWrapper}>
-                          <DateThaiPickerService
-                            name="referenceDate3"
-                            control={step3Methods.control}
-                            placeholder="กรุณาเลือกวันที่"
-                          />
-                        </div>
+                        <ControlledDateThaiPickerService
+                          name="referenceDate3"
+                          control={step3Methods.control}
+                          placeholder="กรุณาเลือกวันที่"
+                          rules={{ required: "กรุณาเลือกวันที่" }}
+                          required={true}
+                        />
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>
-                          เลข สรร. (สานต่อง){" "}
+                          เลข สรร. (สานต่อ){" "}
                           <span className={styles.required}>*</span>
                         </label>
                         <input
                           type="text"
-                          {...step3Methods.register("referenceNumber4")}
+                          {...step3Methods.register("referenceNumber4", {
+                            required: "กรุณากรอกเลข สรร. (สานต่อ)",
+                          })}
+                          style={getErrorStyle("referenceNumber4")}
                         />
+                        {getErrorMessage("referenceNumber4")}
                       </div>
                       <div className={styles.fieldGroupDate}>
                         <label>
                           วันที่ <span className={styles.required}>*</span>
                         </label>
-                        <div className={styles.datePickerWrapper}>
-                          <DateThaiPickerService
-                            name="referenceDate4"
-                            control={step3Methods.control}
-                            placeholder="กรุณาเลือกวันที่"
-                          />
-                        </div>
+                        <ControlledDateThaiPickerService
+                          name="referenceDate4"
+                          control={step3Methods.control}
+                          placeholder="กรุณาเลือกวันที่"
+                          rules={{ required: "กรุณาเลือกวันที่" }}
+                          required={true}
+                        />
                       </div>
                     </div>
 
@@ -478,7 +935,7 @@ const SearchComplaints = () => {
                       <div className={styles.fieldGroup}>
                         <label>ชั้นความลับ</label>
                         <select {...step3Methods.register("securityLevel")}>
-                          <option value="normal">ลับ</option>
+                          <option value="normal">ปกติ</option>
                           <option value="confidential">ลับ</option>
                           <option value="secret">ลับมาก</option>
                           <option value="top_secret">ลับที่สุด</option>
@@ -494,19 +951,21 @@ const SearchComplaints = () => {
                       </div>
                     </div>
 
-                    {/* Checkboxes - ตามภาพ 12 (แนวตั้ง) */}
+                    {/* Checkboxes */}
                     <div className={styles.checkboxSection}>
                       <div className={styles.checkboxGroupVertical}>
                         {/* เรื่องร้องเรียนใหม่ */}
                         <div className={styles.checkboxRowSingle}>
                           <label
                             className={`${styles.checkboxItem} ${
-                              complaintType === "new" ? styles.checked : ""
+                              currentComplaintFilingType === "new"
+                                ? styles.checked
+                                : ""
                             }`}
                           >
                             <input
                               type="checkbox"
-                              checked={complaintType === "new"}
+                              checked={currentComplaintFilingType === "new"}
                               onChange={() => handleComplaintTypeChange("new")}
                             />
                             เรื่องร้องเรียนใหม่
@@ -518,14 +977,16 @@ const SearchComplaints = () => {
                           <div className={styles.checkboxColumn}>
                             <label
                               className={`${styles.checkboxItem} ${
-                                complaintType === "additional"
+                                currentComplaintFilingType === "additional"
                                   ? styles.checked
                                   : ""
                               }`}
                             >
                               <input
                                 type="checkbox"
-                                checked={complaintType === "additional"}
+                                checked={
+                                  currentComplaintFilingType === "additional"
+                                }
                                 onChange={() =>
                                   handleComplaintTypeChange("additional")
                                 }
@@ -536,10 +997,12 @@ const SearchComplaints = () => {
                           <div className={styles.fieldsColumn}>
                             <div className={styles.fieldPair}>
                               <div className={styles.fieldWithLabel}>
-                                <label>เลขที่อ้างอิง(เลข สรร.สานต่อง)</label>
+                                <label>เลขที่อ้างอิง(เลข สรร.สานต่อ)</label>
                                 <input
                                   type="text"
-                                  disabled={complaintType !== "additional"}
+                                  disabled={
+                                    currentComplaintFilingType !== "additional"
+                                  }
                                   {...step3Methods.register(
                                     "additionalReference1"
                                   )}
@@ -551,7 +1014,10 @@ const SearchComplaints = () => {
                                   <DateThaiPickerService
                                     name="additionalReferenceDate1"
                                     control={step3Methods.control}
-                                    disabled={complaintType !== "additional"}
+                                    disabled={
+                                      currentComplaintFilingType !==
+                                      "additional"
+                                    }
                                     placeholder="กรุณาเลือกวันที่"
                                   />
                                 </div>
@@ -565,14 +1031,16 @@ const SearchComplaints = () => {
                           <div className={styles.checkboxColumn}>
                             <label
                               className={`${styles.checkboxItem} ${
-                                complaintType === "committee"
+                                currentComplaintFilingType === "committee"
                                   ? styles.checked
                                   : ""
                               }`}
                             >
                               <input
                                 type="checkbox"
-                                checked={complaintType === "committee"}
+                                checked={
+                                  currentComplaintFilingType === "committee"
+                                }
                                 onChange={() =>
                                   handleComplaintTypeChange("committee")
                                 }
@@ -583,10 +1051,12 @@ const SearchComplaints = () => {
                           <div className={styles.fieldsColumn}>
                             <div className={styles.fieldPair}>
                               <div className={styles.fieldWithLabel}>
-                                <label>เลขที่อ้างอิง(เลข สรร.สานต่อง)</label>
+                                <label>เลขที่อ้างอิง(เลข สรร.สานต่อ)</label>
                                 <input
                                   type="text"
-                                  disabled={complaintType !== "committee"}
+                                  disabled={
+                                    currentComplaintFilingType !== "committee"
+                                  }
                                   {...step3Methods.register(
                                     "additionalReference2"
                                   )}
@@ -598,7 +1068,9 @@ const SearchComplaints = () => {
                                   <DateThaiPickerService
                                     name="additionalReferenceDate2"
                                     control={step3Methods.control}
-                                    disabled={complaintType !== "committee"}
+                                    disabled={
+                                      currentComplaintFilingType !== "committee"
+                                    }
                                     placeholder="กรุณาเลือกวันที่"
                                   />
                                 </div>
@@ -612,7 +1084,7 @@ const SearchComplaints = () => {
                 </div>
               </FormProvider>
 
-              {/* Section 5: ข้อมูลเรื่องร้องทุกข์ (รายละเอียด) - ปรับปรุงตามภาพ */}
+              {/* Section 5: ข้อมูลเรื่องร้องทุกข์ (รายละเอียด) */}
               <FormProvider {...step4Methods}>
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
@@ -676,7 +1148,6 @@ const SearchComplaints = () => {
                         <label>รายละเอียดเพิ่มเติม</label>
                         <textarea
                           rows={8}
-                          defaultValue="บริษัท พีพี เพราคติส จำกัด ได้บอกบนาคาร-ผื่นนี้แล้วส่วนรวบอำนาจเพิ่ม (VAT) ประจำเดือนธันวาคม 2568 แต่มาเสียงปิดบนชิปปิบไม่ได้รับงบแจ้งเวียนอีกแล้วโปรแกรมการต้องเป็นดำเนินอธุรกิจ แน่นงไม่เข้าชำนะดังเดิมนั้นคือแต่งข่าว จะติดต่อมาเมื่อไหร่ แต่กรกฎาคมที่ได้ประมาณการกิจการยังไม่ได้รับการแจ้งเก็บ สรรพากรที่เกี่ยวข้องกับยอดเพาะมารบาศุกก์ แต่ถึงปิดแจ้งแล้วใบใรมสำยาพารขอรายอ่าค่าที่รุงแต่ไม่ได้ราคิดความเสียหายในการปิดเพลิม บราแต่ประเจ่าแก้ข่าย รองรับใหะพอรัดการบริโภคความเสือมได้หมองทางการขี้นแพทิ์่วเพี้ยมาจะเสีสูงมีมันแข่นหาซะการมจังหลายการคาเป็นเวลา สารในข้อมูลใเพื่อนประชาลบไวดยหายแรงกะ 30-60 วัดเป็นลาดยมมายรายละเอียดกิจกรรม แดผงสำนึกต่อขชำห้างทรัพ รับมหลงคนคาเคียกิจกำนองการซิษณีการสุาม สํารองข้องงข่าทนคะกิจและล้วนานด้วยพอมชันใช่ใบสีแนบรประง่ายในมายทางเพาะมายโส ฟอร์มเคล็ทคิบัง คิงแสานเทปในพรวม ทำให้ไม่เก็ดผลการดทอด์อารุโนบายราม."
                           disabled
                           className={styles.disabledTextarea}
                           {...step4Methods.register("additionalDescription")}

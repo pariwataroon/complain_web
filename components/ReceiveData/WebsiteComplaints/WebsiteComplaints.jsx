@@ -30,14 +30,10 @@ const WebsiteComplaints = () => {
 
   // สร้าง issueTypeOptions จาก API response
   const issueTypeOptions = useMemo(() => {
-
-
     const options = [
       { value: "", label: "เลือกประเภทเรื่อง" },
       ...availableTypes,
     ];
-
-    
 
     return options;
   }, [availableTypes]);
@@ -65,7 +61,6 @@ const WebsiteComplaints = () => {
     const skip = page * limit;
     try {
       const res = await GetAllComplaints({ skip, limit });
-      
 
       setAllComplaints(res?.res_data?.items || []);
       setFilteredComplaints(res?.res_data?.items || []);
@@ -75,8 +70,7 @@ const WebsiteComplaints = () => {
 
       setAvailableTypes(types);
 
-      setTimeout(() => {
-      }, 100);
+      setTimeout(() => {}, 100);
     } catch (error) {
       console.error("❌ Load complaints failed", error);
     }
@@ -86,10 +80,7 @@ const WebsiteComplaints = () => {
     fetchComplaints();
   }, [page, limit]);
 
- 
-
   const handleSearch = (filters) => {
-
     const {
       claimantName,
       issueType,

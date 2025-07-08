@@ -33,212 +33,220 @@ const mockData = [
   },
   {
     id: 2,
-    name: "นางสาวจารุณี สิขังสมาธิมี",
-    subject: "พฤติกรรมเจ้าหน้าที่กกต.ไม่เหมาะสม",
-    docNo4: "124/26",
-    docNo: "สป-กค-1234-5-678-9",
-    docNo2: "สป-สร-1234-5-678-9",
-    docNo3: "สตป-1234-5-678-9",
+    name: "นายสมชาย ใจดี",
+    subject: "การเรียกเก็บค่าธรรมเนียมเกินกว่าที่กฎหมายกำหนด",
+    docNo4: "126/26",
+    docNo: "สป-กค-2345-6-789-0",
+    docNo2: "สป-สร-2345-6-789-0",
+    docNo3: "สตป-2345-6-789-0",
     receiveDate: "2025-01-18T00:00:00.000Z",
   },
   {
     id: 3,
-    name: "บริษัท สกายเทค อินโนเวชั่น จำกัด",
-    subject: "ไม่สามารถเบิกค่ารักษาพยาบาลได้",
-    docNo4: "123/26",
-    docNo: "สป-กค-1234-5-678-9",
-    docNo2: "สป-สร-1234-5-678-9",
-    docNo3: "สตป-1234-5-678-9",
-    receiveDate: "2025-01-18T00:00:00.000Z",
+    name: "นางสาวจารุณี สิขังสมาธิมี",
+    subject: "การยื่นเอกสารล่าช้าทำให้เสียสิทธิ์",
+    docNo4: "127/26",
+    docNo: "สป-กค-3456-7-890-1",
+    docNo2: "สป-สร-3456-7-890-1",
+    docNo3: "สตป-3456-7-890-1",
+    receiveDate: "2025-01-19T00:00:00.000Z",
   },
   {
     id: 4,
-    name: "นายปาเจรา จาริยา",
-    subject: "โดนทวงหนี้นอกระบบ",
-    docNo4: "142/26",
-    docNo: "สป-กค-1234-5-678-9",
-    docNo2: "สป-สร-1234-5-678-9",
-    docNo3: "สตป-1234-5-678-9",
+    name: "บริษัท สกายเทค อินโนเวชั่น จำกัด",
+    subject: "ปัญหาการเบิกจ่ายงบประมาณโครงการ",
+    docNo4: "128/26",
+    docNo: "สป-กค-4567-8-901-2",
+    docNo2: "สป-สร-4567-8-901-2",
+    docNo3: "สตป-4567-8-901-2",
     receiveDate: "2025-01-20T00:00:00.000Z",
   },
   {
     id: 5,
-    name: "บริษัท เอ็กซ์เซลเลนท์ ซัพพลาย จำกัด",
-    subject: "การกู้ยืมโดยไม่มีสัญญา",
-    docNo4: "422/26",
-    docNo: "สป-กค-1234-5-678-9",
-    docNo2: "สป-สร-1234-5-678-9",
-    docNo3: "สตป-1234-5-678-9",
-    receiveDate: "2025-01-20T00:00:00.000Z",
-  },
-  {
-    id: 6,
-    name: "นางสาวอภิญญา แสนสุข",
-    subject: "การเรียกร้องค่าชดเชยไม่เป็นธรรม",
-    docNo4: "423/26",
-    docNo: "สป-กค-1111-1-222-3",
-    docNo2: "สป-สร-1111-1-222-3",
-    docNo3: "สตป-1111-1-222-3",
+    name: "นายปาเจรา จาริยา",
+    subject: "ความล่าช้าในการอนุมัติโครงการ",
+    docNo4: "129/26",
+    docNo: "สป-กค-5678-9-012-3",
+    docNo2: "สป-สร-5678-9-012-3",
+    docNo3: "สตป-5678-9-012-3",
     receiveDate: "2025-01-21T00:00:00.000Z",
   },
   {
-    id: 7,
-    name: "นายสมชาย ใจดี",
-    subject: "การจัดเก็บภาษีเกินจริง",
-    docNo4: "524/26",
-    docNo: "สป-กค-2222-2-333-4",
-    docNo2: "สป-สร-2222-2-333-4",
-    docNo3: "สตป-2222-2-333-4",
+    id: 6,
+    name: "นางวิภาดา รักษ์สันติ",
+    subject: "การปฏิเสธการให้บริการโดยไม่มีเหตุผล",
+    docNo4: "130/26",
+    docNo: "สป-กค-6789-0-123-4",
+    docNo2: "สป-สร-6789-0-123-4",
+    docNo3: "สตป-6789-0-123-4",
     receiveDate: "2025-01-22T00:00:00.000Z",
   },
   {
-    id: 8,
-    name: "บริษัท ไทยรุ่งเรือง จำกัด",
-    subject: "สินค้าไม่ตรงตามสเปค",
-    docNo4: "325/26",
-    docNo: "สป-กค-3333-3-444-5",
-    docNo2: "สป-สร-3333-3-444-5",
-    docNo3: "สตป-3333-3-444-5",
+    id: 7,
+    name: "บริษัท เอ็กซ์เซลเลนท์ ซัพพลาย จำกัด",
+    subject: "การชำระเงินล่าช้าตามสัญญา",
+    docNo4: "131/26",
+    docNo: "สป-กค-7890-1-234-5",
+    docNo2: "สป-สร-7890-1-234-5",
+    docNo3: "สตป-7890-1-234-5",
     receiveDate: "2025-01-23T00:00:00.000Z",
   },
   {
-    id: 9,
-    name: "นางสาวมณีรัตน์ สุขใจ",
-    subject: "บริการหลังการขายไม่ดี",
-    docNo4: "226/26",
-    docNo: "สป-กค-4444-4-555-6",
-    docNo2: "สป-สร-4444-4-555-6",
-    docNo3: "สตป-4444-4-555-6",
+    id: 8,
+    name: "นางสาวอภิญญา แสนสุข",
+    subject: "ขอความช่วยเหลือด้านกฎหมาย",
+    docNo4: "132/26",
+    docNo: "สป-กค-8901-2-345-6",
+    docNo2: "สป-สร-8901-2-345-6",
+    docNo3: "สตป-8901-2-345-6",
     receiveDate: "2025-01-24T00:00:00.000Z",
   },
   {
-    id: 10,
-    name: "บริษัท รุ่งอรุณ จำกัด",
-    subject: "การส่งมอบงานล่าช้า",
-    docNo4: "627/26",
-    docNo: "สป-กค-5555-5-666-7",
-    docNo2: "สป-สร-5555-5-666-7",
-    docNo3: "สตป-5555-5-666-7",
+    id: 9,
+    name: "นายธีรพัฒน์ มั่นคง",
+    subject: "การเลือกปฏิบัติในหน่วยงาน",
+    docNo4: "133/26",
+    docNo: "สป-กค-9012-3-456-7",
+    docNo2: "สป-สร-9012-3-456-7",
+    docNo3: "สตป-9012-3-456-7",
     receiveDate: "2025-01-25T00:00:00.000Z",
   },
   {
-    id: 11,
-    name: "นายอำนาจ กล้าหาญ",
-    subject: "การเรียกเก็บค่าปรับผิดกฎหมาย",
-    docNo4: "728/26",
-    docNo: "สป-กค-6666-6-777-8",
-    docNo2: "สป-สร-6666-6-777-8",
-    docNo3: "สตป-6666-6-777-8",
+    id: 10,
+    name: "บริษัท ไทยรุ่งเรือง จำกัด",
+    subject: "ความไม่โปร่งใสในกระบวนการจัดซื้อจัดจ้าง",
+    docNo4: "134/26",
+    docNo: "สป-กค-0123-4-567-8",
+    docNo2: "สป-สร-0123-4-567-8",
+    docNo3: "สตป-0123-4-567-8",
     receiveDate: "2025-01-26T00:00:00.000Z",
   },
   {
-    id: 12,
-    name: "นางสาวจันทร์เจ้า เทพรักษ์",
-    subject: "การส่งภาษีล่าช้า",
-    docNo4: "829/26",
-    docNo: "สป-กค-7777-7-888-9",
-    docNo2: "สป-สร-7777-7-888-9",
-    docNo3: "สตป-7777-7-888-9",
+    id: 11,
+    name: "นางสาวมณีรัตน์ สุขใจ",
+    subject: "การละเมิดข้อมูลส่วนบุคคล",
+    docNo4: "135/26",
+    docNo: "สป-กค-1234-5-678-0",
+    docNo2: "สป-สร-1234-5-678-0",
+    docNo3: "สตป-1234-5-678-0",
     receiveDate: "2025-01-27T00:00:00.000Z",
   },
   {
-    id: 13,
-    name: "บริษัท กรีนฟิลด์ จำกัด",
-    subject: "การประเมินความเสี่ยงไม่ชัดเจน",
-    docNo4: "930/26",
-    docNo: "สป-กค-8888-8-999-0",
-    docNo2: "สป-สร-8888-8-999-0",
-    docNo3: "สตป-8888-8-999-0",
+    id: 12,
+    name: "นายอำนาจ กล้าหาญ",
+    subject: "การปฏิเสธการจ่ายเงินชดเชย",
+    docNo4: "136/26",
+    docNo: "สป-กค-2345-6-789-1",
+    docNo2: "สป-สร-2345-6-789-1",
+    docNo3: "สตป-2345-6-789-1",
     receiveDate: "2025-01-28T00:00:00.000Z",
   },
   {
-    id: 14,
-    name: "นายปรเมศวร์ วัฒนกิจ",
-    subject: "บริการลูกค้าไม่เป็นมิตร",
-    docNo4: "1031/26",
-    docNo: "สป-กค-9999-9-000-1",
-    docNo2: "สป-สร-9999-9-000-1",
-    docNo3: "สตป-9999-9-000-1",
+    id: 13,
+    name: "นางสาวจันทร์เจ้า เทพรักษ์",
+    subject: "ปัญหาสาธารณูปโภคในชุมชน",
+    docNo4: "137/26",
+    docNo: "สป-กค-3456-7-890-2",
+    docNo2: "สป-สร-3456-7-890-2",
+    docNo3: "สตป-3456-7-890-2",
     receiveDate: "2025-01-29T00:00:00.000Z",
   },
   {
-    id: 15,
-    name: "นางสาวพัชรินทร์ นิ่มนวล",
-    subject: "เอกสารสัญญาขาดหาย",
-    docNo4: "1132/26",
-    docNo: "สป-กค-1010-1-010-1",
-    docNo2: "สป-สร-1010-1-010-1",
-    docNo3: "สตป-1010-1-010-1",
+    id: 14,
+    name: "บริษัท กรีนฟิลด์ จำกัด",
+    subject: "การปล่อยมลพิษไม่ตรงตามมาตรฐาน",
+    docNo4: "138/26",
+    docNo: "สป-กค-4567-8-901-3",
+    docNo2: "สป-สร-4567-8-901-3",
+    docNo3: "สตป-4567-8-901-3",
     receiveDate: "2025-01-30T00:00:00.000Z",
   },
   {
-    id: 16,
-    name: "บริษัท ไทยซอฟต์ จำกัด",
-    subject: "ซอฟต์แวร์บั๊กเยอะ",
-    docNo4: "1233/26",
-    docNo: "สป-กค-2020-2-020-2",
-    docNo2: "สป-สร-2020-2-020-2",
-    docNo3: "สตป-2020-2-020-2",
+    id: 15,
+    name: "นายปรเมศวร์ วัฒนกิจ",
+    subject: "การรับสินบนของเจ้าหน้าที่",
+    docNo4: "139/26",
+    docNo: "สป-กค-5678-9-012-4",
+    docNo2: "สป-สร-5678-9-012-4",
+    docNo3: "สตป-5678-9-012-4",
     receiveDate: "2025-01-31T00:00:00.000Z",
   },
   {
-    id: 17,
-    name: "นายจักรพงษ์ แข็งแรง",
-    subject: "สินค้าชำรุดก่อนเวลา",
-    docNo4: "1334/26",
-    docNo: "สป-กค-3030-3-030-3",
-    docNo2: "สป-สร-3030-3-030-3",
-    docNo3: "สตป-3030-3-030-3",
+    id: 16,
+    name: "นางสาวพัชรินทร์ นิ่มนวล",
+    subject: "การถูกเลิกจ้างโดยไม่เป็นธรรม",
+    docNo4: "140/26",
+    docNo: "สป-กค-6789-0-123-5",
+    docNo2: "สป-สร-6789-0-123-5",
+    docNo3: "สตป-6789-0-123-5",
     receiveDate: "2025-02-01T00:00:00.000Z",
   },
   {
-    id: 18,
-    name: "นางสาวมาลี มั่งคั่ง",
-    subject: "การรับประกันไม่ครอบคลุม",
-    docNo4: "1435/26",
-    docNo: "สป-กค-4040-4-040-4",
-    docNo2: "สป-สร-4040-4-040-4",
-    docNo3: "สตป-4040-4-040-4",
+    id: 17,
+    name: "บริษัท ไทยซอฟต์ จำกัด",
+    subject: "การละเมิดลิขสิทธิ์ซอฟต์แวร์",
+    docNo4: "141/26",
+    docNo: "สป-กค-7890-1-234-6",
+    docNo2: "สป-สร-7890-1-234-6",
+    docNo3: "สตป-7890-1-234-6",
     receiveDate: "2025-02-02T00:00:00.000Z",
   },
   {
-    id: 19,
-    name: "บริษัท แกรนด์เทค จำกัด",
-    subject: "การติดตั้งล่าช้า",
-    docNo4: "1536/26",
-    docNo: "สป-กค-5050-5-050-5",
-    docNo2: "สป-สร-5050-5-050-5",
-    docNo3: "สตป-5050-5-050-5",
+    id: 18,
+    name: "นายจักรพงษ์ แข็งแรง",
+    subject: "การทุจริตในการสอบคัดเลือก",
+    docNo4: "142/26",
+    docNo: "สป-กค-8901-2-345-7",
+    docNo2: "สป-สร-8901-2-345-7",
+    docNo3: "สตป-8901-2-345-7",
     receiveDate: "2025-02-03T00:00:00.000Z",
   },
   {
-    id: 20,
-    name: "นางสาวสุนิสา ใจบุญ",
-    subject: "บริการหลังการขายไม่มีคุณภาพ",
-    docNo4: "1637/26",
-    docNo: "สป-กค-6060-6-060-6",
-    docNo2: "สป-สร-6060-6-060-6",
-    docNo3: "สตป-6060-6-060-6",
+    id: 19,
+    name: "นางสาวมาลี มั่งคั่ง",
+    subject: "การซื้อสินค้าออนไลน์แล้วไม่ได้รับสินค้า",
+    docNo4: "143/26",
+    docNo: "สป-กค-9012-3-456-8",
+    docNo2: "สป-สร-9012-3-456-8",
+    docNo3: "สตป-9012-3-456-8",
     receiveDate: "2025-02-04T00:00:00.000Z",
+  },
+  {
+    id: 20,
+    name: "บริษัท แกรนด์เทค จำกัด",
+    subject: "การส่งมอบงานไม่ตรงตามข้อกำหนด",
+    docNo4: "144/26",
+    docNo: "สป-กค-0123-4-567-9",
+    docNo2: "สป-สร-0123-4-567-9",
+    docNo3: "สตป-0123-4-567-9",
+    receiveDate: "2025-02-05T00:00:00.000Z",
   },
 ];
 
 const AssignedComplaintsComponents = () => {
-  // state เก็บผลลัพธ์ที่กรองแล้ว
+  // State for search filters
+  const [searchFilters, setSearchFilters] = useState({
+    claimantName: "",
+    subject: "",
+    docNo4: "",
+    receiveDate: null,
+  });
+
+  // State for filtered rows
   const [rows, setRows] = useState(mockData);
   const router = useRouter();
 
-  // ฟังก์ชันแปลงวันที่จาก DateThaiPickerService เป็น ISO string
+  // Function to convert date to ISO string
   const convertDateToISO = (dateInput) => {
     if (!dateInput) return null;
 
     try {
-      // ถ้าเป็น ISO string แล้ว
+      // If already ISO string
       if (typeof dateInput === "string" && dateInput.includes("T")) {
         return dateInput;
       }
 
-      // ถ้าเป็น object จาก DateThaiPickerService
+      // If object from DateThaiPickerService
       if (
         typeof dateInput === "object" &&
         dateInput.year &&
@@ -253,7 +261,7 @@ const AssignedComplaintsComponents = () => {
         return isoDate.toISOString();
       }
 
-      // ถ้าเป็น string date format อื่น ๆ
+      // If other string date format
       if (typeof dateInput === "string") {
         const parsedDate = new Date(dateInput);
         if (!isNaN(parsedDate.getTime())) {
@@ -268,20 +276,20 @@ const AssignedComplaintsComponents = () => {
     }
   };
 
-  // ฟังก์ชันเปรียบเทียบวันที่
+  // Function to compare dates
   const compareDates = (itemDate, filterDate) => {
     if (!itemDate || !filterDate) return false;
 
     try {
-      // แปลง filter date เป็น ISO
+      // Convert filter date to ISO
       const filterISO = convertDateToISO(filterDate);
       if (!filterISO) return false;
 
-      // แปลงเป็น date objects เพื่อเปรียบเทียบ
+      // Convert to date objects for comparison
       const itemDateObj = new Date(itemDate);
       const filterDateObj = new Date(filterISO);
 
-      // เปรียบเทียบเฉพาะวันที่ (ไม่รวมเวลา)
+      // Compare only the date (not time)
       return (
         itemDateObj.getFullYear() === filterDateObj.getFullYear() &&
         itemDateObj.getMonth() === filterDateObj.getMonth() &&
@@ -293,44 +301,42 @@ const AssignedComplaintsComponents = () => {
     }
   };
 
-  // ฟังก์ชันกรองข้อมูล - แก้ไขให้ทำงานได้ถูกต้อง
-  const handleSearch = (filters) => {
-    console.log("🔍 Search filters received:", filters); // Debug log
+  // Function to handle filter changes
+  const handleFilterChange = (field, value) => {
+    setSearchFilters((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // Function to filter data
+  const handleSearch = () => {
+    console.log("🔍 Search filters:", searchFilters);
 
     const filtered = mockData.filter((item) => {
-      // กรองชื่อผู้ร้องเรียน
-      const matchName = filters.claimantName
-        ? item.name.toLowerCase().includes(filters.claimantName.toLowerCase())
+      // Filter by claimant name
+      const matchName = searchFilters.claimantName
+        ? item.name
+            .toLowerCase()
+            .includes(searchFilters.claimantName.toLowerCase())
         : true;
 
-      // กรองชื่อเรื่อง
-      const matchSubject = filters.subject
-        ? item.subject.toLowerCase().includes(filters.subject.toLowerCase())
+      // Filter by subject
+      const matchSubject = searchFilters.subject
+        ? item.subject
+            .toLowerCase()
+            .includes(searchFilters.subject.toLowerCase())
         : true;
 
-      // กรองเลขที่ สรร.
-      const matchDocNo4 = filters.docNo4
-        ? item.docNo4.toLowerCase().includes(filters.docNo4.toLowerCase())
+      // Filter by docNo4
+      const matchDocNo4 = searchFilters.docNo4
+        ? item.docNo4.toLowerCase().includes(searchFilters.docNo4.toLowerCase())
         : true;
 
-      // กรองวันที่รับเรื่อง - ใช้ฟังก์ชันเปรียบเทียบวันที่ใหม่
-      const matchDate = filters.receiveDate
-        ? compareDates(item.receiveDate, filters.receiveDate)
+      // Filter by receive date
+      const matchDate = searchFilters.receiveDate
+        ? compareDates(item.receiveDate, searchFilters.receiveDate)
         : true;
-
-      // Debug logs
-      console.log(`Item ${item.id}:`, {
-        name: item.name,
-        matchName,
-        subject: item.subject,
-        matchSubject,
-        docNo4: item.docNo4,
-        matchDocNo4,
-        receiveDate: item.receiveDate,
-        filterDate: filters.receiveDate,
-        matchDate,
-        finalMatch: matchName && matchSubject && matchDocNo4 && matchDate,
-      });
 
       return matchName && matchSubject && matchDocNo4 && matchDate;
     });
@@ -339,6 +345,17 @@ const AssignedComplaintsComponents = () => {
       `🎯 Filtered results: ${filtered.length} items from ${mockData.length} total`
     );
     setRows(filtered);
+  };
+
+  // Function to clear search
+  const handleClearSearch = () => {
+    setSearchFilters({
+      claimantName: "",
+      subject: "",
+      docNo4: "",
+      receiveDate: null,
+    });
+    setRows(mockData);
   };
 
   const handleRowClick = (item) => {
@@ -352,6 +369,9 @@ const AssignedComplaintsComponents = () => {
         title="เรื่องร้องเรียนที่ได้รับมอบหมาย"
         rows={rows}
         onSearch={handleSearch}
+        onClearSearch={handleClearSearch}
+        searchFilters={searchFilters}
+        onFilterChange={handleFilterChange}
         handleRowClick={handleRowClick}
       />
     </>

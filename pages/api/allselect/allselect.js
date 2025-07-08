@@ -32,6 +32,46 @@ const GetAllSelectComplaintTypes = async ({
   }
 };
 
+const getSubComplaintTypeById = async (complaint_type_id) => {
+  try {
+    const response = await axiosInstance.get(`/complaint-metadata/subtypes`, {
+      params: {
+        skip: 0,
+        limit: 100,
+        active_only: true,
+        parent_type_id: complaint_type_id,
+      },
+    });
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error(
+      "Error fetching sub complaint types by parent type ID:",
+      error
+    );
+    throw error;
+  }
+};
+
+const GetAllComplaintChannels = async () => {
+  try {
+    const response = await axiosInstance.get(`/complaint-metadata/channels`, {
+      params: {
+        skip: 0,
+        limit: 100,
+        active_only: true,
+      },
+    });
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error fetching complaint channels:", error);
+    throw error;
+  }
+};
+
 // !! GEOGRAPHY
 //  All Provinces
 const GetProvincesSelect = async () => {
@@ -270,6 +310,7 @@ const GetAllSignatureAuthorities = async () => {
 
 export {
   GetAllSelect,
+  getSubComplaintTypeById,
   GetProvincesSelect,
   GetAmphuresSelect,
   GetDistrictsSelect,
@@ -279,4 +320,5 @@ export {
   UsersSearchByRolesupervisor,
   GetOutgoingReportOptions,
   GetAllSignatureAuthorities,
+  GetAllComplaintChannels,
 };

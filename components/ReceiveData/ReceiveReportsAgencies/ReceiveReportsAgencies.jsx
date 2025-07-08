@@ -8,6 +8,7 @@ import ButtonService from "@services/ButtonService/ButtonService";
 import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
+import { alertWarning, alertSuccess } from "@utils/Alerts";
 
 // Constants สำหรับ options
 const PROCESS_STEP_OPTIONS = [
@@ -89,6 +90,82 @@ const ReceiveReportsAgencies = () => {
 
   const [form, setForm] = useState(initialFormState);
 
+  // Validation function
+  const validateForm = useCallback(() => {
+    const missingFields = [];
+
+    // Required fields validation
+    if (!form.referenceNo.trim()) {
+      missingFields.push("เลขที่อ้างอิง(เลข สรร.สารบัญ)");
+    }
+
+    if (!form.date) {
+      missingFields.push("วันที่");
+    }
+
+    if (!form.processStep) {
+      missingFields.push("ขั้นตอนการดำเนินการ");
+    }
+
+    if (!form.confidentiality) {
+      missingFields.push("ชั้นความลับ");
+    }
+
+    if (!form.urgency) {
+      missingFields.push("ชั้นความเร่งด่วน");
+    }
+
+    if (!form.agency) {
+      missingFields.push("หน่วยงาน");
+    }
+
+    if (!form.investigateGk.trim()) {
+      missingFields.push("เลขสป.กค.");
+    }
+
+    if (!form.investigateDate) {
+      missingFields.push("วันที่ (เลขสป.กค.)");
+    }
+
+    if (!form.documentNo.trim()) {
+      missingFields.push("เลขที่หนังสือ");
+    }
+
+    if (!form.documentDate) {
+      missingFields.push("วันที่ (เลขที่หนังสือ)");
+    }
+
+    if (!form.receiveWorkDate) {
+      missingFields.push("วันที่รับงานของเจ้าหน้าที่");
+    }
+
+    if (!form.submitWorkDate) {
+      missingFields.push("วันที่เสนองาน ผอ.สรร.");
+    }
+
+    if (!form.origin.trim()) {
+      missingFields.push("ต้นเรื่อง");
+    }
+
+    if (!form.subject.trim()) {
+      missingFields.push("เรื่อง");
+    }
+
+    if (!form.attachment.trim()) {
+      missingFields.push("เอกสารแนบ");
+    }
+
+    // Show warning alert if there are missing fields
+    if (missingFields.length > 0) {
+      const message = `กรุณากรอกข้อมูลให้ครบถ้วน:\n${missingFields
+        .map((field) => `• ${field}`)
+        .join("\n")}`;
+      alertWarning("ข้อมูลไม่ครบถ้วน", message);
+    }
+
+    return missingFields.length === 0;
+  }, [form]);
+
   // Memoized handlers
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
@@ -108,9 +185,12 @@ const ReceiveReportsAgencies = () => {
   }, [initialFormState]);
 
   const handleSave = useCallback(() => {
-    console.log("Form data:", form);
-    // TODO: save form
-  }, [form]);
+    if (validateForm()) {
+      console.log("Form data:", form);
+      // TODO: save form
+      alertSuccess("สำเร็จ", "บันทึกข้อมูลเรียบร้อยแล้ว");
+    }
+  }, [form, validateForm]);
 
   const handleFileChange = useCallback((e) => {
     const file = e.target.files?.[0];
@@ -174,16 +254,14 @@ const ReceiveReportsAgencies = () => {
           sx={{
             display: "flex",
             flexDirection: "column",
-            gap: 2,
-            p: { xs: 2, sm: 3, md: 5 },
-            pt: 0,
+            px: { xs: 2, sm: 3, md: 5 },
           }}
         >
           {/* แถวที่ 1: เลขที่อ้างอิง(เลข สรร.สารบัญ) | วันที่ | ขั้นตอนการดำเนินการ */}
           <Box
             sx={{
               display: "grid",
-              gap: 2,
+              columnGap: 2,
               gridTemplateColumns: {
                 xs: "1fr",
                 sm: "1fr 1fr",
@@ -235,7 +313,7 @@ const ReceiveReportsAgencies = () => {
           <Box
             sx={{
               display: "grid",
-              gap: 2,
+              columnGap: 2,
               gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
@@ -288,7 +366,7 @@ const ReceiveReportsAgencies = () => {
           <Box
             sx={{
               display: "grid",
-              gap: 2,
+              columnGap: 2,
               gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
@@ -323,7 +401,7 @@ const ReceiveReportsAgencies = () => {
           <Box
             sx={{
               display: "grid",
-              gap: 2,
+              columnGap: 2,
               gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
@@ -358,7 +436,7 @@ const ReceiveReportsAgencies = () => {
           <Box
             sx={{
               display: "grid",
-              gap: 2,
+              columnGap: 2,
               gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
@@ -483,7 +561,7 @@ const ReceiveReportsAgencies = () => {
             flexDirection: { xs: "column", md: "row" },
             justifyContent: "center",
             gap: 2,
-            mb: 5,
+            mb: 4,
             px: { xs: 2, sm: 2, md: 0 },
           }}
         >
