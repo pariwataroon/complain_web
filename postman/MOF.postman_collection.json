@@ -4396,6 +4396,45 @@
 						"description": "ดึงรายละเอียดกลุ่มผู้มีอำนาจลงนาม รวมรายชื่อผู้ใช้และหน่วยงานทั้งหมด\n\n**คุณสมบัติ:**\n- แสดงข้อมูลกลุ่มแบบละเอียด\n- รายชื่อผู้ใช้ทั้งหมดในกลุ่ม\n- รายชื่อหน่วยงานทั้งหมด\n- รายละเอียดการกำหนดสิทธิ์แต่ละรายการ\n\n**สิทธิ์:** ต้องมีสิทธิ์ `setting_users:read` (admin level)"
 					},
 					"response": []
+				},
+				{
+					"name": "Update Group Signature Authority",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"group_name\": \"ผู้อำนวยการกลุ่มงานพัฒนาระบบ (อัปเดต)\",\n    \"description\": \"กลุ่มผู้มีอำนาจลงนามสำหรับงานพัฒนาระบบและเทคโนโลยี - อัปเดตแล้ว\",\n    \"assignments\": [\n        {\n            \"user_id\": \"{{user_id_1}}\",\n            \"department_ids\": [\"{{department_id_1}}\", \"{{department_id_2}}\", \"{{department_id_3}}\"]\n        },\n        {\n            \"user_id\": \"{{user_id_2}}\",\n            \"department_ids\": [\"{{department_id_1}}\"]\n        },\n        {\n            \"user_id\": \"{{user_id_3}}\",\n            \"department_ids\": [\"{{department_id_2}}\", \"{{department_id_3}}\"]\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities/groups/{{group_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities",
+								"groups",
+								"{{group_id}}"
+							]
+						},
+						"description": "อัปเดตกลุ่มผู้มีอำนาจลงนาม - ช่วยในการแก้ไขข้อมูลกลุ่มและปรับเปลี่ยนการมอบหมายสิทธิ์\n\n**คุณสมบัติ:**\n- อัปเดตชื่อและคำอธิบายกลุ่ม\n- ป้องกันการใช้ชื่อกลุ่มซ้ำ\n- แทนที่การมอบหมายเดิมทั้งหมดด้วยข้อมูลใหม่\n- ตรวจสอบความถูกต้องของ UUID และข้อมูลผู้ใช้/หน่วยงาน\n- รองรับการเพิ่ม/ลด/แก้ไขสมาชิกและหน่วยงาน\n\n**สิทธิ์:** ต้องมีสิทธิ์ `setting_users:update` (admin level)\n\n**หมายเหตุ:**\n- การอัปเดตจะลบการมอบหมายเดิมทั้งหมดและสร้างใหม่ตามข้อมูลที่ส่งมา\n- ตรวจสอบว่าชื่อกลุ่มไม่ซ้ำกับกลุ่มอื่น\n- รองรับ placeholder detection สำหรับ UUID\n\n**Response:**\n```json\n{\n  \"res_code\": \"0000\",\n  \"res_message\": \"UPDATE_DATA_SUCCESSFULLY\",\n  \"res_data\": {\n    \"id\": \"uuid\",\n    \"group_name\": \"ผู้อำนวยการกลุ่มงานพัฒนาระบบ (อัปเดต)\",\n    \"description\": \"กลุ่มผู้มีอำนาจลงนาม...\",\n    \"assignments\": [...],\n    \"total_assignments\": 5,\n    \"updated_at\": \"2025-07-09T09:45:00Z\"\n  }\n}\n```"
+					},
+					"response": []
 				}
 			],
 			"description": "API สำหรับจัดการผู้มีอำนาจลงนามเอกสาร - เชื่อมโยงผู้ใช้กับหน่วยงานโดยตรง โดยใช้ข้อมูลตำแหน่งจาก user_positions\n\n**คุณสมบัติใหม่:**\n- Group Signature Authority - จัดการผู้ใช้หลายคนในหลายหน่วยงานพร้อมกัน\n- Bulk Creation - สร้างสิทธิการลงนามจำนวนมากในครั้งเดียว\n- Group Management - จัดกลุ่มผู้มีอำนาจลงนามเพื่อความสะดวกในการบริหารจัดการ"
