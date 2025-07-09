@@ -818,7 +818,7 @@ def get_signature_authority_group_by_id(db: Session, group_id: UUID):
         assignments = db.query(SignatureAuthority)\
             .options(
                 joinedload(SignatureAuthority.user),
-                joinedload(SignatureAuthority.department)
+                joinedload(SignatureAuthority.department).joinedload(Department.group)
             )\
             .filter(
                 SignatureAuthority.group_signature_authorities_id == group_id,
@@ -841,25 +841,51 @@ def get_signature_authority_group_by_id(db: Session, group_id: UUID):
                     "user_name": f"{assignment.user.first_name} {assignment.user.last_name}",
                     "user_email": assignment.user.email,
                     "user_is_active": assignment.user.is_active,
-                    "department_ids": []
+                    "department_ids": [],
+                    "departments": []  # เพิ่มข้อมูลหน่วยงานแบบละเอียด
                 }
             
+            # เพิ่ม department_id และข้อมูลหน่วยงานแบบละเอียด
             users_data[user_id]["department_ids"].append(dept_id)
+            users_data[user_id]["departments"].append({
+                "department_id": dept_id,
+                "department_name": assignment.department.name,
+                "department_description": getattr(assignment.department, 'short_name', ''),
+                "department_is_active": assignment.department.is_active,
+                "group_id": str(assignment.department.group_id) if assignment.department.group_id else None,
+                "group_name": assignment.department.group.name if assignment.department.group else None
+            })
             
             # เก็บข้อมูลหน่วยงาน
             if dept_id not in departments_data:
                 departments_data[dept_id] = {
                     "department_id": dept_id,
                     "department_name": assignment.department.name,
-                    "department_is_active": assignment.department.is_active
+                    "department_description": getattr(assignment.department, 'short_name', ''),
+                    "department_is_active": assignment.department.is_active,
+                    "group_id": str(assignment.department.group_id) if assignment.department.group_id else None,
+                    "group_name": assignment.department.group.name if assignment.department.group else None
                 }
         
-        # สร้างรูปแบบ assignments ที่เหมาะสำหรับการแก้ไข
+        # สร้างรูปแบบ assignments ที่เหมาะสำหรับการแก้ไขพร้อมข้อมูลหน่วยงาน
         formatted_assignments = []
         for user_data in users_data.values():
+            # สร้าง departments สำหรับ assignment
+            assignment_departments = []
+            for dept_id in user_data["department_ids"]:
+                dept_info = departments_data[dept_id]
+                assignment_departments.append({
+                    "department_id": dept_id,
+                    "department_name": dept_info["department_name"],
+                    "department_description": dept_info["department_description"],
+                    "group_id": dept_info["group_id"],
+                    "group_name": dept_info["group_name"]
+                })
+            
             formatted_assignments.append({
                 "user_id": user_data["user_id"],
-                "department_ids": user_data["department_ids"]
+                "department_ids": user_data["department_ids"],
+                "departments": assignment_departments  # เพิ่มข้อมูลหน่วยงานแบบละเอียด
             })
         
         result = {
