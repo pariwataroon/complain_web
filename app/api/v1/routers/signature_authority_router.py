@@ -10,7 +10,8 @@ from app.api.v1.controllers.signature_authority_controller import (
     get_available_users, get_available_departments,
     remove_signature_authority, get_users_with_signature_by_department_group,
     create_bulk_signature_authorities, get_signature_authority_groups,
-    create_signature_authority_group
+    create_signature_authority_group, get_signature_authority_group_by_id,
+    update_signature_authority_group
 )
 from app.api.v1.schemas.signature_authority import (
     SignatureAuthorityCreate, SignatureAuthority, SignatureAuthorityUpdate
@@ -140,7 +141,7 @@ async def remove_signature_authority_endpoint(
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         return format_response("5000", {"error": str(e)})
-    
+
 @router.get("/users-and-departments", response_model=FormatResponseModel)
 async def get_users_with_signature_by_department_group_endpoint(
     skip: int = 0,
@@ -158,6 +159,24 @@ async def get_users_with_signature_by_department_group_endpoint(
         print(f"Unexpected error: {str(e)}")
         return format_response("5000", {"error": str(e)})
 
+@router.post("/bulk", response_model=FormatResponseModel)
+async def create_bulk_signature_authorities_endpoint(
+    bulk_data: BulkSignatureAuthorityCreate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_create("setting_users"))
+):
+    """สร้างกลุ่มผู้ลงนามพร้อมสมาชิกหลายคนในครั้งเดียว (endpoint เดิมที่ใช้งานอยู่)"""
+    try:
+        data = bulk_data.model_dump(exclude_none=True)
+        result = create_bulk_signature_authorities(db, data)
+        return format_response("0001", result)
+    except DuplicateKeyError as e:
+        return format_response("4090", {"error": str(e)})
+    except HTTPException as e:
+        return format_response(f"{e.status_code}", {"error": e.detail})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
 # เพิ่ม endpoints สำหรับ group signature authorities
 @router.get("/groups", response_model=FormatResponseModel)
 async def get_signature_authority_groups_endpoint(
@@ -169,6 +188,21 @@ async def get_signature_authority_groups_endpoint(
     """ดึงรายการกลุ่มผู้มีอำนาจลงนามทั้งหมด"""
     try:
         result = get_signature_authority_groups(db, skip=skip, limit=limit)
+        return format_response("0000", result)
+    except HTTPException as e:
+        return format_response(f"{e.status_code}", {"error": e.detail})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
+@router.get("/groups/{group_id}", response_model=FormatResponseModel)
+async def get_signature_authority_group_by_id_endpoint(
+    group_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_users"))
+):
+    """ดึงข้อมูลกลุ่มผู้มีอำนาจลงนามตาม ID"""
+    try:
+        result = get_signature_authority_group_by_id(db, group_id)
         return format_response("0000", result)
     except HTTPException as e:
         return format_response(f"{e.status_code}", {"error": e.detail})
@@ -193,18 +227,18 @@ async def create_signature_authority_group_endpoint(
     except Exception as e:
         return format_response("5000", {"error": str(e)})
 
-
-@router.post("/bulk", response_model=FormatResponseModel)
-async def create_bulk_signature_authorities_endpoint(
-    bulk_data: BulkSignatureAuthorityCreate,
+@router.put("/groups/{group_id}", response_model=FormatResponseModel)
+async def update_signature_authority_group_endpoint(
+    group_id: UUID,
+    group_data: GroupSignatureCreate,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_create("setting_users"))
+    current_user: str = Depends(can_update("setting_users"))
 ):
-    """สร้างกลุ่มผู้ลงนามพร้อมสมาชิกหลายคนในครั้งเดียว (endpoint เดิมที่ใช้งานอยู่)"""
+    """อัปเดตกลุ่มผู้มีอำนาจลงนาม"""
     try:
-        data = bulk_data.model_dump(exclude_none=True)
-        result = create_bulk_signature_authorities(db, data)
-        return format_response("0001", result)
+        data = group_data.model_dump(exclude_none=True)
+        result = update_signature_authority_group(db, group_id, data)
+        return format_response("0000", result)
     except DuplicateKeyError as e:
         return format_response("4090", {"error": str(e)})
     except HTTPException as e:

@@ -648,6 +648,18 @@ def get_signature_authority_groups(db: Session, skip: int = 0, limit: int = 100)
 def create_signature_authority_group(db: Session, group_data: dict):
     """สร้างกลุ่มผู้ลงนามพร้อมการมอบหมายแบบใหม่ (ไม่กระทบ bulk endpoint เดิม)"""
     try:
+        # ตรวจสอบว่ามีชื่อกลุ่มซ้ำหรือไม่
+        existing_group = db.query(GroupSignatureAuthority).filter(
+            GroupSignatureAuthority.name == group_data["group_name"],
+            GroupSignatureAuthority.is_active == True
+        ).first()
+        
+        if existing_group:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Group name '{group_data['group_name']}' already exists. Use PUT to update existing group."
+            )
+        
         # สร้างกลุ่มใหม่
         db_group = GroupSignatureAuthority(
             name=group_data["group_name"],
@@ -666,6 +678,24 @@ def create_signature_authority_group(db: Session, group_data: dict):
                 user_id = assignment["user_id"]
                 department_ids = assignment["department_ids"]
                 
+                # ตรวจสอบรูปแบบ UUID ของ user_id
+                try:
+                    if isinstance(user_id, str):
+                        # ตรวจสอบว่าไม่ใช่ placeholder
+                        if user_id.startswith("{{") and user_id.endswith("}}"):
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Invalid user_id format: {user_id} (placeholder detected)"
+                            )
+                        user_id = UUID(user_id)
+                    elif not isinstance(user_id, UUID):
+                        user_id = UUID(str(user_id))
+                except ValueError:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Invalid user_id format: {user_id}"
+                    )
+                
                 # ตรวจสอบว่าผู้ใช้มีอยู่จริง
                 user = db.query(User).filter(
                     User.id == user_id,
@@ -680,6 +710,24 @@ def create_signature_authority_group(db: Session, group_data: dict):
                 
                 # สร้างการมอบหมายสำหรับแต่ละหน่วยงาน
                 for dept_id in department_ids:
+                    # ตรวจสอบรูปแบบ UUID ของ department_id
+                    try:
+                        if isinstance(dept_id, str):
+                            # ตรวจสอบว่าไม่ใช่ placeholder
+                            if dept_id.startswith("{{") and dept_id.endswith("}}"):
+                                raise HTTPException(
+                                    status_code=400,
+                                    detail=f"Invalid department_id format: {dept_id} (placeholder detected)"
+                                )
+                            dept_id = UUID(dept_id)
+                        elif not isinstance(dept_id, UUID):
+                            dept_id = UUID(str(dept_id))
+                    except ValueError:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Invalid department_id format: {dept_id}"
+                        )
+                    
                     # ตรวจสอบว่าหน่วยงานมีอยู่จริง
                     department = db.query(Department).filter(
                         Department.id == dept_id,
@@ -749,4 +797,251 @@ def create_signature_authority_group(db: Session, group_data: dict):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create signature authority group: {str(e)}"
+        )
+
+def get_signature_authority_group_by_id(db: Session, group_id: UUID):
+    """ดึงข้อมูลกลุ่มผู้มีอำนาจลงนามตาม ID พร้อมรายละเอียดสมาชิก"""
+    try:
+        # ค้นหากลุ่ม
+        group = db.query(GroupSignatureAuthority).filter(
+            GroupSignatureAuthority.id == group_id,
+            GroupSignatureAuthority.is_active == True
+        ).first()
+        
+        if not group:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Signature authority group with ID {group_id} not found"
+            )
+        
+        # ดึงข้อมูลการมอบหมายในกลุ่ม
+        assignments = db.query(SignatureAuthority)\
+            .options(
+                joinedload(SignatureAuthority.user),
+                joinedload(SignatureAuthority.department)
+            )\
+            .filter(
+                SignatureAuthority.group_signature_authorities_id == group_id,
+                SignatureAuthority.is_active == True
+            )\
+            .all()
+        
+        # จัดกลุ่มข้อมูลตามผู้ใช้
+        users_data = {}
+        departments_data = {}
+        
+        for assignment in assignments:
+            user_id = str(assignment.user_id)
+            dept_id = str(assignment.department_id)
+            
+            # เก็บข้อมูลผู้ใช้
+            if user_id not in users_data:
+                users_data[user_id] = {
+                    "user_id": user_id,
+                    "user_name": f"{assignment.user.first_name} {assignment.user.last_name}",
+                    "user_email": assignment.user.email,
+                    "user_is_active": assignment.user.is_active,
+                    "department_ids": []
+                }
+            
+            users_data[user_id]["department_ids"].append(dept_id)
+            
+            # เก็บข้อมูลหน่วยงาน
+            if dept_id not in departments_data:
+                departments_data[dept_id] = {
+                    "department_id": dept_id,
+                    "department_name": assignment.department.name,
+                    "department_is_active": assignment.department.is_active
+                }
+        
+        # สร้างรูปแบบ assignments ที่เหมาะสำหรับการแก้ไข
+        formatted_assignments = []
+        for user_data in users_data.values():
+            formatted_assignments.append({
+                "user_id": user_data["user_id"],
+                "department_ids": user_data["department_ids"]
+            })
+        
+        result = {
+            "id": str(group.id),
+            "group_name": group.name,
+            "description": group.description,
+            "is_active": group.is_active,
+            "assignments": formatted_assignments,
+            "users": list(users_data.values()),
+            "departments": list(departments_data.values()),
+            "total_members": len(users_data),
+            "total_departments": len(departments_data),
+            "total_assignments": len(assignments),
+            "created_at": group.created_at,
+            "updated_at": group.updated_at
+        }
+        
+        return result
+        
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error fetching signature authority group by ID: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch signature authority group: {str(e)}"
+        )
+
+def update_signature_authority_group(db: Session, group_id: UUID, group_data: dict):
+    """อัปเดตกลุ่มผู้มีอำนาจลงนาม"""
+    try:
+        # ค้นหากลุ่มที่ต้องการอัปเดต
+        db_group = db.query(GroupSignatureAuthority).filter(
+            GroupSignatureAuthority.id == group_id,
+            GroupSignatureAuthority.is_active == True
+        ).first()
+        
+        if not db_group:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Signature authority group with ID {group_id} not found"
+            )
+        
+        # ตรวจสอบชื่อซ้ำ (ยกเว้นกลุ่มปัจจุบัน)
+        if "group_name" in group_data:
+            existing_group = db.query(GroupSignatureAuthority).filter(
+                GroupSignatureAuthority.name == group_data["group_name"],
+                GroupSignatureAuthority.is_active == True,
+                GroupSignatureAuthority.id != group_id
+            ).first()
+            
+            if existing_group:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Group name '{group_data['group_name']}' already exists"
+                )
+            
+            db_group.name = group_data["group_name"]
+        
+        # อัปเดตคำอธิบาย
+        if "description" in group_data:
+            db_group.description = group_data["description"]
+        
+        db_group.updated_at = func.now()
+        
+        # อัปเดตการมอบหมาย
+        updated_assignments = []
+        
+        if "assignments" in group_data:
+            # ลบการมอบหมายเดิมทั้งหมดในกลุ่มนี้
+            existing_assignments = db.query(SignatureAuthority).filter(
+                SignatureAuthority.group_signature_authorities_id == group_id,
+                SignatureAuthority.is_active == True
+            ).all()
+            
+            for assignment in existing_assignments:
+                assignment.is_active = False
+                assignment.end_date = datetime.now()
+            
+            # สร้างการมอบหมายใหม่
+            for assignment in group_data["assignments"]:
+                user_id = assignment["user_id"]
+                department_ids = assignment["department_ids"]
+                
+                # ตรวจสอบรูปแบบ UUID ของ user_id
+                try:
+                    if isinstance(user_id, str):
+                        if user_id.startswith("{{") and user_id.endswith("}}"):
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Invalid user_id format: {user_id} (placeholder detected)"
+                            )
+                        user_id = UUID(user_id)
+                    elif not isinstance(user_id, UUID):
+                        user_id = UUID(str(user_id))
+                except ValueError:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Invalid user_id format: {user_id}"
+                    )
+                
+                # ตรวจสอบว่าผู้ใช้มีอยู่จริง
+                user = db.query(User).filter(
+                    User.id == user_id,
+                    User.is_active == True
+                ).first()
+                
+                if not user:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"User with ID {user_id} not found"
+                    )
+                
+                # สร้างการมอบหมายสำหรับแต่ละหน่วยงาน
+                for dept_id in department_ids:
+                    # ตรวจสอบรูปแบบ UUID ของ department_id
+                    try:
+                        if isinstance(dept_id, str):
+                            if dept_id.startswith("{{") and dept_id.endswith("}}"):
+                                raise HTTPException(
+                                    status_code=400,
+                                    detail=f"Invalid department_id format: {dept_id} (placeholder detected)"
+                                )
+                            dept_id = UUID(dept_id)
+                        elif not isinstance(dept_id, UUID):
+                            dept_id = UUID(str(dept_id))
+                    except ValueError:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Invalid department_id format: {dept_id}"
+                        )
+                    
+                    # ตรวจสอบว่าหน่วยงานมีอยู่จริง
+                    department = db.query(Department).filter(
+                        Department.id == dept_id,
+                        Department.is_active == True
+                    ).first()
+                    
+                    if not department:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Department with ID {dept_id} not found"
+                        )
+                    
+                    # สร้างการมอบหมายใหม่
+                    new_assignment = SignatureAuthority(
+                        user_id=user_id,
+                        department_id=dept_id,
+                        group_signature_authorities_id=group_id,
+                        is_active=True
+                    )
+                    db.add(new_assignment)
+                    db.flush()
+                    
+                    updated_assignments.append({
+                        "id": str(new_assignment.id),
+                        "user_id": str(new_assignment.user_id),
+                        "department_id": str(new_assignment.department_id),
+                        "status": "created"
+                    })
+        
+        db.commit()
+        
+        logger.info(f"Successfully updated signature authority group: {db_group.name} with ID {db_group.id}")
+        
+        return {
+            "id": str(db_group.id),
+            "group_name": db_group.name,
+            "description": db_group.description,
+            "assignments": updated_assignments,
+            "total_assignments": len(updated_assignments),
+            "created_at": db_group.created_at,
+            "updated_at": db_group.updated_at
+        }
+        
+    except HTTPException as e:
+        db.rollback()
+        raise e
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating signature authority group: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update signature authority group: {str(e)}"
         )
