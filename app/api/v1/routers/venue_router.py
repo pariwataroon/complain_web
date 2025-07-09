@@ -106,9 +106,9 @@ async def create_venue_endpoint(
         db_venue = create_venue(db, venue_data)
 
         response_data = {
-            "id": db_venue.id,
-            "code": db_venue.code,
-            "created_at": db_venue.created_at
+            "id": db_venue["id"],
+            "code": db_venue["code"],
+            "created_at": db_venue["created_at"]
         }
 
         return format_response("0001", response_data)
@@ -138,9 +138,9 @@ async def update_venue_endpoint(
             raise HTTPException(status_code=404, detail=f"Venue with ID {venue_id} not found")
 
         response_data = {
-            "id": db_venue.id,
-            "code": db_venue.code,
-            "updated_at": db_venue.updated_at
+            "id": db_venue["id"],
+            "code": db_venue["code"],
+            "updated_at": db_venue["updated_at"]
         }
 
         return format_response("0002", response_data)
