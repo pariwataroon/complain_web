@@ -45,3 +45,10 @@ class BulkSignatureAuthorityCreate(BaseModel):
     department_ids: List[UUID] = Field(..., min_items=1)
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+
+
+class GroupSignatureCreate(BaseModel):
+    """สร้างกลุ่มผู้ลงนาม - รูปแบบยืดหยุ่น"""
+    group_name: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=500)
+    assignments: List[dict] = Field(..., min_items=1)

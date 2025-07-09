@@ -9,7 +9,8 @@ from app.api.v1.controllers.signature_authority_controller import (
     get_signature_authorities, get_authorities_by_department,
     get_available_users, get_available_departments,
     remove_signature_authority, get_users_with_signature_by_department_group,
-    create_bulk_signature_authorities, get_signature_authority_groups
+    create_bulk_signature_authorities, get_signature_authority_groups,
+    create_signature_authority_group
 )
 from app.api.v1.schemas.signature_authority import (
     SignatureAuthorityCreate, SignatureAuthority, SignatureAuthorityUpdate
@@ -17,7 +18,8 @@ from app.api.v1.schemas.signature_authority import (
 from app.api.v1.schemas.group_signature_authority import (
     BulkSignatureAuthorityCreate,
     GroupSignatureAuthorityCreate,
-    GroupSignatureAuthorityUpdate
+    GroupSignatureAuthorityUpdate,
+    GroupSignatureCreate
 )
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
@@ -173,13 +175,32 @@ async def get_signature_authority_groups_endpoint(
     except Exception as e:
         return format_response("5000", {"error": str(e)})
 
+@router.post("/groups", response_model=FormatResponseModel)
+async def create_signature_authority_group_endpoint(
+    group_data: GroupSignatureCreate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_create("setting_users"))
+):
+    """สร้างกลุ่มผู้มีอำนาจลงนาม - รูปแบบยืดหยุ่น"""
+    try:
+        data = group_data.model_dump(exclude_none=True)
+        result = create_signature_authority_group(db, data)
+        return format_response("0001", result)
+    except DuplicateKeyError as e:
+        return format_response("4090", {"error": str(e)})
+    except HTTPException as e:
+        return format_response(f"{e.status_code}", {"error": e.detail})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
+
 @router.post("/bulk", response_model=FormatResponseModel)
 async def create_bulk_signature_authorities_endpoint(
     bulk_data: BulkSignatureAuthorityCreate,
     db: Session = Depends(get_db),
     current_user: str = Depends(can_create("setting_users"))
 ):
-    """สร้างกลุ่มผู้ลงนามพร้อมสมาชิกหลายคนในครั้งเดียว"""
+    """สร้างกลุ่มผู้ลงนามพร้อมสมาชิกหลายคนในครั้งเดียว (endpoint เดิมที่ใช้งานอยู่)"""
     try:
         data = bulk_data.model_dump(exclude_none=True)
         result = create_bulk_signature_authorities(db, data)

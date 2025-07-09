@@ -644,3 +644,109 @@ def get_signature_authority_groups(db: Session, skip: int = 0, limit: int = 100)
             status_code=500,
             detail=f"Failed to fetch signature authority groups: {str(e)}"
         )
+
+def create_signature_authority_group(db: Session, group_data: dict):
+    """สร้างกลุ่มผู้ลงนามพร้อมการมอบหมายแบบใหม่ (ไม่กระทบ bulk endpoint เดิม)"""
+    try:
+        # สร้างกลุ่มใหม่
+        db_group = GroupSignatureAuthority(
+            name=group_data["group_name"],
+            description=group_data.get("description", ""),
+            is_active=True
+        )
+        
+        db.add(db_group)
+        db.flush()  # เพื่อให้ได้ ID ของกลุ่มที่สร้างขึ้น
+        
+        created_assignments = []
+        
+        # สร้างการมอบหมายสำหรับแต่ละผู้ใช้
+        if "assignments" in group_data:
+            for assignment in group_data["assignments"]:
+                user_id = assignment["user_id"]
+                department_ids = assignment["department_ids"]
+                
+                # ตรวจสอบว่าผู้ใช้มีอยู่จริง
+                user = db.query(User).filter(
+                    User.id == user_id,
+                    User.is_active == True
+                ).first()
+                
+                if not user:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"User with ID {user_id} not found"
+                    )
+                
+                # สร้างการมอบหมายสำหรับแต่ละหน่วยงาน
+                for dept_id in department_ids:
+                    # ตรวจสอบว่าหน่วยงานมีอยู่จริง
+                    department = db.query(Department).filter(
+                        Department.id == dept_id,
+                        Department.is_active == True
+                    ).first()
+                    
+                    if not department:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Department with ID {dept_id} not found"
+                        )
+                    
+                    # ตรวจสอบว่ามีการมอบหมายซ้ำหรือไม่
+                    existing = db.query(SignatureAuthority).filter(
+                        SignatureAuthority.user_id == user_id,
+                        SignatureAuthority.department_id == dept_id,
+                        SignatureAuthority.is_active == True
+                    ).first()
+                    
+                    if existing:
+                        # อัปเดตการมอบหมายที่มีอยู่ให้เป็นของกลุ่มใหม่
+                        existing.group_signature_authorities_id = db_group.id
+                        existing.updated_at = func.now()
+                        created_assignments.append({
+                            "id": str(existing.id),
+                            "user_id": str(existing.user_id),
+                            "department_id": str(existing.department_id),
+                            "status": "updated"
+                        })
+                    else:
+                        # สร้างการมอบหมายใหม่
+                        new_assignment = SignatureAuthority(
+                            user_id=user_id,
+                            department_id=dept_id,
+                            group_signature_authorities_id=db_group.id,
+                            is_active=True
+                        )
+                        db.add(new_assignment)
+                        db.flush()
+                        
+                        created_assignments.append({
+                            "id": str(new_assignment.id),
+                            "user_id": str(new_assignment.user_id),
+                            "department_id": str(new_assignment.department_id),
+                            "status": "created"
+                        })
+        
+        db.commit()
+        
+        logger.info(f"Successfully created signature authority group: {db_group.name} with ID {db_group.id}")
+        
+        return {
+            "id": str(db_group.id),
+            "group_name": db_group.name,
+            "description": db_group.description,
+            "assignments": created_assignments,
+            "created_at": db_group.created_at,
+            "updated_at": db_group.updated_at
+        }
+        
+    except HTTPException as e:
+        db.rollback()
+        raise e
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating signature authority group: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create signature authority group: {str(e)}"
+        )
