@@ -699,10 +699,6 @@ const AddUserModal = ({
                       {...field}
                       value={value || ""}
                       handleChange={(event) => {
-                        console.log(
-                          "Selected group value:",
-                          event.target.value
-                        ); // <-- log ที่นี่
                         onChange(event.target.value);
                       }}
                       options={roleOptions}
@@ -823,19 +819,11 @@ const AddUserModal = ({
                         name="title_id"
                         control={control}
                         render={({ field: { value, onChange, ...field } }) => {
-                          // Debug logs
-                          console.log("Title field value:", value);
-                          console.log("Title options:", titleOptions);
-
                           return (
                             <SelectMenuService
                               {...field}
                               value={String(value || "")} // แปลงเป็น string เสมอ
                               handleChange={(event) => {
-                                console.log(
-                                  "Title changed to:",
-                                  event.target.value
-                                );
                                 onChange(event.target.value);
                               }}
                               options={titleOptions}

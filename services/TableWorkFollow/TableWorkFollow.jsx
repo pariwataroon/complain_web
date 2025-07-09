@@ -28,6 +28,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportExcel } from "@utils/exportExcel";
 
 const TableWorkFollow = ({
   data = [],
@@ -38,65 +39,29 @@ const TableWorkFollow = ({
   const router = useRouter();
   const pdfRef = useRef();
   const theme = useTheme();
-  const isXs = useMediaQuery(theme.breakpoints.down("sm")); // < 600px
-  const isSm = useMediaQuery(theme.breakpoints.down("md")); // < 900px
+  const isXs = useMediaQuery(theme.breakpoints.down("sm"));
+  const isSm = useMediaQuery(theme.breakpoints.down("md"));
   const isBelow1100 = useMediaQuery("(max-width:1100px)");
 
-  // เพิ่ม state สำหรับ client-side mounting - เหมือน TableListCollapsReport
+  // Mount state for date picker
   const [isMounted, setIsMounted] = useState(false);
-
-  // เพิ่ม useEffect สำหรับ client-side mounting - เหมือน TableListCollapsReport
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  // เพิ่ม useEffect สำหรับ global CSS สำหรับ DatePicker - เหมือน TableListCollapsReport
   useEffect(() => {
-    if (typeof window === "undefined") return; // ← check window
-
+    if (typeof window === "undefined") return;
     const style = document.createElement("style");
     style.textContent = `
-      .MuiPopper-root {
-        z-index: 99999 !important;
-      }
-      .MuiDialog-root {
-        z-index: 99999 !important;
-      }
-      .MuiModal-root {
-        z-index: 99999 !important;
-      }
-      .MuiPickersPopper-root {
-        z-index: 99999 !important;
-      }
-      .MuiDateCalendar-root {
-        z-index: 99999 !important;
-      }
-      .MuiPickersDay-root {
-        z-index: 99999 !important;
-      }
-      .MuiPickersCalendarHeader-root {
-        z-index: 99999 !important;
-      }
-      .MuiPickersYear-root {
-        z-index: 99999 !important;
-      }
-      .MuiPickersMonth-root {
-        z-index: 99999 !important;
-      }
-      .MuiDatePicker-root {
-        z-index: 99999 !important;
-      }
+      .MuiPopper-root, .MuiDialog-root, .MuiModal-root, .MuiPickersPopper-root,
+      .MuiDateCalendar-root, .MuiPickersDay-root, .MuiPickersCalendarHeader-root,
+      .MuiPickersYear-root, .MuiPickersMonth-root, .MuiDatePicker-root,
       .MuiPaper-root.MuiPickersPopper-paper {
         z-index: 99999 !important;
       }
     `;
-
     document.head.appendChild(style);
-
     return () => {
-      if (document.head.contains(style)) {
-        document.head.removeChild(style);
-      }
+      if (document.head.contains(style)) document.head.removeChild(style);
     };
   }, []);
 
@@ -118,7 +83,7 @@ const TableWorkFollow = ({
   const toggleGroup = (key) =>
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  // Initial filters - ใช้ pattern เดียวกับ TableListCollapsReport
+  // Initial filters and handlers
   const initialFilters = filterFields.reduce((acc, f) => {
     acc[f.name] = "";
     return acc;
@@ -138,17 +103,13 @@ const TableWorkFollow = ({
     setRowsPerPage(+e.target.value);
     setPage(0);
   };
-
-  // Handlers - ใช้ pattern เดียวกับ TableListCollapsReport
   const handleChange = (field) => (e) => {
     const value = e?.target ? e.target.value : e;
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
-
   const handleDateChange = (field) => (selectedDate) => {
     setFilters((prev) => ({ ...prev, [field]: selectedDate }));
   };
-
   const handleSearchClick = () => {
     setPage(0);
     onSearch(filters);
@@ -159,75 +120,13 @@ const TableWorkFollow = ({
     onSearch(initialFilters);
   };
 
-  // ฟังก์ชันสำหรับ DatePicker Props - เหมือน TableListCollapsReport
-  const getDatePickerProps = () => {
-    if (!isMounted || typeof window === "undefined") {
-      return {
-        // Server-side safe props
-        sx: {
-          width: "100%",
-          position: "relative",
-          zIndex: 1000,
-        },
-      };
-    }
-
-    return {
-      // Client-side props with document.body
-      componentsProps: {
-        popper: {
-          style: {
-            zIndex: 99999,
-          },
-          placement: "bottom-start",
-          container: document.body,
-        },
-      },
-      PopperProps: {
-        style: {
-          zIndex: 99999,
-        },
-        disablePortal: false,
-        container: document.body,
-      },
-      slotProps: {
-        popper: {
-          style: {
-            zIndex: 99999,
-          },
-          container: document.body,
-        },
-      },
-      sx: {
-        width: "100%",
-        position: "relative",
-        zIndex: 1000,
-        "& .MuiInputBase-root": {
-          position: "relative",
-          zIndex: 1000,
-        },
-        "& .MuiPopper-root": {
-          zIndex: `${99999} !important`,
-        },
-        "& .MuiDialog-root": {
-          zIndex: `${99999} !important`,
-        },
-        "& .MuiModal-root": {
-          zIndex: `${99999} !important`,
-        },
-        "& .MuiPaper-root": {
-          zIndex: `${99999} !important`,
-        },
-      },
-    };
-  };
-
-  // Columns configuration
+  // Columns for display & export (add field mapping for export)
   const columns = [
-    { label: "ลำดับ", width: 80 },
+    { label: "ลำดับ", width: 80, field: "no" },
     {
       label: "เลขรับ สรร.",
       width: 120,
+      field: "receiptNumber",
       render: (item) => (
         <>
           {item.receiptNumber}
@@ -239,6 +138,7 @@ const TableWorkFollow = ({
     {
       label: "เลขที่อ้างอิง",
       width: 120,
+      field: "referenceNumber",
       render: (item) => (
         <>
           {item.referenceNumber}
@@ -254,7 +154,92 @@ const TableWorkFollow = ({
     { label: "เลขที่หนังสือจากส่วนราชการ", width: 160, field: "letterNumber" },
     { label: "สถานะเรื่อง", width: 140, field: "status" },
     { label: "ดำเนินการมาแล้ว (วัน)", width: 180, field: "elapsedDays" },
+    {
+      label: "เจ้าหน้าที่ผู้รับผิดชอบ",
+      width: 200,
+      field: "responsibleOfficer",
+    },
   ];
+
+  // Prepare export data: flat array with all fields for export
+  const exportData = useMemo(() => {
+    let no = 1;
+    return Object.entries(groupedData).flatMap(([key, items]) =>
+      items.map((item) => ({
+        no: no++,
+        ...item,
+        responsibleOfficer: key,
+        receiptDate: item.receiptDate || "",
+        proposeDate: item.proposeDate || "",
+      }))
+    );
+  }, [groupedData]);
+
+  // Export Excel (always use JSON mode)
+  const handleExportExcel = () => {
+    const today = new Date().toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const filename = `รายงานการติดตามงานค้าง_${today}.xlsx`;
+    const exportLabel = `วันที่ export: ${today}`;
+    // use Thai header as keys for xlsx
+    const jsonExport = exportData.map((row) =>
+      Object.fromEntries(
+        columns.map((col) => [col.label, row[col.field] ?? ""])
+      )
+    );
+    exportExcel(jsonExport, {
+      filename,
+      sheetName: "Sheet1",
+      title: "รายงานการติดตามงานค้าง",
+      exportDate: exportLabel,
+    });
+  };
+
+  // Date picker props
+  const getDatePickerProps = () => {
+    if (!isMounted || typeof window === "undefined") {
+      return {
+        sx: {
+          width: "100%",
+          position: "relative",
+          zIndex: 1000,
+        },
+      };
+    }
+    return {
+      componentsProps: {
+        popper: {
+          style: { zIndex: 99999 },
+          placement: "bottom-start",
+          container: document.body,
+        },
+      },
+      PopperProps: {
+        style: { zIndex: 99999 },
+        disablePortal: false,
+        container: document.body,
+      },
+      slotProps: {
+        popper: {
+          style: { zIndex: 99999 },
+          container: document.body,
+        },
+      },
+      sx: {
+        width: "100%",
+        position: "relative",
+        zIndex: 1000,
+        "& .MuiInputBase-root": { position: "relative", zIndex: 1000 },
+        "& .MuiPopper-root": { zIndex: `${99999} !important` },
+        "& .MuiDialog-root": { zIndex: `${99999} !important` },
+        "& .MuiModal-root": { zIndex: `${99999} !important` },
+        "& .MuiPaper-root": { zIndex: `${99999} !important` },
+      },
+    };
+  };
 
   return (
     <Container
@@ -264,25 +249,24 @@ const TableWorkFollow = ({
         backgroundColor: "#fff",
         borderRadius: 2,
         boxShadow: "0 6px 18px rgba(0,0,0,.06)",
-        overflow: "hidden", // ← เหมือน TableListCollapsReport
+        overflow: "hidden",
         position: "relative",
         zIndex: 1,
       }}
     >
       <Box className={styles.headerBar}></Box>
 
-      {/* Filters Section - Responsive - ใช้ structure เหมือน TableListCollapsReport */}
+      {/* Filters Section */}
       <Box
         px={{ xs: 1.5, sm: 2 }}
         py={{ xs: 1.5, sm: 1 }}
         sx={{
           overflow: "visible",
           position: "relative",
-          zIndex: 1000, // ← เหมือน TableListCollapsReport
+          zIndex: 1000,
         }}
       >
         {isSm || isBelow1100 ? (
-          // Mobile & Tablet & Small Desktop Layout (< 1100px)
           <>
             {/* Filter Fields - Grid Layout */}
             <Box
@@ -297,21 +281,18 @@ const TableWorkFollow = ({
                 mb: 2,
                 width: "100%",
                 position: "relative",
-                zIndex: 1000, // ← เหมือน TableListCollapsReport
+                zIndex: 1000,
                 "& > div": {
                   minWidth: 0,
                   position: "relative",
-                  zIndex: 1000, // ← เหมือน TableListCollapsReport
+                  zIndex: 1000,
                 },
               }}
             >
               {filterFields.map((f, index) => (
                 <Box
                   key={f.name}
-                  sx={{
-                    position: "relative",
-                    zIndex: 1000 + index, // ← เหมือน TableListCollapsReport
-                  }}
+                  sx={{ position: "relative", zIndex: 1000 + index }}
                 >
                   {f.type === "select" ? (
                     <SelectField
@@ -321,10 +302,7 @@ const TableWorkFollow = ({
                       value={filters[f.name]}
                       onChange={handleChange(f.name)}
                       size={isXs ? "small" : "medium"}
-                      sx={{
-                        position: "relative",
-                        zIndex: 1000 + index,
-                      }}
+                      sx={{ position: "relative", zIndex: 1000 + index }}
                     />
                   ) : f.type === "date" ? (
                     <DateThaiPickerService
@@ -334,7 +312,7 @@ const TableWorkFollow = ({
                       placeholder={f.placeholder || `เลือก${f.label}`}
                       disabled={f.disabled || false}
                       required={f.required || false}
-                      {...getDatePickerProps()} // ← ใช้ฟังก์ชันเหมือน TableListCollapsReport
+                      {...getDatePickerProps()}
                     />
                   ) : (
                     <InputText
@@ -343,26 +321,19 @@ const TableWorkFollow = ({
                       value={filters[f.name]}
                       onChange={handleChange(f.name)}
                       size={isXs ? "small" : "medium"}
-                      sx={{
-                        position: "relative",
-                        zIndex: 1000 + index,
-                      }}
+                      sx={{ position: "relative", zIndex: 1000 + index }}
                     />
                   )}
                 </Box>
               ))}
             </Box>
-
             {/* Search Buttons */}
             <Box
               display="flex"
               gap={1.5}
               justifyContent="center"
               mb={2}
-              sx={{
-                position: "relative",
-                zIndex: 500, // ← เหมือน TableListCollapsReport
-              }}
+              sx={{ position: "relative", zIndex: 500 }}
             >
               <IconButton
                 onClick={handleSearchClick}
@@ -393,20 +364,15 @@ const TableWorkFollow = ({
                 <SearchOffIcon sx={{ fontSize: { xs: 18, sm: 24 } }} />
               </IconButton>
             </Box>
-
             {/* Export Buttons - Mobile/Tablet */}
             <Box
               display="flex"
               flexDirection="column"
               gap={1.5}
               alignItems="center"
-              sx={{
-                position: "relative",
-                zIndex: 500,
-              }}
+              sx={{ position: "relative", zIndex: 500 }}
             >
               {isXs ? (
-                // XS - แยกบรรทัด
                 <>
                   <ExportButton
                     label="Export PDF"
@@ -414,22 +380,16 @@ const TableWorkFollow = ({
                       exportElementToPDF(pdfRef, "รายงานการติดตามงานค้าง.pdf")
                     }
                     size="small"
-                    sx={{
-                      width: "100%",
-                      maxWidth: "300px",
-                    }}
+                    sx={{ width: "100%", maxWidth: "300px" }}
                   />
                   <ExportButton
                     label="Export Excel"
+                    onClick={handleExportExcel}
                     size="small"
-                    sx={{
-                      width: "100%",
-                      maxWidth: "300px",
-                    }}
+                    sx={{ width: "100%", maxWidth: "300px" }}
                   />
                 </>
               ) : (
-                // SM+ - อยู่แถวเดียวกัน
                 <Box
                   display="flex"
                   gap={1}
@@ -442,35 +402,26 @@ const TableWorkFollow = ({
                       exportElementToPDF(pdfRef, "รายงานการติดตามงานค้าง.pdf")
                     }
                     size="medium"
-                    sx={{
-                      flex: 1,
-                      maxWidth: "150px",
-                    }}
+                    sx={{ flex: 1, maxWidth: "150px" }}
                   />
                   <ExportButton
                     label="Export Excel"
+                    onClick={handleExportExcel}
                     size="medium"
-                    sx={{
-                      flex: 1,
-                      maxWidth: "150px",
-                    }}
+                    sx={{ flex: 1, maxWidth: "150px" }}
                   />
                 </Box>
               )}
             </Box>
           </>
         ) : (
-          // Large Desktop Layout (>= 1100px) - เหมือน TableListCollapsReport
+          // Large Desktop Layout (>= 1100px)
           <Box
             display="flex"
             alignItems="center"
             justifyContent="space-between"
-            sx={{
-              position: "relative",
-              zIndex: 1000,
-            }}
+            sx={{ position: "relative", zIndex: 1000 }}
           >
-            {/* Left Side - Filters + Search */}
             <Box
               display="flex"
               alignItems="center"
@@ -501,10 +452,7 @@ const TableWorkFollow = ({
                       options={f.options}
                       value={filters[f.name]}
                       onChange={handleChange(f.name)}
-                      sx={{
-                        position: "relative",
-                        zIndex: 1000 + index,
-                      }}
+                      sx={{ position: "relative", zIndex: 1000 + index }}
                     />
                   ) : f.type === "date" ? (
                     <DateThaiPickerService
@@ -514,7 +462,7 @@ const TableWorkFollow = ({
                       placeholder={f.placeholder || `เลือก${f.label}`}
                       disabled={f.disabled || false}
                       required={f.required || false}
-                      {...getDatePickerProps()} // ← ใช้ฟังก์ชันเหมือน TableListCollapsReport
+                      {...getDatePickerProps()}
                     />
                   ) : (
                     <InputText
@@ -522,25 +470,15 @@ const TableWorkFollow = ({
                       label={f.label}
                       value={filters[f.name]}
                       onChange={handleChange(f.name)}
-                      sx={{
-                        position: "relative",
-                        zIndex: 1000 + index,
-                      }}
+                      sx={{ position: "relative", zIndex: 1000 + index }}
                     />
                   )}
                 </Box>
               ))}
-
-              {/* Search Buttons */}
               <Box
                 display="flex"
                 gap={1}
-                sx={{
-                  flexShrink: 0,
-                  ml: 1,
-                  position: "relative",
-                  zIndex: 500,
-                }}
+                sx={{ flexShrink: 0, ml: 1, position: "relative", zIndex: 500 }}
               >
                 <IconButton
                   onClick={handleSearchClick}
@@ -572,18 +510,11 @@ const TableWorkFollow = ({
                 </IconButton>
               </Box>
             </Box>
-
-            {/* Right Side - Export Buttons */}
             <Box
               display="flex"
               alignItems="center"
               gap={1}
-              sx={{
-                flexShrink: 0,
-                ml: 2,
-                position: "relative",
-                zIndex: 500,
-              }}
+              sx={{ flexShrink: 0, ml: 2, position: "relative", zIndex: 500 }}
             >
               <ExportButton
                 label="Export PDF"
@@ -592,7 +523,11 @@ const TableWorkFollow = ({
                 }
                 size="medium"
               />
-              <ExportButton label="Export Excel" size="medium" />
+              <ExportButton
+                label="Export Excel"
+                onClick={handleExportExcel}
+                size="medium"
+              />
             </Box>
           </Box>
         )}
@@ -627,9 +562,7 @@ const TableWorkFollow = ({
             pb: 1,
             position: "relative",
             zIndex: 1,
-            "&::-webkit-scrollbar": {
-              height: "8px",
-            },
+            "&::-webkit-scrollbar": { height: "8px" },
             "&::-webkit-scrollbar-track": {
               backgroundColor: "#f1f1f1",
               borderRadius: "4px",
@@ -637,9 +570,7 @@ const TableWorkFollow = ({
             "&::-webkit-scrollbar-thumb": {
               backgroundColor: "#888",
               borderRadius: "4px",
-              "&:hover": {
-                backgroundColor: "#555",
-              },
+              "&:hover": { backgroundColor: "#555" },
             },
           }}
         >
@@ -714,7 +645,6 @@ const TableWorkFollow = ({
                         {`เจ้าหน้าที่ผู้รับผิดชอบ : ${groupKey}`}
                       </TableCell>
                     </TableRow>
-                    {/* Detail rows */}
                     <TableRow>
                       <TableCell
                         style={{ padding: 0 }}
@@ -754,7 +684,6 @@ const TableWorkFollow = ({
                                       router.push(`${navigateTo}/${item.id}`)
                                     }
                                   >
-                                    {/* ลำดับ */}
                                     <TableCell
                                       align="center"
                                       sx={{
@@ -768,7 +697,6 @@ const TableWorkFollow = ({
                                     >
                                       {page * rowsPerPage + idx + 1}
                                     </TableCell>
-                                    {/* remaining columns */}
                                     {columns.slice(1).map((col, i) => (
                                       <TableCell
                                         key={i}

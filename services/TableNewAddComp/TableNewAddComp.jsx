@@ -23,6 +23,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonService from "@services/ButtonService/ButtonService";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportExcel } from "@utils/exportExcel";
 
 const TableNewAddComp = ({
   data = [],
@@ -35,6 +36,7 @@ const TableNewAddComp = ({
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
+  const excelRef = useRef();
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm")); // < 600px
   const isSm = useMediaQuery(theme.breakpoints.down("md")); // < 900px
@@ -95,6 +97,22 @@ const TableNewAddComp = ({
     { name: "note", label: "หมายเหตุ", width: 250 },
   ];
 
+  // --- Excel Export Handler ---
+  const handleExportExcel = () => {
+    const today = new Date().toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const filename = `รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่ม_${today}.xlsx`;
+    const exportLabel = `วันที่ export: ${today}`;
+    exportExcel(excelRef, {
+      filename,
+      sheetName: "Sheet1",
+      title,
+      exportDate: exportLabel,
+    });
+  };
   return (
     <Container
       maxWidth={false}
@@ -151,7 +169,7 @@ const TableNewAddComp = ({
           >
             <Box
               display="flex"
-              flexDirection={{ xs: "column", sm: "row" }} // ← xs=column, sm+=row
+              flexDirection={{ xs: "column", sm: "row" }}
               gap={{ xs: 1.5, sm: 1 }}
               justifyContent="center"
               alignItems="center"
@@ -201,6 +219,7 @@ const TableNewAddComp = ({
                   />
                   <ExportButton
                     label="Export Excel"
+                    onClick={handleExportExcel}
                     size="small"
                     sx={{
                       minWidth: "200px",
@@ -235,6 +254,7 @@ const TableNewAddComp = ({
                   />
                   <ExportButton
                     label="Export Excel"
+                    onClick={handleExportExcel}
                     size="medium"
                     sx={{
                       minWidth: "120px",
@@ -302,7 +322,11 @@ const TableNewAddComp = ({
               }
               size="medium"
             />
-            <ExportButton label="Export Excel" size="medium" />
+            <ExportButton
+              label="Export Excel"
+              onClick={handleExportExcel}
+              size="medium"
+            />
           </Box>
         </Box>
       )}
@@ -576,7 +600,7 @@ const TableNewAddComp = ({
             },
           }}
         >
-          <Table sx={{ minWidth: isBelow1200 ? 1400 : "100%" }}>
+          <Table ref={excelRef} sx={{ minWidth: isBelow1200 ? 1400 : "100%" }}>
             <TableHead>
               <TableRow>
                 <TableCell

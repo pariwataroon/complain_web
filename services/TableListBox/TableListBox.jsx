@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -13,7 +13,8 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import CleaningServicesIcon from "@mui/icons-material/CleaningServices"; // เปลี่ยนเป็น icon ไม้กวาด
+import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
+import { exportElementToPDF } from "@utils/exportPDF";
 
 import styles from "./TableListBox.module.scss";
 import InputText from "@services/InputText/InputText";
@@ -38,6 +39,7 @@ const TableListBox = ({
   filterFields = [],
 }) => {
   const router = useRouter();
+  const tableRef = useRef(null);
 
   // Updated responsive breakpoints starting from 1305px
   const isExtraSmall = useMediaQuery("(max-width:640px)");
@@ -77,6 +79,13 @@ const TableListBox = ({
     setFilters(initialFilters);
     setPage(0);
     onSearch(initialFilters);
+  };
+
+  // PDF Export handler
+  const handleExportPDF = () => {
+    const today = new Date().toLocaleDateString("th-TH");
+    const filename = `รายงาน${title}_${today}.pdf`;
+    exportElementToPDF(tableRef, filename);
   };
 
   // row click - แก้ไขให้รองรับ custom onRowClick
@@ -243,6 +252,7 @@ const TableListBox = ({
               fontSize: isExtraSmall ? "12px" : "14px",
               minWidth: isExtraSmall ? "120px" : "auto",
             }}
+            onClick={handleExportPDF}
           />
           <ExportButton
             label="Export Excel"
@@ -600,6 +610,7 @@ const TableListBox = ({
       <Box
         className={styles.tableWrapper}
         id="table-results"
+        ref={tableRef}
         sx={{
           overflowX: needsScrollbar ? "auto" : "visible",
           px: layoutConfig.padding,
@@ -620,101 +631,89 @@ const TableListBox = ({
           },
         }}
       >
-        <Table
+        <Box
           sx={{
-            minWidth: needsScrollbar ? 1400 : "100%",
-            width: "100%",
-            tableLayout: needsScrollbar ? "auto" : "fixed",
+            borderRadius: "8px",
+            overflow: "hidden",
+            border: "1px solid #e0e0e0",
           }}
         >
-          <TableHead>
-            <TableRow>
-              {/* <TableCell
-                align="center"
-                sx={{
-                  width: 80,
-                  minWidth: 80,
-                  backgroundColor: "#e8e9f6",
-                  fontWeight: 600,
-                  color: "#1120a3",
-                  border: "1px solid #e0e0e0",
-                  fontSize: "14px",
-                  padding: "14px 12px",
-                }}
-              >
-                ลำดับ
-              </TableCell> */}
-              {columns.map((col) => (
-                <TableCell
-                  key={col.name}
-                  sx={{
-                    width: needsScrollbar ? col.width : "auto",
-                    minWidth: needsScrollbar ? col.width : "auto",
-                    backgroundColor: "#e8e9f6",
-                    fontWeight: 600,
-                    color: "#1120a3",
-                    border: "1px solid #e0e0e0",
-                    fontSize: "14px",
-                    padding: "14px 12px",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {col.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {pagedData.map((item, idx) => (
-              <TableRow
-                key={item.id}
-                onClick={() => handleRowClick(item)}
-                sx={{
-                  cursor: "pointer",
-                  "&:hover": {
-                    backgroundColor: "#f5f7ff",
-                    transform: "scale(1.001)",
-                    transition: "all 0.2s ease-in-out",
-                  },
-                }}
-              >
-                {/* <TableCell
-                  align="center"
-                  sx={{
-                    width: 80,
-                    minWidth: 80,
-                    fontWeight: 600,
-                    color: "#1120A3",
-                    border: "1px solid #e0e0e0",
-                    fontSize: "14px",
-                    padding: "14px 12px",
-                  }}
-                >
-                  {page * rowsPerPage + idx + 1}
-                </TableCell> */}
+          <Table
+            sx={{
+              minWidth: needsScrollbar ? 1400 : "100%",
+              width: "100%",
+              tableLayout: needsScrollbar ? "auto" : "fixed",
+              borderCollapse: "collapse",
+            }}
+          >
+            <TableHead>
+              <TableRow>
                 {columns.map((col) => (
                   <TableCell
                     key={col.name}
                     sx={{
                       width: needsScrollbar ? col.width : "auto",
                       minWidth: needsScrollbar ? col.width : "auto",
-                      border: "1px solid #e0e0e0",
+                      backgroundColor: "#e8e9f6",
+                      fontWeight: 600,
+                      color: "#1120a3",
+                      borderBottom: "1px solid #e0e0e0",
+                      borderRight: "1px solid #e0e0e0",
                       fontSize: "14px",
                       padding: "14px 12px",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
+                      "&:last-child": {
+                        borderRight: "none",
+                      },
                     }}
                   >
-                    {item[col.name] ?? "-"}
+                    {col.label}
                   </TableCell>
                 ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {pagedData.map((item, idx) => (
+                <TableRow
+                  key={item.id}
+                  onClick={() => handleRowClick(item)}
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": {
+                      backgroundColor: "#f5f7ff",
+                      transform: "scale(1.001)",
+                      transition: "all 0.2s ease-in-out",
+                    },
+                  }}
+                >
+                  {columns.map((col) => (
+                    <TableCell
+                      key={col.name}
+                      sx={{
+                        width: needsScrollbar ? col.width : "auto",
+                        minWidth: needsScrollbar ? col.width : "auto",
+                        borderBottom: "1px solid #e0e0e0",
+                        borderRight: "1px solid #e0e0e0",
+                        fontSize: "14px",
+                        padding: "14px 12px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        "&:last-child": {
+                          borderRight: "none",
+                        },
+                      }}
+                    >
+                      {item[col.name] ?? "-"}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
 
         <TablePagination
           component="div"

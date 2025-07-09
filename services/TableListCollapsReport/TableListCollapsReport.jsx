@@ -25,6 +25,7 @@ import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportExcel } from "@utils/exportExcel";
 
 const TableListCollapsReport = ({
   data = [],
@@ -38,6 +39,7 @@ const TableListCollapsReport = ({
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
+  const excelRef = useRef();
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm")); // < 600px
   const isSm = useMediaQuery(theme.breakpoints.down("md")); // < 900px
@@ -168,7 +170,21 @@ const TableListCollapsReport = ({
     const key = `${parentId}_${idx}`;
     setOpenChild((o) => ({ ...o, [key]: !o[key] }));
   };
-
+  const handleExportExcel = () => {
+    const today = new Date().toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const filename = `รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ_${today}.xlsx`;
+    const exportLabel = `วันที่ export: ${today}`;
+    exportExcel(excelRef, {
+      filename,
+      sheetName: "Sheet1",
+      title: reportTitle,
+      exportDate: exportLabel,
+    });
+  };
   // Columns
   const columns = [
     {
@@ -408,7 +424,11 @@ const TableListCollapsReport = ({
               }
               size="medium"
             />
-            <ExportButton label="Export Excel" size="medium" />
+            <ExportButton
+              label="Export Excel"
+              size="medium"
+              onClick={handleExportExcel}
+            />
           </Box>
         </Box>
       )}
@@ -768,6 +788,7 @@ const TableListCollapsReport = ({
           }}
         >
           <Table
+            ref={excelRef}
             sx={{
               minWidth: columns.reduce((sum, c) => sum + c.width, 0),
               tableLayout: "fixed",

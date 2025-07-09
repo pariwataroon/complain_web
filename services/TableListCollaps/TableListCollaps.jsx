@@ -18,13 +18,12 @@ import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-
 import styles from "./TableListCollaps.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
-
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportExcel } from "@utils/exportExcel";
 
 const TableListCollaps = ({
   data = [],
@@ -35,9 +34,10 @@ const TableListCollaps = ({
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
+  const excelRef = useRef();
   const theme = useTheme();
-  const isXs = useMediaQuery(theme.breakpoints.down("sm")); // < 600px
-  const isSm = useMediaQuery(theme.breakpoints.down("md")); // < 900px
+  const isXs = useMediaQuery(theme.breakpoints.down("sm"));
+  const isSm = useMediaQuery(theme.breakpoints.down("md"));
   const isBelow1200 = useMediaQuery("(max-width:1200px)");
   const isBelow1300 = useMediaQuery("(max-width:1300px)");
 
@@ -66,13 +66,11 @@ const TableListCollaps = ({
     setPage(0);
   };
 
-  // collapse state
   const [openRow, setOpenRow] = useState(null);
   const handleToggle = (id) => {
     setOpenRow(openRow === id ? null : id);
   };
 
-  // search functions
   const handleSearchClick = () => {
     setPage(0);
     setAppliedFilters(filters);
@@ -86,7 +84,17 @@ const TableListCollaps = ({
     onSearch(initialFilters);
   };
 
-  // columns definition
+  const handleExportExcel = () => {
+    const today = new Date().toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const filename = `รายงานติดตามสถานะ_${today}.xlsx`;
+    const exportLabel = `วันที่ export: ${today}`;
+    exportExcel(excelRef, filename, "Sheet1", title, exportLabel);
+  };
+
   const columns = [
     { name: "claimantName", label: "ชื่อเรื่อง", width: 200 },
     { name: "department", label: "หน่วยงาน", width: 180 },
@@ -111,7 +119,6 @@ const TableListCollaps = ({
         boxShadow: "0 6px 18px rgba(0,0,0,.06)",
       }}
     >
-      {/* header */}
       <Box
         className={styles.headerBar}
         display="flex"
@@ -123,12 +130,8 @@ const TableListCollaps = ({
           px: { xs: 1.5, sm: 2, md: 3 },
         }}
       ></Box>
-
-      {/* title and export buttons */}
       {isSm ? (
-        // Mobile & Tablet Layout
         <>
-          {/* Title */}
           <Box
             className={styles.headerBar2}
             display="flex"
@@ -142,8 +145,6 @@ const TableListCollaps = ({
           >
             <Box sx={{ fontWeight: "bold", textAlign: "center" }}>{title}</Box>
           </Box>
-
-          {/* Export buttons section - separate for mobile/tablet */}
           <Box
             sx={{
               backgroundColor: "#f8f9fa",
@@ -173,6 +174,7 @@ const TableListCollaps = ({
               />
               <ExportButton
                 label="Export Excel"
+                onClick={handleExportExcel}
                 size={isXs ? "small" : "medium"}
                 sx={{
                   minWidth: { xs: "200px", sm: "140px" },
@@ -184,7 +186,6 @@ const TableListCollaps = ({
           </Box>
         </>
       ) : (
-        // Desktop Layout - Title and Export in same row
         <Box
           className={styles.headerBar2}
           display="flex"
@@ -197,7 +198,6 @@ const TableListCollaps = ({
           }}
         >
           <Box sx={{ fontWeight: "bold" }}>{title}</Box>
-
           <Box display="flex" alignItems="center" gap={1}>
             <ExportButton
               label="Export PDF"
@@ -206,12 +206,14 @@ const TableListCollaps = ({
               }
               size="medium"
             />
-            <ExportButton label="Export Excel" size="medium" />
+            <ExportButton
+              label="Export Excel"
+              size="medium"
+              onClick={handleExportExcel}
+            />
           </Box>
         </Box>
       )}
-
-      {/* filters section */}
       <Box
         sx={{
           backgroundColor: "#ffffff",
@@ -221,9 +223,7 @@ const TableListCollaps = ({
         }}
       >
         {isSm || isBelow1300 ? (
-          // Mobile, Tablet & Small Desktop Layout (< 1300px) - Separate rows
           <>
-            {/* Filter Fields */}
             <Box
               display="grid"
               gridTemplateColumns={{
@@ -258,8 +258,6 @@ const TableListCollaps = ({
                 </Box>
               ))}
             </Box>
-
-            {/* Search Buttons */}
             <Box
               display="flex"
               gap={{ xs: 1.5, sm: 2 }}
@@ -292,14 +290,12 @@ const TableListCollaps = ({
             </Box>
           </>
         ) : (
-          // Large Desktop Layout (>= 1300px) - Filters and Search in same row
           <Box
             display="flex"
             alignItems="center"
             gap={2}
             justifyContent="space-between"
           >
-            {/* Filter Fields */}
             <Box
               display="flex"
               alignItems="center"
@@ -336,8 +332,6 @@ const TableListCollaps = ({
                 </Box>
               ))}
             </Box>
-
-            {/* Search Buttons */}
             <Box display="flex" gap={1.5} sx={{ flexShrink: 0 }}>
               <IconButton
                 onClick={handleSearchClick}
@@ -367,8 +361,6 @@ const TableListCollaps = ({
           </Box>
         )}
       </Box>
-
-      {/* data table - เหมือนเดิม */}
       <div ref={pdfRef}>
         <Box
           className={styles.tableWrapper}
@@ -377,7 +369,6 @@ const TableListCollaps = ({
             overflowX: isBelow1200 ? "auto" : "visible",
             px: { xs: 1, sm: 2 },
             pb: 1,
-            // Add scrollbar styling for better UX
             "&::-webkit-scrollbar": {
               height: "8px",
             },
@@ -394,7 +385,7 @@ const TableListCollaps = ({
             },
           }}
         >
-          <Table sx={{ minWidth: isBelow1200 ? 1400 : "100%" }}>
+          <Table ref={excelRef} sx={{ minWidth: isBelow1200 ? 1400 : "100%" }}>
             <TableHead>
               <TableRow>
                 <TableCell
@@ -429,7 +420,6 @@ const TableListCollaps = ({
                       "&:hover": { backgroundColor: "#f5f7ff" },
                     }}
                   >
-                    {/* Icon cell */}
                     <TableCell
                       align="center"
                       sx={{
@@ -455,8 +445,6 @@ const TableListCollaps = ({
                         )}
                       </IconButton>
                     </TableCell>
-
-                    {/* other cells */}
                     {columns.map((col) => (
                       <TableCell
                         key={col.name}
@@ -473,8 +461,6 @@ const TableListCollaps = ({
                       </TableCell>
                     ))}
                   </TableRow>
-
-                  {/* collapse details */}
                   <TableRow>
                     <TableCell
                       style={{ padding: 0 }}
@@ -497,7 +483,6 @@ const TableListCollaps = ({
                                         appliedFilters.department
                                     )
                                   : item.departmentsData || [];
-
                                 if (filteredDepts.length) {
                                   return filteredDepts.map((dept, i) => (
                                     <TableRow key={i}>
@@ -582,7 +567,6 @@ const TableListCollaps = ({
               ))}
             </TableBody>
           </Table>
-
           <TablePagination
             component="div"
             rowsPerPageOptions={[5, 10, 25]}

@@ -31,68 +31,6 @@ import {
 } from "@utils/Alerts";
 import Image from "next/image";
 
-const mockData = {
-  admin: [
-    {
-      permission: "admin_mof",
-      username: "admin_mof",
-      displayName: "นาย A",
-      roleName: "ผู้ดูแลระบบ",
-      expanded: true,
-      details: {
-        password: "admin123",
-        fullName: "นาย A",
-        idCard: "0-0000-0000-001",
-        email: "admin@example.com",
-        phone: "000-000-0001",
-        addressCard: "บ้านเลขที่ 1 ถนน X",
-        addressContact: "บ้านเลขที่ 1 ถนน X",
-        lastUpdated: "10 พ.ค. 2568",
-      },
-    },
-  ],
-  public: [
-    {
-      permission: "public_mof",
-      username: "nana_public",
-      displayName: "ณัฎฐิรา วอนานนท์",
-      roleName: "ประชาชน",
-      expanded: true,
-      details: {
-        password: "123456789",
-        fullName: "ณัฎฐิรา วอนานนท์",
-        idCard: "0-0000-0000-000",
-        email: "nnnnn_n@hotmail.com",
-        phone: "000-000-0000",
-        addressCard: "บ้านเลขที่00 ถนน xxx ซอย 00",
-        addressContact: "บ้านเลขที่00 ถนน xxx ซอย 00",
-        lastUpdated: "01 ม.ค. 2568",
-      },
-    },
-  ],
-  executive: [
-    {
-      permission: "executive_mof",
-      username: "executive_mof",
-      displayName: "นาย B",
-      roleName: "ผู้บริหาร",
-      expanded: true,
-      details: {
-        password: "executive123",
-        fullName: "นาย B",
-        idCard: "0-0000-0000-002",
-        email: "executive@example.com",
-        phone: "000-000-0002",
-        addressCard: "บ้านเลขที่ 2 ถนน Y",
-        addressContact: "บ้านเลขที่ 2 ถนน Y",
-        lastUpdated: "15 มิ.ย. 2568",
-      },
-    },
-  ],
-  agency: [],
-  officer: [],
-};
-
 const breadcrumbItems = [
   {
     label: "เมนูการใช้งานทั่วไป",
@@ -162,7 +100,7 @@ export default function UserManagementUI() {
   const [hasSearched, setHasSearched] = useState(false);
   const [userDetailsExpanded, setUserDetailsExpanded] = useState({}); // Track user details expansion
   const [roles, setRoles] = useState([]);
-  console.log("roles", roles);
+
   // State สำหรับควบคุมการแสดง/ซ่อนเลขบัตรประชาชน
   const [citizenIdVisibility, setCitizenIdVisibility] = useState({});
   const [roleOptions, setRoleOptions] = useState([]);
@@ -183,7 +121,7 @@ export default function UserManagementUI() {
         setStats(statsData);
 
         setOriginalStats(statsData);
-        console.log("statsData", statsData.res_data);
+
         const roles = statsData.res_data.map((item) => ({
           role_id: item.role_id,
           role_name: item.role_name,
@@ -332,10 +270,6 @@ export default function UserManagementUI() {
     setFullName(event.target.value);
   };
 
-  useEffect(() => {
-    console.log("loginDate state:", loginDate);
-  }, [loginDate]);
-
   // ฟังก์ชันค้นหา user
   const handleSearch = () => {
     const getDateString = (isoString) => {
@@ -422,65 +356,69 @@ export default function UserManagementUI() {
     return "3"; // นาง (default)
   };
 
-  // ฟังก์ชันสำหรับแยกชื่อจาก full_name_with_title
-  const extractFirstName = (fullNameWithTitle) => {
-    if (!fullNameWithTitle) return "";
+  // Update the extractFirstName function to use titleOptions
+  const extractFirstName = (fullNameWithTitle, titleOptions) => {
+    if (!fullNameWithTitle || !Array.isArray(titleOptions)) return "";
 
-    // แยกโดยการตัดคำนำหน้าออก
-    const titlePrefixes = [
-      "นาย",
-      "นาง",
-      "นางสาว",
-      "เด็กชาย",
-      "เด็กหญิง",
-      "ดร.",
-      "ศ.",
-      "รศ.",
-      "ผศ.",
-    ];
-    let nameWithoutTitle = fullNameWithTitle;
+    let nameWithoutTitle = fullNameWithTitle.trim();
 
-    for (const prefix of titlePrefixes) {
-      if (fullNameWithTitle.startsWith(prefix)) {
-        nameWithoutTitle = fullNameWithTitle.substring(prefix.length).trim();
+    // Sort titles by length (longest first) to avoid partial matches
+    // For example, "นางสาว" should be checked before "นาง"
+    const sortedTitles = [...titleOptions].sort(
+      (a, b) => b.label.length - a.label.length
+    );
+
+    // Try to find and remove the title prefix
+    for (const title of sortedTitles) {
+      if (fullNameWithTitle.trim().startsWith(title.label)) {
+        nameWithoutTitle = fullNameWithTitle
+          .substring(title.label.length)
+          .trim();
         break;
       }
     }
 
     // แยกชื่อและนามสกุล
-    const nameParts = nameWithoutTitle.split(" ");
-    return nameParts[0] || "";
+    const nameParts = nameWithoutTitle.split(/\s+/);
+
+    // ตรวจสอบว่ามีชื่อหรือไม่
+    if (nameParts.length > 0) {
+      return nameParts[0];
+    }
+
+    return "";
   };
 
-  // ฟังก์ชันสำหรับแยกนามสกุลจาก full_name_with_title
-  const extractLastName = (fullNameWithTitle) => {
-    if (!fullNameWithTitle) return "";
+  // Update the extractLastName function to use titleOptions
+  const extractLastName = (fullNameWithTitle, titleOptions) => {
+    if (!fullNameWithTitle || !Array.isArray(titleOptions)) return "";
 
-    // แยกโดยการตัดคำนำหน้าออก
-    const titlePrefixes = [
-      "นาย",
-      "นาง",
-      "นางสาว",
-      "เด็กชาย",
-      "เด็กหญิง",
-      "ดร.",
-      "ศ.",
-      "รศ.",
-      "ผศ.",
-    ];
-    let nameWithoutTitle = fullNameWithTitle;
+    let nameWithoutTitle = fullNameWithTitle.trim();
 
-    for (const prefix of titlePrefixes) {
-      if (fullNameWithTitle.startsWith(prefix)) {
-        nameWithoutTitle = fullNameWithTitle.substring(prefix.length).trim();
+    // Sort titles by length (longest first) to avoid partial matches
+    const sortedTitles = [...titleOptions].sort(
+      (a, b) => b.label.length - a.label.length
+    );
+
+    // Try to find and remove the title prefix
+    for (const title of sortedTitles) {
+      if (fullNameWithTitle.trim().startsWith(title.label)) {
+        nameWithoutTitle = fullNameWithTitle
+          .substring(title.label.length)
+          .trim();
         break;
       }
     }
 
     // แยกชื่อและนามสกุล
-    const nameParts = nameWithoutTitle.split(" ");
-    // รวมส่วนที่เหลือเป็นนามสกุล (กรณีมีนามสกุลหลายคำ)
-    return nameParts.slice(1).join(" ") || "";
+    const nameParts = nameWithoutTitle.split(/\s+/);
+
+    // ตรวจสอบว่ามีนามสกุลหรือไม่
+    if (nameParts.length > 1) {
+      return nameParts.slice(1).join(" "); // รวมทุกส่วนที่เหลือเป็นนามสกุล
+    }
+
+    return "";
   };
 
   const getRoleInfoFromSection = (user, statsData) => {
@@ -499,6 +437,7 @@ export default function UserManagementUI() {
     }
     return { role_id: "", role_name: "", role_description: "" };
   };
+
   const handleEditUser = (user) => {
     showLoading("กำลังโหลดข้อมูล...");
     setTimeout(() => {
@@ -530,10 +469,16 @@ export default function UserManagementUI() {
           ),
         first_name:
           user.first_name ||
-          extractFirstName(user.full_name_with_title || user.full_name),
+          extractFirstName(
+            user.full_name_with_title || user.full_name,
+            titleOptions
+          ),
         last_name:
           user.last_name ||
-          extractLastName(user.full_name_with_title || user.full_name),
+          extractLastName(
+            user.full_name_with_title || user.full_name,
+            titleOptions
+          ),
 
         // แมป role_name, role_id, role_description ให้ตรงกับ roles หรือ section
         role_id: userRole.role_id || sectionRole.role_id || user.role_id || "",
@@ -575,8 +520,6 @@ export default function UserManagementUI() {
         subdistricts2: user.subdistricts2 || user.contact_subdistrict || null,
         zipcode2: user.zipcode2 || user.contact_zipcode || null,
       };
-
-      console.log("Complete User Data for Edit:", completeUserData); // Debug log
 
       setEditingUser(completeUserData);
       setOpenModal(true);
@@ -663,7 +606,6 @@ export default function UserManagementUI() {
           <DateThaiPickerService
             value={loginDate}
             onChange={(val) => {
-              console.log("Date picker onChange value:", val);
               setLoginDate(val);
             }}
             time

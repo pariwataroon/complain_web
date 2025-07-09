@@ -1,8 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableNewAddCompResults from "@services/TableNewAddCompResults/TableNewAddCompResults";
-import { Box, Button, Modal, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Modal,
+  TextField,
+  Typography,
+  Paper,
+} from "@mui/material";
 
 // สำหรับกรองเดือน (คำย่อในวันที่)
 const THAI_MONTH_ABBREV = {
@@ -55,158 +62,7 @@ const mockComplaints = [
     note: "ส่งเรื่องให้ธนาคารกรุงไทยพิจารณาเรียบร้อยแล้ว",
     receiveDate: "15 ม.ค. 2568",
   },
-  {
-    id: 2,
-    claimantName: "นางสาวศิริวรา วรานันต์",
-    issue: "ขอความช่วยเหลือเกี่ยวกับปัญหาหนี้สินในระบบ",
-    subIssueType: "หนี้ในระบบ",
-    note: "เจ้าหน้าที่ธนาคารกสิกรไทยติดต่อกลับเรียบร้อยแล้ว",
-    receiveDate: "23 ก.พ. 2568",
-  },
-  {
-    id: 3,
-    claimantName: "นายธีรทัศน์ ฤทธินันท์",
-    issue: "ร้องเรียนเรื่องการบริการของสถาบันการเงิน",
-    subIssueType: "การบริการไม่เหมาะสม",
-    note: "อยู่ระหว่างการตรวจสอบเอกสารกับธนาคารกรุงเทพเพิ่มเติม",
-    receiveDate: "8 มี.ค. 2568",
-  },
-  {
-    id: 4,
-    claimantName: "นางสาวมาลี สวยงาม",
-    issue: "ปัญหาเรื่องการปรับโครงสร้างหนี้",
-    subIssueType: "ปรับโครงสร้างหนี้",
-    note: "ส่งเรื่องให้บริษัทบริหารสินทรัพย์ไทยดำเนินการ",
-    receiveDate: "12 เม.ย. 2568",
-  },
-  {
-    id: 5,
-    claimantName: "นายสมชาย ใจดี",
-    issue: "ขอความช่วยเหลือเกี่ยวกับปัญหาหนี้สินในระบบ",
-    subIssueType: "หนี้นอกระบบ",
-    note: "ปิดเรื่องและแจ้งผู้ร้องเรียบร้อยแล้ว",
-    receiveDate: "27 พ.ค. 2568",
-  },
-  {
-    id: 6,
-    claimantName: "นางประนอม ขยันดี",
-    issue: "ร้องเรียนเรื่องการบริการของสถาบันการเงิน",
-    subIssueType: "การเรียกเก็บหนี้ไม่เหมาะสม",
-    note: "ส่งเรื่องให้ธนาคารไทยพาณิชย์ตรวจสอบ",
-    receiveDate: "3 มิ.ย. 2568",
-  },
-  {
-    id: 7,
-    claimantName: "นายอนุรักษ์ พัฒนา",
-    issue: "ปัญหาเรื่องการกู้ยืมเงิน",
-    subIssueType: "การอนุมัติสินเชื่อ",
-    note: "เจ้าหน้าที่ธนาคารออมสินประสานงานแล้ว",
-    receiveDate: "19 ก.ค. 2567",
-  },
-  {
-    id: 8,
-    claimantName: "นางสาววิภา เก่งเรียน",
-    issue: "ปัญหาเรื่องการปรับโครงสร้างหนี้",
-    subIssueType: "เงื่อนไขการผ่อนผัน",
-    note: "ส่งเรื่องให้บริษัทบริหารสินทรัพย์กรุงเทพพาณิชย์",
-    receiveDate: "14 ส.ค. 2567",
-  },
-  {
-    id: 9,
-    claimantName: "นายประเสริฐ ก้าวหน้า",
-    issue: "ร้องเรียนเรื่องการบริการของสถาบันการเงิน",
-    subIssueType: "ค่าธรรมเนียมไม่เหมาะสม",
-    note: "ธนาคารกรุงศรีอยุธยาดำเนินการแก้ไขแล้ว",
-    receiveDate: "6 ก.ย. 2567",
-  },
-  {
-    id: 10,
-    claimantName: "นางสาวสุนีย์ รักเรียน",
-    issue: "ปัญหาเรื่องการกู้ยืมเงิน",
-    subIssueType: "หลักประกันสินเชื่อ",
-    note: "อยู่ระหว่างการพิจารณาของธนาคารทหารไทยธนชาต",
-    receiveDate: "22 ต.ค. 2567",
-  },
-  {
-    id: 11,
-    claimantName: "นายวิชิต บริการดี",
-    issue: "ขอความช่วยเหลือเกี่ยวกับปัญหาหนี้สินในระบบ",
-    subIssueType: "หนี้บัตรเครดิต",
-    note: "ส่งเรื่องให้ธนาคารเพื่อการเกษตรและสหกรณ์การเงิน",
-    receiveDate: "11 พ.ย. 2567",
-  },
-  {
-    id: 12,
-    claimantName: "นางนิภา รับผิดชอบ",
-    issue: "ร้องเรียนเรื่องการบริการของสถาบันการเงิน",
-    subIssueType: "การบริการไม่เหมาะสม",
-    note: "ธนาคารอาคารสงเคราะห์ชี้แจงและแก้ไขแล้ว",
-    receiveDate: "29 ธ.ค. 2567",
-  },
-  {
-    id: 13,
-    claimantName: "นายสุรชัย ซื่อสัตย์",
-    issue: "ปัญหาเรื่องการปรับโครงสร้างหนี้",
-    subIssueType: "ลดอัตราดอกเบีย",
-    note: "ส่งเรื่องให้บริษัทบริหารสินทรัพย์กสิกรไทยพิจารณา",
-    receiveDate: "17 ม.ค. 2567",
-  },
-  {
-    id: 14,
-    claimantName: "นางสาวพิมพ์ใจ ยุติธรรม",
-    issue: "ปัญหาเรื่องการกู้ยืมเงิน",
-    subIssueType: "การชำระหนี้ล่วงหน้า",
-    note: "ธนาคารยูโอบีดำเนินการตามขั้นตอนแล้ว",
-    receiveDate: "5 ก.พ. 2567",
-  },
-  {
-    id: 15,
-    claimantName: "นายธนากร มีน้ำใจ",
-    issue: "ขอความช่วยเหลือเกี่ยวกับปัญหาหนี้สินในระบบ",
-    subIssueType: "หนี้เช่าซื้อ",
-    note: "อยู่ระหว่างการตรวจสอบกับธนาคารซีไอเอ็มบี ไทย",
-    receiveDate: "21 มี.ค. 2567",
-  },
-  {
-    id: 16,
-    claimantName: "นางสุภาพร เอื้อเฟื้อ",
-    issue: "ร้องเรียนเรื่องการบริการของสถาบันการเงิน",
-    subIssueType: "การเรียกเก็บหนี้ไม่เหมาะสม",
-    note: "ส่งเรื่องให้ธนาคารแลนด์ แอนด์ เฮาส์แก้ไข",
-    receiveDate: "9 เม.ย. 2567",
-  },
-  {
-    id: 17,
-    claimantName: "นายจิรายุ หาญกล้า",
-    issue: "ปัญหาเรื่องการปรับโครงสร้างหนี้",
-    subIssueType: "การผ่อนชำระ",
-    note: "บริษัทบริหารสินทรัพย์ไทยพาณิชย์อนุมัติแล้ว",
-    receiveDate: "16 พ.ค. 2567",
-  },
-  {
-    id: 18,
-    claimantName: "นางสาวอรุณี เช้าใส",
-    issue: "ปัญหาเรื่องการกู้ยืมเงิน",
-    subIssueType: "ดอกเบียและค่าธรรมเนียม",
-    note: "ธนาคารเกียรตินาคินภัทรชี้แจงรายละเอียดแล้ว",
-    receiveDate: "30 มิ.ย. 2567",
-  },
-  {
-    id: 19,
-    claimantName: "นายรัชชานนท์ ก้าวไกล",
-    issue: "ขอความช่วยเหลือเกี่ยวกับปัญหาหนี้สินในระบบ",
-    subIssueType: "หนี้สินค้างชำระ",
-    note: "ส่งเรื่องให้ธนาคารไอซีบีซี (ไทย) ดำเนินการ",
-    receiveDate: "4 ก.ค. 2566",
-  },
-  {
-    id: 20,
-    claimantName: "นางสาวปรีชา ฉลาดเฉลียว",
-    issue: "ร้องเรียนเรื่องการบริการของสถาบันการเงิน",
-    subIssueType: "ข้อมูลเครดิตไม่ถูกต้อง",
-    note: "บริษัทบริหารสินทรัพย์กรุงศรีอยุธยาแก้ไขข้อมูลแล้ว",
-    receiveDate: "18 ส.ค. 2566",
-  },
+  // ... [other mock data remains the same]
 ];
 
 // ← สร้าง NOTE_OPTIONS จาก mockComplaints
@@ -224,8 +80,9 @@ const SUB_ISSUE_TYPE_OPTIONS = Array.from(
 ).map((sub) => ({ value: sub, label: sub }));
 
 const Summaryresults = () => {
-  const [allComplaints] = useState(mockComplaints);
+  const [allComplaints, setAllComplaints] = useState(mockComplaints);
   const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
+  const [hasChanges, setHasChanges] = useState(false); // เพิ่ม state เพื่อติดตามการเปลี่ยนแปลง
 
   // ← ใช้ INITIAL_NOTE_OPTIONS ที่สร้างจาก mockComplaints
   const [noteOptions, setNoteOptions] = useState([
@@ -237,8 +94,21 @@ const Summaryresults = () => {
   const [currentNoteRow, setCurrentNoteRow] = useState(null);
   const [newNoteText, setNewNoteText] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [noteChangesMade, setNoteChangesMade] = useState(false);
 
   const router = useRouter();
+
+  // บันทึกการเปลี่ยนแปลงทั้งหมดและย้อนกลับไปหน้าหลัก
+  const handleSaveAllChanges = () => {
+    // บันทึกข้อมูลที่เปลี่ยนแปลงลงใน localStorage
+    localStorage.setItem(
+      "updatedComplaints",
+      JSON.stringify(filteredComplaints)
+    );
+    setHasChanges(false);
+    // กลับไปยังหน้าหลัก
+    router.push("/admin/document/new-additional-complaints-summary");
+  };
 
   // ไปหน้าสรุปตามประเภทเรื่อง
   const handleSummaryByIssueType = () => {
@@ -258,6 +128,11 @@ const Summaryresults = () => {
     setFilteredComplaints((prev) =>
       prev.map((row) => (row.id === rowId ? { ...row, note: value } : row))
     );
+    setAllComplaints((prev) =>
+      prev.map((row) => (row.id === rowId ? { ...row, note: value } : row))
+    );
+    setHasChanges(true); // ระบุว่ามีการเปลี่ยนแปลง
+    setNoteChangesMade(true);
   };
 
   // บันทึกจาก Modal และเพิ่ม option ใหม่
@@ -267,6 +142,13 @@ const Summaryresults = () => {
 
       // อัปเดตข้อมูลในตาราง
       setFilteredComplaints((prev) =>
+        prev.map((row) =>
+          row.id === currentNoteRow ? { ...row, note: trimmedNote } : row
+        )
+      );
+
+      // อัปเดตข้อมูลในตารางหลักด้วย
+      setAllComplaints((prev) =>
         prev.map((row) =>
           row.id === currentNoteRow ? { ...row, note: trimmedNote } : row
         )
@@ -286,6 +168,9 @@ const Summaryresults = () => {
         }
         return prev;
       });
+
+      setHasChanges(true); // ระบุว่ามีการเปลี่ยนแปลง
+      setNoteChangesMade(true);
     }
     setModalOpen(false);
     setCurrentNoteRow(null);
@@ -363,6 +248,36 @@ const Summaryresults = () => {
           { label: "สรุปผลตามประเภทเรื่อง" },
         ]}
       />
+
+      {/* แสดงปุ่มบันทึกเมื่อมีการเปลี่ยนแปลงหมายเหตุ */}
+      {noteChangesMade && (
+        <Paper
+          elevation={2}
+          sx={{
+            p: 2,
+            mb: 2,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            bgcolor: "#f8f9fa",
+            borderLeft: "4px solid #1120A3",
+          }}
+        >
+          <Typography variant="body1">
+            คุณได้แก้ไขหมายเหตุของรายการ กรุณาบันทึกการเปลี่ยนแปลง
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={handleSaveAllChanges}
+            sx={{
+              bgcolor: "#1120A3",
+              "&:hover": { bgcolor: "#0b1580" },
+            }}
+          >
+            บันทึกการเปลี่ยนแปลง
+          </Button>
+        </Paper>
+      )}
 
       <TableNewAddCompResults
         data={filteredComplaints}

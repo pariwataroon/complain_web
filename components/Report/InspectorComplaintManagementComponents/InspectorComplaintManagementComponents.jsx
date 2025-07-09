@@ -5,6 +5,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import styles from "./ReportTable.module.scss";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportExcel } from "@utils/exportExcel";
 
 // ข้อมูลแยกตามผู้ตรวจ
 const dataByInspector = {
