@@ -12,4 +12,14 @@ const getDepartmentGroup = async () => {
   }
 };
 
-export { getDepartmentGroup };
+const getDepartments = async () => {
+  try {
+    const response = await axiosInstance.get("/departments");
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching departments:", error);
+    throw error;
+  }
+};
+
+export { getDepartmentGroup, getDepartments };

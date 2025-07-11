@@ -36,9 +36,18 @@ const BreadcrumbsService = ({ items = [], separator = ">" }) => {
         return item.url ? (
           <Link
             key={index}
-            href={item.url}
             underline="none"
-            style={{ color: "#1D40F8" }}
+            style={{ color: "#1D40F8", cursor: "pointer" }}
+            // ใช้ onClick ถ้ามี, ถ้าไม่มี fallback เป็น href เดิม
+            onClick={(e) => {
+              e.preventDefault();
+              if (item.onClick) {
+                item.onClick();
+              } else {
+                window.location.href = item.url;
+              }
+            }}
+            href={item.url}
           >
             {ContentBlock}
           </Link>

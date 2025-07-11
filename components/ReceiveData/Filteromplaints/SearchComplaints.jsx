@@ -22,9 +22,8 @@ import {
   UsersSearchByRole,
   getSubComplaintTypeById,
 } from "@pages/api/allselect/allselect";
-import DateThaiPickerService, {
-  ControlledDateThaiPickerService,
-} from "@services/DateThaiPickerService/DateThaiPickerService";
+import { ControlledDateThaiPickerService } from "@services/DateThaiPickerService/DateThaiPickerService";
+import { getDepartments } from "@pages/api/department/department";
 
 import { FormProvider, useForm } from "react-hook-form";
 import { alertError, alertSuccess } from "@utils/Alerts";
@@ -32,6 +31,9 @@ import styles from "./TabNav.module.scss";
 import SearchComplaintsPreview from "@components/ReceiveData/Filteromplaints/SearchComplaintsPreview";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
+import ClearIcon from "@mui/icons-material/Clear";
+import IconButton from "@mui/material/IconButton";
+
 const breadcrumbItems = [
   {
     label: "จัดการข้อมูลในระบบ",
@@ -192,13 +194,24 @@ const SearchComplaints = () => {
     setOpenSearchDialog(false);
   };
 
+  const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
 
   useEffect(() => {
-    if (openSearchDialog && inputRef.current) {
-      inputRef.current.focus();
+    if (openSearchDialog) {
+      setSearchText(""); // reset input
+      handleSearch(""); // แสดงข้อมูลทั้งหมด (search ด้วย keyword ว่าง)
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     }
   }, [openSearchDialog]);
+
+  const onClear = () => {
+    setSearchText("");
+    handleSearch("");
+    inputRef.current?.focus();
+  };
 
   // Fetch complaint types
   useEffect(() => {
@@ -237,6 +250,24 @@ const SearchComplaints = () => {
       fetchComplaints(id);
     }
   }, [id, complaintTypes]);
+
+  const [departments, setDepartments] = useState([]);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await getDepartments();
+        if (res?.res_code === "0000" && Array.isArray(res.res_data)) {
+          setDepartments(res.res_data);
+        } else {
+          setDepartments([]);
+        }
+      } catch {
+        setDepartments([]);
+      }
+    };
+    fetchDepartments();
+  }, []);
 
   const fetchComplaints = async (id) => {
     setLoading(true);
@@ -577,6 +608,15 @@ const SearchComplaints = () => {
     const step3Data = step3Methods.getValues();
     const step4Data = step4Methods.getValues();
 
+    // หา senderAgencyName ตาม id ที่เลือก
+    let senderAgencyName = "";
+    if (step3Data.senderAgency) {
+      const foundDept = departments.find(
+        (dept) => dept.id === step3Data.senderAgency
+      );
+      senderAgencyName = foundDept ? foundDept.name : "";
+    }
+
     const selectedOfficer = staffUsers.find(
       (user) => user.value === step4Data.responsibleOfficer
     );
@@ -629,6 +669,7 @@ const SearchComplaints = () => {
       step3: {
         general: {
           ...step3Data,
+          senderAgencyName, // <= เพิ่มตรงนี้!
           complaintType: step3Data.complaintType,
           complaintFilingType: complaintFilingType,
           ...complaintFilingData,
@@ -1266,10 +1307,16 @@ const SearchComplaints = () => {
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>หน่วยงานอื่นที่ส่งเรื่องมา กค.</label>
-                        <select {...step3Methods.register("senderAgency")}>
+                        <select
+                          className={styles.niceSelect}
+                          {...step3Methods.register("senderAgency")}
+                        >
                           <option value="">เลือกหน่วยงาน</option>
-                          <option value="ministry1">กระทรวงการคลัง</option>
-                          <option value="ministry2">กระทรวงมหาดไทย</option>
+                          {departments.map((dept) => (
+                            <option key={dept.id} value={dept.id}>
+                              {dept.name}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -1279,7 +1326,7 @@ const SearchComplaints = () => {
                       <div className={styles.fieldGroup}>
                         <label>ชั้นความลับ</label>
                         <select {...step3Methods.register("securityLevel")}>
-                          <option value="normal">ธรรมดา</option>
+                          <option value="normal">ปกติ</option>
                           <option value="confidential">ลับ</option>
                           <option value="secret">ลับมาก</option>
                           <option value="top_secret">ลับที่สุด</option>
@@ -1288,9 +1335,11 @@ const SearchComplaints = () => {
                       <div className={styles.fieldGroup}>
                         <label>ชั้นความเร่งด่วน</label>
                         <select {...step3Methods.register("urgencyLevel")}>
-                          <option value="normal">ธรรมดา</option>
-                          <option value="urgent">เร่งด่วน</option>
-                          <option value="very_urgent">เร่งด่วนมาก</option>
+                          <option value="low">ปกติ</option>
+                          <option value="medium">เร่งด่วน</option>
+                          <option value="high">ด่วน</option>
+                          <option value="urgent">ด่วนมาก</option>
+                          <option value="critical">ด่วนที่สุด</option>
                         </select>
                       </div>
                     </div>
@@ -1372,6 +1421,7 @@ const SearchComplaints = () => {
                                     style: {
                                       borderRadius: 12,
                                       background: "#f7fafd",
+                                      height: 500,
                                       boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
                                     },
                                   }}
@@ -1392,15 +1442,29 @@ const SearchComplaints = () => {
                                       fullWidth
                                       size="small"
                                       placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
-                                      onChange={(e) =>
-                                        handleSearch(e.target.value)
-                                      }
+                                      value={searchText}
+                                      onChange={(e) => {
+                                        setSearchText(e.target.value);
+                                        handleSearch(e.target.value);
+                                      }}
                                       InputProps={{
                                         startAdornment: (
                                           <InputAdornment position="start">
                                             <SearchIcon color="action" />
                                           </InputAdornment>
                                         ),
+                                        endAdornment: searchText ? (
+                                          <InputAdornment position="end">
+                                            <IconButton
+                                              size="small"
+                                              onClick={onClear}
+                                              aria-label="clear search"
+                                              edge="end"
+                                            >
+                                              <ClearIcon />
+                                            </IconButton>
+                                          </InputAdornment>
+                                        ) : null,
                                         style: {
                                           background: "#fff",
                                           borderRadius: 8,
@@ -1444,6 +1508,18 @@ const SearchComplaints = () => {
                                         sx={{
                                           maxHeight: 320,
                                           overflow: "auto",
+                                          "&::-webkit-scrollbar": {
+                                            width: "8px",
+                                            background: "#f0f4fa",
+                                            borderRadius: "8px",
+                                          },
+                                          "&::-webkit-scrollbar-thumb": {
+                                            background: "#90caf9",
+                                            borderRadius: "8px",
+                                          },
+                                          "&::-webkit-scrollbar-thumb:hover": {
+                                            background: "#64b5f6",
+                                          },
                                         }}
                                       >
                                         {searchResults.map((item) => (
