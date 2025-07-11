@@ -1095,9 +1095,22 @@ def get_complaints(
                 Complaint.complainant_data.ilike(f"%{search}%")  # ค้นหาใน JSON string
             )
         )
-    # filter ด้วย complainant_name (LIKE ใน JSON)
+    # filter ด้วย complainant_name (ค้นหาในหลายฟิลด์)
     if complainant_name:
-        query = query.filter(Complaint.complainant_data.ilike(f"%{complainant_name}%"))
+        # ค้นหาในฟิลด์ต่างๆ ที่อาจมีชื่อผู้ร้องเรียน
+        complainant_search_filter = or_(
+            Complaint.complainant_data.ilike(f"%{complainant_name}%"),
+            # ค้นหาชื่อในรูปแบบต่างๆ ใน JSON
+            Complaint.complainant_data.ilike(f'%"name":"%{complainant_name}%"%'),
+            Complaint.complainant_data.ilike(f'%"firstName":"%{complainant_name}%"%'),
+            Complaint.complainant_data.ilike(f'%"lastName":"%{complainant_name}%"%'),
+            Complaint.complainant_data.ilike(f'%"fullName":"%{complainant_name}%"%'),
+            Complaint.complainant_data.ilike(f'%"companyName":"%{complainant_name}%"%'),
+            # ค้นหาใน delegate_data ด้วย
+            Complaint.delegate_data.ilike(f"%{complainant_name}%"),
+            Complaint.delegate_data.ilike(f'%"name":"%{complainant_name}%"%')
+        )
+        query = query.filter(complainant_search_filter)
 
     total_count = query.count()
     query = query.order_by(Complaint.created_at.desc())
@@ -2747,7 +2760,20 @@ def get_complaints_grouped_by_channel(
             )
         
         if complainant_name:
-            query = query.filter(Complaint.complainant_data.ilike(f"%{complainant_name}%"))
+            # ค้นหาในฟิลด์ต่างๆ ที่อาจมีชื่อผู้ร้องเรียน (เหมือนกับใน get_complaints)
+            complainant_search_filter = or_(
+                Complaint.complainant_data.ilike(f"%{complainant_name}%"),
+                # ค้นหาชื่อในรูปแบบต่างๆ ใน JSON
+                Complaint.complainant_data.ilike(f'%"name":"%{complainant_name}%"%'),
+                Complaint.complainant_data.ilike(f'%"firstName":"%{complainant_name}%"%'),
+                Complaint.complainant_data.ilike(f'%"lastName":"%{complainant_name}%"%'),
+                Complaint.complainant_data.ilike(f'%"fullName":"%{complainant_name}%"%'),
+                Complaint.complainant_data.ilike(f'%"companyName":"%{complainant_name}%"%'),
+                # ค้นหาใน delegate_data ด้วย
+                Complaint.delegate_data.ilike(f"%{complainant_name}%"),
+                Complaint.delegate_data.ilike(f'%"name":"%{complainant_name}%"%')
+            )
+            query = query.filter(complainant_search_filter)
 
         # Get total count และ complaints
         total_count = query.count()
