@@ -61,8 +61,14 @@ const InformRelatedParties = () => {
       const confidentialityData = await GetOutgoingReportOptions("confidentiality_levels");
       const urgencyData = await GetOutgoingReportOptions("urgency_levels");
 
-      setConfidentialityOptions(confidentialityData);
-      setUrgencyOptions(urgencyData);
+      const normalizeOptions = (data) =>
+        data.map((opt, idx) => ({
+          value: idx + 1,
+          label: opt.label || opt.value || `ตัวเลือก ${idx + 1}`,
+        }));
+
+      setConfidentialityOptions(normalizeOptions(confidentialityData));
+      setUrgencyOptions(normalizeOptions(urgencyData));
 
       setProposeForOptions([
         { value: "ทราบ", label: "ทราบ" },
@@ -78,24 +84,21 @@ const InformRelatedParties = () => {
         { value: "เพิ่มเติม", label: "ต้องการข้อมูลเพิ่มเติม" },
       ]);
 
-      
-
     } catch (error) {
-      
+      console.error("⚠️ fetchOptions error:", error);
 
-      // ใช้ default options ถ้า API ไม่สามารถเรียกได้
       setConfidentialityOptions([
-        { value: "ปกติ", label: "ปกติ" },
-        { value: "ลับ", label: "ลับ" },
-        { value: "ลับมาก", label: "ลับมาก" },
-        { value: "ลับที่สุด", label: "ลับที่สุด" },
+        { value: 1, label: "ปกติ" },
+        { value: 2, label: "ลับ" },
+        { value: 3, label: "ลับมาก" },
+        { value: 4, label: "ลับที่สุด" },
       ]);
 
       setUrgencyOptions([
-        { value: "ปกติ", label: "ปกติ" },
-        { value: "เร่งด่วน", label: "เร่งด่วน" },
-        { value: "เร่งด่วนมาก", label: "เร่งด่วนมาก" },
-        { value: "เร่งด่วนที่สุด", label: "เร่งด่วนที่สุด" },
+        { value: 1, label: "ปกติ" },
+        { value: 2, label: "เร่งด่วน" },
+        { value: 3, label: "เร่งด่วนมาก" },
+        { value: 4, label: "เร่งด่วนที่สุด" },
       ]);
 
       setProposeForOptions([

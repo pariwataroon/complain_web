@@ -19,8 +19,8 @@ export const useInformRelatedParties = () => {
       subject: "",
       signer: "",
       department: "",
-      confidentiality: "",
-      urgency: "",
+      confidentiality: null,
+      urgency: null,
       proposeFor: "",
       decision: "",
       attachment: "",
@@ -85,9 +85,9 @@ export const useInformRelatedParties = () => {
     (e) => {
       const { name, value } = e.target;
       const finalValue =
-        typeof value === "object" && value !== null ? value.value || "" : value;
+        typeof value === "object" && value !== null ? value.value : value;
 
-    
+      console.log("🔥 handleChange:", name, "=", finalValue); // << ตรวจตรงนี้
 
       setForm((prev) => ({ ...prev, [name]: finalValue }));
 
