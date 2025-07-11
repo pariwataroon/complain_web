@@ -1197,16 +1197,31 @@ def get_complaints(
     for complaint in complaints:
         try:
             list_item = create_complaint_list_item(complaint, db)
-            # เพิ่ม complaint_subtype ใน response
+            # เพิ่ม complaint_subtype และ complaint_type details ใน response
             complaint_subtype_name = ""
+            complaint_subtype_id = None
+            complaint_type_name = ""
+            complaint_type_id = None
+            
             if db and hasattr(complaint, "complaint_subtype_id") and complaint.complaint_subtype_id:
                 from models.comp_complaint_types import ComplaintSubType
                 subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
                 if subtype:
                     complaint_subtype_name = subtype.name
+                    complaint_subtype_id = str(subtype.id)
+            
+            if db and hasattr(complaint, "complaint_type_id") and complaint.complaint_type_id:
+                from models.comp_complaint_types import ComplaintType
+                ctype = db.query(ComplaintType).filter(ComplaintType.id == complaint.complaint_type_id).first()
+                if ctype:
+                    complaint_type_name = ctype.name
+                    complaint_type_id = str(ctype.id)
             
             list_item_dict = list_item.__dict__
             list_item_dict["complaint_subtype"] = complaint_subtype_name
+            list_item_dict["complaint_subtype_id"] = complaint_subtype_id
+            list_item_dict["complaint_type_id"] = complaint_type_id
+            list_item_dict["complaint_type_name"] = complaint_type_name
             
             # ✅ เพิ่ม is_master key เพื่อบอกสถานะ parent/child (คำนวณง่ายๆ)
             list_item_dict["is_master"] = complaint.parent_complaint_id is None
@@ -2588,7 +2603,7 @@ def parse_respondent_data(respondent_data, db: Session = None):
         return {"general": {"activeType": "individual", "individual": {}}}
 
 def parse_incident_data(complaint):
-    """แปลงข้อมูลเหตุการณ์ให้อยู่ในรูปแบบ step3 - รวม attachments"""
+    """แปลงข้อมูลเหตุการณ์ให้อยู่ในรูปแบบ step3 - รวม attachments และ complaint type/subtype IDs"""
     try:
         # ดึงไฟล์แนบจาก relationship
         attachment_list = []
@@ -2603,9 +2618,28 @@ def parse_incident_data(complaint):
                     "created_at": attachment.created_at.isoformat() if attachment.created_at else None
                 })
         
+        # ดึงข้อมูล complaint type และ subtype
+        complaint_type_data = None
+        if hasattr(complaint, 'complaint_type_relation') and complaint.complaint_type_relation:
+            complaint_type_data = {
+                "id": str(complaint.complaint_type_relation.id),
+                "name": complaint.complaint_type_relation.name
+            }
+        
+        complaint_subtype_data = None
+        if hasattr(complaint, 'complaint_subtype_relation') and complaint.complaint_subtype_relation:
+            complaint_subtype_data = {
+                "id": str(complaint.complaint_subtype_relation.id),
+                "name": complaint.complaint_subtype_relation.name
+            }
+        
         return {
             "general": {
                 "complaintType": complaint.complaint_type or "",
+                "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
+                "complaint_type_data": complaint_type_data,
+                "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
+                "complaint_subtype_data": complaint_subtype_data,
                 "subject": complaint.subject or "",
                 "description": complaint.description or "",
                 "incidentDate": complaint.incident_date.isoformat() if complaint.incident_date else None,
@@ -2617,6 +2651,10 @@ def parse_incident_data(complaint):
         return {
             "general": {
                 "complaintType": "", 
+                "complaint_type_id": None,
+                "complaint_type_data": None,
+                "complaint_subtype_id": None,
+                "complaint_subtype_data": None,
                 "subject": "", 
                 "description": "", 
                 "incidentDate": None, 
@@ -2681,7 +2719,10 @@ def get_my_complaint_by_id(db: Session, complaint_id: UUID, user_id: UUID) -> Di
 def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict:
     """ดึงรายละเอียดเรื่องร้องเรียนใดๆ รวมข้อมูล assignment form (ไม่จำกัดเฉพาะเจ้าของ)"""
     try:
-        complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+        complaint = db.query(Complaint)\
+            .outerjoin(ComplaintType, Complaint.complaint_type_id == ComplaintType.id)\
+            .outerjoin(ComplaintSubType, Complaint.complaint_subtype_id == ComplaintSubType.id)\
+            .filter(Complaint.id == complaint_id).first()
         
         if not complaint:
             return {"error": "ไม่พบเรื่องร้องเรียน"}
@@ -2746,7 +2787,9 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
 
             # Complaint Categories
             "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
+            "complaint_type_name": complaint.complaint_type_relation.name if hasattr(complaint, 'complaint_type_relation') and complaint.complaint_type_relation else None,
             "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
+            "complaint_subtype_name": complaint.complaint_subtype_relation.name if hasattr(complaint, 'complaint_subtype_relation') and complaint.complaint_subtype_relation else None,
             "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
             
             # Registration Date
