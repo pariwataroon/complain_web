@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef  } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -21,7 +21,8 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
 import { formatCitizenId_null } from "@utils/Formats";
-
+import { exportExcel } from "@utils/exportExcel";
+import { exportElementToPDF } from "@utils/exportPDF";
 const TableList = ({
   data = [],
   title = "",
@@ -98,6 +99,60 @@ const TableList = ({
       handleSearchClick();
     }
   };
+
+  const tableRef = useRef(null);
+  
+    const handleExportPDF = () => {
+      const today = new Date().toLocaleDateString("th-TH");
+      const filename = `รายงาน${title}_${today}.pdf`;
+      exportElementToPDF(tableRef, filename);
+    };
+  const handleExportExcel = () => {
+  if (!data || data.length === 0) return;
+
+  const today = new Date().toLocaleDateString("th-TH");
+  const filename = `รายงาน${title}_${today}.xlsx`;
+
+  // กำหนดหัวตาราง
+  const exportLabel = [
+    "ลำดับ",
+    "ชื่อผู้ร้อง",
+    "บัตรประชาชน",
+    "ชื่อเรื่อง",
+    "เลขที่สป.กค.",
+    "เลขที่สป.สร.",
+    "เลขที่สตป.",
+    "เลขที่ส่วนรับราชการ",
+  ];
+
+  // แปลงข้อมูลเป็น array of array (AOA)
+  const exportData = data.map((item, idx) => [
+    idx + 1,
+    item?.name ?? "-",
+    formatCitizenId_null(item?.citizenId ?? "-"),
+    item?.subject ?? "-",
+    item?.docKk ?? "-",
+    item?.docSr ?? "-",
+    item?.docStp ?? "-",
+    item?.docGov ?? "-",
+  ]);
+
+  // เว้น 1 แถวก่อน header ตามคำขอ
+  const aoaWithHeader = [
+    [],
+    [],
+    exportLabel,
+    ...exportData,
+  ];
+
+  exportExcel(aoaWithHeader, {
+    filename,
+    sheetName: "Sheet1",
+    title,
+    exportDate: `วันที่ ${today}`,
+  });
+};
+
 
   return (
     <Container
@@ -221,8 +276,8 @@ const TableList = ({
 
                 {/* Export Buttons - แยกบรรทัด */}
                 <Box display="flex" flexDirection="column" gap={1}>
-                  <ExportButton label="Export PDF" />
-                  <ExportButton label="Export Excel" />
+                  <ExportButton label="Export PDF" onClick={handleExportPDF} />
+                  <ExportButton label="Export Excel" onClick={handleExportExcel} />
                 </Box>
               </Box>
             ) : (
@@ -286,8 +341,8 @@ const TableList = ({
 
                 {/* แถวที่ 2: Export Buttons */}
                 <Box display="flex" justifyContent="center" gap={1}>
-                  <ExportButton label="Export PDF" />
-                  <ExportButton label="Export Excel" />
+                  <ExportButton label="Export PDF" onClick={handleExportPDF} />
+                  <ExportButton label="Export Excel" onClick={handleExportExcel} />
                 </Box>
               </Box>
             )}
@@ -403,8 +458,8 @@ const TableList = ({
               gap={1}
               sx={{ flexShrink: 0 }}
             >
-              <ExportButton label="Export PDF" />
-              <ExportButton label="Export Excel" />
+              <ExportButton label="Export PDF" onClick={handleExportPDF}/>
+              <ExportButton label="Export Excel" onClick={handleExportExcel}/>
             </Box>
           </Box>
         )}
@@ -419,6 +474,7 @@ const TableList = ({
 
       {/* Table - Conditional Scrolling based on screen size */}
       <Box
+      ref={tableRef}
         className={styles.tableWrapper}
         id="table-results"
         sx={{

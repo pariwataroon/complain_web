@@ -151,19 +151,29 @@ const ComplainantQuestionsComponent = () => {
     exportElementToPDF(tableRef, filename);
   };
 
-  // ฟังก์ชัน Export Excel (placeholder)
-  const handleExportExcel = () => {
+const handleExportExcel = () => {
   if (!filteredData || filteredData.length === 0) return;
 
-  // สร้างข้อมูลสำหรับ export (array of object)
+  const today = new Date().toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
   const rows = filteredData.map((row, idx) => ({
     ลำดับ: idx + 1,
     ชื่อบัญชี: row.name,
     วันที่ถาม: row.date,
   }));
 
-  exportExcel(excelRef, filename, "Sheet1", title, exportLabel);
+  exportExcel(rows, {
+    filename: `รายงานคำถามจากผู้ร้อง_${today}.xlsx`,
+    sheetName: "Report",
+    title: "รายงานคำถามจากผู้ร้อง",
+    exportDate: `วันที่ ${today}`,
+  });
 };
+
 
 
   const breadcrumbItems = [
