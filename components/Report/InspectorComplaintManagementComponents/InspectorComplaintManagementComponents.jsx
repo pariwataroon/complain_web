@@ -441,6 +441,89 @@ const InspectorComplaintManagementComponents = () => {
     INSPECTOR_OPTIONS.find((option) => option.value === selectedInspector)
       ?.label || "";
 
+      // ฟังก์ชันสำหรับ Export Excel
+  const handleExportExcel = () => {
+  if (!selectedInspector || currentData.length === 0) return;
+
+  // Header Row 1
+  const header1 = [
+    "ลำดับ", "วันที่ สคบ.\nรับเรื่อง", "เรื่อง",
+    "หน่วยงาน", "", "", "", "", "",
+    "ประเภทเรื่อง", "", "", "",
+    "จังหวัด", "",
+    "สถานะ", "", "",
+    "หมายเหตุ"
+  ];
+  // Header Row 2
+  const header2 = [
+    "", "", "",
+    "GSB", "PD_MO", "บสส", "ยสท", "สุรา", "ไผ่",
+    "หน่วยงาน $", "หน่วยงาน No$", "ส่วนบุคคล $", "ส่วนบุคคล No$",
+    "กทม.", "ตจว.",
+    "ประสาน (ครั้ง)", "ดำเนินการ", "ยุติ",
+    ""
+  ];
+
+  // Data Rows (ตามลำดับ column)
+  const dataRows = currentData.map(row => [
+    row.order,
+    row.date,
+    row.subject,
+    row.agencies.gsb ? "✔" : "",
+    row.agencies.pdmo ? "✔" : "",
+    row.agencies.bss ? "✔" : "",
+    row.agencies.yst ? "✔" : "",
+    row.agencies.sura ? "✔" : "",
+    row.agencies.phai ? "✔" : "",
+    row.issueTypes.agencyMoney ? "✔" : "",
+    row.issueTypes.agencyNoMoney ? "✔" : "",
+    row.issueTypes.personalMoney ? "✔" : "",
+    row.issueTypes.personalNoMoney ? "✔" : "",
+    row.provinces.bkk ? "✔" : "",
+    row.provinces.regional || "",
+    row.status.coordination || "",
+    row.status.ongoing ? "✔" : "",
+    row.status.terminated || "",
+    row.remark
+  ]);
+
+  // Title and Date
+  const exportData = [];
+  exportData.push([
+    `รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ${selectedInspectorName ? " - " + selectedInspectorName : ""}`
+  ]);
+  exportData.push([
+    `วันที่ ${new Date().toLocaleDateString("th-TH", { year: 'numeric', month: 'long', day: 'numeric' })}`
+  ]);
+  exportData.push(header1);
+  exportData.push(header2);
+  exportData.push(...dataRows);
+
+  // Merge cell เหมือนหน้าเว็บ
+  const merges = [
+    // Title
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 18 } },
+    // Export Date
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 18 } },
+    // "หน่วยงาน"
+    { s: { r: 2, c: 3 }, e: { r: 2, c: 8 } },
+    // "ประเภทเรื่อง"
+    { s: { r: 2, c: 9 }, e: { r: 2, c: 12 } },
+    // "จังหวัด"
+    { s: { r: 2, c: 13 }, e: { r: 2, c: 14 } },
+    // "สถานะ"
+    { s: { r: 2, c: 15 }, e: { r: 2, c: 17 } },
+    // "หมายเหตุ"
+    { s: { r: 2, c: 18 }, e: { r: 3, c: 18 } },
+  ];
+
+  // เรียก util (ต้องรองรับ options.merges)
+  exportExcel(exportData, {
+    filename: `รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ_${selectedInspectorName}.xlsx`,
+    sheetName: "Report",
+    merges
+  });
+};
   return (
     <Box>
       <Box>
@@ -571,6 +654,7 @@ const InspectorComplaintManagementComponents = () => {
               />
               <ExportButton
                 label="Export Excel"
+                onClick={handleExportExcel}
                 sx={{
                   width: { xs: "100%", sm: "auto" },
                   minWidth: { xs: "120px", sm: "auto" },
