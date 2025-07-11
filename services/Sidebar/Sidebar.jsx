@@ -490,7 +490,7 @@ export default function Sidebar() {
                       fontSize: "11px",
                       textTransform: "none",
                       minWidth: "auto",
-                      padding: "6px 8px",
+                      padding: "6px 12px",
                     },
                     "& .MuiTabs-flexContainer": {
                       gap: 1.5,
@@ -499,17 +499,18 @@ export default function Sidebar() {
                 >
                   <Tab
                     label={
-                      <Box display="flex" alignItems="center" gap={1}>
+                      <Box display="flex" alignItems="center" gap={0.75}>
                         <span>ทั้งหมด</span>
                         {notificationCounts.total.unread > 0 && (
                           <Badge
                             badgeContent={notificationCounts.total.unread}
                             color="error"
                             sx={{
+                              ml: 0.5,
                               "& .MuiBadge-badge": {
                                 fontSize: "10px",
-                                height: 16,
-                                minWidth: 16,
+                                height: 18,
+                                minWidth: 18,
                               },
                             }}
                           />
@@ -519,17 +520,18 @@ export default function Sidebar() {
                   />
                   <Tab
                     label={
-                      <Box display="flex" alignItems="center" gap={1}>
+                      <Box display="flex" alignItems="center" gap={0.75}>
                         <span>เรื่องร้องเรียน</span>
                         {notificationCounts.complaints.unread > 0 && (
                           <Badge
                             badgeContent={notificationCounts.complaints.unread}
                             color="error"
                             sx={{
+                               ml: 0.5,
                               "& .MuiBadge-badge": {
                                 fontSize: "10px",
-                                height: 16,
-                                minWidth: 16,
+                                height: 18,
+                                minWidth: 18,
                               },
                             }}
                           />
@@ -539,17 +541,18 @@ export default function Sidebar() {
                   />
                   <Tab
                     label={
-                      <Box display="flex" alignItems="center" gap={1}>
+                      <Box display="flex" alignItems="center" gap={0.75}>
                         <span>ผู้ใช้ใหม่</span>
                         {notificationCounts.newUsers.unread > 0 && (
                           <Badge
                             badgeContent={notificationCounts.newUsers.unread}
                             color="error"
                             sx={{
+                               ml: 0.5,
                               "& .MuiBadge-badge": {
                                 fontSize: "10px",
-                                height: 16,
-                                minWidth: 16,
+                                height: 18,
+                                minWidth: 18,
                               },
                             }}
                           />

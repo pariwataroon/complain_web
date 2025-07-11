@@ -23,6 +23,10 @@ import {
     formatElapsedThaiTime,
 } from '@utils/Formats';
 import HistoryIcon from '@mui/icons-material/History';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 
 const breadcrumbItems = [
     {
@@ -190,7 +194,8 @@ const LogsComponentsDetail = () => {
                                 วันที่และเวลาที่บันทึก
                             </div>
                             <div className={styles.infoValue}>
-                                {formatThaiOfficialDateTimeTimeseven(logData.created_at)}
+                                {formatThaiOfficialDateTimeTimeseven(
+                                    dayjs.utc(logData.created_at).subtract(7, 'hour').toISOString())}
                             </div>
                         </div>
 
@@ -201,7 +206,8 @@ const LogsComponentsDetail = () => {
                             </div>
                             <div className={styles.infoValue}>
                                 <span className={styles.elapsedTime}>
-                                    {formatElapsedThaiTime(logData.created_at)}
+                                    {formatElapsedThaiTime(dayjs.utc(logData.created_at).subtract(7, 'hour').toISOString()
+                                    )}
                                 </span>
                             </div>
                         </div>
