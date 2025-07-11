@@ -363,6 +363,12 @@
   align-items: center;
 }
 
+.dropdownDivider {
+  height: 1px;
+  background: rgba(0, 51, 102, 0.1);
+  margin: 8px 0;
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -387,4 +393,24 @@
   .profileDropdown {
     right: 10px; 
   }
+}
+
+.dropdownItem:nth-child(1) {
+  /* Admin button - green */
+  color: #28a745;
+}
+
+.dropdownItem:nth-child(1):hover {
+  background: rgba(40, 167, 69, 0.1);
+  color: #218838;
+}
+
+.dropdownItem:nth-child(4) {
+  /* Logout button - red */
+  color: #dc3545;
+}
+
+.dropdownItem:nth-child(4):hover {
+  background: rgba(220, 53, 69, 0.1);
+  color: #c82333;
 }

@@ -225,11 +225,16 @@ export default function NavbarMain() {
                 {isAdminUser() && (
                   <button
                     className={styles.dropdownItem}
-                    onClick={() => {
-                      handleAdminClick();
-                      setProfileDropdownOpen(false);
-                    }}
+                    onClick={handleAdminClick}
                   >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
+                    </svg>
                     จัดการระบบ
                   </button>
                 )}
@@ -241,9 +246,17 @@ export default function NavbarMain() {
                     setProfileDropdownOpen(false);
                   }}
                 >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+                  </svg>
                   แจ้งเรื่องร้องทุกข์
                 </button>
-
+                
                 <button
                   className={styles.dropdownItem}
                   onClick={() => {
@@ -251,10 +264,28 @@ export default function NavbarMain() {
                     setProfileDropdownOpen(false);
                   }}
                 >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" />
+                  </svg>
                   ติดตามผล
                 </button>
 
+                <div className={styles.dropdownDivider}></div>
+
                 <button className={styles.dropdownItem} onClick={handleLogout}>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.59L17 17l5-5z" />
+                  </svg>
                   ออกจากระบบ
                 </button>
               </div>
