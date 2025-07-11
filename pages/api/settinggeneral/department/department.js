@@ -14,7 +14,7 @@ const GetDetailDepartment = async () => {
 
 const CreateVenue = async (body) => {
   try {
-    const response = await axiosInstance.post("/venues/", body);
+    const response = await axiosInstance.post("/venues", body);
     if (response && response.data) {
       return response.data;
     }

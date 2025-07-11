@@ -1,7 +1,6 @@
 import NavbarMain from "@services/navbarMain/navbarMain";
 import Footer from "@services/footer/footer";
 
-
 export default function PolicyComponent() {
   return (
     <div style={{ position: "relative" }}>

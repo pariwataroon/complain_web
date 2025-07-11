@@ -8,6 +8,7 @@ import ButtonService from "@services/ButtonService/ButtonService";
 import {
   GetAllSelectComplaintTypes,
   UsersSearchByRole,
+  getSubComplaintTypeById,
 } from "@pages/api/allselect/allselect";
 import DateThaiPickerService, {
   ControlledDateThaiPickerService,
@@ -16,6 +17,7 @@ import DateThaiPickerService, {
 import { FormProvider, useForm } from "react-hook-form";
 import { alertError, alertSuccess } from "@utils/Alerts";
 import styles from "./TabNav.module.scss";
+import SearchComplaintsPreview from "./SearchComplaintsPreview";
 
 const breadcrumbItems = [
   {
@@ -72,7 +74,6 @@ const SearchComplaints = () => {
     if (router.query.id) {
       return router.query.id;
     }
-
     if (router.query.data) {
       try {
         const parsedData = JSON.parse(router.query.data);
@@ -82,7 +83,6 @@ const SearchComplaints = () => {
         return null;
       }
     }
-
     return null;
   }, [router.query.id, router.query.data]);
 
@@ -90,10 +90,12 @@ const SearchComplaints = () => {
   const [defaultData, setDefaultData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [previewMode, setPreviewMode] = useState(false);
   const [complaintFilingType, setComplaintFilingType] = useState("new");
   const [validationErrors, setValidationErrors] = useState({});
   const [showValidation, setShowValidation] = useState(false);
   const [complaintTypes, setComplaintTypes] = useState([]);
+
   const [staffUsers, setStaffUsers] = useState([]);
 
   // Form methods
@@ -118,6 +120,19 @@ const SearchComplaints = () => {
   const [respondentType, setRespondentType] = useState("individual");
   const [respondentData, setRespondentData] = useState({});
 
+  const [previewData, setPreviewData] = useState(null);
+
+  useEffect(() => {
+    if (router.query.preview === "true" || router.query.preview === "") {
+      setPreviewMode(true);
+    } else {
+      setPreviewMode(false);
+    }
+  }, [router.query.preview]);
+
+  const [subComplaintTypes, setSubComplaintTypes] = useState([]);
+  const [subComplaintTypesLoading, setSubComplaintTypesLoading] =
+    useState(false);
   // Fetch complaint types
   useEffect(() => {
     const fetchComplaintTypes = async () => {
@@ -151,10 +166,10 @@ const SearchComplaints = () => {
 
   // Fetch complaint data when ID changes
   useEffect(() => {
-    if (id) {
+    if (id && complaintTypes.length > 0) {
       fetchComplaints(id);
     }
-  }, [id]);
+  }, [id, complaintTypes]);
 
   const fetchComplaints = async (id) => {
     setLoading(true);
@@ -165,6 +180,7 @@ const SearchComplaints = () => {
       const data = res?.res_data;
       setDefaultData(data);
 
+      // Step 1: Complainant
       const general = data?.step1?.general?.general || {};
       const delegate = data?.step1?.general?.delegate || {};
       const { type: cType, data: cData } = getComplainantTypeAndData(general);
@@ -172,11 +188,13 @@ const SearchComplaints = () => {
       setComplainantData(cData);
       defaultGeneralRef.current = cData;
 
+      // Step 1: Delegate
       const { type: dType, data: dData } = getDelegateTypeAndData(general);
       setDelegateType(dType);
       setDelegateData(dData);
       defaultDelegateRef.current = dData;
 
+      // Step 2: Respondent
       const step2General = data?.step2?.general || {};
       const { type: rType, data: rData } =
         getRespondentTypeAndData(step2General);
@@ -184,9 +202,29 @@ const SearchComplaints = () => {
       setRespondentData(rData);
       defaultStep2Ref.current = rData;
 
+      // Step 3: Complaint Details
       const step3Data = data?.step3?.general || {};
       const assignmentForm = data?.assignment_form || {};
       const step4Data = data?.step4?.general || {};
+
+      // === เพิ่ม logic ตรงนี้เพื่อหา complaintTypeId จาก label ===
+      let complaintTypeId = "";
+
+      if (step3Data.complaintType && complaintTypes.length > 0) {
+        // ถ้า complaintType เป็น label ให้หา id
+        const foundType = complaintTypes.find(
+          (t) => t.label === step3Data.complaintType
+        );
+        complaintTypeId = foundType?.value || "";
+      } else if (assignmentForm.complaint_type_id) {
+        complaintTypeId = assignmentForm.complaint_type_id;
+      } else {
+        console.log(
+          "No complaintType available in step3Data or assignmentForm"
+        );
+      }
+
+      // === END เพิ่ม logic ===
 
       const getComplaintTypeText = (id) => {
         if (!id || !complaintTypes.length) return "";
@@ -194,8 +232,6 @@ const SearchComplaints = () => {
         return type ? type.label : "";
       };
 
-      const complaintTypeId =
-        assignmentForm.complaint_type_id || step3Data.complaintType || "";
       const complaintTypeText = getComplaintTypeText(complaintTypeId);
 
       const step3DataWithDefaults = {
@@ -232,6 +268,7 @@ const SearchComplaints = () => {
         urgencyLevel:
           assignmentForm.urgency_level || step3Data.urgencyLevel || "normal",
 
+        // ใช้ id แทน label
         complaintType: complaintTypeId,
         complaintTypeName: complaintTypeText,
         complaintTypeData: {
@@ -281,6 +318,41 @@ const SearchComplaints = () => {
       step2Methods.reset(rData);
       step3Methods.reset(step3DataWithDefaults);
       step4Methods.reset(step4Data);
+
+      // === โหลดประเภทเรื่องย่อยหลัง reset (ถ้ามี complaintTypeId) ===
+      if (complaintTypeId) {
+        setSubComplaintTypesLoading(true);
+        try {
+          const resSub = await getSubComplaintTypeById(complaintTypeId);
+          if (
+            resSub?.res_code === "0000" &&
+            resSub.res_data &&
+            Array.isArray(resSub.res_data.items)
+          ) {
+            setSubComplaintTypes(
+              resSub.res_data.items.map((item) => ({
+                value: item.id,
+                label: item.name,
+              }))
+            );
+          } else {
+            setSubComplaintTypes([]);
+          }
+          // ถ้าไม่มีค่าเดิมของ complaintSubType ให้ reset เป็นค่าว่าง
+          if (!(assignmentForm.complaint_type || step3Data.complaintSubType)) {
+            step3Methods.setValue("complaintSubType", "");
+          }
+        } catch (e) {
+          setSubComplaintTypes([]);
+        } finally {
+          setSubComplaintTypesLoading(false);
+        }
+      } else {
+        setSubComplaintTypes([]);
+        step3Methods.setValue("complaintSubType", "");
+        setSubComplaintTypesLoading(false);
+      }
+      // === END โหลดประเภทเรื่องย่อย ===
     } catch (error) {
       console.error("Load complaints failed", error);
       setError("เกิดข้อผิดพลาดในการโหลดข้อมูล");
@@ -297,7 +369,11 @@ const SearchComplaints = () => {
     const step4Data = step4Methods.getValues();
 
     // ประเภทเรื่องร้องเรียน *
-    if (!step3Data.complaintType || step3Data.complaintType.trim() === "") {
+    if (
+      !step3Data.complaintType ||
+      (typeof step3Data.complaintType === "string" &&
+        step3Data.complaintType.trim() === "")
+    ) {
       errors.complaintType = "กรุณาเลือกประเภทเรื่องร้องเรียน";
       hasErrors = true;
     }
@@ -305,14 +381,18 @@ const SearchComplaints = () => {
     // ประเภทเรื่องย่อย *
     if (
       !step3Data.complaintSubType ||
-      step3Data.complaintSubType.trim() === ""
+      (typeof step3Data.complaintSubType === "string" &&
+        step3Data.complaintSubType.trim() === "")
     ) {
       errors.complaintSubType = "กรุณาเลือกประเภทเรื่องย่อย";
       hasErrors = true;
     }
 
     // เรื่อง *
-    if (!step3Data.subject || step3Data.subject.trim() === "") {
+    if (
+      !step3Data.subject ||
+      (typeof step3Data.subject === "string" && step3Data.subject.trim() === "")
+    ) {
       errors.subject = "กรุณากรอกเรื่อง";
       hasErrors = true;
     }
@@ -320,14 +400,19 @@ const SearchComplaints = () => {
     // เลข สป.กค. *
     if (
       !step3Data.referenceNumber1 ||
-      step3Data.referenceNumber1.trim() === ""
+      (typeof step3Data.referenceNumber1 === "string" &&
+        step3Data.referenceNumber1.trim() === "")
     ) {
       errors.referenceNumber1 = "กรุณากรอกเลข สป.กค.";
       hasErrors = true;
     }
 
     // วันที่ (referenceDate1) *
-    if (!step3Data.referenceDate1 || step3Data.referenceDate1.trim() === "") {
+    if (
+      !step3Data.referenceDate1 ||
+      (typeof step3Data.referenceDate1 === "string" &&
+        step3Data.referenceDate1.trim() === "")
+    ) {
       errors.referenceDate1 = "กรุณาเลือกวันที่";
       hasErrors = true;
     }
@@ -335,14 +420,19 @@ const SearchComplaints = () => {
     // เลข สตป. *
     if (
       !step3Data.referenceNumber3 ||
-      step3Data.referenceNumber3.trim() === ""
+      (typeof step3Data.referenceNumber3 === "string" &&
+        step3Data.referenceNumber3.trim() === "")
     ) {
       errors.referenceNumber3 = "กรุณากรอกเลข สตป.";
       hasErrors = true;
     }
 
     // วันที่ (referenceDate3) *
-    if (!step3Data.referenceDate3 || step3Data.referenceDate3.trim() === "") {
+    if (
+      !step3Data.referenceDate3 ||
+      (typeof step3Data.referenceDate3 === "string" &&
+        step3Data.referenceDate3.trim() === "")
+    ) {
       errors.referenceDate3 = "กรุณาเลือกวันที่";
       hasErrors = true;
     }
@@ -350,23 +440,36 @@ const SearchComplaints = () => {
     // เลข สรร. (สารบัญ) *
     if (
       !step3Data.referenceNumber4 ||
-      step3Data.referenceNumber4.trim() === ""
+      (typeof step3Data.referenceNumber4 === "string" &&
+        step3Data.referenceNumber4.trim() === "")
     ) {
       errors.referenceNumber4 = "กรุณากรอกเลข สรร. (สารบัญ)";
       hasErrors = true;
     }
 
     // วันที่ (referenceDate4) *
-    if (!step3Data.referenceDate4 || step3Data.referenceDate4.trim() === "") {
+    if (
+      !step3Data.referenceDate4 ||
+      (typeof step3Data.referenceDate4 === "string" &&
+        step3Data.referenceDate4.trim() === "")
+    ) {
       errors.referenceDate4 = "กรุณาเลือกวันที่";
       hasErrors = true;
     }
 
     // เจ้าหน้าที่ผู้รับผิดชอบ *
-    if (
-      !step4Data.responsibleOfficer ||
-      step4Data.responsibleOfficer.trim() === ""
+    let responsibleOfficerValue = "";
+    if (typeof step4Data.responsibleOfficer === "string") {
+      responsibleOfficerValue = step4Data.responsibleOfficer;
+    } else if (
+      typeof step4Data.responsibleOfficer === "object" &&
+      step4Data.responsibleOfficer !== null
     ) {
+      // กรณี object (เช่น { id: "...", ... })
+      responsibleOfficerValue = step4Data.responsibleOfficer.id || "";
+    }
+
+    if (!responsibleOfficerValue || responsibleOfficerValue.trim() === "") {
       errors.responsibleOfficer = "กรุณาเลือกเจ้าหน้าที่ผู้รับผิดชอบ";
       hasErrors = true;
     }
@@ -393,7 +496,6 @@ const SearchComplaints = () => {
 
   const handleSubmit = () => {
     const isValid = validateForm();
-
     if (!isValid) {
       alertError(
         "ข้อมูลไม่ครบถ้วน",
@@ -470,13 +572,12 @@ const SearchComplaints = () => {
       },
     };
 
-    router.push({
-      pathname: "/admin/edit/search/Filteromplaints/SearchComplaintsPreview",
-      query: {
-        id: defaultData?.id,
-        data: JSON.stringify(submitData),
-      },
-    });
+    router.push(
+      `/admin/edit/search/Filteromplaints/${defaultData?.id}?preview`,
+      undefined,
+      { shallow: true }
+    );
+    setPreviewData(submitData);
   };
 
   // เปลี่ยนชื่อฟังก์ชันเพื่อแยกจาก dropdown
@@ -524,7 +625,74 @@ const SearchComplaints = () => {
     }
   };
 
-  // Loading state
+  // useEffect subComplaintTypes
+  useEffect(() => {
+    const complaintTypeId = step3Methods.watch("complaintType");
+    if (complaintTypeId) {
+      setSubComplaintTypesLoading(true);
+      getSubComplaintTypeById(complaintTypeId)
+        .then((res) => {
+          if (
+            res?.res_code === "0000" &&
+            res.res_data &&
+            Array.isArray(res.res_data.items)
+          ) {
+            setSubComplaintTypes(
+              res.res_data.items.map((item) => ({
+                value: item.id,
+                label: item.name,
+              }))
+            );
+          } else {
+            setSubComplaintTypes([]);
+          }
+          step3Methods.setValue("complaintSubType", "");
+        })
+        .catch(() => setSubComplaintTypes([]))
+        .finally(() => setSubComplaintTypesLoading(false));
+    } else {
+      setSubComplaintTypes([]);
+      step3Methods.setValue("complaintSubType", "");
+      setSubComplaintTypesLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step3Methods.watch("complaintType")]);
+
+  const complaintType = step3Methods.watch("complaintType");
+
+  useEffect(() => {
+    if (previewData) {
+      generalMethods.reset(previewData?.step1?.general?.general || {});
+      delegateMethods.reset(previewData?.step1?.general?.delegate || {});
+      step2Methods.reset(previewData?.step2?.general?.individual || {});
+      step3Methods.reset(previewData?.step3?.general || {});
+
+      // Fix responsibleOfficer to be id only
+      const previewStep4 = previewData?.step4?.general || {};
+      let responsibleOfficerValue = "";
+      if (typeof previewStep4.responsibleOfficer === "string") {
+        responsibleOfficerValue = previewStep4.responsibleOfficer;
+      } else if (
+        previewStep4.responsibleOfficer &&
+        typeof previewStep4.responsibleOfficer === "object"
+      ) {
+        responsibleOfficerValue =
+          previewStep4.responsibleOfficer.id ||
+          previewStep4.responsibleOfficer.value ||
+          "";
+      }
+
+      step4Methods.reset({
+        ...previewStep4,
+        responsibleOfficer: responsibleOfficerValue,
+      });
+
+      setComplaintFilingType(
+        previewData?.step3?.general?.complaintFilingType || "new"
+      );
+    }
+  }, [previewData]);
+
   if (loading) {
     return (
       <>
@@ -542,7 +710,6 @@ const SearchComplaints = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <>
@@ -566,6 +733,48 @@ const SearchComplaints = () => {
     );
   }
 
+  if (previewMode) {
+    if (!defaultData && !previewData) {
+      return (
+        <div className={styles.loadingContainer}>
+          <div className={styles.spinner}></div>
+          <p>กำลังโหลดข้อมูล...</p>
+        </div>
+      );
+    }
+
+    const baseData = previewData || defaultData;
+    const complaintTypeId = baseData?.step3?.general?.complaintType || "";
+    const complaintTypeLabel =
+      complaintTypes.find((t) => t.value === complaintTypeId)?.label || "";
+
+    // ดึงข้อมูลประเภทเรื่องย่อย (subType)
+    const complaintSubTypeId = baseData?.step3?.general?.complaintSubType || "";
+    const complaintSubTypeLabel =
+      subComplaintTypes.find((t) => t.value === complaintSubTypeId)?.label ||
+      "";
+
+    const previewPayload = {
+      ...baseData,
+      complaintTypeId,
+      complaintTypeLabel,
+      complaintSubTypeId,
+      complaintSubTypeLabel,
+    };
+    return (
+      <SearchComplaintsPreview
+        data={previewPayload}
+        onBack={() => {
+          setPreviewData(null);
+          router.replace(
+            `/admin/edit/search/Filteromplaints/${defaultData?.id}`,
+            undefined,
+            { shallow: true }
+          );
+        }}
+      />
+    );
+  }
   return (
     <>
       <BreadcrumbsService items={breadcrumbItems} />
@@ -741,6 +950,7 @@ const SearchComplaints = () => {
                               ? styles.errorField
                               : ""
                           }
+                          // ไม่ควรมี defaultValue เป็น label ให้ใช้ id เสมอ
                         >
                           <option value="">เลือกประเภทเรื่องร้องเรียน</option>
                           {complaintTypes.map((type) => (
@@ -770,10 +980,21 @@ const SearchComplaints = () => {
                               ? styles.errorField
                               : ""
                           }
+                          disabled={!complaintType || subComplaintTypesLoading} // <---- **ต้องแก้ตรงนี้**
                         >
-                          <option value="">เลือกประเภทเรื่องย่อย</option>
-                          <option value="suggestion">ข้อเสนอแนะ</option>
-                          <option value="complaint">ข้อร้องเรียน</option>
+                          <option value="">
+                            {!complaintType
+                              ? "กรุณาเลือกประเภทเรื่องร้องเรียนก่อน"
+                              : subComplaintTypesLoading
+                              ? "กำลังโหลด..."
+                              : "เลือกประเภทเรื่องย่อย"}
+                          </option>
+                          {subComplaintTypes.length > 0 &&
+                            subComplaintTypes.map((type) => (
+                              <option key={type.value} value={type.value}>
+                                {type.label}
+                              </option>
+                            ))}
                         </select>
                         {hasFieldError("complaintSubType") && (
                           <span className={styles.errorText}>

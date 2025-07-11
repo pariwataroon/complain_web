@@ -15,7 +15,11 @@ import { alertError } from "@utils/Alerts";
 import { validateEmail } from "@utils/emailValidation";
 
 const processComponents = [Tab1, Tab2, Tab3, Tab4, Tab5];
-const stepLabels = ["ข้อมูลผู้ร้องทุกข์", "ข้อมูลผู้ถูกร้องทุกข์", "รายละเอียดเรื่องร้องทุกข์"];
+const stepLabels = [
+  "ข้อมูลผู้ร้องทุกข์",
+  "ข้อมูลผู้ถูกร้องทุกข์",
+  "รายละเอียดเรื่องร้องทุกข์",
+];
 
 export default function ComplaintComponent() {
   const [activeStep, setActiveStep] = useState(0);
@@ -40,26 +44,24 @@ export default function ComplaintComponent() {
   } = useComplaintForm();
 
   const hasValue = useCallback((value) => {
-   
-
     if (Array.isArray(value)) {
       if (value.length === 0) {
         return false;
       }
 
-      const validFiles = value.filter(file => {
+      const validFiles = value.filter((file) => {
         const isFile = file instanceof File;
-        const isValidObject = file &&
-          typeof file === 'object' &&
+        const isValidObject =
+          file &&
+          typeof file === "object" &&
           (file.name || file.size) &&
           Object.keys(file).length > 1;
-
 
         return isFile || isValidObject;
       });
 
       const result = validFiles.length > 0;
-     
+
       return result;
     }
 
@@ -109,9 +111,11 @@ export default function ComplaintComponent() {
         if (!hasValue(idCardValue)) {
           errors[`general.idCard`] = "กรุณากรอก เลขบัตรประชาชน ของผู้ร้องทุกข์";
         } else if (idCardValue.length !== 13) {
-          errors[`general.idCard`] = "กรุณากรอกเลขบัตรประจำตัวประชาชนให้ครบ 13 หลัก ของผู้ร้องทุกข์";
+          errors[`general.idCard`] =
+            "กรุณากรอกเลขบัตรประจำตัวประชาชนให้ครบ 13 หลัก ของผู้ร้องทุกข์";
         } else if (!/^\d{13}$/.test(idCardValue)) {
-          errors[`general.idCard`] = "เลขบัตรประจำตัวประชาชนต้องเป็นตัวเลขเท่านั้น ของผู้ร้องทุกข์";
+          errors[`general.idCard`] =
+            "เลขบัตรประจำตัวประชาชนต้องเป็นตัวเลขเท่านั้น ของผู้ร้องทุกข์";
         }
 
         const generalFields = [
@@ -125,10 +129,12 @@ export default function ComplaintComponent() {
           { key: "email", label: "อีเมล" },
         ];
 
-        generalFields.forEach(field => {
+        generalFields.forEach((field) => {
           const value = data?.general?.[field.key];
           if (!hasValue(value)) {
-            errors[`general.${field.key}`] = `กรุณากรอก ${field.label} ของผู้ร้องทุกข์`;
+            errors[
+              `general.${field.key}`
+            ] = `กรุณากรอก ${field.label} ของผู้ร้องทุกข์`;
           }
         });
 
@@ -141,15 +147,17 @@ export default function ComplaintComponent() {
         } else {
           errors[`general.email`] = "กรุณากรอกอีเมล ของผู้ร้องทุกข์";
         }
-
       } else if (currentTab === 1) {
         const corpIdCardValue = data?.corporate?.idCard;
         if (!hasValue(corpIdCardValue)) {
-          errors[`corporate.idCard`] = "กรุณากรอก เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคล ของนิติบุคคล";
+          errors[`corporate.idCard`] =
+            "กรุณากรอก เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคล ของนิติบุคคล";
         } else if (corpIdCardValue.length !== 13) {
-          errors[`corporate.idCard`] = "กรุณากรอกเลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลให้ครบ 13 หลัก ของนิติบุคคล";
+          errors[`corporate.idCard`] =
+            "กรุณากรอกเลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลให้ครบ 13 หลัก ของนิติบุคคล";
         } else if (!/^\d{13}$/.test(corpIdCardValue)) {
-          errors[`corporate.idCard`] = "เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลต้องเป็นตัวเลขเท่านั้น ของนิติบุคคล";
+          errors[`corporate.idCard`] =
+            "เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลต้องเป็นตัวเลขเท่านั้น ของนิติบุคคล";
         }
 
         const corpFields = [
@@ -163,10 +171,12 @@ export default function ComplaintComponent() {
           { key: "email", label: "อีเมล" },
         ];
 
-        corpFields.forEach(field => {
+        corpFields.forEach((field) => {
           const value = data?.corporate?.[field.key];
           if (!hasValue(value)) {
-            errors[`corporate.${field.key}`] = `กรุณากรอก ${field.label} ของนิติบุคคล`;
+            errors[
+              `corporate.${field.key}`
+            ] = `กรุณากรอก ${field.label} ของนิติบุคคล`;
           }
         });
 
@@ -265,8 +275,6 @@ export default function ComplaintComponent() {
 
     // STEP 3: รายละเอียดเรื่องร้องทุกข์
     if (activeStep === 2) {
-      
-
       if (!hasValue(data.subject)) {
         errors.subject = "กรุณากรอกชื่อเรื่อง";
       }
@@ -282,8 +290,6 @@ export default function ComplaintComponent() {
       if (!hasValue(data.complaintType)) {
         errors.complaintType = "กรุณาเลือกประเภทเรื่องราวร้องทุกข์";
       }
-
-     
     }
 
     return { errors, isValid: Object.keys(errors).length === 0 };
@@ -305,7 +311,6 @@ export default function ComplaintComponent() {
 
     return true;
   }, [activeStep, tabStates, formData, hasValue]);
-
 
   const handleNext = async () => {
     const isValid = await validateStepForSubmit();
@@ -335,9 +340,9 @@ export default function ComplaintComponent() {
   };
 
   const handleTabChange = (stepKey, tabIndex) => {
-    setTabStates(prev => ({
+    setTabStates((prev) => ({
       ...prev,
-      [stepKey]: tabIndex
+      [stepKey]: tabIndex,
     }));
     if (shouldShowValidation) {
       setShouldShowValidation(false);
@@ -387,7 +392,14 @@ export default function ComplaintComponent() {
                 />
               )}
 
-              <Box sx={{ display: "flex", justifyContent: "center", mt: 4, gap: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  mt: 4,
+                  gap: 2,
+                }}
+              >
                 {activeStep === 4 ? (
                   <>
                     <ButtonService
@@ -417,17 +429,16 @@ export default function ComplaintComponent() {
                       />
                     )}
                     <ButtonService
-                      label={
-                        activeStep === 3
-                          ? "ส่งเรื่องร้องทุกข์"
-                          : "ถัดไป"
-                      }
+                      label={activeStep === 3 ? "ส่งเรื่องร้องทุกข์" : "ถัดไป"}
                       color="ถัดไป"
                       variant="contained"
                       onClick={() => {
                         if (activeStep === 3) {
                           if (!acceptSubmit) {
-                            alertError("ไม่สามารถส่งได้", "กรุณายอมรับเงื่อนไขก่อนส่งเรื่องร้องทุกข์");
+                            alertError(
+                              "ไม่สามารถส่งได้",
+                              "กรุณายอมรับเงื่อนไขก่อนส่งเรื่องร้องทุกข์"
+                            );
                             return;
                           }
                           handleNext();

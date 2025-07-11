@@ -166,7 +166,6 @@ const ComplainantQuestionsComponent = () => {
           style={{ width: "24px", height: "24px", marginBottom: "-8px" }}
         />
       ),
-      url: "/admin",
     },
   ];
 

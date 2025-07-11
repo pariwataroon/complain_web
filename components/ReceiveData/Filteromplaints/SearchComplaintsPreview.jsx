@@ -1,11 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/router";
-import {
-  Box,
-  Paper,
-  Typography,
-  Grid,
-} from "@mui/material";
+import { Box, Paper, Typography, Grid } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ImageIcon from "@mui/icons-material/Image";
@@ -15,7 +10,12 @@ import ButtonService from "@services/ButtonService/ButtonService";
 import { GetComplaintByID } from "@pages/api/complaint/complaint";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import {
-  formatThaiDate, formatThaiDateTime, formatPhoneNumber_null, formatCitizenId_null, formatThaiFullDate, formatThaiFullDateTime
+  formatThaiDate,
+  formatThaiDateTime,
+  formatPhoneNumber_null,
+  formatCitizenId_null,
+  formatThaiFullDate,
+  formatThaiFullDateTime,
 } from "@utils/Formats";
 import CheckIcon from "@mui/icons-material/Check";
 import { exportElementToPDF } from "@utils/exportPDF";
@@ -27,10 +27,15 @@ import {
   showConfirm,
 } from "@utils/Alerts";
 import useFilteromplaintsPreview from "@hooks/admin/websitecomplaints/useFilteromplaintsPreview";
-import { GetAllSelectComplaintTypes, UsersSearchByRole } from "@pages/api/allselect/allselect";
+import {
+  GetAllSelectComplaintTypes,
+  UsersSearchByRole,
+} from "@pages/api/allselect/allselect";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
+const SearchComplaintsPreview = ({ data, onBack }) => {
+  console.log("data", data);
 
-const SearchComplaintsPreview = () => {
   const router = useRouter();
 
   const id = useMemo(() => {
@@ -61,11 +66,8 @@ const SearchComplaintsPreview = () => {
 
   const pdfRef = useRef();
 
-  const {
-    handleUpdateAssignment,
-    isSubmitting,
-    preparedFormData
-  } = useFilteromplaintsPreview();
+  const { handleUpdateAssignment, isSubmitting, preparedFormData } =
+    useFilteromplaintsPreview();
 
   const breadcrumbItems = [
     {
@@ -88,7 +90,9 @@ const SearchComplaintsPreview = () => {
     },
     {
       label: "แบบรับคำร้องเรียน / ร้องทุกข์กระทรวง",
-      url: id ? `/admin/edit/search/Filteromplaints/${id}` : "/admin/edit/website-complaints/SearchComplaints"
+      url: id
+        ? `/admin/edit/search/Filteromplaints/${id}`
+        : "/admin/edit/website-complaints/SearchComplaints",
     },
     { label: "ตัวอย่างเอกสาร" },
   ];
@@ -145,7 +149,6 @@ const SearchComplaintsPreview = () => {
       }
 
       try {
-
         // ลองดึงข้อมูลจาก query parameter ก่อน (กรณีส่งมาจากหน้าแก้ไข)
         if (router.query.data) {
           const data = JSON.parse(router.query.data);
@@ -153,14 +156,14 @@ const SearchComplaintsPreview = () => {
           setFormData(data);
           setLoading(false);
           console.log({ data });
-          
+
           return;
         }
 
         // ถ้าไม่มีข้อมูลใน query ให้เรียก API
         const response = await GetComplaintByID(id);
 
-        if (response?.res_code === "0001" && response?.res_data) {
+        if (response?.res_code === "0000" && response?.res_data) {
           setFormData(response.res_data);
         } else {
           throw new Error(response?.res_desc || "ไม่สามารถดึงข้อมูลได้");
@@ -176,15 +179,49 @@ const SearchComplaintsPreview = () => {
     fetchData();
   }, [id, router.query.data]);
 
+  function prepareFormDataForAssignment(formData, dataFromProps) {
+    // ใช้ dataFromProps เป็นหลัก
+    const baseData = dataFromProps || formData || {};
+    const step4General = baseData?.step4?.general || {};
+
+    // ดึง responsibleOfficer จาก data จาก props
+    let ro = step4General.responsibleOfficer;
+    let responsibleOfficerValue = "";
+    if (typeof ro === "object" && ro !== null) {
+      responsibleOfficerValue = ro.id || ro.value || "";
+    } else if (typeof ro === "string") {
+      responsibleOfficerValue = ro;
+    }
+    console.log("DEBUG responsibleOfficer raw:", ro);
+    console.log(
+      ">> responsibleOfficerId (before submit):",
+      responsibleOfficerValue
+    );
+
+    // ดึง complaintTypeId จาก props (root level)
+    const complaintTypeId = baseData.complaintTypeId || "";
+
+    return {
+      ...baseData,
+      complaintTypeId, // แนบไว้ที่ root ส่งไป backend
+      step4: {
+        ...baseData.step4,
+        general: {
+          ...step4General,
+          responsibleOfficer: responsibleOfficerValue,
+          responsibleOfficerId: responsibleOfficerValue,
+        },
+      },
+    };
+  }
 
   const handleSubmit = async () => {
-
     if (!id) {
       alertError("ข้อผิดพลาด", "ไม่พบ ID เรื่องร้องทุกข์");
       return;
     }
 
-    if (!formData) {
+    if (!formData && !data) {
       alertError("ข้อผิดพลาด", "ไม่พบข้อมูลที่จะส่ง");
       return;
     }
@@ -194,22 +231,32 @@ const SearchComplaintsPreview = () => {
       return;
     }
 
+    // เตรียมข้อมูลก่อนส่ง โดย responsibleOfficerId = assigned_officer_id ที่จะถูกใช้ใน preparedData
+    // ลองใช้ formData ถ้าไม่มีให้ fallback ไป data (prop)
+    const preparedFormData = prepareFormDataForAssignment(
+      formData || data,
+      data
+    );
+
     setSubmitting(true);
 
     try {
+      await handleUpdateAssignment(id, preparedFormData, userInfo);
 
-
-      await handleUpdateAssignment(id, formData, userInfo);
-
-      alertSuccess("บันทึกสำเร็จ", "ข้อมูลได้รับการบันทึกและดำเนินการเสร็จสิ้นแล้ว");
+      alertSuccess(
+        "บันทึกสำเร็จ",
+        "ข้อมูลได้รับการบันทึกและดำเนินการเสร็จสิ้นแล้ว"
+      );
 
       setTimeout(() => {
         router.push("/admin/edit/website-complaints");
       }, 1500);
-
     } catch (error) {
       console.error("Error submitting form:", error);
-      alertError("ข้อผิดพลาด", error.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+      alertError(
+        "ข้อผิดพลาด",
+        error.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล"
+      );
     } finally {
       setSubmitting(false);
     }
@@ -219,7 +266,12 @@ const SearchComplaintsPreview = () => {
     return (
       <>
         <BreadcrumbsService items={breadcrumbItems} />
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <Typography>กำลังโหลดข้อมูล...</Typography>
         </Box>
       </>
@@ -230,7 +282,13 @@ const SearchComplaintsPreview = () => {
     return (
       <>
         <BreadcrumbsService items={breadcrumbItems} />
-        <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          flexDirection="column"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <Typography color="error" variant="h6" gutterBottom>
             เกิดข้อผิดพลาด
           </Typography>
@@ -249,7 +307,12 @@ const SearchComplaintsPreview = () => {
     return (
       <>
         <BreadcrumbsService items={breadcrumbItems} />
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <Typography color="error">ไม่พบข้อมูลที่ต้องการแสดง</Typography>
         </Box>
       </>
@@ -263,14 +326,14 @@ const SearchComplaintsPreview = () => {
     step4 = {},
     updated_by,
     updated_at,
-    created_at
+    created_at,
   } = formData;
 
   // ข้อมูลจาก step1 (ผู้ร้องทุกข์)
   const complainant = step1.general?.general || {};
   const delegate = step1.general?.delegate || {};
 
-  // ข้อมูลจาก step2 (ผู้ถูกร้องเรียน)  
+  // ข้อมูลจาก step2 (ผู้ถูกร้องเรียน)
   const respondent = step2.general?.individual || {};
 
   // ข้อมูลจาก step3 (เรื่องร้องทุกข์)
@@ -287,9 +350,7 @@ const SearchComplaintsPreview = () => {
         <Box component="span" fontWeight="bold">
           {label}:
         </Box>{" "}
-        {typeof value === "object"
-          ? value?.label || "-"
-          : value || "-"}
+        {typeof value === "object" ? value?.label || "-" : value || "-"}
       </Typography>
     </Grid>
   );
@@ -319,11 +380,11 @@ const SearchComplaintsPreview = () => {
     return (bytes / (1024 * 1024)).toFixed(2);
   };
 
-
   // Current user name for display
-  const currentUserName = userInfo ?
-    `${userInfo.first_name || ""} ${userInfo.last_name || ""}`.trim() || "ผู้ใช้ไม่ระบุชื่อ" :
-    "กำลังโหลด...";
+  const currentUserName = userInfo
+    ? `${userInfo.first_name || ""} ${userInfo.last_name || ""}`.trim() ||
+      "ผู้ใช้ไม่ระบุชื่อ"
+    : "กำลังโหลด...";
 
   return (
     <>
@@ -362,19 +423,16 @@ const SearchComplaintsPreview = () => {
                 />
                 <InfoItem
                   label="ประเภทเรื่องร้องทุกข์"
-                  value={complaint.complaintTypeData?.id || "-"}
+                  value={complaint.complaintType || "-"}
                 />
                 <InfoItem
                   label="ประเภทเรื่องย่อย"
-                  value={complaint.complaintTypeData?.id || "-"}
+                  value={data.complaintSubTypeLabel || "-"}
                 />
-                <InfoItem
-                  label="เรื่อง"
-                  value={complaint.subject || "-"}
-                />
+                <InfoItem label="เรื่อง" value={complaint.subject || "-"} />
                 <InfoItem
                   label="ช่องทางเรื่องร้องเรียน"
-                  value={complaint.complaintChannel || "-"}
+                  value={data.step3.general.complaintChannel || "-"}
                 />
               </Grid>
             </Grid>
@@ -390,7 +448,12 @@ const SearchComplaintsPreview = () => {
             />
 
             {/* ผู้ร้องทุกข์ */}
-            <Typography variant="subtitle1" fontWeight="bold" fontSize={20} gutterBottom>
+            <Typography
+              variant="subtitle1"
+              fontWeight="bold"
+              fontSize={20}
+              gutterBottom
+            >
               ข้อมูลผู้ร้องทุกข์
             </Typography>
             <Grid container spacing={2} mb={3}>
@@ -398,18 +461,9 @@ const SearchComplaintsPreview = () => {
                 label="หมายเลขประจำตัวประชาชน"
                 value={formatCitizenId_null(complainant.idCard)}
               />
-              <InfoItem
-                label="คำนำหน้า"
-                value={complainant.title || "-"}
-              />
-              <InfoItem
-                label="ชื่อ"
-                value={complainant.firstName || "-"}
-              />
-              <InfoItem
-                label="นามสกุล"
-                value={complainant.lastName || "-"}
-              />
+              <InfoItem label="คำนำหน้า" value={complainant.title || "-"} />
+              <InfoItem label="ชื่อ" value={complainant.firstName || "-"} />
+              <InfoItem label="นามสกุล" value={complainant.lastName || "-"} />
               <InfoItem
                 label="ที่อยู่ที่ติดต่อได้"
                 value={complainant.address || "-"}
@@ -418,22 +472,13 @@ const SearchComplaintsPreview = () => {
                 label="ตำบล/แขวง"
                 value={complainant.subdistrict || "-"}
               />
-              <InfoItem
-                label="อำเภอ/เขต"
-                value={complainant.district || "-"}
-              />
-              <InfoItem
-                label="จังหวัด"
-                value={complainant.province || "-"}
-              />
+              <InfoItem label="อำเภอ/เขต" value={complainant.district || "-"} />
+              <InfoItem label="จังหวัด" value={complainant.province || "-"} />
               <InfoItem
                 label="รหัสไปรษณีย์"
                 value={complainant.zipcode || "-"}
               />
-              <InfoItem
-                label="อีเมล"
-                value={complainant.email || "-"}
-              />
+              <InfoItem label="อีเมล" value={complainant.email || "-"} />
               <InfoItem
                 label="หมายเลขโทรศัพท์"
                 value={formatPhoneNumber_null(complainant.phone)}
@@ -443,7 +488,12 @@ const SearchComplaintsPreview = () => {
             {/* ผู้รับมอบอำนาจร้องเรียน */}
             {delegate && Object.keys(delegate).length > 0 && (
               <>
-                <Typography variant="subtitle1" fontWeight="bold" fontSize={18} gutterBottom>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight="bold"
+                  fontSize={18}
+                  gutterBottom
+                >
                   ผู้รับมอบอำนาจร้องเรียน
                 </Typography>
                 <Grid container spacing={2} mb={3}>
@@ -451,18 +501,9 @@ const SearchComplaintsPreview = () => {
                     label="หมายเลขประจำตัวประชาชน"
                     value={formatCitizenId_null(delegate.idCard)}
                   />
-                  <InfoItem
-                    label="คำนำหน้า"
-                    value={delegate.title || "-"}
-                  />
-                  <InfoItem
-                    label="ชื่อ"
-                    value={delegate.firstName || "-"}
-                  />
-                  <InfoItem
-                    label="นามสกุล"
-                    value={delegate.lastName || "-"}
-                  />
+                  <InfoItem label="คำนำหน้า" value={delegate.title || "-"} />
+                  <InfoItem label="ชื่อ" value={delegate.firstName || "-"} />
+                  <InfoItem label="นามสกุล" value={delegate.lastName || "-"} />
                   <InfoItem
                     label="ที่อยู่ที่ติดต่อได้"
                     value={delegate.address || "-"}
@@ -475,18 +516,12 @@ const SearchComplaintsPreview = () => {
                     label="อำเภอ/เขต"
                     value={delegate.district || "-"}
                   />
-                  <InfoItem
-                    label="จังหวัด"
-                    value={delegate.province || "-"}
-                  />
+                  <InfoItem label="จังหวัด" value={delegate.province || "-"} />
                   <InfoItem
                     label="รหัสไปรษณีย์"
                     value={delegate.zipcode || "-"}
                   />
-                  <InfoItem
-                    label="อีเมล"
-                    value={delegate.email || "-"}
-                  />
+                  <InfoItem label="อีเมล" value={delegate.email || "-"} />
                   <InfoItem
                     label="หมายเลขโทรศัพท์"
                     value={formatPhoneNumber_null(delegate.phone)}
@@ -506,7 +541,12 @@ const SearchComplaintsPreview = () => {
             />
 
             {/* ผู้ถูกร้องเรียน */}
-            <Typography variant="subtitle1" fontWeight="bold" fontSize={20} gutterBottom>
+            <Typography
+              variant="subtitle1"
+              fontWeight="bold"
+              fontSize={20}
+              gutterBottom
+            >
               ข้อมูลผู้ถูกร้องเรียน
             </Typography>
             <Grid container spacing={2} mb={3}>
@@ -514,18 +554,9 @@ const SearchComplaintsPreview = () => {
                 label="หมายเลขประจำตัวประชาชน"
                 value={formatCitizenId_null(respondent.idCard)}
               />
-              <InfoItem
-                label="คำนำหน้า"
-                value={respondent.title || "-"}
-              />
-              <InfoItem
-                label="ชื่อ"
-                value={respondent.firstName || "-"}
-              />
-              <InfoItem
-                label="นามสกุล"
-                value={respondent.lastName || "-"}
-              />
+              <InfoItem label="คำนำหน้า" value={respondent.title || "-"} />
+              <InfoItem label="ชื่อ" value={respondent.firstName || "-"} />
+              <InfoItem label="นามสกุล" value={respondent.lastName || "-"} />
               <InfoItem
                 label="ที่อยู่ที่ติดต่อได้"
                 value={respondent.address || "-"}
@@ -534,22 +565,13 @@ const SearchComplaintsPreview = () => {
                 label="ตำบล/แขวง"
                 value={respondent.subdistrict || "-"}
               />
-              <InfoItem
-                label="อำเภอ/เขต"
-                value={respondent.district || "-"}
-              />
-              <InfoItem
-                label="จังหวัด"
-                value={respondent.province || "-"}
-              />
+              <InfoItem label="อำเภอ/เขต" value={respondent.district || "-"} />
+              <InfoItem label="จังหวัด" value={respondent.province || "-"} />
               <InfoItem
                 label="รหัสไปรษณีย์"
                 value={respondent.zipcode || "-"}
               />
-              <InfoItem
-                label="อีเมล"
-                value={respondent.email || "-"}
-              />
+              <InfoItem label="อีเมล" value={respondent.email || "-"} />
               <InfoItem
                 label="หมายเลขโทรศัพท์"
                 value={formatPhoneNumber_null(respondent.phone)}
@@ -567,7 +589,12 @@ const SearchComplaintsPreview = () => {
             />
 
             {/* ข้อมูลเรื่องร้องทุกข์ */}
-            <Typography variant="subtitle1" fontWeight="bold" fontSize={20} gutterBottom>
+            <Typography
+              variant="subtitle1"
+              fontWeight="bold"
+              fontSize={20}
+              gutterBottom
+            >
               ข้อมูลเรื่องร้องทุกข์
             </Typography>
             <Grid container spacing={2} mb={3}>
@@ -625,13 +652,12 @@ const SearchComplaintsPreview = () => {
               />
               <InfoItem
                 label="ประเภทเรื่องร้องเรียน"
-                value={complaint.complaintTypeData?.id || "-" }
+                value={complaint.complaintTypeData?.id || "-"}
               />
               <InfoItem
                 label="วันและเวลาที่เกิดเหตุ"
                 value={formatThaiDateTime(additionalDetails.incidentDateTime)}
               />
-
             </Grid>
             <Grid item xs={12} mb={3}>
               <InfoItem
@@ -644,11 +670,15 @@ const SearchComplaintsPreview = () => {
             <Grid container spacing={2} mb={3}>
               <InfoItem
                 label="วันที่รับเรื่องของเจ้าพนักงาน"
-                value={formatThaiFullDateTime(additionalDetails.officerReceivedDate || "-")}
+                value={formatThaiFullDateTime(
+                  additionalDetails.officerReceivedDate || "-"
+                )}
               />
               <InfoItem
                 label="วันที่เสนองาน ผอ.สรร."
-                value={formatThaiFullDateTime(additionalDetails.directorSubmittedDate || "-")}
+                value={formatThaiFullDateTime(
+                  additionalDetails.directorSubmittedDate || "-"
+                )}
               />
             </Grid>
 
@@ -675,14 +705,14 @@ const SearchComplaintsPreview = () => {
                         mb: 1,
                         cursor: "pointer",
                         "&:hover": {
-                          backgroundColor: "#f5f5f5"
-                        }
+                          backgroundColor: "#f5f5f5",
+                        },
                       }}
-                      onClick={() => window.open(file.fileUrl, '_blank')}
+                      onClick={() => window.open(file.fileUrl, "_blank")}
                     >
                       {getFileIcon(ext)}
                       <Typography fontSize={14} color="text.secondary">
-                        {file.fileName} {fileSizeMB} MB 
+                        {file.fileName} {fileSizeMB} MB
                       </Typography>
                     </Box>
                   );
@@ -713,7 +743,8 @@ const SearchComplaintsPreview = () => {
             <Grid container spacing={2} mb={3}>
               <Grid item xs={6}>
                 <Typography fontSize={16} fontWeight="bold">
-                  ลงชื่อผู้ร้องทุกข์: {complainant.firstName} {complainant.lastName}
+                  ลงชื่อผู้ร้องทุกข์: {complainant.firstName}{" "}
+                  {complainant.lastName}
                 </Typography>
                 <Typography fontSize={14} color="text.secondary">
                   วันที่: {formatThaiDate(created_at || updated_at)}
@@ -722,7 +753,8 @@ const SearchComplaintsPreview = () => {
               {delegate && Object.keys(delegate).length > 0 && (
                 <Grid item xs={6}>
                   <Typography fontSize={16} fontWeight="bold">
-                    ลงชื่อผู้รับมอบอำนาจ: {delegate.firstName} {delegate.lastName}
+                    ลงชื่อผู้รับมอบอำนาจ: {delegate.firstName}{" "}
+                    {delegate.lastName}
                   </Typography>
                   <Typography fontSize={14} color="text.secondary">
                     วันที่: {formatThaiDate(created_at || updated_at)}
@@ -742,14 +774,14 @@ const SearchComplaintsPreview = () => {
               </Grid>
               <Grid item xs={6}>
                 <Typography fontSize={16} fontWeight="bold">
-                  ลงชื่อเจ้าหน้าที่ผู้รับผิดชอบ: {additionalDetails.responsibleOfficer?.fullName || ""}
+                  ลงชื่อเจ้าหน้าที่ผู้รับผิดชอบ:{" "}
+                  {additionalDetails.responsibleOfficer?.fullName || ""}
                 </Typography>
                 <Typography fontSize={14} color="text.secondary">
                   วันที่: {formatThaiDate(new Date().toISOString())}
                 </Typography>
               </Grid>
             </Grid>
-
           </Paper>
         </Box>
       </div>
@@ -765,6 +797,21 @@ const SearchComplaintsPreview = () => {
           gap: 2,
         }}
       >
+        <ButtonService
+          label="ย้อนกลับ"
+          color="secondary"
+          variant="outlined"
+          onClick={() => {
+            if (onBack) {
+              onBack();
+            } else {
+              // fallback: ถ้าไม่มี onBack prop ให้ถอยกลับ
+              router.back();
+            }
+          }}
+          iconLeft={<ArrowBackIcon />}
+          disabled={submitting || isSubmitting}
+        />
         <ButtonService
           label={submitting || isSubmitting ? "กำลังบันทึก..." : "บันทึก"}
           color="ยืนยัน"
