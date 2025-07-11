@@ -1099,16 +1099,31 @@ def get_complaints(
     if complainant_name:
         # ค้นหาในฟิลด์ต่างๆ ที่อาจมีชื่อผู้ร้องเรียน
         complainant_search_filter = or_(
+            # ค้นหาใน JSON string โดยไม่คำนึงถึงโครงสร้าง
             Complaint.complainant_data.ilike(f"%{complainant_name}%"),
-            # ค้นหาชื่อในรูปแบบต่างๆ ใน JSON
-            Complaint.complainant_data.ilike(f'%"name":"%{complainant_name}%"%'),
-            Complaint.complainant_data.ilike(f'%"firstName":"%{complainant_name}%"%'),
-            Complaint.complainant_data.ilike(f'%"lastName":"%{complainant_name}%"%'),
-            Complaint.complainant_data.ilike(f'%"fullName":"%{complainant_name}%"%'),
-            Complaint.complainant_data.ilike(f'%"companyName":"%{complainant_name}%"%'),
+            
+            # ค้นหาชื่อในรูปแบบต่างๆ ใน JSON ของ complainant_data
+            Complaint.complainant_data.ilike(f'%"name": "{complainant_name}%'),
+            Complaint.complainant_data.ilike(f'%"name":"{complainant_name}%'),
+            Complaint.complainant_data.ilike(f'%"firstName": "{complainant_name}%'),
+            Complaint.complainant_data.ilike(f'%"firstName":"{complainant_name}%'),
+            Complaint.complainant_data.ilike(f'%"lastName": "{complainant_name}%'),
+            Complaint.complainant_data.ilike(f'%"lastName":"{complainant_name}%'),
+            Complaint.complainant_data.ilike(f'%"fullName": "{complainant_name}%'),
+            Complaint.complainant_data.ilike(f'%"fullName":"{complainant_name}%'),
+            Complaint.complainant_data.ilike(f'%"companyName": "{complainant_name}%'),
+            Complaint.complainant_data.ilike(f'%"companyName":"{complainant_name}%'),
+            
             # ค้นหาใน delegate_data ด้วย
             Complaint.delegate_data.ilike(f"%{complainant_name}%"),
-            Complaint.delegate_data.ilike(f'%"name":"%{complainant_name}%"%')
+            Complaint.delegate_data.ilike(f'%"name": "{complainant_name}%'),
+            Complaint.delegate_data.ilike(f'%"name":"{complainant_name}%'),
+            
+            # ค้นหาในรูปแบบ "นาย", "นาง", "นางสาว" + ชื่อ
+            Complaint.complainant_data.ilike(f'%นาย{complainant_name}%'),
+            Complaint.complainant_data.ilike(f'%นาง{complainant_name}%'),
+            Complaint.complainant_data.ilike(f'%นางสาว{complainant_name}%'),
+            Complaint.complainant_data.ilike(f'%บุคคลทั่วไป {complainant_name}%'),
         )
         query = query.filter(complainant_search_filter)
 
@@ -2760,18 +2775,33 @@ def get_complaints_grouped_by_channel(
             )
         
         if complainant_name:
-            # ค้นหาในฟิลด์ต่างๆ ที่อาจมีชื่อผู้ร้องเรียน (เหมือนกับใน get_complaints)
+            # ค้นหาในฟิลด์ต่างๆ ที่อาจมีชื่อผู้ร้องเรียน (ใช้เงื่อนไขเดียวกับ get_complaints)
             complainant_search_filter = or_(
+                # ค้นหาใน JSON string โดยไม่คำนึงถึงโครงสร้าง
                 Complaint.complainant_data.ilike(f"%{complainant_name}%"),
-                # ค้นหาชื่อในรูปแบบต่างๆ ใน JSON
-                Complaint.complainant_data.ilike(f'%"name":"%{complainant_name}%"%'),
-                Complaint.complainant_data.ilike(f'%"firstName":"%{complainant_name}%"%'),
-                Complaint.complainant_data.ilike(f'%"lastName":"%{complainant_name}%"%'),
-                Complaint.complainant_data.ilike(f'%"fullName":"%{complainant_name}%"%'),
-                Complaint.complainant_data.ilike(f'%"companyName":"%{complainant_name}%"%'),
+                
+                # ค้นหาชื่อในรูปแบบต่างๆ ใน JSON ของ complainant_data
+                Complaint.complainant_data.ilike(f'%"name": "{complainant_name}%'),
+                Complaint.complainant_data.ilike(f'%"name":"{complainant_name}%'),
+                Complaint.complainant_data.ilike(f'%"firstName": "{complainant_name}%'),
+                Complaint.complainant_data.ilike(f'%"firstName":"{complainant_name}%'),
+                Complaint.complainant_data.ilike(f'%"lastName": "{complainant_name}%'),
+                Complaint.complainant_data.ilike(f'%"lastName":"{complainant_name}%'),
+                Complaint.complainant_data.ilike(f'%"fullName": "{complainant_name}%'),
+                Complaint.complainant_data.ilike(f'%"fullName":"{complainant_name}%'),
+                Complaint.complainant_data.ilike(f'%"companyName": "{complainant_name}%'),
+                Complaint.complainant_data.ilike(f'%"companyName":"{complainant_name}%'),
+                
                 # ค้นหาใน delegate_data ด้วย
                 Complaint.delegate_data.ilike(f"%{complainant_name}%"),
-                Complaint.delegate_data.ilike(f'%"name":"%{complainant_name}%"%')
+                Complaint.delegate_data.ilike(f'%"name": "{complainant_name}%'),
+                Complaint.delegate_data.ilike(f'%"name":"{complainant_name}%'),
+                
+                # ค้นหาในรูปแบบ "นาย", "นาง", "นางสาว" + ชื่อ
+                Complaint.complainant_data.ilike(f'%นาย{complainant_name}%'),
+                Complaint.complainant_data.ilike(f'%นาง{complainant_name}%'),
+                Complaint.complainant_data.ilike(f'%นางสาว{complainant_name}%'),
+                Complaint.complainant_data.ilike(f'%บุคคลทั่วไป {complainant_name}%'),
             )
             query = query.filter(complainant_search_filter)
 
