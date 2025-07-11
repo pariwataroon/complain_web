@@ -19,8 +19,8 @@ export const useRequestResultProgress = () => {
     subject: "",
     department: "",
     signer: "",
-    confidentiality: "",
-    urgency: "",
+    confidentiality: null,
+    urgency: null,
     attachment: "",
     note: "",
   });
@@ -79,9 +79,7 @@ export const useRequestResultProgress = () => {
     (e) => {
       const { name, value } = e.target;
       const finalValue =
-        typeof value === "object" && value !== null ? value.value || "" : value;
-
-     
+        typeof value === "object" && value !== null ? value.value : value;
 
       setForm((prev) => ({ ...prev, [name]: finalValue }));
 

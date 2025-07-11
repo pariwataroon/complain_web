@@ -35,6 +35,13 @@ const RequestResultProgress = () => {
   const [urgencyOptions, setUrgencyOptions] = useState([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
 
+  const normalizeOptions = (labelsInOrder) =>
+  labelsInOrder.map((label, idx) => ({
+    value: idx + 1,
+    label,
+  }));
+
+
   const handleSignerSelect = (userInfo) => {
     setSelectedSigner(userInfo);
     setSelectedDepartment(null);
@@ -46,41 +53,22 @@ const RequestResultProgress = () => {
   };
 
   const fetchOptions = async () => {
-    try {
-      setOptionsLoading(true);
+  try {
+    setOptionsLoading(true);
 
-      const confidentialityData = await GetOutgoingReportOptions("confidentiality_levels");
-      const urgencyData = await GetOutgoingReportOptions("urgency_levels");
+    const confidentialityLabels = ["ปกติ", "ลับ", "ลับมาก", "ลับที่สุด"];
+    const urgencyLabels = ["ปกติ", "เร่งด่วน", "เร่งด่วนมาก", "เร่งด่วนที่สุด"];
 
-      setConfidentialityOptions(confidentialityData);
-      setUrgencyOptions(urgencyData);
+    setConfidentialityOptions(normalizeOptions(confidentialityLabels));
+    setUrgencyOptions(normalizeOptions(urgencyLabels));
 
-    } catch (error) {
-      console.error("❌ Error fetching options:", {
-        user: "vampirebeam",
-        timestamp: "2025-06-16 18:31:49",
-        component: "RequestResultProgress",
-        error: error.message,
-        stack: error.stack
-      });
+  } catch (error) {
+    console.error("❌ Error:", error);
+  } finally {
+    setOptionsLoading(false);
+  }
+};
 
-      setConfidentialityOptions([
-        { value: "ปกติ", label: "ปกติ" },
-        { value: "ลับ", label: "ลับ" },
-        { value: "ลับมาก", label: "ลับมาก" },
-        { value: "ลับที่สุด", label: "ลับที่สุด" },
-      ]);
-
-      setUrgencyOptions([
-        { value: "ปกติ", label: "ปกติ" },
-        { value: "เร่งด่วน", label: "เร่งด่วน" },
-        { value: "เร่งด่วนมาก", label: "เร่งด่วนมาก" },
-        { value: "เร่งด่วนที่สุด", label: "เร่งด่วนที่สุด" },
-      ]);
-    } finally {
-      setOptionsLoading(false);
-    }
-  };
 
   // โหลดข้อมูล options เมื่อ component mount
   useEffect(() => {
