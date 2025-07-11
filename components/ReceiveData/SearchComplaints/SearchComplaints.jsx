@@ -14,7 +14,7 @@ const breadcrumbItems = [
       />
     ),
   },
-  { label: "รับเข้าเรื่องราวร้องทุกข์" },
+  { label: "สืบค้นเรื่องร้องเรียน" },
 ];
 
 const mockComplaints = [
@@ -200,7 +200,6 @@ const SearchComplaints = () => {
       docStp,
     } = filters;
 
-
     const result = allComplaints.filter((item) => {
       // ชื่อผู้ร้อง
       if (claimantName && !safeIncludes(item.name, claimantName)) {
@@ -255,7 +254,7 @@ const SearchComplaints = () => {
 
       <TableList
         data={filteredComplaints}
-        title="รับเข้าเรื่องราวร้องทุกข์"
+        title="สืบค้นเรื่องร้องเรียน"
         navigateTo="/admin/edit/search"
         onSearch={handleSearch}
         handleNavigateTo={handleNavigateTo}
