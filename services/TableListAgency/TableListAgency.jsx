@@ -100,20 +100,27 @@ const TableListAgency = ({
 
   // --- Excel Export Handler ---
   const handleExportExcel = () => {
-    const today = new Date().toLocaleDateString("th-TH", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
+  const today = new Date().toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const filename = `รายงานสรุปเรื่องร้องเรียนของหน่วยงาน_${today}.xlsx`;
+  const exportLabel = `วันที่ export: ${today}`;
+
+  // เตรียมข้อมูลแปลงเป็น array of object สำหรับ exportExcel
+  const rows = data.map((item, idx) => {
+    const rowObj = {
+      ลำดับ: idx + 1,
+    };
+    columns.forEach((col) => {
+      rowObj[col.label] = item[col.name] ?? "-";
     });
-    const filename = `รายงานสรุปเรื่องร้องเรียนของหน่วยงาน_${today}.xlsx`;
-    const exportLabel = `วันที่ export: ${today}`;
-    exportExcel(excelRef, {
-      filename,
-      sheetName: "Sheet1",
-      title,
-      exportDate: exportLabel,
-    });
-  };
+    return rowObj;
+  });
+
+  exportExcel(excelRef, filename, "Sheet1", title, exportLabel);
+};
 
   return (
     <>

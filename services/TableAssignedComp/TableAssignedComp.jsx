@@ -22,6 +22,7 @@ import ExportButton from "@services/ExportButton/ExportButton";
 import InputText from "@services/InputText/InputText";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportExcel } from "@utils/exportExcel";
 
 // Setup dayjs with Buddhist Era
 dayjs.extend(buddhistEra);
@@ -185,6 +186,34 @@ const TableAssignedComp = ({
       .format("D MMM BBBB"); // BBBB gives Buddhist Era year
   };
 
+  const handleExportExcel = () => {
+  if (!rows || rows.length === 0) return;
+
+  const formattedRows = rows.map((row, idx) => ({
+    ลำดับ: idx + 1,
+    ชื่อผู้ร้อง: row.name || "-",
+    ชื่อเรื่อง: row.subject || "-",
+    "เลขที่ สรร.": row.docNo4 || "-",
+    "เลขที่ สป.กค.": row.docNo || "-",
+    "เลขที่ สป.สร.": row.docNo2 || "-",
+    "เลขที่ สตป.": row.docNo3 || "-",
+    "วันที่รับเรื่อง": row.receiveDate
+      ? dayjs(row.receiveDate).locale("th").format("D MMMM BBBB")
+      : "-",
+  }));
+
+  exportExcel(formattedRows, {
+    filename: `รายงาน${title}_${new Date().toLocaleDateString("th-TH")}.xlsx`,
+    sheetName: "Report",
+    title: `รายงาน${title}`,
+    exportDate: `วันที่ ${new Date().toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })}`,
+  });
+};
+
   return (
     <Container
       maxWidth={false}
@@ -249,6 +278,7 @@ const TableAssignedComp = ({
 
           <ExportButton
             label="Export Excel"
+            onClick={handleExportExcel}
             sx={{
               fontSize: isExtraSmall ? "12px" : "14px",
               minWidth: isExtraSmall ? "120px" : "auto",

@@ -29,6 +29,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportExcel } from "@utils/exportExcel";
 
 // สร้าง component แยกสำหรับ date picker เพื่อป้องกัน hooks issue
 const DatePickerWrapper = ({ field, value, onChange, isMobile }) => {
@@ -143,6 +144,41 @@ const TableAnnualCompSum = ({
 
   // ตรวจสอบว่าไม่มีข้อมูล
   const hasNoData = data.length === 0;
+
+const formatThaiDate = (date) => {
+  if (!date) return "-";
+  return new Date(date).toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
+const handleExportExcel = () => {
+  if (!data || data.length === 0) return;
+
+  const today = new Date().toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const exportRows = data.map((item, idx) => ({
+    ลำดับ: idx + 1,
+    หน่วยงาน: item.agency || "-",
+    จำนวน: item.total || 0,
+    ยุติ: item.closed || 0,
+    "อยู่ระหว่างดำเนินการ": item.ongoing || 0,
+  }));
+
+  exportExcel(exportRows, {
+    filename: `รายงานสรุปเรื่องร้องเรียน_${today}.xlsx`,
+    sheetName: "Report",
+    title: `รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ`,
+    exportDate: `วันที่ ${today}`,
+  });
+};
+
 
   return (
     <Container
@@ -296,6 +332,7 @@ const TableAnnualCompSum = ({
               />
               <ExportButton
                 label="Export Excel"
+                onClick={handleExportExcel}
                 disabled={hasNoData}
                 size="medium" // ขนาดเท่า desktop
                 sx={{
@@ -458,6 +495,7 @@ const TableAnnualCompSum = ({
               />
               <ExportButton
                 label="Export Excel"
+                onClick={handleExportExcel}
                 disabled={hasNoData}
                 size="medium" // ขนาดเท่า desktop
                 sx={{
@@ -635,6 +673,7 @@ const TableAnnualCompSum = ({
               />
               <ExportButton
                 label="Export Excel"
+                onClick={handleExportExcel}
                 disabled={hasNoData}
                 size="medium"
                 sx={{

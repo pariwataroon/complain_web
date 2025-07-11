@@ -151,11 +151,15 @@ const ComplainantQuestionsComponent = () => {
     exportElementToPDF(tableRef, filename);
   };
 
-  // ฟังก์ชัน Export Excel (placeholder)
-  const handleExportExcel = () => {
+const handleExportExcel = () => {
   if (!filteredData || filteredData.length === 0) return;
 
-  // สร้างข้อมูลสำหรับ export (array of object)
+  const today = new Date().toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
   const rows = filteredData.map((row, idx) => ({
     ลำดับ: idx + 1,
     ชื่อบัญชี: row.name,
@@ -163,12 +167,13 @@ const ComplainantQuestionsComponent = () => {
   }));
 
   exportExcel(rows, {
-    filename: `รายงานคำถามจากผู้ร้อง_${new Date().toLocaleDateString("th-TH")}.xlsx`,
+    filename: `รายงานคำถามจากผู้ร้อง_${today}.xlsx`,
     sheetName: "Report",
     title: "รายงานคำถามจากผู้ร้อง",
-    exportDate: `วันที่ ${new Date().toLocaleDateString("th-TH", { year: 'numeric', month: 'long', day: 'numeric' })}`,
+    exportDate: `วันที่ ${today}`,
   });
 };
+
 
 
   const breadcrumbItems = [

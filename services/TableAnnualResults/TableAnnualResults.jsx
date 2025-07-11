@@ -22,7 +22,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import styles from "./TableAnnualResults.module.scss";
-
+import { exportExcel } from "@utils/exportExcel";
 const TableAnnualResults = ({
   data = [],
   filterFields = [],
@@ -288,6 +288,42 @@ const TableAnnualResults = ({
       </Table>
     </Box>
   );
+// ฟังก์ชันสำหรับ export Excel
+const handleExportExcel = () => {
+  if (!filteredData || filteredData.length === 0) {
+    alert("ไม่มีข้อมูลสำหรับ export");
+    return;
+  }
+
+  const today = new Date().toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const exportData = filteredData.map((row, index) => ({
+    ลำดับ: index + 1,
+    "เลขรับ สรร.": row.receiptNumber || "-",
+    "ลงวันที่": row.receiptDate || "-",
+    "ชื่อ-สกุล (ผู้ร้อง)": row.complainant || "-",
+    "ชื่อเรื่อง": row.complaint || "-",
+    "ประเภทเรื่อง": row.issueType || "-",
+    "หนังสือส่งหน่วยงาน/ติดตามผล": row.letterRef
+      ? `${row.letterRef} (${row.letterDate || "-"})`
+      : "-",
+    "เจ้าหน้าที่ผู้รับผิดชอบ": row.responsibleOfficer || "-",
+    "สถานะเรื่อง": row.status || "-",
+    "ระยะเวลาในการดำเนินงาน": row.elapsedTime || "-",
+  }));
+
+  exportExcel(exportData, {
+    filename: `รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี${today}.xlsx`,
+    sheetName: "Report",
+    title: "รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี",
+    exportDate: `วันที่ ${today}`,
+  });
+};
+
 
   return (
     <Container
@@ -444,6 +480,7 @@ const TableAnnualResults = ({
               />
               <ExportButton
                 label="Export Excel"
+                onClick={handleExportExcel}
                 size="medium"
                 sx={{
                   minWidth: "120px",
@@ -616,6 +653,7 @@ const TableAnnualResults = ({
               />
               <ExportButton
                 label="Export Excel"
+                onClick={handleExportExcel}
                 size="medium"
                 sx={{
                   minWidth: "120px",
@@ -782,6 +820,7 @@ const TableAnnualResults = ({
               />
               <ExportButton
                 label="Export Excel"
+                onClick={handleExportExcel}
                 size="medium"
                 sx={{
                   minWidth: "120px",

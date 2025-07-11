@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useRef } from "react";
 import { useRouter } from "next/router";
 import {
     Box,
@@ -10,6 +10,7 @@ import {
     Container,
     TablePagination,
     Typography,
+    useMediaQuery,
     Chip,
 } from "@mui/material";
 
@@ -18,6 +19,8 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { formatThaiDateTime } from "@utils/Formats";
+import { exportExcel } from "@utils/exportExcel";
+import { exportElementToPDF } from "@utils/exportPDF";
 
 const TableAll = ({
     data = [],
@@ -67,6 +70,8 @@ const TableAll = ({
         return filtered;
     }, [data, search, statusFilter]);
 
+      const isExtraSmall = useMediaQuery("(max-width:640px)");
+
     const handlePageChange = (_, newPage) => {
         setPage(newPage);
     };
@@ -108,6 +113,68 @@ const TableAll = ({
             router.push(`${navigateTo}/${item.id}`);
         }
     };
+    // Ref สำหรับ export PDF
+      const tableRef = useRef(null);
+    
+    const handleExportPDF = () => {
+  const today = new Date().toLocaleDateString("th-TH");
+  const filename = `รายงาน${title}_${today}.pdf`;
+  exportElementToPDF(tableRef, filename);
+};
+
+    
+    const handleExportExcel = () => {
+  if (!filteredData || filteredData.length === 0) return;
+
+  const today = new Date().toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  // สร้างหัวตาราง
+  const exportColumns = [
+    "ลำดับ",
+    "วันที่ยื่นเรื่อง",
+    "เรื่อง",
+    "ประเภทเรื่อง",
+    "หน่วยงาน",
+    "วันที่ส่งหน่วยงาน",
+    "สถานะการดำเนินการ",
+  ];
+
+  // สร้างข้อมูลแถว
+  const exportData = filteredData.map((item, index) => [
+    (index + 1).toString(),
+    formatThaiDateTime(item.created_at),
+    item.subject || "-",
+    item.complaint_type || "-",
+    item.department || "-",
+    item.sentDate ? formatThaiDateTime(item.sentDate) : "ยังไม่ได้ส่ง",
+    statusMap[item.status]?.label || item.status || "-",
+  ]);
+
+  // รวมทั้งหมด: [empty row], title, headers, rows
+  const finalExportData = [
+    Array(exportColumns.length).fill(""), // แถวเว้นว่าง
+    [`รายงานเรื่องร้องเรียนร้องทุกข์ ณ วันที่ ${today}`],
+    exportColumns,
+    ...exportData,
+  ];
+
+  exportExcel(finalExportData, {
+    filename: `รายงานเรื่องร้องเรียน_${today}.xlsx`,
+    sheetName: "Report",
+    title: `รายงานเรื่องร้องเรียน`,
+    exportDate: `วันที่ส่งออก: ${today}`,
+  });
+
+  console.log("✅ Exported", {
+    count: exportData.length,
+    filename: `รายงานเรื่องร้องเรียน_${today}.xlsx`,
+  });
+};
+
 
     return (
         <Container maxWidth="lg">
@@ -187,28 +254,17 @@ const TableAll = ({
                 <Box display="flex" gap={1} flexDirection={{ xs: "row", md: "row" }}>
                     <ExportButton
                         label="Export PDF"
-                        onClick={() => {
-                            console.log("📄 PDF Export clicked:", {
-                                user: "vampirebeam",
-                                timestamp: "2025-06-16 13:36:32",
-                                dataCount: filteredData.length
-                            });
-                        }}
+                        onClick={handleExportPDF}
                     />
+
                     <ExportButton
                         label="Export Excel"
-                        onClick={() => {
-                            console.log("📊 Excel Export clicked:", {
-                                user: "vampirebeam",
-                                timestamp: "2025-06-16 13:36:32",
-                                dataCount: filteredData.length
-                            });
-                        }}
+                        onClick={handleExportExcel}
                     />
                 </Box>
             </Box>
 
-            <Box className={styles.tableWrapper}>
+            <Box className={styles.tableWrapper} ref={tableRef}>
                 <Table>
                     <TableHead>
                         <TableRow>
