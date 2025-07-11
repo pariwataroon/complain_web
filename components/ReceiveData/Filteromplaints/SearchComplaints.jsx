@@ -1,6 +1,18 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useMemo } from "react";
-import { Box } from "@mui/material";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  List,
+  ListItem,
+  ListItemButton,
+  InputAdornment,
+  TextField,
+  CircularProgress,
+} from "@mui/material";
 import { GetComplaintByID } from "@pages/api/complaint/complaint";
 import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/ComplaintPersonalFormAPI";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
@@ -17,8 +29,9 @@ import DateThaiPickerService, {
 import { FormProvider, useForm } from "react-hook-form";
 import { alertError, alertSuccess } from "@utils/Alerts";
 import styles from "./TabNav.module.scss";
-import SearchComplaintsPreview from "./SearchComplaintsPreview";
-
+import SearchComplaintsPreview from "@components/ReceiveData/Filteromplaints/SearchComplaintsPreview";
+import SearchIcon from "@mui/icons-material/Search";
+import DescriptionIcon from "@mui/icons-material/Description";
 const breadcrumbItems = [
   {
     label: "จัดการข้อมูลในระบบ",
@@ -133,6 +146,60 @@ const SearchComplaints = () => {
   const [subComplaintTypes, setSubComplaintTypes] = useState([]);
   const [subComplaintTypesLoading, setSubComplaintTypesLoading] =
     useState(false);
+
+  const [openSearchDialog, setOpenSearchDialog] = useState(false);
+  const [searchResults, setSearchResults] = useState([]); // สมมติรายการเลขที่ได้จาก API หรือ mock
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  // ตัวอย่าง: fetch หรือ filter รายการเลขที่
+  const handleSearch = (keyword) => {
+    // ตัวอย่าง mockup data 20 รายการ (สามารถ filter ด้วย keyword ได้)
+    const allReferences = [
+      { id: "REF001", label: "REF001 - เรื่องร้องเรียนการเงิน" },
+      { id: "REF002", label: "REF002 - เรื่องร้องเรียนสัญญา" },
+      { id: "REF003", label: "REF003 - เรื่องร้องเรียนที่ดิน" },
+      { id: "REF004", label: "REF004 - เรื่องร้องเรียนภาษี" },
+      { id: "REF005", label: "REF005 - เรื่องร้องเรียนสวัสดิการ" },
+      { id: "REF006", label: "REF006 - เรื่องร้องเรียนการจ้างงาน" },
+      { id: "REF007", label: "REF007 - เรื่องร้องเรียนการขออนุญาต" },
+      { id: "REF008", label: "REF008 - เรื่องร้องเรียนอาชญากรรม" },
+      { id: "REF009", label: "REF009 - เรื่องร้องเรียนอุบัติเหตุ" },
+      { id: "REF010", label: "REF010 - เรื่องร้องเรียนกฎหมาย" },
+      { id: "REF011", label: "REF011 - เรื่องร้องเรียนการศึกษา" },
+      { id: "REF012", label: "REF012 - เรื่องร้องเรียนการคมนาคม" },
+      { id: "REF013", label: "REF013 - เรื่องร้องเรียนสุขภาพ" },
+      { id: "REF014", label: "REF014 - เรื่องร้องเรียนสิ่งแวดล้อม" },
+      { id: "REF015", label: "REF015 - เรื่องร้องเรียนการก่อสร้าง" },
+      { id: "REF016", label: "REF016 - เรื่องร้องเรียนการนำเข้า-ส่งออก" },
+      { id: "REF017", label: "REF017 - เรื่องร้องเรียนการทุจริต" },
+      { id: "REF018", label: "REF018 - เรื่องร้องเรียนค่าตอบแทน" },
+      { id: "REF019", label: "REF019 - เรื่องร้องเรียนการประมูล" },
+      { id: "REF020", label: "REF020 - เรื่องร้องเรียนเทคโนโลยี" },
+    ];
+
+    // Filter ด้วย keyword (ถ้ามี)
+    const filtered = keyword
+      ? allReferences.filter((item) =>
+          item.label.toLowerCase().includes(keyword.toLowerCase())
+        )
+      : allReferences;
+
+    setSearchResults(filtered);
+  };
+
+  const handleSelectReference = (ref) => {
+    step3Methods.setValue("additionalReference1", ref.id);
+    setOpenSearchDialog(false);
+  };
+
+  const inputRef = useRef();
+
+  useEffect(() => {
+    if (openSearchDialog && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [openSearchDialog]);
+
   // Fetch complaint types
   useEffect(() => {
     const fetchComplaintTypes = async () => {
@@ -1275,15 +1342,152 @@ const SearchComplaints = () => {
                             <div className={styles.fieldPair}>
                               <div className={styles.fieldWithLabel}>
                                 <label>เลขที่อ้างอิง(เลข สรร.สารบัญ)</label>
-                                <input
-                                  type="text"
-                                  disabled={
-                                    complaintFilingType !== "additional"
-                                  }
-                                  {...step3Methods.register(
-                                    "additionalReference1"
-                                  )}
-                                />
+                                <div className={styles.inputWithIcon}>
+                                  <input
+                                    type="text"
+                                    disabled={
+                                      complaintFilingType !== "additional"
+                                    }
+                                    {...step3Methods.register(
+                                      "additionalReference1"
+                                    )}
+                                  />
+                                  <span
+                                    className={styles.icon}
+                                    onClick={() => {
+                                      if (complaintFilingType === "additional")
+                                        setOpenSearchDialog(true);
+                                    }}
+                                  >
+                                    <SearchIcon />
+                                  </span>
+                                </div>
+                                {/* Dialog สำหรับค้นหาเลข */}
+                                <Dialog
+                                  open={openSearchDialog}
+                                  onClose={() => setOpenSearchDialog(false)}
+                                  maxWidth="sm"
+                                  fullWidth
+                                  PaperProps={{
+                                    style: {
+                                      borderRadius: 12,
+                                      background: "#f7fafd",
+                                      boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                                    },
+                                  }}
+                                >
+                                  <DialogTitle
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 8,
+                                    }}
+                                  >
+                                    <SearchIcon color="primary" />{" "}
+                                    ค้นหาเลขที่อ้างอิง
+                                  </DialogTitle>
+                                  <DialogContent>
+                                    <TextField
+                                      inputRef={inputRef}
+                                      fullWidth
+                                      size="small"
+                                      placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
+                                      onChange={(e) =>
+                                        handleSearch(e.target.value)
+                                      }
+                                      InputProps={{
+                                        startAdornment: (
+                                          <InputAdornment position="start">
+                                            <SearchIcon color="action" />
+                                          </InputAdornment>
+                                        ),
+                                        style: {
+                                          background: "#fff",
+                                          borderRadius: 8,
+                                        },
+                                      }}
+                                      sx={{ mb: 2 }}
+                                    />
+                                    {searchLoading ? (
+                                      <div
+                                        style={{
+                                          textAlign: "center",
+                                          padding: 24,
+                                        }}
+                                      >
+                                        <CircularProgress color="primary" />
+                                        <div
+                                          style={{
+                                            marginTop: 8,
+                                            color: "#888",
+                                          }}
+                                        >
+                                          กำลังค้นหา...
+                                        </div>
+                                      </div>
+                                    ) : searchResults.length === 0 ? (
+                                      <div
+                                        style={{
+                                          textAlign: "center",
+                                          padding: 32,
+                                          color: "#bdbdbd",
+                                        }}
+                                      >
+                                        <DescriptionIcon
+                                          sx={{ fontSize: 48, mb: 2 }}
+                                          color="disabled"
+                                        />
+                                        <div>ไม่พบรายการเลขที่อ้างอิง</div>
+                                      </div>
+                                    ) : (
+                                      <List
+                                        sx={{
+                                          maxHeight: 320,
+                                          overflow: "auto",
+                                        }}
+                                      >
+                                        {searchResults.map((item) => (
+                                          <ListItem
+                                            key={item.id}
+                                            disablePadding
+                                          >
+                                            <ListItemButton
+                                              onClick={() =>
+                                                handleSelectReference(item)
+                                              }
+                                              sx={{
+                                                py: 1.5,
+                                                px: 2,
+                                                borderRadius: 2,
+                                                mb: 0.5,
+                                                "&:hover": {
+                                                  background: "#e3f2fd",
+                                                },
+                                              }}
+                                            >
+                                              <DescriptionIcon
+                                                color="info"
+                                                sx={{ mr: 2 }}
+                                              />
+                                              <span style={{ fontWeight: 500 }}>
+                                                {item.label}
+                                              </span>
+                                            </ListItemButton>
+                                          </ListItem>
+                                        ))}
+                                      </List>
+                                    )}
+                                  </DialogContent>
+                                  <DialogActions sx={{ px: 3, pb: 2 }}>
+                                    <Button
+                                      onClick={() => setOpenSearchDialog(false)}
+                                      variant="outlined"
+                                      color="inherit"
+                                    >
+                                      ปิด
+                                    </Button>
+                                  </DialogActions>
+                                </Dialog>
                               </div>
                               <div className={styles.fieldWithLabelDate}>
                                 <label>วันที่</label>
