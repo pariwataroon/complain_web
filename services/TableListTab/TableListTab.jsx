@@ -21,6 +21,7 @@ import SearchOffIcon from "@mui/icons-material/SearchOff";
 
 import styles from "./TableListTab.module.scss";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportExcel } from "@utils/exportExcel";
 
 // ← เพิ่ม try-catch และ fallback สำหรับ imports
 let InputText, SelectField, ExportButton, DateThaiPickerService;
@@ -275,7 +276,60 @@ const TableListTab = ({
           />
         );
     }
-  };
+  }; 
+const handleExportExcel = () => {
+  const today = new Date().toLocaleDateString("th-TH");
+
+  const filename = `ผลการดำเนินการและเรื่องค้างพิจารณา_${today}.xlsx`;
+
+  const columns = columnsByTab[tabIndex];
+  const data = tabIndex === 0 ? summaryData : pendingData;
+
+  // ✅ สร้างชื่อหัวตาราง (headerName) ให้เป็น string ทั้งหมด
+  const exportColumns = columns.map((col, idx) => {
+    return col.headerName?.toString() || col.field?.toString() || `คอลัมน์ ${idx + 1}`;
+  });
+
+  // ✅ แปลงข้อมูลแต่ละแถวเป็น array of string
+  const exportData = data.map((row) =>
+    columns.map((col) => {
+      const value = row?.[col.field];
+      return value !== undefined && value !== null ? value.toString() : "-";
+    })
+  );
+
+  const totalRow = columns.map((col, idx) => {
+    if (idx === 0) return "รวม";
+    const val = totals?.[col.field];
+    return val !== undefined && val !== null ? val.toString() : "-";
+  });
+
+  const finalExportData = [
+  Array(columns.length).fill(""),      // แถวว่าง
+  Array(columns.length).fill(""),      // แถวว่าง
+  exportColumns,
+  ...exportData,
+  totalRow,
+];
+
+  // ✅ ส่งออกผ่าน util
+  exportExcel(finalExportData, {
+    filename,
+    sheetName: "Sheet1",
+    title:
+      tabIndex === 0
+        ? "ผลการดำเนินการและเรื่องค้างพิจารณา"
+        : "เรื่องค้างพิจารณาตามปีงบประมาณ",
+    exportDate: `วันที่ส่งออก: ${today}`,
+  });
+
+  console.log("📤 ส่งออกสำเร็จ", {
+    filename,
+    exportColumns,
+    totalRow,
+    rowCount: exportData.length,
+  });
+};
 
   // ← Fallback สำหรับ ExportButton
   const renderExportButton = (label, onClick) => {
@@ -481,7 +535,7 @@ const TableListTab = ({
                 "ผลการดำเนินการและเรื่องค้างพิจารณา.pdf"
               )
             )}
-            {renderExportButton("Export Excel", () => {})}
+            {renderExportButton("Export Excel", handleExportExcel)}
           </Box>
         </Box>
       </Box>

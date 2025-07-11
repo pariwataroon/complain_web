@@ -185,6 +185,7 @@ const TableListCollapsReport = ({
       exportDate: exportLabel,
     });
   };
+
   // Columns
   const columns = [
     {
@@ -352,6 +353,7 @@ const TableListCollapsReport = ({
                   />
                   <ExportButton
                     label="Export Excel"
+                    onClick={handleExportExcel}
                     size="small"
                     sx={{
                       width: "100%",
@@ -383,6 +385,7 @@ const TableListCollapsReport = ({
                   />
                   <ExportButton
                     label="Export Excel"
+                    onClick={handleExportExcel}
                     size="medium"
                     sx={{
                       flex: 1,

@@ -20,7 +20,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import styles from "./TableNewAddCompResults.module.scss";
 import { exportElementToPDF } from "@utils/exportPDF";
-
+import { exportExcel } from "@utils/exportExcel";
 const TableNewAddCompResults = ({
   data,
   title,
@@ -100,6 +100,21 @@ const TableNewAddCompResults = ({
         prev.map((r) => (r.id === itemId ? { ...r, note: selectedValue } : r))
       );
     }
+  };
+  const handleExportExcel = () => {
+    const exportData = tableData.map((item) => ({
+      "ชื่อ - สกุล (ผู้ร้อง)": item.claimantName || "-",
+      "ชื่อเรื่อง": item.issue || "-",
+      "ประเภทเรื่องย่อย": item.subIssueType || "-",
+      "หมายเหตุ": item.note || "-",
+    }));
+
+    exportExcel(exportData, {
+      filename: `สรุปผลตามประเภทเรื่อง_${new Date().toLocaleDateString("th-TH")}.xlsx`,
+      sheetName: "Sheet1",
+      title: "สรุปผลตามประเภทเรื่อง",
+      exportDate: `วันที่ ${new Date().toLocaleDateString("th-TH")}`,
+    });
   };
 
   return (
@@ -192,7 +207,8 @@ const TableNewAddCompResults = ({
                 exportElementToPDF(pdfRef, "สรุปผลตามประเภทเรื่อง.pdf")
               }
             />
-            <ExportButton label="Export Excel" />
+            <ExportButton label="Export Excel" 
+            onClick={handleExportExcel} />
           </Box>
         </Box>
       </Box>

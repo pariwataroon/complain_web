@@ -20,7 +20,7 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
-
+import { exportExcel } from "@utils/exportExcel";
 const TableListStaffNoti = ({
   data = [],
   title = "",
@@ -184,6 +184,37 @@ const TableListStaffNoti = ({
     );
   };
 
+const handleExportExcel = () => {
+  if (!data || data.length === 0) {
+    alert("ไม่มีข้อมูลสำหรับ export");
+    return;
+  }
+
+  const today = new Date().toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const exportData = data.map((item, index) => ({
+    ลำดับ: index + 1,
+    "ชื่อ - สกุล (ผู้ร้อง)": item.claimantName || "-",
+    "ชื่อเรื่อง": item.issue || "-",
+    "เจ้าหน้าที่ผู้รับผิดชอบ": item.responsibleOfficer || "-",
+    "เลข สรร.": item.receiptNumber || "-",
+    "วันที่เจ้าหน้าที่รับเรื่อง": item.officerReceiveDate || "-",
+    "หัวข้อ": item.issueType || "-",
+    "จำนวนครั้ง": item.countTimes ?? "-",
+  }));
+
+  exportExcel(exportData, {
+    filename: `รายงานการแจ้งเตือนเจ้าหน้าที่_${today}.xlsx`,
+    sheetName: "เรื่องร้องเรียน",
+    title: "รายงานการแจ้งเตือนเจ้าหน้าที่",
+    exportDate: `วันที่ ${today}`,
+  });
+};
+
   return (
     <Container
       maxWidth={false}
@@ -302,6 +333,7 @@ const TableListStaffNoti = ({
               />
               <ExportButton
                 label="Export Excel"
+                onClick={handleExportExcel}
                 size={layoutConfig.buttonSize}
                 sx={{
                   minWidth: isExtraSmall ? "100px" : "120px",
@@ -410,6 +442,7 @@ const TableListStaffNoti = ({
               />
               <ExportButton
                 label="Export Excel"
+                onClick={handleExportExcel}
                 size={layoutConfig.buttonSize}
                 sx={{
                   minWidth: "120px",
@@ -525,6 +558,7 @@ const TableListStaffNoti = ({
               />
               <ExportButton
                 label="Export Excel"
+                onClick={handleExportExcel}
                 size={layoutConfig.buttonSize}
                 sx={{
                   minWidth: "120px",

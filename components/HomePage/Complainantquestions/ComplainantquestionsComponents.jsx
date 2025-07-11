@@ -162,12 +162,7 @@ const ComplainantQuestionsComponent = () => {
     วันที่ถาม: row.date,
   }));
 
-  exportExcel(rows, {
-    filename: `รายงานคำถามจากผู้ร้อง_${new Date().toLocaleDateString("th-TH")}.xlsx`,
-    sheetName: "Report",
-    title: "รายงานคำถามจากผู้ร้อง",
-    exportDate: `วันที่ ${new Date().toLocaleDateString("th-TH", { year: 'numeric', month: 'long', day: 'numeric' })}`,
-  });
+  exportExcel(excelRef, filename, "Sheet1", title, exportLabel);
 };
 
 

@@ -172,7 +172,7 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
       <TableListCollapsReport
         data={filteredComplaints}
         title="รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ"
-        reportTitle="รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจ"
+        reportTitle="รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ"
         dateRange="ประจำปีงบประมาณ พ.ศ.2568"
         onSearch={handleSearch}
         filterFields={[
