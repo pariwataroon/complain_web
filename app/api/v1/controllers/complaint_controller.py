@@ -1080,21 +1080,58 @@ def get_complaints(
     if urgency:
         query = query.filter(Complaint.urgency_level == urgency)
 
-    # ปรับ search ให้ค้นหา complainant_name, complaint_type, complaint_subtype
+    # ปรับ search ให้มีลำดับความสำคัญที่ถูกต้อง
     if search:
         from models.comp_complaint_types import ComplaintSubType
         # join กับ ComplaintSubType เพื่อค้นหาด้วยชื่อ
         query = query.outerjoin(ComplaintSubType, Complaint.complaint_subtype_id == ComplaintSubType.id)
-        query = query.filter(
-            or_(
-                Complaint.complaint_number.ilike(f"%{search}%"),
-                Complaint.subject.ilike(f"%{search}%"),
-                Complaint.description.ilike(f"%{search}%"),
-                Complaint.complaint_type.ilike(f"%{search}%"),
-                ComplaintSubType.name.ilike(f"%{search}%"),
-                Complaint.complainant_data.ilike(f"%{search}%")  # ค้นหาใน JSON string
-            )
-        )
+        
+        # สร้าง Unicode escape pattern สำหรับ search parameter
+        def create_unicode_escape_pattern(text):
+            """แปลงข้อความภาษาไทยเป็น Unicode escape pattern สำหรับการค้นหา"""
+            unicode_pattern = ""
+            for char in text:
+                if ord(char) > 127:  # ตัวอักษรที่ไม่ใช่ ASCII
+                    unicode_pattern += f"\\u{ord(char):04x}"
+                else:
+                    unicode_pattern += char
+            return unicode_pattern
+        
+        unicode_search_pattern = create_unicode_escape_pattern(search)
+        
+        # จัดลำดับความสำคัญการค้นหา:
+        # 1. ข้อมูลหลัก (Primary data)
+        # 2. ข้อมูลการจัดประเภท (Classification)  
+        # 3. ข้อมูลบุคคล (เฉพาะเมื่อไม่ได้ระบุ complainant_name แยกต่างหาก)
+        search_conditions = [
+            # 1. ข้อมูลหลัก - ความสำคัญสูงสุด
+            Complaint.complaint_number.ilike(f"%{search}%"),          # เลขที่เรื่อง
+            Complaint.subject.ilike(f"%{search}%"),                  # หัวเรื่อง
+            Complaint.description.ilike(f"%{search}%"),              # คำอธิบาย
+            
+            # 2. ข้อมูลการจัดประเภท - ความสำคัญรอง
+            Complaint.complaint_type.ilike(f"%{search}%"),           # ประเภทเรื่องร้องเรียน
+            ComplaintSubType.name.ilike(f"%{search}%"),              # ประเภทย่อย
+            
+            # 3. ข้อมูลบุคคล - เฉพาะเมื่อไม่ได้ระบุ complainant_name แยกต่างหาก
+            # (ถ้ามี complainant_name แล้ว จะใช้ filter แยกที่มีความละเอียดสูงกว่า)
+        ]
+        
+        # เพิ่มการค้นหาชื่อบุคคลเฉพาะเมื่อไม่ได้ระบุ complainant_name แยกต่างหาก
+        if not complainant_name:
+            search_conditions.extend([
+                # ค้นหาข้อมูลผู้ร้องเรียนแบบง่าย
+                Complaint.complainant_data.ilike(f"%{search}%"),
+                Complaint.complainant_data.ilike(f"%{unicode_search_pattern}%"),
+                Complaint.delegate_data.ilike(f"%{search}%"),
+                Complaint.delegate_data.ilike(f"%{unicode_search_pattern}%"),
+                
+                # ค้นหาข้อมูลผู้ถูกร้องเรียน
+                Complaint.respondent_data.ilike(f"%{search}%"),
+                Complaint.respondent_data.ilike(f"%{unicode_search_pattern}%"),
+            ])
+        
+        query = query.filter(or_(*search_conditions))
     # filter ด้วย complainant_name (ค้นหาในหลายฟิลด์)
     if complainant_name:
         # สร้าง Unicode escape pattern สำหรับข้อความภาษาไทย
@@ -2788,16 +2825,47 @@ def get_complaints_grouped_by_channel(
         
         if search:
             query = query.outerjoin(ComplaintSubType, Complaint.complaint_subtype_id == ComplaintSubType.id)
-            query = query.filter(
-                or_(
-                    Complaint.complaint_number.ilike(f"%{search}%"),
-                    Complaint.subject.ilike(f"%{search}%"),
-                    Complaint.description.ilike(f"%{search}%"),
-                    Complaint.complaint_type.ilike(f"%{search}%"),
-                    ComplaintSubType.name.ilike(f"%{search}%"),
-                    Complaint.complainant_data.ilike(f"%{search}%")
-                )
-            )
+            
+            # สร้าง Unicode escape pattern สำหรับ search parameter
+            def create_unicode_escape_pattern(text):
+                """แปลงข้อความภาษาไทยเป็น Unicode escape pattern สำหรับการค้นหา"""
+                unicode_pattern = ""
+                for char in text:
+                    if ord(char) > 127:  # ตัวอักษรที่ไม่ใช่ ASCII
+                        unicode_pattern += f"\\u{ord(char):04x}"
+                    else:
+                        unicode_pattern += char
+                return unicode_pattern
+            
+            unicode_search_pattern = create_unicode_escape_pattern(search)
+            
+            # จัดลำดับความสำคัญการค้นหา (เหมือน get_complaints)
+            search_conditions = [
+                # 1. ข้อมูลหลัก - ความสำคัญสูงสุด
+                Complaint.complaint_number.ilike(f"%{search}%"),
+                Complaint.subject.ilike(f"%{search}%"),
+                Complaint.description.ilike(f"%{search}%"),
+                
+                # 2. ข้อมูลการจัดประเภท - ความสำคัญรอง
+                Complaint.complaint_type.ilike(f"%{search}%"),
+                ComplaintSubType.name.ilike(f"%{search}%"),
+            ]
+            
+            # เพิ่มการค้นหาชื่อบุคคลเฉพาะเมื่อไม่ได้ระบุ complainant_name แยกต่างหาก
+            if not complainant_name:
+                search_conditions.extend([
+                    # ค้นหาข้อมูลผู้ร้องเรียนแบบง่าย
+                    Complaint.complainant_data.ilike(f"%{search}%"),
+                    Complaint.complainant_data.ilike(f"%{unicode_search_pattern}%"),
+                    Complaint.delegate_data.ilike(f"%{search}%"),
+                    Complaint.delegate_data.ilike(f"%{unicode_search_pattern}%"),
+                    
+                    # ค้นหาข้อมูลผู้ถูกร้องเรียน
+                    Complaint.respondent_data.ilike(f"%{search}%"),
+                    Complaint.respondent_data.ilike(f"%{unicode_search_pattern}%"),
+                ])
+            
+            query = query.filter(or_(*search_conditions))
         
         if complainant_name:
             # สร้าง Unicode escape pattern สำหรับข้อความภาษาไทย
