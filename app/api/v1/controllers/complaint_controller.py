@@ -1097,6 +1097,20 @@ def get_complaints(
         )
     # filter ด้วย complainant_name (ค้นหาในหลายฟิลด์)
     if complainant_name:
+        # สร้าง Unicode escape pattern สำหรับข้อความภาษาไทย
+        def create_unicode_escape_pattern(text):
+            """แปลงข้อความภาษาไทยเป็น Unicode escape pattern สำหรับการค้นหา"""
+            unicode_pattern = ""
+            for char in text:
+                if ord(char) > 127:  # ตัวอักษรที่ไม่ใช่ ASCII
+                    unicode_pattern += f"\\u{ord(char):04x}"
+                else:
+                    unicode_pattern += char
+            return unicode_pattern
+        
+        # สร้าง Unicode escape pattern
+        unicode_pattern = create_unicode_escape_pattern(complainant_name)
+        
         # ค้นหาในฟิลด์ต่างๆ ที่อาจมีชื่อผู้ร้องเรียน
         complainant_search_filter = or_(
             # ค้นหาใน JSON string โดยไม่คำนึงถึงโครงสร้าง
@@ -1114,16 +1128,27 @@ def get_complaints(
             Complaint.complainant_data.ilike(f'%"companyName": "{complainant_name}%'),
             Complaint.complainant_data.ilike(f'%"companyName":"{complainant_name}%'),
             
+            # ✅ ค้นหาด้วย Unicode escape pattern
+            Complaint.complainant_data.ilike(f"%{unicode_pattern}%"),
+            Complaint.complainant_data.ilike(f'%"name": "{unicode_pattern}%'),
+            Complaint.complainant_data.ilike(f'%"name":"{unicode_pattern}%'),
+            
             # ค้นหาใน delegate_data ด้วย
             Complaint.delegate_data.ilike(f"%{complainant_name}%"),
             Complaint.delegate_data.ilike(f'%"name": "{complainant_name}%'),
             Complaint.delegate_data.ilike(f'%"name":"{complainant_name}%'),
+            Complaint.delegate_data.ilike(f"%{unicode_pattern}%"),
             
             # ค้นหาในรูปแบบ "นาย", "นาง", "นางสาว" + ชื่อ
             Complaint.complainant_data.ilike(f'%นาย{complainant_name}%'),
             Complaint.complainant_data.ilike(f'%นาง{complainant_name}%'),
             Complaint.complainant_data.ilike(f'%นางสาว{complainant_name}%'),
             Complaint.complainant_data.ilike(f'%บุคคลทั่วไป {complainant_name}%'),
+            
+            # ค้นหาด้วย Unicode escape ของคำนำหน้า + ชื่อ
+            Complaint.complainant_data.ilike(f'%{create_unicode_escape_pattern("นาย")}{unicode_pattern}%'),
+            Complaint.complainant_data.ilike(f'%{create_unicode_escape_pattern("นาง")}{unicode_pattern}%'),
+            Complaint.complainant_data.ilike(f'%{create_unicode_escape_pattern("นางสาว")}{unicode_pattern}%'),
         )
         query = query.filter(complainant_search_filter)
 
@@ -2775,6 +2800,20 @@ def get_complaints_grouped_by_channel(
             )
         
         if complainant_name:
+            # สร้าง Unicode escape pattern สำหรับข้อความภาษาไทย
+            def create_unicode_escape_pattern(text):
+                """แปลงข้อความภาษาไทยเป็น Unicode escape pattern สำหรับการค้นหา"""
+                unicode_pattern = ""
+                for char in text:
+                    if ord(char) > 127:  # ตัวอักษรที่ไม่ใช่ ASCII
+                        unicode_pattern += f"\\u{ord(char):04x}"
+                    else:
+                        unicode_pattern += char
+                return unicode_pattern
+            
+            # สร้าง Unicode escape pattern
+            unicode_pattern = create_unicode_escape_pattern(complainant_name)
+            
             # ค้นหาในฟิลด์ต่างๆ ที่อาจมีชื่อผู้ร้องเรียน (ใช้เงื่อนไขเดียวกับ get_complaints)
             complainant_search_filter = or_(
                 # ค้นหาใน JSON string โดยไม่คำนึงถึงโครงสร้าง
@@ -2792,16 +2831,27 @@ def get_complaints_grouped_by_channel(
                 Complaint.complainant_data.ilike(f'%"companyName": "{complainant_name}%'),
                 Complaint.complainant_data.ilike(f'%"companyName":"{complainant_name}%'),
                 
+                # ✅ ค้นหาด้วย Unicode escape pattern
+                Complaint.complainant_data.ilike(f"%{unicode_pattern}%"),
+                Complaint.complainant_data.ilike(f'%"name": "{unicode_pattern}%'),
+                Complaint.complainant_data.ilike(f'%"name":"{unicode_pattern}%'),
+                
                 # ค้นหาใน delegate_data ด้วย
                 Complaint.delegate_data.ilike(f"%{complainant_name}%"),
                 Complaint.delegate_data.ilike(f'%"name": "{complainant_name}%'),
                 Complaint.delegate_data.ilike(f'%"name":"{complainant_name}%'),
+                Complaint.delegate_data.ilike(f"%{unicode_pattern}%"),
                 
                 # ค้นหาในรูปแบบ "นาย", "นาง", "นางสาว" + ชื่อ
                 Complaint.complainant_data.ilike(f'%นาย{complainant_name}%'),
                 Complaint.complainant_data.ilike(f'%นาง{complainant_name}%'),
                 Complaint.complainant_data.ilike(f'%นางสาว{complainant_name}%'),
                 Complaint.complainant_data.ilike(f'%บุคคลทั่วไป {complainant_name}%'),
+                
+                # ค้นหาด้วย Unicode escape ของคำนำหน้า + ชื่อ
+                Complaint.complainant_data.ilike(f'%{create_unicode_escape_pattern("นาย")}{unicode_pattern}%'),
+                Complaint.complainant_data.ilike(f'%{create_unicode_escape_pattern("นาง")}{unicode_pattern}%'),
+                Complaint.complainant_data.ilike(f'%{create_unicode_escape_pattern("นางสาว")}{unicode_pattern}%'),
             )
             query = query.filter(complainant_search_filter)
 
