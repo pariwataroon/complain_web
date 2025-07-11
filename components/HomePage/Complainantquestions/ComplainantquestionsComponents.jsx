@@ -23,6 +23,7 @@ import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportExcel } from "@utils/exportExcel";
 
 const mockData = [
   {
@@ -152,9 +153,23 @@ const ComplainantQuestionsComponent = () => {
 
   // ฟังก์ชัน Export Excel (placeholder)
   const handleExportExcel = () => {
-    // TODO: Implement Excel export
-    console.log("Export Excel functionality will be implemented");
-  };
+  if (!filteredData || filteredData.length === 0) return;
+
+  // สร้างข้อมูลสำหรับ export (array of object)
+  const rows = filteredData.map((row, idx) => ({
+    ลำดับ: idx + 1,
+    ชื่อบัญชี: row.name,
+    วันที่ถาม: row.date,
+  }));
+
+  exportExcel(rows, {
+    filename: `รายงานคำถามจากผู้ร้อง_${new Date().toLocaleDateString("th-TH")}.xlsx`,
+    sheetName: "Report",
+    title: "รายงานคำถามจากผู้ร้อง",
+    exportDate: `วันที่ ${new Date().toLocaleDateString("th-TH", { year: 'numeric', month: 'long', day: 'numeric' })}`,
+  });
+};
+
 
   const breadcrumbItems = [
     {

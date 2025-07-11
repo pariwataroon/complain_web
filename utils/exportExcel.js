@@ -2,15 +2,16 @@ import * as XLSX from "xlsx";
 
 /**
  * Universal Excel Exporter
- * - รองรับ export ข้อมูลจาก JSON (array of object) หรือจาก Table DOM (ref หรือ node)
- * - รองรับ Title, วันที่ export, และชื่อคอลัมน์
+ * - รองรับ export ข้อมูลจาก JSON (array of object), array of array (header หลายแถว), หรือ Table DOM (ref/node)
+ * - รองรับ Title, วันที่ export, ชื่อคอลัมน์ และ merges (merge cell)
  * - ความกว้างคอลัมน์ dynamic ตามความยาวข้อความ
- * @param {Object[]|HTMLElement|React.Ref} source - array of object หรือ <table> element หรือ ref ไปยัง <table>
+ * @param {Array<Array<string>>|Object[]|HTMLElement|React.Ref} source
  * @param {Object} options
  *   - filename: string
  *   - sheetName: string
  *   - title: string (optional)
  *   - exportDate: string (optional)
+ *   - merges: array (optional) [{s: {r,c}, e: {r,c}}]
  */
 export function exportExcel(
   source,
@@ -19,26 +20,33 @@ export function exportExcel(
     sheetName = "Sheet1",
     title = "",
     exportDate = "",
+    merges = [],
   } = {}
 ) {
-  let rows = [];
-  let colHeaders = [];
+  let exportData;
 
-  // --- 1. Detect source type: JSON or table ---
-  if (
+  // 1. ถ้า source เป็น array of array (header หลายแถว)
+  if (Array.isArray(source) && Array.isArray(source[0])) {
+    exportData = source;
+  }
+  // 2. ถ้าเป็น array of object (แบบเก่า)
+  else if (
     Array.isArray(source) &&
     source.length > 0 &&
     typeof source[0] === "object"
   ) {
-    // ---- JSON array ----
-    colHeaders = Object.keys(source[0]);
-
-    // Prepare data rows
-    rows = source.map((row) =>
+    const colHeaders = Object.keys(source[0]);
+    const rows = source.map((row) =>
       colHeaders.map((key) => (row[key] != null ? row[key].toString() : ""))
     );
-  } else {
-    // Assume Table DOM or ref
+    exportData = [];
+    if (title) exportData.push([title]);
+    if (exportDate) exportData.push([exportDate]);
+    exportData.push(colHeaders);
+    exportData.push(...rows);
+  }
+  // 3. ถ้าเป็น table DOM หรือ ref
+  else {
     const table = source?.current || source;
     if (
       !table ||
@@ -51,20 +59,17 @@ export function exportExcel(
       );
       return;
     }
-
-    // Get column headers from thead or first row
+    // Get header rows ทั้งหมด (รองรับหลายแถว)
     const thead = table.querySelector("thead");
-    if (thead && thead.rows[0]) {
-      colHeaders = Array.from(thead.rows[0].cells).map((cell) =>
-        cell.innerText.trim()
-      );
+    const headerRows = [];
+    if (thead && thead.rows.length > 0) {
+      for (let i = 0; i < thead.rows.length; i++) {
+        headerRows.push(Array.from(thead.rows[i].cells).map((cell) => cell.innerText.trim()));
+      }
     } else if (table.rows[0]) {
-      colHeaders = Array.from(table.rows[0].cells).map((cell) =>
-        cell.innerText.trim()
-      );
+      headerRows.push(Array.from(table.rows[0].cells).map((cell) => cell.innerText.trim()));
     }
-
-    // Get data rows (skip header)
+    // Data rows
     const allRows = Array.from(table.rows);
     let dataRows = [];
     if (thead && thead.rows.length > 0) {
@@ -76,48 +81,50 @@ export function exportExcel(
         .slice(1)
         .map((row) => Array.from(row.cells).map((cell) => cell.innerText));
     }
-    rows = dataRows;
+    exportData = [];
+    if (title) exportData.push([title]);
+    if (exportDate) exportData.push([exportDate]);
+    exportData.push(...headerRows);
+    exportData.push(...dataRows);
   }
 
-  // --- 2. Compose export data: Title, Date, Headers, Data ---
-  const exportData = [];
-  if (title) exportData.push([title]);
-  if (exportDate) exportData.push([exportDate]);
-  exportData.push(colHeaders);
-  exportData.push(...rows);
-
-  // --- 3. Create worksheet ---
+  // 4. Create worksheet
   const ws = XLSX.utils.aoa_to_sheet(exportData);
 
-  // --- 4. Merge Title, Date rows if they exist ---
-  const merges = [];
-  const colCount = colHeaders.length || 1;
-  let headerRowOffset = 0;
-  if (title) {
-    merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } });
-    headerRowOffset++;
+  // 5. Merge cell (custom merges > auto merges)
+  if (merges && merges.length) {
+    ws["!merges"] = merges;
+  } else {
+    // ถ้าใช้ title/exportDate แบบเก่า ให้ merge เหมือนเดิม (auto)
+    const oldMerges = [];
+    // หาแถว header ที่ยาวที่สุด
+    const colCount = exportData.reduce((max, row) => Math.max(max, row.length), 1);
+    let headerRowOffset = 0;
+    if (title) {
+      oldMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } });
+      headerRowOffset++;
+    }
+    if (exportDate) {
+      oldMerges.push({
+        s: { r: headerRowOffset, c: 0 },
+        e: { r: headerRowOffset, c: colCount - 1 },
+      });
+    }
+    if (oldMerges.length) ws["!merges"] = oldMerges;
   }
-  if (exportDate) {
-    merges.push({
-      s: { r: headerRowOffset, c: 0 },
-      e: { r: headerRowOffset, c: colCount - 1 },
-    });
-    headerRowOffset++;
-  }
-  if (merges.length) ws["!merges"] = merges;
 
-  // --- 5. Dynamic column width ---
-  ws["!cols"] = colHeaders.map((header, colIdx) => {
+  // 6. Dynamic column width (ดูจาก header ที่ยาวสุด)
+  const lastHeaderRow = exportData.reduce((longest, row) => (row.length > longest.length ? row : longest), []);
+  ws["!cols"] = lastHeaderRow.map((header, colIdx) => {
     let maxLen = (header || "").length;
-    exportData.forEach((row, ridx) => {
-      // Only check if column exists in this row
+    exportData.forEach((row) => {
       const cell = row[colIdx];
       if (cell && cell.length > maxLen) maxLen = cell.length;
     });
-    return { wch: maxLen + 2 };
+    return { wch: maxLen + 4 };
   });
 
-  // --- 6. Export file ---
+  // 7. Export file
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
   XLSX.writeFile(wb, filename);
