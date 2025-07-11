@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -10,6 +10,7 @@ import {
   TablePagination,
   Container,
   IconButton,
+  useMediaQuery,
   Button,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
@@ -18,6 +19,8 @@ import styles from "./TableFilterList.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
+import { exportExcel } from "@utils/exportExcel";
+import { exportElementToPDF } from "@utils/exportPDF";
 
 const TableFilterList = ({
   groups = [],
@@ -129,6 +132,76 @@ const TableFilterList = ({
       handleSearchClick();
     }
   };
+  const tableRef = useRef(null);
+      
+  const handleExportPDF = () => {
+  const today = new Date().toLocaleDateString("th-TH");
+  const filename = `รายงาน${title}_${today}.pdf`;
+  exportElementToPDF(tableRef, filename);
+  };
+  const handleExportExcel = () => {
+  const today = new Date().toLocaleDateString("th-TH");
+  const filename = `รายงาน${title}_${today}.xlsx`;
+
+  const headers = [
+    "ลำดับ",
+    "ชื่อผู้ร้อง",
+    "ประเภทเรื่อง",
+    "ชื่อเรื่อง",
+    "ชื่อผู้ถูกร้อง",
+    "เลขที่สป.กค",
+    "เลขที่สป.สร",
+    "เลขที่สตป.",
+    "เลขที่สรร",
+  ];
+
+  const mergedData = [];
+
+  groups.forEach((group, index) => {
+    const sheetTitle = `ช่องทางการรับเรื่อง : ${group.title} (${group.data.length} รายการ)`;
+
+    if (index !== 0) {
+      mergedData.push([]); // ✅ แถวว่างระหว่างกลุ่ม
+    }
+
+    mergedData.push([sheetTitle]);   // ✅ แถวหัวข้อกลุ่ม
+    mergedData.push(headers);        // ✅ แถวหัวตาราง
+
+    if (group.data.length > 0) {
+      const rows = group.data.map((item, rowIdx) => [
+        rowIdx + 1,
+        item?.name || "-",
+        item?.issueType || "-",
+        item?.subject || "-",
+        item?.respondentName || "-",
+        item?.docNo || "-",
+        item?.docNo2 || "-",
+        item?.docNo3 || "-",
+        item?.docNo4 || "-",
+      ]);
+      mergedData.push(...rows); // ✅ แถวข้อมูลจริง
+    } else {
+      mergedData.push([
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+      ]);
+    }
+  });
+
+  exportExcel(mergedData, {
+    filename,
+    sheetName: "รายงานรวม",
+    exportDate: `วันที่ ${today}`,
+  });
+};
+
 
   return (
     <Container
@@ -245,14 +318,17 @@ const TableFilterList = ({
         </Box>
 
         <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
-          <ExportButton label="Export PDF" />
-          <ExportButton label="Export Excel" />
+          <ExportButton label="Export PDF" onClick={handleExportPDF} />
+          <ExportButton label="Export Excel" onClick={handleExportExcel} />
         </Box>
       </Box>
 
       {/* Groups Tables */}
+      
       {groups.length > 0 ? (
-        groups.map((group, groupIdx) => {
+        <Box ref={tableRef}>
+          {groups.map((group, groupIdx) => {
+          
           const { page, rowsPerPage } = paginationStates[groupIdx] || {
             page: 0,
             rowsPerPage: 10,
@@ -264,6 +340,7 @@ const TableFilterList = ({
               </Box>
 
               <Box
+                
                 className={styles.tableWrapper}
                 sx={{ overflowX: "auto", px: 2, pb: 1 }}
               >
@@ -371,7 +448,7 @@ const TableFilterList = ({
               </Box>
             </Box>
           );
-        })
+        })} </Box>
       ) : (
         <Box sx={{ textAlign: "center", py: 4, color: "#999" }}>
           <Box sx={{ fontSize: "1.2rem", mb: 2 }}>

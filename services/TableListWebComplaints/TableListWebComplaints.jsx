@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -19,6 +19,8 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import CleaningServicesIcon from "@mui/icons-material/CleaningServices"; // เปลี่ยนเป็น icon ไม้กวาด
+import { exportExcel } from "@utils/exportExcel";
+import { exportElementToPDF } from "@utils/exportPDF";
 
 const TableListWebComplaints = ({
   data = [],
@@ -112,6 +114,62 @@ const TableListWebComplaints = ({
       handleSearchClick();
     }
   };
+  const tableRef = useRef(null);
+  const handleExportPDF = () => {
+  const today = new Date().toLocaleDateString("th-TH");
+  const filename = `รายงาน${title}_${today}.pdf`;
+  exportElementToPDF(tableRef, filename);
+};
+const handleExportExcel = () => {
+  const today = new Date().toLocaleDateString("th-TH");
+  const filename = `รายงาน${title}_${today}.xlsx`;
+
+  // สมมุติว่า data มีฟิลด์ channel เช่น 'เว็บไซต์', 'แอดมิน' (คุณอาจต้องเปลี่ยนตรงนี้ตามโครงสร้างจริง)
+  const grouped = data.reduce((acc, item) => {
+    const channel = item.channel || "ไม่ระบุช่องทาง";
+    if (!acc[channel]) acc[channel] = [];
+    acc[channel].push(item);
+    return acc;
+  }, {});
+
+  const exportData = [];
+
+  Object.entries(grouped).forEach(([channel, items]) => {
+
+    // แถว header
+    exportData.push([
+      "ลำดับ",
+      "ชื่อผู้ร้อง",
+      "ประเภทเรื่อง",
+      "ชื่อเรื่อง",
+      "ชื่อผู้ถูกร้อง",
+      "เลขที่ สรร",
+    ]);
+
+    if (items.length > 0) {
+      items.forEach((item, idx) => {
+        exportData.push([
+          `${idx + 1}`,
+          item.complainant_name || "-",
+          item.complaint_type || "-",
+          item.subject || "-",
+          item.respondent_name || "-",
+          item.complaint_number || "-",
+        ]);
+      });
+    } else {
+      exportData.push(["💬 ยังไม่พบข้อมูลในช่องทางนี้"]);
+    }
+
+    // เพิ่มบรรทัดว่างระหว่างกลุ่ม
+    exportData.push([]);
+  });
+
+  exportExcel(exportData, {
+    filename,
+    sheetName: "รายงานเรื่องร้องเรียน",
+  });
+};
 
   return (
     <Container
@@ -227,8 +285,8 @@ const TableListWebComplaints = ({
 
                 {/* Export Buttons - แยกบรรทัดและแยกปุ่ม */}
                 <Box display="flex" flexDirection="column" gap={1}>
-                  <ExportButton label="Export PDF" />
-                  <ExportButton label="Export Excel" />
+                  <ExportButton label="Export PDF" onClick={handleExportPDF} />
+                  <ExportButton label="Export Excel" onClick={handleExportExcel} />
                 </Box>
               </Box>
             ) : (
@@ -272,8 +330,8 @@ const TableListWebComplaints = ({
 
                 {/* Export Buttons */}
                 <Box display="flex" gap={1}>
-                  <ExportButton label="Export PDF" />
-                  <ExportButton label="Export Excel" />
+                  <ExportButton label="Export PDF" onClick={handleExportPDF} />
+                  <ExportButton label="Export Excel" onClick={handleExportExcel} />
                 </Box>
               </Box>
             )}
@@ -384,8 +442,8 @@ const TableListWebComplaints = ({
               gap={1}
               sx={{ flexShrink: 0 }}
             >
-              <ExportButton label="Export PDF" />
-              <ExportButton label="Export Excel" />
+              <ExportButton label="Export PDF" onClick={handleExportPDF} />
+              <ExportButton label="Export Excel" onClick={handleExportExcel} />
             </Box>
           </Box>
         )}
@@ -393,6 +451,7 @@ const TableListWebComplaints = ({
 
       {/* Table - Conditional Scrolling based on screen size */}
       <Box
+        
         className={styles.tableWrapper}
         id="table-results"
         sx={{
@@ -402,6 +461,7 @@ const TableListWebComplaints = ({
         }}
       >
         <Table
+          ref={tableRef}
           sx={{
             minWidth: isSmallScreen ? 1400 : "100%",
             width: isSmallScreen ? 1400 : "100%",

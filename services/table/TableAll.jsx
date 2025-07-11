@@ -264,8 +264,8 @@ const TableAll = ({
                 </Box>
             </Box>
 
-            <Box className={styles.tableWrapper} ref={tableRef}>
-                <Table>
+            <Box className={styles.tableWrapper} >
+                <Table ref={tableRef}>
                     <TableHead>
                         <TableRow>
                             <TableCell align="center" sx={{ fontWeight: 700, bgcolor: '#f8f9fa' }}>
