@@ -2,14 +2,16 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import DetailOPM from "@services/DetailOPM/DetailOPM";
-import { GetCase } from "@pages/api/opm/opm";
+import { GetCase, GetOperatings } from "@pages/api/opm/opm";
 
 const SearchComplaints = () => {
   const router = useRouter();
   const queryParams = router.query;
 
+  const [operatingsDetails, setOperatingsDetails] = useState(null);
   const [caseDetails, setCaseDetails] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingOperatings, setLoadingOperatings] = useState(true);
 
   useEffect(() => {
     const fetchCaseDetails = async () => {
@@ -26,6 +28,23 @@ const SearchComplaints = () => {
     };
 
     fetchCaseDetails();
+  }, [queryParams.id]);
+
+  useEffect(() => {
+    const fetchOperatingDetails = async () => {
+      try {
+        if (queryParams.id) {
+          const operatingsResponse = await GetOperatings(queryParams.id);
+          setOperatingsDetails(operatingsResponse);
+        }
+      } catch (error) {
+        console.error("Error fetching operatings details:", error);
+      } finally {
+        setLoadingOperatings(false);
+      }
+    };
+
+    fetchOperatingDetails();
   }, [queryParams.id]);
 
   const formatDate = (dateString) => {
@@ -65,6 +84,7 @@ const SearchComplaints = () => {
       <DetailOPM
         params={queryParams.id}
         caseDetails={caseDetails}
+        operatingsDetails={operatingsDetails}
         loading={loading}
         formatDate={formatDate}
       />

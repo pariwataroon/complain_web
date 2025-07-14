@@ -116,7 +116,6 @@ const TableListOPM = ({
     if (navigateTo) {
       router.push({
         pathname: `${navigateTo}/${item.case_id}`,
-        query: { ...item },
       });
     }
   };

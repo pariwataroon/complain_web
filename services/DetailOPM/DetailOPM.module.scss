@@ -78,7 +78,11 @@
     font-weight: 500;
 }
 
+// Card Base Styles
 .mainCard,
+.customerCard,
+.attachmentCard,
+.additionalInfoCard,
 .detailsCard,
 .timelineCard,
 .stepsCard {
@@ -96,6 +100,8 @@
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
     }
 }
+
+
 
 .cardContent {
     padding: 40px !important;
@@ -148,6 +154,9 @@
     transition: all 0.4s ease;
     position: relative;
     overflow: hidden;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
 
     &::before {
         content: '';
@@ -170,6 +179,18 @@
             transform: scaleX(1);
         }
     }
+
+    // When no icon is present, remove the flex gap
+    &:not(:has(.infoIcon)) {
+        display: block;
+    }
+}
+
+.infoIcon {
+    color: #0a2cbd;
+    font-size: 1.8rem;
+    margin-top: 4px;
+    flex-shrink: 0;
 }
 
 .label {
@@ -234,6 +255,55 @@
 .dateIcon {
     color: white;
     font-size: 1.4rem;
+}
+
+// Attachment Styles
+.attachmentInfo {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, #fff8e1, #fffde7);
+    border-radius: 12px;
+    border-left: 4px solid #ff9800;
+}
+
+.attachmentItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: #e0e0e0;
+        transform: translateX(4px);
+    }
+
+    svg {
+        color: #ff9800;
+        font-size: 1.2rem;
+    }
+}
+
+// Stepper Styles
+.stepper {
+    .MuiStep-root {
+        .MuiStepLabel-root {
+            .MuiStepLabel-iconContainer {
+                padding: 0;
+            }
+        }
+    }
+}
+
+.stepAvatar {
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 // Timeline Styles
@@ -550,6 +620,14 @@
 
     .infoItem {
         padding: 16px;
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+
+        .infoIcon {
+            align-self: center;
+            margin-top: 0;
+        }
     }
 
     .detailBox,
@@ -572,6 +650,12 @@
         width: 40px;
         height: 40px;
         font-size: 1rem;
+    }
+
+    .attachmentItem {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
     }
 
     .modalContainer {
@@ -610,5 +694,22 @@
 
     .modalActions {
         flex-direction: column;
+    }
+
+    .infoItem {
+        padding: 12px;
+
+        .infoIcon {
+            font-size: 1.5rem;
+        }
+    }
+
+    .attachmentInfo {
+        padding: 12px;
+        font-size: 0.9rem;
+    }
+
+    .value {
+        font-size: 1rem;
     }
 }

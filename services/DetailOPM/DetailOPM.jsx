@@ -15,6 +15,7 @@ import {
     Step,
     StepLabel,
     StepContent,
+    IconButton,
 } from "@mui/material";
 import {
     Assignment as AssignmentIcon,
@@ -25,22 +26,28 @@ import {
     CheckCircle as CheckCircleIcon,
     Schedule as ScheduleIcon,
     Cancel as CancelIcon,
+    AttachFile as AttachFileIcon,
+    Person as PersonIcon,
+    Phone as PhoneIcon,
+    Email as EmailIcon,
+    LocationOn as LocationIcon,
+    Badge as BadgeIcon,
 } from "@mui/icons-material";
 import ButtonSent from "@services/ButtonSent/ButtonSent";
-import OPMModal from "./OPMModal";
-import CitizenModal from "./CitizenModal";
+import CombinedReportModal from "./CombinedReportModal";
 import styles from "./DetailOPM.module.scss";
 
-const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
+const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDate, itemData }) => {
     const theme = useTheme();
     const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
 
-    const [opmModalOpen, setOpmModalOpen] = useState(false);
-    const [citizenModalOpen, setCitizenModalOpen] = useState(false);
+    const [reportModalOpen, setReportModalOpen] = useState(false);
     const [routerItemData, setRouterItemData] = useState(null);
     const [currentItemData, setCurrentItemData] = useState(null);
+    console.log({ caseDetails });
+    console.log({ operatingsDetails });
 
     // รับข้อมูลจาก router state
     useEffect(() => {
@@ -55,13 +62,8 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
         }
     }, [router.isReady]);
 
-
-    const handleRowSendOPM = () => {
-        setOpmModalOpen(true);
-    };
-
-    const handleRowSendCitizen = () => {
-        setCitizenModalOpen(true);
+    const handleReportClick = () => {
+        setReportModalOpen(true);
     };
 
     const getFieldValue = (fieldName) => {
@@ -96,6 +98,45 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
         }
 
         return [];
+    };
+
+    // ฟังก์ชันสำหรับดึงข้อมูลลูกค้า
+    const getCustomerData = () => {
+        if (currentItemData?.customer_name) {
+            return {
+                name: currentItemData.customer_name,
+                fullName: currentItemData.customer_name,
+            };
+        }
+
+        const customerField = caseDetails?.find((item) => item.field === "customer");
+        const customerData = customerField?.value;
+
+        if (customerData && typeof customerData === 'object') {
+            const fullName = `${customerData.salutation_th || ''} ${customerData.firstname_th || ''} ${customerData.lastname_th || ''}`.trim();
+
+            return {
+                name: fullName,
+                fullName: fullName,
+                salutation: customerData.salutation_th,
+                firstName: customerData.firstname_th,
+                lastName: customerData.lastname_th,
+                citizenId: customerData.citizen_id,
+                gender: customerData.gender_text,
+                address: {
+                    subdistrict: customerData.subdistrict_text,
+                    district: customerData.district_text,
+                    province: customerData.province_text,
+                    postcode: customerData.postcode
+                },
+                contacts: customerData.list_customer_detail || []
+            };
+        }
+
+        return {
+            name: '-',
+            fullName: '-'
+        };
     };
 
     const getStatusColor = (status) => {
@@ -134,12 +175,25 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
         }
     };
 
-    const customerName = currentItemData?.customer_name || getFieldValue("customer_name");
+    // ดึงข้อมูลที่ต้องใช้
+    const customerData = getCustomerData();
+    const customerName = customerData.fullName;
     const caseCode = currentItemData?.case_code || getFieldValue("case_code");
     const typeText = currentItemData?.type_text || getFieldValue("type_text");
     const statusText = currentItemData?.status_text || getFieldValue("status_text");
     const mainStatusText = currentItemData?.main_status_text || getFieldValue("main_status_text");
     const caseId = currentItemData?.case_id || params?.case_id;
+
+    // ข้อมูลเพิ่มเติมจากลูกค้า
+    const citizenId = customerData.citizenId;
+    const customerEmail = customerData.contacts?.find(c => c.detail_type === 'E')?.detail || '-';
+    const customerPhone = customerData.contacts?.find(c => c.detail_type === 'M')?.detail || '-';
+    const customerAddress = customerData.address;
+
+    // ข้อมูลไฟล์แนบ
+    const attachmentList = Array.isArray(operatingsDetails)
+        ? operatingsDetails.flatMap(item => Array.isArray(item.attachments) ? item.attachments : [])
+        : [];
 
     if (loading) {
         return (
@@ -170,10 +224,11 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
 
     return (
         <Box className={styles.detailContainer}>
-            {/* เพิ่มชื่อลูกค้าในหัวเรื่อง */}
+            {/* หัวเรื่องพร้อมชื่อลูกค้า */}
             <Typography variant="h4" className={styles.title}>
-                รายละเอียดคำร้อง {customerName && `- ${customerName}`}
+                รายละเอียดคำร้อง {customerName && customerName !== '-' && `- ${customerName}`}
             </Typography>
+
             {/* Main Information Card */}
             <Card className={styles.mainCard}>
                 <CardContent className={styles.cardContent}>
@@ -182,18 +237,13 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
                             <AssignmentIcon />
                         </Avatar>
                         <Typography variant="h6" className={styles.sectionTitle}>
-                            ข้อมูลหลัก 
+                            ข้อมูลหลัก
                         </Typography>
                         <Box sx={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
                             <ButtonSent
-                                label={isTablet ? "ส่งเรื่อง สปน." : "ส่งเรื่อง สปน."}
+                                label={isTablet ? "รายงาน" : "รายงาน"}
                                 size={isTablet ? "small" : "medium"}
-                                onClick={handleRowSendOPM}
-                            />
-                            <ButtonSent
-                                label={isTablet ? "ส่งประชาชน" : "ส่งเรื่องประชาชน"}
-                                size={isTablet ? "small" : "medium"}
-                                onClick={handleRowSendCitizen}
+                                onClick={handleReportClick}
                             />
                         </Box>
                     </Box>
@@ -305,6 +355,156 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
                 </CardContent>
             </Card>
 
+            {/* Customer Details Card */}
+            <Card className={styles.customerCard}>
+                <CardContent className={styles.cardContent}>
+                    <Box className={styles.headerSection}>
+                        <Avatar className={styles.headerIcon}>
+                            <PersonIcon />
+                        </Avatar>
+                        <Typography variant="h6" className={styles.sectionTitle}>
+                            ข้อมูลผู้ยื่นคำร้อง
+                        </Typography>
+                    </Box>
+
+                    <Grid container spacing={3} className={styles.infoGrid}>
+                        {citizenId && citizenId !== '-' && (
+                            <Grid item xs={12} md={6}>
+                                <Box className={styles.infoItem}>
+                                    <BadgeIcon className={styles.infoIcon} />
+                                    <Box>
+                                        <Typography variant="subtitle2" className={styles.label}>
+                                            เลขบัตรประชาชน
+                                        </Typography>
+                                        <Typography variant="body1" className={styles.value}>
+                                            {citizenId}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+                        )}
+
+                        {customerData.gender && (
+                            <Grid item xs={12} md={6}>
+                                <Box className={styles.infoItem}>
+                                    <PersonIcon className={styles.infoIcon} />
+                                    <Box>
+                                        <Typography variant="subtitle2" className={styles.label}>
+                                            เพศ
+                                        </Typography>
+                                        <Typography variant="body1" className={styles.value}>
+                                            {customerData.gender}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+                        )}
+
+                        {customerEmail && customerEmail !== '-' && (
+                            <Grid item xs={12} md={6}>
+                                <Box className={styles.infoItem}>
+                                    <EmailIcon className={styles.infoIcon} />
+                                    <Box>
+                                        <Typography variant="subtitle2" className={styles.label}>
+                                            อีเมล
+                                        </Typography>
+                                        <Typography variant="body1" className={styles.value}>
+                                            {customerEmail}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+                        )}
+
+                        {customerPhone && customerPhone !== '-' && (
+                            <Grid item xs={12} md={6}>
+                                <Box className={styles.infoItem}>
+                                    <PhoneIcon className={styles.infoIcon} />
+                                    <Box>
+                                        <Typography variant="subtitle2" className={styles.label}>
+                                            เบอร์โทรศัพท์
+                                        </Typography>
+                                        <Typography variant="body1" className={styles.value}>
+                                            {customerPhone}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+                        )}
+
+                        {customerAddress && (customerAddress.subdistrict || customerAddress.district || customerAddress.province) && (
+                            <Grid item xs={12}>
+                                <Box className={styles.infoItem}>
+                                    <LocationIcon className={styles.infoIcon} />
+                                    <Box>
+                                        <Typography variant="subtitle2" className={styles.label}>
+                                            ที่อยู่
+                                        </Typography>
+                                        <Typography variant="body1" className={styles.value}>
+                                            {[
+                                                customerAddress.subdistrict,
+                                                customerAddress.district,
+                                                customerAddress.province,
+                                                customerAddress.postcode
+                                            ].filter(Boolean).join(' ')}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+                        )}
+                    </Grid>
+                </CardContent>
+            </Card>
+
+            {/* Attachments Card */}
+            <Card className={styles.attachmentCard}>
+                <CardContent className={styles.cardContent}>
+                    <Box className={styles.headerSection}>
+                        <Avatar className={styles.headerIcon}>
+                            <AttachFileIcon />
+                        </Avatar>
+                        <Typography variant="h6" className={styles.sectionTitle}>
+                            ไฟล์แนบ
+                        </Typography>
+                    </Box>
+
+                    {attachmentList.length === 0 ? (
+                        <Box sx={{
+                            textAlign: 'center',
+                            py: 4,
+                            color: 'text.secondary'
+                        }}>
+                            <AttachFileIcon sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+                            <Typography variant="h6" gutterBottom>
+                                ไม่มีไฟล์แนบ
+                            </Typography>
+                            <Typography variant="body2">
+                                ไม่มีไฟล์แนบมากับคำร้องนี้
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <Box>
+                            <Typography variant="body1" className={styles.attachmentInfo}>
+                                มีไฟล์แนบ {attachmentList.length} ไฟล์
+                            </Typography>
+                            {attachmentList.map((file, index) => (
+                                <Box key={file.attachment_id || index} className={styles.attachmentItem}>
+                                    <AttachFileIcon />
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                        {(file.file_name || `ไฟล์แนบ ${index + 1}`)}
+                                    </Typography>
+                                    {file.file_description && (
+                                        <Typography variant="caption" sx={{ ml: 1 }}>
+                                            ({file.file_description})
+                                        </Typography>
+                                    )}
+                                </Box>
+                            ))}
+                        </Box>
+                    )}
+                </CardContent>
+            </Card>
+
             {/* Process Steps Card */}
             <Card className={styles.timelineCard}>
                 <CardContent className={styles.cardContent}>
@@ -317,7 +517,6 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
                         </Typography>
                     </Box>
 
-                    {/* Show message if no org owner data */}
                     {orgOwnerList.length === 0 ? (
                         <Box sx={{
                             textAlign: 'center',
@@ -408,6 +607,163 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
                 </CardContent>
             </Card>
 
+            {/* Additional Information Card */}
+            <Card className={styles.additionalInfoCard}>
+                <CardContent className={styles.cardContent}>
+                    <Box className={styles.headerSection}>
+                        <Avatar className={styles.headerIcon}>
+                            <InfoIcon />
+                        </Avatar>
+                        <Typography variant="h6" className={styles.sectionTitle}>
+                            ข้อมูลเพิ่มเติม
+                        </Typography>
+                    </Box>
+
+                    <Grid container spacing={3} className={styles.infoGrid}>
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ช่องทางการรับเรื่อง
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("channel_incoming_text")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ระดับความสำคัญ
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("priority_text")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ระดับความรุนแรง
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("severity_text")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ระดับความลับ
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("secret_text")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    พื้นที่เกิดเหตุ
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {[
+                                        getFieldValue("subdistrict_text"),
+                                        getFieldValue("district_text"),
+                                        getFieldValue("province_text")
+                                    ].filter(item => item !== '-').join(' ')}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    พื้นที่เฉพาะ
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("case_area")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    วันที่เกิดเหตุ (จาก)
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {formatDate(getFieldValue("date_occurrenced_from"))}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    วันที่เกิดเหตุ (ถึง)
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {formatDate(getFieldValue("date_occurrenced_to"))}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ในคดีความหรือไม่
+                                </Typography>
+                                <Chip
+                                    label={getFieldValue("is_in_court_text")}
+                                    color={getFieldValue("is_in_court") === "T" ? "error" : "success"}
+                                    size="small"
+                                    className={styles.statusChip}
+                                />
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    สร้างโดย
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("created_by_text")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ผู้ถูกกล่าวหา
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("defendant")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        {getFieldValue("remark") && getFieldValue("remark") !== '-' && (
+                            <Grid item xs={12}>
+                                <Box className={styles.infoItem}>
+                                    <Typography variant="subtitle2" className={styles.label}>
+                                        หมายเหตุ
+                                    </Typography>
+                                    <Typography variant="body1" className={styles.value}>
+                                        {getFieldValue("remark")}
+                                    </Typography>
+                                </Box>
+                            </Grid>
+                        )}
+                    </Grid>
+                </CardContent>
+            </Card>
+
             {/* Details Card */}
             <Card className={styles.detailsCard}>
                 <CardContent className={styles.cardContent}>
@@ -446,18 +802,10 @@ const DetailOPM = ({ params, caseDetails, loading, formatDate, itemData }) => {
                 </CardContent>
             </Card>
 
-            {/* Modals */}
-            <OPMModal
-                open={opmModalOpen}
-                onClose={() => setOpmModalOpen(false)}
-                params={params}
-                caseDetails={caseDetails}
-                itemData={currentItemData}
-            />
-
-            <CitizenModal
-                open={citizenModalOpen}
-                onClose={() => setCitizenModalOpen(false)}
+            {/* Combined Report Modal */}
+            <CombinedReportModal
+                open={reportModalOpen}
+                onClose={() => setReportModalOpen(false)}
                 params={params}
                 caseDetails={caseDetails}
                 itemData={currentItemData}

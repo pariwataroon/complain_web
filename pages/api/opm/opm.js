@@ -77,7 +77,6 @@ const GetToken = async (password) => {
     Cookies.set("opm_token", tokenData.token_id, { expires: 3 });
     Cookies.set("org_id", tokenData.org_id, { expires: 3 });
 
-
     return tokenData;
   } catch (error) {
     console.error(error);
@@ -174,16 +173,14 @@ const GetCase = async (case_id) => {
   }
 };
 
-const GetOperatings = async (case_id) => {
+const GetOperatings = async (case_id, take = 1) => {
   try {
     const token_id = Cookies.get("opm_token");
-    if (!token_id) {
+    if (!token_id)
       throw new Error("Token not found in cookies. Please authenticate first.");
-    }
     const org_id = Cookies.get("org_id");
-    if (!org_id) {
+    if (!org_id)
       throw new Error("Token not found in cookies. Please authenticate first.");
-    }
 
     const response = await soapInstance.post(
       process.env.NEXT_PUBLIC_OPM_API_OFFICER,
@@ -195,20 +192,22 @@ const GetOperatings = async (case_id) => {
               <case_id>${case_id}</case_id>
               <select_org_id>${org_id}</select_org_id>
               <skip>0</skip>
-              <take>1</take>
+              <take>${take}</take>
             </GetOperatings>
           </soap:Body>
         </soap:Envelope>`,
-      {
-        soapActionSuffix: "GetOperatings",
-      }
+      { soapActionSuffix: "GetOperatings" }
     );
 
-    
-    const responseAddOperating = await AddOperating(response);
-    return responseAddOperating;
+    const match = response.data.match(
+      /<GetOperatingsResult>(.*?)<\/GetOperatingsResult>/
+    );
+    if (!match || !match[1]) return [];
+
+    const arr = JSON.parse(match[1]);
+    return Array.isArray(arr) ? arr : [arr];
   } catch (error) {
-    console.error("Error fetching case details:", error);
+    console.error("Error fetching operating details:", error);
     throw error;
   }
 };
@@ -223,8 +222,7 @@ const AddOperating = async (submitData) => {
     if (!org_id) {
       throw new Error("Token not found in cookies. Please authenticate first.");
     }
-    console.log({ submitData });
-    
+
     const response = await soapInstance.post(
       process.env.NEXT_PUBLIC_OPM_API_OFFICER,
       `<?xml version="1.0" encoding="utf-8"?>
@@ -276,7 +274,7 @@ const SetOrgSummaryResult = async (submitData) => {
               <token_id>${token_id}</token_id>
               <case_id>${submitData.case_id}</case_id>
               <status_id>${submitData.status_id}</status_id>
-              <result>${submitData.details}</result>
+              <result>${submitData.detail}</result>
             </SetOrgSummaryResult>
           </soap:Body>
         </soap:Envelope>`,
@@ -343,10 +341,8 @@ const AddCase = async (submitData) => {
   }
 };
 
-
 const GetDistricts = async (provinceId) => {
   try {
-
     const response = await soapInstance.post(
       process.env.NEXT_PUBLIC_OPM_API_LISTOFVALUES,
       `<?xml version="1.0" encoding="utf-8"?>
@@ -362,7 +358,6 @@ const GetDistricts = async (provinceId) => {
         soapActionSuffix: "GetDistricts",
       }
     );
-
 
     let xmlString = response.data;
 
@@ -413,7 +408,6 @@ const GetDistricts = async (provinceId) => {
 
 const GetSubDistricts = async (districtId) => {
   try {
-
     const response = await soapInstance.post(
       process.env.NEXT_PUBLIC_OPM_API_LISTOFVALUES,
       `<?xml version="1.0" encoding="utf-8"?>
@@ -429,7 +423,6 @@ const GetSubDistricts = async (districtId) => {
         soapActionSuffix: "GetSubDistricts",
       }
     );
-
 
     let xmlString = response.data;
 
@@ -499,17 +492,19 @@ const GetOperatingChannel = async () => {
 
     // Parse XML response
     let xmlString = response.data;
-    
-    if (typeof xmlString === 'string') {
-      if (typeof window !== 'undefined') {
+
+    if (typeof xmlString === "string") {
+      if (typeof window !== "undefined") {
         // Browser environment
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlString, "text/xml");
-        const resultElement = xmlDoc.getElementsByTagName("GetOperatingChannelResult")[0];
-        
+        const resultElement = xmlDoc.getElementsByTagName(
+          "GetOperatingChannelResult"
+        )[0];
+
         if (resultElement && resultElement.textContent) {
           const channels = JSON.parse(resultElement.textContent);
-          
+
           return {
             success: true,
             data: Array.isArray(channels) ? channels : [],
@@ -517,10 +512,12 @@ const GetOperatingChannel = async () => {
         }
       } else {
         // Server-side environment
-        const match = xmlString.match(/<GetOperatingChannelResult>(.*?)<\/GetOperatingChannelResult>/);
+        const match = xmlString.match(
+          /<GetOperatingChannelResult>(.*?)<\/GetOperatingChannelResult>/
+        );
         if (match && match[1]) {
           const channels = JSON.parse(match[1]);
-          
+
           return {
             success: true,
             data: Array.isArray(channels) ? channels : [],
@@ -679,6 +676,44 @@ const GetCaseType = async () => {
   }
 };
 
+const GetAttachment = async (password) => {
+  try {
+    const ipAddress = await getIPAddress();
+    const response = await soapInstance.post(
+      process.env.NEXT_PUBLIC_OPM_API_OFFICER,
+
+      `<?xml version="1.0" encoding="utf-8"?>
+          <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+              <GetAttachment xmlns="http://tempuri.org/">
+              <user>${process.env.NEXT_PUBLIC_OPM_ID}</user>
+              <password>${password}</password>
+              <authen_from>S</authen_from>
+              <ip_address>${ipAddress}</ip_address>
+              </GetAttachment>
+          </soap:Body>
+          </soap:Envelope>`,
+      {
+        soapActionSuffix: "GetAttachment",
+      }
+    );
+
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(response.data, "text/xml");
+    const getTokenResult =
+      xmlDoc.getElementsByTagName("GetTokenResult")[0].textContent;
+
+    const tokenData = JSON.parse(getTokenResult);
+
+    Cookies.set("opm_token", tokenData.token_id, { expires: 3 });
+    Cookies.set("org_id", tokenData.org_id, { expires: 3 });
+
+    return tokenData;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
 
 export {
   Encode,
@@ -693,4 +728,5 @@ export {
   GetOperatingChannel,
   GetCaseStatus,
   GetCaseType,
+  GetAttachment,
 };

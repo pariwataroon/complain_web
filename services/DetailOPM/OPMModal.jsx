@@ -66,13 +66,6 @@ const OPMModal = ({ open, onClose, params, caseDetails }) => {
                 errors.push("• กรุณาเลือกประเภทเรื่อง");
             }
 
-            // if (!data.severity_id && data.severity_id !== 0) {
-            //     errors.push("• กรุณาเลือกระดับความสำคัญ");
-            // }
-
-            // if (!data.secret_id && data.secret_id !== 0) {
-            //     errors.push("• กรุณาเลือกระดับความลับ");
-            // }
 
             if (!data.date_opened) {
                 errors.push("• กรุณาเลือกวันที่เปิดเรื่อง");
