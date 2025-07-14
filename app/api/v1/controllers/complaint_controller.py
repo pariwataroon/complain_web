@@ -18,6 +18,7 @@ from models.comp_complaint import (
 from models.comp_provinces import Province
 from models.comp_amphures import Amphure
 from models.comp_districts import District
+from models.comp_complaint_types import ComplaintType, ComplaintSubType, ComplaintChannel
 from app.api.v1.schemas.complaint import ComplaintListItem
 from app.api.v1.schemas.notification import NotificationCreate
 from models.comp_complaint_types import ComplaintType, ComplaintSubType, ComplaintChannel
@@ -2502,7 +2503,7 @@ def get_complaint_by_id_with_assignment_data(db: Session, complaint: Complaint) 
         result = {
             "id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
-            "step1": parse_complainant_data(complaint.complainant_data, db),
+            "step1": parse_complainant_data(complaint.complainant_data, complaint.delegate_data, db),
             "step2": parse_respondent_data(complaint.respondent_data, db),
             "step3": parse_incident_data(complaint),
             "step4": {"general": {"accepted": complaint.terms_accepted}},
@@ -2566,19 +2567,39 @@ def get_complaint_by_id_with_assignment_data(db: Session, complaint: Complaint) 
         logger.error(f"Error converting complaint data: {str(e)}")
         return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
 
-def parse_complainant_data(complainant_data, db: Session = None):
-    """แปลงข้อมูลผู้ร้องเรียนให้อยู่ในรูปแบบ step1 พร้อม enrich address"""
+def parse_complainant_data(complainant_data, delegate_data=None, db: Session = None):
+    """แปลงข้อมูลผู้ร้องเรียนให้อยู่ในรูปแบบ step1 พร้อม enrich address และ delegate data"""
     try:
         if isinstance(complainant_data, str):
             data = json.loads(complainant_data)
         else:
             data = complainant_data or {}
-        # enrich address fields
-        data = enrich_address_fields(data, db)
-        return {
-            "general": {
+        
+        # เพิ่มข้อมูล delegate ถ้ามี
+        if delegate_data:
+            if isinstance(delegate_data, str):
+                delegate_parsed = json.loads(delegate_data)
+            else:
+                delegate_parsed = delegate_data
+            
+            # enrich address fields สำหรับ delegate data
+            delegate_parsed = enrich_address_fields(delegate_parsed, db)
+            
+            # ใส่ delegate data ใน structure
+            data_with_delegate = {
+                "general": data,
+                "delegate": delegate_parsed
+            }
+        else:
+            data_with_delegate = {
                 "general": data
             }
+        
+        # enrich address fields สำหรับข้อมูลหลัก
+        data_with_delegate["general"] = enrich_address_fields(data_with_delegate["general"], db)
+        
+        return {
+            "general": data_with_delegate
         }
     except Exception as e:
         logger.error(f"Error parsing complainant data: {str(e)}")
@@ -2730,7 +2751,7 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
         result = {
             "id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
-            "step1": parse_complainant_data(complaint.complainant_data, db),
+            "step1": parse_complainant_data(complaint.complainant_data, complaint.delegate_data, db),
             "step2": parse_respondent_data(complaint.respondent_data, db),
             "step3": parse_incident_data(complaint),
             "step4": {"general": {"accepted": complaint.terms_accepted}},
