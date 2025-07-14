@@ -400,9 +400,15 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
     firstName: delegateFirstName,
     lastName: delegateLastName,
   } = splitThaiName(delegate.name);
+
   // ข้อมูลจาก step2 (ผู้ถูกร้องเรียน)
   const respondent = step2.general?.individual || {};
 
+  const {
+    title: respondentTitle,
+    firstName: respondentFirstName,
+    lastName: respondentLastName,
+  } = splitThaiName(respondent.name);
   // ข้อมูลจาก step3 (เรื่องร้องทุกข์)
   const complaint = step3.general || {};
 
@@ -624,9 +630,9 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
                 label="หมายเลขประจำตัวประชาชน"
                 value={formatCitizenId_null(respondent.idCard)}
               />
-              <InfoItem label="คำนำหน้า" value={respondent.title || "-"} />
-              <InfoItem label="ชื่อ" value={respondent.firstName || "-"} />
-              <InfoItem label="นามสกุล" value={respondent.lastName || "-"} />
+              <InfoItem label="คำนำหน้า" value={respondentTitle || "-"} />
+              <InfoItem label="ชื่อ" value={respondentFirstName || "-"} />
+              <InfoItem label="นามสกุล" value={respondentLastName || "-"} />
               <InfoItem
                 label="ที่อยู่ที่ติดต่อได้"
                 value={respondent.address || "-"}

@@ -37,15 +37,15 @@ const breadcrumbItems = [
 
 const SearchComplaints = () => {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, preview } = router.query;
 
+  const hasRedirected = useRef(false);
   const [defaultData, setDefaultData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
 
-  console.log("defaultData", defaultData);
   const generalMethods = useForm({
     mode: "onChange",
   });
@@ -63,7 +63,7 @@ const SearchComplaints = () => {
   });
 
   const [complaintTypes, setComplaintTypes] = useState([]);
-  console.log("complaintTypes", complaintTypes);
+
   const [subComplaintTypes, setSubComplaintTypes] = useState([]);
   const [complaintChannels, setComplaintChannels] = useState([]); // เพิ่ม state สำหรับ channels
   const [loadingOptions, setLoadingOptions] = useState(false);
@@ -232,7 +232,6 @@ const SearchComplaints = () => {
               name: item.name,
             }));
 
-            console.log("Filtered sub types:", filteredSubTypes);
             setSubComplaintTypes(filteredSubTypes);
           } else {
             console.log("No items array found in response data");
@@ -246,12 +245,6 @@ const SearchComplaints = () => {
           setSubComplaintTypes([]);
         }
       } catch (error) {
-        // ตรวจสอบว่า promise นี้ยังเป็น current promise หรือไม่
-        if (currentFetchPromiseRef.current !== fetchPromise) {
-          console.log("Promise cancelled, ignoring error");
-          return;
-        }
-
         console.error("Error fetching sub complaint types:", error);
         if (error.response?.status === 404) {
           console.log("404 - No sub types found for this complaint type");
@@ -453,7 +446,6 @@ const SearchComplaints = () => {
         `กรุณาแก้ไขข้อมูลดังต่อไปนี้:<br/><br/>${errorMessages.join("<br/>")}`,
         true
       );
-
       return;
     }
 
@@ -463,18 +455,78 @@ const SearchComplaints = () => {
     const step3Data = step3Methods.getValues();
     const step4Data = step4Methods.getValues();
 
-    // ใช้ complaintTypeId ที่ตรงกับ register
-    const selectedComplaintType = complaintTypes.find(
-      (type) => type.id === step3Data.complaintTypeId
-    );
+    // Log ข้อมูลที่ได้มาจากฟอร์มทั้งหมด (สำหรับ debug)
+    console.log("handleSubmit - step3Data:", step3Data);
 
-    const selectedSubComplaintType = subComplaintTypes.find(
-      (subType) => subType.id === step3Data.complaintSubType
-    );
+    // Logic mapping ที่ robust สำหรับ id หรือ name ที่อาจมีแค่อย่างเดียว
+    const selectedComplaintType =
+      complaintTypes.find(
+        (type) =>
+          type.id === step3Data.complaintTypeId ||
+          type.name === step3Data.complaintType ||
+          type.name === step3Data.complaintTypeName
+      ) || null;
+    const selectedSubComplaintType =
+      subComplaintTypes.find(
+        (subType) =>
+          subType.id === step3Data.complaintSubType ||
+          subType.name === step3Data.complaintSubTypeName
+      ) || null;
+    const selectedComplaintChannel =
+      complaintChannels.find(
+        (channel) =>
+          channel.id === step3Data.complaintChannel ||
+          channel.name === step3Data.complaintChannelName
+      ) || null;
 
-    const selectedComplaintChannel = complaintChannels.find(
-      (channel) => channel.id === step3Data.complaintChannel
-    );
+    // ถ้าไม่มี id ให้ส่ง "-"
+    const complaintTypeId =
+      step3Data.complaintTypeId ||
+      step3Data.complaint_type_id ||
+      selectedComplaintType?.id ||
+      "-";
+    const complaintTypeName =
+      step3Data.complaintTypeName ||
+      step3Data.complaintType ||
+      selectedComplaintType?.name ||
+      "-";
+    const complaintTypeData =
+      step3Data.complaintTypeData ||
+      step3Data.complaint_type_data ||
+      selectedComplaintType ||
+      null;
+
+    const complaintSubTypeId =
+      step3Data.complaintSubType ||
+      step3Data.complaint_subtype_id ||
+      selectedSubComplaintType?.id ||
+      "-";
+    const complaintSubTypeName =
+      step3Data.complaintSubTypeName ||
+      step3Data.complaint_subtype ||
+      selectedSubComplaintType?.name ||
+      "-";
+    const complaintSubTypeData =
+      step3Data.complaintSubTypeData ||
+      step3Data.complaint_subtype_data ||
+      selectedSubComplaintType ||
+      null;
+
+    const complaintChannelId =
+      step3Data.complaintChannel ||
+      step3Data.complaint_channel_id ||
+      selectedComplaintChannel?.id ||
+      "-";
+    const complaintChannelName =
+      step3Data.complaintChannelName ||
+      step3Data.complaint_channel ||
+      selectedComplaintChannel?.name ||
+      "-";
+    const complaintChannelData =
+      step3Data.complaintChannelData ||
+      step3Data.complaint_channel_data ||
+      selectedComplaintChannel ||
+      null;
 
     const submitData = {
       id: defaultData?.id,
@@ -492,22 +544,39 @@ const SearchComplaints = () => {
       step3: {
         general: {
           ...step3Data,
-          complaintTypeId: step3Data.complaintTypeId, // <<--- เพิ่ม/ส่งไปด้วย
-          complaintTypeID: step3Data.complaintTypeId, // <<--- ส่งไปด้วย (ถ้าหลังบ้านต้องการ)
-          complaintTypeName: selectedComplaintType?.name || "",
-          complaintSubTypeID: step3Data.complaintSubType,
-          complaintSubTypeName: selectedSubComplaintType?.name || "",
-          complaintChannelID: step3Data.complaintChannel,
-          complaintChannelName: selectedComplaintChannel?.name || "",
-          complaintTypeData: selectedComplaintType,
-          complaintSubTypeData: selectedSubComplaintType,
-          complaintChannelData: selectedComplaintChannel,
+          complaintType: complaintTypeName,
+          complaintTypeId,
+          complaintTypeID: complaintTypeId,
+          complaintTypeName,
+          complaintTypeData,
+          complaint_type: complaintTypeName,
+          complaint_type_id: complaintTypeId,
+          complaint_type_data: complaintTypeData,
+
+          complaintSubType: complaintSubTypeName,
+          complaintSubTypeID: complaintSubTypeId,
+          complaintSubTypeName: complaintSubTypeName,
+          complaintSubTypeData: complaintSubTypeData,
+          complaint_subtype: complaintSubTypeName,
+          complaint_subtype_id: complaintSubTypeId,
+          complaint_subtype_data: complaintSubTypeData,
+
+          complaintChannel: complaintChannelName,
+          complaintChannelID: complaintChannelId,
+          complaintChannelName: complaintChannelName,
+          complaintChannelData: complaintChannelData,
+          complaint_channel: complaintChannelName,
+          complaint_channel_id: complaintChannelId,
+          complaint_channel_data: complaintChannelData,
         },
       },
       step4: {
         general: step4Data,
       },
     };
+
+    // Log ข้อมูลที่จะถูกส่งไป preview/submit (สำหรับ debug)
+    console.log("handleSubmit - submitData:", submitData);
 
     setPreviewData(submitData);
     setShowPreview(true);
@@ -537,12 +606,42 @@ const SearchComplaints = () => {
   const currentComplaintFilingType =
     step3Methods.watch("complaint_filing_type") || "new";
 
-  if (showPreview && previewData) {
+  useEffect(() => {
+    if (
+      showPreview &&
+      previewData &&
+      defaultData?.id &&
+      !hasRedirected.current &&
+      !preview
+    ) {
+      hasRedirected.current = true;
+      router.replace(
+        {
+          pathname: `/admin/edit/website-complaints/${defaultData?.id}`,
+          query: { preview: "" },
+        },
+        undefined,
+        { shallow: true }
+      );
+    }
+  }, [showPreview, previewData, defaultData?.id, preview, router]);
+
+  if (preview !== undefined) {
+    // ไม่ต้องเช็ค !previewData แล้ว return null
     return (
       <SearchComplaintsPreview
-        id={defaultData?.id}
-        data={previewData}
-        onBack={handleBackFromPreview}
+        id={id}
+        data={previewData} // อาจเป็น null ได้
+        onBack={() => {
+          router.replace(
+            {
+              pathname: `/admin/edit/website-complaints/${id}`,
+              query: {},
+            },
+            undefined,
+            { shallow: true }
+          );
+        }}
       />
     );
   }
@@ -892,7 +991,7 @@ const SearchComplaints = () => {
                       </div>
                     </div>
 
-                    {/* Row 5: เลขที่หนังสือ, วันที่, หน่วยงานอื่นที่ส่งเรื่องมาขึ่ง กก. */}
+                    {/* Row 5: เลขที่หนังสือ, วันที่, หน่วยงานอื่นที่ส่งเรื่องมาขึ่ง กค. */}
                     <div className={styles.fieldRowDate}>
                       <div className={styles.fieldGroup}>
                         <label>เลขที่หนังสือ</label>
@@ -912,7 +1011,7 @@ const SearchComplaints = () => {
                         </div>
                       </div>
                       <div className={styles.fieldGroup}>
-                        <label>หน่วยงานอื่นที่ส่งเรื่องมาขึ่ง กก.</label>
+                        <label>หน่วยงานอื่นที่ส่งเรื่องมาที่ กค.</label>
                         <select {...step3Methods.register("senderAgency")}>
                           <option value="">เลือกหน่วยงาน</option>
                           <option value="ministry1">กระทรวงการคลัง</option>
@@ -935,9 +1034,11 @@ const SearchComplaints = () => {
                       <div className={styles.fieldGroup}>
                         <label>ชั้นความเร่งด่วน</label>
                         <select {...step3Methods.register("urgencyLevel")}>
-                          <option value="normal">ไม่เร่งด่วน</option>
-                          <option value="urgent">เร่งด่วน</option>
-                          <option value="very_urgent">เร่งด่วนมาก</option>
+                          <option value="low">ปกติ</option>
+                          <option value="medium">เร่งด่วน</option>
+                          <option value="high">ด่วน</option>
+                          <option value="urgent">ด่วนมาก</option>
+                          <option value="critical">ด่วนที่สุด</option>
                         </select>
                       </div>
                     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef  } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -12,7 +12,6 @@ import {
   IconButton,
   Button,
   useMediaQuery,
-  useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import styles from "./TableList.module.scss";
@@ -20,26 +19,23 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
-import { formatCitizenId_null } from "@utils/Formats";
 import { exportExcel } from "@utils/exportExcel";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { getDepartments } from "@pages/api/department/department";
+import { alertSuccess, alertWarning } from "@utils/Alerts";
+
 const TableList = ({
   data = [],
   title = "",
   navigateTo = "",
-  agencyOptions = [],
-  onSearch = () => {},
   handleNavigateTo,
 }) => {
   const router = useRouter();
-  const theme = useTheme();
   const isSmallScreen = useMediaQuery("(max-width:1200px)");
   const isExtraSmallScreen = useMediaQuery("(max-width:600px)");
 
-  /* ฟิลเตอร์ที่ผู้ใช้กรอก (จะส่งกลับเมื่อกดค้นหา) */
   const [filters, setFilters] = useState({
     claimantName: "",
-    citizenId: "",
     subject: "",
     docGov: "",
     agency: "",
@@ -48,18 +44,95 @@ const TableList = ({
     docStp: "",
   });
 
-  const handleChange = (field) => (e) => {
-    const value = e?.target ? e.target.value : e;
-    setFilters((prev) => ({ ...prev, [field]: value }));
-  };
+  const [searchFilters, setSearchFilters] = useState({
+    claimantName: "",
+    subject: "",
+    docGov: "",
+    agency: "",
+    docKk: "",
+    docSr: "",
+    docStp: "",
+  });
 
-  /* pagination */
+  // สำหรับ department options
+  const hasFetchedDepartments = useRef(false);
+  const [departmentOptions, setDepartmentOptions] = useState([
+    { value: "", label: "เลือกหน่วยงาน" },
+  ]);
+
+  useEffect(() => {
+    if (hasFetchedDepartments.current) return;
+    hasFetchedDepartments.current = true;
+    const fetchDepartments = async () => {
+      try {
+        const res = await getDepartments();
+        if (res?.res_code === "0000" && Array.isArray(res.res_data)) {
+          const depts = res.res_data.map((d) => ({
+            value: d.id,
+            label: d.name,
+          }));
+          setDepartmentOptions([
+            { value: "", label: "เลือกหน่วยงาน" },
+            ...depts,
+          ]);
+        } else {
+          setDepartmentOptions([{ value: "", label: "เลือกหน่วยงาน" }]);
+        }
+      } catch (err) {
+        setDepartmentOptions([{ value: "", label: "เลือกหน่วยงาน" }]);
+      }
+    };
+    fetchDepartments();
+  }, []);
+
+  // สำหรับ filter & pagination
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // ฟังก์ชัน safeIncludes สำหรับตรวจสอบ string
+  const safeIncludes = (text, query) =>
+    (text ?? "")
+      .toString()
+      .toLowerCase()
+      .includes((query ?? "").toString().toLowerCase());
+
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      if (
+        searchFilters.claimantName &&
+        !safeIncludes(item.complainant_name, searchFilters.claimantName)
+      ) {
+        return false;
+      }
+      if (
+        searchFilters.subject &&
+        !safeIncludes(item.subject, searchFilters.subject)
+      ) {
+        return false;
+      }
+      if (
+        searchFilters.docGov &&
+        !safeIncludes(item.reference_number4, searchFilters.docGov)
+      ) {
+        return false;
+      }
+      if (
+        searchFilters.agency &&
+        item.sender_agency_id !== searchFilters.agency &&
+        item.sender_agency !== searchFilters.agency &&
+        item.agency_id !== searchFilters.agency
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [data, searchFilters]);
+
+  // pagination
   const pagedData = useMemo(
-    () => data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [data, page, rowsPerPage]
+    () =>
+      filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [filteredData, page, rowsPerPage]
   );
 
   const handlePageChange = (_, newPage) => setPage(newPage);
@@ -69,15 +142,21 @@ const TableList = ({
   };
 
   const handleSearchClick = () => {
-    console.log("Searching with filters:", filters); // Debug log
-    setPage(0); // Reset to first page when searching
-    onSearch(filters);
+    setPage(0);
+    setSearchFilters(filters);
+    // Show alert depending on search result
+    setTimeout(() => {
+      if (data.length > 0 && filteredData.length === 0) {
+        alertWarning("ไม่พบข้อมูล", "ไม่พบข้อมูลที่ค้นหา");
+      } else {
+        alertSuccess("ค้นหาสำเร็จ", "ค้นหาข้อมูลสำเร็จแล้ว");
+      }
+    }, 0);
   };
 
   const handleClearSearch = () => {
     const cleared = {
       claimantName: "",
-      citizenId: "",
       subject: "",
       docGov: "",
       agency: "",
@@ -86,8 +165,8 @@ const TableList = ({
       docStp: "",
     };
     setFilters(cleared);
+    setSearchFilters(cleared);
     setPage(0);
-    onSearch(cleared);
   };
 
   const handleRowClick = (item) =>
@@ -101,58 +180,49 @@ const TableList = ({
   };
 
   const tableRef = useRef(null);
-  
-    const handleExportPDF = () => {
-      const today = new Date().toLocaleDateString("th-TH");
-      const filename = `รายงาน${title}_${today}.pdf`;
-      exportElementToPDF(tableRef, filename);
-    };
+
+  const handleExportPDF = () => {
+    const today = new Date().toLocaleDateString("th-TH");
+    const filename = `รายงาน${title}_${today}.pdf`;
+    exportElementToPDF(tableRef, filename);
+  };
+
   const handleExportExcel = () => {
-  if (!data || data.length === 0) return;
+    if (!filteredData || filteredData.length === 0) return;
+    const today = new Date().toLocaleDateString("th-TH");
+    const filename = `รายงาน${title}_${today}.xlsx`;
 
-  const today = new Date().toLocaleDateString("th-TH");
-  const filename = `รายงาน${title}_${today}.xlsx`;
+    // กำหนดหัวตาราง
+    const exportLabel = [
+      "ลำดับ",
+      "ชื่อผู้ร้อง",
+      "ชื่อเรื่อง",
+      "เลขที่ สป.กค.",
+      "เลขที่ สป.สร.",
+      "เลขที่ สตป.",
+      "เลขที่ สรร.",
+    ];
 
-  // กำหนดหัวตาราง
-  const exportLabel = [
-    "ลำดับ",
-    "ชื่อผู้ร้อง",
-    "บัตรประชาชน",
-    "ชื่อเรื่อง",
-    "เลขที่สป.กค.",
-    "เลขที่สป.สร.",
-    "เลขที่สตป.",
-    "เลขที่ส่วนรับราชการ",
-  ];
+    // แปลงข้อมูลเป็น array of array (AOA)
+    const exportData = filteredData.map((item, idx) => [
+      idx + 1,
+      item?.complainant_name ?? "-",
+      item?.subject ?? "-",
+      item?.reference_number ?? "-",
+      item?.reference_number2 ?? "-",
+      item?.reference_number3 ?? "-",
+      item?.reference_number4 ?? "-",
+    ]);
 
-  // แปลงข้อมูลเป็น array of array (AOA)
-  const exportData = data.map((item, idx) => [
-    idx + 1,
-    item?.name ?? "-",
-    formatCitizenId_null(item?.citizenId ?? "-"),
-    item?.subject ?? "-",
-    item?.docKk ?? "-",
-    item?.docSr ?? "-",
-    item?.docStp ?? "-",
-    item?.docGov ?? "-",
-  ]);
+    const aoaWithHeader = [[], [], exportLabel, ...exportData];
 
-  // เว้น 1 แถวก่อน header ตามคำขอ
-  const aoaWithHeader = [
-    [],
-    [],
-    exportLabel,
-    ...exportData,
-  ];
-
-  exportExcel(aoaWithHeader, {
-    filename,
-    sheetName: "Sheet1",
-    title,
-    exportDate: `วันที่ ${today}`,
-  });
-};
-
+    exportExcel(aoaWithHeader, {
+      filename,
+      sheetName: "Sheet1",
+      title,
+      exportDate: `วันที่ ${today}`,
+    });
+  };
 
   return (
     <Container
@@ -165,13 +235,9 @@ const TableList = ({
       }}
     >
       <Box className={styles.headerBar}>{title}</Box>
-
-      {/* Search Bar - Responsive Layout */}
       <Box sx={{ px: 2, py: 2 }}>
         {isSmallScreen ? (
-          // Mobile/Tablet Layout (< 1200px)
           <Box display="flex" flexDirection="column" gap={2}>
-            {/* Search Fields Grid */}
             <Box
               display="grid"
               gridTemplateColumns={{
@@ -185,44 +251,53 @@ const TableList = ({
                 label="ชื่อผู้ร้อง"
                 inputLabel="กรอกชื่อผู้ร้อง"
                 value={filters.claimantName}
-                onChange={handleChange("claimantName")}
-                onKeyPress={handleKeyPress}
-              />
-              <InputText
-                label="เลขบัตรประชาชน"
-                inputLabel="กรอกเลขบัตรประชาชน"
-                value={filters.citizenId}
-                onChange={handleChange("citizenId")}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    claimantName: e.target.value,
+                  }))
+                }
                 onKeyPress={handleKeyPress}
               />
               <InputText
                 label="ชื่อเรื่อง"
                 inputLabel="กรอกชื่อเรื่อง"
                 value={filters.subject}
-                onChange={handleChange("subject")}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    subject: e.target.value,
+                  }))
+                }
                 onKeyPress={handleKeyPress}
               />
               <InputText
-                label="เลขที่ส่วนรับราชการ"
-                inputLabel="กรอกเลขที่ส่วนรับราชการ"
+                label="เลขที่ สรร."
+                inputLabel="กรอกเลขที่ สรร."
                 value={filters.docGov}
-                onChange={handleChange("docGov")}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    docGov: e.target.value,
+                  }))
+                }
                 onKeyPress={handleKeyPress}
               />
               <SelectField
-                label="หน่วยงานอื่นที่ส่งเรื่องมายัง กก."
+                label="หน่วยงานอื่นที่ส่งเรื่องมายัง กค."
                 inputLabel="เลือกหน่วยงาน"
-                options={agencyOptions}
+                options={departmentOptions}
                 value={filters.agency}
-                onChange={handleChange("agency")}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    agency: e.target.value,
+                  }))
+                }
               />
             </Box>
-
-            {/* Action Buttons - Responsive Layout */}
             {isExtraSmallScreen ? (
-              // Extra Small (xs) - แยกบรรทัดและเรียงแนวตั้ง
               <Box display="flex" flexDirection="column" gap={2}>
-                {/* Search & Clear Buttons */}
                 <Box display="flex" justifyContent="center" gap={1}>
                   <IconButton
                     onClick={handleSearchClick}
@@ -251,8 +326,6 @@ const TableList = ({
                     <CleaningServicesIcon />
                   </IconButton>
                 </Box>
-
-                {/* Navigation Button */}
                 <Box display="flex" justifyContent="center">
                   <Button
                     variant="contained"
@@ -273,17 +346,16 @@ const TableList = ({
                     คัดกรองเรื่องร้องเรียน
                   </Button>
                 </Box>
-
-                {/* Export Buttons - แยกบรรทัด */}
                 <Box display="flex" flexDirection="column" gap={1}>
                   <ExportButton label="Export PDF" onClick={handleExportPDF} />
-                  <ExportButton label="Export Excel" onClick={handleExportExcel} />
+                  <ExportButton
+                    label="Export Excel"
+                    onClick={handleExportExcel}
+                  />
                 </Box>
               </Box>
             ) : (
-              // Small and up (sm+) - จัดเป็น 2 แถว
               <Box display="flex" flexDirection="column" gap={2}>
-                {/* แถวที่ 1: Search, Clear, Navigate */}
                 <Box
                   display="flex"
                   justifyContent="space-between"
@@ -319,7 +391,6 @@ const TableList = ({
                       <CleaningServicesIcon />
                     </IconButton>
                   </Box>
-
                   <Button
                     variant="contained"
                     onClick={handleNavigateTo}
@@ -338,17 +409,17 @@ const TableList = ({
                     คัดกรองเรื่องร้องเรียน
                   </Button>
                 </Box>
-
-                {/* แถวที่ 2: Export Buttons */}
                 <Box display="flex" justifyContent="center" gap={1}>
                   <ExportButton label="Export PDF" onClick={handleExportPDF} />
-                  <ExportButton label="Export Excel" onClick={handleExportExcel} />
+                  <ExportButton
+                    label="Export Excel"
+                    onClick={handleExportExcel}
+                  />
                 </Box>
               </Box>
             )}
           </Box>
         ) : (
-          // Desktop Layout (>= 1200px)
           <Box
             display="flex"
             justifyContent="space-between"
@@ -370,38 +441,50 @@ const TableList = ({
                 label="ชื่อผู้ร้อง"
                 inputLabel="กรอกชื่อผู้ร้อง"
                 value={filters.claimantName}
-                onChange={handleChange("claimantName")}
-                onKeyPress={handleKeyPress}
-              />
-              <InputText
-                label="เลขบัตรประชาชน"
-                inputLabel="กรอกเลขบัตรประชาชน"
-                value={filters.citizenId}
-                onChange={handleChange("citizenId")}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    claimantName: e.target.value,
+                  }))
+                }
                 onKeyPress={handleKeyPress}
               />
               <InputText
                 label="ชื่อเรื่อง"
                 inputLabel="กรอกชื่อเรื่อง"
                 value={filters.subject}
-                onChange={handleChange("subject")}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    subject: e.target.value,
+                  }))
+                }
                 onKeyPress={handleKeyPress}
               />
               <InputText
-                label="เลขที่ส่วนรับราชการ"
-                inputLabel="กรอกเลขที่ส่วนรับราชการ"
+                label="เลขที่ สรร."
+                inputLabel="กรอกเลขที่ สรร."
                 value={filters.docGov}
-                onChange={handleChange("docGov")}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    docGov: e.target.value,
+                  }))
+                }
                 onKeyPress={handleKeyPress}
               />
               <SelectField
-                label="หน่วยงานอื่นที่ส่งเรื่องมายัง กก."
+                label="หน่วยงานอื่นที่ส่งเรื่องมายัง กค."
                 inputLabel="เลือกหน่วยงาน"
-                options={agencyOptions}
+                options={departmentOptions}
                 value={filters.agency}
-                onChange={handleChange("agency")}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    agency: e.target.value,
+                  }))
+                }
               />
-
               <IconButton
                 onClick={handleSearchClick}
                 sx={{
@@ -430,7 +513,6 @@ const TableList = ({
               >
                 <CleaningServicesIcon />
               </IconButton>
-
               <Button
                 variant="contained"
                 onClick={handleNavigateTo}
@@ -450,31 +532,25 @@ const TableList = ({
                 คัดกรองเรื่องร้องเรียน
               </Button>
             </Box>
-
-            {/* Export buttons - Responsive for xs */}
             <Box
               display="flex"
               flexDirection={isExtraSmallScreen ? "column" : "row"}
               gap={1}
               sx={{ flexShrink: 0 }}
             >
-              <ExportButton label="Export PDF" onClick={handleExportPDF}/>
-              <ExportButton label="Export Excel" onClick={handleExportExcel}/>
+              <ExportButton label="Export PDF" onClick={handleExportPDF} />
+              <ExportButton label="Export Excel" onClick={handleExportExcel} />
             </Box>
           </Box>
         )}
       </Box>
-
-      {/* Results Summary */}
       <Box sx={{ px: 2, py: 1 }}>
         <Box sx={{ color: "#666", fontSize: "0.9rem" }}>
-          พบข้อมูล {data.length} รายการ
+          พบข้อมูล {filteredData.length} รายการ
         </Box>
       </Box>
-
-      {/* Table - Conditional Scrolling based on screen size */}
       <Box
-      ref={tableRef}
+        ref={tableRef}
         className={styles.tableWrapper}
         id="table-results"
         sx={{
@@ -497,27 +573,23 @@ const TableList = ({
               <TableCell sx={{ width: 200, fontWeight: "bold" }}>
                 ชื่อผู้ร้อง
               </TableCell>
-              <TableCell sx={{ width: 180, fontWeight: "bold" }}>
-                บัตรประชาชน
-              </TableCell>
               <TableCell sx={{ width: 300, fontWeight: "bold" }}>
                 ชื่อเรื่อง
               </TableCell>
               <TableCell sx={{ width: 180, fontWeight: "bold" }}>
-                เลขที่สป.กค.
+                เลขที่ สป.กค.
               </TableCell>
               <TableCell sx={{ width: 180, fontWeight: "bold" }}>
-                เลขที่สป.สร.
+                เลขที่ สป.สร.
               </TableCell>
               <TableCell sx={{ width: 180, fontWeight: "bold" }}>
-                เลขที่สตป.
+                เลขที่ สตป.
               </TableCell>
               <TableCell sx={{ width: 180, fontWeight: "bold" }}>
-                เลขที่ส่วนรับราชการ
+                เลขที่ สรร.
               </TableCell>
             </TableRow>
           </TableHead>
-
           <TableBody>
             {pagedData.length > 0 ? (
               pagedData.map((item, idx) => (
@@ -536,17 +608,14 @@ const TableList = ({
                   >
                     {page * rowsPerPage + idx + 1}
                   </TableCell>
-                  <TableCell>{item?.name ?? "-"}</TableCell>
-                  <TableCell>
-                    {formatCitizenId_null(item?.citizenId ?? "-")}
-                  </TableCell>
+                  <TableCell>{item?.complainant_name ?? "-"}</TableCell>
                   <TableCell className={styles.ellipsisCell}>
                     {item?.subject ?? "-"}
                   </TableCell>
-                  <TableCell>{item?.docKk ?? "-"}</TableCell>
-                  <TableCell>{item?.docSr ?? "-"}</TableCell>
-                  <TableCell>{item?.docStp ?? "-"}</TableCell>
-                  <TableCell>{item?.docGov ?? "-"}</TableCell>
+                  <TableCell>{item?.reference_number ?? "-"}</TableCell>
+                  <TableCell>{item?.reference_number2 ?? "-"}</TableCell>
+                  <TableCell>{item?.reference_number3 ?? "-"}</TableCell>
+                  <TableCell>{item?.reference_number4 ?? "-"}</TableCell>
                 </TableRow>
               ))
             ) : (
@@ -562,12 +631,10 @@ const TableList = ({
             )}
           </TableBody>
         </Table>
-
-        {/* Pagination */}
         <TablePagination
           component="div"
           rowsPerPageOptions={[5, 10, 25, 50]}
-          count={data.length}
+          count={filteredData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handlePageChange}

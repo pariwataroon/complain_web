@@ -27,19 +27,18 @@ import {
 } from "@utils/Alerts";
 import useSearchComplaintsPreview from "@hooks/admin/websitecomplaints/useSearchComplaintsPreview";
 
+const SESSION_KEY = "complaintsPreviewData";
+
 const SearchComplaintsPreview = ({
   id: propId = null,
   data: propData = null,
   onBack = null,
 }) => {
   const router = useRouter();
-  const { id: queryId } = router.query;
-
-  // ใช้ id จาก props ก่อน ถ้าไม่มีค่อยใช้จาก query
-  const id = propId || queryId;
+  const [id, setId] = useState(propId || null);
 
   const [formData, setFormData] = useState(null);
-  console.log("formData", formData);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -47,8 +46,25 @@ const SearchComplaintsPreview = ({
 
   const pdfRef = useRef();
 
-  const { handleUpdateAssignment, isSubmitting, preparedFormData } =
-    useSearchComplaintsPreview();
+  useEffect(() => {
+    if (!formData && id) {
+      const saved = sessionStorage.getItem(SESSION_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // ถ้า sessionStorage เป็นข้อมูลของ id ที่กำลังดู ให้ใช้เลย
+          if (parsed && parsed.id && String(parsed.id) === String(id)) {
+            setFormData(parsed);
+            setLoading(false);
+            setError(null);
+            return;
+          }
+        } catch (e) {}
+      }
+    }
+  }, [id]);
+
+  const { handleUpdateAssignment, isSubmitting } = useSearchComplaintsPreview();
 
   const breadcrumbItems = [
     {
@@ -87,47 +103,73 @@ const SearchComplaintsPreview = ({
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      // ถ้ามี propData ให้ใช้ข้อมูลจาก props
-      if (propData) {
-        setFormData(propData);
-        setLoading(false);
-        return;
-      }
+    if (!propId && router.isReady) {
+      setId(router.query.id || null);
+    }
+  }, [router.isReady, router.query.id, propId]);
 
-      if (!id) {
-        setError("ไม่พบ ID เรื่องร้องทุกข์");
-        setLoading(false);
-        return;
-      }
+  // โหลดข้อมูลเมื่อ id เปลี่ยน หรือ propData เปลี่ยน
+  useEffect(() => {
+    // ถ้าได้ data มาจาก props แล้ว ใช้เลย
+    if (propData) {
+      setFormData(propData);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    // ถ้าไม่มี id ก็ไม่ต้องโหลด
+    if (!id) {
+      setFormData(null);
+      setError("ไม่พบ ID เรื่องร้องทุกข์");
+      setLoading(false);
+      return;
+    }
 
+    // ลอง sessionStorage ก่อน
+    const saved = sessionStorage.getItem(SESSION_KEY);
+    if (saved) {
       try {
-        // ลองดึงข้อมูลจาก query parameter ก่อน (กรณีส่งมาจากหน้าแก้ไข)
-        if (router.query.data) {
-          const data = JSON.parse(router.query.data);
-          setFormData(data);
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.id && String(parsed.id) === String(id)) {
+          setFormData(parsed);
           setLoading(false);
+          setError(null);
           return;
         }
+      } catch {}
+    }
 
-        // ถ้าไม่มีข้อมูลใน query ให้เรียก API
-        const response = await GetComplaintByID(id);
-
-        if (response?.res_code === "0001" && response?.res_data) {
+    // โหลดจาก API
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    GetComplaintByID(id)
+      .then((response) => {
+        if (cancelled) return;
+        if (response?.res_code === "0000" && response?.res_data) {
           setFormData(response.res_data);
+          setError(null);
+          sessionStorage.setItem(
+            SESSION_KEY,
+            JSON.stringify(response.res_data)
+          );
         } else {
-          throw new Error(response?.res_desc || "ไม่สามารถดึงข้อมูลได้");
+          setFormData(null);
+          setError(response?.res_desc || "ไม่สามารถดึงข้อมูลได้");
         }
-      } catch (error) {
-        console.error("Error fetching complaint data:", error);
-        setError(error.message || "เกิดข้อผิดพลาดในการโหลดข้อมูล");
-      } finally {
-        setLoading(false);
-      }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFormData(null);
+        setError("เกิดข้อผิดพลาดในการโหลดข้อมูล");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
     };
-
-    fetchData();
-  }, [id, router.query.data, propData]);
+  }, [id, propData]);
 
   // เพิ่มฟังก์ชันนี้ก่อน return statement
   const safeFormatThaiDateTime = (dateValue) => {
@@ -160,12 +202,10 @@ const SearchComplaintsPreview = ({
       alertError("ข้อผิดพลาด", "ไม่พบ ID เรื่องร้องทุกข์");
       return;
     }
-
     if (!formData) {
       alertError("ข้อผิดพลาด", "ไม่พบข้อมูลที่จะส่ง");
       return;
     }
-
     if (!userInfo) {
       alertError("ข้อผิดพลาด", "ไม่พบข้อมูลผู้ใช้");
       return;
@@ -174,22 +214,60 @@ const SearchComplaintsPreview = ({
     setSubmitting(true);
 
     try {
-      console.log("=== Preview Component: Calling handleUpdateAssignment ===");
-      console.log("Complaint ID:", id);
-      console.log("Form Data to be sent:", JSON.stringify(formData, null, 2));
-      console.log("User Info:", userInfo);
+      const step3Data = formData.step3?.general || {};
+      const step4Data = formData.step4?.general || {};
 
-      // เรียกใช้ handleUpdateAssignment จาก hook โดยตรง
-      // hook จะทำการ prepare ข้อมูลเองภายใน
-      await handleUpdateAssignment(id, formData, userInfo);
+      // ดึง uuid ที่ log ถูกต้อง
+      let complaintTypeId =
+        step3Data.complaintTypeID ||
+        step3Data.complaintTypeId ||
+        step3Data.complaint_type_id ||
+        step3Data.complaintType ||
+        "";
+      let complaintSubTypeId = step3Data.complaintSubTypeID || "";
+      let complaintChannelId =
+        step3Data.complaintChannelID ||
+        step3Data.complaintChannelId ||
+        step3Data.complaint_channel_id ||
+        step3Data.complaintChannelData?.id ||
+        "";
+
+      // ตรวจสอบ uuid
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(complaintTypeId)) complaintTypeId = "";
+      if (!uuidRegex.test(complaintSubTypeId)) complaintSubTypeId = "";
+      if (!uuidRegex.test(complaintChannelId)) complaintChannelId = "";
+
+      console.log("complaintSubTypeId:", complaintSubTypeId);
+      console.log("complaintChannelId:", complaintChannelId);
+
+      // เตรียมข้อมูลให้ตรงกับ API (ใช้ id ที่ log)
+      const mappedFormData = {
+        ...formData,
+        step3: {
+          general: {
+            ...step3Data,
+            complaintTypeID: complaintTypeId,
+            complaintSubType: complaintSubTypeId, // ใช้ ID ที่ log
+            complaintChannel: complaintChannelId, // ใช้ ID ที่ log
+          },
+        },
+        step4: {
+          general: {
+            ...step4Data,
+          },
+        },
+      };
+
+      await handleUpdateAssignment(id, mappedFormData, userInfo);
 
       alertSuccess(
         "บันทึกสำเร็จ",
         "ข้อมูลได้รับการบันทึกและดำเนินการเสร็จสิ้นแล้ว"
       );
-
+      sessionStorage.removeItem("complaintsFormData");
       setTimeout(() => {
-        // ไปหน้า website-complaints โดยตรง
         router.push("/admin/edit/website-complaints/");
       }, 1500);
     } catch (error) {
@@ -204,13 +282,13 @@ const SearchComplaintsPreview = ({
   };
 
   const handleBackClick = () => {
+    sessionStorage.removeItem(SESSION_KEY);
     if (onBack) {
       onBack();
     } else {
       router.back();
     }
   };
-
   if (loading) {
     return (
       <>
@@ -300,8 +378,9 @@ const SearchComplaintsPreview = ({
   const complainant = step1.general?.general || {};
 
   // ข้อมูลจาก step2 (ผู้ถูกร้องเรียน)
-  const delegate = step2.general?.individual || {};
-  console.log("delegate", delegate);
+  const delegate = step1.general?.delegate || {};
+  const respondent = step2.general?.individual || {};
+
   // ข้อมูลจาก step3 (เรื่องร้องทุกข์)
   const complaint = step3.general || {};
   const files = complaint.attachment || [];
@@ -375,7 +454,7 @@ const SearchComplaintsPreview = ({
 
   const complainantName = splitThaiName(complainant.name);
   const delegateName = splitThaiName(delegate?.name);
-
+  const respondentName = splitThaiName(respondent?.name);
   return (
     <>
       <BreadcrumbsService items={breadcrumbItems} />
@@ -514,11 +593,11 @@ const SearchComplaintsPreview = ({
                   />
                   <InfoItem
                     label="ตำบล/แขวง"
-                    value={delegate.subdistrict || "-"}
+                    value={delegate?.subdistricts?.label || "-"}
                   />
                   <InfoItem
                     label="อำเภอ/เขต"
-                    value={delegate.district || "-"}
+                    value={delegate?.districts?.label || "-"}
                   />
                   <InfoItem label="จังหวัด" value={delegate.province || "-"} />
                   <InfoItem
@@ -556,23 +635,35 @@ const SearchComplaintsPreview = ({
             <Grid container spacing={2} mb={3}>
               <InfoItem
                 label="หมายเลขประจำตัวประชาชน"
-                value={formatCitizenId_null(delegate.idCard)}
+                value={formatCitizenId_null(respondent.idCard)}
               />
-              <InfoItem label="คำนำหน้า" value={delegate.title || "-"} />
-              <InfoItem label="ชื่อ" value={delegate.firstName || "-"} />
-              <InfoItem label="นามสกุล" value={delegate.lastName || "-"} />
+              <InfoItem label="คำนำหน้า" value={respondentName.title || "-"} />
+              <InfoItem label="ชื่อ" value={respondentName.firstName || "-"} />
+              <InfoItem
+                label="นามสกุล"
+                value={respondentName.lastName || "-"}
+              />
               <InfoItem
                 label="ที่อยู่ที่ติดต่อได้"
-                value={delegate.address || "-"}
+                value={respondent.address || "-"}
               />
-              <InfoItem label="ตำบล/แขวง" value={delegate.subdistrict || "-"} />
-              <InfoItem label="อำเภอ/เขต" value={delegate.district || "-"} />
-              <InfoItem label="จังหวัด" value={delegate.province || "-"} />
-              <InfoItem label="รหัสไปรษณีย์" value={delegate.zipcode || "-"} />
-              <InfoItem label="อีเมล" value={delegate.email || "-"} />
+              <InfoItem
+                label="ตำบล/แขวง"
+                value={respondent?.subdistricts?.label || "-"}
+              />
+              <InfoItem
+                label="อำเภอ/เขต"
+                value={respondent?.districts?.label || "-"}
+              />
+              <InfoItem label="จังหวัด" value={respondent.province || "-"} />
+              <InfoItem
+                label="รหัสไปรษณีย์"
+                value={respondent.zipcode || "-"}
+              />
+              <InfoItem label="อีเมล" value={respondent.email || "-"} />
               <InfoItem
                 label="หมายเลขโทรศัพท์"
-                value={formatPhoneNumber_null(delegate.phone)}
+                value={formatPhoneNumber_null(respondent.phone)}
               />
             </Grid>
 

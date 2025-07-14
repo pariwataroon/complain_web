@@ -58,7 +58,6 @@ const GetComplaintByID = async (id) => {
   }
 };
 
-
 const GetComplaintMeByID = async (id) => {
   try {
     const response = await axiosInstance.get(`/complaints/me/${id}`);
@@ -112,7 +111,7 @@ const UpdateAssignmentCompleteByAdmin = async (complaint_id, formData) => {
       `/complaints-assignment/${complaint_id}/assignment`,
       formData
     );
-    
+
     if (response && response.data) {
       return response.data;
     }
@@ -121,7 +120,17 @@ const UpdateAssignmentCompleteByAdmin = async (complaint_id, formData) => {
     throw error;
   }
 };
-
+const GetEnhancedComplaints = async ({ skip = 0, limit = 10, search = "" }) => {
+  try {
+    const response = await axiosInstance.get("/complaints/enhanced", {
+      params: { skip, limit, search },
+    });
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching enhanced complaints:", error);
+    throw error;
+  }
+};
 
 export {
   Addcomplaints,
@@ -133,4 +142,5 @@ export {
   GetComplaintTaskStatus,
   GetComplaintsGroupedbyChannel,
   UpdateAssignmentCompleteByAdmin,
+  GetEnhancedComplaints,
 };

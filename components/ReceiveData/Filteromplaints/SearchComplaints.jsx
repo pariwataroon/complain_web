@@ -287,7 +287,7 @@ const SearchComplaints = () => {
       defaultGeneralRef.current = cData;
 
       // Step 1: Delegate
-      const { type: dType, data: dData } = getDelegateTypeAndData(general);
+      const { type: dType, data: dData } = getDelegateTypeAndData(delegate);
       setDelegateType(dType);
       setDelegateData(dData);
       defaultDelegateRef.current = dData;
