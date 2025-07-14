@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -21,6 +21,10 @@ import styles from "./TableListFollowing.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
+import { exportElementToPDF } from "@utils/exportPDF";
+import { exportExcel } from "@utils/exportExcel";
+
+
 
 const TableListFollowing = ({
   data = [],
@@ -186,6 +190,39 @@ const TableListFollowing = ({
     };
   }, [data, filters.status, enhancedStatusOptions]);
 
+  const tableRef = useRef(null);
+      
+    const handleExportPDF = () => {
+    const today = new Date().toLocaleDateString("th-TH");
+    const filename = `ติดตามผลการดำเนินการ_${today}.pdf`;
+    exportElementToPDF(tableRef, filename);
+  };
+const handleExportExcel = () => {
+  const today = new Date().toLocaleDateString("th-TH");
+  const filename = `ติดตามผลการดำเนินการ_${today}.xlsx`;
+
+  // ตรวจสอบว่า pagedData มีข้อมูลหรือไม่
+  if (!pagedData || pagedData.length === 0) {
+    alert("ไม่มีข้อมูลให้ส่งออก");
+    return;
+  }
+
+  const exportData = pagedData.map((item, idx) => ({
+    ลำดับ: page * rowsPerPage + idx + 1,
+    "ชื่อผู้ร้อง": item.claimantName || "-",
+    "หน่วยงานที่เกี่ยวข้อง": item.agency || "-",
+    "เลขสรร.": item.ssoNo || "-",
+    "เรื่อง": item.issue || "-",
+    "ประเภทเรื่อง": item.issueType || "-",
+    "วันที่รับเรื่อง": item.receiveDate || "-",
+    "สถานะการดำเนินการ": item.status || "-",
+  }));
+
+  // ✅ ส่งออก JSON โดยตรง ไม่ต้องอิง ref
+  exportExcel(exportData, filename);
+};
+
+
   return (
     <Container
       maxWidth={false}
@@ -284,15 +321,11 @@ const TableListFollowing = ({
         <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
           <ExportButton
             label="Export PDF"
-            onClick={() => {
-              
-            }}
+            onClick={handleExportPDF}
           />
           <ExportButton
             label="Export Excel"
-            onClick={() => {
-              
-            }}
+            onClick={handleExportExcel}
           />
         </Box>
       </Box>
@@ -302,7 +335,7 @@ const TableListFollowing = ({
         id="table-results"
         sx={{ overflowX: "auto", px: 2, pb: 1 }}
       >
-        <Table sx={{ minWidth: 1400 }}>
+        <Table sx={{ minWidth: 1400 }} ref={tableRef}>
           <TableHead>
             <TableRow>
               <TableCell

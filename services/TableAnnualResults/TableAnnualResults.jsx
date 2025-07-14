@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import PropTypes from "prop-types";
 import {
   Box,
@@ -23,6 +23,7 @@ import ExportButton from "@services/ExportButton/ExportButton";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import styles from "./TableAnnualResults.module.scss";
 import { exportExcel } from "@utils/exportExcel";
+import { exportElementToPDF } from "@utils/exportPDF";
 const TableAnnualResults = ({
   data = [],
   filterFields = [],
@@ -178,7 +179,7 @@ const TableAnnualResults = ({
   );
 
   const renderTable = (dataset) => (
-    <Box
+    <Box 
       sx={{
         overflowX: "auto", // เสมอมี scrollbar ถ้าจำเป็น
         width: "100%",
@@ -288,6 +289,13 @@ const TableAnnualResults = ({
       </Table>
     </Box>
   );
+  const tableRef = useRef(null);
+      
+      const handleExportPDF = () => {
+    const today = new Date().toLocaleDateString("th-TH");
+    const filename = `รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี_${today}.pdf`;
+    exportElementToPDF(tableRef, filename);
+  };
 // ฟังก์ชันสำหรับ export Excel
 const handleExportExcel = () => {
   if (!filteredData || filteredData.length === 0) {
@@ -301,28 +309,59 @@ const handleExportExcel = () => {
     day: "numeric",
   });
 
-  const exportData = filteredData.map((row, index) => ({
-    ลำดับ: index + 1,
-    "เลขรับ สรร.": row.receiptNumber || "-",
-    "ลงวันที่": row.receiptDate || "-",
-    "ชื่อ-สกุล (ผู้ร้อง)": row.complainant || "-",
-    "ชื่อเรื่อง": row.complaint || "-",
-    "ประเภทเรื่อง": row.issueType || "-",
-    "หนังสือส่งหน่วยงาน/ติดตามผล": row.letterRef
-      ? `${row.letterRef} (${row.letterDate || "-"})`
-      : "-",
-    "เจ้าหน้าที่ผู้รับผิดชอบ": row.responsibleOfficer || "-",
-    "สถานะเรื่อง": row.status || "-",
-    "ระยะเวลาในการดำเนินงาน": row.elapsedTime || "-",
-  }));
+  // คำนิยาม columns (ใช้ชื่อคอลัมน์ตามต้องการ)
+  const columns = [
+    "ลำดับ",
+    "เลขรับ สรร.",
+    "ลงวันที่",
+    "ชื่อ-สกุล (ผู้ร้อง)",
+    "ชื่อเรื่อง",
+    "ประเภทเรื่อง",
+    "หนังสือส่งหน่วยงาน/ติดตามผล",
+    "เจ้าหน้าที่ผู้รับผิดชอบ",
+    "สถานะเรื่อง",
+    "ระยะเวลาในการดำเนินงาน",
+  ];
+
+  const completed = filteredData.filter((d) => d.status === "ยุติ");
+  const inProgress = filteredData.filter((d) => d.status !== "ยุติ");
+
+  const mapRow = (row, index) => [
+    index + 1,
+    row.receiptNumber || "-",
+    row.receiptDate || "-",
+    row.complainant || "-",
+    row.complaint || "-",
+    row.issueType || "-",
+    row.letterRef ? `${row.letterRef} (${row.letterDate || "-"})` : "-",
+    row.responsibleOfficer || "-",
+    row.status || "-",
+    row.elapsedTime || "-",
+  ];
+
+  const completedRows = completed.map(mapRow);
+  const inProgressRows = inProgress.map(mapRow);
+
+  // สร้าง exportData
+  const exportData = [
+    [`รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี สถานะ: ยุติแล้ว (${completed.length} รายการ)`],
+    columns,
+    ...completedRows,
+    [], // เว้นบรรทัด
+    [`รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี สถานะ: อยู่ระหว่างดำเนินการ (${inProgress.length} รายการ)`],
+    columns,
+    ...inProgressRows,
+  ];
 
   exportExcel(exportData, {
-    filename: `รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี${today}.xlsx`,
-    sheetName: "Report",
-    title: "รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี",
+    filename: `รายงานสรุปเรื่องร้องเรียน_${today}.xlsx`,
+    sheetName: "รายงาน",
+    title: "", // ไม่ต้องใช้ title ซ้ำ
     exportDate: `วันที่ ${today}`,
   });
 };
+
+
 
 
   return (
@@ -339,7 +378,7 @@ const handleExportExcel = () => {
         zIndex: 1, // กำหนด z-index base ต่ำ
       }}
     >
-      <Box className={styles.headerBar} />
+      <Box className={styles.headerBar} ref={tableRef}/>
 
       {/* Responsive Filters */}
       <Box
@@ -469,6 +508,7 @@ const handleExportExcel = () => {
             <Box display="flex" justifyContent="center" gap={1} flexWrap="wrap">
               <ExportButton
                 label="Export PDF"
+                onClick={handleExportPDF}
                 size="medium"
                 sx={{
                   minWidth: "120px",
@@ -642,6 +682,7 @@ const handleExportExcel = () => {
             <Box display="flex" justifyContent="center" gap={1} flexWrap="wrap">
               <ExportButton
                 label="Export PDF"
+                onClick={handleExportPDF}
                 size="medium"
                 sx={{
                   minWidth: "120px",
@@ -809,6 +850,7 @@ const handleExportExcel = () => {
             >
               <ExportButton
                 label="Export PDF"
+                onClick={handleExportPDF}
                 size="medium"
                 sx={{
                   minWidth: "120px",
@@ -837,6 +879,7 @@ const handleExportExcel = () => {
 
       {/* Title Sections - ทำ responsive ด้วย */}
       {/* Closed Section */}
+      <Box ref={tableRef}>
       <Box
         sx={{
           backgroundColor: "#EAF5FF",
@@ -875,6 +918,7 @@ const handleExportExcel = () => {
         สถานะ อยู่ระหว่างดำเนินการ ({ongoingData.length} รายการ)
       </Box>
       <Box sx={{ px: isMobile ? 1 : 2, pb: 4 }}>{renderTable(ongoingData)}</Box>
+    </Box>
     </Container>
   );
 };

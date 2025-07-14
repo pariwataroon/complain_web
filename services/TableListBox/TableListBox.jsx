@@ -20,7 +20,7 @@ import styles from "./TableListBox.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
-
+import { exportExcel } from "@utils/exportExcel";
 /**
  * props:
  * - data: array of objects
@@ -82,11 +82,37 @@ const TableListBox = ({
   };
 
   // PDF Export handler
+  
   const handleExportPDF = () => {
     const today = new Date().toLocaleDateString("th-TH");
-    const filename = `รายงาน${title}_${today}.pdf`;
+    const filename = `คลังเรื่องราวร้องทุกข์_${title}_${today}.pdf`;
     exportElementToPDF(tableRef, filename);
   };
+  // Excel Export handler
+  const handleExportExcel = () => {
+  if (!Array.isArray(pagedData) || pagedData.length === 0) {
+    alert("ไม่มีข้อมูลที่จะแสดงใน Excel");
+    return;
+  }
+
+  const exportData = pagedData.map((item, idx) => {
+    const row = {
+      ลำดับ: page * rowsPerPage + idx + 1,
+    };
+
+    columns.forEach(col => {
+      row[col.label] = item[col.name] || "-";
+    });
+
+    return row;
+  });
+
+  const today = new Date().toLocaleDateString("th-TH");
+  const filename = `คลังเรื่องราวร้องทุกข์_${today}.xlsx`;
+
+  exportExcel(exportData, filename);
+};
+
 
   // row click - แก้ไขให้รองรับ custom onRowClick
   const handleRowClick = (item) => {
@@ -256,6 +282,7 @@ const TableListBox = ({
           />
           <ExportButton
             label="Export Excel"
+            onClick={handleExportExcel}
             sx={{
               fontSize: isExtraSmall ? "12px" : "14px",
               minWidth: isExtraSmall ? "120px" : "auto",
@@ -639,6 +666,7 @@ const TableListBox = ({
           }}
         >
           <Table
+            ref={tableRef}
             sx={{
               minWidth: needsScrollbar ? 1400 : "100%",
               width: "100%",

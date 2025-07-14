@@ -118,7 +118,7 @@ const TableAll = ({
     
     const handleExportPDF = () => {
   const today = new Date().toLocaleDateString("th-TH");
-  const filename = `รายงาน${title}_${today}.pdf`;
+  const filename = `ติดตามผลการดำเนินการ_${today}.pdf`;
   exportElementToPDF(tableRef, filename);
 };
 
@@ -157,22 +157,18 @@ const TableAll = ({
   // รวมทั้งหมด: [empty row], title, headers, rows
   const finalExportData = [
     Array(exportColumns.length).fill(""), // แถวเว้นว่าง
-    [`รายงานเรื่องร้องเรียนร้องทุกข์ ณ วันที่ ${today}`],
+    [`ติดตามผลการดำเนินการ_${today}`],
     exportColumns,
     ...exportData,
   ];
 
   exportExcel(finalExportData, {
-    filename: `รายงานเรื่องร้องเรียน_${today}.xlsx`,
+    filename: `ติดตามผลการดำเนินการ_${today}.xlsx`,
     sheetName: "Report",
-    title: `รายงานเรื่องร้องเรียน`,
+    title: `ติดตามผลการดำเนินการ`,
     exportDate: `วันที่ส่งออก: ${today}`,
   });
 
-  console.log("✅ Exported", {
-    count: exportData.length,
-    filename: `รายงานเรื่องร้องเรียน_${today}.xlsx`,
-  });
 };
 
 
