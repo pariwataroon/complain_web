@@ -254,19 +254,11 @@ export function formatThaiOfficialDateTime(isoString) {
 }
 
 export function formatThaiOfficialDateTimeTimeseven(isoString) {
-  if (
-    !isoString ||
-    isoString === null ||
-    isoString === undefined ||
-    isoString === ""
-  ) {
-    return null;
-  }
+  if (!isoString) return null;
 
-  const d = dayjs.utc(isoString).tz("Asia/Bangkok");
-  if (!d.isValid()) {
-    return null;
-  }
+  const d = dayjs(isoString).tz("Asia/Bangkok");
+
+  if (!d.isValid()) return null;
 
   return `${d.format("D MMMM")} พ.ศ. ${d.year() + 543} เวลา ${d.format(
     "HH:mm"

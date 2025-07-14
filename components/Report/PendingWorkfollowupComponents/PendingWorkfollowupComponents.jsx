@@ -208,33 +208,30 @@ const PendingWorkfollowupComponents = () => {
   };
 
   // ฟังก์ชันแปลง DateThaiPickerService object เป็น Date object
-  const convertThaiDateToJs = (thaiDateObj) => {
-    console.log("🔄 Converting Thai date:", thaiDateObj);
+  function convertThaiDateToJs(input) {
+  if (!input) return null;
 
-    if (!thaiDateObj || typeof thaiDateObj !== "object") {
-      console.log("❌ Invalid date object");
-      return null;
-    }
+  // ✅ รองรับ input เป็น Date object อยู่แล้ว
+  if (input instanceof Date && !isNaN(input)) {
+    return input;
+  }
 
-    if (!thaiDateObj.year || !thaiDateObj.month || !thaiDateObj.day) {
-      console.log("❌ Missing date components");
-      return null;
-    }
+  // ✅ รองรับ ISO string เช่น "2024-11-22T00:00:00.000Z"
+  const isoDate = new Date(input);
+  if (!isNaN(isoDate)) {
+    return isoDate;
+  }
 
-    // แปลง พ.ศ. เป็น ค.ศ. ถ้าจำเป็น
-    let gregorianYear = thaiDateObj.year;
-    if (gregorianYear > 2500) {
-      gregorianYear = gregorianYear - 543; // แปลง พ.ศ. เป็น ค.ศ.
-    }
+  // ✅ รองรับ "2568-01-15" (พ.ศ.) แบบ manual พิเศษ
+  const parts = input.split("-");
+  if (parts.length === 3) {
+    let [year, month, day] = parts.map((p) => parseInt(p, 10));
+    if (year > 2400) year -= 543; // แปลง พ.ศ. -> ค.ศ.
+    return new Date(year, month - 1, day);
+  }
 
-    const jsDate = new Date(
-      gregorianYear,
-      thaiDateObj.month - 1,
-      thaiDateObj.day
-    );
-    console.log("✅ Converted to:", jsDate);
-    return jsDate;
-  };
+  return null;
+}
 
   // กรองข้อมูลตามวันที่และประเภทเรื่อง
   const handleSearch = (filterData) => {
