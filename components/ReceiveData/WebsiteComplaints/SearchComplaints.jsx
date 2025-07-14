@@ -45,6 +45,7 @@ const SearchComplaints = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
 
+  console.log("defaultData", defaultData);
   const generalMethods = useForm({
     mode: "onChange",
   });
@@ -62,6 +63,7 @@ const SearchComplaints = () => {
   });
 
   const [complaintTypes, setComplaintTypes] = useState([]);
+  console.log("complaintTypes", complaintTypes);
   const [subComplaintTypes, setSubComplaintTypes] = useState([]);
   const [complaintChannels, setComplaintChannels] = useState([]); // เพิ่ม state สำหรับ channels
   const [loadingOptions, setLoadingOptions] = useState(false);
@@ -74,7 +76,6 @@ const SearchComplaints = () => {
   const currentFetchPromiseRef = useRef(null);
   const lastFetchedIdRef = useRef("");
 
-  // โหลด Complaint Types และ Channels เมื่อ component mount
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoadingOptions(true);
@@ -87,15 +88,42 @@ const SearchComplaints = () => {
           GetAllComplaintChannels(),
         ]);
 
-        console.log("Complaint Types Response:", complaintTypesResponse);
-        console.log("Complaint Channels Response:", channelsResponse);
-
-        // จัดการ complaint types
+        // ----- จัดการ complaint types -----
         if (
           complaintTypesResponse?.res_code === "0000" &&
           complaintTypesResponse?.res_data
         ) {
           setComplaintTypes(complaintTypesResponse.res_data);
+
+          // ==== ส่วนสำคัญ: set complaint_type_id ====
+          // ดึงชื่อจาก defaultData (กรุณา ensure ว่า defaultData มีอยู่)
+          if (
+            defaultData?.step3?.general?.complaintType &&
+            Array.isArray(complaintTypesResponse.res_data)
+          ) {
+            const complaintTypeName = defaultData.step3.general.complaintType;
+            const matchedType = complaintTypesResponse.res_data.find(
+              (type) => type.name === complaintTypeName
+            );
+            const complaintTypeId = matchedType ? matchedType.id : null;
+
+            // เซ็ตค่าใหม่ให้ defaultData (แนะนำใช้ setState ถ้า defaultData อยู่ใน state)
+            if (complaintTypeId) {
+              setDefaultData((prev) => ({
+                ...prev,
+                step3: {
+                  ...prev.step3,
+                  general: {
+                    ...prev.step3.general,
+                    complaint_type_id: complaintTypeId,
+                  },
+                },
+              }));
+              console.log(
+                `Mapped complaintType "${complaintTypeName}" -> id: ${complaintTypeId}`
+              );
+            }
+          }
         } else {
           console.error(
             "Failed to load complaint types:",
@@ -103,7 +131,7 @@ const SearchComplaints = () => {
           );
         }
 
-        // จัดการ complaint channels
+        // ----- จัดการ complaint channels -----
         if (
           channelsResponse?.res_code === "0000" &&
           channelsResponse?.res_data
@@ -111,15 +139,12 @@ const SearchComplaints = () => {
           const channelsData = channelsResponse.res_data;
 
           if (channelsData.items && Array.isArray(channelsData.items)) {
-            console.log("Found complaint channels:", channelsData.items.length);
-
             // เอาเฉพาะ id และ name จาก items
             const filteredChannels = channelsData.items.map((item) => ({
               id: item.id,
               name: item.name,
             }));
 
-            console.log("Filtered channels:", filteredChannels);
             setComplaintChannels(filteredChannels);
           } else {
             console.log("No channels items found in response data");
@@ -143,6 +168,7 @@ const SearchComplaints = () => {
     };
 
     fetchInitialData();
+    // ... (no dependency change, so only runs once on mount)
   }, []);
 
   // ฟังก์ชันตรวจสอบว่า ID ถูกต้องหรือไม่
@@ -177,18 +203,9 @@ const SearchComplaints = () => {
   };
 
   const fetchSubComplaintTypes = useCallback(async (complaintTypeId) => {
-    console.log("fetchSubComplaintTypes called with ID:", complaintTypeId);
-
     // ตรวจสอบ ID
     if (!isValidId(complaintTypeId)) {
-      console.log("Invalid ID, clearing sub types");
       clearSubTypes();
-      return;
-    }
-
-    // ถ้า ID เดิม ไม่ต้องยิงใหม่
-    if (lastFetchedIdRef.current === complaintTypeId) {
-      console.log("Same ID as last fetch, skipping...");
       return;
     }
 
@@ -202,26 +219,13 @@ const SearchComplaints = () => {
     // สร้าง promise ใหม่
     const fetchPromise = (async () => {
       try {
-        console.log("Making API call with ID:", complaintTypeId);
         const response = await getSubComplaintTypeById(complaintTypeId);
-        console.log("API Response:", response);
-
-        // ตรวจสอบว่า promise นี้ยังเป็น current promise หรือไม่
-        if (currentFetchPromiseRef.current !== fetchPromise) {
-          console.log("Promise cancelled, ignoring response");
-          return;
-        }
 
         if (response?.res_code === "0000" && response?.res_data) {
           // API ส่ง response เป็น object ที่มี items array
           const responseData = response.res_data;
 
           if (responseData.items && Array.isArray(responseData.items)) {
-            console.log(
-              "Found sub complaint types:",
-              responseData.items.length
-            );
-
             // เอาเฉพาะ id และ name จาก items
             const filteredSubTypes = responseData.items.map((item) => ({
               id: item.id,
@@ -273,10 +277,6 @@ const SearchComplaints = () => {
 
   const handleComplaintTypeSelectChange = (event) => {
     const value = event.target.value;
-    console.log("Complaint type changed to:", value);
-
-    // **ไม่ต้องใช้ setValue เพราะ register จะจัดการให้แล้ว**
-    // step3Methods.setValue("complaintType", value); // ลบบรรทัดนี้
 
     step3Methods.setValue("complaintSubType", ""); // ล้าง sub type
     setSelectedComplaintTypeId(value);
@@ -304,6 +304,47 @@ const SearchComplaints = () => {
     }
   }, [id]);
 
+  useEffect(() => {
+    // เงื่อนไข: ต้องมีทั้ง defaultData และ complaintTypes (และข้อมูลใน general)
+    if (
+      defaultData?.step3?.general?.complaintType &&
+      complaintTypes.length > 0
+    ) {
+      const step3General = defaultData.step3.general;
+      const complaintTypeName = step3General.complaintType;
+      const matchedType = complaintTypes.find(
+        (type) => type.name === complaintTypeName
+      );
+      const complaintTypeId = matchedType ? matchedType.id : "";
+
+      // Map complaintChannel ด้วย
+      let complaintChannelId = "";
+      if (step3General.complaintChannel && complaintChannels.length > 0) {
+        const matchedChannel = complaintChannels.find(
+          (channel) => channel.name === step3General.complaintChannel
+        );
+        complaintChannelId = matchedChannel ? matchedChannel.id : "";
+      }
+
+      // Reset form ด้วย id ที่ map แล้ว
+      step3Methods.reset({
+        ...step3General,
+        complaintTypeId: String(complaintTypeId),
+        complaintSubType: step3General.complaintSubType || "",
+        complaintChannel: complaintChannelId || "",
+        complaint_filing_type: step3General.complaint_filing_type || "new",
+      });
+
+      setSelectedComplaintTypeId(complaintTypeId);
+
+      // autoload sub types ถ้ามี id เดิม
+      if (complaintTypeId) {
+        fetchSubComplaintTypes(complaintTypeId);
+      }
+    }
+    // eslint-disable-next-line
+  }, [defaultData, complaintTypes, complaintChannels]);
+
   const fetchComplaints = async (id) => {
     setLoading(true);
     setError(null);
@@ -312,60 +353,24 @@ const SearchComplaints = () => {
       const res = await GetComplaintByID(id);
       const data = res?.res_data;
       setDefaultData(data);
-      console.log("Fetched complaint data:", data);
 
-      const general = data?.step1?.general?.general || {};
-      const delegate = data?.step1?.general?.delegate || null;
-      const step2Data = data?.step2?.general?.individual || {};
-      const step3Data = data?.step3?.general || {};
-      const step4Data = data?.step4?.general || {};
+      // refs เก่า
+      defaultGeneralRef.current = data?.step1?.general?.general || {};
+      defaultDelegateRef.current = data?.step1?.general?.delegate || null;
+      defaultStep2Ref.current = data?.step2?.general?.individual || {};
+      defaultStep3Ref.current = data?.step3?.general || {};
+      defaultStep4Ref.current = data?.step4?.general || {};
 
-      defaultGeneralRef.current = general;
-      defaultDelegateRef.current = delegate;
-      defaultStep2Ref.current = step2Data;
-      defaultStep3Ref.current = step3Data;
-      defaultStep4Ref.current = step4Data;
+      // reset form อื่น
+      generalMethods.reset(defaultGeneralRef.current);
+      if (defaultDelegateRef.current)
+        delegateMethods.reset(defaultDelegateRef.current);
+      step2Methods.reset(defaultStep2Ref.current);
+      step4Methods.reset(defaultStep4Ref.current);
 
-      generalMethods.reset(general);
-      if (delegate) delegateMethods.reset(delegate);
-      step2Methods.reset(step2Data);
-
-      step3Methods.reset({
-        ...step3Data,
-        complaintType: step3Data.complaintType || "",
-        complaintSubType: step3Data.complaintSubType || "",
-        complaintChannel: step3Data.complaintChannel || "", // เพิ่มการ reset complaint channel
-        complaint_filing_type: step3Data.complaint_filing_type || "new",
-      });
-
-      // ตั้งค่า selectedComplaintTypeId และโหลด sub types ถ้ามีข้อมูลเดิม
-      const existingComplaintType = step3Data.complaintType;
-      console.log("Existing complaint type:", existingComplaintType);
-
-      if (isValidId(existingComplaintType)) {
-        setSelectedComplaintTypeId(existingComplaintType);
-
-        // รอให้ complaint types โหลดเสร็จก่อน
-        const waitForComplaintTypes = setInterval(() => {
-          if (complaintTypes.length > 0) {
-            clearInterval(waitForComplaintTypes);
-            console.log("Loading sub types for existing complaint type");
-            fetchSubComplaintTypes(existingComplaintType);
-          }
-        }, 100);
-
-        // ตั้ง timeout เพื่อป้องกันการรอไม่สิ้นสุด
-        setTimeout(() => {
-          clearInterval(waitForComplaintTypes);
-        }, 5000);
-      } else {
-        setSelectedComplaintTypeId("");
-        clearSubTypes();
-      }
-
-      step4Methods.reset(step4Data);
+      // *** อย่า reset step3Methods ตรงนี้ ***
+      // รอให้ complaintTypes โหลดเสร็จก่อน (ทำใน useEffect ด้านล่าง)
     } catch (error) {
-      console.error("Load complaints failed", error);
       setError("เกิดข้อผิดพลาดในการโหลดข้อมูล");
     } finally {
       setLoading(false);
@@ -423,7 +428,7 @@ const SearchComplaints = () => {
 
   const handleSubmit = async () => {
     const fieldsToValidate = [
-      "complaintType",
+      "complaintTypeId",
       "complaintSubType",
       "complaintChannel",
       "subject",
@@ -458,14 +463,9 @@ const SearchComplaints = () => {
     const step3Data = step3Methods.getValues();
     const step4Data = step4Methods.getValues();
 
-    // Debug: ดูข้อมูลที่ได้
-    console.log("step3Data:", step3Data);
-    console.log("complaintTypes:", complaintTypes);
-    console.log("subComplaintTypes:", subComplaintTypes);
-    console.log("complaintChannels:", complaintChannels);
-
+    // ใช้ complaintTypeId ที่ตรงกับ register
     const selectedComplaintType = complaintTypes.find(
-      (type) => type.id === step3Data.complaintType
+      (type) => type.id === step3Data.complaintTypeId
     );
 
     const selectedSubComplaintType = subComplaintTypes.find(
@@ -475,11 +475,6 @@ const SearchComplaints = () => {
     const selectedComplaintChannel = complaintChannels.find(
       (channel) => channel.id === step3Data.complaintChannel
     );
-
-    // Debug: ดูข้อมูลที่เลือก
-    console.log("selectedComplaintType:", selectedComplaintType);
-    console.log("selectedSubComplaintType:", selectedSubComplaintType);
-    console.log("selectedComplaintChannel:", selectedComplaintChannel);
 
     const submitData = {
       id: defaultData?.id,
@@ -497,13 +492,13 @@ const SearchComplaints = () => {
       step3: {
         general: {
           ...step3Data,
-          complaintTypeID: step3Data.complaintType,
+          complaintTypeId: step3Data.complaintTypeId, // <<--- เพิ่ม/ส่งไปด้วย
+          complaintTypeID: step3Data.complaintTypeId, // <<--- ส่งไปด้วย (ถ้าหลังบ้านต้องการ)
           complaintTypeName: selectedComplaintType?.name || "",
           complaintSubTypeID: step3Data.complaintSubType,
           complaintSubTypeName: selectedSubComplaintType?.name || "",
           complaintChannelID: step3Data.complaintChannel,
-          complaintChannelName: selectedComplaintChannel?.name || "", // เพิ่มบรรทัดนี้
-          // เพิ่มข้อมูลเพื่อความแน่ใจ
+          complaintChannelName: selectedComplaintChannel?.name || "",
           complaintTypeData: selectedComplaintType,
           complaintSubTypeData: selectedSubComplaintType,
           complaintChannelData: selectedComplaintChannel,
@@ -513,10 +508,6 @@ const SearchComplaints = () => {
         general: step4Data,
       },
     };
-
-    console.log("Submitting data:", JSON.stringify(submitData, null, 2));
-    console.log("complaintSubTypeName value:", selectedSubComplaintType?.name);
-    console.log("complaintChannelName value:", selectedComplaintChannel?.name); // เพิ่มบรรทัดนี้
 
     setPreviewData(submitData);
     setShowPreview(true);
@@ -707,11 +698,11 @@ const SearchComplaints = () => {
                           <span className={styles.required}>*</span>
                         </label>
                         <select
-                          {...step3Methods.register("complaintType", {
+                          {...step3Methods.register("complaintTypeId", {
                             required: "กรุณาเลือกประเภทเรื่องร้องเรียน",
-                            onChange: handleComplaintTypeSelectChange, // ใช้ onChange ใน register
+                            onChange: handleComplaintTypeSelectChange,
                           })}
-                          style={getErrorStyle("complaintType")}
+                          style={getErrorStyle("complaintTypeId")}
                           disabled={loadingOptions}
                         >
                           <option value="">เลือกประเภทเรื่องร้องเรียน</option>
@@ -721,7 +712,7 @@ const SearchComplaints = () => {
                             </option>
                           ))}
                         </select>
-                        {getErrorMessage("complaintType")}
+                        {getErrorMessage("complaintTypeId")}
                       </div>
 
                       <div className={styles.fieldGroup}>
