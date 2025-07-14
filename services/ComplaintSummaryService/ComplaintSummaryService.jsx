@@ -5,6 +5,7 @@ import {
     Typography,
     Grid,
 } from "@mui/material";
+import { useRouter } from "next/router";
 import ButtonService from "@services/ButtonService/ButtonService";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -63,6 +64,8 @@ const ComplaintSummaryService = ({ data = {} }) => {
     };
 
     const getFileExt = (filename) => filename.slice(filename.lastIndexOf(".")).toLowerCase();
+
+    const router = useRouter();
 
     return (
         <Box>
@@ -180,6 +183,7 @@ const ComplaintSummaryService = ({ data = {} }) => {
                     label="ยืนยัน"
                     color="ยืนยัน"
                     variant="contained"
+                    onClick={() => router.back()}
                     // onClick={handleSubmit}
                     // disabled={!acceptSubmit}
                     iconRight={<CheckIcon />}

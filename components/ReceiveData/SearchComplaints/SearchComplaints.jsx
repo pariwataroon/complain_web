@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableList from "@services/TableList/TableList";
 import { useRouter } from "next/router";
+import { GetEnhancedComplaints } from "@pages/api/complaint/complaint";
 
 const breadcrumbItems = [
   {
@@ -181,10 +182,36 @@ const safeIncludes = (text, query) =>
     .includes((query ?? "").toString().toLowerCase());
 
 const SearchComplaints = () => {
-  const [allComplaints] = useState(mockComplaints);
-  const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
   const router = useRouter();
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await GetEnhancedComplaints({ skip: 0, limit: 100 });
+        const items = res?.res_data?.items || [];
 
+        const mapped = items.map((item) => ({
+          id: item.id,
+          name: item.complainant_name || "-",
+          citizenId: item.citizen_id || "-", // หรือ "-"
+          subject: item.subject || "-",
+          docKk: item.reference_number || "-",
+          docSr: item.reference_number2 || "-",
+          docStp: item.reference_number3 || "-",
+          docGov: item.reference_number4 || "-",
+          agency: item.incident_location || "-",
+        }));
+
+        setAllComplaints(mapped);
+        setFilteredComplaints(mapped);
+      } catch (err) {
+        console.error("โหลดข้อมูลร้องเรียนล้มเหลว:", err);
+      }
+    };
+
+    fetchData();
+  }, []);
   const handleNavigateTo = () =>
     router.push("/admin/edit/search/Filteromplaints");
 
@@ -199,6 +226,7 @@ const SearchComplaints = () => {
       docSr,
       docStp,
     } = filters;
+
 
     const result = allComplaints.filter((item) => {
       // ชื่อผู้ร้อง
@@ -247,6 +275,7 @@ const SearchComplaints = () => {
     console.log("Search result:", result);
     setFilteredComplaints(result);
   };
+
 
   return (
     <>

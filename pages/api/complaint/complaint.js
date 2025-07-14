@@ -122,10 +122,23 @@ const UpdateAssignmentCompleteByAdmin = async (complaint_id, formData) => {
   }
 };
 
+const GetEnhancedComplaints = async ({ skip = 0, limit = 10, search = "" }) => {
+  try {
+    const response = await axiosInstance.get("/complaints/enhanced", {
+      params: { skip, limit, search },
+    });
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching enhanced complaints:", error);
+    throw error;
+  }
+};
+
 
 export {
   Addcomplaints,
   GetAllComplaints,
+  GetEnhancedComplaints,
   UploadAttachments,
   GetComplaintByID,
   GetMeAllComplaints,
