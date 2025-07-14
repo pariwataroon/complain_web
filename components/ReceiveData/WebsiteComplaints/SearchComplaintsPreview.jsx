@@ -298,11 +298,10 @@ const SearchComplaintsPreview = ({
 
   // ข้อมูลจาก step1 (ผู้ร้องทุกข์)
   const complainant = step1.general?.general || {};
-  const delegate = step1.general?.delegate || {};
 
   // ข้อมูลจาก step2 (ผู้ถูกร้องเรียน)
-  const respondent = step2.general?.individual || {};
-
+  const delegate = step2.general?.individual || {};
+  console.log("delegate", delegate);
   // ข้อมูลจาก step3 (เรื่องร้องทุกข์)
   const complaint = step3.general || {};
   const files = complaint.attachment || [];
@@ -362,6 +361,21 @@ const SearchComplaintsPreview = ({
       "ผู้ใช้ไม่ระบุชื่อ"
     : "กำลังโหลด...";
 
+  function splitThaiName(fullName) {
+    if (!fullName) return { title: "-", firstName: "-", lastName: "-" };
+    const parts = fullName.trim().split(" ");
+    if (parts.length < 2) {
+      return { title: "-", firstName: fullName, lastName: "-" };
+    }
+    const title = parts[0];
+    const firstName = parts[1];
+    const lastName = parts.length > 2 ? parts.slice(2).join(" ") : "-";
+    return { title, firstName, lastName };
+  }
+
+  const complainantName = splitThaiName(complainant.name);
+  const delegateName = splitThaiName(delegate?.name);
+
   return (
     <>
       <BreadcrumbsService items={breadcrumbItems} />
@@ -403,7 +417,7 @@ const SearchComplaintsPreview = ({
                 />
                 <InfoItem
                   label="ประเภทเรื่องย่อย"
-                  value={complaint.complaintTypeName || "-"}
+                  value={complaint.complaintSubTypeName || "-"}
                 />
                 <InfoItem label="เรื่อง" value={complaint.subject || "-"} />
                 <InfoItem
@@ -437,18 +451,24 @@ const SearchComplaintsPreview = ({
                 label="หมายเลขประจำตัวประชาชน"
                 value={formatCitizenId_null(complainant.idCard)}
               />
-              <InfoItem label="คำนำหน้า" value={complainant.title || "-"} />
-              <InfoItem label="ชื่อ" value={complainant.firstName || "-"} />
-              <InfoItem label="นามสกุล" value={complainant.lastName || "-"} />
+              <InfoItem label="คำนำหน้า" value={complainantName.title || "-"} />
+              <InfoItem label="ชื่อ" value={complainantName.firstName || "-"} />
+              <InfoItem
+                label="นามสกุล"
+                value={complainantName.lastName || "-"}
+              />
               <InfoItem
                 label="ที่อยู่ที่ติดต่อได้"
                 value={complainant.address || "-"}
               />
               <InfoItem
                 label="ตำบล/แขวง"
-                value={complainant.subdistrict || "-"}
+                value={complainant?.subdistricts?.label || "-"}
               />
-              <InfoItem label="อำเภอ/เขต" value={complainant.district || "-"} />
+              <InfoItem
+                label="อำเภอ/เขต"
+                value={complainant?.districts?.label || "-"}
+              />
               <InfoItem label="จังหวัด" value={complainant.province || "-"} />
               <InfoItem
                 label="รหัสไปรษณีย์"
@@ -461,7 +481,6 @@ const SearchComplaintsPreview = ({
               />
             </Grid>
 
-            {/* ผู้รับมอบอำนาจร้องเรียน */}
             {delegate && Object.keys(delegate).length > 0 && (
               <>
                 <Typography
@@ -477,9 +496,18 @@ const SearchComplaintsPreview = ({
                     label="หมายเลขประจำตัวประชาชน"
                     value={formatCitizenId_null(delegate.idCard)}
                   />
-                  <InfoItem label="คำนำหน้า" value={delegate.title || "-"} />
-                  <InfoItem label="ชื่อ" value={delegate.firstName || "-"} />
-                  <InfoItem label="นามสกุล" value={delegate.lastName || "-"} />
+                  <InfoItem
+                    label="คำนำหน้า"
+                    value={delegateName.title || "-"}
+                  />
+                  <InfoItem
+                    label="ชื่อ"
+                    value={delegateName.firstName || "-"}
+                  />
+                  <InfoItem
+                    label="นามสกุล"
+                    value={delegateName.lastName || "-"}
+                  />
                   <InfoItem
                     label="ที่อยู่ที่ติดต่อได้"
                     value={delegate.address || "-"}
@@ -528,29 +556,23 @@ const SearchComplaintsPreview = ({
             <Grid container spacing={2} mb={3}>
               <InfoItem
                 label="หมายเลขประจำตัวประชาชน"
-                value={formatCitizenId_null(respondent.idCard)}
+                value={formatCitizenId_null(delegate.idCard)}
               />
-              <InfoItem label="คำนำหน้า" value={respondent.title || "-"} />
-              <InfoItem label="ชื่อ" value={respondent.firstName || "-"} />
-              <InfoItem label="นามสกุล" value={respondent.lastName || "-"} />
+              <InfoItem label="คำนำหน้า" value={delegate.title || "-"} />
+              <InfoItem label="ชื่อ" value={delegate.firstName || "-"} />
+              <InfoItem label="นามสกุล" value={delegate.lastName || "-"} />
               <InfoItem
                 label="ที่อยู่ที่ติดต่อได้"
-                value={respondent.address || "-"}
+                value={delegate.address || "-"}
               />
-              <InfoItem
-                label="ตำบล/แขวง"
-                value={respondent.subdistrict || "-"}
-              />
-              <InfoItem label="อำเภอ/เขต" value={respondent.district || "-"} />
-              <InfoItem label="จังหวัด" value={respondent.province || "-"} />
-              <InfoItem
-                label="รหัสไปรษณีย์"
-                value={respondent.zipcode || "-"}
-              />
-              <InfoItem label="อีเมล" value={respondent.email || "-"} />
+              <InfoItem label="ตำบล/แขวง" value={delegate.subdistrict || "-"} />
+              <InfoItem label="อำเภอ/เขต" value={delegate.district || "-"} />
+              <InfoItem label="จังหวัด" value={delegate.province || "-"} />
+              <InfoItem label="รหัสไปรษณีย์" value={delegate.zipcode || "-"} />
+              <InfoItem label="อีเมล" value={delegate.email || "-"} />
               <InfoItem
                 label="หมายเลขโทรศัพท์"
-                value={formatPhoneNumber_null(respondent.phone)}
+                value={formatPhoneNumber_null(delegate.phone)}
               />
             </Grid>
 
