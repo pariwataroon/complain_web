@@ -2982,6 +2982,7 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
             "complaint_subtype_name": complaint.complaint_subtype_relation.name if hasattr(complaint, 'complaint_subtype_relation') and complaint.complaint_subtype_relation else None,
             "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
+            "complaint_channel_name": get_channel_name(db, complaint.complaint_channel_id),
             
             # Registration Date
             "registration_date": complaint.registration_date.isoformat() if complaint.registration_date else None,
