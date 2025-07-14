@@ -147,6 +147,37 @@ const mockComplaints = [
   },
 ];
 
+  const convertThaiDateStringToBuddhistISO = (thaiDateStr) => {
+  if (!thaiDateStr) return null;
+
+  const thaiMonths = {
+    'ม.ค.': '01',
+    'ก.พ.': '02',
+    'มี.ค.': '03',
+    'เม.ย.': '04',
+    'พ.ค.': '05',
+    'มิ.ย.': '06',
+    'ก.ค.': '07',
+    'ส.ค.': '08',
+    'ก.ย.': '09',
+    'ต.ค.': '10',
+    'พ.ย.': '11',
+    'ธ.ค.': '12',
+  };
+
+  const parts = thaiDateStr.trim().split(' '); // ['15', 'ม.ค.', '2568']
+  if (parts.length !== 3) return null;
+
+  const [dayStr, monthThai, yearStr] = parts;
+  const day = dayStr.padStart(2, '0');
+  const month = thaiMonths[monthThai];
+  const year = yearStr;
+
+  if (!month) return null;
+
+  return `${year}-${month}-${day}`;
+};
+
 const agencyOptions = Array.from(
   new Set(mockComplaints.map((r) => r.agency))
 ).map((a) => ({ value: a, label: a }));
@@ -172,24 +203,42 @@ const ReportResultsComponents = () => {
     );
   };
 
+  // แปลงวันที่ส่งไปหรอง
+  const formatDateForComparison = (dateInput) => {
+    if (!dateInput) return null;
+    const date = new Date(dateInput);
+    const year = date.getFullYear() + 543; // แปลงเป็น พ.ศ.
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // กรองข้อมูลตามวันที่และประเภทเรื่อง
   const handleSearch = ({ receiveDateFrom, receiveDateTo, issueType }) => {
     let result = allComplaints;
 
-    if (receiveDateFrom) {
-      result = result.filter((item) =>
-        item.receiveDate.includes(receiveDateFrom)
-      );
+    const fromDate = formatDateForComparison(receiveDateFrom);
+    const toDate = formatDateForComparison(receiveDateTo); 
+
+    if (fromDate) {
+      result = result.filter((item) => {
+        const itemDate = convertThaiDateStringToBuddhistISO(item.receiptDate);
+        return itemDate && itemDate >= fromDate;
+      });
     }
-    if (receiveDateTo) {
-      result = result.filter((item) =>
-        item.receiveDate.includes(receiveDateTo)
-      );
+
+    if (toDate) {
+      result = result.filter((item) => {
+        const itemDate = convertThaiDateStringToBuddhistISO(item.receiptDate);
+        return itemDate && itemDate <= toDate;
+      });
     }
+
     if (issueType) {
       result = result.filter((item) => item.issueType === issueType);
     }
 
+    console.log("Filtered result:", result);
     setFilteredComplaints(result);
   };
 

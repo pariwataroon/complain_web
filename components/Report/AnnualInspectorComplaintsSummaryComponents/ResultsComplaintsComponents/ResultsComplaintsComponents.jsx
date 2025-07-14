@@ -113,48 +113,29 @@ const ResultsComplaintsComponents = () => {
   const [filteredSummary, setFilteredSummary] = useState(mockSummary);
   const [filteredPending, setFilteredPending] = useState(mockPending);
   const router = useRouter();
+  
+  const convertThaiDateToDate = (input) => {
+    if (!input) return null;
 
-  // ← แก้ไขฟังก์ชันแปลงวันที่ให้ใช้งานได้ถูกต้อง
-  const convertThaiDateToDate = (thaiDate) => {
-    if (!thaiDate) return null;
-
-    console.log("🔄 Converting Thai date:", thaiDate);
-
-    // ถ้าเป็น object จาก DateThaiPickerService
-    if (
-      typeof thaiDate === "object" &&
-      thaiDate.day &&
-      thaiDate.month &&
-      thaiDate.year
-    ) {
-      // ใช้ year จาก object (ปี ค.ศ.)
-      const gregorianYear = thaiDate.year;
-      const result = new Date(gregorianYear, thaiDate.month - 1, thaiDate.day);
-      console.log(
-        `📅 Converted ${thaiDate.day}/${thaiDate.month}/${gregorianYear} to:`,
-        result
-      );
-      return result;
+    // กรณี input เป็น Date object อยู่แล้ว
+    if (input instanceof Date && !isNaN(input)) {
+      return input;
     }
 
-    // ถ้าเป็น string format "YYYY-MM-DD" จาก TextField
-    if (typeof thaiDate === "string" && thaiDate.includes("-")) {
-      const [year, month, day] = thaiDate.split("-").map(Number);
-      if (year && month && day) {
-        const result = new Date(year, month - 1, day);
-        console.log(`📅 Converted string ${thaiDate} to:`, result);
-        return result;
-      }
-    }
+    // กรณี input เป็น ISO string เช่น '2024-12-31T17:00:00.000Z'
+    const parsed = new Date(input);
+    if (!isNaN(parsed)) return parsed;
 
-    return null;
-  };
+    // Fallback (ถ้า input เป็นรูปแบบ "2568-01-15")
+    const [year, month, day] = input.split("-").map(Number);
+    return new Date(year - 543, month - 1, day);
+  }
 
-  // ← ปรับปรุงฟังก์ชันแปลงวันที่จาก string format "DD MMM. YYYY" เป็น Date object
-  const convertStringToDate = (dateStr) => {
-    if (!dateStr) return null;
 
-    const thaiMonthMap = {
+  const convertStringToDate = (thaiDateStr) => {
+    if (!thaiDateStr) return null;
+
+    const months = {
       "ม.ค.": 0,
       "ก.พ.": 1,
       "มี.ค.": 2,
@@ -169,24 +150,14 @@ const ResultsComplaintsComponents = () => {
       "ธ.ค.": 11,
     };
 
-    // แยก string format "15 ม.ค. 2568"
-    const parts = dateStr.split(" ");
-    if (parts.length !== 3) return null;
+    const [day, monthThai, yearThai] = thaiDateStr.split(" ");
+    const month = months[monthThai];
+    const year = parseInt(yearThai, 10) - 543;
+    const d = parseInt(day, 10);
 
-    const day = parseInt(parts[0]);
-    const monthAbbrev = parts[1];
-    const buddhistYear = parseInt(parts[2]);
+    return new Date(year, month, d);
+  }
 
-    // แปลงปี พ.ศ. เป็น ค.ศ.
-    const gregorianYear = buddhistYear;
-
-    const month = thaiMonthMap[monthAbbrev];
-    if (isNaN(day) || month === undefined || isNaN(gregorianYear)) return null;
-
-    const result = new Date(gregorianYear, month, day);
-    console.log(`📊 Data date ${dateStr} converted to:`, result);
-    return result;
-  };
 
   // ← แก้ไขฟังก์ชัน handleSearch ให้ทำงานถูกต้อง
   const handleSearch = (filters) => {
@@ -342,7 +313,7 @@ const ResultsComplaintsComponents = () => {
             maxDate: new Date(),
           },
         ]}
-        navigateTo="/admin/document/annual-inspector-complaints-summary/resultscomplaints"
+        // navigateTo="/admin/document/annual-inspector-complaints-summary/resultscomplaints"
       />
     </>
   );

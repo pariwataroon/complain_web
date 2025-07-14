@@ -36,6 +36,7 @@ const TableListCollapsReport = ({
   reportTitle = "",
   reportSubTitle = "",
   dateRange = "",
+  disableRowNavigation = false,
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
@@ -850,7 +851,7 @@ const TableListCollapsReport = ({
                 <React.Fragment key={item.id}>
                   {/* Parent row */}
                   <TableRow
-                    onClick={() => router.push(`${navigateTo}/${item.id}`)}
+                    // onClick={() => router.push(`${navigateTo}/${item.id}`)}
                     sx={{
                       cursor: "pointer",
                       "&:hover": { backgroundColor: "#f5f7ff" },
