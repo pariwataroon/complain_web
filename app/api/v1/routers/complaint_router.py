@@ -7,9 +7,10 @@ from models.user import User
 from datetime import datetime
 
 from app.api.middleware.jwt_verify import verify_token
-from app.api.middleware.permission_middleware import can_update, can_delete
+from app.api.middleware.permission_middleware import can_update, can_delete, can_read
 from app.api.v1.controllers.complaint_controller import (
     get_complaints, 
+    get_complaints_enhanced,
     update_complaint_status, 
     delete_complaint, 
     get_user_complaints, 
@@ -103,6 +104,37 @@ async def read_complaints(
         urgency=urgency,
         search=search,
         complainant_name=complainant_name      # ส่งไป controller
+    )
+    return format_response("0000", result)
+
+@router.get("/enhanced", response_model=FormatResponseModel)
+async def read_complaints_enhanced(
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    complaint_type: Optional[str] = None,
+    complaint_subtype: Optional[str] = None,
+    assignee: Optional[str] = None,
+    location: Optional[str] = None,
+    urgency: Optional[str] = None,
+    search: Optional[str] = None,
+    complainant_name: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_access"))
+):
+    """Get a list of complaints with enhanced data including reference numbers and channel info"""
+    result = get_complaints_enhanced(
+        db, 
+        skip=skip, 
+        limit=limit, 
+        status=status,
+        complaint_type=complaint_type,
+        complaint_subtype=complaint_subtype,
+        assignee=assignee,
+        location=location,
+        urgency=urgency,
+        search=search,
+        complainant_name=complainant_name
     )
     return format_response("0000", result)
 

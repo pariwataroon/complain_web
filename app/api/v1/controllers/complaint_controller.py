@@ -1039,6 +1039,176 @@ def create_status_history(db: Session, complaint_id: UUID, status: ComplaintStat
     db.add(status_history)
     db.commit()
 
+def get_complaints_enhanced(
+    db: Session, 
+    skip: int = 0, 
+    limit: int = 100, 
+    status: Optional[str] = None,
+    complaint_type: Optional[str] = None,
+    complaint_subtype: Optional[str] = None,
+    assignee: Optional[str] = None,
+    location: Optional[str] = None,
+    urgency: Optional[str] = None,
+    search: Optional[str] = None,
+    complainant_name: Optional[str] = None,
+):
+    """ดึงรายการข้อร้องเรียนแบบ enhanced พร้อมข้อมูลเพิ่มเติม"""
+    from models.comp_complaint_types import ComplaintChannel
+    
+    # สร้าง query พื้นฐาน พร้อม join กับ complaint_channel
+    query = db.query(Complaint).outerjoin(
+        ComplaintChannel, Complaint.complaint_channel_id == ComplaintChannel.id
+    )
+    
+    # Apply filters (เหมือนฟังก์ชันเดิม)
+    if status:
+        query = query.filter(Complaint.status == status)
+    
+    if complaint_type:
+        query = query.filter(Complaint.complaint_type.ilike(f"%{complaint_type}%"))
+    
+    if complaint_subtype:
+        query = query.filter(Complaint.complaint_subtype_id == complaint_subtype)
+    
+    if assignee:
+        query = query.filter(Complaint.assigned_to.ilike(f"%{assignee}%"))
+    
+    if location:
+        query = query.filter(
+            or_(
+                Complaint.incident_province.ilike(f"%{location}%"),
+                Complaint.incident_district.ilike(f"%{location}%"),
+                Complaint.incident_subdistrict.ilike(f"%{location}%")
+            )
+        )
+    
+    if urgency:
+        query = query.filter(Complaint.urgency_level == urgency)
+
+    # Search filter
+    if search:
+        search_filter = or_(
+            Complaint.complaint_number.ilike(f"%{search}%"),
+            Complaint.subject.ilike(f"%{search}%"),
+            Complaint.description.ilike(f"%{search}%")
+        )
+        query = query.filter(search_filter)
+    
+    # Filter by complainant name
+    if complainant_name:
+        complainant_filter = or_(
+            Complaint.complainant_data.ilike(f'%"name":"%{complainant_name}%"%'),
+            Complaint.delegate_data.ilike(f'%"name":"%{complainant_name}%"%')
+        )
+        query = query.filter(complainant_filter)
+
+    total_count = query.count()
+    query = query.order_by(Complaint.created_at.desc())
+    complaints = query.offset(skip).limit(limit).all()
+
+    result = []
+    for complaint in complaints:
+        # สร้างข้อมูลแบบ enhanced โดยตรงเป็น dict (ไม่ใช้ Pydantic model)
+        try:
+            # ดึงข้อมูลพื้นฐาน
+            complainant_data = ensure_dict(complaint.complainant_data)
+            delegate_data = ensure_dict(complaint.delegate_data)
+            respondent_data = ensure_dict(complaint.respondent_data)
+            
+            # ดึงชื่อ complaint subtype
+            complaint_subtype_name = ""
+            if hasattr(complaint, "complaint_subtype_id") and complaint.complaint_subtype_id:
+                try:
+                    from models.comp_complaint_types import ComplaintSubType
+                    subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
+                    if subtype:
+                        complaint_subtype_name = subtype.name
+                except Exception:
+                    pass
+            
+            enhanced_item = {
+                "id": str(complaint.id),
+                "complaint_number": complaint.complaint_number,
+                "subject": complaint.subject,
+                "complaint_type": get_thai_complaint_type(complaint.complaint_type) if complaint.complaint_type else "",
+                "complaint_subtype": complaint_subtype_name,
+                "status": get_thai_status(complaint.status),
+                "created_at": complaint.created_at.isoformat(),
+                "complainant_name": get_display_complainant_name(complainant_data, delegate_data),
+                "respondent_name": get_display_respondent_name(complaint.respondent_type, respondent_data),
+                "incident_location": get_display_incident_location(complaint),
+                "assigned_to": get_display_assigned_info(complaint, db),
+                "assigned_remark": complaint.assigned_remark or "",
+                "urgency_level": complaint.urgency_level.value if complaint.urgency_level else "low",
+                "severity_level": complaint.severity_level.value if complaint.severity_level else "low",
+                "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
+                "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
+                "complaint_type_name": complaint.complaint_type or "",
+                "is_master": True,  # default value
+                
+                # Enhanced fields - ข้อมูลเพิ่มเติม
+                "additional_reference_number1": complaint.additional_reference_number1,
+                "additional_reference_date1": complaint.additional_reference_date1.isoformat() if complaint.additional_reference_date1 else None,
+                "additional_reference_number2": complaint.additional_reference_number2,
+                "additional_reference_date2": complaint.additional_reference_date2.isoformat() if complaint.additional_reference_date2 else None,
+                "reference_number": complaint.reference_number,
+                "reference_date": complaint.reference_date.isoformat() if complaint.reference_date else None,
+                "reference_number2": complaint.reference_number2,
+                "reference_date2": complaint.reference_date2.isoformat() if complaint.reference_date2 else None,
+                "reference_number3": complaint.reference_number3,
+                "reference_date3": complaint.reference_date3.isoformat() if complaint.reference_date3 else None,
+                "reference_number4": complaint.reference_number4,
+                "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
+                "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
+                "complaint_channel_name": get_channel_name(db, complaint.complaint_channel_id) if complaint.complaint_channel_id else None
+            }
+            
+            result.append(enhanced_item)
+            
+        except Exception as e:
+            logger.error(f"Error creating enhanced complaint item: {str(e)}")
+            # fallback ใช้ข้อมูลพื้นฐาน (convert Pydantic model to dict)
+            try:
+                basic_item = create_complaint_list_item(complaint, db)
+                basic_dict = basic_item.dict()
+                # เพิ่ม enhanced fields ด้วยค่าเริ่มต้น
+                basic_dict.update({
+                    "additional_reference_number1": None,
+                    "additional_reference_date1": None,
+                    "additional_reference_number2": None,
+                    "additional_reference_date2": None,
+                    "reference_number": None,
+                    "reference_date": None,
+                    "reference_number2": None,
+                    "reference_date2": None,
+                    "reference_number3": None,
+                    "reference_date3": None,
+                    "reference_number4": None,
+                    "reference_date4": None,
+                    "complaint_channel_id": None,
+                    "complaint_channel_name": None,
+                    "complaint_subtype_id": None,
+                    "complaint_type_id": None,
+                    "complaint_type_name": "",
+                    "is_master": True
+                })
+                result.append(basic_dict)
+            except Exception as e2:
+                logger.error(f"Error in fallback: {str(e2)}")
+                continue
+
+    filters = get_filter_options(db)
+    return {
+        "items": result,
+        "pagination": {
+            "total": total_count,
+            "skip": skip,
+            "limit": limit,
+            "has_more": total_count > (skip + limit)
+        },
+        "filters": filters
+    }
+
 def get_complaints(
     db: Session, 
     skip: int = 0, 
