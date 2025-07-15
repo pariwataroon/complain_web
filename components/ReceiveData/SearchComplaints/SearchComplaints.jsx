@@ -111,7 +111,6 @@ const SearchComplaints = () => {
         navigateTo="/admin/edit/search"
         onSearch={handleSearch}
         handleNavigateTo={handleNavigateTo}
-        loading={loading}
       />
     </>
   );

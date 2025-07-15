@@ -135,7 +135,6 @@ const GetEnhancedComplaints = async ({ skip = 0, limit = 10, search = "" }) => {
 export {
   Addcomplaints,
   GetAllComplaints,
-  GetEnhancedComplaints,
   UploadAttachments,
   GetComplaintByID,
   GetMeAllComplaints,
