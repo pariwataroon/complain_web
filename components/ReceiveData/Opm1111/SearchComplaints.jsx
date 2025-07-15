@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import DetailOPM from "@services/DetailOPM/DetailOPM";
-import { GetCase, GetOperatings } from "@pages/api/opm/opm";
+import { GetCase, GetOperatings, GetAttachment } from "@pages/api/opm/opm";
 
 const SearchComplaints = () => {
   const router = useRouter();
@@ -12,7 +12,9 @@ const SearchComplaints = () => {
   const [caseDetails, setCaseDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingOperatings, setLoadingOperatings] = useState(true);
-
+  const [attachmentsDetails, setAttachmentsDetails] = useState([]);
+  // console.log({ caseDetails });
+  
   useEffect(() => {
     const fetchCaseDetails = async () => {
       try {
@@ -46,6 +48,34 @@ const SearchComplaints = () => {
 
     fetchOperatingDetails();
   }, [queryParams.id]);
+
+  useEffect(() => {
+    const fetchAttachments = async () => {
+      if (!operatingsDetails) return;
+      const attachmentIds = [];
+      operatingsDetails.forEach(op => {
+        if (Array.isArray(op.attachments)) {
+          op.attachments.forEach(att => {
+            if (att.attachment_id) {
+              attachmentIds.push(att.attachment_id);
+            }
+          });
+        }
+      });
+
+      try {
+        const attachmentsData = await Promise.all(
+          attachmentIds.map(id => GetAttachment(id))
+        );
+        setAttachmentsDetails(attachmentsData);
+      } catch (error) {
+        console.error("Error fetching attachment details:", error);
+        setAttachmentsDetails([]);
+      }
+    };
+
+    fetchAttachments();
+  }, [operatingsDetails]);
 
   const formatDate = (dateString) => {
     if (!dateString) return "-";
@@ -87,6 +117,7 @@ const SearchComplaints = () => {
         operatingsDetails={operatingsDetails}
         loading={loading}
         formatDate={formatDate}
+        attachmentsDetails={attachmentsDetails}
       />
     </>
   );

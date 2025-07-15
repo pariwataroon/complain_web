@@ -32,12 +32,14 @@ import {
     Email as EmailIcon,
     LocationOn as LocationIcon,
     Badge as BadgeIcon,
+    AccountBox as AccountBoxIcon,
+    PersonOutline as PersonOutlineIcon,
 } from "@mui/icons-material";
 import ButtonSent from "@services/ButtonSent/ButtonSent";
 import CombinedReportModal from "./CombinedReportModal";
 import styles from "./DetailOPM.module.scss";
 
-const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDate, itemData }) => {
+const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails, loading, formatDate, itemData }) => {
     const theme = useTheme();
     const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -46,8 +48,7 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
     const [reportModalOpen, setReportModalOpen] = useState(false);
     const [routerItemData, setRouterItemData] = useState(null);
     const [currentItemData, setCurrentItemData] = useState(null);
-    console.log({ caseDetails });
-    console.log({ operatingsDetails });
+
 
     // รับข้อมูลจาก router state
     useEffect(() => {
@@ -57,7 +58,7 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
             if (queryData) {
                 setCurrentItemData(queryData);
             } else {
-                console.log("No router query data found");
+                // console.log("No router query data found");
             }
         }
     }, [router.isReady]);
@@ -100,7 +101,39 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
         return [];
     };
 
-    // ฟังก์ชันสำหรับดึงข้อมูลลูกค้า
+    // ฟังก์ชันสำหรับดึงข้อมูลผู้ยื่นคำร้อง (account)
+    const getAccountData = () => {
+        const accountField = caseDetails?.find((item) => item.field === "account");
+        const accountData = accountField?.value;
+
+        if (accountData && typeof accountData === 'object') {
+            const fullName = `${accountData.salutation_th || ''} ${accountData.firstname_th || ''} ${accountData.lastname_th || ''}`.trim();
+
+            return {
+                name: fullName,
+                fullName: fullName,
+                salutation: accountData.salutation_th,
+                firstName: accountData.firstname_th,
+                lastName: accountData.lastname_th,
+                citizenId: accountData.citizen_id,
+                gender: accountData.gender_text,
+                address: {
+                    subdistrict: accountData.subdistrict_text,
+                    district: accountData.district_text,
+                    province: accountData.province_text,
+                    postcode: accountData.postcode
+                },
+                contacts: accountData.list_account_detail || []
+            };
+        }
+
+        return {
+            name: '-',
+            fullName: '-'
+        };
+    };
+
+    // ฟังก์ชันสำหรับดึงข้อมูลผู้เดือดร้อน (customer)
     const getCustomerData = () => {
         if (currentItemData?.customer_name) {
             return {
@@ -176,19 +209,13 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
     };
 
     // ดึงข้อมูลที่ต้องใช้
+    const accountData = getAccountData();
     const customerData = getCustomerData();
-    const customerName = customerData.fullName;
     const caseCode = currentItemData?.case_code || getFieldValue("case_code");
     const typeText = currentItemData?.type_text || getFieldValue("type_text");
     const statusText = currentItemData?.status_text || getFieldValue("status_text");
     const mainStatusText = currentItemData?.main_status_text || getFieldValue("main_status_text");
     const caseId = currentItemData?.case_id || params?.case_id;
-
-    // ข้อมูลเพิ่มเติมจากลูกค้า
-    const citizenId = customerData.citizenId;
-    const customerEmail = customerData.contacts?.find(c => c.detail_type === 'E')?.detail || '-';
-    const customerPhone = customerData.contacts?.find(c => c.detail_type === 'M')?.detail || '-';
-    const customerAddress = customerData.address;
 
     // ข้อมูลไฟล์แนบ
     const attachmentList = Array.isArray(operatingsDetails)
@@ -224,9 +251,9 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
 
     return (
         <Box className={styles.detailContainer}>
-            {/* หัวเรื่องพร้อมชื่อลูกค้า */}
+            {/* หัวเรื่องพร้อมชื่อผู้ยื่นคำร้อง */}
             <Typography variant="h4" className={styles.title}>
-                รายละเอียดคำร้อง {customerName && customerName !== '-' && `- ${customerName}`}
+                รายละเอียดคำร้อง {accountData.fullName && accountData.fullName !== '-' && `- ${accountData.fullName}`}
             </Typography>
 
             {/* Main Information Card */}
@@ -263,21 +290,6 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                         <Grid item xs={12} md={6}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
-                                    ชื่อ
-                                </Typography>
-                                <Typography variant="body1" className={styles.value} sx={{
-                                    color: '#1976d2',
-                                    fontWeight: 'medium',
-                                    fontSize: '1.1rem'
-                                }}>
-                                    {customerName}
-                                </Typography>
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
                                     วัตถุประสงค์
                                 </Typography>
                                 <Chip
@@ -298,8 +310,6 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                                 </Typography>
                             </Box>
                         </Grid>
-
-                        
 
                         <Grid item xs={12} md={6}>
                             <Box className={styles.infoItem}>
@@ -329,7 +339,7 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={12}>
+                        <Grid item xs={12} md={6}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     วันที่เปิดคำร้อง
@@ -346,12 +356,12 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                 </CardContent>
             </Card>
 
-            {/* Customer Details Card */}
+            {/* Account Details Card - ผู้ยื่นคำร้อง */}
             <Card className={styles.customerCard}>
                 <CardContent className={styles.cardContent}>
                     <Box className={styles.headerSection}>
                         <Avatar className={styles.headerIcon}>
-                            <PersonIcon />
+                            <AccountBoxIcon />
                         </Avatar>
                         <Typography variant="h6" className={styles.sectionTitle}>
                             ข้อมูลผู้ยื่นคำร้อง
@@ -359,7 +369,25 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                     </Box>
 
                     <Grid container spacing={3} className={styles.infoGrid}>
-                        {citizenId && citizenId !== '-' && (
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <PersonIcon className={styles.infoIcon} />
+                                <Box>
+                                    <Typography variant="subtitle2" className={styles.label}>
+                                        ชื่อ-นามสกุล
+                                    </Typography>
+                                    <Typography variant="body1" className={styles.value} sx={{
+                                        color: '#1976d2',
+                                        fontWeight: 'medium',
+                                        fontSize: '1.1rem'
+                                    }}>
+                                        {accountData.fullName}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        </Grid>
+
+                        {accountData.citizenId && accountData.citizenId !== '-' && (
                             <Grid item xs={12} md={6}>
                                 <Box className={styles.infoItem}>
                                     <BadgeIcon className={styles.infoIcon} />
@@ -368,14 +396,14 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                                             เลขบัตรประชาชน
                                         </Typography>
                                         <Typography variant="body1" className={styles.value}>
-                                            {citizenId}
+                                            {accountData.citizenId}
                                         </Typography>
                                     </Box>
                                 </Box>
                             </Grid>
                         )}
 
-                        {customerData.gender && (
+                        {accountData.gender && (
                             <Grid item xs={12} md={6}>
                                 <Box className={styles.infoItem}>
                                     <PersonIcon className={styles.infoIcon} />
@@ -384,14 +412,14 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                                             เพศ
                                         </Typography>
                                         <Typography variant="body1" className={styles.value}>
-                                            {customerData.gender}
+                                            {accountData.gender}
                                         </Typography>
                                     </Box>
                                 </Box>
                             </Grid>
                         )}
 
-                        {customerEmail && customerEmail !== '-' && (
+                        {accountData.contacts?.find(c => c.detail_type === 'E')?.detail && (
                             <Grid item xs={12} md={6}>
                                 <Box className={styles.infoItem}>
                                     <EmailIcon className={styles.infoIcon} />
@@ -400,14 +428,14 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                                             อีเมล
                                         </Typography>
                                         <Typography variant="body1" className={styles.value}>
-                                            {customerEmail}
+                                            {accountData.contacts.find(c => c.detail_type === 'E')?.detail}
                                         </Typography>
                                     </Box>
                                 </Box>
                             </Grid>
                         )}
 
-                        {customerPhone && customerPhone !== '-' && (
+                        {accountData.contacts?.find(c => c.detail_type === 'M')?.detail && (
                             <Grid item xs={12} md={6}>
                                 <Box className={styles.infoItem}>
                                     <PhoneIcon className={styles.infoIcon} />
@@ -416,14 +444,14 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                                             เบอร์โทรศัพท์
                                         </Typography>
                                         <Typography variant="body1" className={styles.value}>
-                                            {customerPhone}
+                                            {accountData.contacts.find(c => c.detail_type === 'M')?.detail}
                                         </Typography>
                                     </Box>
                                 </Box>
                             </Grid>
                         )}
 
-                        {customerAddress && (customerAddress.subdistrict || customerAddress.district || customerAddress.province) && (
+                        {accountData.address && (accountData.address.subdistrict || accountData.address.district || accountData.address.province) && (
                             <Grid item xs={12}>
                                 <Box className={styles.infoItem}>
                                     <LocationIcon className={styles.infoIcon} />
@@ -433,10 +461,10 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                                         </Typography>
                                         <Typography variant="body1" className={styles.value}>
                                             {[
-                                                customerAddress.subdistrict,
-                                                customerAddress.district,
-                                                customerAddress.province,
-                                                customerAddress.postcode
+                                                accountData.address.subdistrict,
+                                                accountData.address.district,
+                                                accountData.address.province,
+                                                accountData.address.postcode
                                             ].filter(Boolean).join(' ')}
                                         </Typography>
                                     </Box>
@@ -446,6 +474,127 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                     </Grid>
                 </CardContent>
             </Card>
+
+            {/* Customer Details Card - ผู้เดือดร้อน */}
+            {customerData.fullName !== '-' && (
+                <Card className={styles.customerCard}>
+                    <CardContent className={styles.cardContent}>
+                        <Box className={styles.headerSection}>
+                            <Avatar className={styles.headerIcon}>
+                                <PersonOutlineIcon />
+                            </Avatar>
+                            <Typography variant="h6" className={styles.sectionTitle}>
+                                ข้อมูลผู้เดือดร้อน
+                            </Typography>
+                        </Box>
+
+                        <Grid container spacing={3} className={styles.infoGrid}>
+                            <Grid item xs={12} md={6}>
+                                <Box className={styles.infoItem}>
+                                    <PersonIcon className={styles.infoIcon} />
+                                    <Box>
+                                        <Typography variant="subtitle2" className={styles.label}>
+                                            ชื่อ-นามสกุล
+                                        </Typography>
+                                        <Typography variant="body1" className={styles.value} sx={{
+                                            color: '#d32f2f',
+                                            fontWeight: 'medium',
+                                            fontSize: '1.1rem'
+                                        }}>
+                                            {customerData.fullName}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+
+                            {customerData.citizenId && customerData.citizenId !== '-' && (
+                                <Grid item xs={12} md={6}>
+                                    <Box className={styles.infoItem}>
+                                        <BadgeIcon className={styles.infoIcon} />
+                                        <Box>
+                                            <Typography variant="subtitle2" className={styles.label}>
+                                                เลขบัตรประชาชน
+                                            </Typography>
+                                            <Typography variant="body1" className={styles.value}>
+                                                {customerData.citizenId}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Grid>
+                            )}
+
+                            {customerData.gender && (
+                                <Grid item xs={12} md={6}>
+                                    <Box className={styles.infoItem}>
+                                        <PersonIcon className={styles.infoIcon} />
+                                        <Box>
+                                            <Typography variant="subtitle2" className={styles.label}>
+                                                เพศ
+                                            </Typography>
+                                            <Typography variant="body1" className={styles.value}>
+                                                {customerData.gender}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Grid>
+                            )}
+
+                            {customerData.contacts?.find(c => c.detail_type === 'E')?.detail && (
+                                <Grid item xs={12} md={6}>
+                                    <Box className={styles.infoItem}>
+                                        <EmailIcon className={styles.infoIcon} />
+                                        <Box>
+                                            <Typography variant="subtitle2" className={styles.label}>
+                                                อีเมล
+                                            </Typography>
+                                            <Typography variant="body1" className={styles.value}>
+                                                {customerData.contacts.find(c => c.detail_type === 'E')?.detail}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Grid>
+                            )}
+
+                            {customerData.contacts?.find(c => c.detail_type === 'M')?.detail && (
+                                <Grid item xs={12} md={6}>
+                                    <Box className={styles.infoItem}>
+                                        <PhoneIcon className={styles.infoIcon} />
+                                        <Box>
+                                            <Typography variant="subtitle2" className={styles.label}>
+                                                เบอร์โทรศัพท์
+                                            </Typography>
+                                            <Typography variant="body1" className={styles.value}>
+                                                {customerData.contacts.find(c => c.detail_type === 'M')?.detail}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Grid>
+                            )}
+
+                            {customerData.address && (customerData.address.subdistrict || customerData.address.district || customerData.address.province) && (
+                                <Grid item xs={12}>
+                                    <Box className={styles.infoItem}>
+                                        <LocationIcon className={styles.infoIcon} />
+                                        <Box>
+                                            <Typography variant="subtitle2" className={styles.label}>
+                                                ที่อยู่
+                                            </Typography>
+                                            <Typography variant="body1" className={styles.value}>
+                                                {[
+                                                    customerData.address.subdistrict,
+                                                    customerData.address.district,
+                                                    customerData.address.province,
+                                                    customerData.address.postcode
+                                                ].filter(Boolean).join(' ')}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Grid>
+                            )}
+                        </Grid>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Attachments Card */}
             <Card className={styles.attachmentCard}>
@@ -459,7 +608,7 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                         </Typography>
                     </Box>
 
-                    {attachmentList.length === 0 ? (
+                    {(!attachmentsDetails || attachmentsDetails.length === 0) ? (
                         <Box sx={{
                             textAlign: 'center',
                             py: 4,
@@ -476,21 +625,45 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                     ) : (
                         <Box>
                             <Typography variant="body1" className={styles.attachmentInfo}>
-                                มีไฟล์แนบ {attachmentList.length} ไฟล์
+                                มีไฟล์แนบ {attachmentsDetails.length} ไฟล์
                             </Typography>
-                            {attachmentList.map((file, index) => (
-                                <Box key={file.attachment_id || index} className={styles.attachmentItem}>
-                                    <AttachFileIcon />
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                        {(file.file_name || `ไฟล์แนบ ${index + 1}`)}
-                                    </Typography>
-                                    {file.file_description && (
-                                        <Typography variant="caption" sx={{ ml: 1 }}>
-                                            ({file.file_description})
+                            {attachmentsDetails.map((file, index) => {
+                                let fileUrl = "#";
+                                if (file.file_content) {
+                                    if (file.file_type === "application/pdf") {
+                                        fileUrl = `data:application/pdf;base64,${file.file_content}`;
+                                    } else if (file.file_type?.startsWith("image/")) {
+                                        fileUrl = `data:${file.file_type};base64,${file.file_content}`;
+                                    } else {
+                                        fileUrl = `data:application/octet-stream;base64,${file.file_content}`;
+                                    }
+                                }
+
+                                return (
+                                    <Box key={file.attachment_id || index} className={styles.attachmentItem} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <AttachFileIcon />
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                            {file.file_name || `ไฟล์แนบ ${index + 1}`}
                                         </Typography>
-                                    )}
-                                </Box>
-                            ))}
+                                        {file.file_description && (
+                                            <Typography variant="caption" sx={{ ml: 1 }}>
+                                                ({file.file_description})
+                                            </Typography>
+                                        )}
+                                        {file.file_content && (
+                                            <a
+                                                href={fileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ marginLeft: 8, color: "#1976d2", textDecoration: "underline", fontWeight: 500 }}
+                                                download={file.file_name}
+                                            >
+                                                ดาวน์โหลด
+                                            </a>
+                                        )}
+                                    </Box>
+                                );
+                            })}
                         </Box>
                     )}
                 </CardContent>
@@ -662,7 +835,6 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                                 </Typography>
                                 <Typography variant="body1" className={styles.value}>
                                     {[
-
                                         getFieldValue("case_area"),
                                         getFieldValue("subdistrict_text"),
                                         getFieldValue("district_text"),
@@ -684,7 +856,6 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                                 </Box>
                             </Grid>
                         </Grid>
-
 
                         <Grid item xs={12} md={12}>
                             <Box className={styles.infoItem}>
@@ -725,7 +896,6 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                                 </Box>
                             </Grid>
                         </Grid>
-
 
                         <Grid item xs={12} md={12}>
                             <Box className={styles.infoItem}>

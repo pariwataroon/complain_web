@@ -250,7 +250,7 @@ const AddOperating = async (submitData) => {
       }
     );
 
-    console.log({ response });
+    // console.log({ response });
 
     return response;
   } catch (error) {
@@ -283,7 +283,7 @@ const SetOrgSummaryResult = async (submitData) => {
       }
     );
 
-    console.log({ response });
+    // console.log({ response });
 
     return response;
   } catch (error) {
@@ -331,8 +331,6 @@ const AddCase = async (submitData) => {
         soapActionSuffix: "AddCase",
       }
     );
-
-    console.log({ response });
 
     return response;
   } catch (error) {
@@ -448,7 +446,7 @@ const GetSubDistricts = async (districtId) => {
         );
         if (match && match[1]) {
           const subDistricts = JSON.parse(match[1]);
-          console.log("Parsed sub-districts:", subDistricts);
+          // console.log("Parsed sub-districts:", subDistricts);
 
           return {
             success: true,
@@ -676,41 +674,89 @@ const GetCaseType = async () => {
   }
 };
 
-const GetAttachment = async (password) => {
+const GetAttachment = async (id) => {
   try {
-    const ipAddress = await getIPAddress();
+    const token_id = Cookies.get("opm_token");
+    if (!token_id) {
+      throw new Error("Token not found in cookies. Please authenticate first.");
+    }
     const response = await soapInstance.post(
       process.env.NEXT_PUBLIC_OPM_API_OFFICER,
-
       `<?xml version="1.0" encoding="utf-8"?>
-          <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
           <soap:Body>
-              <GetAttachment xmlns="http://tempuri.org/">
-              <user>${process.env.NEXT_PUBLIC_OPM_ID}</user>
-              <password>${password}</password>
-              <authen_from>S</authen_from>
-              <ip_address>${ipAddress}</ip_address>
-              </GetAttachment>
+            <GetAttachment xmlns="http://tempuri.org/">
+              <token_id>${token_id}</token_id>
+              <attachment_id>${id}</attachment_id>
+              <is_preview>true</is_preview>
+            </GetAttachment>
           </soap:Body>
-          </soap:Envelope>`,
+        </soap:Envelope>`,
       {
         soapActionSuffix: "GetAttachment",
       }
     );
 
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(response.data, "text/xml");
-    const getTokenResult =
-      xmlDoc.getElementsByTagName("GetTokenResult")[0].textContent;
-
-    const tokenData = JSON.parse(getTokenResult);
-
-    Cookies.set("opm_token", tokenData.token_id, { expires: 3 });
-    Cookies.set("org_id", tokenData.org_id, { expires: 3 });
-
-    return tokenData;
+    const xml = response.data;
+    const match = xml.match(
+      /<GetAttachmentResult>([\s\S]*?)<\/GetAttachmentResult>/
+    );
+    if (!match) {
+      throw new Error("Cannot find <GetAttachmentResult> in SOAP response.");
+    }
+    const attachmentObj = JSON.parse(match[1]);
+    return attachmentObj;
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching attachment:", error);
+    throw error;
+  }
+};
+
+const OperatingAttachment = async (submitData) => {
+  try {
+    const token_id = Cookies.get("opm_token");
+    if (!token_id) {
+      throw new Error("Token not found in cookies. Please authenticate first.");
+    }
+    const response = await soapInstance.post(
+      process.env.NEXT_PUBLIC_OPM_API_OFFICER,
+      `<?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+            <OperatingAttachment xmlns="http://tempuri.org/">
+              <token_id>${token_id}</token_id>
+              <case_id>string</case_id>
+              <operating_id>string</operating_id>
+              <file_name>string</file_name>
+              <file_content>string</file_content>
+              <file_description>string</file_description>
+              <doc_type_id>string</doc_type_id>
+              <doc_type>string</doc_type>
+              <doc_no>string</doc_no>
+              <doc_date>string</doc_date>
+              <doc_ref_no>string</doc_ref_no>
+              <doc_ref_date>string</doc_ref_date>
+              <document_no>string</document_no>
+              <document_date>string</document_date>
+            </OperatingAttachment>
+          </soap:Body>
+        </soap:Envelope>`,
+      {
+        soapActionSuffix: "OperatingAttachment",
+      }
+    );
+
+    const xml = response.data;
+    const match = xml.match(
+      /<OperatingAttachment>([\s\S]*?)<\/OperatingAttachment>/
+    );
+    if (!match) {
+      throw new Error("Cannot find <OperatingAttachment> in SOAP response.");
+    }
+    const attachmentObj = JSON.parse(match[1]);
+    return attachmentObj;
+  } catch (error) {
+    console.error("Error fetching attachment:", error);
     throw error;
   }
 };
@@ -729,4 +775,5 @@ export {
   GetCaseStatus,
   GetCaseType,
   GetAttachment,
+  OperatingAttachment,
 };
