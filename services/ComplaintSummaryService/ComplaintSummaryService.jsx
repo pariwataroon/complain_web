@@ -1,5 +1,11 @@
 import React, { useRef } from "react";
-import { Box, Paper, Typography, Grid } from "@mui/material";
+import {
+    Box,
+    Paper,
+    Typography,
+    Grid,
+} from "@mui/material";
+import { useRouter } from "next/router";
 import ButtonService from "@services/ButtonService/ButtonService";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -57,8 +63,9 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {} }) => {
     }
   };
 
-  const getFileExt = (filename) =>
-    filename.slice(filename.lastIndexOf(".")).toLowerCase();
+    const getFileExt = (filename) => filename.slice(filename.lastIndexOf(".")).toLowerCase();
+
+    const router = useRouter();
 
   return (
     <Box>
@@ -308,40 +315,42 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {} }) => {
 
           <Divider />
 
-          <Grid container spacing={2} mb={3}>
-            <InfoItem label="ลงชื่อผู้ร้องทุกข์" value={corporate.name} />
-            <InfoItem label="ลงชื่อผู้รับมอบอำนาจ" value={delegate.name} />
-            <InfoItem label="วันที่" value={formatThaiDate()} />
-            <InfoItem label="วันที่" value={formatThaiDate()} />
-          </Grid>
-        </Paper>
-      </div>
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 4, gap: 2 }}>
-        <ButtonService
-          label="แก้ไข"
-          color="แก้ไข"
-          variant="outlined"
-          // onClick={handleBack}
-          iconLeft={<EditOutlinedIcon />}
-        />
-        <ButtonService
-          label="ยืนยัน"
-          color="ยืนยัน"
-          variant="contained"
-          onClick={handleSubmit}
-          // disabled={!acceptSubmit}
-          iconRight={<CheckIcon />}
-        />
-        <ButtonService
-          label="ส่งออก"
-          color="ส่งออก"
-          variant="outlined"
-          onClick={() => exportElementToPDF(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
-          iconRight={<UploadOutlinedIcon />}
-        />
-      </Box>
-    </Box>
-  );
+                <Grid container spacing={2} mb={3}>
+                    <InfoItem label="ลงชื่อผู้ร้องทุกข์" value={complainant.name} />
+                    <InfoItem label="ลงชื่อผู้รับมอบอำนาจ" value={delegate.name} />
+                    <InfoItem label="วันที่" value={formatThaiDate()} />
+                    <InfoItem label="วันที่" value={formatThaiDate()} />
+                </Grid>
+            </Paper>
+            </div>
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 4, gap: 2 }}>
+                <ButtonService
+                label="แก้ไข"
+                color="แก้ไข"
+                variant="outlined"
+                // onClick={handleBack}
+                iconLeft={<EditOutlinedIcon />}
+                />
+                <ButtonService
+                    label="ยืนยัน"
+                    color="ยืนยัน"
+                    variant="contained"
+                    onClick={() => router.back()}
+                    // onClick={handleSubmit}
+                    // disabled={!acceptSubmit}
+                    iconRight={<CheckIcon />}
+                />
+                <ButtonService
+                    label="ส่งออก"
+                    color="ส่งออก"
+                    variant="outlined"
+                    onClick={() => exportElementToPDF(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
+                    iconRight={<UploadOutlinedIcon />}
+                />
+            </Box>
+        </Box>
+
+    );
 };
 
 const Section = ({ title, children }) => (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableList from "@services/TableList/TableList";
 import { useRouter } from "next/router";
@@ -21,47 +21,49 @@ const breadcrumbItems = [
 const SearchComplaints = () => {
   const [allComplaints, setAllComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
-
-  const didFetchRef = useRef(false);
-
   useEffect(() => {
-    if (didFetchRef.current) return;
-    didFetchRef.current = true;
-
-    const fetchComplaints = async () => {
-      setLoading(true);
+    const fetchData = async () => {
       try {
-        const data = await GetEnhancedComplaints({ skip: 0, limit: 100 });
-        const complaints = data?.res_data?.items || [];
-        setAllComplaints(complaints);
-        setFilteredComplaints(complaints);
-      } catch (e) {
-        setAllComplaints([]);
-        setFilteredComplaints([]);
-      } finally {
-        setLoading(false);
+        const res = await GetEnhancedComplaints({ skip: 0, limit: 100 });
+        const items = res?.res_data?.items || [];
+
+        const mapped = items.map((item) => ({
+          id: item.id,
+          name: item.complainant_name || "-",
+          citizenId: item.citizen_id || "-", // หรือ "-"
+          subject: item.subject || "-",
+          docKk: item.reference_number || "-",
+          docSr: item.reference_number2 || "-",
+          docStp: item.reference_number3 || "-",
+          docGov: item.reference_number4 || "-",
+          agency: item.incident_location || "-",
+        }));
+
+        setAllComplaints(mapped);
+        setFilteredComplaints(mapped);
+      } catch (err) {
+        console.error("โหลดข้อมูลร้องเรียนล้มเหลว:", err);
       }
     };
 
-    fetchComplaints();
+    fetchData();
   }, []);
-
   const handleNavigateTo = () =>
     router.push("/admin/edit/search/Filteromplaints");
 
   const handleSearch = (filters) => {
-    // คุณสามารถ filter client-side หรือ call API ใหม่ (แนะนำ call API ใหม่ถ้า dataset ใหญ่)
-    // ตัวอย่างนี้ filter client-side
-    const { claimantName, subject, docGov, agency, docKk, docSr, docStp } =
-      filters;
+    const {
+      claimantName,
+      citizenId,
+      subject,
+      docGov,
+      agency,
+      docKk,
+      docSr,
+      docStp,
+    } = filters;
 
-    const safeIncludes = (text, query) =>
-      (text ?? "")
-        .toString()
-        .toLowerCase()
-        .includes((query ?? "").toString().toLowerCase());
 
     const result = allComplaints.filter((item) => {
       // ชื่อผู้ร้อง
@@ -97,6 +99,7 @@ const SearchComplaints = () => {
 
     setFilteredComplaints(result);
   };
+
 
   return (
     <>
