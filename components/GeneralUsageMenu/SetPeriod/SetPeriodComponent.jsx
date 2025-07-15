@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Unstable_Grid2";
 import { Paper, Typography } from "@mui/material";
@@ -8,9 +8,17 @@ import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs.jsx";
 import ButtonService from "@services/ButtonService/ButtonService";
 import { alertSuccess } from "@utils/Alerts";
+import { getTimeSettings, updateTimeSettingById } from "@pages/api/settinggeneral/times/times";
+
+// Default settings with just the ID and value to match the API data
+const defaultSettings = {
+  new_complaint_days: { id: "c0009fbd-4593-44b5-91d1-806d4edf38ab", value: 3, name: "กำหนดระยะเวลาการส่งเรื่องอนุมัติ / เพื่อรอเอกสารเพิ่มเติม" },
+  complaint_response_days: { id: "1d2c4dae-4d7f-4843-9499-5a7e2f9ec8bd", value: 15, name: "กำหนดระยะเวลาตามฐานการเพิ่มฐานจากข้อมูลเดิม" },
+  department_response_days: { id: "676dbffc-a6f4-49f6-a836-63b238675786", value: 30, name: "กำหนดระยะเวลาตามขั้นตอนในขั้นที่ครบถ้วนแล้ว" },
+  review_response_days: { id: "b2a77005-31e8-4009-a4a4-bd84ce463aab", value: 7, name: "กำหนดระยะเวลาตามสถานการพิจารณาตอบกลับจากหน่วยงาน" },
+};
 
 const SetPeriodComponent = () => {
-  // Breadcrumbs
   const breadcrumbItems = [
     {
       label: "เมนูกำหนดการใช้งานทั่วไป",
@@ -27,48 +35,80 @@ const SetPeriodComponent = () => {
     },
   ];
 
-  // State สำหรับรับค่าแต่ละช่อง
-  const [period1, setPeriod1] = useState(3);
-  const [period2, setPeriod2] = useState(15);
-  const [period3, setPeriod3] = useState(30);
-  const [period4, setPeriod4] = useState(7);
+  const [periods, setPeriods] = useState(defaultSettings);
 
-  // สร้างตัวเลือกสำหรับ dropdown (1-30 วัน)
-  const dayOptions = Array.from({ length: 30 }, (_, i) => i + 1);
-  const selectOptions = dayOptions.map((day) => ({
-    label: day.toString(),
-    value: day,
-  }));
+  // ดึงข้อมูลจาก API
+  const fetchSettings = async () => {
+    try {
+      const settings = await getTimeSettings();
+      const loaded = { ...defaultSettings };
 
-  // ฟังก์ชันจัดการเลือกแต่ละช่อง
-  const handlePeriod1Change = (event) => setPeriod1(event.target.value);
-  const handlePeriod2Change = (event) => setPeriod2(event.target.value);
-  const handlePeriod3Change = (event) => setPeriod3(event.target.value);
-  const handlePeriod4Change = (event) => setPeriod4(event.target.value);
+      settings.forEach((item) => {
+        if (loaded.hasOwnProperty(item.key)) {
+          loaded[item.key] = {
+            id: item.id,
+            value: Number(item.value),
+            name: item.name, // เก็บชื่อจาก API
+          };
+        }
+      });
 
-  // ฟังก์ชันเมื่อกดปุ่มบันทึก
-  const handleSave = () => {
-    // สามารถเพิ่ม logic เก็บค่าหรือ API call ได้ที่นี่
-    alertSuccess("บันทึกสำเร็จ");
+      setPeriods(loaded);
+    } catch (err) {
+      console.error("โหลดข้อมูลล้มเหลว:", err);
+    }
   };
 
-  // Component ย่อย แสดง Paper พร้อม icon + ข้อความ และ Select + "วัน"
-  const RenderPaperItem = ({ iconSrc, text, value, onChange }) => (
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const handleChange = (key) => (event) => {
+    const value = Number(event.target.value);
+    setPeriods((prev) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        value,
+      },
+    }));
+  };
+
+  const handleReset = () => {
+    fetchSettings();  // รีเซ็ตข้อมูลจาก API
+  };
+
+  const handleSave = async () => {
+    try {
+      const updateAll = await Promise.all(
+        Object.entries(periods).map(([_, { id, value }]) =>
+          updateTimeSettingById(id, { value })
+        )
+      );
+      alertSuccess("บันทึกสำเร็จ");
+    } catch (error) {
+      console.error("เกิดข้อผิดพลาดระหว่างการบันทึก:", error);
+    }
+  };
+
+  const selectOptions = Array.from({ length: 30 }, (_, i) => ({
+    label: (i + 1).toString(),
+    value: i + 1,
+  }));
+
+  const RenderPaperItem = ({ iconSrc, text, keyName }) => (
     <Paper
       elevation={0}
       sx={{
         borderRadius: 2,
         padding: "20px",
         display: "flex",
-        // แม่เป็น flex row ในจอใหญ่, แต่จอเล็กจะสลับเป็นคอลัมน์
         flexDirection: { xs: "column", sm: "row" },
-        // จัดวางให้ไอคอน+ข้อความ และ Select+วัน อยู่คนละฝั่ง
         justifyContent: "space-between",
         alignItems: { xs: "flex-start", sm: "center" },
         gap: { xs: 2, sm: 0 },
       }}
     >
-      {/* ส่วนซ้าย: ไอคอน + ข้อความ */}
       <Box
         sx={{
           display: "flex",
@@ -79,21 +119,12 @@ const SetPeriodComponent = () => {
         }}
       >
         <img src={iconSrc} alt="Icon" width="50" height="50" />
-        <Typography variant="body1">{text}</Typography>
+        <Typography variant="body1">{text}</Typography> {/* ใช้ชื่อจาก API */}
       </Box>
-
-      {/* ส่วนขวา: Select + "วัน" */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          // ถ้าจอเล็ก ให้เว้นระยะห่างด้านบนเล็กน้อย กันไม่ให้ชิดไอคอน
-          mt: { xs: 1, sm: 0 },
-        }}
-      >
+      <Box sx={{ display: "flex", alignItems: "center", mt: { xs: 1, sm: 0 } }}>
         <SelectMenuService
-          value={value}
-          handleChange={onChange}
+          value={periods[keyName]?.value || ""}
+          handleChange={handleChange(keyName)}
           options={selectOptions}
           width={100}
           sx={{ marginRight: 1, textAlign: "center" }}
@@ -107,16 +138,8 @@ const SetPeriodComponent = () => {
   );
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        padding: 0,
-        margin: 0,
-        boxSizing: "border-box",
-      }}
-    >
+    <Box sx={{ minHeight: "100vh", padding: 0, margin: 0, boxSizing: "border-box" }}>
       <Box sx={{ padding: { xs: "0 8px", sm: "0 16px" } }}>
-        {/* Breadcrumbs */}
         <Box
           sx={{
             borderRadius: 3,
@@ -129,7 +152,6 @@ const SetPeriodComponent = () => {
           <BreadcrumbsService items={breadcrumbItems} />
         </Box>
 
-        {/* Content Box ที่มีพื้นหลัง */}
         <Box
           sx={{
             backgroundImage: "url('/bgbluegd.png')",
@@ -143,48 +165,39 @@ const SetPeriodComponent = () => {
           }}
         >
           <Grid container spacing={2}>
-            {/* บล็อกที่ 1 */}
             <Grid xs={12}>
               <RenderPaperItem
                 iconSrc="/icons/pric01.png"
-                text="กำหนดระยะเวลาการส่งเรื่องอนุมัติ / เพื่อรอเอกสารเพิ่มเติม"
-                value={period1}
-                onChange={handlePeriod1Change}
+                text={periods.new_complaint_days?.name || "กำหนดระยะเวลาการส่งเรื่องอนุมัติ / เพื่อรอเอกสารเพิ่มเติม"}
+                keyName="new_complaint_days"
               />
             </Grid>
 
-            {/* บล็อกที่ 2 */}
             <Grid xs={12}>
               <RenderPaperItem
                 iconSrc="/icons/pric02.png"
-                text="กำหนดระยะเวลาตามฐานการเพิ่มฐานจากข้อมูลเดิม"
-                value={period2}
-                onChange={handlePeriod2Change}
+                text={periods.complaint_response_days?.name || "กำหนดระยะเวลาตามฐานการเพิ่มฐานจากข้อมูลเดิม"}
+                keyName="complaint_response_days"
               />
             </Grid>
 
-            {/* บล็อกที่ 3 */}
             <Grid xs={12}>
               <RenderPaperItem
                 iconSrc="/icons/pric03.png"
-                text="กำหนดระยะเวลาตามขั้นตอนในขั้นที่ครบถ้วนแล้ว"
-                value={period3}
-                onChange={handlePeriod3Change}
+                text={periods.department_response_days?.name || "กำหนดระยะเวลาตามขั้นตอนในขั้นที่ครบถ้วนแล้ว"}
+                keyName="department_response_days"
               />
             </Grid>
 
-            {/* บล็อกที่ 4 */}
             <Grid xs={12}>
               <RenderPaperItem
                 iconSrc="/icons/pric04.png"
-                text="กำหนดระยะเวลาตามสถานการพิจารณาตอบกลับจากหน่วยงาน"
-                value={period4}
-                onChange={handlePeriod4Change}
+                text={periods.review_response_days?.name || "กำหนดระยะเวลาตามสถานการพิจารณาตอบกลับจากหน่วยงาน"}
+                keyName="review_response_days"
               />
             </Grid>
           </Grid>
 
-          {/* ปุ่ม "ล้าง" และ "บันทึก" */}
           <Box
             sx={{
               display: "flex",
@@ -199,13 +212,7 @@ const SetPeriodComponent = () => {
               label="ล้าง"
               variant="outlined"
               iconLeft={<CloseIcon />}
-              onClick={() => {
-                // รีเซ็ตค่ากลับเป็นค่าเริ่มต้น
-                setPeriod1(3);
-                setPeriod2(15);
-                setPeriod3(30);
-                setPeriod4(7);
-              }}
+              onClick={handleReset}
               sx={{
                 backgroundColor: "#ffffff",
                 color: "#50ADFF",
