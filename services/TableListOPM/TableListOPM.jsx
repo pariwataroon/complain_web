@@ -131,7 +131,7 @@ const TableListOPM = ({
 
   const columns = [
     { name: "case_code", label: "รหัสเรื่อง", width: 100, priority: 3 },
-    { name: "customer_name", label: "ชื่อ", width: 180, priority: 2 },
+    { name: "customer_name", label: "ชื่อผู้เดือดร้อน", width: 180, priority: 2 },
     { name: "type_text", label: "ประเภทเรืองร้องทุกข์", width: 120, priority: 4 },
     { name: "ShowDateTime", label: "วันที่และเวลา", width: 120, priority: 4 },
     { name: "status_text", label: "สถานะหลักของเรื่อง", width: 80, priority: 4 },

@@ -61,7 +61,7 @@ const Opm1111Components = () => {
       const parsedData = Array.isArray(timelineData) ? timelineData : timelineData;
 
       const mappedComplaints = parsedData.map((item) => {
-        // console.log({ item }); 
+        // console.log({ item });
         return {
           case_id: item.case_id,
           case_code: item.case_code,

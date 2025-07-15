@@ -252,17 +252,6 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                         <Grid item xs={12} md={6}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
-                                    รหัสคำร้อง
-                                </Typography>
-                                <Typography variant="body1" className={styles.value}>
-                                    {getFieldValue("ref_id") || caseId}
-                                </Typography>
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
                                     รหัสเรื่อง
                                 </Typography>
                                 <Typography variant="body1" className={styles.value}>
@@ -310,19 +299,7 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    วันที่เปิดคำร้อง
-                                </Typography>
-                                <Box className={styles.dateContainer}>
-                                    <DateRangeIcon className={styles.dateIcon} />
-                                    <Typography variant="body1" className={styles.valuetime}>
-                                        {formatDate(getFieldValue("date_opened"))}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </Grid>
+                        
 
                         <Grid item xs={12} md={6}>
                             <Box className={styles.infoItem}>
@@ -349,6 +326,20 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                                     className={styles.statusChip}
                                     icon={getStatusIcon(mainStatusText)}
                                 />
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={12}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    วันที่เปิดคำร้อง
+                                </Typography>
+                                <Box className={styles.dateContainer}>
+                                    <DateRangeIcon className={styles.dateIcon} />
+                                    <Typography variant="body1" className={styles.valuetime}>
+                                        {formatDate(getFieldValue("date_opened"))}
+                                    </Typography>
+                                </Box>
                             </Box>
                         </Grid>
                     </Grid>
@@ -664,13 +655,15 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12} md={12}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     พื้นที่เกิดเหตุ
                                 </Typography>
                                 <Typography variant="body1" className={styles.value}>
                                     {[
+
+                                        getFieldValue("case_area"),
                                         getFieldValue("subdistrict_text"),
                                         getFieldValue("district_text"),
                                         getFieldValue("province_text")
@@ -679,34 +672,28 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    พื้นที่เฉพาะ
-                                </Typography>
-                                <Typography variant="body1" className={styles.value}>
-                                    {getFieldValue("case_area")}
-                                </Typography>
-                            </Box>
+                        <Grid item xs={12} md={12}>
+                            <Grid item xs={12}>
+                                <Box className={styles.infoItem}>
+                                    <Typography variant="subtitle2" className={styles.label}>
+                                        ช่วงเวลาที่เกิดเหตุ
+                                    </Typography>
+                                    <Typography variant="body1" className={styles.value}>
+                                        {getFieldValue("time_occurrenced")}
+                                    </Typography>
+                                </Box>
+                            </Grid>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+
+                        <Grid item xs={12} md={12}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
-                                    วันที่เกิดเหตุ (จาก)
+                                    วันที่เกิดเหตุ (จาก - ถึง)
                                 </Typography>
                                 <Typography variant="body1" className={styles.value}>
                                     {formatDate(getFieldValue("date_occurrenced_from"))}
-                                </Typography>
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    วันที่เกิดเหตุ (ถึง)
-                                </Typography>
-                                <Typography variant="body1" className={styles.value}>
+                                    {" - "}
                                     {formatDate(getFieldValue("date_occurrenced_to"))}
                                 </Typography>
                             </Box>
@@ -715,7 +702,7 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                         <Grid item xs={12} md={6}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
-                                    ในคดีความหรือไม่
+                                    อยู่ระหว่างการฟ้องร้อง / พิจารณาในชั้นศาล
                                 </Typography>
                                 <Chip
                                     label={getFieldValue("is_in_court_text")}
@@ -727,23 +714,26 @@ const DetailOPM = ({ params, caseDetails, operatingsDetails,  loading, formatDat
                         </Grid>
 
                         <Grid item xs={12} md={6}>
+                            <Grid item xs={12}>
+                                <Box className={styles.infoItem}>
+                                    <Typography variant="subtitle2" className={styles.label}>
+                                        ผู้ถูกร้อง
+                                    </Typography>
+                                    <Typography variant="body1" className={styles.value}>
+                                        {getFieldValue("defendant")}
+                                    </Typography>
+                                </Box>
+                            </Grid>
+                        </Grid>
+
+
+                        <Grid item xs={12} md={12}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     สร้างโดย
                                 </Typography>
                                 <Typography variant="body1" className={styles.value}>
                                     {getFieldValue("created_by_text")}
-                                </Typography>
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    ผู้ถูกกล่าวหา
-                                </Typography>
-                                <Typography variant="body1" className={styles.value}>
-                                    {getFieldValue("defendant")}
                                 </Typography>
                             </Box>
                         </Grid>
