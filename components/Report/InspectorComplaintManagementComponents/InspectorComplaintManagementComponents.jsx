@@ -490,7 +490,7 @@ const InspectorComplaintManagementComponents = () => {
   // Title and Date
   const exportData = [];
   exportData.push([
-    `รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ${selectedInspectorName ? " - " + selectedInspectorName : ""}`
+    `รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจราชการกระทรวงการคลัง${selectedInspectorName ? " - " + selectedInspectorName : ""}`
   ]);
   exportData.push([
     `วันที่ ${new Date().toLocaleDateString("th-TH", { year: 'numeric', month: 'long', day: 'numeric' })}`
@@ -519,7 +519,7 @@ const InspectorComplaintManagementComponents = () => {
 
   // เรียก util (ต้องรองรับ options.merges)
   exportExcel(exportData, {
-    filename: `รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ_${selectedInspectorName}.xlsx`,
+    filename: `รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจราชการกระทรวงการคลัง_${selectedInspectorName}.xlsx`,
     sheetName: "Report",
     merges
   });
@@ -539,7 +539,7 @@ const InspectorComplaintManagementComponents = () => {
                 />
               ),
             },
-            { label: "รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ" },
+            { label: "รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจราชการกระทรวงการคลัง" },
           ]}
         />
       </Box>
@@ -583,7 +583,7 @@ const InspectorComplaintManagementComponents = () => {
                 lineHeight: 1.2,
               }}
             >
-              รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ
+              รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจราชการกระทรวงการคลัง
               {selectedInspectorName && (
                 <span style={{ fontSize: "16px", fontWeight: "normal" }}>
                   {" - "}ของ {selectedInspectorName}
@@ -644,7 +644,7 @@ const InspectorComplaintManagementComponents = () => {
                 onClick={() =>
                   exportElementToPDF(
                     pdfRef,
-                    `รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจ_${selectedInspectorName}.pdf`
+                    `รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจราชการกระทรวงการคลัง_${selectedInspectorName}.pdf`
                   )
                 }
                 sx={{

@@ -210,7 +210,7 @@ const TableList = ({
                 onKeyPress={handleKeyPress}
               />
               <SelectField
-                label="หน่วยงานอื่นที่ส่งเรื่องมายัง กก."
+                label="หน่วยงานอื่นที่ส่งเรื่องมายัง กค."
                 inputLabel="เลือกหน่วยงาน"
                 options={agencyOptions}
                 value={filters.agency}
@@ -395,7 +395,7 @@ const TableList = ({
                 onKeyPress={handleKeyPress}
               />
               <SelectField
-                label="หน่วยงานอื่นที่ส่งเรื่องมายัง กก."
+                label="หน่วยงานอื่นที่ส่งเรื่องมายัง กค."
                 inputLabel="เลือกหน่วยงาน"
                 options={agencyOptions}
                 value={filters.agency}

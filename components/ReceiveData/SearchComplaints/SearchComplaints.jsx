@@ -17,7 +17,55 @@ const breadcrumbItems = [
   },
   { label: "สืบค้นเรื่องร้องเรียน" },
 ];
+// Mockup data สำหรับ agencyOptions
+const mockAgencyOptions = [
+  { value: "", label: "เลือกหน่วยงาน" },
+  { value: "กระทรวงมหาดไทย", label: "กระทรวงมหาดไทย" },
+  {
+    value: "กรมส่งเสริมการปกครองท้องถิ่น",
+    label: "กรมส่งเสริมการปกครองท้องถิ่น",
+  },
+  { value: "กรมการปกครอง", label: "กรมการปกครอง" },
+  {
+    value: "กรมป้องกันและบรรเทาสาธารณภัย",
+    label: "กรมป้องกันและบรรเทาสาธารณภัย",
+  },
+  { value: "กรมโยธาธิการและผังเมือง", label: "กรมโยธาธิการและผังเมือง" },
+  { value: "จังหวัด", label: "จังหวัด" },
+  { value: "อำเภอ", label: "อำเภอ" },
+  { value: "องค์การบริหารส่วนจังหวัด", label: "องค์การบริหารส่วนจังหวัด" },
+  { value: "เทศบาลเมือง", label: "เทศบาลเมือง" },
+  { value: "เทศบาลตำบล", label: "เทศบาลตำบล" },
+  { value: "องค์การบริหารส่วนตำบล", label: "องค์การบริหารส่วนตำบล" },
+  { value: "กรุงเทพมหานคร", label: "กรุงเทพมหานคร" },
+  { value: "เมืองพัทยา", label: "เมืองพัทยา" },
+  {
+    value: "สำนักงานคณะกรรมการการเลือกตั้ง",
+    label: "สำนักงานคณะกรรมการการเลือกตั้ง",
+  },
+  { value: "สำนักงานตำรวจแห่งชาติ", label: "สำนักงานตำรวจแห่งชาติ" },
+  { value: "สำนักงาน ก.พ.", label: "สำนักงาน ก.พ." },
+  { value: "สำนักงานอัยการสูงสุด", label: "สำนักงานอัยการสูงสุด" },
+  { value: "สำนักงานศาลยุติธรรม", label: "สำนักงานศาลยุติธรรม" },
+  { value: "กระทรวงการคลัง", label: "กระทรวงการคลัง" },
+  { value: "กระทรวงศึกษาธิการ", label: "กระทรวงศึกษาธิการ" },
+  { value: "กระทรวงสาธารณสุข", label: "กระทรวงสาธารณสุข" },
+  { value: "กระทรวงแรงงาน", label: "กระทรวงแรงงาน" },
+  { value: "กระทรวงยุติธรรม", label: "กระทรวงยุติธรรม" },
+  {
+    value: "กระทรวงพัฒนาสังคมและความมั่นคงของมนุษย์",
+    label: "กระทรวงพัฒนาสังคมและความมั่นคงของมนุษย์",
+  },
+  { value: "หน่วยงานเอกชน", label: "หน่วยงานเอกชน" },
+  { value: "รัฐวิสาหกิจ", label: "รัฐวิสาหกิจ" },
+  { value: "อื่นๆ", label: "อื่นๆ" },
+];
 
+const safeIncludes = (text, query) =>
+  (text ?? "")
+    .toString()
+    .toLowerCase()
+    .includes((query ?? "").toString().toLowerCase());
 const SearchComplaints = () => {
   const [allComplaints, setAllComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
@@ -111,6 +159,8 @@ const SearchComplaints = () => {
         navigateTo="/admin/edit/search"
         onSearch={handleSearch}
         handleNavigateTo={handleNavigateTo}
+        
+        agencyOptions={mockAgencyOptions}
       />
     </>
   );
