@@ -1051,6 +1051,7 @@ def get_complaints_enhanced(
     urgency: Optional[str] = None,
     search: Optional[str] = None,
     complainant_name: Optional[str] = None,
+    subject: Optional[str] = None,   # เพิ่ม subject filter
 ):
     """ดึงรายการข้อร้องเรียนแบบ enhanced พร้อมข้อมูลเพิ่มเติม"""
     from models.comp_complaint_types import ComplaintChannel
@@ -1093,6 +1094,42 @@ def get_complaints_enhanced(
             Complaint.description.ilike(f"%{search}%")
         )
         query = query.filter(search_filter)
+    
+    # Filter ด้วย subject สำหรับค้นหา "นร" เท่านั้น
+    if subject:
+        import re
+        
+        # ตรวจสอบว่า subject เป็นรายการแบบ comma-separated หรือไม่
+        if ',' in subject:
+            # แยก subjects หลายตัว
+            subjects = [s.strip() for s in subject.split(',') if s.strip()]
+            subject_filters = []
+            
+            for subj in subjects:
+                # ตรวจสอบแต่ละ subject ว่าขึ้นต้นด้วย "นร" และตามด้วยตัวเลขหรือไม่
+                if subj.startswith("นร"):
+                    if len(subj) > 2 and subj[2:].isdigit():
+                        # กรณี "นร" + เลข เช่น "นร01680000068"
+                        subject_filters.append(Complaint.subject == subj)
+                    elif subj == "นร":
+                        # กรณีค้นหา "นร" ทั้งหมด
+                        subject_filters.append(
+                            Complaint.subject.op('~')(r'^นร[0-9]+$')
+                        )
+            
+            if subject_filters:
+                query = query.filter(or_(*subject_filters))
+        else:
+            # subject เดียว
+            if subject.startswith("นร"):
+                if len(subject) > 2 and subject[2:].isdigit():
+                    # กรณี "นร" + เลข เช่น "นร01680000068"
+                    query = query.filter(Complaint.subject == subject)
+                elif subject == "นร":
+                    # กรณีค้นหา "นร" ทั้งหมด - ใช้ regex pattern
+                    query = query.filter(
+                        Complaint.subject.op('~')(r'^นร[0-9]+$')
+                    )
     
     # Filter by complainant name
     if complainant_name:
@@ -1221,6 +1258,7 @@ def get_complaints(
     urgency: Optional[str] = None,
     search: Optional[str] = None,
     complainant_name: Optional[str] = None,   # เพิ่ม filter
+    subject: Optional[str] = None,   # เพิ่ม subject filter
 ):
     query = db.query(Complaint)
     
@@ -1303,6 +1341,43 @@ def get_complaints(
             ])
         
         query = query.filter(or_(*search_conditions))
+        
+    # Filter ด้วย subject สำหรับค้นหา "นร" เท่านั้น
+    if subject:
+        import re
+        
+        # ตรวจสอบว่า subject เป็นรายการแบบ comma-separated หรือไม่
+        if ',' in subject:
+            # แยก subjects หลายตัว
+            subjects = [s.strip() for s in subject.split(',') if s.strip()]
+            subject_filters = []
+            
+            for subj in subjects:
+                # ตรวจสอบแต่ละ subject ว่าขึ้นต้นด้วย "นร" และตามด้วยตัวเลขหรือไม่
+                if subj.startswith("นร"):
+                    if len(subj) > 2 and subj[2:].isdigit():
+                        # กรณี "นร" + เลข เช่น "นร01680000068"
+                        subject_filters.append(Complaint.subject == subj)
+                    elif subj == "นร":
+                        # กรณีค้นหา "นร" ทั้งหมด
+                        subject_filters.append(
+                            Complaint.subject.op('~')(r'^นร[0-9]+$')
+                        )
+            
+            if subject_filters:
+                query = query.filter(or_(*subject_filters))
+        else:
+            # subject เดียว
+            if subject.startswith("นร"):
+                if len(subject) > 2 and subject[2:].isdigit():
+                    # กรณี "นร" + เลข เช่น "นร01680000068"
+                    query = query.filter(Complaint.subject == subject)
+                elif subject == "นร":
+                    # กรณีค้นหา "นร" ทั้งหมด - ใช้ regex pattern
+                    query = query.filter(
+                        Complaint.subject.op('~')(r'^นร[0-9]+$')
+                    )
+    
     # filter ด้วย complainant_name (ค้นหาในหลายฟิลด์)
     if complainant_name:
         # สร้าง Unicode escape pattern สำหรับข้อความภาษาไทย
