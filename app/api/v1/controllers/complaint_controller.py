@@ -81,6 +81,25 @@ def validate_complaint_channel(db: Session, channel_id: UUID) -> bool:
 def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optional[UUID] = None) -> Complaint:
     """สร้างข้อร้องเรียนใหม่"""
     try:
+        # ✅ ตรวจสอบ duplicate สำหรับ case "นร" ก่อนทำอะไร
+        subject = ""
+        # ลองหา subject จากหลายจุด
+        if "subject" in complaint_data:
+            subject = complaint_data.get("subject", "")
+        elif "step3" in complaint_data and "general" in complaint_data["step3"]:
+            subject = complaint_data["step3"]["general"].get("subject", "")
+        
+        # ถ้า subject ขึ้นต้นด้วย "นร" ให้ตรวจสอบ duplicate
+        if subject and subject.strip().startswith("นร"):
+            existing_complaint = db.query(Complaint).filter(
+                Complaint.subject == subject.strip()
+            ).first()
+            
+            if existing_complaint:
+                logger.info(f"Found duplicate 'นร' case with subject: {subject}, skipping creation")
+                # คืนค่า complaint ที่มีอยู่แล้วแทนการสร้างใหม่
+                return existing_complaint
+        
         complaint_channel_id = None
         if "complaint_channel_id" in complaint_data:
             channel_id_str = complaint_data["complaint_channel_id"]
