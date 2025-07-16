@@ -625,7 +625,9 @@ def extract_complaint_data(complaint_data: Dict, root_complaint_type: str) -> Di
     if not complainant_result.get("data"):
         raise ValueError("Complainant data is required")
     
-    if not respondent_result.get("data"):
+    # ✅ สำหรับกรณี "นร" อนุญาตให้สร้างได้แม้ว่าจะไม่มีข้อมูลผู้ถูกร้องเรียน
+    is_nr_case = subject and subject.strip().startswith("นร")
+    if not respondent_result.get("data") and not is_nr_case:
         raise ValueError("Respondent data is required")
     
     return {
@@ -637,7 +639,7 @@ def extract_complaint_data(complaint_data: Dict, root_complaint_type: str) -> Di
         "complainant_data": complainant_result.get("data", {}),
         "complainant_type": complainant_result.get("type", ComplainantType.INDIVIDUAL),
         "delegate_data": complainant_result.get("delegate_data"),
-        "respondent_data": respondent_result.get("data", {}),
+        "respondent_data": respondent_result.get("data", {} if not is_nr_case else {"name": "ไม่ระบุผู้ถูกร้องเรียน", "category": "UNKNOWN_NR_CASE"}),
         "respondent_type": respondent_result.get("type", RespondentType.INDIVIDUAL)
     }
 
@@ -752,6 +754,10 @@ def process_respondent_data(step2: Dict) -> Dict:
             # ใช้ข้อมูลที่เหลือใน step2_general (ลบ activeType ออก)
             filtered_data = {k: v for k, v in step2_general.items() if k not in ["activeType"]}
             respondent_data = process_nested_fields(filtered_data)
+            
+            # ✅ ถ้าไม่มีข้อมูลเลย ให้ใช้ข้อมูลเริ่มต้น
+            if not respondent_data:
+                respondent_data = {"name": "ไม่ระบุ", "category": "MINIMAL_DATA"}
 
     return {
         "data": respondent_data,
