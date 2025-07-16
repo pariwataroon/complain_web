@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 
 from app.api.middleware.jwt_verify import verify_token
+from app.api.middleware.permission_middleware import can_read
 from app.api.v1.controllers.document_storage_controller import (
     get_document_storage_by_channel,
     get_document_storage_statistics,
@@ -34,7 +35,7 @@ async def get_document_storage(
     search: Optional[str] = Query(None, description="คำค้นหา"),
     complainant_name: Optional[str] = Query(None, description="ชื่อผู้ร้องเรียน"),
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
     """ดึงข้อมูลคลังเอกสารแบ่งตามช่องทาง (แบบสรุป - สำหรับ listing)
     
@@ -68,7 +69,7 @@ async def get_document_storage(
 async def get_statistics(
     page_type: str = Query("website", description="ประเภทหน้า: 'website' หรือ 'card'"),
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
     """ดึงสถิติคลังเอกสาร"""
     try:
@@ -83,7 +84,7 @@ async def get_statistics(
 @router.get("/filters", response_model=FormatResponseModel)
 async def get_filters(
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
     """ดึงตัวเลือกสำหรับ filter"""
     try:
@@ -99,7 +100,7 @@ async def get_filters(
 async def get_document_storage_detail_by_id(
     complaint_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
     """ดึงรายละเอียดเต็มของ complaint เดียว รวมถึงความสัมพันธ์ทั้งหมด"""
     try:

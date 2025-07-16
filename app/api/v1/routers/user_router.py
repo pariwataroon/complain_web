@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any
 
-from app.api.middleware.permission_middleware import can_create, can_read, can_delete
+from app.api.middleware.permission_middleware import can_create, can_read, can_update, can_delete
 from app.api.v1.controllers.user_controller import (DuplicateKeyError,
                                                    create_user, delete_user,
                                                    get_titles, get_users_with_titles,
@@ -394,7 +394,7 @@ async def admin_update_user(
     user_id: UUID,
     user_data: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_create("setting_users"))  # ใช้สิทธิ์ create เนื่องจาก admin level
+    current_user: str = Depends(can_update("setting_users"))  # ใช้สิทธิ์ update เนื่องจาก admin level
 ):
     """
     Admin endpoint to update user with full privileges including roles and positions

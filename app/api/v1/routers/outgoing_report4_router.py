@@ -6,6 +6,7 @@ from datetime import datetime
 
 from config.database import get_db
 from app.api.middleware.jwt_verify import verify_token
+from app.api.middleware.permission_middleware import can_read, can_create
 from app.api.v1.controllers.outgoing_report4_controller import (
     get_outgoing_reports4,
     get_outgoing_report4_by_id,
@@ -38,7 +39,7 @@ async def get_outgoing_reports4_list(
     date_from: Optional[datetime] = Query(None, description="วันที่เริ่มต้น"),
     date_to: Optional[datetime] = Query(None, description="วันที่สิ้นสุด"),
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """ดึงรายการรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบทั้งหมด"""
     try:
@@ -62,7 +63,7 @@ async def get_outgoing_reports4_list(
 @router.get("/options", response_model=FormatResponseModel)
 async def get_options4(
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """ดึงตัวเลือกสำหรับ dropdown ต่างๆ"""
     try:
@@ -76,7 +77,7 @@ async def get_options4(
 async def auto_fill_from_complaint4_endpoint(
     complaint_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์ม"""
     try:
@@ -92,7 +93,7 @@ async def auto_fill_from_complaint4_endpoint(
 async def create_new_outgoing_report4(
     report_data: OutgoingReport4Create,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_create("dashboard"))
 ):
     """สร้างรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบใหม่ด้วย JSON body"""
     try:
@@ -116,7 +117,7 @@ async def create_new_outgoing_report4(
 async def get_outgoing_report4(
     report_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """ดึงรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบตาม ID"""
     try:

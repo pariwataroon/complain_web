@@ -68,7 +68,7 @@ async def get_notifications(
 async def mark_as_seen(
     notification_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_update("initial_notification"))
 ):
     """ทำเครื่องหมายว่าแจ้งเตือนนี้ถูกเห็นแล้วโดยผู้ใช้ที่กำลัง login"""
     try:

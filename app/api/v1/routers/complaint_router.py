@@ -89,7 +89,7 @@ async def read_complaints(
     search: Optional[str] = None,
     complainant_name: Optional[str] = None,   # เพิ่ม filter
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
     """Get a list of complaints with advanced filtering and search"""
     result = get_complaints(
@@ -170,7 +170,7 @@ async def read_complaints_group_by_channel(
     search: Optional[str] = None,
     complainant_name: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
     """
     Get a list of complaints grouped by complaint_channel_id, 
@@ -200,7 +200,7 @@ async def get_complaints_assignment_form(
     complaint_type: Optional[str] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
     """ดึงรายการเรื่องร้องเรียนทั้งหมดสำหรับฟอร์ม assignment"""
     try:
@@ -333,7 +333,7 @@ async def get_complaints_assignment_form(
 async def read_complaint(
     complaint_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("setting_access"))
 ):
     """Get a specific complaint by ID with assignment form data"""
     try:
@@ -653,7 +653,7 @@ async def update_complaint_satisfaction(
     rating: SatisfactionRating,
     comment: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_update("setting_access"))
 ):
     """บันทึกคะแนนความพึงพอใจต่อการแก้ไขปัญหา"""
     complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()

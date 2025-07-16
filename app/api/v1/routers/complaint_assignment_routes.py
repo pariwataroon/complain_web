@@ -7,6 +7,7 @@ from datetime import datetime
 from config.database import get_db
 from models.user import User
 from app.api.middleware.jwt_verify import verify_token
+from app.api.middleware.permission_middleware import can_read, can_create, can_update
 from app.api.v1.controllers.complaint_assignment_controller import (
     update_complaint_assignment_data,
     get_assignment_form_data,
@@ -29,7 +30,7 @@ router = APIRouter(prefix="/complaints-assignment", tags=["complaint_assignment"
 @router.get("/{complaint_id}/assignment-form")
 async def get_assignment_form(
     complaint_id: UUID,
-    current_user: str = Depends(verify_token),
+    current_user: str = Depends(can_read("dashboard")),
     db: Session = Depends(get_db)
 ):
     """ดึงข้อมูลสำหรับฟอร์ม Assignment"""
@@ -54,7 +55,7 @@ async def get_assignment_form(
 async def update_assignment(
     complaint_id: UUID,
     assignment_data: Dict[str, Any],
-    current_user: str = Depends(verify_token),
+    current_user: str = Depends(can_update("dashboard")),
     db: Session = Depends(get_db)
 ):
     """อัพเดทการมอบหมายงาน"""
@@ -96,7 +97,7 @@ async def update_assignment(
 async def link_related_complaint(
     complaint_id: UUID,
     link_data: Dict[str, Any],
-    current_user: str = Depends(verify_token),  # ← str
+    current_user: str = Depends(can_create("dashboard")),
     db: Session = Depends(get_db)
 ):
     """เชื่อมโยงเรื่องร้องเรียนที่เกี่ยวข้อง"""
@@ -129,7 +130,7 @@ async def link_related_complaint(
 async def update_complainant(
     complaint_id: UUID,
     complainant_data: Dict[str, Any],
-    current_user: str = Depends(verify_token),  # ← str
+    current_user: str = Depends(can_update("dashboard")),
     db: Session = Depends(get_db)
 ):
     """อัพเดทข้อมูลผู้ร้องเรียน"""
@@ -162,7 +163,7 @@ async def update_complainant(
 async def update_respondent(
     complaint_id: UUID,
     respondent_data: Dict[str, Any],
-    current_user: str = Depends(verify_token),  # ← str
+    current_user: str = Depends(can_update("dashboard")),
     db: Session = Depends(get_db)
 ):
     """อัพเดทข้อมูลผู้ถูกร้องเรียน"""
@@ -195,7 +196,7 @@ async def update_respondent(
 async def search_for_reference(
     q: str = Query(..., description="คำค้นหา"),
     limit: int = Query(10, description="จำนวนผลลัพธ์"),
-    current_user: str = Depends(verify_token),  # ← str
+    current_user: str = Depends(can_read("dashboard")),
     db: Session = Depends(get_db)
 ):
     """ค้นหาเรื่องร้องเรียนสำหรับการอ้างอิง"""
@@ -221,7 +222,7 @@ async def search_for_reference(
 async def add_additional_reference(
     complaint_id: UUID,
     reference_data: Dict[str, Any],
-    current_user: str = Depends(verify_token),  # ← str
+    current_user: str = Depends(can_create("dashboard")),
     db: Session = Depends(get_db)
 ):
     """เพิ่มเลขอ้างอิงเรื่องเพิ่มเติม"""
@@ -255,7 +256,7 @@ async def add_additional_reference(
 async def get_assignment_history(
     complaint_id: UUID,
     limit: int = Query(20, description="จำนวนประวัติที่แสดง"),
-    current_user: str = Depends(verify_token),  # ← str
+    current_user: str = Depends(can_read("dashboard")),
     db: Session = Depends(get_db)
 ):
     """ดูประวัติการเปลี่ยนแปลงการมอบหมาย"""
@@ -299,7 +300,7 @@ async def get_assignment_history(
 @router.post("/bulk-assignment")
 async def bulk_assignment(
     bulk_data: Dict[str, Any],
-    current_user: str = Depends(verify_token),  # ← str
+    current_user: str = Depends(can_create("dashboard")),
     db: Session = Depends(get_db)
 ):
     """มอบหมายงานแบบ bulk"""
@@ -373,7 +374,7 @@ async def get_complaints_by_page_type(
     urgency: Optional[str] = Query(None, description="ความเร่งด่วน"),
     search: Optional[str] = Query(None, description="คำค้นหา"),
     complainant_name: Optional[str] = Query(None, description="ชื่อผู้ร้องเรียน"),
-    current_user: str = Depends(verify_token),
+    current_user: str = Depends(can_read("dashboard")),
     db: Session = Depends(get_db)
 ):
     """ดึงข้อมูลเรื่องร้องเรียนแบ่งตามประเภทหน้า (website/card) ในรูปแบบ assignment form - เฉพาะงานที่ได้รับมอบหมาย"""
@@ -411,7 +412,7 @@ async def get_complaints_by_page_type(
 async def confirm_assignment_endpoint(
     complaint_id: UUID,
     confirm_data: Dict[str, Any],
-    current_user: str = Depends(verify_token),
+    current_user: str = Depends(can_create("dashboard")),
     db: Session = Depends(get_db)
 ):
     """ยืนยันรับงานที่ได้รับมอบหมาย"""

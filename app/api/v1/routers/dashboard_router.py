@@ -5,6 +5,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
 from app.api.middleware.jwt_verify import verify_token
+from app.api.middleware.permission_middleware import can_read
 from app.api.middleware.permission_middleware import permission_required
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
@@ -27,7 +28,7 @@ async def get_staff_workload_data(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """
     ดึงข้อมูลภาระงานของเจ้าหน้าที่แต่ละคน แยกตามสถานะของเรื่องร้องทุกข์
@@ -46,7 +47,7 @@ async def get_staff_performance_data(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """
     ดึงข้อมูลประสิทธิภาพการทำงานของเจ้าหน้าที่

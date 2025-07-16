@@ -6,6 +6,7 @@ from datetime import datetime
 
 from config.database import get_db
 from app.api.middleware.jwt_verify import verify_token
+from app.api.middleware.permission_middleware import can_read, can_create
 from app.api.v1.controllers.outgoing_report2_controller import (
     get_outgoing_reports2,
     get_outgoing_report2_by_id,
@@ -39,7 +40,7 @@ async def get_outgoing_reports2_list(
     date_from: Optional[datetime] = Query(None, description="วันที่เริ่มต้น"),
     date_to: Optional[datetime] = Query(None, description="วันที่สิ้นสุด"),
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """ดึงรายการรายงานแจ้งผู้ร้องเรียนทั้งหมด"""
     try:
@@ -64,7 +65,7 @@ async def get_outgoing_reports2_list(
 @router.get("/options", response_model=FormatResponseModel)
 async def get_options2(
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """ดึงตัวเลือกสำหรับ dropdown ต่างๆ"""
     try:
@@ -78,7 +79,7 @@ async def get_options2(
 async def auto_fill_from_complaint2_endpoint(
     complaint_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์ม"""
     try:
@@ -94,7 +95,7 @@ async def auto_fill_from_complaint2_endpoint(
 async def create_new_outgoing_report2(
     report_data: OutgoingReport2Create,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_create("dashboard"))
 ):
     """สร้างรายงานแจ้งผู้ร้องเรียนใหม่ด้วย JSON body"""
     try:
@@ -118,7 +119,7 @@ async def create_new_outgoing_report2(
 async def get_outgoing_report2(
     report_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(verify_token)
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """ดึงรายงานแจ้งผู้ร้องเรียนตาม ID"""
     try:
