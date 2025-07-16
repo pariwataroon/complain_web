@@ -6,8 +6,9 @@ from typing import Dict, Any, Optional, List
 import json
 
 from models.comp_complaint import Complaint, ComplaintStatus
-from models.comp_complaint_types import ComplaintChannel
+from models.comp_complaint_types import ComplaintChannel, ComplaintType, ComplaintSubType
 from models.user import User
+from models.departments import Department
 from models.outgoing_reports import OutgoingReport
 from models.outgoing_reports2 import OutgoingReport2
 from models.outgoing_reports3 import OutgoingReport3
@@ -710,22 +711,47 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
         elif complaint.new_complaint:
             complaint_category = "เรื่องร้องเรียนใหม่"
         
+        # ดึงข้อมูลประเภทเรื่องและประเภทเรื่องย่อย
+        complaint_type_name = ""
+        complaint_subtype_name = ""
+        
+        if complaint.complaint_type_id:
+            complaint_type_obj = db.query(ComplaintType).filter(ComplaintType.id == complaint.complaint_type_id).first()
+            complaint_type_name = complaint_type_obj.name if complaint_type_obj else ""
+        
+        if complaint.complaint_subtype_id:
+            complaint_subtype_obj = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
+            complaint_subtype_name = complaint_subtype_obj.name if complaint_subtype_obj else ""
+        
+        # ดึงข้อมูลหน่วยงานจาก outgoing_reports
+        agency_name = ""
+        try:
+            outgoing_report = db.query(OutgoingReport).filter(
+                OutgoingReport.complaint_id == complaint_id,
+                OutgoingReport.is_active == True
+            ).first()
+            
+            if outgoing_report and outgoing_report.department:
+                agency_name = outgoing_report.department.name
+        except Exception as e:
+            logger.warning(f"Error getting agency name from outgoing_reports: {str(e)}")
+        
         # จัดรูปแบบผลลัพธ์
         result = {
             "detail": {
-                "วันที่รับ": received_date,
-                "หมายเลข": complaint.complaint_number or "",
-                "ข้อมูลผู้ร้อง": complainant_data.get("name", "") or f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip(),
-                "เรื่อง": complaint.subject or "",
-                "คำอธิบาย": complaint.description or "",
-                "ประเภทเรื่อง": complaint.complaint_type or "",
-                "ประเภทเรื่องย่อย": "",  # จะต้องเชื่อมโยงกับ complaint_subtype
-                "เจ้าหน้าที่ที่รับผิดชอบ": complaint.assigned_to or "",
-                "สถานะเรื่อง": complaint.status.value if complaint.status else "",
-                "สถานะการรับงาน": confirmation_status,
-                "ประเภทการร้องเรียน": complaint_category,
-                "ผู้สร้างเรื่อง": f"{creator.first_name} {creator.last_name}".strip() if creator else "ไม่ระบุ",
-                "หมายเหตุ": complaint.assigned_remark or "",
+                "receiveDate": received_date,
+                "agency": agency_name,
+                "claimantName": complainant_data.get("name", "") or f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip(),
+                "issue": complaint.subject or "",
+                "description": complaint.description or "",
+                "issueType": complaint_type_name,
+                "subIssueType": complaint_subtype_name,
+                "responsibleOfficer": complaint.assigned_to or "",
+                "status": complaint.status.value if complaint.status else "",
+                "confirmationStatus": confirmation_status,
+                "complaintCategory": complaint_category,
+                "creator": f"{creator.first_name} {creator.last_name}".strip() if creator else "ไม่ระบุ",
+                "note": complaint.assigned_remark or "",
                 
                 # ข้อมูลเพิ่มเติมสำหรับ API
                 "id": str(complaint.id),
@@ -1069,19 +1095,44 @@ def get_document_storage_by_channel(
             elif complaint.new_complaint:
                 complaint_category = "เรื่องร้องเรียนใหม่"
             
+            # ดึงข้อมูลประเภทเรื่องและประเภทเรื่องย่อย
+            complaint_type_name = ""
+            complaint_subtype_name = ""
+            
+            if complaint.complaint_type_id:
+                complaint_type_obj = db.query(ComplaintType).filter(ComplaintType.id == complaint.complaint_type_id).first()
+                complaint_type_name = complaint_type_obj.name if complaint_type_obj else ""
+            
+            if complaint.complaint_subtype_id:
+                complaint_subtype_obj = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
+                complaint_subtype_name = complaint_subtype_obj.name if complaint_subtype_obj else ""
+            
+            # ดึงข้อมูลหน่วยงานจาก outgoing_reports
+            agency_name = ""
+            try:
+                outgoing_report = db.query(OutgoingReport).filter(
+                    OutgoingReport.complaint_id == complaint.id,
+                    OutgoingReport.is_active == True
+                ).first()
+                
+                if outgoing_report and outgoing_report.department:
+                    agency_name = outgoing_report.department.name
+            except Exception as e:
+                logger.warning(f"Error getting agency name from outgoing_reports: {str(e)}")
+            
             items.append({
-                "วันที่รับ": received_date,  # 🔥 ใช้ confirm_assigned_date
-                "หมายเลข": complaint.complaint_number or "",
-                "ข้อมูลผู้ร้อง": complainant_data.get("name", "") or f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip(),
-                "เรื่อง": complaint.subject or "",
-                "ประเภทเรื่อง": complaint.complaint_type or "",
-                "ประเภทเรื่องย่อย": "",  # จะต้องเชื่อมโยงกับ complaint_subtype
-                "เจ้าหน้าที่ที่รับผิดชอบ": complaint.assigned_to or "",
-                "สถานะเรื่อง": complaint.status.value if complaint.status else "",
-                "สถานะการรับงาน": confirmation_status,  # 🔥 เพิ่มสถานะการยืนยัน
-                "ประเภทการร้องเรียน": complaint_category,  # 🔥 เพิ่มประเภทการร้องเรียน
-                "ผู้สร้างเรื่อง": f"{creator.first_name} {creator.last_name}".strip() if creator else "ไม่ระบุ",
-                "หมายเหตุ": complaint.assigned_remark or "",
+                "receiveDate": received_date,  # 🔥 ใช้ confirm_assigned_date
+                "agency": agency_name,
+                "claimantName": complainant_data.get("name", "") or f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip(),
+                "issue": complaint.subject or "",
+                "issueType": complaint_type_name,
+                "subIssueType": complaint_subtype_name,
+                "responsibleOfficer": complaint.assigned_to or "",
+                "status": complaint.status.value if complaint.status else "",
+                "confirmationStatus": confirmation_status,  # 🔥 เพิ่มสถานะการยืนยัน
+                "complaintCategory": complaint_category,  # 🔥 เพิ่มประเภทการร้องเรียน
+                "creator": f"{creator.first_name} {creator.last_name}".strip() if creator else "ไม่ระบุ",
+                "note": complaint.assigned_remark or "",
                 
                 # ข้อมูลเพิ่มเติมสำหรับ API
                 "id": str(complaint.id),
@@ -1152,8 +1203,8 @@ def get_document_storage_by_channel(
             ],
             "page_type": page_type,
             "legend": {
-                "วันที่รับ": "วันที่เจ้าหน้าที่ยืนยันรับงาน (ถ้ายังไม่ยืนยัน จะแสดงวันที่มอบหมาย)",
-                "สถานะการรับงาน": {
+                "receiveDate": "วันที่เจ้าหน้าที่ยืนยันรับงาน (ถ้ายังไม่ยืนยัน จะแสดงวันที่มอบหมาย)",
+                "confirmationStatus": {
                     "ยืนยันรับงานแล้ว": "เจ้าหน้าที่ยืนยันรับงานแล้ว",
                     "ปฏิเสธรับงาน": "เจ้าหน้าที่ปฏิเสธรับงาน",
                     "รอการยืนยัน": "มอบหมายแล้วแต่ยังไม่ได้ยืนยัน",
@@ -1281,7 +1332,6 @@ def get_document_storage_filters(db: Session) -> Dict:
         ).all()
         
         # ดึง complaint types และ subtypes
-        from models.comp_complaint_types import ComplaintType, ComplaintSubType
         complaint_types = db.query(ComplaintType).filter(ComplaintType.is_active == True).all()
         complaint_subtypes = db.query(ComplaintSubType).filter(ComplaintSubType.is_active == True).all()
         
