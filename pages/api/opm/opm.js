@@ -725,7 +725,7 @@ const OperatingAttachment = async (submitData) => {
           <soap:Body>
             <OperatingAttachment xmlns="http://tempuri.org/">
               <token_id>${token_id}</token_id>
-              <case_id>string</case_id>
+              <case_id>${submitData.case_id}</case_id>
               <operating_id>string</operating_id>
               <file_name>string</file_name>
               <file_content>string</file_content>
