@@ -14,13 +14,10 @@ const useDetailOPMData = ({
   const [currentItemData, setCurrentItemData] = useState(null);
   const [compiledData, setCompiledData] = useState([]);
   const [isDataReady, setIsDataReady] = useState(false);
-
-  // เพิ่ม state variables ที่ขาดหายไป
   const [opmChannelId, setOpmChannelId] = useState(null);
   const [autoCreateAttempted, setAutoCreateAttempted] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  // Update current item data when router is ready
   useEffect(() => {
     if (router.isReady) {
       const queryData = router.query;
@@ -30,7 +27,6 @@ const useDetailOPMData = ({
     }
   }, [router.isReady]);
 
-  // Helper function to get field value
   const getFieldValue = (fieldName) => {
     if (currentItemData && currentItemData[fieldName]) {
       return currentItemData[fieldName];
@@ -39,14 +35,11 @@ const useDetailOPMData = ({
     return field?.value || "-";
   };
 
-  // Helper function to get field array value
   const getFieldArrayValue = (fieldName) => {
     const field = caseDetails?.find((item) => item.field === fieldName);
     const value = field?.value;
 
-    if (Array.isArray(value)) {
-      return value;
-    }
+    if (Array.isArray(value)) return value;
 
     if (
       typeof value === "string" &&
@@ -60,27 +53,20 @@ const useDetailOPMData = ({
         return [];
       }
     }
-
-    if (value && typeof value === "object") {
-      return [value];
-    }
-
+    if (value && typeof value === "object") return [value];
     return [];
   };
 
-  // Function to get account data
   const getAccountData = () => {
     const accountField = caseDetails?.find((item) => item.field === "account");
     const accountData = accountField?.value;
-
     if (accountData && typeof accountData === "object") {
       const fullName = `${accountData.salutation_th || ""} ${
         accountData.firstname_th || ""
       } ${accountData.lastname_th || ""}`.trim();
-
       return {
         name: fullName,
-        fullName: fullName,
+        fullName,
         salutation: accountData.salutation_th,
         firstName: accountData.firstname_th,
         lastName: accountData.lastname_th,
@@ -97,20 +83,23 @@ const useDetailOPMData = ({
           district: accountData.district_text,
           province: accountData.province_text,
           postcode: accountData.postcode,
+          province_id: accountData.province_id,
+          district_id: accountData.district_id,
+          subdistrict_id: accountData.subdistrict_id,
         },
         contacts: accountData.list_account_detail || [],
       };
     }
-
     return {
       name: "-",
       fullName: "-",
       phone: "-",
       email: "-",
+      address: {},
+      contacts: [],
     };
   };
 
-  // Function to get customer data
   const getCustomerData = () => {
     if (currentItemData?.customer_name) {
       return {
@@ -118,22 +107,21 @@ const useDetailOPMData = ({
         fullName: currentItemData.customer_name,
         phone: "-",
         email: "-",
+        address: {},
+        contacts: [],
       };
     }
-
     const customerField = caseDetails?.find(
       (item) => item.field === "customer"
     );
     const customerData = customerField?.value;
-
     if (customerData && typeof customerData === "object") {
       const fullName = `${customerData.salutation_th || ""} ${
         customerData.firstname_th || ""
       } ${customerData.lastname_th || ""}`.trim();
-
       return {
         name: fullName,
-        fullName: fullName,
+        fullName,
         salutation: customerData.salutation_th,
         firstName: customerData.firstname_th,
         lastName: customerData.lastname_th,
@@ -150,109 +138,136 @@ const useDetailOPMData = ({
           district: customerData.district_text,
           province: customerData.province_text,
           postcode: customerData.postcode,
+          province_id: customerData.province_id,
+          district_id: customerData.district_id,
+          subdistrict_id: customerData.subdistrict_id,
         },
         contacts: customerData.list_customer_detail || [],
       };
     }
-
     return {
       name: "-",
       fullName: "-",
       phone: "-",
       email: "-",
+      address: {},
+      contacts: [],
     };
   };
 
-  // เพิ่มฟังก์ชัน getOpmChannelId ที่ขาดหายไป
-  const getOpmChannelId = async () => {
-    try {
-      setIsCreating(true);
-      const data = await GetAllComplaintChannels();
-      setOpmChannelId(data.channelId || data.channel_id);
-      console.log(
-        "✅ OPM Channel ID obtained:",
-        data.channelId || data.channel_id
-      );
-      return data.channelId || data.channel_id;
-    } catch (error) {
-      console.error("❌ Error fetching OPM Channel ID:", error);
-      const mockChannelId = "mock-channel-id-123";
-      setOpmChannelId(mockChannelId);
-      return mockChannelId;
-    } finally {
-      setIsCreating(false);
-    }
+  // แก้ให้ส่ง label อย่างเดียว (และ zip_code สำหรับ subdistricts)
+  const stripAddressValues = (address) => {
+    if (!address) return {};
+    return {
+      province:
+        address.province_text || address.province
+          ? { label: address.province_text || address.province }
+          : undefined,
+      districts:
+        address.district_text || address.district
+          ? { label: address.district_text || address.district }
+          : undefined,
+      subdistricts:
+        address.subdistrict_text || address.subdistrict
+          ? {
+              label: address.subdistrict_text || address.subdistrict,
+              ...(address.postcode ? { zip_code: address.postcode } : {}),
+            }
+          : undefined,
+      zipcode: address.postcode
+        ? { label: String(address.postcode) }
+        : undefined,
+    };
   };
 
-  // เพิ่มฟังก์ชัน isValidForAPICreation ที่ขาดหายไป
-  const isValidForAPICreation = () => {
-    if (!compiledData.length) return false;
-
-    const mainInfo = getSectionData("main_information");
+  const getFormattedDataForCreateAPI = () => {
     const accountData = getAccountData();
+    const customerData = getCustomerData();
+    const mainInfo = getSectionData("main_information");
+    const attachments = getSectionData("attachments");
+    const detailsData = getSectionData("details_summary");
 
-    // ตรวจสอบข้อมูลที่จำเป็น
-    const hasRequiredData =
-      mainInfo.case_code &&
-      mainInfo.case_id &&
-      accountData.fullName !== "-" &&
-      accountData.fullName !== "" &&
-      !autoCreateAttempted;
+    const step1 = {
+      general: {
+        general: {
+          idCard: accountData.citizenId || "",
+          name: accountData.fullName || "",
+          address: accountData.address?.full_address || "",
+          phone: accountData.phone || "",
+          email: accountData.email || "",
+          ...stripAddressValues(accountData.address),
+        },
+      },
+    };
 
-    console.log("🔍 Validation check:", {
-      hasRequiredData,
-      caseCode: mainInfo.case_code,
-      caseId: mainInfo.case_id,
-      accountName: accountData.fullName,
-      autoCreateAttempted,
-    });
-
-    return hasRequiredData;
-  };
-
-  const createComplaintAPI = async (apiData) => {
-    try {
-      setIsCreating(true);
-      console.log("📤 Sending complaint data to API:", apiData);
-
-      const result = await CreateComplaint(apiData);
-      console.log("✅ Complaint created successfully:", result);
-      return result;
-    } catch (error) {
-      console.error("❌ Error creating complaint:", error);
-      throw error;
-    } finally {
-      setIsCreating(false);
+    let step2 = undefined;
+    if (
+      customerData.fullName &&
+      customerData.fullName !== "-" &&
+      customerData.fullName !== accountData.fullName
+    ) {
+      step2 = {
+        general: {
+          individual: {
+            idCard: customerData.citizenId || "",
+            name: customerData.fullName || "",
+            email: customerData.email || "",
+            address: customerData.address?.full_address || "",
+            phone: customerData.phone || "",
+            ...stripAddressValues(customerData.address),
+          },
+          activeType: "individual",
+        },
+      };
     }
+
+    const step3 = {
+      general: {
+        complaintType: mainInfo.type_text || "",
+        subject: mainInfo.case_code || "",
+        incidentDate: mainInfo.date_opened || "",
+        description: detailsData.detail || "",
+        attachment:
+          attachments.attachments?.map((file) => ({
+            id: file.attachment_id,
+            name: file.file_name,
+            type: file.file_type,
+            size: file.file_size,
+            description: file.file_description,
+            content: file.file_content,
+          })) || [],
+      },
+    };
+
+    const step4 = {
+      general: {
+        accepted: true,
+      },
+    };
+
+    const payload = {
+      step1,
+      ...(step2 ? { step2 } : {}),
+      step3,
+      step4,
+    };
+
+    return payload;
   };
 
-  const autoCreateComplaint = async () => {
-    try {
-      setAutoCreateAttempted(true);
-      const apiData = getFormattedDataForCreateAPI();
-      apiData.channel_id = opmChannelId;
-      const result = await createComplaintAPI(apiData);
-      return result;
-    } catch (error) {
-      console.error("❌ Auto-create complaint failed:", error);
-      throw error;
-    }
-  };
-
-  // Compile all data into structured format
   const compileAllData = useMemo(() => {
-    if (!caseDetails && !currentItemData) {
+    if (
+      (!caseDetails || caseDetails.length === 0) &&
+      (!currentItemData || Object.keys(currentItemData).length === 0)
+    ) {
       return [];
     }
-
     const accountData = getAccountData();
     const customerData = getCustomerData();
     const orgOwnerList = getFieldArrayValue("list_case_org_owner");
     const caseCode = currentItemData?.case_code || getFieldValue("case_code");
     const caseId = currentItemData?.case_id || params?.case_id;
-
     const dataArray = [
-      // Section 1: Main Information
       {
         section: "main_information",
         section_name: "ข้อมูลหลัก",
@@ -272,8 +287,6 @@ const useDetailOPMData = ({
           date_opened: getFieldValue("date_opened"),
         },
       },
-
-      // Section 2: Account Details (ผู้ยื่นคำร้อง)
       {
         section: "account_details",
         section_name: "ข้อมูลผู้ยื่นคำร้อง",
@@ -303,8 +316,6 @@ const useDetailOPMData = ({
           contacts: accountData.contacts || [],
         },
       },
-
-      // Section 3: Customer Details (ผู้เดือดร้อน)
       {
         section: "customer_details",
         section_name: "ข้อมูลผู้เดือดร้อน",
@@ -334,8 +345,6 @@ const useDetailOPMData = ({
           contacts: customerData.contacts || [],
         },
       },
-
-      // Section 4: Attachments
       {
         section: "attachments",
         section_name: "ไฟล์แนบ",
@@ -352,8 +361,6 @@ const useDetailOPMData = ({
             })) || [],
         },
       },
-
-      // Section 5: Organizations
       {
         section: "organizations",
         section_name: "หน่วยงานที่เกี่ยวข้อง",
@@ -369,8 +376,6 @@ const useDetailOPMData = ({
             })) || [],
         },
       },
-
-      // Section 6: Additional Information
       {
         section: "additional_information",
         section_name: "ข้อมูลเพิ่มเติม",
@@ -403,8 +408,6 @@ const useDetailOPMData = ({
           remark: getFieldValue("remark"),
         },
       },
-
-      // Section 7: Details and Summary
       {
         section: "details_summary",
         section_name: "รายละเอียดและสรุป",
@@ -414,7 +417,6 @@ const useDetailOPMData = ({
         },
       },
     ];
-
     return dataArray;
   }, [
     caseDetails,
@@ -424,7 +426,6 @@ const useDetailOPMData = ({
     params,
   ]);
 
-  // Update compiled data when dependencies change
   useEffect(() => {
     if (compileAllData.length > 0) {
       setCompiledData(compileAllData);
@@ -432,7 +433,6 @@ const useDetailOPMData = ({
     }
   }, [compileAllData]);
 
-  // Function to get specific section data
   const getSectionData = (sectionName) => {
     return (
       compiledData.find((section) => section.section === sectionName)?.data ||
@@ -440,7 +440,6 @@ const useDetailOPMData = ({
     );
   };
 
-  // Function to get all data as flat object
   const getFlatData = () => {
     const flatData = {};
     compiledData.forEach((section) => {
@@ -449,7 +448,6 @@ const useDetailOPMData = ({
     return flatData;
   };
 
-  // Function to get formatted data for API
   const getFormattedDataForAPI = () => {
     const flatData = getFlatData();
     return {
@@ -461,189 +459,110 @@ const useDetailOPMData = ({
     };
   };
 
-  // Function to get formatted data for Create API (step format)
-  const getFormattedDataForCreateAPI = () => {
-    const accountData = getAccountData();
-    const customerData = getCustomerData();
+  const getOpmChannelId = async () => {
+    try {
+      setIsCreating(true);
+      const data = await GetAllComplaintChannels();
+      setOpmChannelId(data.channelId || data.channel_id);
+      console.log(
+        "✅ OPM Channel ID obtained:",
+        data.channelId || data.channel_id
+      );
+      return data.channelId || data.channel_id;
+    } catch (error) {
+      console.error("❌ Error fetching OPM Channel ID:", error);
+      const mockChannelId = "mock-channel-id-123";
+      setOpmChannelId(mockChannelId);
+      return mockChannelId;
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const isValidForAPICreation = () => {
+    if (!compiledData.length) return false;
     const mainInfo = getSectionData("main_information");
-    const additionalInfo = getSectionData("additional_information");
-    const attachments = getSectionData("attachments");
-    const detailsData = getSectionData("details_summary");
+    const accountData = getAccountData();
+    const hasRequiredData =
+      mainInfo.case_code &&
+      mainInfo.case_id &&
+      accountData.fullName !== "-" &&
+      accountData.fullName !== "" &&
+      !autoCreateAttempted;
+    return hasRequiredData;
+  };
 
-    // Helper function to create address object
-    const createAddressObject = (addressData) => {
-      if (!addressData) return {};
-      const obj = {};
-      if (addressData.province_id || addressData.province_text) {
-        obj.province = {};
-        if (addressData.province_id)
-          obj.province.value = addressData.province_id;
-        if (addressData.province_text)
-          obj.province.label = addressData.province_text;
+  const createComplaintAPI = async (apiData) => {
+    try {
+      setIsCreating(true);
+      const result = await CreateComplaint(apiData);
+      return result;
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const autoCreateComplaint = async () => {
+    try {
+      setAutoCreateAttempted(true);
+      const apiData = getFormattedDataForCreateAPI();
+      apiData.channel_id = opmChannelId;
+      const result = await createComplaintAPI(apiData);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    if (isDataReady && opmChannelId && !autoCreateAttempted && !isCreating) {
+      if (isValidForAPICreation()) {
+        setTimeout(() => {
+          autoCreateComplaint();
+        }, 1000);
       }
-      if (addressData.district_id || addressData.district_text) {
-        obj.districts = {};
-        if (addressData.district_id)
-          obj.districts.value = addressData.district_id;
-        if (addressData.district_text)
-          obj.districts.label = addressData.district_text;
-      }
-      if (addressData.subdistrict_id || addressData.subdistrict_text) {
-        obj.subdistricts = {};
-        if (addressData.subdistrict_id)
-          obj.subdistricts.value = addressData.subdistrict_id;
-        if (addressData.subdistrict_text)
-          obj.subdistricts.label = addressData.subdistrict_text;
-        if (addressData.postcode)
-          obj.subdistricts.zip_code = addressData.postcode;
-      }
-      if (addressData.postcode) {
-        obj.zipcode = {
-          value: addressData.postcode,
-          label: String(addressData.postcode),
-        };
-      }
-      return obj;
-    };
+    }
+  }, [
+    isDataReady,
+    opmChannelId,
+    autoCreateAttempted,
+    isCreating,
+    compiledData,
+  ]);
 
-    const getFormattedDataForCreateAPI = () => {
-      const accountData = getAccountData();
-      const customerData = getCustomerData();
-      const mainInfo = getSectionData("main_information");
-      const attachments = getSectionData("attachments");
-      const detailsData = getSectionData("details_summary");
+  useEffect(() => {
+    if (isDataReady && !opmChannelId) {
+      getOpmChannelId();
+    }
+  }, [isDataReady, opmChannelId, compiledData]);
 
-      // Step 1: ผู้ยื่น (individual)
-      const step1 = {
-        general: {
-          general: {
-            idCard: accountData.citizenId || "",
-            name: accountData.fullName || "",
-            address: accountData.address?.full_address || "",
-            phone: accountData.phone || "",
-            email: accountData.email || "",
-            ...createAddressObject(accountData.address),
-          },
-        },
-      };
+  return {
+    compiledData,
+    isDataReady,
+    isCreating,
+    autoCreateAttempted,
+    currentItemData,
+    opmChannelId,
 
-      // Step 2: corporate หรือ individual (ดูว่ามี customerData หรือไม่)
-      let step2 = undefined;
-      // ถ้ามี customerData และมีชื่อที่ต่างจาก accountData
-      if (
-        customerData.fullName &&
-        customerData.fullName !== "-" &&
-        customerData.fullName !== accountData.fullName
-      ) {
-        step2 = {
-          general: {
-            individual: {
-              idCard: customerData.citizenId || "",
-              name: customerData.fullName || "",
-              email: customerData.email || "",
-              address: customerData.address?.full_address || "",
-              phone: customerData.phone || "",
-              ...createAddressObject(customerData.address),
-            },
-            activeType: "individual",
-          },
-        };
-      }
+    getSectionData,
+    getFlatData,
+    getFormattedDataForAPI,
+    getFormattedDataForCreateAPI,
+    getAccountData,
+    getCustomerData,
+    getFieldValue,
+    getFieldArrayValue,
 
-      // Step 3: ข้อมูลร้องเรียน
-      const step3 = {
-        general: {
-          complaintType: mainInfo.type_text || "",
-          subject: mainInfo.case_code || "", // subject ให้ใช้เลข นร = รหัสเรื่อง
-          incidentDate: mainInfo.date_opened || "",
-          description: detailsData.detail || "",
-          attachment:
-            attachments.attachments?.map((file) => ({
-              id: file.attachment_id,
-              name: file.file_name,
-              type: file.file_type,
-              size: file.file_size,
-              description: file.file_description,
-              content: file.file_content,
-            })) || [],
-        },
-      };
+    createComplaintAPI,
+    autoCreateComplaint,
+    isValidForAPICreation,
+    getOpmChannelId,
 
-      // Step 4: ยอมรับ
-      const step4 = {
-        general: {
-          accepted: true,
-        },
-      };
-
-      // รวม payload
-      const payload = {
-        step1,
-        ...(step2 ? { step2 } : {}),
-        step3,
-        step4,
-      };
-
-      return payload;
-    };
-
-    // Auto-create complaint when data is ready
-    useEffect(() => {
-      if (isDataReady && opmChannelId && !autoCreateAttempted && !isCreating) {
-        if (isValidForAPICreation()) {
-          const mainInfo = getSectionData("main_information");
-          console.log(
-            "🚀 Auto-creating complaint for case:",
-            mainInfo.case_code
-          );
-
-          // Add a small delay to ensure all data is properly loaded
-          setTimeout(() => {
-            autoCreateComplaint();
-          }, 1000);
-        }
-      }
-    }, [
-      isDataReady,
-      opmChannelId,
-      autoCreateAttempted,
-      isCreating,
-      compiledData,
-    ]);
-
-    useEffect(() => {
-      if (isDataReady && !opmChannelId) {
-        console.log("📞 Fetching OPM Channel ID...");
-        getOpmChannelId();
-      }
-    }, [isDataReady, opmChannelId, compiledData]);
-
-    return {
-      compiledData,
-      isDataReady,
-      isCreating,
-      autoCreateAttempted,
-      currentItemData,
-      opmChannelId,
-
-      getSectionData,
-      getFlatData,
-      getFormattedDataForAPI,
-      getFormattedDataForCreateAPI,
-      getAccountData,
-      getCustomerData,
-      getFieldValue,
-      getFieldArrayValue,
-
-      createComplaintAPI,
-      autoCreateComplaint,
-      isValidForAPICreation,
-      getOpmChannelId,
-
-      setOpmChannelId,
-      setAutoCreateAttempted,
-      setIsCreating,
-    };
+    setOpmChannelId,
+    setAutoCreateAttempted,
+    setIsCreating,
   };
 };
 

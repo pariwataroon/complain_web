@@ -53,7 +53,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
         compiledData,
         isDataReady,
         isCreating,
-        autoCreateAttempted, // เพิ่ม autoCreateAttempted
+        autoCreateAttempted,
         currentItemData,
         opmChannelId,
         getSectionData,
@@ -61,8 +61,8 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
         getFormattedDataForAPI,
         getFormattedDataForCreateAPI,
         createComplaintAPI,
-        autoCreateComplaint, // เพิ่ม autoCreateComplaint
-        isValidForAPICreation, // เพิ่ม isValidForAPICreation
+        autoCreateComplaint,
+        isValidForAPICreation,
         getOpmChannelId,
         getAccountData,
         getCustomerData,
@@ -634,7 +634,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                     </Box>
 
                     <Grid container spacing={3} className={styles.infoGrid}>
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12} md={12}>
                             <Box className={styles.infoItem}>
                                 <PersonIcon className={styles.infoIcon} />
                                 <Box>
@@ -754,7 +754,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                         </Box>
 
                         <Grid container spacing={3} className={styles.infoGrid}>
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} md={12}>
                                 <Box className={styles.infoItem}>
                                     <PersonIcon className={styles.infoIcon} />
                                     <Box>
