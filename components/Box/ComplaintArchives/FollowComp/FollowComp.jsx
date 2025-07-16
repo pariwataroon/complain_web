@@ -10,6 +10,7 @@ import {
   TableRow,
   TableCell,
   IconButton,
+  Stack,
 } from "@mui/material";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import FolderIcon from "@mui/icons-material/Folder";
@@ -60,6 +61,7 @@ const handleOpenDocument = (documentName) => {
 // ปุ่มจัดการ (คง logic เดิม ไม่มีการเปลี่ยนแปลง)
 const handleManage = (sectionKey, router) => {
   switch (sectionKey) {
+
     case "FORWARDED":
       router.push("/admin/edit/forward-to-agency/");
       break;
@@ -265,6 +267,12 @@ const FollowComp = () => {
     responsibleOfficer: "นายเป็นสุข เป็นสุขเถิด",
     complainantName: "กิติศักดิ์ รัตนเกษม",
   };
+  const handleImageClick = () => {
+    router.push("/complaint/");
+  };
+  const handleClickRECEIVED = (id) => {
+    router.push(`/complaint/${id}`); // ไปที่หน้า complaint ตามด้วย id ที่ได้
+  };
 
   return (
     <Box>
@@ -297,13 +305,43 @@ const FollowComp = () => {
         }}
       >
         <span>เจ้าหน้าที่ผู้รับผิดชอบ: {mockHeader.responsibleOfficer}</span>
+          <IconButton
+            size="small"
+            onClick={() => handleOpenDocument(["เอกสารแนบ"])}
+            sx={{
+              color: "#1976d2",
+              "&:hover": {
+                backgroundColor: "rgba(25, 118, 210, 0.04)",
+              },
+            }}
+          >
+            <FolderIcon
+              sx={{ color: "#1223A5", fontSize: 24 }}
+            />
+          </IconButton>
       </Box>
       <Box sx={{ background: "#FBEAE9", py: 2, px: 3 }}>
         ชื่อผู้ร้อง: {mockHeader.complainantName}
       </Box>
       <Box sx={{ background: "#91CBFF", py: 2, px: 3 }}>
-        ขั้นตอนดำเนินการครั้งแรก
-      </Box>
+  <Stack direction="row" alignItems="center" spacing={2}>
+    <Typography variant="h6" sx={{ color: "#000" }}>
+      ขั้นตอนดำเนินการครั้งแรก
+    </Typography>
+    <img
+      src="/icons/Add.png"
+      alt="Add"
+      style={{
+        width: "24px",
+        height: "24px",
+        cursor: "pointer",
+        marginLeft: "auto",
+      }}
+      onClick={handleImageClick} 
+    />
+  </Stack>
+</Box>
+
 
       {sections
         .filter((section) => section.key !== "FINAL_NOTIFY")
@@ -364,16 +402,28 @@ const FollowComp = () => {
                       } else if (h === "การจัดการ") {
                         return (
                           <TableCell key={h} align="center">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleManage(section.key, router)}
-                              sx={{
-                                color: "#1976d2",
-                                "&:hover": {
-                                  backgroundColor: "rgba(25, 118, 210, 0.04)",
-                                },
-                              }}
-                            >
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  // ตรวจสอบว่าเป็นกรณี RECCEIVED หรือไม่
+                                  if (section.key === "RECEIVED") {
+                                    const complaintId = row.id; // รับค่า id จาก row
+                                    if (complaintId) {
+                                      handleClickRECEIVED(complaintId); // ใช้ handleClickRECEIVED หาก complaintId มีค่า
+                                    } else {
+                                      console.error("Error: complaintId is undefined");
+                                    }
+                                  } else {
+                                    handleManage(section.key, router); // ใช้ handleManage สำหรับกรณีอื่น
+                                  }
+                                }}
+                                sx={{
+                                  color: "#1976d2",
+                                  "&:hover": {
+                                    backgroundColor: "rgba(25, 118, 210, 0.04)",
+                                  },
+                                }}
+                              >
                               <img
                                 src="/icons/Edit.png"
                                 alt="Edit"
