@@ -53,6 +53,27 @@ async def create_new_complaint(
                 })
             
             request_data["complaint_channel_id"] = str(complaint_channel_id)
+            
+            # ตรวจสอบ subject ที่ขึ้นต้นด้วย "นร" สำหรับ case พิเศษ
+            subject = request_data.get("subject", "")
+            if subject and subject.startswith("นร"):
+                # ตรวจสอบว่า subject ซ้ำในระบบไหม
+                existing_complaint = db.query(Complaint).filter(
+                    Complaint.subject == subject
+                ).first()
+                
+                if existing_complaint:
+                    # ข้ามการสร้างใหม่ และคืนข้อมูลของ complaint ที่มีอยู่แล้ว
+                    return format_response("0000", {
+                        "task_id": None,
+                        "status": "existing",
+                        "message": f"พบข้อร้องเรียนที่มี subject '{subject}' อยู่ในระบบแล้ว ข้ามการสร้างใหม่",
+                        "processing_mode": "skip_duplicate",
+                        "complaint_id": str(existing_complaint.id),
+                        "complaint_number": existing_complaint.complaint_number,
+                        "existing_subject": subject,
+                        "complaint_channel_id": str(complaint_channel_id) if complaint_channel_id else None
+                    })
         
         from config.dotenv import RABBITMQ_URL
         from app.services.complaint_queue_service import ComplaintQueueService
