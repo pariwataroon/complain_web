@@ -131,7 +131,21 @@ const GetEnhancedComplaints = async ({ skip = 0, limit = 10, search = "" }) => {
     throw error;
   }
 };
-
+const GetComplaintsWithSearch = async ({
+  skip = 0,
+  limit = 10,
+  search = "",
+}) => {
+  try {
+    const response = await axiosInstance.get("/complaints", {
+      params: { skip, limit, search },
+    });
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching complaints with search:", error);
+    throw error;
+  }
+};
 export {
   Addcomplaints,
   GetAllComplaints,
@@ -143,4 +157,5 @@ export {
   GetComplaintsGroupedbyChannel,
   UpdateAssignmentCompleteByAdmin,
   GetEnhancedComplaints,
+  GetComplaintsWithSearch,
 };

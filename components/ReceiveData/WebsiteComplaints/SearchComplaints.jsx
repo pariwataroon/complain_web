@@ -1,6 +1,9 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { GetComplaintByID } from "@pages/api/complaint/complaint";
+import {
+  GetComplaintByID,
+  GetComplaintsWithSearch,
+} from "@pages/api/complaint/complaint";
 import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/ComplaintPersonalFormAPI";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import ButtonService from "@services/ButtonService/ButtonService";
@@ -16,6 +19,23 @@ import {
   getSubComplaintTypeById,
   GetAllComplaintChannels,
 } from "@pages/api/allselect/allselect";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  List,
+  ListItem,
+  ListItemButton,
+  TextField,
+  InputAdornment,
+  CircularProgress,
+} from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
+import DescriptionIcon from "@mui/icons-material/Description";
+import ClearIcon from "@mui/icons-material/Clear";
+import IconButton from "@mui/material/IconButton";
 
 const breadcrumbItems = [
   {
@@ -75,6 +95,76 @@ const SearchComplaints = () => {
   const fetchSubTypesTimeoutRef = useRef(null);
   const currentFetchPromiseRef = useRef(null);
   const lastFetchedIdRef = useRef("");
+
+  const [openSearchDialog, setOpenSearchDialog] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const inputRef = useRef();
+
+  // --- เปลี่ยน useEffect เปิด Dialog ให้ยิง API ---
+  useEffect(() => {
+    if (openSearchDialog) {
+      setSearchText(""); // reset input
+      handleSearch(""); // โหลดรายการทั้งหมดทันทีที่เปิด (keyword ว่าง)
+      inputRef.current?.focus();
+    }
+  }, [openSearchDialog]);
+
+  // --- handleSearch ยังคงเดิม (ยิง API search ด้วย keyword) ---
+
+  const handleSearch = async (keyword) => {
+    setSearchLoading(true);
+    try {
+      const response = await GetComplaintsWithSearch({
+        skip: 0,
+        limit: 100,
+        search: keyword || "",
+      });
+
+      console.log("API response", response);
+
+      // ใช้ complaint_number เป็น label และ value หลัก
+      const items = Array.isArray(response?.res_data?.items)
+        ? response.res_data.items
+        : [];
+
+      console.log("items for result", items);
+
+      const results = items.map((item) => ({
+        ...item,
+        label: item.complaint_number || "",
+        value: item.complaint_number || "",
+      }));
+
+      setSearchResults(results);
+      console.log("results for display", results);
+    } catch (err) {
+      setSearchResults([]);
+      console.error("handleSearch error", err);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleSelectReference = (ref) => {
+    step3Methods.setValue("additionalReference1", ref.complaint_number);
+    setOpenSearchDialog(false);
+  };
+
+  const onClear = () => {
+    setSearchText("");
+    handleSearch("");
+    inputRef.current?.focus();
+  };
+
+  useEffect(() => {
+    if (openSearchDialog) {
+      setSearchText("");
+      handleSearch("");
+      inputRef.current?.focus();
+    }
+  }, [openSearchDialog]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -419,6 +509,16 @@ const SearchComplaints = () => {
     return formError ? { borderColor: "red", borderWidth: "2px" } : {};
   };
 
+  const handleBackFromPreview = () => {
+    setShowPreview(false);
+    setPreviewData(null);
+    hasRedirected.current = false;
+    console.log(
+      "handleBackFromPreview called, reset hasRedirected:",
+      hasRedirected.current
+    );
+  };
+
   const handleSubmit = async () => {
     const fieldsToValidate = [
       "complaintTypeId",
@@ -454,9 +554,6 @@ const SearchComplaints = () => {
     const step2Data = step2Methods.getValues();
     const step3Data = step3Methods.getValues();
     const step4Data = step4Methods.getValues();
-
-    // Log ข้อมูลที่ได้มาจากฟอร์มทั้งหมด (สำหรับ debug)
-    console.log("handleSubmit - step3Data:", step3Data);
 
     // Logic mapping ที่ robust สำหรับ id หรือ name ที่อาจมีแค่อย่างเดียว
     const selectedComplaintType =
@@ -575,9 +672,6 @@ const SearchComplaints = () => {
       },
     };
 
-    // Log ข้อมูลที่จะถูกส่งไป preview/submit (สำหรับ debug)
-    console.log("handleSubmit - submitData:", submitData);
-
     setPreviewData(submitData);
     setShowPreview(true);
   };
@@ -598,15 +692,20 @@ const SearchComplaints = () => {
     step3Methods.setValue("complaint_filing_type", type);
   };
 
-  const handleBackFromPreview = () => {
-    setShowPreview(false);
-    setPreviewData(null);
-  };
-
   const currentComplaintFilingType =
     step3Methods.watch("complaint_filing_type") || "new";
 
   useEffect(() => {
+    console.log(
+      "showPreview",
+      showPreview,
+      "previewData",
+      previewData,
+      "hasRedirected",
+      hasRedirected.current,
+      "preview",
+      preview
+    );
     if (
       showPreview &&
       previewData &&
@@ -626,22 +725,19 @@ const SearchComplaints = () => {
     }
   }, [showPreview, previewData, defaultData?.id, preview, router]);
 
+  useEffect(() => {
+    return () => {
+      hasRedirected.current = false; // reset ตอน unmount
+    };
+  }, []);
+
   if (preview !== undefined) {
     // ไม่ต้องเช็ค !previewData แล้ว return null
     return (
       <SearchComplaintsPreview
         id={id}
         data={previewData} // อาจเป็น null ได้
-        onBack={() => {
-          router.replace(
-            {
-              pathname: `/admin/edit/website-complaints/${id}`,
-              query: {},
-            },
-            undefined,
-            { shallow: true }
-          );
-        }}
+        onBack={handleBackFromPreview}
       />
     );
   }
@@ -1089,21 +1185,197 @@ const SearchComplaints = () => {
                           <div className={styles.fieldsColumn}>
                             <div className={styles.fieldPair}>
                               <div className={styles.fieldWithLabel}>
-                                <label>เลขที่อ้างอิง(เลข สรร.สานต่อ)</label>
-                                <input
-                                  type="text"
-                                  disabled={
-                                    currentComplaintFilingType !== "additional"
-                                  }
-                                  {...step3Methods.register(
-                                    "additionalReference1"
-                                  )}
-                                />
+                                <label>เลขที่อ้างอิง(เลข สรร.สารบัญ)</label>
+                                <div className={styles.inputWithIcon}>
+                                  <input
+                                    type="text"
+                                    disabled={
+                                      currentComplaintFilingType !==
+                                      "additional"
+                                    }
+                                    {...step3Methods.register(
+                                      "additionalReference1"
+                                    )}
+                                  />
+                                  <span
+                                    className={styles.icon}
+                                    onClick={() => {
+                                      if (
+                                        currentComplaintFilingType ===
+                                        "additional"
+                                      )
+                                        setOpenSearchDialog(true);
+                                    }}
+                                  >
+                                    <SearchIcon />
+                                  </span>
+                                </div>
+                                {/* Dialog สำหรับค้นหาเลข */}
+                                <Dialog
+                                  open={openSearchDialog}
+                                  onClose={() => setOpenSearchDialog(false)}
+                                  maxWidth="sm"
+                                  fullWidth
+                                  PaperProps={{
+                                    style: {
+                                      borderRadius: 12,
+                                      background: "#f7fafd",
+                                      height: 500,
+                                      boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                                    },
+                                  }}
+                                >
+                                  <DialogTitle
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 8,
+                                    }}
+                                  >
+                                    <SearchIcon color="primary" />{" "}
+                                    ค้นหาเลขที่อ้างอิง
+                                  </DialogTitle>
+                                  <DialogContent>
+                                    <TextField
+                                      inputRef={inputRef}
+                                      fullWidth
+                                      size="small"
+                                      placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
+                                      value={searchText}
+                                      onChange={(e) => {
+                                        setSearchText(e.target.value);
+                                        handleSearch(e.target.value);
+                                      }}
+                                      InputProps={{
+                                        startAdornment: (
+                                          <InputAdornment position="start">
+                                            <SearchIcon color="action" />
+                                          </InputAdornment>
+                                        ),
+                                        endAdornment: searchText ? (
+                                          <InputAdornment position="end">
+                                            <IconButton
+                                              size="small"
+                                              onClick={onClear}
+                                              aria-label="clear search"
+                                              edge="end"
+                                            >
+                                              <ClearIcon />
+                                            </IconButton>
+                                          </InputAdornment>
+                                        ) : null,
+                                        style: {
+                                          background: "#fff",
+                                          borderRadius: 8,
+                                        },
+                                      }}
+                                      sx={{ mb: 2 }}
+                                    />
+                                    {searchLoading ? (
+                                      <div
+                                        style={{
+                                          textAlign: "center",
+                                          padding: 24,
+                                        }}
+                                      >
+                                        <CircularProgress color="primary" />
+                                        <div
+                                          style={{
+                                            marginTop: 8,
+                                            color: "#888",
+                                          }}
+                                        >
+                                          กำลังค้นหา...
+                                        </div>
+                                      </div>
+                                    ) : searchResults.length === 0 ? (
+                                      <div
+                                        style={{
+                                          textAlign: "center",
+                                          padding: 32,
+                                          color: "#bdbdbd",
+                                        }}
+                                      >
+                                        <DescriptionIcon
+                                          sx={{ fontSize: 48, mb: 2 }}
+                                          color="disabled"
+                                        />
+                                        <div>ไม่พบรายการเลขที่อ้างอิง</div>
+                                      </div>
+                                    ) : (
+                                      <List
+                                        sx={{
+                                          maxHeight: 320,
+                                          overflow: "auto",
+                                          "&::-webkit-scrollbar": {
+                                            width: "8px",
+                                            background: "#f0f4fa",
+                                            borderRadius: "8px",
+                                          },
+                                          "&::-webkit-scrollbar-thumb": {
+                                            background: "#90caf9",
+                                            borderRadius: "8px",
+                                          },
+                                          "&::-webkit-scrollbar-thumb:hover": {
+                                            background: "#64b5f6",
+                                          },
+                                        }}
+                                      >
+                                        {searchResults.map((item) => (
+                                          <List>
+                                            {searchResults.map((item) => (
+                                              <ListItem
+                                                key={item.id}
+                                                disablePadding
+                                              >
+                                                <ListItemButton
+                                                  onClick={() =>
+                                                    handleSelectReference(item)
+                                                  }
+                                                  sx={{
+                                                    py: 1.5,
+                                                    px: 2,
+                                                    borderRadius: 2,
+                                                    mb: 0.5,
+                                                    "&:hover": {
+                                                      background: "#e3f2fd",
+                                                    },
+                                                  }}
+                                                >
+                                                  <DescriptionIcon
+                                                    color="info"
+                                                    sx={{ mr: 2 }}
+                                                  />
+                                                  <span
+                                                    style={{ fontWeight: 500 }}
+                                                  >
+                                                    {/* แสดง complaint_type + complaint_number */}
+                                                    {item.complaint_type} -{" "}
+                                                    {item.complaint_number}
+                                                  </span>
+                                                </ListItemButton>
+                                              </ListItem>
+                                            ))}
+                                          </List>
+                                        ))}
+                                      </List>
+                                    )}
+                                  </DialogContent>
+                                  <DialogActions sx={{ px: 3, pb: 2 }}>
+                                    <Button
+                                      onClick={() => setOpenSearchDialog(false)}
+                                      variant="outlined"
+                                      color="inherit"
+                                    >
+                                      ปิด
+                                    </Button>
+                                  </DialogActions>
+                                </Dialog>
                               </div>
                               <div className={styles.fieldWithLabelDate}>
                                 <label>วันที่</label>
                                 <div className={styles.datePickerWrapper}>
-                                  <DateThaiPickerService
+                                  <ControlledDateThaiPickerService
                                     name="additionalReferenceDate1"
                                     control={step3Methods.control}
                                     disabled={

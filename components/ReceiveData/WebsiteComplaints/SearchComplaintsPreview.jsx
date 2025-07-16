@@ -284,11 +284,36 @@ const SearchComplaintsPreview = ({
   const handleBackClick = () => {
     sessionStorage.removeItem(SESSION_KEY);
     if (onBack) {
-      onBack();
+      onBack(); // reset state ใน SearchComplaints
+      // เปลี่ยน URL กลับ (ลบ preview ออกจาก query)
+      router.replace(
+        {
+          pathname: `/admin/edit/website-complaints/${id}`,
+          query: {},
+        },
+        undefined,
+        { shallow: true }
+      );
     } else {
       router.back();
     }
   };
+
+  const confidentialityLevelMap = {
+    normal: "ปกติ",
+    confidential: "ลับ",
+    secret: "ลับมาก",
+    top_secret: "ลับที่สุด",
+  };
+
+  const urgencyLevelMap = {
+    low: "ปกติ",
+    medium: "เร่งด่วน",
+    high: "ด่วน",
+    urgent: "ด่วนมาก",
+    critical: "ด่วนที่สุด",
+  };
+
   if (loading) {
     return (
       <>
@@ -733,11 +758,11 @@ const SearchComplaintsPreview = ({
               />
               <InfoItem
                 label="ชั้นความลับ"
-                value={complaint.securityLevel || "-"}
+                value={confidentialityLevelMap[complaint.securityLevel] || "-"}
               />
               <InfoItem
                 label="ชั้นความเร่งด่วน"
-                value={complaint.urgencyLevel || "-"}
+                value={urgencyLevelMap[complaint.urgencyLevel] || "-"}
               />
               <InfoItem
                 label="ประเภทเรื่องร้องเรียน"
