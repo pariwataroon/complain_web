@@ -13,7 +13,10 @@ import {
   TextField,
   CircularProgress,
 } from "@mui/material";
-import { GetComplaintByID } from "@pages/api/complaint/complaint";
+import {
+  GetComplaintByID,
+  GetComplaintsWithSearch,
+} from "@pages/api/complaint/complaint";
 import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/ComplaintPersonalFormAPI";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import ButtonService from "@services/ButtonService/ButtonService";
@@ -153,44 +156,42 @@ const SearchComplaints = () => {
   const [searchResults, setSearchResults] = useState([]); // สมมติรายการเลขที่ได้จาก API หรือ mock
   const [searchLoading, setSearchLoading] = useState(false);
 
-  // ตัวอย่าง: fetch หรือ filter รายการเลขที่
-  const handleSearch = (keyword) => {
-    // ตัวอย่าง mockup data 20 รายการ (สามารถ filter ด้วย keyword ได้)
-    const allReferences = [
-      { id: "REF001", label: "REF001 - เรื่องร้องเรียนการเงิน" },
-      { id: "REF002", label: "REF002 - เรื่องร้องเรียนสัญญา" },
-      { id: "REF003", label: "REF003 - เรื่องร้องเรียนที่ดิน" },
-      { id: "REF004", label: "REF004 - เรื่องร้องเรียนภาษี" },
-      { id: "REF005", label: "REF005 - เรื่องร้องเรียนสวัสดิการ" },
-      { id: "REF006", label: "REF006 - เรื่องร้องเรียนการจ้างงาน" },
-      { id: "REF007", label: "REF007 - เรื่องร้องเรียนการขออนุญาต" },
-      { id: "REF008", label: "REF008 - เรื่องร้องเรียนอาชญากรรม" },
-      { id: "REF009", label: "REF009 - เรื่องร้องเรียนอุบัติเหตุ" },
-      { id: "REF010", label: "REF010 - เรื่องร้องเรียนกฎหมาย" },
-      { id: "REF011", label: "REF011 - เรื่องร้องเรียนการศึกษา" },
-      { id: "REF012", label: "REF012 - เรื่องร้องเรียนการคมนาคม" },
-      { id: "REF013", label: "REF013 - เรื่องร้องเรียนสุขภาพ" },
-      { id: "REF014", label: "REF014 - เรื่องร้องเรียนสิ่งแวดล้อม" },
-      { id: "REF015", label: "REF015 - เรื่องร้องเรียนการก่อสร้าง" },
-      { id: "REF016", label: "REF016 - เรื่องร้องเรียนการนำเข้า-ส่งออก" },
-      { id: "REF017", label: "REF017 - เรื่องร้องเรียนการทุจริต" },
-      { id: "REF018", label: "REF018 - เรื่องร้องเรียนค่าตอบแทน" },
-      { id: "REF019", label: "REF019 - เรื่องร้องเรียนการประมูล" },
-      { id: "REF020", label: "REF020 - เรื่องร้องเรียนเทคโนโลยี" },
-    ];
+  const handleSearch = async (keyword) => {
+    setSearchLoading(true);
+    try {
+      // เรียก API จริง
+      const response = await GetComplaintsWithSearch({
+        skip: 0,
+        limit: 100,
+        search: keyword || "",
+      });
 
-    // Filter ด้วย keyword (ถ้ามี)
-    const filtered = keyword
-      ? allReferences.filter((item) =>
-          item.label.toLowerCase().includes(keyword.toLowerCase())
-        )
-      : allReferences;
+      // สมมติ API ส่งมาแบบ response.res_data.items
+      const items = Array.isArray(response?.res_data?.items)
+        ? response.res_data.items
+        : [];
 
-    setSearchResults(filtered);
+      // แปลงผลลัพธ์ให้เหมาะกับการแสดงผล
+      const results = items.map((item) => ({
+        id: item.complaint_number || item.id,
+        label: `${item.complaint_number} - ${item.subject}`,
+        ...item,
+      }));
+
+      setSearchResults(results);
+    } catch (error) {
+      setSearchResults([]);
+      console.error("handleSearch error", error);
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
   const handleSelectReference = (ref) => {
-    step3Methods.setValue("additionalReference1", ref.id);
+    step3Methods.setValue(
+      "additionalReference1",
+      ref.complaint_number || ref.id
+    );
     setOpenSearchDialog(false);
   };
 

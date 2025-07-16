@@ -50,77 +50,45 @@ const getThaiStatus = (englishStatus) => {
   return statusMap[englishStatus] || englishStatus;
 };
 
-// แก้ไข: ใช้ PDF จาก W3Schools
+// ใช้ PDF sample จาก W3Schools
 const handleOpenDocument = (documentName) => {
-  // ใช้ PDF sample จาก W3Schools
   const w3schoolsPDF =
     "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
-
-  // เปิด PDF ในแท็บใหม่
   window.open(w3schoolsPDF, "_blank");
 };
 
-// ฟังก์ชันดักสถานะจาก query parameters
-const getStatusFromQuery = (query) => {
-  console.log("🔍 Full query object:", query); // Debug log
-
-  // ตรวจสอบ query parameters ทั้งหมดเพื่อหาสถานะ
-  const statusKeys = [
-    "submitted",
-    "sent_to_agency",
-    "stop",
-    "received",
-    "investigating",
-    "processing",
-    "awaiting_info",
-    "forwarded",
-    "completed",
-  ];
-
-  for (const status of statusKeys) {
-    if (query.hasOwnProperty(status)) {
-      console.log(`✅ Found status in query: ${status}`); // Debug log
-      return status;
-    }
-  }
-
-  // ถ้าไม่เจอสถานะใน query parameters ให้ใช้ค่าเริ่มต้น
-  console.log("❌ No status found in query, using default: received"); // Debug log
-  return "received";
-};
-
-const getIconForStatus = (englishStatus) => {
-  console.log("🎯 Getting icon for status:", englishStatus); // Debug log
-
-  // เฉพาะสถานะ submitted เท่านั้นที่ใช้ folder icon
-  const folderStatuses = ["submitted"];
-
-  if (folderStatuses.includes(englishStatus)) {
-    console.log("📁 Using Folder icon for:", englishStatus); // Debug log
-    return <FolderIcon sx={{ color: "#1223A5", fontSize: 24 }} />; // ✅ submitted ใช้ Folder icon สี #1223A5
-  } else {
-    console.log("✏️ Using Edit icon for:", englishStatus); // Debug log
-    // สถานะอื่น ๆ รวมทั้ง "sent_to_agency" และ "stop" ใช้ Edit icon สี #1223A5
-    return (
-      <img
-        src="/icons/Edit.png"
-        alt="Edit"
-        style={{
-          width: 35,
-          height: 35,
-          // CSS filter ที่แปลงสีรูปภาพเป็น #1223A5 (สีน้ำเงินเข้ม)
-          filter:
-            "brightness(0) saturate(100%) invert(9%) sepia(89%) saturate(7495%) hue-rotate(230deg) brightness(94%) contrast(106%)",
-        }}
-      />
-    );
+// ปุ่มจัดการ (คง logic เดิม ไม่มีการเปลี่ยนแปลง)
+const handleManage = (sectionKey, router) => {
+  switch (sectionKey) {
+    case "FORWARDED":
+      router.push("/admin/edit/forward-to-agency/");
+      break;
+    case "INITIAL_NOTIFY":
+      router.push("/admin/edit/initial-notification-to-complainant-or-agency/");
+      break;
+    case "REQUEST_UPDATE":
+      router.push("/admin/edit/request-result-or-progress/");
+      break;
+    case "AGENCY_REPORT":
+      router.push("/admin/edit/report/");
+      break;
+    case "FINAL_NOTIFY":
+      router.push("/admin/edit/inform-related-parties/");
+      break;
+    default:
+      break;
   }
 };
 
-// 2. Sections array with status + matching header/row keys
+// icon เอกสารแนบ (folder icon เท่านั้น)
+const getDocumentIcon = () => (
+  <FolderIcon sx={{ color: "#1223A5", fontSize: 24 }} />
+);
+
+// ข้อมูล Sections (status ถูกตัดออก และเพิ่มคอลัมน์ "เอกสารแนบ" กับ "การจัดการ" ทุก section)
 const sections = [
   {
-    status: STATUS.RECEIVED,
+    key: "RECEIVED",
     title: "รับเรื่องราวร้องทุกข์",
     headers: [
       "ลำดับ",
@@ -130,6 +98,7 @@ const sections = [
       "เรื่อง",
       "ประเภทเรื่อง",
       "เอกสารแนบ",
+      "การจัดการ",
     ],
     rows: [
       {
@@ -153,7 +122,7 @@ const sections = [
     ],
   },
   {
-    status: STATUS.FORWARDED,
+    key: "FORWARDED",
     title: "ส่งหน่วยงานที่เกี่ยวข้อง",
     headers: [
       "ลำดับ",
@@ -163,6 +132,7 @@ const sections = [
       "ลงวันที่",
       "ผู้ลงนาม",
       "เอกสารแนบ",
+      "การจัดการ",
     ],
     rows: [
       {
@@ -177,7 +147,7 @@ const sections = [
     ],
   },
   {
-    status: STATUS.INITIAL_NOTIFY,
+    key: "INITIAL_NOTIFY",
     title: "แจ้งผู้ร้องเรียนส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น",
     headers: [
       "ลำดับ",
@@ -187,6 +157,7 @@ const sections = [
       "เรื่อง",
       "ผู้ลงนาม",
       "เอกสารแนบ",
+      "การจัดการ",
     ],
     rows: [
       {
@@ -210,7 +181,7 @@ const sections = [
     ],
   },
   {
-    status: STATUS.REQUEST_UPDATE,
+    key: "REQUEST_UPDATE",
     title: "ขอทราบผลการพิจารณา / ผลความคืบหน้า",
     headers: [
       "ลำดับ",
@@ -220,6 +191,7 @@ const sections = [
       "ลงวันที่",
       "ผู้ลงนาม",
       "เอกสารแนบ",
+      "การจัดการ",
     ],
     rows: [
       {
@@ -234,7 +206,7 @@ const sections = [
     ],
   },
   {
-    status: STATUS.AGENCY_REPORT,
+    key: "AGENCY_REPORT",
     title: "หนังสือแจ้งผลพิจารณาหน่วยงาน",
     headers: [
       "ลำดับ",
@@ -245,6 +217,7 @@ const sections = [
       "วันที่เสนองาน",
       "หน่วยงาน",
       "เอกสารแนบ",
+      "การจัดการ",
     ],
     rows: [
       {
@@ -260,7 +233,7 @@ const sections = [
     ],
   },
   {
-    status: STATUS.FINAL_NOTIFY,
+    key: "FINAL_NOTIFY",
     title: "แจ้งผลการให้ผู้เกี่ยวข้องทราบ",
     headers: [
       "ลำดับ",
@@ -269,6 +242,7 @@ const sections = [
       "เรื่อง",
       "ลงวันที่",
       "เอกสารแนบ",
+      "การจัดการ",
     ],
     rows: [
       {
@@ -285,36 +259,12 @@ const sections = [
 
 const FollowComp = () => {
   const router = useRouter();
-  console.log("🌐 Router query:", router.query); // Debug log
 
-  // ดักสถานะจาก query parameters
-  const englishStatus = getStatusFromQuery(router.query);
-  const id = router.query.id || "unknown";
-
-  console.log("🆔 ID:", id);
-  console.log("📊 Detected Status:", englishStatus);
-
-  const getHeadersForSection = (section, currentStatus) => {
-    // If current status is sent_to_agency, replace "เอกสารแนบ" with "การจัดการ"
-    if (currentStatus === "sent_to_agency") {
-      return section.headers.map((header) =>
-        header === "เอกสารแนบ" ? "การจัดการ" : header
-      );
-    }
-    return section.headers;
-  };
-  // Mock header info - ใช้สถานะที่ดักได้จาก query และแปลงเป็นไทย
+  // Mock header info
   const mockHeader = {
     responsibleOfficer: "นายเป็นสุข เป็นสุขเถิด",
     complainantName: "กิติศักดิ์ รัตนเกษม",
-    status: getThaiStatus(englishStatus), // แปลงเป็นไทยเพื่อแสดงผล
-    englishStatus: englishStatus, // เก็บสถานะอังกฤษไว้ใช้กับ icon
   };
-
-  console.log("📋 Mock Header:", mockHeader); // Debug log
-
-  const firstPhases = sections.filter((s) => s.status < STATUS.FINAL_NOTIFY);
-  const finalPhase = sections.find((s) => s.status === STATUS.FINAL_NOTIFY);
 
   return (
     <Box>
@@ -336,7 +286,6 @@ const FollowComp = () => {
         </Typography>
       </Box>
       {/* Info rows */}
-      {/* แก้ไข: ใช้ icon ตามสถานะภาษาอังกฤษ */}
       <Box
         sx={{
           background: "#EDF7EA",
@@ -348,18 +297,6 @@ const FollowComp = () => {
         }}
       >
         <span>เจ้าหน้าที่ผู้รับผิดชอบ: {mockHeader.responsibleOfficer}</span>
-        <IconButton
-          size="small"
-          onClick={() => handleOpenDocument("เอกสารเจ้าหน้าที่")}
-          sx={{
-            color: "#1976d2",
-            "&:hover": {
-              backgroundColor: "rgba(25, 118, 210, 0.04)",
-            },
-          }}
-        >
-          {getIconForStatus(mockHeader.englishStatus)}
-        </IconButton>
       </Box>
       <Box sx={{ background: "#FBEAE9", py: 2, px: 3 }}>
         ชื่อผู้ร้อง: {mockHeader.complainantName}
@@ -368,14 +305,12 @@ const FollowComp = () => {
         ขั้นตอนดำเนินการครั้งแรก
       </Box>
 
-      {firstPhases.map((section) => {
-        // Get headers based on current status
-        const currentHeaders = getHeadersForSection(section, englishStatus);
-
-        return (
+      {sections
+        .filter((section) => section.key !== "FINAL_NOTIFY")
+        .map((section) => (
           <Box
-            key={section.status}
-            sx={{ border: "1px solid #E0E0E0", borderRadius: 1 }}
+            key={section.key}
+            sx={{ border: "1px solid #E0E0E0", borderRadius: 1, mb: 2 }}
           >
             <Box
               sx={{
@@ -391,7 +326,7 @@ const FollowComp = () => {
             <Table>
               <TableHead>
                 <TableRow>
-                  {currentHeaders.map((h) => (
+                  {section.headers.map((h) => (
                     <TableCell
                       key={h}
                       sx={{ background: "#fff", fontWeight: "bold" }}
@@ -404,57 +339,15 @@ const FollowComp = () => {
               <TableBody>
                 {section.rows.map((row, idx) => (
                   <TableRow key={idx}>
-                    {currentHeaders.map((h, headerIdx) => {
-                      // Get the original header name to access row data
-                      const originalHeader = section.headers[headerIdx];
-
-                      return (
-                        <TableCell key={h}>
-                          {originalHeader === "เอกสารแนบ" ||
-                          h === "การจัดการ" ? (
+                    {section.headers.map((h) => {
+                      if (h === "เอกสารแนบ") {
+                        return (
+                          <TableCell key={h} align="center">
                             <IconButton
                               size="small"
-                              onClick={() => {
-                                // Check if this is the "ส่งหน่วยงานที่เกี่ยวข้อง" section and status is sent_to_agency
-                                if (
-                                  section.status === STATUS.FORWARDED &&
-                                  englishStatus === "sent_to_agency"
-                                ) {
-                                  // Navigate to the forward-to-agency edit page
-                                  router.push("/admin/edit/forward-to-agency/");
-                                }
-                                // Check if this is the "แจ้งผู้ร้องเรียนส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น" section and status is sent_to_agency
-                                else if (
-                                  section.status === STATUS.INITIAL_NOTIFY &&
-                                  englishStatus === "sent_to_agency"
-                                ) {
-                                  // Navigate to the initial notification edit page
-                                  router.push(
-                                    "/admin/edit/initial-notification-to-complainant-or-agency/"
-                                  );
-                                }
-                                // Check if this is the "ขอทราบผลการพิจารณา / ผลความคืบหน้า" section and status is sent_to_agency
-                                else if (
-                                  section.status === STATUS.REQUEST_UPDATE &&
-                                  englishStatus === "sent_to_agency"
-                                ) {
-                                  // Navigate to the request result or progress edit page
-                                  router.push(
-                                    "/admin/edit/request-result-or-progress/"
-                                  );
-                                }
-                                // Check if this is the "หนังสือแจ้งผลพิจารณาหน่วยงาน" section and status is sent_to_agency
-                                else if (
-                                  section.status === STATUS.AGENCY_REPORT &&
-                                  englishStatus === "sent_to_agency"
-                                ) {
-                                  // Navigate to the report edit page
-                                  router.push("/admin/edit/report/");
-                                } else {
-                                  // Default behavior for other cases
-                                  handleOpenDocument(row[originalHeader]);
-                                }
-                              }}
+                              onClick={() =>
+                                handleOpenDocument(row["เอกสารแนบ"])
+                              }
                               sx={{
                                 color: "#1976d2",
                                 "&:hover": {
@@ -462,102 +355,101 @@ const FollowComp = () => {
                                 },
                               }}
                             >
-                              {getIconForStatus(mockHeader.englishStatus)}
+                              <FolderIcon
+                                sx={{ color: "#1223A5", fontSize: 24 }}
+                              />
                             </IconButton>
-                          ) : (
-                            row[originalHeader] ?? "-"
-                          )}
-                        </TableCell>
-                      );
+                          </TableCell>
+                        );
+                      } else if (h === "การจัดการ") {
+                        return (
+                          <TableCell key={h} align="center">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleManage(section.key, router)}
+                              sx={{
+                                color: "#1976d2",
+                                "&:hover": {
+                                  backgroundColor: "rgba(25, 118, 210, 0.04)",
+                                },
+                              }}
+                            >
+                              <img
+                                src="/icons/Edit.png"
+                                alt="Edit"
+                                style={{
+                                  width: 35,
+                                  height: 35,
+                                  filter:
+                                    "brightness(0) saturate(100%) invert(9%) sepia(89%) saturate(7495%) hue-rotate(230deg) brightness(94%) contrast(106%)",
+                                }}
+                              />
+                            </IconButton>
+                          </TableCell>
+                        );
+                      } else {
+                        return <TableCell key={h}>{row[h] ?? "-"}</TableCell>;
+                      }
                     })}
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </Box>
-        );
-      })}
+        ))}
+
       {/* Yellow in-progress bar */}
       <Box sx={{ background: "#FFF9C4", py: 2, px: 3, borderRadius: 1 }}>
         ขั้นตอนอยู่ระหว่างดำเนินการ
       </Box>
-      {/* Final (status 6) section */}
-      {finalPhase && (
-        <Box sx={{ border: "1px solid #E0E0E0", borderRadius: 1 }}>
-          <Box
-            sx={{
-              px: 3,
-              background: "#FEFAEF",
-              py: 1,
-            }}
-          >
-            <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
-              {finalPhase.title}
-            </Typography>
-          </Box>
-          <Table>
-            <TableHead>
-              <TableRow>
-                {getHeadersForSection(finalPhase, englishStatus).map((h) => (
-                  <TableCell
-                    key={h}
-                    sx={{ background: "#E3F2FD", fontWeight: "bold" }}
-                  >
-                    {h}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {finalPhase.rows.map((row, idx) => (
-                <TableRow key={idx}>
-                  {getHeadersForSection(finalPhase, englishStatus).map(
-                    (h, headerIdx) => {
-                      const originalHeader = finalPhase.headers[headerIdx];
-
-                      return (
-                        <TableCell key={h}>
-                          {originalHeader === "เอกสารแนบ" ||
-                          h === "การจัดการ" ? (
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                // Check if this is the "แจ้งผลการให้ผู้เกี่ยวข้องทราบ" section and status is sent_to_agency
-                                if (
-                                  finalPhase.status === STATUS.FINAL_NOTIFY &&
-                                  englishStatus === "sent_to_agency"
-                                ) {
-                                  // Navigate to the inform related parties edit page
-                                  router.push(
-                                    "/admin/edit/inform-related-parties/"
-                                  );
-                                } else {
-                                  // Default behavior for other cases
-                                  handleOpenDocument(row[originalHeader]);
-                                }
-                              }}
-                              sx={{
-                                color: "#1976d2",
-                                "&:hover": {
-                                  backgroundColor: "rgba(25, 118, 210, 0.04)",
-                                },
-                              }}
-                            >
-                              {getIconForStatus(mockHeader.englishStatus)}
-                            </IconButton>
-                          ) : (
-                            row[originalHeader] ?? "-"
-                          )}
-                        </TableCell>
-                      );
-                    }
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+      {/* Final Notify Section - No data (empty table) as in image1 */}
+      <Box sx={{ mt: 2 }}>
+        <Box
+          sx={{
+            px: 3,
+            background: "#FBE5A6",
+            py: 1,
+            borderTopLeftRadius: 4,
+            borderTopRightRadius: 4,
+          }}
+        >
+          <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
+            แจ้งผลการให้ผู้เกี่ยวข้องทราบ
+          </Typography>
         </Box>
-      )}
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ background: "#fff", fontWeight: "bold" }}>
+                ลำดับ
+              </TableCell>
+              <TableCell sx={{ background: "#fff", fontWeight: "bold" }}>
+                ถึงหน่วยงาน / ผู้ร้อง / อื่นๆ (ครั้งที่แจ้งผล)
+              </TableCell>
+              <TableCell sx={{ background: "#fff", fontWeight: "bold" }}>
+                เลขที่หนังสือ
+              </TableCell>
+              <TableCell sx={{ background: "#fff", fontWeight: "bold" }}>
+                เรื่อง
+              </TableCell>
+              <TableCell sx={{ background: "#fff", fontWeight: "bold" }}>
+                ลงวันที่
+              </TableCell>
+              <TableCell sx={{ background: "#fff", fontWeight: "bold" }}>
+                การจัดการ
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {/* No data row - show empty as in image1 */}
+            <TableRow>
+              <TableCell colSpan={6} align="center">
+                {/* You can add a placeholder if needed, but image1 shows empty */}
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </Box>
     </Box>
   );
 };
