@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from uuid import UUID
@@ -684,14 +684,15 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "total_count": 0
             }
         
-        # วันที่รับงาน
+        # วันที่ร้อง (created_at)
         received_date = ""
-        if complaint.confirm_assigned_date and complaint.confirm_assigned_status == True:
-            received_date = complaint.confirm_assigned_date.strftime("%d %b %Y")
-        elif complaint.assigned_date:
-            received_date = f"มอบหมายแล้ว ({complaint.assigned_date.strftime('%d %b %Y')})"
+        if complaint.created_at:
+            # Convert to Bangkok timezone (+07:00)
+            bangkok_tz = timezone(timedelta(hours=7))
+            bangkok_time = complaint.created_at.replace(tzinfo=timezone.utc).astimezone(bangkok_tz)
+            received_date = bangkok_time.strftime("%d %b %Y")
         else:
-            received_date = "ยังไม่ได้รับงาน"
+            received_date = "ไม่ระบุ"
         
         # สถานะการยืนยันรับงาน
         confirmation_status = "ยังไม่ได้รับงาน"
@@ -1064,18 +1065,15 @@ def get_document_storage_by_channel(
                     ComplaintChannel.id == complaint.complaint_channel_id
                 ).first()
             
-            # 🔥 แก้ไข: ใช้ confirm_assigned_date แทน created_at สำหรับ "วันที่รับ"
-            # วันที่รับ = วันที่เจ้าหน้าที่ยืนยันรับงาน
+            # 🔥 วันที่ร้อง = วันที่สร้างเรื่องร้องเรียน (created_at)
             received_date = ""
-            if complaint.confirm_assigned_date and complaint.confirm_assigned_status == True:
-                # มีการยืนยันรับงานแล้ว
-                received_date = complaint.confirm_assigned_date.strftime("%d %b %Y")
-            elif complaint.assigned_date:
-                # มีการมอบหมายแต่ยังไม่ได้ยืนยัน
-                received_date = f"มอบหมายแล้ว ({complaint.assigned_date.strftime('%d %b %Y')})"
+            if complaint.created_at:
+                # Convert to Bangkok timezone (+07:00)
+                bangkok_tz = timezone(timedelta(hours=7))
+                bangkok_time = complaint.created_at.replace(tzinfo=timezone.utc).astimezone(bangkok_tz)
+                received_date = bangkok_time.strftime("%d %b %Y")
             else:
-                # ยังไม่ได้มอบหมาย
-                received_date = "ยังไม่ได้รับงาน"
+                received_date = "ไม่ระบุ"
             
             # 🔥 เพิ่มสถานะการยืนยันรับงาน
             confirmation_status = "ยังไม่ได้รับงาน"
@@ -1121,7 +1119,7 @@ def get_document_storage_by_channel(
                 logger.warning(f"Error getting agency name from outgoing_reports: {str(e)}")
             
             items.append({
-                "receiveDate": received_date,  # 🔥 ใช้ confirm_assigned_date
+                "receiveDate": received_date,  # 🔥 วันที่ร้อง (created_at)
                 "agency": agency_name,
                 "claimantName": complainant_data.get("name", "") or f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip(),
                 "issue": complaint.subject or "",
@@ -1203,7 +1201,7 @@ def get_document_storage_by_channel(
             ],
             "page_type": page_type,
             "legend": {
-                "receiveDate": "วันที่เจ้าหน้าที่ยืนยันรับงาน (ถ้ายังไม่ยืนยัน จะแสดงวันที่มอบหมาย)",
+                "receiveDate": "วันที่ยื่นเรื่องร้องเรียน (วันที่สร้างเรื่อง)",
                 "confirmationStatus": {
                     "ยืนยันรับงานแล้ว": "เจ้าหน้าที่ยืนยันรับงานแล้ว",
                     "ปฏิเสธรับงาน": "เจ้าหน้าที่ปฏิเสธรับงาน",
