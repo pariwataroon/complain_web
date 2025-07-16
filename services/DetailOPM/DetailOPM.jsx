@@ -16,6 +16,7 @@ import {
     StepLabel,
     StepContent,
     IconButton,
+    Button,
 } from "@mui/material";
 import {
     Assignment as AssignmentIcon,
@@ -38,6 +39,7 @@ import {
 import ButtonSent from "@services/ButtonSent/ButtonSent";
 import CombinedReportModal from "./CombinedReportModal";
 import styles from "./DetailOPM.module.scss";
+import useDetailOPMData from "@hooks/admin/opm/useDetailOPMData";
 
 const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails, loading, formatDate, itemData }) => {
     const theme = useTheme();
@@ -46,130 +48,183 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
 
     const [reportModalOpen, setReportModalOpen] = useState(false);
-    const [routerItemData, setRouterItemData] = useState(null);
-    const [currentItemData, setCurrentItemData] = useState(null);
 
+    const {
+        compiledData,
+        isDataReady,
+        isCreating,
+        autoCreateAttempted, // เพิ่ม autoCreateAttempted
+        currentItemData,
+        opmChannelId,
+        getSectionData,
+        getFlatData,
+        getFormattedDataForAPI,
+        getFormattedDataForCreateAPI,
+        createComplaintAPI,
+        autoCreateComplaint, // เพิ่ม autoCreateComplaint
+        isValidForAPICreation, // เพิ่ม isValidForAPICreation
+        getOpmChannelId,
+        getAccountData,
+        getCustomerData,
+        getFieldValue,
+        getFieldArrayValue
+    } = useDetailOPMData({
+        caseDetails,
+        attachmentsDetails,
+        operatingsDetails,
+        params,
+        itemData
+    });
 
-    // รับข้อมูลจาก router state
-    useEffect(() => {
-        if (router.isReady) {
-            const queryData = router.query;
+    // เพิ่ม function alertInfo สำหรับการแจ้งเตือน
+    const alertInfo = (title, message) => {
+        alert(`${title}\n\n${message}`);
+    };
 
-            if (queryData) {
-                setCurrentItemData(queryData);
+    const handleCreateData = async () => {
+        if (!isDataReady) {
+            console.log('Data is not ready yet');
+            return;
+        }
+
+        try {
+            const apiData = getFormattedDataForAPI();
+
+            console.log('=== Compiled Data Array ===');
+            console.log(compiledData);
+
+            console.log('=== Formatted Data for API ===');
+            console.log(apiData);
+
+            console.log('=== Flat Data ===');
+            console.log(getFlatData());
+
+            console.log('=== Specific Section Data ===');
+            console.log('Main Info:', getSectionData('main_information'));
+            console.log('Account:', getSectionData('account_details'));
+            console.log('Customer:', getSectionData('customer_details'));
+            console.log('Attachments:', getSectionData('attachments'));
+            console.log('Organizations:', getSectionData('organizations'));
+            console.log('Additional:', getSectionData('additional_information'));
+            console.log('Details:', getSectionData('details_summary'));
+
+            
+
+            alert('ข้อมูลพร้อมสำหรับ API แล้ว! ดูใน Console');
+
+        } catch (error) {
+            console.error('Error preparing data for API:', error);
+        }
+    };
+
+    // Function สำหรับ call API ใหม่ (Step format)
+    const handleCreateDataNewFormat = async () => {
+        if (!isDataReady) {
+            console.log('Data is not ready yet');
+            return;
+        }
+
+        try {
+            const apiData = getFormattedDataForCreateAPI();
+
+            console.log('=== Step Format Data for API ===');
+            console.log(JSON.stringify(apiData, null, 2));
+
+            // Call API
+            const result = await createComplaintAPI(apiData);
+
+            if (result && result.res_code === "0000") {
+                alert(`✅ สร้างข้อมูลสำเร็จ!\nMessage: ${result.res_message}`);
+                console.log('✅ Success Response:', result);
             } else {
-                // console.log("No router query data found");
+                alert(`❌ เกิดข้อผิดพลาด: ${result?.res_message || 'Unknown error'}`);
+                console.error('❌ Error Response:', result);
+            }
+
+        } catch (error) {
+            console.error('Error preparing data for API:', error);
+            alert(`❌ เกิดข้อผิดพลาด: ${error.message}`);
+        }
+    };
+
+    // Function สำหรับ call API เพื่อสร้างข้อมูลแบบแยกส่วน
+    const handleCreateDataBySections = async () => {
+        if (!isDataReady) {
+            console.log('Data is not ready yet');
+            return;
+        }
+
+        try {
+            for (const section of compiledData) {
+                console.log(`Processing section: ${section.section_name}`);
+            }
+
+            alert('ข้อมูลทุกส่วนพร้อมสำหรับ API แล้ว! ดูใน Console');
+
+        } catch (error) {
+            console.error('Error processing sections:', error);
+        }
+    };
+
+    // Effect เพื่อ monitor ข้อมูลที่เปลี่ยน
+    useEffect(() => {
+        if (isDataReady) {
+            console.log('📊 Data is ready!');
+            console.log('Total sections:', compiledData.length);
+            const mainInfo = getSectionData('main_information');
+            const accountData = getAccountData();
+            const customerData = getCustomerData();
+
+            console.log('Current case ID:', mainInfo.case_id);
+            console.log('Current case code:', mainInfo.case_code);
+            console.log('OPM Channel ID:', opmChannelId);
+            console.log('Auto-create attempted:', autoCreateAttempted);
+            console.log('Is creating:', isCreating);
+            console.log('📋 People Data:', {
+                account: accountData.fullName,
+                customer: customerData.fullName !== '-' ? customerData.fullName : 'N/A',
+                willHaveStep1: !!(accountData.fullName && accountData.fullName !== '-'),
+                willHaveStep2: !!(customerData.fullName && customerData.fullName !== '-' && customerData.fullName !== accountData.fullName)
+            });
+
+            if (opmChannelId && !autoCreateAttempted && !isCreating) {
+                console.log('🚀 Conditions met for auto-create!');
             }
         }
-    }, [router.isReady]);
+    }, [isDataReady, compiledData, opmChannelId, autoCreateAttempted, isCreating]);
+
+    // Effect เพื่อแสดงผลลัพธ์การสร้างข้อมูลอัตโนมัติ
+    useEffect(() => {
+        if (autoCreateAttempted && !isCreating) {
+            // แสดงแจ้งเตือนเมื่อการสร้างข้อมูลอัตโนมัติเสร็จสิ้น (เฉพาะใน development)
+            if (process.env.NODE_ENV === 'development') {
+                const timeoutId = setTimeout(() => {
+                    alertInfo(
+                        'การสร้างข้อมูลอัตโนมัติเสร็จสิ้น',
+                        'ระบบได้พยายามสร้างคำร้องอัตโนมัติแล้ว กรุณาตรวจสอบ Console สำหรับรายละเอียด'
+                    );
+                }, 2000);
+
+                return () => clearTimeout(timeoutId);
+            }
+        }
+    }, [autoCreateAttempted, isCreating]);
+
+    // Effect เพื่อตรวจสอบ error states
+    useEffect(() => {
+        if (isDataReady && !opmChannelId && !isCreating) {
+            const timeoutId = setTimeout(() => {
+                if (!opmChannelId) {
+                    console.warn('⚠️ OPM Channel ID not found after data ready');
+                }
+            }, 5000);
+
+            return () => clearTimeout(timeoutId);
+        }
+    }, [isDataReady, opmChannelId, isCreating]);
 
     const handleReportClick = () => {
         setReportModalOpen(true);
-    };
-
-    const getFieldValue = (fieldName) => {
-        if (currentItemData && currentItemData[fieldName]) {
-            return currentItemData[fieldName];
-        }
-
-        const field = caseDetails?.find((item) => item.field === fieldName);
-        return field?.value || "-";
-    };
-
-    const getFieldArrayValue = (fieldName) => {
-        const field = caseDetails?.find((item) => item.field === fieldName);
-        const value = field?.value;
-
-        if (Array.isArray(value)) {
-            return value;
-        }
-
-        if (typeof value === 'string' && (value.startsWith('[') || value.startsWith('{'))) {
-            try {
-                const parsed = JSON.parse(value);
-                return Array.isArray(parsed) ? parsed : [];
-            } catch (error) {
-                console.warn(`Failed to parse JSON for field ${fieldName}:`, error);
-                return [];
-            }
-        }
-
-        if (value && typeof value === 'object') {
-            return [value];
-        }
-
-        return [];
-    };
-
-    // ฟังก์ชันสำหรับดึงข้อมูลผู้ยื่นคำร้อง (account)
-    const getAccountData = () => {
-        const accountField = caseDetails?.find((item) => item.field === "account");
-        const accountData = accountField?.value;
-
-        if (accountData && typeof accountData === 'object') {
-            const fullName = `${accountData.salutation_th || ''} ${accountData.firstname_th || ''} ${accountData.lastname_th || ''}`.trim();
-
-            return {
-                name: fullName,
-                fullName: fullName,
-                salutation: accountData.salutation_th,
-                firstName: accountData.firstname_th,
-                lastName: accountData.lastname_th,
-                citizenId: accountData.citizen_id,
-                gender: accountData.gender_text,
-                address: {
-                    subdistrict: accountData.subdistrict_text,
-                    district: accountData.district_text,
-                    province: accountData.province_text,
-                    postcode: accountData.postcode
-                },
-                contacts: accountData.list_account_detail || []
-            };
-        }
-
-        return {
-            name: '-',
-            fullName: '-'
-        };
-    };
-
-    // ฟังก์ชันสำหรับดึงข้อมูลผู้เดือดร้อน (customer)
-    const getCustomerData = () => {
-        if (currentItemData?.customer_name) {
-            return {
-                name: currentItemData.customer_name,
-                fullName: currentItemData.customer_name,
-            };
-        }
-
-        const customerField = caseDetails?.find((item) => item.field === "customer");
-        const customerData = customerField?.value;
-
-        if (customerData && typeof customerData === 'object') {
-            const fullName = `${customerData.salutation_th || ''} ${customerData.firstname_th || ''} ${customerData.lastname_th || ''}`.trim();
-
-            return {
-                name: fullName,
-                fullName: fullName,
-                salutation: customerData.salutation_th,
-                firstName: customerData.firstname_th,
-                lastName: customerData.lastname_th,
-                citizenId: customerData.citizen_id,
-                gender: customerData.gender_text,
-                address: {
-                    subdistrict: customerData.subdistrict_text,
-                    district: customerData.district_text,
-                    province: customerData.province_text,
-                    postcode: customerData.postcode
-                },
-                contacts: customerData.list_customer_detail || []
-            };
-        }
-
-        return {
-            name: '-',
-            fullName: '-'
-        };
     };
 
     const getStatusColor = (status) => {
@@ -208,7 +263,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
         }
     };
 
-    // ดึงข้อมูลที่ต้องใช้
+    // ใช้ข้อมูลจาก hook
     const accountData = getAccountData();
     const customerData = getCustomerData();
     const caseCode = currentItemData?.case_code || getFieldValue("case_code");
@@ -216,6 +271,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
     const statusText = currentItemData?.status_text || getFieldValue("status_text");
     const mainStatusText = currentItemData?.main_status_text || getFieldValue("main_status_text");
     const caseId = currentItemData?.case_id || params?.case_id;
+    const orgOwnerList = getFieldArrayValue("list_case_org_owner");
 
     // ข้อมูลไฟล์แนบ
     const attachmentList = Array.isArray(operatingsDetails)
@@ -247,14 +303,223 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
         );
     }
 
-    const orgOwnerList = getFieldArrayValue("list_case_org_owner");
+    // แสดง loading เมื่อกำลังสร้างข้อมูลอัตโนมัติ
+    if (isCreating && !autoCreateAttempted) {
+        return (
+            <Box className={styles.loadingContainer}>
+                <div className={styles.spinner}></div>
+                <Typography variant="body1" className={styles.loadingText}>
+                    กำลังสร้างคำร้องอัตโนมัติ...
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                    กรุณารอสักครู่
+                </Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box className={styles.detailContainer}>
             {/* หัวเรื่องพร้อมชื่อผู้ยื่นคำร้อง */}
-            <Typography variant="h4" className={styles.title}>
-                รายละเอียดคำร้อง {accountData.fullName && accountData.fullName !== '-' && `- ${accountData.fullName}`}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Typography variant="h4" className={styles.title}>
+                    รายละเอียดคำร้อง {accountData.fullName && accountData.fullName !== '-' && `- ${accountData.fullName}`}
+                </Typography>
+
+                {/* แสดงสถานะการสร้างข้อมูลอัตโนมัติ */}
+                {isDataReady && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {!opmChannelId && (
+                            <Chip
+                                label="กำลังดึง Channel ID"
+                                color="warning"
+                                size="small"
+                                variant="outlined"
+                            />
+                        )}
+                        {opmChannelId && !autoCreateAttempted && !isCreating && isValidForAPICreation() && (
+                            <Chip
+                                label="พร้อมสร้างอัตโนมัติ"
+                                color="info"
+                                size="small"
+                                variant="outlined"
+                            />
+                        )}
+                        {autoCreateAttempted && (
+                            <Chip
+                                label="สร้างอัตโนมัติแล้ว"
+                                color="success"
+                                size="small"
+                                variant="outlined"
+                            />
+                        )}
+                    </Box>
+                )}
+            </Box>
+
+            {/* Debug Panel - สำหรับดูข้อมูลที่ compile แล้ว */}
+            {process.env.NODE_ENV === 'development' && (
+                <Card sx={{ mb: 2, bgcolor: '#f5f5f5' }}>
+                    <CardContent>
+                        <Typography variant="h6" gutterBottom>
+                            Debug Panel - Data Status
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                            Data Ready: {isDataReady ? '✅ Yes' : '❌ No'}
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                            Total Sections: {compiledData.length}
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                            Case ID: {getSectionData('main_information').case_id || 'Not available'}
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                            OPM Channel ID: {opmChannelId || 'Loading...'}
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                            Creating: {isCreating ? '🔄 Yes' : '⏸️ No'}
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                            Auto-Create Status: {autoCreateAttempted ? '✅ Attempted' : '⏳ Pending'}
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                            Data Valid for API: {isValidForAPICreation() ? '✅ Yes' : '❌ No'}
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                            Account Name (Step 1): {getAccountData().fullName || 'N/A'}
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                            Customer Name (Step 2): {getCustomerData().fullName !== '-' ? getCustomerData().fullName : 'N/A'}
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                            Will Include Step 1 (ผู้ยื่นคำร้อง): {getAccountData().fullName && getAccountData().fullName !== '-' ? '✅ Yes' : '❌ No'}
+                        </Typography>
+                        <Typography variant="body2" gutterBottom>
+                            Will Include Step 2 (ผู้เดือดร้อน): {getCustomerData().fullName !== '-' && getCustomerData().fullName !== getAccountData().fullName ? '✅ Yes' : '❌ No'}
+                        </Typography>
+
+                        {!opmChannelId && isDataReady && (
+                            <Typography variant="body2" color="warning.main" gutterBottom>
+                                ⚠️ Warning: OPM Channel ID not found. Please check if "opm1111" channel exists.
+                            </Typography>
+                        )}
+
+                        {isDataReady && opmChannelId && !autoCreateAttempted && isValidForAPICreation() && (
+                            <Typography variant="body2" color="info.main" gutterBottom>
+                                🚀 Auto-creating complaint: Step 1 ({getAccountData().fullName !== '-' ? 'ผู้ยื่นคำร้อง' : 'ไม่มี'}) + Step 2 ({getCustomerData().fullName !== '-' && getCustomerData().fullName !== getAccountData().fullName ? 'ผู้เดือดร้อน' : 'ไม่มี'})
+                            </Typography>
+                        )}
+
+                        {isDataReady && (!opmChannelId || !isValidForAPICreation()) && !autoCreateAttempted && (
+                            <Typography variant="body2" color="warning.main" gutterBottom>
+                                ⏳ Waiting for valid data or channel ID...
+                            </Typography>
+                        )}
+
+                        {autoCreateAttempted && (
+                            <Typography variant="body2" color="success.main" gutterBottom>
+                                ✅ Auto-create process completed. Check console for details.
+                            </Typography>
+                        )}
+                        <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={handleCreateData}
+                                disabled={!isDataReady}
+                            >
+                                Test API Data (Original)
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={handleCreateDataBySections}
+                                disabled={!isDataReady}
+                            >
+                                Test API Data (By Sections)
+                            </Button>
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={handleCreateDataNewFormat}
+                                disabled={!isDataReady || isCreating || !opmChannelId}
+                                color="primary"
+                            >
+                                {isCreating ? '🔄 Creating...' : autoCreateAttempted ? 'Manual Create (Again)' : 'Manual Create'}
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => {
+                                    const apiData = getFormattedDataForCreateAPI();
+                                    console.log('=== Current API Data ===');
+                                    console.log(JSON.stringify(apiData, null, 2));
+                                    console.log('=== Data Structure ===');
+                                    console.log('Has Step 1 (ผู้ยื่นคำร้อง):', !!apiData.step1);
+                                    console.log('Has Step 2 (ผู้เดือดร้อน):', !!apiData.step2);
+                                    console.log('Has Step 3 (ข้อมูลร้องเรียน):', !!apiData.step3);
+                                    console.log('Has Step 4 (ยอมรับ):', !!apiData.step4);
+                                    alert('ข้อมูลแสดงใน Console แล้ว!');
+                                }}
+                                disabled={!isDataReady}
+                                color="secondary"
+                            >
+                                Show API Data
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => {
+                                    const accountData = getAccountData();
+                                    const customerData = getCustomerData();
+                                    const mainInfo = getSectionData('main_information');
+
+                                    console.log('🔍 Validation Details:', {
+                                        isDataReady,
+                                        opmChannelId,
+                                        autoCreateAttempted,
+                                        isCreating,
+                                        isValidForAPICreation: isValidForAPICreation(),
+                                        mainInfo: {
+                                            case_code: mainInfo.case_code,
+                                            case_id: mainInfo.case_id,
+                                            type_text: mainInfo.type_text
+                                        },
+                                        accountData: {
+                                            fullName: accountData.fullName,
+                                            citizenId: accountData.citizenId,
+                                            phone: accountData.phone,
+                                            email: accountData.email
+                                        },
+                                        customerData: {
+                                            fullName: customerData.fullName,
+                                            citizenId: customerData.citizenId,
+                                            phone: customerData.phone,
+                                            email: customerData.email
+                                        },
+                                        willIncludeStep1: !!(accountData.fullName && accountData.fullName !== '-'),
+                                        willIncludeStep2: !!(customerData.fullName && customerData.fullName !== '-' && customerData.fullName !== accountData.fullName)
+                                    });
+                                    alert('ตรวจสอบข้อมูลใน Console แล้ว!');
+                                }}
+                                disabled={!isDataReady}
+                                color="info"
+                            >
+                                Check Validation
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={getOpmChannelId}
+                                disabled={isCreating}
+                                color="secondary"
+                            >
+                                Refresh Channel ID
+                            </Button>
+                        </Box>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Main Information Card */}
             <Card className={styles.mainCard}>

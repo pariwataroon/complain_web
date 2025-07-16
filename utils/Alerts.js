@@ -1,9 +1,7 @@
 import Swal from "sweetalert2";
 
-// เพิ่ม z-index สูงสุดให้กับ SweetAlert2 container ทุกตัว
 const HIGH_Z_INDEX_CLASS = "swal-high-zindex";
 
-// ฟังก์ชัน inject CSS เฉพาะ client (ป้องกัน SSR error)
 function ensureSwalZIndexStyle() {
   if (typeof window !== "undefined" && typeof document !== "undefined") {
     if (!document.getElementById("swal-high-zindex-style")) {

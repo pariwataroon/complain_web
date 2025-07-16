@@ -90,6 +90,21 @@ const Addcomplaints = async (data) => {
   }
 };
 
+const CreateComplaint = async (data) => {
+  try {
+    const response = await axiosInstance.post(
+      `/complaints/complaint_channel_id=${data.channel_id}`,
+      data
+    );
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error adding complaint:", error);
+    throw error;
+  }
+};
+
 const UploadAttachments = async (complaint_id, formDataUpload) => {
   try {
     const response = await axiosInstance.post(
@@ -147,6 +162,7 @@ const GetComplaintsWithSearch = async ({
   }
 };
 export {
+  CreateComplaint,
   Addcomplaints,
   GetAllComplaints,
   UploadAttachments,
