@@ -39,7 +39,7 @@ async def get_my_resources_by_group(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """
     ดึงข้อมูล resources-bygroup เฉพาะที่ตรงกับ roles ของ user ที่ login
@@ -114,9 +114,9 @@ async def read_roles(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
-    """ดึงข้อมูลบทบาททั้งหมด - ต้องมีสิทธิ์อ่านใน setting_access"""
+    """ดึงข้อมูลบทบาททั้งหมด - ต้องมีสิทธิ์อ่านใน dashboard"""
     try:
         roles = get_roles(db, skip=skip, limit=limit)
         result = [RoleResponse.model_validate(role).model_dump() for role in roles]
@@ -129,9 +129,9 @@ async def read_roles(
 async def read_role(
     role_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
-    """ดึงข้อมูลบทบาทตาม ID - ต้องมีสิทธิ์อ่านใน setting_access"""
+    """ดึงข้อมูลบทบาทตาม ID - ต้องมีสิทธิ์อ่านใน dashboard"""
     try:
         role = db.query(Role).filter(Role.id == role_id).first()
         if not role:
@@ -200,9 +200,9 @@ async def read_resources(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
-    """ดึงข้อมูลทรัพยากรทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_access"""
+    """ดึงข้อมูลทรัพยากรทั้งหมด - ต้องมีสิทธิ์อ่านใน dashboard"""
     try:
         resources = get_resources(db, skip=skip, limit=limit)
         result = [ResourceResponse.model_validate(resource).model_dump() for resource in resources]
@@ -217,9 +217,9 @@ async def read_resources_by_group(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
-    """ดึงข้อมูลทรัพยากรตามกลุ่ม - ต้องมีสิทธิ์อ่านใน setting_access"""
+    """ดึงข้อมูลทรัพยากรตามกลุ่ม - ต้องมีสิทธิ์อ่านใน dashboard"""
     try:
         # ฟังก์ชัน get_resources_by_group คืนค่าเป็นลิสต์ของกลุ่มที่มีทรัพยากรอยู่แล้ว
         # แต่ละกลุ่มมี resources ที่ผ่านการแปลงเป็น dict ด้วย ResourceResponse แล้ว
@@ -235,9 +235,9 @@ async def read_resources_by_group(
 async def read_resource(
     resource_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
-    """ดึงข้อมูลทรัพยากรตาม ID - ต้องมีสิทธิ์อ่านใน setting_access"""
+    """ดึงข้อมูลทรัพยากรตาม ID - ต้องมีสิทธิ์อ่านใน dashboard"""
     try:
         resource = db.query(Resource).filter(Resource.id == resource_id).first()
         if not resource:
@@ -323,9 +323,9 @@ async def read_permissions(
     resource_id: Optional[UUID] = None,
     user_id: Optional[UUID] = None, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
-    """ดึงข้อมูลสิทธิ์ทั้งหมดหรือกรองตามบทบาท, ทรัพยากร, หรือผู้ใช้ - ต้องมีสิทธิ์อ่านใน setting_access"""
+    """ดึงข้อมูลสิทธิ์ทั้งหมดหรือกรองตามบทบาท, ทรัพยากร, หรือผู้ใช้ - ต้องมีสิทธิ์อ่านใน dashboard"""
     try:
         permissions = get_permissions(db, role_id=role_id, resource_id=resource_id, user_id=user_id)
         result = [PermissionResponse.model_validate(permission).model_dump() for permission in permissions]
@@ -341,10 +341,10 @@ async def get_all_resources_with_permissions(
     skip: int = 0, 
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """
-    ดึงข้อมูลทรัพยากรทั้งหมดพร้อมรายละเอียดสิทธิ์ - ต้องมีสิทธิ์อ่านใน setting_access
+    ดึงข้อมูลทรัพยากรทั้งหมดพร้อมรายละเอียดสิทธิ์ - ต้องมีสิทธิ์อ่านใน dashboard
     
     แสดงรายละเอียดว่าแต่ละทรัพยากรมี role และ user ใดบ้างที่มีสิทธิ์เข้าถึง
     พร้อมสถานะการตรวจสอบ (tracking) สำหรับทุกบทบาท
@@ -365,9 +365,9 @@ async def get_all_resources_with_permissions(
 async def read_permission(
     permission_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
-    """ดึงข้อมูลสิทธิ์ตาม ID - ต้องมีสิทธิ์อ่านใน setting_access"""
+    """ดึงข้อมูลสิทธิ์ตาม ID - ต้องมีสิทธิ์อ่านใน dashboard"""
     try:
         permission = db.query(Permission).filter(Permission.id == permission_id).first()
         if not permission:
@@ -451,9 +451,9 @@ async def remove_role_from_user_endpoint(
 async def get_roles_for_user_endpoint(
     user_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
-    """ดึงข้อมูลบทบาทของผู้ใช้ - ต้องมีสิทธิ์อ่านใน setting_access"""
+    """ดึงข้อมูลบทบาทของผู้ใช้ - ต้องมีสิทธิ์อ่านใน dashboard"""
     try:
         roles = get_user_roles(db, user_id)
         result = [RoleResponse.model_validate(role).model_dump() for role in roles]
@@ -469,10 +469,10 @@ async def get_combined_permissions(
     user_id: UUID,
     resource_path: str,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """
-    ดึงข้อมูลสิทธิ์รวมของผู้ใช้สำหรับทรัพยากรที่ระบุ - ต้องมีสิทธิ์อ่านใน setting_access
+    ดึงข้อมูลสิทธิ์รวมของผู้ใช้สำหรับทรัพยากรที่ระบุ - ต้องมีสิทธิ์อ่านใน dashboard
     
     คำนวณจากทั้งบทบาทที่ผู้ใช้มีและสิทธิ์เฉพาะบุคคล โดยคำนึงถึงการ override
     """
@@ -495,10 +495,10 @@ async def get_combined_permissions(
 async def get_resource_permissions(
     resource_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """
-    ดึงข้อมูลสิทธิ์ทั้งหมดของทรัพยากรที่ระบุ - ต้องมีสิทธิ์อ่านใน setting_access
+    ดึงข้อมูลสิทธิ์ทั้งหมดของทรัพยากรที่ระบุ - ต้องมีสิทธิ์อ่านใน dashboard
     
     แสดงรายละเอียดว่าทรัพยากรนี้มีการกำหนดสิทธิ์ให้กับ role และ user ใดบ้าง
     """
@@ -563,10 +563,10 @@ async def get_resource_permissions(
 async def search_resources(
     query: str,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """
-    ค้นหาทรัพยากรตามชื่อหรือคำอธิบาย - ต้องมีสิทธิ์อ่านใน setting_access
+    ค้นหาทรัพยากรตามชื่อหรือคำอธิบาย - ต้องมีสิทธิ์อ่านใน dashboard
     """
     try:
         # ค้นหา resources ที่ชื่อหรือคำอธิบายมีคำที่ต้องการค้นหา
@@ -591,10 +591,10 @@ async def search_resources(
 async def get_users_with_access_to_resource(
     resource_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("dashboard"))
 ):
     """
-    ดึงข้อมูลผู้ใช้ทั้งหมดที่มีสิทธิ์เข้าถึงทรัพยากรที่ระบุ - ต้องมีสิทธิ์อ่านใน setting_access
+    ดึงข้อมูลผู้ใช้ทั้งหมดที่มีสิทธิ์เข้าถึงทรัพยากรที่ระบุ - ต้องมีสิทธิ์อ่านใน dashboard
     
     รวมทั้งผู้ใช้ที่ได้รับสิทธิ์โดยตรงและผู้ใช้ที่ได้รับสิทธิ์ผ่านบทบาท
     """
