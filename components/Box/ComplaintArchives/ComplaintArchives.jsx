@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListBox from "@services/TableListBox/TableListBox";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
-import { getDocumentStorage } from "@pages/api/document/document";
+import { getDocumentStorageForWebsite } from "@pages/api/document/document";
 
 const issueTypeOptions = [
   { value: "ภารกิจ", label: "ภารกิจ" },
@@ -237,7 +237,7 @@ const ComplaintArchives = () => {
     const fetchDocumentStorage = async () => {
       try {
         setLoading(true);
-        const res = await getDocumentStorage();
+        const res = await getDocumentStorageForWebsite({ skip: 0, limit: 100 });
         setDocumentStorage(res.res_data.items);
 
         // แปลงข้อมูลและตั้งค่าใน state

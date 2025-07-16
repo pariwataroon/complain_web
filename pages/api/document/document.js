@@ -1,21 +1,41 @@
 import axiosInstance from "@pages/api/axiosInstance";
 
-export const getDocumentStorage = async ({
-  page_type = "website",
+// ฟังก์ชันสำหรับดึงข้อมูล document-storage สำหรับ page_type = "website"
+export const getDocumentStorageForWebsite = async ({
   skip = 0,
   limit = 100,
 } = {}) => {
   try {
     const { data } = await axiosInstance.get("/document-storage", {
       params: {
-        page_type,
+        page_type: "website", // กำหนด page_type เป็น "website"
         skip,
         limit,
       },
     });
     return data;
   } catch (err) {
-    console.error("Error fetching document storage:", err);
+    console.error("Error fetching document storage for website:", err);
+    return [];
+  }
+};
+
+// ฟังก์ชันสำหรับดึงข้อมูล document-storage สำหรับ page_type = "card"
+export const getDocumentStorageForCard = async ({
+  skip = 0,
+  limit = 100,
+} = {}) => {
+  try {
+    const { data } = await axiosInstance.get("/document-storage", {
+      params: {
+        page_type: "card", // กำหนด page_type เป็น "card"
+        skip,
+        limit,
+      },
+    });
+    return data;
+  } catch (err) {
+    console.error("Error fetching document storage for card:", err);
     return [];
   }
 };
