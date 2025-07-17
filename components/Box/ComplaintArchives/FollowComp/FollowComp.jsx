@@ -1,4 +1,4 @@
-import React from "react";
+import React , { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import {
@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import FolderIcon from "@mui/icons-material/Folder";
+import { getDocumentStorageForWebsite } from "@pages/api/document/document"; // API ที่ต้องการ
 
 // 1. Define English-status constants
 const STATUS = {
@@ -59,9 +60,16 @@ const handleOpenDocument = (documentName) => {
 };
 
 // ปุ่มจัดการ (คง logic เดิม ไม่มีการเปลี่ยนแปลง)
-const handleManage = (sectionKey, router) => {
+const handleManage = (sectionKey, id, router) => {
   switch (sectionKey) {
-
+    case "RECEIVED":
+      // ตรวจสอบว่า id มีค่าไหมก่อนที่จะไปต่อ
+      if (id) {
+        router.push(`/admin/edit/website-complaints/${id}`);
+      } else {
+        console.error("Error: complaintId is undefined or null");
+      }
+      break;
     case "FORWARDED":
       router.push("/admin/edit/forward-to-agency/");
       break;
@@ -81,6 +89,7 @@ const handleManage = (sectionKey, router) => {
       break;
   }
 };
+
 
 // icon เอกสารแนบ (folder icon เท่านั้น)
 const getDocumentIcon = () => (
@@ -104,6 +113,7 @@ const sections = [
     ],
     rows: [
       {
+        id: "693611da-130a-4dab-adb7-b716b0144108",
         ลำดับ: 1,
         หน่วยงาน: "กรมการกำกับ",
         "เลข สรร.": "97/68",
@@ -113,6 +123,7 @@ const sections = [
         เอกสารแนบ: "หนังสือรับเรื่อง",
       },
       {
+        id: "c1944d27-5093-4e9d-9776-c062082a4cfa",
         ลำดับ: 2,
         หน่วยงาน: "กรมการกำกับ",
         "เลข สรร.": "02/68",
@@ -261,7 +272,9 @@ const sections = [
 
 const FollowComp = () => {
   const router = useRouter();
-
+  const { id } = router.query;
+  const [documentData, setDocumentData] = useState(null);
+  const [loading, setLoading] = useState(true);
   // Mock header info
   const mockHeader = {
     responsibleOfficer: "นายเป็นสุข เป็นสุขเถิด",
@@ -273,7 +286,26 @@ const FollowComp = () => {
   const handleClickRECEIVED = (id) => {
     router.push(`/complaint/${id}`); // ไปที่หน้า complaint ตามด้วย id ที่ได้
   };
+  useEffect(() => {
+    if (id) {
+      fetchDocumentData(id);
+    }
+  }, [id]);
 
+  // ฟังก์ชันดึงข้อมูลจาก API
+  const fetchDocumentData = async (id) => {
+    setLoading(true);
+    try {
+      const response = await getDocumentStorageForWebsite(id); // Fetch data from API
+      if (response && response.res_data) {
+        setDocumentData(response.res_data);  // Set API response to state
+      }
+    } catch (error) {
+      console.error("Error fetching document data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <Box>
       <BreadcrumbsService items={breadcrumbItems} />
@@ -341,8 +373,6 @@ const FollowComp = () => {
     />
   </Stack>
 </Box>
-
-
       {sections
         .filter((section) => section.key !== "FINAL_NOTIFY")
         .map((section) => (
@@ -402,28 +432,18 @@ const FollowComp = () => {
                       } else if (h === "การจัดการ") {
                         return (
                           <TableCell key={h} align="center">
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  // ตรวจสอบว่าเป็นกรณี RECCEIVED หรือไม่
-                                  if (section.key === "RECEIVED") {
-                                    const complaintId = row.id; // รับค่า id จาก row
-                                    if (complaintId) {
-                                      handleClickRECEIVED(complaintId); // ใช้ handleClickRECEIVED หาก complaintId มีค่า
-                                    } else {
-                                      console.error("Error: complaintId is undefined");
-                                    }
-                                  } else {
-                                    handleManage(section.key, router); // ใช้ handleManage สำหรับกรณีอื่น
-                                  }
-                                }}
-                                sx={{
-                                  color: "#1976d2",
-                                  "&:hover": {
-                                    backgroundColor: "rgba(25, 118, 210, 0.04)",
-                                  },
-                                }}
-                              >
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                handleManage(section.key, row.id, router); // ใช้ handleManage สำหรับกรณีนี้
+                              }}
+                              sx={{
+                                color: "#1976d2",
+                                "&:hover": {
+                                  backgroundColor: "rgba(25, 118, 210, 0.04)",
+                                },
+                              }}
+                            >
                               <img
                                 src="/icons/Edit.png"
                                 alt="Edit"
