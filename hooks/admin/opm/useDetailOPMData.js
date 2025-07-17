@@ -187,6 +187,22 @@ const useDetailOPMData = ({
     const attachments = getSectionData("attachments");
     const detailsData = getSectionData("details_summary");
 
+    let incidentDate = mainInfo.date_opened || "";
+    if (incidentDate) {
+      const match = incidentDate.match(/\/Date\((\d+)\)\//);
+      if (match) {
+        const timestamp = Number(match[1]);
+        incidentDate = new Date(timestamp).toISOString();
+      } else {
+        const isoTry = new Date(incidentDate);
+        if (!isNaN(isoTry.getTime())) {
+          incidentDate = isoTry.toISOString();
+        }
+      }
+    } else {
+      incidentDate = new Date().toISOString();
+    }
+
     const step1 = {
       general: {
         general: {
@@ -225,7 +241,7 @@ const useDetailOPMData = ({
       general: {
         complaintType: mainInfo.type_text || "",
         subject: mainInfo.case_code || "",
-        incidentDate: mainInfo.date_opened || "",
+        incidentDate: incidentDate || "",
         description: detailsData.detail || "",
         attachment:
           attachments.attachments?.map((file) => ({
@@ -463,17 +479,18 @@ const useDetailOPMData = ({
     try {
       setIsCreating(true);
       const data = await GetAllComplaintChannels();
-      setOpmChannelId(data.channelId || data.channel_id);
-      console.log(
-        "✅ OPM Channel ID obtained:",
-        data.channelId || data.channel_id
+      const opmChannel = data.res_data?.items?.find(
+        (item) => item.name === "opm1111"
       );
-      return data.channelId || data.channel_id;
+      if (opmChannel) {
+        setOpmChannelId(opmChannel.id);
+        return opmChannel.id; 
+      } else {
+        throw new Error("OPM Channel not found");
+      }
     } catch (error) {
       console.error("❌ Error fetching OPM Channel ID:", error);
-      const mockChannelId = "mock-channel-id-123";
-      setOpmChannelId(mockChannelId);
-      return mockChannelId;
+      return null;
     } finally {
       setIsCreating(false);
     }
@@ -495,7 +512,7 @@ const useDetailOPMData = ({
   const createComplaintAPI = async (apiData) => {
     try {
       setIsCreating(true);
-      const result = await CreateComplaint(apiData);
+      const result = await CreateComplaint(opmChannelId, apiData);
       return result;
     } catch (error) {
       throw error;
@@ -508,7 +525,6 @@ const useDetailOPMData = ({
     try {
       setAutoCreateAttempted(true);
       const apiData = getFormattedDataForCreateAPI();
-      apiData.channel_id = opmChannelId;
       const result = await createComplaintAPI(apiData);
       return result;
     } catch (error) {
@@ -517,12 +533,15 @@ const useDetailOPMData = ({
   };
 
   useEffect(() => {
-    if (isDataReady && opmChannelId && !autoCreateAttempted && !isCreating) {
-      if (isValidForAPICreation()) {
-        setTimeout(() => {
-          autoCreateComplaint();
-        }, 1000);
-      }
+    if (
+      isDataReady &&
+      opmChannelId &&
+      !autoCreateAttempted &&
+      !isCreating
+    ) {
+      setTimeout(() => {
+        autoCreateComplaint();
+      }, 500);
     }
   }, [
     isDataReady,

@@ -4,6 +4,7 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListOPM from "@services/TableListOPM/TableListOPM";
 import Cookies from "js-cookie";
 import { Encode, GetTimelineHeader } from "@pages/api/opm/opm";
+import { GetComplaintsSubjectOPM } from "@pages/api/complaint/complaint";
 import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 
 const Opm1111Components = () => {
@@ -11,6 +12,7 @@ const Opm1111Components = () => {
   const [filteredComplaints, setFilteredComplaints] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [readComplaints, setReadComplaints] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const router = useRouter();
 
@@ -56,25 +58,44 @@ const Opm1111Components = () => {
 
   const fetchTimelineHeader = async (take) => {
     try {
-
       const timelineData = await GetTimelineHeader(take);
       const parsedData = Array.isArray(timelineData) ? timelineData : timelineData;
-
-      const mappedComplaints = parsedData.map((item) => {
-        // console.log({ item });
-        return {
-          case_id: item.case_id,
-          case_code: item.case_code,
-          customer_name: item.customer_name,
-          type_text: item.type_text,
-          status_text: item.status_text,
-          main_status_text: item.main_status_text,
-          ShowDateTime: item.ShowDateTime,
-        };
-      });
+      const mappedComplaints = parsedData.map((item) => ({
+        case_id: item.case_id,
+        case_code: item.case_code,
+        customer_name: item.customer_name,
+        type_text: item.type_text,
+        status_text: item.status_text,
+        main_status_text: item.main_status_text,
+        ShowDateTime: item.ShowDateTime,
+      }));
 
       setComplaints(mappedComplaints);
       setFilteredComplaints(mappedComplaints);
+
+      const caseCodes = mappedComplaints.map(c => c.case_code);
+
+      if (caseCodes.length > 0) {
+        const subjectStr = caseCodes.join(',');
+        const complaintsSubjectRes = await GetComplaintsSubjectOPM({
+          skip: 0,
+          limit: 100,
+          subject: subjectStr,
+        });
+
+        const readSubjects = new Set(
+          (complaintsSubjectRes?.res_data?.items || []).map(item => item.subject)
+        );
+
+        const complaintsWithReadStatus = mappedComplaints.map(item => ({
+          ...item,
+          isRead: readSubjects.has(item.case_code),
+        }));
+
+        setComplaints(complaintsWithReadStatus);
+        setFilteredComplaints(complaintsWithReadStatus);
+        setReadComplaints(Array.from(readSubjects));
+      }
     } catch (error) {
       console.error("Error fetching timeline header:", error);
       alertError(
@@ -144,7 +165,7 @@ const Opm1111Components = () => {
           fontSize: '24px',
           fontWeight: '600'
         }}>
-          เกิดข้อผิดพลาด
+          กำลังปรับปรุงจากต้นทาง OPM1111
         </h3>
         <p style={{
           color: '#64748b',
@@ -153,7 +174,7 @@ const Opm1111Components = () => {
           maxWidth: '400px',
           lineHeight: '1.5'
         }}>
-          ไม่สามารถรับรองตัวตนได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต และลองใหม่อีกครั้ง
+          กรุณารอสักครู่และลองใหม่อีกครั้ง
         </p>
         <button
           onClick={handleRefresh}

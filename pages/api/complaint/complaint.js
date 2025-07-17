@@ -90,10 +90,10 @@ const Addcomplaints = async (data) => {
   }
 };
 
-const CreateComplaint = async (data) => {
+const CreateComplaint = async (opmChannel, data) => {
   try {
     const response = await axiosInstance.post(
-      `/complaints/complaint_channel_id=${data.channel_id}`,
+      `/complaints?complaint_channel_id=${opmChannel}`,
       data
     );
     if (response && response.data) {
@@ -161,6 +161,19 @@ const GetComplaintsWithSearch = async ({
     throw error;
   }
 };
+
+const GetComplaintsSubjectOPM = async ({ skip = 0, limit = 10, case_code }) => {
+  try {
+    const response = await axiosInstance.get(
+      `/complaints?${skip}&${limit}&subject=${case_code}`
+    );
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching complaints:", error);
+    throw error;
+  }
+};
+
 export {
   CreateComplaint,
   Addcomplaints,
@@ -174,4 +187,5 @@ export {
   UpdateAssignmentCompleteByAdmin,
   GetEnhancedComplaints,
   GetComplaintsWithSearch,
+  GetComplaintsSubjectOPM,
 };
