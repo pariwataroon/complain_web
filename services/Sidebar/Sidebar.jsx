@@ -527,7 +527,7 @@ export default function Sidebar() {
                             badgeContent={notificationCounts.complaints.unread}
                             color="error"
                             sx={{
-                               ml: 0.5,
+                              ml: 0.5,
                               "& .MuiBadge-badge": {
                                 fontSize: "10px",
                                 height: 18,
@@ -548,7 +548,7 @@ export default function Sidebar() {
                             badgeContent={notificationCounts.newUsers.unread}
                             color="error"
                             sx={{
-                               ml: 0.5,
+                              ml: 0.5,
                               "& .MuiBadge-badge": {
                                 fontSize: "10px",
                                 height: 18,

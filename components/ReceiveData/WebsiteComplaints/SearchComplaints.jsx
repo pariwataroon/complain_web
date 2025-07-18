@@ -293,58 +293,55 @@ const SearchComplaints = () => {
   };
 
   const fetchSubComplaintTypes = useCallback(async (complaintTypeId) => {
-    // ตรวจสอบ ID
+    // ตรวจสอบ ID ก่อน ถ้าไม่ถูกต้อง ให้ล้าง subTypes แล้ว return เลย
     if (!isValidId(complaintTypeId)) {
       clearSubTypes();
       return;
     }
 
-    // ยกเลิกการเรียกก่อนหน้า
+    // ยกเลิก API/promise/subTypes ที่อาจรอค้างอยู่ก่อน
     clearSubTypes();
 
-    // เริ่มโหลด
     setLoadingSubTypes(true);
     lastFetchedIdRef.current = complaintTypeId;
 
-    // สร้าง promise ใหม่
+    // สร้าง promise อันใหม่สำหรับ fetch นี้
     const fetchPromise = (async () => {
       try {
         const response = await getSubComplaintTypeById(complaintTypeId);
 
         if (response?.res_code === "0000" && response?.res_data) {
-          // API ส่ง response เป็น object ที่มี items array
           const responseData = response.res_data;
 
-          if (responseData.items && Array.isArray(responseData.items)) {
-            // เอาเฉพาะ id และ name จาก items
+          if (Array.isArray(responseData.items)) {
+            // map เฉพาะ id และ name จาก items
             const filteredSubTypes = responseData.items.map((item) => ({
               id: item.id,
               name: item.name,
             }));
-
             setSubComplaintTypes(filteredSubTypes);
           } else {
-            console.log("No items array found in response data");
+            // กรณีไม่มี items array
             setSubComplaintTypes([]);
+            console.log("No items array found in response data");
           }
         } else {
+          // กรณี response error code
+          setSubComplaintTypes([]);
           console.error(
             "Failed response:",
             response?.res_message || response?.res_desc
           );
-          setSubComplaintTypes([]);
         }
       } catch (error) {
-        console.error("Error fetching sub complaint types:", error);
-        if (error.response?.status === 404) {
+        // กรณี error จาก API
+        setSubComplaintTypes([]);
+        if (error?.response?.status === 404) {
           console.log("404 - No sub types found for this complaint type");
-          setSubComplaintTypes([]);
-        } else if (error.response?.status === 400) {
+        } else if (error?.response?.status === 400) {
           console.log("400 - Bad request, possibly invalid parent_type_id");
-          setSubComplaintTypes([]);
         } else {
-          console.error("Other error:", error.message);
-          setSubComplaintTypes([]);
+          console.error("Error fetching sub complaint types:", error);
         }
       } finally {
         // ตรวจสอบว่า promise นี้ยังเป็น current promise หรือไม่
@@ -355,6 +352,7 @@ const SearchComplaints = () => {
       }
     })();
 
+    // set ให้ currentFetchPromiseRef รอ promise นี้
     currentFetchPromiseRef.current = fetchPromise;
   }, []);
 
@@ -472,19 +470,6 @@ const SearchComplaints = () => {
     step2Methods.reset(defaultStep2Ref.current);
     step3Methods.reset(defaultStep3Ref.current);
     step4Methods.reset(defaultStep4Ref.current);
-
-    // Reset complaint type states
-    const originalComplaintType = defaultStep3Ref.current?.complaintType;
-
-    if (isValidId(originalComplaintType)) {
-      setSelectedComplaintTypeId(originalComplaintType);
-      // รอสักครู่แล้วค่อยโหลด sub types
-      setTimeout(() => {
-        fetchSubComplaintTypes(originalComplaintType);
-      }, 100);
-    } else {
-      setSelectedComplaintTypeId("");
-    }
   };
 
   // Cleanup เมื่อ component unmount
