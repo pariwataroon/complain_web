@@ -5,11 +5,13 @@ import TableListOPM from "@services/TableListOPM/TableListOPM";
 import Cookies from "js-cookie";
 import { Encode, GetTimelineHeader } from "@pages/api/opm/opm";
 import { GetComplaintsSubjectOPM } from "@pages/api/complaint/complaint";
-import { showLoading, closeAlert, alertError } from "@utils/Alerts";
+import { showLoading, closeAlert, alertError, alertSuccess } from "@utils/Alerts";
 
 const Opm1111Components = () => {
   const [result, setResult] = useState("");
   const [filteredComplaints, setFilteredComplaints] = useState([]);
+  // console.log({ filteredComplaints });
+
   const [complaints, setComplaints] = useState([]);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [readComplaints, setReadComplaints] = useState([]);
@@ -132,8 +134,18 @@ const Opm1111Components = () => {
     router.push(path);
   };
 
-  const handleRefresh = () => {
-    window.location.reload();
+  const handleRefresh = async () => {
+    setIsDataLoaded(false);
+    showLoading("กำลังรีเฟรชข้อมูลและตรวจสอบสถานะ reopen...");
+    try {
+      await fetchTimelineHeader(rowsPerPage);
+      alertSuccess("รีเฟรชข้อมูลเรียบร้อย", "ข้อมูลได้รับการอัปเดตล่าสุดแล้ว รวมถึงการตรวจสอบสถานะ reopen");
+    } catch (error) {
+      alertError("เกิดข้อผิดพลาด", "ไม่สามารถรีเฟรชข้อมูลได้");
+    } finally {
+      closeAlert();
+      setIsDataLoaded(true);
+    }
   };
 
   if (!isDataLoaded) {
@@ -224,6 +236,7 @@ const Opm1111Components = () => {
         onSearch={handleSearch}
         handleNavigateTo={handleNavigateTo}
         onRowsPerPageChange={(newRowsPerPage) => setRowsPerPage(newRowsPerPage)}
+        showReopenIndicator={true}
       />
     </>
   );

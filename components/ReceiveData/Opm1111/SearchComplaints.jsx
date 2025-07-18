@@ -7,13 +7,12 @@ import { GetCase, GetOperatings, GetAttachment } from "@pages/api/opm/opm";
 const SearchComplaints = () => {
   const router = useRouter();
   const queryParams = router.query;
-
+  
   const [operatingsDetails, setOperatingsDetails] = useState(null);
   const [caseDetails, setCaseDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingOperatings, setLoadingOperatings] = useState(true);
   const [attachmentsDetails, setAttachmentsDetails] = useState([]);
-  // console.log({ caseDetails });
   
   useEffect(() => {
     const fetchCaseDetails = async () => {
@@ -87,6 +86,13 @@ const SearchComplaints = () => {
     });
   };
 
+  const getCaseCode = () => {
+    if (!caseDetails || !Array.isArray(caseDetails)) return "กำลังโหลด...";
+
+    const caseCodeItem = caseDetails.find(item => item.field === "case_code");
+    return caseCodeItem?.value || queryParams.id || "ไม่พบรหัสเรื่อง";
+  };
+
   return (
     <>
       <BreadcrumbsService
@@ -106,7 +112,7 @@ const SearchComplaints = () => {
             url: "/admin/edit/opm1111",
           },
           {
-            label: queryParams.id || "กำลังโหลด...",
+            label: getCaseCode(),
           },
         ]}
       />

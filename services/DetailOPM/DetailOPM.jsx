@@ -46,9 +46,10 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
     const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
-
+    
     const [reportModalOpen, setReportModalOpen] = useState(false);
-
+    console.log({ operatingsDetails });
+    
     const {
         compiledData,
         isDataReady,
@@ -553,78 +554,8 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                 </Card>
             )}
 
-            {/* Attachments Card */}
-            <Card className={styles.attachmentCard}>
-                <CardContent className={styles.cardContent}>
-                    <Box className={styles.headerSection}>
-                        <Avatar className={styles.headerIcon}>
-                            <AttachFileIcon />
-                        </Avatar>
-                        <Typography variant="h6" className={styles.sectionTitle}>
-                            ไฟล์แนบ
-                        </Typography>
-                    </Box>
 
-                    {(!attachmentsDetails || attachmentsDetails.length === 0) ? (
-                        <Box sx={{
-                            textAlign: 'center',
-                            py: 4,
-                            color: 'text.secondary'
-                        }}>
-                            <AttachFileIcon sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
-                            <Typography variant="h6" gutterBottom>
-                                ไม่มีไฟล์แนบ
-                            </Typography>
-                            <Typography variant="body2">
-                                ไม่มีไฟล์แนบมากับคำร้องนี้
-                            </Typography>
-                        </Box>
-                    ) : (
-                        <Box>
-                            <Typography variant="body1" className={styles.attachmentInfo}>
-                                มีไฟล์แนบ {attachmentsDetails.length} ไฟล์
-                            </Typography>
-                            {attachmentsDetails.map((file, index) => {
-                                let fileUrl = "#";
-                                if (file.file_content) {
-                                    if (file.file_type === "application/pdf") {
-                                        fileUrl = `data:application/pdf;base64,${file.file_content}`;
-                                    } else if (file.file_type?.startsWith("image/")) {
-                                        fileUrl = `data:${file.file_type};base64,${file.file_content}`;
-                                    } else {
-                                        fileUrl = `data:application/octet-stream;base64,${file.file_content}`;
-                                    }
-                                }
-
-                                return (
-                                    <Box key={file.attachment_id || index} className={styles.attachmentItem} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                        <AttachFileIcon />
-                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                            {file.file_name || `ไฟล์แนบ ${index + 1}`}
-                                        </Typography>
-                                        {file.file_description && (
-                                            <Typography variant="caption" sx={{ ml: 1 }}>
-                                                ({file.file_description})
-                                            </Typography>
-                                        )}
-                                        {file.file_content && (
-                                            <a
-                                                href={fileUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                style={{ marginLeft: 8, color: "#1976d2", textDecoration: "underline", fontWeight: 500 }}
-                                                download={file.file_name}
-                                            >
-                                                ดาวน์โหลด
-                                            </a>
-                                        )}
-                                    </Box>
-                                );
-                            })}
-                        </Box>
-                    )}
-                </CardContent>
-            </Card>
+            
 
             {/* Process Steps Card */}
             <Card className={styles.timelineCard}>
@@ -728,6 +659,256 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                 </CardContent>
             </Card>
 
+            {/* Attachments Card */}
+            <Card className={styles.timelineCard}>
+                <CardContent className={styles.cardContent}>
+                    <Box className={styles.headerSection}>
+                        <Avatar className={styles.headerIcon}>
+                            <AssignmentIcon />
+                        </Avatar>
+                        <Typography variant="h6" className={styles.sectionTitle}>
+                            ขั้นตอนการดำเนินงาน
+                        </Typography>
+                    </Box>
+
+                    {(!operatingsDetails || operatingsDetails.length === 0) ? (
+                        <Box sx={{
+                            textAlign: 'center',
+                            py: 4,
+                            color: 'text.secondary'
+                        }}>
+                            <AssignmentIcon sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+                            <Typography variant="h6" gutterBottom>
+                                ไม่มีข้อมูลขั้นตอนการดำเนินงาน
+                            </Typography>
+                            <Typography variant="body2">
+                                ยังไม่มีการบันทึกขั้นตอนการดำเนินงานสำหรับคำร้องนี้
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <Stepper orientation="vertical" className={styles.stepper}>
+                            {operatingsDetails.map((operation, index) => (
+                                <Step key={operation.id || index} active={true} completed={operation.status_text === "ดำเนินการแล้ว"}>
+                                    <StepLabel
+                                        icon={
+                                            <Avatar
+                                                className={styles.stepAvatar}
+                                                sx={{
+                                                    bgcolor: theme.palette[getStatusColor(operation.status_text)]?.main || '#1976d2'
+                                                }}
+                                            >
+                                                {operation.line || index + 1}
+                                            </Avatar>
+                                        }
+                                    >
+                                        <Typography variant="h6" className={styles.stepTitle}>
+                                            ขั้นตอนที่ {operation.line || index + 1}: {operation.operating_type_text}
+                                        </Typography>
+                                    </StepLabel>
+                                    <StepContent>
+                                        <Card className={styles.stepCard}>
+                                            <CardContent className={styles.stepContent}>
+                                                {/* รหัสดำเนินการ */}
+                                                <Box className={styles.stepInfo}>
+                                                    <BusinessIcon className={styles.stepIcon} />
+                                                    <Box>
+                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                            รหัสดำเนินการ
+                                                        </Typography>
+                                                        <Typography variant="body1" className={styles.stepValue}>
+                                                            {operation.operating_code || 'ไม่ระบุ'}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+
+                                                {/* ประเภทการดำเนินการ */}
+                                                <Box className={styles.stepInfo}>
+                                                    <CategoryIcon className={styles.stepIcon} />
+                                                    <Box>
+                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                            ประเภทการดำเนินการ
+                                                        </Typography>
+                                                        <Typography variant="body1" className={styles.stepValue}>
+                                                            {operation.operating_type_text || 'ไม่ระบุ'}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+
+                                                {/* วัตถุประสงค์ */}
+                                                {operation.operating_objective_text && (
+                                                    <Box className={styles.stepInfo}>
+                                                        <InfoIcon className={styles.stepIcon} />
+                                                        <Box>
+                                                            <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                                วัตถุประสงค์
+                                                            </Typography>
+                                                            <Typography variant="body1" className={styles.stepValue}>
+                                                                {operation.operating_objective_text}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                )}
+
+                                                {/* หน่วยงาน */}
+                                                <Box className={styles.stepInfo}>
+                                                    <BusinessIcon className={styles.stepIcon} />
+                                                    <Box>
+                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                            หน่วยงาน
+                                                        </Typography>
+                                                        <Typography variant="body1" className={styles.stepValue}>
+                                                            {operation.org_text || 'ไม่ระบุหน่วยงาน'}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+
+                                                {/* เจ้าหน้าที่ปฏิบัติ */}
+                                                {operation.officer_text && (
+                                                    <Box className={styles.stepInfo}>
+                                                        <PersonIcon className={styles.stepIcon} />
+                                                        <Box>
+                                                            <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                                เจ้าหน้าที่ปฏิบัติ
+                                                            </Typography>
+                                                            <Typography variant="body1" className={styles.stepValue}>
+                                                                {operation.officer_text}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                )}
+
+                                                {/* สถานะ */}
+                                                <Box className={styles.stepInfo}>
+                                                    <Box className={styles.statusContainer}>
+                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                            สถานะ
+                                                        </Typography>
+                                                        <Chip
+                                                            label={operation.status_text || 'ไม่ระบุสถานะ'}
+                                                            color={getStatusColor(operation.status_text)}
+                                                            className={styles.statusChip}
+                                                            size="small"
+                                                            icon={getStatusIcon(operation.status_text)}
+                                                        />
+                                                    </Box>
+                                                </Box>
+
+                                                {/* วันที่ดำเนินการ */}
+                                                {operation.operating_date && (
+                                                    <Box className={styles.stepInfo}>
+                                                        <DateRangeIcon className={styles.stepIcon} />
+                                                        <Box>
+                                                            <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                                วันที่ดำเนินการ
+                                                            </Typography>
+                                                            <Typography variant="body1" className={styles.stepValue}>
+                                                                {formatDate(operation.operating_date)}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                )}
+
+                                                {/* รายละเอียด */}
+                                                {operation.detail && (
+                                                    <Box className={styles.summaryResult}>
+                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                            รายละเอียดการดำเนินงาน
+                                                        </Typography>
+                                                        <Typography variant="body2" className={styles.summaryText}>
+                                                            {operation.detail}
+                                                        </Typography>
+                                                    </Box>
+                                                )}
+
+                                                {/* ไฟล์แนบ */}
+                                                {(() => {
+                                                    // หาไฟล์แนบที่ตรงกับ operation นี้
+                                                    const operationAttachments = operation.attachments || [];
+                                                    const attachmentDetails = operationAttachments.map(att => {
+                                                        // หาข้อมูลไฟล์แนบจาก attachmentsDetails ที่ดึงมาแล้ว
+                                                        const detailedAttachment = attachmentsDetails?.find(detail =>
+                                                            detail.attachment_id === att.attachment_id
+                                                        );
+                                                        return detailedAttachment || att;
+                                                    });
+
+                                                    return attachmentDetails.length > 0 ? (
+                                                        <Box className={styles.attachmentSection}>
+                                                            <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                                ไฟล์แนบ ({attachmentDetails.length} ไฟล์)
+                                                            </Typography>
+                                                            {attachmentDetails.map((file, fileIndex) => {
+                                                                let fileUrl = "#";
+                                                                if (file.file_content) {
+                                                                    if (file.file_type === "application/pdf") {
+                                                                        fileUrl = `data:application/pdf;base64,${file.file_content}`;
+                                                                    } else if (file.file_type?.startsWith("image/")) {
+                                                                        fileUrl = `data:${file.file_type};base64,${file.file_content}`;
+                                                                    } else {
+                                                                        fileUrl = `data:application/octet-stream;base64,${file.file_content}`;
+                                                                    }
+                                                                }
+
+                                                                return (
+                                                                    <Box key={file.attachment_id || fileIndex} className={styles.attachmentItem} sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
+                                                                        <AttachFileIcon sx={{ fontSize: 16 }} />
+                                                                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                                                            {file.file_name || `ไฟล์แนบ ${fileIndex + 1}`}
+                                                                        </Typography>
+                                                                        {file.file_description && (
+                                                                            <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                                                                                ({file.file_description})
+                                                                            </Typography>
+                                                                        )}
+                                                                        {file.file_content && (
+                                                                            <a
+                                                                                href={fileUrl}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                style={{ marginLeft: 8, color: "#1976d2", textDecoration: "underline", fontWeight: 500 }}
+                                                                                download={file.file_name}
+                                                                            >
+                                                                                ดาวน์โหลด
+                                                                            </a>
+                                                                        )}
+                                                                    </Box>
+                                                                );
+                                                            })}
+                                                        </Box>
+                                                    ) : null;
+                                                })()}
+
+                                                {/* ช่องทางการดำเนินการ */}
+                                                {operation.operating_channel_text && (
+                                                    <Box className={styles.stepInfo}>
+                                                        <InfoIcon className={styles.stepIcon} />
+                                                        <Box>
+                                                            <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                                ช่องทางการดำเนินการ
+                                                            </Typography>
+                                                            <Typography variant="body1" className={styles.stepValue}>
+                                                                {operation.operating_channel_text}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                )}
+
+                                                {/* ข้อมูลการสร้าง */}
+                                                <Box className={styles.createdBy}>
+                                                    <Typography variant="caption" className={styles.createdByText}>
+                                                        สร้างโดย: {operation.created_by_text || 'ไม่ระบุ'}
+                                                        {operation.ShowDateTime && ` | ${operation.ShowDateTime}`}
+                                                    </Typography>
+                                                </Box>
+                                            </CardContent>
+                                        </Card>
+                                    </StepContent>
+                                </Step>
+                            ))}
+                        </Stepper>
+                    )}
+                </CardContent>
+            </Card>
             {/* Additional Information Card */}
             <Card className={styles.additionalInfoCard}>
                 <CardContent className={styles.cardContent}>

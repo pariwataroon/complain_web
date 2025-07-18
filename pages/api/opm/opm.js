@@ -2,7 +2,7 @@ import soapInstance from "@pages/api/soapInstance";
 import Cookies from "js-cookie";
 
 const Encode = async () => {
-  const str = "m0f#n01";
+  const str = process.env.NEXT_PUBLIC_OPM_PS;
   try {
     const response = await soapInstance.post(
       process.env.NEXT_PUBLIC_OPM_API_GENERAL,
@@ -173,7 +173,7 @@ const GetCase = async (case_id) => {
   }
 };
 
-const GetOperatings = async (case_id, take = 1) => {
+const GetOperatings = async (case_id, take = 1000) => {
   try {
     const token_id = Cookies.get("opm_token");
     if (!token_id)
@@ -190,7 +190,7 @@ const GetOperatings = async (case_id, take = 1) => {
             <GetOperatings xmlns="http://tempuri.org/">
               <token_id>${token_id}</token_id>
               <case_id>${case_id}</case_id>
-              <select_org_id>${org_id}</select_org_id>
+              <select_org_id></select_org_id>
               <skip>0</skip>
               <take>${take}</take>
             </GetOperatings>
@@ -250,11 +250,69 @@ const AddOperating = async (submitData) => {
       }
     );
 
-    // console.log({ response });
+    try {
+      const xmlDoc = new DOMParser().parseFromString(response.data, "text/xml");
+      const addOperatingResult =
+        xmlDoc.getElementsByTagName("AddOperatingResult")[0]?.textContent;
 
-    return response;
+      if (addOperatingResult) {
+        console.log("AddOperating raw result:", addOperatingResult);
+
+        // Extract operating_id from format: "Result:6000207FB2A44CA7ACD90FEF1F26C784"
+        let operatingId = null;
+
+        if (addOperatingResult.includes("Result:")) {
+          // Remove quotes and extract the ID after "Result:"
+          const cleanResult = addOperatingResult.replace(/"/g, ""); // Remove quotes
+          const resultMatch = cleanResult.match(/Result:([A-F0-9]+)/i);
+
+          if (resultMatch && resultMatch[1]) {
+            operatingId = resultMatch[1];
+            console.log("Extracted operating_id:", operatingId);
+          }
+        }
+
+        // Fallback: try to parse as JSON (in case format changes)
+        if (!operatingId) {
+          try {
+            const resultData = JSON.parse(addOperatingResult);
+            operatingId =
+              resultData.operating_id || resultData.id || resultData.ID;
+          } catch (parseError) {
+            console.log("Could not parse as JSON, trying regex extraction");
+
+            // Final fallback: generic regex
+            const operatingIdMatch = addOperatingResult.match(/[A-F0-9]{32}/i);
+            operatingId = operatingIdMatch ? operatingIdMatch[0] : null;
+          }
+        }
+
+        return {
+          success: true,
+          operating_id: operatingId,
+          data: addOperatingResult,
+          raw_response: response,
+        };
+      }
+
+      console.warn("No AddOperatingResult found in response");
+      return {
+        success: false,
+        operating_id: null,
+        data: null,
+        raw_response: response,
+      };
+    } catch (error) {
+      console.error("Error parsing AddOperating response:", error);
+      return {
+        success: false,
+        operating_id: null,
+        error: error.message,
+        raw_response: response,
+      };
+    }
   } catch (error) {
-    console.error("Error fetching case details:", error);
+    console.error("Error in AddOperating API call:", error);
     throw error;
   }
 };
@@ -712,12 +770,20 @@ const GetAttachment = async (id) => {
   }
 };
 
-const OperatingAttachment = async (submitData) => {
+const buildDateField = (name, value) => {
+  if (!value) {
+    return `<${name} xsi:nil="true" />`;
+  }
+  return `<${name}>${value}</${name}>`;
+};
+
+const OperatingAttachment = async (attachmentData) => {
   try {
     const token_id = Cookies.get("opm_token");
     if (!token_id) {
       throw new Error("Token not found in cookies. Please authenticate first.");
     }
+
     const response = await soapInstance.post(
       process.env.NEXT_PUBLIC_OPM_API_OFFICER,
       `<?xml version="1.0" encoding="utf-8"?>
@@ -725,19 +791,21 @@ const OperatingAttachment = async (submitData) => {
           <soap:Body>
             <OperatingAttachment xmlns="http://tempuri.org/">
               <token_id>${token_id}</token_id>
-              <case_id>${submitData.case_id}</case_id>
-              <operating_id>string</operating_id>
-              <file_name>string</file_name>
-              <file_content>string</file_content>
-              <file_description>string</file_description>
-              <doc_type_id>string</doc_type_id>
-              <doc_type>string</doc_type>
-              <doc_no>string</doc_no>
-              <doc_date>string</doc_date>
-              <doc_ref_no>string</doc_ref_no>
-              <doc_ref_date>string</doc_ref_date>
-              <document_no>string</document_no>
-              <document_date>string</document_date>
+              <case_id>${attachmentData.case_id}</case_id>
+              <operating_id>${attachmentData.operating_id}</operating_id>
+              <file_name>${attachmentData.file_name}</file_name>
+              <file_content>${attachmentData.file_content}</file_content>
+              <file_description>${
+                attachmentData.file_description || ""
+              }</file_description>
+              <doc_type_id>${attachmentData.doc_type_id || 8}</doc_type_id>
+              <doc_type>${attachmentData.doc_type || "X"}</doc_type>
+              <doc_no>${attachmentData.doc_no || ""}</doc_no>
+              ${buildDateField("doc_date", attachmentData.doc_date)}
+              <doc_ref_no>${attachmentData.doc_ref_no || ""}</doc_ref_no>
+              ${buildDateField("doc_ref_date", attachmentData.doc_ref_date)}
+              <document_no>${attachmentData.document_no || ""}</document_no>
+              ${buildDateField("document_date", attachmentData.document_date)}
             </OperatingAttachment>
           </soap:Body>
         </soap:Envelope>`,
@@ -746,17 +814,39 @@ const OperatingAttachment = async (submitData) => {
       }
     );
 
+    // Parse response to get result
     const xml = response.data;
     const match = xml.match(
-      /<OperatingAttachment>([\s\S]*?)<\/OperatingAttachment>/
+      /<OperatingAttachmentResult>([\s\S]*?)<\/OperatingAttachmentResult>/
     );
-    if (!match) {
-      throw new Error("Cannot find <OperatingAttachment> in SOAP response.");
+
+    if (match && match[1]) {
+      try {
+        const attachmentResult = JSON.parse(match[1]);
+        return {
+          success: true,
+          data: attachmentResult,
+          message: "Attachment uploaded successfully",
+        };
+      } catch (parseError) {
+        console.log(
+          "Could not parse attachment result as JSON, returning raw response"
+        );
+        return {
+          success: true,
+          data: match[1],
+          message: "Attachment uploaded successfully",
+        };
+      }
     }
-    const attachmentObj = JSON.parse(match[1]);
-    return attachmentObj;
+
+    return {
+      success: true,
+      data: response.data,
+      message: "Attachment uploaded successfully",
+    };
   } catch (error) {
-    console.error("Error fetching attachment:", error);
+    console.error("Error uploading attachment:", error);
     throw error;
   }
 };

@@ -11,12 +11,16 @@ import {
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import { alertError, alertSuccess, showLoading, closeAlert } from "@utils/Alerts";
-import { SetOrgSummaryResult, AddOperating } from "@pages/api/opm/opm";
+import InputFile from "@services/InputFile/InputFile";
+
+import { SetOrgSummaryResult, AddOperating, OperatingAttachment } from "@pages/api/opm/opm";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import styles from "./CombinedReportModal.module.scss";
 
 const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [attachments, setAttachments] = useState([]);
+    const [fileErrors, setFileErrors] = useState({});
 
     const { handleSubmit, control, reset, watch, formState: { errors } } = useForm();
 
@@ -28,7 +32,6 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
         { value: 1, label: "ยุติเรื่อง" },
         { value: 2, label: "รับทราบไว้ชั้นต้น" },
         { value: 3, label: "ไม่อยู่ในอำนาจหน้าที่" },
-        { value: 4, label: "เสร็จสิ้น" }
     ], []);
 
     const opmTypeOptions = useMemo(() => [
@@ -51,6 +54,8 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
         if (!isSubmitting) {
             onClose();
             reset();
+            setAttachments([]);
+            setFileErrors({});
         }
     }, [isSubmitting, onClose, reset]);
 
@@ -74,6 +79,39 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
             return null;
         }
     }, []);
+
+    // File handling functions
+    const handleFileChange = useCallback((files) => {
+        setAttachments(files);
+        // Clear file errors when files change
+        setFileErrors({});
+    }, []);
+
+    const getFieldError = useCallback((fieldName) => {
+        return fileErrors[fieldName];
+    }, [fileErrors]);
+
+    const validateFiles = useCallback(() => {
+        const errors = {};
+
+        // Validate file types and sizes
+        attachments.forEach((file, index) => {
+            const allowedTypes = ['application/pdf', 'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'image/jpeg', 'image/jpg', 'image/png'];
+
+            if (!allowedTypes.includes(file.type)) {
+                errors.attachment = "ประเภทไฟล์ไม่ถูกต้อง";
+            }
+
+            if (file.size > 10 * 1024 * 1024) { // 10MB
+                errors.attachment = "ไฟล์มีขนาดใหญ่เกิน 10MB";
+            }
+        });
+
+        setFileErrors(errors);
+        return Object.keys(errors).length === 0;
+    }, [attachments]);
 
     const validateForm = useCallback((data) => {
         const errors = [];
@@ -100,9 +138,37 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
         }
         if (!data.opm_details || data.opm_details.trim() === "") {
             errors.push("• กรุณากรอกรายละเอียดการปฏิบัติงาน");
-        } 
+        }
 
         return errors;
+    }, []);
+
+    // Convert files to base64 for API
+    const convertFilesToBase64 = useCallback(async (files) => {
+        const convertFile = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64 = reader.result.split(',')[1]; // Remove data:... prefix
+                    resolve({
+                        fileName: file.name,
+                        fileType: file.type,
+                        fileSize: file.size,
+                        fileContent: base64
+                    });
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        };
+
+        try {
+            const converted = await Promise.all(files.map(convertFile));
+            return converted;
+        } catch (error) {
+            console.error("File conversion error:", error);
+            return [];
+        }
     }, []);
 
     // Combined submit function that calls both APIs
@@ -131,6 +197,11 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
                 return;
             }
 
+            // Validate files
+            if (!validateFiles()) {
+                return;
+            }
+
             showLoading("กำลังส่งรายงาน...");
 
             const opmData = {
@@ -147,9 +218,9 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
                 send_to: "OPM"
             };
 
-            console.log("OPM Data:", opmData);
+            console.log("OPM Data to be sent:", opmData);
 
-            // Call both APIs simultaneously
+            // Step 1: Call SetOrgSummaryResult and AddOperating
             const [citizenResponse, opmResponse] = await Promise.all([
                 SetOrgSummaryResult(opmData),
                 AddOperating(opmData)
@@ -157,6 +228,84 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
 
             console.log("Citizen API Response:", citizenResponse);
             console.log("OPM API Response:", opmResponse);
+
+            // Step 2: Get operating_id from AddOperating response
+            let operatingId = null;
+
+            if (opmResponse.success && opmResponse.operating_id) {
+                operatingId = opmResponse.operating_id;
+                console.log("Operating ID extracted:", operatingId);
+            } else {
+                console.warn("Could not extract operating_id from AddOperating response:", opmResponse);
+
+                // Fallback: try manual extraction from raw response
+                try {
+                    const xmlString = opmResponse.raw_response?.data || opmResponse.data;
+                    if (xmlString) {
+                        const match = xmlString.match(/<AddOperatingResult>(.*?)<\/AddOperatingResult>/);
+                        if (match && match[1]) {
+                            const rawResult = match[1].replace(/"/g, ''); // Remove quotes
+                            if (rawResult.includes("Result:")) {
+                                const resultMatch = rawResult.match(/Result:([A-F0-9]+)/i);
+                                if (resultMatch && resultMatch[1]) {
+                                    operatingId = resultMatch[1];
+                                    console.log("Operating ID from fallback extraction:", operatingId);
+                                }
+                            }
+                        }
+                    }
+                } catch (parseError) {
+                    console.error("Error in fallback operating_id extraction:", parseError);
+                }
+            }
+
+            // Step 3: Upload attachments if available and operating_id exists
+            if (attachments.length > 0 && operatingId) {
+                showLoading("กำลังอัปโหลดไฟล์แนบ...");
+
+                // Convert attachments to base64
+                const convertedAttachments = await convertFilesToBase64(attachments);
+
+                // Upload each file
+                const attachmentPromises = convertedAttachments.map(async (file) => {
+                    const attachmentData = {
+                        case_id: caseIdValue,
+                        operating_id: operatingId,
+                        file_name: file.fileName,
+                        file_content: file.fileContent,
+                        file_description: data.contact_detail?.trim() || `ไฟล์แนบ: ${file.fileName}`,
+                        doc_type_id: 8,
+                        doc_type: "X",
+                        doc_no: "",
+                        doc_date: null,
+                        doc_ref_no: "",
+                        doc_ref_date: null,
+                        document_no: "",
+                        document_date: null
+                    };
+
+                    try {
+                        const attachmentResponse = await OperatingAttachment(attachmentData);
+                        console.log(`Attachment uploaded: ${file.fileName}`, attachmentResponse);
+                        return attachmentResponse;
+                    } catch (error) {
+                        console.error(`Error uploading ${file.fileName}:`, error);
+                        throw error;
+                    }
+                });
+
+                try {
+                    const attachmentResponses = await Promise.all(attachmentPromises);
+                    console.log("All attachments uploaded successfully:", attachmentResponses);
+                } catch (attachmentError) {
+                    console.error("Error uploading attachments:", attachmentError);
+                    // Don't fail the whole process if attachment upload fails
+                    await alertError("คำเตือน", "ส่งรายงานสำเร็จแล้ว แต่ไม่สามารถอัปโหลดไฟล์แนบบางไฟล์ได้");
+                }
+            } else if (attachments.length > 0 && !operatingId) {
+                console.warn("Cannot upload attachments: operating_id not found");
+                await alertError("คำเตือน", "ส่งรายงานสำเร็จแล้ว แต่ไม่สามารถอัปโหลดไฟล์แนบได้ เนื่องจากไม่พบ operating_id");
+            }
 
             closeAlert();
             handleModalClose();
@@ -241,8 +390,6 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
                                     )}
                                 />
                             </Box>
-
-
 
                             {/* ประเภทเรื่องการตอบกลับ */}
                             <Box className={styles.fieldGroup}>
@@ -438,6 +585,26 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
                                         </Box>
                                     )}
                                 />
+                            </Box>
+
+                            {/* ไฟล์แนบ */}
+                            <Box className={styles.fieldGroup}>
+                                <Box className={`${styles.fieldContainer} ${styles.optionalField} ${isSubmitting ? styles.loading : ''}`}>
+                                    <Typography className={styles.fieldLabel}>
+                                        เอกสารประกอบการร้องเรียน
+                                    </Typography>
+                                    <InputFile
+                                        label=""
+                                        name="attachment"
+                                        onChange={handleFileChange}
+                                        error={!!fileErrors.attachment}
+                                        helperText={getFieldError("attachment") || "หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"}
+                                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                        maxFiles={3}
+                                        maxSizeMB={10}
+                                        disabled={isSubmitting}
+                                    />
+                                </Box>
                             </Box>
 
                             {/* Action Buttons */}
