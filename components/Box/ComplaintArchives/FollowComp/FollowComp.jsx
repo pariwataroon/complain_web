@@ -61,34 +61,36 @@ const handleOpenDocument = (documentName) => {
 
 // ปุ่มจัดการ (คง logic เดิม ไม่มีการเปลี่ยนแปลง)
 const handleManage = (sectionKey, id, router) => {
+  if (!id) {
+    console.error("Error: complaintId is undefined or null");
+    // แสดงข้อความหรือทำอะไรสักอย่างเมื่อไม่มี id
+    return;  // หยุดการทำงานหาก id ไม่มีค่า
+  }
+
   switch (sectionKey) {
     case "RECEIVED":
-      // ตรวจสอบว่า id มีค่าไหมก่อนที่จะไปต่อ
-      if (id) {
-        router.push(`/admin/edit/website-complaints/${id}`);
-      } else {
-        console.error("Error: complaintId is undefined or null");
-      }
+      router.push(`/admin/edit/website-complaints/${id}`);
       break;
     case "FORWARDED":
-      router.push("/admin/edit/forward-to-agency/");
+      router.push(`/admin/edit/forward-to-agency/${id}`);
       break;
     case "INITIAL_NOTIFY":
-      router.push("/admin/edit/initial-notification-to-complainant-or-agency/");
+      router.push(`/admin/edit/initial-notification-to-complainant-or-agency/${id}`);
       break;
     case "REQUEST_UPDATE":
-      router.push("/admin/edit/request-result-or-progress/");
+      router.push(`/admin/edit/request-result-or-progress/${id}`);
       break;
     case "AGENCY_REPORT":
-      router.push("/admin/edit/report/");
+      router.push(`/admin/edit/report/${id}`);
       break;
     case "FINAL_NOTIFY":
-      router.push("/admin/edit/inform-related-parties/");
+      router.push(`/admin/edit/inform-related-parties/${id}`);
       break;
     default:
       break;
   }
 };
+
 
 
 // icon เอกสารแนบ (folder icon เท่านั้น)
@@ -149,6 +151,7 @@ const sections = [
     ],
     rows: [
       {
+        id: "1",
         ลำดับ: 1,
         "หน่วยงาน(ครั้งที่ส่ง)": "กรมสรรพากร(1)",
         เรื่อง: "พฤติกรรมเจ้าหน้าที่ไม่เหมาะสม",
@@ -174,6 +177,7 @@ const sections = [
     ],
     rows: [
       {
+        id: "1",
         ลำดับ: 1,
         "หน่วยงานหรือผู้ร้อง(ครั้งที่ส่ง)": "สำนักงานปลัดสำนักนายกรัฐมนตรี(1)",
         เลขที่หนังสือ: "กค.0203/416202",
@@ -183,6 +187,7 @@ const sections = [
         เอกสารแนบ: "หนังสือแจ้งผล",
       },
       {
+        id: "2",
         ลำดับ: 2,
         "หน่วยงานหรือผู้ร้อง(ครั้งที่ส่ง)": "นางสนิท หวันหาญ(1)",
         เลขที่หนังสือ: "กค.0203/416202",
@@ -208,6 +213,7 @@ const sections = [
     ],
     rows: [
       {
+        id: "1",
         ลำดับ: 1,
         "ส่งหน่วยงาน(ครั้งที่ส่ง)": "กรมสรรพากร(1)",
         เรื่อง: "ขอความเห็นการพิจารณา",
@@ -234,6 +240,7 @@ const sections = [
     ],
     rows: [
       {
+        id: "1",
         ลำดับ: 1,
         เลขที่หนังสือ: "กค.1006/3574",
         ลงวันที่: "15 มี.ค. 2568",
@@ -259,6 +266,7 @@ const sections = [
     ],
     rows: [
       {
+        id: "1",
         ลำดับ: 1,
         "ถึงหน่วยงาน / ผู้ร้อง / อื่นๆ (ครั้งที่แจ้งผล)": "กรมสรรพากร(1)",
         เลขที่หนังสือ: "กค.1302/3513",
@@ -298,7 +306,7 @@ const FollowComp = () => {
     try {
       const response = await getDocumentStorageForWebsite(id); // Fetch data from API
       if (response && response.res_data) {
-        setDocumentData(response.res_data);  // Set API response to state
+        setDocumentData(response.res_data); // Set API response to state
       }
     } catch (error) {
       console.error("Error fetching document data:", error);
@@ -306,6 +314,13 @@ const FollowComp = () => {
       setLoading(false);
     }
   };
+
+  // เมื่อรับ id มาจาก query ให้ทำการดึงข้อมูล
+  useEffect(() => {
+    if (id) {
+      fetchDocumentData(id);
+    }
+  }, [id]);
   return (
     <Box>
       <BreadcrumbsService items={breadcrumbItems} />
@@ -435,7 +450,12 @@ const FollowComp = () => {
                             <IconButton
                               size="small"
                               onClick={() => {
-                                handleManage(section.key, row.id, router); // ใช้ handleManage สำหรับกรณีนี้
+                               if (row.id) {
+                                  handleManage(section.key, row.id, router); // ใช้ handleManage หากมี id
+                                } else {
+                                  console.error("Error: ID is missing for this row.");
+                                  // แสดงข้อความแจ้งเตือนหรือทำอะไรที่ต้องการ
+                                }
                               }}
                               sx={{
                                 color: "#1976d2",
