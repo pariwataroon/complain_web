@@ -47,8 +47,8 @@ const columns = [
   { name: "type_text", label: "ประเภทเรืองร้องทุกข์", width: 120, priority: 4 },
   { name: "ShowDateTime", label: "วันที่และเวลา", width: 120, priority: 4 },
   { name: "status_text", label: "สถานะหลักของเรื่อง", width: 80, priority: 4 },
-  { name: "main_status_text", label: "สถานะดำเนินการ", width: 160, priority: 3 },
-  { name: "isRead", label: "สถานะ", width: 120, priority: 2 },
+  { name: "main_status_text", label: "สถานะดำเนินการของสปน", width: 160, priority: 2 },
+  { name: "isRead", label: "สถานะ", width: 80, priority: 2 },
 ];
 
 const getVisibleColumns = (columns) => {

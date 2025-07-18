@@ -71,7 +71,7 @@ export default function Footer() {
         </div>
       </div>
       <div className={styles.footerBottom}>
-        <p>© 2025 MINERTA TECHNOLOGY, Inc. All Rights Reserved.</p>
+        <p>Copyright ©2025  Thailand's Ministry of Finance  All rights Reserved.</p>
       </div>
     </footer>
   );
