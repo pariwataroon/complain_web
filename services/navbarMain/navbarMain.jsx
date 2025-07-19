@@ -9,6 +9,7 @@ export default function NavbarMain() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMobileModalOpen, setMobileModalOpen] = useState(false);
   const [isProfileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const profileRef = useRef(null);
   const router = useRouter();

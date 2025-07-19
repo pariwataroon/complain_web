@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import styles from "./TabNav.module.scss";
 import ComplaintPersonalForm from "@services/ComplaintPersonal/ComplaintPersonalForm";
+import ComplaintMinistryMainForm from "@services/ComplaintMinistryMain/ComplaintMinistryMainForm";
 
-const tabs = ["บุคคลทั่วไป", "นิติบุคคล"];
-const underlineColors = ["#0B1F8F", "#3FA9F5"];
+const tabs = ["บุคคลทั่วไป", "นิติบุคคล", "หน่วยงานของรัฐ"];
+const underlineColors = ["#0B1F8F", "#3FA9F5", "#EDC458"];
 
 const Tab1 = ({
   stepKey,
@@ -14,9 +15,58 @@ const Tab1 = ({
   onTabChange,
   currentTab = 0
 }) => {
+  const [userRoles, setUserRoles] = useState([]);
+  const [hasGovernmentAccess, setHasGovernmentAccess] = useState(false);
+
+  // ฟังก์ชันตรวจสอบ roles จาก cookie (ดึงมาจาก Dashboard)
+  const getUserRoles = () => {
+    try {
+      const cookies = document.cookie.split(";").reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split("=");
+        if (key && value) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {});
+
+      const infoCookie = cookies.info;
+
+      if (infoCookie) {
+        const parsed = JSON.parse(decodeURIComponent(infoCookie));
+        let userRoles = [];
+
+        if (typeof parsed.roles === "string") {
+          userRoles = JSON.parse(parsed.roles);
+        } else if (Array.isArray(parsed.roles)) {
+          userRoles = parsed.roles;
+        }
+
+        return userRoles;
+      }
+    } catch (err) {
+      console.error("Error parsing cookie or roles:", err);
+    }
+
+    return [];
+  };
+
+  // ตรวจสอบสิทธิ์การเข้าถึง tab หน่วยงานของรัฐ
+  useEffect(() => {
+    const roles = getUserRoles();
+    setUserRoles(roles);
+
+    const allowedRoles = ["admin", "staff", "supervisor", "department", "admin_home"];
+    const hasAccess = allowedRoles.some((role) => roles.includes(role));
+    setHasGovernmentAccess(hasAccess);
+  }, []);
 
   const handleTabChange = (newTab) => {
-    
+    // ถ้าพยายามเข้า tab หน่วยงานของรัฐ แต่ไม่มีสิทธิ์ ให้ return
+    if (newTab === 2 && !hasGovernmentAccess) {
+      console.log("ไม่มีสิทธิ์เข้าถึง tab หน่วยงานของรัฐ");
+      return;
+    }
+
     if (onTabChange) {
       onTabChange('step1', newTab);
     }
@@ -37,10 +87,14 @@ const Tab1 = ({
           general: type === "general" ? updated : tabData.general || {},
           delegate: type === "delegate" ? updated : tabData.delegate || {},
         };
-      } else {
+      } else if (currentTab === 1) {
         updatedData = {
           corporate: type === "corporate" ? updated : tabData.corporate || {},
           signer: type === "signer" ? updated : tabData.signer || {},
+        };
+      } else if (currentTab === 2) {
+        updatedData = {
+          government: type === "government" ? updated : tabData.government || {},
         };
       }
 
@@ -68,7 +122,7 @@ const Tab1 = ({
       if (tabData.delegate?.province) {
         resetAddressFields("delegate", tabData.delegate.province.value);
       }
-    } else {
+    } else if (currentTab === 1) {
       // นิติบุคคล
       if (tabData.corporate?.province) {
         resetAddressFields("corporate", tabData.corporate.province.value);
@@ -76,12 +130,18 @@ const Tab1 = ({
       if (tabData.signer?.province) {
         resetAddressFields("signer", tabData.signer.province.value);
       }
+    } else if (currentTab === 2) {
+      // หน่วยงานของรัฐ
+      if (tabData.government?.province) {
+        resetAddressFields("government", tabData.government.province.value);
+      }
     }
   }, [
     tabData.general?.province?.value,
     tabData.delegate?.province?.value,
     tabData.corporate?.province?.value,
     tabData.signer?.province?.value,
+    tabData.government?.province?.value,
     currentTab,
     handleUpdate
   ]);
@@ -89,15 +149,22 @@ const Tab1 = ({
   return (
     <div className={styles.container}>
       <div className={styles.tabNav}>
-        {tabs.map((label, idx) => (
-          <div
-            key={idx}
-            className={`${styles.tab} ${styles[`tab${idx}`]} ${currentTab === idx ? styles.active : ""}`}
-            onClick={() => handleTabChange(idx)}
-          >
-            {label}
-          </div>
-        ))}
+        {tabs.map((label, idx) => {
+          // ซ่อน tab หน่วยงานของรัฐ ถ้าไม่มีสิทธิ์
+          if (idx === 2 && !hasGovernmentAccess) {
+            return null;
+          }
+
+          return (
+            <div
+              key={idx}
+              className={`${styles.tab} ${styles[`tab${idx}`]} ${currentTab === idx ? styles.active : ""}`}
+              onClick={() => handleTabChange(idx)}
+            >
+              {label}
+            </div>
+          );
+        })}
         <div
           className={styles.underlineBar}
           style={{ backgroundColor: underlineColors[currentTab] }}
@@ -154,6 +221,23 @@ const Tab1 = ({
               shouldShowValidation={shouldShowValidation}
               fieldPrefix="signer"
               formType="optional"
+            />
+          </div>
+        </>
+      )}
+
+      {/* แสดง tab หน่วยงานของรัฐ เฉพาะเมื่อมีสิทธิ์ */}
+      {currentTab === 2 && hasGovernmentAccess && (
+        <>
+          <div className={styles.formContainer}>
+            <ComplaintMinistryMainForm
+              data={tabData.government || {}}
+              onChange={handleUpdate("government")}
+              title="ข้อมูลหน่วยงานของรัฐที่ถูกร้องทุกข์"
+              validationErrors={validationErrors}
+              shouldShowValidation={shouldShowValidation}
+              fieldPrefix="government"
+              formType="mandatory"
             />
           </div>
         </>
