@@ -25,33 +25,33 @@ const STATUS = {
   FINAL_NOTIFY: 6, // แจ้งผลการให้ผู้เกี่ยวข้องทราบ
 };
 
-  const handleManage = (sectionStatus, id, router) => {
-  switch (sectionStatus) {
-    case STATUS.RECEIVED:
-      if (id) {
-        console.log("Pushing to:", `/admin/edit/website-complaints/${id}`);
-        router.push(`/admin/edit/website-complaints/${id}`);
-      } else {
-        console.error("Error: complaintId is undefined or null");
-      }
+  const handleManage = (sectionKey, id, router) => {
+  if (!id) {
+    console.error("Error: complaintId is undefined or null");
+    // แสดงข้อความหรือทำอะไรสักอย่างเมื่อไม่มี id
+    return;  // หยุดการทำงานหาก id ไม่มีค่า
+  }
+
+  switch (sectionKey) {
+    case "RECEIVED":
+      router.push(`/admin/edit/website-complaints/${id}`);
       break;
-    case STATUS.FORWARDED:
-      router.push("/admin/edit/forward-to-agency/");
+    case "FORWARDED":
+      router.push(`/admin/edit/forward-to-agency/${id}`);
       break;
-    case STATUS.INITIAL_NOTIFY:
-      router.push("/admin/edit/initial-notification-to-complainant-or-agency/");
+    case "INITIAL_NOTIFY":
+      router.push(`/admin/edit/initial-notification-to-complainant-or-agency/${id}`);
       break;
-    case STATUS.REQUEST_UPDATE:
-      router.push("/admin/edit/request-result-or-progress/");
+    case "REQUEST_UPDATE":
+      router.push(`/admin/edit/request-result-or-progress/${id}`);
       break;
-    case STATUS.AGENCY_REPORT:
-      router.push("/admin/edit/report/");
+    case "AGENCY_REPORT":
+      router.push(`/admin/edit/report/${id}`);
       break;
-    case STATUS.FINAL_NOTIFY:
-      router.push("/admin/edit/inform-related-parties/");
+    case "FINAL_NOTIFY":
+      router.push(`/admin/edit/inform-related-parties/${id}`);
       break;
     default:
-      console.error("Unrecognized section status:", sectionStatus);
       break;
   }
 };
@@ -160,6 +160,7 @@ const sections = [
     ],
     rows: [
       {
+        id: "1",
         ลำดับ: 1,
         "หน่วยงานหรือผู้ร้อง(ครั้งที่ส่ง)": "สำนักงานปลัดสำนักนายกรัฐมนตรี(1)",
         เลขที่หนังสือ: "กค.0203/416202",
@@ -169,6 +170,7 @@ const sections = [
         เอกสารแนบ: "หนังสือแจ้งผล",
       },
       {
+        id: "2",
         ลำดับ: 2,
         "หน่วยงานหรือผู้ร้อง(ครั้งที่ส่ง)": "นางสนิท หวันหาญ(1)",
         เลขที่หนังสือ: "กค.0203/416202",
@@ -194,6 +196,7 @@ const sections = [
     ],
     rows: [
       {
+        id: "1",
         ลำดับ: 1,
         "ส่งหน่วยงาน(ครั้งที่ส่ง)": "กรมสรรพากร(1)",
         เรื่อง: "ขอความเห็นการพิจารณา",
@@ -220,6 +223,7 @@ const sections = [
     ],
     rows: [
       {
+        id: "1",
         ลำดับ: 1,
         เลขที่หนังสือ: "กค.1006/3574",
         ลงวันที่: "15 มี.ค. 2568",
@@ -245,6 +249,7 @@ const sections = [
     ],
     rows: [
       {
+        id: "1",
         ลำดับ: 1,
         "ถึงหน่วยงาน / ผู้ร้อง / อื่นๆ (ครั้งที่แจ้งผล)": "กรมสรรพากร(1)",
         เลขที่หนังสือ: "กค.1302/3513",
@@ -399,8 +404,14 @@ const FollowComp = () => {
                             <IconButton
                               size="small"
                               onClick={() => {
-                                console.log("Going to edit with id:", row.id);
-                                handleManage(section.status, row.id, router); // ใช้ handleManage สำหรับกรณีนี้
+                                
+                                if (row.id) {
+                                  console.log("Going to edit with id:", row.id);
+                                  handleManage(section.key, row.id, router); // ใช้ handleManage สำหรับกรณีนี้
+                                  } else {
+                                  console.error("Error: ID is missing for this row.");
+                                  // แสดงข้อความแจ้งเตือนหรือทำอะไรที่ต้องการ
+                                }
                               }}
                               sx={{
                                 color: "#1976d2",
