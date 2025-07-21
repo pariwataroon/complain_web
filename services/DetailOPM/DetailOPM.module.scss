@@ -713,3 +713,57 @@
         font-size: 1rem;
     }
 }
+
+.commentsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.commentItem {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.commentHeader {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.commentMeta {
+    flex: 1;
+}
+
+.commentInfo {
+    display: flex;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.commentBody {
+    margin-left: 52px;
+    /* ขยับให้ตรงกับข้อความ */
+}
+
+.commentCard {
+    background-color: #fafafa;
+}
+
+.commentDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.detailItem {
+    display: flex;
+    align-items: center;
+}
+
+.attachmentList {
+    display: flex;
+    flex-direction: column;
+}
