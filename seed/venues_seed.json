@@ -100,6 +100,28 @@
       "is_active": true
     },
     {
+      "name": "สำนักงานรัฐมนตรี",
+      "short_name": "สรม.",
+      "code": "MINOFF",
+      "abbreviation": "สรม.",
+      "color_code": null,
+      "department_name": "กระทรวงการคลัง",
+      "group_name": "ส่วนราชการ",
+      "order_index": 10,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานปลัดกระทรวงการคลัง",
+      "short_name": "สป.",
+      "code": "OPS",
+      "abbreviation": "สป.",
+      "color_code": null,
+      "department_name": "กระทรวงการคลัง",
+      "group_name": "ส่วนราชการ",
+      "order_index": 11,
+      "is_active": true
+    },
+    {
       "name": "ธนาคารออมสิน",
       "short_name": "GSB",
       "code": "GSB",
@@ -229,6 +251,17 @@
       "department_name": "กระทรวงการคลัง",
       "group_name": "รัฐวิสาหกิจ",
       "order_index": 12,
+      "is_active": true
+    },
+    {
+      "name": "ธนาคารกรุงไทย จำกัด (มหาชน)",
+      "short_name": "KTB",
+      "code": "KTB",
+      "abbreviation": "KTB",
+      "color_code": null,
+      "department_name": "กระทรวงการคลัง",
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 13,
       "is_active": true
     },
     {
