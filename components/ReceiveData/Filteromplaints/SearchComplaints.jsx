@@ -1711,7 +1711,7 @@ const SearchComplaints = () => {
                           }
                           disabled
                           className={styles.disabledTextarea}
-                          {...step4Methods.register("additionalDescription")}
+                          {...step3Methods.register("description")}
                         />
                       </div>
 

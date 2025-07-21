@@ -176,6 +176,7 @@ function mapComplaintData(raw) {
       phone: raw.step2?.general?.government?.phone || "",
     },
     complaint: {
+      id: raw.id || raw.complaint?.id || "",
       complaintType: raw.step3?.general?.complaintType || "",
       subject: raw.step3?.general?.subject || raw.subject || "",
       channel: raw.assignment_form?.complaint_channel_name || "",
@@ -193,24 +194,35 @@ function mapComplaintData(raw) {
 
 const ComplaintDetail = () => {
   const router = useRouter();
-  const { id } = router.query;
-  const [data, setData] = useState(mockupData);
+  const { id } = router.query;  // ดึง id จาก URL query
+  const [data, setData] = useState(mockupData);  // ค่าเริ่มต้น
 
   const handleSubmit = () => {
-    router.push("/admin/edit/search/");
+    router.push(`/admin/edit/website-complaints/${id}`);  // ส่งไปหน้าแก้ไข
   };
+
   useEffect(() => {
     if (!id) return;
+
     const fetchData = async () => {
-      const res = await GetComplaintByID(id);
-      console.log("res?.res_data", res?.res_data);
-      setData(mapComplaintData(res?.res_data));
+      try {
+        const res = await GetComplaintByID(id); // ดึงข้อมูลจาก API
+        console.log("Fetched data: ", res?.res_data);  // ตรวจสอบข้อมูลที่ได้จาก API
+        setData(mapComplaintData(res?.res_data));  // ใช้ mapComplaintData เพื่อแปลงข้อมูล
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
     };
+
     fetchData();
   }, [id]);
 
-  // ใช้ mockupData เสมอ (สำหรับ dev/mock)
+  if (!id) return <div>No Complaint ID</div>;
+
   return <ComplaintSummaryService data={data} handleSubmit={handleSubmit} />;
 };
 
 export default ComplaintDetail;
+
+
+

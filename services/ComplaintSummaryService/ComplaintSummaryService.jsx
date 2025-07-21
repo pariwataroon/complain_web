@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState   } from "react";
 import {
     Box,
     Paper,
@@ -23,6 +23,26 @@ import CheckIcon from "@mui/icons-material/Check";
 import UploadOutlinedIcon from "@mui/icons-material/UploadOutlined";
 
 const ComplaintSummaryService = ({ data = {}, handleSubmit = {} }) => {
+  const router = useRouter();
+  const [complaintId, setComplaintId] = useState(null);
+
+  // เช็คว่ามี 'complaint.id' ใน data หรือไม่
+  useEffect(() => {
+    if (data?.complaint?.id) {
+      setComplaintId(data?.complaint?.id); // ใช้ complaint.id
+    } else {
+      // console.error("Complaint ID is missing in the data.");
+    }
+  }, [data]);
+
+  const handleEdit = () => {
+    if (complaintId) {
+      console.log("Navigating to:", `/admin/edit/website-complaints/${complaintId}`);
+      router.push(`/admin/edit/website-complaints/${complaintId}`);
+    } else {
+      console.error("Complaint ID is missing.");
+    }
+  };
   const pdfRef = useRef();
   const {
     complainant = {},
@@ -65,7 +85,7 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {} }) => {
 
     const getFileExt = (filename) => filename.slice(filename.lastIndexOf(".")).toLowerCase();
 
-    const router = useRouter();
+    // const router = useRouter();
 
   return (
     <Box>
@@ -328,7 +348,7 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {} }) => {
                 label="แก้ไข"
                 color="แก้ไข"
                 variant="outlined"
-                // onClick={handleBack}
+                onClick={handleEdit}
                 iconLeft={<EditOutlinedIcon />}
                 />
                 <ButtonService

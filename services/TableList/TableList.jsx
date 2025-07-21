@@ -39,7 +39,7 @@ const TableList = ({
   /* ฟิลเตอร์ที่ผู้ใช้กรอก (จะส่งกลับเมื่อกดค้นหา) */
   const [filters, setFilters] = useState({
     claimantName: "",
-    citizenId: "",
+    // citizenId: "",
     subject: "",
     docGov: "",
     agency: "",
@@ -77,7 +77,7 @@ const TableList = ({
   const handleClearSearch = () => {
     const cleared = {
       claimantName: "",
-      citizenId: "",
+      // citizenId: "",
       subject: "",
       docGov: "",
       agency: "",
@@ -117,7 +117,7 @@ const TableList = ({
   const exportLabel = [
     "ลำดับ",
     "ชื่อผู้ร้อง",
-    "บัตรประชาชน",
+    // "บัตรประชาชน",
     "ชื่อเรื่อง",
     "เลขที่สป.กค.",
     "เลขที่สป.สร.",
@@ -129,7 +129,7 @@ const TableList = ({
   const exportData = data.map((item, idx) => [
     idx + 1,
     item?.name ?? "-",
-    formatCitizenId_null(item?.citizenId ?? "-"),
+    // formatCitizenId_null(item?.citizenId ?? "-"),
     item?.subject ?? "-",
     item?.docKk ?? "-",
     item?.docSr ?? "-",
@@ -188,13 +188,13 @@ const TableList = ({
                 onChange={handleChange("claimantName")}
                 onKeyPress={handleKeyPress}
               />
-              <InputText
+              {/* <InputText
                 label="เลขบัตรประชาชน"
                 inputLabel="กรอกเลขบัตรประชาชน"
                 value={filters.citizenId}
                 onChange={handleChange("citizenId")}
                 onKeyPress={handleKeyPress}
-              />
+              /> */}
               <InputText
                 label="ชื่อเรื่อง"
                 inputLabel="กรอกชื่อเรื่อง"
@@ -373,13 +373,13 @@ const TableList = ({
                 onChange={handleChange("claimantName")}
                 onKeyPress={handleKeyPress}
               />
-              <InputText
+              {/* <InputText
                 label="เลขบัตรประชาชน"
                 inputLabel="กรอกเลขบัตรประชาชน"
                 value={filters.citizenId}
                 onChange={handleChange("citizenId")}
                 onKeyPress={handleKeyPress}
-              />
+              /> */}
               <InputText
                 label="ชื่อเรื่อง"
                 inputLabel="กรอกชื่อเรื่อง"
@@ -497,9 +497,9 @@ const TableList = ({
               <TableCell sx={{ width: 200, fontWeight: "bold" }}>
                 ชื่อผู้ร้อง
               </TableCell>
-              <TableCell sx={{ width: 180, fontWeight: "bold" }}>
+              {/* <TableCell sx={{ width: 180, fontWeight: "bold" }}>
                 บัตรประชาชน
-              </TableCell>
+              </TableCell> */}
               <TableCell sx={{ width: 300, fontWeight: "bold" }}>
                 ชื่อเรื่อง
               </TableCell>
@@ -537,9 +537,9 @@ const TableList = ({
                     {page * rowsPerPage + idx + 1}
                   </TableCell>
                   <TableCell>{item?.name ?? "-"}</TableCell>
-                  <TableCell>
+                  {/* <TableCell>
                     {formatCitizenId_null(item?.citizenId ?? "-")}
-                  </TableCell>
+                  </TableCell> */}
                   <TableCell className={styles.ellipsisCell}>
                     {item?.subject ?? "-"}
                   </TableCell>
