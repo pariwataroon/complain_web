@@ -244,7 +244,7 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
                     if (xmlString) {
                         const match = xmlString.match(/<AddOperatingResult>(.*?)<\/AddOperatingResult>/);
                         if (match && match[1]) {
-                            const rawResult = match[1].replace(/"/g, ''); // Remove quotes
+                            const rawResult = match[1].replace(/"/g, '');
                             if (rawResult.includes("Result:")) {
                                 const resultMatch = rawResult.match(/Result:([A-F0-9]+)/i);
                                 if (resultMatch && resultMatch[1]) {

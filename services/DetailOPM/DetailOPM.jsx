@@ -16,7 +16,6 @@ import {
     StepLabel,
     StepContent,
     IconButton,
-    Button,
 } from "@mui/material";
 import {
     Assignment as AssignmentIcon,
@@ -36,20 +35,24 @@ import {
     AccountBox as AccountBoxIcon,
     PersonOutline as PersonOutlineIcon,
 } from "@mui/icons-material";
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import ImageIcon from '@mui/icons-material/Image';
+import DownloadIcon from '@mui/icons-material/Download';
 import ButtonSent from "@services/ButtonSent/ButtonSent";
 import CombinedReportModal from "./CombinedReportModal";
 import styles from "./DetailOPM.module.scss";
 import useDetailOPMData from "@hooks/admin/opm/useDetailOPMData";
+import { formatThaiOfficialDateTime } from "@utils/Formats";
 
 const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails, loading, formatDate, itemData }) => {
     const theme = useTheme();
     const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
-    
+
     const [reportModalOpen, setReportModalOpen] = useState(false);
     console.log({ operatingsDetails });
-    
+
     const {
         compiledData,
         isDataReady,
@@ -81,18 +84,14 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
         alert(`${title}\n\n${message}`);
     };
 
-    
-    
+
+
 
     useEffect(() => {
         if (isDataReady) {
-            
             const mainInfo = getSectionData('main_information');
             const accountData = getAccountData();
             const customerData = getCustomerData();
-
-            
-
             if (opmChannelId && !autoCreateAttempted && !isCreating) {
             }
         }
@@ -213,7 +212,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                 </Typography>
             </Box>
 
-            
+
             {/* Main Information Card */}
             <Card className={styles.mainCard}>
                 <CardContent className={styles.cardContent}>
@@ -555,7 +554,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
             )}
 
 
-            
+
 
             {/* Process Steps Card */}
             <Card className={styles.timelineCard}>
@@ -686,146 +685,114 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Typography>
                         </Box>
                     ) : (
-                        <Stepper orientation="vertical" className={styles.stepper}>
+                        <Box className={styles.commentsContainer}>
                             {operatingsDetails.map((operation, index) => (
-                                <Step key={operation.id || index} active={true} completed={operation.status_text === "ดำเนินการแล้ว"}>
-                                    <StepLabel
-                                        icon={
-                                            <Avatar
-                                                className={styles.stepAvatar}
-                                                sx={{
-                                                    bgcolor: theme.palette[getStatusColor(operation.status_text)]?.main || '#1976d2'
-                                                }}
-                                            >
-                                                {operation.line || index + 1}
-                                            </Avatar>
-                                        }
-                                    >
-                                        <Typography variant="h6" className={styles.stepTitle}>
-                                            ขั้นตอนที่ {operation.line || index + 1}: {operation.operating_type_text}
-                                        </Typography>
-                                    </StepLabel>
-                                    <StepContent>
-                                        <Card className={styles.stepCard}>
-                                            <CardContent className={styles.stepContent}>
-                                                {/* รหัสดำเนินการ */}
-                                                <Box className={styles.stepInfo}>
-                                                    <BusinessIcon className={styles.stepIcon} />
-                                                    <Box>
-                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                            รหัสดำเนินการ
+                                <Box key={operation.id || index} className={styles.commentItem}>
+                                    {/* Comment Header */}
+                                    <Box className={styles.commentHeader}>
+                                        <Avatar
+                                            className={styles.commentAvatar}
+                                            sx={{
+                                                bgcolor: theme.palette[getStatusColor(operation.status_text)]?.main || '#1976d2',
+                                                width: 40,
+                                                height: 40
+                                            }}
+                                        >
+                                            {operation.line || index + 1}
+                                        </Avatar>
+                                        <Box className={styles.commentMeta}>
+                                            <Typography variant="subtitle1" className={styles.commentTitle}>
+                                                ขั้นตอนที่ {operation.line || index + 1}: {operation.operating_type_text}
+                                            </Typography>
+                                            <Box className={styles.commentInfo}>
+                                                <Typography variant="caption" className={styles.commentAuthor}>
+                                                    {operation.created_by_text || operation.officer_text || 'ไม่ระบุผู้ปฏิบัติ'}
+                                                </Typography>
+                                                {operation.ShowDateTime && (
+                                                    <>
+                                                        <Typography variant="caption" sx={{ mx: 1 }}>•</Typography>
+                                                        <Typography variant="caption" className={styles.commentTime}>
+                                                            {operation.ShowDateTime}
                                                         </Typography>
-                                                        <Typography variant="body1" className={styles.stepValue}>
-                                                            {operation.operating_code || 'ไม่ระบุ'}
-                                                        </Typography>
-                                                    </Box>
-                                                </Box>
-
-                                                {/* ประเภทการดำเนินการ */}
-                                                <Box className={styles.stepInfo}>
-                                                    <CategoryIcon className={styles.stepIcon} />
-                                                    <Box>
-                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                            ประเภทการดำเนินการ
-                                                        </Typography>
-                                                        <Typography variant="body1" className={styles.stepValue}>
-                                                            {operation.operating_type_text || 'ไม่ระบุ'}
-                                                        </Typography>
-                                                    </Box>
-                                                </Box>
-
-                                                {/* วัตถุประสงค์ */}
-                                                {operation.operating_objective_text && (
-                                                    <Box className={styles.stepInfo}>
-                                                        <InfoIcon className={styles.stepIcon} />
-                                                        <Box>
-                                                            <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                                วัตถุประสงค์
-                                                            </Typography>
-                                                            <Typography variant="body1" className={styles.stepValue}>
-                                                                {operation.operating_objective_text}
-                                                            </Typography>
-                                                        </Box>
-                                                    </Box>
+                                                    </>
                                                 )}
+                                                <Chip
+                                                    label={operation.status_text || 'ไม่ระบุสถานะ'}
+                                                    color={getStatusColor(operation.status_text)}
+                                                    size="small"
+                                                    icon={getStatusIcon(operation.status_text)}
+                                                    sx={{ ml: 2, height: 20 }}
+                                                />
+                                            </Box>
+                                        </Box>
+                                    </Box>
 
-                                                {/* หน่วยงาน */}
-                                                <Box className={styles.stepInfo}>
-                                                    <BusinessIcon className={styles.stepIcon} />
-                                                    <Box>
-                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                            หน่วยงาน
-                                                        </Typography>
-                                                        <Typography variant="body1" className={styles.stepValue}>
-                                                            {operation.org_text || 'ไม่ระบุหน่วยงาน'}
-                                                        </Typography>
-                                                    </Box>
-                                                </Box>
-
-                                                {/* เจ้าหน้าที่ปฏิบัติ */}
-                                                {operation.officer_text && (
-                                                    <Box className={styles.stepInfo}>
-                                                        <PersonIcon className={styles.stepIcon} />
-                                                        <Box>
-                                                            <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                                เจ้าหน้าที่ปฏิบัติ
-                                                            </Typography>
-                                                            <Typography variant="body1" className={styles.stepValue}>
-                                                                {operation.officer_text}
-                                                            </Typography>
-                                                        </Box>
-                                                    </Box>
-                                                )}
-
-                                                {/* สถานะ */}
-                                                <Box className={styles.stepInfo}>
-                                                    <Box className={styles.statusContainer}>
-                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                            สถานะ
-                                                        </Typography>
-                                                        <Chip
-                                                            label={operation.status_text || 'ไม่ระบุสถานะ'}
-                                                            color={getStatusColor(operation.status_text)}
-                                                            className={styles.statusChip}
-                                                            size="small"
-                                                            icon={getStatusIcon(operation.status_text)}
-                                                        />
-                                                    </Box>
-                                                </Box>
-
-                                                {/* วันที่ดำเนินการ */}
-                                                {operation.operating_date && (
-                                                    <Box className={styles.stepInfo}>
-                                                        <DateRangeIcon className={styles.stepIcon} />
-                                                        <Box>
-                                                            <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                                วันที่ดำเนินการ
-                                                            </Typography>
-                                                            <Typography variant="body1" className={styles.stepValue}>
-                                                                {formatDate(operation.operating_date)}
-                                                            </Typography>
-                                                        </Box>
-                                                    </Box>
-                                                )}
-
-                                                {/* รายละเอียด */}
+                                    {/* Comment Body */}
+                                    <Box className={styles.commentBody}>
+                                        <Card className={styles.commentCard} variant="outlined">
+                                            <CardContent className={styles.commentContent}>
+                                                {/* รายละเอียดหลัก */}
                                                 {operation.detail && (
-                                                    <Box className={styles.summaryResult}>
-                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                            รายละเอียดการดำเนินงาน
-                                                        </Typography>
-                                                        <Typography variant="body2" className={styles.summaryText}>
-                                                            {operation.detail}
+                                                    <Typography variant="body1" className={styles.commentText} sx={{ mb: 2 }}>
+                                                        {operation.detail}
+                                                    </Typography>
+                                                )}
+
+                                                {/* ข้อมูลเพิ่มเติม */}
+                                                <Box className={styles.commentDetails}>
+                                                    {/* รหัสดำเนินการ */}
+                                                    {operation.operating_code && (
+                                                        <Box className={styles.detailItem}>
+                                                            <BusinessIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                รหัส: {operation.operating_code}
+                                                            </Typography>
+                                                        </Box>
+                                                    )}
+
+                                                    {/* หน่วยงาน */}
+                                                    <Box className={styles.detailItem}>
+                                                        <BusinessIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            หน่วยงาน: {operation.org_text || 'ไม่ระบุ'}
                                                         </Typography>
                                                     </Box>
-                                                )}
+
+                                                    {/* วัตถุประสงค์ */}
+                                                    {operation.operating_objective_text && (
+                                                        <Box className={styles.detailItem}>
+                                                            <InfoIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                วัตถุประสงค์: {operation.operating_objective_text}
+                                                            </Typography>
+                                                        </Box>
+                                                    )}
+
+                                                    {/* วันที่ดำเนินการ */}
+                                                    {operation.operating_date && (
+                                                        <Box className={styles.detailItem}>
+                                                            <DateRangeIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                วันที่ดำเนินการ: {formatThaiOfficialDateTime(operation.operating_date)}
+                                                            </Typography>
+                                                        </Box>
+                                                    )}
+
+                                                    {/* ช่องทางการดำเนินการ */}
+                                                    {operation.operating_channel_text && (
+                                                        <Box className={styles.detailItem}>
+                                                            <InfoIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ช่องทาง: {operation.operating_channel_text}
+                                                            </Typography>
+                                                        </Box>
+                                                    )}
+                                                </Box>
 
                                                 {/* ไฟล์แนบ */}
                                                 {(() => {
-                                                    // หาไฟล์แนบที่ตรงกับ operation นี้
                                                     const operationAttachments = operation.attachments || [];
                                                     const attachmentDetails = operationAttachments.map(att => {
-                                                        // หาข้อมูลไฟล์แนบจาก attachmentsDetails ที่ดึงมาแล้ว
                                                         const detailedAttachment = attachmentsDetails?.find(detail =>
                                                             detail.attachment_id === att.attachment_id
                                                         );
@@ -833,79 +800,180 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                                     });
 
                                                     return attachmentDetails.length > 0 ? (
-                                                        <Box className={styles.attachmentSection}>
-                                                            <Typography variant="subtitle2" className={styles.stepLabel}>
+                                                        <Box className={styles.attachmentSection} sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                                                <AttachFileIcon sx={{ fontSize: 16, mr: 0.5 }} />
                                                                 ไฟล์แนบ ({attachmentDetails.length} ไฟล์)
                                                             </Typography>
-                                                            {attachmentDetails.map((file, fileIndex) => {
-                                                                let fileUrl = "#";
-                                                                if (file.file_content) {
-                                                                    if (file.file_type === "application/pdf") {
-                                                                        fileUrl = `data:application/pdf;base64,${file.file_content}`;
-                                                                    } else if (file.file_type?.startsWith("image/")) {
-                                                                        fileUrl = `data:${file.file_type};base64,${file.file_content}`;
-                                                                    } else {
-                                                                        fileUrl = `data:application/octet-stream;base64,${file.file_content}`;
-                                                                    }
-                                                                }
+                                                            <Box className={styles.attachmentList}>
+                                                                {attachmentDetails.map((file, fileIndex) => {
+                                                                    let fileUrl = "#";
+                                                                    let isImage = false;
+                                                                    let isPdf = false;
 
-                                                                return (
-                                                                    <Box key={file.attachment_id || fileIndex} className={styles.attachmentItem} sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
-                                                                        <AttachFileIcon sx={{ fontSize: 16 }} />
-                                                                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                                                                            {file.file_name || `ไฟล์แนบ ${fileIndex + 1}`}
-                                                                        </Typography>
-                                                                        {file.file_description && (
-                                                                            <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-                                                                                ({file.file_description})
-                                                                            </Typography>
-                                                                        )}
-                                                                        {file.file_content && (
-                                                                            <a
-                                                                                href={fileUrl}
-                                                                                target="_blank"
-                                                                                rel="noopener noreferrer"
-                                                                                style={{ marginLeft: 8, color: "#1976d2", textDecoration: "underline", fontWeight: 500 }}
-                                                                                download={file.file_name}
-                                                                            >
-                                                                                ดาวน์โหลด
-                                                                            </a>
-                                                                        )}
-                                                                    </Box>
-                                                                );
-                                                            })}
+                                                                    if (file.file_content) {
+                                                                        if (file.file_type === "application/pdf") {
+                                                                            fileUrl = `data:application/pdf;base64,${file.file_content}`;
+                                                                            isPdf = true;
+                                                                        } else if (file.file_type?.startsWith("image/")) {
+                                                                            fileUrl = `data:${file.file_type};base64,${file.file_content}`;
+                                                                            isImage = true;
+                                                                        } else {
+                                                                            fileUrl = `data:application/octet-stream;base64,${file.file_content}`;
+                                                                        }
+                                                                    }
+
+                                                                    return (
+                                                                        <Box key={file.attachment_id || fileIndex} className={styles.attachmentItem} sx={{ mb: 1 }}>
+                                                                            {/* ไฟล์ที่ไม่ใช่รูปภาพ */}
+                                                                            {!isImage && (
+                                                                                <Box sx={{
+                                                                                    display: "flex",
+                                                                                    alignItems: "center",
+                                                                                    gap: 1,
+                                                                                    p: 1,
+                                                                                    borderRadius: 1,
+                                                                                    bgcolor: 'grey.50',
+                                                                                    border: '1px solid',
+                                                                                    borderColor: 'grey.200'
+                                                                                }}>
+                                                                                    {isPdf ? (
+                                                                                        <PictureAsPdfIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                                                                                    ) : (
+                                                                                        <AttachFileIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                                                                    )}
+                                                                                    <Box sx={{ flex: 1 }}>
+                                                                                        <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.8rem' }}>
+                                                                                            {file.file_name || `ไฟล์แนบ ${fileIndex + 1}`}
+                                                                                        </Typography>
+                                                                                        {file.file_description && (
+                                                                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                                                                                {file.file_description}
+                                                                                            </Typography>
+                                                                                        )}
+                                                                                    </Box>
+                                                                                    {file.file_content && (
+                                                                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                                                                            <a
+                                                                                                href={fileUrl}
+                                                                                                target="_blank"
+                                                                                                rel="noopener noreferrer"
+                                                                                                style={{
+                                                                                                    color: "#1976d2",
+                                                                                                    textDecoration: "none",
+                                                                                                    fontWeight: 500,
+                                                                                                    fontSize: '0.75rem'
+                                                                                                }}
+                                                                                                download={file.file_name}
+                                                                                            >
+                                                                                                ดาวน์โหลด
+                                                                                            </a>
+                                                                                        </Box>
+                                                                                    )}
+                                                                                </Box>
+                                                                            )}
+
+                                                                            {/* ไฟล์รูปภาพ - แสดง preview */}
+                                                                            {isImage && (
+                                                                                <Box sx={{
+                                                                                    border: '1px solid',
+                                                                                    borderColor: 'grey.200',
+                                                                                    borderRadius: 2,
+                                                                                    overflow: 'hidden',
+                                                                                    bgcolor: 'white'
+                                                                                }}>
+                                                                                    {/* Image Preview */}
+                                                                                    <Box sx={{
+                                                                                        position: 'relative',
+                                                                                        maxWidth: '100%',
+                                                                                        maxHeight: 300,
+                                                                                        overflow: 'hidden',
+                                                                                        cursor: 'pointer'
+                                                                                    }}
+                                                                                        onClick={() => window.open(fileUrl, '_blank')}
+                                                                                    >
+                                                                                        <img
+                                                                                            src={fileUrl}
+                                                                                            alt={file.file_name || `รูปภาพ ${fileIndex + 1}`}
+                                                                                            style={{
+                                                                                                width: '100%',
+                                                                                                height: 'auto',
+                                                                                                maxHeight: '300px',
+                                                                                                objectFit: 'cover',
+                                                                                                display: 'block'
+                                                                                            }}
+                                                                                            onError={(e) => {
+                                                                                                e.target.style.display = 'none';
+                                                                                                e.target.nextSibling.style.display = 'flex';
+                                                                                            }}
+                                                                                        />
+                                                                                        {/* Fallback for broken images */}
+                                                                                        <Box sx={{
+                                                                                            display: 'none',
+                                                                                            alignItems: 'center',
+                                                                                            justifyContent: 'center',
+                                                                                            height: 100,
+                                                                                            bgcolor: 'grey.100',
+                                                                                            color: 'text.secondary'
+                                                                                        }}>
+                                                                                            <ImageIcon sx={{ fontSize: 32 }} />
+                                                                                            <Typography variant="caption" sx={{ ml: 1 }}>
+                                                                                                ไม่สามารถแสดงรูปภาพได้
+                                                                                            </Typography>
+                                                                                        </Box>
+                                                                                    </Box>
+
+                                                                                    {/* Image Info Bar */}
+                                                                                    <Box sx={{
+                                                                                        p: 1.5,
+                                                                                        bgcolor: 'grey.50',
+                                                                                        display: 'flex',
+                                                                                        alignItems: 'center',
+                                                                                        justifyContent: 'space-between'
+                                                                                    }}>
+                                                                                        <Box>
+                                                                                            <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.8rem' }}>
+                                                                                                {file.file_name || `รูปภาพ ${fileIndex + 1}`}
+                                                                                            </Typography>
+                                                                                            {file.file_description && (
+                                                                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                                                                                    {file.file_description}
+                                                                                                </Typography>
+                                                                                            )}
+                                                                                        </Box>
+                                                                                        {file.file_content && (
+                                                                                            <Box sx={{ display: 'flex', gap: 1 }}>
+
+                                                                                                <a
+                                                                                                    href={fileUrl}
+                                                                                                    download={file.file_name}
+                                                                                                    style={{ textDecoration: 'none' }}
+                                                                                                >
+                                                                                                    <IconButton
+                                                                                                        size="small"
+                                                                                                        title="ดาวน์โหลด"
+                                                                                                    >
+                                                                                                        <DownloadIcon sx={{ fontSize: 16 }} />
+                                                                                                    </IconButton>
+                                                                                                </a>
+                                                                                            </Box>
+                                                                                        )}
+                                                                                    </Box>
+                                                                                </Box>
+                                                                            )}
+                                                                        </Box>
+                                                                    );
+                                                                })}
+                                                            </Box>
                                                         </Box>
                                                     ) : null;
                                                 })()}
-
-                                                {/* ช่องทางการดำเนินการ */}
-                                                {operation.operating_channel_text && (
-                                                    <Box className={styles.stepInfo}>
-                                                        <InfoIcon className={styles.stepIcon} />
-                                                        <Box>
-                                                            <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                                ช่องทางการดำเนินการ
-                                                            </Typography>
-                                                            <Typography variant="body1" className={styles.stepValue}>
-                                                                {operation.operating_channel_text}
-                                                            </Typography>
-                                                        </Box>
-                                                    </Box>
-                                                )}
-
-                                                {/* ข้อมูลการสร้าง */}
-                                                <Box className={styles.createdBy}>
-                                                    <Typography variant="caption" className={styles.createdByText}>
-                                                        สร้างโดย: {operation.created_by_text || 'ไม่ระบุ'}
-                                                        {operation.ShowDateTime && ` | ${operation.ShowDateTime}`}
-                                                    </Typography>
-                                                </Box>
                                             </CardContent>
                                         </Card>
-                                    </StepContent>
-                                </Step>
+                                    </Box>
+                                </Box>
                             ))}
-                        </Stepper>
+                        </Box>
                     )}
                 </CardContent>
             </Card>
