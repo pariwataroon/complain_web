@@ -1,30 +1,21 @@
 {
   "departments": [
     {
-      "name": "ธนาคารแห่งประเทศไทย",
-      "short_name": "ธปท.",
-      "code": "BOT",
-      "parent_name": null,
-      "group_name": "อื่น ๆ",
-      "order_index": 1,
-      "is_active": true
-    },
-    {
       "name": "กรมธนารักษ์",
       "short_name": "ธร.",
       "code": "TRD",
       "parent_name": null,
       "group_name": "ส่วนราชการ",
-      "order_index": 2,
+      "order_index": 1,
       "is_active": true
     },
     {
       "name": "กรมบัญชีกลาง",
-      "short_name": "บก.",
+      "short_name": "บช.",
       "code": "CGD",
       "parent_name": null,
       "group_name": "ส่วนราชการ",
-      "order_index": 3,
+      "order_index": 2,
       "is_active": true
     },
     {
@@ -33,16 +24,16 @@
       "code": "CUS",
       "parent_name": null,
       "group_name": "ส่วนราชการ",
-      "order_index": 4,
+      "order_index": 3,
       "is_active": true
     },
     {
       "name": "กรมสรรพสามิต",
       "short_name": "สส.",
-      "code": "ED",
+      "code": "EXD",
       "parent_name": null,
       "group_name": "ส่วนราชการ",
-      "order_index": 5,
+      "order_index": 4,
       "is_active": true
     },
     {
@@ -51,7 +42,7 @@
       "code": "RD",
       "parent_name": null,
       "group_name": "ส่วนราชการ",
-      "order_index": 6,
+      "order_index": 5,
       "is_active": true
     },
     {
@@ -60,7 +51,7 @@
       "code": "SEPO",
       "parent_name": null,
       "group_name": "ส่วนราชการ",
-      "order_index": 7,
+      "order_index": 6,
       "is_active": true
     },
     {
@@ -69,7 +60,7 @@
       "code": "PDMO",
       "parent_name": null,
       "group_name": "ส่วนราชการ",
-      "order_index": 8,
+      "order_index": 7,
       "is_active": true
     },
     {
@@ -78,16 +69,241 @@
       "code": "FPO",
       "parent_name": null,
       "group_name": "ส่วนราชการ",
+      "order_index": 8,
+      "is_active": true
+    },
+    {
+      "name": "สถาบันวิจัยนโยบายเศรษฐกิจการคลัง",
+      "short_name": "สวค.",
+      "code": "FPRI",
+      "parent_name": null,
+      "group_name": "ส่วนราชการ",
       "order_index": 9,
       "is_active": true
     },
     {
       "name": "ธนาคารออมสิน",
-      "short_name": "ออมสิน",
+      "short_name": "GSB",
       "code": "GSB",
       "parent_name": null,
       "group_name": "รัฐวิสาหกิจ",
       "order_index": 10,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานสลากกินแบ่งรัฐบาล",
+      "short_name": "GLO",
+      "code": "GLO",
+      "parent_name": null,
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 11,
+      "is_active": true
+    },
+    {
+      "name": "การยาสูบแห่งประเทศไทย",
+      "short_name": "ยสท.",
+      "code": "TOAT",
+      "parent_name": null,
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 12,
+      "is_active": true
+    },
+    {
+      "name": "โรงงานไพ่",
+      "short_name": "รงพ.",
+      "code": "PCARD",
+      "parent_name": null,
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 13,
+      "is_active": true
+    },
+    {
+      "name": "ธนาคารอาคารสงเคราะห์",
+      "short_name": "ธอส.",
+      "code": "GHB",
+      "parent_name": null,
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 14,
+      "is_active": true
+    },
+    {
+      "name": "องค์การสุรา",
+      "short_name": "อส.",
+      "code": "LIQ",
+      "parent_name": null,
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 15,
+      "is_active": true
+    },
+    {
+      "name": "ธนาคารเพื่อการเกษตรและสหกรณ์การเกษตร",
+      "short_name": "ธ.ก.ส.",
+      "code": "BAAC",
+      "parent_name": null,
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 16,
+      "is_active": true
+    },
+    {
+      "name": "ธนาคารเพื่อการส่งออกและนำเข้าแห่งประเทศไทย",
+      "short_name": "ธสน.",
+      "code": "EXIM",
+      "parent_name": null,
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 17,
+      "is_active": true
+    },
+    {
+      "name": "ธนาคารพัฒนาวิสาหกิจขนาดกลางและขนาดย่อมแห่งประเทศไทย",
+      "short_name": "ธพว.",
+      "code": "SMEB",
+      "parent_name": null,
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 18,
+      "is_active": true
+    },
+    {
+      "name": "บรรษัทประกันสินเชื่ออุตสาหกรรมขนาดย่อม",
+      "short_name": "บสย.",
+      "code": "TCG",
+      "parent_name": null,
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 19,
+      "is_active": true
+    },
+    {
+      "name": "บริษัท ธนารักษ์พัฒนาสินทรัพย์ จำกัด",
+      "short_name": "ธพส.",
+      "code": "DAD",
+      "parent_name": null,
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 20,
+      "is_active": true
+    },
+    {
+      "name": "ธนาคารอิสลามแห่งประเทศไทย",
+      "short_name": "ธอท.",
+      "code": "IBANK",
+      "parent_name": null,
+      "group_name": "รัฐวิสาหกิจ",
+      "order_index": 21,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานคณะกรรมการกำกับและส่งเสริมการประกอบธุรกิจประกันภัย",
+      "short_name": "คปภ.",
+      "code": "OIC",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 22,
+      "is_active": true
+    },
+    {
+      "name": "กองทุนเงินให้กู้ยืมเพื่อการศึกษา",
+      "short_name": "กยศ.",
+      "code": "SLF",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 23,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานคณะกรรมการกำกับหลักทรัพย์และตลาดหลักทรัพย์",
+      "short_name": "กลต.",
+      "code": "SEC",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 24,
+      "is_active": true
+    },
+    {
+      "name": "กองทุนบำเหน็จบำนาญข้าราชการ",
+      "short_name": "กบข.",
+      "code": "GPF",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 25,
+      "is_active": true
+    },
+    {
+      "name": "สถาบันคุ้มครองเงินฝาก",
+      "short_name": "สคฝ.",
+      "code": "DPA",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 26,
+      "is_active": true
+    },
+    {
+      "name": "กองทุนการออมแห่งชาติ",
+      "short_name": "กอช.",
+      "code": "NSF",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 27,
+      "is_active": true
+    },
+    {
+      "name": "ธนาคารแห่งประเทศไทย",
+      "short_name": "ธปท.",
+      "code": "BOT",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 28,
+      "is_active": true
+    },
+    {
+      "name": "บริษัท บริหารสินทรัพย์กรุงเทพพาณิชย์ จำกัด",
+      "short_name": "BAM",
+      "code": "BAM",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 29,
+      "is_active": true
+    },
+    {
+      "name": "บริษัท บริหารสินทรัพย์สุขุมวิท จำกัด",
+      "short_name": "SAM",
+      "code": "SAM",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 30,
+      "is_active": true
+    },
+    {
+      "name": "บริษัท บริหารสินทรัพย์ เจ จำกัด",
+      "short_name": "JAM",
+      "code": "JAM",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 31,
+      "is_active": true
+    },
+    {
+      "name": "บริษัท บริหารสินทรัพย์ ธนาคารอิสลามแห่งประเทศไทย จำกัด",
+      "short_name": "ธอท.",
+      "code": "IAM",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 32,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานความร่วมมือพัฒนาเศรษฐกิจกับประเทศเพื่อนบ้าน (องค์การมหาชน)",
+      "short_name": "สพพ.",
+      "code": "NEDA",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 33,
+      "is_active": true
+    },
+    {
+      "name": "อื่น ๆ",
+      "short_name": "อื่นๆ",
+      "code": "OTHER",
+      "parent_name": null,
+      "group_name": "หน่วยงานในกำกับ/อื่นๆ",
+      "order_index": 34,
       "is_active": true
     }
   ]
