@@ -102,6 +102,7 @@ const getDocumentIcon = () => (
 const sections = [
   {
     key: "RECEIVED",
+    status: STATUS.RECEIVED,
     title: "รับเรื่องราวร้องทุกข์",
     headers: [
       "ลำดับ",
@@ -164,6 +165,7 @@ const sections = [
   },
   {
     key: "INITIAL_NOTIFY",
+    title: "แจ้งผู้ร้องเรียน / ส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น",
     title: "แจ้งผู้ร้องเรียนส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น",
     headers: [
       "ลำดับ",
@@ -200,6 +202,7 @@ const sections = [
   },
   {
     key: "REQUEST_UPDATE",
+    status: STATUS.REQUEST_UPDATE,
     title: "ขอทราบผลการพิจารณา / ผลความคืบหน้า",
     headers: [
       "ลำดับ",
@@ -226,6 +229,7 @@ const sections = [
   },
   {
     key: "AGENCY_REPORT",
+    status: STATUS.AGENCY_REPORT,
     title: "หนังสือแจ้งผลพิจารณาหน่วยงาน",
     headers: [
       "ลำดับ",
@@ -254,6 +258,7 @@ const sections = [
   },
   {
     key: "FINAL_NOTIFY",
+    status: STATUS.FINAL_NOTIFY,
     title: "แจ้งผลการให้ผู้เกี่ยวข้องทราบ",
     headers: [
       "ลำดับ",
@@ -283,6 +288,8 @@ const FollowComp = () => {
   const { id } = router.query;
   const [documentData, setDocumentData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const firstPhases = sections.filter((s) => s.status < STATUS.FINAL_NOTIFY);
+  const finalPhase = sections.find((s) => s.status === STATUS.FINAL_NOTIFY);
   // Mock header info
   const mockHeader = {
     responsibleOfficer: "นายเป็นสุข เป็นสุขเถิด",
@@ -291,9 +298,7 @@ const FollowComp = () => {
   const handleImageClick = () => {
     router.push("/complaint/");
   };
-  const handleClickRECEIVED = (id) => {
-    router.push(`/complaint/${id}`); // ไปที่หน้า complaint ตามด้วย id ที่ได้
-  };
+
   useEffect(() => {
     if (id) {
       fetchDocumentData(id);
@@ -324,6 +329,7 @@ const FollowComp = () => {
   return (
     <Box>
       <BreadcrumbsService items={breadcrumbItems} />
+
       {/* Top gradient bar */}
       <Box
         sx={{
@@ -340,7 +346,9 @@ const FollowComp = () => {
           ติดตามผลการดำเนินการ
         </Typography>
       </Box>
+
       {/* Info rows */}
+      {/* แก้ไข: เพิ่มไอคอนโฟลเดอร์ข้างเจ้าหน้าที่ */}
       <Box
         sx={{
           background: "#EDF7EA",
@@ -352,194 +360,221 @@ const FollowComp = () => {
         }}
       >
         <span>เจ้าหน้าที่ผู้รับผิดชอบ: {mockHeader.responsibleOfficer}</span>
-          <IconButton
-            size="small"
-            onClick={() => handleOpenDocument(["เอกสารแนบ"])}
-            sx={{
-              color: "#1976d2",
-              "&:hover": {
-                backgroundColor: "rgba(25, 118, 210, 0.04)",
-              },
-            }}
-          >
-            <FolderIcon
-              sx={{ color: "#1223A5", fontSize: 24 }}
-            />
-          </IconButton>
+        <IconButton
+          size="small"
+          onClick={() => handleOpenDocument("เอกสารเจ้าหน้าที่")}
+          sx={{
+            color: "#1120A3",
+            "&:hover": {
+              backgroundColor: "rgba(25, 118, 210, 0.04)",
+            },
+          }}
+        >
+          <FolderIcon />
+        </IconButton>
       </Box>
+
       <Box sx={{ background: "#FBEAE9", py: 2, px: 3 }}>
         ชื่อผู้ร้อง: {mockHeader.complainantName}
       </Box>
       <Box sx={{ background: "#91CBFF", py: 2, px: 3 }}>
-  <Stack direction="row" alignItems="center" spacing={2}>
-    <Typography variant="h6" sx={{ color: "#000" }}>
-      ขั้นตอนดำเนินการครั้งแรก
-    </Typography>
-    <img
-      src="/icons/Add.png"
-      alt="Add"
-      style={{
-        width: "24px",
-        height: "24px",
-        cursor: "pointer",
-        marginLeft: "auto",
-      }}
-      onClick={handleImageClick} 
-    />
-  </Stack>
-</Box>
-      {sections
-        .filter((section) => section.key !== "FINAL_NOTIFY")
-        .map((section) => (
-          <Box
-            key={section.key}
-            sx={{ border: "1px solid #E0E0E0", borderRadius: 1, mb: 2 }}
-          >
-            <Box
-              sx={{
-                px: 3,
-                background: "#EAF5FF",
-                py: 1,
-              }}
-            >
-              <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
-                {section.title}
-              </Typography>
-            </Box>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  {section.headers.map((h) => (
-                    <TableCell
-                      key={h}
-                      sx={{ background: "#fff", fontWeight: "bold" }}
-                    >
-                      {h}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {section.rows.map((row, idx) => (
-                  <TableRow key={idx}>
-                    {section.headers.map((h) => {
-                      if (h === "เอกสารแนบ") {
-                        return (
-                          <TableCell key={h} align="center">
-                            <IconButton
-                              size="small"
-                              onClick={() =>
-                                handleOpenDocument(row["เอกสารแนบ"])
-                              }
-                              sx={{
-                                color: "#1976d2",
-                                "&:hover": {
-                                  backgroundColor: "rgba(25, 118, 210, 0.04)",
-                                },
-                              }}
-                            >
-                              <FolderIcon
-                                sx={{ color: "#1223A5", fontSize: 24 }}
-                              />
-                            </IconButton>
-                          </TableCell>
-                        );
-                      } else if (h === "การจัดการ") {
-                        return (
-                          <TableCell key={h} align="center">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                               if (row.id) {
-                                  handleManage(section.key, row.id, router); // ใช้ handleManage หากมี id
-                                } else {
-                                  console.error("Error: ID is missing for this row.");
-                                  // แสดงข้อความแจ้งเตือนหรือทำอะไรที่ต้องการ
-                                }
-                              }}
-                              sx={{
-                                color: "#1976d2",
-                                "&:hover": {
-                                  backgroundColor: "rgba(25, 118, 210, 0.04)",
-                                },
-                              }}
-                            >
-                              <img
-                                src="/icons/Edit.png"
-                                alt="Edit"
-                                style={{
-                                  width: 35,
-                                  height: 35,
-                                  filter:
-                                    "brightness(0) saturate(100%) invert(9%) sepia(89%) saturate(7495%) hue-rotate(230deg) brightness(94%) contrast(106%)",
-                                }}
-                              />
-                            </IconButton>
-                          </TableCell>
-                        );
-                      } else {
-                        return <TableCell key={h}>{row[h] ?? "-"}</TableCell>;
-                      }
-                    })}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Box>
-        ))}
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Typography variant="h6" sx={{ color: "#000" }}>
+            ขั้นตอนดำเนินการครั้งแรก
+          </Typography>
+          <img
+            src="/icons/Add.png"
+            alt="Add"
+            style={{
+              width: "24px",
+              height: "24px",
+              cursor: "pointer",
+              marginLeft: "auto",
+            }}
+            onClick={handleImageClick} 
+          />
+        </Stack>
+      </Box>
 
+       {/* First 5 dynamic sections */}
+{sections
+  .filter((section) => section.key !== "FINAL_NOTIFY") // กรองเอา "FINAL_NOTIFY" ออก
+  .slice(0, 5) // เลือกแค่ 5 ตัวแรก
+  .map((section) => (
+    <Box
+      key={section.key} // เปลี่ยนเป็น section.key
+      sx={{ border: "1px solid #E0E0E0", borderRadius: 1, mb: 2 }}
+    >
+      <Box
+        sx={{
+          px: 3,
+          background: "#EAF5FF",
+          py: 1,
+        }}
+      >
+        <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
+          {section.title}
+        </Typography>
+      </Box>
+      <Table>
+        <TableHead>
+          <TableRow>
+            {section.headers.map((h) => (
+              <TableCell
+                key={h}
+                sx={{ background: "#fff", fontWeight: "bold" }}
+              >
+                {h}
+              </TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {section.rows.map((row, idx) => (
+            <TableRow key={idx}>
+              {section.headers.map((h) => {
+                if (h === "เอกสารแนบ") {
+                  return (
+                    <TableCell key={h} align="center">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenDocument(row["เอกสารแนบ"])}
+                        sx={{
+                          color: "#1976d2",
+                          "&:hover": {
+                            backgroundColor: "rgba(25, 118, 210, 0.04)",
+                          },
+                        }}
+                      >
+                        <FolderIcon sx={{ color: "#1223A5", fontSize: 24 }} />
+                      </IconButton>
+                    </TableCell>
+                  );
+                } else if (h === "การจัดการ") {
+                  return (
+                    <TableCell key={h} align="center">
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          if (row.id) {
+                            console.log("Going to edit with id:", row.id);
+                            handleManage(section.key, row.id, router); // ใช้ handleManage สำหรับกรณีนี้
+                          } else {
+                            console.error("Error: ID is missing for this row.");
+                            // แสดงข้อความแจ้งเตือนหรือทำอะไรที่ต้องการ
+                          }
+                        }}
+                        sx={{
+                          color: "#1976d2",
+                          "&:hover": {
+                            backgroundColor: "rgba(25, 118, 210, 0.04)",
+                          },
+                        }}
+                      >
+                        <img
+                          src="/icons/Edit.png"
+                          alt="Edit"
+                          style={{
+                            width: 35,
+                            height: 35,
+                            filter:
+                              "brightness(0) saturate(100%) invert(9%) sepia(89%) saturate(7495%) hue-rotate(230deg) brightness(94%) contrast(106%)",
+                          }}
+                        />
+                      </IconButton>
+                    </TableCell>
+                  );
+                } else {
+                  return <TableCell key={h}>{row[h] ?? "-"}</TableCell>;
+                }
+              })}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Box>
+  ))}
       {/* Yellow in-progress bar */}
       <Box sx={{ background: "#FFF9C4", py: 2, px: 3, borderRadius: 1 }}>
         ขั้นตอนอยู่ระหว่างดำเนินการ
       </Box>
-      {/* Final Notify Section - No data (empty table) as in image1 */}
-      <Box sx={{ mt: 2 }}>
-        <Box
-          sx={{
-            px: 3,
-            background: "#FBE5A6",
-            py: 1,
-            borderTopLeftRadius: 4,
-            borderTopRightRadius: 4,
-          }}
-        >
-          <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
-            แจ้งผลการให้ผู้เกี่ยวข้องทราบ
-          </Typography>
+
+      {/* Final (status 6) section */}
+      {finalPhase && (
+        <Box sx={{ border: "1px solid #E0E0E0", borderRadius: 1 }}>
+          <Box sx={{ px: 3, background: "#FEFAEF", py: 1 }}>
+            <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
+              {finalPhase.title}
+            </Typography>
+          </Box>
+          <Table>
+            <TableHead>
+              <TableRow>
+                {finalPhase.headers.map((h) => (
+                  <TableCell key={h} sx={{ background: "#E3F2FD", fontWeight: "bold" }}>
+                    {h}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {finalPhase.rows.map((row, idx) => (
+                <TableRow key={idx}>
+                  {finalPhase.headers.map((h) => (
+                    <TableCell key={h}>
+                      {h === "เอกสารแนบ" ? (
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenDocument(row[h])} // ฟังก์ชันเปิดเอกสาร
+                          sx={{
+                            color: "#1120A3",
+                            "&:hover": {
+                              backgroundColor: "rgba(25, 118, 210, 0.04)",
+                            },
+                          }}
+                        >
+                          <FolderIcon />
+                        </IconButton>
+                      ) : h === "การจัดการ" ? (
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            if (row.id) {
+                              console.log("Going to edit with id:", row.id);
+                              handleManage(finalPhase.key, row.id, router); // ใช้ handleManage สำหรับการจัดการ
+                            } else {
+                              console.error("Error: ID is missing for this row.");
+                            }
+                          }}
+                          sx={{
+                            color: "#1976d2",
+                            "&:hover": {
+                              backgroundColor: "rgba(25, 118, 210, 0.04)",
+                            },
+                          }}
+                        >
+                          <img
+                            src="/icons/Edit.png"
+                            alt="Edit"
+                            style={{
+                              width: 35,
+                              height: 35,
+                              filter:
+                                "brightness(0) saturate(100%) invert(9%) sepia(89%) saturate(7495%) hue-rotate(230deg) brightness(94%) contrast(106%)",
+                            }}
+                          />
+                        </IconButton>
+                      ) : (
+                        (h !== "เอกสารแนบ" && h !== "การจัดการ") && (row[h] ?? "-") // แก้ไขให้ถูกต้อง
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </Box>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ background: "#fff", fontWeight: "bold" }}>
-                ลำดับ
-              </TableCell>
-              <TableCell sx={{ background: "#fff", fontWeight: "bold" }}>
-                ถึงหน่วยงาน / ผู้ร้อง / อื่นๆ (ครั้งที่แจ้งผล)
-              </TableCell>
-              <TableCell sx={{ background: "#fff", fontWeight: "bold" }}>
-                เลขที่หนังสือ
-              </TableCell>
-              <TableCell sx={{ background: "#fff", fontWeight: "bold" }}>
-                เรื่อง
-              </TableCell>
-              <TableCell sx={{ background: "#fff", fontWeight: "bold" }}>
-                ลงวันที่
-              </TableCell>
-              <TableCell sx={{ background: "#fff", fontWeight: "bold" }}>
-                การจัดการ
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {/* No data row - show empty as in image1 */}
-            <TableRow>
-              <TableCell colSpan={6} align="center">
-                {/* You can add a placeholder if needed, but image1 shows empty */}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </Box>
+      )}
     </Box>
   );
 };

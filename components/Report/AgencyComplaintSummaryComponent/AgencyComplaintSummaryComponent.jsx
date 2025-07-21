@@ -90,7 +90,7 @@ const formatToThaiDate = (date) => {
 // ─── mock data (20 รายการ) ─────────────────────────────────────────────────
 const mockComplaints = [
   {
-    id: 1,
+    id: "693611da-130a-4dab-adb7-b716b0144108",
     claimantName: "สุนิสา มณีโชติ",
     receiptNumber: "REC-0001",
     receiveDate: "01 ก.พ. 2568",
