@@ -14,7 +14,7 @@ import { validateEmail, validateEmailRealtime } from "@utils/emailValidation";
 const ComplaintMinistryMainForm = ({
     data = {},
     onChange,
-    title = "ข้อมูลหน่วยงานของรัฐที่ถูกร้องทุกข์",
+    title = "",
     validationErrors = {},
     shouldShowValidation = false,
     fieldPrefix = "",

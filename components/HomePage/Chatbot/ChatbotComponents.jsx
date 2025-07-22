@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  CircularProgress,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -29,93 +30,54 @@ import {
 } from "@utils/Alerts";
 import Image from "next/image";
 import InputTags from "@services/InputTags/InputTags";
-
-const initialData = [
-  {
-    title: "ขอความช่วยเหลือเกี่ยวกับการคืนภาษีล่าช้า",
-    detail: "สอบถามข้อมูลเกี่ยวกับเรียนระดับการศึกษาระดับอาชีวศึกษา โทร 1161",
-    keyword: ["ภาษี", "คืนภาษี", "ล่าช้า"],
-    date: "17 ม.ค. 2568",
-  },
-  {
-    title:
-      "ร้องเรียนพฤติกรรม/การดำเนินงานของเจ้าหน้าที่หน่วยงานในสังกัดกระทรวงการคลัง",
-    detail: "",
-    keyword: ["ร้องเรียน", "เจ้าหน้าที่", "กระทรวงการคลัง"],
-    date: "17 ม.ค. 2568",
-  },
-  {
-    title: "ขอความช่วยเหลือเกี่ยวกับการปรับโครงสร้างหนี้",
-    detail: "",
-    keyword: ["หนี้", "โครงสร้างหนี้", "ปรับโครงสร้าง"],
-    date: "17 ม.ค. 2568",
-  },
-  {
-    title: "ขอความช่วยเหลือเกี่ยวกับปัญหาหนี้สิน สำหรับบุคลากรภาครัฐ",
-    detail: "",
-    keyword: ["หนี้สิน", "บุคลากรภาครัฐ", "ข้าราชการ"],
-    date: "17 ม.ค. 2568",
-  },
-  {
-    title: "แจ้งเบาะแสการหลีกเลี่ยงภาษี",
-    detail: "",
-    keyword: ["เบาะแส", "หลีกเลี่ยงภาษี", "แจ้ง"],
-    date: "17 ม.ค. 2568",
-  },
-  {
-    title: "ขอความช่วยเหลือเกี่ยวกับแหล่งเงินทุนสำหรับการประกอบอาชีพ",
-    detail: "",
-    keyword: ["เงินทุน", "ประกอบอาชีพ", "แหล่งเงินทุน"],
-    date: "17 ม.ค. 2568",
-  },
-  {
-    title: "ขอความช่วยเหลือเกี่ยวกับปัญหาหนี้สิน",
-    detail: "",
-    keyword: ["หนี้สิน", "ปัญหาหนี้"],
-    date: "17 ม.ค. 2568",
-  },
-  {
-    title: "โครงการคุณสู้ เราช่วย",
-    detail: "",
-    keyword: ["โครงการ", "คุณสู้เราช่วย"],
-    date: "17 ม.ค. 2568",
-  },
-  {
-    title: "แนวทางจัดการหนี้สาธารณะอย่างไรให้เกิดความยั่งยืน",
-    detail: "",
-    keyword: ["หนี้สาธารณะ", "ความยั่งยืน", "จัดการหนี้"],
-    date: "17 ม.ค. 2568",
-  },
-  {
-    title: "กระทรวงการคลังมีแนวทางกระตุ้นเศรษฐกิจปีนี้อย่างไร",
-    detail: "",
-    keyword: ["กระตุ้นเศรษฐกิจ", "เศรษฐกิจ", "นโยบาย"],
-    date: "17 ม.ค. 2568",
-  },
-  {
-    title: "มีแนวทางสนับสนุนการลงทุนจากต่างประเทศเพิ่มเติมหรือไม่",
-    detail: "",
-    keyword: ["ลงทุน", "ต่างประเทศ", "FDI"],
-    date: "17 ม.ค. 2568",
-  },
-];
+import { getChatBot, addChatBot, updateChatBot, deleteChatBot } from "@pages/api/chatbot/chatbot";
 
 const ChatbotComponents = () => {
   const router = useRouter();
-  const [newsData, setNewsData] = useState(initialData);
+  const [faqsData, setFaqsData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [expandedIndex, setExpandedIndex] = useState(null);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [deleteIndex, setDeleteIndex] = useState(null);
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
   const [form, setForm] = useState({ title: "", detail: "", keyword: [] });
+  const [submitting, setSubmitting] = useState(false);
+
+  // Load FAQ data from API
+  useEffect(() => {
+    loadFAQs();
+  }, []);
+
+  const loadFAQs = async () => {
+    try {
+      setLoading(true);
+      const response = await getChatBot();
+      if (response.faqs) {
+        // Format date for display
+        const formattedFaqs = response.faqs.map(faq => ({
+          ...faq,
+          date: new Date(faq.created_at).toLocaleDateString("th-TH", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+        }));
+        setFaqsData(formattedFaqs);
+      }
+    } catch (error) {
+      console.error("Error loading FAQs:", error);
+      alertError("เกิดข้อผิดพลาด", "ไม่สามารถโหลดข้อมูลคำถามได้");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleToggle = (index) => {
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
   const handleDeleteClick = async (index) => {
+    const faq = faqsData[index];
     const confirm = await showConfirm2(
       `<span style="color:#932626;">ลบคำถาม</span>`,
       `<div><strong style="color:#932626;">การลบคำถามจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
@@ -129,51 +91,114 @@ const ChatbotComponents = () => {
 
     if (confirm) {
       try {
-        const newData = [...newsData];
+        setSubmitting(true);
+        // Call delete API if you have deleteChatBot function
+        if (typeof deleteChatBot === 'function') {
+          await deleteChatBot(faq.id);
+        }
+
+        // Remove from local state
+        const newData = [...faqsData];
         newData.splice(index, 1);
-        setNewsData(newData);
+        setFaqsData(newData);
 
         closeAlert();
         alertSuccess("ลบคำถามสำเร็จ");
       } catch (err) {
+        console.error("Error deleting FAQ:", err);
         closeAlert();
         alertError("เกิดข้อผิดพลาด", "ไม่สามารถลบคำถามได้");
+      } finally {
+        setSubmitting(false);
       }
     }
   };
 
-  const handleAdd = () => {
-    const newItem = {
-      ...form,
-      date: new Date().toLocaleDateString("th-TH", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      }),
-    };
-    setNewsData([newItem, ...newsData]);
-    setOpenAddDialog(false);
-    setForm({ title: "", detail: "" });
+  const handleAdd = async () => {
+    if (!form.title.trim()) {
+      alertError("กรุณากรอกข้อมูล", "กรุณากรอกคำถาม");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const newFAQ = {
+        title: form.title.trim(),
+        detail: form.detail.trim(),
+        keyword: form.keyword || []
+      };
+
+      const response = await addChatBot(newFAQ);
+
+      if (response.success) {
+        // Reload FAQs to get updated data with IDs
+        await loadFAQs();
+
+        setOpenAddDialog(false);
+        setForm({ title: "", detail: "", keyword: [] });
+        alertSuccess("เพิ่มคำถามสำเร็จ");
+      } else {
+        throw new Error(response.message || "Failed to add FAQ");
+      }
+    } catch (error) {
+      console.error("Error adding FAQ:", error);
+      alertError("เกิดข้อผิดพลาด", "ไม่สามารถเพิ่มคำถามได้");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleEdit = () => {
-    const updated = [...newsData];
-    updated[editIndex] = { ...updated[editIndex], ...form };
-    setNewsData(updated);
-    setOpenEditDialog(false);
-    setForm({ title: "", detail: "" });
-    setEditIndex(null);
+  const handleEdit = async () => {
+    if (!form.title.trim()) {
+      alertError("กรุณากรอกข้อมูล", "กรุณากรอกคำถาม");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const faq = faqsData[editIndex];
+      const updatedFAQ = {
+        id: faq.id,
+        title: form.title.trim(),
+        detail: form.detail.trim(),
+        keyword: form.keyword || []
+      };
+
+      const response = await updateChatBot(updatedFAQ);
+
+      if (response.success) {
+        // Update local state
+        const updated = [...faqsData];
+        updated[editIndex] = { ...updated[editIndex], ...updatedFAQ };
+        setFaqsData(updated);
+
+        setOpenEditDialog(false);
+        setForm({ title: "", detail: "", keyword: [] });
+        setEditIndex(null);
+        alertSuccess("อัปเดตคำถามสำเร็จ");
+      } else {
+        throw new Error(response.message || "Failed to update FAQ");
+      }
+    } catch (error) {
+      console.error("Error updating FAQ:", error);
+      alertError("เกิดข้อผิดพลาด", "ไม่สามารถอัปเดตคำถามได้");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const openEdit = (index) => {
     setEditIndex(index);
     setForm({
-      title: newsData[index].title,
-      detail: newsData[index].detail,
-      keyword: newsData[index].keyword || [],
+      title: faqsData[index].title,
+      detail: faqsData[index].detail,
+      keyword: faqsData[index].keyword || [],
     });
     setOpenEditDialog(true);
   };
+
   const breadcrumbItems = [
     {
       label: <span style={{ color: "#1120A3" }}>กำหนดคำถาม Chat Bot</span>,
@@ -194,6 +219,17 @@ const ChatbotComponents = () => {
       url: "/admin",
     },
   ];
+
+  if (loading) {
+    return (
+      <Box sx={{ background: "#F5F7FB", minHeight: "100vh", py: 3 }}>
+        <BreadcrumbsService items={breadcrumbItems} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ background: "#F5F7FB", minHeight: "100vh", py: 3 }}>
@@ -224,11 +260,11 @@ const ChatbotComponents = () => {
             component="span"
             sx={{ fontWeight: "bold", fontSize: 18 }}
           >
-            คำถามในระบบทั้งหมด
+            คำถามในระบบทั้งหมด ({faqsData.length} รายการ)
           </Typography>
           <Button
             onClick={() => {
-              setForm({ title: "", detail: "" });
+              setForm({ title: "", detail: "", keyword: [] });
               setOpenAddDialog(true);
             }}
             variant="contained"
@@ -246,8 +282,8 @@ const ChatbotComponents = () => {
         </Stack>
 
         <Grid container spacing={2}>
-          {newsData.map((item, index) => (
-            <Grid item xs={12} key={index}>
+          {faqsData.map((item, index) => (
+            <Grid item xs={12} key={item.id || index}>
               <Box
                 sx={{
                   background: "#fff",
@@ -312,6 +348,25 @@ const ChatbotComponents = () => {
                         <Typography sx={{ fontSize: 13, mt: 0.5 }}>
                           {item.detail}
                         </Typography>
+                        {item.keyword && item.keyword.length > 0 && (
+                          <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {item.keyword.map((keyword, keyIndex) => (
+                              <Typography
+                                key={keyIndex}
+                                sx={{
+                                  fontSize: 11,
+                                  backgroundColor: '#E3F2FD',
+                                  color: '#1976D2',
+                                  px: 1,
+                                  py: 0.5,
+                                  borderRadius: 1
+                                }}
+                              >
+                                {keyword}
+                              </Typography>
+                            ))}
+                          </Box>
+                        )}
                       </Collapse>
                     </Box>
                   </Stack>
@@ -357,6 +412,7 @@ const ChatbotComponents = () => {
                     <Tooltip title="แก้ไข">
                       <IconButton
                         onClick={() => openEdit(index)}
+                        disabled={submitting}
                         style={{
                           backgroundColor: "transparent",
                           border: "none",
@@ -387,6 +443,7 @@ const ChatbotComponents = () => {
                     <Tooltip title="ลบ">
                       <IconButton
                         onClick={() => handleDeleteClick(index)}
+                        disabled={submitting}
                         style={{
                           backgroundColor: "transparent",
                           border: "none",
@@ -417,11 +474,38 @@ const ChatbotComponents = () => {
             </Grid>
           ))}
         </Grid>
+
+        {faqsData.length === 0 && (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography sx={{ color: '#9CA3AF', fontSize: 18 }}>
+              ยังไม่มีคำถามในระบบ
+            </Typography>
+            <Button
+              onClick={() => {
+                setForm({ title: "", detail: "", keyword: [] });
+                setOpenAddDialog(true);
+              }}
+              variant="contained"
+              startIcon={<AddIcon />}
+              sx={{
+                mt: 2,
+                borderRadius: "10px",
+                textTransform: "none",
+                fontWeight: "bold",
+                background: "#1120A3",
+                "&:hover": { background: "#0d1680" },
+              }}
+            >
+              เพิ่มคำถามแรก
+            </Button>
+          </Box>
+        )}
       </Box>
+
       {/* Dialog: เพิ่มคำถาม */}
       <Dialog
         open={openAddDialog}
-        onClose={() => setOpenAddDialog(false)}
+        onClose={() => !submitting && setOpenAddDialog(false)}
         fullWidth
         maxWidth={false}
         PaperProps={{
@@ -435,6 +519,7 @@ const ChatbotComponents = () => {
       >
         <IconButton
           onClick={() => setOpenAddDialog(false)}
+          disabled={submitting}
           sx={{ position: "absolute", top: 12, right: 12 }}
         >
           <CloseIcon />
@@ -450,12 +535,13 @@ const ChatbotComponents = () => {
           เพิ่มคำถามในระบบ
         </DialogTitle>
         <DialogContent sx={{ px: 6, pt: 1 }}>
-          <Typography sx={{ color: "#1120A3" }}>คำถาม</Typography>
+          <Typography sx={{ color: "#1120A3" }}>คำถาม *</Typography>
           <TextField
             fullWidth
             margin="normal"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
+            disabled={submitting}
             inputProps={{ style: { fontSize: 16 } }}
             sx={{
               "& .MuiOutlinedInput-root": {
@@ -478,6 +564,7 @@ const ChatbotComponents = () => {
             rows={4}
             value={form.detail}
             onChange={(e) => setForm({ ...form, detail: e.target.value })}
+            disabled={submitting}
             inputProps={{ style: { fontSize: 16 } }}
             sx={{
               "& .MuiOutlinedInput-root": {
@@ -497,12 +584,14 @@ const ChatbotComponents = () => {
             value={form.keyword || []}
             onChange={(e) => setForm({ ...form, keyword: e.target.value })}
             name="keyword"
+            disabled={submitting}
           />
         </DialogContent>
         <DialogActions sx={{ justifyContent: "center", pb: 4 }}>
           <Button
             onClick={() => setOpenAddDialog(false)}
             variant="outlined"
+            disabled={submitting}
             sx={{
               borderColor: "#BFDBFE",
               color: "#2563EB",
@@ -520,6 +609,7 @@ const ChatbotComponents = () => {
           <Button
             onClick={handleAdd}
             variant="contained"
+            disabled={submitting}
             sx={{
               backgroundColor: "#2563EB",
               color: "#fff",
@@ -531,12 +621,18 @@ const ChatbotComponents = () => {
               "&:hover": { backgroundColor: "#1D4ED8" },
             }}
           >
-            ยืนยัน
-            <img
-              src="/icons/Tick.png"
-              alt=""
-              style={{ width: 22, height: 22, marginLeft: 10 }}
-            />
+            {submitting ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              <>
+                ยืนยัน
+                <img
+                  src="/icons/Tick.png"
+                  alt=""
+                  style={{ width: 22, height: 22, marginLeft: 10 }}
+                />
+              </>
+            )}
           </Button>
         </DialogActions>
       </Dialog>
@@ -544,7 +640,7 @@ const ChatbotComponents = () => {
       {/*Dialog: แก้ไขคำถาม */}
       <Dialog
         open={openEditDialog}
-        onClose={() => setOpenEditDialog(false)}
+        onClose={() => !submitting && setOpenEditDialog(false)}
         fullWidth
         maxWidth={false}
         PaperProps={{
@@ -558,6 +654,7 @@ const ChatbotComponents = () => {
       >
         <IconButton
           onClick={() => setOpenEditDialog(false)}
+          disabled={submitting}
           sx={{ position: "absolute", top: 12, right: 12 }}
         >
           <CloseIcon />
@@ -573,12 +670,13 @@ const ChatbotComponents = () => {
           แก้ไขคำถามในระบบ
         </DialogTitle>
         <DialogContent sx={{ px: 6, pt: 1 }}>
-          <Typography sx={{ color: "#1120A3" }}>คำถาม</Typography>
+          <Typography sx={{ color: "#1120A3" }}>คำถาม *</Typography>
           <TextField
             fullWidth
             margin="normal"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
+            disabled={submitting}
             inputProps={{ style: { fontSize: 16 } }}
             sx={{
               "& .MuiOutlinedInput-root": {
@@ -601,6 +699,7 @@ const ChatbotComponents = () => {
             rows={4}
             value={form.detail}
             onChange={(e) => setForm({ ...form, detail: e.target.value })}
+            disabled={submitting}
             inputProps={{ style: { fontSize: 16 } }}
             sx={{
               "& .MuiOutlinedInput-root": {
@@ -620,12 +719,14 @@ const ChatbotComponents = () => {
             value={form.keyword || []}
             onChange={(e) => setForm({ ...form, keyword: e.target.value })}
             name="keyword"
+            disabled={submitting}
           />
         </DialogContent>
         <DialogActions sx={{ justifyContent: "center", pb: 4 }}>
           <Button
             onClick={() => setOpenEditDialog(false)}
             variant="outlined"
+            disabled={submitting}
             sx={{
               borderColor: "#50ADFF",
               color: "#50ADFF",
@@ -643,6 +744,7 @@ const ChatbotComponents = () => {
           <Button
             onClick={handleEdit}
             variant="contained"
+            disabled={submitting}
             sx={{
               backgroundColor: "#50ADFF",
               color: "#fff",
@@ -654,12 +756,18 @@ const ChatbotComponents = () => {
               "&:hover": { backgroundColor: "#1D4ED8" },
             }}
           >
-            ยืนยัน
-            <img
-              src="/icons/Tick.png"
-              alt=""
-              style={{ width: 22, height: 22, marginLeft: 10 }}
-            />
+            {submitting ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              <>
+                ยืนยัน
+                <img
+                  src="/icons/Tick.png"
+                  alt=""
+                  style={{ width: 22, height: 22, marginLeft: 10 }}
+                />
+              </>
+            )}
           </Button>
         </DialogActions>
       </Dialog>
