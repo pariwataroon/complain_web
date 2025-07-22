@@ -27,6 +27,7 @@ from app.api.v1.routers.outgoing_report2_router import router as outgoing_report
 from app.api.v1.routers.outgoing_report3_router import router as outgoing_report3_router_v1
 from app.api.v1.routers.outgoing_report4_router import router as outgoing_report4_router_v1
 from app.api.v1.routers.consolidated_report_router import router as consolidated_report_router_v1
+from app.api.v1.routers.chat_bot_router import router as chat_bot_router_v1
 # from app.api.v1.routers.file_management_router import router as file_management_router_v1
 from config.dotenv import PREFIX
 
@@ -65,6 +66,7 @@ v1_router.include_router(outgoing_report2_router_v1)
 v1_router.include_router(outgoing_report3_router_v1)
 v1_router.include_router(outgoing_report4_router_v1)
 v1_router.include_router(consolidated_report_router_v1)
+v1_router.include_router(chat_bot_router_v1)
 # v1_router.include_router(file_management_router_v1)
 
 # เมื่อมี router เวอร์ชัน 2 ในอนาคต จะเพิ่มได้ง่ายๆ

@@ -29,6 +29,7 @@ from .outgoing_reports import OutgoingReport, OutgoingReportAttachment
 from .outgoing_reports2 import OutgoingReport2, OutgoingReportAttachment2
 from .outgoing_reports3 import OutgoingReport3, OutgoingReportAttachment3
 from .outgoing_reports4 import OutgoingReport4, OutgoingReportAttachment4
+from .chat_bot import ChatBot
 
 
 # ระบุโมเดลที่สามารถนำเข้าเมื่อใช้ from models import *
@@ -40,5 +41,6 @@ __all__ = [
     'SignatureAuthority', 'GroupSignatureAuthority', 'Complaint', 'ComplaintAttachment',
     'ComplaintStatusHistory', 'ComplaintType', 'ComplaintSubType', 'ComplaintChannel',
     'OutgoingReport', 'OutgoingReportAttachment', 'OutgoingReport2', 'OutgoingReportAttachment2',
-    'OutgoingReport3', 'OutgoingReportAttachment3', 'OutgoingReport4', 'OutgoingReportAttachment4'
+    'OutgoingReport3', 'OutgoingReportAttachment3', 'OutgoingReport4', 'OutgoingReportAttachment4',
+    'ChatBot'
 ]

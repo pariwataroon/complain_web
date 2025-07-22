@@ -9309,6 +9309,254 @@
 				}
 			],
 			"description": "API สำหรับรายงานรวม - รวบรวมข้อมูลเรื่องร้องเรียน, เอกสารส่งออกทั้ง 4 ประเภท, เลขอ้างอิงเพิ่มเติม, และเรื่องร้องเรียนที่เกี่ยวข้อง"
+		},
+		{
+			"name": "CHAT BOT",
+			"item": [
+				{
+					"name": "Get All Chat Bots",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/chat_bot?skip=0&limit=100&search=",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"chat_bot"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนรายการที่จะข้าม (offset)"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนรายการสูงสุดที่จะแสดง"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "ค้นหาใน title, detail หรือ keyword"
+								}
+							]
+						},
+						"description": "ดึงข้อมูล ChatBot ทั้งหมด (tensor flow user) - ใช้สำหรับแสดงรายการคำตอบอัตโนมัติของระบบ chat bot"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Chat Bot by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/chat_bot/{{chat_bot_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"chat_bot",
+								"{{chat_bot_id}}"
+							]
+						},
+						"description": "ดึงข้อมูล ChatBot ตาม ID - แสดงรายละเอียดของคำตอบอัตโนมัติแต่ละรายการ"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Chat Bot",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"ขอความช่วยเหลือเกี่ยวกับการคืนภาษีล่าช้า\",\n  \"detail\": \"สอบถามข้อมูลเกี่ยวกับเรียนระดับการศึกษาระดับอาชีวศึกษา โทร 1161\",\n  \"keyword\": [\"ภาษี\", \"คืนภาษี\", \"ล่าช้า\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/chat_bot",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"chat_bot"
+							]
+						},
+						"description": "สร้าง ChatBot ใหม่ - เพิ่มคำตอบอัตโนมัติสำหรับระบบ chat bot"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Chat Bot",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"ขอความช่วยเหลือเกี่ยวกับการคืนภาษีล่าช้า (อัปเดต)\",\n  \"detail\": \"สอบถามข้อมูลเกี่ยวกับเรียนระดับการศึกษาระดับอาชีวศึกษา โทร 1161 (ข้อมูลใหม่)\",\n  \"keyword\": [\"ภาษี\", \"คืนภาษี\", \"ล่าช้า\", \"อัปเดต\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/chat_bot/{{chat_bot_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"chat_bot",
+								"{{chat_bot_id}}"
+							]
+						},
+						"description": "อัปเดตข้อมูล ChatBot - แก้ไขคำตอบอัตโนมัติที่มีอยู่"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Chat Bot",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/chat_bot/{{chat_bot_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"chat_bot",
+								"{{chat_bot_id}}"
+							]
+						},
+						"description": "ลบ ChatBot - ลบคำตอบอัตโนมัติที่ไม่ต้องการ"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Chat Bot by Keywords",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/chat_bot/search/by-keywords?keywords=ภาษี&keywords=คืนภาษี&skip=0&limit=100",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"chat_bot",
+								"search",
+								"by-keywords"
+							],
+							"query": [
+								{
+									"key": "keywords",
+									"value": "ภาษี",
+									"description": "คำสำคัญที่ต้องการค้นหา"
+								},
+								{
+									"key": "keywords",
+									"value": "คืนภาษี",
+									"description": "คำสำคัญที่ต้องการค้นหา (สามารถระบุหลายคำได้)"
+								},
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนรายการที่จะข้าม (offset)"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนรายการสูงสุดที่จะแสดง"
+								}
+							]
+						},
+						"description": "ค้นหา ChatBot ตาม keywords - ค้นหาคำตอบอัตโนมัติที่ตรงกับคำสำคัญที่กำหนด"
+					},
+					"response": []
+				}
+			],
+			"description": "API สำหรับจัดการระบบ Chat Bot - การสร้าง, แก้ไข, ลบ และค้นหาคำตอบอัตโนมัติสำหรับระบบ tensor flow"
 		}
 	],
 	"event": [
@@ -9386,6 +9634,11 @@
 		},
 		{
 			"key": "complaint_id_3",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "chat_bot_id",
 			"value": "",
 			"type": "string"
 		}
