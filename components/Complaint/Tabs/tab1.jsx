@@ -13,7 +13,7 @@ const Tab1 = ({
   validationErrors = {},
   shouldShowValidation = false,
   onTabChange,
-  currentTab = 0
+  currentTab = 0,
 }) => {
   const [userRoles, setUserRoles] = useState([]);
   const [hasGovernmentAccess, setHasGovernmentAccess] = useState(false);
@@ -55,7 +55,13 @@ const Tab1 = ({
     const roles = getUserRoles();
     setUserRoles(roles);
 
-    const allowedRoles = ["admin", "staff", "supervisor", "department", "admin_home"];
+    const allowedRoles = [
+      "admin",
+      "staff",
+      "supervisor",
+      "department",
+      "admin_home",
+    ];
     const hasAccess = allowedRoles.some((role) => roles.includes(role));
     setHasGovernmentAccess(hasAccess);
   }, []);
@@ -68,7 +74,7 @@ const Tab1 = ({
     }
 
     if (onTabChange) {
-      onTabChange('step1', newTab);
+      onTabChange("step1", newTab);
     }
   };
 
@@ -94,7 +100,8 @@ const Tab1 = ({
         };
       } else if (currentTab === 2) {
         updatedData = {
-          government: type === "government" ? updated : tabData.government || {},
+          government:
+            type === "government" ? updated : tabData.government || {},
         };
       }
 
@@ -143,7 +150,7 @@ const Tab1 = ({
     tabData.signer?.province?.value,
     tabData.government?.province?.value,
     currentTab,
-    handleUpdate
+    handleUpdate,
   ]);
 
   return (
@@ -158,7 +165,9 @@ const Tab1 = ({
           return (
             <div
               key={idx}
-              className={`${styles.tab} ${styles[`tab${idx}`]} ${currentTab === idx ? styles.active : ""}`}
+              className={`${styles.tab} ${styles[`tab${idx}`]} ${
+                currentTab === idx ? styles.active : ""
+              }`}
               onClick={() => handleTabChange(idx)}
             >
               {label}
@@ -233,7 +242,7 @@ const Tab1 = ({
             <ComplaintMinistryMainForm
               data={tabData.government || {}}
               onChange={handleUpdate("government")}
-              title="ข้อมูลหน่วยงานของรัฐที่ถูกร้องทุกข์"
+              title="ข้อมูลผู้ร้องทุกข์ (หน่วยงานของรัฐ)"
               validationErrors={validationErrors}
               shouldShowValidation={shouldShowValidation}
               fieldPrefix="government"
