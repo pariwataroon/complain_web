@@ -1,11 +1,12 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, distinct
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 from uuid import UUID
 
 from models.api_log import ApiLog
 from models.user import User
+from lib.cache_service import cache
 
 
 def get_all_logs(
@@ -173,3 +174,110 @@ def delete_old_logs(db: Session, days: int = 90) -> int:
     deleted = db.query(ApiLog).filter(ApiLog.created_at < cutoff_date).delete()
     db.commit()
     return deleted
+
+
+def get_user_counter_from_chatbot_logs(db: Session, use_cache: bool = True) -> Dict:
+    """
+    นับจำนวนผู้เข้าใช้งานระบบจาก path /chat_bot
+    ใช้ cache เพื่อความเร็ว cache 1 นาที
+    """
+    cache_key = "user_counter_chatbot"
+    
+    # ตรวจสอบ cache ก่อน
+    if use_cache:
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            return cached_result
+    
+    try:
+        # นับผู้ใช้งานทั้งหมดที่เคยเข้า chat_bot
+        total_users_query = db.query(distinct(ApiLog.user_id)).filter(
+            ApiLog.path.like('%/chat_bot%'),
+            ApiLog.user_id.isnot(None)
+        )
+        total_unique_users = total_users_query.count()
+        
+        # นับผู้ใช้งานวันนี้
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_users_query = db.query(distinct(ApiLog.user_id)).filter(
+            ApiLog.path.like('%/chat_bot%'),
+            ApiLog.user_id.isnot(None),
+            ApiLog.created_at >= today_start
+        )
+        today_unique_users = today_users_query.count()
+        
+        # นับผู้ใช้งาน 7 วันที่ผ่านมา
+        week_start = datetime.now() - timedelta(days=7)
+        week_users_query = db.query(distinct(ApiLog.user_id)).filter(
+            ApiLog.path.like('%/chat_bot%'),
+            ApiLog.user_id.isnot(None),
+            ApiLog.created_at >= week_start
+        )
+        week_unique_users = week_users_query.count()
+        
+        # นับผู้ใช้งาน 30 วันที่ผ่านมา
+        month_start = datetime.now() - timedelta(days=30)
+        month_users_query = db.query(distinct(ApiLog.user_id)).filter(
+            ApiLog.path.like('%/chat_bot%'),
+            ApiLog.user_id.isnot(None),
+            ApiLog.created_at >= month_start
+        )
+        month_unique_users = month_users_query.count()
+        
+        # นับจำนวนครั้งที่เข้าใช้งาน (Total requests)
+        total_requests = db.query(ApiLog).filter(
+            ApiLog.path.like('%/chat_bot%')
+        ).count()
+        
+        # นับจำนวนครั้งที่เข้าใช้งานวันนี้
+        today_requests = db.query(ApiLog).filter(
+            ApiLog.path.like('%/chat_bot%'),
+            ApiLog.created_at >= today_start
+        ).count()
+        
+        # สร้างผลลัพธ์
+        result = {
+            "total_unique_users": total_unique_users,
+            "today_unique_users": today_unique_users,
+            "week_unique_users": week_unique_users,
+            "month_unique_users": month_unique_users,
+            "total_requests": total_requests,
+            "today_requests": today_requests,
+            "last_updated": datetime.now().isoformat(),
+            "cached": False
+        }
+        
+        # เก็บใน cache เป็นเวลา 60 วินาที
+        if use_cache:
+            cache.set(cache_key, result, ttl_seconds=60)
+        
+        return result
+        
+    except Exception as e:
+        print(f"Error getting user counter: {e}")
+        # ถ้าเกิดข้อผิดพลาด ให้ลองดึงจาก cache
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            cached_result["error"] = f"Database error, showing cached data: {str(e)}"
+            return cached_result
+        
+        # ถ้าไม่มีใน cache ให้ return ค่าเริ่มต้น
+        return {
+            "total_unique_users": 0,
+            "today_unique_users": 0,
+            "week_unique_users": 0,
+            "month_unique_users": 0,
+            "total_requests": 0,
+            "today_requests": 0,
+            "last_updated": datetime.now().isoformat(),
+            "cached": False,
+            "error": f"Database error: {str(e)}"
+        }
+
+
+def force_refresh_user_counter(db: Session) -> Dict:
+    """
+    บังคับ refresh counter โดยไม่ใช้ cache
+    ใช้สำหรับกรณีต้องการข้อมูลล่าสุด
+    """
+    return get_user_counter_from_chatbot_logs(db, use_cache=False)

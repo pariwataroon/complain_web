@@ -10,11 +10,15 @@ from app.api.v1.controllers.api_log_controller import (
     get_log_by_id,
     get_log_stats,
     get_user_activity_logs,
-    delete_old_logs
+    delete_old_logs,
+    get_user_counter_from_chatbot_logs,
+    force_refresh_user_counter
 )
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
 from lib.mask_sensitive import mask_sensitive
+from lib.cache_service import cache
+from lib.counter_service import counter_service
 
 router = APIRouter(
     prefix="/api-logs",
@@ -169,3 +173,65 @@ async def cleanup_old_logs(
     """Delete logs older than specified days"""
     deleted_count = delete_old_logs(db, days)
     return format_response("0000", {"deleted_count": deleted_count})
+
+
+@router.get("/counter", response_model=FormatResponseModel)
+async def get_user_counter(
+    refresh: bool = Query(False, description="บังคับ refresh ข้อมูลใหม่ (ไม่ใช้ cache)"),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("admin_logs"))
+):
+    """
+    นับจำนวนผู้เข้าใช้งานระบบจาก chat_bot path
+    - ใช้ cache 1 นาทีเพื่อความเร็ว
+    - สามารถ refresh ข้อมูลใหม่ได้ด้วย parameter refresh=true
+    """
+    try:
+        if refresh:
+            counter_data = force_refresh_user_counter(db)
+        else:
+            counter_data = get_user_counter_from_chatbot_logs(db)
+        
+        return format_response("0000", counter_data)
+    
+    except Exception as e:
+        return format_response("5000", {
+            "error": f"Failed to get user counter: {str(e)}",
+            "total_unique_users": 0,
+            "today_unique_users": 0,
+            "week_unique_users": 0,
+            "month_unique_users": 0,
+            "total_requests": 0,
+            "today_requests": 0,
+            "last_updated": datetime.now().isoformat()
+        })
+
+
+@router.get("/counter/status", response_model=FormatResponseModel)
+async def get_counter_status(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("admin_logs"))
+):
+    """
+    ดูสถานะของ counter service และ cache
+    """
+    try:
+        counter_status = counter_service.get_status()
+        cache_stats = cache.get_stats()
+        
+        status_data = {
+            "counter_service": counter_status,
+            "cache": cache_stats,
+            "endpoints": {
+                "counter": "/api-logs/counter",
+                "counter_with_refresh": "/api-logs/counter?refresh=true",
+                "status": "/api-logs/counter/status"
+            }
+        }
+        
+        return format_response("0000", status_data)
+    
+    except Exception as e:
+        return format_response("5000", {
+            "error": f"Failed to get status: {str(e)}"
+        })

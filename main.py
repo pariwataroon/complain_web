@@ -9,6 +9,8 @@ from fastapi.responses import JSONResponse
 # เพิ่ม imports
 from app.api.middleware.security_middleware import SecurityHeadersMiddleware
 from app.api.middleware.rate_limit import RateLimitMiddleware, rate_limiter, get_client_ip
+from lib.cache_service import cache
+from lib.counter_service import counter_service
 
 app = create_application()
 
@@ -59,6 +61,16 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 #     scheduler.shutdown()
 # เพิ่ม shutdown handler
 
+@app.on_event("startup")
+async def startup_event():
+    """เริ่มต้น services เมื่อ app เริ่มทำงาน"""
+    # เริ่ม cache cleanup task
+    await cache.start_cleanup_manually()
+    # เริ่ม counter update service
+    await counter_service.start_background_update()
+
 @app.on_event("shutdown")
 async def shutdown_event():
     rate_limiter.shutdown()
+    cache.shutdown()
+    counter_service.stop_background_update()

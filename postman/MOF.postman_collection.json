@@ -867,9 +867,175 @@
 						"description": "ลบบันทึกการเรียกใช้งาน API ที่เก่ากว่าจำนวนวันที่ระบุ - ต้องมีสิทธิ์ลบใน system_logs"
 					},
 					"response": []
+				},
+				{
+					"name": "Get User Counter",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/api-logs/counter?refresh=false",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"api-logs",
+								"counter"
+							],
+							"query": [
+								{
+									"key": "refresh",
+									"value": "false",
+									"description": "บังคับ refresh ข้อมูลใหม่ (ไม่ใช้ cache)"
+								}
+							]
+						},
+						"description": "นับจำนวนผู้เข้าใช้งานระบบจาก chat_bot path ใช้ cache 1 นาทีเพื่อความเร็ว - ต้องมีสิทธิ์อ่านใน admin_logs"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/api-logs/counter",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"api-logs",
+										"counter"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"message_code\": \"0000\",\n  \"data\": {\n    \"total_unique_users\": 1250,\n    \"today_unique_users\": 45,\n    \"week_unique_users\": 320,\n    \"month_unique_users\": 890,\n    \"total_requests\": 15420,\n    \"today_requests\": 125,\n    \"last_updated\": \"2025-07-23T14:30:45.123456\",\n    \"cached\": true\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get User Counter (Force Refresh)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/api-logs/counter?refresh=true",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"api-logs",
+								"counter"
+							],
+							"query": [
+								{
+									"key": "refresh",
+									"value": "true",
+									"description": "บังคับ refresh ข้อมูลใหม่ (ไม่ใช้ cache)"
+								}
+							]
+						},
+						"description": "นับจำนวนผู้เข้าใช้งานระบบ แบบ Force Refresh (ไม่ใช้ cache) - ต้องมีสิทธิ์อ่านใน admin_logs"
+					},
+					"response": [
+						{
+							"name": "Success Response (Refreshed)",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{API}}{{PREFIX}}/api-logs/counter?refresh=true",
+									"host": [
+										"{{API}}{{PREFIX}}"
+									],
+									"path": [
+										"api-logs",
+										"counter"
+									],
+									"query": [
+										{
+											"key": "refresh",
+											"value": "true"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"message_code\": \"0000\",\n  \"data\": {\n    \"total_unique_users\": 1251,\n    \"today_unique_users\": 46,\n    \"week_unique_users\": 321,\n    \"month_unique_users\": 891,\n    \"total_requests\": 15425,\n    \"today_requests\": 126,\n    \"last_updated\": \"2025-07-23T14:31:45.123456\",\n    \"cached\": false\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Counter Service Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/api-logs/counter/status",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"api-logs",
+								"counter",
+								"status"
+							]
+						},
+						"description": "ดูสถานะของ counter service และ cache - ต้องมีสิทธิ์อ่านใน admin_logs"
+					},
+					"response": []
 				}
 			],
-			"description": "API สำหรับดูบันทึกการเรียกใช้งาน API และประวัติการใช้งานระบบ"
+			"description": "API สำหรับดูบันทึกการเรียกใช้งาน API, ประวัติการใช้งานระบบ และ นับจำนวนผู้เข้าใช้งานระบบ"
 		},
 		{
 			"name": "USERS",
