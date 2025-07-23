@@ -169,7 +169,7 @@ const Chat = () => {
       } else {
         botResponse = {
           type: 'bot',
-          text: 'ขออภัยครับ ฉันไม่สามารถหาคำตอบที่ตรงกับคำถามของคุณได้ กรุณาลองถามคำถามอื่น หรือติดต่อเจ้าหน้าที่โดยตรงที่ 1161',
+          text: 'ขออภัยครับ ฉันไม่สามารถหาคำตอบที่ตรงกับคำถามของคุณได้ กรุณาลองถามคำถามอื่น หรือติดต่อเจ้าหน้าที่โดยตรงที่ 1689',
           timestamp: new Date()
         };
       }
@@ -226,7 +226,7 @@ const Chat = () => {
 
   return (
     <div>
-      <div className={styles.phoneIcon} onClick={() => window.open('tel:1161')}>
+      <div className={styles.phoneIcon} onClick={() => window.open('tel:1689')}>
         <Phone style={{ fontSize: 30, color: "white" }} />
       </div>
       {showScrollTop && (
@@ -327,7 +327,7 @@ const Chat = () => {
               </button>
             </div>
             <div className={styles.chatFooter}>
-              สอบถามเพิ่มเติม: <a href="tel:1161" className={styles.phoneLink}>1161</a>
+              สอบถามเพิ่มเติม: <a href="tel:1689" className={styles.phoneLink}>1689</a>
             </div>
           </div>
         </div>

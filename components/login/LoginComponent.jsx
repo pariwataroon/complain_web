@@ -1,11 +1,27 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/router";
 import { IconButton } from "@mui/material";
 import styles from "./LoginPage.module.scss";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import { alertWarning } from "@utils/Alerts";
 
 export default function LoginPage() {
   const router = useRouter();
+
+  useEffect(() => {
+    if (router.query.error === "token_expired") {
+      alertWarning(
+        "หมดเวลา",
+        "Session ของคุณหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง"
+      );
+
+      const { error, ...queryWithoutError } = router.query;
+      router.replace({
+        pathname: router.pathname,
+        query: queryWithoutError,
+      }, undefined, { shallow: true });
+    }
+  }, [router.query.error]);
 
   const handleClick = (method) => {
     router.push({
