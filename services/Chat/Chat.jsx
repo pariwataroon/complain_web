@@ -12,7 +12,7 @@ const Chat = () => {
   const [messages, setMessages] = useState([
     {
       type: 'bot',
-      text: 'สวัสดีครับ! ผมคือ COMP AI พร้อมตอบคำถามของคุณ',
+      text: 'สวัสดีครับ! ผมคือ COMP ChatBot พร้อมตอบคำถามของคุณ',
       timestamp: new Date()
     }
   ]);
@@ -275,7 +275,7 @@ const Chat = () => {
         <div className={styles.chatBox}>
           <div className={styles.chatHeader}>
             <div className={styles.chatTitle}>
-              AI สำนักงานปลัดกระทรวงการคลัง
+              CB สำนักงานปลัดกระทรวงการคลัง
             </div>
             <button
               className={styles.closeButton}
