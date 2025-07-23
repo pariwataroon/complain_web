@@ -3,12 +3,20 @@ import axiosInstance from "@pages/api/axiosInstance";
 const getChatBot = async () => {
   try {
     const response = await axiosInstance.get(`/chat_bot`);
-    if (response && response.data) {
-      return { faqs: response.data };
+    if (
+      response &&
+      response.data &&
+      response.data.res_data &&
+      Array.isArray(response.data.res_data)
+    ) {
+      return response.data.res_data;
+    } else {
+      console.warn("Invalid API response structure:", response.data);
+      return [];
     }
   } catch (error) {
     console.error("Error fetching chatbot FAQs:", error);
-    throw error;
+    return [];
   }
 };
 

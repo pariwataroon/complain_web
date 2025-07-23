@@ -60,6 +60,7 @@ const useDetailOPMData = ({
   const getAccountData = () => {
     const accountField = caseDetails?.find((item) => item.field === "account");
     const accountData = accountField?.value;
+    
     if (accountData && typeof accountData === "object") {
       const fullName = `${accountData.salutation_th || ""} ${
         accountData.firstname_th || ""
@@ -115,6 +116,8 @@ const useDetailOPMData = ({
       (item) => item.field === "customer"
     );
     const customerData = customerField?.value;
+    console.log({ customerData });
+    
     if (customerData && typeof customerData === "object") {
       const fullName = `${customerData.salutation_th || ""} ${
         customerData.firstname_th || ""
@@ -321,6 +324,7 @@ const useDetailOPMData = ({
             province: accountData.address?.province || "-",
             postcode: accountData.address?.postcode || "-",
             full_address: [
+              accountData.address,
               accountData.address?.subdistrict,
               accountData.address?.district,
               accountData.address?.province,
@@ -350,6 +354,7 @@ const useDetailOPMData = ({
             province: customerData.address?.province || "-",
             postcode: customerData.address?.postcode || "-",
             full_address: [
+              customerData.address,
               customerData.address?.subdistrict,
               customerData.address?.district,
               customerData.address?.province,

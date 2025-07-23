@@ -12,7 +12,7 @@ export default function LoginPage() {
     if (router.query.error === "token_expired") {
       alertWarning(
         "หมดเวลา",
-        "Session ของคุณหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง"
+        "Token ของคุณหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง"
       );
 
       const { error, ...queryWithoutError } = router.query;

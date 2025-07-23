@@ -20,10 +20,10 @@ const Chat = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [faqData, setFaqData] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [showQuickMenu, setShowQuickMenu] = useState(false);
   const chatContentRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Load FAQ data on component mount
   useEffect(() => {
     loadFAQData();
   }, []);
@@ -31,12 +31,11 @@ const Chat = () => {
   const loadFAQData = async () => {
     try {
       setIsLoadingData(true);
-      const response = await getChatBot();
-      if (response.faqs) {
-        setFaqData(response.faqs);
-      }
+      const faqs = await getChatBot(); // รับ array โดยตรง
+      setFaqData(faqs); // faqs จะเป็น array เสมอ
     } catch (error) {
       console.error("Error loading FAQ data:", error);
+      setFaqData([]); // fallback เป็น empty array
     } finally {
       setIsLoadingData(false);
     }
@@ -50,94 +49,105 @@ const Chat = () => {
       .trim();
   };
 
-  // Calculate text similarity using simple keyword matching and TensorFlow.js
-  const calculateSimilarity = async (userInput, faqTitle, faqKeywords = []) => {
+  // ตรวจสอบการ match กับ title และ keywords
+  const checkMatch = (userInput, faqTitle, faqKeywords = []) => {
     const processedInput = preprocessText(userInput);
     const processedTitle = preprocessText(faqTitle);
+    const keywords = Array.isArray(faqKeywords) ? faqKeywords : [];
 
-    // Simple keyword matching score
-    let keywordScore = 0;
-    const inputWords = processedInput.split(' ');
-    const titleWords = processedTitle.split(' ');
-
-    // Check title word matches
-    titleWords.forEach(word => {
-      if (inputWords.includes(word) && word.length > 1) {
-        keywordScore += 2;
-      }
-    });
-
-    // Check keyword matches (higher weight)
-    faqKeywords.forEach(keyword => {
-      const processedKeyword = preprocessText(keyword);
-      if (processedInput.includes(processedKeyword)) {
-        keywordScore += 3;
-      }
-    });
-
-    // Use TensorFlow.js for enhanced text similarity (simple approach)
-    try {
-      // Create simple text vectors based on character frequency
-      const createTextVector = (text) => {
-        const vector = new Array(128).fill(0); // ASCII range
-        for (let char of text) {
-          const code = char.charCodeAt(0);
-          if (code < 128) {
-            vector[code]++;
-          }
-        }
-        return vector;
-      };
-
-      const inputVector = createTextVector(processedInput);
-      const titleVector = createTextVector(processedTitle);
-
-      // Calculate cosine similarity using TensorFlow.js
-      const inputTensor = tf.tensor1d(inputVector);
-      const titleTensor = tf.tensor1d(titleVector);
-
-      const dotProduct = tf.sum(tf.mul(inputTensor, titleTensor));
-      const inputNorm = tf.norm(inputTensor);
-      const titleNorm = tf.norm(titleTensor);
-
-      const cosineSimilarity = tf.div(dotProduct, tf.mul(inputNorm, titleNorm));
-      const similarityScore = await cosineSimilarity.data();
-
-      // Clean up tensors
-      inputTensor.dispose();
-      titleTensor.dispose();
-      dotProduct.dispose();
-      inputNorm.dispose();
-      titleNorm.dispose();
-      cosineSimilarity.dispose();
-
-      // Combine keyword score and cosine similarity
-      const totalScore = keywordScore + (similarityScore[0] * 10);
-      return totalScore;
-
-    } catch (error) {
-      console.error("TensorFlow similarity calculation error:", error);
-      return keywordScore; // Fallback to keyword score only
+    // เช็ค exact match กับ title
+    if (processedInput === processedTitle) {
+      return { isMatch: true, type: 'exact_title', score: 100 };
     }
+
+    // เช็คว่า title มีอยู่ใน user input หรือไม่
+    if (processedInput.includes(processedTitle)) {
+      return { isMatch: true, type: 'title_contained', score: 90 };
+    }
+
+    // เช็คว่า user input มีอยู่ใน title หรือไม่
+    if (processedTitle.includes(processedInput)) {
+      return { isMatch: true, type: 'input_in_title', score: 85 };
+    }
+
+    // เช็ค exact match กับ keywords
+    for (const keyword of keywords) {
+      const processedKeyword = preprocessText(keyword);
+
+      // exact match กับ keyword
+      if (processedInput === processedKeyword) {
+        return { isMatch: true, type: 'exact_keyword', score: 95 };
+      }
+
+      // keyword มีอยู่ใน user input
+      if (processedInput.includes(processedKeyword)) {
+        return { isMatch: true, type: 'keyword_contained', score: 80 };
+      }
+
+      // user input มีอยู่ใน keyword
+      if (processedKeyword.includes(processedInput)) {
+        return { isMatch: true, type: 'input_in_keyword', score: 75 };
+      }
+    }
+
+    // เช็คคำที่คล้ายกัน (word similarity)
+    const inputWords = processedInput.split(' ').filter(word => word.length > 1);
+    const titleWords = processedTitle.split(' ').filter(word => word.length > 1);
+
+    let wordMatchCount = 0;
+    inputWords.forEach(inputWord => {
+      titleWords.forEach(titleWord => {
+        if (inputWord === titleWord) {
+          wordMatchCount++;
+        }
+      });
+    });
+
+    // เช็คคำใน keywords
+    keywords.forEach(keyword => {
+      const keywordWords = preprocessText(keyword).split(' ').filter(word => word.length > 1);
+      inputWords.forEach(inputWord => {
+        keywordWords.forEach(keywordWord => {
+          if (inputWord === keywordWord) {
+            wordMatchCount++;
+          }
+        });
+      });
+    });
+
+    // ถ้ามีคำที่ match อย่างน้อย 1 คำ
+    if (wordMatchCount > 0) {
+      const score = Math.min(70, wordMatchCount * 20);
+      return { isMatch: true, type: 'word_similarity', score };
+    }
+
+    return { isMatch: false, type: 'no_match', score: 0 };
   };
 
-  // Find best matching FAQ
-  const findBestMatch = async (userInput) => {
+  const findBestMatch = (userInput) => {
     if (faqData.length === 0) return null;
 
     let bestMatch = null;
     let highestScore = 0;
+    let matchType = '';
 
     for (const faq of faqData) {
-      const score = await calculateSimilarity(userInput, faq.title, faq.keyword);
-      if (score > highestScore) {
-        highestScore = score;
+      const matchResult = checkMatch(userInput, faq.title, faq.keyword);
+
+      if (matchResult.isMatch && matchResult.score > highestScore) {
+        highestScore = matchResult.score;
         bestMatch = faq;
+        matchType = matchResult.type;
       }
     }
 
-    // Return match only if score is above threshold
-    return highestScore > 1.5 ? bestMatch : null;
+    if (bestMatch) {
+      return {
+        text: bestMatch.detail || bestMatch.title,
+      };
+    }
+
+    return null;
   };
 
   // Handle sending message
@@ -155,15 +165,14 @@ const Chat = () => {
     setIsTyping(true);
 
     try {
-      // Find matching FAQ
-      const matchedFAQ = await findBestMatch(userMessage.text);
+      const matchResult = findBestMatch(userMessage.text);
 
       let botResponse;
-      if (matchedFAQ) {
+      if (matchResult) {
         botResponse = {
           type: 'bot',
-          text: matchedFAQ.detail || matchedFAQ.title,
-          faq: matchedFAQ,
+          text: matchResult.text,
+          faq: matchResult.faq,
           timestamp: new Date()
         };
       } else {
@@ -200,6 +209,30 @@ const Chat = () => {
 
   const toggleChat = () => {
     setIsChatOpen((prev) => !prev);
+  };
+
+  const toggleQuickMenu = () => {
+    setShowQuickMenu((prev) => !prev);
+  };
+
+  const handleQuickMenuSelect = (question) => {
+    setInputMessage(question);
+    setShowQuickMenu(false);
+    // Focus ที่ input field
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  // ดึง 6 คำถามล่าสุด (เรียงตาม created_at หรือ updated_at)
+  const getRecentQuestions = () => {
+    if (!Array.isArray(faqData) || faqData.length === 0) return [];
+
+    // เรียงตาม updated_at หรือ created_at (ใหม่ไปเก่า) และเอา 6 รายการแรก
+    return faqData
+      .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
+      .slice(0, 6)
+      .map(faq => faq.title);
   };
 
   const scrollToTop = () => {
@@ -272,7 +305,7 @@ const Chat = () => {
                         {lineIndex < message.text.split('\n').length - 1 && <br />}
                       </div>
                     ))}
-                    {message.faq && message.faq.keyword && (
+                    {message.faq && message.faq.keyword && Array.isArray(message.faq.keyword) && (
                       <div className={styles.keywords}>
                         {message.faq.keyword.map((keyword, keyIndex) => (
                           <span key={keyIndex} className={styles.keyword}>
@@ -307,7 +340,47 @@ const Chat = () => {
           </div>
 
           <div className={styles.chatInput}>
+            {/* Quick Menu */}
+            {showQuickMenu && (
+              <div className={styles.quickMenu}>
+                <div className={styles.quickMenuHeader}>
+                  <span>คำถามยอดนิยม</span>
+                  <button
+                    className={styles.closeQuickMenu}
+                    onClick={toggleQuickMenu}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className={styles.quickMenuItems}>
+                  {getRecentQuestions().map((question, index) => (
+                    <div
+                      key={index}
+                      className={styles.quickMenuItem}
+                      onClick={() => handleQuickMenuSelect(question)}
+                    >
+                      <span className={styles.questionIcon}>❓</span>
+                      <span className={styles.questionText}>{question}</span>
+                    </div>
+                  ))}
+                  {getRecentQuestions().length === 0 && (
+                    <div className={styles.noQuestions}>
+                      ไม่มีคำถามที่แนะนำในขณะนี้
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className={styles.inputContainer}>
+              <button
+                className={styles.menuButton}
+                onClick={toggleQuickMenu}
+                disabled={isTyping}
+                title="เมนูคำถามยอดนิยม"
+              >
+                <span className={styles.menuIcon}>☰</span>
+              </button>
               <textarea
                 ref={inputRef}
                 value={inputMessage}

@@ -49,7 +49,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
     const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
-
+    
     const [reportModalOpen, setReportModalOpen] = useState(false);
 
     const {
@@ -84,16 +84,18 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
     };
 
 
-
-
+    
+    console.log({ caseDetails });
+    
     useEffect(() => {
         if (isDataReady) {
             const mainInfo = getSectionData('main_information');
             const accountData = getAccountData();
-
+            
             const customerData = getCustomerData();
             if (opmChannelId && !autoCreateAttempted && !isCreating) {
             }
+            console.log({ customerData });
         }
     }, [isDataReady, compiledData, opmChannelId, autoCreateAttempted, isCreating]);
 
@@ -419,6 +421,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                         </Typography>
                                         <Typography variant="body1" className={styles.value}>
                                             {[
+                                                accountData.address || '',
                                                 accountData.address.subdistrict,
                                                 accountData.address.district,
                                                 accountData.address.province,
@@ -529,7 +532,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                 </Grid>
                             )}
 
-                            {customerData.address && (customerData.address.subdistrict || customerData.address.district || customerData.address.province) && (
+                            {(customerData.address || customerData.subdistrict_text || customerData.district_text || customerData.province_text) && (
                                 <Grid item xs={12}>
                                     <Box className={styles.infoItem}>
                                         <LocationIcon className={styles.infoIcon} />
@@ -539,11 +542,12 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                             </Typography>
                                             <Typography variant="body1" className={styles.value}>
                                                 {[
-                                                    customerData.address.subdistrict,
-                                                    customerData.address.district,
-                                                    customerData.address.province,
-                                                    customerData.address.postcode
-                                                ].filter(Boolean).join(' ')}
+                                                    customerData.address || '',
+                                                    customerData.subdistrict_text || '',
+                                                    customerData.district_text || '',
+                                                    customerData.province_text || '',
+                                                    customerData.postcode || ''
+                                                ].filter(item => item && String(item).trim() !== '' && item !== '-').join(' ') || 'ไม่ได้ระบุ'}
                                             </Typography>
                                         </Box>
                                     </Box>

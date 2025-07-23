@@ -43,7 +43,6 @@ const ChatbotComponents = () => {
   const [form, setForm] = useState({ title: "", detail: "", keyword: [] });
   const [submitting, setSubmitting] = useState(false);
 
-  // Load FAQ data from API
   useEffect(() => {
     loadFAQs();
   }, []);
@@ -55,7 +54,17 @@ const ChatbotComponents = () => {
 
       console.log('API Response:', response);
 
-      if (response && response.res_data && Array.isArray(response.res_data)) {
+      if (Array.isArray(response)) {
+        const formattedFaqs = response.map(faq => ({
+          ...faq,
+          date: new Date(faq.created_at).toLocaleDateString("th-TH", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+        }));
+        setFaqsData(formattedFaqs);
+      } else if (response && response.res_data && Array.isArray(response.res_data)) {
         const formattedFaqs = response.res_data.map(faq => ({
           ...faq,
           date: new Date(faq.created_at).toLocaleDateString("th-TH", {
@@ -66,6 +75,7 @@ const ChatbotComponents = () => {
         }));
         setFaqsData(formattedFaqs);
       } else {
+        console.warn("Unexpected API response format:", response);
         setFaqsData([]);
       }
     } catch (error) {
@@ -136,7 +146,7 @@ const ChatbotComponents = () => {
 
       const response = await addChatBot(newFAQ);
 
-      if (response.success) {
+      if (response.success || response) {
         // Reload FAQs to get updated data with IDs
         await loadFAQs();
 
@@ -173,7 +183,7 @@ const ChatbotComponents = () => {
 
       const response = await updateChatBot(updatedFAQ);
 
-      if (response.success) {
+      if (response.success || response) {
         // Update local state
         const updated = [...faqsData];
         updated[editIndex] = { ...updated[editIndex], ...updatedFAQ };
@@ -355,6 +365,9 @@ const ChatbotComponents = () => {
                         </Typography>
                         {item.keyword && item.keyword.length > 0 && (
                           <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            <Typography sx={{ fontSize: 12, color: "#9CA3AF", mr: 1 }}>
+                              คีย์เวิร์ด:
+                            </Typography>
                             {item.keyword.map((keyword, keyIndex) => (
                               <Typography
                                 key={keyIndex}
