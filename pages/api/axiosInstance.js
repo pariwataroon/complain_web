@@ -45,7 +45,7 @@ axiosInstance.interceptors.response.use(
         Cookies.remove("refresh_token");
         Cookies.remove("info");
         Cookies.remove("permission_paths");
-        window.location.href = "/login";
+        window.location.href = "/login?error=token_expired";
       }
       return;
     }

@@ -51,7 +51,6 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
 
     const [reportModalOpen, setReportModalOpen] = useState(false);
-    console.log({ operatingsDetails });
 
     const {
         compiledData,
@@ -91,6 +90,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
         if (isDataReady) {
             const mainInfo = getSectionData('main_information');
             const accountData = getAccountData();
+
             const customerData = getCustomerData();
             if (opmChannelId && !autoCreateAttempted && !isCreating) {
             }
@@ -151,6 +151,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
 
     // ใช้ข้อมูลจาก hook
     const accountData = getAccountData();
+
     const customerData = getCustomerData();
     const caseCode = currentItemData?.case_code || getFieldValue("case_code");
     const typeText = currentItemData?.type_text || getFieldValue("type_text");
@@ -658,6 +659,197 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                 </CardContent>
             </Card>
 
+            
+            {/* Additional Information Card */}
+            <Card className={styles.additionalInfoCard}>
+                <CardContent className={styles.cardContent}>
+                    <Box className={styles.headerSection}>
+                        <Avatar className={styles.headerIcon}>
+                            <InfoIcon />
+                        </Avatar>
+                        <Typography variant="h6" className={styles.sectionTitle}>
+                            ข้อมูลเพิ่มเติม
+                        </Typography>
+                    </Box>
+
+                    <Grid container spacing={3} className={styles.infoGrid}>
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ช่องทางการรับเรื่อง
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("channel_incoming_text")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ระดับความสำคัญ
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("priority_text")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ระดับความเร่งด่วน
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("severity_text")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ระดับความลับ
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("secret_text")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={12}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    พื้นที่เกิดเหตุ
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {[
+                                        getFieldValue("case_area"),
+                                        getFieldValue("subdistrict_text"),
+                                        getFieldValue("district_text"),
+                                        getFieldValue("province_text")
+                                    ].filter(item => item !== '-').join(' ')}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={12}>
+                            <Grid item xs={12}>
+                                <Box className={styles.infoItem}>
+                                    <Typography variant="subtitle2" className={styles.label}>
+                                        ช่วงเวลาที่เกิดเหตุ
+                                    </Typography>
+                                    <Typography variant="body1" className={styles.value}>
+                                        {getFieldValue("time_occurrenced")}
+                                    </Typography>
+                                </Box>
+                            </Grid>
+                        </Grid>
+
+                        <Grid item xs={12} md={12}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    วันที่เกิดเหตุ (จาก - ถึง)
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {formatDate(getFieldValue("date_occurrenced_from"))}
+                                    {" - "}
+                                    {formatDate(getFieldValue("date_occurrenced_to"))}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    อยู่ระหว่างการฟ้องร้อง / พิจารณาในชั้นศาล
+                                </Typography>
+                                <Chip
+                                    label={getFieldValue("is_in_court_text")}
+                                    color={getFieldValue("is_in_court") === "T" ? "error" : "success"}
+                                    size="small"
+                                    className={styles.statusChip}
+                                />
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Grid item xs={12}>
+                                <Box className={styles.infoItem}>
+                                    <Typography variant="subtitle2" className={styles.label}>
+                                        ผู้ถูกร้อง
+                                    </Typography>
+                                    <Typography variant="body1" className={styles.value}>
+                                        {getFieldValue("defendant")}
+                                    </Typography>
+                                </Box>
+                            </Grid>
+                        </Grid>
+
+                        <Grid item xs={12} md={12}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    สร้างโดย
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("created_by_text")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        {getFieldValue("remark") && getFieldValue("remark") !== '-' && (
+                            <Grid item xs={12}>
+                                <Box className={styles.infoItem}>
+                                    <Typography variant="subtitle2" className={styles.label}>
+                                        หมายเหตุ
+                                    </Typography>
+                                    <Typography variant="body1" className={styles.value}>
+                                        {getFieldValue("remark")}
+                                    </Typography>
+                                </Box>
+                            </Grid>
+                        )}
+                    </Grid>
+                </CardContent>
+            </Card>
+
+            {/* Details Card */}
+            <Card className={styles.detailsCard}>
+                <CardContent className={styles.cardContent}>
+                    <Box className={styles.headerSection}>
+                        <Avatar className={styles.headerIcon}>
+                            <InfoIcon />
+                        </Avatar>
+                        <Typography variant="h6" className={styles.sectionTitle}>
+                            รายละเอียดและสรุป
+                        </Typography>
+                    </Box>
+
+                    <Box className={styles.detailSection}>
+                        <Typography variant="subtitle2" className={styles.label}>
+                            รายละเอียด
+                        </Typography>
+                        <Box className={styles.detailBox}>
+                            <Typography variant="body1" className={styles.detailText}>
+                                {getFieldValue("detail")}
+                            </Typography>
+                        </Box>
+                    </Box>
+
+                    <Divider className={styles.divider} />
+
+                    <Box className={styles.detailSection}>
+                        <Typography variant="subtitle2" className={styles.label}>
+                            สรุป
+                        </Typography>
+                        <Box className={styles.summaryBox}>
+                            <Typography variant="body1" className={styles.summaryText}>
+                                {getFieldValue("summary")}
+                            </Typography>
+                        </Box>
+                    </Box>
+                </CardContent>
+            </Card>
             {/* Attachments Card */}
             <Card className={styles.timelineCard}>
                 <CardContent className={styles.cardContent}>
@@ -977,197 +1169,6 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                     )}
                 </CardContent>
             </Card>
-            {/* Additional Information Card */}
-            <Card className={styles.additionalInfoCard}>
-                <CardContent className={styles.cardContent}>
-                    <Box className={styles.headerSection}>
-                        <Avatar className={styles.headerIcon}>
-                            <InfoIcon />
-                        </Avatar>
-                        <Typography variant="h6" className={styles.sectionTitle}>
-                            ข้อมูลเพิ่มเติม
-                        </Typography>
-                    </Box>
-
-                    <Grid container spacing={3} className={styles.infoGrid}>
-                        <Grid item xs={12} md={6}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    ช่องทางการรับเรื่อง
-                                </Typography>
-                                <Typography variant="body1" className={styles.value}>
-                                    {getFieldValue("channel_incoming_text")}
-                                </Typography>
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    ระดับความสำคัญ
-                                </Typography>
-                                <Typography variant="body1" className={styles.value}>
-                                    {getFieldValue("priority_text")}
-                                </Typography>
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    ระดับความรุนแรง
-                                </Typography>
-                                <Typography variant="body1" className={styles.value}>
-                                    {getFieldValue("severity_text")}
-                                </Typography>
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    ระดับความลับ
-                                </Typography>
-                                <Typography variant="body1" className={styles.value}>
-                                    {getFieldValue("secret_text")}
-                                </Typography>
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12} md={12}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    พื้นที่เกิดเหตุ
-                                </Typography>
-                                <Typography variant="body1" className={styles.value}>
-                                    {[
-                                        getFieldValue("case_area"),
-                                        getFieldValue("subdistrict_text"),
-                                        getFieldValue("district_text"),
-                                        getFieldValue("province_text")
-                                    ].filter(item => item !== '-').join(' ')}
-                                </Typography>
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12} md={12}>
-                            <Grid item xs={12}>
-                                <Box className={styles.infoItem}>
-                                    <Typography variant="subtitle2" className={styles.label}>
-                                        ช่วงเวลาที่เกิดเหตุ
-                                    </Typography>
-                                    <Typography variant="body1" className={styles.value}>
-                                        {getFieldValue("time_occurrenced")}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                        </Grid>
-
-                        <Grid item xs={12} md={12}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    วันที่เกิดเหตุ (จาก - ถึง)
-                                </Typography>
-                                <Typography variant="body1" className={styles.value}>
-                                    {formatDate(getFieldValue("date_occurrenced_from"))}
-                                    {" - "}
-                                    {formatDate(getFieldValue("date_occurrenced_to"))}
-                                </Typography>
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    อยู่ระหว่างการฟ้องร้อง / พิจารณาในชั้นศาล
-                                </Typography>
-                                <Chip
-                                    label={getFieldValue("is_in_court_text")}
-                                    color={getFieldValue("is_in_court") === "T" ? "error" : "success"}
-                                    size="small"
-                                    className={styles.statusChip}
-                                />
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <Grid item xs={12}>
-                                <Box className={styles.infoItem}>
-                                    <Typography variant="subtitle2" className={styles.label}>
-                                        ผู้ถูกร้อง
-                                    </Typography>
-                                    <Typography variant="body1" className={styles.value}>
-                                        {getFieldValue("defendant")}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                        </Grid>
-
-                        <Grid item xs={12} md={12}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    สร้างโดย
-                                </Typography>
-                                <Typography variant="body1" className={styles.value}>
-                                    {getFieldValue("created_by_text")}
-                                </Typography>
-                            </Box>
-                        </Grid>
-
-                        {getFieldValue("remark") && getFieldValue("remark") !== '-' && (
-                            <Grid item xs={12}>
-                                <Box className={styles.infoItem}>
-                                    <Typography variant="subtitle2" className={styles.label}>
-                                        หมายเหตุ
-                                    </Typography>
-                                    <Typography variant="body1" className={styles.value}>
-                                        {getFieldValue("remark")}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                        )}
-                    </Grid>
-                </CardContent>
-            </Card>
-
-            {/* Details Card */}
-            <Card className={styles.detailsCard}>
-                <CardContent className={styles.cardContent}>
-                    <Box className={styles.headerSection}>
-                        <Avatar className={styles.headerIcon}>
-                            <InfoIcon />
-                        </Avatar>
-                        <Typography variant="h6" className={styles.sectionTitle}>
-                            รายละเอียดและสรุป
-                        </Typography>
-                    </Box>
-
-                    <Box className={styles.detailSection}>
-                        <Typography variant="subtitle2" className={styles.label}>
-                            รายละเอียด
-                        </Typography>
-                        <Box className={styles.detailBox}>
-                            <Typography variant="body1" className={styles.detailText}>
-                                {getFieldValue("detail")}
-                            </Typography>
-                        </Box>
-                    </Box>
-
-                    <Divider className={styles.divider} />
-
-                    <Box className={styles.detailSection}>
-                        <Typography variant="subtitle2" className={styles.label}>
-                            สรุป
-                        </Typography>
-                        <Box className={styles.summaryBox}>
-                            <Typography variant="body1" className={styles.summaryText}>
-                                {getFieldValue("summary")}
-                            </Typography>
-                        </Box>
-                    </Box>
-                </CardContent>
-            </Card>
-
             {/* Combined Report Modal */}
             <CombinedReportModal
                 open={reportModalOpen}

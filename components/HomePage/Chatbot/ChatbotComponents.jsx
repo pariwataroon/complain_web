@@ -52,9 +52,11 @@ const ChatbotComponents = () => {
     try {
       setLoading(true);
       const response = await getChatBot();
-      if (response.faqs) {
-        // Format date for display
-        const formattedFaqs = response.faqs.map(faq => ({
+
+      console.log('API Response:', response);
+
+      if (response && response.res_data && Array.isArray(response.res_data)) {
+        const formattedFaqs = response.res_data.map(faq => ({
           ...faq,
           date: new Date(faq.created_at).toLocaleDateString("th-TH", {
             year: "numeric",
@@ -63,10 +65,13 @@ const ChatbotComponents = () => {
           })
         }));
         setFaqsData(formattedFaqs);
+      } else {
+        setFaqsData([]);
       }
     } catch (error) {
       console.error("Error loading FAQs:", error);
       alertError("เกิดข้อผิดพลาด", "ไม่สามารถโหลดข้อมูลคำถามได้");
+      setFaqsData([]);
     } finally {
       setLoading(false);
     }
