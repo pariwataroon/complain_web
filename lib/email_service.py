@@ -7,8 +7,8 @@ from lib.logger import get_logger
 logger = get_logger("email_service", console_output=False)
 
 # อ่านค่าจาก Environment Variables หรือใช้ค่าเริ่มต้น
-SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp-alert.mof.go.th")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 25))
 SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "your-email@gmail.com")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "your-app-password")
 EMAIL_FROM = os.environ.get("EMAIL_FROM", "noreply@yourdomain.com")
@@ -51,8 +51,8 @@ def _send_email_smtp(to_email: str, subject: str, message: str, html_message: st
         
         # เชื่อมต่อกับ SMTP server
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()  # เข้ารหัสการเชื่อมต่อ
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        #server.starttls()  # เข้ารหัสการเชื่อมต่อ
+        #server.login(SMTP_USERNAME, SMTP_PASSWORD)
         
         # ส่งอีเมล
         server.sendmail(EMAIL_FROM, to_email, msg.as_string())
