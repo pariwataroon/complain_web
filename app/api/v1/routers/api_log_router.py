@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime, timedelta
 from uuid import UUID
 
+from app.api.middleware.api_key_verify import verify_api_key_or_token
 from app.api.middleware.permission_middleware import can_read
 from app.api.v1.controllers.api_log_controller import (
     get_all_logs,
@@ -177,9 +178,10 @@ async def cleanup_old_logs(
 
 @router.get("/counter", response_model=FormatResponseModel)
 async def get_user_counter(
+    request: Request,
     refresh: bool = Query(False, description="บังคับ refresh ข้อมูลใหม่ (ไม่ใช้ cache)"),
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("admin_logs"))
+    # current_user: str = Depends(can_read("admin_logs"))
 ):
     """
     นับจำนวนผู้เข้าใช้งานระบบจาก chat_bot path
@@ -187,6 +189,15 @@ async def get_user_counter(
     - สามารถ refresh ข้อมูลใหม่ได้ด้วย parameter refresh=true
     """
     try:
+        # ตรวจสอบ API Key หรือ Token
+        is_authenticated = await verify_api_key_or_token(request, db)
+        
+        if not is_authenticated:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid API key/token"
+            )
+        
         if refresh:
             counter_data = force_refresh_user_counter(db)
         else:

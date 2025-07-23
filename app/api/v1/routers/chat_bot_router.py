@@ -1,9 +1,10 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from app.api.middleware.permission_middleware import can_create, can_read, can_update, can_delete
+from app.api.middleware.api_key_verify import verify_api_key_or_token
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
 from app.api.v1.schemas.chat_bot import ChatBotCreate, ChatBotResponse, ChatBotUpdate
@@ -24,14 +25,23 @@ router = APIRouter(
 
 @router.get("", response_model=FormatResponseModel)
 async def read_chat_bots(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
     search: Optional[str] = Query(None, description="ค้นหาใน title, detail หรือ keyword"),
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("homepage_chatbot"))
+    # current_user: str = Depends(can_read("homepage_chatbot"))
 ):
     """ดึงข้อมูล ChatBot ทั้งหมด (tensor flow user) - ต้องมีสิทธิ์อ่านใน chat_bot"""
     try:
+        # ตรวจสอบ API Key หรือ Token
+        is_authenticated = await verify_api_key_or_token(request, db)
+        
+        if not is_authenticated:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid API key/token"
+            )
         chat_bots = get_chat_bots(db, skip=skip, limit=limit, search=search)
         result = [ChatBotResponse.model_validate(chat_bot).model_dump() for chat_bot in chat_bots]
         return format_response("0000", result)
