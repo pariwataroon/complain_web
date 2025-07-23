@@ -1,16 +1,30 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import styles from "./Footer.module.scss";
 import { LocalPhone, ChatBubbleOutline } from "@mui/icons-material";
+import { getApiLogsCounter } from "@pages/api/home/home";
 
 export default function Footer() {
+  const [apiLogsStats, setApiLogsStats] = useState(null);
+
+  useEffect(() => {
+    const fetchApiLogsCounter = async () => {
+      try {
+        const data = await getApiLogsCounter();
+        setApiLogsStats(data?.res_data ?? data); // ใช้ res_data โดยตรง
+      } catch (error) {
+        setApiLogsStats(null);
+      }
+    };
+    fetchApiLogsCounter();
+  }, []);
 
   const handleStepsClick = (e) => {
     e.preventDefault();
-    const stepsSection = document.getElementById('steps-section');
+    const stepsSection = document.getElementById("steps-section");
     if (stepsSection) {
       stepsSection.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
+        behavior: "smooth",
+        block: "start",
       });
     }
   };
@@ -25,7 +39,11 @@ export default function Footer() {
             <a href="/" className={styles.linkItem}>
               หน้าหลัก
             </a>
-            <a href="#steps-section" className={styles.linkItem} onClick={handleStepsClick}>
+            <a
+              href="#steps-section"
+              className={styles.linkItem}
+              onClick={handleStepsClick}
+            >
               ขั้นตอนการแจ้งเรื่องร้องทุกข์
             </a>
             <a href="/complaint" className={styles.linkItem}>
@@ -68,10 +86,27 @@ export default function Footer() {
               referrerPolicy="no-referrer-when-downgrade"
             ></iframe>
           </div>
+          <div className={styles.apiLogsCounterContainer}>
+            <div className={styles.statSingleRow}>
+              <span className={styles.statLabel}>จำนวนการเข้าใช้ทั้งหมด</span>
+              {apiLogsStats ? (
+                <span className={styles.statValueRight}>
+                  {apiLogsStats.total_requests}
+                </span>
+              ) : (
+                <span className={styles.loadingContainer}>
+                  <span className={styles.loadingSpinner}></span>
+                  <span>กำลังโหลด...</span>
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
       <div className={styles.footerBottom}>
-        <p>Copyright ©2025  Thailand's Ministry of Finance  All rights Reserved.</p>
+        <p>
+          Copyright ©2025 Thailand's Ministry of Finance All rights Reserved.
+        </p>
       </div>
     </footer>
   );
