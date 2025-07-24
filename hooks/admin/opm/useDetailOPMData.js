@@ -80,6 +80,7 @@ const useDetailOPMData = ({
           accountData.list_account_detail?.find((c) => c.detail_type === "E")
             ?.detail || "-",
         address: {
+          address: accountData.address,
           subdistrict: accountData.subdistrict_text,
           district: accountData.district_text,
           province: accountData.province_text,
@@ -116,7 +117,7 @@ const useDetailOPMData = ({
       (item) => item.field === "customer"
     );
     const customerData = customerField?.value;
-    console.log({ customerData });
+    // console.log({ customerData });
     
     if (customerData && typeof customerData === "object") {
       const fullName = `${customerData.salutation_th || ""} ${
@@ -137,6 +138,7 @@ const useDetailOPMData = ({
           customerData.list_customer_detail?.find((c) => c.detail_type === "E")
             ?.detail || "-",
         address: {
+          address: customerData.address,
           subdistrict: customerData.subdistrict_text,
           district: customerData.district_text,
           province: customerData.province_text,

@@ -27,7 +27,6 @@ const SelectFieldPAAOPM = ({
   selectedDistrict,
   ...otherProps
 }) => {
-  // State สำหรับเก็บข้อมูลจาก API
   const [districts, setDistricts] = useState([]);
   const [subDistricts, setSubDistricts] = useState([]);
   const [operatingChannels, setOperatingChannels] = useState([]);

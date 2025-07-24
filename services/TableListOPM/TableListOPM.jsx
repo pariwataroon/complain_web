@@ -35,7 +35,9 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import WarningIcon from "@mui/icons-material/Warning";
-import { green, grey, orange } from "@mui/material/colors";
+import NotificationImportantIcon from "@mui/icons-material/NotificationImportant";
+import BusinessIcon from "@mui/icons-material/Business";
+import { green, grey, orange, blue } from "@mui/material/colors";
 
 import styles from "./TableListOPM.module.scss";
 import InputText from "@services/InputText/InputText";
@@ -60,63 +62,65 @@ const columns = [
   { name: "isRead", label: "สถานะการคลัง", width: 80, priority: 2 },
 ];
 
-// Utility functions สำหรับตรวจสอบ reopen
-const TERMINATION_KEYWORDS = [
-  'ยุติ', 'ยุติเรื่อง', 'ปิดเคส', 'สิ้นสุด', 'จบเรื่อง',
-  'ไม่อยู่ในอำนาจหน้าที่', 'ปิดการดำเนินการ'
-];
-
-const REOPEN_KEYWORDS = [
-  'ไม่ยุติ', 'ทำงานต่อ', 'เปิดใหม่', 'ดำเนินการต่อ',
-  'กลับมาดำเนินการ', 'เปิดคืน', 'ทำต่อ', 'ขอให้ดำเนินการต่อ',
-  'อย่ายุติ', 'ไม่ควรยุติ', 'ต้องการให้ทำต่อ'
-];
-
-const containsKeywords = (text, keywords) => {
-  if (!text) return false;
-  const lowerText = text.toLowerCase();
-  return keywords.some(keyword => lowerText.includes(keyword.toLowerCase()));
-};
-
-const checkReopenStatus = (operatingsDetails) => {
+// ฟังก์ชันตรวจสอบการมีข้อมูลจากสำนักงานปลัดสำนักนายกรัฐมนตรี
+const checkPMOfficeSubmission = (operatingsDetails) => {
   if (!operatingsDetails || operatingsDetails.length === 0) {
-    return { isReopened: false, reopenCount: 0, lastReopenDate: null };
+    return {
+      hasPMOfficeSubmission: false,
+      submissionCount: 0,
+      lastSubmissionDate: null,
+      submissions: []
+    };
   }
 
-  const sortedOperations = operatingsDetails
-    .filter(op => op.operating_date)
-    .sort((a, b) => new Date(a.operating_date) - new Date(b.operating_date));
+  // คำสำคัญสำหรับตรวจสอบหน่วยงาน
+  const PM_OFFICE_KEYWORDS = [
+    'สำนักงานปลัดสำนักนายกรัฐมนตรี',
+    'สปน',
+    'สำนักนายกรัฐมนตรี',
+    'ปลัดสำนักนายกรัฐมนตรี',
+    'Prime Minister Office',
+    'PMO'
+  ];
 
-  let hasTermination = false;
-  let reopenCount = 0;
-  let lastReopenDate = null;
+  const submissions = [];
 
-  for (const operation of sortedOperations) {
-    const { detail, status_text, operating_type_text, operating_date } = operation;
+  operatingsDetails.forEach(operation => {
+    const { org_text, detail, operating_type_text, operating_date, officer_text, created_by_text } = operation;
 
-    // ตรวจสอบการยุติ
-    if (containsKeywords(detail, TERMINATION_KEYWORDS) ||
-      containsKeywords(status_text, TERMINATION_KEYWORDS) ||
-      containsKeywords(operating_type_text, TERMINATION_KEYWORDS)) {
-      hasTermination = true;
+    // ตรวจสอบใน org_text, detail, operating_type_text, officer_text, created_by_text
+    const textToCheck = [
+      org_text,
+      detail,
+      operating_type_text,
+      officer_text,
+      created_by_text
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    const isPMOfficeSubmission = PM_OFFICE_KEYWORDS.some(keyword =>
+      textToCheck.includes(keyword.toLowerCase())
+    );
+
+    if (isPMOfficeSubmission) {
+      submissions.push({
+        date: operating_date,
+        org: org_text,
+        detail: detail,
+        type: operating_type_text,
+        officer: officer_text || created_by_text,
+        operation: operation
+      });
     }
+  });
 
-    // ตรวจสอบการเปิดใหม่ (หลังจากมีการยุติ)
-    if (hasTermination && (
-      containsKeywords(detail, REOPEN_KEYWORDS) ||
-      containsKeywords(status_text, REOPEN_KEYWORDS) ||
-      containsKeywords(operating_type_text, REOPEN_KEYWORDS)
-    )) {
-      reopenCount++;
-      lastReopenDate = operating_date;
-    }
-  }
+  // เรียงตามวันที่
+  submissions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   return {
-    isReopened: hasTermination && reopenCount > 0,
-    reopenCount,
-    lastReopenDate,
-    hasTermination
+    hasPMOfficeSubmission: submissions.length > 0,
+    submissionCount: submissions.length,
+    lastSubmissionDate: submissions.length > 0 ? submissions[0].date : null,
+    submissions: submissions
   };
 };
 
@@ -141,7 +145,7 @@ const TableListOPM = ({
   navigateTo = "",
   filterFields = [],
   onRowsPerPageChange = () => { },
-  showReopenIndicator = false,
+  showPMOfficeIndicator = true, // เปลี่ยนจาก showReopenIndicator
 }) => {
   const router = useRouter();
   const theme = useTheme();
@@ -169,89 +173,96 @@ const TableListOPM = ({
   const [loading, setLoading] = useState(true);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [reopenStatusMap, setReopenStatusMap] = useState(new Map());
-  const [isCheckingReopen, setIsCheckingReopen] = useState(false);
-  const [reopenNotification, setReopenNotification] = useState(null);
-  const [showReopenAlert, setShowReopenAlert] = useState(false);
-  const [hasShownReopenAlert, setHasShownReopenAlert] = useState(false);
+  const [pmOfficeStatusMap, setPMOfficeStatusMap] = useState(new Map()); // เปลี่ยนจาก reopenStatusMap
+  const [isCheckingPMOffice, setIsCheckingPMOffice] = useState(false); // เปลี่ยนจาก isCheckingReopen
+  const [pmOfficeNotification, setPMOfficeNotification] = useState(null); // เปลี่ยนจาก reopenNotification
+  const [showPMOfficeAlert, setShowPMOfficeAlert] = useState(false); // เปลี่ยนจาก showReopenAlert
+  const [hasShownPMOfficeAlert, setHasShownPMOfficeAlert] = useState(false); // เปลี่ยนจาก hasShownReopenAlert
 
-  // ตรวจสอบ reopen status สำหรับข้อมูลที่โหลดมา
+  // ตรวจสอบการมีข้อมูลจาก PM Office สำหรับข้อมูลที่โหลดมา
   useEffect(() => {
-    const checkReopenForAllCases = async () => {
-      if (!showReopenIndicator || !data.length) return;
+    const checkPMOfficeForAllCases = async () => {
+      if (!showPMOfficeIndicator || !data.length) return;
 
-      setIsCheckingReopen(true);
-      const reopenMap = new Map();
-      let reopenedCases = [];
+      setIsCheckingPMOffice(true);
+      const pmOfficeMap = new Map();
+      let pmOfficeCases = [];
 
       try {
-        // ตรวจสอบ reopen status สำหรับแต่ละเคส
+        // ตรวจสอบ PM Office submissions สำหรับแต่ละเคส
         const promises = data.map(async (item) => {
           try {
             const operatingsDetails = await GetOperatings(item.case_id);
-            const reopenStatus = checkReopenStatus(operatingsDetails);
-            reopenMap.set(item.case_id, reopenStatus);
+            const pmOfficeStatus = checkPMOfficeSubmission(operatingsDetails);
+            pmOfficeMap.set(item.case_id, pmOfficeStatus);
 
-            if (reopenStatus.isReopened) {
-              reopenedCases.push({
+            if (pmOfficeStatus.hasPMOfficeSubmission) {
+              pmOfficeCases.push({
                 ...item,
-                ...reopenStatus
+                ...pmOfficeStatus
               });
             }
 
-            return { case_id: item.case_id, ...reopenStatus };
+            return { case_id: item.case_id, ...pmOfficeStatus };
           } catch (error) {
-            console.error(`Error checking reopen for case ${item.case_id}:`, error);
-            reopenMap.set(item.case_id, { isReopened: false, reopenCount: 0 });
+            console.error(`Error checking PM Office submission for case ${item.case_id}:`, error);
+            pmOfficeMap.set(item.case_id, {
+              hasPMOfficeSubmission: false,
+              submissionCount: 0,
+              submissions: []
+            });
             return null;
           }
         });
 
         await Promise.all(promises);
-        setReopenStatusMap(reopenMap);
+        setPMOfficeStatusMap(pmOfficeMap);
 
-        // แสดง notification ถ้ามีเคสที่ reopen (เฉพาะครั้งแรก)
-        if (reopenedCases.length > 0 && !hasShownReopenAlert) {
-          const totalReopens = reopenedCases.reduce((sum, c) => sum + c.reopenCount, 0);
-          setReopenNotification({
-            count: reopenedCases.length,
-            totalReopens,
-            cases: reopenedCases
+        // แสดง notification ถ้ามีเคสที่มีข้อมูลจาก PM Office (เฉพาะครั้งแรก)
+        if (pmOfficeCases.length > 0 && !hasShownPMOfficeAlert) {
+          const totalSubmissions = pmOfficeCases.reduce((sum, c) => sum + c.submissionCount, 0);
+          setPMOfficeNotification({
+            count: pmOfficeCases.length,
+            totalSubmissions,
+            cases: pmOfficeCases
           });
-          setShowReopenAlert(true);
-          setHasShownReopenAlert(true); // จำว่าแสดงแล้ว
+          setShowPMOfficeAlert(true);
+          setHasShownPMOfficeAlert(true); // จำว่าแสดงแล้ว
         }
 
       } catch (error) {
-        console.error("Error checking reopen statuses:", error);
+        console.error("Error checking PM Office submissions:", error);
       } finally {
-        setIsCheckingReopen(false);
+        setIsCheckingPMOffice(false);
       }
     };
 
-    checkReopenForAllCases();
-  }, [data, showReopenIndicator]);
+    checkPMOfficeForAllCases();
+  }, [data, showPMOfficeIndicator]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      // เพิ่ม reopen status เข้าไปในข้อมูล
-      const dataWithReopenStatus = (data || []).map(item => {
-        const reopenStatus = reopenStatusMap.get(item.case_id) || { isReopened: false, reopenCount: 0 };
+      // เพิ่ม PM Office status เข้าไปในข้อมูล
+      const dataWithPMOfficeStatus = (data || []).map(item => {
+        const pmOfficeStatus = pmOfficeStatusMap.get(item.case_id) || {
+          hasPMOfficeSubmission: false,
+          submissionCount: 0
+        };
         return {
           ...item,
-          ...reopenStatus,
-          statusPriority: calculateStatusPriority(item.status_text, reopenStatus)
+          ...pmOfficeStatus,
+          statusPriority: calculateStatusPriority(item.status_text, pmOfficeStatus)
         };
       });
 
-      // เรียงลำดับให้เคส reopen ขึ้นด้านบน
-      const sortedData = dataWithReopenStatus.sort((a, b) => {
+      // เรียงลำดับให้เคสที่มีข้อมูลจาก PM Office ขึ้นด้านบน
+      const sortedData = dataWithPMOfficeStatus.sort((a, b) => {
         if (b.statusPriority !== a.statusPriority) {
           return b.statusPriority - a.statusPriority;
         }
         // ถ้า priority เท่ากัน เรียงตามวันที่
-        const dateA = new Date(a.lastReopenDate || a.ShowDateTime);
-        const dateB = new Date(b.lastReopenDate || b.ShowDateTime);
+        const dateA = new Date(a.lastSubmissionDate || a.ShowDateTime);
+        const dateB = new Date(b.lastSubmissionDate || b.ShowDateTime);
         return dateB - dateA;
       });
 
@@ -260,9 +271,9 @@ const TableListOPM = ({
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [data, reopenStatusMap]);
+  }, [data, pmOfficeStatusMap]);
 
-  const calculateStatusPriority = (statusText, reopenStatus) => {
+  const calculateStatusPriority = (statusText, pmOfficeStatus) => {
     let priority = 0;
 
     switch (statusText) {
@@ -287,9 +298,10 @@ const TableListOPM = ({
         priority = 1;
     }
 
-    if (reopenStatus.isReopened) {
-      priority += 20;
-      priority += reopenStatus.reopenCount;
+    // เพิ่ม priority สำหรับเคสที่มีข้อมูลจาก PM Office
+    if (pmOfficeStatus.hasPMOfficeSubmission) {
+      priority += 30; // ให้ priority สูงกว่า reopen
+      priority += pmOfficeStatus.submissionCount;
     }
 
     return priority;
@@ -357,8 +369,8 @@ const TableListOPM = ({
     }
   };
 
-  const handleCloseReopenAlert = () => {
-    setShowReopenAlert(false);
+  const handleClosePMOfficeAlert = () => {
+    setShowPMOfficeAlert(false);
     // เมื่อปิดแล้ว ไม่แสดงซ้ำในครั้งนี้
   };
 
@@ -426,19 +438,19 @@ const TableListOPM = ({
     </Box>
   );
 
-  // ฟังก์ชันสำหรับ render cell ที่มี reopen indicator
+  // ฟังก์ชันสำหรับ render cell ที่มี PM Office indicator
   const renderCaseCodeCell = (item) => {
-    const reopenStatus = reopenStatusMap.get(item.case_id);
+    const pmOfficeStatus = pmOfficeStatusMap.get(item.case_id);
 
     return (
       <Box display="flex" alignItems="center" gap={0.5}>
         <Typography>{item.case_code}</Typography>
-        {reopenStatus?.isReopened && (
-          <Tooltip title={`เคสนี้เคยถูกยุติแล้ว แต่ได้รับการเปิดใหม่ ${reopenStatus.reopenCount} ครั้ง`}>
-            <Badge badgeContent={reopenStatus.reopenCount} color="warning" max={99}>
-              <RestartAltIcon
+        {pmOfficeStatus?.hasPMOfficeSubmission && (
+          <Tooltip title={`มีข้อมูลจากสำนักงานปลัดสำนักนายกรัฐมนตรี ${pmOfficeStatus.submissionCount} รายการ`}>
+            <Badge badgeContent={pmOfficeStatus.submissionCount} color="primary" max={99}>
+              <BusinessIcon
                 sx={{
-                  color: orange[600],
+                  color: blue[600],
                   fontSize: 16,
                   animation: 'pulse 2s infinite'
                 }}
@@ -451,17 +463,17 @@ const TableListOPM = ({
   };
 
   const renderCustomerNameCell = (item) => {
-    const reopenStatus = reopenStatusMap.get(item.case_id);
+    const pmOfficeStatus = pmOfficeStatusMap.get(item.case_id);
 
-    if (!reopenStatus?.isReopened) {
+    if (!pmOfficeStatus?.hasPMOfficeSubmission) {
       return item.customer_name;
     }
 
     return (
       <Box display="flex" alignItems="center" gap={0.5}>
-        <WarningIcon
+        <NotificationImportantIcon
           sx={{
-            color: orange[600],
+            color: blue[600],
             fontSize: 16,
             animation: 'blink 1.5s infinite'
           }}
@@ -477,7 +489,7 @@ const TableListOPM = ({
   const MobileCardView = () => (
     <Stack spacing={2} sx={{ p: 2 }}>
       {pagedData.map((item, idx) => {
-        const reopenStatus = reopenStatusMap.get(item.case_id);
+        const pmOfficeStatus = pmOfficeStatusMap.get(item.case_id);
         return (
           <Card
             key={item.case_id}
@@ -486,8 +498,8 @@ const TableListOPM = ({
               cursor: "pointer",
               "&:hover": { backgroundColor: "#f5f7ff" },
               border: "1px solid #e0e0e0",
-              backgroundColor: reopenStatus?.isReopened ? 'rgba(255, 152, 0, 0.05)' : 'transparent',
-              borderLeft: reopenStatus?.isReopened ? '4px solid #ff9800' : 'none'
+              backgroundColor: pmOfficeStatus?.hasPMOfficeSubmission ? 'rgba(33, 150, 243, 0.05)' : 'transparent',
+              borderLeft: pmOfficeStatus?.hasPMOfficeSubmission ? '4px solid #2196f3' : 'none'
             }}
           >
             <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
@@ -496,11 +508,11 @@ const TableListOPM = ({
                   #{page * rowsPerPage + idx + 1}
                 </Typography>
                 <Box display="flex" alignItems="center" gap={1}>
-                  {reopenStatus?.isReopened && (
+                  {pmOfficeStatus?.hasPMOfficeSubmission && (
                     <Chip
-                      icon={<RestartAltIcon />}
-                      label="เปิดใหม่"
-                      color="warning"
+                      icon={<BusinessIcon />}
+                      label="สปน."
+                      color="primary"
                       size="small"
                       variant="outlined"
                     />
@@ -576,7 +588,7 @@ const TableListOPM = ({
     return item[col.name] ?? "-";
   };
 
-  const reopenedCasesCount = Array.from(reopenStatusMap.values()).filter(status => status.isReopened).length;
+  const pmOfficeCasesCount = Array.from(pmOfficeStatusMap.values()).filter(status => status.hasPMOfficeSubmission).length;
 
   return (
     <Container
@@ -602,27 +614,27 @@ const TableListOPM = ({
         }
       `}</style>
 
-      {/* Reopen Alert */}
+      {/* PM Office Alert */}
       <Snackbar
-        open={showReopenAlert}
+        open={showPMOfficeAlert}
         autoHideDuration={10000}
-        onClose={handleCloseReopenAlert}
+        onClose={handleClosePMOfficeAlert}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert
-          onClose={handleCloseReopenAlert}
-          severity="warning"
+          onClose={handleClosePMOfficeAlert}
+          severity="info"
           sx={{ width: '100%' }}
         >
           <AlertTitle>
-            <WarningIcon sx={{ mr: 1 }} />
-            แจ้งเตือน: พบเคสที่เปิดใหม่หลังยุติ
+            <BusinessIcon sx={{ mr: 1 }} />
+            แจ้งเตือน: มีเคสที่ได้รับข้อมูลจากสำนักงานปลัดสำนักนายกรัฐมนตรี
           </AlertTitle>
-          {reopenNotification && (
+          {pmOfficeNotification && (
             <>
-              มี <strong>{reopenNotification.count} เคส</strong> ที่ถูกเปิดใหม่หลังจากยุติแล้ว
+              มี <strong>{pmOfficeNotification.count} เคส</strong> ที่มีข้อมูลจากสำนักงานปลัดสำนักนายกรัฐมนตรี
               <br />
-              กรุณาตรวจสอบเคสที่มีเครื่องหมาย 🔄 ในตาราง
+              กรุณาตรวจสอบเคสที่มีเครื่องหมาย 🏢 ในตาราง
             </>
           )}
         </Alert>
@@ -644,22 +656,22 @@ const TableListOPM = ({
           <Typography variant={isMobile ? "h6" : "h5"} component="div">
             {title}
           </Typography>
-          {showReopenIndicator && reopenedCasesCount > 0 && (
-            <Badge badgeContent={reopenedCasesCount} color="warning">
+          {showPMOfficeIndicator && pmOfficeCasesCount > 0 && (
+            <Badge badgeContent={pmOfficeCasesCount} color="primary">
               <Chip
-                icon={<WarningIcon />}
-                label={`${reopenedCasesCount} เคสเปิดใหม่`}
-                color="warning"
+                icon={<BusinessIcon />}
+                label={`${pmOfficeCasesCount} เคสจาก สปน.`}
+                color="primary"
                 size="small"
                 variant="outlined"
               />
             </Badge>
           )}
-          {isCheckingReopen && (
+          {isCheckingPMOffice && (
             <Box display="flex" alignItems="center" gap={1}>
               <CircularProgress size={16} />
               <Typography variant="caption" color="text.secondary">
-                กำลังตรวจสอบสถานะ...
+                กำลังตรวจสอบข้อมูล สปน....
               </Typography>
             </Box>
           )}
@@ -819,11 +831,11 @@ const TableListOPM = ({
         id="table-results"
         sx={{ overflowX: "auto", px: isMobile ? 0 : 2, pb: 1 }}
       >
-        {loading || isCheckingReopen ? (
+        {loading || isCheckingPMOffice ? (
           <Box display="flex" justifyContent="center" py={4}>
             <CircularProgress />
             <Typography sx={{ ml: 2 }}>
-              {isCheckingReopen ? "กำลังตรวจสอบสถานะข้อมูล..." : "กำลังโหลดข้อมูล..."}
+              {isCheckingPMOffice ? "กำลังตรวจสอบข้อมูลจาก สปน...." : "กำลังโหลดข้อมูล..."}
             </Typography>
           </Box>
         ) : filteredData.length === 0 ? (
@@ -854,7 +866,7 @@ const TableListOPM = ({
             </TableHead>
             <TableBody>
               {pagedData.map((item, idx) => {
-                const reopenStatus = reopenStatusMap.get(item.case_id);
+                const pmOfficeStatus = pmOfficeStatusMap.get(item.case_id);
                 return (
                   <TableRow
                     key={item.case_id}
@@ -862,8 +874,8 @@ const TableListOPM = ({
                     sx={{
                       cursor: "pointer",
                       "&:hover": { backgroundColor: "#f5f7ff" },
-                      backgroundColor: reopenStatus?.isReopened ? 'rgba(255, 152, 0, 0.05)' : 'transparent',
-                      borderLeft: reopenStatus?.isReopened ? '4px solid #ff9800' : 'none'
+                      backgroundColor: pmOfficeStatus?.hasPMOfficeSubmission ? 'rgba(33, 150, 243, 0.05)' : 'transparent',
+                      borderLeft: pmOfficeStatus?.hasPMOfficeSubmission ? '4px solid #2196f3' : 'none'
                     }}
                   >
                     <TableCell

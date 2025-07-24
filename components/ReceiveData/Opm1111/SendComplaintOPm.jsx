@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -29,11 +29,10 @@ const SendComplaintOPM = () => {
   const router = useRouter();
   const queryParams = router.query;
 
-  // State variables
   const [selectedProvince, setSelectedProvince] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedSubDistrict, setSelectedSubDistrict] = useState("");
-  const [selectedChannel, setSelectedChannel] = useState("");
+  const [selectedChannel, setSelectedChannel] = useState("6");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedType, setselectedType] = useState("");
   const [createdDate, setCreatedDate] = useState(new Date().toISOString());
@@ -61,21 +60,45 @@ const SendComplaintOPM = () => {
 
   const isPhoneValid = validatePhoneNumber(reporterPhone);
 
-  const isFormValid =
-    selectedProvince &&
-    selectedDistrict &&
-    selectedSubDistrict &&
-    selectedChannel &&
-    selectedStatus &&
-    selectedType &&
-    createdDate &&
-    updatedDate &&
-    reporterFirstName &&
-    reporterLastName &&
-    reporterPhone &&
-    caseCode &&
-    complaintDetail &&
-    isPhoneValid;
+
+  const isFormValid = useMemo(() => {
+    const validations = {
+      selectedProvince: !!selectedProvince,
+      selectedDistrict: !!selectedDistrict,
+      selectedSubDistrict: !!selectedSubDistrict,
+      selectedChannel: true,
+      selectedStatus: !!selectedStatus,
+      selectedType: !!selectedType,
+      createdDate: !!createdDate,
+      updatedDate: !!updatedDate,
+      reporterFirstName: !!reporterFirstName?.trim(),
+      reporterLastName: !!reporterLastName?.trim(),
+      reporterPhone: !!reporterPhone?.trim(),
+      caseCode: !!caseCode?.trim(),
+      complaintDetail: !!complaintDetail?.trim(),
+      isPhoneValid: isPhoneValid
+    };
+
+    const allValid = Object.values(validations).every(valid => valid === true);
+
+    return allValid;
+  }, [
+    selectedProvince,
+    selectedDistrict,
+    selectedSubDistrict,
+    selectedChannel,
+    selectedStatus,
+    selectedType,
+    createdDate,
+    updatedDate,
+    reporterFirstName,
+    reporterLastName,
+    reporterPhone,
+    caseCode,
+    complaintDetail,
+    isPhoneValid
+  ]);
+
 
   // Event handlers
   const handleProvinceChange = useCallback((event) => {
@@ -557,6 +580,8 @@ const SendComplaintOPM = () => {
                   value={selectedChannel}
                   onChange={handleChannelChange}
                   required={true}
+                  disabled={false}
+                  readOnly={false} 
                 />
               </Grid>
 

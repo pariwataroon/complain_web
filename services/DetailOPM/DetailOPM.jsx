@@ -83,9 +83,8 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
         alert(`${title}\n\n${message}`);
     };
 
-
     
-    console.log({ caseDetails });
+    
     
     useEffect(() => {
         if (isDataReady) {
@@ -93,9 +92,12 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
             const accountData = getAccountData();
             
             const customerData = getCustomerData();
+            console.log({ caseDetails });
+            console.log({ accountData });
+            console.log({ customerData });
+            
             if (opmChannelId && !autoCreateAttempted && !isCreating) {
             }
-            console.log({ customerData });
         }
     }, [isDataReady, compiledData, opmChannelId, autoCreateAttempted, isCreating]);
 
@@ -411,7 +413,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Grid>
                         )}
 
-                        {accountData.address && (accountData.address.subdistrict || accountData.address.district || accountData.address.province) && (
+                        {accountData.address && (accountData.address.address ||accountData.address.subdistrict || accountData.address.district || accountData.address.province) && (
                             <Grid item xs={12}>
                                 <Box className={styles.infoItem}>
                                     <LocationIcon className={styles.infoIcon} />
@@ -421,7 +423,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                         </Typography>
                                         <Typography variant="body1" className={styles.value}>
                                             {[
-                                                accountData.address || '',
+                                                accountData.address.address || '',
                                                 accountData.address.subdistrict,
                                                 accountData.address.district,
                                                 accountData.address.province,
@@ -531,8 +533,8 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                     </Box>
                                 </Grid>
                             )}
-
-                            {(customerData.address || customerData.subdistrict_text || customerData.district_text || customerData.province_text) && (
+                            
+                            {customerData.address && (customerData.address.address || customerData.address.subdistrict || customerData.address.district || customerData.address.province) && (
                                 <Grid item xs={12}>
                                     <Box className={styles.infoItem}>
                                         <LocationIcon className={styles.infoIcon} />
@@ -542,12 +544,12 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                             </Typography>
                                             <Typography variant="body1" className={styles.value}>
                                                 {[
-                                                    customerData.address || '',
-                                                    customerData.subdistrict_text || '',
-                                                    customerData.district_text || '',
-                                                    customerData.province_text || '',
-                                                    customerData.postcode || ''
-                                                ].filter(item => item && String(item).trim() !== '' && item !== '-').join(' ') || 'ไม่ได้ระบุ'}
+                                                    customerData.address.address || '',
+                                                    customerData.address.subdistrict,
+                                                    customerData.address.district,
+                                                    customerData.address.province,
+                                                    customerData.address.postcode
+                                                ].filter(Boolean).join(' ')}
                                             </Typography>
                                         </Box>
                                     </Box>
@@ -558,7 +560,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                 </Card>
             )}
 
-
+        
 
 
             {/* Process Steps Card */}
