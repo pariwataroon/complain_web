@@ -87,18 +87,41 @@ export default function Footer() {
             ></iframe>
           </div>
           <div className={styles.apiLogsCounterContainer}>
-            <div className={styles.statSingleRow}>
-              <span className={styles.statLabel}>จำนวนการเข้าใช้ทั้งหมด</span>
-              {apiLogsStats ? (
-                <span className={styles.statValueRight}>
-                  {apiLogsStats.total_requests}
+            <div className={styles.statsBox}>
+              <div className={styles.statsTitleRow}>
+                <span className={styles.statsIcon}>📶</span>
+                <span className={styles.statsTitle}>จำนวนผู้เข้าชม</span>
+              </div>
+              <div className={styles.statsRow}>
+                <span className={styles.statsLabel}>7 ที่ผ่านมา</span>
+                <span className={styles.statsValue}>
+                  {apiLogsStats ? (
+                    apiLogsStats.week_unique_users ?? "-"
+                  ) : (
+                    <span className={styles.loadingSpinnerInline}></span>
+                  )}
                 </span>
-              ) : (
-                <span className={styles.loadingContainer}>
-                  <span className={styles.loadingSpinner}></span>
-                  <span>กำลังโหลด...</span>
+              </div>
+              <div className={styles.statsRow}>
+                <span className={styles.statsLabel}>30 ที่ผ่านมา</span>
+                <span className={styles.statsValue}>
+                  {apiLogsStats ? (
+                    apiLogsStats.month_unique_users ?? "-"
+                  ) : (
+                    <span className={styles.loadingSpinnerInline}></span>
+                  )}
                 </span>
-              )}
+              </div>
+              <div className={styles.statsRow}>
+                <span className={styles.statsLabel}>ทั้งหมด</span>
+                <span className={styles.statsValue}>
+                  {apiLogsStats ? (
+                    apiLogsStats.total_requests ?? "-"
+                  ) : (
+                    <span className={styles.loadingSpinnerInline}></span>
+                  )}
+                </span>
+              </div>
             </div>
           </div>
         </div>
