@@ -30,7 +30,7 @@ import app.api.v1.controllers.notification_controller as notification_controller
 logger = logging.getLogger(__name__)
 
 # Global flag สำหรับควบคุม debug logs
-DEBUG_MODE = False
+DEBUG_MODE = True
 
 def get_or_set_default_complaint_channel(db: Session, channel_id: Optional[UUID] = None) -> Optional[UUID]:
     """ดึงหรือกำหนดช่องทางการร้องเรียนเริ่มต้น"""
@@ -640,14 +640,43 @@ def extract_complaint_data(complaint_data: Dict, root_complaint_type: str) -> Di
     complainant_result = process_complainant_data(step1)
     respondent_result = process_respondent_data(step2)
 
+    if DEBUG_MODE:
+        logger.debug(f"Complainant result: {complainant_result}")
+        logger.debug(f"Respondent result: {respondent_result}")
+        logger.debug(f"Subject: '{subject}'")
+
     # ✅ ตรวจสอบข้อมูลที่จำเป็น
     if not complainant_result.get("data"):
         raise ValueError("Complainant data is required")
     
-    # ✅ สำหรับกรณี "นร" อนุญาตให้สร้างได้แม้ว่าจะไม่มีข้อมูลผู้ถูกร้องเรียน
-    is_nr_case = subject and subject.strip().startswith("นร")
-    if not respondent_result.get("data") and not is_nr_case:
-        raise ValueError("Respondent data is required")
+    # ✅ สำหรับกรณี "นร" หรือกรณีที่ไม่มีข้อมูลผู้ถูกร้องเรียน ให้สร้างข้อมูลเริ่มต้น
+    is_nr_case = (subject and (subject.strip().startswith("นร") or "นร" in subject.strip()))
+    
+    if DEBUG_MODE:
+        logger.debug(f"Is NR case: {is_nr_case}")
+    
+    # ตรวจสอบว่ามีข้อมูลผู้ถูกร้องเรียนหรือไม่
+    respondent_data = respondent_result.get("data", {})
+    has_respondent_data = bool(respondent_data and any(v for v in respondent_data.values() if v))
+    
+    if DEBUG_MODE:
+        logger.debug(f"Has respondent data: {has_respondent_data}")
+        logger.debug(f"Respondent data content: {respondent_data}")
+    
+    # หากไม่มีข้อมูลผู้ถูกร้องเรียนและไม่ใช่กรณี "นร" ให้สร้างข้อมูลเริ่มต้น
+    if not has_respondent_data:
+        if is_nr_case:
+            # สำหรับกรณี "นร" ให้ใช้ข้อมูลเริ่มต้น
+            respondent_result["data"] = {"name": "ไม่ระบุผู้ถูกร้องเรียน", "category": "NR_CASE"}
+            respondent_result["type"] = RespondentType.INDIVIDUAL
+            if DEBUG_MODE:
+                logger.debug("Created default data for NR case")
+        else:
+            # สำหรับกรณีอื่นๆ ที่ไม่มีข้อมูลผู้ถูกร้องเรียน ให้ใช้ข้อมูลเริ่มต้น
+            respondent_result["data"] = {"name": "ไม่ระบุ", "category": "UNKNOWN_RESPONDENT"}
+            respondent_result["type"] = RespondentType.INDIVIDUAL
+            if DEBUG_MODE:
+                logger.debug("Created default data for unknown respondent")
     
     return {
         "subject": subject,
@@ -658,7 +687,7 @@ def extract_complaint_data(complaint_data: Dict, root_complaint_type: str) -> Di
         "complainant_data": complainant_result.get("data", {}),
         "complainant_type": complainant_result.get("type", ComplainantType.INDIVIDUAL),
         "delegate_data": complainant_result.get("delegate_data"),
-        "respondent_data": respondent_result.get("data", {} if not is_nr_case else {"name": "ไม่ระบุผู้ถูกร้องเรียน", "category": "UNKNOWN_NR_CASE"}),
+        "respondent_data": respondent_result.get("data", {}),
         "respondent_type": respondent_result.get("type", RespondentType.INDIVIDUAL)
     }
 
@@ -714,7 +743,21 @@ def process_respondent_data(step2: Dict) -> Dict:
     respondent_data = {}
     respondent_type = RespondentType.INDIVIDUAL
     
+    if DEBUG_MODE:
+        logger.debug(f"Processing respondent data: {step2}")
+    
+    # ตรวจสอบ step2 structure
+    if not isinstance(step2, dict):
+        if DEBUG_MODE:
+            logger.debug("step2 is not a dict, returning empty data")
+        return {"data": {}, "type": respondent_type}
+        
     if "general" not in step2:
+        # ลองใช้ข้อมูลจาก step2 โดยตรง หากมีข้อมูลที่เหมาะสม
+        if any(key in step2 for key in ["name", "respondent_name", "agencyName", "companyName"]):
+            respondent_data = process_nested_fields(step2)
+            if DEBUG_MODE:
+                logger.debug(f"Using direct step2 data: {respondent_data}")
         return {"data": respondent_data, "type": respondent_type}
         
     step2_general = step2["general"]
@@ -777,6 +820,15 @@ def process_respondent_data(step2: Dict) -> Dict:
             # ✅ ถ้าไม่มีข้อมูลเลย ให้ใช้ข้อมูลเริ่มต้น
             if not respondent_data:
                 respondent_data = {"name": "ไม่ระบุ", "category": "MINIMAL_DATA"}
+
+    # ✅ สุดท้าย ตรวจสอบว่าข้อมูลที่ได้มีความสมบูรณ์หรือไม่
+    if not respondent_data or not any(v for v in respondent_data.values() if v):
+        respondent_data = {"name": "ไม่ระบุ", "category": "NO_DATA_PROVIDED"}
+        if DEBUG_MODE:
+            logger.debug("No valid respondent data found, using default")
+
+    if DEBUG_MODE:
+        logger.debug(f"Final respondent result: data={respondent_data}, type={respondent_type}")
 
     return {
         "data": respondent_data,
