@@ -1171,8 +1171,15 @@ const SetRole = () => {
               </DialogActions>
             </Dialog>
             {/* Action buttons */}
-            <Box
-              sx={{ display: "flex", justifyContent: "center", mt: 2, gap: 2 }}
+           <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                justifyContent: "center",
+                mt: 2,
+                gap: 2,
+                alignItems: "center",
+              }}
             >
               <ButtonService
                 label="ล้าง"
@@ -1184,7 +1191,7 @@ const SetRole = () => {
                   color: "#304FFE",
                   borderRadius: "15px",
                   boxShadow: "none",
-                  width: "23%",
+                  width: { xs: "100%", sm: "23%" }, 
                   height: "55px",
                   fontSize: "24px",
                   border: "2px solid #50ADFF",
@@ -1204,7 +1211,7 @@ const SetRole = () => {
                   backgroundColor: "#2196F3",
                   color: "#FFF",
                   borderRadius: "15px",
-                  width: "23%",
+                  width: { xs: "100%", sm: "23%" }, 
                   height: "55px",
                   fontSize: "24px",
                   "&:hover": { backgroundColor: "#1E88E5" },

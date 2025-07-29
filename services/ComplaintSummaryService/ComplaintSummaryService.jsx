@@ -343,30 +343,43 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {} }) => {
                 </Grid>
             </Paper>
             </div>
-            <Box sx={{ display: "flex", justifyContent: "center", mt: 4, gap: 2 }}>
-                <ButtonService
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                mt: 4,
+                gap: 2,
+                flexDirection: { xs: "column", sm: "row" }, 
+                alignItems: "center",
+                width: "100%",
+                maxWidth: "100%",
+                overflowX: "auto", 
+              }}
+            >
+              <ButtonService
                 label="แก้ไข"
                 color="แก้ไข"
                 variant="outlined"
                 onClick={handleEdit}
                 iconLeft={<EditOutlinedIcon />}
-                />
-                <ButtonService
-                    label="ยืนยัน"
-                    color="ยืนยัน"
-                    variant="contained"
-                    onClick={() => router.back()}
-                    // onClick={handleSubmit}
-                    // disabled={!acceptSubmit}
-                    iconRight={<CheckIcon />}
-                />
-                <ButtonService
-                    label="ส่งออก"
-                    color="ส่งออก"
-                    variant="outlined"
-                    onClick={() => exportElementToPDF(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
-                    iconRight={<UploadOutlinedIcon />}
-                />
+                sx={{ width: { xs: "100%", sm: "auto" } }} 
+              />
+              <ButtonService
+                label="ยืนยัน"
+                color="ยืนยัน"
+                variant="contained"
+                onClick={() => router.back()}
+                iconRight={<CheckIcon />}
+                sx={{ width: { xs: "100%", sm: "auto" } }} 
+              />
+              <ButtonService
+                label="ส่งออก"
+                color="ส่งออก"
+                variant="outlined"
+                onClick={() => exportElementToPDF(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
+                iconRight={<UploadOutlinedIcon />}
+                sx={{ width: { xs: "100%", sm: "auto" } }} 
+              />
             </Box>
         </Box>
 

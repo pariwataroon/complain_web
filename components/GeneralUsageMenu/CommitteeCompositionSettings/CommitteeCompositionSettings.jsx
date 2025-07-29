@@ -153,7 +153,7 @@ const CommitteeCompositionSettings = () => {
           borderRadius: "15px",
           width: "100%",
           height: "40px",
-          fontSize: "17px",
+          fontSize: "14px",  // ลดขนาดฟอนต์
           "&:hover": {
             backgroundColor: "#1E88E5",
             color: "#ffffff",

@@ -320,12 +320,12 @@ export default function NavbarMain() {
               style={{ cursor: "pointer" }}
               onClick={() => router.push("/")}
             />
+          </div>
             <div className={styles.hamburger} onClick={toggleMobileModal}>
               <div className={styles.bar}></div>
               <div className={styles.bar}></div>
               <div className={styles.bar}></div>
             </div>
-          </div>
 
           <div className={styles.menu}>
             <a href="/" className={styles.menuItem}>

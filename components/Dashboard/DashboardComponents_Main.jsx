@@ -104,306 +104,314 @@ const DashboardComponents_Main = () => {
   ];
 
   return (
-    <Box sx={{ p: { xs: 0.5, md: 1 } }}>
-      <BreadcrumbsService items={breadcrumbItems} />
+  <Box sx={{ p: { xs: 0.5, sm: 1, md: 1.5 } }}>
+  <BreadcrumbsService items={breadcrumbItems} />
 
-      <Grid container spacing={{ xs: 0.5, md: 1 }} mt={0.5}>
-        {/* แผนที่ - ใช้ความสูง 860px lg */}
-        <Grid item xs={12} lg={4}>
+  <Grid container spacing={{ xs: 2, sm: 3, md: 4 }} mt={1}>
+    {/* แผนที่ */}
+    <Grid item xs={12} sm={6} lg={4}>
+      <Box
+        sx={{
+          backgroundColor: "#fff",
+          p: { xs: 1, sm: 1.5, md: 2 },
+          minHeight: "400px",
+          height: { xs: "auto", sm: "500px", md: "600px", lg: "860px" },
+          borderRadius: 1,
+          boxShadow: 1,
+        }}
+      >
+        <TopLeftService />
+      </Box>
+    </Grid>
+
+    {/* กลาง - Charts และ Cards */}
+    <Grid item xs={12} sm={6} lg={4}>
+      <Box sx={{ mb: 3 }}>
+        <DashBoardCard />
+      </Box>
+
+      <Box
+        sx={{
+          backgroundColor: "#fff",
+          p: { xs: 1, sm: 1.5, md: 2 },
+          height: { xs: "300px", sm: "350px", md: "380px" },
+          borderRadius: 1,
+          boxShadow: 1,
+          mb: 3,
+        }}
+      >
+        <TopRightService />
+      </Box>
+
+      <Grid container spacing={{ xs: 1, sm: 2, md: 3 }}>
+        <Grid item xs={12} sm={6}>
           <Box
             sx={{
               backgroundColor: "#fff",
-              p: { xs: 0.5, md: 1 },
-              height: { xs: "400px", md: "550px", lg: "860px" },
+              p: { xs: 1, sm: 1.5, md: 2 },
+              minHeight: "250px",
+              height: { xs: "auto", sm: "250px", md: "300px" },
               borderRadius: 1,
               boxShadow: 1,
+              mb: 3,
             }}
           >
-            <TopLeftService />
+            <BottomLeftService />
           </Box>
         </Grid>
 
-        {/* กลาง - Charts และ Cards - ปรับให้เท่ากับ 860px */}
-        <Grid item xs={12} lg={4}>
-          {/* Cards - ลดขนาดลง */}
-          <Box sx={{ height: { xs: "auto", md: "80px" }, mb: 9.5 }}>
-            <DashBoardCard />
-          </Box>
-
-          {/* Chart ด้านบน - เพิ่มความสูง */}
+        <Grid item xs={12} sm={6}>
           <Box
             sx={{
               backgroundColor: "#fff",
-              p: { xs: 0.5, md: 1 },
-              height: { xs: "250px", md: "300px", lg: "320px" },
+              p: { xs: 1, sm: 1.5, md: 2 },
+              minHeight: "250px",
+              height: { xs: "auto", sm: "250px", md: "300px" },
               borderRadius: 1,
               boxShadow: 1,
-              mb: 1,
             }}
           >
-            <TopRightService />
-          </Box>
-
-          {/* Charts ด้านล่าง - 2 อัน - เพิ่มความสูง */}
-          <Grid container spacing={{ xs: 0.5, md: 1 }}>
-            <Grid item xs={12} sm={6}>
-              <Box
-                sx={{
-                  backgroundColor: "#fff",
-                  p: { xs: 0.5, md: 1 },
-                  height: { xs: "250px", md: "280px", lg: "360px" },
-                  borderRadius: 1,
-                  boxShadow: 1,
-                }}
-              >
-                <BottomLeftService />
-              </Box>
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <Box
-                sx={{
-                  backgroundColor: "#fff",
-                  p: { xs: 0.5, md: 1 },
-                  height: { xs: "250px", md: "280px", lg: "360px" },
-                  borderRadius: 1,
-                  boxShadow: 1,
-                }}
-              >
-                <BottomRightService />
-              </Box>
-            </Grid>
-          </Grid>
-        </Grid>
-
-        {/* ขวา - Stats และ Date Pickers - ใช้ความสูง 860px lg */}
-        <Grid item xs={12} lg={4}>
-          <Box
-            sx={{
-              backgroundColor: "#fff",
-              p: { xs: 0.5, md: 1 },
-              height: { xs: "auto", md: "550px", lg: "860px" },
-              borderRadius: 1,
-              boxShadow: 1,
-              display: "flex",
-              flexDirection: "column",
-              gap: { xs: 1, md: 1.5 },
-              overflow: "hidden", // ป้องกันการทะลุ
-            }}
-          >
-            {/* Date Range Selector - แก้ไขการจัด layout */}
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 1,
-                width: "100%",
-                minWidth: 0,
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: { xs: "column", sm: "row" },
-                  gap: { xs: 1, sm: 0.5 },
-                  alignItems: { xs: "stretch", sm: "flex-end" },
-                  width: "100%",
-                  minWidth: 0,
-                }}
-              >
-                {/* วันที่เริ่มต้น */}
-                <Box
-                  sx={{
-                    flex: 1,
-                    minWidth: 0,
-                    maxWidth: { xs: "100%", sm: "45%" },
-                  }}
-                >
-                  <DateThaiPickerService
-                    label="วันที่เริ่มต้น"
-                    value={startDateWithBuddhist}
-                    onChange={(newValue) => {
-                      console.log(
-                        "เลือกวันที่เริ่มต้น:",
-                        newValue,
-                        typeof newValue
-                      );
-                      let parsed = parseDateStringToObj(newValue);
-                      // ถ้าเป็น buddhistYear ให้แปลงกลับเป็น year
-                      if (parsed && parsed.buddhistYear) {
-                        setStartDate({
-                          ...parsed,
-                          year: parsed.buddhistYear - 543,
-                        });
-                      } else {
-                        setStartDate(parsed);
-                      }
-                    }}
-                    placeholder="เลือกวันที่เริ่มต้น"
-                    maxDate={
-                      endDateWithBuddhist
-                        ? new Date(
-                            endDateWithBuddhist.year,
-                            endDateWithBuddhist.month - 1,
-                            endDateWithBuddhist.day
-                          )
-                        : null
-                    }
-                  />
-                </Box>
-
-                {/* ข้อความ "ถึง" */}
-                <Box
-                  sx={{
-                    display: { xs: "none", sm: "flex" },
-                    alignItems: "center",
-                    fontWeight: "bold",
-                    color: "#1120A3",
-                    width: "10%",
-                    justifyContent: "center",
-                    mb: 2,
-                    fontSize: "12px",
-                    flexShrink: 0,
-                  }}
-                >
-                  ถึง
-                </Box>
-
-                {/* วันที่สิ้นสุด */}
-                <Box
-                  sx={{
-                    flex: 1,
-                    minWidth: 0,
-                    maxWidth: { xs: "100%", sm: "45%" },
-                  }}
-                >
-                  <DateThaiPickerService
-                    label="วันที่สิ้นสุด"
-                    value={endDateWithBuddhist}
-                    onChange={(newValue) => {
-                      console.log(
-                        "เลือกวันที่สิ้นสุด:",
-                        newValue,
-                        typeof newValue
-                      );
-                      let parsed = parseDateStringToObj(newValue);
-                      if (parsed && parsed.buddhistYear) {
-                        setEndDate({
-                          ...parsed,
-                          year: parsed.buddhistYear - 543,
-                        });
-                      } else {
-                        setEndDate(parsed);
-                      }
-                    }}
-                    placeholder="เลือกวันที่สิ้นสุด"
-                    minDate={
-                      startDateWithBuddhist
-                        ? new Date(
-                            startDateWithBuddhist.year,
-                            startDateWithBuddhist.month - 1,
-                            startDateWithBuddhist.day
-                          )
-                        : null
-                    }
-                  />
-                </Box>
-              </Box>
-
-              {/* แสดงช่วงวันที่ */}
-              {startDate && endDate && (
-                <Box
-                  sx={{
-                    p: 1,
-                    backgroundColor: "#f8f9ff",
-                    borderRadius: 1,
-                    border: "1px solid #e3f2fd",
-                    textAlign: "center",
-                    fontSize: { xs: "10px", md: "12px" },
-                    color: "#1120A3",
-                    fontWeight: 500,
-                    width: "100%",
-                    wordBreak: "break-word",
-                    boxSizing: "border-box", // ป้องกันการทะลุ
-                  }}
-                >
-                  ช่วงวันที่: {dateRangeText}
-                </Box>
-              )}
-            </Box>
-
-            {/* Stats Swipers */}
-            <Box
-              sx={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                gap: { xs: 2, md: 3, lg: 8 },
-                width: "100%",
-                minWidth: 0,
-              }}
-            >
-              {/* เรื่องสูงสุด */}
-              <Box sx={{ height: { xs: "180px", md: "220px", lg: "300px" } }}>
-                <TopStatsSwiper
-                  title="สถิติหน่วยงานที่มีเรื่องสูงมากที่สุด"
-                  bgColor="#64B5F6"
-                  headerColor="#1976D2"
-                  startDate={startDate}
-                  endDate={endDate}
-                  variant="high"
-                  data={[
-                    [
-                      { name: "กรมสรรพสามิต", count: 29 },
-                      { name: "กรมบัญชีกลาง", count: 28 },
-                      { name: "ธนาคารแห่งประเทศไทย", count: 25 },
-                      { name: "กรมธนารักษ์", count: 12 },
-                      { name: "สำนักงานเศรษฐกิจการคลัง", count: 11 },
-                    ],
-                    [
-                      { name: "กรมการขนส่งทางบก", count: 10 },
-                      { name: "สำนักงานตรวจเงินแผ่นดิน", count: 9 },
-                      { name: "สำนักงานตำรวจแห่งชาติ", count: 9 },
-                      { name: "กรมที่ดิน", count: 8 },
-                      { name: "กรมโยธาธิการ", count: 7 },
-                    ],
-                  ]}
-                />
-              </Box>
-
-              {/* เรื่องต่ำสุด */}
-              <Box sx={{ height: { xs: "180px", md: "220px", lg: "300px" } }}>
-                <TopStatsSwiper
-                  title="สถิติหน่วยงานที่มีเรื่องต่ำมากที่สุด"
-                  bgColor="#FFECB3"
-                  headerColor="#F44336"
-                  startDate={startDate}
-                  endDate={endDate}
-                  variant="low"
-                  data={[
-                    [
-                      { name: "สำนักงานบริหารที่สาธารณะ", count: 8 },
-                      { name: "สำนักงานคณะกรรมการนโยบาย...", count: 7 },
-                      { name: "ธนาคารแห่งประเทศไทย", count: 5 },
-                      { name: "สำนักงานเศรษฐกิจการคลัง", count: 4 },
-                      { name: "กรมศุลกากร", count: 7 },
-                    ],
-                    [
-                      { name: "กรมปศุสัตว์", count: 3 },
-                      { name: "กรมวิชาการเกษตร", count: 2 },
-                      { name: "กรมทางหลวง", count: 1 },
-                      { name: "สำนักงานเศรษฐกิจพาณิชย์", count: 1 },
-                      { name: "กรมตรวจบัญชีสหกรณ์", count: 1 },
-                    ],
-                  ]}
-                />
-              </Box>
-            </Box>
+            <BottomRightService />
           </Box>
         </Grid>
       </Grid>
-    </Box>
-  );
+    </Grid>
+
+    {/* ขวา - Stats และ Date Pickers */}
+    <Grid item xs={12} sm={6} lg={4}>
+      <Box
+        sx={{
+          backgroundColor: "#fff",
+          p: { xs: 1, sm: 1.5, md: 2 },
+          minHeight: "500px",
+          height: { xs: "auto", sm: "550px", lg: "860px" },
+          borderRadius: 1,
+          boxShadow: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: { xs: 2, sm: 3 },
+          overflow: "hidden",
+        }}
+      >
+        {/* Date Range Selector */}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+            width: "100%",
+            minWidth: 0,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: { xs: 1, sm: 0.5 },
+              alignItems: { xs: "stretch", sm: "flex-end" },
+              width: "100%",
+              minWidth: 0,
+            }}
+          >
+            {/* วันที่เริ่มต้น */}
+            <Box
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                maxWidth: { xs: "100%", sm: "45%" },
+              }}
+            >
+              <DateThaiPickerService
+                label="วันที่เริ่มต้น"
+                value={startDateWithBuddhist}
+                onChange={(newValue) => {
+                  let parsed = parseDateStringToObj(newValue);
+                  if (parsed && parsed.buddhistYear) {
+                    setStartDate({
+                      ...parsed,
+                      year: parsed.buddhistYear - 543,
+                    });
+                  } else {
+                    setStartDate(parsed);
+                  }
+                }}
+                placeholder="เลือกวันที่เริ่มต้น"
+                maxDate={
+                  endDateWithBuddhist
+                    ? new Date(
+                        endDateWithBuddhist.year,
+                        endDateWithBuddhist.month - 1,
+                        endDateWithBuddhist.day
+                      )
+                    : null
+                }
+              />
+            </Box>
+
+            {/* ข้อความ "ถึง" */}
+            <Box
+              sx={{
+                display: { xs: "none", sm: "flex" },
+                alignItems: "center",
+                fontWeight: "bold",
+                color: "#1120A3",
+                width: "10%",
+                justifyContent: "center",
+                mb: 2,
+                fontSize: "12px",
+                flexShrink: 0,
+              }}
+            >
+              ถึง
+            </Box>
+
+            {/* วันที่สิ้นสุด */}
+            <Box
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                maxWidth: { xs: "100%", sm: "45%" },
+              }}
+            >
+              <DateThaiPickerService
+                label="วันที่สิ้นสุด"
+                value={endDateWithBuddhist}
+                onChange={(newValue) => {
+                  let parsed = parseDateStringToObj(newValue);
+                  if (parsed && parsed.buddhistYear) {
+                    setEndDate({
+                      ...parsed,
+                      year: parsed.buddhistYear - 543,
+                    });
+                  } else {
+                    setEndDate(parsed);
+                  }
+                }}
+                placeholder="เลือกวันที่สิ้นสุด"
+                minDate={
+                  startDateWithBuddhist
+                    ? new Date(
+                        startDateWithBuddhist.year,
+                        startDateWithBuddhist.month - 1,
+                        startDateWithBuddhist.day
+                      )
+                    : null
+                }
+              />
+            </Box>
+          </Box>
+
+          {startDate && endDate && (
+            <Box
+              sx={{
+                p: 1,
+                backgroundColor: "#f8f9ff",
+                borderRadius: 1,
+                border: "1px solid #e3f2fd",
+                textAlign: "center",
+                fontSize: { xs: "10px", md: "12px" },
+                color: "#1120A3",
+                fontWeight: 500,
+                width: "100%",
+                wordBreak: "break-word",
+                boxSizing: "border-box",
+              }}
+            >
+              ช่วงวันที่: {dateRangeText}
+            </Box>
+          )}
+        </Box>
+
+          <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: { xs: 1, sm: 1, lg: 1 },  
+            width: "100%",
+            minWidth: 0,
+          }}
+        >
+          {/* สถิติหน่วยงานที่มีเรื่องสูงมากที่สุด */}
+          <Box
+            sx={{
+              flexGrow: 1,
+              display: "flex",
+              justifyContent: "center",
+              minHeight: { xs: "100px", sm: "150px", md: "250px", lg: "350px" }, 
+              height: "auto", 
+              width: "100%",
+              marginBottom: { xs: 1, sm: 1 }, 
+            }}
+          >
+            <TopStatsSwiper
+              title="สถิติหน่วยงานที่มีเรื่องสูงมากที่สุด"
+              bgColor="#64B5F6"
+              headerColor="#1976D2"
+              startDate={startDate}
+              endDate={endDate}
+              variant="high"
+              data={[
+                [
+                  { name: "กรมสรรพสามิต", count: 29 },
+                  { name: "กรมบัญชีกลาง", count: 28 },
+                  { name: "ธนาคารแห่งประเทศไทย", count: 25 },
+                  { name: "กรมธนารักษ์", count: 12 },
+                  { name: "สำนักงานเศรษฐกิจการคลัง", count: 11 },
+                ],
+                [
+                  { name: "กรมการขนส่งทางบก", count: 10 },
+                  { name: "สำนักงานตรวจเงินแผ่นดิน", count: 9 },
+                  { name: "สำนักงานตำรวจแห่งชาติ", count: 9 },
+                  { name: "กรมที่ดิน", count: 8 },
+                  { name: "กรมโยธาธิการ", count: 7 },
+                ],
+              ]}
+            />
+          </Box>
+
+          {/* สถิติหน่วยงานที่มีเรื่องต่ำมากที่สุด */}
+          <Box
+            sx={{
+              flexGrow: 1,
+              display: "flex",
+              justifyContent: "center",
+              minHeight: { xs: "100px", sm: "150px", md: "250px", lg: "350px" },  
+              height: "auto", 
+              width: "100%",
+              marginBottom: { xs: 1, sm: 1 }, 
+            }}
+          >
+            <TopStatsSwiper
+              title="สถิติหน่วยงานที่มีเรื่องต่ำมากที่สุด"
+              bgColor="#FFECB3"
+              headerColor="#F44336"
+              startDate={startDate}
+              endDate={endDate}
+              variant="low"
+              data={[
+                [
+                  { name: "สำนักงานบริหารที่สาธารณะ", count: 8 },
+                  { name: "สำนักงานคณะกรรมการนโยบาย...", count: 7 },
+                  { name: "ธนาคารแห่งประเทศไทย", count: 5 },
+                  { name: "สำนักงานเศรษฐกิจการคลัง", count: 4 },
+                  { name: "กรมศุลกากร", count: 7 },
+                ],
+                [
+                  { name: "กรมปศุสัตว์", count: 3 },
+                  { name: "กรมวิชาการเกษตร", count: 2 },
+                  { name: "กรมทางหลวง", count: 1 },
+                  { name: "สำนักงานเศรษฐกิจพาณิชย์", count: 1 },
+                  { name: "กรมตรวจบัญชีสหกรณ์", count: 1 },
+                ],
+              ]}
+            />
+          </Box>
+        </Box>
+      </Box>
+    </Grid>
+  </Grid>
+</Box>
+  )
 };
 
 export default DashboardComponents_Main;

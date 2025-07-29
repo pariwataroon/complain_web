@@ -205,7 +205,7 @@ const SetPeriodComponent = () => {
               justifyContent: "center",
               alignItems: "center",
               marginTop: 4,
-              gap: 2,
+              gap: { xs: 1, sm: 2 },
             }}
           >
             <ButtonService
@@ -217,7 +217,7 @@ const SetPeriodComponent = () => {
                 backgroundColor: "#ffffff",
                 color: "#50ADFF",
                 borderRadius: "15px",
-                width: "18%",
+                width: { xs: "80%", sm: "18%" }, 
                 height: "55px",
                 fontSize: "24px",
                 "&:hover": {
@@ -235,7 +235,7 @@ const SetPeriodComponent = () => {
                 backgroundColor: "#2196F3",
                 color: "#FFF",
                 borderRadius: "15px",
-                width: "18%",
+                width: { xs: "80%", sm: "18%" },
                 height: "55px",
                 fontSize: "24px",
                 "&:hover": {
