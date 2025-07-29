@@ -17,6 +17,7 @@ from app.api.v1.schemas.news import (
 from app.api.v1.controllers.news_controller import (
     get_news_list,
     get_news_by_id,
+    get_news_by_id_without_increment,
     create_news,
     update_news,
     delete_news,
@@ -123,7 +124,7 @@ async def read_news(
 ):
     """ดึงข้อมูล News ตาม ID - ต้องมีสิทธิ์อ่านใน news"""
     try:
-        news = get_news_by_id(db, news_id)
+        news = get_news_by_id_without_increment(db, news_id)
         if not news:
             return format_response("4040", {"error": f"News with ID {news_id} not found"})
         
@@ -151,7 +152,7 @@ async def read_published_news_by_id(
                 detail="Missing or invalid API key/token"
             )
             
-        news = get_news_by_id(db, news_id)
+        news = get_news_by_id_without_increment(db, news_id)
         if not news:
             return format_response("4040", {"error": f"News with ID {news_id} not found"})
         

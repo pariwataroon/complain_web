@@ -35,7 +35,7 @@ def get_news_list(db: Session, skip: int = 0, limit: int = 100, search: str = No
     
     # อัปเดต view_count ด้วยข้อมูลจาก cache สำหรับการแสดงผล
     for news in news_list:
-        real_count = get_real_view_count(db, news.id)
+        real_count = get_real_view_count(db, news.id, news.view_count)
         news.view_count = str(real_count)
     
     return news_list
@@ -46,7 +46,17 @@ def get_news_by_id(db: Session, news_id: UUID) -> Optional[News]:
     news = db.query(News).filter(News.id == news_id).first()
     if news:
         # อัปเดต view_count ด้วยข้อมูลจาก cache สำหรับการแสดงผล
-        real_count = get_real_view_count(db, news.id)
+        real_count = get_real_view_count(db, news_id, news.view_count)
+        news.view_count = str(real_count)
+    return news
+
+
+def get_news_by_id_without_increment(db: Session, news_id: UUID) -> Optional[News]:
+    """ดึงข้อมูล News ตาม ID โดยไม่เพิ่ม view_count จาก cache (สำหรับการแก้ไข/ดูข้อมูล)"""
+    news = db.query(News).filter(News.id == news_id).first()
+    if news:
+        # อัปเดต view_count ด้วยข้อมูลจาก cache สำหรับการแสดงผล โดยไม่เพิ่มค่า
+        real_count = get_real_view_count(db, news_id, news.view_count)
         news.view_count = str(real_count)
     return news
 
@@ -87,7 +97,7 @@ def create_news(db: Session, news: NewsCreate) -> News:
 def update_news(db: Session, news_id: UUID, news_data: NewsUpdate) -> Optional[News]:
     """อัปเดต News"""
     try:
-        db_news = get_news_by_id(db, news_id)
+        db_news = get_news_by_id_without_increment(db, news_id)
         if not db_news:
             return None
         
@@ -128,7 +138,7 @@ def update_news(db: Session, news_id: UUID, news_data: NewsUpdate) -> Optional[N
 def delete_news(db: Session, news_id: UUID) -> bool:
     """ลบ News"""
     try:
-        db_news = get_news_by_id(db, news_id)
+        db_news = get_news_by_id_without_increment(db, news_id)
         if not db_news:
             return False
         
@@ -145,8 +155,8 @@ def delete_news(db: Session, news_id: UUID) -> bool:
 def increment_view_count(db: Session, news_id: UUID) -> Optional[News]:
     """เพิ่มจำนวนผู้ชม (ใช้ cache เพื่อลดการเขียนฐานข้อมูล)"""
     try:
-        # ตรวจสอบว่าข่าวมีอยู่จริง
-        db_news = get_news_by_id(db, news_id)
+        # ตรวจสอบว่าข่าวมีอยู่จริง (ดึงข้อมูลจากฐานข้อมูลโดยตรงเพื่อไม่ให้ view_count ถูกแก้ไข)
+        db_news = db.query(News).filter(News.id == news_id).first()
         if not db_news:
             return None
         
@@ -157,13 +167,15 @@ def increment_view_count(db: Session, news_id: UUID) -> Optional[News]:
         cached_increment = cache.get(cache_key) or 0
         
         # เพิ่มการนับใน cache
-        cache.set(cache_key, cached_increment + 1, ttl_seconds=300)  # cache 5 นาที
+        new_cached_count = cached_increment + 1
+        cache.set(cache_key, new_cached_count, ttl_seconds=300)  # cache 5 นาที
         
-        # ถ้า cached_increment เป็นจำนวนคู่ (เช่น 0, 2, 4, 6...) หรือมากกว่า 10 ให้อัปเดตฐานข้อมูล
-        if (cached_increment > 0 and cached_increment % 5 == 0) or cached_increment >= 10:
-            # อัปเดตฐานข้อมูลด้วยจำนวนที่สะสมใน cache
-            current_views = int(db_news.view_count) if db_news.view_count.isdigit() else 0
-            db_news.view_count = str(current_views + cached_increment + 1)
+        # ถ้า cached_increment มากกว่าหรือเท่ากับ 5 ให้อัปเดตฐานข้อมูล
+        if new_cached_count >= 5:
+            # อัปเดตฐานข้อมูลด้วยจำนวนที่สะสมใน cache (ใช้ view_count จากฐานข้อมูลโดยตรง)
+            current_views = int(db_news.view_count) if db_news.view_count and db_news.view_count.isdigit() else 0
+            new_count = current_views + new_cached_count
+            db_news.view_count = str(new_count)
             
             db.commit()
             db.refresh(db_news)
@@ -171,9 +183,15 @@ def increment_view_count(db: Session, news_id: UUID) -> Optional[News]:
             # ล้าง cache หลังจากอัปเดตฐานข้อมูล
             cache.delete(cache_key)
             
-            logger.info(f"Updated view count in database for news: {news_id}, new count: {db_news.view_count}")
+            logger.info(f"Updated view count in database for news: {news_id}, new count: {new_count}")
+            
+            # อัปเดต view_count ของ object ที่จะ return ให้ตรงกับข้อมูลใหม่
+            db_news.view_count = str(new_count)
         else:
-            logger.info(f"Incremented view count in cache for news: {news_id}, cached increment: {cached_increment + 1}")
+            logger.info(f"Incremented view count in cache for news: {news_id}, cached increment: {new_cached_count}")
+            # อัปเดต view_count ให้แสดงค่ารวมจาก DB + cache
+            current_views = int(db_news.view_count) if db_news.view_count and db_news.view_count.isdigit() else 0
+            db_news.view_count = str(current_views + new_cached_count)
         
         return db_news
     except Exception as e:
@@ -182,16 +200,18 @@ def increment_view_count(db: Session, news_id: UUID) -> Optional[News]:
         raise
 
 
-def get_real_view_count(db: Session, news_id: UUID) -> int:
+def get_real_view_count(db: Session, news_id: UUID, current_view_count: str = None) -> int:
     """ดึงจำนวนผู้ชมจริงที่รวม cache และ database"""
     try:
-        # ดึงข้อมูลจากฐานข้อมูล
-        db_news = get_news_by_id(db, news_id)
-        if not db_news:
-            return 0
+        # ถ้าไม่ได้ส่ง current_view_count มา ให้ดึงจากฐานข้อมูล
+        if current_view_count is None:
+            db_news = db.query(News).filter(News.id == news_id).first()
+            if not db_news:
+                return 0
+            current_view_count = db_news.view_count
         
         # ดึงจำนวนจากฐานข้อมูล
-        db_count = int(db_news.view_count) if db_news.view_count.isdigit() else 0
+        db_count = int(current_view_count) if current_view_count and current_view_count.isdigit() else 0
         
         # ดึงจำนวนที่ยังไม่ได้บันทึกจาก cache
         cache_key = f"news_view_count_{news_id}"
@@ -210,7 +230,8 @@ def get_real_view_count(db: Session, news_id: UUID) -> int:
 def force_flush_view_count(db: Session, news_id: UUID) -> Optional[News]:
     """บังคับบันทึก view count จาก cache ลงฐานข้อมูลทันที"""
     try:
-        db_news = get_news_by_id(db, news_id)
+        # ดึงข้อมูลจากฐานข้อมูลโดยตรงเพื่อไม่ให้ view_count ถูกแก้ไข
+        db_news = db.query(News).filter(News.id == news_id).first()
         if not db_news:
             return None
         
@@ -218,8 +239,8 @@ def force_flush_view_count(db: Session, news_id: UUID) -> Optional[News]:
         cached_increment = cache.get(cache_key) or 0
         
         if cached_increment > 0:
-            # อัปเดตฐานข้อมูล
-            current_views = int(db_news.view_count) if db_news.view_count.isdigit() else 0
+            # อัปเดตฐานข้อมูล (ใช้ view_count จากฐานข้อมูลโดยตรง)
+            current_views = int(db_news.view_count) if db_news.view_count and db_news.view_count.isdigit() else 0
             db_news.view_count = str(current_views + cached_increment)
             
             db.commit()
@@ -293,7 +314,7 @@ def get_displayable_news(db: Session, skip: int = 0, limit: int = 100, search: s
     
     # อัปเดต view_count ด้วยข้อมูลจาก cache สำหรับการแสดงผล
     for news in news_list:
-        real_count = get_real_view_count(db, news.id)
+        real_count = get_real_view_count(db, news.id, news.view_count)
         news.view_count = str(real_count)
     
     return news_list
@@ -302,7 +323,7 @@ def get_displayable_news(db: Session, skip: int = 0, limit: int = 100, search: s
 def add_gallery_image(db: Session, news_id: UUID, image_url: str) -> Optional[News]:
     """เพิ่มรูปภาพลงใน gallery"""
     try:
-        db_news = get_news_by_id(db, news_id)
+        db_news = get_news_by_id_without_increment(db, news_id)
         if not db_news:
             return None
         
@@ -328,7 +349,7 @@ def add_gallery_image(db: Session, news_id: UUID, image_url: str) -> Optional[Ne
 def remove_gallery_image(db: Session, news_id: UUID, image_url: str) -> Optional[News]:
     """ลบรูปภาพจาก gallery"""
     try:
-        db_news = get_news_by_id(db, news_id)
+        db_news = get_news_by_id_without_increment(db, news_id)
         if not db_news:
             return None
         
@@ -350,7 +371,7 @@ def remove_gallery_image(db: Session, news_id: UUID, image_url: str) -> Optional
 def update_gallery_images(db: Session, news_id: UUID, image_urls: List[str]) -> Optional[News]:
     """อัปเดต gallery images ทั้งหมด"""
     try:
-        db_news = get_news_by_id(db, news_id)
+        db_news = get_news_by_id_without_increment(db, news_id)
         if not db_news:
             return None
         
@@ -369,7 +390,7 @@ def update_gallery_images(db: Session, news_id: UUID, image_urls: List[str]) -> 
 def add_additional_link(db: Session, news_id: UUID, link_data: dict) -> Optional[News]:
     """เพิ่มลิงก์เพิ่มเติมลงในข่าว"""
     try:
-        db_news = get_news_by_id(db, news_id)
+        db_news = get_news_by_id_without_increment(db, news_id)
         if not db_news:
             return None
         
@@ -396,7 +417,7 @@ def add_additional_link(db: Session, news_id: UUID, link_data: dict) -> Optional
 def remove_additional_link(db: Session, news_id: UUID, link_title: str) -> Optional[News]:
     """ลบลิงก์เพิ่มเติมจากข่าว"""
     try:
-        db_news = get_news_by_id(db, news_id)
+        db_news = get_news_by_id_without_increment(db, news_id)
         if not db_news:
             return None
         
@@ -421,7 +442,7 @@ def remove_additional_link(db: Session, news_id: UUID, link_title: str) -> Optio
 def update_additional_links(db: Session, news_id: UUID, links: List[dict]) -> Optional[News]:
     """อัปเดตลิงก์เพิ่มเติมทั้งหมด"""
     try:
-        db_news = get_news_by_id(db, news_id)
+        db_news = get_news_by_id_without_increment(db, news_id)
         if not db_news:
             return None
         
@@ -440,7 +461,7 @@ def update_additional_links(db: Session, news_id: UUID, links: List[dict]) -> Op
 def update_display_schedule(db: Session, news_id: UUID, start_date: Optional[datetime], end_date: Optional[datetime]) -> Optional[News]:
     """อัปเดตระยะเวลาการแสดงข่าว"""
     try:
-        db_news = get_news_by_id(db, news_id)
+        db_news = get_news_by_id_without_increment(db, news_id)
         if not db_news:
             return None
         
