@@ -8,6 +8,20 @@
             "https://example.com/images/gallery/no-gift-policy-detail-2.jpg",
             "https://example.com/images/gallery/no-gift-policy-infographic.jpg"
         ],
+        "additional_links": [
+            {
+                "title": "เอกสารนโยบาย NO GIFT POLICY ฉบับสมบูรณ์",
+                "url": "https://example.com/documents/no-gift-policy-2568.pdf",
+                "description": "ดาวน์โหลดเอกสารนโยบายฉบับเต็ม"
+            },
+            {
+                "title": "แนวทางปฏิบัติสำหรับเจ้าหน้าที่",
+                "url": "https://example.com/guidelines/staff-guidelines.pdf",
+                "description": "คู่มือแนวทางปฏิบัติตามนโยบาย"
+            }
+        ],
+        "display_start_date": "2024-10-01T00:00:00+07:00",
+        "display_end_date": "2025-12-31T23:59:59+07:00",
         "is_published": true
     },
     {
@@ -20,6 +34,15 @@
             "https://example.com/images/gallery/group-photo.jpg",
             "https://example.com/images/gallery/ceremony-activities.jpg"
         ],
+        "additional_links": [
+            {
+                "title": "รายละเอียดโครงการส่งเสริมคุณธรรม",
+                "url": "https://example.com/projects/ethics-promotion.html",
+                "description": "ข้อมูลโครงการส่งเสริมคุณธรรม จริยธรรม และธรรมาภิบาล"
+            }
+        ],
+        "display_start_date": "2025-01-01T00:00:00+07:00",
+        "display_end_date": null,
         "is_published": true
     },
     {
@@ -31,6 +54,20 @@
             "https://example.com/images/gallery/handover-ceremony.jpg",
             "https://example.com/images/gallery/recipient-families.jpg"
         ],
+        "additional_links": [
+            {
+                "title": "ข้อมูลสวัสดิการเจ้าหน้าที่",
+                "url": "https://example.com/welfare/employee-benefits.html",
+                "description": "รายการสวัสดิการสำหรับเจ้าหน้าที่"
+            },
+            {
+                "title": "แบบฟอร์มขอรับสวัสดิการ",
+                "url": "https://example.com/forms/welfare-application.pdf",
+                "description": "ดาวน์โหลดแบบฟอร์มขอรับสวัสดิการ"
+            }
+        ],
+        "display_start_date": null,
+        "display_end_date": "2025-03-31T23:59:59+07:00",
         "is_published": true
     },
     {
@@ -44,16 +81,25 @@
             "https://example.com/images/gallery/prayer-ceremony.jpg",
             "https://example.com/images/gallery/participants-group.jpg"
         ],
+        "additional_links": [
+            {
+                "title": "ปฏิทินกิจกรรมทางศาสนา",
+                "url": "https://example.com/calendar/religious-activities.html",
+                "description": "ปฏิทินกิจกรรมทางพระพุทธศาสนาประจำปี"
+            }
+        ],
+        "display_start_date": "2025-07-01T00:00:00+07:00",
+        "display_end_date": "2025-08-31T23:59:59+07:00",
         "is_published": true
     },
     {
-        "title": "พิธีมอบเสื้อขาวร่วมใจรักษ์เศรษฐกิจ ประจำปีบัญชีประมาณ พ.ศ. 2568 ภายใต้โครงการส่งเสริมคุณธรรม จริยธรรม และธรรมาภิบาล",
-        "content": "<p>การจัดกิจกรรมส่งเสริมจิตสำนึกรักชาติ รักเศรษฐกิจ ของเจ้าหน้าที่กระทรวงการคลัง</p><p>มีการมอบเสื้อขาวเป็นสัญลักษณ์ของความสะอาด ความบริสุทธิ์ในการปฏิบัติหน้าที่</p>",
-        "cover_image_url": "https://example.com/images/covers/white-shirt-ceremony-2-cover.jpg",
-        "gallery_images": [
-            "https://example.com/images/gallery/opening-speech-2.jpg",
-            "https://example.com/images/gallery/shirt-distribution.jpg"
-        ],
+        "title": "ข่าวทดสอบ - จะแสดงในอนาคต",
+        "content": "<p>นี่คือข่าวทดสอบที่จะแสดงในอนาคต เพื่อทดสอบระบบจัดการเวลาแสดงข่าว</p>",
+        "cover_image_url": "https://example.com/images/covers/future-news.jpg",
+        "gallery_images": [],
+        "additional_links": [],
+        "display_start_date": "2025-12-01T00:00:00+07:00",
+        "display_end_date": "2025-12-31T23:59:59+07:00",
         "is_published": true
     }
 ]

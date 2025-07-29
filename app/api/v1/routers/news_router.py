@@ -9,7 +9,9 @@ from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
 from app.api.v1.schemas.news import (
     NewsCreate, NewsResponse, NewsUpdate, 
-    GalleryImageAdd, GalleryImageRemove, GalleryImagesUpdate
+    GalleryImageAdd, GalleryImageRemove, GalleryImagesUpdate,
+    AdditionalLinkAdd, AdditionalLinkRemove, AdditionalLinksUpdate,
+    NewsDisplaySchedule
 )
 from app.api.v1.controllers.news_controller import (
     get_news_list,
@@ -19,9 +21,15 @@ from app.api.v1.controllers.news_controller import (
     delete_news,
     increment_view_count,
     get_published_news,
+    get_displayable_news,
     add_gallery_image,
     remove_gallery_image,
-    update_gallery_images
+    update_gallery_images,
+    add_additional_link,
+    remove_additional_link,
+    update_additional_links,
+    update_display_schedule,
+    check_news_displayable
 )
 
 router = APIRouter(
@@ -75,6 +83,33 @@ async def read_published_news(
     except Exception as e:
         print(f"Error fetching published news: {str(e)}")
         return format_response("5000", {"error": "Error fetching published news"})
+
+
+@router.get("/public/displayable", response_model=FormatResponseModel)
+async def read_displayable_news(
+    request: Request,
+    skip: int = 0,
+    limit: int = 100,
+    search: Optional[str] = Query(None, description="ค้นหาใน title หรือ content"),
+    db: Session = Depends(get_db),
+):
+    """ดึงข้อมูล News ที่สามารถแสดงได้ในเวลาปัจจุบัน (เผยแพร่ + อยู่ในช่วงเวลาที่กำหนด) - ไม่ต้องมีสิทธิ์"""
+    try:
+        # ตรวจสอบ API Key หรือ Token
+        is_authenticated = await verify_api_key_or_token(request, db)
+        
+        if not is_authenticated:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid API key/token"
+            )
+            
+        news_list = get_displayable_news(db, skip=skip, limit=limit, search=search)
+        result = [NewsResponse.model_validate(news).model_dump() for news in news_list]
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error fetching displayable news: {str(e)}")
+        return format_response("5000", {"error": "Error fetching displayable news"})
 
 
 @router.get("/{news_id}", response_model=FormatResponseModel)
@@ -271,3 +306,123 @@ async def update_news_gallery_images(
     except Exception as e:
         print(f"Error updating gallery images: {str(e)}")
         return format_response("5000", {"error": "Error updating gallery images"})
+
+
+@router.post("/{news_id}/links", response_model=FormatResponseModel)
+async def add_additional_link_to_news(
+    news_id: UUID,
+    link_data: AdditionalLinkAdd,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("homepage_news"))
+):
+    """เพิ่มลิงก์เพิ่มเติมลงในข่าว - ต้องมีสิทธิ์แก้ไขใน news"""
+    try:
+        updated_news = add_additional_link(db, news_id, link_data.link.dict())
+        if not updated_news:
+            return format_response("4040", {"error": f"News with ID {news_id} not found"})
+        
+        result = NewsResponse.model_validate(updated_news).model_dump()
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error adding additional link: {str(e)}")
+        return format_response("5000", {"error": "Error adding additional link"})
+
+
+@router.delete("/{news_id}/links", response_model=FormatResponseModel)
+async def remove_additional_link_from_news(
+    news_id: UUID,
+    link_data: AdditionalLinkRemove,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("homepage_news"))
+):
+    """ลบลิงก์เพิ่มเติมจากข่าว - ต้องมีสิทธิ์แก้ไขใน news"""
+    try:
+        updated_news = remove_additional_link(db, news_id, link_data.link_title)
+        if not updated_news:
+            return format_response("4040", {"error": f"News with ID {news_id} not found"})
+        
+        result = NewsResponse.model_validate(updated_news).model_dump()
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error removing additional link: {str(e)}")
+        return format_response("5000", {"error": "Error removing additional link"})
+
+
+@router.put("/{news_id}/links", response_model=FormatResponseModel)
+async def update_news_additional_links(
+    news_id: UUID,
+    links_data: AdditionalLinksUpdate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("homepage_news"))
+):
+    """อัปเดตลิงก์เพิ่มเติมทั้งหมด - ต้องมีสิทธิ์แก้ไขใน news"""
+    try:
+        links = [link.dict() for link in links_data.links]
+        updated_news = update_additional_links(db, news_id, links)
+        if not updated_news:
+            return format_response("4040", {"error": f"News with ID {news_id} not found"})
+        
+        result = NewsResponse.model_validate(updated_news).model_dump()
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error updating additional links: {str(e)}")
+        return format_response("5000", {"error": "Error updating additional links"})
+
+
+@router.put("/{news_id}/schedule", response_model=FormatResponseModel)
+async def update_news_display_schedule(
+    news_id: UUID,
+    schedule_data: NewsDisplaySchedule,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("homepage_news"))
+):
+    """อัปเดตระยะเวลาการแสดงข่าว - ต้องมีสิทธิ์แก้ไขใน news"""
+    try:
+        updated_news = update_display_schedule(
+            db, news_id, 
+            schedule_data.display_start_date, 
+            schedule_data.display_end_date
+        )
+        if not updated_news:
+            return format_response("4040", {"error": f"News with ID {news_id} not found"})
+        
+        result = NewsResponse.model_validate(updated_news).model_dump()
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error updating display schedule: {str(e)}")
+        return format_response("5000", {"error": "Error updating display schedule"})
+
+
+@router.get("/{news_id}/displayable", response_model=FormatResponseModel)
+async def check_news_displayable_status(
+    request: Request,
+    news_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """ตรวจสอบว่าข่าวสามารถแสดงได้ในเวลาปัจจุบันหรือไม่ - ไม่ต้องมีสิทธิ์"""
+    try:
+        # ตรวจสอบ API Key หรือ Token
+        is_authenticated = await verify_api_key_or_token(request, db)
+        
+        if not is_authenticated:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid API key/token"
+            )
+            
+        news = get_news_by_id(db, news_id)
+        if not news:
+            return format_response("4040", {"error": f"News with ID {news_id} not found"})
+        
+        is_displayable = check_news_displayable(news)
+        result = {
+            "news_id": str(news_id),
+            "is_displayable": is_displayable,
+            "is_published": news.is_published,
+            "display_start_date": news.display_start_date.isoformat() if news.display_start_date else None,
+            "display_end_date": news.display_end_date.isoformat() if news.display_end_date else None
+        }
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error checking displayable status: {str(e)}")
+        return format_response("5000", {"error": "Error checking displayable status"})

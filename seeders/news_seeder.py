@@ -2,6 +2,7 @@ import json
 import uuid
 from datetime import datetime
 from sqlalchemy.orm import Session
+import pytz
 from models.news import News
 from config.database import get_db
 from lib.logger import get_logger
@@ -42,12 +43,28 @@ def seed_news(db: Session):
             # จัดการ gallery_images
             gallery_images = news_item.get('gallery_images', [])
             
+            # จัดการ additional_links
+            additional_links = news_item.get('additional_links', [])
+            
+            # จัดการ datetime fields
+            display_start_date = None
+            display_end_date = None
+            
+            if news_item.get('display_start_date'):
+                display_start_date = datetime.fromisoformat(news_item['display_start_date'])
+                
+            if news_item.get('display_end_date'):
+                display_end_date = datetime.fromisoformat(news_item['display_end_date'])
+            
             db_news = News(
                 id=uuid.uuid4(),
                 title=news_item['title'],
                 content=news_item['content'],
                 cover_image_url=news_item.get('cover_image_url'),
                 gallery_images=gallery_images,
+                additional_links=additional_links,
+                display_start_date=display_start_date,
+                display_end_date=display_end_date,
                 is_published=news_item['is_published'],
                 view_count="0",
                 created_at=datetime.now(),
