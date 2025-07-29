@@ -155,45 +155,67 @@ def delete_news(db: Session, news_id: UUID) -> bool:
 def increment_view_count(db: Session, news_id: UUID) -> Optional[News]:
     """เพิ่มจำนวนผู้ชม (ใช้ cache เพื่อลดการเขียนฐานข้อมูล)"""
     try:
-        # ตรวจสอบว่าข่าวมีอยู่จริง (ดึงข้อมูลจากฐานข้อมูลโดยตรงเพื่อไม่ให้ view_count ถูกแก้ไข)
+        # ตรวจสอบว่าข่าวมีอยู่จริง (ดึงข้อมูลจากฐานข้อมูลโดยตรง)
         db_news = db.query(News).filter(News.id == news_id).first()
         if not db_news:
             return None
         
-        # ใช้ cache สำหรับนับ view count
+        # ใช้ cache สำหรับนับ view count - เพิ่มทีละ 1
         cache_key = f"news_view_count_{news_id}"
         
-        # ดึงจำนวนการเข้าชมจาก cache
-        cached_increment = cache.get(cache_key) or 0
-        
-        # เพิ่มการนับใน cache
-        new_cached_count = cached_increment + 1
-        cache.set(cache_key, new_cached_count, ttl_seconds=300)  # cache 5 นาที
-        
-        # ถ้า cached_increment มากกว่าหรือเท่ากับ 5 ให้อัปเดตฐานข้อมูล
-        if new_cached_count >= 5:
-            # อัปเดตฐานข้อมูลด้วยจำนวนที่สะสมใน cache (ใช้ view_count จากฐานข้อมูลโดยตรง)
+        # เพิ่มการนับใน cache (ใช้ increment atomic operation ถ้ามี)
+        try:
+            # ใช้ cache.incr() ถ้า cache service รองรับ (atomic operation)
+            if hasattr(cache, 'incr'):
+                new_count = cache.incr(cache_key, delta=1)
+                if new_count == 1:  # ครั้งแรกที่สร้าง key
+                    cache.expire(cache_key, 900)  # TTL 15 นาที
+            else:
+                # fallback สำหรับ cache ที่ไม่รองรับ incr
+                current_cache = cache.get(cache_key) or 0
+                new_count = current_cache + 1
+                cache.set(cache_key, new_count, ttl_seconds=900)  # TTL 15 นาที
+        except:
+            # ถ้า cache ล้มเหลว ให้เพิ่มใน database โดยตรง
             current_views = int(db_news.view_count) if db_news.view_count and db_news.view_count.isdigit() else 0
-            new_count = current_views + new_cached_count
-            db_news.view_count = str(new_count)
-            
+            db_news.view_count = str(current_views + 1)
             db.commit()
             db.refresh(db_news)
-            
-            # ล้าง cache หลังจากอัปเดตฐานข้อมูล
-            cache.delete(cache_key)
-            
-            logger.info(f"Updated view count in database for news: {news_id}, new count: {new_count}")
-            
-            # อัปเดต view_count ของ object ที่จะ return ให้ตรงกับข้อมูลใหม่
-            db_news.view_count = str(new_count)
-        else:
-            logger.info(f"Incremented view count in cache for news: {news_id}, cached increment: {new_cached_count}")
-            # อัปเดต view_count ให้แสดงค่ารวมจาก DB + cache
-            current_views = int(db_news.view_count) if db_news.view_count and db_news.view_count.isdigit() else 0
-            db_news.view_count = str(current_views + new_cached_count)
+            logger.warning(f"Cache failed, updated view count directly in DB for news: {news_id}")
+            return db_news
+        
+        # Flush cache ลง database ทุกๆ 10 views หรือ random ระหว่าง 8-12
+        import random
+        flush_threshold = random.randint(8, 12)
+        
+        if new_count >= flush_threshold:
+            try:
+                # อัปเดตฐานข้อมูล
+                current_views = int(db_news.view_count) if db_news.view_count and db_news.view_count.isdigit() else 0
+                db_news.view_count = str(current_views + new_count)
+                
+                db.commit()
+                db.refresh(db_news)
+                
+                # ล้าง cache หลังจากอัปเดตฐานข้อมูล
+                cache.delete(cache_key)
+                
+                logger.info(f"Flushed {new_count} views to database for news: {news_id}, new total: {db_news.view_count}")
+            except Exception as flush_error:
+                # ถ้า flush ล้มเหลว ให้คงไว้ใน cache
+                logger.error(f"Failed to flush cache for news {news_id}: {str(flush_error)}")
+                db.rollback()
+        
+        # คำนวณ view_count สำหรับ response (DB + cache ที่เหลือ)
+        current_db_views = int(db_news.view_count) if db_news.view_count and db_news.view_count.isdigit() else 0
+        current_cache_views = cache.get(cache_key) or 0
+        total_views = current_db_views + current_cache_views
+        
+        # อัปเดต object สำหรับ response
+        db_news.view_count = str(total_views)
         
         return db_news
+        
     except Exception as e:
         db.rollback()
         logger.error(f"Error incrementing view count for news {news_id}: {str(e)}")
@@ -201,7 +223,7 @@ def increment_view_count(db: Session, news_id: UUID) -> Optional[News]:
 
 
 def get_real_view_count(db: Session, news_id: UUID, current_view_count: str = None) -> int:
-    """ดึงจำนวนผู้ชมจริงที่รวม cache และ database"""
+    """ดึงจำนวนผู้ชมจริงที่รวม cache และ database (เพื่อ performance ใช้สำหรับแสดงผลเท่านั้น)"""
     try:
         # ถ้าไม่ได้ส่ง current_view_count มา ให้ดึงจากฐานข้อมูล
         if current_view_count is None:
@@ -213,17 +235,22 @@ def get_real_view_count(db: Session, news_id: UUID, current_view_count: str = No
         # ดึงจำนวนจากฐานข้อมูล
         db_count = int(current_view_count) if current_view_count and current_view_count.isdigit() else 0
         
-        # ดึงจำนวนที่ยังไม่ได้บันทึกจาก cache
-        cache_key = f"news_view_count_{news_id}"
-        cached_increment = cache.get(cache_key) or 0
+        # ดึงจำนวนที่ยังไม่ได้บันทึกจาก cache (ถ้า cache พัง ให้แสดงแค่ DB)
+        try:
+            cache_key = f"news_view_count_{news_id}"
+            cached_increment = cache.get(cache_key) or 0
+        except:
+            # ถ้า cache ล้มเหลว ให้ใช้แค่ข้อมูลจาก DB
+            cached_increment = 0
+            logger.warning(f"Cache failed for getting view count of news {news_id}, using DB only")
         
         # รวมจำนวนจากทั้งสองแหล่ง
         total_count = db_count + cached_increment
         
-        logger.debug(f"Real view count for news {news_id}: DB={db_count}, Cache={cached_increment}, Total={total_count}")
         return total_count
     except Exception as e:
         logger.error(f"Error getting real view count for news {news_id}: {str(e)}")
+        # ถ้าเกิดข้อผิดพลาด ให้ return 0 เพื่อไม่ให้ระบบล้มเหลว
         return 0
 
 
@@ -236,7 +263,13 @@ def force_flush_view_count(db: Session, news_id: UUID) -> Optional[News]:
             return None
         
         cache_key = f"news_view_count_{news_id}"
-        cached_increment = cache.get(cache_key) or 0
+        
+        try:
+            cached_increment = cache.get(cache_key) or 0
+        except:
+            # ถ้า cache ล้มเหลว ให้ return ข้อมูลปัจจุบัน
+            logger.warning(f"Cache failed during force flush for news {news_id}")
+            return db_news
         
         if cached_increment > 0:
             # อัปเดตฐานข้อมูล (ใช้ view_count จากฐานข้อมูลโดยตรง)
@@ -247,7 +280,10 @@ def force_flush_view_count(db: Session, news_id: UUID) -> Optional[News]:
             db.refresh(db_news)
             
             # ล้าง cache
-            cache.delete(cache_key)
+            try:
+                cache.delete(cache_key)
+            except:
+                logger.warning(f"Failed to clear cache after flush for news {news_id}")
             
             logger.info(f"Force flushed view count for news: {news_id}, added: {cached_increment}, new total: {db_news.view_count}")
         
@@ -256,6 +292,61 @@ def force_flush_view_count(db: Session, news_id: UUID) -> Optional[News]:
         db.rollback()
         logger.error(f"Error force flushing view count for news {news_id}: {str(e)}")
         raise
+
+
+def flush_all_view_cache_to_db(db: Session) -> dict:
+    """Background task: flush cache ทั้งหมดลงฐานข้อมูล (เรียกใช้เป็นระยะ)"""
+    try:
+        from models.news import News
+        
+        # ดึงรายการข่าวทั้งหมด
+        all_news = db.query(News).all()
+        
+        flushed_count = 0
+        total_increment = 0
+        failed_count = 0
+        
+        for news in all_news:
+            try:
+                cache_key = f"news_view_count_{news.id}"
+                cached_increment = cache.get(cache_key) or 0
+                
+                if cached_increment > 0:
+                    # อัปเดตฐานข้อมูล
+                    current_views = int(news.view_count) if news.view_count and news.view_count.isdigit() else 0
+                    news.view_count = str(current_views + cached_increment)
+                    
+                    # ล้าง cache
+                    cache.delete(cache_key)
+                    
+                    flushed_count += 1
+                    total_increment += cached_increment
+                    
+            except Exception as item_error:
+                failed_count += 1
+                logger.error(f"Failed to flush cache for news {news.id}: {str(item_error)}")
+                continue
+        
+        if flushed_count > 0:
+            try:
+                db.commit()
+                logger.info(f"Background flush completed: {flushed_count} news updated, {total_increment} total views added")
+            except:
+                db.rollback()
+                logger.error("Failed to commit background flush")
+                return {"error": "Failed to commit changes"}
+        
+        return {
+            "flushed_news_count": flushed_count,
+            "total_view_increment": total_increment,
+            "failed_count": failed_count,
+            "success": True
+        }
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error in background flush: {str(e)}")
+        return {"error": str(e), "success": False}
 
 
 def get_published_news(db: Session, skip: int = 0, limit: int = 100, search: str = None) -> List[News]:

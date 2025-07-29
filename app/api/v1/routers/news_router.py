@@ -160,8 +160,10 @@ async def read_published_news_by_id(
         if not news.is_published:
             return format_response("4040", {"error": "News not published"})
         
-        # เพิ่มจำนวนผู้ชม
+        # เพิ่มจำนวนผู้ชมและดึงข้อมูลที่อัปเดตแล้ว
         updated_news = increment_view_count(db, news_id)
+        if not updated_news:
+            return format_response("4040", {"error": f"News with ID {news_id} not found"})
         
         result = NewsResponse.model_validate(updated_news).model_dump()
         return format_response("0000", result)
@@ -241,6 +243,7 @@ async def increment_news_view_count(
                 detail="Missing or invalid API key/token"
             )
             
+        # เพิ่มจำนวนผู้ชมและดึงข้อมูลที่อัปเดตแล้ว
         updated_news = increment_view_count(db, news_id)
         if not updated_news:
             return format_response("4040", {"error": f"News with ID {news_id} not found"})
@@ -323,25 +326,27 @@ async def get_view_cache_status(
         total_cached_views = 0
         
         for news in all_news:
-            cache_key = f"news_view_count_{news.id}"
-            cached_increment = cache.get(cache_key) or 0
-            
-            if cached_increment > 0:
-                db_count = int(news.view_count) if news.view_count.isdigit() else 0
-                cache_status.append({
-                    "news_id": str(news.id),
-                    "title": news.title[:50] + "..." if len(news.title) > 50 else news.title,
-                    "database_count": db_count,
-                    "cached_increment": cached_increment,
-                    "total_count": db_count + cached_increment
-                })
-                total_cached_views += cached_increment
+            try:
+                cache_key = f"news_view_count_{news.id}"
+                cached_increment = cache.get(cache_key) or 0
+                
+                if cached_increment > 0:
+                    db_count = int(news.view_count) if news.view_count.isdigit() else 0
+                    cache_status.append({
+                        "news_id": str(news.id),
+                        "title": news.title[:50] + "..." if len(news.title) > 50 else news.title,
+                        "database_count": db_count,
+                        "cached_increment": cached_increment,
+                        "total_count": db_count + cached_increment
+                    })
+                    total_cached_views += cached_increment
+            except:
+                continue
         
         result = {
             "total_news_with_cached_views": len(cache_status),
             "total_cached_increment": total_cached_views,
-            "cache_details": cache_status,
-            "cache_stats": cache.get_stats() if hasattr(cache, 'get_stats') else {}
+            "cache_details": cache_status
         }
         
         return format_response("0000", result)
