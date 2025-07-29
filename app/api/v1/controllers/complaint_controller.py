@@ -3031,12 +3031,17 @@ def format_status_history(status_history_list):
 def get_my_complaint_by_id(db: Session, complaint_id: UUID, user_id: UUID) -> Dict:
     """ดึงรายละเอียดเรื่องร้องเรียนของผู้ใช้คนนั้นๆ รวมข้อมูล assignment form"""
     try:
+        from sqlalchemy.orm import joinedload
+        
         # ตรวจสอบ role ของผู้ใช้
         user_roles = get_user_roles(db, user_id)
         is_admin = any(role.name == "admin" for role in user_roles)
         
-        # สร้าง query พื้นฐาน
-        query = db.query(Complaint).filter(Complaint.id == complaint_id)
+        # สร้าง query พื้นฐานพร้อม eager loading
+        query = db.query(Complaint)\
+            .options(joinedload(Complaint.attachments))\
+            .options(joinedload(Complaint.status_history))\
+            .filter(Complaint.id == complaint_id)
         
         # ถ้าไม่ใช่ admin ให้กรองเฉพาะเรื่องที่เกี่ยวข้องกับผู้ใช้
         if not is_admin:
@@ -3062,7 +3067,11 @@ def get_my_complaint_by_id(db: Session, complaint_id: UUID, user_id: UUID) -> Di
 def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict:
     """ดึงรายละเอียดเรื่องร้องเรียนใดๆ รวมข้อมูล assignment form (ไม่จำกัดเฉพาะเจ้าของ)"""
     try:
+        from sqlalchemy.orm import joinedload
+        
         complaint = db.query(Complaint)\
+            .options(joinedload(Complaint.attachments))\
+            .options(joinedload(Complaint.status_history))\
             .outerjoin(ComplaintType, Complaint.complaint_type_id == ComplaintType.id)\
             .outerjoin(ComplaintSubType, Complaint.complaint_subtype_id == ComplaintSubType.id)\
             .filter(Complaint.id == complaint_id).first()
