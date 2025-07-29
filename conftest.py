@@ -11,7 +11,7 @@ sys.path.insert(0, project_root)
 def app_config():
     """Configuration สำหรับ testing"""
     return {
-        "base_url": "https://compdev.minertatech.com/api/v1",
+        "base_url": "https://complain.mof.go.th/api/v1",
         "test_user": {
             "citizen_id": "1234567890122",
             "password": "password",
