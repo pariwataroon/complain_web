@@ -39,11 +39,15 @@ def seed_news(db: Session):
 
         # เพิ่มข้อมูลลงในฐานข้อมูล
         for news_item in news_data:
+            # จัดการ gallery_images
+            gallery_images = news_item.get('gallery_images', [])
+            
             db_news = News(
                 id=uuid.uuid4(),
                 title=news_item['title'],
                 content=news_item['content'],
-                image_url=news_item['image_url'],
+                cover_image_url=news_item.get('cover_image_url'),
+                gallery_images=gallery_images,
                 is_published=news_item['is_published'],
                 view_count="0",
                 created_at=datetime.now(),

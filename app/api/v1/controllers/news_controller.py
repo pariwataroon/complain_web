@@ -39,10 +39,14 @@ def get_news_by_id(db: Session, news_id: UUID) -> Optional[News]:
 def create_news(db: Session, news: NewsCreate) -> News:
     """สร้าง News ใหม่"""
     try:
+        # ตรวจสอบและจัดการ gallery_images
+        gallery_images = news.gallery_images if news.gallery_images else []
+        
         db_news = News(
             title=news.title,
             content=news.content,
-            image_url=news.image_url,
+            cover_image_url=news.cover_image_url,
+            gallery_images=gallery_images,
             is_published=news.is_published,
             view_count="0"
         )
@@ -66,6 +70,16 @@ def update_news(db: Session, news_id: UUID, news_data: NewsUpdate) -> Optional[N
         
         update_data = news_data.model_dump(exclude_unset=True, exclude_none=True)
         
+        # จัดการ gallery_images แยกต่างหาก
+        if 'gallery_images' in update_data:
+            gallery_images = update_data['gallery_images']
+            if gallery_images is None:
+                db_news.gallery_images = []
+            else:
+                db_news.gallery_images = gallery_images
+            del update_data['gallery_images']
+        
+        # อัปเดตฟิลด์อื่นๆ
         for key, value in update_data.items():
             setattr(db_news, key, value)
         
@@ -120,3 +134,70 @@ def increment_view_count(db: Session, news_id: UUID) -> Optional[News]:
 def get_published_news(db: Session, skip: int = 0, limit: int = 100, search: str = None) -> List[News]:
     """ดึงข้อมูล News ที่เผยแพร่แล้วเท่านั้น (สำหรับผู้ใช้ทั่วไป)"""
     return get_news_list(db, skip=skip, limit=limit, search=search, is_published=True)
+
+
+def add_gallery_image(db: Session, news_id: UUID, image_url: str) -> Optional[News]:
+    """เพิ่มรูปภาพลงใน gallery"""
+    try:
+        db_news = get_news_by_id(db, news_id)
+        if not db_news:
+            return None
+        
+        # ตรวจสอบว่ามี gallery_images หรือไม่
+        if not db_news.gallery_images:
+            db_news.gallery_images = []
+        
+        # เพิ่มรูปใหม่ถ้ายังไม่มี
+        if image_url not in db_news.gallery_images:
+            db_news.gallery_images.append(image_url)
+            
+            db.commit()
+            db.refresh(db_news)
+            logger.info(f"Added gallery image to news {news_id}: {image_url}")
+        
+        return db_news
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error adding gallery image to news {news_id}: {str(e)}")
+        raise
+
+
+def remove_gallery_image(db: Session, news_id: UUID, image_url: str) -> Optional[News]:
+    """ลบรูปภาพจาก gallery"""
+    try:
+        db_news = get_news_by_id(db, news_id)
+        if not db_news:
+            return None
+        
+        # ตรวจสอบว่ามี gallery_images หรือไม่
+        if db_news.gallery_images and image_url in db_news.gallery_images:
+            db_news.gallery_images.remove(image_url)
+            
+            db.commit()
+            db.refresh(db_news)
+            logger.info(f"Removed gallery image from news {news_id}: {image_url}")
+        
+        return db_news
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error removing gallery image from news {news_id}: {str(e)}")
+        raise
+
+
+def update_gallery_images(db: Session, news_id: UUID, image_urls: List[str]) -> Optional[News]:
+    """อัปเดต gallery images ทั้งหมด"""
+    try:
+        db_news = get_news_by_id(db, news_id)
+        if not db_news:
+            return None
+        
+        db_news.gallery_images = image_urls
+        
+        db.commit()
+        db.refresh(db_news)
+        logger.info(f"Updated gallery images for news {news_id}: {len(image_urls)} images")
+        return db_news
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating gallery images for news {news_id}: {str(e)}")
+        raise

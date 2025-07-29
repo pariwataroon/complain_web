@@ -7,7 +7,10 @@ from app.api.middleware.permission_middleware import can_create, can_read, can_u
 from app.api.middleware.api_key_verify import verify_api_key_or_token
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
-from app.api.v1.schemas.news import NewsCreate, NewsResponse, NewsUpdate
+from app.api.v1.schemas.news import (
+    NewsCreate, NewsResponse, NewsUpdate, 
+    GalleryImageAdd, GalleryImageRemove, GalleryImagesUpdate
+)
 from app.api.v1.controllers.news_controller import (
     get_news_list,
     get_news_by_id,
@@ -15,7 +18,10 @@ from app.api.v1.controllers.news_controller import (
     update_news,
     delete_news,
     increment_view_count,
-    get_published_news
+    get_published_news,
+    add_gallery_image,
+    remove_gallery_image,
+    update_gallery_images
 )
 
 router = APIRouter(
@@ -205,3 +211,63 @@ async def increment_news_view_count(
     except Exception as e:
         print(f"Error incrementing view count: {str(e)}")
         return format_response("5000", {"error": "Error incrementing view count"})
+
+
+@router.post("/{news_id}/gallery", response_model=FormatResponseModel)
+async def add_gallery_image_to_news(
+    news_id: UUID,
+    image_data: GalleryImageAdd,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("homepage_news"))
+):
+    """เพิ่มรูปภาพลงใน gallery - ต้องมีสิทธิ์แก้ไขใน news"""
+    try:
+        updated_news = add_gallery_image(db, news_id, image_data.image_url)
+        if not updated_news:
+            return format_response("4040", {"error": f"News with ID {news_id} not found"})
+        
+        result = NewsResponse.model_validate(updated_news).model_dump()
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error adding gallery image: {str(e)}")
+        return format_response("5000", {"error": "Error adding gallery image"})
+
+
+@router.delete("/{news_id}/gallery", response_model=FormatResponseModel)
+async def remove_gallery_image_from_news(
+    news_id: UUID,
+    image_data: GalleryImageRemove,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("homepage_news"))
+):
+    """ลบรูปภาพจาก gallery - ต้องมีสิทธิ์แก้ไขใน news"""
+    try:
+        updated_news = remove_gallery_image(db, news_id, image_data.image_url)
+        if not updated_news:
+            return format_response("4040", {"error": f"News with ID {news_id} not found"})
+        
+        result = NewsResponse.model_validate(updated_news).model_dump()
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error removing gallery image: {str(e)}")
+        return format_response("5000", {"error": "Error removing gallery image"})
+
+
+@router.put("/{news_id}/gallery", response_model=FormatResponseModel)
+async def update_news_gallery_images(
+    news_id: UUID,
+    gallery_data: GalleryImagesUpdate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("homepage_news"))
+):
+    """อัปเดต gallery images ทั้งหมด - ต้องมีสิทธิ์แก้ไขใน news"""
+    try:
+        updated_news = update_gallery_images(db, news_id, gallery_data.image_urls)
+        if not updated_news:
+            return format_response("4040", {"error": f"News with ID {news_id} not found"})
+        
+        result = NewsResponse.model_validate(updated_news).model_dump()
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error updating gallery images: {str(e)}")
+        return format_response("5000", {"error": "Error updating gallery images"})

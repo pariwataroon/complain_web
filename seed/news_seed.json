@@ -2,31 +2,58 @@
     {
         "title": "NO GIFT POLICY 2568 การนโยบายงดรับของขวัญและของที่ระลึก จากการปฏิบัติหน้าที่ ประจำปีงบประมาณ พ.ศ. 2568",
         "content": "<p>กระทรวงการคลังขอประกาศนโยบาย NO GIFT POLICY สำหรับปีงบประมาณ 2568 เพื่อส่งเสริมความโปร่งใสในการปฏิบัติหน้าที่ของเจ้าหน้าที่ โดยงดรับของขวัญและของที่ระลึกจากบุคคลภายนอกในทุกกรณี</p><p>นโยบายนี้มีผลบังคับใช้ตั้งแต่วันที่ 1 ตุลาคม 2567 เป็นต้นไป และครอบคลุมเจ้าหน้าที่ทุกระดับในสังกัดกระทรวงการคลัง</p>",
-        "image_url": "https://example.com/images/no-gift-policy-2568.jpg",
+        "cover_image_url": "https://example.com/images/covers/no-gift-policy-2568-cover.jpg",
+        "gallery_images": [
+            "https://example.com/images/gallery/no-gift-policy-detail-1.jpg",
+            "https://example.com/images/gallery/no-gift-policy-detail-2.jpg",
+            "https://example.com/images/gallery/no-gift-policy-infographic.jpg"
+        ],
         "is_published": true
     },
     {
         "title": "พิธีมอบเสื้อขาวร่วมใจรักษ์เศรษฐกิจ ประจำปีบัญชีประมาณ พ.ศ. 2568 ภายใต้โครงการส่งเสริมคุณธรรม จริยธรรม และธรรมาภิบาล",
         "content": "<p>กระทรวงการคลังจัดพิธีมอบเสื้อขาวร่วมใจรักษ์เศรษฐกิจ เพื่อส่งเสริมจิตสำนึกในการรักษาเศรษฐกิจของประเทศ</p><p>กิจกรรมนี้เป็นส่วนหนึ่งของโครงการส่งเสริมคุณธรรม จริยธรรม และธรรมาภิบาล ที่มุ่งเน้นการสร้างค่านิยมที่ดีให้กับเจ้าหน้าที่</p>",
-        "image_url": "https://example.com/images/white-shirt-ceremony.jpg",
+        "cover_image_url": "https://example.com/images/covers/white-shirt-ceremony-cover.jpg",
+        "gallery_images": [
+            "https://example.com/images/gallery/ceremony-speech.jpg",
+            "https://example.com/images/gallery/shirt-handover.jpg",
+            "https://example.com/images/gallery/group-photo.jpg",
+            "https://example.com/images/gallery/ceremony-activities.jpg"
+        ],
         "is_published": true
     },
     {
         "title": "รองปลัดกระทรวงการคลัง สำนักบริการ มอบสิ่งของ ชุดครัวและชุดเครื่องเพิ่มความอบอุ่นของครอบครัว",
         "content": "<p>รองปลัดกระทรวงการคลังร่วมกับสำนักบริการ จัดกิจกรรมมอบสิ่งของเพื่อช่วยเหลือครอบครัวของเจ้าหน้าที่</p><p>โดยมอบชุดครัวและเครื่องใช้ที่จำเป็นเพื่อเพิ่มความอบอุ่นให้กับครอบครัว ซึ่งเป็นการแสดงความเอาใจใส่และดูแลสวัสดิการของเจ้าหน้าที่</p>",
-        "image_url": "https://example.com/images/family-welfare.jpg",
+        "cover_image_url": "https://example.com/images/covers/family-welfare-cover.jpg",
+        "gallery_images": [
+            "https://example.com/images/gallery/kitchen-set-display.jpg",
+            "https://example.com/images/gallery/handover-ceremony.jpg",
+            "https://example.com/images/gallery/recipient-families.jpg"
+        ],
         "is_published": true
     },
     {
         "title": "ดรุณสุกานติกาศรวงแนวดปเดิมพระกรรมฐานพบรมเนื่องแต่พิวงมุนใจโอกาสในโลกการเพาะพรรษพธีตมมงคล",
         "content": "<p>กิจกรรมทางพระพุทธศาสนาที่จัดขึ้นเพื่อส่งเสริมคุณธรรมและจริยธรรมในการปฏิบัติงาน</p><p>เป็นการสืบสานประเพณีและวัฒนธรรมไทยที่ดีงาม พร้อมทั้งปลูกฝังจิตสำนึกที่ดีให้กับบุคลากร</p>",
-        "image_url": "https://example.com/images/buddhist-activity.jpg",
+        "cover_image_url": "https://example.com/images/covers/buddhist-activity-cover.jpg",
+        "gallery_images": [
+            "https://example.com/images/gallery/meditation-session.jpg",
+            "https://example.com/images/gallery/dharma-teaching.jpg",
+            "https://example.com/images/gallery/merit-making.jpg",
+            "https://example.com/images/gallery/prayer-ceremony.jpg",
+            "https://example.com/images/gallery/participants-group.jpg"
+        ],
         "is_published": true
     },
     {
         "title": "พิธีมอบเสื้อขาวร่วมใจรักษ์เศรษฐกิจ ประจำปีบัญชีประมาณ พ.ศ. 2568 ภายใต้โครงการส่งเสริมคุณธรรม จริยธรรม และธรรมาภิบาล",
         "content": "<p>การจัดกิจกรรมส่งเสริมจิตสำนึกรักชาติ รักเศรษฐกิจ ของเจ้าหน้าที่กระทรวงการคลัง</p><p>มีการมอบเสื้อขาวเป็นสัญลักษณ์ของความสะอาด ความบริสุทธิ์ในการปฏิบัติหน้าที่</p>",
-        "image_url": "https://example.com/images/white-shirt-ceremony-2.jpg",
+        "cover_image_url": "https://example.com/images/covers/white-shirt-ceremony-2-cover.jpg",
+        "gallery_images": [
+            "https://example.com/images/gallery/opening-speech-2.jpg",
+            "https://example.com/images/gallery/shirt-distribution.jpg"
+        ],
         "is_published": true
     }
 ]
