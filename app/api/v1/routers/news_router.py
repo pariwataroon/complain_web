@@ -7,6 +7,7 @@ from app.api.middleware.permission_middleware import can_create, can_read, can_u
 from app.api.middleware.api_key_verify import verify_api_key_or_token
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
+from models.news import News
 from app.api.v1.schemas.news import (
     NewsCreate, NewsResponse, NewsUpdate, NewsListResponse,
     GalleryImageAdd, GalleryImageRemove, GalleryImagesUpdate,
@@ -20,6 +21,8 @@ from app.api.v1.controllers.news_controller import (
     update_news,
     delete_news,
     increment_view_count,
+    get_real_view_count,
+    force_flush_view_count,
     get_published_news,
     get_displayable_news,
     add_gallery_image,
@@ -246,6 +249,150 @@ async def increment_news_view_count(
     except Exception as e:
         print(f"Error incrementing view count: {str(e)}")
         return format_response("5000", {"error": "Error incrementing view count"})
+
+
+@router.get("/{news_id}/view/count", response_model=FormatResponseModel)
+async def get_news_real_view_count(
+    request: Request,
+    news_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """ดึงจำนวนผู้ชมจริงที่รวม cache และ database - ไม่ต้องมีสิทธิ์"""
+    try:
+        # ตรวจสอบ API Key หรือ Token
+        is_authenticated = await verify_api_key_or_token(request, db)
+        
+        if not is_authenticated:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid API key/token"
+            )
+            
+        # ตรวจสอบว่าข่าวมีอยู่จริง
+        news = get_news_by_id(db, news_id)
+        if not news:
+            return format_response("4040", {"error": f"News with ID {news_id} not found"})
+        
+        real_count = get_real_view_count(db, news_id)
+        
+        result = {
+            "news_id": str(news_id),
+            "database_count": int(news.view_count) if news.view_count.isdigit() else 0,
+            "real_count": real_count,
+            "title": news.title
+        }
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error getting real view count: {str(e)}")
+        return format_response("5000", {"error": "Error getting real view count"})
+
+
+@router.post("/{news_id}/view/flush", response_model=FormatResponseModel)
+async def flush_news_view_count(
+    news_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("homepage_news"))
+):
+    """บังคับบันทึก view count จาก cache ลงฐานข้อมูลทันที - ต้องมีสิทธิ์แก้ไขใน news"""
+    try:
+        updated_news = force_flush_view_count(db, news_id)
+        if not updated_news:
+            return format_response("4040", {"error": f"News with ID {news_id} not found"})
+        
+        result = NewsResponse.model_validate(updated_news).model_dump()
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error flushing view count: {str(e)}")
+        return format_response("5000", {"error": "Error flushing view count"})
+
+
+@router.get("/view/cache/status", response_model=FormatResponseModel)
+async def get_view_cache_status(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("homepage_news"))
+):
+    """ดูสถานะ cache ของ view counts ทั้งหมด - ต้องมีสิทธิ์อ่านใน news"""
+    try:
+        from lib.cache_service import cache
+        
+        # ดึงรายการข่าวทั้งหมด
+        all_news = db.query(News).all()
+        
+        cache_status = []
+        total_cached_views = 0
+        
+        for news in all_news:
+            cache_key = f"news_view_count_{news.id}"
+            cached_increment = cache.get(cache_key) or 0
+            
+            if cached_increment > 0:
+                db_count = int(news.view_count) if news.view_count.isdigit() else 0
+                cache_status.append({
+                    "news_id": str(news.id),
+                    "title": news.title[:50] + "..." if len(news.title) > 50 else news.title,
+                    "database_count": db_count,
+                    "cached_increment": cached_increment,
+                    "total_count": db_count + cached_increment
+                })
+                total_cached_views += cached_increment
+        
+        result = {
+            "total_news_with_cached_views": len(cache_status),
+            "total_cached_increment": total_cached_views,
+            "cache_details": cache_status,
+            "cache_stats": cache.get_stats() if hasattr(cache, 'get_stats') else {}
+        }
+        
+        return format_response("0000", result)
+    except Exception as e:
+        print(f"Error getting view cache status: {str(e)}")
+        return format_response("5000", {"error": "Error getting view cache status"})
+
+
+@router.post("/view/cache/flush-all", response_model=FormatResponseModel)
+async def flush_all_view_counts(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("homepage_news"))
+):
+    """บังคับบันทึก view counts ทั้งหมดจาก cache ลงฐานข้อมูล - ต้องมีสิทธิ์แก้ไขใน news"""
+    try:
+        from lib.cache_service import cache
+        
+        # ดึงรายการข่าวทั้งหมด
+        all_news = db.query(News).all()
+        
+        flushed_count = 0
+        total_increment = 0
+        
+        for news in all_news:
+            cache_key = f"news_view_count_{news.id}"
+            cached_increment = cache.get(cache_key) or 0
+            
+            if cached_increment > 0:
+                # อัปเดตฐานข้อมูล
+                current_views = int(news.view_count) if news.view_count.isdigit() else 0
+                news.view_count = str(current_views + cached_increment)
+                
+                # ล้าง cache
+                cache.delete(cache_key)
+                
+                flushed_count += 1
+                total_increment += cached_increment
+        
+        if flushed_count > 0:
+            db.commit()
+        
+        result = {
+            "flushed_news_count": flushed_count,
+            "total_view_increment": total_increment,
+            "message": f"Flushed view counts for {flushed_count} news items"
+        }
+        
+        return format_response("0000", result)
+    except Exception as e:
+        db.rollback()
+        print(f"Error flushing all view counts: {str(e)}")
+        return format_response("5000", {"error": "Error flushing all view counts"})
 
 
 @router.post("/{news_id}/gallery", response_model=FormatResponseModel)

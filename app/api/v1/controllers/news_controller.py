@@ -8,6 +8,7 @@ import pytz
 from models.news import News
 from app.api.v1.schemas.news import NewsCreate, NewsUpdate
 from lib.logger import get_logger
+from lib.cache_service import cache
 
 logger = get_logger("news_controller", console_output=False)
 
@@ -30,12 +31,24 @@ def get_news_list(db: Session, skip: int = 0, limit: int = 100, search: str = No
             )
         )
     
-    return query.order_by(desc(News.created_at)).offset(skip).limit(limit).all()
+    news_list = query.order_by(desc(News.created_at)).offset(skip).limit(limit).all()
+    
+    # อัปเดต view_count ด้วยข้อมูลจาก cache สำหรับการแสดงผล
+    for news in news_list:
+        real_count = get_real_view_count(db, news.id)
+        news.view_count = str(real_count)
+    
+    return news_list
 
 
 def get_news_by_id(db: Session, news_id: UUID) -> Optional[News]:
-    """ดึงข้อมูล News ตาม ID"""
-    return db.query(News).filter(News.id == news_id).first()
+    """ดึงข้อมูล News ตาม ID พร้อมอัปเดต view_count จาก cache"""
+    news = db.query(News).filter(News.id == news_id).first()
+    if news:
+        # อัปเดต view_count ด้วยข้อมูลจาก cache สำหรับการแสดงผล
+        real_count = get_real_view_count(db, news.id)
+        news.view_count = str(real_count)
+    return news
 
 
 def create_news(db: Session, news: NewsCreate) -> News:
@@ -130,23 +143,97 @@ def delete_news(db: Session, news_id: UUID) -> bool:
 
 
 def increment_view_count(db: Session, news_id: UUID) -> Optional[News]:
-    """เพิ่มจำนวนผู้ชม"""
+    """เพิ่มจำนวนผู้ชม (ใช้ cache เพื่อลดการเขียนฐานข้อมูล)"""
+    try:
+        # ตรวจสอบว่าข่าวมีอยู่จริง
+        db_news = get_news_by_id(db, news_id)
+        if not db_news:
+            return None
+        
+        # ใช้ cache สำหรับนับ view count
+        cache_key = f"news_view_count_{news_id}"
+        
+        # ดึงจำนวนการเข้าชมจาก cache
+        cached_increment = cache.get(cache_key) or 0
+        
+        # เพิ่มการนับใน cache
+        cache.set(cache_key, cached_increment + 1, ttl_seconds=300)  # cache 5 นาที
+        
+        # ถ้า cached_increment เป็นจำนวนคู่ (เช่น 0, 2, 4, 6...) หรือมากกว่า 10 ให้อัปเดตฐานข้อมูล
+        if (cached_increment > 0 and cached_increment % 5 == 0) or cached_increment >= 10:
+            # อัปเดตฐานข้อมูลด้วยจำนวนที่สะสมใน cache
+            current_views = int(db_news.view_count) if db_news.view_count.isdigit() else 0
+            db_news.view_count = str(current_views + cached_increment + 1)
+            
+            db.commit()
+            db.refresh(db_news)
+            
+            # ล้าง cache หลังจากอัปเดตฐานข้อมูล
+            cache.delete(cache_key)
+            
+            logger.info(f"Updated view count in database for news: {news_id}, new count: {db_news.view_count}")
+        else:
+            logger.info(f"Incremented view count in cache for news: {news_id}, cached increment: {cached_increment + 1}")
+        
+        return db_news
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error incrementing view count for news {news_id}: {str(e)}")
+        raise
+
+
+def get_real_view_count(db: Session, news_id: UUID) -> int:
+    """ดึงจำนวนผู้ชมจริงที่รวม cache และ database"""
+    try:
+        # ดึงข้อมูลจากฐานข้อมูล
+        db_news = get_news_by_id(db, news_id)
+        if not db_news:
+            return 0
+        
+        # ดึงจำนวนจากฐานข้อมูล
+        db_count = int(db_news.view_count) if db_news.view_count.isdigit() else 0
+        
+        # ดึงจำนวนที่ยังไม่ได้บันทึกจาก cache
+        cache_key = f"news_view_count_{news_id}"
+        cached_increment = cache.get(cache_key) or 0
+        
+        # รวมจำนวนจากทั้งสองแหล่ง
+        total_count = db_count + cached_increment
+        
+        logger.debug(f"Real view count for news {news_id}: DB={db_count}, Cache={cached_increment}, Total={total_count}")
+        return total_count
+    except Exception as e:
+        logger.error(f"Error getting real view count for news {news_id}: {str(e)}")
+        return 0
+
+
+def force_flush_view_count(db: Session, news_id: UUID) -> Optional[News]:
+    """บังคับบันทึก view count จาก cache ลงฐานข้อมูลทันที"""
     try:
         db_news = get_news_by_id(db, news_id)
         if not db_news:
             return None
         
-        # แปลง view_count เป็น int เพื่อเพิ่มค่า แล้วแปลงกลับเป็น string
-        current_views = int(db_news.view_count) if db_news.view_count.isdigit() else 0
-        db_news.view_count = str(current_views + 1)
+        cache_key = f"news_view_count_{news_id}"
+        cached_increment = cache.get(cache_key) or 0
         
-        db.commit()
-        db.refresh(db_news)
-        logger.info(f"Incremented view count for news: {news_id}, new count: {db_news.view_count}")
+        if cached_increment > 0:
+            # อัปเดตฐานข้อมูล
+            current_views = int(db_news.view_count) if db_news.view_count.isdigit() else 0
+            db_news.view_count = str(current_views + cached_increment)
+            
+            db.commit()
+            db.refresh(db_news)
+            
+            # ล้าง cache
+            cache.delete(cache_key)
+            
+            logger.info(f"Force flushed view count for news: {news_id}, added: {cached_increment}, new total: {db_news.view_count}")
+        
         return db_news
     except Exception as e:
         db.rollback()
-        logger.error(f"Error incrementing view count for news {news_id}: {str(e)}")
+        logger.error(f"Error force flushing view count for news {news_id}: {str(e)}")
         raise
 
 
@@ -202,7 +289,14 @@ def get_displayable_news(db: Session, skip: int = 0, limit: int = 100, search: s
             )
         )
     
-    return query.order_by(desc(News.created_at)).offset(skip).limit(limit).all()
+    news_list = query.order_by(desc(News.created_at)).offset(skip).limit(limit).all()
+    
+    # อัปเดต view_count ด้วยข้อมูลจาก cache สำหรับการแสดงผล
+    for news in news_list:
+        real_count = get_real_view_count(db, news.id)
+        news.view_count = str(real_count)
+    
+    return news_list
 
 
 def add_gallery_image(db: Session, news_id: UUID, image_url: str) -> Optional[News]:
