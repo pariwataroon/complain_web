@@ -149,6 +149,7 @@ const RequestResultProgress = () => {
               onChange={handleChange}
               error={!!getFieldError("salutation")}
               helperText={getFieldError("salutation")}
+              sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}
             />
 
             <InputText
@@ -159,9 +160,10 @@ const RequestResultProgress = () => {
               onChange={handleChange}
               error={!!getFieldError("refNo")}
               helperText={getFieldError("refNo")}
+              sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}
             />
 
-            <Box sx={{ position: "relative", zIndex: 1 }}>
+            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
               <DateThaiPickerService
                 label={createLabel("วันที่", "date")}
                 value={form.date}

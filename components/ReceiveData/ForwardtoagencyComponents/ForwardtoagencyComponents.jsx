@@ -195,9 +195,11 @@ const ForwardtoagencyComponents = () => {
                 sm: "1fr 1fr",
                 md: "6fr 3fr 3fr",
               },
+              width: "100%",
             }}
           >
             <Controller
+              
               name="salutation"
               control={control}
               render={({ field }) => (
@@ -208,6 +210,7 @@ const ForwardtoagencyComponents = () => {
                   onChange={(e) => field.onChange(e.target.value)}
                   error={!!getFieldError("salutation")}
                   helperText={getFieldError("salutation")}
+                  sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}
                 />
               )}
             />
@@ -224,11 +227,12 @@ const ForwardtoagencyComponents = () => {
                   onChange={field.onChange}
                   error={!!getFieldError("refNo")}
                   helperText={getFieldError("refNo")}
+                  sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}
                 />
               )}
             />
 
-            <Box sx={{ position: "relative", zIndex: 1 }}>
+            <Box sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}>
               <Controller
                 name="date1"
                 control={control}
@@ -290,11 +294,12 @@ const ForwardtoagencyComponents = () => {
                   onChange={field.onChange}
                   error={!!getFieldError("bookNo")}
                   helperText={getFieldError("bookNo")}
+                  sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}
                 />
               )}
             />
 
-            <Box sx={{ position: "relative", zIndex: 1 }}>
+            <Box sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}>
               <Controller
                 name="date2"
                 control={control}
@@ -329,6 +334,7 @@ const ForwardtoagencyComponents = () => {
                   placeholder="เลือกผู้ลงนาม"
                   showUserInfo={false}
                   size="small"
+                  sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}
                 />
               )}
             />

@@ -226,7 +226,15 @@ const ReceiveReportsAgencies = () => {
         ]}
       />
 
-      <Box sx={{ border: "2px solid #2499FF", borderTopRightRadius: 15 }}>
+     <Box
+  sx={{
+    border: "2px solid #2499FF",
+    borderTopRightRadius: 15,
+    width: "100%", // ใช้ความกว้างเต็มหน้าจอ
+    maxWidth: { xs: "100%", sm: "auto" }, // ความกว้าง 100% สำหรับหน้าจอขนาดเล็ก และ auto สำหรับขนาดใหญ่
+    overflow: "hidden", // ป้องกันไม่ให้กล่องล้นขอบ
+  }}
+>
         {/* top gradient */}
         <Box
           sx={{
@@ -266,7 +274,9 @@ const ReceiveReportsAgencies = () => {
                 xs: "1fr",
                 sm: "1fr 1fr",
                 md: "4fr 3fr 4fr",
+                
               },
+              width: "100%",
             }}
           >
             <InputText
@@ -280,8 +290,9 @@ const ReceiveReportsAgencies = () => {
               name="referenceNo"
               value={form.referenceNo}
               onChange={handleChange}
+              sx={{ width: {xs: "80%", sm: "auto"}}}
             />
-            <Box sx={{ position: "relative", zIndex: 1 }}>
+            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
               <DateThaiPickerService
                 label={
                   <span>
@@ -294,6 +305,7 @@ const ReceiveReportsAgencies = () => {
                 placeholder="เลือกวันที่"
               />
             </Box>
+            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
             <SelectField
               label={
                 <span>
@@ -307,6 +319,7 @@ const ReceiveReportsAgencies = () => {
               onChange={handleChange}
               options={PROCESS_STEP_OPTIONS}
             />
+            </Box>
           </Box>
 
           {/* แถวที่ 2: ชั้นความลับ | ชั้นความเร่งด่วน */}
@@ -381,8 +394,9 @@ const ReceiveReportsAgencies = () => {
               name="investigateGk"
               value={form.investigateGk}
               onChange={handleChange}
+              sx={{ width: {xs: "80%", sm: "auto"}}}
             />
-            <Box sx={{ position: "relative", zIndex: 1 }}>
+            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
               <DateThaiPickerService
                 label={
                   <span>
@@ -392,6 +406,7 @@ const ReceiveReportsAgencies = () => {
                 }
                 value={form.investigateDate}
                 onChange={handleDateChange("investigateDate")}
+                sx={{ width: {xs: "80%", sm: "auto"}}}
                 placeholder="เลือกวันที่"
               />
             </Box>
@@ -416,8 +431,9 @@ const ReceiveReportsAgencies = () => {
               name="documentNo"
               value={form.documentNo}
               onChange={handleChange}
+              sx={{ width: {xs: "80%", sm: "auto"}}}
             />
-            <Box sx={{ position: "relative", zIndex: 1 }}>
+            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
               <DateThaiPickerService
                 label={
                   <span>
@@ -440,7 +456,7 @@ const ReceiveReportsAgencies = () => {
               gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
-            <Box sx={{ position: "relative", zIndex: 1 }}>
+            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
               <DateThaiPickerService
                 label={
                   <span>
@@ -453,7 +469,7 @@ const ReceiveReportsAgencies = () => {
                 placeholder="เลือกวันที่"
               />
             </Box>
-            <Box sx={{ position: "relative", zIndex: 1 }}>
+            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
               <DateThaiPickerService
                 label={
                   <span>
