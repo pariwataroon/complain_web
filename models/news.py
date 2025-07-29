@@ -1,6 +1,6 @@
 import uuid
-from sqlalchemy import Column, DateTime, NVARCHAR, TEXT, Boolean, JSON
-from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
+from sqlalchemy import Column, DateTime, NVARCHAR, Boolean, JSON
+from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER, NTEXT
 from sqlalchemy.sql import func
 from config.database import Base
 
@@ -10,7 +10,7 @@ class News(Base):
 
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4, index=True)
     title = Column(NVARCHAR(500), nullable=False)  # หัวข้อข่าวสาร
-    content = Column(TEXT, nullable=True)  # เนื้อหาข่าวสาร
+    content = Column(NTEXT, nullable=True)  # เนื้อหาข่าวสาร (รองรับภาษาไทยและ HTML)
     cover_image_url = Column(NVARCHAR(1000), nullable=True)  # URL รูปปกหลัก
     gallery_images = Column(JSON, nullable=True)  # เก็บ array ของ URL รูปย่อย
     additional_links = Column(JSON, nullable=True)  # เก็บ array ของลิงก์เพิ่มเติม {title, url, description}
