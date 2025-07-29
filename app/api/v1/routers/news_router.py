@@ -8,7 +8,7 @@ from app.api.middleware.api_key_verify import verify_api_key_or_token
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
 from app.api.v1.schemas.news import (
-    NewsCreate, NewsResponse, NewsUpdate, 
+    NewsCreate, NewsResponse, NewsUpdate, NewsListResponse,
     GalleryImageAdd, GalleryImageRemove, GalleryImagesUpdate,
     AdditionalLinkAdd, AdditionalLinkRemove, AdditionalLinksUpdate,
     NewsDisplaySchedule
@@ -51,7 +51,7 @@ async def read_news_list(
     """ดึงข้อมูล News ทั้งหมด (สำหรับผู้ดูแลระบบ) - ต้องมีสิทธิ์อ่านใน news"""
     try:
         news_list = get_news_list(db, skip=skip, limit=limit, search=search, is_published=is_published)
-        result = [NewsResponse.model_validate(news).model_dump() for news in news_list]
+        result = [NewsListResponse.model_validate(news).model_dump() for news in news_list]
         return format_response("0000", result)
     except Exception as e:
         print(f"Error fetching news: {str(e)}")
@@ -78,7 +78,7 @@ async def read_published_news(
             )
             
         news_list = get_published_news(db, skip=skip, limit=limit, search=search)
-        result = [NewsResponse.model_validate(news).model_dump() for news in news_list]
+        result = [NewsListResponse.model_validate(news).model_dump() for news in news_list]
         return format_response("0000", result)
     except Exception as e:
         print(f"Error fetching published news: {str(e)}")
@@ -105,7 +105,7 @@ async def read_displayable_news(
             )
             
         news_list = get_displayable_news(db, skip=skip, limit=limit, search=search)
-        result = [NewsResponse.model_validate(news).model_dump() for news in news_list]
+        result = [NewsListResponse.model_validate(news).model_dump() for news in news_list]
         return format_response("0000", result)
     except Exception as e:
         print(f"Error fetching displayable news: {str(e)}")

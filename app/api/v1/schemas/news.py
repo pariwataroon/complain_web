@@ -112,6 +112,22 @@ class NewsResponse(NewsBase):
         from_attributes = True
 
 
+class NewsListResponse(BaseModel):
+    """Schema สำหรับ response ข้อมูล News ในรายการ (สำหรับแสดงผลหน้าแรก)"""
+    id: UUID
+    title: str
+    cover_image_url: Optional[str] = None
+    view_count: str
+    is_published: bool
+    display_start_date: Optional[datetime] = None
+    display_end_date: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class NewsInDB(NewsResponse):
     """Schema สำหรับข้อมูล News ในฐานข้อมูล"""
     pass
