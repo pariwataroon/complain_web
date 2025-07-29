@@ -9723,6 +9723,614 @@
 				}
 			],
 			"description": "API สำหรับจัดการระบบ Chat Bot - การสร้าง, แก้ไข, ลบ และค้นหาคำตอบอัตโนมัติสำหรับระบบ tensor flow"
+		},
+		{
+			"name": "NEWS",
+			"item": [
+				{
+					"name": "Get All News (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news?skip=0&limit=100&search=&is_published=",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news"],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนรายการที่ข้าม"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนรายการสูงสุดที่ต้องการ"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "ค้นหาใน title หรือ content"
+								},
+								{
+									"key": "is_published",
+									"value": "",
+									"description": "กรองตามสถานะการเผยแพร่ (true/false)"
+								}
+							]
+						},
+						"description": "ดึงข้อมูล News ทั้งหมด (สำหรับผู้ดูแลระบบ) - ต้องมีสิทธิ์อ่านใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Published News (Public)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "cap_mof_live_frontend_web_2025@minerta",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/public?skip=0&limit=100&search=",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "public"],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนรายการที่ข้าม"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนรายการสูงสุดที่ต้องการ"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "ค้นหาใน title หรือ content"
+								}
+							]
+						},
+						"description": "ดึงข้อมูล News ที่เผยแพร่แล้ว (สำหรับผู้ใช้ทั่วไป) - ใช้ API Key สำหรับ authentication"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Displayable News (Public)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "cap_mof_live_frontend_web_2025@minerta",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/public/displayable?skip=0&limit=100&search=",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "public", "displayable"],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนรายการที่ข้าม"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนรายการสูงสุดที่ต้องการ"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "ค้นหาใน title หรือ content"
+								}
+							]
+						},
+						"description": "ดึงข้อมูล News ที่สามารถแสดงได้ในเวลาปัจจุบัน (เผยแพร่ + อยู่ในช่วงเวลาที่กำหนด) - ใช้ API Key สำหรับ authentication"
+					},
+					"response": []
+				},
+				{
+					"name": "Get News by ID (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}"]
+						},
+						"description": "ดึงข้อมูล News ตาม ID - ต้องมีสิทธิ์อ่านใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Published News by ID (Public)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "cap_mof_live_frontend_web_2025@minerta",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/public/{{news_id}}",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "public", "{{news_id}}"]
+						},
+						"description": "ดึงข้อมูล News ตาม ID (สำหรับผู้ใช้ทั่วไป) และเพิ่มจำนวนผู้ชม - ใช้ API Key สำหรับ authentication"
+					},
+					"response": []
+				},
+				{
+					"name": "Create News",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"ข่าวสารใหม่\",\n  \"content\": \"เนื้อหาข่าวสาร...\",\n  \"cover_image_url\": \"https://example.com/image.jpg\",\n  \"gallery_images\": [\n    \"https://example.com/gallery1.jpg\",\n    \"https://example.com/gallery2.jpg\"\n  ],\n  \"additional_links\": [\n    {\n      \"title\": \"ลิงก์เพิ่มเติม\",\n      \"url\": \"https://example.com\",\n      \"description\": \"คำอธิบายลิงก์\"\n    }\n  ],\n  \"is_published\": true,\n  \"display_start_date\": \"2025-07-29T00:00:00\",\n  \"display_end_date\": \"2025-12-31T23:59:59\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news"]
+						},
+						"description": "สร้าง News ใหม่ - ต้องมีสิทธิ์สร้างใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Update News",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"ข่าวสารที่อัปเดต\",\n  \"content\": \"เนื้อหาข่าวสารที่อัปเดต...\",\n  \"is_published\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}"]
+						},
+						"description": "อัปเดตข้อมูล News - ต้องมีสิทธิ์แก้ไขใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete News",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}"]
+						},
+						"description": "ลบ News - ต้องมีสิทธิ์ลบใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Increment View Count",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "cap_mof_live_frontend_web_2025@minerta",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}/view",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}", "view"]
+						},
+						"description": "เพิ่มจำนวนผู้ชม News - ใช้ API Key สำหรับ authentication"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Real View Count",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "cap_mof_live_frontend_web_2025@minerta",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}/view/count",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}", "view", "count"]
+						},
+						"description": "ดึงจำนวนผู้ชมจริงที่รวม cache และ database - ใช้ API Key สำหรับ authentication"
+					},
+					"response": []
+				},
+				{
+					"name": "Flush View Count to Database",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}/view/flush",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}", "view", "flush"]
+						},
+						"description": "บังคับบันทึก view count จาก cache ลงฐานข้อมูลทันที - ต้องมีสิทธิ์แก้ไขใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Get View Cache Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/view/cache/status",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "view", "cache", "status"]
+						},
+						"description": "ดูสถานะ cache ของ view counts ทั้งหมด - ต้องมีสิทธิ์อ่านใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Flush All View Counts",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/view/cache/flush-all",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "view", "cache", "flush-all"]
+						},
+						"description": "บังคับบันทึก view counts ทั้งหมดจาก cache ลงฐานข้อมูล - ต้องมีสิทธิ์แก้ไขใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Gallery Image",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"image_url\": \"https://example.com/new-gallery-image.jpg\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}/gallery",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}", "gallery"]
+						},
+						"description": "เพิ่มรูปภาพลงใน gallery - ต้องมีสิทธิ์แก้ไขใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Gallery Image",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"image_url\": \"https://example.com/gallery-image-to-remove.jpg\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}/gallery",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}", "gallery"]
+						},
+						"description": "ลบรูปภาพจาก gallery - ต้องมีสิทธิ์แก้ไขใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Gallery Images",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"image_urls\": [\n    \"https://example.com/gallery1.jpg\",\n    \"https://example.com/gallery2.jpg\",\n    \"https://example.com/gallery3.jpg\"\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}/gallery",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}", "gallery"]
+						},
+						"description": "อัปเดต gallery images ทั้งหมด - ต้องมีสิทธิ์แก้ไขใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Additional Link",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"link\": {\n    \"title\": \"ลิงก์เพิ่มเติมใหม่\",\n    \"url\": \"https://example.com/new-link\",\n    \"description\": \"คำอธิบายลิงก์ใหม่\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}/links",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}", "links"]
+						},
+						"description": "เพิ่มลิงก์เพิ่มเติมลงในข่าว - ต้องมีสิทธิ์แก้ไขใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Additional Link",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"link_title\": \"ลิงก์ที่ต้องการลบ\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}/links",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}", "links"]
+						},
+						"description": "ลบลิงก์เพิ่มเติมจากข่าว - ต้องมีสิทธิ์แก้ไขใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Additional Links",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"links\": [\n    {\n      \"title\": \"ลิงก์ที่ 1\",\n      \"url\": \"https://example.com/link1\",\n      \"description\": \"คำอธิบายลิงก์ที่ 1\"\n    },\n    {\n      \"title\": \"ลิงก์ที่ 2\",\n      \"url\": \"https://example.com/link2\",\n      \"description\": \"คำอธิบายลิงก์ที่ 2\"\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}/links",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}", "links"]
+						},
+						"description": "อัปเดตลิงก์เพิ่มเติมทั้งหมด - ต้องมีสิทธิ์แก้ไขใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Display Schedule",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"display_start_date\": \"2025-08-01T00:00:00\",\n  \"display_end_date\": \"2025-12-31T23:59:59\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}/schedule",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}", "schedule"]
+						},
+						"description": "อัปเดตระยะเวลาการแสดงข่าว - ต้องมีสิทธิ์แก้ไขใน homepage_news"
+					},
+					"response": []
+				},
+				{
+					"name": "Check News Displayable Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "cap_mof_live_frontend_web_2025@minerta",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/news/{{news_id}}/displayable",
+							"host": ["{{API}}"],
+							"path": ["api", "v1", "news", "{{news_id}}", "displayable"]
+						},
+						"description": "ตรวจสอบว่าข่าวสามารถแสดงได้ในเวลาปัจจุบันหรือไม่ - ใช้ API Key สำหรับ authentication"
+					},
+					"response": []
+				}
+			],
+			"description": "API สำหรับจัดการระบบข่าวสาร - การสร้าง, แก้ไข, ลบ, ค้นหา, จัดการ gallery รูปภาพ, ลิงก์เพิ่มเติม, การนับผู้ชม, และการกำหนดช่วงเวลาแสดงข่าว\n\n**คุณสมบัติหลัก:**\n- CRUD operations สำหรับข่าว\n- Gallery management (เพิ่ม/ลบ/อัปเดตรูปภาพ)\n- Additional links management\n- View counting with caching system\n- Display scheduling (กำหนดช่วงเวลาแสดง)\n- Search functionality\n- แยก admin endpoints และ public endpoints\n- ระบบ cache สำหรับ view count เพื่อประสิทธิภาพ\n\n**การยืนยันตัวตน:**\n- Admin endpoints: ใช้ Bearer Token + สิทธิ์ homepage_news\n- Public endpoints: ใช้ X-API-Key header"
 		}
 	],
 	"event": [
