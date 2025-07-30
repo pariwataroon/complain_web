@@ -7,109 +7,85 @@ import {
   Grid,
   Stack,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useRouter } from 'next/router';
+import { getAllNews, deleteNews } from '@pages/api/news/news'; // ใช้ API ฟังก์ชันดึงข้อมูลข่าวสาร
 import BreadcrumbsService from '@services/BreadCrumbs/breadcrumbs';
-import {
-  closeAlert,
-  alertError,
-  alertSuccess,
-  showConfirm2,
+import { closeAlert, alertError, alertSuccess, showConfirm2 } from '@utils/Alerts';
+import Image from 'next/image';
+import dayjs from 'dayjs';
 
-} from "@utils/Alerts";
+// ฟังก์ชันสำหรับการแปลงวันที่
+const formatDate = (dateStr) => {
+  const date = new Date(dateStr);
+  return `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+};
 
-import Image from "next/image";
 const DefineNewsComponents = () => {
   const router = useRouter();
   const [newsList, setNewsList] = useState([]);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  // ดึงข้อมูลข่าวทั้งหมดจาก API
   useEffect(() => {
-    const saved = sessionStorage.getItem('newsList');
-    if (saved) {
-      setNewsList(JSON.parse(saved));
-    } else {
-      const initial = [
-        {
-    title: 'NO GIFT POLICY 2568 การมอบนโยบายงดรับของขวัญและของกำนัลทุกชนิด จากการปฏิบัติหน้าที่ ประจำปีงบประมาณ พ.ศ. 2568 และการส่งเสริมคุณธรรม และจริยธรรมในการปฏิบัติงาน',
-    date: '17 ม.ค. 2568',
-    update: '18 ม.ค. 2568',
-    status: 'หายไปในวันที่ 14 ก.พ. 2568 (21 วัน)',
-    img: '/news/news1.png',
-    views: 1235,
-  },
-  {
-    title: 'พิธีมอบสัญญาเช่าที่ราชพัสดุ ประจำปีงบประมาณ พ.ศ. 2568 ภายใต้โครงการธนารักษ์เอื้อราษฎร์ “สัญญาเช่าที่ดิน พลิกชีวิตประชาชน”',
-    date: '17 ม.ค. 2568',
-    update: '18 ม.ค. 2568',
-    status: 'หายไปในวันที่ 14 ก.พ. 2568 (21 วัน)',
-    img: '/news/news2.png',
-    views: 1235,
-  },
-  {
-    title: 'รองปลัดกระทรวงการคลัง ด้านบริหาร มอบสิ่งของ ชุดครัว และชุดเครื่องนอน เพื่อบรรเทาความเดือดร้อนของประชาชน อ.เมืองเชียงราย จ.เชียงราย',
-    date: '17 ม.ค. 2568',
-    update: '18 ม.ค. 2568',
-    status: 'หายไปในวันที่ 14 ก.พ. 2568 (21 วัน)',
-    img: '/news/news3.png',
-    views: 1235,
-  },
-  {
-    title: 'ตราสัญลักษณ์การจัดงานเฉลิมพระเกียรติพระบาทสมเด็จพระเจ้าอยู่หัว เนื่องในโอกาสพระราชพิธีสมมงคลพระชนมายุเท่าพระบาทสมเด็จพระพุทธยอดฟ้าจุฬาโลกมหาราช',
-    date: '17 ม.ค. 2568',
-    update: '18 ม.ค. 2568',
-    status: 'หายไปในวันที่ 14 ก.พ. 2568 (21 วัน)',
-    img: '/news/news4.png',
-    views: 1235,
-  },
-  {
-    title: 'พิธีมอบสัญญาเช่าที่ราชพัสดุ ประจำปีงบประมาณ พ.ศ. 2568 ภายใต้โครงการธนารักษ์เอื้อราษฎร์“สัญญาเช่าที่ดิน พลิกชีวิตประชาชน”',
-    date: '17 ม.ค. 2568',
-    update: '18 ม.ค. 2568',
-    status: 'หายไปในวันที่ 14 ก.พ. 2568 (21 วัน)',
-    img: '/news/news5.png',
-    views: 1235,
-  },
-      ];
-      sessionStorage.setItem('newsList', JSON.stringify(initial));
-      setNewsList(initial);
-    }
-  }, []);
+    const fetchNews = async () => {
+      try {
+        const news = await getAllNews(0, 100, '', true); // ดึงข้อมูลข่าวทั้งหมดที่เผยแพร่
+        if (news.length > 0) {
+          setNewsList(news);
+        } else {
+          // ใช้ข้อมูลจาก sessionStorage หากไม่มีข้อมูลจาก API
+          const saved = sessionStorage.getItem('newsList');
+          if (saved) {
+            setNewsList(JSON.parse(saved));
+          }
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching news:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchNews();
+  }, []); // ใช้ empty array เพื่อให้ทำงานแค่ครั้งเดียวเมื่อโหลด
 
   const breadcrumbItems = [
     {
       label: (
-        <span style={{ color: "#1120A3" }}>
-        กำหนดข่าวสาร
-      </span>
+        <span style={{ color: '#1120A3' }}>
+          กำหนดข่าวสาร
+        </span>
       ),
       icon: (
         <img
           src="/icons/config.png"
           alt="icon"
-          style={{ width: "24px", height: "24px", marginBottom: "-8px",borderRadius: "50%", border: "2px solid #1120A3" ,padding: "2px" }}
+          style={{
+            width: '24px',
+            height: '24px',
+            marginBottom: '-8px',
+            borderRadius: '50%',
+            border: '2px solid #1120A3',
+            padding: '2px',
+          }}
         />
-      ),url: "/admin"
+      ), url: "/admin"
     }
   ];
 
   const handleAddNews = () => {
-    router.push({ pathname: "/admin/homepage/news", query: { method: "CreateNew" } });
+    router.push({ pathname: '/admin/homepage/news', query: { method: 'CreateNew' } });
   };
 
   const handleEditNews = (index) => {
     const item = newsList[index];
     router.push({
-      pathname: "/admin/homepage/news",
+      pathname: '/admin/homepage/news',
       query: {
-        method: "EditNew",
-        id: index,
+        method: 'EditNew',
+        id: item.id,
         title: item.title,
         content: item.content || '',
         url: item.url || '',
@@ -128,36 +104,37 @@ const DefineNewsComponents = () => {
       ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก<br /><br />
       ยืนยันการลบข่าวสารนี้หรือไม่?</strong>
         </div>`,
-        "ยืนยัน",
-        "ยกเลิก",
-        800
+      'ยืนยัน',
+      'ยกเลิก',
+      800
     );
-  
+
     if (confirm) {
       try {
-        const updated = [...newsList];
-        updated.splice(selectedIndex, 1);
-        setNewsList(updated);
-        sessionStorage.setItem('newsList', JSON.stringify(updated));
-  
+        const item = newsList[selectedIndex];
+        await deleteNews(item.id); // ลบข่าวจาก API
+        const updatedNewsList = newsList.filter((_, index) => index !== selectedIndex);
+        setNewsList(updatedNewsList);
+
         closeAlert();
-        alertSuccess("ลบข่าวสารสำเร็จ");
-        
-      } catch (err) {
+        alertSuccess('ลบข่าวสารสำเร็จ');
+      } catch (error) {
         closeAlert();
-        alertError("เกิดข้อผิดพลาด", "ไม่สามารถลบข่าวสารได้");
-        
+        alertError('ไม่สามารถลบข่าวสารได้', error.message);
       }
     }
   };
-  
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <Box sx={{ background: '#EAF3FF', minHeight: '100vh', py: 3 }}>
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{
         fontWeight: 'bold', fontSize: 18, color: '#1120A3', mb: 2, maxWidth: '1600px', mx: 'auto', px: 2
       }}>
-        <BreadcrumbsService items={breadcrumbItems}/>
+        <BreadcrumbsService items={breadcrumbItems} />
       </Stack>
 
       <Box sx={{ maxWidth: '1400px', mx: 'auto', px: { xs: 1, sm: 2, md: 4 } }}>
@@ -196,7 +173,7 @@ const DefineNewsComponents = () => {
               }}>
                 <CardMedia
                   component="img"
-                  image={item.img}
+                  image={item.img || "/images/default-image.jpg"} // ถ้าไม่มีรูปภาพจะใช้ default
                   alt="news"
                   sx={{
                     width: { xs: '100%', sm: 100 },
@@ -205,7 +182,7 @@ const DefineNewsComponents = () => {
                     borderRadius: 2,
                     objectFit: 'cover',
                     mb: { xs: 1, sm: 0 }
-                  }}/>
+                  }} />
 
                 <Box sx={{
                   flex: 1,
@@ -240,7 +217,7 @@ const DefineNewsComponents = () => {
                       {item.title}
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#89939E', fontSize: 12 }}>
-                      👁 {item.views.toLocaleString()} view
+                      👁 {item.view_count.toLocaleString()} view
                     </Typography>
                   </Box>
 
@@ -261,13 +238,13 @@ const DefineNewsComponents = () => {
                       <Stack direction="row" spacing={1} alignItems="center">
                         <img src="/icons/Edit.png" alt="" style={{ width: 16, height: 16 }} />
                         <Typography variant="body2" sx={{ color: '#89939E', fontSize: 12 }}>
-                          วันที่นำเข้าข้อมูล {item.date}
+                          วันที่นำเข้าข้อมูล {item.created_at ? formatDate(item.created_at) : '-'}
                         </Typography>
                       </Stack>
                       <Stack direction="row" spacing={1} alignItems="center">
                         <img src="/icons/re.png" alt="" style={{ width: 16, height: 16 }} />
                         <Typography variant="body2" sx={{ color: '#89939E', fontSize: 12 }}>
-                          วันที่ปรับปรุงข้อมูล {item.update}
+                          วันที่ปรับปรุงข้อมูล {item.updated_at ? formatDate(item.updated_at) : '-'}
                         </Typography>
                       </Stack>
                     </Stack>
@@ -306,29 +283,28 @@ const DefineNewsComponents = () => {
                   
                   <Tooltip title="ลบ">
                     <button
-                                  onClick={() => openDeleteDialog(index)}
-                                  style={{
-                                    backgroundColor: "transparent",
-                                    border: "none",
-                                    borderRadius: "8px",
-                                    width: "40px",
-                                    height: "40px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    cursor: "pointer",
-                                    '&:hover': {
-                                      backgroundColor: '#FDE68A',
-                                    },
-                                  }}
-                                  
-                                >
-                                  <Image
-                                  src="/icons/DeleteYellow.png"
-                                  alt=""
-                                  width={30}
-                                  height={30}
-                                  />
+                      onClick={() => openDeleteDialog(index)}
+                      style={{
+                        backgroundColor: "transparent",
+                        border: "none",
+                        borderRadius: "8px",
+                        width: "40px",
+                        height: "40px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        '&:hover': {
+                          backgroundColor: '#FDE68A',
+                        },
+                      }}
+                    >
+                      <Image
+                        src="/icons/DeleteYellow.png"
+                        alt=""
+                        width={30}
+                        height={30}
+                      />
                     </button>
                   </Tooltip>
                 </Stack>

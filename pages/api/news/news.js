@@ -1,10 +1,15 @@
 import axiosInstance from "@pages/api/axiosInstance";
 
 // ฟังก์ชันดึงข้อมูลข่าวสารทั้งหมด
-const getAllNews = async (skip = 0, limit = 100, search = "", isPublished = "") => {
+const getAllNews = async (skip = 0, limit = 100, search = "", isPublished = true) => {
   try {
-    const response = await axiosInstance.get('/api/v1/news', {
-      params: { skip, limit, search, is_published: isPublished },
+    const response = await axiosInstance.get('/news', {
+      params: {
+        skip,
+        limit,
+        search,
+        is_published: isPublished === true ? true : false,
+      },
     });
 
     if (response && response.data && response.data.res_data) {
@@ -19,10 +24,11 @@ const getAllNews = async (skip = 0, limit = 100, search = "", isPublished = "") 
   }
 };
 
+
 // ฟังก์ชันดึงข้อมูลข่าวสารตาม ID
 const getNewsById = async (newsId) => {
   try {
-    const response = await axiosInstance.get(`/api/v1/news/${newsId}`);
+    const response = await axiosInstance.get(`/news/${newsId}`);
     if (response && response.data) {
       return response.data;
     }
@@ -35,7 +41,7 @@ const getNewsById = async (newsId) => {
 // ฟังก์ชันดึงข่าวสารที่เผยแพร่แล้ว
 const getPublishedNews = async (skip = 0, limit = 100, search = "") => {
   try {
-    const response = await axiosInstance.get('/api/v1/news/public', {
+    const response = await axiosInstance.get('/news/public', {
       params: { skip, limit, search },
     });
 
@@ -54,7 +60,7 @@ const getPublishedNews = async (skip = 0, limit = 100, search = "") => {
 // ฟังก์ชันดึงข่าวสารที่สามารถแสดงผลได้
 const getDisplayableNews = async (skip = 0, limit = 100, search = "") => {
   try {
-    const response = await axiosInstance.get('/api/v1/news/public/displayable', {
+    const response = await axiosInstance.get('/news/public/displayable', {
       params: { skip, limit, search },
     });
 
@@ -73,7 +79,7 @@ const getDisplayableNews = async (skip = 0, limit = 100, search = "") => {
 // ฟังก์ชันดึงข่าวสารที่เผยแพร่ตาม ID
 const getPublishedNewsById = async (newsId) => {
   try {
-    const response = await axiosInstance.get(`/api/v1/news/public/${newsId}`);
+    const response = await axiosInstance.get(`/news/public/${newsId}`);
     if (response && response.data) {
       return response.data;
     }
@@ -86,7 +92,7 @@ const getPublishedNewsById = async (newsId) => {
 // ฟังก์ชันสร้างข่าวสารใหม่
 const createNews = async (newsData) => {
   try {
-    const response = await axiosInstance.post('/api/v1/news', newsData);
+    const response = await axiosInstance.post('/news', newsData);
     if (response && response.data) {
       return response.data;
     }
@@ -99,7 +105,7 @@ const createNews = async (newsData) => {
 // ฟังก์ชันอัปเดตข่าวสาร
 const updateNews = async (newsId, newsData) => {
   try {
-    const response = await axiosInstance.put(`/api/v1/news/${newsId}`, newsData);
+    const response = await axiosInstance.put(`/news/${newsId}`, newsData);
     if (response && response.data) {
       return response.data;
     }
@@ -112,7 +118,7 @@ const updateNews = async (newsId, newsData) => {
 // ฟังก์ชันลบข่าวสาร
 const deleteNews = async (newsId) => {
   try {
-    const response = await axiosInstance.delete(`/api/v1/news/${newsId}`);
+    const response = await axiosInstance.delete(`/news/${newsId}`);
     if (response && response.data) {
       return response.data;
     }
