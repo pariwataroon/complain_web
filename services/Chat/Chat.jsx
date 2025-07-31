@@ -45,7 +45,7 @@ const Chat = () => {
   const preprocessText = (text) => {
     return text
       .toLowerCase()
-      .replace(/[^\u0E00-\u0E7Fa-z0-9\s]/g, '') // Keep Thai, English, numbers, and spaces
+      .replace(/[^\u0E00-\u0E7Fa-z0-9\s]/g, '')
       .trim();
   };
 
@@ -275,6 +275,11 @@ const Chat = () => {
         <div className={styles.chatBox}>
           <div className={styles.chatHeader}>
             <div className={styles.chatTitle}>
+              <img
+                src="/logo_blue.png"
+                alt="Logo"
+                className={styles.chatLogo}
+              />
               CB สำนักงานปลัดกระทรวงการคลัง
             </div>
             <button
@@ -379,7 +384,7 @@ const Chat = () => {
                 disabled={isTyping}
                 title="เมนูคำถามยอดนิยม"
               >
-                <span className={styles.menuIcon}>☰</span>
+                <span className={styles.menuText}>เมนู</span>
               </button>
               <textarea
                 ref={inputRef}

@@ -286,7 +286,7 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
 
                     try {
                         const attachmentResponse = await OperatingAttachment(attachmentData);
-                        console.log(`Attachment uploaded: ${file.fileName}`, attachmentResponse);
+                        // console.log(`Attachment uploaded: ${file.fileName}`, attachmentResponse);
                         return attachmentResponse;
                     } catch (error) {
                         console.error(`Error uploading ${file.fileName}:`, error);
@@ -296,10 +296,9 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
 
                 try {
                     const attachmentResponses = await Promise.all(attachmentPromises);
-                    console.log("All attachments uploaded successfully:", attachmentResponses);
+                    // console.log("All attachments uploaded successfully:", attachmentResponses);
                 } catch (attachmentError) {
                     console.error("Error uploading attachments:", attachmentError);
-                    // Don't fail the whole process if attachment upload fails
                     await alertError("คำเตือน", "ส่งรายงานสำเร็จแล้ว แต่ไม่สามารถอัปโหลดไฟล์แนบบางไฟล์ได้");
                 }
             } else if (attachments.length > 0 && !operatingId) {
