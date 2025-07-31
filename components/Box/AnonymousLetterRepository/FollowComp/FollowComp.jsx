@@ -324,9 +324,10 @@ const FollowComp = () => {
           px: 3,
           display: "flex",
           alignItems: "center",
+          width: "100%", // ใช้ความกว้างเต็ม
         }}
       ></Box>
-      <Box sx={{ background: "#fff", py: 2, px: 3 }}>
+      <Box sx={{ background: "#fff", py: 2, px: 3, width: "100%"  }}>
         <Typography variant="h5" fontWeight="bold" color="#1120A3">
           ติดตามผลการดำเนินการ
         </Typography>
@@ -342,6 +343,7 @@ const FollowComp = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          width: "100%", 
         }}
       >
         <span>เจ้าหน้าที่ผู้รับผิดชอบ: {mockHeader.responsibleOfficer}</span>
@@ -359,10 +361,10 @@ const FollowComp = () => {
         </IconButton>
       </Box>
 
-      <Box sx={{ background: "#FBEAE9", py: 2, px: 3 }}>
+      <Box sx={{ background: "#FBEAE9", py: 2, px: 3, width: "100%" }}>
         ชื่อผู้ร้อง: {mockHeader.complainantName}
       </Box>
-      <Box sx={{ background: "#91CBFF", py: 2, px: 3 }}>
+      <Box sx={{ background: "#91CBFF", py: 2, px: 3, width: "100%" }}>
         <Stack direction="row" alignItems="center" spacing={2}>
           <Typography variant="h6" sx={{ color: "#000" }}>
             ขั้นตอนดำเนินการครั้งแรก
@@ -388,7 +390,14 @@ const FollowComp = () => {
   .map((section) => (
     <Box
       key={section.key} // เปลี่ยนเป็น section.key
-      sx={{ border: "1px solid #E0E0E0", borderRadius: 1, mb: 2 }}
+      sx={{
+        border: "1px solid #E0E0E0",
+        borderRadius: 1,
+        width: "100%",
+        maxWidth: { sm: "auto" },
+        marginBottom: 2,
+        px: 3,
+      }}
     >
       <Box
         sx={{
@@ -401,7 +410,8 @@ const FollowComp = () => {
           {section.title}
         </Typography>
       </Box>
-      <Table>
+      <Box sx={{ overflowX: { xs: "auto", sm: "unset" }, width: "100%" }}>
+                <Table sx={{ width: "100%" }}>
         <TableHead>
           <TableRow>
             {section.headers.map((h) => (
@@ -478,21 +488,32 @@ const FollowComp = () => {
         </TableBody>
       </Table>
     </Box>
+    </Box>
   ))}
       {/* Yellow in-progress bar */}
-      <Box sx={{ background: "#FFF9C4", py: 2, px: 3, borderRadius: 1 }}>
-        ขั้นตอนอยู่ระหว่างดำเนินการ
-      </Box>
+      <Box sx={{ background: "#FFF9C4", py: 2, px: 3, borderRadius: 1, width: "100%" }}>
+          ขั้นตอนอยู่ระหว่างดำเนินการ
+        </Box>
 
       {/* Final (status 6) section */}
       {finalPhase && (
-        <Box sx={{ border: "1px solid #E0E0E0", borderRadius: 1 }}>
-          <Box sx={{ px: 3, background: "#FEFAEF", py: 1 }}>
-            <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
-              {finalPhase.title}
-            </Typography>
-          </Box>
-          <Table>
+        <Box
+              sx={{
+                border: "1px solid #E0E0E0",
+                borderRadius: 1,
+                width: "100%",
+                maxWidth: { sm: "auto" },
+                marginBottom: 2,
+                px: 3,
+              }}
+            >
+              <Box sx={{ px: 3, background: "#FEFAEF", py: 1 }}>
+                <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
+                  {finalPhase.title}
+                </Typography>
+              </Box>
+              <Box sx={{ overflowX: { xs: "auto", sm: "unset" }, width: "100%" }}> {/* เปิดการเลื่อนข้างในหน้าจอเล็ก */}
+                <Table sx={{ width: "100%" }}>
             <TableHead>
               <TableRow>
                 {finalPhase.headers.map((h) => (
@@ -558,6 +579,7 @@ const FollowComp = () => {
               ))}
             </TableBody>
           </Table>
+        </Box>
         </Box>
       )}
     </Box>

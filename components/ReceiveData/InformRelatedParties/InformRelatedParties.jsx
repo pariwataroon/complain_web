@@ -200,9 +200,10 @@ const InformRelatedParties = () => {
               onChange={handleChange}
               error={!!getFieldError("refNo")}
               helperText={getFieldError("refNo")}
+              sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}
             />
 
-            <Box sx={{ position: "relative", zIndex: 1 }}>
+            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
               <DateThaiPickerService
                 label={createLabel("วันที่", "date")}
                 value={form.date}

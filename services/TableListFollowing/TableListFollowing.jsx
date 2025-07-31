@@ -248,31 +248,36 @@ const handleExportExcel = () => {
         }}
       >
         <Box
-          display="flex"
-          alignItems="center"
-          gap={1}
-          sx={{ flexWrap: "nowrap" }}
+        width="100%"
+      display="flex"
+      alignItems="center"
+      gap={1}
+      sx={{
+      flexWrap: { xs: "wrap", sm: "nowrap" }, 
+      whiteSpace: "nowrap",
+      px: 2,
+      }}
         >
           <InputText
-            label="ชื่อผู้ร้อง"
-            value={filters.claimantName}
-            onChange={handleChange("claimantName")}
-            placeholder="ค้นหาชื่อผู้ร้อง"
-            sx={{ minWidth: "180px" }}
+          label="ชื่อผู้ร้อง"
+          value={filters.claimantName}
+          onChange={handleChange("claimantName")}
+          placeholder="ค้นหาชื่อผู้ร้อง"
+          sx={{ minWidth: { xs: "100%", sm: "180px" }, marginBottom: { xs: "8px", sm: 0 } }} // Full width on small screens, 180px on larger screens
           />
           <InputText
-            label="หน่วยงาน"
-            value={filters.agency}
-            onChange={handleChange("agency")}
-            placeholder="ค้นหาหน่วยงาน"
-            sx={{ minWidth: "180px" }}
+          label="หน่วยงาน"
+          value={filters.agency}
+          onChange={handleChange("agency")}
+          placeholder="ค้นหาหน่วยงาน"
+          sx={{ minWidth: { xs: "100%", sm: "180px" }, marginBottom: { xs: "8px", sm: 0 } }} // Same behavior for this input
           />
           <InputText
-            label="เลขสรร."
-            value={filters.ssoNo}
-            onChange={handleChange("ssoNo")}
-            placeholder="ค้นหาเลขสรร."
-            sx={{ minWidth: "150px" }}
+          label="เลขสรร."
+          value={filters.ssoNo}
+          onChange={handleChange("ssoNo")}
+          placeholder="ค้นหาเลขสรร."
+          sx={{ minWidth: { xs: "100%", sm: "150px" }, marginBottom: { xs: "8px", sm: 0 } }} // Full width on small screens, 150px on larger screens
           />
           <SelectField
             label="สถานะการดำเนินการ"
@@ -316,9 +321,7 @@ const handleExportExcel = () => {
           >
             <CleaningServicesIcon />
           </IconButton>
-        </Box>
-
-        <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
+          <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
           <ExportButton
             label="Export PDF"
             onClick={handleExportPDF}
@@ -328,6 +331,8 @@ const handleExportExcel = () => {
             onClick={handleExportExcel}
           />
         </Box>
+        </Box>
+        
       </Box>
       
       <Box
