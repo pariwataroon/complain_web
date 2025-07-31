@@ -32,6 +32,7 @@ from seeders.comp_districts_seeder import DistrictSeeder
 from seeders.comp_complaint_types_seeder import ComplaintTypeSeeder
 from seeders.comp_complaint_subtypes_seeder import ComplaintSubTypeSeeder
 from seeders.comp_complaint_channels_seeder import ComplaintChannelSeeder
+from seeders.chat_bot_seeder import ChatBotSeeder
 
 # Import the ApiLog model (you'll need to create this)
 from models.api_log import ApiLog
@@ -76,6 +77,7 @@ def check_and_seed_tables():
             {"name": "complaint_types", "seeder": ComplaintTypeSeeder(), "table_prefix": "comp_"},
             {"name": "complaint_subtypes", "seeder": ComplaintSubTypeSeeder(), "table_prefix": "comp_"},
             {"name": "complaint_channels", "seeder": ComplaintChannelSeeder(), "table_prefix": "comp_"},
+            {"name": "chat_bot", "seeder": ChatBotSeeder(), "table_prefix": ""},
         ]
 
         # วนลูปตรวจสอบแต่ละตาราง โดยเรียกตามลำดับที่กำหนดไว้ในลิสต์
