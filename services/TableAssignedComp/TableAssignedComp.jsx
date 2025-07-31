@@ -216,45 +216,110 @@ const TableAssignedComp = ({
 
   return (
     <Container
-      maxWidth={false}
-      disableGutters
+  maxWidth={false}
+  disableGutters
+  sx={{
+    backgroundColor: "#fff",
+    borderRadius: 2,
+    boxShadow: "0 6px 18px rgba(0,0,0,.06)",
+    overflow: "visible",
+    position: "relative",
+  }}
+>
+  {/* Header Bar */}
+  <Box
+    className={styles.headerBar}
+    display="flex"
+    alignItems="center"
+    justifyContent="space-between"
+  ></Box>
+
+  {/* Header with title and export buttons */}
+  <Box
+    mt={2}
+    className={styles.headerBar2}
+    display="flex"
+    alignItems="center"
+    justifyContent="space-between"
+    px={isExtraSmall ? 1 : 2}
+    sx={{
+      flexDirection: isExtraSmall ? "column" : "row",
+      gap: isExtraSmall ? 1 : 0,
+    }}
+  >
+    <Box
       sx={{
-        backgroundColor: "#fff",
-        borderRadius: 2,
-        boxShadow: "0 6px 18px rgba(0,0,0,.06)",
-        overflow: "visible",
-        position: "relative",
+        fontSize: isExtraSmall ? "16px" : "18px",
+        fontWeight: "bold",
+        color: "#1120a3",
       }}
     >
-      {/* Header Bar */}
-      <Box
-        className={styles.headerBar}
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-      ></Box>
+      {title}
+    </Box>
+  </Box>
 
-      {/* Header with title and export buttons */}
-      <Box
-        mt={2}
-        className={styles.headerBar2}
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        px={isExtraSmall ? 1 : 2}
-        sx={{
-          flexDirection: isExtraSmall ? "column" : "row",
-          gap: isExtraSmall ? 1 : 0,
-        }}
-      >
+  {/* Responsive Filters */}
+  <Box
+    width="100%"
+    px={layoutConfig.padding}
+    py={layoutConfig.padding}
+    sx={{
+      overflow: "visible",
+      boxSizing: "border-box",
+    }}
+  >
+    {layoutConfig.layout === "stacked" ? (
+      // Stacked Layout (Mobile/Small screens)
+      <>
+        {/* Filter Fields */}
         <Box
+          display="grid"
+          gridTemplateColumns={`repeat(${layoutConfig.fieldsPerRow}, 1fr)`}
+          gap={layoutConfig.gap}
+          mb={2}
           sx={{
-            fontSize: isExtraSmall ? "16px" : "18px",
-            fontWeight: "bold",
-            color: "#1120a3",
+            overflow: "visible",
+            width: "100%",
           }}
         >
-          {title}
+          {renderFilterField("claimantName", "ชื่อผู้ร้อง")}
+          {renderFilterField("subject", "ชื่อเรื่อง")}
+          {renderFilterField("docNo4", "เลขที่ สรร.")}
+          {renderFilterField("receiveDate", "วันที่รับเรื่อง", "date")}
+        </Box>
+
+        {/* Search Buttons */}
+        <Box display="flex" justifyContent="center" gap={1} mb={2}>
+          <IconButton
+            onClick={handleSearchClick}
+            sx={{
+              bgcolor: "#1120A3",
+              color: "#fff",
+              "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+              width: layoutConfig.iconSize,
+              height: layoutConfig.iconSize,
+              borderRadius: "50%",
+              transition: "all 0.2s ease-in-out",
+            }}
+            title="ค้นหา"
+          >
+            <SearchIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            onClick={handleClearSearch}
+            sx={{
+              bgcolor: "#dc3545",
+              color: "#fff",
+              "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
+              width: layoutConfig.iconSize,
+              height: layoutConfig.iconSize,
+              borderRadius: "50%",
+              transition: "all 0.2s ease-in-out",
+            }}
+            title="ล้างการค้นหา"
+          >
+            <CleaningServicesIcon fontSize="small" />
+          </IconButton>
         </Box>
 
         {/* Export buttons */}
@@ -262,6 +327,112 @@ const TableAssignedComp = ({
           display="flex"
           alignItems="center"
           gap={1}
+          sx={{
+            flexDirection: isExtraSmall ? "column" : "row",
+            width: isExtraSmall ? "100%" : "auto",
+            justifyContent: isExtraSmall ? "center" : "flex-end", // ปรับการจัดตำแหน่งให้ชิดขวาหรือกลาง
+          }}
+        >
+          <ExportButton
+            label="Export PDF"
+            onClick={handleExportPDF}
+            sx={{
+              fontSize: isExtraSmall ? "12px" : "14px",
+              minWidth: isExtraSmall ? "120px" : "auto",
+              width: isExtraSmall ? "100%" : "auto", // ปรับความกว้างตามขนาดหน้าจอ
+            }}
+          />
+
+          <ExportButton
+            label="Export Excel"
+            onClick={handleExportExcel}
+            sx={{
+              fontSize: isExtraSmall ? "12px" : "14px",
+              minWidth: isExtraSmall ? "120px" : "auto",
+              width: isExtraSmall ? "100%" : "auto", // ปรับความกว้างตามขนาดหน้าจอ
+            }}
+          />
+        </Box>
+      </>
+    ) : layoutConfig.layout === "two-row" ? (
+      // Two-row Layout (Medium screens)
+      <>
+        {/* First Row - First 3 fields */}
+        <Box
+          display="grid"
+          gridTemplateColumns="repeat(3, 1fr)"
+          gap={layoutConfig.gap}
+          mb={2}
+          sx={{
+            overflow: "visible",
+            width: "100%",
+          }}
+        >
+          {renderFilterField("claimantName", "ชื่อผู้ร้อง")}
+          {renderFilterField("subject", "ชื่อเรื่อง")}
+          {renderFilterField("docNo4", "เลขที่ สรร.")}
+        </Box>
+
+        {/* Second Row - Last field + Search Buttons */}
+        <Box
+          display="flex"
+          alignItems="center"
+          gap={layoutConfig.gap}
+          mb={2}
+          sx={{
+            overflow: "visible",
+            width: "100%",
+          }}
+        >
+          {/* Date field */}
+          <Box
+            sx={{
+              flex: "1 1 0",
+              minWidth: 0,
+            }}
+          >
+            {renderFilterField("receiveDate", "วันที่รับเรื่อง", "date")}
+          </Box>
+
+          {/* Search Buttons */}
+          <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
+            <IconButton
+              onClick={handleSearchClick}
+              sx={{
+                bgcolor: "#1120A3",
+                color: "#fff",
+                "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                width: layoutConfig.iconSize,
+                height: layoutConfig.iconSize,
+                borderRadius: "50%",
+                transition: "all 0.2s ease-in-out",
+                mt: 1,
+              }}
+              title="ค้นหา"
+            >
+              <SearchIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              onClick={handleClearSearch}
+              sx={{
+                bgcolor: "#dc3545",
+                color: "#fff",
+                "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
+                width: layoutConfig.iconSize,
+                height: layoutConfig.iconSize,
+                borderRadius: "50%",
+                transition: "all 0.2s ease-in-out",
+                mt: 1,
+              }}
+              title="ล้างการค้นหา"
+            >
+              <CleaningServicesIcon fontSize="small" />
+            </IconButton>
+          </Box>
+          <Box
+          display="flex"
+          alignItems="center"
+          gap={2}
           sx={{
             flexDirection: isExtraSmall ? "column" : "row",
             width: isExtraSmall ? "100%" : "auto",
@@ -273,6 +444,7 @@ const TableAssignedComp = ({
             sx={{
               fontSize: isExtraSmall ? "12px" : "14px",
               minWidth: isExtraSmall ? "120px" : "auto",
+              width: isExtraSmall ? "100%" : "auto",
             }}
           />
 
@@ -282,237 +454,128 @@ const TableAssignedComp = ({
             sx={{
               fontSize: isExtraSmall ? "12px" : "14px",
               minWidth: isExtraSmall ? "120px" : "auto",
+              width: isExtraSmall ? "100%" : "auto",
+            }}
+          />
+        </Box>
+        </Box>
+      </>
+    ) : (
+      // Single Row Layout (Large screens)
+      <Box
+        display="flex"
+        alignItems="center"
+        gap={layoutConfig.gap}
+        sx={{
+          overflow: "visible",
+          flexWrap: "nowrap",
+        }}
+      >
+        {/* Filter fields */}
+        <Box
+          sx={{
+            flex: "1 1 0",
+            minWidth: "140px",
+            maxWidth: "200px",
+          }}
+        >
+          {renderFilterField("claimantName", "ชื่อผู้ร้อง")}
+        </Box>
+        <Box
+          sx={{
+            flex: "1 1 0",
+            minWidth: "140px",
+            maxWidth: "200px",
+          }}
+        >
+          {renderFilterField("subject", "ชื่อเรื่อง")}
+        </Box>
+        <Box
+          sx={{
+            flex: "1 1 0",
+            minWidth: "140px",
+            maxWidth: "200px",
+          }}
+        >
+          {renderFilterField("docNo4", "เลขที่ สรร.")}
+        </Box>
+        <Box
+          sx={{
+            flex: "1 1 0",
+            minWidth: "140px",
+            maxWidth: "200px",
+          }}
+        >
+          {renderFilterField("receiveDate", "วันที่รับเรื่อง", "date")}
+        </Box>
+
+        {/* Search Buttons */}
+        <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
+          <IconButton
+            onClick={handleSearchClick}
+            sx={{
+              bgcolor: "#1120A3",
+              color: "#fff",
+              "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+              width: layoutConfig.iconSize,
+              height: layoutConfig.iconSize,
+              borderRadius: "50%",
+              transition: "all 0.2s ease-in-out",
+              mt: 1,
+            }}
+            title="ค้นหา"
+          >
+            <SearchIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            onClick={handleClearSearch}
+            sx={{
+              bgcolor: "#dc3545",
+              color: "#fff",
+              "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
+              width: layoutConfig.iconSize,
+              height: layoutConfig.iconSize,
+              borderRadius: "50%",
+              transition: "all 0.2s ease-in-out",
+              mt: 1,
+            }}
+            title="ล้างการค้นหา"
+          >
+            <CleaningServicesIcon fontSize="small" />
+          </IconButton>
+        </Box>
+        
+        {/* Export buttons */}
+        <Box
+          display="flex"
+          alignItems="center"
+          gap={2}
+          sx={{
+            flexDirection: isExtraSmall ? "column" : "row",
+            width: isExtraSmall ? "100%" : "auto",
+          }}
+        >
+          <ExportButton
+            label="Export PDF"
+            onClick={handleExportPDF}
+            sx={{
+              fontSize: isExtraSmall ? "12px" : "14px",
+              minWidth: isExtraSmall ? "120px" : "auto",
+              width: isExtraSmall ? "100%" : "auto",
+            }}
+          />
+
+          <ExportButton
+            label="Export Excel"
+            onClick={handleExportExcel}
+            sx={{
+              fontSize: isExtraSmall ? "12px" : "14px",
+              minWidth: isExtraSmall ? "120px" : "auto",
+              width: isExtraSmall ? "100%" : "auto",
             }}
           />
         </Box>
       </Box>
-
-      {/* Responsive Filters */}
-      <Box
-        width="100%"
-        px={layoutConfig.padding}
-        py={layoutConfig.padding}
-        sx={{
-          overflow: "visible",
-          boxSizing: "border-box",
-        }}
-      >
-        {layoutConfig.layout === "stacked" ? (
-          // Stacked Layout (Mobile/Small screens)
-          <>
-            {/* Filter Fields */}
-            <Box
-              display="grid"
-              gridTemplateColumns={`repeat(${layoutConfig.fieldsPerRow}, 1fr)`}
-              gap={layoutConfig.gap}
-              mb={2}
-              sx={{
-                overflow: "visible",
-                width: "100%",
-              }}
-            >
-              {renderFilterField("claimantName", "ชื่อผู้ร้อง")}
-              {renderFilterField("subject", "ชื่อเรื่อง")}
-              {renderFilterField("docNo4", "เลขที่ สรร.")}
-              {renderFilterField("receiveDate", "วันที่รับเรื่อง", "date")}
-            </Box>
-
-            {/* Search Buttons */}
-            <Box display="flex" justifyContent="center" gap={1} mb={2}>
-              <IconButton
-                onClick={handleSearchClick}
-                sx={{
-                  bgcolor: "#1120A3",
-                  color: "#fff",
-                  "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
-                  width: layoutConfig.iconSize,
-                  height: layoutConfig.iconSize,
-                  borderRadius: "50%",
-                  transition: "all 0.2s ease-in-out",
-                }}
-                title="ค้นหา"
-              >
-                <SearchIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                onClick={handleClearSearch}
-                sx={{
-                  bgcolor: "#dc3545",
-                  color: "#fff",
-                  "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
-                  width: layoutConfig.iconSize,
-                  height: layoutConfig.iconSize,
-                  borderRadius: "50%",
-                  transition: "all 0.2s ease-in-out",
-                }}
-                title="ล้างการค้นหา"
-              >
-                <CleaningServicesIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          </>
-        ) : layoutConfig.layout === "two-row" ? (
-          // Two-row Layout (Medium screens)
-          <>
-            {/* First Row - First 3 fields */}
-            <Box
-              display="grid"
-              gridTemplateColumns="repeat(3, 1fr)"
-              gap={layoutConfig.gap}
-              mb={2}
-              sx={{
-                overflow: "visible",
-                width: "100%",
-              }}
-            >
-              {renderFilterField("claimantName", "ชื่อผู้ร้อง")}
-              {renderFilterField("subject", "ชื่อเรื่อง")}
-              {renderFilterField("docNo4", "เลขที่ สรร.")}
-            </Box>
-
-            {/* Second Row - Last field + Search Buttons */}
-            <Box
-              display="flex"
-              alignItems="center"
-              gap={layoutConfig.gap}
-              mb={2}
-              sx={{
-                overflow: "visible",
-                width: "100%",
-              }}
-            >
-              {/* Date field */}
-              <Box
-                sx={{
-                  flex: "1 1 0",
-                  minWidth: 0,
-                }}
-              >
-                {renderFilterField("receiveDate", "วันที่รับเรื่อง", "date")}
-              </Box>
-
-              {/* Search Buttons */}
-              <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
-                <IconButton
-                  onClick={handleSearchClick}
-                  sx={{
-                    bgcolor: "#1120A3",
-                    color: "#fff",
-                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
-                    width: layoutConfig.iconSize,
-                    height: layoutConfig.iconSize,
-                    borderRadius: "50%",
-                    transition: "all 0.2s ease-in-out",
-                    mt: 1,
-                  }}
-                  title="ค้นหา"
-                >
-                  <SearchIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                  onClick={handleClearSearch}
-                  sx={{
-                    bgcolor: "#dc3545",
-                    color: "#fff",
-                    "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
-                    width: layoutConfig.iconSize,
-                    height: layoutConfig.iconSize,
-                    borderRadius: "50%",
-                    transition: "all 0.2s ease-in-out",
-                    mt: 1,
-                  }}
-                  title="ล้างการค้นหา"
-                >
-                  <CleaningServicesIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            </Box>
-          </>
-        ) : (
-          // Single Row Layout (Large screens)
-          <Box
-            display="flex"
-            alignItems="center"
-            gap={layoutConfig.gap}
-            sx={{
-              overflow: "visible",
-              flexWrap: "nowrap",
-            }}
-          >
-            {/* Filter fields */}
-            <Box
-              sx={{
-                flex: "1 1 0",
-                minWidth: "140px",
-                maxWidth: "200px",
-              }}
-            >
-              {renderFilterField("claimantName", "ชื่อผู้ร้อง")}
-            </Box>
-            <Box
-              sx={{
-                flex: "1 1 0",
-                minWidth: "140px",
-                maxWidth: "200px",
-              }}
-            >
-              {renderFilterField("subject", "ชื่อเรื่อง")}
-            </Box>
-            <Box
-              sx={{
-                flex: "1 1 0",
-                minWidth: "140px",
-                maxWidth: "200px",
-              }}
-            >
-              {renderFilterField("docNo4", "เลขที่ สรร.")}
-            </Box>
-            <Box
-              sx={{
-                flex: "1 1 0",
-                minWidth: "140px",
-                maxWidth: "200px",
-              }}
-            >
-              {renderFilterField("receiveDate", "วันที่รับเรื่อง", "date")}
-            </Box>
-
-            {/* Search Buttons */}
-            <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
-              <IconButton
-                onClick={handleSearchClick}
-                sx={{
-                  bgcolor: "#1120A3",
-                  color: "#fff",
-                  "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
-                  width: layoutConfig.iconSize,
-                  height: layoutConfig.iconSize,
-                  borderRadius: "50%",
-                  transition: "all 0.2s ease-in-out",
-                  mt: 1,
-                }}
-                title="ค้นหา"
-              >
-                <SearchIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                onClick={handleClearSearch}
-                sx={{
-                  bgcolor: "#dc3545",
-                  color: "#fff",
-                  "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
-                  width: layoutConfig.iconSize,
-                  height: layoutConfig.iconSize,
-                  borderRadius: "50%",
-                  transition: "all 0.2s ease-in-out",
-                  mt: 1,
-                }}
-                title="ล้างการค้นหา"
-              >
-                <CleaningServicesIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          </Box>
         )}
       </Box>
 

@@ -318,6 +318,7 @@ const ReceiveReportsAgencies = () => {
               value={form.processStep}
               onChange={handleChange}
               options={PROCESS_STEP_OPTIONS}
+              // sx={{ width: {xs: "80%", sm: "auto"}}}
             />
             </Box>
           </Box>

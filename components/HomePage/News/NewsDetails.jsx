@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box, Button, Container, Stack, Typography, TextField, Checkbox, FormControlLabel,
   Grid, useMediaQuery, useTheme, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions
@@ -9,7 +9,9 @@ import DateThaiPickerService from '@services/DateThaiPickerService/DateThaiPicke
 import BreadcrumbsServiceF from '@services/BreadCrumbs/breadcrumbsFunction';
 import RichTextEditor from '@services/RichTextEditor/RichTextEditor';
 import ImageUpload from '@services/ImageUpload/ImageUpload';
-import { showConfirm2, } from "@utils/Alerts";
+import { showConfirm2 } from "@utils/Alerts";
+import { createNews, updateNews } from '@pages/api/news/news';
+
 export default function NewsDetails() {
   const router = useRouter();
   const { query, isReady } = router;
@@ -26,6 +28,7 @@ export default function NewsDetails() {
   const [expireDate, setExpireDate] = useState(dayjs().add(21, 'day'));
   const [images, setImages] = useState([]);
   const [isDirty, setIsDirty] = useState(false);
+
   useEffect(() => {
     if (method === 'EditNew' && isReady) {
       setTitle(qTitle || '');
@@ -52,147 +55,117 @@ export default function NewsDetails() {
     }
   }, [title, content, url, pinTop, publish, expireDate, images]);
 
-  useEffect(() => {
-  if (method !== 'EditNew') return;
+  const handleSubmit = async () => {
+  // Check if the required fields are provided
+  if (!title || !content) {
+    alertError('Missing fields', 'Title and content are required.');
+    return;
+  }
 
-  const handleRouteChangeStart = (url) => {
-    if (!isDirty) return;
+  const formattedExpire = dayjs(expireDate).isValid() ? dayjs(expireDate).format('YYYY-MM-DD') : null;
 
-    router.events.off('routeChangeStart', handleRouteChangeStart);
-
-    showConfirm2(
-      `<span style="color:#932626;">ยกเลิกการแสดงข่าวสาร</span>`,
-      `<div><strong style="color:#932626;">การยกเลิกแสดงข่าวสารจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
-       ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก<br /><br />
-       ยืนยันการยกเลิกแสดงข่าวสารนี้หรือไม่?</strong>
-        </div>`,
-        "ยืนยัน",
-        "ยกเลิก",
-        800
-    ).then((confirmed) => {
-      if (confirmed) {
-        setIsDirty(false);
-        router.push(url);
-      } else {
-        router.events.on('routeChangeStart', handleRouteChangeStart);
-      }
-    });
-
-    router.events.emit('routeChangeError');
-    throw 'Route change aborted due to unsaved changes';
+  // Prepare the data to be sent in the request
+  const newData = {
+    title,
+    content,
+    cover_image_url: images[0] || null,  // Ensure this is either a URL or null
+    gallery_images: images.length > 0 ? images : [],  // Use an empty array if no gallery images
+    additional_links: [
+      {
+        title: url ? 'Link' : '',  // Provide a default value if URL is not provided
+        url,
+        description: 'Additional link description',  // Adjust accordingly
+      },
+    ],
+    is_published: publish,
+    display_start_date: dayjs().format('YYYY-MM-DD'), // Start date should be a valid date string
+    display_end_date: formattedExpire || dayjs().add(21, 'day').format('YYYY-MM-DD'), // Expiry date should also be valid
   };
 
-  router.events.on('routeChangeStart', handleRouteChangeStart);
-  return () => {
-    router.events.off('routeChangeStart', handleRouteChangeStart);
-  };
-}, [isDirty, method, router.events]);
+  const stored = sessionStorage.getItem('newsList');
+  const existing = stored ? JSON.parse(stored) : [];
 
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (!isDirty) return;
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [isDirty]);
-
-
-  const handleSubmit = () => {
-    const formattedExpire = dayjs(expireDate).isValid() ? dayjs(expireDate).format('D MMM YYYY') : '-';
-    const newData = {
-      title,
-      content,
-      url,
-      pinTop,
-      publish,
-      expireDate,
-      img: images.length > 0 ? images[0] : '',
-      date: dayjs().format('D MMM YYYY'),
-      update: dayjs().format('D MMM YYYY'),
-      status: `หายไปในวันที่ ${formattedExpire} (21 วัน)`,
-      views: 0,
-    };
-
-    const stored = sessionStorage.getItem('newsList');
-    const existing = stored ? JSON.parse(stored) : [];
-
+  try {
     if (method === 'EditNew' && id !== undefined) {
-      existing[parseInt(id)] = newData;
+      // Update existing news item
+      await updateNews(id, newData);
+      existing[parseInt(id)] = newData; // Update the local list
     } else {
-      existing.push(newData);
+      // Create a new news item
+      const createdNews = await createNews(newData);
+      existing.push(createdNews); // Add the new news to the local list
     }
 
     sessionStorage.setItem('newsList', JSON.stringify(existing));
     setIsDirty(false);
     router.push('/admin/homepage/news');
-  };
-
-  const handleBreadcrumbClick = async (url) => {
-  if (!isDirty) {
-    router.push(url);
-    return;
-  }
-
-  const confirmed = await showConfirm2(
-    `<span style="color:#932626;">ยกเลิกการแสดงข่าวสาร</span>`,
-    `<div><strong style="color:#932626;">การยกเลิกแสดงข่าวสารจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
-    ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก<br /><br />
-    ยืนยันการยกเลิกแสดงข่าวสารนี้หรือไม่?</strong>
-        </div>`,
-        "ยืนยัน",
-        "ยกเลิก",
-        800
-  );
-
-  if (confirmed) {
-    setIsDirty(false);
-    router.push(url);
+  } catch (error) {
+    console.error('Error submitting news:', error);
+    alertError('Submission failed', 'There was an error while submitting your news.');
   }
 };
 
-const breadcrumbItems = [
-  {
-    label: (
-      <span style={{ color: "#1120A3" }}>
-        กำหนดข่าวสาร
-      </span>
-    ),
-    icon: (
-      <img
-        src="/icons/config.png"
-        alt="icon"
-        style={{
-          width: "24px",
-          height: "24px",
-          marginBottom: "-8px",
-          borderRadius: "50%",
-          border: "2px solid #1120A3",
-          padding: "2px",
-        }}
-      />
-    ),
-    onClick: () => handleBreadcrumbClick("/admin/homepage/news"),
-  },
-  {
-  label: (
-    <span style={{ color: "#1120A3" }}>
-      {method === "EditNew" ? "แก้ไขข่าวสาร" : "เพิ่มข่าวสาร"}
-    </span>
-  ),
-}
 
-];
+  const handleBreadcrumbClick = async (url) => {
+    if (!isDirty) {
+      router.push(url);
+      return;
+    }
 
+    const confirmed = await showConfirm2(
+      `<span style="color:#932626;">ยกเลิกการแสดงข่าวสาร</span>`,
+      `<div><strong style="color:#932626;">การยกเลิกแสดงข่าวสารจะเป็นการย้ายรายการนี้ไปยังคลังเก็บข้อมูลในฐานข้อมูล<br />
+      ซึ่งสามารถกู้คืนได้จากระบบหากจำเป็น และจะไม่แสดงผลในหน้านี้อีก<br /><br />
+      ยืนยันการยกเลิกแสดงข่าวสารนี้หรือไม่?</strong>
+        </div>`,
+      "ยืนยัน",
+      "ยกเลิก",
+      800
+    );
+
+    if (confirmed) {
+      setIsDirty(false);
+      router.push(url);
+    }
+  };
+
+  const breadcrumbItems = [
+    {
+      label: (
+        <span style={{ color: "#1120A3" }}>
+          กำหนดข่าวสาร
+        </span>
+      ),
+      icon: (
+        <img
+          src="/icons/config.png"
+          alt="icon"
+          style={{
+            width: "24px",
+            height: "24px",
+            marginBottom: "-8px",
+            borderRadius: "50%",
+            border: "2px solid #1120A3",
+            padding: "2px",
+          }}
+        />
+      ),
+      onClick: () => handleBreadcrumbClick("/admin/homepage/news"),
+    },
+    {
+      label: (
+        <span style={{ color: "#1120A3" }}>
+          {method === "EditNew" ? "แก้ไขข่าวสาร" : "เพิ่มข่าวสาร"}
+        </span>
+      ),
+    }
+  ];
 
   return (
     <Box sx={{ background: '#f5f7fb', py: isSmDown ? 2 : 4, minHeight: '100vh' }}>
       <Container maxWidth="lg" sx={{ maxWidth: { xs: '100%', md: '1400px' }, px: { xs: 1, sm: 2, md: 4 } }}>
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: isSmDown ? 1 : 2 }}>
-          <BreadcrumbsServiceF items={breadcrumbItems}/>
+          <BreadcrumbsServiceF items={breadcrumbItems} />
         </Stack>
         <Box sx={{
           border: '2px solid #007AFF',
