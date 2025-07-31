@@ -24,8 +24,9 @@
 .tableWrapper {
   background-color: white;
   border-radius: 0 0 16px 16px;
-  box-shadow: none; /* <─ เอาเงาออก */
-  overflow: hidden;
+  box-shadow: none;
+  overflow-x: auto;   // ✅ สำคัญมาก
+  -webkit-overflow-scrolling: touch;
 }
 
 .tableWrapper thead tr {
@@ -44,9 +45,8 @@
   color: #333;
   padding: 14px 12px;
   border-bottom: 1px solid #eee;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
+  white-space: normal;       
+  word-break: break-word;
 }
 
 .filterRow {

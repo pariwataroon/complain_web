@@ -125,7 +125,9 @@ const TableNewAddCompResults = ({
         backgroundColor: "#fff",
         borderRadius: 2,
         boxShadow: "0 6px 18px rgba(0,0,0,.06)",
-      }}
+        px: { xs: 1, md: 0 },
+        pl: { xs: "60px", md: "80px" },
+  }}
     >
       <Box className={styles.headerBar} />
       <Box className={styles.headerBar2}>
@@ -134,10 +136,27 @@ const TableNewAddCompResults = ({
 
       {/* Filters + Search */}
       <Box px={2} py={1}>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Box display="flex" gap={1} sx={{ flexGrow: 1, overflowX: "auto" }}>
+        <Box
+          display="flex"
+          flexDirection={{ xs: "column", md: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "stretch", md: "flex-start" }}
+          gap={2}
+          flexWrap="wrap"
+        >
+          {/* Filter Fields */}
+          <Box
+            display="flex"
+            flexWrap="wrap"
+            gap={1.5}
+            flex="1 1 auto"
+            minWidth={0}
+            sx={{
+              overflowX: { xs: "auto", md: "visible" },
+            }}
+          >
             {filterFields.map((f) => (
-              <Box key={f.name} flex="1 1 0" minWidth="140px" maxWidth="200px">
+              <Box key={f.name} sx={{ minWidth: "140px", maxWidth: "220px", flex: "1 1 0" }}>
                 {f.type === "select" ? (
                   <SelectField
                     fullWidth
@@ -158,15 +177,9 @@ const TableNewAddCompResults = ({
                 )}
               </Box>
             ))}
-            <Box
-              display="flex"
-              gap={1}
-              sx={{
-                flexShrink: 0,
-                alignItems: "center", // ← จัดให้อยู่ตรงกลางในแนวตั้ง
-                justifyContent: "center", // ← จัดให้อยู่ตรงกลางในแนวนอน
-              }}
-            >
+
+            {/* Search buttons */}
+            <Box display="flex" alignItems="center" gap={1}>
               <IconButton
                 onClick={handleSearchClick}
                 sx={{
@@ -194,21 +207,22 @@ const TableNewAddCompResults = ({
             </Box>
           </Box>
 
+          {/* Export Buttons */}
           <Box
             display="flex"
-            alignItems="center"
+            flexDirection={{ xs: "column", sm: "row" }}
             gap={1}
-            mr={4}
-            sx={{ flex: "0 0 700px", justifyContent: "flex-end" }}
+            justifyContent="flex-end"
+            sx={{
+              flexShrink: 0,
+              minWidth: { xs: "100%", md: "auto" },
+            }}
           >
             <ExportButton
               label="Export PDF"
-              onClick={() =>
-                exportElementToPDF(pdfRef, "สรุปผลตามประเภทเรื่อง.pdf")
-              }
+              onClick={() => exportElementToPDF(pdfRef, "สรุปผลตามประเภทเรื่อง.pdf")}
             />
-            <ExportButton label="Export Excel" 
-            onClick={handleExportExcel} />
+            <ExportButton label="Export Excel" onClick={handleExportExcel} />
           </Box>
         </Box>
       </Box>
@@ -255,7 +269,7 @@ const TableNewAddCompResults = ({
           className={styles.tableWrapper}
           sx={{ overflowX: "auto", px: 2, pb: 1 }}
         >
-          <Table sx={{ minWidth: 1400 }}>
+          <Table sx={{ width: "100%", minWidth: 700 }}>
             <TableHead>
               <TableRow>
                 <TableCell align="center" sx={{ width: 80 }}>

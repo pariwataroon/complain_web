@@ -40,6 +40,7 @@ import Cookies from "js-cookie";
 export default function Sidebar() {
   const router = useRouter();
   const notificationRef = useRef(null);
+  const sidebarRef = useRef(null);
 
   const [activeMenu, setActiveMenu] = useState("");
   const [openSubmenu, setOpenSubmenu] = useState(null);
@@ -48,13 +49,52 @@ export default function Sidebar() {
   const [notifications, setNotifications] = useState([]);
   const [menuData, setMenuData] = useState([]);
   const [notificationFilter, setNotificationFilter] = useState(0);
-  const sidebarRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(false);
+
   const notifArr = Array.isArray(notifications) ? notifications : [];
   const unreadExists = notifArr.some((n) => !n.is_read);
 
+  // ฟังก์ชันจัดการตำแหน่ง submenu สำหรับมือถือ
+  const handleSubmenuPosition = () => {
+    if (!isMobile) return;
+    
+    const submenuElements = document.querySelectorAll(`.${styles.submenu}.${styles.submenuVisible}`);
+    
+    submenuElements.forEach((submenu) => {
+      const rect = submenu.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+
+      // รีเซ็ตคลาสและ style
+      submenu.classList.remove('bottomOverflow', 'topOverflow', 'adjustPosition');
+      submenu.style.maxWidth = '';
+      submenu.style.top = '';
+      submenu.style.bottom = '';
+      submenu.style.transform = '';
+
+      // กำหนดตำแหน่งใหม่
+      submenu.style.top = '10px';
+      submenu.style.transform = 'translateY(0)';
+      
+      // ตรวจสอบความกว้าง
+      if (rect.right > viewportWidth - 20) {
+        submenu.style.maxWidth = `${viewportWidth - rect.left - 20}px`;
+        submenu.style.width = `${viewportWidth - rect.left - 20}px`;
+      }
+
+      // ตรวจสอบความสูง หลังจากปรับตำแหน่งแล้ว
+      const newRect = submenu.getBoundingClientRect();
+      const ulElement = submenu.querySelector('ul');
+      
+      if (newRect.bottom > viewportHeight - 20 && ulElement) {
+        const availableHeight = viewportHeight - newRect.top - 40;
+        ulElement.style.maxHeight = `${availableHeight}px`;
+      }
+    });
+  };
+
   const handleNotificationClick = async (n) => {
     try {
-      // markNotificationAsSeen ทุกครั้งที่คลิก
       if (!n.is_read) {
         await markNotificationAsSeen(n.id);
         setNotifications((prev) =>
@@ -80,12 +120,10 @@ export default function Sidebar() {
     }
   };
 
-  // ฟังก์ชันสำหรับกรองการแจ้งเตือนตามประเภท
   const getFilteredNotifications = () => {
-    if (notificationFilter === 0) return notifArr; // ทั้งหมด
+    if (notificationFilter === 0) return notifArr;
 
     if (notificationFilter === 1) {
-      // เรื่องร้องเรียนใหม่ - กรองตาม title หรือ message ที่ไม่ใช่ผู้ใช้ใหม่
       return notifArr.filter(
         (n) =>
           !(
@@ -102,7 +140,6 @@ export default function Sidebar() {
     }
 
     if (notificationFilter === 2) {
-      // ผู้ใช้ลงทะเบียนใหม่ - กรองตาม title หรือ message ที่มีคำว่า "ลงทะเบียน", "สมัคร", "ผู้ใช้ใหม่"
       return notifArr.filter(
         (n) =>
           n.title?.includes("ลงทะเบียน") ||
@@ -111,15 +148,14 @@ export default function Sidebar() {
           n.message?.includes("ลงทะเบียน") ||
           n.message?.includes("สมัคร") ||
           n.message?.includes("ผู้ใช้ใหม่") ||
-          n.type === "user_registration" || // หากมี field type
-          n.category === "registration" // หากมี field category
+          n.type === "user_registration" ||
+          n.category === "registration"
       );
     }
 
     return notifArr;
   };
 
-  // นับจำนวนการแจ้งเตือนแต่ละประเภท
   const getNotificationCounts = () => {
     const total = notifArr.length;
     const newUsers = notifArr.filter(
@@ -135,7 +171,6 @@ export default function Sidebar() {
     ).length;
     const complaints = total - newUsers;
 
-    // นับ unread สำหรับแต่ละประเภท
     const unreadTotal = notifArr.filter((n) => !n.is_read).length;
     const unreadNewUsers = notifArr.filter(
       (n) =>
@@ -181,6 +216,55 @@ export default function Sidebar() {
     admin: "บันทึกการใช้งาน",
   };
 
+  // useEffect สำหรับตรวจสอบขนาดหน้าจอ
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
+  // useEffect สำหรับจัดการ submenu position
+  useEffect(() => {
+    if (openSubmenu && isMobile) {
+      // ใช้ setTimeout เพื่อให้ submenu render ก่อน
+      const timer = setTimeout(() => {
+        handleSubmenuPosition();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [openSubmenu, isMobile]);
+
+  // useEffect สำหรับจัดการการคลิกนอก submenu ในมือถือ
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleClickOutside = (event) => {
+      const sidebar = sidebarRef.current;
+      if (sidebar && !sidebar.contains(event.target)) {
+        setOpenSubmenu(null);
+        setShowNotifications(false);
+      }
+    };
+
+    if (openSubmenu || showNotifications) {
+      document.addEventListener('touchstart', handleClickOutside);
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [openSubmenu, showNotifications, isMobile]);
+
+  // useEffect สำหรับโหลด notifications (เดิม)
   useEffect(() => {
     const info = Cookies.get("info");
     let roles = [];
@@ -204,6 +288,7 @@ export default function Sidebar() {
     })();
   }, []);
 
+  // useEffect สำหรับโหลดเมนู (เดิม)
   useEffect(() => {
     (async () => {
       showLoading("กำลังโหลดเมนู...");
@@ -268,24 +353,34 @@ export default function Sidebar() {
 
   const renderMenuItem = (key, IconC, submenu = []) => {
     const submenuItems = submenu.filter((item) => item.type !== "header");
+    
     return (
       <Box
         key={key}
         className={styles.menuItemContainer}
         onMouseEnter={() => {
-          if (submenuItems.length > 0) {
+          if (submenuItems.length > 0 && !isMobile) {
             setOpenSubmenu(key);
           }
         }}
         onMouseLeave={() => {
-          if (submenuItems.length > 0) {
+          if (submenuItems.length > 0 && !isMobile) {
             setOpenSubmenu(null);
+          }
+        }}
+        onTouchStart={() => {
+          if (submenuItems.length > 0 && isMobile) {
+            setOpenSubmenu(openSubmenu === key ? null : key);
           }
         }}
       >
         <ListItemButton
           onClick={() => {
-            setActiveMenu(key);
+            if (isMobile && submenuItems.length > 0) {
+              setOpenSubmenu(openSubmenu === key ? null : key);
+            } else {
+              setActiveMenu(key);
+            }
           }}
         >
           <ListItemIcon className={activeMenu === key ? styles.activeIcon : ""}>
@@ -298,8 +393,13 @@ export default function Sidebar() {
             className={`${styles.submenu} ${
               openSubmenu === key ? styles.submenuVisible : ""
             }`}
-            onMouseEnter={() => setOpenSubmenu(key)}
-            onMouseLeave={() => setOpenSubmenu(null)}
+            onMouseEnter={() => !isMobile && setOpenSubmenu(key)}
+            onMouseLeave={() => !isMobile && setOpenSubmenu(null)}
+            onTouchStart={(e) => {
+              if (isMobile) {
+                e.stopPropagation();
+              }
+            }}
           >
             <ul>
               {submenu.map((item, i) => (
@@ -396,8 +496,13 @@ export default function Sidebar() {
         {showNotificationBell && (
           <Box
             className={styles.notificationContainer}
-            onMouseEnter={() => setShowNotifications(true)}
-            onMouseLeave={() => setShowNotifications(false)}
+            onMouseEnter={() => !isMobile && setShowNotifications(true)}
+            onMouseLeave={() => !isMobile && setShowNotifications(false)}
+            onTouchStart={() => {
+              if (isMobile) {
+                setShowNotifications(!showNotifications);
+              }
+            }}
           >
             <IconButton
               className={`${styles.notificationIcon} notifications-icon`}
@@ -426,13 +531,19 @@ export default function Sidebar() {
               className={`${stylesNoti.notificationBox} ${
                 showNotifications ? stylesNoti.show : ""
               }`}
-              onMouseEnter={() => setShowNotifications(true)}
-              onMouseLeave={() => setShowNotifications(false)}
+              onMouseEnter={() => !isMobile && setShowNotifications(true)}
+              onMouseLeave={() => !isMobile && setShowNotifications(false)}
+              onTouchStart={(e) => {
+                if (isMobile) {
+                  e.stopPropagation();
+                }
+              }}
               sx={{
                 zIndex: 9999,
-                width: 380,
+                width: isMobile ? '90vw' : 380,
+                maxWidth: isMobile ? '350px' : 380,
                 minHeight: 400,
-                maxHeight: 500,
+                maxHeight: isMobile ? '70vh' : 500,
                 display: "flex",
                 flexDirection: "column",
               }}
@@ -487,7 +598,7 @@ export default function Sidebar() {
                     minHeight: 36,
                     "& .MuiTab-root": {
                       minHeight: 36,
-                      fontSize: "11px",
+                      fontSize: isMobile ? "10px" : "11px",
                       textTransform: "none",
                       minWidth: "auto",
                       padding: "6px 12px",
