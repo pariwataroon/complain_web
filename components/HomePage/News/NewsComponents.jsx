@@ -10,16 +10,32 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useRouter } from 'next/router';
-import { getAllNews, deleteNews } from '@pages/api/news/news'; // ใช้ API ฟังก์ชันดึงข้อมูลข่าวสาร
+import { getAllNews, deleteNews } from '@pages/api/news/news';
 import BreadcrumbsService from '@services/BreadCrumbs/breadcrumbs';
 import { closeAlert, alertError, alertSuccess, showConfirm2 } from '@utils/Alerts';
 import Image from 'next/image';
-import dayjs from 'dayjs';
 
 // ฟังก์ชันสำหรับการแปลงวันที่
 const formatDate = (dateStr) => {
   const date = new Date(dateStr);
   return `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+};
+const calculateRemainingDays = (startDate, endDate) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const currentDate = new Date();
+  
+  // คำนวณจำนวนวันที่เหลือจากวันที่ปัจจุบัน
+  const diffTime = end - currentDate;
+  if (diffTime < 0) return 0;
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+// ฟังก์ชันแปลงวันที่เป็น พุทธศักราช
+const formatThaiDate = (dateStr) => {
+  const date = new Date(dateStr);
+  const buddhistYear = date.getFullYear() + 543;
+  const month = date.toLocaleString('default', { month: 'short' });
+  return `${date.getDate()} ${month} ${buddhistYear}`;
 };
 
 const DefineNewsComponents = () => {
@@ -31,25 +47,29 @@ const DefineNewsComponents = () => {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const news = await getAllNews(0, 100, '', true); // ดึงข้อมูลข่าวทั้งหมดที่เผยแพร่
-        if (news.length > 0) {
-          setNewsList(news);
+        const response = await getAllNews(0, 100, '', null);
+        if (response && response.length > 0) {
+          const updatedNewsList = response.map(item => {
+            const remainingDays = calculateRemainingDays(item.display_start_date, item.display_end_date);
+            // ถ้าหมดเวลาหรือวันที่สิ้นสุดแล้ว, ตั้งค่า isPublished = false
+            if (remainingDays <= 0) {
+              item.isPublished = false;
+            }
+            return item;
+          });
+          setNewsList(updatedNewsList);
         } else {
-          // ใช้ข้อมูลจาก sessionStorage หากไม่มีข้อมูลจาก API
-          const saved = sessionStorage.getItem('newsList');
-          if (saved) {
-            setNewsList(JSON.parse(saved));
-          }
+          console.warn('No news found or invalid response');
         }
         setLoading(false);
       } catch (error) {
         console.error('Error fetching news:', error);
-        setLoading(false);
+        setLoading(false); 
       }
     };
 
     fetchNews();
-  }, []); // ใช้ empty array เพื่อให้ทำงานแค่ครั้งเดียวเมื่อโหลด
+  }, []);
 
   const breadcrumbItems = [
     {
@@ -86,13 +106,6 @@ const DefineNewsComponents = () => {
       query: {
         method: 'EditNew',
         id: item.id,
-        title: item.title,
-        content: item.content || '',
-        url: item.url || '',
-        pinTop: item.pinTop ?? false,
-        publish: item.publish ?? true,
-        expireDate: item.expireDate || '',
-        img: item.img || '',
       },
     });
   };
@@ -112,7 +125,7 @@ const DefineNewsComponents = () => {
     if (confirm) {
       try {
         const item = newsList[selectedIndex];
-        await deleteNews(item.id); // ลบข่าวจาก API
+        await deleteNews(item.id);  // ลบข่าวจาก API
         const updatedNewsList = newsList.filter((_, index) => index !== selectedIndex);
         setNewsList(updatedNewsList);
 
@@ -125,6 +138,7 @@ const DefineNewsComponents = () => {
     }
   };
 
+  // แสดงข้อความ "Loading..." ขณะรอข้อมูลจาก API
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -160,7 +174,7 @@ const DefineNewsComponents = () => {
 
         <Grid container spacing={2}>
           {newsList.map((item, index) => (
-            <Grid item xs={12} key={index}>
+            <Grid item xs={12} key={item.id}>
               <Box sx={{
                 background: '#fff',
                 borderRadius: 2,
@@ -173,7 +187,7 @@ const DefineNewsComponents = () => {
               }}>
                 <CardMedia
                   component="img"
-                  image={item.img || "/images/default-image.jpg"} // ถ้าไม่มีรูปภาพจะใช้ default
+                  image={item.cover_image_url || "/images/default-image.jpg"}  // ถ้าไม่มีรูปภาพจะใช้ default
                   alt="news"
                   sx={{
                     width: { xs: '100%', sm: 100 },
@@ -192,32 +206,26 @@ const DefineNewsComponents = () => {
                   minHeight: 100,
                   pr: { xs: 0, sm: 6 }
                 }}>
-                  <Box
-                    display="flex"
-                    alignItems="flex-start"
-                    flexDirection="column"
-                    flexWrap="wrap"
-                    sx={{ mb: 1, width: '100%' }}>
-                    <Typography
-                      sx={{
-                        color: '#878FD0',
-                        fontWeight: 'bold',
-                        fontSize: 14,
-                        lineHeight: 1.4,
-                        cursor: 'pointer',
-                        mr: 1,
-                        wordBreak: 'break-word',
-                        display: '-webkit-box',
-                        WebkitBoxOrient: 'vertical',
-                        WebkitLineClamp: { xs: 2, sm: 1 },
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        width: '100%'
-                      }}>
+                  <Box display="flex" alignItems="flex-start" flexDirection="column" flexWrap="wrap" sx={{ mb: 1, width: '100%' }}>
+                    <Typography sx={{
+                      color: '#878FD0',
+                      fontWeight: 'bold',
+                      fontSize: 14,
+                      lineHeight: 1.4,
+                      cursor: 'pointer',
+                      mr: 1,
+                      wordBreak: 'break-word',
+                      display: '-webkit-box',
+                      WebkitBoxOrient: 'vertical',
+                      WebkitLineClamp: { xs: 2, sm: 1 },
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      width: '100%'
+                    }}>
                       {item.title}
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#89939E', fontSize: 12 }}>
-                      👁 {item.view_count.toLocaleString()} view
+                      👁 {item.view_count} view
                     </Typography>
                   </Box>
 
@@ -238,49 +246,35 @@ const DefineNewsComponents = () => {
                       <Stack direction="row" spacing={1} alignItems="center">
                         <img src="/icons/Edit.png" alt="" style={{ width: 16, height: 16 }} />
                         <Typography variant="body2" sx={{ color: '#89939E', fontSize: 12 }}>
-                          วันที่นำเข้าข้อมูล {item.created_at ? formatDate(item.created_at) : '-'}
+                          วันที่นำเข้าข้อมูล {formatThaiDate(item.created_at)}
                         </Typography>
                       </Stack>
                       <Stack direction="row" spacing={1} alignItems="center">
                         <img src="/icons/re.png" alt="" style={{ width: 16, height: 16 }} />
                         <Typography variant="body2" sx={{ color: '#89939E', fontSize: 12 }}>
-                          วันที่ปรับปรุงข้อมูล {item.updated_at ? formatDate(item.updated_at) : '-'}
+                          วันที่ปรับปรุงข้อมูล {formatThaiDate(item.updated_at)}
                         </Typography>
                       </Stack>
                     </Stack>
                     <Typography variant="body2" sx={{
-                      color: '#89939E',
-                      mt: { xs: 1, sm: 0 },
-                      fontSize: 12,
-                      whiteSpace: { xs: 'normal', sm: 'nowrap' },
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                      color: '#89939E', mt: { xs: 1, sm: 0 }, fontSize: 12,
+                      whiteSpace: { xs: 'normal', sm: 'nowrap' }, overflow: 'hidden', textOverflow: 'ellipsis'
                     }}>
-                      สถานะ: {item.status}
+                      {item.display_end_date ? `สถานะ: หายไปในวันที่ ${formatThaiDate(item.display_end_date)}  (${calculateRemainingDays(item.display_start_date, item.display_end_date)} วัน)` : ''}
                     </Typography>
+
                   </Box>
                 </Box>
 
-                <Stack
-                  direction="row"
-                  spacing={0.5}
-                  alignItems="center"
-                  ml={{ sm: 2, xs: 0 }}
-                  mt={{ xs: 1.5, sm: 0 }}
-                  sx={{
-                    alignSelf: { xs: 'center', sm: 'flex-start' },
-                    width: { xs: '100%', sm: 'auto' },
-                    justifyContent: { xs: 'center', sm: 'flex-start' }
-                  }}>
+                <Stack direction="row" spacing={0.5} alignItems="center" ml={{ sm: 2, xs: 0 }} mt={{ xs: 1.5, sm: 0 }} sx={{
+                  alignSelf: { xs: 'center', sm: 'flex-start' },
+                  width: { xs: '100%', sm: 'auto' },
+                  justifyContent: { xs: 'center', sm: 'flex-start' }
+                }}>
                   <Tooltip title="แก้ไข">
-                    <img
-                      src="/icons/PencilWhite.png"
-                      alt=""
-                      style={{ cursor: 'pointer', width: 28, height: 28 }}
-                      onClick={() => handleEditNews(index)}
-                    />
+                    <img src="/icons/PencilWhite.png" alt="" style={{ cursor: 'pointer', width: 28, height: 28 }} onClick={() => handleEditNews(index)} />
                   </Tooltip>
-                  
+
                   <Tooltip title="ลบ">
                     <button
                       onClick={() => openDeleteDialog(index)}
@@ -294,17 +288,10 @@ const DefineNewsComponents = () => {
                         alignItems: "center",
                         justifyContent: "center",
                         cursor: "pointer",
-                        '&:hover': {
-                          backgroundColor: '#FDE68A',
-                        },
+                        '&:hover': { backgroundColor: '#FDE68A' },
                       }}
                     >
-                      <Image
-                        src="/icons/DeleteYellow.png"
-                        alt=""
-                        width={30}
-                        height={30}
-                      />
+                      <Image src="/icons/DeleteYellow.png" alt="" width={30} height={30} />
                     </button>
                   </Tooltip>
                 </Stack>
