@@ -7,6 +7,7 @@
 }
 
 .headerImage {
+  height: 400px;
   width: 100%;
   margin-bottom: 20px;
   border-radius: 8px;
@@ -25,7 +26,20 @@
   margin-bottom: 15px;
   line-height: 1.4;
 }
+.galleryContainer {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
 
+.galleryImage {
+  width: 100%;
+  height: auto;
+  max-width: 350px;
+  object-fit: cover;
+  border-radius: 8px;
+}
 .metaInfo {
   display: flex;
   flex-wrap: wrap;

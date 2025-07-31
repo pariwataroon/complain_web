@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { getPublishedNewsById } from "@pages/api/news/news"; // API function to get the news by ID
 import styles from "./NewsComponent.module.scss";
 import FacebookIcon from "@mui/icons-material/Facebook";
 import TwitterIcon from "@mui/icons-material/Twitter";
@@ -6,76 +8,57 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import HistoryIcon from "@mui/icons-material/History";
+
 const LineIcon = () => (
   <img src="/icons/lineicon.png" alt="Line Icon" width="24px" height="24px" />
 );
 
 const NewsComponent = () => {
-  // สามารถปรับจำนวนรูปภาพตามที่ต้องการ - ระบบจะปรับการแสดงผลอัตโนมัติ
-  const imageUrls = [
-    "https://picsum.photos/300/200?random=2",
-    "https://picsum.photos/300/200?random=3",
-    "https://picsum.photos/300/200?random=4",
-    "https://picsum.photos/300/200?random=5",
-    "https://picsum.photos/300/200?random=6",
-    "https://picsum.photos/300/200?random=7",
-    "https://picsum.photos/300/200?random=8",
-    "https://picsum.photos/300/200?random=9",
-  ];
+  const router = useRouter();
+  const { id } = router.query; // Get the news ID from the URL
+  const [newsData, setNewsData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [selectedImage, setSelectedImage] = useState(null);
-
-  const openModal = (imageUrl) => {
-    console.log(imageUrl);
-    setSelectedImage(imageUrl); // Set selected image for modal
+  const fetchNews = async () => {
+    try {
+      const data = await getPublishedNewsById(id); // Fetch news data by ID
+      if (data && data.res_data) {
+        setNewsData(data.res_data); // Set the news data
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching news by ID:", error);
+      setLoading(false);
+    }
   };
 
-  const closeModal = () => {
-    setSelectedImage(null); // Close modal
-  };
+  useEffect(() => {
+    if (id) {
+      fetchNews(); // Fetch news data when the `id` changes
+    }
+  }, [id]);
 
-  // Prevent closing modal when clicking on the image itself
-  const handleImageClick = (e) => {
-    e.stopPropagation();
-  };
-
-  // ฟังก์ชันสำหรับกำหนด class ของ grid ตามจำนวนรูปภาพ
-  const getGridClassName = () => {
-    const count = imageUrls.length;
-
-    if (count === 1) return styles.singleImage;
-    if (count === 2) return styles.twoImages;
-    if (count === 3) return styles.threeImages;
-    if (count === 4) return styles.fourImages;
-    if (count === 5) return styles.fiveImages;
-    if (count === 6) return styles.sixImages;
-    if (count === 7) return styles.sevenImages;
-    if (count === 8) return styles.eightImages;
-
-    return styles.eightImages; // default for more than 8 images
-  };
+  if (loading) return <div>กำลังโหลดข้อมูล...</div>;
+  if (!newsData) return <div>ไม่พบข้อมูลข่าวสาร</div>;
 
   return (
     <div className={styles.newsContainer}>
       <div className={styles.headerImage}>
-        <img src="/images/exampleNews01.png" alt="No Gift Policy 2568 Header" />
+        <img src={newsData?.cover_image_url} alt="ข่าวสารหัวข้อ" />
       </div>
 
-      <h1 className={styles.newsTitle}>
-        NO GIFT POLICY 2568 การมอบนโยบายงดรับของขวัญและของกำนัลทุกชนิด
-        จากการปฏิบัติหน้าที่ประจำปีงบประมาณ พ.ศ. 2568 และการส่งเสริมคุณธรรม
-        และจริยธรรมในการปฏิบัติงาน
-      </h1>
+      <h1 className={styles.newsTitle}>{newsData?.title}</h1>
 
       <div className={styles.metaInfo}>
         <CalendarTodayIcon fontSize="small" />
-        <span>วันที่เผยแพร่ข้อมูล 17 ม.ค. 2568</span>
+        <span>{`วันที่เผยแพร่ข้อมูล ${new Date(newsData?.created_at).toLocaleDateString('th-TH')}`}</span>
 
         <HistoryIcon fontSize="small" />
-        <span>วันที่ปรับปรุงข้อมูล 18 ม.ค. 2568</span>
+        <span>{`วันที่ปรับปรุงข้อมูล ${new Date(newsData?.updated_at).toLocaleDateString('th-TH')}`}</span>
 
         <VisibilityIcon fontSize="small" />
-        <span>1,235 view</span>
+        <span>{`${newsData?.view_count} view`}</span>
+
         <div className={styles.shareButtons}>
           <button className={`${styles.shareButton} ${styles.link}`}>
             <ContentCopyIcon fontSize="small" />
@@ -93,43 +76,23 @@ const NewsComponent = () => {
       </div>
 
       <div className={styles.newsContent}>
-        <p>
-          เมื่อวันที่ 17 มกราคม 2568 ณ อาคารการพัฒนาอาคารสุด จัดกิจกรรม
-          นายจารุรัช พงษ์ประภาส อธิบดีกรมการพัฒนา ประกาศนโยบายมาตรฐานแนวปฏิบัติ
-          "การไม่รับของขวัญและของกำนัลทุกชนิด (No Gift Policy) ประจำปีงบประมาณ
-          พ.ศ. 2568 โดยได้เน้นย้ำข้าราชการและเจ้าหน้าที่ปฏิบัติตามนโยบาย
-          โดยไม่ใช้ตำแหน่งหน้าที่หรือการปฏิบัติหน้าที่
-          เพื่อแสวงหาประโยชน์ที่มิควรได้ปฏิบัติหน้าที่
-        </p>
+        <p>{newsData?.content}</p>
       </div>
 
       <div className={styles.galleryTitle}>รูปภาพกิจกรรม</div>
 
-      {imageUrls.length > 0 && (
-        <div className={`${styles.imageGrid} ${getGridClassName()}`}>
-          {imageUrls.map((url, index) => (
-            <div
+      <div className={styles.galleryContainer}>
+        {newsData?.gallery_images && newsData.gallery_images.length > 0 ? (
+          newsData.gallery_images.map((url, index) => (
+            <img
               key={index}
-              className={styles.imageItem}
-              onClick={() => openModal(url)}
-            >
-              <img src={url} alt={`กิจกรรม ${index + 1}`} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Modal for showing the full image */}
-      <div
-        className={`${styles.modal} ${selectedImage ? styles.active : ""}`}
-        onClick={closeModal}
-      >
-        {selectedImage && (
-          <img
-            src={selectedImage}
-            alt="Selected Activity"
-            onClick={handleImageClick}
-          />
+              src={url}
+              alt={`กิจกรรม ${index + 1}`}
+              className={styles.galleryImage}
+            />
+          ))
+        ) : (
+          <p>ไม่พบรูปภาพกิจกรรม</p>
         )}
       </div>
     </div>

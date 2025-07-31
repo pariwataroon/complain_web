@@ -1,42 +1,48 @@
 import axiosInstance from "@pages/api/axiosInstance";
 
 // ฟังก์ชันดึงข้อมูลข่าวสารทั้งหมด
-const getAllNews = async (skip = 0, limit = 100, search = "", isPublished = true) => {
+const getAllNews = async (skip = 0, limit = 100, search = "", isPublished = null) => {
   try {
+    // ปรับปรุงเงื่อนไขในการส่งค่า is_published
     const response = await axiosInstance.get('/news', {
       params: {
         skip,
         limit,
         search,
-        is_published: isPublished === true ? true : false,
+        // หาก isPublished เป็น null หรือ undefined จะไม่ส่งพารามิเตอร์ is_published ไป
+        ...(isPublished !== null && { is_published: isPublished }),
       },
     });
 
+    console.log("API Response:", response); // ตรวจสอบค่าที่ได้รับจาก API
+
     if (response && response.data && response.data.res_data) {
-      return response.data.res_data;
+      return response.data.res_data; // ดึงข้อมูลข่าวสารจาก res_data
     } else {
       console.warn('Invalid API response structure:', response.data);
-      return [];
+      return []; // หากไม่มีข้อมูลหรือข้อมูลไม่ถูกต้อง ส่งค่าเป็นอาร์เรย์ว่าง
     }
   } catch (error) {
     console.error('Error fetching all news:', error.response || error.message);
-    return [];
+    return []; // กรณีมีข้อผิดพลาดในการดึงข้อมูล ส่งค่าเป็นอาร์เรย์ว่าง
   }
 };
+
 
 
 // ฟังก์ชันดึงข้อมูลข่าวสารตาม ID
 const getNewsById = async (newsId) => {
   try {
-    const response = await axiosInstance.get(`/news/${newsId}`);
+    const response = await axiosInstance.get(`/news/${newsId}`); // ส่ง HTTP GET เพื่อดึงข้อมูลข่าว
     if (response && response.data) {
-      return response.data;
+      return response.data.res_data; // ส่งข้อมูลที่ดึงมาในฟอร์แมตที่ต้องการ
     }
   } catch (error) {
-    console.error("Error fetching news by ID:", error.response || error.message);
+    console.error('Error fetching news by ID:', error.response || error.message);
     throw error;
   }
 };
+
 
 // ฟังก์ชันดึงข่าวสารที่เผยแพร่แล้ว
 const getPublishedNews = async (skip = 0, limit = 100, search = "") => {
@@ -92,15 +98,16 @@ const getPublishedNewsById = async (newsId) => {
 // ฟังก์ชันสร้างข่าวสารใหม่
 const createNews = async (newsData) => {
   try {
-    const response = await axiosInstance.post('/news', newsData);
+    const response = await axiosInstance.post('/news', newsData); // ส่งข้อมูลไปยัง API เพื่อสร้างข่าว
     if (response && response.data) {
-      return response.data;
+      return response.data; // ส่งข้อมูลที่ได้รับจาก API (อาจเป็น ID หรือข้อมูลที่สร้างขึ้น)
     }
   } catch (error) {
     console.error('Error creating news:', error.response || error.message);
     throw error;
   }
 };
+
 
 // ฟังก์ชันอัปเดตข่าวสาร
 const updateNews = async (newsId, newsData) => {
