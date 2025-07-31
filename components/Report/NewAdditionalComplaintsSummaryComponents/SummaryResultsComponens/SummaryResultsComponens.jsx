@@ -279,6 +279,7 @@ const Summaryresults = () => {
         </Paper>
       )}
 
+      <Box sx={{ width: "100%", overflowX: "auto" }}>
       <TableNewAddCompResults
         data={filteredComplaints}
         title="สรุปผลตามประเภทเรื่อง"
@@ -323,6 +324,7 @@ const Summaryresults = () => {
           },
         ]}
       />
+      </Box>
 
       {/* Modal สำหรับเพิ่ม/แก้ไขหมายเหตุ */}
       <Modal open={modalOpen} onClose={handleModalClose}>

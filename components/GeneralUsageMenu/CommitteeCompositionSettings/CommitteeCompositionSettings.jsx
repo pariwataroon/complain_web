@@ -420,6 +420,14 @@ const CommitteeCompositionSettings = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          flexDirection: {
+            xs: "column",
+            md: "row",  
+          },
+          gap: {
+            xs: 1.5,
+            md: 0,
+          },
           mb: 2,
         }}
       >
@@ -437,7 +445,10 @@ const CommitteeCompositionSettings = () => {
             color: "#ffffff",
             borderRadius: "15px",
             padding: "8px 20px",
-            width: "200px",
+            width: {
+              xs: "100%",
+              sm: "auto", 
+            },
             fontSize: "16px",
             border: "2px solid #0067B1",
           }}
