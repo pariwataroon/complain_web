@@ -36,10 +36,11 @@
 .galleryImage {
   width: 100%;
   height: auto;
-  max-width: 350px;
+  max-width: 290px; /* สามารถปรับขนาดสูงสุดตามที่ต้องการ */
   object-fit: cover;
   border-radius: 8px;
 }
+
 .metaInfo {
   display: flex;
   flex-wrap: wrap;
@@ -116,8 +117,13 @@
 
   p {
     margin-bottom: 15px;
+    white-space: normal; /* ทำให้ข้อความสามารถขึ้นบรรทัดใหม่ */
+    overflow: hidden; /* ซ่อนข้อความที่เกินขอบ */
+    text-overflow: ellipsis; /* แสดง ... ถ้าข้อความเกินขอบ */
+    word-wrap: break-word; /* ให้คำที่ยาวเกินไปถูกตัดและพับขึ้นบรรทัดใหม่ */
   }
 }
+
 
 .galleryTitle {
   font-size: 20px;

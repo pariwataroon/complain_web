@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useRouter } from 'next/router';
-import { getAllNews, deleteNews } from '@pages/api/news/news';
+import { getAllNews, deleteNews, updateNews } from '@pages/api/news/news';
 import BreadcrumbsService from '@services/BreadCrumbs/breadcrumbs';
 import { closeAlert, alertError, alertSuccess, showConfirm2 } from '@utils/Alerts';
 import Image from 'next/image';
@@ -20,6 +20,7 @@ const formatDate = (dateStr) => {
   const date = new Date(dateStr);
   return `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
 };
+
 const calculateRemainingDays = (startDate, endDate) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -30,12 +31,43 @@ const calculateRemainingDays = (startDate, endDate) => {
   if (diffTime < 0) return 0;
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
+
 // ฟังก์ชันแปลงวันที่เป็น พุทธศักราช
 const formatThaiDate = (dateStr) => {
   const date = new Date(dateStr);
   const buddhistYear = date.getFullYear() + 543;
   const month = date.toLocaleString('default', { month: 'short' });
   return `${date.getDate()} ${month} ${buddhistYear}`;
+};
+
+// ฟังก์ชันเพื่อดึงสถานะข่าว
+const getStatusMessage = (item) => {
+  const currentDate = new Date();
+  const endDate = new Date(item.display_end_date);
+
+  // ถ้าไม่มีวันสิ้นสุด (display_end_date ไม่มีหรือค่าว่าง)
+  if (!item.display_end_date) {
+    return "สถานะ: ไม่จำกัดเวลา";
+  }
+
+  const remainingDays = calculateRemainingDays(item.display_start_date, item.display_end_date);
+
+  // ถ้าหมดเวลาแล้ว (remainingDays <= 0)
+  if (remainingDays <= 0) {
+    return "สถานะ: สิ้นสุดเวลาการแสดงผล";
+  }
+
+  // ถ้ายังเหลือเวลาจะแสดงวันที่สิ้นสุด
+  return `สถานะ: หายไปในวันที่ ${formatThaiDate(item.display_end_date)} (${remainingDays} วัน)`;
+};
+
+// ฟังก์ชันอัปเดตสถานะของข่าว
+const updateNewsStatus = async (id, is_published) => {
+  try {
+    await updateNews(id, { is_published }); // ส่งคำขอ API เพื่ออัปเดตสถานะ
+  } catch (error) {
+    console.error('Error updating news status:', error);
+  }
 };
 
 const DefineNewsComponents = () => {
@@ -49,22 +81,25 @@ const DefineNewsComponents = () => {
       try {
         const response = await getAllNews(0, 100, '', null);
         if (response && response.length > 0) {
-          const updatedNewsList = response.map(item => {
+          const updatedNewsList = response.map(async (item) => {
             const remainingDays = calculateRemainingDays(item.display_start_date, item.display_end_date);
-            // ถ้าหมดเวลาหรือวันที่สิ้นสุดแล้ว, ตั้งค่า isPublished = false
-            if (remainingDays <= 0) {
-              item.isPublished = false;
+            // ถ้าหมดเวลาหรือวันที่สิ้นสุดแล้ว, ตั้งค่า is_published = false และอัปเดตใน API
+            if (remainingDays <= 0 && item.is_published !== false) {
+              await updateNewsStatus(item.id, false);  // อัปเดตใน API
+              item.is_published = false;
             }
             return item;
           });
-          setNewsList(updatedNewsList);
+          // รอจนกว่าการอัปเดตทั้งหมดจะเสร็จ
+          const updatedNews = await Promise.all(updatedNewsList);
+          setNewsList(updatedNews);
         } else {
           console.warn('No news found or invalid response');
         }
         setLoading(false);
       } catch (error) {
         console.error('Error fetching news:', error);
-        setLoading(false); 
+        setLoading(false);
       }
     };
 
@@ -260,7 +295,7 @@ const DefineNewsComponents = () => {
                       color: '#89939E', mt: { xs: 1, sm: 0 }, fontSize: 12,
                       whiteSpace: { xs: 'normal', sm: 'nowrap' }, overflow: 'hidden', textOverflow: 'ellipsis'
                     }}>
-                      {item.display_end_date ? `สถานะ: หายไปในวันที่ ${formatThaiDate(item.display_end_date)}  (${calculateRemainingDays(item.display_start_date, item.display_end_date)} วัน)` : ''}
+                      {getStatusMessage(item)}
                     </Typography>
 
                   </Box>
@@ -291,7 +326,8 @@ const DefineNewsComponents = () => {
                         '&:hover': { backgroundColor: '#FDE68A' },
                       }}
                     >
-                      <Image src="/icons/DeleteYellow.png" alt="" width={30} height={30} />
+                      <Image src="/icons/DeleteYellow.png" alt="Delete Icon" width={30} height={30} style={{ width: 'auto', height: 'auto' }} />
+
                     </button>
                   </Tooltip>
                 </Stack>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Box, Typography, Grid, Button, CardMedia, Stack, Tooltip } from "@mui/material";
 import { getDisplayableNews } from "@pages/api/news/news"; // Fetch news data from API
@@ -8,16 +8,17 @@ const Homepage5 = () => {
   const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch displayable news when the component mounts
+  // URL สำหรับรูปสำรอง
+  const fallbackImage =
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpe8Naj6LbXz7o_Gn6S9GszsfiRNZ5t3xJxA&s";
+
   useEffect(() => {
     const fetchDisplayableNews = async () => {
       try {
-        const newsData = await getDisplayableNews(0, 10, ""); // Fetch displayable news
-
-        // Filter the news by 'is_published' and sort the news items by 'created_at' from latest to oldest
+        const newsData = await getDisplayableNews(0, 10, "");
         const filteredNewsData = newsData
-          .filter((news) => news.is_published) // Filter only the news that is published
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sort by created_at
+          .filter((news) => news.is_published)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); 
 
         setNewsList(filteredNewsData);
         setLoading(false);
@@ -28,10 +29,9 @@ const Homepage5 = () => {
     };
 
     fetchDisplayableNews();
-  }, []); // Runs only once when the component is mounted
+  }, []);
 
   const handleImageClick = (id) => {
-    // Redirect to the news detail page when a news item is clicked
     router.push(`/news?id=${id}`);
   };
 
@@ -45,7 +45,6 @@ const Homepage5 = () => {
 
   return (
     <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-      {/* Title of the page */}
       <h2 style={{ marginBottom: "20px", fontSize: "24px", fontWeight: "bold" }}>
         ข่าวสารและประชาสัมพันธ์
       </h2>
@@ -56,22 +55,36 @@ const Homepage5 = () => {
           position: "relative",
           marginBottom: "20px",
           overflow: "hidden",
+          width: "100%",
+            height: "400px",
           borderRadius: "8px",
         }}
-        onClick={() => handleImageClick(newsList[0]?.id)} // คลิกไปที่ข่าวแรก
+        onClick={() => handleImageClick(newsList[0]?.id)}
       >
         <img
-          src={newsList[0]?.cover_image_url || "https://picsum.photos/1200/400?random=1"} // ใช้ภาพจาก API หรือภาพตัวอย่าง
-          alt="ข่าวสารและประชาสัมพันธ์"
+          src={newsList[0]?.cover_image_url || fallbackImage}
+          alt={newsList[0]?.title}
           style={{
-            width: "100%",
-            height: "auto",
-            display: "block",
-            objectFit: "cover",
+            width: '100%',
+            height: '100%', 
+            display: 'block',
+            objectFit: 'cover',
+            maxWidth: '100%', 
           }}
+          onError={(e) => (e.target.src = fallbackImage)}
         />
+        <div
+            style={{
+              position: "absolute",
+              bottom: "0",
+              left: "0",
+              width: "100%",
+              height: "100px", // ความสูงของเอฟเฟ็กต์
+              background: "linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.5) 70%)", // เอฟเฟ็กต์สีดำที่ค่อยๆ จางลง
 
-        {/* กล่องข้อความซ้อนบนภาพ */}
+            }}
+          />
+
         <div
           style={{
             position: "absolute",
@@ -83,12 +96,9 @@ const Homepage5 = () => {
             borderRadius: "8px",
           }}
         >
-          <h3 style={{ margin: 0, fontSize: "20px", fontWeight: "bold" }}>
-            {newsList[0]?.title || "มอบสัญญาเช่าที่ราชพัสดุ"}
+          <h3 style={{ margin: 0, fontSize: "20px", fontWeight: "bold"}}>
+            {newsList[0]?.title}
           </h3>
-          <p style={{ margin: "5px 0 0", fontSize: "14px" }}>
-            {newsList[0]?.content || "ธนารักษ์อัจฉริยะ “สัญญาเช่าที่ราชพัสดุ พลิกชีวิตประชาชน”"}
-          </p>
         </div>
       </div>
 
@@ -98,71 +108,73 @@ const Homepage5 = () => {
           display: "flex",
           gap: "10px",
           marginTop: "20px",
-          overflowX: "auto", // ให้สามารถเลื่อนแนวนอนได้
-          whiteSpace: "nowrap", // ป้องกันการหักบรรทัด
+          overflowX: "auto",
+          whiteSpace: "nowrap",
         }}
       >
-        {newsList.slice(1, 5).map((item, index) => (
+        {newsList.slice(1).map((item, index) => (
           <div
-            key={index}
+          key={index}
+          style={{
+            flex: "0 0 auto",
+            width: "calc(30% - 60px)",
+            height: "200px",
+            position: "relative",
+            overflow: "hidden",
+            borderRadius: "8px",
+          }}
+          onClick={() => handleImageClick(item.id)}
+        >
+          <img
+            src={item.cover_image_url || fallbackImage}
+            alt={item.title}
             style={{
-              flex: "0 0 auto", // กำหนดให้แต่ละรูปมีขนาดคงที่
-              width: "calc(25% - 10px)", // ให้แต่ละรูปมีความกว้าง 1/4
-              position: "relative",
-              overflow: "hidden",
-              borderRadius: "8px",
+              width: "100%",
+              height: "100%",
+              display: "block",
+              objectFit: "cover",
+              transition: "all 0.3s ease", // เพิ่มการเคลื่อนไหวให้เรียบเนียน
             }}
-            onClick={() => handleImageClick(item.id)} // คลิกไปที่ข่าวที่เลือก
-          >
-            <img
-              src={item.cover_image_url || "https://picsum.photos/1200/400?random=" + (index + 2)}
-              alt={`ข่าวประชาสัมพันธ์ ${index + 1}`}
-              style={{
-                width: "100%",
-                height: "auto", // ปรับให้สูงเท่ากับภาพแบนเนอร์
-                display: "block",
-                objectFit: "cover", // ให้รูปครอบคลุมพื้นที่ที่กำหนด
-              }}
-            />
+            onError={(e) => (e.target.src = fallbackImage)}
+          />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "0",
+              left: "0",
+              width: "100%",
+              height: "100px", // ความสูงของเอฟเฟ็กต์
+              background: "linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.5) 70%)", // เอฟเฟ็กต์สีดำที่ค่อยๆ จางลง
 
-            {/* กล่องข้อความซ้อนบนภาพ */}
-            <div
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "20px",
+              left: "10px",
+              width: "calc(100% - 40px)",
+              color: "#fff",
+              padding: "10px",
+              borderRadius: "8px",
+              boxSizing: "border-box",
+            }}
+          >
+            <h3
               style={{
-                position: "absolute",
-                bottom: "20px",
-                left: "10px",
-                width: "calc(100% - 40px)",
-                color: "#fff",
-                padding: "10px",
-                borderRadius: "8px",
-                boxSizing: "border-box", // ป้องกันข้อความออกนอกขอบ
+                margin: 0,
+                fontSize: "14px",
+                fontWeight: "bold",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  whiteSpace: "nowrap", // ทำให้ข้อความไม่ขยายไปเกิน
-                  overflow: "hidden",
-                  textOverflow: "ellipsis", // ถ้าข้อความยาวเกินจะตัด
-                }}
-              >
-                {item.title || "มอบสัญญาเช่าที่ราชพัสดุ"}
-              </h3>
-              <p
-                style={{
-                  margin: "5px 0 0",
-                  fontSize: "12px",
-                  whiteSpace: "nowrap", // ทำให้ข้อความไม่ขยายไปเกิน
-                  overflow: "hidden",
-                  textOverflow: "ellipsis", // ถ้าข้อความยาวเกินจะตัด
-                }}
-              >
-                {item.content || "ธนารักษ์อัจฉริยะ “สัญญาเช่าที่ราชพัสดุ พลิกชีวิตประชาชน”"}
-              </p>
-            </div>
+              {item.title}
+            </h3>
           </div>
+        </div>
+
         ))}
       </div>
     </div>
