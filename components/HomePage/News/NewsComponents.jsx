@@ -44,14 +44,14 @@ const formatThaiDate = (dateStr) => {
 const getStatusMessage = (item) => {
   const currentDate = new Date();
   const endDate = new Date(item.display_end_date);
+  const remainingDays = calculateRemainingDays(item.display_start_date, item.display_end_date);
 
   // ถ้าไม่มีวันสิ้นสุด (display_end_date ไม่มีหรือค่าว่าง)
-  if (!item.display_end_date) {
+  if (remainingDays >= 1000) {
     return "สถานะ: ไม่จำกัดเวลา";
   }
 
-  const remainingDays = calculateRemainingDays(item.display_start_date, item.display_end_date);
-
+  
   // ถ้าหมดเวลาแล้ว (remainingDays <= 0)
   if (remainingDays <= 0) {
     return "สถานะ: สิ้นสุดเวลาการแสดงผล";
@@ -178,6 +178,9 @@ const DefineNewsComponents = () => {
     return <div>Loading...</div>;
   }
 
+  const fallbackImage =
+  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpe8Naj6LbXz7o_Gn6S9GszsfiRNZ5t3xJxA&s";
+
   return (
     <Box sx={{ background: '#EAF3FF', minHeight: '100vh', py: 3 }}>
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{
@@ -222,7 +225,7 @@ const DefineNewsComponents = () => {
               }}>
                 <CardMedia
                   component="img"
-                  image={item.cover_image_url || "/images/default-image.jpg"}  // ถ้าไม่มีรูปภาพจะใช้ default
+                  image={item.cover_image_url || fallbackImage}  // ใช้ fallbackImage ถ้าไม่มี cover_image_url
                   alt="news"
                   sx={{
                     width: { xs: '100%', sm: 100 },
@@ -231,8 +234,9 @@ const DefineNewsComponents = () => {
                     borderRadius: 2,
                     objectFit: 'cover',
                     mb: { xs: 1, sm: 0 }
-                  }} />
-
+                  }}
+                  onError={(e) => e.target.src = fallbackImage}  // ถ้ามีข้อผิดพลาดในการโหลดรูปให้ใช้ fallbackImage
+                />
                 <Box sx={{
                   flex: 1,
                   ml: { sm: 2, xs: 0 },
