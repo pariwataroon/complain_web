@@ -19,6 +19,14 @@ const baseConfig = {
     unoptimized: true,
     loader: "custom",
     loaderFile: "./imageLoader.js",
+
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "complain.mof.go.th",
+        pathname: "/api/uploads/**",
+      },
+    ],
   },
 
   reactStrictMode: isDev,
@@ -52,6 +60,18 @@ const baseConfig = {
   },
   typescript: {
     ignoreBuildErrors: true,
+  },
+
+  async rewrites() {
+    return isDev
+      ? [
+          {
+            source: "/api/upload",
+            destination:
+              "https://complain.mof.go.th/api/v1/complaints/upload-attachment",
+          },
+        ]
+      : [];
   },
 };
 

@@ -53,7 +53,7 @@ export default function NewsDetails() {
       const fetchNews = async () => {
         try {
           const newsData = await getNewsById(id);
-          console.log("Fetched News:", newsData);
+          // console.log("Fetched News:", newsData);
           if (newsData) {
             setTitle(newsData.title || "");
             setContent(newsData.content || "");
@@ -129,16 +129,22 @@ export default function NewsDetails() {
     }
   }, [isReady, method, id]);
 
-  // ฟังก์ชันจัดการการอัพเดทรูปภาพจาก ImageUpload
+  const fullImageUrl = (url) => {
+    if (!url) return "";
+    if (url.startsWith("http")) return url;
+    return `https://complain.mof.go.th/api${url}`;
+  };
+
   const handleImagesUpdate = (newImages) => {
-    console.log("Images from ImageUpload:", newImages);
-    setImages(newImages);
-    setGalleryImages(newImages);
-    if (newImages && newImages.length > 0) {
-      setCoverImageUrl(newImages[0]);
-    } else {
-      setCoverImageUrl("");
-    }
+    const imageArray = Array.isArray(newImages) ? newImages : [];
+
+    const updatedImages = imageArray.map(fullImageUrl);
+
+    // console.log("🟢 Final image array:", updatedImages);
+
+    setImages(updatedImages);
+    setGalleryImages(updatedImages);
+    setCoverImageUrl(updatedImages[0] || "");
     setIsDirty(true);
   };
 
@@ -176,33 +182,33 @@ export default function NewsDetails() {
   };
 
   const handleSubmit = async () => {
-    console.log("Before submit - Images:", images);
-    console.log("Before submit - Gallery Images:", galleryImages);
-    console.log("Before submit - Cover Image URL:", coverImageUrl);
-    console.log("Before submit - Additional Links:", additionalLinks);
-
     // เช็คว่าถ้าไม่ใช่ showAlways แต่ไม่ได้เลือกวันที่
     if (!showAlways && (!expireDate || !expireDate.isValid())) {
       alert("กรุณาเลือกวันที่สิ้นสุดการแสดงผล");
       return;
     }
 
-    const cleanedGalleryImages = galleryImages.map(img => 
-      img.startsWith('blob:') ? img.replace('blob:', '') : img
-    );
-    const cleanedCoverImageUrl = coverImageUrl.startsWith('blob:') 
-      ? coverImageUrl.replace('blob:', '') 
-      : coverImageUrl;
+    const cleanedGalleryImages = (galleryImages || [])
+      .filter((img) => typeof img === "string")
+      .map((img) =>
+        img.startsWith("blob:") ? img.replace("blob:", "") : img
+      );
 
-    // กำหนดวันที่แสดงผลตาม showAlways
+    const cleanedCoverImageUrl =
+      typeof coverImageUrl === "string" && coverImageUrl.trim() !== ""
+        ? coverImageUrl.startsWith("blob:")
+          ? coverImageUrl.replace("blob:", "")
+          : coverImageUrl
+        : (galleryImages.length > 0 ? galleryImages[0] : "");
+
+    // 🎯 WORKAROUND: สำหรับ "แสดงผลตลอด" ให้กำหนดวันที่ไกลมากๆ แทน null
     let finalDisplayStartDate, finalDisplayEndDate;
     
     if (showAlways) {
-      // แสดงผลตลอด - ไม่ส่งวันที่
-      finalDisplayStartDate = null;
-      finalDisplayEndDate = null;
+      finalDisplayStartDate = displayStartDate.toISOString();
+      // 🔥 แทนที่จะส่ง null ให้ส่งวันที่ไกลมากๆ เช่น 100 ปีข้างหน้า
+      finalDisplayEndDate = dayjs().add(100, 'year').toISOString();
     } else {
-      // ใช้ระยะเวลาที่กำหนด
       finalDisplayStartDate = displayStartDate.toISOString();
       finalDisplayEndDate = displayEndDate ? displayEndDate.toISOString() : null;
     }
@@ -222,36 +228,57 @@ export default function NewsDetails() {
       gallery_images: cleanedGalleryImages,
       additional_links: additionalLinks,
       show_views: showViews,
-      show_always: showAlways,
-      ...(showAlways ? {} : {
-        display_start_date: finalDisplayStartDate,
-        display_end_date: finalDisplayEndDate,
-      }),
+      is_published: true, // Force เป็น true
+      display_start_date: finalDisplayStartDate,
+      display_end_date: finalDisplayEndDate, // จะไม่เป็น null สำหรับ showAlways
       date: dayjs().format("D MMM YYYY"),
       update: dayjs().format("D MMM YYYY"),
       status: status,
-      views: 0,
+      views: method === "EditNew" ? undefined : 0,
       pinTop: false,
+      show_always: showAlways, // ส่งไปให้ Backend รู้ว่าเป็น showAlways
     };
 
-    console.log("Data to send:", newData);
+    console.log("📤 Data to send:", newData);
+    console.log("🔍 is_published value:", newData.is_published);
+    console.log("🔍 showAlways:", showAlways);
+    console.log("🔍 finalDisplayEndDate:", finalDisplayEndDate);
 
     try {
-      if (id) {
-        await updateNews(id, newData);
+      let result;
+      if (id && method === "EditNew") {
+        result = await updateNews(id, newData);
+        console.log("✅ Update result:", result);
       } else {
         const createData = {
           ...newData,
-          display_start_date: showAlways 
-            ? dayjs().toISOString() 
-            : dayjs().toISOString(),
+          views: 0,
         };
-        const createdNews = await createNews(createData);
+        
+        console.log("📤 Final createData:", createData);
+        result = await createNews(createData);
+        console.log("✅ Created news:", result);
+      }
+
+      // 🛡️ BACKUP PLAN: หาก Backend ยัง set is_published = false อยู่
+      // ให้ทำการ update อีกครั้งหลังจาก save แล้ว
+      if (result && result.id && !result.is_published && showAlways) {
+        console.log("🔄 Backup fix: Force updating is_published to true");
+        try {
+          await updateNews(result.id, { 
+            is_published: true,
+            display_end_date: dayjs().add(100, 'year').toISOString() // ยืนยันวันที่ไกลอีกครั้ง
+          });
+          console.log("✅ Backup fix successful");
+        } catch (backupError) {
+          console.warn("⚠️ Backup fix failed:", backupError);
+        }
       }
 
       router.push("/admin/homepage/news");
     } catch (error) {
-      console.error("Error submitting the data", error.message);
+      console.error("❌ Error submitting the data", error.message);
+      console.error("❌ Full error:", error);
     }
   };
 

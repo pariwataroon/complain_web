@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  Box,
-  Button,
-  Grid,
-  IconButton,
-  useMediaQuery,
-  useTheme,
-} from '@mui/material';
+import { Box, Button, Grid, IconButton, useMediaQuery, useTheme } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 
@@ -14,10 +7,47 @@ const ImageUpload = ({ images, setImages }) => {
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const handleImageChange = (e) => {
+  const getTokenFromCookie = () => {
+    const match = document.cookie.match(/(^| )access_token=([^;]+)/);
+    return match ? match[2] : null;
+  };
+
+  const handleImageChange = async (e) => {
     const files = Array.from(e.target.files);
-    const newImages = files.map((file) => URL.createObjectURL(file));
-    setImages([...images, ...newImages]);
+    const token = getTokenFromCookie();
+
+    const uploaded = [];
+
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) throw new Error("Upload failed");
+
+        const result = await response.json();
+        const fileUrl = `https://complain.mof.go.th/api${result.res_data.fileUrl}`;
+
+        uploaded.push(fileUrl);
+      } catch (err) {
+        console.error("Upload error:", err);
+        alert("อัปโหลดรูปไม่สำเร็จ กรุณาลองใหม่");
+      }
+    }
+
+    if (uploaded.length > 0) {
+      const newImageList = [...images, ...uploaded];
+      // console.log("✅ Uploaded images:", newImageList);
+      setImages(newImageList); // ✅ สำคัญ! ต้องเป็น array
+    }
   };
 
   const removeImage = (index) => {
@@ -53,6 +83,7 @@ const ImageUpload = ({ images, setImages }) => {
           onChange={handleImageChange}
         />
       </Button>
+
       <Grid container spacing={2} sx={{ mt: 1 }}>
         {images.map((img, index) => (
           <Grid item xs={6} sm="auto" key={index}>
