@@ -168,7 +168,7 @@ const ComplaintArchives = () => {
 
   // ปรับปรุงฟังก์ชัน handleSearch ให้ทำงานได้ดีขึ้น
   const handleSearch = (filters) => {
-    console.log("Search filters:", filters);
+    // console.log("Search filters:", filters);
 
     const result = allComplaints.filter((item) => {
       let matchesFilter = true;
@@ -218,7 +218,7 @@ const ComplaintArchives = () => {
       return matchesFilter;
     });
 
-    console.log("Filtered results:", result);
+    // console.log("Filtered results:", result);
     setFilteredComplaints(result);
   };
 
@@ -245,8 +245,8 @@ const ComplaintArchives = () => {
         setAllComplaints(transformedData);
         setFilteredComplaints(transformedData);
 
-        console.log("Document Storage Data:", res.res_data.items);
-        console.log("Transformed Data:", transformedData);
+        // console.log("Document Storage Data:", res.res_data.items);
+        // console.log("Transformed Data:", transformedData);
       } catch (err) {
         console.error("Error fetching document storage:", err);
       } finally {

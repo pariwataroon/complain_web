@@ -460,7 +460,7 @@ const FollowComp = () => {
                             size="small"
                             onClick={() => {
                               if (row.id) {
-                                console.log("Going to edit with id:", row.id);
+                                // console.log("Going to edit with id:", row.id);
                                 handleManage(section.key, row.id, router);
                               } else {
                                 console.error("Error: ID is missing for this row.");
@@ -555,7 +555,7 @@ const FollowComp = () => {
                         size="small"
                         onClick={() => {
                           if (row.id) {
-                            console.log("Going to edit with id:", row.id);
+                            // console.log("Going to edit with id:", row.id);
                             handleManage(finalPhase.key, row.id, router);
                           } else {
                             console.error("Error: ID is missing for this row.");
