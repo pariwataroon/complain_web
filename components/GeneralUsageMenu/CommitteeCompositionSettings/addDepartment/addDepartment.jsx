@@ -358,7 +358,7 @@ const DepartmentManagement = () => {
     const { name, value } = event.target;
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
-      console.log("SelectField change →", updated);
+      // console.log("SelectField change →", updated);
       return updated;
     });
   };

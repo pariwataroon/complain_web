@@ -114,7 +114,7 @@ const CommitteeCompositionSettings = () => {
   // ← แก้ไข: ปรับปรุง handleInputChange ให้จัดการแต่ละ field แยกกัน
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    console.log("📝 Input changed:", { name, value }); // debug log
+    // console.log("📝 Input changed:", { name, value }); // debug log
 
     setFormData((prevState) => ({
       ...prevState,
@@ -411,7 +411,7 @@ const CommitteeCompositionSettings = () => {
   );
 
   // ← เพิ่ม debug function เพื่อดู current state
-  console.log("🔍 Current formData:", formData);
+  // console.log("🔍 Current formData:", formData);
 
   return (
     <Box>
@@ -437,7 +437,7 @@ const CommitteeCompositionSettings = () => {
           variant="outlined"
           iconLeft={<AddIcon />}
           onClick={() => {
-            console.log("💾 Saving data:", formData);
+            // console.log("💾 Saving data:", formData);
             router.push("/admin/settinggeneral/department/add");
           }}
           sx={{

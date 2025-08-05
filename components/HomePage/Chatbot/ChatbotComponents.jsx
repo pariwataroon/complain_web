@@ -52,7 +52,7 @@ const ChatbotComponents = () => {
       setLoading(true);
       const response = await getChatBot();
 
-      console.log('API Response:', response);
+      // console.log('API Response:', response);
 
       if (Array.isArray(response)) {
         const formattedFaqs = response.map(faq => ({

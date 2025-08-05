@@ -19,8 +19,8 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
-import DeleteIcon from "@mui/icons-material/Delete"; // Icon for trash can
-import { keyframes } from "@mui/system"; // For creating animations
+import DeleteIcon from "@mui/icons-material/Delete";
+import { keyframes } from "@mui/system";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import ButtonService from "@services/ButtonService/ButtonService";
 import TextfieldService from "@services/TextfieldService/TextfieldService";
@@ -94,18 +94,13 @@ const breadcrumbItems = [
   },
 ];
 const SetRole = () => {
-  // Modal state
   const [openModal, setOpenModal] = useState(false);
-  const [newGroupName, setNewGroupName] = useState(""); // สำหรับชื่อกลุ่ม
-  const [newGroupDescription, setNewGroupDescription] = useState(""); // สำหรับคำอธิบายกลุ่ม
-
-  const [openDeleteModal, setOpenDeleteModal] = useState(false); // Added this state
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupDescription, setNewGroupDescription] = useState("");
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState(null);
-  // Handle modal open/close
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
-
-  // State for selected menu and submenu
 
   // ฟังก์ชันในการสลับสถานะการเปิด/ปิด
   const handleToggle = (id) => {
@@ -123,7 +118,7 @@ const SetRole = () => {
         description: newGroupDescription, // เพิ่มคำอธิบายกลุ่ม
       });
 
-      console.log("Role created successfully:", response.res_code);
+      // console.log("Role created successfully:", response.res_code);
 
       // ตรวจสอบว่า response มี res_code เป็น 5000 หรือไม่
       if (response.res_code && response.res_code === "5000") {
@@ -171,11 +166,11 @@ const SetRole = () => {
     try {
       const response = await deleteRole(groupToDelete);
 
-      console.log("Response from deleteRole:", response);
+      // console.log("Response from deleteRole:", response);
 
       setGroups(groups.filter((group) => group.id !== groupToDelete));
 
-      console.log("Updated groups list after deletion:", groups);
+      // console.log("Updated groups list after deletion:", groups);
 
       const { res_data } = await getMenuPermission();
       setMenuData(res_data);
@@ -183,7 +178,7 @@ const SetRole = () => {
 
       setOpenDeleteModal(false);
 
-      console.log("Delete modal closed.");
+      // console.log("Delete modal closed.");
 
       alertSuccess("ลบกลุ่มสิทธิ์สำเร็จ");
     } catch (error) {
@@ -385,9 +380,9 @@ const SetRole = () => {
             updatedGroup.permission_id === "" ||
             updatedGroup.permission_id == null
           ) {
-            console.log(
-              "permission_id is empty or null, will create new permission."
-            );
+            // console.log(
+            //   "permission_id is empty or null, will create new permission."
+            // );
 
             // ถ้าไม่มี permission_id ให้เพิ่ม group.id ลงใน pendingCreates แต่ไม่ซ้ำ
             setPendingCreates((prevCreates) => {
@@ -402,7 +397,7 @@ const SetRole = () => {
               prevDeletes.filter((id) => id !== group.id)
             );
           } else {
-            console.log("permission_id exists, will delete permission.");
+            // console.log("permission_id exists, will delete permission.");
 
             // ถ้ามี permission_id ให้เพิ่ม group.id ลงใน pendingDeletes แต่ไม่ซ้ำ
             setPendingDeletes((prevDeletes) => {
@@ -437,14 +432,14 @@ const SetRole = () => {
 
       // ลบสิทธิ์ทั้งหมดใน pendingDeletes
       if (pendingDeletes.length) {
-        console.log("Deleting permissions:", pendingDeletes);
+        // console.log("Deleting permissions:", pendingDeletes);
         await Promise.all(
           pendingDeletes.map(async (id) => {
             const group = groups.find((group) => group.id === id);
             if (group && group.permission_id) {
-              console.log(
-                `Calling deletePermission for ID: ${group.permission_id}`
-              );
+              // console.log(
+              //   `Calling deletePermission for ID: ${group.permission_id}`
+              // );
               await deletePermission(group.permission_id); // เรียกใช้ deletePermission API
             }
           })
@@ -453,14 +448,14 @@ const SetRole = () => {
 
       // สร้างสิทธิ์ทั้งหมดใน pendingCreates
       if (pendingCreates.length) {
-        console.log("Creating permissions:", pendingCreates);
+        // console.log("Creating permissions:", pendingCreates);
         await Promise.all(
           pendingCreates.map(async (id) => {
             const group = groups.find((group) => group.id === id);
             if (group && group.role_id && group.selected) {
-              console.log(
-                `Calling createPermission for role_id: ${group.role_id}, resource_id: ${resourceId}`
-              );
+              // console.log(
+              //   `Calling createPermission for role_id: ${group.role_id}, resource_id: ${resourceId}`
+              // );
               await createPermission({
                 role_id: group.role_id,
                 resource_id: resourceId,
@@ -608,6 +603,26 @@ const SetRole = () => {
         open: false,
       };
     });
+
+    const handleReset = () => {
+      // รีเซ็ตค่าของชื่อกลุ่มและคำอธิบายกลุ่ม
+      setNewGroupName("");
+      setNewGroupDescription("");
+
+      // ปิด Modal หากเปิดอยู่
+      handleCloseModal();
+
+      // ถ้าต้องการรีเซ็ตค่าหรือสถานะอื่น ๆ ที่เกี่ยวข้อง เช่น กลุ่มที่เลือกหรือผู้ใช้ที่เลือก
+      setSelectedMenu({
+        mainMenu: "",
+        resourceId: "",
+        subMenuName: "",
+      });
+
+      // ถ้าต้องการรีเซ็ตสถานะของ pendingDeletes และ pendingCreates
+      setPendingDeletes([]);
+      setPendingCreates([]);
+    };
 
   return (
     <Box>
@@ -1184,14 +1199,14 @@ const SetRole = () => {
               <ButtonService
                 label="ล้าง"
                 variant="outlined"
-                onClick={[]} // ใส่ฟังก์ชันที่ต้องการจะทำเมื่อคลิก
+                onClick={handleReset}
                 iconLeft={<CloseIcon />}
                 sx={{
                   backgroundColor: "#E3F2FD",
                   color: "#304FFE",
                   borderRadius: "15px",
                   boxShadow: "none",
-                  width: { xs: "100%", sm: "23%" }, 
+                  width: { xs: "100%", sm: "23%" },
                   height: "55px",
                   fontSize: "24px",
                   border: "2px solid #50ADFF",
@@ -1201,7 +1216,6 @@ const SetRole = () => {
                   },
                 }}
               />
-
               <ButtonService
                 label="บันทึก"
                 variant="contained"

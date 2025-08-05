@@ -266,10 +266,10 @@ const TopLeftService = () => {
     });
     return keys;
   }, []);
-    console.log(localizedMapDataThailand.features.map(f => ({
-    key: f.properties["hc-key"],
-    name: f.properties.name
-  })));
+  //   console.log(localizedMapDataThailand.features.map(f => ({
+  //   key: f.properties["hc-key"],
+  //   name: f.properties.name
+  // })));
 
   const provinceOptions = useMemo(() => {
     return [

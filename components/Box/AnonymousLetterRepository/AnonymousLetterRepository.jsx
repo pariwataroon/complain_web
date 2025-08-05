@@ -167,7 +167,7 @@ const AnonymousLetterRepository = () => {
 
   // 3) ฟังก์ชันค้นหา
   const handleSearch = (filters) => {
-  console.log("Search filters:", filters);
+  // console.log("Search filters:", filters);
 
   const result = allComplaints.filter((item) => {
     let matchesFilter = true;
@@ -226,7 +226,7 @@ const AnonymousLetterRepository = () => {
     return matchesFilter;  // ถ้าตรงทุกเงื่อนไข matchesFilter จะเป็น true
   });
 
-  console.log("Filtered results:", result);
+  // console.log("Filtered results:", result);
   setFilteredComplaints(result);
 };
 
@@ -254,8 +254,8 @@ const AnonymousLetterRepository = () => {
           setAllComplaints(transformedData);
           setFilteredComplaints(transformedData);
   
-          console.log("Document Storage Data:", res.res_data.items);
-          console.log("Transformed Data:", transformedData);
+          // console.log("Document Storage Data:", res.res_data.items);
+          // console.log("Transformed Data:", transformedData);
         } catch (err) {
           console.error("Error fetching document storage:", err);
         } finally {

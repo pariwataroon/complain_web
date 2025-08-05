@@ -62,7 +62,7 @@ const handleOpenDocument = (documentName) => {
 
 // ฟังก์ชันดักสถานะจาก query parameters
 const getStatusFromQuery = (query) => {
-  console.log("🔍 Full query object:", query); // Debug log
+  // console.log("🔍 Full query object:", query); // Debug log
 
   // ตรวจสอบ query parameters ทั้งหมดเพื่อหาสถานะ
   const statusKeys = [
@@ -79,27 +79,27 @@ const getStatusFromQuery = (query) => {
 
   for (const status of statusKeys) {
     if (query.hasOwnProperty(status)) {
-      console.log(`✅ Found status in query: ${status}`); // Debug log
+      // console.log(`✅ Found status in query: ${status}`); // Debug log
       return status;
     }
   }
 
   // ถ้าไม่เจอสถานะใน query parameters ให้ใช้ค่าเริ่มต้น
-  console.log("❌ No status found in query, using default: received"); // Debug log
+  // console.log("❌ No status found in query, using default: received"); // Debug log
   return "received";
 };
 
 const getIconForStatus = (englishStatus) => {
-  console.log("🎯 Getting icon for status:", englishStatus); // Debug log
+  // console.log("🎯 Getting icon for status:", englishStatus); // Debug log
 
   // เฉพาะสถานะที่ยังรอการดำเนินการเท่านั้นที่ใช้ folder icon
   const pendingStatuses = ["pending", "waiting"];
 
   if (pendingStatuses.includes(englishStatus)) {
-    console.log("📁 Using Folder icon for:", englishStatus); // Debug log
+    // console.log("📁 Using Folder icon for:", englishStatus); // Debug log
     return <FolderIcon sx={{ color: "#1223A5", fontSize: 24 }} />; // ✅ pending, waiting ใช้ Folder icon สี #1223A5
   } else {
-    console.log("✏️ Using Edit icon for:", englishStatus); // Debug log
+    // console.log("✏️ Using Edit icon for:", englishStatus); // Debug log
     // สถานะอื่น ๆ รวมทั้ง "stop" ใช้ Edit icon สี #1223A5
     return (
       <img
@@ -285,14 +285,14 @@ const sections = [
 
 const FollowComp = () => {
   const router = useRouter();
-  console.log("🌐 Router query:", router.query); // Debug log
+  // console.log("🌐 Router query:", router.query); // Debug log
 
   // ดักสถานะจาก query parameters
   const englishStatus = getStatusFromQuery(router.query);
   const id = router.query.id || "unknown";
 
-  console.log("🆔 ID:", id);
-  console.log("📊 Detected Status:", englishStatus);
+  // console.log("🆔 ID:", id);
+  // console.log("📊 Detected Status:", englishStatus);
 
   // Mock header info - ใช้สถานะที่ดักได้จาก query และแปลงเป็นไทย
   const mockHeader = {
@@ -302,7 +302,7 @@ const FollowComp = () => {
     englishStatus: englishStatus, // เก็บสถานะอังกฤษไว้ใช้กับ icon
   };
 
-  console.log("📋 Mock Header:", mockHeader); // Debug log
+  // console.log("📋 Mock Header:", mockHeader); // Debug log
 
   const firstPhases = sections.filter((s) => s.status < STATUS.FINAL_NOTIFY);
   const finalPhase = sections.find((s) => s.status === STATUS.FINAL_NOTIFY);

@@ -28,10 +28,10 @@ const DashboardComponents_Main = () => {
 
   // Log state update
   useEffect(() => {
-    console.log("state startDate (updated):", startDate);
+    // console.log("state startDate (updated):", startDate);
   }, [startDate]);
   useEffect(() => {
-    console.log("state endDate (updated):", endDate);
+    // console.log("state endDate (updated):", endDate);
   }, [endDate]);
 
   // Helper function สำหรับ format วันที่แบบไทย (year + 543)
