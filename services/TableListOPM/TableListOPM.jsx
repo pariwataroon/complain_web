@@ -44,7 +44,7 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonSent from "@services/ButtonSent/ButtonSent";
-import { GetOperatings } from "@pages/api/opm/opm";
+import { GetOperatingsSelect } from "@pages/api/opm/opm";
 
 const statusReadOptions = [
   { value: '', label: "ทั้งหมด" },
@@ -192,7 +192,7 @@ const TableListOPM = ({
         // ตรวจสอบ PM Office submissions สำหรับแต่ละเคส
         const promises = data.map(async (item) => {
           try {
-            const operatingsDetails = await GetOperatings(item.case_id);
+            const operatingsDetails = await GetOperatingsSelect(item.case_id);
             const pmOfficeStatus = checkPMOfficeSubmission(operatingsDetails);
             pmOfficeMap.set(item.case_id, pmOfficeStatus);
 

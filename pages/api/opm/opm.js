@@ -99,7 +99,7 @@ const GetTimelineHeader = async (take = 1) => {
                 <GetTimelineHeader xmlns="http://tempuri.org/">
                 <token_id>${token_id}</token_id>
                 <last_get_date_time></last_get_date_time>
-                <timeline_type>A</timeline_type>
+                <timeline_type>I</timeline_type>
                 <skip>0</skip>
                 <take>${take}</take>
                 </GetTimelineHeader>
@@ -173,6 +173,44 @@ const GetCase = async (case_id) => {
   }
 };
 
+const GetOperatingsSelect = async (case_id, take = 1000) => {
+  try {
+    const token_id = Cookies.get("opm_token");
+    if (!token_id)
+      throw new Error("Token not found in cookies. Please authenticate first.");
+    const org_id = Cookies.get("org_id");
+    if (!org_id)
+      throw new Error("Token not found in cookies. Please authenticate first.");
+
+    const response = await soapInstance.post(
+      process.env.NEXT_PUBLIC_OPM_API_OFFICER,
+      `<?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+            <GetOperatings xmlns="http://tempuri.org/">
+              <token_id>${token_id}</token_id>
+              <case_id>${case_id}</case_id>
+              <select_org_id>301</select_org_id>
+              <skip>0</skip>
+              <take>${take}</take>
+            </GetOperatings>
+          </soap:Body>
+        </soap:Envelope>`,
+      { soapActionSuffix: "GetOperatings" }
+    );
+
+    const match = response.data.match(
+      /<GetOperatingsResult>(.*?)<\/GetOperatingsResult>/
+    );
+    if (!match || !match[1]) return [];
+
+    const arr = JSON.parse(match[1]);
+    return Array.isArray(arr) ? arr : [arr];
+  } catch (error) {
+    console.error("Error fetching operating details:", error);
+    throw error;
+  }
+};
 const GetOperatings = async (case_id, take = 1000) => {
   try {
     const token_id = Cookies.get("opm_token");
@@ -866,4 +904,5 @@ export {
   GetCaseType,
   GetAttachment,
   OperatingAttachment,
+  GetOperatingsSelect,
 };
