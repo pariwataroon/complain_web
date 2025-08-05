@@ -3160,8 +3160,8 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             "created_at": complaint.created_at.isoformat(),
             "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
             
-            # ✅ เพิ่มไฟล์แนบใน assignment_form ด้วย
-            "attachments": parse_incident_data(complaint)["general"]["attachment"]
+            # # ✅ เพิ่มไฟล์แนบใน assignment_form ด้วย
+            # "attachments": parse_incident_data(complaint)["general"]["attachment"]
         }
         
         result["assignment_form"] = assignment_form
