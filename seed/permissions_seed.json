@@ -118,7 +118,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin_home",
@@ -174,11 +174,11 @@
       "role_name": "admin",
       "user_citizen_id": null,
       "resource_name": "account_box",
-      "can_create": false,
+      "can_create": true,
       "can_read": true,
-      "can_update": false,
-      "can_delete": false,
-      "override_role": false
+      "can_update": true,
+      "can_delete": true,
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -188,27 +188,27 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
       "user_citizen_id": null,
       "resource_name": "dashboard",
-      "can_create": false,
+      "can_create": true,
       "can_read": true,
-      "can_update": false,
-      "can_delete": false,
-      "override_role": false
+      "can_update": true,
+      "can_delete": true,
+      "override_role": true
     },
     {
       "role_name": "admin",
       "user_citizen_id": null,
       "resource_name": "stacked_line_chart",
-      "can_create": false,
+      "can_create": true,
       "can_read": true,
-      "can_update": false,
-      "can_delete": false,
-      "override_role": false
+      "can_update": true,
+      "can_delete": true,
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -218,7 +218,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -228,7 +228,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -238,7 +238,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -248,7 +248,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -258,7 +258,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -268,7 +268,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -278,7 +278,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -288,7 +288,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -298,7 +298,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -308,7 +308,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -318,7 +318,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -328,7 +328,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -338,7 +338,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -348,7 +348,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -358,7 +358,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -368,7 +368,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -378,7 +378,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -388,7 +388,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
@@ -398,7 +398,7 @@
       "can_read": true,
       "can_update": true,
       "can_delete": true,
-      "override_role": false
+      "override_role": true
     },
     {
       "role_name": "admin",
