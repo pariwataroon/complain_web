@@ -84,7 +84,7 @@ const GetToken = async (password) => {
   }
 };
 
-const GetTimelineHeader = async (take = 1) => {
+const GetTimelineHeader = async (take = 1, timeline_type = "I") => {
   try {
     const token_id = Cookies.get("opm_token");
     if (!token_id) {
@@ -99,7 +99,7 @@ const GetTimelineHeader = async (take = 1) => {
                 <GetTimelineHeader xmlns="http://tempuri.org/">
                 <token_id>${token_id}</token_id>
                 <last_get_date_time></last_get_date_time>
-                <timeline_type>I</timeline_type>
+                <timeline_type>${timeline_type}</timeline_type>
                 <skip>0</skip>
                 <take>${take}</take>
                 </GetTimelineHeader>

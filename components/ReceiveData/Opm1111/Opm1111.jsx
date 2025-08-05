@@ -10,12 +10,11 @@ import { showLoading, closeAlert, alertError, alertSuccess } from "@utils/Alerts
 const Opm1111Components = () => {
   const [result, setResult] = useState("");
   const [filteredComplaints, setFilteredComplaints] = useState([]);
-  // console.log({ filteredComplaints });
-
   const [complaints, setComplaints] = useState([]);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [readComplaints, setReadComplaints] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [timelineType, setTimelineType] = useState("I"); // เพิ่ม state สำหรับ timeline type
   const router = useRouter();
 
   useEffect(() => {
@@ -33,7 +32,7 @@ const Opm1111Components = () => {
           showLoading("กำลังโหลดข้อมูล...");
 
           await new Promise(resolve => setTimeout(resolve, 500));
-          await fetchTimelineHeader(rowsPerPage);
+          await fetchTimelineHeader(rowsPerPage, timelineType);
 
           closeAlert();
           setIsDataLoaded(true);
@@ -58,9 +57,9 @@ const Opm1111Components = () => {
     initializeData();
   }, []);
 
-  const fetchTimelineHeader = async (take) => {
+  const fetchTimelineHeader = async (take, timeline_type = "I") => {
     try {
-      const timelineData = await GetTimelineHeader(take);
+      const timelineData = await GetTimelineHeader(take, timeline_type);
       const parsedData = Array.isArray(timelineData) ? timelineData : timelineData;
       const mappedComplaints = parsedData.map((item) => ({
         case_id: item.case_id,
@@ -113,7 +112,7 @@ const Opm1111Components = () => {
 
       const fetchData = async () => {
         try {
-          await fetchTimelineHeader(rowsPerPage);
+          await fetchTimelineHeader(rowsPerPage, timelineType);
         } finally {
           closeAlert();
         }
@@ -121,7 +120,7 @@ const Opm1111Components = () => {
 
       fetchData();
     }
-  }, [rowsPerPage, isDataLoaded, result]);
+  }, [rowsPerPage, timelineType, isDataLoaded, result]); // เพิ่ม timelineType เป็น dependency
 
   const handleSearch = (searchQuery) => {
     const filtered = complaints.filter((complaint) =>
@@ -138,7 +137,7 @@ const Opm1111Components = () => {
     setIsDataLoaded(false);
     showLoading("กำลังรีเฟรชข้อมูลและตรวจสอบสถานะ reopen...");
     try {
-      await fetchTimelineHeader(rowsPerPage);
+      await fetchTimelineHeader(rowsPerPage, timelineType);
       alertSuccess("รีเฟรชข้อมูลเรียบร้อย", "ข้อมูลได้รับการอัปเดตล่าสุดแล้ว รวมถึงการตรวจสอบสถานะ reopen");
     } catch (error) {
       alertError("เกิดข้อผิดพลาด", "ไม่สามารถรีเฟรชข้อมูลได้");
@@ -146,6 +145,11 @@ const Opm1111Components = () => {
       closeAlert();
       setIsDataLoaded(true);
     }
+  };
+
+  // ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลง timeline type
+  const handleTimelineTypeChange = (newTimelineType) => {
+    setTimelineType(newTimelineType);
   };
 
   if (!isDataLoaded) {
@@ -236,6 +240,8 @@ const Opm1111Components = () => {
         onSearch={handleSearch}
         handleNavigateTo={handleNavigateTo}
         onRowsPerPageChange={(newRowsPerPage) => setRowsPerPage(newRowsPerPage)}
+        onTimelineTypeChange={handleTimelineTypeChange} // เพิ่ม prop สำหรับ timeline type
+        currentTimelineType={timelineType} // ส่งค่า current timeline type
         showReopenIndicator={true}
       />
     </>

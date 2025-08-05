@@ -52,6 +52,13 @@ const statusReadOptions = [
   { value: 'unread', label: "ยังไม่รับเรื่อง" },
 ];
 
+// เพิ่ม options สำหรับ timeline type
+const timelineTypeOptions = [
+  { value: 'A', label: "ทั้งหมด" },
+  { value: 'I', label: "งานใหม่" },
+  { value: 'P', label: "งานกำลังดำเนินการ" },
+];
+
 const columns = [
   { name: "case_code", label: "รหัสเรื่อง", width: 100, priority: 3 },
   { name: "customer_name", label: "ชื่อผู้เดือดร้อน", width: 80, priority: 2 },
@@ -145,7 +152,9 @@ const TableListOPM = ({
   navigateTo = "",
   filterFields = [],
   onRowsPerPageChange = () => { },
-  showPMOfficeIndicator = true, // เปลี่ยนจาก showReopenIndicator
+  onTimelineTypeChange = () => { }, // เพิ่ม prop สำหรับ timeline type change
+  currentTimelineType = "I", // เพิ่ม prop สำหรับ current timeline type
+  showPMOfficeIndicator = true,
 }) => {
   const router = useRouter();
   const theme = useTheme();
@@ -173,11 +182,11 @@ const TableListOPM = ({
   const [loading, setLoading] = useState(true);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [pmOfficeStatusMap, setPMOfficeStatusMap] = useState(new Map()); // เปลี่ยนจาก reopenStatusMap
-  const [isCheckingPMOffice, setIsCheckingPMOffice] = useState(false); // เปลี่ยนจาก isCheckingReopen
-  const [pmOfficeNotification, setPMOfficeNotification] = useState(null); // เปลี่ยนจาก reopenNotification
-  const [showPMOfficeAlert, setShowPMOfficeAlert] = useState(false); // เปลี่ยนจาก showReopenAlert
-  const [hasShownPMOfficeAlert, setHasShownPMOfficeAlert] = useState(false); // เปลี่ยนจาก hasShownReopenAlert
+  const [pmOfficeStatusMap, setPMOfficeStatusMap] = useState(new Map());
+  const [isCheckingPMOffice, setIsCheckingPMOffice] = useState(false);
+  const [pmOfficeNotification, setPMOfficeNotification] = useState(null);
+  const [showPMOfficeAlert, setShowPMOfficeAlert] = useState(false);
+  const [hasShownPMOfficeAlert, setHasShownPMOfficeAlert] = useState(false);
 
   // ตรวจสอบการมีข้อมูลจาก PM Office สำหรับข้อมูลที่โหลดมา
   useEffect(() => {
@@ -227,7 +236,7 @@ const TableListOPM = ({
             cases: pmOfficeCases
           });
           setShowPMOfficeAlert(true);
-          setHasShownPMOfficeAlert(true); // จำว่าแสดงแล้ว
+          setHasShownPMOfficeAlert(true);
         }
 
       } catch (error) {
@@ -300,7 +309,7 @@ const TableListOPM = ({
 
     // เพิ่ม priority สำหรับเคสที่มีข้อมูลจาก PM Office
     if (pmOfficeStatus.hasPMOfficeSubmission) {
-      priority += 30; // ให้ priority สูงกว่า reopen
+      priority += 30;
       priority += pmOfficeStatus.submissionCount;
     }
 
@@ -315,6 +324,12 @@ const TableListOPM = ({
   const handleChangeFilter = (field) => (event) => {
     const value = event?.target?.value || "";
     setFilters((prevFilters) => ({ ...prevFilters, [field]: value }));
+  };
+
+  // ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลง timeline type
+  const handleTimelineTypeChange = (event) => {
+    const value = event?.target?.value || "I";
+    onTimelineTypeChange(value);
   };
 
   const handlePageChange = (_, newPage) => setPage(newPage);
@@ -371,7 +386,6 @@ const TableListOPM = ({
 
   const handleClosePMOfficeAlert = () => {
     setShowPMOfficeAlert(false);
-    // เมื่อปิดแล้ว ไม่แสดงซ้ำในครั้งนี้
   };
 
   const FilterContent = () => (
@@ -387,8 +401,24 @@ const TableListOPM = ({
         overflowX: "auto",
       }}
     >
+      {/* เพิ่ม Timeline Type Filter */}
+      <Box sx={{ minWidth: 160, flex: 1 }}>
+        <SelectField
+          fullWidth
+          label="ประเภทงาน"
+          value={currentTimelineType}
+          onChange={handleTimelineTypeChange}
+          options={timelineTypeOptions}
+          size={isMobile ? "small" : "medium"}
+        />
+      </Box>
+
       {columns
-        .filter((col) => col.name !== "secret_id")
+        .filter((col) =>
+          col.name !== "secret_id" &&
+          col.name !== "main_status_text" && // ไม่แสดง filter สำหรับสถานะหลักของ สปน.
+          col.name !== "status_text" // ไม่แสดง filter สำหรับสถานะย่อยของ สปน.
+        )
         .map((col) =>
           col.name === "isRead" ? (
             <Box key={col.name} sx={{ minWidth: 160, flex: 1 }}>
@@ -698,36 +728,60 @@ const TableListOPM = ({
                 overflowX: "auto",
               }}
             >
-              {visibleColumns.map((col) => (
-                <Box
-                  key={col.name}
-                  sx={{
-                    minWidth: 160,
-                    maxWidth: 220,
-                    flex: "1 1 0",
-                    flexShrink: 1,
-                  }}
-                >
-                  {col.name === 'isRead' ? (
-                    <SelectField
-                      fullWidth
-                      label={col.label}
-                      value={filters[col.name] || ""}
-                      onChange={handleChangeFilter(col.name)}
-                      options={statusReadOptions}
-                      size="small"
-                    />
-                  ) : (
-                    <InputText
-                      fullWidth
-                      label={col.label}
-                      value={filters[col.name] || ""}
-                      onChange={handleChangeFilter(col.name)}
-                      size="small"
-                    />
-                  )}
-                </Box>
-              ))}
+              {/* Timeline Type Filter */}
+              <Box
+                sx={{
+                  minWidth: 160,
+                  maxWidth: 220,
+                  flex: "1 1 0",
+                  flexShrink: 1,
+                }}
+              >
+                <SelectField
+                  fullWidth
+                  label="ประเภทงาน"
+                  value={currentTimelineType}
+                  onChange={handleTimelineTypeChange}
+                  options={timelineTypeOptions}
+                  size="small"
+                />
+              </Box>
+
+              {visibleColumns
+                .filter((col) =>
+                  col.name !== "main_status_text" && // ไม่แสดง filter สำหรับสถานะหลักของ สปน.
+                  col.name !== "status_text" // ไม่แสดง filter สำหรับสถานะย่อยของ สปน.
+                )
+                .map((col) => (
+                  <Box
+                    key={col.name}
+                    sx={{
+                      minWidth: 160,
+                      maxWidth: 220,
+                      flex: "1 1 0",
+                      flexShrink: 1,
+                    }}
+                  >
+                    {col.name === 'isRead' ? (
+                      <SelectField
+                        fullWidth
+                        label={col.label}
+                        value={filters[col.name] || ""}
+                        onChange={handleChangeFilter(col.name)}
+                        options={statusReadOptions}
+                        size="small"
+                      />
+                    ) : (
+                      <InputText
+                        fullWidth
+                        label={col.label}
+                        value={filters[col.name] || ""}
+                        onChange={handleChangeFilter(col.name)}
+                        size="small"
+                      />
+                    )}
+                  </Box>
+                ))}
             </Box>
             <Box
               display="flex"
