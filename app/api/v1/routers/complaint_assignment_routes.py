@@ -93,38 +93,38 @@ async def update_assignment(
             "message": "INTERNAL_SERVER_ERROR"
         })
 
-@router.post("/{complaint_id}/link-related")
-async def link_related_complaint(
-    complaint_id: UUID,
-    link_data: Dict[str, Any],
-    current_user: str = Depends(can_create("dashboard")),
-    db: Session = Depends(get_db)
-):
-    """เชื่อมโยงเรื่องร้องเรียนที่เกี่ยวข้อง"""
-    try:
-        result = link_related_complaint(
-            db=db,
-            main_complaint_id=complaint_id,
-            related_complaint_number=link_data.get("related_complaint_number"),
-            updated_by=UUID(current_user)  # ← แปลงเป็น UUID
-        )
+# @router.post("/{complaint_id}/link-related")
+# async def link_related_complaint(
+#     complaint_id: UUID,
+#     link_data: Dict[str, Any],
+#     current_user: str = Depends(can_create("dashboard")),
+#     db: Session = Depends(get_db)
+# ):
+#     """เชื่อมโยงเรื่องร้องเรียนที่เกี่ยวข้อง"""
+#     try:
+#         result = link_related_complaint(
+#             db=db,
+#             main_complaint_id=complaint_id,
+#             related_complaint_number=link_data.get("related_complaint_number"),
+#             updated_by=UUID(current_user)  # ← แปลงเป็น UUID
+#         )
         
-        if result.get("success"):
-            return format_data.format_response("0000", {
-                "data": result,
-                "message": "LINK_SUCCESS"
-            })
-        else:
-            return format_data.format_response("4000", {
-                "error": result.get("message"),
-                "message": "LINK_FAILED"
-            })
+#         if result.get("success"):
+#             return format_data.format_response("0000", {
+#                 "data": result,
+#                 "message": "LINK_SUCCESS"
+#             })
+#         else:
+#             return format_data.format_response("4000", {
+#                 "error": result.get("message"),
+#                 "message": "LINK_FAILED"
+#             })
         
-    except Exception as e:
-        return format_data.format_response("5000", {
-            "error": str(e),
-            "message": "INTERNAL_SERVER_ERROR"
-        })
+#     except Exception as e:
+#         return format_data.format_response("5000", {
+#             "error": str(e),
+#             "message": "INTERNAL_SERVER_ERROR"
+#         })
 
 @router.put("/{complaint_id}/complainant")
 async def update_complainant(
@@ -192,65 +192,65 @@ async def update_respondent(
             "message": "INTERNAL_SERVER_ERROR"
         })
 
-@router.get("/search-for-reference")
-async def search_for_reference(
-    q: str = Query(..., description="คำค้นหา"),
-    limit: int = Query(10, description="จำนวนผลลัพธ์"),
-    current_user: str = Depends(can_read("dashboard")),
-    db: Session = Depends(get_db)
-):
-    """ค้นหาเรื่องร้องเรียนสำหรับการอ้างอิง"""
-    try:
-        results = search_complaint_for_reference(
-            db=db,
-            search_term=q,
-            limit=limit
-        )
+# @router.get("/search-for-reference")
+# async def search_for_reference(
+#     q: str = Query(..., description="คำค้นหา"),
+#     limit: int = Query(10, description="จำนวนผลลัพธ์"),
+#     current_user: str = Depends(can_read("dashboard")),
+#     db: Session = Depends(get_db)
+# ):
+#     """ค้นหาเรื่องร้องเรียนสำหรับการอ้างอิง"""
+#     try:
+#         results = search_complaint_for_reference(
+#             db=db,
+#             search_term=q,
+#             limit=limit
+#         )
         
-        return format_data.format_response("0000", {
-            "data": results,
-            "message": "SEARCH_SUCCESS"
-        })
+#         return format_data.format_response("0000", {
+#             "data": results,
+#             "message": "SEARCH_SUCCESS"
+#         })
         
-    except Exception as e:
-        return format_data.format_response("5000", {
-            "error": str(e),
-            "message": "INTERNAL_SERVER_ERROR"
-        })
+#     except Exception as e:
+#         return format_data.format_response("5000", {
+#             "error": str(e),
+#             "message": "INTERNAL_SERVER_ERROR"
+#         })
 
-@router.post("/{complaint_id}/additional-reference")
-async def add_additional_reference(
-    complaint_id: UUID,
-    reference_data: Dict[str, Any],
-    current_user: str = Depends(can_create("dashboard")),
-    db: Session = Depends(get_db)
-):
-    """เพิ่มเลขอ้างอิงเรื่องเพิ่มเติม"""
-    try:
-        result = add_additional_complaint_reference(
-            db=db,
-            complaint_id=complaint_id,
-            reference_complaint_id=reference_data.get("reference_complaint_id"),
-            reference_complaint_number=reference_data.get("reference_complaint_number"),
-            updated_by=UUID(current_user)  # ← แปลงเป็น UUID
-        )
+# @router.post("/{complaint_id}/additional-reference")
+# async def add_additional_reference(
+#     complaint_id: UUID,
+#     reference_data: Dict[str, Any],
+#     current_user: str = Depends(can_create("dashboard")),
+#     db: Session = Depends(get_db)
+# ):
+#     """เพิ่มเลขอ้างอิงเรื่องเพิ่มเติม"""
+#     try:
+#         result = add_additional_complaint_reference(
+#             db=db,
+#             complaint_id=complaint_id,
+#             reference_complaint_id=reference_data.get("reference_complaint_id"),
+#             reference_complaint_number=reference_data.get("reference_complaint_number"),
+#             updated_by=UUID(current_user)  # ← แปลงเป็น UUID
+#         )
         
-        if result.get("success"):
-            return format_data.format_response("0000", {
-                "data": result,
-                "message": "ADD_REFERENCE_SUCCESS"
-            })
-        else:
-            return format_data.format_response("4000", {
-                "error": result.get("message"),
-                "message": "ADD_REFERENCE_FAILED"
-            })
+#         if result.get("success"):
+#             return format_data.format_response("0000", {
+#                 "data": result,
+#                 "message": "ADD_REFERENCE_SUCCESS"
+#             })
+#         else:
+#             return format_data.format_response("4000", {
+#                 "error": result.get("message"),
+#                 "message": "ADD_REFERENCE_FAILED"
+#             })
         
-    except Exception as e:
-        return format_data.format_response("5000", {
-            "error": str(e),
-            "message": "INTERNAL_SERVER_ERROR"
-        })
+#     except Exception as e:
+#         return format_data.format_response("5000", {
+#             "error": str(e),
+#             "message": "INTERNAL_SERVER_ERROR"
+#         })
 
 @router.get("/{complaint_id}/history")
 async def get_assignment_history(
