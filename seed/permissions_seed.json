@@ -474,9 +474,9 @@
       "role_name": "staff",
       "user_citizen_id": null,
       "resource_name": "dashboard",
-      "can_create": false,
+      "can_create": true,
       "can_read": true,
-      "can_update": false,
+      "can_update": true,
       "can_delete": false,
       "override_role": false
     },
