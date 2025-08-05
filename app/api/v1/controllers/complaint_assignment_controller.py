@@ -1658,9 +1658,15 @@ def confirm_assignment(
 
         # บันทึกการยืนยัน
         complaint.confirm_assigned_status = confirm_status
-        complaint.confirm_assigned_date = datetime.now()
         complaint.confirm_assigned_by = current_user_id
         complaint.confirm_assigned_remark = remark
+        
+        # ✅ เก็บ confirm_assigned_date เฉพาะเมื่อ confirm_status = True (ยอมรับงาน)
+        if confirm_status:
+            complaint.confirm_assigned_date = datetime.now()
+        else:
+            # ✅ เมื่อปฏิเสธ ไม่เก็บ confirm_assigned_date (หรือล้างค่าเดิม)
+            complaint.confirm_assigned_date = None
         
         # เปลี่ยนสถานะตามการยืนยัน
         old_status = complaint.status
@@ -1726,7 +1732,7 @@ def confirm_assignment(
             "complaint_id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
             "confirmed": confirm_status,
-            "confirmed_at": complaint.confirm_assigned_date.isoformat(),
+            "confirmed_at": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None,
             "old_status": old_status.value,
             "new_status": complaint.status.value,
             "remark": remark,
