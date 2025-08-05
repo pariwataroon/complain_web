@@ -1433,12 +1433,54 @@ def get_complaints_by_page_type_with_assignment_form(
         for complaint in complaints:
             received_date_info = _get_received_date_info(complaint)
             
+            # ✅ ดึงข้อมูลชื่อผู้ร้องเรียนจาก complainant_data JSON
+            complainant_name = ""
+            try:
+                import json
+                if complaint.complainant_data:
+                    complainant_json = json.loads(complaint.complainant_data) if isinstance(complaint.complainant_data, str) else complaint.complainant_data
+                    # พยายามดึงชื่อจากหลายฟิลด์ที่เป็นไปได้
+                    if isinstance(complainant_json, dict):
+                        name_parts = []
+                        
+                        # ลองดึงจากฟิลด์ต่างๆ
+                        if complainant_json.get("title"):
+                            name_parts.append(complainant_json["title"])
+                        if complainant_json.get("first_name"):
+                            name_parts.append(complainant_json["first_name"])
+                        if complainant_json.get("last_name"):
+                            name_parts.append(complainant_json["last_name"])
+                        
+                        # ถ้าไม่มี ลองดูฟิลด์อื่น
+                        if not name_parts:
+                            if complainant_json.get("name"):
+                                name_parts.append(complainant_json["name"])
+                            elif complainant_json.get("full_name"):
+                                name_parts.append(complainant_json["full_name"])
+                            elif complainant_json.get("complainant_name"):
+                                name_parts.append(complainant_json["complainant_name"])
+                        
+                        complainant_name = " ".join(name_parts).strip()
+                        
+                        # ถ้ายังไม่ได้ ลองใช้ชื่อบริษัท/องค์กร (สำหรับนิติบุคคล)
+                        if not complainant_name:
+                            if complainant_json.get("company_name"):
+                                complainant_name = complainant_json["company_name"]
+                            elif complainant_json.get("organization_name"):
+                                complainant_name = complainant_json["organization_name"]
+            except:
+                complainant_name = ""
+            
             assignment_form = {
                 "id": str(complaint.id),
                 "complaint_number": complaint.complaint_number,
                 "subject": complaint.subject,
                 "complaint_type": complaint.complaint_type,
                 "status": complaint.status,
+                
+                # ✅ เพิ่มข้อมูลชื่อผู้ร้องเรียน
+                "complainant_name": complainant_name,
+                "complainant_type": complaint.complainant_type,
                 
                 # Reference Numbers (1-4)
                 "reference_number": complaint.reference_number,
