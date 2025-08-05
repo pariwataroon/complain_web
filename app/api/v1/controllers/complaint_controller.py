@@ -2878,7 +2878,7 @@ def get_complaint_by_id_with_assignment_data(db: Session, complaint: Complaint) 
             "regulation_reference": complaint.regulation_reference,
             "created_at": complaint.created_at.isoformat(),
             "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
-            "attachments": parse_incident_data(complaint)["general"]["attachment"]
+            # "attachments": parse_incident_data(complaint)["general"]["attachment"]
         }
         
         result["assignment_form"] = assignment_form
