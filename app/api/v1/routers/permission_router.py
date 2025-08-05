@@ -39,7 +39,7 @@ async def get_my_resources_by_group(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("dashboard"))
+    current_user: str = Depends(can_read("homepage_chatbot"))
 ):
     """
     ดึงข้อมูล resources-bygroup เฉพาะที่ตรงกับ roles ของ user ที่ login
