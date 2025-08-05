@@ -35,7 +35,7 @@ async def get_document_storage(
     search: Optional[str] = Query(None, description="คำค้นหา"),
     complainant_name: Optional[str] = Query(None, description="ชื่อผู้ร้องเรียน"),
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("complaints_list"))
 ):
     """ดึงข้อมูลคลังเอกสารแบ่งตามช่องทาง (แบบสรุป - สำหรับ listing)
     
@@ -100,7 +100,7 @@ async def get_filters(
 async def get_document_storage_detail_by_id(
     complaint_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_access"))
+    current_user: str = Depends(can_read("complaints_list"))
 ):
     """ดึงรายละเอียดเต็มของ complaint เดียว รวมถึงความสัมพันธ์ทั้งหมด"""
     try:
