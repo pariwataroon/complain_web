@@ -34,10 +34,10 @@ const TableAssignedComp = ({
   onSearch = () => {},
   onClearSearch = () => {},
   searchFilters = {
-    claimantName: "",
+    complainant_name: "",
     subject: "",
-    docNo4: "",
-    receiveDate: null,
+    complaint_number: "",
+    confirm_assigned_date: null,
   },
   onFilterChange = () => {},
   title = "รายการข้อมูล",
@@ -75,7 +75,7 @@ const TableAssignedComp = ({
   const handleFilterChange = (field) => (e) => {
     let value;
 
-    if (field === "receiveDate") {
+    if (field === "confirm_assigned_date") {
       // For date picker, pass the value directly
       value = e;
       console.log("DatePicker returned value:", e);
@@ -191,14 +191,14 @@ const TableAssignedComp = ({
 
   const formattedRows = rows.map((row, idx) => ({
     ลำดับ: idx + 1,
-    ชื่อผู้ร้อง: row.name || "-",
+    ชื่อผู้ร้อง: row.complainant_name || "-",
     ชื่อเรื่อง: row.subject || "-",
-    "เลขที่ สรร.": row.docNo4 || "-",
-    "เลขที่ สป.กค.": row.docNo || "-",
-    "เลขที่ สป.สร.": row.docNo2 || "-",
-    "เลขที่ สตป.": row.docNo3 || "-",
-    "วันที่รับเรื่อง": row.receiveDate
-      ? dayjs(row.receiveDate).locale("th").format("D MMMM BBBB")
+    "เลขที่ สรร.": row.complaint_number || "-",
+    "เลขที่ สป.กค.": row.reference_number || "-",
+    "เลขที่ สป.สร.": row.reference_number2 || "-",
+    "เลขที่ สตป.": row.reference_number3 || "-",
+    "วันที่รับเรื่อง": row.confirm_assigned_date
+      ? dayjs(row.confirm_assigned_date).locale("th").format("D MMMM BBBB")
       : "-",
   }));
 
@@ -282,10 +282,10 @@ const TableAssignedComp = ({
             width: "100%",
           }}
         >
-          {renderFilterField("claimantName", "ชื่อผู้ร้อง")}
+          {renderFilterField("complainant_name", "ชื่อผู้ร้อง")}
           {renderFilterField("subject", "ชื่อเรื่อง")}
-          {renderFilterField("docNo4", "เลขที่ สรร.")}
-          {renderFilterField("receiveDate", "วันที่รับเรื่อง", "date")}
+          {renderFilterField("complaint_number", "เลขที่ สรร.")}
+          {renderFilterField("confirm_assigned_date", "วันที่รับเรื่อง", "date")}
         </Box>
 
         {/* Search Buttons */}
@@ -368,9 +368,9 @@ const TableAssignedComp = ({
             width: "100%",
           }}
         >
-          {renderFilterField("claimantName", "ชื่อผู้ร้อง")}
+          {renderFilterField("complainant_name", "ชื่อผู้ร้อง")}
           {renderFilterField("subject", "ชื่อเรื่อง")}
-          {renderFilterField("docNo4", "เลขที่ สรร.")}
+          {renderFilterField("complaint_number", "เลขที่ สรร.")}
         </Box>
 
         {/* Second Row - Last field + Search Buttons */}
@@ -391,7 +391,7 @@ const TableAssignedComp = ({
               minWidth: 0,
             }}
           >
-            {renderFilterField("receiveDate", "วันที่รับเรื่อง", "date")}
+            {renderFilterField("confirm_assigned_date", "วันที่รับเรื่อง", "date")}
           </Box>
 
           {/* Search Buttons */}
@@ -479,7 +479,7 @@ const TableAssignedComp = ({
             maxWidth: "200px",
           }}
         >
-          {renderFilterField("claimantName", "ชื่อผู้ร้อง")}
+          {renderFilterField("complainant_name", "ชื่อผู้ร้อง")}
         </Box>
         <Box
           sx={{
@@ -497,7 +497,7 @@ const TableAssignedComp = ({
             maxWidth: "200px",
           }}
         >
-          {renderFilterField("docNo4", "เลขที่ สรร.")}
+          {renderFilterField("complaint_number", "เลขที่ สรร.")}
         </Box>
         <Box
           sx={{
@@ -506,7 +506,7 @@ const TableAssignedComp = ({
             maxWidth: "200px",
           }}
         >
-          {renderFilterField("receiveDate", "วันที่รับเรื่อง", "date")}
+          {renderFilterField("confirm_assigned_date", "วันที่รับเรื่อง", "date")}
         </Box>
 
         {/* Search Buttons */}
@@ -788,7 +788,7 @@ const TableAssignedComp = ({
                         minWidth: isBelow1350 ? 200 : "auto",
                       }}
                     >
-                      {item.name ?? "-"}
+                      {item.complainant_name ?? "-"}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -804,7 +804,7 @@ const TableAssignedComp = ({
                         minWidth: isBelow1350 ? 160 : "auto",
                       }}
                     >
-                      {item.docNo4 ?? "-"}
+                      {item.complaint_number ?? "-"}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -812,7 +812,7 @@ const TableAssignedComp = ({
                         minWidth: isBelow1350 ? 180 : "auto",
                       }}
                     >
-                      {item.docNo ?? "-"}
+                      {item.reference_number ?? "-"}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -820,7 +820,7 @@ const TableAssignedComp = ({
                         minWidth: isBelow1350 ? 180 : "auto",
                       }}
                     >
-                      {item.docNo2 ?? "-"}
+                      {item.reference_number2 ?? "-"}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -828,7 +828,7 @@ const TableAssignedComp = ({
                         minWidth: isBelow1350 ? 180 : "auto",
                       }}
                     >
-                      {item.docNo3 ?? "-"}
+                      {item.reference_number3 ?? "-"}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -837,7 +837,7 @@ const TableAssignedComp = ({
                       }}
                     >
                       {/* Use formatThaiDate to display date in Buddhist Era */}
-                      {formatThaiDate(item.receiveDate)}
+                      {formatThaiDate(item.confirm_assigned_date)}
                     </TableCell>
                   </TableRow>
                 ))

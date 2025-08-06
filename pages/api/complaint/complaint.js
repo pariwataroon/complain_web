@@ -174,6 +174,44 @@ const GetComplaintsSubjectOPM = async ({ skip = 0, limit = 10, case_code }) => {
   }
 };
 
+const GetComplaintsByPageType = async ({
+  pageType = "website",
+  skip = 0,
+  limit = 10,
+}) => {
+  try {
+    const response = await axiosInstance.get(
+      `/complaints-assignment/by-page-type`, {
+        params: { page_type: pageType, skip, limit, },
+      }
+    );
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching complaints by page type:", error);
+    throw error;
+  }
+};
+
+const GetComplaintsByPageTypeCard = async ({
+  pageType = "card",  // Set the default to "card"
+  skip = 0,
+  limit = 10,
+}) => {
+  try {
+    const response = await axiosInstance.get(
+      `/complaints-assignment/by-page-type`, 
+      {
+        params: { page_type: pageType, skip, limit, },
+      }
+    );
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching complaints by card page type:", error);
+    throw error;
+  }
+};
+
+
 export {
   CreateComplaint,
   Addcomplaints,
@@ -188,4 +226,6 @@ export {
   GetEnhancedComplaints,
   GetComplaintsWithSearch,
   GetComplaintsSubjectOPM,
+  GetComplaintsByPageType,
+  GetComplaintsByPageTypeCard,
 };
