@@ -11,6 +11,7 @@ import {
   Container,
   IconButton,
   useMediaQuery,
+  Typography,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
@@ -660,10 +661,28 @@ const TableListBox = ({
       >
         <Box
           sx={{
-            borderRadius: "8px",
-            overflow: "hidden",
-            border: "1px solid #e0e0e0",
-          }}
+          mx: isExtraSmall ? 1 : 3,
+          mb: 3,
+          borderRadius: "16px",
+          overflow: "hidden",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+          border: "1px solid #f1f3f4",
+          // Responsive overflow handling
+          overflowX: isLarge ? "auto" : "visible",
+          "&::-webkit-scrollbar": {
+            height: "6px",
+          },
+          "&::-webkit-scrollbar-track": {
+            backgroundColor: "#f8f9fa",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "#dee2e6",
+            borderRadius: "3px",
+            "&:hover": {
+              backgroundColor: "#adb5bd",
+            },
+          },
+        }}
         >
           <Table
             ref={tableRef}
@@ -675,7 +694,19 @@ const TableListBox = ({
             }}
           >
             <TableHead>
-              <TableRow>
+              <TableRow sx={{
+                backgroundColor: "#f8f9fa",
+                "& th": {
+                  borderBottom: "1px solid #e9ecef",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#495057",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  padding: "16px 20px",
+                  whiteSpace: "nowrap",
+                },
+              }}>
                 {columns.map((col) => (
                   <TableCell
                     key={col.name}
@@ -703,42 +734,111 @@ const TableListBox = ({
               </TableRow>
             </TableHead>
             <TableBody>
-              {pagedData.map((item, idx) => (
-                <TableRow
-                  key={item.id}
-                  onClick={() => handleRowClick(item)}
-                  sx={{
-                    cursor: "pointer",
-                    "&:hover": {
-                      backgroundColor: "#f5f7ff",
-                      transform: "scale(1.001)",
-                      transition: "all 0.2s ease-in-out",
-                    },
-                  }}
-                >
-                  {columns.map((col) => (
-                    <TableCell
-                      key={col.name}
+              {pagedData.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    align="center"
+                              sx={{
+                                padding: "60px 20px",
+                                borderBottom: "none",
+                              }}
+                  >
+                    <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
+                      <Box
+                        sx={{
+                          width: 64,
+                          height: 64,
+                          borderRadius: "50%",
+                          backgroundColor: "#f8f9fa",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Typography sx={{ fontSize: "24px", color: "#6c757d" }}>📄</Typography>
+                      </Box>
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          color: "#6c757d",
+                          fontWeight: 500,
+                          fontSize: "16px",
+                        }}
+                      >
+                        ไม่พบข้อมูลที่ค้นหา
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "#adb5bd",
+                          fontSize: "14px",
+                        }}
+                      >
+                        กรุณาลองปรับเปลี่ยนเงื่อนไขการค้นหา
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                <TableRow> 
+                  <TableCell
+                    colSpan={columns.length}
+                    sx={{
+                      padding: "0px",
+                      borderBottom: "none",
+                    }}
+                  >
+                    {/* Add a wrapper to make the table horizontally scrollable */}
+                    <Box
                       sx={{
-                        width: needsScrollbar ? col.width : "auto",
-                        minWidth: needsScrollbar ? col.width : "auto",
-                        borderBottom: "1px solid #e0e0e0",
-                        borderRight: "1px solid #e0e0e0",
-                        fontSize: "14px",
-                        padding: "14px 12px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        "&:last-child": {
-                          borderRight: "none",
-                        },
+                        overflowX: "auto", // Enable horizontal scroll
+                        display: "block", // Ensure that the table is block-level for scrolling
+                        width: "100%",
                       }}
                     >
-                      {item[col.name] ?? "-"}
-                    </TableCell>
-                  ))}
+                      <Table>
+                        {pagedData.map((item, idx) => (
+                          <TableRow
+                            key={item.id}
+                            onClick={() => handleRowClick(item)}
+                            sx={{
+                              cursor: "pointer",
+                              "&:hover": {
+                                backgroundColor: "#f5f7ff",
+                                transform: "scale(1.001)",
+                                transition: "all 0.2s ease-in-out",
+                              },
+                            }}
+                          >
+                            {columns.map((col) => (
+                              <TableCell
+                                key={col.name}
+                                sx={{
+                                  width: needsScrollbar ? col.width : "auto",
+                                  minWidth: needsScrollbar ? col.width : "auto",
+                                  borderBottom: "1px solid #e0e0e0",
+                                  borderRight: "1px solid #e0e0e0",
+                                  fontSize: "14px",
+                                  padding: "14px 12px",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  "&:last-child": {
+                                    borderRight: "none",
+                                  },
+                                }}
+                              >
+                                {item[col.name] ?? "-"}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </Table>
+                    </Box>
+                  </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </Box>
