@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { IconButton } from "@mui/material";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
@@ -11,6 +11,19 @@ export default function ResetPasswordComponents() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [errors, setErrors] = useState({});
+  const [accessAllowed, setAccessAllowed] = useState(false);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const { token } = router.query;
+
+    if (typeof token === "string" && token.length > 10) {
+      setAccessAllowed(true);
+    } else {
+      alertError("ไม่สามารถเข้าถึง", "ลิงก์ไม่ถูกต้องหรือหมดอายุ");
+      router.replace("/login");
+    }
+  }, [router.isReady, router.query]);
 
   const handleBackToLogin = () => {
     router.push("/login");
@@ -35,22 +48,41 @@ export default function ResetPasswordComponents() {
     e.preventDefault();
     const errs = validate();
     setErrors(errs);
-    if (Object.keys(errs).length) return;
+    if (Object.keys(errs).length > 0) return;
 
     setLoading(true);
     try {
-      // TODO: call API to reset password here (with password)
-      // Example: await resetPassword({ password });
-      alertSuccess(
-        "ตั้งรหัสผ่านใหม่สำเร็จ",
-        "สามารถเข้าสู่ระบบด้วยรหัสใหม่ได้แล้ว"
-      );
-      router.push("/login");
+      const { token } = router.query;
+
+      const response = await fetch("https://complain.mof.go.th//api/v1/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          new_password: password,
+        }),
+      });
+
+      const result = await response.json().catch(() => ({})); // เผื่อไม่ใช่ JSON
+
+      if (!response.ok) {
+        console.error("❌ Reset failed", response.status, result);
+        alertError(
+          "ไม่สามารถตั้งรหัสผ่านได้",
+          result.message || `รหัสสถานะ: ${response.status}`
+        );
+      } else {
+        alertSuccess("ตั้งรหัสผ่านใหม่สำเร็จ", "สามารถเข้าสู่ระบบด้วยรหัสใหม่ได้แล้ว");
+        router.push("/login");
+      }
     } catch (err) {
-      alertError("เกิดข้อผิดพลาด", "ไม่สามารถตั้งรหัสผ่านใหม่ได้");
+      console.error("🔥 เกิดข้อผิดพลาด:", err);
+      alertError("ข้อผิดพลาด", err.message || "ไม่สามารถตั้งรหัสผ่านได้");
     }
     setLoading(false);
   };
+
+  if (!accessAllowed) return null;
 
   return (
     <div className={styles.container}>
@@ -61,12 +93,7 @@ export default function ResetPasswordComponents() {
       <div className={styles.loginBox}>
         <IconButton
           onClick={handleBackToLogin}
-          sx={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            color: "grey.700",
-          }}
+          sx={{ position: "absolute", top: 16, right: 16, color: "grey.700" }}
         >
           <ArrowBackIosNewIcon />
         </IconButton>
