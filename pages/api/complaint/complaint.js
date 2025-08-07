@@ -120,6 +120,21 @@ const UploadAttachments = async (complaint_id, formDataUpload) => {
   }
 };
 
+const NewsUploadAttachments = async (formDataUpload) => {
+  try {
+    const response = await axiosInstance.post(
+      `/complaints/upload-attachment`,
+      formDataUpload
+    );
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error adding complaint:", error);
+    throw error;
+  }
+};
+
 const UpdateAssignmentCompleteByAdmin = async (complaint_id, formData) => {
   try {
     const response = await axiosInstance.put(
@@ -228,4 +243,5 @@ export {
   GetComplaintsSubjectOPM,
   GetComplaintsByPageType,
   GetComplaintsByPageTypeCard,
+  NewsUploadAttachments,
 };

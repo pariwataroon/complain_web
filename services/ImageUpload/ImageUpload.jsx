@@ -2,6 +2,8 @@ import React from 'react';
 import { Box, Button, Grid, IconButton, useMediaQuery, useTheme } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { NewsUploadAttachments } from '@pages/api/complaint/complaint'
+import { createNews } from '@pages/api/news/news'
 
 const ImageUpload = ({ images, setImages }) => {
   const theme = useTheme();
@@ -14,7 +16,6 @@ const ImageUpload = ({ images, setImages }) => {
 
   const handleImageChange = async (e) => {
     const files = Array.from(e.target.files);
-    const token = getTokenFromCookie();
 
     const uploaded = [];
 
@@ -23,19 +24,17 @@ const ImageUpload = ({ images, setImages }) => {
       formData.append("file", file);
 
       try {
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const uploadResult = await NewsUploadAttachments( formData );
+        const response = response.data;
 
-        if (!response.ok) throw new Error("Upload failed");
+        if (result.res_code !== "0001") {
+          throw new Error(result.res_message || "Upload failed");
+        }
 
         const result = await response.json();
         const fileUrl = `https://complain.mof.go.th/api${result.res_data.fileUrl}`;
 
+        
         uploaded.push(fileUrl);
       } catch (err) {
         console.error("Upload error:", err);
@@ -45,7 +44,6 @@ const ImageUpload = ({ images, setImages }) => {
 
     if (uploaded.length > 0) {
       const newImageList = [...images, ...uploaded];
-      // console.log("✅ Uploaded images:", newImageList);
       setImages(newImageList); // ✅ สำคัญ! ต้องเป็น array
     }
   };
