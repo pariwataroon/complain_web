@@ -3,48 +3,71 @@ import { Box, Button, Grid, IconButton, useMediaQuery, useTheme } from '@mui/mat
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { NewsUploadAttachments } from '@pages/api/complaint/complaint'
-import { createNews } from '@pages/api/news/news'
+import { showLoading, closeAlert, alertSuccess, alertError } from '@utils/Alerts';
 
 const ImageUpload = ({ images, setImages }) => {
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const getTokenFromCookie = () => {
-    const match = document.cookie.match(/(^| )access_token=([^;]+)/);
-    return match ? match[2] : null;
-  };
-
   const handleImageChange = async (e) => {
     const files = Array.from(e.target.files);
 
+    if (files.length === 0) return;
+
+    showLoading("กำลังอัปโหลดรูปภาพ...");
+
     const uploaded = [];
+    const failed = [];
 
     for (const file of files) {
       const formData = new FormData();
       formData.append("file", file);
 
       try {
-        const uploadResult = await NewsUploadAttachments( formData );
-        const response = response.data;
+        const uploadResult = await NewsUploadAttachments(formData);
+
+        const result = uploadResult.data || uploadResult;
+
+        console.log('Upload result:', result);
 
         if (result.res_code !== "0001") {
           throw new Error(result.res_message || "Upload failed");
         }
 
-        const result = await response.json();
         const fileUrl = `https://complain.mof.go.th/api${result.res_data.fileUrl}`;
-
-        
         uploaded.push(fileUrl);
+
       } catch (err) {
         console.error("Upload error:", err);
-        alert("อัปโหลดรูปไม่สำเร็จ กรุณาลองใหม่");
+        failed.push(file.name);
       }
     }
 
+    closeAlert();
     if (uploaded.length > 0) {
       const newImageList = [...images, ...uploaded];
-      setImages(newImageList); // ✅ สำคัญ! ต้องเป็น array
+      setImages(newImageList);
+
+      if (failed.length === 0) {
+        alertSuccess(
+          "อัปโหลดสำเร็จ",
+          `อัปโหลดรูปภาพสำเร็จ ${uploaded.length} ไฟล์`
+        );
+      } else {
+        alertWarning(
+          "อัปโหลดบางส่วน",
+          `อัปโหลดสำเร็จ ${uploaded.length} ไฟล์<br>ไม่สำเร็จ ${failed.length} ไฟล์: ${failed.join(', ')}`,
+          true
+        );
+      }
+    } else {
+      alertError(
+        "อัปโหลดไม่สำเร็จ",
+        failed.length > 1
+          ? `ไม่สามารถอัปโหลดไฟล์ ${failed.join(', ')} ได้<br>กรุณาลองใหม่อีกครั้ง`
+          : "ไม่สามารถอัปโหลดรูปภาพได้ กรุณาลองใหม่อีกครั้ง",
+        failed.length > 1
+      );
     }
   };
 
