@@ -112,30 +112,29 @@ const AssignedAnonymousComponents = () => {
     setFilteredRows([]);
   };
 
-  // Fetch complaints from the API
   useEffect(() => {
     const fetchComplaints = async () => {
       try {
-        const data = await GetComplaintsByPageTypeCard({
-          pageType: "card", // Using the card pageType
+        const response = await GetComplaintsByPageTypeCard({
+          pageType: "card",
           skip: 0,
           limit: 100,
-          status: "SUBMITTED", // Default status
         });
 
-        if (Array.isArray(data)) {
-          setFilteredRows(data); // Set filtered rows with fetched data
+        if (response?.res_code === "0000" && Array.isArray(response?.res_data?.items)) {
+          const complaints = response.res_data.items.map((item) => item.complaint);
+          setFilteredRows(complaints);
         } else {
-          console.error("Received data is not an array", data);
+          console.error("Unexpected response format", response);
         }
       } catch (error) {
         console.error("Error fetching complaints:", error);
       } finally {
-        setLoading(false); // Stop loading once data is fetched
+        setLoading(false);
       }
     };
 
-    fetchComplaints(); // Call the fetch function when component mounts
+    fetchComplaints();
   }, []);
 
   // Row click handler

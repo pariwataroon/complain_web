@@ -163,9 +163,10 @@ const NewsComponent = () => {
       </div>
 
       {/* เนื้อหาข่าวสาร */}
-      <div className={styles.newsContent}>
-        <p>{newsData?.content}</p>
-      </div>
+      <div
+        className={styles.newsContent}
+        dangerouslySetInnerHTML={{ __html: newsData?.content || "" }}
+      />
 
       {/* รูปภาพกิจกรรม */}
       <div className={styles.galleryTitle}>รูปภาพกิจกรรม</div>

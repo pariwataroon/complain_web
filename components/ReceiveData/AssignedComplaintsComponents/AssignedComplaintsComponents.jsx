@@ -150,31 +150,30 @@ const AssignedComplaintsComponents = () => {
     setRows([]);  // เคลียร์แถว
   };
 
-  // ฟังก์ชันโหลดข้อมูลจาก API
+// ฟังก์ชันโหลดข้อมูลจาก API
   useEffect(() => {
     const fetchComplaints = async () => {
       try {
-        const data = await GetComplaintsByPageType({
-          pageType: "website",  // ใช้ pageType เป็น "website"
+        const response = await GetComplaintsByPageType({
+          pageType: "website",
           skip: 0,
           limit: 100,
-          status: "SUBMITTED", // กำหนดสถานะให้เป็น SUBMITTED
         });
-        
-        // ตรวจสอบว่า data ที่ได้รับเป็นอาร์เรย์หรือไม่
-        if (Array.isArray(data)) {
-          setRows(data);  // ตั้งค่า rows จากข้อมูลที่ได้รับ
+
+        if (response?.res_code === "0000" && Array.isArray(response?.res_data?.items)) {
+          const complaints = response.res_data.items.map((item) => item.complaint);
+          setRows(complaints);
         } else {
-          console.error("Received data is not an array", data);
+          console.error("Unexpected response format", response);
         }
       } catch (error) {
         console.error("Error fetching complaints:", error);
       } finally {
-        setLoading(false);  // หยุดสถานะโหลด
+        setLoading(false);
       }
     };
 
-    fetchComplaints(); // เรียกฟังก์ชันเมื่อคอมโพเนนต์โหลด
+    fetchComplaints();
   }, []);
 
   // ฟังก์ชันคลิกที่แถวเพื่อแก้ไขข้อมูล
