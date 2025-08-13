@@ -429,8 +429,69 @@ def _load_raw_map_json(path: Optional[str] = None) -> Dict[str, Any]:
     file_path = _resolve_path(path or MAP_JSON_PATH)
     if not file_path.is_file():
         raise FileNotFoundError(f"ไม่พบไฟล์แผนที่: {file_path}")
-    with open(file_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+
+    raw = file_path.read_text(encoding="utf-8").strip()
+
+    # ลอง parse ปกติก่อน (ไฟล์ก้อนเดียว)
+    try:
+        obj = json.loads(raw)
+        if isinstance(obj, dict):
+            return obj
+    except json.JSONDecodeError:
+        pass
+
+    # โหมดหลวม: parse หลายก้อน -> merge
+    dec = json.JSONDecoder()
+    idx = 0
+    length = len(raw)
+
+    merged: Dict[str, Any] = {}
+    merged_hc: Dict[str, str] = {}
+    merged_pv: Dict[str, List[Dict[str, Any]]] = {}
+    merged_year_options: List[Dict[str, str]] = []
+
+    while idx < length:
+        # ข้ามช่องว่าง
+        while idx < length and raw[idx].isspace():
+            idx += 1
+        if idx >= length:
+            break
+        obj, next_idx = dec.raw_decode(raw, idx)
+        idx = next_idx
+
+        if not isinstance(obj, dict):
+            continue
+
+        # เก็บตามคีย์สำคัญที่ frontend ใช้
+        if "hcKeyToThaiName" in obj and isinstance(obj["hcKeyToThaiName"], dict):
+            merged_hc.update(obj["hcKeyToThaiName"])
+
+        if "provinceValues" in obj and isinstance(obj["provinceValues"], dict):
+            # รวมปี: ปีซ้ำให้ข้อมูลจากก้อนหลังทับ
+            for y, arr in obj["provinceValues"].items():
+                merged_pv[str(y)] = arr or []
+
+        if "yearOptions" in obj and isinstance(obj["yearOptions"], list):
+            # ถ้าก้อนหลังมี yearOptions ให้ทับทั้งชุด (ตรงตามไฟล์ seed ปัจจุบัน)
+            merged_year_options = obj["yearOptions"]
+
+        # เก็บคีย์อื่นที่อาจมี (ปัจจุบันไม่ใช้)
+        for k, v in obj.items():
+            if k not in ("hcKeyToThaiName", "provinceValues", "yearOptions"):
+                merged[k] = v
+
+    # ประกอบกลับ
+    result = {
+        "hcKeyToThaiName": merged_hc,
+        "provinceValues": merged_pv
+    }
+    if merged_year_options:
+        result["yearOptions"] = merged_year_options
+
+    if not merged_hc and not merged_pv and not merged_year_options:
+        raise json.JSONDecodeError("Invalid JSON or empty after loose-parse", raw, 0)
+
+    return result
 
 def _invert_thai_to_hckey(mapping: Dict[str, str]) -> Dict[str, str]:
     """
@@ -538,8 +599,15 @@ def get_full_map_json_from_db(
             province_values[str(yg)] = zs
             province_values[str(yb)] = zs
 
+    year_options = data_seed.get("yearOptions")
+    if not year_options:
+        # ถ้า seed ไม่มี ให้ generate ตามปีที่มีอยู่ใน province_values (เรียงตามสตริง)
+        # หรือจะเลือกเฉพาะ พ.ศ. ก็ได้ แต่คงทั่วไป: ใส่ทุกคีย์ที่เราสร้าง
+        year_options = [{"value": y, "label": y} for y in sorted(province_values.keys(), key=str)]
+
     # 6) ส่งกลับตามรูปแบบ map.json
     return {
         "hcKeyToThaiName": hckey_to_th,
-        "provinceValues": province_values
+        "provinceValues": province_values,
+        "yearOptions": year_options
     }
