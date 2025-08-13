@@ -2,7 +2,7 @@ from uuid import UUID
 from sqlalchemy import func, and_, or_, literal, text, distinct
 from sqlalchemy.orm import Session, joinedload, aliased
 from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import os, json
 from pathlib import Path
@@ -30,6 +30,22 @@ try:
     from zoneinfo import ZoneInfo  # Python 3.9+
 except Exception:
     ZoneInfo = None
+
+def _is_be_year(y_str: str) -> bool:
+    try:
+        return int(y_str) >= 2500
+    except:
+        return False
+
+def _series_to_counts(series: List[Dict[str, Any]]) -> Dict[str, int]:
+    # แปลง list [{"hc-key":..,"value":..}] -> dict {hckey: value}
+    out: Dict[str, int] = {}
+    for item in series or []:
+        k = (item.get("hc-key") or "").strip()
+        if not k:
+            continue
+        out[k] = int(item.get("value", 0) or 0)
+    return out
 
 def _get_user_info(db: Session, staff_id: str) -> Dict:
     """
@@ -512,60 +528,51 @@ def _zero_fill_series(all_keys: List[str], counts: Dict[str, int]) -> List[Dict[
 def get_full_map_json_from_db(
     db: Session,
     json_path: Optional[str] = None,
-    base_year_gregorian: int = 2025,   # ปีเริ่มระบบ (ค.ศ.)
-    years_forward: int = 5             # เตรียมปีล่วงหน้า
+    base_year_gregorian: int = 2025,   # ไม่ได้ใช้แล้ว แต่คง signature เดิมไว้กันกระทบ
+    years_forward: int = 0             # ไม่ได้ใช้แล้ว
 ) -> Dict[str, Any]:
     """
-    สร้างข้อมูล map.json 'ทั้งก้อน' จาก DB โดย:
-      - ใช้เวลา Asia/Bangkok (+07:00)
-      - ปีเริ่มระบบ = 2025 (ค.ศ.) / 2568 (พ.ศ.) -> ดึง 'ค่าจริง' จาก DB
-      - เติมคีย์ปีล่วงหน้าอีก 5 ปี (ค.ศ. และ พ.ศ.) ด้วยค่าศูนย์ (รออนาคต)
-      - ZERO-FILL จังหวัดให้ครบทุกปี
+    ส่งออก JSON รูปเดียวกับ map.json แต่:
+      - provinceValues: มี 'เฉพาะปี พ.ศ.' เท่านั้น
+      - ปีปัจจุบัน (พ.ศ.) จะคิวรี 'ค่าจริง' จาก DB โดยกำหนดกรอบเวลาเป็น BKK แล้วแปลงเป็น UTC ก่อน query
+      - จังหวัด ZERO-FILL ครบเสมอ (กันกราฟพัง)
+      - yearOptions: เฉพาะ พ.ศ. เท่านั้น (ถ้า seed มี จะฟิลเตอร์เอาเฉพาะ พ.ศ.; ถ้าไม่มี seed -> generate จาก key ที่ส่งออก)
 
-    โครงสร้างตอบกลับเหมือน seed/map.json:
+    โครงสร้าง:
     {
       "hcKeyToThaiName": {...},
-      "provinceValues": {
-        "2025":  [ {"hc-key":"...", "value":...}, ... ],
-        "2568":  [ {"hc-key":"...", "value":...}, ... ],
-        "2026":  [ ... 0 ... ],
-        "2569":  [ ... 0 ... ],
-        ...
-      }
+      "provinceValues": { "2568": [...], "2567": [...], ... },   # ไม่มีคีย์ ค.ศ.
+      "yearOptions": [ {"value":"2564","label":"2564"}, ... ]     # เฉพาะ พ.ศ.
     }
     """
-    # 1) โหลด mapping จังหวัดจาก seed (สำหรับ hc-key + zero-fill)
-    data_seed = _load_raw_map_json(json_path)   # helper ของไฟล์นี้
+    # 1) โหลด seed แล้วเตรียม mapping จังหวัด
+    data_seed = _load_raw_map_json(json_path)  # ฟังก์ชันนี้ของคุณรองรับไฟล์หลายก้อนแล้ว
     hckey_to_th: Dict[str, str] = data_seed.get("hcKeyToThaiName", {}) or {}
-    all_hc_keys = sorted(list(hckey_to_th.keys()))
-    if not all_hc_keys:
-        return {"hcKeyToThaiName": {}, "provinceValues": {}}
+    if not hckey_to_th:
+        return {"hcKeyToThaiName": {}, "provinceValues": {}, "yearOptions": []}
 
+    all_hc_keys = sorted(list(hckey_to_th.keys()))
     th_to_hckey = _invert_thai_to_hckey(hckey_to_th)
 
-    # 2) เวลา Bangkok
-    tz = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
-    now_bkk = datetime.now(tz) if tz else datetime.now()
+    # 2) เวลาปัจจุบันตาม Bangkok (+07:00)
+    tz_bkk = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
+    now_bkk = datetime.now(tz_bkk) if tz_bkk else datetime.now()
     current_year_g = now_bkk.year                # ค.ศ.
-    current_year_b = current_year_g + 543        # พ.ศ.
+    current_year_b = current_year_g + 543        # พ.ศ. ที่ต้องแสดงผล
 
-    # 3) เตรียม key ปีที่ต้องมีใน provinceValues
-    #    - เริ่มจาก base_year_gregorian (2025) ถึง base_year_gregorian + years_forward (2030)
-    #    - ทำทั้งคีย์ ค.ศ. และ พ.ศ. คู่กันเสมอ
-    years_g = list(range(base_year_gregorian, base_year_gregorian + years_forward + 1))
-    years_b = [yg + 543 for yg in years_g]
+    # 3) คิดช่วงเวลา "ปีปัจจุบันตาม BKK" แล้ว "แปลงเป็น UTC" ก่อนคิวรี DB
+    bkk_start = datetime(current_year_g, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(current_year_g, 1, 1, 0, 0, 0)
+    bkk_end   = datetime(current_year_g, 12, 31, 23, 59, 59, 999999, tzinfo=tz_bkk) if tz_bkk else datetime(current_year_g, 12, 31, 23, 59, 59, 999999)
+    utc_start = bkk_start.astimezone(timezone.utc) if bkk_start.tzinfo else bkk_start  # fallback กรณีไม่มี tz
+    utc_end   = bkk_end.astimezone(timezone.utc)   if bkk_end.tzinfo   else bkk_end
 
-    # 4) นับค่าจริงจาก DB เฉพาะปี "ปัจจุบัน" ถ้าปีปัจจุบันยังเท่ากับปีเริ่มระบบก็จะนับปีนั้น
-    #    หมายเหตุ: โปรเจคปีแรกคือ 2025 -> เราจะนับ 2025 จริง, ปีถัดๆ ไปเตรียม 0 ไว้ก่อน
-    start_dt = datetime(current_year_g, 1, 1, 0, 0, 0, tzinfo=tz) if tz else datetime(current_year_g, 1, 1, 0, 0, 0)
-    end_dt   = datetime(current_year_g, 12, 31, 23, 59, 59, tzinfo=tz) if tz else datetime(current_year_g, 12, 31, 23, 59, 59)
-
+    # 4) นับเรื่องจริงจาก DB (ช่วงเวลา UTC) กลุ่มตาม incident_province (ชื่อไทย)
     rows = (
         db.query(
             Complaint.incident_province,
             func.count(Complaint.id).label("c")
         )
-        .filter(Complaint.created_at.between(start_dt, end_dt))
+        .filter(Complaint.created_at.between(utc_start, utc_end))
         .group_by(Complaint.incident_province)
         .all()
     )
@@ -577,37 +584,47 @@ def get_full_map_json_from_db(
         name = (th_name or "").strip()
         hckey = th_to_hckey.get(name)
         if not hckey:
-            # ถ้าชื่อไม่แมตช์ mapping -> ข้าม เพื่อกันกราฟพัง (หรือจะ log เตือนก็ได้)
+            # ชื่อไม่แมตช์ mapping -> ข้าม (กันพัง); จะเพิ่ม normalizer ได้ภายหลังถ้าจำเป็น
             continue
         counts_this_year[hckey] = counts_this_year.get(hckey, 0) + int(c or 0)
 
-    # 5) ประกอบ provinceValues: ปีปัจจุบัน = ค่าจริง, อื่นๆ = 0
-    def zero_series() -> List[Dict[str, Any]]:
-        return _zero_fill_series(all_hc_keys, {})  # ทุกจังหวัด 0
-
+    # 5) ZERO-FILL ให้ครบทุกจังหวัด สำหรับปีปัจจุบัน (พ.ศ.)
     real_series = _zero_fill_series(all_hc_keys, counts_this_year)
 
-    province_values: Dict[str, List[Dict[str, Any]]] = {}
+    # 6) รวมข้อมูล seed เฉพาะ "ปี พ.ศ." เท่านั้น + ZERO-FILL
+    province_values_seed = data_seed.get("provinceValues", {}) or {}
+    province_values_be: Dict[str, List[Dict[str, Any]]] = {}
 
-    for yg in years_g:
-        yb = yg + 543
-        if yg == current_year_g:
-            province_values[str(yg)] = real_series
-            province_values[str(yb)] = real_series
-        else:
-            zs = zero_series()
-            province_values[str(yg)] = zs
-            province_values[str(yb)] = zs
+    # เติมปี พ.ศ. ที่มีใน seed (ถ้ามี) โดย ZERO-FILL ให้ครบจังหวัด
+    for y_str, series in province_values_seed.items():
+        if not _is_be_year(y_str):
+            continue  # ตัดคีย์ ค.ศ. ทิ้ง
+        province_values_be[str(y_str)] = _zero_fill_series(all_hc_keys, _series_to_counts(series))
 
-    year_options = data_seed.get("yearOptions")
-    if not year_options:
-        # ถ้า seed ไม่มี ให้ generate ตามปีที่มีอยู่ใน province_values (เรียงตามสตริง)
-        # หรือจะเลือกเฉพาะ พ.ศ. ก็ได้ แต่คงทั่วไป: ใส่ทุกคีย์ที่เราสร้าง
-        year_options = [{"value": y, "label": y} for y in sorted(province_values.keys(), key=str)]
+    # ใส่/ทับปีปัจจุบัน (พ.ศ.) ด้วยค่าจริงจาก DB
+    province_values_be[str(current_year_b)] = real_series
 
-    # 6) ส่งกลับตามรูปแบบ map.json
+    # 7) yearOptions: เอาเฉพาะ พ.ศ. เท่านั้น
+    seed_year_opts = data_seed.get("yearOptions")
+    if seed_year_opts and isinstance(seed_year_opts, list):
+        # ฟิลเตอร์เอาเฉพาะ พ.ศ. + ทำให้ซิงก์กับคีย์ที่เรามีจริง
+        be_keys = set(province_values_be.keys())
+        year_options = [
+            {"value": y.get("value"), "label": y.get("label")}
+            for y in seed_year_opts
+            if y and _is_be_year(str(y.get("value"))) and str(y.get("value")) in be_keys
+        ]
+        # ถ้า seed ไม่มีปีปัจจุบันใน yearOptions ให้เติมเข้าไป
+        if str(current_year_b) not in {str(o["value"]) for o in year_options}:
+            year_options.append({"value": str(current_year_b), "label": str(current_year_b)})
+        # จัดเรียงตามค่า พ.ศ.
+        year_options = sorted(year_options, key=lambda o: int(o["value"]))
+    else:
+        # สร้างจากคีย์ที่มีจริง
+        year_options = [{"value": y, "label": y} for y in sorted(province_values_be.keys(), key=lambda s: int(s))]
+
     return {
         "hcKeyToThaiName": hckey_to_th,
-        "provinceValues": province_values,
-        "yearOptions": year_options
+        "provinceValues": province_values_be,  # << มีแต่คีย์ พ.ศ.
+        "yearOptions": year_options           # << มีแต่ พ.ศ.
     }
