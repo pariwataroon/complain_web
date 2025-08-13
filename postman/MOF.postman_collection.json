@@ -25,7 +25,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{API}}{{PREFIX}}/dashboard/staff-workload?skip=0&limit=100&date_from=2024-01-01&date_to=2026-05-22",
+							"raw": "{{API}}{{PREFIX}}/dashboard/staff-workload?skip=0&limit=100&date_from=2025-01-01&date_to=2025-12-31&year=2025",
 							"host": [
 								"{{API}}{{PREFIX}}"
 							],
@@ -36,25 +36,32 @@
 							"query": [
 								{
 									"key": "skip",
-									"value": "0"
+									"value": "0",
+									"description": "จำนวนข้อมูลที่ข้าม (สำหรับ pagination)"
 								},
 								{
 									"key": "limit",
-									"value": "100"
+									"value": "100",
+									"description": "จำนวนข้อมูลสูงสุดที่แสดง"
 								},
 								{
 									"key": "date_from",
-									"value": "2024-01-01",
-									"description": "Optional - วันที่เริ่มต้น"
+									"value": "2025-01-01",
+									"description": "วันที่เริ่มต้น (ISO format)"
 								},
 								{
 									"key": "date_to",
-									"value": "2026-05-22",
-									"description": "Optional - วันที่สิ้นสุด"
+									"value": "2025-12-31",
+									"description": "วันที่สิ้นสุด (ISO format)"
+								},
+								{
+									"key": "year",
+									"value": "2025",
+									"description": "ปีงบประมาณ (ถ้าระบุจะใช้แทน date_from/date_to)"
 								}
 							]
 						},
-						"description": "ดึงข้อมูลภาระงานของเจ้าหน้าที่แต่ละคน แยกตามสถานะของเรื่องร้องทุกข์ แสดงปริมาณงานที่ได้รับมอบหมาย สัดส่วนงาน และความคืบหน้า สามารถระบุช่วงเวลาได้"
+						"description": "ดึงข้อมูลภาระงานของเจ้าหน้าที่แต่ละคน แยกตามสถานะของเรื่องร้องทุกข์ แสดงปริมาณงานที่ได้รับมอบหมาย สัดส่วนงาน และความคืบหน้า สามารถระบุช่วงเวลาหรือปีงบประมาณได้ - ต้องมีสิทธิ์อ่านใน dashboard"
 					},
 					"response": []
 				},
@@ -74,7 +81,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{API}}{{PREFIX}}/dashboard/staff-performance?date_from=2025-04-01&date_to=2025-04-30T23:59:59Z",
+							"raw": "{{API}}{{PREFIX}}/dashboard/staff-performance?date_from=2025-01-01&date_to=2025-12-31",
 							"host": [
 								"{{API}}{{PREFIX}}"
 							],
@@ -85,22 +92,58 @@
 							"query": [
 								{
 									"key": "date_from",
-									"value": "2025-04-01",
-									"description": "Optional - วันที่เริ่มต้น"
+									"value": "2025-01-01",
+									"description": "วันที่เริ่มต้น (ISO format) - ถ้าไม่ระบุจะใช้ 30 วันย้อนหลัง"
 								},
 								{
 									"key": "date_to",
-									"value": "2025-04-30T23:59:59Z",
-									"description": "Optional - วันที่สิ้นสุด"
+									"value": "2025-12-31",
+									"description": "วันที่สิ้นสุด (ISO format) - ถ้าไม่ระบุจะใช้วันปัจจุบัน"
 								}
 							]
 						},
-						"description": "ดึงข้อมูลประสิทธิภาพการทำงานของเจ้าหน้าที่ แสดงจำนวนเรื่องที่ได้รับมอบหมาย จำนวนเรื่องที่จัดการสำเร็จ ระยะเวลาเฉลี่ยในการจัดการเรื่องร้องทุกข์ และประสิทธิภาพการทำงาน"
+						"description": "ดึงข้อมูลประสิทธิภาพการทำงานของเจ้าหน้าที่ แสดงจำนวนเรื่องที่ได้รับมอบหมาย จำนวนเรื่องที่จัดการสำเร็จ ระยะเวลาเฉลี่ยในการจัดการเรื่องร้องทุกข์ และประสิทธิภาพการทำงาน เรียงลำดับตามประสิทธิภาพ - ต้องมีสิทธิ์อ่านใน dashboard"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Map JSON (Thailand Map Data)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/dashboard/map-json?json_path=",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"dashboard",
+								"map-json"
+							],
+							"query": [
+								{
+									"key": "json_path",
+									"value": "",
+									"description": "Optional - path to custom map JSON file (ถ้าไม่ระบุจะใช้ default)"
+								}
+							]
+						},
+						"description": "ส่งออกข้อมูลแผนที่ประเทศไทยทั้งหมด รวมจำนวนเรื่องร้องเรียนแยกตามจังหวัดและปี ใช้ข้อมูลจริงจากฐานข้อมูลสำหรับปีปัจจุบัน และเตรียมข้อมูลเป็น 0 สำหรับปีถัดไป รองรับทั้งปี ค.ศ. และ พ.ศ. ใช้เขตเวลา Asia/Bangkok - ต้องมีสิทธิ์อ่านใน dashboard"
 					},
 					"response": []
 				}
 			],
-			"description": "API สำหรับดูข้อมูล dashboard ภาระงานและประสิทธิภาพการทำงานของเจ้าหน้าที่"
+			"description": "API สำหรับดูข้อมูล dashboard ภาระงานและประสิทธิภาพการทำงานของเจ้าหน้าที่ รวมถึงข้อมูลแผนที่แสดงสถิติเรื่องร้องเรียนตามจังหวัด"
 		},
 		{
 			"name": "ThaID_SandBox_MOF",

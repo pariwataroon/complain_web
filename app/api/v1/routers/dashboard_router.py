@@ -10,6 +10,8 @@ from app.api.middleware.permission_middleware import permission_required
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
 
+from app.api.v1.controllers.dashboard_controller import get_full_map_json_from_db
+
 # นำเข้า controller สำหรับ dashboard
 from app.api.v1.controllers.dashboard_controller import (
     get_staff_workload,
@@ -55,6 +57,25 @@ async def get_staff_performance_data(
     """
     try:
         result = get_staff_performance(db, date_from, date_to)
+        return format_response("0000", result)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return format_response("5000", {"error": str(e)})
+
+@router.get("/map-json", response_model=FormatResponseModel)
+async def get_map_json_endpoint(
+    json_path: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("dashboard"))
+):
+    """
+    ส่งออกข้อมูลแผนที่ทั้งก้อน (เหมือน map.json)
+    โดยดึง "ค่าจริง" จาก DB สำหรับปี 2025 และทำสำเนาเป็น key '2568' ด้วย
+    พร้อม zero-fill จังหวัดให้ครบเพื่อกันกราฟพัง
+    """
+    try:
+        result = get_full_map_json_from_db(db, json_path)
         return format_response("0000", result)
     except Exception as e:
         import traceback

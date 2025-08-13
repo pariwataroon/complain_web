@@ -3,6 +3,9 @@ from sqlalchemy import func, and_, or_, literal, text, distinct
 from sqlalchemy.orm import Session, joinedload, aliased
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
+
+import os, json
+from pathlib import Path
 import logging
 
 from models.comp_complaint import Complaint, ComplaintStatus, ComplaintStatusHistory
@@ -21,6 +24,12 @@ STAFF_ROLES = [
     "staff", "admin", "admin_home", "supervisor", "department"
 ]
 EXCLUDED_ROLES = ["people"]
+MAP_JSON_PATH = os.getenv("THAI_MAP_JSON_PATH", os.path.join("seed", "map.json"))
+
+try:
+    from zoneinfo import ZoneInfo  # Python 3.9+
+except Exception:
+    ZoneInfo = None
 
 def _get_user_info(db: Session, staff_id: str) -> Dict:
     """
@@ -403,3 +412,134 @@ def get_staff_performance(db: Session, date_from: Optional[str] = None, date_to:
     result["performance_data"].sort(key=lambda x: x["performance"]["efficiency_percentage"], reverse=True)
     
     return result
+
+def _resolve_path(p: str) -> Path:
+    cand = Path(p)
+    if cand.is_absolute() and cand.exists():
+        return cand
+    cwd_cand = Path.cwd() / p
+    if cwd_cand.exists():
+        return cwd_cand
+    here_cand = Path(__file__).resolve().parent / p
+    if here_cand.exists():
+        return here_cand
+    return cwd_cand
+
+def _load_raw_map_json(path: Optional[str] = None) -> Dict[str, Any]:
+    file_path = _resolve_path(path or MAP_JSON_PATH)
+    if not file_path.is_file():
+        raise FileNotFoundError(f"ไม่พบไฟล์แผนที่: {file_path}")
+    with open(file_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def _invert_thai_to_hckey(mapping: Dict[str, str]) -> Dict[str, str]:
+    """
+    กลับ mapping เป็น: ชื่อจังหวัดไทย -> hc-key
+    ถ้าซ้ำ ให้บังคับกรุงเทพฯ เป็น th-bk (มาตรฐาน Highcharts Thailand)
+    """
+    rev = {}
+    for hckey, thname in (mapping or {}).items():
+        if thname:
+            rev.setdefault(thname.strip(), hckey)
+    if "กรุงเทพมหานคร" in rev:
+        rev["กรุงเทพมหานคร"] = "th-bk"
+    return rev
+
+def _zero_fill_series(all_keys: List[str], counts: Dict[str, int]) -> List[Dict[str, Any]]:
+    return [{"hc-key": k, "value": int(counts.get(k, 0))} for k in sorted(all_keys)]
+
+def get_full_map_json_from_db(
+    db: Session,
+    json_path: Optional[str] = None,
+    base_year_gregorian: int = 2025,   # ปีเริ่มระบบ (ค.ศ.)
+    years_forward: int = 5             # เตรียมปีล่วงหน้า
+) -> Dict[str, Any]:
+    """
+    สร้างข้อมูล map.json 'ทั้งก้อน' จาก DB โดย:
+      - ใช้เวลา Asia/Bangkok (+07:00)
+      - ปีเริ่มระบบ = 2025 (ค.ศ.) / 2568 (พ.ศ.) -> ดึง 'ค่าจริง' จาก DB
+      - เติมคีย์ปีล่วงหน้าอีก 5 ปี (ค.ศ. และ พ.ศ.) ด้วยค่าศูนย์ (รออนาคต)
+      - ZERO-FILL จังหวัดให้ครบทุกปี
+
+    โครงสร้างตอบกลับเหมือน seed/map.json:
+    {
+      "hcKeyToThaiName": {...},
+      "provinceValues": {
+        "2025":  [ {"hc-key":"...", "value":...}, ... ],
+        "2568":  [ {"hc-key":"...", "value":...}, ... ],
+        "2026":  [ ... 0 ... ],
+        "2569":  [ ... 0 ... ],
+        ...
+      }
+    }
+    """
+    # 1) โหลด mapping จังหวัดจาก seed (สำหรับ hc-key + zero-fill)
+    data_seed = _load_raw_map_json(json_path)   # helper ของไฟล์นี้
+    hckey_to_th: Dict[str, str] = data_seed.get("hcKeyToThaiName", {}) or {}
+    all_hc_keys = sorted(list(hckey_to_th.keys()))
+    if not all_hc_keys:
+        return {"hcKeyToThaiName": {}, "provinceValues": {}}
+
+    th_to_hckey = _invert_thai_to_hckey(hckey_to_th)
+
+    # 2) เวลา Bangkok
+    tz = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
+    now_bkk = datetime.now(tz) if tz else datetime.now()
+    current_year_g = now_bkk.year                # ค.ศ.
+    current_year_b = current_year_g + 543        # พ.ศ.
+
+    # 3) เตรียม key ปีที่ต้องมีใน provinceValues
+    #    - เริ่มจาก base_year_gregorian (2025) ถึง base_year_gregorian + years_forward (2030)
+    #    - ทำทั้งคีย์ ค.ศ. และ พ.ศ. คู่กันเสมอ
+    years_g = list(range(base_year_gregorian, base_year_gregorian + years_forward + 1))
+    years_b = [yg + 543 for yg in years_g]
+
+    # 4) นับค่าจริงจาก DB เฉพาะปี "ปัจจุบัน" ถ้าปีปัจจุบันยังเท่ากับปีเริ่มระบบก็จะนับปีนั้น
+    #    หมายเหตุ: โปรเจคปีแรกคือ 2025 -> เราจะนับ 2025 จริง, ปีถัดๆ ไปเตรียม 0 ไว้ก่อน
+    start_dt = datetime(current_year_g, 1, 1, 0, 0, 0, tzinfo=tz) if tz else datetime(current_year_g, 1, 1, 0, 0, 0)
+    end_dt   = datetime(current_year_g, 12, 31, 23, 59, 59, tzinfo=tz) if tz else datetime(current_year_g, 12, 31, 23, 59, 59)
+
+    rows = (
+        db.query(
+            Complaint.incident_province,
+            func.count(Complaint.id).label("c")
+        )
+        .filter(Complaint.created_at.between(start_dt, end_dt))
+        .group_by(Complaint.incident_province)
+        .all()
+    )
+
+    counts_this_year: Dict[str, int] = {}
+    for th_name, c in rows:
+        if not th_name:
+            continue
+        name = (th_name or "").strip()
+        hckey = th_to_hckey.get(name)
+        if not hckey:
+            # ถ้าชื่อไม่แมตช์ mapping -> ข้าม เพื่อกันกราฟพัง (หรือจะ log เตือนก็ได้)
+            continue
+        counts_this_year[hckey] = counts_this_year.get(hckey, 0) + int(c or 0)
+
+    # 5) ประกอบ provinceValues: ปีปัจจุบัน = ค่าจริง, อื่นๆ = 0
+    def zero_series() -> List[Dict[str, Any]]:
+        return _zero_fill_series(all_hc_keys, {})  # ทุกจังหวัด 0
+
+    real_series = _zero_fill_series(all_hc_keys, counts_this_year)
+
+    province_values: Dict[str, List[Dict[str, Any]]] = {}
+
+    for yg in years_g:
+        yb = yg + 543
+        if yg == current_year_g:
+            province_values[str(yg)] = real_series
+            province_values[str(yb)] = real_series
+        else:
+            zs = zero_series()
+            province_values[str(yg)] = zs
+            province_values[str(yb)] = zs
+
+    # 6) ส่งกลับตามรูปแบบ map.json
+    return {
+        "hcKeyToThaiName": hckey_to_th,
+        "provinceValues": province_values
+    }
