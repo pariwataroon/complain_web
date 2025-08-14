@@ -16,6 +16,9 @@ import {
   GetNameDepartments,
   GetDonutChartComplaintTypes,
 } from "@pages/api/dashboard/dashboard";
+import {
+  GetAllSelectYears,
+} from "@pages/api/allselect/allselect";
 
 const getComplaintTypeColor = (index) => {
   const colors = [
@@ -37,10 +40,45 @@ const BottomLeftService = () => {
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedYear, setSelectedYear] = useState("2568");
   const [departments, setDepartments] = useState([]);
+  const [yearOptions, setYearOptions] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [departmentsLoading, setDepartmentsLoading] = useState(true);
+  const [yearsLoading, setYearsLoading] = useState(true);
+
+  // Fetch years data from API
+  const fetchYears = async () => {
+    setYearsLoading(true);
+    try {
+      const result = await GetAllSelectYears();
+
+      if (result.success && result.yearOptions) {
+        setYearOptions(result.yearOptions);
+        // Set latest year as default if available
+        if (result.yearOptions.length > 0) {
+          const latestYear = result.yearOptions[result.yearOptions.length - 1];
+          setSelectedYear(latestYear.value);
+        }
+      } else {
+        console.warn("Failed to fetch years:", result.message);
+        // Fallback to default years if API fails
+        setYearOptions([
+          { value: "2567", label: "2567" },
+          { value: "2568", label: "2568" }
+        ]);
+      }
+    } catch (err) {
+      console.error("Error fetching years:", err);
+      // Fallback to default years if API fails
+      setYearOptions([
+        { value: "2567", label: "2567" },
+        { value: "2568", label: "2568" }
+      ]);
+    } finally {
+      setYearsLoading(false);
+    }
+  };
 
   // Fetch departments list
   const fetchDepartments = async () => {
@@ -102,17 +140,24 @@ const BottomLeftService = () => {
     }
   };
 
-  // Load departments on mount
+  // Load initial data on mount
   useEffect(() => {
-    fetchDepartments();
+    const fetchInitialData = async () => {
+      await Promise.all([
+        fetchYears(),
+        fetchDepartments()
+      ]);
+    };
+
+    fetchInitialData();
   }, []);
 
   // Load complaint types when department or year changes
   useEffect(() => {
-    if (selectedDepartment && !departmentsLoading) {
+    if (selectedDepartment && !departmentsLoading && !yearsLoading) {
       fetchComplaintTypes();
     }
-  }, [selectedDepartment, selectedYear, departmentsLoading]);
+  }, [selectedDepartment, selectedYear, departmentsLoading, yearsLoading]);
 
   // Chart effect
   useEffect(() => {
@@ -303,7 +348,7 @@ const BottomLeftService = () => {
               <Select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                disabled={loading || departmentsLoading}
+                disabled={loading || departmentsLoading || yearsLoading}
                 sx={{
                   fontSize: { xs: "10px", md: "12px" },
                   height: { xs: "24px", md: "32px" },
@@ -321,8 +366,20 @@ const BottomLeftService = () => {
                   },
                 }}
               >
-                <MenuItem value="2567">2567</MenuItem>
-                <MenuItem value="2568">2568</MenuItem>
+                {yearsLoading ? (
+                  <MenuItem disabled>
+                    <CircularProgress size={12} sx={{ mr: 1 }} />
+                    กำลังโหลด...
+                  </MenuItem>
+                ) : yearOptions.length > 0 ? (
+                  yearOptions.map((year) => (
+                    <MenuItem key={year.value} value={year.value}>
+                      {year.label}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem disabled>ไม่มีข้อมูลปี</MenuItem>
+                )}
               </Select>
             </FormControl>
           </Box>

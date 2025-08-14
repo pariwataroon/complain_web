@@ -308,6 +308,56 @@ const GetAllSignatureAuthorities = async () => {
   }
 };
 
+
+const GetAllSelectYears = async () => {
+  try {
+    const response = await axiosInstance.get(`/dashboard/years`);
+
+    if (
+      response?.data?.res_code === "0000" &&
+      response?.data?.res_data?.years
+    ) {
+      const yearsData = response.data.res_data.years;
+
+      const yearOptions = yearsData.map((year) => ({
+        value: year.value.toString(),
+        label: year.label,
+        be: year.be,
+        ce: year.ce,
+      }));
+
+      const yearRange = response.data.res_data.range;
+
+      return {
+        success: true,
+        yearOptions,
+        range: yearRange,
+        totalYears: yearOptions.length,
+        raw: response.data,
+      };
+    } else {
+      return {
+        success: false,
+        yearOptions: [],
+        range: null,
+        totalYears: 0,
+        message: response?.data?.res_message || "ไม่พบข้อมูล",
+        raw: response?.data,
+      };
+    }
+  } catch (error) {
+    console.error("Error fetching years:", error);
+    return {
+      success: false,
+      yearOptions: [],
+      range: null,
+      totalYears: 0,
+      error: error.message || "เกิดข้อผิดพลาดในการดึงข้อมูล",
+      raw: null,
+    };
+  }
+};
+
 export {
   GetAllSelect,
   getSubComplaintTypeById,
@@ -321,4 +371,5 @@ export {
   GetOutgoingReportOptions,
   GetAllSignatureAuthorities,
   GetAllComplaintChannels,
+  GetAllSelectYears,
 };

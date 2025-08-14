@@ -7,6 +7,9 @@ import SelectField from "@services/SelectField/SelectField";
 import {
   GetMapJSONThailandMapData,
 } from "@pages/api/dashboard/dashboard";
+import {
+  GetAllSelectYears,
+} from "@pages/api/allselect/allselect";
 
 const TopLeftService = () => {
   const chartRef = useRef(null);
@@ -16,10 +19,35 @@ const TopLeftService = () => {
 
   // API data states
   const [mapData, setMapData] = useState(null);
+  const [yearData, setYearData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch data from API
+  // Fetch years data from API
+  const fetchYearData = async () => {
+    try {
+      const result = await GetAllSelectYears();
+
+      if (result.success) {
+        setYearData(result);
+        // Set default years if available
+        if (result.yearOptions && result.yearOptions.length > 0) {
+          const years = result.yearOptions;
+          const latestYear = years[years.length - 1]?.value;
+          const previousYear = years[years.length - 2]?.value || latestYear;
+
+          setSelectedStartYear(previousYear);
+          setSelectedEndYear(latestYear);
+        }
+      } else {
+        console.warn("Failed to fetch years data:", result.message);
+      }
+    } catch (err) {
+      console.error("Error fetching years data:", err);
+    }
+  };
+
+  // Fetch map data from API
   const fetchMapData = async () => {
     setLoading(true);
     setError(null);
@@ -44,8 +72,28 @@ const TopLeftService = () => {
 
   // Fetch data on component mount
   useEffect(() => {
-    fetchMapData();
+    const fetchAllData = async () => {
+      await Promise.all([
+        fetchYearData(),
+        fetchMapData()
+      ]);
+    };
+
+    fetchAllData();
   }, []);
+
+  // Create year options from API data
+  const yearOptions = useMemo(() => {
+    if (!yearData?.yearOptions) {
+      // Fallback options if API fails
+      return [
+        { value: "2567", label: "2567" },
+        { value: "2568", label: "2568" }
+      ];
+    }
+
+    return yearData.yearOptions;
+  }, [yearData]);
 
   // Create localized map data
   const localizedMapDataThailand = useMemo(() => {
@@ -63,11 +111,6 @@ const TopLeftService = () => {
     return newMap;
   }, [mapData]);
 
-  // Get available year options
-  const yearOptions = useMemo(() => {
-    return mapData?.yearOptions || [];
-  }, [mapData]);
-
   // Get province options
   const provinceOptions = useMemo(() => {
     return mapData?.provinceOptions || [{ value: "ทั้งหมด", label: "ทั้งหมด" }];
@@ -75,7 +118,7 @@ const TopLeftService = () => {
 
   // Calculate merged data based on selected years and province
   const mergedData = useMemo(() => {
-    if (!mapData?.provinceValues) return [];
+    if (!mapData?.provinceValues || !selectedStartYear || !selectedEndYear) return [];
 
     const dataMap = {};
     for (

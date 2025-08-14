@@ -5,6 +5,7 @@ import {
   GetComplaintSummary,
 } from "@pages/api/dashboard/dashboard";
 
+
 const DashBoardCard = () => {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
