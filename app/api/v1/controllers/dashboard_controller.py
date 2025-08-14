@@ -628,3 +628,157 @@ def get_full_map_json_from_db(
         "provinceValues": province_values_be,  # << มีแต่คีย์ พ.ศ.
         "yearOptions": year_options           # << มีแต่ พ.ศ.
     }
+
+def _calc_yoy_label_and_values(curr: int, prev: int) -> Dict[str, Any]:
+    """
+    คำนวณ % เปลี่ยนแปลง (YoY) พร้อมนโยบายการแสดงผล:
+    - prev == 0:
+        - curr == 0 -> 0%
+        - curr > 0  -> 100++% (มากกว่า 100% และเลี่ยงหารศูนย์)
+    - จำกัดการแสดงผลไม่ให้เกิน 100% หรือ น้อยกว่า -100%
+      ถ้าเกิน 100% -> "100++%"
+      ถ้าน้อยกว่า -100% -> "-100%"
+    คืนทั้งค่า raw, ค่า capped และ label ที่พร้อมแสดง
+    """
+    diff = curr - prev
+
+    if prev == 0:
+        if curr == 0:
+            return {
+                "previous": prev,
+                "current": curr,
+                "diff": diff,
+                "pct_change_raw": 0.0,
+                "pct_change_capped": 0.0,
+                "pct_change_label": "0%"
+            }
+        else:
+            # กรณีฐานเป็นศูนย์แล้วปีนี้มีค่า > 0
+            return {
+                "previous": prev,
+                "current": curr,
+                "diff": diff,
+                "pct_change_raw": None,        # เลี่ยงหารศูนย์
+                "pct_change_capped": None,     # ไม่มีความหมายเชิงตัวเลขที่เที่ยงตรง
+                "pct_change_label": "100++%"   # สื่อว่าโตเกิน 100%
+            }
+
+    # prev > 0 ปกติ
+    pct_raw = ((curr - prev) / prev) * 100.0
+    # ทำค่า capped ตามนโยบาย (ไม่เกิน 100 และไม่ต่ำกว่า -100)
+    pct_capped = max(-100.0, min(100.0, pct_raw))
+
+    # label สำหรับแสดงผล
+    if pct_raw > 100.0:
+        label = "100++%"
+    elif pct_raw < -100.0:
+        label = "-100%"
+    else:
+        # แสดงทศนิยม 2 ตำแหน่ง (ปรับได้)
+        label = f"{pct_raw:.2f}%"
+
+    return {
+        "previous": prev,
+        "current": curr,
+        "diff": diff,
+        "pct_change_raw": round(pct_raw, 6),
+        "pct_change_capped": round(pct_capped, 6),
+        "pct_change_label": label
+    }
+
+def get_complaint_summary_bkk_year(db: Session) -> Dict[str, Any]:
+    """
+    Summary complaint ที่อิงช่วงเวลาแบบเดียวกับ get_full_map_json_from_db:
+    - ใช้ปีปัจจุบันตาม Asia/Bangkok
+    - แปลงเป็น UTC ก่อนคิวรี
+    นับ: total, in_progress, completed
+    และเทียบ YoY กับปีก่อนหน้า พร้อม % ตามนโยบายการแสดงผล
+    """
+    # 1) เวลาปัจจุบันตาม Bangkok (+07:00) -> กรอบปี
+    tz_bkk = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
+    now_bkk = datetime.now(tz_bkk) if tz_bkk else datetime.now()
+    current_year_g = now_bkk.year
+
+    # ช่วงปีปัจจุบัน
+    bkk_start = datetime(current_year_g, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(current_year_g, 1, 1, 0, 0, 0)
+    bkk_end   = datetime(current_year_g, 12, 31, 23, 59, 59, 999999, tzinfo=tz_bkk) if tz_bkk else datetime(current_year_g, 12, 31, 23, 59, 59, 999999)
+    utc_start = bkk_start.astimezone(timezone.utc) if bkk_start.tzinfo else bkk_start
+    utc_end   = bkk_end.astimezone(timezone.utc)   if bkk_end.tzinfo   else bkk_end
+
+    # ช่วง "ปีก่อนหน้า"
+    prev_year = current_year_g - 1
+    bkk_prev_start = datetime(prev_year, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(prev_year, 1, 1, 0, 0, 0)
+    bkk_prev_end   = datetime(prev_year, 12, 31, 23, 59, 59, 999999, tzinfo=tz_bkk) if tz_bkk else datetime(prev_year, 12, 31, 23, 59, 59, 999999)
+    utc_prev_start = bkk_prev_start.astimezone(timezone.utc) if bkk_prev_start.tzinfo else bkk_prev_start
+    utc_prev_end   = bkk_prev_end.astimezone(timezone.utc)   if bkk_prev_end.tzinfo   else bkk_prev_end
+
+    # 2) กลุ่มสถานะ
+    completed_set = [ComplaintStatus.COMPLETED, ComplaintStatus.REVIEWED]
+    in_progress_set = [
+        ComplaintStatus.SUBMITTED,
+        ComplaintStatus.SENT_TO_AGENCY,
+        ComplaintStatus.IN_PROCESS,
+        ComplaintStatus.IN_REVIEW,
+        ComplaintStatus.TRACKING,
+    ]
+
+    # 3) คิวรีนับ "ปีนี้"
+    total_cur = db.query(func.count(Complaint.id))\
+        .filter(Complaint.created_at.between(utc_start, utc_end))\
+        .scalar() or 0
+
+    in_progress_cur = db.query(func.count(Complaint.id))\
+        .filter(
+            Complaint.created_at.between(utc_start, utc_end),
+            Complaint.status.in_(in_progress_set)
+        ).scalar() or 0
+
+    completed_cur = db.query(func.count(Complaint.id))\
+        .filter(
+            Complaint.created_at.between(utc_start, utc_end),
+            Complaint.status.in_(completed_set)
+        ).scalar() or 0
+
+    # 4) คิวรีนับ "ปีก่อนหน้า"
+    total_prev = db.query(func.count(Complaint.id))\
+        .filter(Complaint.created_at.between(utc_prev_start, utc_prev_end))\
+        .scalar() or 0
+
+    in_progress_prev = db.query(func.count(Complaint.id))\
+        .filter(
+            Complaint.created_at.between(utc_prev_start, utc_prev_end),
+            Complaint.status.in_(in_progress_set)
+        ).scalar() or 0
+
+    completed_prev = db.query(func.count(Complaint.id))\
+        .filter(
+            Complaint.created_at.between(utc_prev_start, utc_prev_end),
+            Complaint.status.in_(completed_set)
+        ).scalar() or 0
+
+    # 5) คำนวณ YoY + จัดรูปแบบแสดงผล
+    yoy_total      = _calc_yoy_label_and_values(int(total_cur), int(total_prev))
+    yoy_inprogress = _calc_yoy_label_and_values(int(in_progress_cur), int(in_progress_prev))
+    yoy_completed  = _calc_yoy_label_and_values(int(completed_cur), int(completed_prev))
+
+    return {
+        "date_range_utc": {
+            "from": utc_start.isoformat(),
+            "to": utc_end.isoformat()
+        },
+        "date_range_bangkok": {
+            "from": bkk_start.isoformat(),
+            "to": bkk_end.isoformat()
+        },
+        "summary": {
+            "total": int(total_cur),
+            "in_progress": int(in_progress_cur),
+            "completed": int(completed_cur),
+            "yoy": {
+                "compare_with_year": prev_year,
+                "total": yoy_total,
+                "in_progress": yoy_inprogress,
+                "completed": yoy_completed
+            }
+        }
+    }

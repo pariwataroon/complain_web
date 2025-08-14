@@ -141,6 +141,35 @@
 						"description": "ส่งออกข้อมูลแผนที่ประเทศไทยทั้งหมด รวมจำนวนเรื่องร้องเรียนแยกตามจังหวัดและปี ใช้ข้อมูลจริงจากฐานข้อมูลสำหรับปีปัจจุบัน และเตรียมข้อมูลเป็น 0 สำหรับปีถัดไป รองรับทั้งปี ค.ศ. และ พ.ศ. ใช้เขตเวลา Asia/Bangkok - ต้องมีสิทธิ์อ่านใน dashboard"
 					},
 					"response": []
+				},
+				{
+					"name": "Get Complaint Summary",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/dashboard/summary",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"dashboard",
+								"summary"
+							]
+						},
+						"description": "สรุปเรื่องร้องเรียนแบบสั้น: แสดงจำนวนเรื่องร้องเรียนทั้งหมดในปีปัจจุบัน (ตามเขตเวลา Asia/Bangkok) แยกตามสถานะต่างๆ เช่น total (ทั้งหมด), in_progress (กำลังดำเนินการ), completed (เสร็จสิ้นแล้ว) รวมถึง COMPLETED และ REVIEWED - ต้องมีสิทธิ์อ่านใน dashboard"
+					},
+					"response": []
 				}
 			],
 			"description": "API สำหรับดูข้อมูล dashboard ภาระงานและประสิทธิภาพการทำงานของเจ้าหน้าที่ รวมถึงข้อมูลแผนที่แสดงสถิติเรื่องร้องเรียนตามจังหวัด"
