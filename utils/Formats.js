@@ -508,3 +508,59 @@ export function formatConfirmationStatus(status, statusText = null) {
 
   return result;
 }
+
+export const formatDateForAPI = (dateObj) => {
+  if (!dateObj) return null;
+  const year = dateObj.year;
+  const month = String(dateObj.month).padStart(2, "0");
+  const day = String(dateObj.day).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+export const formatThaiDateMonths = (dateObj) => {
+  if (
+    !dateObj ||
+    typeof dateObj.day !== "number" ||
+    typeof dateObj.month !== "number" ||
+    typeof dateObj.year !== "number"
+  )
+    return "-";
+
+  const thaiMonths = [
+    "มกราคม",
+    "กุมภาพันธ์",
+    "มีนาคม",
+    "เมษายน",
+    "พฤษภาคม",
+    "มิถุนายน",
+    "กรกฎาคม",
+    "สิงหาคม",
+    "กันยายน",
+    "ตุลาคม",
+    "พฤศจิกายน",
+    "ธันวาคม",
+  ];
+
+  const buddhistYear = dateObj.year + 543;
+  return `${dateObj.day} ${thaiMonths[dateObj.month - 1]} พ.ศ. ${buddhistYear}`;
+};
+
+export const parseDateStringToObj = (value) => {
+  if (typeof value === "string") {
+    const d = new Date(value);
+    return {
+      day: d.getDate(),
+      month: d.getMonth() + 1,
+      year: d.getFullYear(),
+    };
+  }
+  return value;
+};
+
+export const chunkArray = (array, chunkSize = 5) => {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks.length > 0 ? chunks : [[]];
+};

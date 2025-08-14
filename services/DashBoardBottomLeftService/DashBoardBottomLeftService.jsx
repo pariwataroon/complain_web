@@ -7,25 +7,22 @@ import {
   FormControl,
   useMediaQuery,
   useTheme,
+  CircularProgress,
+  ListSubheader,
+  Button,
 } from "@mui/material";
 import Chart from "chart.js/auto";
+import {
+  GetNameDepartments,
+  GetDonutChartComplaintTypes,
+} from "@pages/api/dashboard/dashboard";
 
-const chartDataByDepartment = {
-  1: [
-    { name: "บุคลากร", count: 146, color: "#4A5CD6" },
-    { name: "ร้องเรียนทั่วไป", count: 73, color: "#E91E63" },
-    { name: "ไม่ระบุ", count: 31, color: "#87CEEB" },
-  ],
-  2: [
-    { name: "ภาษี", count: 40, color: "#4A5CD6" },
-    { name: "การเงิน", count: 55, color: "#E91E63" },
-    { name: "อื่น ๆ", count: 10, color: "#87CEEB" },
-  ],
-  3: [
-    { name: "ศุลกากร", count: 60, color: "#4A5CD6" },
-    { name: "การนำเข้า", count: 30, color: "#E91E63" },
-    { name: "การส่งออก", count: 20, color: "#87CEEB" },
-  ],
+const getComplaintTypeColor = (index) => {
+  const colors = [
+    "#4A5CD6", "#E91E63", "#87CEEB", "#FF9800", "#4CAF50",
+    "#9C27B0", "#FF5722", "#607D8B", "#795548", "#F44336"
+  ];
+  return colors[index % colors.length];
 };
 
 const BottomLeftService = () => {
@@ -35,41 +32,122 @@ const BottomLeftService = () => {
 
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
-  const [selectedDepartment, setSelectedDepartment] = useState("1");
-  const [selectedYear, setSelectedYear] = useState("2568");
-  const data = chartDataByDepartment[selectedDepartment] || [];
 
+  // States
+  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [selectedYear, setSelectedYear] = useState("2568");
+  const [departments, setDepartments] = useState([]);
+  const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [departmentsLoading, setDepartmentsLoading] = useState(true);
+
+  // Fetch departments list
+  const fetchDepartments = async () => {
+    setDepartmentsLoading(true);
+    try {
+      const result = await GetNameDepartments();
+
+      if (result.success) {
+        setDepartments(result.departments);
+        // Set first department as default
+        if (result.departments.length > 0) {
+          setSelectedDepartment(result.departments[0].id);
+        }
+      } else {
+        setError("ไม่สามารถโหลดรายชื่อหน่วยงานได้");
+        console.error("Department fetch error:", result.message || result.error);
+      }
+    } catch (err) {
+      console.error("Error fetching departments:", err);
+      setError("เกิดข้อผิดพลาดในการโหลดหน่วยงาน");
+    } finally {
+      setDepartmentsLoading(false);
+    }
+  };
+
+  // Fetch complaint types data
+  const fetchComplaintTypes = async () => {
+    if (!selectedDepartment) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const year = parseInt(selectedYear) - 543; // แปลง พ.ศ. เป็น ค.ศ.
+      const result = await GetDonutChartComplaintTypes(year, selectedDepartment);
+
+      if (result.success) {
+        if (result.isEmpty || result.total === 0) {
+          // ไม่มีข้อมูล
+          setChartData([]);
+          setError("ไม่มีข้อมูลประเภทเรื่องร้องเรียนสำหรับหน่วยงานและปีที่เลือก");
+        } else if (result.data && result.data.length > 0) {
+          setChartData(result.data);
+        } else {
+          // มี total แต่ไม่มี departments data
+          setChartData([]);
+          setError("ไม่มีข้อมูลแยกตามประเภท");
+        }
+      } else {
+        setError(result.message || result.error || "ไม่สามารถดึงข้อมูลได้");
+        setChartData([]);
+      }
+    } catch (err) {
+      console.error("Error fetching complaint types:", err);
+      setError("เกิดข้อผิดพลาดในการดึงข้อมูล");
+      setChartData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load departments on mount
   useEffect(() => {
+    fetchDepartments();
+  }, []);
+
+  // Load complaint types when department or year changes
+  useEffect(() => {
+    if (selectedDepartment && !departmentsLoading) {
+      fetchComplaintTypes();
+    }
+  }, [selectedDepartment, selectedYear, departmentsLoading]);
+
+  // Chart effect
+  useEffect(() => {
+    if (!chartRef.current) return;
+
     const ctx = chartRef.current.getContext("2d");
 
     if (chartInstanceRef.current) {
       chartInstanceRef.current.destroy();
     }
 
-    const isEmpty = data.length === 0 || data.every((item) => item.count === 0);
+    const isEmpty = loading || error || chartData.length === 0 || chartData.every((item) => item.value === 0);
 
-    const chartData = isEmpty
+    const processedChartData = isEmpty
       ? {
-          labels: ["ไม่มีข้อมูล"],
-          datasets: [
-            {
-              data: [1],
-              backgroundColor: ["#e0e0e0"],
-              borderWidth: 0,
-            },
-          ],
-        }
+        labels: [loading ? "กำลังโหลด..." : error ? "เกิดข้อผิดพลาด" : "ไม่มีข้อมูล"],
+        datasets: [
+          {
+            data: [1],
+            backgroundColor: ["#e0e0e0"],
+            borderWidth: 0,
+          },
+        ],
+      }
       : {
-          labels: data.map((item) => item.name),
-          datasets: [
-            {
-              data: data.map((item) => item.count),
-              backgroundColor: data.map((item) => item.color),
-              borderWidth: isMobile ? 1 : 2,
-              borderColor: "#fff",
-            },
-          ],
-        };
+        labels: chartData.map((item) => item.name),
+        datasets: [
+          {
+            data: chartData.map((item) => item.value),
+            backgroundColor: chartData.map((item) => item.color),
+            borderWidth: isMobile ? 1 : 2,
+            borderColor: "#fff",
+          },
+        ],
+      };
 
     // Responsive font sizes
     const fontSizes = {
@@ -80,7 +158,7 @@ const BottomLeftService = () => {
 
     chartInstanceRef.current = new Chart(ctx, {
       type: "doughnut",
-      data: chartData,
+      data: processedChartData,
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -88,12 +166,22 @@ const BottomLeftService = () => {
         plugins: {
           legend: { display: false },
           tooltip: {
+            enabled: !isEmpty,
             titleFont: {
               size: isSmallMobile ? 10 : 12,
             },
             bodyFont: {
               size: isSmallMobile ? 10 : 12,
             },
+            callbacks: {
+              label: (context) => {
+                const item = chartData[context.dataIndex];
+                if (item) {
+                  return `${item.name}: ${item.value} เรื่อง (${item.formattedPercent || ''})`;
+                }
+                return context.label;
+              }
+            }
           },
         },
         animation: {
@@ -111,11 +199,17 @@ const BottomLeftService = () => {
             ctx.fillStyle = "#666";
             ctx.textAlign = "center";
 
-            if (isEmpty) {
+            if (loading) {
+              ctx.font = `bold ${fontSizes.centerTitle}px sans-serif`;
+              ctx.fillText("กำลังโหลด...", width / 2, height / 2 + 5);
+            } else if (error) {
+              ctx.font = `bold ${fontSizes.centerTitle}px sans-serif`;
+              ctx.fillText("ไม่มีข้อมูล", width / 2, height / 2 + 5);
+            } else if (isEmpty) {
               ctx.font = `bold ${fontSizes.centerTitle}px sans-serif`;
               ctx.fillText("ไม่มีข้อมูล", width / 2, height / 2 + 5);
             } else {
-              const total = data.reduce((sum, d) => sum + d.count, 0);
+              const total = chartData.reduce((sum, d) => sum + d.value, 0);
 
               // Title
               ctx.font = `bold ${fontSizes.centerTitle}px sans-serif`;
@@ -129,7 +223,7 @@ const BottomLeftService = () => {
               ctx.fillStyle = "#4A5CD6";
               ctx.font = `bold ${fontSizes.centerNumber}px sans-serif`;
               ctx.fillText(
-                total,
+                total.toLocaleString(),
                 width / 2,
                 height / 2 + (isSmallMobile ? 5 : 10)
               );
@@ -155,7 +249,17 @@ const BottomLeftService = () => {
         chartInstanceRef.current.destroy();
       }
     };
-  }, [data, isMobile, isSmallMobile]);
+  }, [chartData, loading, error, isMobile, isSmallMobile]);
+
+  // Group departments by group name for better organization
+  const groupedDepartments = departments.reduce((groups, dept) => {
+    const groupName = dept.groupName;
+    if (!groups[groupName]) {
+      groups[groupName] = [];
+    }
+    groups[groupName].push(dept);
+    return groups;
+  }, {});
 
   return (
     <Box sx={{ p: { xs: 0.5, md: 1 }, height: "100%" }}>
@@ -199,19 +303,20 @@ const BottomLeftService = () => {
               <Select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
+                disabled={loading || departmentsLoading}
                 sx={{
                   fontSize: { xs: "10px", md: "12px" },
                   height: { xs: "24px", md: "32px" },
-                  borderRadius: "8px", // เพิ่ม borderRadius
+                  borderRadius: "8px",
                   "& .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#1976d2", // สีฟ้า border
+                    borderColor: "#1976d2",
                     borderRadius: "8px",
                   },
                   "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#1565c0", // สีฟ้าเข้มเมื่อ hover
+                    borderColor: "#1565c0",
                   },
                   "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#1976d2", // สีฟ้าเมื่อ focus
+                    borderColor: "#1976d2",
                     borderWidth: "2px",
                   },
                 }}
@@ -237,58 +342,67 @@ const BottomLeftService = () => {
             <FormControl
               size="small"
               sx={{
-                minWidth: { xs: 120, sm: 140, md: 160 },
+                minWidth: { xs: 120, sm: 140, md: 200 },
               }}
             >
               <Select
                 value={selectedDepartment}
                 onChange={(e) => setSelectedDepartment(e.target.value)}
+                disabled={departmentsLoading || departments.length === 0}
                 sx={{
                   fontSize: { xs: "10px", md: "12px" },
                   height: { xs: "24px", md: "32px" },
-                  borderRadius: "8px", // เพิ่ม borderRadius
+                  borderRadius: "8px",
                   "& .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#1976d2", // สีฟ้า border
+                    borderColor: "#1976d2",
                     borderRadius: "8px",
                   },
                   "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#1565c0", // สีฟ้าเข้มเมื่อ hover
+                    borderColor: "#1565c0",
                   },
                   "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#1976d2", // สีฟ้าเมื่อ focus
+                    borderColor: "#1976d2",
                     borderWidth: "2px",
                   },
                 }}
-              >
-                {[
-                  { value: "1", label: "กรมบัญชีกลาง" },
-                  { value: "2", label: "สำนักงานเศรษฐกิจการคลัง" },
-                  { value: "3", label: "กรมศุลกากร" },
-                  { value: "4", label: "กรมสรรพากร" },
-                  { value: "5", label: "สำนักงานงบประมาณ" },
-                  { value: "6", label: "สำนักงานตรวจเงินแผ่นดิน" },
-                  { value: "7", label: "สำนักงานบริหารหนี้สาธารณะ" },
-                  { value: "8", label: "ธนาคารแห่งประเทศไทย" },
-                  { value: "9", label: "สำนักงานคณะกรรมการนโยบายรัฐวิสาหกิจ" },
-                  {
-                    value: "10",
-                    label: "สำนักงานคณะกรรมการกำกับหลักทรัพย์และตลาดหลักทรัพย์",
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 300,
+                    },
                   },
-                ].map((item) => (
-                  <MenuItem key={item.value} value={item.value}>
-                    <Typography
-                      noWrap
-                      sx={{
-                        maxWidth: { xs: "100px", sm: "120px", md: "160px" },
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        fontSize: { xs: "10px", md: "12px" },
-                      }}
-                    >
-                      {item.label}
-                    </Typography>
+                }}
+              >
+                {departmentsLoading ? (
+                  <MenuItem disabled>
+                    <CircularProgress size={16} sx={{ mr: 1 }} />
+                    กำลังโหลด...
                   </MenuItem>
-                ))}
+                ) : Object.keys(groupedDepartments).length > 0 ? (
+                  Object.entries(groupedDepartments).map(([groupName, depts]) => [
+                    <ListSubheader key={groupName} sx={{ fontSize: "11px", fontWeight: "bold", color: "#1976d2" }}>
+                      {groupName}
+                    </ListSubheader>,
+                    ...depts.map((dept) => (
+                      <MenuItem key={dept.id} value={dept.id}>
+                        <Typography
+                          noWrap
+                          sx={{
+                            maxWidth: { xs: "100px", sm: "120px", md: "180px" },
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            fontSize: { xs: "10px", md: "12px" },
+                          }}
+                          title={dept.name}
+                        >
+                          {dept.name}
+                        </Typography>
+                      </MenuItem>
+                    ))
+                  ]).flat()
+                ) : (
+                  <MenuItem disabled>ไม่มีข้อมูลหน่วยงาน</MenuItem>
+                )}
               </Select>
             </FormControl>
           </Box>
@@ -331,7 +445,7 @@ const BottomLeftService = () => {
       </Box>
 
       {/* Legend สำหรับ Mobile */}
-      {isMobile && data.length > 0 && (
+      {isMobile && !loading && !error && chartData.length > 0 && (
         <Box
           sx={{
             mt: 1,
@@ -341,9 +455,9 @@ const BottomLeftService = () => {
             alignItems: "center",
           }}
         >
-          {data.map((item, index) => (
+          {chartData.map((item, index) => (
             <Box
-              key={index}
+              key={item.id || index}
               sx={{
                 display: "flex",
                 alignItems: "center",
@@ -360,7 +474,8 @@ const BottomLeftService = () => {
                 }}
               />
               <Typography sx={{ fontSize: "10px", color: "#666" }}>
-                {item.name}: {item.count} เรื่อง
+                {item.name}: {item.value} เรื่อง
+                {item.formattedPercent && ` (${item.formattedPercent})`}
               </Typography>
             </Box>
           ))}

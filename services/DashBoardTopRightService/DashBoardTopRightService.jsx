@@ -14,11 +14,15 @@ import {
   Popover,
   Grid,
   Button,
+  CircularProgress,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import SelectField from "@services/SelectField/SelectField";
 import Chart from "chart.js/auto";
+import {
+  GetComplaintSummary,
+} from "@pages/api/dashboard/dashboard";
 
 const TopRightChart = () => {
   const theme = useTheme();
@@ -28,6 +32,11 @@ const TopRightChart = () => {
   const chartInstanceRef = useRef(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [openModal, setOpenModal] = useState(null);
+
+  // API data states
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // States for current display mode
   const [currentMode, setCurrentMode] = useState("monthly");
@@ -45,95 +54,79 @@ const TopRightChart = () => {
     toYear: "2567",
   });
 
-  // Mock data for different periods with varied patterns
-  const getMockData = (mode, period) => {
-    const baseData = [
-      { name: "สำนักงานพัฒนาการศึกษาชาวบ้าน", color: "#1A237E" },
-      { name: "กรุงเทพการ", color: "#3949AB" },
-      { name: "สำนักงานเขตกรุงเทพมหานคร", color: "#7986CB" },
-      { name: "วิชาการและเทคโนโลยี", color: "#29B6F6" },
-      { name: "สำนักงานพัฒนาวิศวกรรม", color: "#81D4FA" },
-      { name: "หน่วยงาน A", color: "#FBC02D" },
-      { name: "หน่วยงาน B", color: "#FBE9A7" },
-      { name: "หน่วยงาน C", color: "#E91E63" },
-      { name: "หน่วยงาน D", color: "#F48FB1" },
-    ];
+  const [chartData, setChartData] = useState([]);
 
-    // Base pattern values สำหรับแต่ละโหมด
-    const getBaseValues = (mode, period) => {
-      switch (mode) {
-        case "monthly":
-          if (period.includes("มกราคม"))
-            return [8, 18, 12, 3, 12, 6, 11, 14, 8];
-          if (period.includes("กุมภาพันธ์"))
-            return [15, 7, 20, 9, 4, 16, 2, 19, 11];
-          if (period.includes("มีนาคม"))
-            return [5, 22, 8, 17, 10, 3, 14, 6, 19];
-          if (period.includes("เมษายน"))
-            return [12, 4, 16, 8, 21, 5, 18, 9, 13];
-          if (period.includes("พฤษภาคม"))
-            return [9, 17, 6, 14, 3, 20, 7, 15, 4];
-          if (period.includes("มิถุนายน"))
-            return [16, 5, 19, 10, 8, 12, 22, 3, 17];
-          if (period.includes("กรกฎาคม"))
-            return [6, 19, 11, 4, 18, 8, 15, 12, 7];
-          if (period.includes("สิงหาคม"))
-            return [8, 18, 12, 3, 12, 6, 11, 14, 8];
-          if (period.includes("กันยายน"))
-            return [14, 6, 17, 11, 5, 19, 8, 16, 10];
-          if (period.includes("ตุลาคม"))
-            return [7, 20, 9, 16, 12, 4, 18, 5, 15];
-          if (period.includes("พฤศจิกายน"))
-            return [11, 8, 21, 6, 16, 13, 3, 17, 9];
-          if (period.includes("ธันวาคม"))
-            return [18, 4, 14, 12, 7, 20, 9, 6, 16];
-          return [8, 18, 12, 3, 12, 6, 11, 14, 8];
+  // Fetch data from API
+  const fetchApiData = async () => {
+    setLoading(true);
+    setError(null);
 
-        case "quarterly":
-          if (period.includes("ไตรมาสที่ 1"))
-            return [12, 8, 19, 5, 16, 10, 22, 7, 14];
-          if (period.includes("ไตรมาสที่ 2"))
-            return [9, 21, 6, 17, 4, 18, 8, 15, 11];
-          if (period.includes("ไตรมาสที่ 3"))
-            return [16, 3, 14, 11, 20, 6, 17, 9, 13];
-          if (period.includes("ไตรมาสที่ 4"))
-            return [7, 18, 10, 4, 15, 12, 5, 19, 8];
-          return [12, 8, 19, 5, 16, 10, 22, 7, 14];
+    try {
+      const result = await GetComplaintSummary();
 
-        case "yearly":
-          if (period.includes("2565")) return [10, 15, 8, 19, 6, 21, 4, 16, 12];
-          if (period.includes("2566")) return [14, 7, 18, 9, 22, 5, 17, 11, 6];
-          if (period.includes("2567")) return [6, 20, 11, 4, 16, 9, 23, 7, 15];
-          if (period.includes("2568")) return [13, 5, 19, 12, 8, 17, 10, 20, 7];
-          return [13, 5, 19, 12, 8, 17, 10, 20, 7];
+      if (result.success) {
+        setApiData(result);
 
-        case "department":
-          // Random-ish but consistent pattern for comparison
-          const seed = period.charCodeAt(0) + period.length;
-          const patterns = [
-            [11, 6, 17, 9, 4, 19, 12, 8, 15],
-            [8, 16, 5, 20, 11, 7, 18, 13, 9],
-            [15, 4, 21, 8, 17, 6, 14, 10, 19],
-            [9, 18, 7, 15, 5, 22, 11, 6, 16],
-          ];
-          return patterns[seed % patterns.length];
-
-        default:
-          return [8, 18, 12, 3, 12, 6, 11, 14, 8];
+        // Process department data for chart
+        if (result.departmentData && result.departmentData.length > 0) {
+          const processedData = result.departmentData.map((dept, index) => ({
+            name: dept.name,
+            count: dept.count,
+            color: getChartColor(index),
+            id: dept.id
+          }));
+          setChartData(processedData);
+        } else {
+          // Use summary data as fallback
+          const summaryChartData = result.dashboardCards.map((card, index) => ({
+            name: card.title.replace("เรื่องราวร้องทุกข์", "").trim(),
+            count: card.count,
+            color: getChartColor(index),
+            id: card.id
+          }));
+          setChartData(summaryChartData);
+        }
+      } else {
+        setError(result.message || result.error || "ไม่สามารถดึงข้อมูลได้");
+        setChartData([
+          {
+            name: "ไม่มีข้อมูล",
+            count: 0,
+            color: "#e0e0e0",
+            id: "no-data"
+          }
+        ]);
       }
-    };
-
-    const values = getBaseValues(mode, period);
-
-    return baseData.map((item, index) => ({
-      ...item,
-      count: values[index] || 8,
-    }));
+    } catch (err) {
+      console.error("Error fetching API data:", err);
+      setError("เกิดข้อผิดพลาดในการดึงข้อมูล");
+      setChartData([
+        {
+          name: "เกิดข้อผิดพลาด",
+          count: 0,
+          color: "#f44336",
+          id: "error"
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const [chartData, setChartData] = useState(() =>
-    getMockData("monthly", "สิงหาคม 2568")
-  );
+  // Generate chart colors
+  const getChartColor = (index) => {
+    const colors = [
+      "#1A237E", "#3949AB", "#7986CB", "#29B6F6", "#81D4FA",
+      "#FBC02D", "#FBE9A7", "#E91E63", "#F48FB1", "#4CAF50",
+      "#8BC34A", "#CDDC39", "#FF9800", "#FF5722", "#795548"
+    ];
+    return colors[index % colors.length];
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchApiData();
+  }, []);
 
   const menuItems = [
     { text: "รายเดือน", id: "monthly" },
@@ -182,16 +175,16 @@ const TopRightChart = () => {
     setOpenModal(null);
   };
 
-  // Handle form changes with data update
+  // Handle form changes with period update
   const handleMonthlyChange = (field) => (e) => {
     const newForm = { ...monthlyForm, [field]: e.target.value };
     setMonthlyForm(newForm);
 
-    // Update chart data immediately
+    // Update period display
     const newPeriod = `${newForm.month} ${newForm.year}`;
     setCurrentPeriod(newPeriod);
     setCurrentMode("monthly");
-    setChartData(getMockData("monthly", newPeriod));
+    handleCloseModal();
   };
 
   const handleQuarterlyChange = (e) => {
@@ -203,22 +196,22 @@ const TopRightChart = () => {
     const newForm = { year: e.target.value };
     setYearlyForm(newForm);
 
-    // Update chart data immediately
+    // Update period display
     const newPeriod = `ปี ${newForm.year}`;
     setCurrentPeriod(newPeriod);
     setCurrentMode("yearly");
-    setChartData(getMockData("yearly", newPeriod));
+    handleCloseModal();
   };
 
   const handleDepartmentChange = (field) => (e) => {
     const newForm = { ...departmentForm, [field]: e.target.value };
     setDepartmentForm(newForm);
 
-    // Update chart data immediately
+    // Update period display
     const newPeriod = `เปรียบเทียบ ${newForm.fromYear}-${newForm.toYear}`;
     setCurrentPeriod(newPeriod);
     setCurrentMode("department");
-    setChartData(getMockData("department", newPeriod));
+    handleCloseModal();
   };
 
   // Handle quarter selection
@@ -226,7 +219,6 @@ const TopRightChart = () => {
     const newPeriod = `${quarterLabel} ปี ${quarterlyForm.year}`;
     setCurrentPeriod(newPeriod);
     setCurrentMode("quarterly");
-    setChartData(getMockData("quarterly", quarterLabel));
     handleCloseModal();
   };
 
@@ -533,7 +525,10 @@ const TopRightChart = () => {
     }
   };
 
+  // Chart effect
   useEffect(() => {
+    if (!chartRef.current || loading) return;
+
     const ctx = chartRef.current.getContext("2d");
 
     if (chartInstanceRef.current) {
@@ -584,6 +579,9 @@ const TopRightChart = () => {
                   return fullName.substring(0, 15) + "...";
                 }
                 return fullName;
+              },
+              label: function (context) {
+                return `${context.dataset.label}: ${context.parsed.y} เรื่อง`;
               },
             },
           },
@@ -640,9 +638,31 @@ const TopRightChart = () => {
         chartInstanceRef.current.destroy();
       }
     };
-  }, [chartData, isMobile, isSmallMobile]);
+  }, [chartData, isMobile, isSmallMobile, loading]);
 
   const open = Boolean(anchorEl);
+
+  // Loading state
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          height: "100%",
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 2,
+        }}
+      >
+        <CircularProgress size={40} />
+        <Typography variant="body2" color="textSecondary">
+          กำลังโหลดข้อมูล...
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <>
@@ -705,6 +725,21 @@ const TopRightChart = () => {
           >
             ณ {currentPeriod}
           </Typography>
+
+          {error && (
+            <Typography
+              variant="caption"
+              sx={{
+                color: "#f44336",
+                textAlign: "center",
+                fontSize: { xs: "8px", sm: "9px" },
+                display: "block",
+                mt: 0.5,
+              }}
+            >
+              {error}
+            </Typography>
+          )}
         </Box>
 
         <Box
@@ -715,17 +750,32 @@ const TopRightChart = () => {
             overflow: "hidden",
           }}
         >
-          <canvas
-            ref={chartRef}
-            style={{
-              width: "100%",
-              height: "100%",
-              display: "block",
-            }}
-          />
+          {chartData.length > 0 ? (
+            <canvas
+              ref={chartRef}
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "block",
+              }}
+            />
+          ) : (
+            <Box
+              sx={{
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#999",
+                fontSize: "14px",
+              }}
+            >
+              ไม่มีข้อมูลแสดง
+            </Box>
+          )}
         </Box>
 
-        {isMobile && (
+        {isMobile && chartData.length > 0 && (
           <Box
             sx={{
               flexShrink: 0,
@@ -740,7 +790,7 @@ const TopRightChart = () => {
           >
             {chartData.slice(0, 4).map((item, index) => (
               <Box
-                key={index}
+                key={item.id || index}
                 sx={{
                   display: "flex",
                   alignItems: "center",
@@ -784,6 +834,20 @@ const TopRightChart = () => {
                 </Typography>
               </Box>
             )}
+          </Box>
+        )}
+
+        {/* Retry button when error */}
+        {error && (
+          <Box sx={{ textAlign: "center", mt: 1 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={fetchApiData}
+              sx={{ fontSize: "10px", py: 0.5, px: 1 }}
+            >
+              ลองใหม่
+            </Button>
           </Box>
         )}
       </Box>

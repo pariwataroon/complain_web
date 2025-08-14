@@ -9,19 +9,14 @@ import {
   useTheme,
 } from "@mui/material";
 import Chart from "chart.js/auto";
+import {
+  GetDonutChartChannels,
+} from "@pages/api/dashboard/dashboard";
 
-const chartDataByYear = {
-  2567: [
-    { name: "เว็บไซต์", count: 80, color: "#4A5CD6" },
-    { name: "อีเมล", count: 40, color: "#E91E63" },
-    { name: "จดหมาย", count: 26, color: "#87CEEB" },
-  ],
-  2568: [
-    { name: "เว็บไซต์", count: 60, color: "#4A5CD6" },
-    { name: "อีเมล", count: 30, color: "#E91E63" },
-    { name: "จดหมาย", count: 0, color: "#87CEEB" },
-  ],
-};
+const chartColors = [
+  "#4A5CD6", "#E91E63", "#87CEEB", "#FF9800", "#4CAF50",
+  "#9C27B0", "#FF5722", "#607D8B", "#795548", "#F44336"
+];
 
 const BottomRightService = () => {
   const theme = useTheme();
@@ -29,41 +24,85 @@ const BottomRightService = () => {
   const isSmallMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [selectedYear, setSelectedYear] = useState("2568");
+  const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [total, setTotal] = useState(0);
+
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
-  const data = chartDataByYear[selectedYear] || [];
 
+  // Fetch data from API
+  const fetchChartData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await GetDonutChartChannels(parseInt(selectedYear) - 543); // แปลง พ.ศ. เป็น ค.ศ.
+
+      if (result.success && result.data) {
+        // เพิ่มสีให้กับข้อมูล
+        const dataWithColors = result.data.map((item, index) => ({
+          ...item,
+          color: chartColors[index % chartColors.length]
+        }));
+
+        setChartData(dataWithColors);
+        setTotal(result.total);
+      } else {
+        setError(result.message || result.error || "ไม่สามารถดึงข้อมูลได้");
+        setChartData([]);
+        setTotal(0);
+      }
+    } catch (err) {
+      console.error("Error fetching chart data:", err);
+      setError("เกิดข้อผิดพลาดในการดึงข้อมูล");
+      setChartData([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data when year changes
   useEffect(() => {
+    fetchChartData();
+  }, [selectedYear]);
+
+  // Create chart
+  useEffect(() => {
+    if (!chartRef.current) return;
+
     const ctx = chartRef.current.getContext("2d");
 
     if (chartInstanceRef.current) {
       chartInstanceRef.current.destroy();
     }
 
-    const isEmpty = data.length === 0 || data.every((item) => item.count === 0);
+    const isEmpty = loading || error || chartData.length === 0 || chartData.every((item) => item.value === 0);
 
-    const chartData = isEmpty
+    const processedChartData = isEmpty
       ? {
-          labels: ["ไม่มีข้อมูล"],
-          datasets: [
-            {
-              data: [1],
-              backgroundColor: ["#e0e0e0"],
-              borderWidth: 0,
-            },
-          ],
-        }
+        labels: [loading ? "กำลังโหลด..." : error ? "เกิดข้อผิดพลาด" : "ไม่มีข้อมูล"],
+        datasets: [
+          {
+            data: [1],
+            backgroundColor: ["#e0e0e0"],
+            borderWidth: 0,
+          },
+        ],
+      }
       : {
-          labels: data.map((item) => item.name),
-          datasets: [
-            {
-              data: data.map((item) => item.count),
-              backgroundColor: data.map((item) => item.color),
-              borderWidth: isMobile ? 1 : 2,
-              borderColor: "#fff",
-            },
-          ],
-        };
+        labels: chartData.map((item) => item.name),
+        datasets: [
+          {
+            data: chartData.map((item) => item.value),
+            backgroundColor: chartData.map((item) => item.color),
+            borderWidth: isMobile ? 1 : 2,
+            borderColor: "#fff",
+          },
+        ],
+      };
 
     // Responsive font sizes
     const fontSizes = {
@@ -74,7 +113,7 @@ const BottomRightService = () => {
 
     chartInstanceRef.current = new Chart(ctx, {
       type: "doughnut",
-      data: chartData,
+      data: processedChartData,
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -82,12 +121,19 @@ const BottomRightService = () => {
         plugins: {
           legend: { display: false },
           tooltip: {
+            enabled: !isEmpty,
             titleFont: {
               size: isSmallMobile ? 10 : 12,
             },
             bodyFont: {
               size: isSmallMobile ? 10 : 12,
             },
+            callbacks: {
+              label: (context) => {
+                const item = chartData[context.dataIndex];
+                return `${item.name}: ${item.value} เรื่อง (${item.formattedPercent})`;
+              }
+            }
           },
         },
         animation: {
@@ -105,12 +151,16 @@ const BottomRightService = () => {
             ctx.fillStyle = "#666";
             ctx.textAlign = "center";
 
-            if (isEmpty) {
+            if (loading) {
+              ctx.font = `bold ${fontSizes.centerTitle}px sans-serif`;
+              ctx.fillText("กำลังโหลด...", width / 2, height / 2 + 5);
+            } else if (error) {
+              ctx.font = `bold ${fontSizes.centerTitle}px sans-serif`;
+              ctx.fillText("เกิดข้อผิดพลาด", width / 2, height / 2 + 5);
+            } else if (isEmpty) {
               ctx.font = `bold ${fontSizes.centerTitle}px sans-serif`;
               ctx.fillText("ไม่มีข้อมูล", width / 2, height / 2 + 5);
             } else {
-              const total = data.reduce((sum, d) => sum + d.count, 0);
-
               // Title
               ctx.font = `bold ${fontSizes.centerTitle}px sans-serif`;
               ctx.fillText(
@@ -149,7 +199,7 @@ const BottomRightService = () => {
         chartInstanceRef.current.destroy();
       }
     };
-  }, [data, isMobile, isSmallMobile]);
+  }, [chartData, loading, error, total, isMobile, isSmallMobile]);
 
   return (
     <Box sx={{ p: { xs: 0.5, md: 1 }, height: "100%" }}>
@@ -181,19 +231,20 @@ const BottomRightService = () => {
           <Select
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
+            disabled={loading}
             sx={{
               fontSize: { xs: "10px", md: "12px" },
               height: { xs: "24px", md: "32px" },
-              borderRadius: "8px", // เพิ่ม borderRadius
+              borderRadius: "8px",
               "& .MuiOutlinedInput-notchedOutline": {
-                borderColor: "#1976d2", // สีฟ้า border
+                borderColor: "#1976d2",
                 borderRadius: "8px",
               },
               "&:hover .MuiOutlinedInput-notchedOutline": {
-                borderColor: "#1565c0", // สีฟ้าเข้มเมื่อ hover
+                borderColor: "#1565c0",
               },
               "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                borderColor: "#1976d2", // สีฟ้าเมื่อ focus
+                borderColor: "#1976d2",
                 borderWidth: "2px",
               },
             }}
@@ -204,14 +255,14 @@ const BottomRightService = () => {
         </FormControl>
       </Box>
 
-      {/* หัวข้อ - เพิ่ม margin top อีก 2 */}
+      {/* หัวข้อ */}
       <Typography
         variant="h6"
         sx={{
           fontWeight: "bold",
           textAlign: "center",
           mb: { xs: 1, md: 2 },
-          mt: { xs: 0, md: 7 }, // เพิ่มจาก { xs: 2, md: 3 } เป็น { xs: 4, md: 5 }
+          mt: { xs: 0, md: 7 },
           fontSize: { xs: "12px", sm: "14px", md: "16px" },
           color: "#1120A3",
         }}
@@ -242,7 +293,7 @@ const BottomRightService = () => {
       </Box>
 
       {/* Legend สำหรับ Mobile */}
-      {isMobile && data.length > 0 && (
+      {isMobile && !loading && !error && chartData.length > 0 && (
         <Box
           sx={{
             mt: 1,
@@ -252,9 +303,9 @@ const BottomRightService = () => {
             alignItems: "center",
           }}
         >
-          {data.map((item, index) => (
+          {chartData.map((item, index) => (
             <Box
-              key={index}
+              key={item.id || index}
               sx={{
                 display: "flex",
                 alignItems: "center",
@@ -271,10 +322,24 @@ const BottomRightService = () => {
                 }}
               />
               <Typography sx={{ fontSize: "10px", color: "#666" }}>
-                {item.name}: {item.count} เรื่อง
+                {item.name}: {item.value} เรื่อง ({item.formattedPercent})
               </Typography>
             </Box>
           ))}
+        </Box>
+      )}
+
+      {/* Error message */}
+      {error && !loading && (
+        <Box
+          sx={{
+            mt: 1,
+            textAlign: "center",
+            color: "#f44336",
+            fontSize: "12px",
+          }}
+        >
+          {error}
         </Box>
       )}
     </Box>

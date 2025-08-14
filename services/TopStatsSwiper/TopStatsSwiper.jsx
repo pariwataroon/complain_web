@@ -5,45 +5,19 @@ import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import styles from "./TopStatsSwiper.module.scss";
-
-// รับ { day, month, year }
-const formatThaiDate = (dateObj) => {
-  if (
-    !dateObj ||
-    typeof dateObj.day !== "number" ||
-    typeof dateObj.month !== "number" ||
-    typeof dateObj.year !== "number"
-  )
-    return "-";
-  const thaiMonths = [
-    "มกราคม",
-    "กุมภาพันธ์",
-    "มีนาคม",
-    "เมษายน",
-    "พฤษภาคม",
-    "มิถุนายน",
-    "กรกฎาคม",
-    "สิงหาคม",
-    "กันยายน",
-    "ตุลาคม",
-    "พฤศจิกายน",
-    "ธันวาคม",
-  ];
-  return `${dateObj.day} ${thaiMonths[dateObj.month - 1]} พ.ศ. ${
-    dateObj.year + 543
-  }`;
-};
+import { formatThaiDateMonths } from "@utils/Formats";
 
 const TopStatsSwiper = ({
   title,
   data,
-  startDate, // { day, month, year }
-  endDate, // { day, month, year }
+  startDate, 
+  endDate, 
   variant = "high",
+  loading = false,
 }) => {
   const dateRangeText =
     startDate && endDate
-      ? `ณ ${formatThaiDate(startDate)} - ${formatThaiDate(endDate)}`
+      ? `ณ ${formatThaiDateMonths(startDate)} - ${formatThaiDateMonths(endDate)}`
       : "";
 
   const fiscalYear =
@@ -53,11 +27,12 @@ const TopStatsSwiper = ({
 
   const isHigh = variant === "high";
 
+  const hasData = data && data.length > 0 && data.some(chunk => chunk.length > 0);
+
   return (
     <Box
-      className={`${styles.topStatsBox} ${
-        isHigh ? styles.cardBlue : styles.cardRed
-      }`}
+      className={`${styles.topStatsBox} ${isHigh ? styles.cardBlue : styles.cardRed
+        }`}
     >
       <div className={styles.header}>{title}</div>
 
@@ -68,27 +43,37 @@ const TopStatsSwiper = ({
       </div>
 
       <div className={styles.slideBox}>
-        <Swiper
-          slidesPerView={1}
-          spaceBetween={12}
-          pagination={{ clickable: true }}
-          modules={[Pagination]}
-          autoHeight={true}
-        >
-          {data.map((pageData, slideIndex) => (
-            <SwiperSlide key={slideIndex}>
-              {pageData.map((item, i) => (
-                <div key={i} className={styles.itemBox}>
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <div className={styles.rankCircle}>{i + 1}</div>
-                    <div className={styles.label}>{item.name}</div>
-                  </Box>
-                  <div className={styles.count}>{item.count}</div>
-                </div>
-              ))}
-            </SwiperSlide>
-          ))}
-        </Swiper>
+        {loading ? (
+          <div className={styles.emptyStateContainer}>
+            กำลังโหลด...
+          </div>
+        ) : !hasData ? (
+          <div className={styles.emptyStateContainer}>
+            ยังไม่มีข้อมูล
+          </div>
+        ) : (
+          <Swiper
+            slidesPerView={1}
+            spaceBetween={12}
+            pagination={{ clickable: true }}
+            modules={[Pagination]}
+            autoHeight={true}
+          >
+            {data.map((pageData, slideIndex) => (
+              <SwiperSlide key={slideIndex}>
+                {pageData.map((item, i) => (
+                  <div key={i} className={styles.itemBox}>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <div className={styles.rankCircle}>{i + 1}</div>
+                      <div className={styles.label}>{item.name}</div>
+                    </Box>
+                    <div className={styles.count}>{item.count}</div>
+                  </div>
+                ))}
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        )}
       </div>
     </Box>
   );

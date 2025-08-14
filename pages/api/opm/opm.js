@@ -655,6 +655,8 @@ const GetCaseStatus = async () => {
 
     let xmlString = response.data;
 
+    const keepTexts = ["รับเรื่อง", "อยู่ระหว่างดำเนินการ", "ยุติเรื่อง"];
+
     if (typeof xmlString === "string") {
       if (typeof window !== "undefined") {
         const parser = new DOMParser();
@@ -664,7 +666,10 @@ const GetCaseStatus = async () => {
         )[0];
 
         if (resultElement && resultElement.textContent) {
-          const statuses = JSON.parse(resultElement.textContent);
+          let statuses = JSON.parse(resultElement.textContent);
+          statuses = statuses.filter((item) =>
+            keepTexts.includes(item.text.trim())
+          );
 
           return {
             success: true,
@@ -676,7 +681,10 @@ const GetCaseStatus = async () => {
           /<GetCaseStatusResult>(.*?)<\/GetCaseStatusResult>/
         );
         if (match && match[1]) {
-          const statuses = JSON.parse(match[1]);
+          let statuses = JSON.parse(match[1]);
+          statuses = statuses.filter((item) =>
+            keepTexts.includes(item.text.trim())
+          );
 
           return {
             success: true,

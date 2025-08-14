@@ -14,7 +14,7 @@ const Opm1111Components = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [readComplaints, setReadComplaints] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [timelineType, setTimelineType] = useState("I"); // เพิ่ม state สำหรับ timeline type
+  const [timelineType, setTimelineType] = useState("I");
   const router = useRouter();
 
   useEffect(() => {
@@ -61,6 +61,8 @@ const Opm1111Components = () => {
     try {
       const timelineData = await GetTimelineHeader(take, timeline_type);
       const parsedData = Array.isArray(timelineData) ? timelineData : timelineData;
+      console.log({ parsedData });
+      
       const mappedComplaints = parsedData.map((item) => ({
         case_id: item.case_id,
         case_code: item.case_code,
@@ -68,7 +70,7 @@ const Opm1111Components = () => {
         type_text: item.type_text,
         status_text: item.status_text,
         main_status_text: item.main_status_text,
-        ShowDateTime: item.ShowDateTime,
+        ShowDateTime: item.operating_date,
       }));
 
       setComplaints(mappedComplaints);

@@ -49,6 +49,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
     const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
+    console.log({ operatingsDetails });
     
     const [reportModalOpen, setReportModalOpen] = useState(false);
 
@@ -397,10 +398,14 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Grid>
                         )}
 
-                        {accountData.contacts
-                            ?.filter(c => c.detail_type === 'M')
-                            .map((contact, idx) => (
-                                <Grid item xs={12} md={6} key={contact.id || idx}>
+                        {(() => {
+                            const phoneNumbers = accountData.contacts
+                                ?.filter(c => c.detail_type === 'M')
+                                ?.map(c => c.detail)
+                                ?.filter(Boolean) || [];
+
+                            return phoneNumbers.length > 0 ? (
+                                <Grid item xs={12} md={6}>
                                     <Box className={styles.infoItem}>
                                         <PhoneIcon className={styles.infoIcon} />
                                         <Box>
@@ -408,13 +413,13 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                                 เบอร์โทรศัพท์
                                             </Typography>
                                             <Typography variant="body1" className={styles.value}>
-                                                {contact.detail}
+                                                {phoneNumbers.join(' , ')}
                                             </Typography>
                                         </Box>
                                     </Box>
                                 </Grid>
-                            ))
-                        }
+                            ) : null;
+                        })()}
 
                         {accountData.address && (accountData.address.address ||accountData.address.subdistrict || accountData.address.district || accountData.address.province) && (
                             <Grid item xs={12}>
@@ -521,10 +526,14 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                 </Grid>
                             )}
 
-                            {customerData.contacts
-                                ?.filter(c => c.detail_type === 'M')
-                                .map((contact, idx) => (
-                                    <Grid item xs={12} md={6} key={contact.id || idx}>
+                            {(() => {
+                                const phoneNumbers = customerData.contacts
+                                    ?.filter(c => c.detail_type === 'M')
+                                    ?.map(c => c.detail)
+                                    ?.filter(Boolean) || [];
+
+                                return phoneNumbers.length > 0 ? (
+                                    <Grid item xs={12} md={6}>
                                         <Box className={styles.infoItem}>
                                             <PhoneIcon className={styles.infoIcon} />
                                             <Box>
@@ -532,13 +541,13 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                                     เบอร์โทรศัพท์
                                                 </Typography>
                                                 <Typography variant="body1" className={styles.value}>
-                                                    {contact.detail}
+                                                    {phoneNumbers.join(' , ')}
                                                 </Typography>
                                             </Box>
                                         </Box>
                                     </Grid>
-                                ))
-                            }
+                                ) : null;
+                            })()}                            
                             
                             {customerData.address && (customerData.address.address || customerData.address.subdistrict || customerData.address.district || customerData.address.province) && (
                                 <Grid item xs={12}>
