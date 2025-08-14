@@ -1,5 +1,5 @@
 from uuid import UUID
-from sqlalchemy import func, and_, or_, literal, text, distinct, exists
+from sqlalchemy import func, and_, or_, literal, text, distinct, exists, select, union_all
 from sqlalchemy.orm import Session, joinedload, aliased
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta, timezone
@@ -9,8 +9,10 @@ from pathlib import Path
 import logging
 
 from models.comp_complaint import Complaint, ComplaintStatus, ComplaintStatusHistory
+from models.comp_complaint_types import ComplaintType, ComplaintChannel
 from models.user import User
 from models.role import Role
+from models.departments import Department
 from models.outgoing_reports import OutgoingReport
 from models.outgoing_reports2 import OutgoingReport2
 from models.outgoing_reports3 import OutgoingReport3
@@ -788,7 +790,7 @@ def get_complaint_summary_bkk_year(db: Session) -> Dict[str, Any]:
     }
 
 # ---------- helper: BKK-year → UTC range ----------
-def _bkk_year_to_utc_range(year: int) -> Tuple[datetime, datetime, datetime, datetime]:
+def _bkk_year_to_utc_range(year: int):
     tz_bkk = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
     bkk_start = datetime(year, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year, 1, 1, 0, 0, 0)
     bkk_end   = datetime(year, 12, 31, 23, 59, 59, 999999, tzinfo=tz_bkk) if tz_bkk else datetime(year, 12, 31, 23, 59, 59, 999999)
@@ -873,12 +875,137 @@ def get_donut_by_complaint_types(db: Session, year: Optional[int] = None, depart
         "items": items
     }
 
+def get_donut_types_grouped_by_department(
+    db: Session,
+    year: Optional[int] = None,
+    department_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    โดนัท: แยกตาม Department แล้วแตกย่อยตามประเภทเรื่อง (ComplaintType)
+    - ปี: กรอบ BKK-year -> คิวรีด้วย UTC
+    - ถ้าระบุ department_id -> คืนเฉพาะหน่วยงานนั้น
+      ไม่ระบุ -> รวมทุกหน่วยงาน (คืนหลายก้อน)
+    การผูก Department ใช้ OutgoingReport(1–4) กับ Complaint
+    """
+    # ปีเป้าหมาย
+    if not year:
+        tz_bkk = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
+        now_bkk = datetime.now(tz_bkk) if tz_bkk else datetime.now()
+        year = now_bkk.year
+
+    bkk_start, bkk_end, utc_start, utc_end = _bkk_year_to_utc_range(year)
+
+    # ----- union รายงานส่งออกทั้งหมด → (complaint_id, department_id)
+    r1 = select(OutgoingReport.complaint_id.label("complaint_id"),
+                OutgoingReport.department_id.label("department_id"))
+    r2 = select(OutgoingReport2.complaint_id.label("complaint_id"),
+                OutgoingReport2.department_id.label("department_id"))
+    r3 = select(OutgoingReport3.complaint_id.label("complaint_id"),
+                OutgoingReport3.department_id.label("department_id"))
+    r4 = select(OutgoingReport4.complaint_id.label("complaint_id"),
+                OutgoingReport4.department_id.label("department_id"))
+
+    union_q = union_all(r1, r2, r3, r4).subquery("rep_union")
+    # distinct กันซ้ำ (บางเรื่องมีหลายเรคอร์ดในหลายตาราง)
+    link_q = select(distinct(union_q.c.complaint_id).label("complaint_id"),
+                    union_q.c.department_id.label("department_id")).subquery("link_distinct")
+
+    # ----- นับจำนวนต่อ department x complaint_type
+    q = (
+        db.query(
+            link_q.c.department_id.label("dept_id"),
+            Department.name.label("dept_name"),
+            Complaint.complaint_type_id.label("type_id"),
+            ComplaintType.name.label("type_name"),
+            func.count(distinct(Complaint.id)).label("cnt")
+        )
+        .join(Complaint, Complaint.id == link_q.c.complaint_id)
+        .outerjoin(Department, Department.id == link_q.c.department_id)
+        .outerjoin(ComplaintType, ComplaintType.id == Complaint.complaint_type_id)
+        .filter(Complaint.created_at.between(utc_start, utc_end))
+    )
+
+    if department_id:
+        q = q.filter(link_q.c.department_id == department_id)
+
+    rows = q.group_by(
+        link_q.c.department_id, Department.name,
+        Complaint.complaint_type_id, ComplaintType.name
+    ).all()
+
+    # ----- รวม total ต่อ department
+    total_q = (
+        db.query(
+            link_q.c.department_id.label("dept_id"),
+            func.count(distinct(Complaint.id)).label("cnt")
+        )
+        .join(Complaint, Complaint.id == link_q.c.complaint_id)
+        .filter(Complaint.created_at.between(utc_start, utc_end))
+    )
+    if department_id:
+        total_q = total_q.filter(link_q.c.department_id == department_id)
+
+    total_rows = total_q.group_by(link_q.c.department_id).all()
+    total_by_dept = {str(dept_id) if dept_id else None: int(c or 0) for dept_id, c in total_rows}
+
+    # ----- จัดรูปผลลัพธ์
+    buckets: Dict[str, Dict[str, Any]] = {}
+    for dept_id, dept_name, type_id, type_name, cnt in rows:
+        key = str(dept_id) if dept_id else "null"
+        if key not in buckets:
+            buckets[key] = {
+                "department": {
+                    "id": str(dept_id) if dept_id else None,
+                    "name": dept_name or "ไม่ระบุ"
+                },
+                "total": total_by_dept.get(str(dept_id) if dept_id else None, 0),
+                "items": []
+            }
+        total = buckets[key]["total"] or 0
+        pct = (cnt / total * 100.0) if total else 0.0
+        buckets[key]["items"].append({
+            "id": str(type_id) if type_id else None,
+            "name": type_name or "ไม่ระบุ",
+            "value": int(cnt or 0),
+            "percent": round(pct, 2)
+        })
+
+    # เผื่อมี dept ที่ total > 0 แต่ไม่มีแถว rows (เช่น type_id = NULL อย่างเดียว)
+    for k, v in list(total_by_dept.items()):
+        key = k if k is not None else "null"
+        if key not in buckets:
+            # เติมก้อนเปล่า (จะแสดงรวม 0 รายการ)
+            dept_obj = db.query(Department.name).filter(Department.id == k).scalar() if k else None
+            buckets[key] = {
+                "department": {
+                    "id": k,
+                    "name": dept_obj or "ไม่ระบุ"
+                },
+                "total": int(v or 0),
+                "items": []
+            }
+
+    # รวมยอดทั้งระบบสำหรับ header
+    grand_total = sum([b["total"] for b in buckets.values()])
+
+    # เรียงก้อนตามจำนวนมาก → น้อย
+    departments_payload = sorted(buckets.values(), key=lambda x: x["total"], reverse=True)
+
+    return {
+        "filters": {
+            "year": year,
+            "department_id": department_id
+        },
+        "date_range_bangkok": {"from": bkk_start.isoformat(), "to": bkk_end.isoformat()},
+        "date_range_utc": {"from": utc_start.isoformat(), "to": utc_end.isoformat()},
+        "total": int(grand_total),
+        "departments": departments_payload
+    }
 
 def get_donut_by_channels(db: Session, year: Optional[int] = None) -> Dict[str, Any]:
     """
-    โดนัท 2: แยกตาม 'ช่องทางการร้องเรียน' (comp_complaint_channels)
-    - กรองปีตาม BKK-year → คิวรีด้วย UTC
-    - (ไม่ต้องกรอง department ตามโจทย์)
+    โดนัท: แยกตาม 'ช่องทางการร้องเรียน' (ComplaintChannel) พร้อมชื่อ
+    - ปี: กรอบ BKK-year -> คิวรีด้วย UTC
     """
     if not year:
         tz_bkk = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
@@ -891,30 +1018,31 @@ def get_donut_by_channels(db: Session, year: Optional[int] = None) -> Dict[str, 
         .filter(Complaint.created_at.between(utc_start, utc_end))\
         .scalar() or 0
 
-    rows = db.query(
-        Complaint.complaint_channel_id.label("channel_id"),
-        func.count(Complaint.id).label("count")
-    ).filter(Complaint.created_at.between(utc_start, utc_end))\
-     .group_by(Complaint.complaint_channel_id)\
-     .all()
+    rows = (
+        db.query(
+            Complaint.complaint_channel_id.label("channel_id"),
+            ComplaintChannel.name.label("channel_name"),
+            func.count(Complaint.id).label("cnt")
+        )
+        .outerjoin(ComplaintChannel, ComplaintChannel.id == Complaint.complaint_channel_id)
+        .filter(Complaint.created_at.between(utc_start, utc_end))
+        .group_by(Complaint.complaint_channel_id, ComplaintChannel.name)
+        .all()
+    )
 
     items: List[Dict[str, Any]] = []
-    for r in rows:
-        # ถ้ามีโมเดล ComplaintChannel และ field name: เติม label จริงได้
-        # name = db.query(ComplaintChannel.name).filter(ComplaintChannel.id == r.channel_id).scalar() if r.channel_id else "ไม่ระบุ"
-        name = "ไม่ระบุ" if r.channel_id is None else str(r.channel_id)
-        pct = (r.count / total * 100.0) if total else 0.0
+    for channel_id, channel_name, cnt in rows:
+        name = channel_name or "ไม่ระบุ"
+        pct = (cnt / total * 100.0) if total else 0.0
         items.append({
-            "id": str(r.channel_id) if r.channel_id else None,
-            "label": name,
-            "value": int(r.count),
+            "id": str(channel_id) if channel_id else None,
+            "name": name,
+            "value": int(cnt or 0),
             "percent": round(pct, 2)
         })
 
     return {
-        "filters": {
-            "year": year
-        },
+        "filters": {"year": year},
         "date_range_bangkok": {"from": bkk_start.isoformat(), "to": bkk_end.isoformat()},
         "date_range_utc": {"from": utc_start.isoformat(), "to": utc_end.isoformat()},
         "total": int(total),

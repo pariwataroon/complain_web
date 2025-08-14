@@ -10,7 +10,7 @@ from app.api.middleware.permission_middleware import permission_required
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
 
-from app.api.v1.controllers.dashboard_controller import get_full_map_json_from_db, get_complaint_summary_bkk_year, get_donut_by_complaint_types, get_donut_by_channels
+from app.api.v1.controllers.dashboard_controller import get_full_map_json_from_db, get_complaint_summary_bkk_year, get_donut_types_grouped_by_department, get_donut_by_channels
 
 # นำเข้า controller สำหรับ dashboard
 from app.api.v1.controllers.dashboard_controller import (
@@ -104,34 +104,24 @@ async def get_complaint_summary_endpoint(
 
 @router.get("/donut/types", response_model=FormatResponseModel)
 async def donut_types_endpoint(
-    year: Optional[int] = Query(None, description="ปี พ.ศ./ค.ศ. ที่ต้องการ (ถ้าไม่ส่ง ใช้ปีปัจจุบันตามเวลาไทย)"),
-    department_id: Optional[str] = Query(None, description="UUID ของแผนก (กรองเฉพาะเรื่องที่ถูกมอบหมายไปยังแผนกนี้)"),
+    year: Optional[int] = Query(None),
+    department_id: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("dashboard")),
 ):
-    """
-    โดนัท: ประเภทเรื่องร้องทุกข์ (comp_complaint_types)
-    - year: ปี (ยึดกรอบ BKK-year แล้วคิวรีด้วย UTC)
-    - department_id: กรองจากการมอบหมายผ่าน outgoing_reports(1–4)
-    """
     try:
-        data = get_donut_by_complaint_types(db, year=year, department_id=department_id)
+        data = get_donut_types_grouped_by_department(db, year=year, department_id=department_id)
         return format_response("0000", data)
     except Exception as e:
         import traceback; traceback.print_exc()
         return format_response("5000", {"error": str(e)})
 
-
 @router.get("/donut/channels", response_model=FormatResponseModel)
 async def donut_channels_endpoint(
-    year: Optional[int] = Query(None, description="ปี พ.ศ./ค.ศ. ที่ต้องการ (ถ้าไม่ส่ง ใช้ปีปัจจุบันตามเวลาไทย)"),
+    year: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("dashboard")),
 ):
-    """
-    โดนัท: แยกตามช่องทางการร้องเรียน (comp_complaint_channels)
-    - year: ปี (ยึดกรอบ BKK-year แล้วคิวรีด้วย UTC)
-    """
     try:
         data = get_donut_by_channels(db, year=year)
         return format_response("0000", data)
