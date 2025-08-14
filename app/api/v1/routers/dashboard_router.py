@@ -10,7 +10,7 @@ from app.api.middleware.permission_middleware import permission_required
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
 
-from app.api.v1.controllers.dashboard_controller import get_full_map_json_from_db, get_complaint_summary_bkk_year, get_donut_types_grouped_by_department, get_donut_by_channels
+from app.api.v1.controllers.dashboard_controller import get_full_map_json_from_db, get_complaint_summary_bkk_year, get_donut_types_grouped_by_department, get_donut_by_channels, get_department_ranking_by_date
 
 # นำเข้า controller สำหรับ dashboard
 from app.api.v1.controllers.dashboard_controller import (
@@ -124,6 +124,33 @@ async def donut_channels_endpoint(
 ):
     try:
         data = get_donut_by_channels(db, year=year)
+        return format_response("0000", data)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return format_response("5000", {"error": str(e)})
+    
+@router.get("/departments/ranking", response_model=FormatResponseModel)
+async def get_department_ranking_endpoint(
+    date_from: Optional[str] = Query(None, description="วันที่เริ่ม (เช่น 2025-01-31 หรือ 31/01/2568)"),
+    date_to: Optional[str]   = Query(None, description="วันที่สิ้นสุด (เช่น 2025-04-02 หรือ 02/04/2568)"),
+    limit_top: Optional[int] = Query(5, ge=1, le=50, description="จำนวนอันดับมากที่สุด"),
+    limit_bottom: Optional[int] = Query(5, ge=1, le=50, description="จำนวนอันดับน้อยที่สุด"),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("dashboard")),
+):
+    """
+    จัดอันดับหน่วยงานที่มีเรื่อง 'มากที่สุด' และ 'น้อยที่สุด' ตามช่วงวันที่
+    - ผูก complaint ↔ department ผ่าน outgoing_reports(1–4) แบบเดียวกับโดนัท
+    - วันที่ใช้เวลาไทย แล้วแปลงเป็น UTC ก่อนคิวรี
+    """
+    try:
+        data = get_department_ranking_by_date(
+            db,
+            date_from=date_from,
+            date_to=date_to,
+            limit_top=limit_top or 5,
+            limit_bottom=limit_bottom or 5,
+        )
         return format_response("0000", data)
     except Exception as e:
         import traceback; traceback.print_exc()

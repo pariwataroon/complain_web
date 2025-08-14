@@ -1048,3 +1048,151 @@ def get_donut_by_channels(db: Session, year: Optional[int] = None) -> Dict[str, 
         "total": int(total),
         "items": items
     }
+
+def _parse_bkk_date(date_str: Optional[str], end_of_day: bool = False) -> Optional[datetime]:
+    """
+    รับรูปแบบวันที่ที่พบบ่อย:
+      - ISO: '2025-01-31' หรือ '2025-01-31T13:20:00'
+      - '31/01/2025', '31-01-2025'
+      - พ.ศ.: '31/01/2568' (ลบ 543 อัตโนมัติ)
+    คืนค่า datetime tz-aware (Asia/Bangkok)
+    """
+    if not date_str:
+        return None
+    s = date_str.strip()
+    tz_bkk = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
+
+    # ลอง ISO ก่อน
+    try:
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            # ถ้าไม่มีเวลา ใส่ต้นวัน/ท้ายวันให้เหมาะสม
+            if end_of_day and dt.hour == 0 and dt.minute == 0 and dt.second == 0:
+                dt = datetime(dt.year, dt.month, dt.day, 23, 59, 59, 999999)
+            dt = dt.replace(tzinfo=tz_bkk)
+        return dt.astimezone(tz_bkk) if tz_bkk else dt
+    except Exception:
+        pass
+
+    # ลอง d/m/Y, d-m-Y
+    for fmt in ("%d/%m/%Y", "%d-%m-%Y"):
+        try:
+            d = datetime.strptime(s, fmt)
+            year = d.year
+            # แปลง พ.ศ. -> ค.ศ.
+            if year > 2400:
+                year -= 543
+            if end_of_day:
+                d = datetime(year, d.month, d.day, 23, 59, 59, 999999, tzinfo=tz_bkk)
+            else:
+                d = datetime(year, d.month, d.day, 0, 0, 0, 0, tzinfo=tz_bkk)
+            return d
+        except Exception:
+            continue
+
+    # ล้มเหลว: ให้ None
+    return None
+
+
+def _bkk_to_utc_range(date_from_bkk: Optional[datetime], date_to_bkk: Optional[datetime]) -> Tuple[datetime, datetime, datetime, datetime]:
+    """
+    ถ้าไม่ส่งช่วงวันที่ ให้ fallback เป็นทั้งปีปัจจุบัน (เวลาไทย)
+    คืน (bkk_from, bkk_to, utc_from, utc_to)
+    """
+    tz_bkk = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
+    now_bkk = datetime.now(tz_bkk) if tz_bkk else datetime.now()
+
+    if not date_from_bkk or not date_to_bkk:
+        bkk_from = datetime(now_bkk.year, 1, 1, 0, 0, 0, 0, tzinfo=tz_bkk)
+        bkk_to   = datetime(now_bkk.year, 12, 31, 23, 59, 59, 999999, tzinfo=tz_bkk)
+    else:
+        bkk_from = date_from_bkk
+        bkk_to   = date_to_bkk
+
+    utc_from = bkk_from.astimezone(timezone.utc) if bkk_from.tzinfo else bkk_from
+    utc_to   = bkk_to.astimezone(timezone.utc)   if bkk_to.tzinfo   else bkk_to
+    return bkk_from, bkk_to, utc_from, utc_to
+
+
+def get_department_ranking_by_date(
+    db: Session,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    limit_top: int = 5,
+    limit_bottom: int = 5
+) -> Dict[str, Any]:
+    """
+    จัดอันดับหน่วยงานที่ 'มีเรื่องมากที่สุด' และ 'น้อยที่สุด'
+    - อิงเรื่องที่ถูก 'มอบหมาย' ผ่าน outgoing_reports(1–4)
+    - รับช่วงวันที่ (เวลาไทย) -> แปลงเป็น UTC ก่อนคิวรี
+    - กันการซ้ำด้วย distinct(complaint_id, department_id)
+    """
+    # 1) ทำช่วงวันที่ (BKK -> UTC)
+    bkk_from = _parse_bkk_date(date_from, end_of_day=False)
+    bkk_to   = _parse_bkk_date(date_to,   end_of_day=True)
+    bkk_from, bkk_to, utc_from, utc_to = _bkk_to_utc_range(bkk_from, bkk_to)
+
+    # 2) รวม mapping complaint_id ↔ department_id จาก report 1–4
+    r1 = select(OutgoingReport.complaint_id.label("complaint_id"),
+                OutgoingReport.department_id.label("department_id"))
+    r2 = select(OutgoingReport2.complaint_id.label("complaint_id"),
+                OutgoingReport2.department_id.label("department_id"))
+    r3 = select(OutgoingReport3.complaint_id.label("complaint_id"),
+                OutgoingReport3.department_id.label("department_id"))
+    r4 = select(OutgoingReport4.complaint_id.label("complaint_id"),
+                OutgoingReport4.department_id.label("department_id"))
+
+    union_q = union_all(r1, r2, r3, r4).subquery("rep_union")
+    link_q = select(
+        distinct(union_q.c.complaint_id).label("complaint_id"),
+        union_q.c.department_id.label("department_id")
+    ).subquery("link_distinct")
+
+    # 3) นับจำนวนเรื่องต่อ department (ภายในช่วงเวลา)
+    rows = (
+        db.query(
+            link_q.c.department_id.label("dept_id"),
+            Department.name.label("dept_name"),
+            func.count(distinct(Complaint.id)).label("cnt")
+        )
+        .join(Complaint, Complaint.id == link_q.c.complaint_id)
+        .outerjoin(Department, Department.id == link_q.c.department_id)
+        .filter(Complaint.created_at.between(utc_from, utc_to))
+        .group_by(link_q.c.department_id, Department.name)
+        .all()
+    )
+
+    # 4) รวมยอดทั้งหมด + จำนวนหน่วยงานที่มีเรื่อง
+    total_complaints = sum(int(r.cnt or 0) for r in rows)
+    # เรียงมากสุด ↓ / น้อยสุด ↑
+    top_sorted = sorted(rows, key=lambda r: (int(r.cnt or 0), r.dept_name or ""), reverse=True)
+    bottom_sorted = sorted(rows, key=lambda r: (int(r.cnt or 0), r.dept_name or ""))
+
+    # 5) ทำ payload
+    def _pack(lst, take, desc=True):
+        out: List[Dict[str, Any]] = []
+        for idx, r in enumerate(lst[:max(0, take)], start=1):
+            out.append({
+                "rank": idx,
+                "department": {"id": str(r.dept_id) if r.dept_id else None, "name": r.dept_name or "ไม่ระบุ"},
+                "count": int(r.cnt or 0)
+            })
+        return out
+
+    payload = {
+        "filters": {
+            "date_from_bangkok": bkk_from.isoformat(),
+            "date_to_bangkok": bkk_to.isoformat(),
+            "date_from_utc": utc_from.isoformat(),
+            "date_to_utc": utc_to.isoformat(),
+            "limit_top": int(limit_top),
+            "limit_bottom": int(limit_bottom)
+        },
+        "totals": {
+            "total_complaints": int(total_complaints),
+            "departments_with_complaints": len(rows)
+        },
+        "top_departments": _pack(top_sorted, limit_top, desc=True),
+        "bottom_departments": _pack(bottom_sorted, limit_bottom, desc=False)
+    }
+    return payload

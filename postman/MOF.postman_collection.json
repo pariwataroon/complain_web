@@ -249,6 +249,58 @@
 						"description": "โดนัท: แยกตามช่องทางการร้องเรียน (comp_complaint_channels) - year: ปี (ยึดกรอบ BKK-year แล้วคิวรีด้วย UTC) - ต้องมีสิทธิ์อ่านใน dashboard"
 					},
 					"response": []
+				},
+				{
+					"name": "Get Department Ranking",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/dashboard/departments/ranking?date_from=2025-01-31&date_to=2025-04-02&limit_top=5&limit_bottom=5",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"dashboard",
+								"departments",
+								"ranking"
+							],
+							"query": [
+								{
+									"key": "date_from",
+									"value": "2025-01-31",
+									"description": "วันที่เริ่ม (เช่น 2025-01-31 หรือ 31/01/2568)"
+								},
+								{
+									"key": "date_to",
+									"value": "2025-04-02",
+									"description": "วันที่สิ้นสุด (เช่น 2025-04-02 หรือ 02/04/2568)"
+								},
+								{
+									"key": "limit_top",
+									"value": "5",
+									"description": "จำนวนอันดับมากที่สุด (1-50)"
+								},
+								{
+									"key": "limit_bottom",
+									"value": "5",
+									"description": "จำนวนอันดับน้อยที่สุด (1-50)"
+								}
+							]
+						},
+						"description": "จัดอันดับหน่วยงานที่มีเรื่องร้องเรียน 'มากที่สุด' และ 'น้อยที่สุด' ตามช่วงวันที่ - ผูก complaint ↔ department ผ่าน outgoing_reports(1–4) แบบเดียวกับโดนัท - วันที่ใช้เวลาไทย แล้วแปลงเป็น UTC ก่อนคิวรี - ต้องมีสิทธิ์อ่านใน dashboard"
+					},
+					"response": []
 				}
 			],
 			"description": "API สำหรับดูข้อมูล dashboard ภาระงานและประสิทธิภาพการทำงานของเจ้าหน้าที่ รวมถึงข้อมูลแผนที่แสดงสถิติเรื่องร้องเรียนตามจังหวัด"
