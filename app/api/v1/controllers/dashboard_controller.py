@@ -32,16 +32,59 @@ STAFF_ROLES = [
 EXCLUDED_ROLES = ["people"]
 MAP_JSON_PATH = os.getenv("THAI_MAP_JSON_PATH", os.path.join("seed", "map.json"))
 
+BE_START = 2567
+BE_END   = 2577
+CE_START = BE_START - 543  # 2024
+CE_END   = BE_END   - 543  # 2034
+
 try:
     from zoneinfo import ZoneInfo  # Python 3.9+
 except Exception:
     ZoneInfo = None
+
+def _is_be(y: int) -> bool:
+    return y >= 2400  # heuristic พ.ศ.
 
 def _is_be_year(y_str: str) -> bool:
     try:
         return int(y_str) >= 2500
     except:
         return False
+
+def list_years_be(start_be: int = BE_START, end_be: int = BE_END) -> Dict[str, Any]:
+    years = []
+    for be in range(start_be, end_be + 1):
+        ce = be - 543
+        years.append({"value": be, "label": str(be), "be": be, "ce": ce})
+    return {
+        "years": years,
+        "range": {"be_start": start_be, "be_end": end_be, "ce_start": CE_START, "ce_end": CE_END},
+    }
+
+def convert_year_pair(year: int) -> Dict[str, int]:
+    """
+    รับปี (พ.ศ. หรือ ค.ศ.) แล้วคืนคู่ค่า {"be": พ.ศ., "ce": ค.ศ.}
+    จำกัดช่วง: พ.ศ. 2567–2577 (เทียบเท่า ค.ศ. 2024–2034)
+    """
+    if _is_be(year):
+        be, ce = year, year - 543
+    else:
+        be, ce = year + 543, year
+
+    if not (BE_START <= be <= BE_END and CE_START <= ce <= CE_END):
+        raise ValueError(f"year out of allowed range: BE {BE_START}-{BE_END} / CE {CE_START}-{CE_END}")
+
+    return {"be": be, "ce": ce}
+
+def get_years_api(year: Optional[int] = None) -> Dict[str, Any]:
+    """
+    - year=None → คืน list ปี พ.ศ. 2567–2577
+    - year=<BE หรือ CE> → คืนคู่ค่า {"be":..,"ce":..}
+    """
+    if year is None:
+        return list_years_be()
+    pair = convert_year_pair(int(year))
+    return {"input": int(year), **pair}
 
 def _series_to_counts(series: List[Dict[str, Any]]) -> Dict[str, int]:
     # แปลง list [{"hc-key":..,"value":..}] -> dict {hckey: value}

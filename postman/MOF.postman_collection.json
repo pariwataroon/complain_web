@@ -107,6 +107,42 @@
 					"response": []
 				},
 				{
+					"name": "Get Years",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/dashboard/years?year=",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"dashboard",
+								"years"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "",
+									"description": "ระบุปี พ.ศ. (2567–2577) หรือ ค.ศ. (2024–2034) เพื่อแปลงค่าเป็นคู่ be/ce; ถ้าไม่ระบุจะคืนลิสต์ปี พ.ศ."
+								}
+							]
+						},
+						"description": "ใช้สำหรับ front-end: GET /dashboard/years → {\"years\":[{value:2567,label:\"2567\"},...]}; GET /dashboard/years?year=2568 → {\"input\":2568,\"be\":2568,\"ce\":2025} - ต้องมีสิทธิ์อ่านใน dashboard"
+					},
+					"response": []
+				},
+				{
 					"name": "Get Map JSON (Thailand Map Data)",
 					"request": {
 						"auth": {
@@ -122,7 +158,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{API}}{{PREFIX}}/dashboard/map-json?json_path=",
+							"raw": "{{API}}{{PREFIX}}/dashboard/map-json?json_path=&year=&only_year=false",
 							"host": [
 								"{{API}}{{PREFIX}}"
 							],
@@ -135,10 +171,20 @@
 									"key": "json_path",
 									"value": "",
 									"description": "Optional - path to custom map JSON file (ถ้าไม่ระบุจะใช้ default)"
+								},
+								{
+									"key": "year",
+									"value": "",
+									"description": "ปี ค.ศ. ที่ต้องการ (เช่น 2025)"
+								},
+								{
+									"key": "only_year",
+									"value": "false",
+									"description": "ส่งเฉพาะปีที่เลือก (ไม่รวมปีจากไฟล์ seed)"
 								}
 							]
 						},
-						"description": "ส่งออกข้อมูลแผนที่ประเทศไทยทั้งหมด รวมจำนวนเรื่องร้องเรียนแยกตามจังหวัดและปี ใช้ข้อมูลจริงจากฐานข้อมูลสำหรับปีปัจจุบัน และเตรียมข้อมูลเป็น 0 สำหรับปีถัดไป รองรับทั้งปี ค.ศ. และ พ.ศ. ใช้เขตเวลา Asia/Bangkok - ต้องมีสิทธิ์อ่านใน dashboard"
+						"description": "ส่งออกข้อมูลแผนที่ประเทศไทยทั้งหมด รวมจำนวนเรื่องร้องเรียนแยกตามจังหวัดและปี ใช้ข้อมูลจริงจากฐานข้อมูลสำหรับปีปัจจุบัน และเตรียมข้อมูลเป็น 0 สำหรับปีถัดไป รองรับทั้งปี ค.ศ. และ พ.ศ. ใช้เขตเวลา Asia/Bangkok - ถ้า only_year=true จะส่งเฉพาะปี พ.ศ. ที่คำนวณจาก year เท่านั้น - ต้องมีสิทธิ์อ่านใน dashboard"
 					},
 					"response": []
 				},

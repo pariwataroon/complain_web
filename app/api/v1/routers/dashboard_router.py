@@ -10,7 +10,7 @@ from app.api.middleware.permission_middleware import permission_required
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
 
-from app.api.v1.controllers.dashboard_controller import get_full_map_json_from_db, get_complaint_summary_bkk_year, get_donut_types_grouped_by_department, get_donut_by_channels, get_department_ranking_by_date
+from app.api.v1.controllers.dashboard_controller import get_years_api, get_full_map_json_from_db, get_complaint_summary_bkk_year, get_donut_types_grouped_by_department, get_donut_by_channels, get_department_ranking_by_date
 
 # นำเข้า controller สำหรับ dashboard
 from app.api.v1.controllers.dashboard_controller import (
@@ -61,6 +61,30 @@ async def get_staff_performance_data(
     except Exception as e:
         import traceback
         traceback.print_exc()
+        return format_response("5000", {"error": str(e)})
+
+@router.get("/years", response_model=FormatResponseModel)
+async def get_years_endpoint(
+    year: Optional[int] = Query(
+        None,
+        description="ระบุปี พ.ศ. (2567–2577) หรือ ค.ศ. (2024–2034) เพื่อแปลงค่าเป็นคู่ be/ce; ถ้าไม่ระบุจะคืนลิสต์ปี พ.ศ."
+    ),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("dashboard")),
+):
+    """
+    ใช้สำหรับ front-end:
+    - GET /dashboard/years            → {"years":[{value:2567,label:"2567"},...]}
+    - GET /dashboard/years?year=2568  → {"input":2568,"be":2568,"ce":2025}
+    - GET /dashboard/years?year=2026  → {"input":2026,"be":2569,"ce":2026}
+    """
+    try:
+        data = get_years_api(year)
+        return format_response("0000", data)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        import traceback; traceback.print_exc()
         return format_response("5000", {"error": str(e)})
 
 @router.get("/map-json", response_model=FormatResponseModel)
