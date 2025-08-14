@@ -66,20 +66,20 @@ async def get_staff_performance_data(
 @router.get("/map-json", response_model=FormatResponseModel)
 async def get_map_json_endpoint(
     json_path: Optional[str] = None,
+    year: Optional[int] = Query(None, description="ปี ค.ศ. ที่ต้องการ (เช่น 2025)"),
+    only_year: bool = Query(False, description="ส่งเฉพาะปีที่เลือก (ไม่รวมปีจากไฟล์ seed)"),
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("dashboard"))
 ):
     """
     ส่งออกข้อมูลแผนที่ทั้งก้อน (เหมือน map.json)
-    โดยดึง "ค่าจริง" จาก DB สำหรับปี 2025 และทำสำเนาเป็น key '2568' ด้วย
-    พร้อม zero-fill จังหวัดให้ครบเพื่อกันกราฟพัง
+    - ถ้า only_year=true จะส่งเฉพาะปี พ.ศ. ที่คำนวณจาก year เท่านั้น
     """
     try:
-        result = get_full_map_json_from_db(db, json_path)
+        result = get_full_map_json_from_db(db, json_path, year=year, only_year=only_year)
         return format_response("0000", result)
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        import traceback; traceback.print_exc()
         return format_response("5000", {"error": str(e)})
     
 @router.get("/summary", response_model=FormatResponseModel)
