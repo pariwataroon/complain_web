@@ -1,5 +1,5 @@
 from uuid import UUID
-from sqlalchemy import func, and_, or_, literal, text, distinct
+from sqlalchemy import func, and_, or_, literal, text, distinct, exists
 from sqlalchemy.orm import Session, joinedload, aliased
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta, timezone
@@ -11,6 +11,10 @@ import logging
 from models.comp_complaint import Complaint, ComplaintStatus, ComplaintStatusHistory
 from models.user import User
 from models.role import Role
+from models.outgoing_reports import OutgoingReport
+from models.outgoing_reports2 import OutgoingReport2
+from models.outgoing_reports3 import OutgoingReport3
+from models.outgoing_reports4 import OutgoingReport4
 from app.api.v1.controllers.user_controller import get_user_with_roles_and_titles
 
 # สร้าง logger
@@ -781,4 +785,138 @@ def get_complaint_summary_bkk_year(db: Session) -> Dict[str, Any]:
                 "completed": yoy_completed
             }
         }
+    }
+
+# ---------- helper: BKK-year → UTC range ----------
+def _bkk_year_to_utc_range(year: int) -> Tuple[datetime, datetime, datetime, datetime]:
+    tz_bkk = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
+    bkk_start = datetime(year, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year, 1, 1, 0, 0, 0)
+    bkk_end   = datetime(year, 12, 31, 23, 59, 59, 999999, tzinfo=tz_bkk) if tz_bkk else datetime(year, 12, 31, 23, 59, 59, 999999)
+    utc_start = bkk_start.astimezone(timezone.utc) if bkk_start.tzinfo else bkk_start
+    utc_end   = bkk_end.astimezone(timezone.utc)   if bkk_end.tzinfo   else bkk_end
+    return bkk_start, bkk_end, utc_start, utc_end
+
+
+# ---------- helper: department filter by any outgoing_reports(1–4) ----------
+def _filter_by_department(query, department_id):
+    """
+    จำกัดเรื่องร้องเรียนให้อยู่ในแผนกที่ได้รับมอบหมาย ‘ใดๆ’ ผ่านรายงานส่งออก 1–4
+    ใช้ exists() เพื่อกันการนับซ้ำ (ไม่ join แบบเกิด row duplication)
+    """
+    if not department_id:
+        return query  # ไม่กรอง
+
+    any_report_of_dept = or_(
+        exists().where(OutgoingReport.complaint_id == Complaint.id).where(OutgoingReport.department_id == department_id),
+        exists().where(OutgoingReport2.complaint_id == Complaint.id).where(OutgoingReport2.department_id == department_id),
+        exists().where(OutgoingReport3.complaint_id == Complaint.id).where(OutgoingReport3.department_id == department_id),
+        exists().where(OutgoingReport4.complaint_id == Complaint.id).where(OutgoingReport4.department_id == department_id),
+    )
+    return query.filter(any_report_of_dept)
+
+
+def get_donut_by_complaint_types(db: Session, year: Optional[int] = None, department_id: Optional[str] = None) -> Dict[str, Any]:
+    """
+    โดนัท 1: แยกตาม 'ประเภทเรื่องร้องทุกข์' (comp_complaint_types)
+    - กรองปีตาม BKK-year → คิวรีด้วย UTC
+    - option: department_id (แผนกที่ได้รับมอบหมายผ่าน outgoing_reports 1–4)
+    """
+    # ปีเป้าหมาย
+    if not year:
+        tz_bkk = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
+        now_bkk = datetime.now(tz_bkk) if tz_bkk else datetime.now()
+        year = now_bkk.year
+
+    bkk_start, bkk_end, utc_start, utc_end = _bkk_year_to_utc_range(year)
+
+    # Base query: เงื่อนไขช่วงเวลา
+    base_q = db.query(Complaint).filter(Complaint.created_at.between(utc_start, utc_end))
+    # กรองตาม department จาก reports ใดๆ
+    base_q = _filter_by_department(base_q, department_id)
+
+    # รวมทั้งหมด (distinct ID กันซ้ำเผื่อมีเงื่อนไขอื่นในอนาคต)
+    total = db.query(func.count(Complaint.id))\
+        .filter(Complaint.created_at.between(utc_start, utc_end))
+    total = _filter_by_department(total, department_id).scalar() or 0
+
+    # นับตาม complaint_type_id (ต่อให้ไม่ join ชื่อ ก็ใช้ id ได้)
+    rows = db.query(
+        Complaint.complaint_type_id.label("type_id"),
+        func.count(Complaint.id).label("count")
+    ).filter(Complaint.created_at.between(utc_start, utc_end))\
+     .group_by(Complaint.complaint_type_id)
+
+    rows = _filter_by_department(rows, department_id).all()
+
+    # เตรียม items
+    items: List[Dict[str, Any]] = []
+    for r in rows:
+        # ถ้ามีโมเดล ComplaintType และ field name: เติม label จริงได้
+        # name = db.query(ComplaintType.name).filter(ComplaintType.id == r.type_id).scalar() if r.type_id else "ไม่ระบุ"
+        name = "ไม่ระบุ" if r.type_id is None else str(r.type_id)  # fallback ปลอดภัย
+        pct = (r.count / total * 100.0) if total else 0.0
+        items.append({
+            "id": str(r.type_id) if r.type_id else None,
+            "label": name,
+            "value": int(r.count),
+            "percent": round(pct, 2)
+        })
+
+    return {
+        "filters": {
+            "year": year,
+            "department_id": department_id
+        },
+        "date_range_bangkok": {"from": bkk_start.isoformat(), "to": bkk_end.isoformat()},
+        "date_range_utc": {"from": utc_start.isoformat(), "to": utc_end.isoformat()},
+        "total": int(total),
+        "items": items
+    }
+
+
+def get_donut_by_channels(db: Session, year: Optional[int] = None) -> Dict[str, Any]:
+    """
+    โดนัท 2: แยกตาม 'ช่องทางการร้องเรียน' (comp_complaint_channels)
+    - กรองปีตาม BKK-year → คิวรีด้วย UTC
+    - (ไม่ต้องกรอง department ตามโจทย์)
+    """
+    if not year:
+        tz_bkk = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
+        now_bkk = datetime.now(tz_bkk) if tz_bkk else datetime.now()
+        year = now_bkk.year
+
+    bkk_start, bkk_end, utc_start, utc_end = _bkk_year_to_utc_range(year)
+
+    total = db.query(func.count(Complaint.id))\
+        .filter(Complaint.created_at.between(utc_start, utc_end))\
+        .scalar() or 0
+
+    rows = db.query(
+        Complaint.complaint_channel_id.label("channel_id"),
+        func.count(Complaint.id).label("count")
+    ).filter(Complaint.created_at.between(utc_start, utc_end))\
+     .group_by(Complaint.complaint_channel_id)\
+     .all()
+
+    items: List[Dict[str, Any]] = []
+    for r in rows:
+        # ถ้ามีโมเดล ComplaintChannel และ field name: เติม label จริงได้
+        # name = db.query(ComplaintChannel.name).filter(ComplaintChannel.id == r.channel_id).scalar() if r.channel_id else "ไม่ระบุ"
+        name = "ไม่ระบุ" if r.channel_id is None else str(r.channel_id)
+        pct = (r.count / total * 100.0) if total else 0.0
+        items.append({
+            "id": str(r.channel_id) if r.channel_id else None,
+            "label": name,
+            "value": int(r.count),
+            "percent": round(pct, 2)
+        })
+
+    return {
+        "filters": {
+            "year": year
+        },
+        "date_range_bangkok": {"from": bkk_start.isoformat(), "to": bkk_end.isoformat()},
+        "date_range_utc": {"from": utc_start.isoformat(), "to": utc_end.isoformat()},
+        "total": int(total),
+        "items": items
     }

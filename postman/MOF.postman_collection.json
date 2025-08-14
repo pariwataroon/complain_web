@@ -170,6 +170,85 @@
 						"description": "สรุปเรื่องร้องเรียนแบบสั้น: แสดงจำนวนเรื่องร้องเรียนทั้งหมดในปีปัจจุบัน (ตามเขตเวลา Asia/Bangkok) แยกตามสถานะต่างๆ เช่น total (ทั้งหมด), in_progress (กำลังดำเนินการ), completed (เสร็จสิ้นแล้ว) รวมถึง COMPLETED และ REVIEWED - ต้องมีสิทธิ์อ่านใน dashboard"
 					},
 					"response": []
+				},
+				{
+					"name": "Get Donut Chart - Complaint Types",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/dashboard/donut/types?year=&department_id=",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"dashboard",
+								"donut",
+								"types"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "",
+									"description": "ปี พ.ศ./ค.ศ. ที่ต้องการ (ถ้าไม่ส่ง ใช้ปีปัจจุบันตามเวลาไทย)"
+								},
+								{
+									"key": "department_id",
+									"value": "",
+									"description": "UUID ของแผนก (กรองเฉพาะเรื่องที่ถูกมอบหมายไปยังแผนกนี้)"
+								}
+							]
+						},
+						"description": "โดนัท: ประเภทเรื่องร้องทุกข์ (comp_complaint_types) - year: ปี (ยึดกรอบ BKK-year แล้วคิวรีด้วย UTC) - department_id: กรองจากการมอบหมายผ่าน outgoing_reports(1–4) - ต้องมีสิทธิ์อ่านใน dashboard"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Donut Chart - Channels",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/dashboard/donut/channels?year=",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"dashboard",
+								"donut",
+								"channels"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "",
+									"description": "ปี พ.ศ./ค.ศ. ที่ต้องการ (ถ้าไม่ส่ง ใช้ปีปัจจุบันตามเวลาไทย)"
+								}
+							]
+						},
+						"description": "โดนัท: แยกตามช่องทางการร้องเรียน (comp_complaint_channels) - year: ปี (ยึดกรอบ BKK-year แล้วคิวรีด้วย UTC) - ต้องมีสิทธิ์อ่านใน dashboard"
+					},
+					"response": []
 				}
 			],
 			"description": "API สำหรับดูข้อมูล dashboard ภาระงานและประสิทธิภาพการทำงานของเจ้าหน้าที่ รวมถึงข้อมูลแผนที่แสดงสถิติเรื่องร้องเรียนตามจังหวัด"
