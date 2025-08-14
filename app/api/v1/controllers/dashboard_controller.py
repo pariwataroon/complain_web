@@ -637,56 +637,40 @@ def get_full_map_json_from_db(
 
 def _calc_yoy_label_and_values(curr: int, prev: int) -> Dict[str, Any]:
     """
-    คำนวณ % เปลี่ยนแปลง (YoY) พร้อมนโยบายการแสดงผล:
     - prev == 0:
         - curr == 0 -> 0%
-        - curr > 0  -> 100++% (มากกว่า 100% และเลี่ยงหารศูนย์)
-    - จำกัดการแสดงผลไม่ให้เกิน 100% หรือ น้อยกว่า -100%
-      ถ้าเกิน 100% -> "100++%"
-      ถ้าน้อยกว่า -100% -> "-100%"
-    คืนทั้งค่า raw, ค่า capped และ label ที่พร้อมแสดง
+        - curr > 0  -> 100++%
+    - จำกัดการแสดงผลไม่ให้เกิน 100% หรือ ต่ำกว่า -100%
+      (label: >100 -> "100++%", < -100 -> "-100%")
     """
     diff = curr - prev
 
     if prev == 0:
         if curr == 0:
             return {
-                "previous": prev,
-                "current": curr,
-                "diff": diff,
-                "pct_change_raw": 0.0,
-                "pct_change_capped": 0.0,
+                "previous": prev, "current": curr, "diff": diff,
+                "pct_change_raw": 0.0, "pct_change_capped": 0.0,
                 "pct_change_label": "0%"
             }
         else:
-            # กรณีฐานเป็นศูนย์แล้วปีนี้มีค่า > 0
             return {
-                "previous": prev,
-                "current": curr,
-                "diff": diff,
-                "pct_change_raw": None,        # เลี่ยงหารศูนย์
-                "pct_change_capped": None,     # ไม่มีความหมายเชิงตัวเลขที่เที่ยงตรง
-                "pct_change_label": "100++%"   # สื่อว่าโตเกิน 100%
+                "previous": prev, "current": curr, "diff": diff,
+                "pct_change_raw": None, "pct_change_capped": None,
+                "pct_change_label": "100++%"
             }
 
-    # prev > 0 ปกติ
     pct_raw = ((curr - prev) / prev) * 100.0
-    # ทำค่า capped ตามนโยบาย (ไม่เกิน 100 และไม่ต่ำกว่า -100)
     pct_capped = max(-100.0, min(100.0, pct_raw))
 
-    # label สำหรับแสดงผล
     if pct_raw > 100.0:
         label = "100++%"
     elif pct_raw < -100.0:
         label = "-100%"
     else:
-        # แสดงทศนิยม 2 ตำแหน่ง (ปรับได้)
         label = f"{pct_raw:.2f}%"
 
     return {
-        "previous": prev,
-        "current": curr,
-        "diff": diff,
+        "previous": prev, "current": curr, "diff": diff,
         "pct_change_raw": round(pct_raw, 6),
         "pct_change_capped": round(pct_capped, 6),
         "pct_change_label": label
@@ -695,30 +679,29 @@ def _calc_yoy_label_and_values(curr: int, prev: int) -> Dict[str, Any]:
 def get_complaint_summary_bkk_year(db: Session) -> Dict[str, Any]:
     """
     Summary complaint ที่อิงช่วงเวลาแบบเดียวกับ get_full_map_json_from_db:
-    - ใช้ปีปัจจุบันตาม Asia/Bangkok
-    - แปลงเป็น UTC ก่อนคิวรี
-    นับ: total, in_progress, completed
-    และเทียบ YoY กับปีก่อนหน้า พร้อม % ตามนโยบายการแสดงผล
+    - ใช้ปีปัจจุบันตาม Asia/Bangkok (BKK-year) แล้วแปลงเป็น UTC ก่อนคิวรี
+    - นับ: total, in_progress, completed
+    - เทียบ YoY กับปีก่อนหน้า (label ตามนโยบาย 100++%, -100%, ฯลฯ)
+    - แนบกราฟ 'เดือนล่าสุด' แยกตามหน่วยงาน (department) จากการผูก outgoing_reports(1–4)
     """
-    # 1) เวลาปัจจุบันตาม Bangkok (+07:00) -> กรอบปี
+    # ---------- 1) เวลาไทย -> กรอบปีปัจจุบัน ----------
     tz_bkk = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
     now_bkk = datetime.now(tz_bkk) if tz_bkk else datetime.now()
     current_year_g = now_bkk.year
 
-    # ช่วงปีปัจจุบัน
     bkk_start = datetime(current_year_g, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(current_year_g, 1, 1, 0, 0, 0)
     bkk_end   = datetime(current_year_g, 12, 31, 23, 59, 59, 999999, tzinfo=tz_bkk) if tz_bkk else datetime(current_year_g, 12, 31, 23, 59, 59, 999999)
     utc_start = bkk_start.astimezone(timezone.utc) if bkk_start.tzinfo else bkk_start
     utc_end   = bkk_end.astimezone(timezone.utc)   if bkk_end.tzinfo   else bkk_end
 
-    # ช่วง "ปีก่อนหน้า"
+    # ---------- 2) กรอบ "ปีก่อนหน้า" ----------
     prev_year = current_year_g - 1
     bkk_prev_start = datetime(prev_year, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(prev_year, 1, 1, 0, 0, 0)
     bkk_prev_end   = datetime(prev_year, 12, 31, 23, 59, 59, 999999, tzinfo=tz_bkk) if tz_bkk else datetime(prev_year, 12, 31, 23, 59, 59, 999999)
     utc_prev_start = bkk_prev_start.astimezone(timezone.utc) if bkk_prev_start.tzinfo else bkk_prev_start
     utc_prev_end   = bkk_prev_end.astimezone(timezone.utc)   if bkk_prev_end.tzinfo   else bkk_prev_end
 
-    # 2) กลุ่มสถานะ
+    # ---------- 3) กลุ่มสถานะ ----------
     completed_set = [ComplaintStatus.COMPLETED, ComplaintStatus.REVIEWED]
     in_progress_set = [
         ComplaintStatus.SUBMITTED,
@@ -728,7 +711,7 @@ def get_complaint_summary_bkk_year(db: Session) -> Dict[str, Any]:
         ComplaintStatus.TRACKING,
     ]
 
-    # 3) คิวรีนับ "ปีนี้"
+    # ---------- 4) คิวรีนับ "ปีนี้" ----------
     total_cur = db.query(func.count(Complaint.id))\
         .filter(Complaint.created_at.between(utc_start, utc_end))\
         .scalar() or 0
@@ -745,7 +728,7 @@ def get_complaint_summary_bkk_year(db: Session) -> Dict[str, Any]:
             Complaint.status.in_(completed_set)
         ).scalar() or 0
 
-    # 4) คิวรีนับ "ปีก่อนหน้า"
+    # ---------- 5) คิวรีนับ "ปีก่อน" ----------
     total_prev = db.query(func.count(Complaint.id))\
         .filter(Complaint.created_at.between(utc_prev_start, utc_prev_end))\
         .scalar() or 0
@@ -762,11 +745,71 @@ def get_complaint_summary_bkk_year(db: Session) -> Dict[str, Any]:
             Complaint.status.in_(completed_set)
         ).scalar() or 0
 
-    # 5) คำนวณ YoY + จัดรูปแบบแสดงผล
+    # ---------- 6) คำนวณ YoY ----------
     yoy_total      = _calc_yoy_label_and_values(int(total_cur), int(total_prev))
     yoy_inprogress = _calc_yoy_label_and_values(int(in_progress_cur), int(in_progress_prev))
     yoy_completed  = _calc_yoy_label_and_values(int(completed_cur), int(completed_prev))
 
+    # ---------- 7) เดือนล่าสุด (ตามเวลาไทย) แยกตาม department ----------
+    cur_month = now_bkk.month
+    cur_year  = now_bkk.year
+
+    bkk_month_start = datetime(cur_year, cur_month, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(cur_year, cur_month, 1, 0, 0, 0)
+    # first day of next month
+    if cur_month == 12:
+        nm_year, nm_month = cur_year + 1, 1
+    else:
+        nm_year, nm_month = cur_year, cur_month + 1
+    bkk_next_month_start = datetime(nm_year, nm_month, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(nm_year, nm_month, 1, 0, 0, 0)
+    # end of current month (ไทย)
+    bkk_month_end = bkk_next_month_start - timedelta(microseconds=1)
+
+    utc_month_start = bkk_month_start.astimezone(timezone.utc) if bkk_month_start.tzinfo else bkk_month_start
+    utc_month_end   = bkk_month_end.astimezone(timezone.utc)   if bkk_month_end.tzinfo   else bkk_month_end
+
+    # ผูก complaint_id ↔ department_id จาก outgoing_reports(1–4) แล้ว distinct กันซ้ำ
+    r1 = select(OutgoingReport.complaint_id.label("complaint_id"),
+                OutgoingReport.department_id.label("department_id"))
+    r2 = select(OutgoingReport2.complaint_id.label("complaint_id"),
+                OutgoingReport2.department_id.label("department_id"))
+    r3 = select(OutgoingReport3.complaint_id.label("complaint_id"),
+                OutgoingReport3.department_id.label("department_id"))
+    r4 = select(OutgoingReport4.complaint_id.label("complaint_id"),
+                OutgoingReport4.department_id.label("department_id"))
+
+    rep_union = union_all(r1, r2, r3, r4).subquery("rep_union")
+    link_distinct = select(
+        distinct(rep_union.c.complaint_id).label("complaint_id"),
+        rep_union.c.department_id.label("department_id")
+    ).subquery("link_distinct")
+
+    month_rows = (
+        db.query(
+            link_distinct.c.department_id.label("dept_id"),
+            Department.name.label("dept_name"),
+            func.count(distinct(Complaint.id)).label("cnt")
+        )
+        .join(Complaint, Complaint.id == link_distinct.c.complaint_id)
+        .outerjoin(Department, Department.id == link_distinct.c.department_id)
+        .filter(Complaint.created_at.between(utc_month_start, utc_month_end))
+        .group_by(link_distinct.c.department_id, Department.name)
+        .all()
+    )
+
+    month_total = sum(int(r.cnt or 0) for r in month_rows)
+    month_items = []
+    for r in month_rows:
+        cnt = int(r.cnt or 0)
+        pct = (cnt / month_total * 100.0) if month_total else 0.0
+        month_items.append({
+            "id": str(r.dept_id) if r.dept_id else None,
+            "name": r.dept_name or "ไม่ระบุ",
+            "value": cnt,
+            "percent": round(pct, 2)
+        })
+    month_items.sort(key=lambda x: x["value"], reverse=True)
+
+    # ---------- 8) ส่งผลลัพธ์ ----------
     return {
         "date_range_utc": {
             "from": utc_start.isoformat(),
@@ -786,6 +829,18 @@ def get_complaint_summary_bkk_year(db: Session) -> Dict[str, Any]:
                 "in_progress": yoy_inprogress,
                 "completed": yoy_completed
             }
+        },
+        "latest_month_by_department": {
+            "date_range_bangkok": {
+                "from": bkk_month_start.isoformat(),
+                "to": bkk_month_end.isoformat()
+            },
+            "date_range_utc": {
+                "from": utc_month_start.isoformat(),
+                "to": utc_month_end.isoformat()
+            },
+            "total": int(month_total),
+            "items": month_items
         }
     }
 
