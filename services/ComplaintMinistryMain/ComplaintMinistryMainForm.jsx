@@ -6,6 +6,9 @@ import InputPhone from "@services/InputPhone/InputPhone";
 import SelectFieldPAA from "@services/SelectFieldPAA/SelectFieldPAA";
 import styles from "./ComplaintMinistryMainForm.module.scss";
 import { validateEmail, validateEmailRealtime } from "@utils/emailValidation";
+import {
+  GetNameDepartments,
+} from "@pages/api/dashboard/dashboard";
 
 const ComplaintMinistryMainForm = ({
   data = {},
@@ -18,6 +21,31 @@ const ComplaintMinistryMainForm = ({
 }) => {
   const [emailRealtimeError, setEmailRealtimeError] = useState("");
   const [lastEmailValue, setLastEmailValue] = useState("");
+  const [departmentOptions, setDepartmentOptions] = useState([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
+
+  // Load departments on component mount
+  useEffect(() => {
+    const loadDepartments = async () => {
+      setLoadingDepartments(true);
+      try {
+        const result = await GetNameDepartments();
+        if (result.success) {
+          setDepartmentOptions(result.departments);
+        } else {
+          console.error("Failed to load departments:", result.message);
+          setDepartmentOptions([]);
+        }
+      } catch (error) {
+        console.error("Error loading departments:", error);
+        setDepartmentOptions([]);
+      } finally {
+        setLoadingDepartments(false);
+      }
+    };
+
+    loadDepartments();
+  }, []);
 
   const handleChange = useCallback(
     (field) => (value) => {
@@ -165,13 +193,16 @@ const ComplaintMinistryMainForm = ({
         </Grid>
 
         <Grid item xs={12}>
-          <InputText
+          <SelectFieldPAA
             label={formatLabel("หน่วยงาน")}
-            placeholder="ชื่อหน่วยงานของรัฐ"
+            placeholder="เลือกหน่วยงานของรัฐ"
             value={data.agencyName || ""}
-            onChange={handleChange("agencyName")}
+            onChange={(option) => onChange("agencyName", option)}
+            options={departmentOptions}
             error={hasFieldError("agencyName")}
             helperText={getFieldError("agencyName")}
+            loading={loadingDepartments}
+            formType={formType}
           />
         </Grid>
 
