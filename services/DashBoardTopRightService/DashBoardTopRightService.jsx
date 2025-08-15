@@ -23,6 +23,9 @@ import Chart from "chart.js/auto";
 import {
   GetComplaintSummary,
 } from "@pages/api/dashboard/dashboard";
+import {
+  GetAllSelectYears,
+} from "@pages/api/allselect/allselect";
 
 const TopRightChart = () => {
   const theme = useTheme();
@@ -35,7 +38,9 @@ const TopRightChart = () => {
 
   // API data states
   const [apiData, setApiData] = useState(null);
+  const [yearOptions, setYearOptions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [yearsLoading, setYearsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // States for current display mode
@@ -55,6 +60,57 @@ const TopRightChart = () => {
   });
 
   const [chartData, setChartData] = useState([]);
+
+  // Fetch years data from API
+  const fetchYears = async () => {
+    setYearsLoading(true);
+    try {
+      const result = await GetAllSelectYears();
+
+      if (result.success && result.yearOptions) {
+        setYearOptions(result.yearOptions);
+
+        // Update default year values if available
+        if (result.yearOptions.length > 0) {
+          const latestYear = result.yearOptions[result.yearOptions.length - 1];
+          const secondLatestYear = result.yearOptions[result.yearOptions.length - 2] || latestYear;
+          const thirdLatestYear = result.yearOptions[result.yearOptions.length - 3] || secondLatestYear;
+
+          // Update form states with latest years
+          setMonthlyForm(prev => ({ ...prev, year: latestYear.value }));
+          setQuarterlyForm({ year: latestYear.value });
+          setYearlyForm({ year: latestYear.value });
+          setDepartmentForm({
+            fromYear: thirdLatestYear.value,
+            toYear: secondLatestYear.value
+          });
+
+          // Update current period display
+          setCurrentPeriod(`สิงหาคม ${latestYear.value}`);
+        }
+      } else {
+        console.warn("Failed to fetch years:", result.message);
+        // Fallback to default years if API fails
+        setYearOptions([
+          { value: "2565", label: "2565" },
+          { value: "2566", label: "2566" },
+          { value: "2567", label: "2567" },
+          { value: "2568", label: "2568" }
+        ]);
+      }
+    } catch (err) {
+      console.error("Error fetching years:", err);
+      // Fallback to default years if API fails
+      setYearOptions([
+        { value: "2565", label: "2565" },
+        { value: "2566", label: "2566" },
+        { value: "2567", label: "2567" },
+        { value: "2568", label: "2568" }
+      ]);
+    } finally {
+      setYearsLoading(false);
+    }
+  };
 
   // Fetch data from API
   const fetchApiData = async () => {
@@ -123,9 +179,16 @@ const TopRightChart = () => {
     return colors[index % colors.length];
   };
 
-  // Fetch data on component mount
+  // Fetch initial data on component mount
   useEffect(() => {
-    fetchApiData();
+    const fetchInitialData = async () => {
+      await Promise.all([
+        fetchYears(),
+        fetchApiData()
+      ]);
+    };
+
+    fetchInitialData();
   }, []);
 
   const menuItems = [
@@ -135,7 +198,7 @@ const TopRightChart = () => {
     { text: "เปรียบเทียบระหว่างปี", id: "department" },
   ];
 
-  // Options for SelectField
+  // Options for SelectField - months remain static
   const monthOptions = [
     { value: "มกราคม", label: "มกราคม" },
     { value: "กุมภาพันธ์", label: "กุมภาพันธ์" },
@@ -149,13 +212,6 @@ const TopRightChart = () => {
     { value: "ตุลาคม", label: "ตุลาคม" },
     { value: "พฤศจิกายน", label: "พฤศจิกายน" },
     { value: "ธันวาคม", label: "ธันวาคม" },
-  ];
-
-  const yearOptions = [
-    { value: "2565", label: "2565" },
-    { value: "2566", label: "2566" },
-    { value: "2567", label: "2567" },
-    { value: "2568", label: "2568" },
   ];
 
   const handleMenuClick = (event) => {
@@ -285,13 +341,20 @@ const TopRightChart = () => {
                   ปีงบประมาณ :
                 </Typography>
                 <Box sx={{ minWidth: 200 }}>
-                  <SelectField
-                    options={yearOptions}
-                    value={monthlyForm.year}
-                    onChange={handleMonthlyChange("year")}
-                    name="year"
-                    size="small"
-                  />
+                  {yearsLoading ? (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography sx={{ fontSize: "12px" }}>กำลังโหลด...</Typography>
+                    </Box>
+                  ) : (
+                    <SelectField
+                      options={yearOptions}
+                      value={monthlyForm.year}
+                      onChange={handleMonthlyChange("year")}
+                      name="year"
+                      size="small"
+                    />
+                  )}
                 </Box>
               </Box>
             </Box>
@@ -342,13 +405,20 @@ const TopRightChart = () => {
                 ปีงบประมาณ :
               </Typography>
               <Box sx={{ minWidth: 120 }}>
-                <SelectField
-                  options={yearOptions}
-                  value={quarterlyForm.year}
-                  onChange={handleQuarterlyChange}
-                  name="quarterlyYear"
-                  size="small"
-                />
+                {yearsLoading ? (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <CircularProgress size={16} />
+                    <Typography sx={{ fontSize: "12px" }}>กำลังโหลด...</Typography>
+                  </Box>
+                ) : (
+                  <SelectField
+                    options={yearOptions}
+                    value={quarterlyForm.year}
+                    onChange={handleQuarterlyChange}
+                    name="quarterlyYear"
+                    size="small"
+                  />
+                )}
               </Box>
             </Box>
 
@@ -435,13 +505,20 @@ const TopRightChart = () => {
                 ปี :
               </Typography>
               <Box sx={{ minWidth: 150 }}>
-                <SelectField
-                  options={yearOptions}
-                  value={yearlyForm.year}
-                  onChange={handleYearlyChange}
-                  name="yearlyYear"
-                  size="small"
-                />
+                {yearsLoading ? (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <CircularProgress size={16} />
+                    <Typography sx={{ fontSize: "12px" }}>กำลังโหลด...</Typography>
+                  </Box>
+                ) : (
+                  <SelectField
+                    options={yearOptions}
+                    value={yearlyForm.year}
+                    onChange={handleYearlyChange}
+                    name="yearlyYear"
+                    size="small"
+                  />
+                )}
               </Box>
             </Box>
           </Paper>
@@ -492,13 +569,20 @@ const TopRightChart = () => {
                   ปี :
                 </Typography>
                 <Box sx={{ minWidth: 150 }}>
-                  <SelectField
-                    options={yearOptions}
-                    value={departmentForm.fromYear}
-                    onChange={handleDepartmentChange("fromYear")}
-                    name="fromYear"
-                    size="small"
-                  />
+                  {yearsLoading ? (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography sx={{ fontSize: "12px" }}>กำลังโหลด...</Typography>
+                    </Box>
+                  ) : (
+                    <SelectField
+                      options={yearOptions}
+                      value={departmentForm.fromYear}
+                      onChange={handleDepartmentChange("fromYear")}
+                      name="fromYear"
+                      size="small"
+                    />
+                  )}
                 </Box>
               </Box>
 
@@ -507,13 +591,20 @@ const TopRightChart = () => {
                   ปี :
                 </Typography>
                 <Box sx={{ minWidth: 150 }}>
-                  <SelectField
-                    options={yearOptions}
-                    value={departmentForm.toYear}
-                    onChange={handleDepartmentChange("toYear")}
-                    name="toYear"
-                    size="small"
-                  />
+                  {yearsLoading ? (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography sx={{ fontSize: "12px" }}>กำลังโหลด...</Typography>
+                    </Box>
+                  ) : (
+                    <SelectField
+                      options={yearOptions}
+                      value={departmentForm.toYear}
+                      onChange={handleDepartmentChange("toYear")}
+                      name="toYear"
+                      size="small"
+                    />
+                  )}
                 </Box>
               </Box>
             </Box>

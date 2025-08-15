@@ -92,7 +92,6 @@ const DashboardComponents_Main = () => {
     }
   };
 
-  // Call API when dates change
   useEffect(() => {
     handleGetDepartmentRanking();
   }, [startDate, endDate]);
@@ -102,7 +101,6 @@ const DashboardComponents_Main = () => {
       ? `ณ ${formatThaiDateMonths(startDate)} - ${formatThaiDateMonths(endDate)}`
       : "";
 
-  // สำหรับส่งเข้า DateThaiPickerService (object + buddhistYear)
   const startDateWithBuddhist = startDate
     ? { ...startDate, buddhistYear: startDate.year + 543 }
     : null;
@@ -111,7 +109,6 @@ const DashboardComponents_Main = () => {
     ? { ...endDate, buddhistYear: endDate.year + 543 }
     : null;
 
-  // แบ่งข้อมูลเป็น chunks สำหรับ swiper (หากมีข้อมูลเยอะ)
   const topDepartmentChunks = chunkArray(departmentRanking.topDepartments, 5);
   const bottomDepartmentChunks = chunkArray(departmentRanking.bottomDepartments, 5);
 
