@@ -15,9 +15,60 @@ const ComplaintPersonalForm = ({
   shouldShowValidation = false,
   fieldPrefix = "",
   formType = "mandatory",
+  dataMe = {},
+  isLoadingAuthMe = false,
 }) => {
   const [emailRealtimeError, setEmailRealtimeError] = useState("");
   const [lastEmailValue, setLastEmailValue] = useState("");
+  const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
+  const [localData, setLocalData] = useState({});
+
+  const currentData = {
+    ...localData,
+    ...data
+  };
+
+  useEffect(() => {
+    const autoPopulateUserData = () => {
+      if (hasAutoPopulated || !dataMe || Object.keys(dataMe).length === 0) {
+        return;
+      }
+
+      try {
+        setTimeout(() => {
+          const newLocalData = {};
+
+          if (dataMe.citizen_id) {
+            newLocalData.idCard = dataMe.citizen_id;
+            onChange("idCard", dataMe.citizen_id);
+          }
+
+          if (dataMe.email) {
+            newLocalData.email = dataMe.email;
+            onChange("email", dataMe.email);
+          }
+
+          if (dataMe.phone) {
+            newLocalData.phone = dataMe.phone;
+            onChange("phone", dataMe.phone);
+          }
+
+          if (dataMe.full_name) {
+            newLocalData.name = dataMe.full_name;
+            onChange("name", dataMe.full_name);
+          }
+
+          setLocalData(newLocalData);
+          setHasAutoPopulated(true);
+        }, 0);
+
+      } catch (error) {
+        console.error("Error auto-populating user data:", error);
+      }
+    };
+
+    autoPopulateUserData();
+  }, [onChange, hasAutoPopulated, dataMe]);
 
   const handleChange = useCallback(
     (field) => (value) => {
@@ -42,6 +93,10 @@ const ComplaintPersonalForm = ({
       }
 
       onChange(field, finalValue);
+      setLocalData(prev => ({
+        ...prev,
+        [field]: finalValue
+      }));
     },
     [onChange]
   );
@@ -58,14 +113,12 @@ const ComplaintPersonalForm = ({
       return false;
     }
 
-    // ตรวจสอบ format หลัง paste
     setTimeout(() => {
       const realtimeError = validateEmailRealtime(pastedText);
       setEmailRealtimeError(realtimeError || "");
     }, 0);
   }, []);
 
-  // Handle email key press
   const handleEmailKeyPress = useCallback((event) => {
     const thaiPattern = /[\u0E00-\u0E7F]/;
     if (thaiPattern.test(event.key)) {
@@ -77,18 +130,17 @@ const ComplaintPersonalForm = ({
     }
   }, []);
 
-  // Reset email error when data.email changes from outside
   useEffect(() => {
-    if (data.email !== lastEmailValue) {
-      setLastEmailValue(data.email || "");
-      if (data.email) {
-        const realtimeError = validateEmailRealtime(data.email);
+    if (currentData.email !== lastEmailValue) {
+      setLastEmailValue(currentData.email || "");
+      if (currentData.email) {
+        const realtimeError = validateEmailRealtime(currentData.email);
         setEmailRealtimeError(realtimeError || "");
       } else {
         setEmailRealtimeError("");
       }
     }
-  }, [data.email, lastEmailValue]);
+  }, [currentData.email, lastEmailValue]);
 
   const getFieldError = useCallback(
     (fieldName) => {
@@ -141,15 +193,18 @@ const ComplaintPersonalForm = ({
   return (
     <Box className={styles.formContainer}>
       <Typography className={styles.title}>
-        {title}{" "}
+        {title}
         {formType === "optional" && (
           <span className={styles.optionalText}></span>
+        )}
+        {isLoadingAuthMe && (
+          <span className={styles.loadingText}> (กำลังโหลดข้อมูล...)</span>
         )}
       </Typography>
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <IDCardInput
-            value={data.idCard}
+            value={currentData.idCard || ""}
             onChange={handleChange("idCard")}
             error={hasFieldError("idCard")}
             helperText={getFieldError("idCard")}
@@ -160,7 +215,7 @@ const ComplaintPersonalForm = ({
           <InputText
             label={formatLabel("ชื่อ - นามสกุล")}
             placeholder="ชื่อ - นามสกุล"
-            value={data.name}
+            value={currentData.name || ""}
             onChange={handleChange("name")}
             error={hasFieldError("name")}
             helperText={getFieldError("name")}
@@ -170,7 +225,7 @@ const ComplaintPersonalForm = ({
           <InputText
             label={formatLabel("ที่อยู่ที่สามารถติดต่อได้")}
             placeholder="ที่อยู่ที่สามารถติดต่อได้"
-            value={data.address}
+            value={currentData.address || ""}
             onChange={handleChange("address")}
             error={hasFieldError("address")}
             helperText={getFieldError("address")}
@@ -180,7 +235,7 @@ const ComplaintPersonalForm = ({
           <InputPhone
             label={formatLabel("หมายเลขโทรศัพท์")}
             placeholder="หมายเลขโทรศัพท์"
-            value={data.phone}
+            value={currentData.phone || ""}
             onChange={handleChange("phone")}
             error={hasFieldError("phone")}
             helperText={getFieldError("phone")}
@@ -189,7 +244,7 @@ const ComplaintPersonalForm = ({
         <Grid item xs={12} sm={3}>
           <SelectFieldPAA
             label={formatLabel("จังหวัด")}
-            value={data.province || ""}
+            value={currentData.province || ""}
             onChange={(option) => onChange("province", option)}
             error={hasFieldError("province")}
             helperText={getFieldError("province")}
@@ -200,8 +255,8 @@ const ComplaintPersonalForm = ({
         <Grid item xs={12} sm={3}>
           <SelectFieldPAA
             label={formatLabel("อำเภอ/เขต")}
-            value={data.districts || ""}
-            provinceCode={data.province?.value}
+            value={currentData.districts || ""}
+            provinceCode={currentData.province?.value}
             onChange={(option) => onChange("districts", option)}
             error={hasFieldError("districts")}
             helperText={getFieldError("districts")}
@@ -214,7 +269,7 @@ const ComplaintPersonalForm = ({
           <InputText
             label={formatLabel("อีเมล")}
             placeholder="อีเมล เช่น example@domain.com"
-            value={data.email || ""}
+            value={currentData.email || ""}
             onChange={handleEmailChange}
             error={hasFieldError("email")}
             helperText={
@@ -233,8 +288,8 @@ const ComplaintPersonalForm = ({
         <Grid item xs={12} sm={3}>
           <SelectFieldPAA
             label={formatLabel("ตำบล/แขวง")}
-            value={data.subdistricts || ""}
-            amphureCode={data.districts?.value}
+            value={currentData.subdistricts || ""}
+            amphureCode={currentData.districts?.value}
             onChange={(option) => onChange("subdistricts", option)}
             error={hasFieldError("subdistricts")}
             helperText={getFieldError("subdistricts")}
@@ -245,8 +300,8 @@ const ComplaintPersonalForm = ({
         <Grid item xs={12} sm={3}>
           <SelectFieldPAA
             label={formatLabel("รหัสไปรษณีย์")}
-            value={data.zipcode || ""}
-            amphureCode={data.districts?.value}
+            value={currentData.zipcode || ""}
+            amphureCode={currentData.districts?.value}
             onChange={(option) => onChange("zipcode", option)}
             error={hasFieldError("zipcode")}
             helperText={getFieldError("zipcode")}

@@ -159,6 +159,16 @@ const getUsersByGroup = async () => {
   }
 };
 
+const getAuthMe = async () => {
+  try {
+    const { data } = await axiosInstance.get("/auth/me");
+    return data;
+  } catch (err) {
+    console.error("Error fetching auth me:", err);
+    throw err;
+  }
+};
+
 export {
   getMenuPermission,
   getUserStatsByRole,
@@ -170,4 +180,5 @@ export {
   deleteUserPermission,
   getUsersByRole,
   getUsersByGroup,
+  getAuthMe,
 };

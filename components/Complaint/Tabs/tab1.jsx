@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import styles from "./TabNav.module.scss";
 import ComplaintPersonalForm from "@services/ComplaintPersonal/ComplaintPersonalForm";
 import ComplaintMinistryMainForm from "@services/ComplaintMinistryMain/ComplaintMinistryMainForm";
+import { getAuthMe } from "@pages/api/role/role"
 
 const tabs = ["บุคคลทั่วไป", "นิติบุคคล", "หน่วยงานของรัฐ"];
 const underlineColors = ["#0B1F8F", "#3FA9F5", "#EDC458"];
@@ -17,6 +18,8 @@ const Tab1 = ({
 }) => {
   const [userRoles, setUserRoles] = useState([]);
   const [hasGovernmentAccess, setHasGovernmentAccess] = useState(false);
+  const [authMeData, setAuthMeData] = useState({});
+  const [isLoadingAuthMe, setIsLoadingAuthMe] = useState(false);
 
   // ฟังก์ชันตรวจสอบ roles จาก cookie (ดึงมาจาก Dashboard)
   const getUserRoles = () => {
@@ -49,6 +52,30 @@ const Tab1 = ({
 
     return [];
   };
+
+  // ดึงข้อมูลจาก getAuthMe API
+  useEffect(() => {
+    const fetchAuthMeData = async () => {
+      try {
+        setIsLoadingAuthMe(true);
+        const response = await getAuthMe();
+
+        if (response && response.res_code === "0000" && response.res_data) {
+          setAuthMeData(response.res_data);
+        } else {
+          console.error("Failed to fetch auth me data:", response);
+          setAuthMeData({});
+        }
+      } catch (error) {
+        console.error("Error fetching auth me data:", error);
+        setAuthMeData({});
+      } finally {
+        setIsLoadingAuthMe(false);
+      }
+    };
+
+    fetchAuthMeData();
+  }, []);
 
   // ตรวจสอบสิทธิ์การเข้าถึง tab หน่วยงานของรัฐ
   useEffect(() => {
@@ -192,6 +219,7 @@ const Tab1 = ({
               shouldShowValidation={shouldShowValidation}
               fieldPrefix="general"
               formType="mandatory"
+              dataMe={authMeData}
             />
           </div>
           <div className={styles.formContainer2}>
