@@ -22,34 +22,27 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportExcel } from "@utils/exportExcel";
-/**
- * props:
- * - data: array of objects
- * - title: table title
- * - navigateTo: base path for row click (item.id appended)
- * - onRowClick: custom function for row click (optional)
- * - onSearch: function(filters) => void
- * - filterFields: [{ name, label, type, options? }]
- */
+
 const TableListBox = ({
   data = [],
   title = "",
   navigateTo = "",
-  onRowClick, // เพิ่ม prop สำหรับ custom row click
+  onRowClick,
   onSearch = () => {},
+  onResetSearch,
   filterFields = [],
 }) => {
   const router = useRouter();
-  const tableRef = useRef(null);
+  const tableWrapperRef = useRef(null); // ใช้ wrapper เดียวสำหรับ Export PDF
 
-  // Updated responsive breakpoints starting from 1305px
+  // Breakpoints
   const isExtraSmall = useMediaQuery("(max-width:640px)");
   const isSmall = useMediaQuery("(max-width:768px)");
   const isMedium = useMediaQuery("(max-width:1024px)");
-  const isLarge = useMediaQuery("(max-width:1305px)"); // New breakpoint for responsive filters
+  const isLarge = useMediaQuery("(max-width:1305px)");
   const needsScrollbar = useMediaQuery("(max-width:1200px)");
 
-  // initialize filter state based on filterFields prop
+  // Filters
   const initialFilters = filterFields.reduce((acc, f) => {
     acc[f.name] = "";
     return acc;
@@ -58,7 +51,7 @@ const TableListBox = ({
   const handleChange = (field) => (e) =>
     setFilters({ ...filters, [field]: e?.target ? e.target.value : e });
 
-  // pagination
+  // Pagination
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const pagedData = useMemo(
@@ -71,7 +64,7 @@ const TableListBox = ({
     setPage(0);
   };
 
-  // search handlers
+  // Search
   const handleSearchClick = () => {
     setPage(0);
     onSearch(filters);
@@ -79,130 +72,77 @@ const TableListBox = ({
   const handleClearSearch = () => {
     setFilters(initialFilters);
     setPage(0);
-    onSearch(initialFilters);
+    if (onResetSearch) onResetSearch();
+    else onSearch(initialFilters);
   };
 
-  // PDF Export handler
-  
+  // Export PDF
   const handleExportPDF = () => {
     const today = new Date().toLocaleDateString("th-TH");
     const filename = `คลังเรื่องราวร้องทุกข์_${title}_${today}.pdf`;
-    exportElementToPDF(tableRef, filename);
+    exportElementToPDF(tableWrapperRef, filename);
   };
-  // Excel Export handler
+
+  // Columns (ใช้ร่วมกันทั้งหัว/ตัวข้อมูล + colgroup)
+  const columns = [
+    { name: "receiveDate", label: "วันที่ร้อง", width: 120 },
+    { name: "agency", label: "หน่วยงาน", width: 200 },
+    { name: "claimantName", label: "ชื่อสกุลผู้ร้อง", width: 200 },
+    { name: "issue", label: "เรื่อง", width: 200 },
+    { name: "issueType", label: "ประเภทเรื่อง", width: 200 },
+    { name: "subIssueType", label: "ประเภทเรื่องย่อย", width: 200 },
+    { name: "responsibleOfficer", label: "เจ้าหน้าที่รับผิดชอบ", width: 200 },
+    { name: "status", label: "สถานะเรื่อง", width: 140 },
+    { name: "note", label: "หมายเหตุ", width: 140 },
+  ];
+
+  // Export Excel
   const handleExportExcel = () => {
-  if (!Array.isArray(pagedData) || pagedData.length === 0) {
-    alert("ไม่มีข้อมูลที่จะแสดงใน Excel");
-    return;
-  }
-
-  const exportData = pagedData.map((item, idx) => {
-    const row = {
-      ลำดับ: page * rowsPerPage + idx + 1,
-    };
-
-    columns.forEach(col => {
-      row[col.label] = item[col.name] || "-";
+    if (!Array.isArray(pagedData) || pagedData.length === 0) {
+      alert("ไม่มีข้อมูลที่จะแสดงใน Excel");
+      return;
+    }
+    const exportData = pagedData.map((item, idx) => {
+      const row = { ลำดับ: page * rowsPerPage + idx + 1 };
+      columns.forEach((col) => {
+        row[col.label] = item[col.name] ?? "-";
+      });
+      return row;
     });
+    const today = new Date().toLocaleDateString("th-TH");
+    const filename = `คลังเรื่องราวร้องทุกข์_${today}.xlsx`;
+    exportExcel(exportData, filename);
+  };
 
-    return row;
-  });
-
-  const today = new Date().toLocaleDateString("th-TH");
-  const filename = `คลังเรื่องราวร้องทุกข์_${today}.xlsx`;
-
-  exportExcel(exportData, filename);
-};
-
-
-  // row click - แก้ไขให้รองรับ custom onRowClick
+  // Row click
   const handleRowClick = (item) => {
     if (onRowClick) {
-      // ถ้ามี custom onRowClick ให้ใช้แทน
       onRowClick(item);
     } else if (navigateTo) {
-      // ถ้าไม่มี custom onRowClick ให้ใช้ navigateTo แบบเดิม
       router.push(`${navigateTo}/${item.id}`);
     }
   };
 
-  const columns = [
-    { name: "receiveDate", label: "วันที่ร้อง", width: 100 },
-    { name: "agency", label: "หน่วยงาน", width: 180 },
-    { name: "claimantName", label: "ชื่อสกุลผู้ร้อง", width: 200 },
-    { name: "issue", label: "เรื่อง", width: 300 },
-    { name: "issueType", label: "ประเภทเรื่อง", width: 180 },
-    { name: "subIssueType", label: "ประเภทเรื่องย่อย", width: 180 }, // แก้จาก issueSubType → subIssueType
-    { name: "responsibleOfficer", label: "เจ้าหน้าที่รับผิดชอบ", width: 180 },
-    { name: "status", label: "สถานะเรื่อง", width: 150 },
-    { name: "note", label: "หมายเหตุ", width: 100 },
-  ];
-
-  // Updated dynamic layout configuration with new breakpoint
+  // Layout config
   const getLayoutConfig = () => {
     if (isExtraSmall) {
-      return {
-        layout: "stacked",
-        fieldsPerRow: 1,
-        gap: 1,
-        padding: 1,
-        inputHeight: "40px",
-        iconSize: 36,
-      };
+      return { layout: "stacked", fieldsPerRow: 1, gap: 1, padding: 1, inputHeight: "40px", iconSize: 36 };
     } else if (isSmall) {
-      return {
-        layout: "stacked",
-        fieldsPerRow: 2,
-        gap: 1,
-        padding: 1.5,
-        inputHeight: "40px",
-        iconSize: 40,
-      };
+      return { layout: "stacked", fieldsPerRow: 2, gap: 1, padding: 1.5, inputHeight: "40px", iconSize: 40 };
     } else if (isMedium) {
-      return {
-        layout: "two-row",
-        fieldsPerRow: 3,
-        gap: 1.5,
-        padding: 2,
-        inputHeight: "40px",
-        iconSize: 40,
-      };
+      return { layout: "two-row", fieldsPerRow: 3, gap: 1.5, padding: 2, inputHeight: "40px", iconSize: 40 };
     } else if (isLarge) {
-      // New responsive layout for screens 1025px - 1305px
-      return {
-        layout: "large-responsive",
-        fieldsPerRow: Math.min(4, filterFields.length),
-        gap: 1.5,
-        padding: 2,
-        inputHeight: "40px",
-        iconSize: 40,
-      };
-    } else {
-      // Only for screens larger than 1305px
-      return {
-        layout: "single-row",
-        fieldsPerRow: filterFields.length,
-        gap: 1.5,
-        padding: 2,
-        inputHeight: "40px",
-        iconSize: 40,
-      };
+      return { layout: "large-responsive", fieldsPerRow: Math.min(4, filterFields.length), gap: 1.5, padding: 2, inputHeight: "40px", iconSize: 40 };
     }
+    return { layout: "single-row", fieldsPerRow: filterFields.length, gap: 1.5, padding: 2, inputHeight: "40px", iconSize: 40 };
   };
-
   const layoutConfig = getLayoutConfig();
 
-  // Common filter field styles
+  // Common filter styles
   const getFilterFieldStyles = () => ({
-    "& .MuiInputBase-root": {
-      height: layoutConfig.inputHeight,
-    },
-    "& .MuiInputLabel-root": {
-      fontSize: isExtraSmall ? "13px" : "14px",
-    },
-    "& .MuiInputBase-input": {
-      fontSize: isExtraSmall ? "13px" : "14px",
-    },
+    "& .MuiInputBase-root": { height: layoutConfig.inputHeight },
+    "& .MuiInputLabel-root": { fontSize: isExtraSmall ? "13px" : "14px" },
+    "& .MuiInputBase-input": { fontSize: isExtraSmall ? "13px" : "14px" },
   });
 
   const renderFilterField = (f) => {
@@ -214,7 +154,6 @@ const TableListBox = ({
       size: "small",
       sx: getFilterFieldStyles(),
     };
-
     return f.type === "select" ? (
       <SelectField {...commonProps} options={f.options} />
     ) : (
@@ -233,14 +172,10 @@ const TableListBox = ({
         overflow: "visible",
       }}
     >
-      <Box
-        className={styles.headerBar}
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-      ></Box>
+      {/* Header (เส้น/พื้นที่) */}
+      <Box className={styles.headerBar} display="flex" alignItems="center" justifyContent="space-between" />
 
-      {/* Header with title and export buttons */}
+      {/* Title + Export */}
       <Box
         mt={2}
         className={styles.headerBar2}
@@ -248,73 +183,41 @@ const TableListBox = ({
         alignItems="center"
         justifyContent="space-between"
         px={isExtraSmall ? 1 : 2}
-        sx={{
-          flexDirection: isExtraSmall ? "column" : "row",
-          gap: isExtraSmall ? 1 : 0,
-        }}
+        sx={{ flexDirection: isExtraSmall ? "column" : "row", gap: isExtraSmall ? 1 : 0 }}
       >
-        <Box
-          sx={{
-            fontSize: isExtraSmall ? "16px" : "18px",
-            fontWeight: "bold",
-            color: "#1120a3",
-          }}
-        >
+        <Box sx={{ fontSize: isExtraSmall ? "16px" : "18px", fontWeight: "bold", color: "#1120a3" }}>
           {title}
         </Box>
 
-        {/* Export buttons */}
         <Box
           display="flex"
           alignItems="center"
           gap={1}
-          sx={{
-            flexDirection: isExtraSmall ? "column" : "row",
-            width: isExtraSmall ? "100%" : "auto",
-          }}
+          sx={{ flexDirection: isExtraSmall ? "column" : "row", width: isExtraSmall ? "100%" : "auto" }}
         >
           <ExportButton
             label="Export PDF"
-            sx={{
-              fontSize: isExtraSmall ? "12px" : "14px",
-              minWidth: isExtraSmall ? "120px" : "auto",
-            }}
+            sx={{ fontSize: isExtraSmall ? "12px" : "14px", minWidth: isExtraSmall ? "120px" : "auto" }}
             onClick={handleExportPDF}
           />
           <ExportButton
             label="Export Excel"
             onClick={handleExportExcel}
-            sx={{
-              fontSize: isExtraSmall ? "12px" : "14px",
-              minWidth: isExtraSmall ? "120px" : "auto",
-            }}
+            sx={{ fontSize: isExtraSmall ? "12px" : "14px", minWidth: isExtraSmall ? "120px" : "auto" }}
           />
         </Box>
       </Box>
 
-      {/* Responsive Filters */}
-      <Box
-        width="100%"
-        px={layoutConfig.padding}
-        py={layoutConfig.padding}
-        sx={{
-          overflow: "visible",
-          boxSizing: "border-box",
-        }}
-      >
+      {/* Filters — Responsive Layouts */}
+      <Box width="100%" px={layoutConfig.padding} py={layoutConfig.padding} sx={{ overflow: "visible", boxSizing: "border-box" }}>
         {layoutConfig.layout === "stacked" ? (
-          // Stacked Layout (Mobile/Small screens)
           <>
-            {/* Filter Fields */}
             <Box
               display="grid"
               gridTemplateColumns={`repeat(${layoutConfig.fieldsPerRow}, 1fr)`}
               gap={layoutConfig.gap}
               mb={2}
-              sx={{
-                overflow: "visible",
-                width: "100%",
-              }}
+              sx={{ overflow: "visible", width: "100%" }}
             >
               {filterFields.map((f) => (
                 <Box key={f.name} sx={{ minWidth: 0 }}>
@@ -323,7 +226,6 @@ const TableListBox = ({
               ))}
             </Box>
 
-            {/* Search Buttons */}
             <Box display="flex" justifyContent="center" gap={1} mb={2}>
               <IconButton
                 onClick={handleSearchClick}
@@ -343,9 +245,9 @@ const TableListBox = ({
               <IconButton
                 onClick={handleClearSearch}
                 sx={{
-                  bgcolor: "#dc3545", // เปลี่ยนเป็นสีแดง
+                  bgcolor: "#dc3545",
                   color: "#fff",
-                  "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" }, // สีแดงเข้มเมื่อ hover
+                  "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
                   width: layoutConfig.iconSize,
                   height: layoutConfig.iconSize,
                   borderRadius: "50%",
@@ -358,18 +260,13 @@ const TableListBox = ({
             </Box>
           </>
         ) : layoutConfig.layout === "two-row" ? (
-          // Two-row Layout (Medium screens)
           <>
-            {/* First Row - First 3 fields */}
             <Box
               display="grid"
               gridTemplateColumns="repeat(3, 1fr)"
               gap={layoutConfig.gap}
               mb={2}
-              sx={{
-                overflow: "visible",
-                width: "100%",
-              }}
+              sx={{ overflow: "visible", width: "100%" }}
             >
               {filterFields.slice(0, 3).map((f) => (
                 <Box key={f.name} sx={{ minWidth: 0 }}>
@@ -378,31 +275,12 @@ const TableListBox = ({
               ))}
             </Box>
 
-            {/* Second Row - Remaining fields + Search Buttons */}
-            <Box
-              display="flex"
-              alignItems="center"
-              gap={layoutConfig.gap}
-              mb={2}
-              sx={{
-                overflow: "visible",
-                width: "100%",
-              }}
-            >
-              {/* Remaining filter fields */}
+            <Box display="flex" alignItems="center" gap={layoutConfig.gap} mb={2} sx={{ overflow: "visible", width: "100%" }}>
               {filterFields.slice(3).map((f) => (
-                <Box
-                  key={f.name}
-                  sx={{
-                    flex: "1 1 0",
-                    minWidth: 0,
-                  }}
-                >
+                <Box key={f.name} sx={{ flex: "1 1 0", minWidth: 0 }}>
                   {renderFilterField(f)}
                 </Box>
               ))}
-
-              {/* Search Buttons */}
               <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
                 <IconButton
                   onClick={handleSearchClick}
@@ -423,9 +301,9 @@ const TableListBox = ({
                 <IconButton
                   onClick={handleClearSearch}
                   sx={{
-                    bgcolor: "#dc3545", // เปลี่ยนเป็นสีแดง
+                    bgcolor: "#dc3545",
                     color: "#fff",
-                    "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" }, // สีแดงเข้มเมื่อ hover
+                    "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
                     width: layoutConfig.iconSize,
                     height: layoutConfig.iconSize,
                     borderRadius: "50%",
@@ -440,67 +318,35 @@ const TableListBox = ({
             </Box>
           </>
         ) : layoutConfig.layout === "large-responsive" ? (
-          // Large Responsive Layout (1025px - 1305px)
           <>
-            {/* First Row - First 4 fields or all if less than 4 */}
             <Box
               display="grid"
-              gridTemplateColumns={`repeat(${Math.min(
-                4,
-                filterFields.length
-              )}, 1fr)`}
+              gridTemplateColumns={`repeat(${Math.min(4, filterFields.length)}, 1fr)`}
               gap={layoutConfig.gap}
               mb={2}
-              sx={{
-                overflow: "visible",
-                width: "100%",
-              }}
+              sx={{ overflow: "visible", width: "100%" }}
             >
-              {filterFields
-                .slice(0, Math.min(4, filterFields.length))
-                .map((f) => (
-                  <Box key={f.name} sx={{ minWidth: 0 }}>
-                    {renderFilterField(f)}
-                  </Box>
-                ))}
+              {filterFields.slice(0, Math.min(4, filterFields.length)).map((f) => (
+                <Box key={f.name} sx={{ minWidth: 0 }}>
+                  {renderFilterField(f)}
+                </Box>
+              ))}
             </Box>
 
-            {/* Second Row - Remaining fields + Search Buttons (if more than 4 fields) */}
             {filterFields.length > 4 && (
-              <Box
-                display="flex"
-                alignItems="center"
-                gap={layoutConfig.gap}
-                mb={2}
-                sx={{
-                  overflow: "visible",
-                  width: "100%",
-                }}
-              >
-                {/* Remaining filter fields */}
+              <Box display="flex" alignItems="center" gap={layoutConfig.gap} mb={2} sx={{ overflow: "visible", width: "100%" }}>
                 {filterFields.slice(4).map((f) => (
-                  <Box
-                    key={f.name}
-                    sx={{
-                      flex: "1 1 0",
-                      minWidth: 0,
-                    }}
-                  >
+                  <Box key={f.name} sx={{ flex: "1 1 0", minWidth: 0 }}>
                     {renderFilterField(f)}
                   </Box>
                 ))}
-
-                {/* Search Buttons */}
                 <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
                   <IconButton
                     onClick={handleSearchClick}
                     sx={{
                       bgcolor: "#1120A3",
                       color: "#fff",
-                      "&:hover": {
-                        bgcolor: "#0b1580",
-                        transform: "scale(1.05)",
-                      },
+                      "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
                       width: layoutConfig.iconSize,
                       height: layoutConfig.iconSize,
                       borderRadius: "50%",
@@ -514,12 +360,9 @@ const TableListBox = ({
                   <IconButton
                     onClick={handleClearSearch}
                     sx={{
-                      bgcolor: "#dc3545", // เปลี่ยนเป็นสีแดง
+                      bgcolor: "#dc3545",
                       color: "#fff",
-                      "&:hover": {
-                        bgcolor: "#c82333", // สีแดงเข้มเมื่อ hover
-                        transform: "scale(1.05)",
-                      },
+                      "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
                       width: layoutConfig.iconSize,
                       height: layoutConfig.iconSize,
                       borderRadius: "50%",
@@ -534,7 +377,6 @@ const TableListBox = ({
               </Box>
             )}
 
-            {/* Search buttons centered if 4 or fewer fields */}
             {filterFields.length <= 4 && (
               <Box display="flex" justifyContent="center" gap={1} mb={2}>
                 <IconButton
@@ -555,9 +397,9 @@ const TableListBox = ({
                 <IconButton
                   onClick={handleClearSearch}
                   sx={{
-                    bgcolor: "#dc3545", // เปลี่ยนเป็นสีแดง
+                    bgcolor: "#dc3545",
                     color: "#fff",
-                    "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" }, // สีแดงเข้มเมื่อ hover
+                    "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
                     width: layoutConfig.iconSize,
                     height: layoutConfig.iconSize,
                     borderRadius: "50%",
@@ -571,31 +413,14 @@ const TableListBox = ({
             )}
           </>
         ) : (
-          // Single Row Layout (Screens larger than 1305px)
-          <Box
-            display="flex"
-            alignItems="center"
-            gap={layoutConfig.gap}
-            sx={{
-              overflow: "visible",
-              flexWrap: "nowrap",
-            }}
-          >
-            {/* Filter fields */}
+          // Single-row layout (>1305px)
+          <Box display="flex" alignItems="center" gap={layoutConfig.gap} sx={{ overflow: "visible", flexWrap: "nowrap" }}>
             {filterFields.map((f) => (
-              <Box
-                key={f.name}
-                sx={{
-                  flex: "1 1 0",
-                  minWidth: "140px",
-                  maxWidth: "200px",
-                }}
-              >
+              <Box key={f.name} sx={{ flex: "1 1 0", minWidth: "140px", maxWidth: "200px" }}>
                 {renderFilterField(f)}
               </Box>
             ))}
 
-            {/* Search Buttons */}
             <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
               <IconButton
                 onClick={handleSearchClick}
@@ -616,9 +441,9 @@ const TableListBox = ({
               <IconButton
                 onClick={handleClearSearch}
                 sx={{
-                  bgcolor: "#dc3545", // เปลี่ยนเป็นสีแดง
+                  bgcolor: "#dc3545",
                   color: "#fff",
-                  "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" }, // สีแดงเข้มเมื่อ hover
+                  "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
                   width: layoutConfig.iconSize,
                   height: layoutConfig.iconSize,
                   borderRadius: "50%",
@@ -634,213 +459,147 @@ const TableListBox = ({
         )}
       </Box>
 
-      {/* Data Table with conditional scrollbar */}
+      {/* Data Table — ใช้ Table เดียว + colgroup + fixed layout + scroll แนวนอน */}
       <Box
         className={styles.tableWrapper}
         id="table-results"
-        ref={tableRef}
-        sx={{
-          overflowX: needsScrollbar ? "auto" : "visible",
-          px: layoutConfig.padding,
-          pb: 1,
-          "&::-webkit-scrollbar": {
-            height: "8px",
-          },
-          "&::-webkit-scrollbar-track": {
-            backgroundColor: "#f1f1f1",
-            borderRadius: "4px",
-          },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#c1c1c1",
-            borderRadius: "4px",
-            "&:hover": {
-              backgroundColor: "#a8a8a8",
-            },
-          },
-        }}
+        sx={{ px: layoutConfig.padding, pb: 1 }}
       >
         <Box
+          ref={tableWrapperRef}
           sx={{
-          mx: isExtraSmall ? 1 : 3,
-          mb: 3,
-          borderRadius: "16px",
-          overflow: "hidden",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
-          border: "1px solid #f1f3f4",
-          // Responsive overflow handling
-          overflowX: isLarge ? "auto" : "visible",
-          "&::-webkit-scrollbar": {
-            height: "6px",
-          },
-          "&::-webkit-scrollbar-track": {
-            backgroundColor: "#f8f9fa",
-          },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#dee2e6",
-            borderRadius: "3px",
-            "&:hover": {
-              backgroundColor: "#adb5bd",
-            },
-          },
-        }}
+            mx: isExtraSmall ? 1 : 3,
+            mb: 3,
+            borderRadius: "16px",
+            overflow: "hidden",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+            border: "1px solid #f1f3f4",
+          }}
         >
-          <Table
-            ref={tableRef}
+          <Box
             sx={{
-              minWidth: needsScrollbar ? 1400 : "100%",
-              width: "100%",
-              tableLayout: needsScrollbar ? "auto" : "fixed",
-              borderCollapse: "collapse",
+              overflowX: "auto",
+              "&::-webkit-scrollbar": { height: "8px" },
+              "&::-webkit-scrollbar-track": { backgroundColor: "#f8f9fa" },
+              "&::-webkit-scrollbar-thumb": {
+                backgroundColor: "#dee2e6",
+                borderRadius: "3px",
+                "&:hover": { backgroundColor: "#adb5bd" },
+              },
             }}
           >
-            <TableHead>
-              <TableRow sx={{
-                backgroundColor: "#f8f9fa",
-                "& th": {
-                  borderBottom: "1px solid #e9ecef",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#495057",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                  padding: "16px 20px",
-                  whiteSpace: "nowrap",
-                },
-              }}>
+            <Table
+              sx={{
+                minWidth: needsScrollbar ? 1600 : "100%",
+                tableLayout: "fixed", // สำคัญ: ให้หัวและตัวข้อมูลคำนวณคอลัมน์เหมือนกัน
+                borderCollapse: "collapse",
+              }}
+            >
+              <colgroup>
                 {columns.map((col) => (
-                  <TableCell
-                    key={col.name}
-                    sx={{
-                      width: needsScrollbar ? col.width : "auto",
-                      minWidth: needsScrollbar ? col.width : "auto",
-                      backgroundColor: "#e8e9f6",
-                      fontWeight: 600,
-                      color: "#1120a3",
-                      borderBottom: "1px solid #e0e0e0",
-                      borderRight: "1px solid #e0e0e0",
-                      fontSize: "14px",
-                      padding: "14px 12px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      "&:last-child": {
-                        borderRight: "none",
-                      },
-                    }}
-                  >
-                    {col.label}
-                  </TableCell>
+                  <col key={col.name} style={{ width: col.width }} />
                 ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {pagedData.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    align="center"
-                              sx={{
-                                padding: "60px 20px",
-                                borderBottom: "none",
-                              }}
-                  >
-                    <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
-                      <Box
-                        sx={{
-                          width: 64,
-                          height: 64,
-                          borderRadius: "50%",
-                          backgroundColor: "#f8f9fa",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Typography sx={{ fontSize: "24px", color: "#6c757d" }}>📄</Typography>
-                      </Box>
-                      <Typography
-                        variant="h6"
-                        sx={{
-                          color: "#6c757d",
-                          fontWeight: 500,
-                          fontSize: "16px",
-                        }}
-                      >
-                        ไม่พบข้อมูลที่ค้นหา
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: "#adb5bd",
-                          fontSize: "14px",
-                        }}
-                      >
-                        กรุณาลองปรับเปลี่ยนเงื่อนไขการค้นหา
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                <TableRow> 
-                  <TableCell
-                    colSpan={columns.length}
-                    sx={{
-                      padding: "0px",
-                      borderBottom: "none",
-                    }}
-                  >
-                    {/* Add a wrapper to make the table horizontally scrollable */}
-                    <Box
+              </colgroup>
+
+              <TableHead>
+                <TableRow
+                  sx={{
+                    backgroundColor: "#f8f9fa",
+                    "& th": {
+                      borderBottom: "1px solid #e9ecef",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: "#495057",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      padding: "16px 20px",
+                      whiteSpace: "nowrap",
+                    },
+                  }}
+                >
+                  {columns.map((col) => (
+                    <TableCell
+                      key={col.name}
                       sx={{
-                        overflowX: "auto", // Enable horizontal scroll
-                        display: "block", // Ensure that the table is block-level for scrolling
-                        width: "100%",
+                        backgroundColor: "#e8e9f6",
+                        fontWeight: 600,
+                        color: "#1120a3",
+                        borderBottom: "1px solid #e0e0e0",
+                        borderRight: "1px solid #e0e0e0",
+                        "&:last-child": { borderRight: "none" },
                       }}
                     >
-                      <Table>
-                        {pagedData.map((item, idx) => (
-                          <TableRow
-                            key={item.id}
-                            onClick={() => handleRowClick(item)}
-                            sx={{
-                              cursor: "pointer",
-                              "&:hover": {
-                                backgroundColor: "#f5f7ff",
-                                transform: "scale(1.001)",
-                                transition: "all 0.2s ease-in-out",
-                              },
-                            }}
-                          >
-                            {columns.map((col) => (
-                              <TableCell
-                                key={col.name}
-                                sx={{
-                                  width: needsScrollbar ? col.width : "auto",
-                                  minWidth: needsScrollbar ? col.width : "auto",
-                                  borderBottom: "1px solid #e0e0e0",
-                                  borderRight: "1px solid #e0e0e0",
-                                  fontSize: "14px",
-                                  padding: "14px 12px",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  "&:last-child": {
-                                    borderRight: "none",
-                                  },
-                                }}
-                              >
-                                {item[col.name] ?? "-"}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                      </Table>
-                    </Box>
-                  </TableCell>
+                      {col.label}
+                    </TableCell>
+                  ))}
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHead>
+
+              <TableBody>
+                {pagedData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} align="center" sx={{ padding: "60px 20px", borderBottom: "none" }}>
+                      <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
+                        <Box
+                          sx={{
+                            width: 64,
+                            height: 64,
+                            borderRadius: "50%",
+                            backgroundColor: "#f8f9fa",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Typography sx={{ fontSize: "24px", color: "#6c757d" }}>📄</Typography>
+                        </Box>
+                        <Typography variant="h6" sx={{ color: "#6c757d", fontWeight: 500, fontSize: "16px" }}>
+                          ไม่พบข้อมูลที่ค้นหา
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: "#adb5bd", fontSize: "14px" }}>
+                          กรุณาลองปรับเปลี่ยนเงื่อนไขการค้นหา
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pagedData.map((item) => (
+                    <TableRow
+                      key={item.id}
+                      onClick={() => handleRowClick(item)}
+                      sx={{
+                        cursor: "pointer",
+                        "&:hover": {
+                          backgroundColor: "#f5f7ff",
+                          transform: "scale(1.001)",
+                          transition: "all 0.2s ease-in-out",
+                        },
+                      }}
+                    >
+                      {columns.map((col) => (
+                        <TableCell
+                          key={col.name}
+                          sx={{
+                            borderBottom: "1px solid #e0e0e0",
+                            borderRight: "1px solid #e0e0e0",
+                            fontSize: "14px",
+                            padding: "14px 12px",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            "&:last-child": { borderRight: "none" },
+                          }}
+                          title={item[col.name] ?? "-"}
+                        >
+                          {item[col.name] ?? "-"}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Box>
         </Box>
 
         <TablePagination
@@ -853,14 +612,8 @@ const TableListBox = ({
           onRowsPerPageChange={handleRowsPerPageChange}
           sx={{
             borderTop: "1px solid #eee",
-            "& .MuiTablePagination-toolbar": {
-              fontSize: "14px",
-              padding: "16px",
-            },
-            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
-              {
-                fontSize: "14px",
-              },
+            "& .MuiTablePagination-toolbar": { fontSize: "14px", padding: "16px" },
+            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: "14px" },
           }}
         />
       </Box>
