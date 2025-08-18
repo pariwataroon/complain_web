@@ -21,5 +21,69 @@ const getDepartments = async () => {
     throw error;
   }
 };
+const getPositions = async () => {
+  try {
+    const response = await axiosInstance.get("/positions");
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching departments:", error);
+    throw error;
+  }
+};
 
-export { getDepartmentGroup, getDepartments };
+const getAvailable = async () => {
+  try {
+    const response = await axiosInstance.get(
+      "/signature-authorities/available-users"
+    );
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching departments:", error);
+    throw error;
+  }
+};
+const getSignatureAuthorities = async () => {
+  try {
+    const response = await axiosInstance.get("/signature-authorities");
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching departments:", error);
+    throw error;
+  }
+};
+const createSignatureAuthorityGroup = async (payload) => {
+  try {
+    const response = await axiosInstance.post(
+      "/signature-authorities/groups",
+      payload
+    );
+    return response?.data;
+  } catch (error) {
+    console.error("Error posting /signature-authorities/groups:", error);
+    throw error;
+  }
+};
+const updateSignatureAuthorityGroup = async (groupId, payload) => {
+  try {
+    const response = await axiosInstance.put(
+      `/signature-authorities/groups/${groupId}`,
+      payload
+    );
+    return response?.data;
+  } catch (error) {
+    console.error(
+      `Error putting /signature-authorities/groups/${groupId}:`,
+      error
+    );
+    throw error;
+  }
+};
+export {
+  getDepartmentGroup,
+  getDepartments,
+  getPositions,
+  getAvailable,
+  getSignatureAuthorities,
+  createSignatureAuthorityGroup,
+  updateSignatureAuthorityGroup,
+};

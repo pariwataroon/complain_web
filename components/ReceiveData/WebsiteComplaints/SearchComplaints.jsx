@@ -1195,6 +1195,7 @@ const SearchComplaints = () => {
                                     <SearchIcon />
                                   </span>
                                 </div>
+
                                 {/* Dialog สำหรับค้นหาเลข */}
                                 <Dialog
                                   open={openSearchDialog}
@@ -1217,10 +1218,12 @@ const SearchComplaints = () => {
                                       gap: 8,
                                     }}
                                   >
-                                    <SearchIcon color="primary" />{" "}
+                                    <SearchIcon color="primary" />
                                     ค้นหาเลขที่อ้างอิง
                                   </DialogTitle>
+
                                   <DialogContent>
+                                    {/* ช่องค้นหา */}
                                     <TextField
                                       inputRef={inputRef}
                                       fullWidth
@@ -1228,8 +1231,9 @@ const SearchComplaints = () => {
                                       placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
                                       value={searchText}
                                       onChange={(e) => {
-                                        setSearchText(e.target.value);
-                                        handleSearch(e.target.value);
+                                        const val = e.target.value;
+                                        setSearchText(val);
+                                        handleSearch(val);
                                       }}
                                       InputProps={{
                                         startAdornment: (
@@ -1256,6 +1260,8 @@ const SearchComplaints = () => {
                                       }}
                                       sx={{ mb: 2 }}
                                     />
+
+                                    {/* สถานะโหลด / ไม่พบ / รายการ */}
                                     {searchLoading ? (
                                       <div
                                         style={{
@@ -1288,27 +1294,29 @@ const SearchComplaints = () => {
                                         <div>ไม่พบรายการเลขที่อ้างอิง</div>
                                       </div>
                                     ) : (
-                                      <List
-                                        sx={{
-                                          maxHeight: 320,
-                                          overflow: "auto",
-                                          "&::-webkit-scrollbar": {
-                                            width: "8px",
-                                            background: "#f0f4fa",
-                                            borderRadius: "8px",
-                                          },
-                                          "&::-webkit-scrollbar-thumb": {
-                                            background: "#90caf9",
-                                            borderRadius: "8px",
-                                          },
-                                          "&::-webkit-scrollbar-thumb:hover": {
-                                            background: "#64b5f6",
-                                          },
-                                        }}
-                                      >
-                                        {searchResults.map((item) => (
-                                          <List>
-                                            {searchResults.map((item) => (
+                                      <>
+                                        <List
+                                          sx={{
+                                            maxHeight: 320,
+                                            overflow: "auto",
+                                            "&::-webkit-scrollbar": {
+                                              width: "8px",
+                                              background: "#f0f4fa",
+                                              borderRadius: "8px",
+                                            },
+                                            "&::-webkit-scrollbar-thumb": {
+                                              background: "#90caf9",
+                                              borderRadius: "8px",
+                                            },
+                                            "&::-webkit-scrollbar-thumb:hover":
+                                              {
+                                                background: "#64b5f6",
+                                              },
+                                          }}
+                                        >
+                                          {searchResults.map((item) => {
+                                            const isMaster = !!item.is_master; // fallback ถ้า undefined
+                                            return (
                                               <ListItem
                                                 key={item.id}
                                                 disablePadding
@@ -1322,30 +1330,104 @@ const SearchComplaints = () => {
                                                     px: 2,
                                                     borderRadius: 2,
                                                     mb: 0.5,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 1.5,
                                                     "&:hover": {
                                                       background: "#e3f2fd",
                                                     },
                                                   }}
                                                 >
+                                                  {/* จุดสถานะ is_master */}
+                                                  <span
+                                                    style={{
+                                                      width: 12,
+                                                      height: 12,
+                                                      borderRadius: "50%",
+                                                      backgroundColor: isMaster
+                                                        ? "#2ecc71"
+                                                        : "#bdbdbd",
+                                                      border: "2px solid #fff",
+                                                      boxShadow:
+                                                        "0 0 0 1px rgba(0,0,0,0.15)",
+                                                      flexShrink: 0,
+                                                    }}
+                                                    title={
+                                                      isMaster
+                                                        ? "Master"
+                                                        : "Non-master"
+                                                    }
+                                                  />
                                                   <DescriptionIcon
                                                     color="info"
-                                                    sx={{ mr: 2 }}
+                                                    sx={{ mr: 0.5 }}
                                                   />
                                                   <span
                                                     style={{ fontWeight: 500 }}
                                                   >
-                                                    {/* แสดง complaint_type + complaint_number */}
                                                     {item.complaint_type} -{" "}
                                                     {item.complaint_number}
                                                   </span>
                                                 </ListItemButton>
                                               </ListItem>
-                                            ))}
-                                          </List>
-                                        ))}
-                                      </List>
+                                            );
+                                          })}
+                                        </List>
+
+                                        {/* Legend (ถ้าไม่ต้องการสามารถลบส่วนนี้ออกได้) */}
+                                        <div
+                                          style={{
+                                            display: "flex",
+                                            gap: 16,
+                                            marginTop: 8,
+                                            fontSize: 12,
+                                            color: "#555",
+                                            padding: "0 4px",
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: 6,
+                                            }}
+                                          >
+                                            <span
+                                              style={{
+                                                width: 10,
+                                                height: 10,
+                                                borderRadius: "50%",
+                                                background: "#2ecc71",
+                                                boxShadow:
+                                                  "0 0 0 1px rgba(0,0,0,0.15)",
+                                              }}
+                                            />
+                                            Master
+                                          </div>
+                                          <div
+                                            style={{
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: 6,
+                                            }}
+                                          >
+                                            <span
+                                              style={{
+                                                width: 10,
+                                                height: 10,
+                                                borderRadius: "50%",
+                                                background: "#bdbdbd",
+                                                boxShadow:
+                                                  "0 0 0 1px rgba(0,0,0,0.15)",
+                                              }}
+                                            />
+                                            Non-master
+                                          </div>
+                                        </div>
+                                      </>
                                     )}
                                   </DialogContent>
+
                                   <DialogActions sx={{ px: 3, pb: 2 }}>
                                     <Button
                                       onClick={() => setOpenSearchDialog(false)}

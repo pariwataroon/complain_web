@@ -179,6 +179,7 @@ const SearchComplaints = () => {
       }));
 
       setSearchResults(results);
+      console.log("results", results);
     } catch (error) {
       setSearchResults([]);
       console.error("handleSearch error", error);
@@ -1505,24 +1506,7 @@ const SearchComplaints = () => {
                                         <div>ไม่พบรายการเลขที่อ้างอิง</div>
                                       </div>
                                     ) : (
-                                      <List
-                                        sx={{
-                                          maxHeight: 320,
-                                          overflow: "auto",
-                                          "&::-webkit-scrollbar": {
-                                            width: "8px",
-                                            background: "#f0f4fa",
-                                            borderRadius: "8px",
-                                          },
-                                          "&::-webkit-scrollbar-thumb": {
-                                            background: "#90caf9",
-                                            borderRadius: "8px",
-                                          },
-                                          "&::-webkit-scrollbar-thumb:hover": {
-                                            background: "#64b5f6",
-                                          },
-                                        }}
-                                      >
+                                      <List>
                                         {searchResults.map((item) => (
                                           <ListItem
                                             key={item.id}
@@ -1540,11 +1524,35 @@ const SearchComplaints = () => {
                                                 "&:hover": {
                                                   background: "#e3f2fd",
                                                 },
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 1,
                                               }}
                                             >
+                                              {/* จุดสถานะ is_master */}
+                                              <span
+                                                style={{
+                                                  width: 12,
+                                                  height: 12,
+                                                  borderRadius: "50%",
+                                                  backgroundColor:
+                                                    item.is_master
+                                                      ? "#2ecc71"
+                                                      : "#bdbdbd",
+                                                  border: "2px solid #fff",
+                                                  boxShadow:
+                                                    "0 0 0 1px rgba(0,0,0,0.15)",
+                                                  flex: "0 0 auto",
+                                                }}
+                                                title={
+                                                  item.is_master
+                                                    ? "Master"
+                                                    : "Non-master"
+                                                }
+                                              />
                                               <DescriptionIcon
                                                 color="info"
-                                                sx={{ mr: 2 }}
+                                                sx={{ mr: 1 }}
                                               />
                                               <span style={{ fontWeight: 500 }}>
                                                 {item.label}
