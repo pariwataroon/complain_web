@@ -56,6 +56,8 @@ def list_years_be(start_be: int = BE_START, end_be: int = BE_END) -> Dict[str, A
     for be in range(start_be, end_be + 1):
         ce = be - 543
         years.append({"value": be, "label": str(be), "be": be, "ce": ce})
+    # เรียงจากมากไปน้อย
+    years.sort(key=lambda x: x["value"], reverse=True)
     return {
         "years": years,
         "range": {"be_start": start_be, "be_end": end_be, "ce_start": CE_START, "ce_end": CE_END},
