@@ -150,6 +150,28 @@ const UpdateAssignmentCompleteByAdmin = async (complaint_id, formData) => {
     throw error;
   }
 };
+
+const ConfirmAssignment = async (complaint_id, remark ="ยืนยันรับงานร้องทุกข์กระทรวงการคลัง") => {
+  try {
+    const requestBody = {
+      confirm_status: true,
+      remark: remark
+    };
+
+    const response = await axiosInstance.post(
+      `/complaints-assignment/${complaint_id}/confirm-assignment`,
+      requestBody
+    );
+    
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error confirming assignment:", error);
+    throw error;
+  }
+};
+
 const GetEnhancedComplaints = async ({ skip = 0, limit = 10, search = "" }) => {
   try {
     const response = await axiosInstance.get("/complaints/enhanced", {
@@ -244,4 +266,5 @@ export {
   GetComplaintsByPageType,
   GetComplaintsByPageTypeCard,
   NewsUploadAttachments,
+  ConfirmAssignment,
 };
