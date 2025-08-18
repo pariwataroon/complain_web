@@ -1,11 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import { Box, Typography } from "@mui/material";
 import ButtonService from "@services/ButtonService/ButtonService";
 import AddIcon from "@mui/icons-material/Add";
+import SaveIcon from "@mui/icons-material/Save";
 import { useRouter } from "next/router";
 import SelectField from "@services/SelectField/SelectField";
-import { getDepartmentGroup } from "@pages/api/department/department";
+import {
+  getDepartmentGroup,
+  getPositions,
+  getAvailable,
+  getSignatureAuthorities,
+  createSignatureAuthorityGroup,
+  updateSignatureAuthorityGroup,
+} from "@pages/api/department/department";
+import { alertSuccess, alertError } from "@utils/Alerts";
+import { translateResCode, isSuccessResCode } from "@utils/responseMessages";
 
 const breadcrumbItems = [
   {
@@ -18,127 +28,335 @@ const breadcrumbItems = [
       />
     ),
   },
-  {
-    label: "กำหนดหน่วยงานในสังกัด",
-  },
+  { label: "กำหนดหน่วยงานในสังกัด" },
 ];
+
 const CommitteeCompositionSettings = () => {
   const router = useRouter();
 
-  // Options สำหรับตำแหน่งผู้ลงนาม
-  const positionOptions = [
-    { label: "ผู้อำนวยการ", value: "director" },
-    { label: "รองผู้อำนวยการ", value: "deputy_director" },
-    { label: "ผู้จัดการ", value: "manager" },
-    { label: "รองผู้จัดการ", value: "deputy_manager" },
-    { label: "หัวหน้าแผนก", value: "department_head" },
-    { label: "รองหัวหน้าแผนก", value: "deputy_department_head" },
-    { label: "ผู้อำนวยการฝ่าย", value: "division_director" },
-    { label: "ผู้จัดการฝ่าย", value: "division_manager" },
-    { label: "ประธานกรรมการ", value: "chairman" },
-    { label: "รองประธานกรรมการ", value: "vice_chairman" },
-    { label: "เลขานุการ", value: "secretary" },
-    { label: "นายกเทศมนตรี", value: "mayor" },
-    { label: "รองนายกเทศมนตรี", value: "deputy_mayor" },
-    { label: "ปลัดเทศบาล", value: "municipal_clerk" },
-    { label: "หัวหน้าส่วนราชการ", value: "government_head" },
-  ];
-
-  // Options สำหรับชื่อผู้ลงนาม
-  const signatoryNameOptions = [
-    { label: "นายสมชาย ใจดี", value: "somchai_jaidee" },
-    { label: "นางสาวสุนีย์ รักเรียน", value: "sunee_rakrian" },
-    { label: "นายอนุรักษ์ พัฒนา", value: "anurak_pattana" },
-    { label: "นางมาลี สวยงาม", value: "malee_suayngam" },
-    { label: "นายประเสริฐ ก้าวหน้า", value: "prasert_gaowana" },
-    { label: "นางสาววิมล เก่งเรียน", value: "wimon_kengrian" },
-    { label: "นายสุรชัย ขยันดี", value: "surachai_khayandee" },
-    { label: "นางนิภา รับผิดชอบ", value: "nipa_rapphitchop" },
-    { label: "นายธนากร บริการดี", value: "thanakorn_borikandee" },
-    { label: "นางสาวพิมพ์ใจ ซื่อสัตย์", value: "pimjai_suesat" },
-  ];
-
-  // Helper: แปลง departments array เป็น options
-  function mapDepartmentsToOptions(departments) {
-    if (!Array.isArray(departments)) return [];
-    return departments.map((dep) => ({
-      label: dep.name,
-      value: dep.id,
-    }));
-  }
-
+  const [allPositionOptions, setAllPositionOptions] = useState([]);
+  const [availablePositionOptions, setAvailablePositionOptions] = useState([]);
+  const [signatoryOptions, setSignatoryOptions] = useState([]);
   const [stateEnterpriseOptions, setStateEnterpriseOptions] = useState([]);
   const [governmentOptions, setGovernmentOptions] = useState([]);
   const [otherOptions, setOtherOptions] = useState([]);
   const [otherGroupOptions, setOtherGroupOptions] = useState([]);
 
+  const positionsLoaded = useRef(false);
+  const usersLoaded = useRef(false);
+  const departmentsLoaded = useRef(false);
+
+  const [formData, setFormData] = useState({});
+  const [additionalSelects, setAdditionalSelects] = useState({});
+  const [signatoryBoxes, setSignatoryBoxes] = useState(2);
+  const [boxSaveState, setBoxSaveState] = useState({});
+  const [groupsPrefilled, setGroupsPrefilled] = useState(false);
+  const [groupIdByBox, setGroupIdByBox] = useState({});
+
+  useEffect(() => {
+    const fetchPositions = async () => {
+      try {
+        const res = await getPositions();
+        if (Array.isArray(res?.res_data)) {
+          const mapped = res.res_data.map((p) => {
+            const baseName =
+              p.name ?? p.position_name ?? p.label ?? String(p.id);
+            const levelText = p.level ? ` (${p.level})` : "";
+            return {
+              label: `${baseName}${levelText}`,
+              value: p.id ?? p.value,
+              rawName: baseName,
+              level: p.level || "",
+              description: p.description || "",
+            };
+          });
+          const cleaned = mapped.filter(
+            (o) => o.label && (o.value || o.value === 0)
+          );
+          setAllPositionOptions(cleaned);
+          setAvailablePositionOptions(cleaned);
+        } else {
+          setAllPositionOptions([]);
+          setAvailablePositionOptions([]);
+        }
+      } catch {
+        setAllPositionOptions([]);
+        setAvailablePositionOptions([]);
+      } finally {
+        positionsLoaded.current = true;
+      }
+    };
+    fetchPositions();
+  }, []);
+
+  useEffect(() => {
+    const fetchAvailableSignatories = async () => {
+      try {
+        const res = await getAvailable();
+        const list = Array.isArray(res?.res_data) ? res.res_data : [];
+        const mapped = list.map((item) => ({
+          value: item.id,
+          label:
+            item.full_name_with_title ||
+            item.name_with_title ||
+            item.full_name ||
+            item.name ||
+            item.label ||
+            "(ไม่ระบุชื่อ)",
+          fullName: item.full_name || item.name || "",
+          email: item.email || "",
+          departmentName:
+            item.department?.name ||
+            item.department_name ||
+            item.dept_name ||
+            "",
+          raw: item,
+        }));
+        setSignatoryOptions(mapped);
+      } catch {
+        setSignatoryOptions([]);
+      } finally {
+        usersLoaded.current = true;
+      }
+    };
+    fetchAvailableSignatories();
+  }, []);
+
+  function mapDepartmentsToOptions(departments) {
+    if (!Array.isArray(departments)) return [];
+    return departments.map((dep) => ({ label: dep.name, value: dep.id }));
+  }
+
   useEffect(() => {
     const fetchOptions = async () => {
-      const res = await getDepartmentGroup();
-      if (Array.isArray(res?.res_data)) {
-        // จัดกลุ่ม
-        const resData = res.res_data;
-        // รัฐวิสาหกิจ, ส่วนราชการ, อื่น ๆ
-        const stateEnterprise = resData.find(
-          (item) => item.name === "รัฐวิสาหกิจ"
-        );
-        const government = resData.find((item) => item.name === "ส่วนราชการ");
-        const others = resData.find((item) => item.name === "อื่น ๆ");
+      try {
+        const res = await getDepartmentGroup();
+        if (Array.isArray(res?.res_data)) {
+          const resData = res.res_data;
+          const stateEnterprise = resData.find((i) => i.name === "รัฐวิสาหกิจ");
+          const government = resData.find((i) => i.name === "ส่วนราชการ");
+          const others = resData.find((i) => i.name === "อื่น ๆ");
 
-        setStateEnterpriseOptions(
-          mapDepartmentsToOptions(stateEnterprise?.departments)
-        );
-        setGovernmentOptions(mapDepartmentsToOptions(government?.departments));
-        setOtherOptions(mapDepartmentsToOptions(others?.departments));
-        // กลุ่มอื่นๆ ตั้งแต่ตัวที่ 4 เป็นต้นไป
-        const otherGroups = resData.slice(3).map((group) => ({
-          groupName: group.name,
-          label: group.name,
-          options: mapDepartmentsToOptions(group.departments),
-        }));
-        setOtherGroupOptions(otherGroups);
+          setStateEnterpriseOptions(
+            mapDepartmentsToOptions(stateEnterprise?.departments)
+          );
+          setGovernmentOptions(
+            mapDepartmentsToOptions(government?.departments)
+          );
+          setOtherOptions(mapDepartmentsToOptions(others?.departments));
+
+          const otherGroups = resData.slice(3).map((group) => ({
+            groupName: group.name,
+            label: group.name,
+            options: mapDepartmentsToOptions(group.departments),
+          }));
+          setOtherGroupOptions(otherGroups);
+        } else {
+          setStateEnterpriseOptions([]);
+          setGovernmentOptions([]);
+          setOtherOptions([]);
+          setOtherGroupOptions([]);
+        }
+      } catch {
+        setStateEnterpriseOptions([]);
+        setGovernmentOptions([]);
+        setOtherOptions([]);
+        setOtherGroupOptions([]);
+      } finally {
+        departmentsLoaded.current = true;
       }
     };
     fetchOptions();
   }, []);
 
-  // ← แก้ไข: เปลี่ยนจาก object เดียวเป็น object แยกตาม field
-  const [formData, setFormData] = useState({});
+  useEffect(() => {
+    const ready =
+      positionsLoaded.current &&
+      usersLoaded.current &&
+      departmentsLoaded.current &&
+      !groupsPrefilled;
+    if (!ready) return;
 
-  // State to track the number of signatory boxes
-  const [signatoryBoxes, setSignatoryBoxes] = useState(2);
+    const prefill = async () => {
+      try {
+        const res = await getSignatureAuthorities();
+        if (!isSuccessResCode(res?.res_code)) {
+          setGroupsPrefilled(true);
+          return;
+        }
+        const groups = res?.res_data?.groups || [];
+        if (groups.length === 0) {
+          setGroupsPrefilled(true);
+          return;
+        }
 
-  // State to track additional select menus for each section and signatory
-  const [additionalSelects, setAdditionalSelects] = useState({});
+        setSignatoryBoxes(groups.length);
 
-  // ← แก้ไข: ปรับปรุง handleInputChange ให้จัดการแต่ละ field แยกกัน
+        const newForm = {};
+        const newAdditional = {};
+        const newGroupMap = {};
+        const usedGroupNames = new Set(groups.map((g) => g.group_name));
+
+        groups.forEach((group, idx) => {
+          const num = idx + 1;
+          newGroupMap[num] = group.group_id;
+
+          let positionOption = allPositionOptions.find(
+            (p) => p.label === group.group_name
+          );
+          if (!positionOption) {
+            positionOption = {
+              label: group.group_name,
+              value: `__custom_${group.group_id}`,
+              description: group.group_description || "",
+              rawName: group.group_name,
+            };
+            setAllPositionOptions((prev) => {
+              if (prev.find((p) => p.value === positionOption.value))
+                return prev;
+              return [...prev, positionOption];
+            });
+          }
+          newForm[`position_${num}`] = positionOption.value;
+
+          const users = group.users || [];
+          if (users.length > 0) {
+            newForm[`name_${num}`] = users[0].user_id;
+            if (users.length > 1) {
+              const key = `name_${num}`;
+              newAdditional[key] = [];
+              users.slice(1).forEach((u) => {
+                const addId = Date.now() + Math.random();
+                newAdditional[key].push(addId);
+                newForm[`name_${num}_additional_${addId}`] = u.user_id;
+              });
+            }
+          }
+
+          const departments = group.departments || [];
+          if (departments.length > 0) {
+            const stateIds = [];
+            const govIds = [];
+            const otherIds = [];
+            const dynamicGroupMap = {};
+
+            departments.forEach((dpt) => {
+              const id = dpt.department_id;
+              if (stateEnterpriseOptions.some((o) => o.value === id))
+                stateIds.push(id);
+              else if (governmentOptions.some((o) => o.value === id))
+                govIds.push(id);
+              else if (otherOptions.some((o) => o.value === id))
+                otherIds.push(id);
+              else {
+                let assigned = false;
+                for (const g of otherGroupOptions) {
+                  if (g.options.some((o) => o.value === id)) {
+                    if (!dynamicGroupMap[g.groupName])
+                      dynamicGroupMap[g.groupName] = [];
+                    dynamicGroupMap[g.groupName].push(id);
+                    assigned = true;
+                    break;
+                  }
+                }
+                if (!assigned) otherIds.push(id);
+              }
+            });
+
+            if (stateIds.length > 0) {
+              newForm[`state_enterprise_${num}`] = stateIds[0];
+              if (stateIds.length > 1) {
+                const key = `state_enterprise_${num}`;
+                newAdditional[key] = [];
+                stateIds.slice(1).forEach((id) => {
+                  const addId = Date.now() + Math.random();
+                  newAdditional[key].push(addId);
+                  newForm[`state_enterprise_${num}_additional_${addId}`] = id;
+                });
+              }
+            }
+            if (govIds.length > 0) {
+              newForm[`government_${num}`] = govIds[0];
+              if (govIds.length > 1) {
+                const key = `government_${num}`;
+                newAdditional[key] = [];
+                govIds.slice(1).forEach((id) => {
+                  const addId = Date.now() + Math.random();
+                  newAdditional[key].push(addId);
+                  newForm[`government_${num}_additional_${addId}`] = id;
+                });
+              }
+            }
+            if (otherIds.length > 0) {
+              newForm[`other1_${num}`] = otherIds[0];
+              if (otherIds.length > 1) newForm[`other2_${num}`] = otherIds[1];
+              if (otherIds.length > 2) {
+                const key = `other_${num}`;
+                newAdditional[key] = [];
+                otherIds.slice(2).forEach((id) => {
+                  const addId = Date.now() + Math.random();
+                  newAdditional[key].push(addId);
+                  newForm[`other_${num}_additional_${addId}`] = id;
+                });
+              }
+            }
+            Object.entries(dynamicGroupMap).forEach(([gName, ids]) => {
+              if (!ids.length) return;
+              newForm[`other_${gName}_${num}`] = ids[0];
+              if (ids.length > 1) {
+                const key = `other_${num}`;
+                if (!newAdditional[key]) newAdditional[key] = [];
+                ids.slice(1).forEach((id) => {
+                  const addId = Date.now() + Math.random();
+                  newAdditional[key].push(addId);
+                  newForm[`other_${num}_additional_${addId}`] = id;
+                });
+              }
+            });
+          }
+        });
+
+        setAvailablePositionOptions((prevAvail) =>
+          prevAvail.filter((opt) => !usedGroupNames.has(opt.label))
+        );
+
+        setGroupIdByBox(newGroupMap);
+        setFormData((prev) => ({ ...prev, ...newForm }));
+        setAdditionalSelects((prev) => ({ ...prev, ...newAdditional }));
+        setGroupsPrefilled(true);
+      } catch {
+        setGroupsPrefilled(true);
+      }
+    };
+
+    prefill();
+  }, [
+    groupsPrefilled,
+    allPositionOptions,
+    signatoryOptions,
+    stateEnterpriseOptions,
+    governmentOptions,
+    otherOptions,
+    otherGroupOptions,
+  ]);
+
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    // console.log("📝 Input changed:", { name, value }); // debug log
-
-    setFormData((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Function to add a new select menu to a specific section
   const addSelectMenu = (section, signatoryNumber) => {
     const sectionKey = `${section}_${signatoryNumber}`;
-
-    setAdditionalSelects((prevState) => {
-      const currentSelects = prevState[sectionKey] || [];
-      return {
-        ...prevState,
-        [sectionKey]: [...currentSelects, Date.now()], // Use timestamp as unique ID
-      };
+    setAdditionalSelects((prev) => {
+      const currentSelects = prev[sectionKey] || [];
+      return { ...prev, [sectionKey]: [...currentSelects, Date.now()] };
     });
   };
 
   const DepartmentButton = ({
     section,
     signatoryNumber,
-    label = "เพิ่มหน่วยงาน",
+    label = "เพิ่มผู้ลงนาม",
   }) => (
     <Box mt={1}>
       <ButtonService
@@ -153,31 +371,22 @@ const CommitteeCompositionSettings = () => {
           borderRadius: "15px",
           width: "100%",
           height: "40px",
-          fontSize: "14px",  // ลดขนาดฟอนต์
-          "&:hover": {
-            backgroundColor: "#1E88E5",
-            color: "#ffffff",
-          },
+          fontSize: "14px",
+          "&:hover": { backgroundColor: "#1E88E5", color: "#ffffff" },
         }}
       />
     </Box>
   );
 
-  // Function to add a new signatory box
-  const addSignatoryBox = () => {
-    setSignatoryBoxes(signatoryBoxes + 1);
-  };
+  const addSignatoryBox = () => setSignatoryBoxes((c) => c + 1);
 
-  // Render additional select menus for a specific section
   const renderAdditionalSelects = (section, signatoryNumber) => {
     const sectionKey = `${section}_${signatoryNumber}`;
     const selects = additionalSelects[sectionKey] || [];
-
-    // เลือก options ตามประเภท section
     let options = [];
     switch (section) {
       case "name":
-        options = signatoryNameOptions;
+        options = signatoryOptions;
         break;
       case "state_enterprise":
         options = stateEnterpriseOptions;
@@ -191,7 +400,6 @@ const CommitteeCompositionSettings = () => {
       default:
         options = [];
     }
-
     return selects.map((id) => (
       <Box mt={1} key={id}>
         <SelectField
@@ -206,212 +414,417 @@ const CommitteeCompositionSettings = () => {
     ));
   };
 
-  // Component for a single signatory box
-  const SignatoryBox = ({ number }) => (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "row",
-        borderRadius: "10px",
-        border: "2px solid #2499FF",
-        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
-        mb: 2,
-        height: "auto",
-        backgroundColor: "white",
-      }}
-    >
-      {/* Vertical sidebar */}
+  const collectDepartmentIdsForBox = (i) => {
+    const deptFields = new Set([
+      `state_enterprise_${i}`,
+      `government_${i}`,
+      `other1_${i}`,
+      `other2_${i}`,
+    ]);
+
+    otherGroupOptions.forEach((g) =>
+      deptFields.add(`other_${g.groupName}_${i}`)
+    );
+
+    ["state_enterprise", "government", "other"].forEach((sec) => {
+      const key = `${sec}_${i}`;
+      if (additionalSelects[key]) {
+        additionalSelects[key].forEach((id) =>
+          deptFields.add(`${sec}_${i}_additional_${id}`)
+        );
+      }
+    });
+
+    const departmentIds = Array.from(deptFields)
+      .map((f) => formData[f])
+      .filter((v) => v && typeof v === "string");
+
+    return Array.from(new Set(departmentIds));
+  };
+
+  const buildAssignmentsForBox = (i) => {
+    const primaryUser = formData[`name_${i}`];
+    const additionalUserKeys = Object.keys(formData).filter((k) =>
+      k.startsWith(`name_${i}_additional_`)
+    );
+    const userIds = [
+      ...(primaryUser ? [primaryUser] : []),
+      ...additionalUserKeys.map((k) => formData[k]).filter(Boolean),
+    ];
+    if (!userIds.length) return [];
+    const departmentIds = collectDepartmentIdsForBox(i);
+    if (!departmentIds.length) return [];
+    return userIds.map((uid) => ({
+      user_id: uid,
+      department_ids: departmentIds,
+    }));
+  };
+
+  const handleSaveBox = async (boxNumber) => {
+    setBoxSaveState((prev) => ({
+      ...prev,
+      [boxNumber]: { saving: true, success: null, error: null },
+    }));
+    try {
+      const positionId = formData[`position_${boxNumber}`];
+      if (!positionId) {
+        const msg = "กรุณาเลือกตำแหน่งก่อนบันทึก";
+        setBoxSaveState((prev) => ({
+          ...prev,
+          [boxNumber]: { saving: false, success: null, error: msg },
+        }));
+        alertError("บันทึกล้มเหลว", msg);
+        return;
+      }
+      const positionObj = allPositionOptions.find(
+        (p) => p.value === positionId
+      );
+      const groupName = positionObj?.label || "ไม่ระบุตำแหน่ง";
+      const description = positionObj?.description || "";
+      const assignments = buildAssignmentsForBox(boxNumber);
+      if (!assignments.length) {
+        const msg = "กรุณาเลือกผู้ลงนามและหน่วยงานอย่างน้อย 1 รายการ";
+        setBoxSaveState((prev) => ({
+          ...prev,
+          [boxNumber]: { saving: false, success: null, error: msg },
+        }));
+        alertError("บันทึกล้มเหลว", msg);
+        return;
+      }
+      const payload = { group_name: groupName, description, assignments };
+
+      const existingGroupId = groupIdByBox[boxNumber];
+      let res;
+      let isUpdate = false;
+
+      if (existingGroupId) {
+        isUpdate = true;
+        res = await updateSignatureAuthorityGroup(existingGroupId, payload);
+      } else {
+        res = await createSignatureAuthorityGroup(payload);
+      }
+
+      const code = res?.res_code;
+      const backendMsg = res?.res_message;
+      const thaiMsg = translateResCode(code, backendMsg);
+
+      if (isSuccessResCode(code)) {
+        if (!existingGroupId) {
+          const returnedGroupId =
+            res?.res_data?.group_id ||
+            res?.res_data?.group?.group_id ||
+            res?.group_id;
+          if (returnedGroupId) {
+            setGroupIdByBox((prev) => ({
+              ...prev,
+              [boxNumber]: returnedGroupId,
+            }));
+            setAvailablePositionOptions((prevAvail) =>
+              prevAvail.filter((opt) => opt.value !== positionId)
+            );
+          }
+        }
+        setBoxSaveState((prev) => ({
+          ...prev,
+          [boxNumber]: {
+            saving: false,
+            success: thaiMsg,
+            error: null,
+          },
+        }));
+        alertSuccess(
+          isUpdate ? "อัปเดตสำเร็จ" : "สร้างสำเร็จ",
+          `${thaiMsg}\n(${groupName})`
+        );
+      } else {
+        const errText = thaiMsg || "ดำเนินการไม่สำเร็จ";
+        setBoxSaveState((prev) => ({
+          ...prev,
+          [boxNumber]: { saving: false, success: null, error: errText },
+        }));
+        alertError(isUpdate ? "อัปเดตล้มเหลว" : "บันทึกล้มเหลว", errText);
+      }
+    } catch (e) {
+      const code = e?.response?.data?.res_code;
+      const backendMsg =
+        e?.response?.data?.res_message || e?.response?.data?.message;
+      const translated = translateResCode(code, backendMsg || e.message, true);
+      setBoxSaveState((prev) => ({
+        ...prev,
+        [boxNumber]: {
+          saving: false,
+          success: null,
+          error: translated,
+        },
+      }));
+      alertError("ข้อผิดพลาด", translated);
+    }
+  };
+
+  const getPositionOptionsForBox = (number) => {
+    const currentVal = formData[`position_${number}`];
+    if (!currentVal) return availablePositionOptions;
+    const currentOption = allPositionOptions.find(
+      (o) => o.value === currentVal
+    );
+    if (!currentOption) return availablePositionOptions;
+    const existsInAvailable = availablePositionOptions.some(
+      (o) => o.value === currentVal
+    );
+    if (existsInAvailable) return availablePositionOptions;
+    return [currentOption, ...availablePositionOptions];
+  };
+
+  const SignatoryBox = ({ number }) => {
+    const saveState = boxSaveState[number] || {
+      saving: false,
+      success: null,
+      error: null,
+    };
+    const assignmentsPreview = buildAssignmentsForBox(number);
+    const hasPosition = !!formData[`position_${number}`];
+    const disabledSave =
+      saveState.saving || !hasPosition || assignmentsPreview.length === 0;
+    const positionOpts = getPositionOptionsForBox(number);
+    const existingGroupId = groupIdByBox[number];
+
+    return (
       <Box
         sx={{
-          width: "70px",
-          background: "linear-gradient(to bottom, #2499FF, #0067B1)",
-          borderTopRightRadius: "8px",
-          borderBottomRightRadius: "8px",
           display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          transform: "rotate(180deg)",
-          writingMode: "vertical-lr",
-          color: "white",
-          fontWeight: "bold",
-          alignSelf: "stretch", // This makes the sidebar stretch to match parent's height
-        }}
-      >
-        <Typography variant="h5">ผู้ลงนาม {number}</Typography>
-      </Box>
-
-      {/* Content area */}
-      <Box
-        sx={{
-          flexGrow: 1,
-          padding: 2,
+          flexDirection: "row",
+          borderRadius: "10px",
+          border: "2px solid #2499FF",
+          boxShadow: "0px 4px 6px rgba(0,0,0,0.1)",
+          mb: 2,
+          backgroundColor: "white",
         }}
       >
         <Box
           sx={{
+            width: "70px",
+            background: "linear-gradient(to bottom, #2499FF, #0067B1)",
+            borderTopRightRadius: "8px",
+            borderBottomRightRadius: "8px",
             display: "flex",
-            flexDirection: { xs: "column", md: "row" },
-            width: "100%",
+            justifyContent: "center",
+            alignItems: "center",
+            transform: "rotate(180deg)",
+            writingMode: "vertical-lr",
+            color: "white",
+            fontWeight: "bold",
           }}
         >
-          {/* Left side */}
-          <Box
-            sx={{
-              width: { xs: "100%", md: "50%" },
-              pr: { xs: 0, md: 2 },
-              mb: { xs: 2, md: 0 },
-            }}
-          >
-            <Typography
-              variant="h5"
-              sx={{ fontWeight: "bold", color: "#1120A3" }}
-            >
-              ชื่อผู้ลงนาม
-            </Typography>
-            <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
-              ตำแหน่ง
-            </Typography>
-            <SelectField
-              label="เลือกตำแหน่ง"
-              options={positionOptions}
-              value={formData[`position_${number}`] || ""}
-              onChange={handleInputChange}
-              name={`position_${number}`}
-            />
-          </Box>
-
-          {/* Right side */}
-          <Box sx={{ width: { xs: "100%", md: "50%" } }}>
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: "bold",
-                marginTop: { xs: 0, md: "23px" },
-                color: "#1120A3",
-              }}
-            >
-              ชื่อผู้ลงนาม
-            </Typography>
-            <SelectField
-              label="เลือกชื่อผู้ลงนาม"
-              options={signatoryNameOptions}
-              value={formData[`name_${number}`] || ""}
-              onChange={handleInputChange}
-              name={`name_${number}`}
-            />
-            {renderAdditionalSelects("name", number)}
-            <DepartmentButton
-              section="name"
-              signatoryNumber={number}
-              label="เพิ่มผู้ลงนาม"
-            />
-          </Box>
+          <Typography variant="h6">
+            {existingGroupId ? "แก้ไข" : "ผู้ลงนาม"} {number}
+          </Typography>
         </Box>
 
-        {/* Complaint handling departments section */}
         <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "column", md: "row" },
-            width: "100%",
-            mt: 2,
-          }}
+          sx={{ flexGrow: 1, p: 2, display: "flex", flexDirection: "column" }}
         >
-          {/* Left side - State Enterprises */}
           <Box
             sx={{
-              width: { xs: "100%", md: "50%" },
-              pr: { xs: 0, md: 2 },
-              mb: { xs: 2, md: 0 },
+              display: "flex",
+              flexDirection: { xs: "column", md: "row" },
+              width: "100%",
             }}
           >
-            <Typography
-              variant="h5"
-              sx={{ fontWeight: "bold", color: "#2499FF" }}
-            >
-              หน่วยงานรับผิดชอบเรื่องร้องเรียนร้องทุกข์
-            </Typography>
-            <Typography sx={{ fontWeight: "bold", color: "#2499FF" }}>
-              รัฐวิสาหกิจ
-            </Typography>
-            <SelectField
-              label="เลือกรัฐวิสาหกิจ"
-              options={stateEnterpriseOptions}
-              value={formData[`state_enterprise_${number}`] || ""}
-              onChange={handleInputChange}
-              name={`state_enterprise_${number}`}
-            />
-            {renderAdditionalSelects("state_enterprise", number)}
-            <DepartmentButton
-              section="state_enterprise"
-              signatoryNumber={number}
-            />
-          </Box>
-
-          {/* Right side - Government and Other */}
-          <Box sx={{ width: { xs: "100%", md: "50%" } }}>
-            <Typography
+            <Box
               sx={{
-                fontWeight: "bold",
-                color: "#2499FF",
-                mt: { xs: 0, md: 4 },
+                width: { xs: "100%", md: "50%" },
+                pr: { xs: 0, md: 2 },
+                mb: { xs: 2, md: 0 },
               }}
             >
-              ส่วนราชการ
-            </Typography>
-            <SelectField
-              label="เลือกส่วนราชการ"
-              options={governmentOptions}
-              value={formData[`government_${number}`] || ""}
-              onChange={handleInputChange}
-              name={`government_${number}`}
-            />
-            {renderAdditionalSelects("government", number)}
-            <DepartmentButton section="government" signatoryNumber={number} />
-
-            <Typography sx={{ fontWeight: "bold", color: "#2499FF", mt: 1 }}>
-              อื่นๆ
-            </Typography>
-            <SelectField
-              label="เลือกหน่วยงานอื่นๆ"
-              options={otherOptions}
-              value={formData[`other1_${number}`] || ""}
-              onChange={handleInputChange}
-              name={`other1_${number}`}
-            />
-            <Box mt={1}>
-              {/* ถ้าไม่มีกลุ่มอื่นๆเลย ให้ใช้ options ของ 'อื่น ๆ' แบบเดิม */}
-              {otherGroupOptions.length === 0 ? (
-                <SelectField
-                  label="เลือกหน่วยงานอื่นๆ (เพิ่มเติม)"
-                  options={otherOptions}
-                  value={formData[`other2_${number}`] || ""}
-                  onChange={handleInputChange}
-                  name={`other2_${number}`}
-                />
-              ) : (
-                otherGroupOptions.map((group, idx) => (
-                  <SelectField
-                    key={group.groupName}
-                    label={group.label}
-                    options={group.options}
-                    value={formData[`other_${group.groupName}_${number}`] || ""}
-                    onChange={handleInputChange}
-                    name={`other_${group.groupName}_${number}`}
-                  />
-                ))
-              )}
+              <Typography
+                variant="h5"
+                sx={{ fontWeight: "bold", color: "#1120A3" }}
+              >
+                ชื่อผู้ลงนาม
+              </Typography>
+              <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
+                ตำแหน่ง
+              </Typography>
+              <SelectField
+                label="เลือกตำแหน่ง"
+                options={positionOpts}
+                value={formData[`position_${number}`] || ""}
+                onChange={handleInputChange}
+                name={`position_${number}`}
+              />
             </Box>
-            {renderAdditionalSelects("other", number)}
-            <DepartmentButton section="other" signatoryNumber={number} />
+
+            <Box sx={{ width: { xs: "100%", md: "50%" } }}>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: "bold",
+                  mt: { xs: 0, md: "23px" },
+                  color: "#1120A3",
+                }}
+              >
+                ชื่อผู้ลงนาม
+              </Typography>
+              <SelectField
+                label="เลือกผู้ลงนาม"
+                options={signatoryOptions}
+                value={formData[`name_${number}`] || ""}
+                onChange={handleInputChange}
+                name={`name_${number}`}
+              />
+              {renderAdditionalSelects("name", number)}
+              <DepartmentButton
+                section="name"
+                signatoryNumber={number}
+                label="เพิ่มผู้ลงนาม"
+              />
+            </Box>
+          </Box>
+
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", md: "row" },
+              mt: 2,
+              width: "100%",
+            }}
+          >
+            <Box
+              sx={{
+                width: { xs: "100%", md: "50%" },
+                pr: { xs: 0, md: 2 },
+                mb: { xs: 2, md: 0 },
+              }}
+            >
+              <Typography
+                variant="h5"
+                sx={{ fontWeight: "bold", color: "#2499FF" }}
+              >
+                หน่วยงานรับผิดชอบเรื่องร้องเรียนร้องทุกข์
+              </Typography>
+              <Typography sx={{ fontWeight: "bold", color: "#2499FF" }}>
+                รัฐวิสาหกิจ
+              </Typography>
+              <SelectField
+                label="เลือกรัฐวิสาหกิจ"
+                options={stateEnterpriseOptions}
+                value={formData[`state_enterprise_${number}`] || ""}
+                onChange={handleInputChange}
+                name={`state_enterprise_${number}`}
+              />
+              {renderAdditionalSelects("state_enterprise", number)}
+              <DepartmentButton
+                section="state_enterprise"
+                signatoryNumber={number}
+                label="เพิ่มหน่วยงาน"
+              />
+            </Box>
+
+            <Box sx={{ width: { xs: "100%", md: "50%" } }}>
+              <Typography
+                sx={{
+                  fontWeight: "bold",
+                  color: "#2499FF",
+                  mt: { xs: 0, md: 4 },
+                }}
+              >
+                ส่วนราชการ
+              </Typography>
+              <SelectField
+                label="เลือกส่วนราชการ"
+                options={governmentOptions}
+                value={formData[`government_${number}`] || ""}
+                onChange={handleInputChange}
+                name={`government_${number}`}
+              />
+              {renderAdditionalSelects("government", number)}
+              <DepartmentButton
+                section="government"
+                signatoryNumber={number}
+                label="เพิ่มหน่วยงาน"
+              />
+
+              <Typography sx={{ fontWeight: "bold", color: "#2499FF", mt: 1 }}>
+                อื่นๆ
+              </Typography>
+              <SelectField
+                label="เลือกหน่วยงานอื่นๆ"
+                options={otherOptions}
+                value={formData[`other1_${number}`] || ""}
+                onChange={handleInputChange}
+                name={`other1_${number}`}
+              />
+              <Box mt={1}>
+                {otherGroupOptions.length === 0 ? (
+                  <SelectField
+                    label="เลือกหน่วยงานอื่นๆ (เพิ่มเติม)"
+                    options={otherOptions}
+                    value={formData[`other2_${number}`] || ""}
+                    onChange={handleInputChange}
+                    name={`other2_${number}`}
+                  />
+                ) : (
+                  otherGroupOptions.map((group) => (
+                    <SelectField
+                      key={group.groupName}
+                      label={group.label}
+                      options={group.options}
+                      value={
+                        formData[`other_${group.groupName}_${number}`] || ""
+                      }
+                      onChange={handleInputChange}
+                      name={`other_${group.groupName}_${number}`}
+                    />
+                  ))
+                )}
+              </Box>
+              {renderAdditionalSelects("other", number)}
+              <DepartmentButton
+                section="other"
+                signatoryNumber={number}
+                label="เพิ่มหน่วยงาน"
+              />
+            </Box>
+          </Box>
+
+          <Box
+            sx={{
+              mt: 3,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              gap: 1,
+            }}
+          >
+            <ButtonService
+              label={
+                saveState.saving
+                  ? "กำลังบันทึก..."
+                  : existingGroupId
+                  ? "อัปเดตกลุ่ม"
+                  : "บันทึก"
+              }
+              variant="contained"
+              iconLeft={<SaveIcon />}
+              disabled={disabledSave}
+              onClick={() => handleSaveBox(number)}
+              sx={{
+                background: disabledSave ? "#b5c6d4" : "#2499FF",
+                color: "#ffffff",
+                borderRadius: "12px",
+                padding: "8px 20px",
+                fontSize: "15px",
+                "&:hover": {
+                  background: disabledSave ? "#b5c6d4" : "#0067B1",
+                },
+              }}
+            />
           </Box>
         </Box>
       </Box>
-    </Box>
-  );
-
-  // ← เพิ่ม debug function เพื่อดู current state
-  // console.log("🔍 Current formData:", formData);
+    );
+  };
 
   return (
     <Box>
@@ -420,14 +833,8 @@ const CommitteeCompositionSettings = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          flexDirection: {
-            xs: "column",
-            md: "row",  
-          },
-          gap: {
-            xs: 1.5,
-            md: 0,
-          },
+          flexDirection: { xs: "column", md: "row" },
+          gap: { xs: 1.5, md: 0 },
           mb: 2,
         }}
       >
@@ -436,34 +843,26 @@ const CommitteeCompositionSettings = () => {
           label="เพิ่มหน่วยงาน"
           variant="outlined"
           iconLeft={<AddIcon />}
-          onClick={() => {
-            // console.log("💾 Saving data:", formData);
-            router.push("/admin/settinggeneral/department/add");
-          }}
+          onClick={() => router.push("/admin/settinggeneral/department/add")}
           sx={{
             background: "#0067B1",
             color: "#ffffff",
             borderRadius: "15px",
             padding: "8px 20px",
-            width: {
-              xs: "100%",
-              sm: "auto", 
-            },
+            width: { xs: "100%", sm: "auto" },
             fontSize: "16px",
             border: "2px solid #0067B1",
           }}
         />
       </Box>
 
-      {/* Render signatory boxes based on state */}
       {Array.from({ length: signatoryBoxes }).map((_, index) => (
         <SignatoryBox key={index} number={index + 1} />
       ))}
 
-      {/* Add new signatory box button */}
       <Box mt={2} display="flex" justifyContent="center">
         <ButtonService
-          label="เพิ่มผู้ลงนาม"
+          label="เพิ่มผู้ลงนาม (กล่องใหม่ว่าง)"
           color="#2499FF"
           iconRight={<AddIcon />}
           variant="contained"
@@ -474,9 +873,7 @@ const CommitteeCompositionSettings = () => {
             borderRadius: "15px",
             padding: "10px 30px",
             fontSize: "18px",
-            "&:hover": {
-              backgroundColor: "#0067B1",
-            },
+            "&:hover": { backgroundColor: "#0067B1" },
           }}
         />
       </Box>
