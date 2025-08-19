@@ -1,13 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Box, Typography, Modal, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import TextfieldService from "@services/TextfieldService/TextfieldService";
+import { getStaffWorkload } from "@pages/api/statistics/statistics";
 
-/* -------------------------------------------------------------------------- */
-/*  breadcrumbs                                                               */
-/* -------------------------------------------------------------------------- */
 const breadcrumbItems = [
   {
     label: "สถิติการทำงานของเจ้าหน้าที่",
@@ -21,92 +19,54 @@ const breadcrumbItems = [
   },
 ];
 
-/* -------------------------------------------------------------------------- */
-/*  options                                                                   */
-/* -------------------------------------------------------------------------- */
-const fiscalYearOptions = [
-  { label: "2566", value: "2566" },
-  { label: "2567", value: "2567" },
-  { label: "2568", value: "2568" },
-  { label: "2569", value: "2569" },
-];
+const getFiscalYearOptions = () => {
+  const currentYearBE = new Date().getFullYear() + 543;
+  const years = [];
+  for (let y = currentYearBE - 2; y <= currentYearBE + 2; y++) {
+    years.push({ label: String(y), value: String(y) });
+  }
+  return years;
+};
 
-/* -------------------------------------------------------------------------- */
-/*  summary cards                                                             */
-/* -------------------------------------------------------------------------- */
-const summaryCards = [
-  { label: "จำนวนเจ้าหน้าที่ทั้งหมด", value: 8, unit: "คน", bg: "#1221B5" },
-  {
-    label: "เรื่องราวร้องทุกข์ทั้งหมด",
-    value: 25,
-    unit: "เรื่อง",
-    bg: "#2499FF",
-  },
-  { label: "เรื่องราวร้องทุกข์ยุติ", value: 15, unit: "เรื่อง", bg: "#9AD0FF" },
-  {
-    label: "เรื่องราวร้องทุกข์ดำเนินการ",
-    value: 10,
-    unit: "เรื่อง",
-    bg: "#F1CA4B",
-  },
-];
+const fiscalYearOptions = getFiscalYearOptions();
 
-/* -------------------------------------------------------------------------- */
-/*  staff mock data (with example complaints)                                 */
-/* -------------------------------------------------------------------------- */
-const staffStats = Array.from({ length: 12 }, (_, idx) => ({
-  id: idx + 1,
-  name: "นายเป็นสุข เป็นสุขจิต",
-  role: "เจ้าหน้าที่รับผิดชอบตอบเรื่องร้องทุกข์",
-  received: 5,
-  backlog: 2,
-  done: 3,
-  complaints: [
-    {
-      topic: "พฤติกรรมเจ้าหน้าที่ที่ไม่เหมาะสมขณะปฏิบัติราชการ",
-      channel: "เว็บไซต์รับเรื่องร้องทุกข์",
-      type: "พฤติกรรมเจ้าหน้าที่",
-      code: "000-0000-00000-00",
-    },
-    {
-      topic: "พฤติกรรมเจ้าหน้าที่ที่ไม่เหมาะสมขณะปฏิบัติราชการ",
-      channel: "เว็บไซต์รับเรื่องร้องทุกข์",
-      type: "พฤติกรรมเจ้าหน้าที่",
-      code: "000-0000-00000-01",
-    },
-    {
-      topic: "พฤติกรรมเจ้าหน้าที่ที่ไม่เหมาะสมขณะปฏิบัติราชการ",
-      channel: "เว็บไซต์รับเรื่องร้องทุกข์",
-      type: "พฤติกรรมเจ้าหน้าที่",
-      code: "000-0000-00000-02",
-    },
-    {
-      topic: "พฤติกรรมเจ้าหน้าที่ที่ไม่เหมาะสมขณะปฏิบัติราชการ",
-      channel: "เว็บไซต์รับเรื่องร้องทุกข์",
-      type: "พฤติกรรมเจ้าหน้าที่",
-      code: "000-0000-00000-03",
-    },
-    {
-      topic: "พฤติกรรมเจ้าหน้าที่ที่ไม่เหมาะสมขณะปฏิบัติราชการ",
-      channel: "เว็บไซต์รับเรื่องร้องทุกข์",
-      type: "พฤติกรรมเจ้าหน้าที่",
-      code: "000-0000-00000-04",
-    },
-  ],
-}));
+const thaiYearToGregorian = (thaiYearStr) => {
+  const y = parseInt(thaiYearStr, 10);
+  return Number.isNaN(y) ? new Date().getFullYear() : y - 543;
+};
 
-/* -------------------------------------------------------------------------- */
-/*  helper component : ComplaintCard                                           */
-/* -------------------------------------------------------------------------- */
+const buildDateRangeOfYear = (gregYear) => ({
+  date_from: `${gregYear}-01-01`,
+  date_to: `${gregYear}-12-31`,
+});
+
+const statusLabel = (s) =>
+  ({
+    submitted: "รับเรื่อง",
+    sent_to_agency: "ส่งหน่วยงาน",
+    in_process: "กำลังดำเนินการ",
+    in_review: "ตรวจสอบ",
+    tracking: "ติดตาม",
+    reviewed: "ทบทวน",
+    completed: "สำเร็จ",
+    cancelled: "ยุติ",
+  }[s] ?? s);
+
+const getCurrentThaiFiscalYear = () => {
+  const now = new Date();
+  const gregYear = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const beFiscal = gregYear + 543 + (month >= 10 ? 1 : 0);
+  return String(beFiscal);
+};
+
 const ComplaintCard = ({ complaint, index, backlog }) => {
   const bg = index < backlog ? "#FDEAEA" : "#EAF4FE";
-
   return (
     <Box mb={3} p={2} bgcolor={bg} borderRadius={2} overflow="hidden">
       <Typography fontWeight={700} mb={2} color="#1120A3">
         เรื่องที่ {index + 1}
       </Typography>
-
       <Box
         display="grid"
         gridTemplateColumns={{ xs: "1fr", sm: "160px 1fr" }}
@@ -114,41 +74,18 @@ const ComplaintCard = ({ complaint, index, backlog }) => {
         columnGap={2}
       >
         <Typography>เรื่อง</Typography>
-        <TextfieldService
-          size="small"
-          fullWidth
-          disabled
-          value={complaint.topic}
-        />
+        <TextfieldService size="small" fullWidth disabled value={complaint.topic} />
         <Typography>ช่องทางเรื่องร้องเรียน</Typography>
-        <TextfieldService
-          size="small"
-          fullWidth
-          disabled
-          value={complaint.channel}
-        />
+        <TextfieldService size="small" fullWidth disabled value={complaint.channel} />
         <Typography>ประเภทเรื่องร้องเรียน</Typography>
-        <TextfieldService
-          size="small"
-          fullWidth
-          disabled
-          value={complaint.type}
-        />
+        <TextfieldService size="small" fullWidth disabled value={complaint.type} />
         <Typography>เลขรับแจ้ง</Typography>
-        <TextfieldService
-          size="small"
-          fullWidth
-          disabled
-          value={complaint.code}
-        />
+        <TextfieldService size="small" fullWidth disabled value={complaint.code} />
       </Box>
     </Box>
   );
 };
 
-/* -------------------------------------------------------------------------- */
-/*  Staff Profile Component for Modal                                          */
-/* -------------------------------------------------------------------------- */
 const StaffProfile = ({ staff }) => {
   return (
     <>
@@ -175,26 +112,12 @@ const StaffProfile = ({ staff }) => {
           }}
         />
       </Box>
-
-      <Typography
-        fontSize={{ xs: 18, sm: 24 }}
-        mt={1}
-        fontWeight={600}
-        align="center"
-        color="#FFFFFF"
-      >
+      <Typography fontSize={{ xs: 18, sm: 24 }} mt={1} fontWeight={600} align="center" color="#FFFFFF">
         {staff.name}
       </Typography>
-
-      <Typography
-        fontSize={{ xs: 14, sm: 18 }}
-        mb={3}
-        align="center"
-        color="#FFFFFF"
-      >
+      <Typography fontSize={{ xs: 14, sm: 18 }} mb={3} align="center" color="#FFFFFF">
         {staff.role}
       </Typography>
-
       <Box
         sx={{
           display: "flex",
@@ -232,19 +155,18 @@ const StaffProfile = ({ staff }) => {
   );
 };
 
-/* -------------------------------------------------------------------------- */
-/*  main component                                                             */
-/* -------------------------------------------------------------------------- */
 const AccountBoxComponents = () => {
-  // เปลี่ยน handleYearChange ให้รับ event และดึง value
-  const [fiscalYear, setFiscalYear] = useState(fiscalYearOptions[0].value);
+  const [fiscalYear, setFiscalYear] = useState(() => {
+    const fy = getCurrentThaiFiscalYear();
+    const exists = fiscalYearOptions.some((o) => o.value === fy);
+    return exists ? fy : fiscalYearOptions[0].value;
+  });
   const handleYearChange = (e) => {
     setFiscalYear(e.target.value);
   };
 
   const [open, setOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
-
   const handleOpenModal = (staff) => {
     setSelectedStaff(staff);
     setOpen(true);
@@ -254,10 +176,119 @@ const AccountBoxComponents = () => {
     setSelectedStaff(null);
   };
 
+  const [loading, setLoading] = useState(false);
+  const [summaryState, setSummaryState] = useState({
+    total_staff: 0,
+    total_complaints: 0,
+    in_progress_cases: 0,
+    completed_cases: 0,
+    cancelled_cases: 0,
+  });
+  const [staffStats, setStaffStats] = useState([]);
+
+  const summaryCards = useMemo(
+    () => [
+      { label: "จำนวนเจ้าหน้าที่ทั้งหมด", value: summaryState.total_staff, unit: "คน", bg: "#1221B5" },
+      { label: "เรื่องราวร้องทุกข์ทั้งหมด", value: summaryState.total_complaints, unit: "เรื่อง", bg: "#2499FF" },
+      { label: "เรื่องราวร้องทุกข์ยุติ", value: summaryState.cancelled_cases, unit: "เรื่อง", bg: "#9AD0FF" },
+      { label: "เรื่องราวร้องทุกข์ดำเนินการ", value: summaryState.in_progress_cases, unit: "เรื่อง", bg: "#F1CA4B" },
+    ],
+    [summaryState]
+  );
+
+  const fetchData = async (thaiYearStr) => {
+    try {
+      setLoading(true);
+      const year = thaiYearToGregorian(thaiYearStr);
+      const { date_from, date_to } = buildDateRangeOfYear(year);
+      const data = await getStaffWorkload({ skip: 0, limit: 100, date_from, date_to, year });
+
+      const apiSummary = data?.summary ?? {};
+      const sc = apiSummary?.status_counts ?? {};
+
+      // in_progress: ไม่รวม cancelled และ completed
+      const inProgressSum =
+        Number(sc.submitted ?? 0) +
+        Number(sc.sent_to_agency ?? 0) +
+        Number(sc.in_process ?? 0) +
+        Number(sc.in_review ?? 0) +
+        Number(sc.tracking ?? 0) +
+        Number(sc.reviewed ?? 0);
+
+      setSummaryState({
+        total_staff: Number(apiSummary.total_staff ?? 0),
+        total_complaints: Number(apiSummary.total_complaints ?? 0),
+        in_progress_cases: inProgressSum,
+        completed_cases: Number(sc.completed ?? 0),
+        cancelled_cases: Number(sc.cancelled ?? 0),
+      });
+
+      const rawStaff = Array.isArray(data?.staff_data) ? data.staff_data : [];
+      const nextStaff = rawStaff.map((row, idx) => {
+        const info = row?.staff_info ?? {};
+        const wl = row?.workload ?? {};
+        const wsc = wl?.status_counts ?? {};
+
+        // backlog: ไม่รวม cancelled และ completed
+        const backlog =
+          Number(wsc.submitted ?? 0) +
+          Number(wsc.sent_to_agency ?? 0) +
+          Number(wsc.in_process ?? 0) +
+          Number(wsc.in_review ?? 0) +
+          Number(wsc.tracking ?? 0) +
+          Number(wsc.reviewed ?? 0);
+
+        const done = Number(wsc.completed ?? 0);
+        const cancelled = Number(wsc.cancelled ?? 0);
+
+        // received: ใช้ total_assigned ถ้ามี; ไม่งั้น fallback รวม backlog + done + cancelled
+        const received = Number(
+          wl.total_assigned ?? backlog + done + cancelled
+        );
+
+        const complaints = Array.isArray(row?.latest_complaints)
+          ? row.latest_complaints.map((c) => ({
+              topic: c.subject ?? "-",
+              channel: "เว็บไซต์รับเรื่องร้องทุกข์",
+              type: statusLabel(c.status),
+              code: c.complaint_number ?? "-",
+            }))
+          : [];
+
+        return {
+          id: info.id ?? idx + 1,
+          name: info.name ?? "ไม่ระบุชื่อ",
+          role: info.position || "เจ้าหน้าที่",
+          received,
+          backlog,
+          done,
+          complaints,
+        };
+      });
+
+      setStaffStats(nextStaff);
+    } catch (err) {
+      console.error(err);
+      setSummaryState({
+        total_staff: 0,
+        total_complaints: 0,
+        in_progress_cases: 0,
+        completed_cases: 0,
+        cancelled_cases: 0,
+      });
+      setStaffStats([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData(fiscalYear);
+  }, [fiscalYear]);
+
   return (
     <Box>
       <BreadcrumbsService items={breadcrumbItems} />
-
       <Box display="flex" justifyContent="flex-end" mt={2} px={1}>
         <Typography color="#1120A3" fontWeight={600} mb={0.5} mr={2}>
           ปีงบประมาณ
@@ -271,7 +302,6 @@ const AccountBoxComponents = () => {
           placeholder="เลือกปี"
         />
       </Box>
-
       <Box display="flex" flexWrap="wrap" gap={3} mt={4} px={1}>
         {summaryCards.map((card) => (
           <Box
@@ -292,12 +322,11 @@ const AccountBoxComponents = () => {
               {card.label}
             </Typography>
             <Typography fontSize={28} fontWeight={700}>
-              {card.value} {card.unit}
+              {loading ? "…" : card.value} {card.unit}
             </Typography>
           </Box>
         ))}
       </Box>
-
       <Box mt={6} px={1}>
         <Box display="flex" alignItems="center" mb={3}>
           <Typography color="#1120A3" fontWeight={700} fontSize={20} mr={2}>
@@ -349,8 +378,6 @@ const AccountBoxComponents = () => {
           ))}
         </Box>
       </Box>
-
-      {/* Responsive Modal */}
       <Modal
         open={open}
         onClose={handleCloseModal}
@@ -389,7 +416,6 @@ const AccountBoxComponents = () => {
           >
             <CloseIcon />
           </IconButton>
-
           {selectedStaff && (
             <Box
               sx={{
@@ -398,7 +424,6 @@ const AccountBoxComponents = () => {
                 height: { xs: "auto", md: "85vh" },
               }}
             >
-              {/* Fixed Profile Section */}
               <Box
                 sx={{
                   width: { xs: "100%", md: 320 },
@@ -436,26 +461,12 @@ const AccountBoxComponents = () => {
                     }}
                   />
                 </Box>
-
-                <Typography
-                  fontSize={{ xs: 18, sm: 24 }}
-                  mt={1}
-                  fontWeight={600}
-                  align="center"
-                  color="#FFFFFF"
-                >
+                <Typography fontSize={{ xs: 18, sm: 24 }} mt={1} fontWeight={600} align="center" color="#FFFFFF">
                   {selectedStaff.name}
                 </Typography>
-
-                <Typography
-                  fontSize={{ xs: 14, sm: 18 }}
-                  mb={3}
-                  align="center"
-                  color="#FFFFFF"
-                >
+                <Typography fontSize={{ xs: 14, sm: 18 }} mb={3} align="center" color="#FFFFFF">
                   {selectedStaff.role}
                 </Typography>
-
                 <Box
                   sx={{
                     display: "flex",
@@ -480,11 +491,7 @@ const AccountBoxComponents = () => {
                       mb={{ md: 0.5 }}
                       px={{ xs: 1, md: 0 }}
                     >
-                      <Typography
-                        fontSize={{ xs: 16, sm: 18 }}
-                        color="#FFFFFF"
-                        mr={1}
-                      >
+                      <Typography fontSize={{ xs: 16, sm: 18 }} color="#FFFFFF" mr={1}>
                         {label}
                       </Typography>
                       <Typography fontSize={{ xs: 16, sm: 18 }} color="#FFFFFF">
@@ -494,8 +501,6 @@ const AccountBoxComponents = () => {
                   ))}
                 </Box>
               </Box>
-
-              {/* Scrollable Content Section */}
               <Box
                 sx={{
                   flexGrow: 1,
@@ -514,14 +519,8 @@ const AccountBoxComponents = () => {
                 >
                   เรื่องร้องเรียนที่รับผิดชอบ
                 </Typography>
-
                 {selectedStaff.complaints.map((c, idx) => (
-                  <ComplaintCard
-                    key={idx}
-                    complaint={c}
-                    index={idx}
-                    backlog={selectedStaff.backlog}
-                  />
+                  <ComplaintCard key={idx} complaint={c} index={idx} backlog={selectedStaff.backlog} />
                 ))}
               </Box>
             </Box>
