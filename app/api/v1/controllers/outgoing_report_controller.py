@@ -762,29 +762,24 @@ def delete_outgoing_report(db: Session, report_id: UUID, current_user_id: UUID) 
         logger.error(f"Stack trace: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
-def get_outgoing_tracking(db: Session, complaint_id: UUID) -> Dict[str, Any]:
+def get_outgoing_tracking(
+    db: Session,
+    complaint_id: UUID,
+    report_type: Optional[str] = None  # "outgoing_report" | "outgoing_report3" | "status_history"
+) -> Dict[str, Any]:
     """
     ติดตามสถานะหลังส่งหนังสือออก (OutgoingReport → OutgoingReport3)
     - สรุป Complaint + status_history
     - รวม OutgoingReport (ส่งหน่วยงาน) และ OutgoingReport3 (ผลพิจารณา)
-    - คืน derived.suggested_next_status เพื่อให้ UI แสดง "ควรอยู่สถานะไหน" โดยไม่แก้ DB
-
-    Response shape:
-    {
-      "complaint": {...},
-      "counts": {"outgoing_reports": n, "decisions": m},
-      "latest": {"sent": {...}|None, "decision": {...}|None},
-      "history": [ ... timeline ... ],
-      "derived": {"current_status": "...", "suggested_next_status": "..."}
-    }
+    - คืน derived.suggested_next_status (ไม่แก้ DB)
+    - รองรับการกรองประเภท timeline ด้วย report_type
     """
 
-    # -------- helpers (local) --------
+    # ---- helpers ----
     def _iso(dt):
         return dt.isoformat() if dt else None
 
     def _enum_str(v):
-        # enum → value, else str/None
         if v is None:
             return None
         return getattr(v, "value", str(v))
@@ -792,7 +787,26 @@ def get_outgoing_tracking(db: Session, complaint_id: UUID) -> Dict[str, Any]:
     def _safe_str(v):
         return str(v) if v is not None else None
 
-    # -------- fetch base complaint + history --------
+    # label ไทยของสถานะเรื่องร้องเรียน (ฝั่งเรามี enum อยู่แล้ว)
+    status_th_map = {
+        "submitted": "ส่งคำร้อง",
+        "sent_to_agency": "ส่งหน่วยงาน",
+        "in_process": "อยู่ระหว่างดำเนินการ",
+        "in_review": "อยู่ระหว่างการพิจารณา",
+        "tracking": "ติดตามผลการพิจารณา",
+        "reviewed": "แจ้งผลการพิจารณา",
+        "completed": "เสร็จสิ้น",
+        "cancelled": "ยกเลิก",
+    }
+    # label ไทยของผลพิจารณา/แนวโน้ม
+    decision_th_map = {
+        "completed": "เสร็จสิ้น",
+        "tracking": "ติดตามต่อ",
+        "reviewed": "มีผลพิจารณา",
+        "sent_to_agency": "ส่งหน่วยงานแล้ว",
+    }
+
+    # ---- fetch base complaint + history ----
     complaint = (
         db.query(Complaint)
         .options(joinedload(Complaint.status_history))
@@ -802,7 +816,7 @@ def get_outgoing_tracking(db: Session, complaint_id: UUID) -> Dict[str, Any]:
     if not complaint:
         return {"error": "COMPLAINT_NOT_FOUND"}
 
-    # -------- fetch OutgoingReport (การส่งหนังสือออก) --------
+    # ---- fetch OutgoingReport (การส่งหนังสือออก) ----
     outgoing_list: List[OutgoingReport] = (
         db.query(OutgoingReport)
         .filter(
@@ -813,7 +827,7 @@ def get_outgoing_tracking(db: Session, complaint_id: UUID) -> Dict[str, Any]:
         .all()
     )
 
-    # -------- fetch OutgoingReport3 (ผลพิจารณาจากหน่วยงาน) ถ้ามี model นี้ --------
+    # ---- fetch OutgoingReport3 (ผลพิจารณาจากหน่วยงาน) ถ้ามีโมเดลนี้ ----
     decision_list = []
     OR3Model = None
     try:
@@ -832,23 +846,25 @@ def get_outgoing_tracking(db: Session, complaint_id: UUID) -> Dict[str, Any]:
             .all()
         )
 
-    # -------- build timeline --------
+    # ---- build timeline ----
     timeline: List[Dict[str, Any]] = []
 
     # 1) status history ของ complaint
     try:
         for h in (complaint.status_history or []):
+            st = _enum_str(getattr(h, "status", None))
             timeline.append({
                 "type": "status_history",
                 "at": _iso(getattr(h, "created_at", None)),
-                "status": _enum_str(getattr(h, "status", None)),
+                "status": st,
+                "status_label": status_th_map.get(st, st),
                 "note": getattr(h, "note", None) or getattr(h, "remark", None),
                 "by": _safe_str(getattr(h, "updated_by", None))
             })
     except Exception:
         pass
 
-    # 2) OutgoingReport (การส่งหนังสือออก)
+    # 2) OutgoingReport (ส่งหนังสือออก)
     for r in outgoing_list:
         timeline.append({
             "type": "outgoing_report",
@@ -866,6 +882,11 @@ def get_outgoing_tracking(db: Session, complaint_id: UUID) -> Dict[str, Any]:
     # 3) OutgoingReport3 (ผลพิจารณาที่ตอบกลับ)
     latest_decision: Optional[Dict[str, Any]] = None
     for d in decision_list:
+        result_raw = (
+            getattr(d, "result", None)
+            or getattr(d, "outcome", None)
+            or getattr(d, "decision_status", None)
+        )
         item = {
             "type": "outgoing_report3",
             "at": _iso(getattr(d, "created_at", None)),
@@ -875,17 +896,14 @@ def get_outgoing_tracking(db: Session, complaint_id: UUID) -> Dict[str, Any]:
             "reference_date": _iso(getattr(d, "reference_date", None)),
             "by": _safe_str(getattr(d, "created_by", None)),
             "id": _safe_str(getattr(d, "id", None)),
-            # รองรับหลายชื่อฟิลด์ผลลัพธ์
-            "result": (
-                getattr(d, "result", None)
-                or getattr(d, "outcome", None)
-                or getattr(d, "decision_status", None)
-            )
+            "result": result_raw,
+            # label ไทยแบบหยาบจากข้อความผลลัพธ์
+            "result_label": None,
         }
         timeline.append(item)
-        latest_decision = item  # อันท้ายสุดคืออันล่าสุด
+        latest_decision = item  # ตัวท้ายสุดคืออันล่าสุด
 
-    # -------- latest sent (OutgoingReport ล่าสุด) --------
+    # ---- latest sent (OutgoingReport ล่าสุด) ----
     latest_sent = None
     if outgoing_list:
         r = outgoing_list[-1]
@@ -898,36 +916,41 @@ def get_outgoing_tracking(db: Session, complaint_id: UUID) -> Dict[str, Any]:
             "created_at": _iso(getattr(r, "created_at", None)),
         }
 
-    # -------- derive suggested_next_status (ไม่เขียน DB) --------
+    # ---- derive suggested_next_status (ไม่เขียน DB) + label ไทย ----
     current_status = _enum_str(getattr(complaint, "status", None))
     suggested_next = None
 
     if latest_decision:
-        # ตัดสินบนข้อความผลลัพธ์ (รองรับไทย/อังกฤษ)
-        decision_text = (latest_decision.get("result") or "").lower()
-        if any(k in decision_text for k in ["complete", "completed", "success", "สำเร็จ", "เสร็จ", "ปิดเรื่อง"]):
+        decision_text = (latest_decision.get("result") or "")
+        decision_text_l = decision_text.lower()
+        if any(k in decision_text_l for k in ["complete", "completed", "success", "สำเร็จ", "เสร็จ", "ปิดเรื่อง"]):
             suggested_next = "completed"
-        elif any(k in decision_text for k in ["ติดตาม", "ต่อเนื่อง", "follow", "follow-up", "รอ", "pending", "review"]):
+        elif any(k in decision_text_l for k in ["ติดตาม", "ต่อเนื่อง", "follow", "follow-up", "รอ", "pending", "review"]):
             suggested_next = "tracking"
         else:
             suggested_next = "reviewed"
+        # ใส่ label ไทยของผลลัพธ์ใน timeline อันล่าสุด
+        latest_decision["result_label"] = decision_th_map.get(suggested_next, suggested_next)
     elif latest_sent:
         suggested_next = "sent_to_agency"
 
-    # -------- sort timeline (null-safe) --------
-    def _ts(x: Dict[str, Any]):
-        # ใช้ลำดับ at → reference_date → created_at ที่แปลงเป็น ISO แล้ว
-        return x.get("at") or x.get("reference_date") or x.get("created_at") or ""
+    # ---- filter timeline ตาม report_type (ถ้ามี) ----
+    if report_type in {"outgoing_report", "outgoing_report3", "status_history"}:
+        timeline = [t for t in timeline if t.get("type") == report_type]
 
+    # ---- sort timeline (ISO พร้อมเรียง) ----
+    def _ts(x: Dict[str, Any]):
+        return x.get("at") or x.get("reference_date") or x.get("created_at") or ""
     timeline.sort(key=_ts)
 
-    # -------- response --------
+    # ---- response ----
     return {
         "complaint": {
             "id": _safe_str(getattr(complaint, "id", None)),
             "complaint_number": getattr(complaint, "complaint_number", None),
             "subject": getattr(complaint, "subject", None),
             "status": current_status,
+            "status_label": status_th_map.get(current_status, current_status),
             "created_at": _iso(getattr(complaint, "created_at", None)),
             "updated_at": _iso(getattr(complaint, "updated_at", None)),
         },
@@ -942,6 +965,8 @@ def get_outgoing_tracking(db: Session, complaint_id: UUID) -> Dict[str, Any]:
         "history": timeline,
         "derived": {
             "current_status": current_status,
+            "current_status_label": status_th_map.get(current_status, current_status),
             "suggested_next_status": suggested_next,
+            "suggested_next_status_label": decision_th_map.get(suggested_next, suggested_next),
         }
     }
