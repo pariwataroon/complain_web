@@ -764,165 +764,184 @@ def delete_outgoing_report(db: Session, report_id: UUID, current_user_id: UUID) 
 
 def get_outgoing_tracking(db: Session, complaint_id: UUID) -> Dict[str, Any]:
     """
-    สรุปเหตุการณ์ส่งออก (OutgoingReport) และผลการพิจารณา (OutgoingReport3) พร้อม history ของ Complaint
-    ไม่แก้สถานะในฐานข้อมูล — แค่ "อธิบาย/ติดตาม" ให้ front-end แสดงผล
+    ติดตามสถานะหลังส่งหนังสือออก (OutgoingReport → OutgoingReport3)
+    - สรุป Complaint + status_history
+    - รวม OutgoingReport (ส่งหน่วยงาน) และ OutgoingReport3 (ผลพิจารณา)
+    - คืน derived.suggested_next_status เพื่อให้ UI แสดง "ควรอยู่สถานะไหน" โดยไม่แก้ DB
 
-    Returns:
-      {
-        "complaint": {...},
-        "counts": {"outgoing_reports": n, "decisions": m},
-        "latest": {"sent": {...} | None, "decision": {...} | None},
-        "history": [ ... merged timeline ... ],
-        "derived": {"current_status": "...", "suggested_next_status": "..."}
-      }
+    Response shape:
+    {
+      "complaint": {...},
+      "counts": {"outgoing_reports": n, "decisions": m},
+      "latest": {"sent": {...}|None, "decision": {...}|None},
+      "history": [ ... timeline ... ],
+      "derived": {"current_status": "...", "suggested_next_status": "..."}
+    }
     """
-    # 1) ข้อมูลเรื่องร้องเรียน + history
+
+    # -------- helpers (local) --------
+    def _iso(dt):
+        return dt.isoformat() if dt else None
+
+    def _enum_str(v):
+        # enum → value, else str/None
+        if v is None:
+            return None
+        return getattr(v, "value", str(v))
+
+    def _safe_str(v):
+        return str(v) if v is not None else None
+
+    # -------- fetch base complaint + history --------
     complaint = (
         db.query(Complaint)
-        .options(
-            joinedload(Complaint.status_history)
-        )
+        .options(joinedload(Complaint.status_history))
         .filter(Complaint.id == complaint_id)
         .first()
     )
     if not complaint:
         return {"error": "COMPLAINT_NOT_FOUND"}
 
-    # 2) OutgoingReport ที่ผูกกับเรื่องนี้
-    outgoing_q = db.query(OutgoingReport).filter(
-        OutgoingReport.is_active == True,
-        OutgoingReport.complaint_id == complaint_id
-    ).order_by(OutgoingReport.created_at.asc())
-    outgoing_list: List[OutgoingReport] = outgoing_q.all()
+    # -------- fetch OutgoingReport (การส่งหนังสือออก) --------
+    outgoing_list: List[OutgoingReport] = (
+        db.query(OutgoingReport)
+        .filter(
+            OutgoingReport.is_active == True,
+            OutgoingReport.complaint_id == complaint_id
+        )
+        .order_by(OutgoingReport.created_at.asc())
+        .all()
+    )
 
-    # 3) OutgoingReport3 (ผลการพิจารณาจากหน่วยงานภายนอก) — บางระบบอาจไม่มีตารางนี้
-    OutgoingReport3 = None
-    try:
-        from models.outgoing_reports3 import OutgoingReport3 as OR3
-        OutgoingReport3 = OR3
-    except Exception:
-        pass
-
+    # -------- fetch OutgoingReport3 (ผลพิจารณาจากหน่วยงาน) ถ้ามี model นี้ --------
     decision_list = []
-    if OutgoingReport3:
+    OR3Model = None
+    try:
+        from models.outgoing_reports3 import OutgoingReport3 as OR3Model  # type: ignore
+    except Exception:
+        OR3Model = None
+
+    if OR3Model:
         decision_list = (
-            db.query(OutgoingReport3)
+            db.query(OR3Model)
             .filter(
-                OutgoingReport3.is_active == True,
-                OutgoingReport3.complaint_id == complaint_id
+                OR3Model.is_active == True,
+                OR3Model.complaint_id == complaint_id
             )
-            .order_by(OutgoingReport3.created_at.asc())
+            .order_by(OR3Model.created_at.asc())
             .all()
         )
 
-    # 4) เตรียม timeline
-    timeline = []
+    # -------- build timeline --------
+    timeline: List[Dict[str, Any]] = []
 
-    # 4.1 ประวัติสถานะจากเรื่องร้องเรียน
-    # หมายเหตุ: ถ้ามี model ComplaintStatusHistory ให้ serialize เบาๆ
+    # 1) status history ของ complaint
     try:
         for h in (complaint.status_history or []):
             timeline.append({
                 "type": "status_history",
-                "at": getattr(h, "created_at", None),
-                "status": getattr(h, "status", None),
-                "note": getattr(h, "note", getattr(h, "remark", None)),
-                "by": str(getattr(h, "updated_by", "") or "")
+                "at": _iso(getattr(h, "created_at", None)),
+                "status": _enum_str(getattr(h, "status", None)),
+                "note": getattr(h, "note", None) or getattr(h, "remark", None),
+                "by": _safe_str(getattr(h, "updated_by", None))
             })
     except Exception:
         pass
 
-    # 4.2 การส่งหนังสือออก (OutgoingReport)
+    # 2) OutgoingReport (การส่งหนังสือออก)
     for r in outgoing_list:
         timeline.append({
             "type": "outgoing_report",
-            "at": r.created_at,
-            "reference_number": r.reference_number,
-            "reference_date": r.reference_date,
-            "subject": r.subject,
-            "department_id": str(r.department_id),
-            "confidentiality": r.confidentiality_level,
-            "urgency": r.urgency_level,
-            "by": str(r.created_by),
-            "id": str(r.id)
+            "at": _iso(getattr(r, "created_at", None)),
+            "reference_number": getattr(r, "reference_number", None),
+            "reference_date": _iso(getattr(r, "reference_date", None)),
+            "subject": getattr(r, "subject", None),
+            "department_id": _safe_str(getattr(r, "department_id", None)),
+            "confidentiality": _enum_str(getattr(r, "confidentiality_level", None)),
+            "urgency": _enum_str(getattr(r, "urgency_level", None)),
+            "by": _safe_str(getattr(r, "created_by", None)),
+            "id": _safe_str(getattr(r, "id", None))
         })
 
-    # 4.3 ผลการพิจารณาที่ตอบกลับ (OutgoingReport3)
-    latest_decision = None
+    # 3) OutgoingReport3 (ผลพิจารณาที่ตอบกลับ)
+    latest_decision: Optional[Dict[str, Any]] = None
     for d in decision_list:
         item = {
             "type": "outgoing_report3",
-            "at": getattr(d, "created_at", None),
+            "at": _iso(getattr(d, "created_at", None)),
             "decision_subject": getattr(d, "subject", None),
-            "decision_note": getattr(d, "remarks", None),
+            "decision_note": getattr(d, "remarks", None) or getattr(d, "note", None),
             "reference_number": getattr(d, "reference_number", None),
-            "reference_date": getattr(d, "reference_date", None),
-            "by": str(getattr(d, "created_by", "")),
-            "id": str(getattr(d, "id", "")),
-            # ถ้ามีฟิลด์สรุปผล/ผลลัพธ์ เช่น result/outcome/decision_status ให้แนบมาด้วย
-            "result": getattr(d, "result", None) or getattr(d, "outcome", None) or getattr(d, "decision_status", None)
+            "reference_date": _iso(getattr(d, "reference_date", None)),
+            "by": _safe_str(getattr(d, "created_by", None)),
+            "id": _safe_str(getattr(d, "id", None)),
+            # รองรับหลายชื่อฟิลด์ผลลัพธ์
+            "result": (
+                getattr(d, "result", None)
+                or getattr(d, "outcome", None)
+                or getattr(d, "decision_status", None)
+            )
         }
         timeline.append(item)
-        latest_decision = item  # ตัวท้ายสุดคืออันล่าสุด
+        latest_decision = item  # อันท้ายสุดคืออันล่าสุด
 
-    # 5) ชิ้นล่าสุดของการ "ส่งออก"
+    # -------- latest sent (OutgoingReport ล่าสุด) --------
     latest_sent = None
     if outgoing_list:
         r = outgoing_list[-1]
         latest_sent = {
-            "id": str(r.id),
-            "reference_number": r.reference_number,
-            "reference_date": r.reference_date,
-            "subject": r.subject,
-            "department_id": str(r.department_id),
-            "created_at": r.created_at
+            "id": _safe_str(getattr(r, "id", None)),
+            "reference_number": getattr(r, "reference_number", None),
+            "reference_date": _iso(getattr(r, "reference_date", None)),
+            "subject": getattr(r, "subject", None),
+            "department_id": _safe_str(getattr(r, "department_id", None)),
+            "created_at": _iso(getattr(r, "created_at", None)),
         }
 
-    # 6) คำนวณ derived/suggested สถานะจากเส้นเรื่อง (ไม่เขียนกลับ DB)
-    current_status = getattr(complaint.status, "value", str(complaint.status))
+    # -------- derive suggested_next_status (ไม่เขียน DB) --------
+    current_status = _enum_str(getattr(complaint, "status", None))
     suggested_next = None
-    # กติกาอธิบาย (soft rule):
-    # - ถ้าเพิ่งมี OutgoingReport แต่ยังไม่มี OR3 → ควรอยู่ 'sent_to_agency' หรือ 'in_review'
-    # - ถ้ามี OR3 แล้ว:
-    #     * ถ้าผลสรุปชัดเจนว่าจบ → 'completed'
-    #     * ถ้ายังต้องติดตาม → 'tracking'
+
     if latest_decision:
+        # ตัดสินบนข้อความผลลัพธ์ (รองรับไทย/อังกฤษ)
         decision_text = (latest_decision.get("result") or "").lower()
-        if any(k in decision_text for k in ["complete", "สำเร็จ", "เสร็จ", "ปิดเรื่อง"]):
+        if any(k in decision_text for k in ["complete", "completed", "success", "สำเร็จ", "เสร็จ", "ปิดเรื่อง"]):
             suggested_next = "completed"
-        elif any(k in decision_text for k in ["ติดตาม", "ต่อเนื่อง", "รอ", "review"]):
+        elif any(k in decision_text for k in ["ติดตาม", "ต่อเนื่อง", "follow", "follow-up", "รอ", "pending", "review"]):
             suggested_next = "tracking"
         else:
-            suggested_next = "reviewed"  # มีผลการพิจารณาแต่ไม่สรุปชัด → reviewed
+            suggested_next = "reviewed"
     elif latest_sent:
-        # ส่งหนังสือออกไปแล้ว แต่ยังไม่รับผล
         suggested_next = "sent_to_agency"
 
-    # 7) เรียง timeline ตามเวลา (null-safe)
-    def _ts(x):
-        return x.get("at") or x.get("reference_date") or x.get("created_at")
+    # -------- sort timeline (null-safe) --------
+    def _ts(x: Dict[str, Any]):
+        # ใช้ลำดับ at → reference_date → created_at ที่แปลงเป็น ISO แล้ว
+        return x.get("at") or x.get("reference_date") or x.get("created_at") or ""
+
     timeline.sort(key=_ts)
 
+    # -------- response --------
     return {
         "complaint": {
-            "id": str(complaint.id),
-            "complaint_number": complaint.complaint_number,
-            "subject": complaint.subject,
+            "id": _safe_str(getattr(complaint, "id", None)),
+            "complaint_number": getattr(complaint, "complaint_number", None),
+            "subject": getattr(complaint, "subject", None),
             "status": current_status,
-            "created_at": complaint.created_at,
-            "updated_at": complaint.updated_at
+            "created_at": _iso(getattr(complaint, "created_at", None)),
+            "updated_at": _iso(getattr(complaint, "updated_at", None)),
         },
         "counts": {
             "outgoing_reports": len(outgoing_list),
-            "decisions": len(decision_list)
+            "decisions": len(decision_list),
         },
         "latest": {
             "sent": latest_sent,
-            "decision": latest_decision
+            "decision": latest_decision,
         },
         "history": timeline,
         "derived": {
             "current_status": current_status,
-            "suggested_next_status": suggested_next
+            "suggested_next_status": suggested_next,
         }
     }
