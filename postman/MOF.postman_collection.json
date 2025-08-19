@@ -6061,7 +6061,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{API}}{{PREFIX}}/complaints?skip=0&limit=10&status=SUBMITTED",
+							"raw": "{{API}}{{PREFIX}}/complaints?skip=0&limit=20&status=&complaint_type=&complaint_subtype=&assignee=&location=&urgency=&search=&complainant_name=&subject=",
 							"host": [
 								"{{API}}{{PREFIX}}"
 							],
@@ -6075,16 +6075,140 @@
 								},
 								{
 									"key": "limit",
-									"value": "10"
+									"value": "20"
 								},
 								{
 									"key": "status",
-									"value": "SUBMITTED",
+									"value": "",
 									"description": "Optional filter by status"
+								},
+								{
+									"key": "complaint_type",
+									"value": "",
+									"description": "Optional filter by complaint type"
+								},
+								{
+									"key": "complaint_subtype",
+									"value": "",
+									"description": "Optional filter by complaint subtype"
+								},
+								{
+									"key": "assignee",
+									"value": "",
+									"description": "Optional filter by assignee"
+								},
+								{
+									"key": "location",
+									"value": "",
+									"description": "Optional filter by location"
+								},
+								{
+									"key": "urgency",
+									"value": "",
+									"description": "Optional filter by urgency"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Optional search keyword"
+								},
+								{
+									"key": "complainant_name",
+									"value": "",
+									"description": "Optional filter by complainant name"
+								},
+								{
+									"key": "subject",
+									"value": "",
+									"description": "Optional filter by subject"
 								}
 							]
 						},
-						"description": "Get a list of complaints with pagination and optional status filtering"
+						"description": "ดึงรายการเรื่องร้องเรียนทั้งหมดพร้อมตัวกรองขั้นสูง - ต้องมีสิทธิ์ setting_access"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Enhanced Complaints",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/enhanced?skip=0&limit=20&status=&complaint_type=&complaint_subtype=&assignee=&location=&urgency=&search=&complainant_name=&subject=",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"enhanced"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Optional filter by status"
+								},
+								{
+									"key": "complaint_type",
+									"value": "",
+									"description": "Optional filter by complaint type"
+								},
+								{
+									"key": "complaint_subtype",
+									"value": "",
+									"description": "Optional filter by complaint subtype"
+								},
+								{
+									"key": "assignee",
+									"value": "",
+									"description": "Optional filter by assignee"
+								},
+								{
+									"key": "location",
+									"value": "",
+									"description": "Optional filter by location"
+								},
+								{
+									"key": "urgency",
+									"value": "",
+									"description": "Optional filter by urgency"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Optional search keyword"
+								},
+								{
+									"key": "complainant_name",
+									"value": "",
+									"description": "Optional filter by complainant name"
+								},
+								{
+									"key": "subject",
+									"value": "",
+									"description": "Optional filter by subject"
+								}
+							]
+						},
+						"description": "ดึงรายการเรื่องร้องเรียนแบบ enhanced พร้อมข้อมูลเลขอ้างอิงและช่องทาง - ต้องมีสิทธิ์ setting_access"
 					},
 					"response": []
 				},
@@ -6454,9 +6578,117 @@
 						"description": "Update the status of a complaint"
 					},
 					"response": []
+				},
+				{
+					"name": "Update Complaint Severity",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "\"HIGH\"",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/severity",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"severity"
+							]
+						},
+						"description": "อัปเดตระดับความรุนแรงของเรื่องร้องเรียน (LOW, MEDIUM, HIGH, CRITICAL) - ต้องมีสิทธิ์ setting_access"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Complaint Satisfaction",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rating\": \"SATISFIED\",\n  \"comment\": \"ความคิดเห็นเพิ่มเติม\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/satisfaction",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"satisfaction"
+							]
+						},
+						"description": "บันทึกคะแนนความพึงพอใจต่อการแก้ไขปัญหา (VERY_DISSATISFIED, DISSATISFIED, NEUTRAL, SATISFIED, VERY_SATISFIED) - ต้องมีสิทธิ์ setting_access"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Outgoing Tracking",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}/outgoing-tracking",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"{{complaint_id}}",
+								"outgoing-tracking"
+							]
+						},
+						"description": "ติดตามสถานะหลังส่งหนังสือออก - รวม OutgoingReport + OutgoingReport3 + status history - ต้องมีสิทธิ์ dashboard"
+					},
+					"response": []
 				}
 			],
-			"description": "API endpoints for managing complaints"
+			"description": "API endpoints for managing complaints - รองรับการสร้างผ่าน queue system, การค้นหาขั้นสูง, การจัดการสถานะ, การแนบไฟล์, การติดตามเอกสารส่งออก"
 		},
 		{
 			"name": "COMPLAINTS REFERENCES",

@@ -20,6 +20,7 @@ from app.api.v1.controllers.complaint_controller import (
     get_complaint_by_id_with_assignment,
     get_complaints_grouped_by_channel
 )
+from app.api.v1.controllers.outgoing_report_controller import get_outgoing_tracking
 from app.api.v1.schemas.complaint import StatusUpdateRequest
 from models.comp_complaint import Complaint, ComplaintStatus, SeverityLevel, SatisfactionRating
 from config.database import get_db
@@ -682,6 +683,27 @@ async def update_complaint_satisfaction(
         "satisfaction_rating": rating.value,
         "has_comment": comment is not None
     })
+
+@router.get("/{complaint_id}/outgoing-tracking", response_model=FormatResponseModel)
+async def read_outgoing_tracking(
+    complaint_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("dashboard"))  # ปรับ permission ตามนโยบายคุณ
+):
+    """
+    ติดตามสถานะหลังส่งหนังสือออก:
+      - รวม OutgoingReport (ส่งหน่วยงาน) + OutgoingReport3 (ผลการพิจารณา)
+      - รวม status history ของ complaint
+      - สรุป derived/suggested status โดยไม่แก้ไข DB
+    """
+    try:
+        result = get_outgoing_tracking(db, complaint_id)
+        if "error" in result:
+            return format_response("4004", {"error": result["error"]})
+        return format_response("0000", result)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return format_response("5000", {"error": str(e)})
 
 @router.get("/queue/status/{task_id}", response_model=FormatResponseModel)
 async def check_queue_task_status(
