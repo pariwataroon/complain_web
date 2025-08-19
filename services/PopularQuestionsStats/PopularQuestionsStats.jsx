@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Box,
   FormControl,
@@ -55,7 +55,32 @@ const mockData = {
 };
 
 const PopularQuestionsStats = () => {
-  const [selectedMonth, setSelectedMonth] = useState("มิถุนายน 2568"); // ตั้งเป็นเดือนปัจจุบัน
+
+  const TH_MONTHS = [
+    "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+    "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"
+  ];
+  const monthTH = TH_MONTHS[new Date().getMonth()];
+  const yearTH = new Date().getFullYear() + 543;
+  const currentKey = `${monthTH} ${yearTH}`;
+
+  const [selectedMonth, setSelectedMonth] = useState(currentKey);
+
+  const parseKey = (key) => {
+    const [m, y] = key.split(" ");
+    return { m: TH_MONTHS.indexOf(m), y: Number(y) };
+  };
+  const latestAvailableKey = useMemo(() => {
+    const keys = Object.keys(mockData);
+    if (keys.length === 0) return currentKey;
+    return keys.sort((a, b) => {
+      const A = parseKey(a), B = parseKey(b);
+      return A.y === B.y ? A.m - B.m : A.y - B.y;
+    })[keys.length - 1];
+  }, []);
+
+  const displayKey = mockData[selectedMonth] ? selectedMonth : latestAvailableKey;
+  const items = mockData[displayKey] || [];
 
   return (
     <Box className={styles["question-container"]}>
@@ -81,7 +106,7 @@ const PopularQuestionsStats = () => {
               variant="outlined"
               className={styles["month-select"]}
             >
-              {Object.keys(mockData).map((month) => (
+              {[currentKey, ...Object.keys(mockData).filter(k => k !== currentKey)].map((month) => (
                 <MenuItem key={month} value={month}>
                   {month}
                 </MenuItem>
@@ -91,8 +116,8 @@ const PopularQuestionsStats = () => {
         </Box>
 
         {/* Questions List */}
-        <ul className={styles["question-list"]}>
-          {(mockData[selectedMonth] || []).map((q, i) => (
+        <ul className={styles["question-list"]} style={{ minHeight: 160 }}>
+          {items.map((q, i) => (
             <li key={i} className={styles["question-item"]}>
               <span className={styles["number-circle"]}>{i + 1}</span>
               <span className={styles["question-text"]}>{q}</span>

@@ -36,6 +36,14 @@ const TopRightChart = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [openModal, setOpenModal] = useState(null);
 
+  const TH_MONTHS = [
+    "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+    "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"
+  ];
+
+  const getCurrentThaiYear = () => new Date().getFullYear() + 543;
+  const getCurrentThaiMonthLabel = () => TH_MONTHS[new Date().getMonth()];
+
   // API data states
   const [apiData, setApiData] = useState(null);
   const [yearOptions, setYearOptions] = useState([]);
@@ -45,18 +53,24 @@ const TopRightChart = () => {
 
   // States for current display mode
   const [currentMode, setCurrentMode] = useState("monthly");
-  const [currentPeriod, setCurrentPeriod] = useState("สิงหาคม 2568");
+  const [currentPeriod, setCurrentPeriod] = useState(
+    `${getCurrentThaiMonthLabel()} ${getCurrentThaiYear()}`
+  );
 
   // States for form values
   const [monthlyForm, setMonthlyForm] = useState({
-    month: "สิงหาคม",
-    year: "2568",
+    month: getCurrentThaiMonthLabel(),
+    year: String(getCurrentThaiYear()),
   });
-  const [quarterlyForm, setQuarterlyForm] = useState({ year: "2568" });
-  const [yearlyForm, setYearlyForm] = useState({ year: "2568" });
+  const [quarterlyForm, setQuarterlyForm] = useState({
+    year: String(getCurrentThaiYear()),
+  });
+  const [yearlyForm, setYearlyForm] = useState({
+    year: String(getCurrentThaiYear()),
+  });
   const [departmentForm, setDepartmentForm] = useState({
-    fromYear: "2565",
-    toYear: "2567",
+    fromYear: String(getCurrentThaiYear()),
+    toYear:   String(getCurrentThaiYear()),
   });
 
   const [chartData, setChartData] = useState([]);
@@ -66,47 +80,47 @@ const TopRightChart = () => {
     setYearsLoading(true);
     try {
       const result = await GetAllSelectYears();
+      const currentTH = String(getCurrentThaiYear());
 
-      if (result.success && result.yearOptions) {
+      if (result?.success && Array.isArray(result?.yearOptions)) {
         setYearOptions(result.yearOptions);
 
-        // Update default year values if available
-        if (result.yearOptions.length > 0) {
-          const latestYear = result.yearOptions[result.yearOptions.length - 1];
-          const secondLatestYear = result.yearOptions[result.yearOptions.length - 2] || latestYear;
-          const thirdLatestYear = result.yearOptions[result.yearOptions.length - 3] || secondLatestYear;
+        const latest = result.yearOptions[result.yearOptions.length - 1];
+        const displayYear = result.yearOptions.some(y => String(y.value) === currentTH)
+          ? currentTH
+          : String(latest?.value ?? currentTH);
 
-          // Update form states with latest years
-          setMonthlyForm(prev => ({ ...prev, year: latestYear.value }));
-          setQuarterlyForm({ year: latestYear.value });
-          setYearlyForm({ year: latestYear.value });
-          setDepartmentForm({
-            fromYear: thirdLatestYear.value,
-            toYear: secondLatestYear.value
-          });
+        setMonthlyForm(prev => ({ ...prev, year: displayYear, month: prev.month || getCurrentThaiMonthLabel() }));
+        setQuarterlyForm({ year: displayYear });
+        setYearlyForm({ year: displayYear });
+        setDepartmentForm({ fromYear: displayYear, toYear: displayYear });
 
-          // Update current period display
-          setCurrentPeriod(`สิงหาคม ${latestYear.value}`);
-        }
+        setCurrentPeriod(`${getCurrentThaiMonthLabel()} ${displayYear}`);
       } else {
-        console.warn("Failed to fetch years:", result.message);
-        // Fallback to default years if API fails
-        setYearOptions([
-          { value: "2565", label: "2565" },
-          { value: "2566", label: "2566" },
-          { value: "2567", label: "2567" },
-          { value: "2568", label: "2568" }
-        ]);
+        const y = getCurrentThaiYear();
+        const fallback = [
+          { value: String(y - 3), label: String(y - 3) },
+          { value: String(y - 2), label: String(y - 2) },
+          { value: String(y - 1), label: String(y - 1) },
+          { value: String(y),     label: String(y) },
+        ];
+        setYearOptions(fallback);
+        setMonthlyForm(prev => ({ ...prev, year: String(y), month: prev.month || getCurrentThaiMonthLabel() }));
+        setQuarterlyForm({ year: String(y) });
+        setYearlyForm({ year: String(y) });
+        setDepartmentForm({ fromYear: String(y), toYear: String(y) });
+        setCurrentPeriod(`${getCurrentThaiMonthLabel()} ${y}`);
       }
     } catch (err) {
       console.error("Error fetching years:", err);
-      // Fallback to default years if API fails
-      setYearOptions([
-        { value: "2565", label: "2565" },
-        { value: "2566", label: "2566" },
-        { value: "2567", label: "2567" },
-        { value: "2568", label: "2568" }
-      ]);
+      const y = getCurrentThaiYear();
+      const fallback = [{ value: String(y), label: String(y) }];
+      setYearOptions(fallback);
+      setMonthlyForm(prev => ({ ...prev, year: String(y), month: prev.month || getCurrentThaiMonthLabel() }));
+      setQuarterlyForm({ year: String(y) });
+      setYearlyForm({ year: String(y) });
+      setDepartmentForm({ fromYear: String(y), toYear: String(y) });
+      setCurrentPeriod(`${getCurrentThaiMonthLabel()} ${y}`);
     } finally {
       setYearsLoading(false);
     }

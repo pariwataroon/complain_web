@@ -28,7 +28,7 @@ const breadcrumbItems = [
       />
     ),
   },
-  { label: "กำหนดหน่วยงานในสังกัด" },
+  { label: "กำหนดกลุ่มหน่วยงาน" },
 ];
 
 const CommitteeCompositionSettings = () => {
@@ -616,7 +616,8 @@ const CommitteeCompositionSettings = () => {
           }}
         >
           <Typography variant="h6">
-            {existingGroupId ? "แก้ไข" : "ผู้ลงนาม"} {number}
+            {/* {existingGroupId ? "แก้ไข" : "ผู้ลงนาม"} {number} */}
+            {existingGroupId ? `กลุ่ม ${number}` : number}
           </Typography>
         </Box>
 
@@ -628,40 +629,23 @@ const CommitteeCompositionSettings = () => {
               display: "flex",
               flexDirection: { xs: "column", md: "row" },
               width: "100%",
+              gap: 2, 
             }}
           >
             <Box
               sx={{
-                width: { xs: "100%", md: "50%" },
-                pr: { xs: 0, md: 2 },
-                mb: { xs: 2, md: 0 },
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-start",
               }}
             >
               <Typography
-                variant="h5"
-                sx={{ fontWeight: "bold", color: "#1120A3" }}
-              >
-                ชื่อผู้ลงนาม
-              </Typography>
-              <Typography sx={{ fontWeight: "bold", color: "#1120A3" }}>
-                ตำแหน่ง
-              </Typography>
-              <SelectField
-                label="เลือกตำแหน่ง"
-                options={positionOpts}
-                value={formData[`position_${number}`] || ""}
-                onChange={handleInputChange}
-                name={`position_${number}`}
-              />
-            </Box>
-
-            <Box sx={{ width: { xs: "100%", md: "50%" } }}>
-              <Typography
-                variant="h6"
                 sx={{
                   fontWeight: "bold",
-                  mt: { xs: 0, md: "23px" },
-                  color: "#1120A3",
+                  color: "#0067B1",
+                  fontSize: "18px",
+                  mt: { xs: 0, md: 0 },
                 }}
               >
                 ชื่อผู้ลงนาม
@@ -678,6 +662,33 @@ const CommitteeCompositionSettings = () => {
                 section="name"
                 signatoryNumber={number}
                 label="เพิ่มผู้ลงนาม"
+              />
+            </Box>
+
+            <Box
+              sx={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-start",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontWeight: "bold",
+                  color: "#0067B1",
+                  fontSize: "18px",
+                  mt: { xs: 0, md: 0 },
+                }}
+              >
+                ตำแหน่ง
+              </Typography>
+              <SelectField
+                label="เลือกตำแหน่ง"
+                options={positionOpts}
+                value={formData[`position_${number}`] || ""}
+                onChange={handleInputChange}
+                name={`position_${number}`}
               />
             </Box>
           </Box>
@@ -697,32 +708,7 @@ const CommitteeCompositionSettings = () => {
                 mb: { xs: 2, md: 0 },
               }}
             >
-              <Typography
-                variant="h5"
-                sx={{ fontWeight: "bold", color: "#2499FF" }}
-              >
-                หน่วยงานรับผิดชอบเรื่องร้องเรียนร้องทุกข์
-              </Typography>
-              <Typography sx={{ fontWeight: "bold", color: "#2499FF" }}>
-                รัฐวิสาหกิจ
-              </Typography>
-              <SelectField
-                label="เลือกรัฐวิสาหกิจ"
-                options={stateEnterpriseOptions}
-                value={formData[`state_enterprise_${number}`] || ""}
-                onChange={handleInputChange}
-                name={`state_enterprise_${number}`}
-              />
-              {renderAdditionalSelects("state_enterprise", number)}
-              <DepartmentButton
-                section="state_enterprise"
-                signatoryNumber={number}
-                label="เพิ่มหน่วยงาน"
-              />
-            </Box>
-
-            <Box sx={{ width: { xs: "100%", md: "50%" } }}>
-              <Typography
+             <Typography
                 sx={{
                   fontWeight: "bold",
                   color: "#2499FF",
@@ -741,6 +727,31 @@ const CommitteeCompositionSettings = () => {
               {renderAdditionalSelects("government", number)}
               <DepartmentButton
                 section="government"
+                signatoryNumber={number}
+                label="เพิ่มหน่วยงาน"
+              />
+            </Box>
+
+            <Box sx={{ width: { xs: "100%", md: "50%" } }}>
+               <Typography
+                variant="h5"
+                sx={{ fontWeight: "bold", color: "#2499FF" }}
+              >
+                หน่วยงานรับผิดชอบเรื่องร้องเรียนร้องทุกข์
+              </Typography>
+              <Typography sx={{ fontWeight: "bold", color: "#2499FF" }}>
+                รัฐวิสาหกิจ
+              </Typography>
+              <SelectField
+                label="เลือกรัฐวิสาหกิจ"
+                options={stateEnterpriseOptions}
+                value={formData[`state_enterprise_${number}`] || ""}
+                onChange={handleInputChange}
+                name={`state_enterprise_${number}`}
+              />
+              {renderAdditionalSelects("state_enterprise", number)}
+              <DepartmentButton
+                section="state_enterprise"
                 signatoryNumber={number}
                 label="เพิ่มหน่วยงาน"
               />

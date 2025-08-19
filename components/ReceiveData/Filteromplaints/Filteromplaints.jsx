@@ -15,7 +15,7 @@ const breadcrumbItems = [
     ),
   },
   {
-    label: "สืบค้นเรื่องร้องเรียน11",
+    label: "สืบค้นเรื่องร้องเรียน",
     url: "/admin/edit/search",
   },
   { label: "คัดกรองเรื่องร้องเรียน" },

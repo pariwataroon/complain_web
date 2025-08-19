@@ -36,9 +36,17 @@ const BottomLeftService = () => {
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
 
+  const getCurrentThaiYear = () => new Date().getFullYear() + 543;
+
+  const getCurrentFiscalYearTH = () => {
+    const ad = new Date().getFullYear();  
+    const m = new Date().getMonth(); 
+    return (m >= 9) ? ad + 544 : ad + 543;
+  };
+
   // States
   const [selectedDepartment, setSelectedDepartment] = useState("");
-  const [selectedYear, setSelectedYear] = useState("2568");
+  const [selectedYear, setSelectedYear] = useState(getCurrentFiscalYearTH().toString());
   const [departments, setDepartments] = useState([]);
   const [yearOptions, setYearOptions] = useState([]);
   const [chartData, setChartData] = useState([]);
@@ -52,29 +60,29 @@ const BottomLeftService = () => {
     setYearsLoading(true);
     try {
       const result = await GetAllSelectYears();
+      const fiscalNow = getCurrentFiscalYearTH().toString();
 
-      if (result.success && result.yearOptions) {
+      if (result.success && Array.isArray(result.yearOptions)) {
         setYearOptions(result.yearOptions);
-        // Set latest year as default if available
-        if (result.yearOptions.length > 0) {
-          const latestYear = result.yearOptions[result.yearOptions.length - 1];
-          setSelectedYear(latestYear.value);
-        }
+        const hasFiscalNow = result.yearOptions.some(y => String(y.value) === fiscalNow);
+        setSelectedYear(hasFiscalNow
+          ? fiscalNow
+          : String(result.yearOptions[result.yearOptions.length - 1]?.value ?? fiscalNow)
+        );
       } else {
-        console.warn("Failed to fetch years:", result.message);
-        // Fallback to default years if API fails
-        setYearOptions([
-          { value: "2567", label: "2567" },
-          { value: "2568", label: "2568" }
-        ]);
+        // Fallback
+        const fallback = [
+          { value: (getCurrentThaiYear()-1).toString(), label: (getCurrentThaiYear()-1).toString() },
+          { value: fiscalNow, label: fiscalNow }
+        ];
+        setYearOptions(fallback);
+        setSelectedYear(fiscalNow);
       }
     } catch (err) {
       console.error("Error fetching years:", err);
-      // Fallback to default years if API fails
-      setYearOptions([
-        { value: "2567", label: "2567" },
-        { value: "2568", label: "2568" }
-      ]);
+      const fiscalNow = getCurrentFiscalYearTH().toString();
+      setYearOptions([{ value: fiscalNow, label: fiscalNow }]);
+      setSelectedYear(fiscalNow);
     } finally {
       setYearsLoading(false);
     }

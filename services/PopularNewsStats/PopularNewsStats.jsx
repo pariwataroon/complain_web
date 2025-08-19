@@ -3,7 +3,13 @@ import { useState, useMemo } from "react";
 import styles from "./PopularNewsStats.module.scss";
 
 const PopularNewsStats = () => {
-  const [selectedMonth, setSelectedMonth] = useState("มิถุนายน"); // ตั้งเป็นเดือนปัจจุบัน
+  const TH_MONTHS = [
+    "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+    "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"
+  ];
+  const currentMonthTH = TH_MONTHS[new Date().getMonth()];
+  const currentThaiYear = new Date().getFullYear() + 543;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthTH);
 
   const handleMonthChange = (event) => {
     setSelectedMonth(event.target.value);
@@ -339,7 +345,7 @@ const PopularNewsStats = () => {
 
   // ใช้ useMemo เพื่อ optimize การคำนวณ
   const currentNewsData = useMemo(() => {
-    return newsDataByMonth[selectedMonth] || newsDataByMonth["มิถุนายน"];
+    return newsDataByMonth[selectedMonth] || newsDataByMonth[currentMonthTH];
   }, [selectedMonth]);
 
   return (
@@ -347,7 +353,7 @@ const PopularNewsStats = () => {
       {/* Header with gradient background */}
       <div className={styles.header}>
         <Typography variant="h6" className={styles.title}>
-          สถิติข่าวสารที่ได้รับความนิยม มีผู้เข้าชมมากที่สุด 5 อันดับแรก ณ เดือน{selectedMonth} 2568
+          สถิติข่าวสารที่ได้รับความนิยม มีผู้เข้าชมมากที่สุด 5 อันดับแรก ณ เดือน{selectedMonth} {currentThaiYear}
         </Typography>
       </div>
 

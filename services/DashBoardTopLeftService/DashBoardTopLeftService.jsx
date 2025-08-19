@@ -11,10 +11,13 @@ import {
   GetAllSelectYears,
 } from "@pages/api/allselect/allselect";
 
+const getCurrentThaiYear = () => (new Date().getFullYear() + 543).toString();
+
 const TopLeftService = () => {
   const chartRef = useRef(null);
-  const [selectedStartYear, setSelectedStartYear] = useState("2567");
-  const [selectedEndYear, setSelectedEndYear] = useState("2568");
+
+  const [selectedStartYear, setSelectedStartYear] = useState(getCurrentThaiYear());
+  const [selectedEndYear, setSelectedEndYear] = useState(getCurrentThaiYear());
   const [selectedProvince, setSelectedProvince] = useState("ทั้งหมด");
 
   // API data states
@@ -30,20 +33,30 @@ const TopLeftService = () => {
 
       if (result.success) {
         setYearData(result);
-        // Set default years if available
-        if (result.yearOptions && result.yearOptions.length > 0) {
-          const years = result.yearOptions;
-          const latestYear = years[years.length - 1]?.value;
-          const previousYear = years[years.length - 2]?.value || latestYear;
 
-          setSelectedStartYear(previousYear);
-          setSelectedEndYear(latestYear);
+        const years = result.yearOptions || [];
+        const current = getCurrentThaiYear();
+        const hasCurrent = years.some((y) => y.value === current);
+
+        if (hasCurrent) {
+          setSelectedStartYear(current);
+          setSelectedEndYear(current);
+        } else if (years.length > 0) {
+          const latest = years[years.length - 1].value;
+          setSelectedStartYear(latest);
+          setSelectedEndYear(latest);
         }
       } else {
         console.warn("Failed to fetch years data:", result.message);
+        const current = getCurrentThaiYear();
+        setSelectedStartYear(current);
+        setSelectedEndYear(current);
       }
     } catch (err) {
       console.error("Error fetching years data:", err);
+      const current = getCurrentThaiYear();
+      setSelectedStartYear(current);
+      setSelectedEndYear(current);
     }
   };
 
@@ -73,10 +86,7 @@ const TopLeftService = () => {
   // Fetch data on component mount
   useEffect(() => {
     const fetchAllData = async () => {
-      await Promise.all([
-        fetchYearData(),
-        fetchMapData()
-      ]);
+      await Promise.all([fetchYearData(), fetchMapData()]);
     };
 
     fetchAllData();
@@ -84,14 +94,10 @@ const TopLeftService = () => {
 
   // Create year options from API data
   const yearOptions = useMemo(() => {
-    if (!yearData?.yearOptions) {
-      // Fallback options if API fails
-      return [
-        { value: "2567", label: "2567" },
-        { value: "2568", label: "2568" }
-      ];
+    const current = getCurrentThaiYear();
+    if (!yearData?.yearOptions?.length) {
+      return [{ value: current, label: current }];
     }
-
     return yearData.yearOptions;
   }, [yearData]);
 
@@ -126,9 +132,9 @@ const TopLeftService = () => {
       year <= parseInt(selectedEndYear);
       year++
     ) {
-      const yearData = mapData.provinceValues[year.toString()];
-      if (yearData) {
-        yearData.forEach((item) => {
+      const yData = mapData.provinceValues[year.toString()];
+      if (yData) {
+        yData.forEach((item) => {
           dataMap[item.hcKey] = (dataMap[item.hcKey] || 0) + item.value;
         });
       }

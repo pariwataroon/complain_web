@@ -99,6 +99,7 @@ const GetMapJSONThailandMapData = async () => {
 //!! 2
 const GetComplaintSummary = async () => {
   try {
+    const currentYearTH = new Date().getFullYear() + 543;
     const response = await axiosInstance.get("/dashboard/summary");
 
     if (response?.data?.res_code === "0000" && response?.data?.res_data) {
@@ -114,7 +115,7 @@ const GetComplaintSummary = async () => {
           gradient: "cardBrown",
           trend: summary.yoy.total.pct_change_label,
           trendValue: summary.yoy.total.diff,
-          compareYear: summary.yoy.compare_with_year.toString(),
+          compareYear: (currentYearTH),
           isPositive: summary.yoy.total.diff >= 0,
           previousValue: summary.yoy.total.previous,
           currentValue: summary.yoy.total.current,
@@ -127,7 +128,7 @@ const GetComplaintSummary = async () => {
           gradient: "cardBlue",
           trend: summary.yoy.completed.pct_change_label,
           trendValue: summary.yoy.completed.diff,
-          compareYear: summary.yoy.compare_with_year.toString(),
+          compareYear: (currentYearTH),
           isPositive: summary.yoy.completed.diff >= 0,
           previousValue: summary.yoy.completed.previous,
           currentValue: summary.yoy.completed.current,
@@ -140,7 +141,7 @@ const GetComplaintSummary = async () => {
           gradient: "cardPink",
           trend: summary.yoy.in_progress.pct_change_label,
           trendValue: summary.yoy.in_progress.diff,
-          compareYear: summary.yoy.compare_with_year.toString(),
+          compareYear: (currentYearTH),
           isPositive: summary.yoy.in_progress.diff >= 0,
           previousValue: summary.yoy.in_progress.previous,
           currentValue: summary.yoy.in_progress.current,

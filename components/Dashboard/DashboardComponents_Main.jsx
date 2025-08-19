@@ -19,7 +19,20 @@ import {
 } from "@utils/Formats";
 
 const DashboardComponents_Main = () => {
-  const [selectedYear, setSelectedYear] = useState("2567");
+  const TH_MONTHS = [
+    "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+    "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"
+  ];
+
+  const getCurrentADYear = () => new Date().getFullYear();
+  const getCurrentThaiYear = () => getCurrentADYear() + 543;
+
+  const startOfYear = (adYear) => ({ day: 1, month: 1, year: adYear });
+  const endOfYear   = (adYear) => ({ day: 31, month: 12, year: adYear });
+
+const formatThaiBEFromAD = (d) =>
+  `${d.day} ${TH_MONTHS[d.month - 1]} ${d.year + 543}`;
+  const [selectedYear, setSelectedYear] = useState(String(getCurrentThaiYear()));
   const data = [selectedYear] || [];
   const [departmentRanking, setDepartmentRanking] = useState({
     topDepartments: [],
@@ -27,17 +40,8 @@ const DashboardComponents_Main = () => {
   });
   const [loading, setLoading] = useState(false);
 
-  const [startDate, setStartDate] = useState({
-    day: 31,
-    month: 1,
-    year: 2025,
-  });
-
-  const [endDate, setEndDate] = useState({
-    day: 2,
-    month: 4,
-    year: 2025,
-  });
+  const [startDate, setStartDate] = useState(startOfYear(getCurrentADYear()));
+  const [endDate,   setEndDate]   = useState(endOfYear(getCurrentADYear())); 
 
   // Function to handle department ranking data
   const handleGetDepartmentRanking = async () => {
@@ -98,7 +102,7 @@ const DashboardComponents_Main = () => {
 
   const dateRangeText =
     startDate && endDate
-      ? `ณ ${formatThaiDateMonths(startDate)} - ${formatThaiDateMonths(endDate)}`
+      ? `ณ ${formatThaiBEFromAD(startDate)} - ${formatThaiBEFromAD(endDate)}`
       : "";
 
   const startDateWithBuddhist = startDate
