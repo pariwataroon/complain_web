@@ -1953,45 +1953,53 @@ def delete_complaint(db: Session, complaint_id: uuid.UUID):
     
     return True
 
-def get_user_complaints(db: Session, user_id: UUID, skip: int = 0, limit: int = 100, status: Optional[str] = None):
-    """ดึงรายการข้อร้องเรียนของผู้ใช้เฉพาะราย"""
+def get_user_complaints(
+    db: Session,
+    user_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None
+):
+    """
+    /complaints/me → คืนเฉพาะเรื่องที่ 'ผู้ใช้เป็นผู้ร้องเอง'
+    รูปแบบ response: {"items": [...], "pagination": {...}} (เหมือนเดิม)
+    """
     try:
-        # ตรวจสอบ role ของผู้ใช้
-        user_roles = get_user_roles(db, user_id)
-        is_admin = any(role.name == "admin" for role in user_roles)
-        
-        # สร้าง query พื้นฐาน
-        query = db.query(Complaint)
-        
-        # ถ้าไม่ใช่ admin ให้กรองเฉพาะเรื่องที่เกี่ยวข้องกับผู้ใช้
-        if not is_admin:
-            query = query.filter(
-                or_(
-                    Complaint.created_by == user_id,           # เรื่องที่ตนเองสร้าง
-                    Complaint.assigned_officer_id == user_id   # เรื่องที่ได้รับมอบหมาย
-                )
-            )
-        
-        # กรองตาม status ถ้ามี
+        # เห็นเฉพาะเรื่องที่ตัวเองร้อง (ไม่พิจารณา role)
+        q = db.query(Complaint).filter(Complaint.created_by == user_id)
+
+        # รองรับทั้ง enum/string สำหรับ status filter
         if status:
-            query = query.filter(Complaint.status == status)
-        
-        total_count = query.count()
-        query = query.order_by(Complaint.created_at.desc())
-        complaints = query.offset(skip).limit(limit).all()
-        
-        result = []
-        for complaint in complaints:
             try:
-                list_item = create_complaint_list_item(complaint, db)
-                result.append(list_item.__dict__)
+                q = q.filter(Complaint.status == ComplaintStatus(status))
+            except Exception:
+                q = q.filter(Complaint.status == status)
+
+        total_count = q.count()
+
+        complaints = (
+            q.order_by(Complaint.created_at.desc())
+             .offset(skip)
+             .limit(limit)
+             .all()
+        )
+
+        items = []
+        for c in complaints:
+            try:
+                li = create_complaint_list_item(c, db)
+                # คงรูปแบบเดิม: ถ้าเป็น pydantic ใช้ .dict() ได้, ถ้าเดิมใช้ __dict__ ก็ fallback
+                if hasattr(li, "dict"):
+                    items.append(li.dict())
+                else:
+                    items.append(li.__dict__)
             except Exception as e:
                 if DEBUG_MODE:
-                    print(f"Error creating list item for complaint {complaint.id}: {str(e)}")
+                    print(f"Error create list item for {c.id}: {e}")
                 continue
-        
+
         return {
-            "items": result,
+            "items": items,
             "pagination": {
                 "total": total_count,
                 "skip": skip,
@@ -1999,12 +2007,17 @@ def get_user_complaints(db: Session, user_id: UUID, skip: int = 0, limit: int = 
                 "has_more": total_count > (skip + limit)
             }
         }
-        
+
     except Exception as e:
-        logger.error(f"Error getting user complaints: {str(e)}")
+        logger.error(f"Error getting user complaints: {e}")
         return {
             "items": [],
-            "pagination": {"total": 0, "skip": skip, "limit": limit, "has_more": False}
+            "pagination": {
+                "total": 0,
+                "skip": skip,
+                "limit": limit,
+                "has_more": False
+            }
         }
 
 def map_complaint_type(db: Session, complaint_type_str: str) -> str:
@@ -3029,37 +3042,28 @@ def format_status_history(status_history_list):
         return []
 
 def get_my_complaint_by_id(db: Session, complaint_id: UUID, user_id: UUID) -> Dict:
-    """ดึงรายละเอียดเรื่องร้องเรียนของผู้ใช้คนนั้นๆ รวมข้อมูล assignment form"""
+    """
+    /complaints/me/{complaint_id}
+    - อนุญาตเฉพาะเรื่องที่ผู้ใช้คนนี้เป็นผู้ร้องเอง (created_by == user_id)
+    - ไม่สน role (admin/staff ก็ต้องเป็นเจ้าของเรื่องถึงจะเห็นใน /me)
+    """
     try:
         from sqlalchemy.orm import joinedload
-        
-        # ตรวจสอบ role ของผู้ใช้
-        user_roles = get_user_roles(db, user_id)
-        is_admin = any(role.name == "admin" for role in user_roles)
-        
-        # สร้าง query พื้นฐานพร้อม eager loading
-        query = db.query(Complaint)\
-            .options(joinedload(Complaint.attachments))\
-            .options(joinedload(Complaint.status_history))\
-            .filter(Complaint.id == complaint_id)
-        
-        # ถ้าไม่ใช่ admin ให้กรองเฉพาะเรื่องที่เกี่ยวข้องกับผู้ใช้
-        if not is_admin:
-            query = query.filter(
-                or_(
-                    Complaint.created_by == user_id,           # เรื่องที่ตนเองสร้าง
-                    Complaint.assigned_officer_id == user_id   # เรื่องที่ได้รับมอบหมาย
-                )
-            )
-        
-        complaint = query.first()
-        
+
+        complaint = (
+            db.query(Complaint)
+              .options(joinedload(Complaint.attachments))
+              .options(joinedload(Complaint.status_history))
+              .filter(Complaint.id == complaint_id)
+              .filter(Complaint.created_by == user_id)  # << ล็อกเฉพาะเจ้าของเรื่อง
+              .first()
+        )
+
         if not complaint:
             return {"error": "ไม่พบข้อร้องเรียนหรือไม่มีสิทธิ์เข้าถึง"}
-        
-        # ใช้ฟังก์ชันเดิมในการแปลงข้อมูล
+
+        # ใช้ตัวแปลงเดิมที่ระบบคุณมีอยู่แล้ว
         return get_complaint_by_id_with_assignment_data(db, complaint)
-        
     except Exception as e:
         logger.error(f"Error getting my complaint: {str(e)}")
         return {"error": f"เกิดข้อผิดพลาด: {str(e)}"}
