@@ -6,7 +6,6 @@ from uuid import UUID
 from typing import Dict, Any, Optional, List, Tuple, Union
 from fastapi import HTTPException, UploadFile
 import os
-import shutil
 
 from models.outgoing_reports import OutgoingReport, OutgoingReportAttachment
 from models.comp_complaint import Complaint, ComplaintStatus
@@ -15,30 +14,41 @@ from models.position import Position
 from models.departments import Department
 from app.api.v1.schemas.outgoing_report import OutgoingReportCreate, OutgoingReportUpdate
 from lib.logger import get_logger
-from lib.file_upload import save_upload_file, delete_upload_file 
+from lib.file_upload import save_upload_file, delete_upload_file
 
 logger = get_logger("outgoing_report_controller")
+
 
 class DuplicateKeyError(Exception):
     pass
 
+
+# =========================
+# Helpers
+# =========================
 def _set_if_has(obj, **kwargs):
+    """ตั้งค่าเฉพาะฟิลด์ที่โมเดลมีจริง เพื่อกัน schema ต่างกันระหว่าง env"""
     for k, v in kwargs.items():
         if hasattr(obj, k):
             setattr(obj, k, v)
 
-def _attachment_dict(att: OutgoingReportAttachment) -> Dict[str, Any]:
+
+def _attachment_dict(att):
+    """แปลง attachment model เป็น dict แบบปลอดภัย"""
     return {
-        "id": str(att.id),
-        "file_name": getattr(att, "file_name", None),
-        "file_url": getattr(att, "file_url", None),
-        "file_path": getattr(att, "file_path", None),
-        "file_size": getattr(att, "file_size", None),
-        "file_type": getattr(att, "file_type", None),
-        "is_active": getattr(att, "is_active", True),
-        "created_at": att.created_at.isoformat() if getattr(att, "created_at", None) else None,
+        "attachment_id": str(getattr(att, "id", None)) if getattr(att, "id", None) else None,
+        "fileName": getattr(att, "file_name", None),
+        "fileUrl": getattr(att, "file_url", None),   # ถ้า schema ไม่มีคอลัมน์นี้จะเป็น None
+        "filePath": getattr(att, "file_path", None),
+        "fileType": getattr(att, "file_type", None),
+        "fileSize": getattr(att, "file_size", None),
+        "created_at": getattr(att, "created_at", None).isoformat() if getattr(att, "created_at", None) else None,
     }
 
+
+# =========================
+# Create
+# =========================
 async def create_outgoing_report(
     db: Session,
     report_data: Union[OutgoingReportCreate, dict],
@@ -105,18 +115,23 @@ async def create_outgoing_report(
             for i, file in enumerate(files):
                 try:
                     info = await save_upload_file(file, f"outgoing-reports/{str(db_report.id)}")
-                    att = OutgoingReportAttachment(
+                    att = OutgoingReportAttachment()
+                    _set_if_has(
+                        att,
                         outgoing_report_id=db_report.id,
                         file_name=info.get("filename") or file.filename,
                         file_path=info.get("file_path"),
-                        file_url=info.get("file_url"),
                         file_size=str(info.get("file_size")) if info.get("file_size") is not None else None,
                         file_type=info.get("file_type"),
                         is_active=True
                     )
+                    # ถ้า schema ของคุณมีคอลัมน์ file_url ค่อย set เพิ่ม
+                    if hasattr(att, "file_url"):
+                        att.file_url = info.get("file_url")
+
                     db.add(att)
                     db.flush()
-                    db.refresh(att)  # ให้ created_at พร้อมใช้งานใน response
+                    db.refresh(att)
                     attachment_list.append(att)
                 except Exception as e:
                     logger.warning(f"Could not save file {getattr(file, 'filename', '?')}: {e}")
@@ -189,10 +204,13 @@ async def create_outgoing_report(
         logger.error(f"UNEXPECTED ERROR: {e}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
+
+# =========================
+# Read (by id)
+# =========================
 def get_outgoing_report_by_id(db: Session, report_id: UUID) -> Dict:
     """ดึงรายงานส่งออกตาม ID"""
     try:
-        # 🔥 Load relationships พร้อมกัน
         report = db.query(OutgoingReport).options(
             joinedload(OutgoingReport.position),
             joinedload(OutgoingReport.signature_authority_user),
@@ -205,73 +223,56 @@ def get_outgoing_report_by_id(db: Session, report_id: UUID) -> Dict:
             OutgoingReport.id == report_id,
             OutgoingReport.is_active == True
         ).first()
-        
+
         if not report:
             raise HTTPException(status_code=404, detail="ไม่พบรายงานที่ระบุ")
-        
-        # 🔥 สร้าง response แบบสมบูรณ์
+
         response_data = {
             "id": str(report.id),
-            
-            # ข้อมูลตำแหน่ง
             "position": {
                 "id": str(report.position_id),
                 "name": report.position.name if report.position else "N/A",
                 "level": report.position.level if report.position else None,
                 "description": report.position.description if report.position else None
             },
-            
             "reference_number": report.reference_number,
             "reference_date": report.reference_date.isoformat() if report.reference_date else None,
             "subject": report.subject,
             "complaint_number": report.complaint_number,
             "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,
-            
-            # ข้อมูลผู้มีอำนาจลงนาม
             "signature_authority_user": {
                 "id": str(report.signature_authority_user_id),
                 "name": f"{report.signature_authority_user.first_name} {report.signature_authority_user.last_name}" if report.signature_authority_user else "N/A",
                 "email": report.signature_authority_user.email if report.signature_authority_user else "N/A"
             },
-            
-            # ข้อมูลหน่วยงาน
             "department": {
                 "id": str(report.department_id),
                 "name": report.department.name if report.department else "N/A",
                 "code": report.department.code if report.department else "N/A",
                 "short_name": report.department.short_name if report.department else "N/A"
             },
-            
             "confidentiality_level": report.confidentiality_level,
             "urgency_level": report.urgency_level,
             "remarks": report.remarks,
             "complaint_id": str(report.complaint_id) if report.complaint_id else None,
             "created_at": report.created_at.isoformat() if report.created_at else None,
             "updated_at": report.updated_at.isoformat() if report.updated_at else None,
-            
-            # ข้อมูลผู้สร้าง
             "creator": {
                 "id": str(report.creator.id) if report.creator else None,
                 "name": f"{report.creator.first_name} {report.creator.last_name}" if report.creator else "N/A",
                 "email": report.creator.email if report.creator else "N/A"
             },
-            
-            # ข้อมูลผู้แก้ไข
             "updater": {
                 "id": str(report.updater.id) if report.updater else None,
                 "name": f"{report.updater.first_name} {report.updater.last_name}" if report.updater else None,
                 "email": report.updater.email if report.updater else None
             } if report.updater else None,
-            
-            # ข้อมูลข้อร้องเรียนที่เกี่ยวข้อง
             "related_complaint": {
                 "id": str(report.complaint.id),
                 "complaint_number": report.complaint.complaint_number,
                 "subject": report.complaint.subject,
                 "status": report.complaint.status.value if hasattr(report.complaint, 'status') and report.complaint.status else None
             } if report.complaint else None,
-            
-            # ไฟล์แนบ
             "attachments": [
                 {
                     "id": str(att.id),
@@ -284,15 +285,19 @@ def get_outgoing_report_by_id(db: Session, report_id: UUID) -> Dict:
             ],
             "attachment_count": len([att for att in report.attachments if getattr(att, "is_active", True)])
         }
-        
+
         return response_data
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting outgoing report by ID: {str(e)}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
+
+# =========================
+# List
+# =========================
 def get_outgoing_reports(
     db: Session,
     skip: int = 0,
@@ -307,7 +312,6 @@ def get_outgoing_reports(
 ) -> Dict:
     """ดึงรายการรายงานส่งออก"""
     try:
-        # 🔥 Load relationships พร้อมกัน
         query = db.query(OutgoingReport).options(
             joinedload(OutgoingReport.position),
             joinedload(OutgoingReport.signature_authority_user),
@@ -316,12 +320,10 @@ def get_outgoing_reports(
             joinedload(OutgoingReport.complaint),
             joinedload(OutgoingReport.attachments)
         ).filter(OutgoingReport.is_active == True)
-        
-        # Apply filters
+
         if search:
             pattern = f"%{search}%"
             try:
-                # ใช้ ilike ถ้าดีๆ เลย (Postgres)
                 query = query.filter(
                     or_(
                         OutgoingReport.reference_number.ilike(pattern),
@@ -331,7 +333,6 @@ def get_outgoing_reports(
                     )
                 )
             except Exception:
-                # Fallback (ทุก dialect): lower(..) LIKE lower(:pattern)
                 query = query.filter(
                     or_(
                         func.lower(OutgoingReport.reference_number).like(func.lower(pattern)),
@@ -340,87 +341,64 @@ def get_outgoing_reports(
                         func.lower(OutgoingReport.remarks).like(func.lower(pattern)),
                     )
                 )
-        
+
         if position_id:
             query = query.filter(OutgoingReport.position_id == position_id)
-        
         if department_id:
             query = query.filter(OutgoingReport.department_id == department_id)
-        
         if signature_authority_user_id:
             query = query.filter(OutgoingReport.signature_authority_user_id == signature_authority_user_id)
-        
         if urgency_level:
             query = query.filter(OutgoingReport.urgency_level == urgency_level)
-        
         if date_from:
             query = query.filter(OutgoingReport.reference_date >= date_from)
-        
         if date_to:
             query = query.filter(OutgoingReport.reference_date <= date_to)
-        
-        # Get total count
+
         total = query.count()
-        
-        # Apply pagination and order
         reports = query.order_by(OutgoingReport.created_at.desc()).offset(skip).limit(limit).all()
-        
-        # 🔥 Format response แบบสมบูรณ์
+
         items = []
         for report in reports:
             item = {
                 "id": str(report.id),
-                
-                # ข้อมูลตำแหน่ง
                 "position": {
                     "id": str(report.position_id),
                     "name": report.position.name if report.position else "N/A",
                     "level": report.position.level if report.position else None
                 },
-                
                 "reference_number": report.reference_number,
                 "reference_date": report.reference_date.isoformat() if report.reference_date else None,
                 "subject": report.subject,
                 "complaint_number": report.complaint_number,
                 "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,
-                
-                # ข้อมูลผู้มีอำนาจลงนาม
                 "signature_authority_user": {
                     "id": str(report.signature_authority_user_id),
                     "name": f"{report.signature_authority_user.first_name} {report.signature_authority_user.last_name}" if report.signature_authority_user else "N/A",
                     "email": report.signature_authority_user.email if report.signature_authority_user else "N/A"
                 },
-                
-                # ข้อมูลหน่วยงาน
                 "department": {
                     "id": str(report.department_id),
                     "name": report.department.name if report.department else "N/A",
                     "code": report.department.code if report.department else "N/A"
                 },
-                
                 "confidentiality_level": report.confidentiality_level,
                 "urgency_level": report.urgency_level,
                 "remarks": report.remarks,
                 "complaint_id": str(report.complaint_id) if report.complaint_id else None,
                 "created_at": report.created_at.isoformat() if report.created_at else None,
                 "updated_at": report.updated_at.isoformat() if report.updated_at else None,
-                
-                # ข้อมูลผู้สร้าง
                 "creator": {
                     "id": str(report.creator.id) if report.creator else None,
                     "name": f"{report.creator.first_name} {report.creator.last_name}" if report.creator else "N/A",
                     "email": report.creator.email if report.creator else "N/A"
                 },
-                
-                # ข้อมูลข้อร้องเรียนที่เกี่ยวข้อง
                 "related_complaint": {
                     "id": str(report.complaint.id),
                     "complaint_number": report.complaint.complaint_number,
                     "subject": report.complaint.subject,
                     "status": report.complaint.status.value if hasattr(report.complaint, 'status') and report.complaint.status else None
                 } if report.complaint else None,
-                
-                # ไฟล์แนบ
                 "attachments": [
                     {
                         "id": str(att.id),
@@ -434,7 +412,7 @@ def get_outgoing_reports(
                 "attachment_count": len([att for att in report.attachments if getattr(att, "is_active", True)])
             }
             items.append(item)
-        
+
         return {
             "items": items,
             "total": total,
@@ -442,26 +420,26 @@ def get_outgoing_reports(
             "size": limit,
             "total_pages": (total + limit - 1) // limit
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting outgoing reports: {str(e)}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
-    
 
+
+# =========================
+# Options
+# =========================
 def get_outgoing_report_options(db: Session) -> Dict:
     """ดึงตัวเลือกสำหรับ dropdown ต่างๆ"""
     try:
         logger.info("Getting outgoing report options...")
-        
-        # ดึงรายการตำแหน่ง
+
         positions = db.query(Position).filter(Position.is_active == True).order_by(Position.name).all()
         logger.info(f"Found {len(positions)} positions")
-        
-        # ดึงรายการหน่วยงาน
+
         departments = db.query(Department).filter(Department.is_active == True).order_by(Department.name).all()
         logger.info(f"Found {len(departments)} departments")
-        
-        # ดึงรายการผู้มีอำนาจลงนาม - ใช้ Users ที่ active
+
         signature_list = []
         try:
             users = db.query(User).filter(User.is_active == True).order_by(User.first_name).all()
@@ -475,7 +453,7 @@ def get_outgoing_report_options(db: Session) -> Dict:
             logger.info(f"Found {len(signature_list)} signature authorities")
         except Exception as e:
             logger.warning(f"Could not load signature authorities: {e}")
-        
+
         result = {
             "positions": [
                 {
@@ -485,7 +463,6 @@ def get_outgoing_report_options(db: Session) -> Dict:
                     "description": pos.description
                 } for pos in positions
             ],
-            
             "departments": [
                 {
                     "id": str(dept.id),
@@ -494,34 +471,35 @@ def get_outgoing_report_options(db: Session) -> Dict:
                     "short_name": dept.short_name
                 } for dept in departments
             ],
-            
             "signature_authorities": signature_list,
-            
             "confidentiality_levels": ["ปกติ", "ลับ", "ลับมาก", "ลับที่สุด"],
             "urgency_levels": ["ปกติ", "เร่งด่วน", "เร่งด่วนมาก", "เร่งด่วนที่สุด"]
         }
-        
+
         logger.info("Options retrieved successfully")
         return result
-        
+
     except Exception as e:
         logger.error(f"Error getting outgoing report options: {str(e)}")
         logger.error(f"Stack trace: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
+
+# =========================
+# Auto-fill from complaint
+# =========================
 def auto_fill_from_complaint(db: Session, complaint_id: UUID) -> Dict:
     """ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์ม"""
     try:
         logger.info(f"Auto filling from complaint: {complaint_id}")
-        
+
         complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
-        
         if not complaint:
             logger.error(f"Complaint not found: {complaint_id}")
             raise HTTPException(status_code=404, detail="ไม่พบข้อร้องเรียนที่ระบุ")
-        
+
         logger.info(f"Found complaint: {complaint.complaint_number}")
-        
+
         result = {
             "complaint_id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
@@ -530,10 +508,10 @@ def auto_fill_from_complaint(db: Session, complaint_id: UUID) -> Dict:
             "reference_date": complaint.reference_date.isoformat() if hasattr(complaint, 'reference_date') and complaint.reference_date else None,
             "subject": complaint.subject,
         }
-        
+
         logger.info(f"Auto fill data: {result}")
         return result
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -541,6 +519,10 @@ def auto_fill_from_complaint(db: Session, complaint_id: UUID) -> Dict:
         logger.error(f"Stack trace: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
+
+# =========================
+# Update
+# =========================
 def update_outgoing_report(
     db: Session,
     report_id: UUID,
@@ -548,50 +530,48 @@ def update_outgoing_report(
     current_user_id: UUID,
     files: Optional[List[UploadFile]] = None
 ) -> Dict:
-    """แก้ไขรายงานส่งออก"""
+    """แก้ไขรายงานส่งออก (รองรับ Pydantic v1/v2)"""
+    def _model_to_dict(model) -> Dict[str, Any]:
+        if hasattr(model, "model_dump"):
+            return model.model_dump(exclude_unset=True)  # Pydantic v2
+        return model.dict(exclude_unset=True)           # Pydantic v1
+
     try:
         logger.info(f"=== START UPDATE OUTGOING REPORT: {report_id} ===")
-        
-        # ค้นหารายงานที่ต้องการแก้ไข
+
         report = db.query(OutgoingReport).filter(
             OutgoingReport.id == report_id,
             OutgoingReport.is_active == True
         ).first()
-        
+
         if not report:
             logger.error(f"Report not found: {report_id}")
             raise HTTPException(status_code=404, detail="ไม่พบรายงานที่ระบุ")
-        
+
         logger.info(f"Found report: {report.reference_number}")
-        
-        # ตรวจสอบ reference_number ซ้ำ (ถ้ามีการเปลี่ยน)
-        if hasattr(report_data, 'reference_number') and report_data.reference_number != report.reference_number:
-            existing = db.query(OutgoingReport).filter(
-                OutgoingReport.reference_number == report_data.reference_number,
+
+        updates = _model_to_dict(report_data)
+        if "reference_number" in updates and updates["reference_number"] != report.reference_number:
+            dup = db.query(OutgoingReport).filter(
+                OutgoingReport.reference_number == updates["reference_number"],
                 OutgoingReport.is_active == True,
                 OutgoingReport.id != report_id
             ).first()
-            
-            if existing:
-                logger.error(f"Duplicate reference number: {report_data.reference_number}")
-                raise DuplicateKeyError(f"เลข สป.กค {report_data.reference_number} มีอยู่แล้ว")
-        
-        # อัปเดตข้อมูล
-        update_data = report_data.dict(exclude_unset=True)
-        update_data['updated_by'] = current_user_id
-        
-        for field, value in update_data.items():
+            if dup:
+                logger.error(f"Duplicate reference number: {updates['reference_number']}")
+                raise DuplicateKeyError(f"เลข สป.กค {updates['reference_number']} มีอยู่แล้ว")
+
+        updates["updated_by"] = current_user_id
+        for field, value in updates.items():
             if hasattr(report, field):
                 setattr(report, field, value)
-        
+
         db.commit()
         db.refresh(report)
-        
         logger.info(f"Updated report: {report.reference_number}")
-        
-        # ใช้ get_outgoing_report_by_id เพื่อ return ข้อมูลที่สมบูรณ์
+
         return get_outgoing_report_by_id(db, report_id)
-        
+
     except DuplicateKeyError:
         db.rollback()
         raise
@@ -604,40 +584,43 @@ def update_outgoing_report(
         logger.error(f"Stack trace: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
+
+# =========================
+# Delete (soft)
+# =========================
 def delete_outgoing_report(db: Session, report_id: UUID, current_user_id: UUID) -> Dict:
     """ลบรายงานส่งออก (soft delete)"""
     try:
         logger.info(f"=== START DELETE OUTGOING REPORT: {report_id} ===")
-        
-        # ค้นหารายงานที่ต้องการลบ
+
         report = db.query(OutgoingReport).filter(
             OutgoingReport.id == report_id,
             OutgoingReport.is_active == True
         ).first()
-        
+
         if not report:
             logger.error(f"Report not found: {report_id}")
             raise HTTPException(status_code=404, detail="ไม่พบรายงานที่ระบุ")
-        
+
         logger.info(f"Found report: {report.reference_number}")
-        
+
         # Soft delete
         report.is_active = False
         report.updated_by = current_user_id
-        
-        # ลบไฟล์แนบด้วย
+
+        # ปิดการแสดงไฟล์แนบทั้งหมด
         for attachment in report.attachments:
-            attachment.is_active = False
-        
+            if hasattr(attachment, "is_active"):
+                attachment.is_active = False
+
         db.commit()
-        
         logger.info(f"Deleted report: {report.reference_number}")
-        
+
         return {
             "id": str(report_id),
             "message": "ลบรายงานส่งออกเรียบร้อยแล้ว"
         }
-        
+
     except HTTPException:
         db.rollback()
         raise
@@ -647,6 +630,10 @@ def delete_outgoing_report(db: Session, report_id: UUID, current_user_id: UUID) 
         logger.error(f"Stack trace: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
+
+# =========================
+# User-related complaints with tracking
+# =========================
 def get_user_related_complaints_with_tracking(
     db: Session,
     current_user_id: UUID,
@@ -660,12 +647,11 @@ def get_user_related_complaints_with_tracking(
     complainant_name: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    รวม 'งานที่ผู้ใช้เกี่ยวข้อง' (assigned_officer หรือ ผู้ร้องเอง)
-    พร้อม timeline เหมือน get_outgoing_tracking แต่ทำเป็นรายการหลายเรื่อง + pagination
-    *ปรับ sorting ให้ใช้งานได้กับ SQL Server (ไม่มี NULLS LAST)
-    *เพิ่ม department_name ใน timeline และ latest
+    รวม 'งานที่ผู้ใช้เกี่ยวข้อง' พร้อม timeline + pagination
+    MSSQL-safe (fallback จาก ilike เป็น lower(..) LIKE lower(..))
     """
-    # ---------- helpers ----------
+    from sqlalchemy import case
+
     def _iso(dt):
         return dt.isoformat() if dt else None
 
@@ -678,12 +664,8 @@ def get_user_related_complaints_with_tracking(
     def _dept_name(obj) -> Optional[str]:
         dep = getattr(obj, "department", None)
         if dep is not None:
-            # ถ้าชื่อคอลัมน์เป็น name_th หรืออื่น ๆ เปลี่ยนตรงนี้ได้
             return getattr(dep, "name", None) or getattr(dep, "name_th", None) or getattr(dep, "title", None)
         return None
-
-    # MSSQL-safe: ใช้ CASE เพื่อจัด NULLs ไว้ท้าย (NULLS LAST)
-    from sqlalchemy import case
 
     status_th_map = {
         "submitted": "ส่งคำร้อง",
@@ -702,17 +684,13 @@ def get_user_related_complaints_with_tracking(
         "sent_to_agency": "ส่งหน่วยงานแล้ว",
     }
 
-    # ---------- base query: งานที่ user เกี่ยวข้อง ----------
-    q = db.query(Complaint).options(
-        joinedload(Complaint.status_history)
-    ).filter(
+    q = db.query(Complaint).options(joinedload(Complaint.status_history)).filter(
         or_(
             Complaint.assigned_officer_id == current_user_id,
             Complaint.created_by == current_user_id
         )
     )
 
-    # ---------- filters ----------
     if status:
         try:
             q = q.filter(Complaint.status == ComplaintStatus(status))
@@ -745,31 +723,37 @@ def get_user_related_complaints_with_tracking(
                 (Complaint.description.ilike(f"%{search}%"))
             )
         except Exception:
-            pass
+            q = q.filter(
+                or_(
+                    func.lower(Complaint.complaint_number).like(func.lower(f"%{search}%")),
+                    func.lower(Complaint.subject).like(func.lower(f"%{search}%")),
+                    func.lower(Complaint.description).like(func.lower(f"%{search}%")),
+                )
+            )
 
+    # name search (ถ้ามีคอลัมน์)
     if complainant_name:
-        try:
-            q = q.filter(Complaint.subject.ilike(f"%{complainant_name}%"))
-        except Exception:
-            pass
+        pattern = f"%{complainant_name}%"
+        clauses = []
+        for field in ["complainant_name", "complainant_fullname", "full_name", "first_name", "last_name", "name"]:
+            col = getattr(Complaint, field, None)
+            if col is not None:
+                try:
+                    clauses.append(col.ilike(pattern))
+                except Exception:
+                    clauses.append(func.lower(col).like(func.lower(pattern)))
+        if clauses:
+            q = q.filter(or_(*clauses))
 
-    # ---------- count + pagination (MSSQL-safe ordering: NULLS LAST) ----------
     total = q.count()
-
     ordering = [
-        case((Complaint.updated_at.is_(None), 1), else_=0).asc(),  # NULL → 1 (ไปท้ายเมื่อ ASC)
+        case((Complaint.updated_at.is_(None), 1), else_=0).asc(),
         Complaint.updated_at.desc(),
         Complaint.created_at.desc(),
     ]
+    complaints: List[Complaint] = q.order_by(*ordering).offset(skip).limit(limit).all()
 
-    complaints: List[Complaint] = (
-        q.order_by(*ordering)
-         .offset(skip)
-         .limit(limit)
-         .all()
-    )
-
-    # ---------- prepare OutgoingReport3 model (ถ้ามี) ----------
+    # OR3 optional
     OR3Model = None
     try:
         from models.outgoing_reports3 import OutgoingReport3 as OR3Model  # type: ignore
@@ -777,9 +761,7 @@ def get_user_related_complaints_with_tracking(
         OR3Model = None
 
     items: List[Dict[str, Any]] = []
-
     for c in complaints:
-        # --- timeline per complaint ---
         timeline: List[Dict[str, Any]] = []
 
         # 1) status history
@@ -797,10 +779,10 @@ def get_user_related_complaints_with_tracking(
         except Exception:
             pass
 
-        # 2) OutgoingReport (ส่งหนังสือออก) + department
+        # 2) OutgoingReport + department
         outgoing_list: List[OutgoingReport] = (
             db.query(OutgoingReport)
-              .options(joinedload(OutgoingReport.department))  # ✅ preload ชื่อหน่วยงาน
+              .options(joinedload(OutgoingReport.department))
               .filter(OutgoingReport.is_active == True, OutgoingReport.complaint_id == c.id)
               .order_by(OutgoingReport.created_at.asc())
               .all()
@@ -813,24 +795,26 @@ def get_user_related_complaints_with_tracking(
                 "reference_date": _iso(getattr(r, "reference_date", None)),
                 "subject": getattr(r, "subject", None),
                 "department_id": _safe_str(getattr(r, "department_id", None)),
-                "department_name": _dept_name(r),  # ✅ ชื่อหน่วยงาน
+                "department_name": _dept_name(r),
                 "confidentiality": _enum_str(getattr(r, "confidentiality_level", None)),
                 "urgency": _enum_str(getattr(r, "urgency_level", None)),
                 "by": _safe_str(getattr(r, "created_by", None)),
                 "id": _safe_str(getattr(r, "id", None)),
             })
 
-        # 3) OutgoingReport3 (ผลพิจารณา) + department (ถ้ามีความสัมพันธ์)
+        # 3) OR3 (decisions) + department if has rel
         latest_decision: Optional[Dict[str, Any]] = None
         decision_list = []
         if OR3Model:
-            decision_list = (
+            has_dept_rel = hasattr(OR3Model, "department")
+            q_or3 = (
                 db.query(OR3Model)
-                  .options(joinedload(getattr(OR3Model, "department", None)))  # ✅ พยายาม preload ถ้ามีความสัมพันธ์
                   .filter(OR3Model.is_active == True, OR3Model.complaint_id == c.id)
                   .order_by(OR3Model.created_at.asc())
-                  .all()
             )
+            if has_dept_rel:
+                q_or3 = q_or3.options(joinedload(OR3Model.department))
+            decision_list = q_or3.all()
 
             for d in decision_list:
                 result_raw = (
@@ -849,14 +833,12 @@ def get_user_related_complaints_with_tracking(
                     "id": _safe_str(getattr(d, "id", None)),
                     "result": result_raw,
                     "result_label": None,
-                    # ✅ หน่วยงานที่ตอบกลับ (ถ้าโมเดล OR3 มีความสัมพันธ์ department)
                     "department_id": _safe_str(getattr(d, "department_id", None)),
                     "department_name": _dept_name(d),
                 }
                 timeline.append(item)
                 latest_decision = item
 
-        # latest sent
         latest_sent = None
         if outgoing_list:
             r = outgoing_list[-1]
@@ -866,11 +848,10 @@ def get_user_related_complaints_with_tracking(
                 "reference_date": _iso(getattr(r, "reference_date", None)),
                 "subject": getattr(r, "subject", None),
                 "department_id": _safe_str(getattr(r, "department_id", None)),
-                "department_name": _dept_name(r),  # ✅ ชื่อหน่วยงานล่าสุดที่ส่ง
+                "department_name": _dept_name(r),
                 "created_at": _iso(getattr(r, "created_at", None)),
             }
 
-        # derive suggested next
         current_status = _enum_str(getattr(c, "status", None))
         suggested_next = None
 
@@ -886,12 +867,10 @@ def get_user_related_complaints_with_tracking(
         elif latest_sent:
             suggested_next = "sent_to_agency"
 
-        # sort timeline (ISO พร้อมเรียง)
         def _ts(x: Dict[str, Any]):
             return x.get("at") or x.get("reference_date") or x.get("created_at") or ""
         timeline.sort(key=_ts)
 
-        # push item
         items.append({
             "complaint": {
                 "id": _safe_str(getattr(c, "id", None)),
@@ -932,6 +911,10 @@ def get_user_related_complaints_with_tracking(
         }
     }
 
+
+# =========================
+# Single complaint tracking
+# =========================
 def get_outgoing_tracking(
     db: Session,
     complaint_id: UUID,
@@ -939,14 +922,8 @@ def get_outgoing_tracking(
 ) -> Dict[str, Any]:
     """
     ติดตามสถานะหลังส่งหนังสือออก (OutgoingReport → OutgoingReport3)
-    - สรุป Complaint + status_history
-    - รวม OutgoingReport (ส่งหน่วยงาน) และ OutgoingReport3 (ผลพิจารณา)
-    - คืน derived.suggested_next_status (ไม่แก้ DB)
-    - รองรับการกรองประเภท timeline ด้วย report_type
-    *เพิ่ม department_name ใน timeline และ latest
+    รวม timeline + derived next status
     """
-
-    # ---- helpers ----
     def _iso(dt):
         return dt.isoformat() if dt else None
 
@@ -981,7 +958,6 @@ def get_outgoing_tracking(
         "sent_to_agency": "ส่งหน่วยงานแล้ว",
     }
 
-    # ---- fetch base complaint + history ----
     complaint = (
         db.query(Complaint)
         .options(joinedload(Complaint.status_history))
@@ -991,19 +967,14 @@ def get_outgoing_tracking(
     if not complaint:
         return {"error": "COMPLAINT_NOT_FOUND"}
 
-    # ---- fetch OutgoingReport (การส่งหนังสือออก) + department ----
     outgoing_list: List[OutgoingReport] = (
         db.query(OutgoingReport)
-        .options(joinedload(OutgoingReport.department))   # ✅ preload department
-        .filter(
-            OutgoingReport.is_active == True,
-            OutgoingReport.complaint_id == complaint_id
-        )
+        .options(joinedload(OutgoingReport.department))
+        .filter(OutgoingReport.is_active == True, OutgoingReport.complaint_id == complaint_id)
         .order_by(OutgoingReport.created_at.asc())
         .all()
     )
 
-    # ---- fetch OutgoingReport3 (ผลพิจารณาจากหน่วยงาน) ถ้ามีโมเดลนี้ ----
     decision_list = []
     OR3Model = None
     try:
@@ -1012,33 +983,24 @@ def get_outgoing_tracking(
         OR3Model = None
 
     if OR3Model:
-        # พยายาม preload department ถ้ามีความสัมพันธ์
         try:
             decision_list = (
                 db.query(OR3Model)
                 .options(joinedload(getattr(OR3Model, "department", None)))
-                .filter(
-                    OR3Model.is_active == True,
-                    OR3Model.complaint_id == complaint_id
-                )
+                .filter(OR3Model.is_active == True, OR3Model.complaint_id == complaint_id)
                 .order_by(OR3Model.created_at.asc())
                 .all()
             )
         except Exception:
             decision_list = (
                 db.query(OR3Model)
-                .filter(
-                    OR3Model.is_active == True,
-                    OR3Model.complaint_id == complaint_id
-                )
+                .filter(OR3Model.is_active == True, OR3Model.complaint_id == complaint_id)
                 .order_by(OR3Model.created_at.asc())
                 .all()
             )
 
-    # ---- build timeline ----
     timeline: List[Dict[str, Any]] = []
 
-    # 1) status history ของ complaint
     try:
         for h in (complaint.status_history or []):
             st = _enum_str(getattr(h, "status", None))
@@ -1053,7 +1015,6 @@ def get_outgoing_tracking(
     except Exception:
         pass
 
-    # 2) OutgoingReport (ส่งหนังสือออก)
     for r in outgoing_list:
         timeline.append({
             "type": "outgoing_report",
@@ -1062,14 +1023,13 @@ def get_outgoing_tracking(
             "reference_date": _iso(getattr(r, "reference_date", None)),
             "subject": getattr(r, "subject", None),
             "department_id": _safe_str(getattr(r, "department_id", None)),
-            "department_name": _dept_name(r),  # ✅ ชื่อหน่วยงาน
+            "department_name": _dept_name(r),
             "confidentiality": _enum_str(getattr(r, "confidentiality_level", None)),
             "urgency": _enum_str(getattr(r, "urgency_level", None)),
             "by": _safe_str(getattr(r, "created_by", None)),
             "id": _safe_str(getattr(r, "id", None))
         })
 
-    # 3) OutgoingReport3 (ผลพิจารณาที่ตอบกลับ)
     latest_decision: Optional[Dict[str, Any]] = None
     for d in decision_list:
         result_raw = (
@@ -1088,14 +1048,12 @@ def get_outgoing_tracking(
             "id": _safe_str(getattr(d, "id", None)),
             "result": result_raw,
             "result_label": None,
-            # ✅ หน่วยงานผู้พิจารณา (ถ้ามีใน OR3)
             "department_id": _safe_str(getattr(d, "department_id", None)),
             "department_name": _dept_name(d),
         }
         timeline.append(item)
-        latest_decision = item  # ตัวท้ายสุดคืออันล่าสุด
+        latest_decision = item
 
-    # ---- latest sent (OutgoingReport ล่าสุด) ----
     latest_sent = None
     if outgoing_list:
         r = outgoing_list[-1]
@@ -1105,11 +1063,10 @@ def get_outgoing_tracking(
             "reference_date": _iso(getattr(r, "reference_date", None)),
             "subject": getattr(r, "subject", None),
             "department_id": _safe_str(getattr(r, "department_id", None)),
-            "department_name": _dept_name(r),  # ✅
+            "department_name": _dept_name(r),
             "created_at": _iso(getattr(r, "created_at", None)),
         }
 
-    # ---- derive suggested_next_status (ไม่เขียน DB) + label ไทย ----
     current_status = _enum_str(getattr(complaint, "status", None))
     suggested_next = None
 
@@ -1126,16 +1083,13 @@ def get_outgoing_tracking(
     elif latest_sent:
         suggested_next = "sent_to_agency"
 
-    # ---- filter timeline ตาม report_type (ถ้ามี) ----
     if report_type in {"outgoing_report", "outgoing_report3", "status_history"}:
         timeline = [t for t in timeline if t.get("type") == report_type]
 
-    # ---- sort timeline (ISO พร้อมเรียง) ----
     def _ts(x: Dict[str, Any]):
         return x.get("at") or x.get("reference_date") or x.get("created_at") or ""
     timeline.sort(key=_ts)
 
-    # ---- response ----
     return {
         "complaint": {
             "id": _safe_str(getattr(complaint, "id", None)),
@@ -1163,6 +1117,10 @@ def get_outgoing_tracking(
         }
     }
 
+
+# =========================
+# Attachments
+# =========================
 async def add_attachments_to_outgoing_report(
     db: Session,
     outgoing_report_id: UUID,
@@ -1171,8 +1129,8 @@ async def add_attachments_to_outgoing_report(
 ) -> Dict[str, Any]:
     """
     อัปโหลด 'หลายไฟล์' ให้รายงานส่งออกที่ระบุ
-    - ใช้ lib.file_upload.save_upload_file
-    - สร้างเรคอร์ด OutgoingReportAttachment แบบ safe-set เผื่อ schema ต่างกัน
+    - ไม่ส่ง keyword ที่โมเดลไม่มี (เช่น file_url) เข้า constructor โดยตรง
+    - ใช้ _set_if_has(...) เพื่อตั้งค่าเฉพาะฟิลด์ที่มีจริง
     """
     report = db.query(OutgoingReport).filter(OutgoingReport.id == outgoing_report_id).first()
     if not report:
@@ -1182,26 +1140,37 @@ async def add_attachments_to_outgoing_report(
 
     for f in files:
         info = await save_upload_file(f, f"outgoing-reports/{outgoing_report_id}")
+
         att = OutgoingReportAttachment()
         _set_if_has(
             att,
             outgoing_report_id=outgoing_report_id,
             file_name=info.get("filename") or f.filename,
-            file_url=info.get("file_url"),
             file_path=info.get("file_path"),
             file_size=str(info.get("file_size")) if info.get("file_size") is not None else None,
             file_type=info.get("file_type"),
             is_active=True,
         )
+        # ถ้า schema คุณมีคอลัมน์ file_url ค่อย set เพิ่ม
+        if hasattr(att, "file_url"):
+            att.file_url = info.get("file_url")
+
         db.add(att)
-        db.flush()  # ให้ได้ id
-        saved.append(_attachment_dict(att))
+        db.flush()
+        db.refresh(att)
+
+        payload = _attachment_dict(att)
+        if not payload.get("fileUrl") and info.get("file_url"):
+            payload["fileUrl"] = info["file_url"]
+
+        saved.append(payload)
 
     db.commit()
     return {
         "outgoing_report_id": str(outgoing_report_id),
         "attachments": saved
     }
+
 
 def list_attachments_of_outgoing_report(
     db: Session,
@@ -1214,7 +1183,6 @@ def list_attachments_of_outgoing_report(
     if hasattr(OutgoingReportAttachment, "is_active"):
         q = q.filter(OutgoingReportAttachment.is_active == True)
 
-    # เรียงใหม่สุดก่อน หากไม่มี created_at ให้ fallback เป็น id
     order_col = getattr(OutgoingReportAttachment, "created_at", None)
     if order_col is not None:
         q = q.order_by(order_col.desc())
@@ -1226,6 +1194,7 @@ def list_attachments_of_outgoing_report(
         "outgoing_report_id": str(outgoing_report_id),
         "attachments": [_attachment_dict(r) for r in rows]
     }
+
 
 def get_outgoing_report_attachment_fileinfo(
     db: Session,
@@ -1253,6 +1222,7 @@ def get_outgoing_report_attachment_fileinfo(
     media_type = getattr(att, "file_type", None) or "application/octet-stream"
     return file_path, media_type, filename
 
+
 def delete_outgoing_report_attachment_by_id(
     db: Session,
     outgoing_report_id: UUID,
@@ -1277,19 +1247,16 @@ def delete_outgoing_report_attachment_by_id(
             try:
                 delete_upload_file(file_path)
             except Exception:
-                # แม้ลบไฟล์จริงไม่สำเร็จ ก็ยังลบเรคอร์ดต่อไป
                 pass
         db.delete(att)
         db.commit()
         return {"code": "0003", "message": "ลบไฟล์แนบ (hard delete) เรียบร้อย", "attachment_id": str(attachment_id)}
 
-    # soft delete
     if hasattr(att, "is_active"):
         setattr(att, "is_active", False)
         db.commit()
         return {"code": "0001", "message": "ลบไฟล์แนบเรียบร้อย (soft delete)", "attachment_id": str(attachment_id)}
 
-    # ไม่มีฟิลด์ is_active → ลบเรคอร์ด
     db.delete(att)
     db.commit()
     return {"code": "0003", "message": "ลบเรคอร์ดไฟล์แนบ (no is_active field)", "attachment_id": str(attachment_id)}
