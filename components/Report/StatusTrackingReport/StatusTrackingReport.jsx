@@ -4,6 +4,7 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListCollaps from "@services/TableListCollaps/TableListCollaps";
 import { GetMyRelatedComplaints } from "@pages/api/complaint/complaint";
 
+/* ======================= ตัวเลือกฟิลเตอร์ ======================= */
 const departmentOptions = [
   { value: "ภาษีอากร", label: "ภาษีอากร" },
   { value: "ค่ารักษาพยาบาล", label: "ค่ารักษาพยาบาล" },
@@ -14,6 +15,8 @@ const departmentOptions = [
   { value: "อื่นๆ", label: "อื่นๆ" },
   { value: "โครงการสาธารณูปโภคพื้นฐาน", label: "โครงการสาธารณูปโภคพื้นฐาน" },
   { value: "โครงการลงทะเบียนสวัสดิการ", label: "โครงการลงทะเบียนสวัสดิการ" },
+  // (หมายเหตุ: ชุดนี้เป็น “หมวดหมู่” เป็นหลัก ถ้าต้องการให้กรองตามหน่วยงานจริง
+  // อาจต้องเพิ่มรายการหน่วยงานเข้าไปให้ครบเพื่อให้ตรงกับข้อมูล)
 ];
 
 const responsibleOfficerOptions = [
@@ -34,6 +37,7 @@ const statusOptions = [
   { value: "เสร็จสิ้น", label: "เสร็จสิ้น" },
 ];
 
+/* ======================= Utils แปลงค่า/คำนวนเวลา ======================= */
 // map สถานะ API -> 3 สถานะบน UI
 const mapStatusToUI = (code = "") => {
   const c = String(code).toLowerCase();
@@ -74,7 +78,6 @@ const diffDaysBetween = (startISO, endISO) => {
 const guessRefFromSubject = (subject) => {
   if (!subject || subject === "-") return null;
   const s = String(subject).trim();
-  // มีตัวเลขยาวพอ และ/หรือมีเครื่องหมาย -_/ ถือว่าเป็นโค้ดอ้างอิง
   const hasLongDigits = (s.match(/\d/g) || []).length >= 5;
   const hasSep = /[-_/]/.test(s);
   if (hasLongDigits || hasSep) return s;
@@ -85,35 +88,65 @@ const guessRefFromSubject = (subject) => {
 const getReferenceNumber = (item) => {
   const c = item?.complaint ?? {};
   const latest = item?.latest ?? {};
-  const direct = c.reference_number || latest?.sent?.reference_number || latest?.decision?.reference_number;
+  // ✅ ให้ความสำคัญ “เลขหนังสือส่งออกล่าสุด” ก่อน
+  const direct =
+    latest?.sent?.reference_number ||
+    c.reference_number ||
+    latest?.decision?.reference_number;
   if (direct) return String(direct);
+
   const fromSubject = guessRefFromSubject(c.subject);
   if (fromSubject) return fromSubject;
-  // สุดท้าย fallback เป็น complaint_number ให้ไม่ชนกับเลขรับ สรร. กรณีไม่มีจริง ๆ คุณอาจใช้ c.id ก็ได้
+
+  // fallback
   return c.complaint_number || c.id || "-";
 };
 
 // แปลง history -> แถวลูก (departmentsData)
 const buildHistoryRows = (item) => {
   const c = item?.complaint ?? {};
-  const history = Array.isArray(item?.history) ? item.history : [];
+  const latest = item?.latest ?? {};
+  const history = Array.isArray(item?.history) ? item.history.slice() : [];
   if (history.length === 0) return [];
-  const refNo = getReferenceNumber(item);
+
+  // เรียงตามเวลา (กันข้อมูล API ไม่เรียง)
+  history.sort((a, b) => new Date(a.at) - new Date(b.at));
+
+  const refNoFallback = getReferenceNumber(item);
 
   return history.map((h, idx) => {
     const prevAt = idx === 0 ? c.created_at : history[idx - 1]?.at ?? c.created_at;
     const stepDays = diffDaysBetween(prevAt, h.at);
-    const department = h.status === "sent_to_agency" ? (c.assigned_to ?? "-") : "-";
+
+    // ค่าเริ่มต้น
+    let department = "-";
+    let referenceNumber = refNoFallback;
+    let statusLabel = h.status_label ?? h.status ?? "-";
+
+    if (h.type === "status_history") {
+      // ถ้าเป็นสเต็ป "ส่งหน่วยงาน" ให้โชว์หน่วยงานเป้าหมาย (ถ้ามี)
+      if (String(h.status).toLowerCase() === "sent_to_agency") {
+        department = latest?.sent?.department_name || "-";
+      }
+      // statusLabel ใช้จาก status_label เดิม
+    } else if (h.type === "outgoing_report") {
+      // หนังสือ/รายงานส่งออก
+      department = h.department_name || latest?.sent?.department_name || "-";
+      referenceNumber = h.reference_number || refNoFallback;
+      statusLabel = "ทำหนังสือส่งหน่วยงาน";
+    }
+
     return {
       department,
       receiptNumber: c.complaint_number ?? "-",
-      referenceNumber: refNo,                 // แสดงเลขอ้างอิงเดียวกันในทุกสเต็ป (ถ้ามีสเต็ปละเลข อนาคตค่อยสลับมาใช้ของ event)
+      referenceNumber,
       workingDays: stepDays,
-      status: h.status_label ?? h.status ?? "-",
+      status: statusLabel,
     };
   });
 };
 
+/* ======================= หน้ารายงานหลัก ======================= */
 const StatusTrackingReport = () => {
   const router = useRouter();
   const [allComplaints, setAllComplaints] = useState([]);
@@ -129,16 +162,21 @@ const StatusTrackingReport = () => {
 
         const mapped = items.map((it, idx) => {
           const c = it?.complaint ?? {};
+          const latest = it?.latest ?? {};
+
+          // ✅ หน่วยงาน: ใช้ department_name จากหนังสือล่าสุดถ้ามี
+          const deptName = latest?.sent?.department_name || "-";
+
           return {
             id: c.id ?? idx + 1,
             claimantName: c.subject ?? "-",
-            department: c.assigned_to ?? "-",
-            responsibleOfficer: c.assigned_to ?? "-",
+            department: deptName,                         // หน่วยงาน
+            responsibleOfficer: c.assigned_to || "-",     // เจ้าหน้าที่ผู้รับผิดชอบ (บุคคล)
             receiptNumber: c.complaint_number ?? "-",
-            referenceNumber: getReferenceNumber(it),
+            referenceNumber: getReferenceNumber(it),      // ให้เลขหนังสือล่าสุดมาก่อน
             workingDays: diffDaysFrom(c.created_at),
-            status: mapStatusToUI(c.status),
-            departmentsData: buildHistoryRows(it),
+            status: mapStatusToUI(c.status),              // map เหลือ 3 สถานะบน UI
+            departmentsData: buildHistoryRows(it),        // รายการย่อยจาก timeline
           };
         });
 
@@ -168,11 +206,13 @@ const StatusTrackingReport = () => {
 
     const norm = (v) => (v ?? "").toString().toLowerCase();
 
+    // ไม่มีตัวกรอง -> คืนทั้งหมด
     if (!fName && !fDept && !fOfficer && !fReceipt && !fReference && !fStatus) {
       setFilteredComplaints(allComplaints);
       return;
     }
 
+    // (ตรรกะ OR ตามเดิม — ถ้าต้องการ AND ให้เปลี่ยนเป็นตรวจทุกเงื่อนไขพร้อมกัน)
     const result = allComplaints.filter((item) => {
       if (fName && norm(item.claimantName).includes(norm(fName))) return true;
       if (fDept && item.department === fDept) return true;
