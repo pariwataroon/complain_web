@@ -30,7 +30,7 @@ import app.api.v1.controllers.notification_controller as notification_controller
 logger = logging.getLogger(__name__)
 
 # Global flag สำหรับควบคุม debug logs
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 def get_or_set_default_complaint_channel(db: Session, channel_id: Optional[UUID] = None) -> Optional[UUID]:
     """ดึงหรือกำหนดช่องทางการร้องเรียนเริ่มต้น"""
