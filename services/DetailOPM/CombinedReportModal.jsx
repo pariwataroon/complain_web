@@ -17,7 +17,7 @@ import { SetOrgSummaryResult, AddOperating, OperatingAttachment } from "@pages/a
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import styles from "./CombinedReportModal.module.scss";
 
-const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) => {
+const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, operatingsDetails }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [attachments, setAttachments] = useState([]);
     const [fileErrors, setFileErrors] = useState({});
@@ -26,7 +26,8 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
 
     const dateOpened = watch("date_opened");
     const dateClosed = watch("date_closed");
-
+    console.log({ operatingsDetails });
+    
     const citizenStatusOptions = useMemo(() => [
         { value: 0, label: "อยู่ระหว่างดำเนินการ" },
         { value: 1, label: "ยุติเรื่อง" },
@@ -120,6 +121,10 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
             errors.push("• กรุณาเลือกสถานะการดำเนินการ");
         }
 
+        if (!data.org_id) {
+            errors.push("• กรุณาเลือกหน่วยงานที่จะส่งรายงาน");
+        }
+
         if (!data.type_id && data.type_id !== 0) {
             errors.push("• กรุณาเลือกประเภทเรื่องการตอบกลับ");
         }
@@ -171,6 +176,33 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
         }
     }, []);
 
+    const organizationOptions = useMemo(() => {
+        if (!operatingsDetails || operatingsDetails.length === 0) {
+            return [];
+        }
+
+        // ดึงข้อมูล org ที่ไม่ซ้ำกัน
+        const uniqueOrgs = [];
+        const orgMap = new Map();
+
+        operatingsDetails.forEach(operation => {
+            const orgId = operation.org_id;
+            const orgText = operation.org_text;
+
+            // ถ้ามี org_id และยังไม่เคยเพิ่มในรายการ
+            if (orgId && orgText && !orgMap.has(orgId)) {
+                orgMap.set(orgId, true);
+                uniqueOrgs.push({
+                    value: orgId,
+                    label: orgText
+                });
+            }
+        });
+
+        // เรียงตามชื่อ organization
+        return uniqueOrgs.sort((a, b) => a.label.localeCompare(b.label, 'th'));
+    }, [operatingsDetails]);
+
     // Combined submit function that calls both APIs
     const handleFormSubmit = async (data) => {
         if (isSubmitting) return;
@@ -209,6 +241,7 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
                 type_id: data.type_id,
                 status_id: data.status_id,
                 created_by: createdBy,
+                org_id: data.org_id,
                 contact_detail: data.contact_detail?.trim() || "",
                 date_opened: formatThaiDateToMySQL(data.date_opened),
                 date_closed: formatThaiDateToMySQL(data.date_closed),
@@ -421,6 +454,52 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData }) =
                                                     </MenuItem>
                                                 ))}
                                             </TextField>
+                                        </Box>
+                                    )}
+                                />
+                            </Box>
+
+                            {/* ส่งให้หน่วยงาน */}
+                            <Box className={styles.fieldGroup}>
+                                <Controller
+                                    name="org_id"
+                                    control={control}
+                                    defaultValue=""
+                                    rules={{
+                                        required: "กรุณาเลือกหน่วยงานที่จะส่งรายงาน"
+                                    }}
+                                    render={({ field, fieldState: { error } }) => (
+                                        <Box className={`${styles.fieldContainer} ${isSubmitting ? styles.loading : ''}`}>
+                                            <Typography className={styles.fieldLabel}>
+                                                ส่งให้หน่วยงาน <span className={styles.required}>*</span>
+                                            </Typography>
+                                            <TextField
+                                                select
+                                                fullWidth
+                                                {...field}
+                                                error={!!error}
+                                                helperText={error?.message}
+                                                className={styles.selectField}
+                                                placeholder="เลือกหน่วยงานที่จะส่งรายงาน"
+                                                disabled={isSubmitting || organizationOptions.length === 0}
+                                            >
+                                                {organizationOptions.length === 0 ? (
+                                                    <MenuItem value="" disabled>
+                                                        ไม่พบข้อมูลหน่วยงาน
+                                                    </MenuItem>
+                                                ) : (
+                                                    organizationOptions.map((option) => (
+                                                        <MenuItem key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </MenuItem>
+                                                    ))
+                                                )}
+                                            </TextField>
+                                            {organizationOptions.length === 0 && (
+                                                <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                                                    หมายเหตุ: ไม่พบข้อมูลหน่วยงานจากประวัติการดำเนินงาน
+                                                </Typography>
+                                            )}
                                         </Box>
                                     )}
                                 />

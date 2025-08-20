@@ -42,14 +42,14 @@ import ButtonSent from "@services/ButtonSent/ButtonSent";
 import CombinedReportModal from "./CombinedReportModal";
 import styles from "./DetailOPM.module.scss";
 import useDetailOPMData from "@hooks/admin/opm/useDetailOPMData";
-import { formatThaiOfficialDateTime } from "@utils/Formats";
+import { formatThaiOfficialDateTimeTimeseven } from "@utils/Formats";
 
 const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails, loading, formatDate, itemData }) => {
     const theme = useTheme();
     const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
-    console.log({ operatingsDetails });
+    // console.log({ operatingsDetails });
     
     const [reportModalOpen, setReportModalOpen] = useState(false);
 
@@ -93,9 +93,9 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
             const accountData = getAccountData();
             
             const customerData = getCustomerData();
-            console.log({ caseDetails });
-            console.log({ accountData });
-            console.log({ customerData });
+            // console.log({ caseDetails });
+            // console.log({ accountData });
+            // console.log({ customerData });
             
             if (opmChannelId && !autoCreateAttempted && !isCreating) {
             }
@@ -986,7 +986,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                                         <Box className={styles.detailItem}>
                                                             <DateRangeIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
                                                             <Typography variant="caption" color="text.secondary">
-                                                                วันที่ดำเนินการ: {formatThaiOfficialDateTime(operation.operating_date)}
+                                                                วันที่ดำเนินการ: {formatThaiOfficialDateTimeTimeseven(operation.operating_date)}
                                                             </Typography>
                                                         </Box>
                                                     )}
@@ -1196,6 +1196,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                 onClose={() => setReportModalOpen(false)}
                 params={params}
                 caseDetails={caseDetails}
+                operatingsDetails={operatingsDetails}
                 itemData={currentItemData}
             />
         </Box>

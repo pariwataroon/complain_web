@@ -211,6 +211,7 @@ const GetOperatingsSelect = async (case_id, take = 1000) => {
     throw error;
   }
 };
+
 const GetOperatings = async (case_id, take = 1000) => {
   try {
     const token_id = Cookies.get("opm_token");
@@ -256,11 +257,7 @@ const AddOperating = async (submitData) => {
     if (!token_id) {
       throw new Error("Token not found in cookies. Please authenticate first.");
     }
-    const org_id = Cookies.get("org_id");
-    if (!org_id) {
-      throw new Error("Token not found in cookies. Please authenticate first.");
-    }
-
+    
     const response = await soapInstance.post(
       process.env.NEXT_PUBLIC_OPM_API_OFFICER,
       `<?xml version="1.0" encoding="utf-8"?>
@@ -271,7 +268,7 @@ const AddOperating = async (submitData) => {
               <case_id>${submitData.case_id}</case_id>
               <type_id>${submitData.type_id}</type_id>
               <objective_id>6</objective_id>
-              <terminal_org_id>${org_id}</terminal_org_id>
+              <terminal_org_id>${submitData.org_id}</terminal_org_id>
               <terminal_owner_id>${submitData.created_by}</terminal_owner_id>
               <channel_id>5899EE5D72CF3652A4AAE69E429D9DED</channel_id>
               <contact_detail>${submitData.contact_detail}</contact_detail>

@@ -19,7 +19,6 @@ import {
   Edit,
   Inventory2,
   Description,
-  StackedLineChart,
   AccountBox,
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
@@ -35,6 +34,7 @@ import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 import { getElapsedTimeTH } from "@utils/Formats";
 import LayersIcon from "@mui/icons-material/Layers";
 import HistoryIcon from "@mui/icons-material/History";
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import Cookies from "js-cookie";
 
 export default function Sidebar() {
@@ -205,6 +205,7 @@ export default function Sidebar() {
     stacked_line_chart: LayersIcon,
     account_box: AccountBox,
     admin: HistoryIcon,
+    setting: AdminPanelSettingsIcon,
   };
 
   const headerTextMap = {
@@ -317,7 +318,6 @@ export default function Sidebar() {
 
         const filteredMenu = data.res_data.map((group) => {
           const resources = group.resources || [];
-
           return {
             group_id: group.group_id,
             group_name: group.group_name,
@@ -331,7 +331,8 @@ export default function Sidebar() {
             })),
           };
         });
-
+        
+        
         setMenuData(filteredMenu);
       } catch (err) {
         console.error(err);

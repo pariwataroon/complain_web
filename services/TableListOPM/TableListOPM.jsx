@@ -45,6 +45,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonSent from "@services/ButtonSent/ButtonSent";
 import { GetOperatingsSelect } from "@pages/api/opm/opm";
+import { formatThaiShortDateTime } from "@utils/Formats";
 
 const statusReadOptions = [
   { value: '', label: "ทั้งหมด" },
@@ -561,6 +562,7 @@ const TableListOPM = ({
                   <Typography variant="body2" fontWeight="medium">
                     {col.name === "case_code" ? renderCaseCodeCell(item) :
                       col.name === "customer_name" ? renderCustomerNameCell(item) :
+                        col.name === "ShowDateTime" ? formatThaiShortDateTime(item.ShowDateTime) || "-" :
                         renderCellValue(col, item)}
                   </Typography>
                 </Box>
@@ -573,7 +575,9 @@ const TableListOPM = ({
                   </Typography>
                   {columns.filter(col => col.priority > 2).map((col) => (
                     <Typography key={col.name} variant="caption" display="block">
-                      {col.label}: {item[col.name] ?? "-"}
+                      {col.label}: {col.name === "ShowDateTime" ?
+                        formatThaiShortDateTime(item[col.name]) || "-" :
+                        item[col.name] ?? "-"}
                     </Typography>
                   ))}
                 </Box>
@@ -592,6 +596,10 @@ const TableListOPM = ({
 
     if (col.name === "customer_name") {
       return renderCustomerNameCell(item);
+    }
+
+    if (col.name === "ShowDateTime") {
+      return formatThaiShortDateTime(item.ShowDateTime) || "-";
     }
 
     if (col.name === "isRead") {
@@ -615,6 +623,7 @@ const TableListOPM = ({
         );
       }
     }
+
     return item[col.name] ?? "-";
   };
 
