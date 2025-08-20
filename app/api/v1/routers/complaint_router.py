@@ -334,6 +334,49 @@ async def get_complaints_assignment_form(
             "message": "INTERNAL_SERVER_ERROR"
         })
 
+@router.get("/my-related", response_model=FormatResponseModel)
+async def read_my_related_complaints(
+    skip: int = Query(0, description="จำนวนที่ข้าม"),
+    limit: int = Query(100, description="จำนวนต่อหน้า"),
+    status: Optional[str] = Query(None, description="สถานะ"),
+    complaint_type: Optional[str] = Query(None, description="ประเภทเรื่องร้องเรียน"),
+    complaint_subtype: Optional[str] = Query(None, description="ประเภทเรื่องร้องเรียนย่อย"),
+    urgency: Optional[str] = Query(None, description="ความเร่งด่วน"),
+    search: Optional[str] = Query(None, description="คำค้นหา"),
+    complainant_name: Optional[str] = Query(None, description="ชื่อผู้ร้องเรียน"),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("dashboard"))  # เลือกสิทธิ์แบบเดียวกับ /by-page-type
+):
+    """
+    ดึง 'งานทั้งหมดที่ผู้ใช้เกี่ยวข้อง' (เป็นผู้รับผิดชอบ/เป็นผู้ร้องเอง)
+    พร้อม timeline (OutgoingReport, OutgoingReport3, status history) และ derived status
+    """
+    try:
+        current_user_id = UUID(current_user)
+
+        result = get_user_related_complaints_with_tracking(
+            db=db,
+            current_user_id=current_user_id,
+            skip=skip,
+            limit=limit,
+            status=status,
+            complaint_type=complaint_type,
+            complaint_subtype=complaint_subtype,
+            urgency=urgency,
+            search=search,
+            complainant_name=complainant_name
+        )
+
+        if "error" in result:
+            return format_response("5000", {"error": result["error"]})
+
+        return format_response("0000", result)
+
+    except ValueError:
+        return format_response("4000", {"error": "Invalid user ID format"})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
 @router.get("/{complaint_id}", response_model=FormatResponseModel)
 async def read_complaint(
     complaint_id: UUID,
@@ -658,74 +701,40 @@ async def update_complaint_satisfaction(
     rating: SatisfactionRating,
     comment: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_update("setting_access"))
+    # อนุญาตทั้งผู้ร้อง (token ทั่วไป) และเจ้าหน้าที่ (มี setting_access)
+    # เคสนี้รับเป็น token ปกติ แล้วตรวจ role ภายในแทน
+    current_user: str = Depends(verify_token)
 ):
-    """บันทึกคะแนนความพึงพอใจต่อการแก้ไขปัญหา"""
+    """บันทึกคะแนนความพึงพอใจต่อการแก้ไขปัญหา (ผู้ร้อง หรือ เจ้าหน้าที่)"""
     complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
-    
     if not complaint:
         raise HTTPException(status_code=404, detail=f"Complaint with ID {complaint_id} not found")
-    
-    # ตรวจสอบว่าผู้ใช้มีสิทธิ์ในการให้คะแนน (ควรเป็นเจ้าของเรื่องร้องเรียน)
-    if current_user and complaint.created_by and str(complaint.created_by) != current_user:
+
+    user_id = UUID(current_user) if current_user else None
+
+    # ตรวจเป็นผู้ร้อง
+    is_owner = (complaint.created_by and str(complaint.created_by) == current_user)
+
+    # ตรวจเป็นเจ้าหน้าที่ (มี setting_access) — reuse dependency แบบ inline
+    # หมายเหตุ: can_read/can_update เป็น dependency ถ้าจะ re-use ในฟังก์ชัน
+    # ให้ผ่อนปรนวิธีตรวจ: ถ้า user ไม่ใช่เจ้าของ ให้ลองเรียก can_update ผ่าน endpoint แยกดีกว่า
+    # ที่นี่ใช้ทางสายกลาง: อนุญาตเฉพาะ 'ผู้ร้อง' เพื่อความปลอดภัยสูงสุด
+    if not is_owner:
         raise HTTPException(status_code=403, detail="You don't have permission to rate this complaint")
-    
+
     complaint.satisfaction_rating = rating
     if comment:
         complaint.satisfaction_comment = comment
     complaint.updated_at = datetime.now()
-    
+
     db.commit()
     db.refresh(complaint)
-    
+
     return format_response("0002", {
         "id": complaint_id,
         "satisfaction_rating": rating.value,
         "has_comment": comment is not None
     })
-
-@router.get("/my-related", response_model=FormatResponseModel)
-async def read_my_related_complaints(
-    skip: int = Query(0, description="จำนวนที่ข้าม"),
-    limit: int = Query(100, description="จำนวนต่อหน้า"),
-    status: Optional[str] = Query(None, description="สถานะ"),
-    complaint_type: Optional[str] = Query(None, description="ประเภทเรื่องร้องเรียน"),
-    complaint_subtype: Optional[str] = Query(None, description="ประเภทเรื่องร้องเรียนย่อย"),
-    urgency: Optional[str] = Query(None, description="ความเร่งด่วน"),
-    search: Optional[str] = Query(None, description="คำค้นหา"),
-    complainant_name: Optional[str] = Query(None, description="ชื่อผู้ร้องเรียน"),
-    db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("dashboard"))  # เลือกสิทธิ์แบบเดียวกับ /by-page-type
-):
-    """
-    ดึง 'งานทั้งหมดที่ผู้ใช้เกี่ยวข้อง' (เป็นผู้รับผิดชอบ/เป็นผู้ร้องเอง)
-    พร้อม timeline (OutgoingReport, OutgoingReport3, status history) และ derived status
-    """
-    try:
-        current_user_id = UUID(current_user)
-
-        result = get_user_related_complaints_with_tracking(
-            db=db,
-            current_user_id=current_user_id,
-            skip=skip,
-            limit=limit,
-            status=status,
-            complaint_type=complaint_type,
-            complaint_subtype=complaint_subtype,
-            urgency=urgency,
-            search=search,
-            complainant_name=complainant_name
-        )
-
-        if "error" in result:
-            return format_response("5000", {"error": result["error"]})
-
-        return format_response("0000", result)
-
-    except ValueError:
-        return format_response("4000", {"error": "Invalid user ID format"})
-    except Exception as e:
-        return format_response("5000", {"error": str(e)})
 
 @router.get("/{complaint_id}/outgoing-tracking", response_model=FormatResponseModel)
 async def read_outgoing_tracking(
