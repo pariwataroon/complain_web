@@ -777,6 +777,7 @@ def get_user_related_complaints_with_tracking(
     """
     รวม 'งานที่ผู้ใช้เกี่ยวข้อง' (assigned_officer หรือ ผู้ร้องเอง)
     พร้อม timeline เหมือน get_outgoing_tracking แต่ทำเป็นรายการหลายเรื่อง + pagination
+    *ปรับ sorting ให้ใช้งานได้กับ SQL Server (ไม่มี NULLS LAST)
     """
     # ---------- helpers ----------
     def _iso(dt):
@@ -787,6 +788,10 @@ def get_user_related_complaints_with_tracking(
 
     def _safe_str(v):
         return str(v) if v is not None else None
+
+    # MSSQL-safe: ใช้ CASE เพื่อจัด NULLs ไว้ท้าย (NULLS LAST)
+    # นำเข้าในฟังก์ชันเพื่อไม่ต้องแก้ imports ด้านบนไฟล์
+    from sqlalchemy import case
 
     status_th_map = {
         "submitted": "ส่งคำร้อง",
@@ -817,14 +822,12 @@ def get_user_related_complaints_with_tracking(
 
     # ---------- filters ----------
     if status:
-        # รับทั้ง enum string/รหัสดิบ
         try:
             q = q.filter(Complaint.status == ComplaintStatus(status))
         except Exception:
             q = q.filter(Complaint.status == status)
 
     if complaint_type:
-        # ช่องนี้ขึ้นกับ schema ของคุณ ถ้าเก็บเป็น text ใช้ ilike
         try:
             q = q.filter(Complaint.complaint_type.ilike(f"%{complaint_type}%"))
         except Exception:
@@ -837,14 +840,12 @@ def get_user_related_complaints_with_tracking(
             pass
 
     if urgency:
-        # ถ้าเก็บเป็น enum ก็รับทั้ง string/enum
         try:
             q = q.filter(Complaint.urgency_level == urgency)
         except Exception:
             pass
 
     if search:
-        # ค้นหาเบื้องต้นจากเลขคำร้อง/เรื่อง/รายละเอียด
         try:
             q = q.filter(
                 (Complaint.complaint_number.ilike(f"%{search}%")) |
@@ -855,18 +856,26 @@ def get_user_related_complaints_with_tracking(
             pass
 
     if complainant_name:
-        # หากชื่อผู้ร้องเก็บใน JSON (complainant_data) ฝั่ง DB อาจค้นยาก
-        # ตรงนี้เลือกค้นจาก subject/description เป็นหลัก และให้ FE เติมชื่อเพื่อกรอง client side ก็ได้
+        # ถ้าชื่อผู้ร้องเก็บใน JSON อาจต้องค้นฝั่ง DB ยาก — เบื้องต้นกรองจาก subject/description
         try:
             q = q.filter(Complaint.subject.ilike(f"%{complainant_name}%"))
         except Exception:
             pass
 
-    # ---------- count + pagination ----------
+    # ---------- count + pagination (MSSQL-safe ordering: NULLS LAST) ----------
     total = q.count()
+
+    ordering = [
+        case((Complaint.updated_at.is_(None), 1), else_=0).asc(),  # NULL → 1 (ไปท้ายเมื่อ ASC)
+        Complaint.updated_at.desc(),
+        Complaint.created_at.desc(),
+    ]
+
     complaints: List[Complaint] = (
-        q.order_by(Complaint.updated_at.desc().nullslast(), Complaint.created_at.desc())
-         .offset(skip).limit(limit).all()
+        q.order_by(*ordering)
+         .offset(skip)           # SQLAlchemy (mssql) → OFFSET ? ROWS
+         .limit(limit)           # SQLAlchemy (mssql) → FETCH NEXT ? ROWS ONLY
+         .all()
     )
 
     # ---------- prepare OutgoingReport3 model (ถ้ามี) ----------
@@ -979,7 +988,7 @@ def get_user_related_complaints_with_tracking(
         elif latest_sent:
             suggested_next = "sent_to_agency"
 
-        # sort timeline
+        # sort timeline (ISO พร้อมเรียง)
         def _ts(x: Dict[str, Any]):
             return x.get("at") or x.get("reference_date") or x.get("created_at") or ""
         timeline.sort(key=_ts)
