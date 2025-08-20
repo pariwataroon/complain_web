@@ -23,7 +23,7 @@ const SelectFieldDepartment = ({
     required = false,
     disabled = false,
     onDepartmentSelect = () => { },
-    filterBySignerId = null, // ID ของผู้ลงนามที่เลือก
+    filterBySignerId = null,
     showDepartmentInfo = false,
     ...props
 }) => {
@@ -73,7 +73,6 @@ const SelectFieldDepartment = ({
             setLoading(true);
             setApiError(null);
 
-          
             // ดึงข้อมูลจาก GetAllSignatureAuthorities
             const signatureAuthorities = await GetAllSignatureAuthorities();
 
@@ -81,62 +80,58 @@ const SelectFieldDepartment = ({
                 let departmentOptions = [];
 
                 if (filterBySignerId) {
-                    // กรองหน่วยงานตาม signer ID ที่เลือก
-                    const filteredAuthorities = signatureAuthorities.filter(auth =>
-                        auth.value === filterBySignerId // auth.value คือ user.id
+                    // หาผู้ลงนามที่เลือก
+                    const selectedAuthority = signatureAuthorities.find(auth =>
+                        auth.value === filterBySignerId
                     );
 
-                    // สร้างรายการหน่วยงานจากผู้ลงนามที่เลือก
-                    departmentOptions = filteredAuthorities.map(auth => ({
-                        value: auth.departmentId, // department.id
-                        label: auth.departmentName, // department.name
-                        code: auth.department?.code || "", // ถ้ามี code
-                        shortName: auth.department?.shortName || "", // ถ้ามี shortName
-                        authority: auth // เก็บข้อมูล authority ไว้ด้วย
-                    }));
+                    if (selectedAuthority && selectedAuthority.departments) {
+                        // สร้างรายการหน่วยงานทั้งหมดของผู้ลงนามที่เลือก
+                        departmentOptions = selectedAuthority.departments.map(dept => ({
+                            value: dept.id,
+                            label: dept.name,
+                            code: dept.code || "",
+                            shortName: dept.shortName || "",
+                            authority: selectedAuthority
+                        }));
+                    }
 
-                    const uniqueDepartments = departmentOptions.filter((dept, index, self) =>
-                        index === self.findIndex(d => d.value === dept.value)
-                    );
+                    console.log('Departments for selected signer:', {
+                        signerId: filterBySignerId,
+                        signerName: selectedAuthority?.label,
+                        departments: departmentOptions
+                    });
 
-                    setOptions(uniqueDepartments);
+                    setOptions(departmentOptions);
 
                 } else {
-                    // ถ้าไม่ได้เลือกผู้ลงนาม ให้แสดงหน่วยงานทั้งหมด
-                    const allDepartments = signatureAuthorities.map(auth => ({
-                        value: auth.departmentId,
-                        label: auth.departmentName,
-                        code: auth.department?.code || "",
-                        shortName: auth.department?.shortName || "",
-                        authority: auth
-                    }));
+                    const allDepartments = [];
 
-                    // ลบ duplicate departments
-                    const uniqueDepartments = allDepartments.filter((dept, index, self) =>
-                        index === self.findIndex(d => d.value === dept.value)
-                    );
+                    signatureAuthorities.forEach(auth => {
+                        if (auth.departments) {
+                            auth.departments.forEach(dept => {
+                                const exists = allDepartments.find(d => d.value === dept.id);
+                                if (!exists) {
+                                    allDepartments.push({
+                                        value: dept.id,
+                                        label: dept.name,
+                                        code: dept.code || "",
+                                        shortName: dept.shortName || "",
+                                        authority: auth
+                                    });
+                                }
+                            });
+                        }
+                    });
 
-                    setOptions(uniqueDepartments);
-
+                    setOptions(allDepartments);
                 }
             } else {
-                console.warn("⚠️ SelectFieldDepartment: No signature authorities data found", {
-                    user: "vampirebeam",
-                    timestamp: "2025-06-16 18:17:39",
-                    component: "SelectFieldDepartment",
-                    response: signatureAuthorities
-                });
+                console.warn("⚠️ SelectFieldDepartment: No signature authorities data found");
                 setOptions([]);
             }
         } catch (error) {
-            console.error("❌ SelectFieldDepartment: Error fetching departments data", {
-                user: "vampirebeam",
-                timestamp: "2025-06-16 18:17:39",
-                component: "SelectFieldDepartment",
-                error: error.message,
-                stack: error.stack
-            });
-
+            console.error("❌ SelectFieldDepartment: Error fetching departments data", error);
             setApiError("ไม่สามารถโหลดข้อมูลหน่วยงานได้");
             setOptions([]);
         } finally {

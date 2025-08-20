@@ -95,7 +95,6 @@ const RequestResultProgress = () => {
       }));
 
       setSearchResults(results);
-      console.log("results for display", results);
     } catch (err) {
       setSearchResults([]);
       console.error("handleSearch error", err);

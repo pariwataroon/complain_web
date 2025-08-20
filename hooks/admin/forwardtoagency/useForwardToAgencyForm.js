@@ -8,6 +8,10 @@ import {
   showLoading,
   closeAlert,
 } from "@utils/Alerts";
+import {
+  CreateOutgoingReport,
+  UploadOutgoingReportAttachments,
+} from "@pages/api/outgoinreports/outgoinreports";
 
 // Extended validation schema with file validation
 const validationSchema = yup.object().shape({
@@ -51,9 +55,7 @@ const validationSchema = yup.object().shape({
 
 // Hook หลัก
 export const useForwardToAgencyForm = () => {
-  // State to store the actual file object (not just the name)
   const [fileData, setFileData] = useState(null);
-  // Add a key state to force file input to re-render
   const [fileInputKey, setFileInputKey] = useState(0);
 
   // Current time and user from the input
@@ -71,18 +73,18 @@ export const useForwardToAgencyForm = () => {
     resolver: yupResolver(validationSchema),
     mode: "onChange",
     defaultValues: {
-      salutation: "",
-      refNo: "",
-      date1: null,
+      position_id: "",
+      reference_number: "",
+      reference_date: null,
       subject: "",
-      bookNo: "",
-      date2: null,
-      signer: "",
-      department: "",
-      confidentiality: "null",
-      urgency: "null",
+      complaint_number: "",
+      complaint_number_date: null,
+      signature_authority_user_id: "",
+      department_id: "",
+      confidentiality_level: "null",
+      urgency_level: "null",
       attachment: "",
-      note: "",
+      remarks: "",
     },
   });
 
@@ -170,14 +172,7 @@ export const useForwardToAgencyForm = () => {
 
       // Log the file information
       const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-      console.log("📎 File attached:", {
-        name: file.name,
-        size: `${fileSizeMB} MB`,
-        type: file.type,
-        uploadedBy: currentUser,
-        uploadedAt: currentTime,
-        lastModified: new Date(file.lastModified).toISOString(),
-      });
+
     },
     [setValue, resetFileInput, currentTime, currentUser]
   );
@@ -186,12 +181,7 @@ export const useForwardToAgencyForm = () => {
   const handleDateChange = useCallback(
     (field) => (date) => {
       setValue(field, date, { shouldValidate: true });
-      console.log(`📅 Date ${field} changed:`, {
-        field,
-        value: date,
-        changedBy: currentUser,
-        changedAt: currentTime,
-      });
+      
     },
     [setValue, currentTime, currentUser]
   );
@@ -216,82 +206,158 @@ export const useForwardToAgencyForm = () => {
     // Reset file input completely
     resetFileInput();
 
-    console.log(`🧹 Form cleared by ${currentUser} at ${currentTime}`);
   }, [reset, resetFileInput, currentTime, currentUser]);
 
-  // ฟังก์ชันสำหรับบันทึกข้อมูล
   const handleSave = useCallback(
     async (data) => {
       try {
         showLoading("กำลังบันทึกข้อมูล...");
 
-        // Check if file was attached
         if (!fileData) {
           closeAlert();
           alertError("ไม่พบไฟล์แนบ", "กรุณาอัพโหลดไฟล์ก่อนบันทึกข้อมูล");
           return { success: false };
         }
 
-        // สร้างข้อมูลที่จะส่ง พร้อมข้อมูลผู้ใช้และเวลาปัจจุบัน
-        const submitData = {
-          ...data,
-          fileInfo: {
-            name: fileData.name,
-            size: fileData.size,
-            type: fileData.type,
-            lastModified: fileData.lastModified,
-          },
-          submittedBy: currentUser,
-          submittedAt: currentTime,
-          submittedAtThai: new Date(currentTime).toLocaleString("th-TH", {
-            timeZone: "Asia/Bangkok",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          }),
-          formId: `FORM_${Date.now()}`,
-          version: "1.0.0",
-          sessionId: `SESSION_${Math.random().toString(36).substr(2, 9)}`,
-          browserInfo: {
-            userAgent:
-              typeof navigator !== "undefined" ? navigator.userAgent : "N/A",
-            language:
-              typeof navigator !== "undefined" ? navigator.language : "th-TH",
-            platform:
-              typeof navigator !== "undefined" ? navigator.platform : "N/A",
-          },
+        const outgoingReportData = {
+          position_id: data.salutation,
+          reference_number: data.refNo,
+          reference_date: data.date1,
+          subject: data.subject,
+          complaint_number: data.bookNo,
+          complaint_number_date: data.date2,
+          signature_authority_user_id: data.signer,
+          department_id: data.department,
+          confidentiality_level: data.confidentiality,
+          urgency_level: data.urgency,
+          remarks: data.note || "",
         };
 
-        // Log ข้อมูลที่จะส่ง (สำหรับ development)
-        console.log("📋 Form Data to Submit:", submitData);
-        console.log("📄 File to Upload:", fileData);
-        console.log("👤 Current User:", currentUser);
-        console.log("🕐 Current Time (UTC):", currentTime);
-        console.log("🕐 Current Time (Thai): ", submitData.submittedAtThai);
-        console.log("🌏 Browser Info:", submitData.browserInfo);
 
-        // จำลองการเรียก API
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        showLoading("กำลังสร้างรายงาน...");
+
+        // 🔍 Add try-catch specifically for API call
+        let createResponse;
+        try {
+          createResponse = await CreateOutgoingReport(outgoingReportData);
+        } catch (apiError) {
+          console.error("🚨 API Call Error:", apiError);
+          console.error("🚨 API Error Details:", {
+            message: apiError.message,
+            response: apiError.response,
+            status: apiError.response?.status,
+            statusText: apiError.response?.statusText,
+            data: apiError.response?.data,
+          });
+
+        }
+
+
+        if (createResponse === null || createResponse === undefined) {
+          console.error("❌ createResponse is null or undefined");
+        }
+        if (createResponse === null || createResponse === undefined) {
+          console.error("❌ No response received from CreateOutgoingReport");
+        }
+
+        if (typeof createResponse !== "object") {
+          console.error("❌ Invalid response type:", typeof createResponse);
+          console.error("❌ Response value:", createResponse);
+        }
+
+
+        // 🔍 แก้ไขการตรวจสอบ success ตาม API response จริง
+        const isSuccess =
+          createResponse.success === true ||
+          createResponse.success === "true" ||
+          createResponse.res_code === "0001" ||
+          createResponse.res_message === "CREATE_DATA_SUCCESSFULLY" ||
+          (createResponse.res_code &&
+            createResponse.res_code.toString().startsWith("2")) ||
+          createResponse.status === "success";
+
+        if (!isSuccess) {
+          console.error("❌ API indicated failure:", createResponse);
+
+          const errorSources = [
+            createResponse?.res_data?.error,
+            createResponse?.res_data?.message,
+            createResponse?.res_message,
+            createResponse?.message,
+            createResponse?.error,
+            createResponse?.data?.error,
+            createResponse?.data?.message,
+          ].filter(Boolean);
+
+          const errorMessage =
+            errorSources[0] || "ไม่สามารถสร้างรายงานได้ (ไม่ทราบสาเหตุ)";
+
+          console.error("❌ Final error message:", errorMessage);
+
+          closeAlert();
+          await alertError("เกิดข้อผิดพลาด", errorMessage);
+          return { success: false };
+        }
+
+        const reportId = createResponse.res_data?.id;
+        console.log({ reportId });
+        
+        if (!reportId) {
+          console.error("❌ No report ID found in response:", createResponse);
+        }
+
+
+        // Step 2: อัพโหลดไฟล์แนบ (ถ้ามีไฟล์)
+        if (reportId) {
+          showLoading("กำลังอัพโหลดไฟล์แนบ...");
+
+          const fileForUpload = prepareFileAsFormData(fileData);
+
+          try {
+            const uploadResponse = await UploadOutgoingReportAttachments(
+              fileForUpload,
+              reportId
+            );
+
+            if (!uploadResponse || !uploadResponse.success) {
+              console.warn("⚠️ File upload failed:", uploadResponse?.message);
+              await alertError(
+                "คำเตือน",
+                "สร้างรายงานสำเร็จแล้ว แต่ไม่สามารถอัพโหลดไฟล์แนบได้: " +
+                  (uploadResponse?.message ||
+                    uploadResponse?.res_message ||
+                    "ไม่ทราบสาเหตุ")
+              );
+            }
+          } catch (uploadError) {
+            console.error("❌ File upload error:", uploadError);
+            await alertError(
+              "คำเตือน",
+              "สร้างรายงานสำเร็จแล้ว แต่ไม่สามารถอัพโหลดไฟล์แนบได้: " +
+                (uploadError.message || "ไม่ทราบสาเหตุ")
+            );
+          }
+        }
 
         closeAlert();
 
-        // สร้าง success message ที่มีข้อมูลรายละเอียด
         const successMessage = `
-          <div style="text-align: center; line-height: 1.6;">
-            <p style="margin-bottom: 15px; font-size: 16px;"> บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
-          </div>
-        `;
+        <div style="text-align: center; line-height: 1.6;">
+          <p style="margin-bottom: 15px; font-size: 16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
+          <p style="margin-bottom: 10px; color: #666;">รหัสรายงาน: <strong>${reportId}</strong></p>
+          <p style="margin-bottom: 10px; color: #666;">เรื่อง: <strong>${
+            data.subject
+          }</strong></p>
+          ${
+            fileData
+              ? `<p style="color: #666;">ไฟล์แนบ: <strong>${fileData.name}</strong></p>`
+              : ""
+          }
+        </div>
+      `;
 
-        await alertSuccess(
-          "บันทึกสำเร็จ!",
-          successMessage,
-          true // ใช้ HTML
-        );
+        await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
 
-        // Reset form after successful submission
         reset({
           salutation: "",
           refNo: "",
@@ -307,27 +373,50 @@ export const useForwardToAgencyForm = () => {
           note: "",
         });
 
-        // Reset file input completely
         resetFileInput();
 
-        console.log(
-          `🔄 Form reset after successful submission by ${currentUser} at ${currentTime}`
-        );
-
-        // Return success status for component to handle
-        return { success: true };
+        return {
+          success: true,
+          reportId: reportId,
+          data: createResponse.res_data || createResponse.data,
+        };
       } catch (error) {
         closeAlert();
         console.error("❌ Save error:", error);
-        await alertError(
-          "เกิดข้อผิดพลาด",
-          `ไม่สามารถบันทึกข้อมูลได้: ${error.message || "กรุณาลองใหม่อีกครั้ง"}`
-        );
+        console.error("❌ Error stack:", error.stack);
+
+        let errorMessage = "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง";
+
+        if (error.response?.data) {
+          const responseData = error.response.data;
+
+          if (responseData.res_code === "4090") {
+            errorMessage =
+              responseData.res_data?.error || "เลข สป.กค. มีอยู่แล้ว";
+          } else {
+            errorMessage =
+              responseData.res_data?.error ||
+              responseData.res_message ||
+              responseData.message ||
+              errorMessage;
+          }
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        console.error("❌ Final error message:", errorMessage);
+        await alertError("เกิดข้อผิดพลาด", errorMessage);
         return { success: false, error };
       }
     },
     [fileData, reset, resetFileInput, currentTime, currentUser]
   );
+
+  const prepareFileAsFormData = (file, reportId) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return formData;
+  };
 
   // ฟังก์ชันตรวจสอบว่า field ไหนที่มี error
   const getFieldError = useCallback(

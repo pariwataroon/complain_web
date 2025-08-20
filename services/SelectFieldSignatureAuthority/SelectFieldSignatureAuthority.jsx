@@ -52,12 +52,7 @@ const SelectFieldSignatureAuthority = ({
   const handleClear = (e) => {
     e.stopPropagation();
 
-    console.log("🧹 SelectFieldSignatureAuthority: Clear button clicked", {
-      user: "vampirebeam",
-      timestamp: "2025-06-16 17:59:30",
-      component: "SelectFieldSignatureAuthority",
-      previousValue: selectedValue,
-    });
+    
 
     setSelectedUser(null);
     onChange({
@@ -71,12 +66,7 @@ const SelectFieldSignatureAuthority = ({
   };
 
   const handleRetry = () => {
-    console.log("🔄 SelectFieldSignatureAuthority: Retrying data fetch", {
-      user: "vampirebeam",
-      timestamp: "2025-06-16 17:59:30",
-      component: "SelectFieldSignatureAuthority",
-      action: "RETRY",
-    });
+    
 
     setApiError(null);
     setLoading(true);
@@ -88,52 +78,20 @@ const SelectFieldSignatureAuthority = ({
       setLoading(true);
       setApiError(null);
 
-      console.log(
-        "🔄 SelectFieldSignatureAuthority: Fetching signature authorities data",
-        {
-          user: "vampirebeam",
-          timestamp: "2025-06-16 17:59:30",
-          component: "SelectFieldSignatureAuthority",
-          action: "FETCH_SIGNATURE_AUTHORITIES",
-        }
-      );
+     
 
       const authorities = await GetAllSignatureAuthorities();
 
       if (authorities && authorities.length > 0) {
         setOptions(authorities);
 
-        console.log(
-          "✅ SelectFieldSignatureAuthority: Data loaded successfully",
-          {
-            user: "vampirebeam",
-            timestamp: "2025-06-16 17:59:30",
-            component: "SelectFieldSignatureAuthority",
-            count: authorities.length,
-            authorities: authorities.map((a) => ({
-              id: a.value,
-              name: a.label,
-              department: a.departmentName,
-            })),
-          }
-        );
+        
       } else {
-        console.warn("⚠️ SelectFieldSignatureAuthority: No data found", {
-          user: "vampirebeam",
-          timestamp: "2025-06-16 17:59:30",
-          component: "SelectFieldSignatureAuthority",
-          response: authorities,
-        });
+        console.warn("⚠️ SelectFieldSignatureAuthority: No data found");
         setOptions([]);
       }
     } catch (error) {
-      console.error("❌ SelectFieldSignatureAuthority: Error fetching data", {
-        user: "vampirebeam",
-        timestamp: "2025-06-16 17:59:30",
-        component: "SelectFieldSignatureAuthority",
-        error: error.message,
-        stack: error.stack,
-      });
+      console.error("❌ SelectFieldSignatureAuthority: Error fetching data");
 
       setApiError("ไม่สามารถโหลดข้อมูลผู้ลงนามได้");
       setOptions([]);
@@ -178,19 +136,7 @@ const SelectFieldSignatureAuthority = ({
             (opt) => opt.value === selectedVal
           );
 
-          console.log("✍️ SelectFieldSignatureAuthority: Value changed", {
-            user: "vampirebeam",
-            timestamp: "2025-06-16 17:59:30",
-            component: "SelectFieldSignatureAuthority",
-            selectedValue: selectedVal,
-            selectedAuthority: selectedAuthority
-              ? {
-                  id: selectedAuthority.value,
-                  name: selectedAuthority.label,
-                  department: selectedAuthority.departmentName,
-                }
-              : null,
-          });
+          
 
           setSelectedUser(selectedAuthority);
 

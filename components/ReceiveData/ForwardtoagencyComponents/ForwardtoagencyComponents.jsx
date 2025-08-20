@@ -51,23 +51,33 @@ const ForwardtoagencyComponents = () => {
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
   const onSubmit = async (data) => {
-    const result = await handleSave(data);
+    const confidentialityObj = confidentialityOptions.find(
+      opt => String(opt.value) === String(data.confidentiality)
+    );
+    const urgencyObj = urgencyOptions.find(
+      opt => String(opt.value) === String(data.urgency)
+    );
+
+    const submitData = {
+      ...data,
+      confidentiality: confidentialityObj?.label ?? "",
+      urgency: urgencyObj?.label ?? "",
+    };
+    const result = await handleSave(submitData);
     if (result?.success) {
-      // Reset component-specific state
       setSelectedSigner(null);
       setSelectedDepartment(null);
     }
   };
-  // --- เปลี่ยน useEffect เปิด Dialog ให้ยิง API ---
+
   useEffect(() => {
     if (openSearchDialog) {
-      setSearchText(""); // reset input
-      handleSearch(""); // โหลดรายการทั้งหมดทันทีที่เปิด (keyword ว่าง)
+      setSearchText("");
+      handleSearch("");
       inputRef.current?.focus();
     }
   }, [openSearchDialog]);
 
-    // --- handleSearch ยังคงเดิม (ยิง API search ด้วย keyword) ---
   
     const handleSearch = async (keyword) => {
       setSearchLoading(true);
@@ -78,14 +88,11 @@ const ForwardtoagencyComponents = () => {
           search: keyword || "",
         });
   
-        console.log("API response", response);
   
-        // ใช้ complaint_number เป็น label และ value หลัก
         const items = Array.isArray(response?.res_data?.items)
           ? response.res_data.items
           : [];
   
-        console.log("items for result", items);
   
         const results = items.map((item) => ({
           ...item,
@@ -94,7 +101,6 @@ const ForwardtoagencyComponents = () => {
         }));
   
         setSearchResults(results);
-        console.log("results for display", results);
       } catch (err) {
         setSearchResults([]);
         console.error("handleSearch error", err);
@@ -197,7 +203,6 @@ const ForwardtoagencyComponents = () => {
       setUrgencyOptions(normalizeOptions(urgencyData));
 
     } catch (error) {
-      console.error("❌ fetchOptions error:", error);
 
       setConfidentialityOptions([
         { value: 1, label: "ปกติ" },

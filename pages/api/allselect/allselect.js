@@ -276,6 +276,7 @@ const GetOutgoingReportOptions = async (type) => {
   }
 };
 
+
 const GetAllSignatureAuthorities = async () => {
   try {
     const response = await axiosInstance.get(`/signature-authorities`);
@@ -283,22 +284,83 @@ const GetAllSignatureAuthorities = async () => {
     const results = response?.data?.res_data;
 
     if (response?.data?.res_code === "0000" && results) {
-      // Access the individuals array from the nested structure
-      const individuals = results.individuals || [];
+      let formattedUsers = [];
 
-      const formattedUsers = individuals
+      const individuals = results.individuals || [];
+      const individualsData = individuals
         .filter((item) => item.is_active)
         .map((item) => ({
           value: item.user.id,
           label: item.user.name,
           fullName: item.user.name,
           email: item.user.email,
-          department: item.department,
-          departmentId: item.department.id,
-          departmentName: item.department.name,
+          departments: [
+            {
+              id: item.department.id,
+              name: item.department.name,
+            },
+          ],
+          source: "individual",
         }));
 
-      return formattedUsers;
+      const groups = results.groups || [];
+      const groupsData = [];
+
+      groups.forEach((group) => {
+        if (group.is_active && group.users && group.departments) {
+          group.users.forEach((user) => {
+            if (user.user_is_active) {
+              // สร้าง user record สำหรับแต่ละ department
+              group.departments.forEach((department) => {
+                if (department.department_is_active) {
+                  groupsData.push({
+                    value: user.user_id,
+                    label: user.user_name,
+                    fullName: user.user_name,
+                    email: user.user_email,
+                    departments: [
+                      {
+                        // เก็บเป็น array เพื่อความสอดคล้อง
+                        id: department.department_id,
+                        name: department.department_name,
+                      },
+                    ],
+                    groupName: group.group_name,
+                    groupId: group.group_id,
+                    source: "group",
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+
+      // 3. รวมข้อมูลและจัดกลุ่ม users ที่ซ้ำกัน
+      const allUsers = [...individualsData, ...groupsData];
+
+      // จัดกลุ่ม users ที่มี user_id เดียวกันและรวม departments
+      const userMap = new Map();
+
+      allUsers.forEach((user) => {
+        const existingUser = userMap.get(user.value);
+
+        if (existingUser) {
+          // รวม departments โดยไม่ให้ซ้ำ
+          const existingDeptIds = existingUser.departments.map((d) => d.id);
+          user.departments.forEach((dept) => {
+            if (!existingDeptIds.includes(dept.id)) {
+              existingUser.departments.push(dept);
+            }
+          });
+        } else {
+          userMap.set(user.value, { ...user });
+        }
+      });
+
+      // 4. แปลงกลับเป็น array และเรียงลำดับ
+      const uniqueUsers = Array.from(userMap.values());
+      return uniqueUsers.sort((a, b) => a.label.localeCompare(b.label, "th"));
     }
 
     return [];
