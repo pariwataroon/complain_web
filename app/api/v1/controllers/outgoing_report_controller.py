@@ -778,6 +778,7 @@ def get_user_related_complaints_with_tracking(
     รวม 'งานที่ผู้ใช้เกี่ยวข้อง' (assigned_officer หรือ ผู้ร้องเอง)
     พร้อม timeline เหมือน get_outgoing_tracking แต่ทำเป็นรายการหลายเรื่อง + pagination
     *ปรับ sorting ให้ใช้งานได้กับ SQL Server (ไม่มี NULLS LAST)
+    *เพิ่ม department_name ใน timeline และ latest
     """
     # ---------- helpers ----------
     def _iso(dt):
@@ -789,8 +790,14 @@ def get_user_related_complaints_with_tracking(
     def _safe_str(v):
         return str(v) if v is not None else None
 
+    def _dept_name(obj) -> Optional[str]:
+        dep = getattr(obj, "department", None)
+        if dep is not None:
+            # ถ้าชื่อคอลัมน์เป็น name_th หรืออื่น ๆ เปลี่ยนตรงนี้ได้
+            return getattr(dep, "name", None) or getattr(dep, "name_th", None) or getattr(dep, "title", None)
+        return None
+
     # MSSQL-safe: ใช้ CASE เพื่อจัด NULLs ไว้ท้าย (NULLS LAST)
-    # นำเข้าในฟังก์ชันเพื่อไม่ต้องแก้ imports ด้านบนไฟล์
     from sqlalchemy import case
 
     status_th_map = {
@@ -856,7 +863,6 @@ def get_user_related_complaints_with_tracking(
             pass
 
     if complainant_name:
-        # ถ้าชื่อผู้ร้องเก็บใน JSON อาจต้องค้นฝั่ง DB ยาก — เบื้องต้นกรองจาก subject/description
         try:
             q = q.filter(Complaint.subject.ilike(f"%{complainant_name}%"))
         except Exception:
@@ -873,8 +879,8 @@ def get_user_related_complaints_with_tracking(
 
     complaints: List[Complaint] = (
         q.order_by(*ordering)
-         .offset(skip)           # SQLAlchemy (mssql) → OFFSET ? ROWS
-         .limit(limit)           # SQLAlchemy (mssql) → FETCH NEXT ? ROWS ONLY
+         .offset(skip)
+         .limit(limit)
          .all()
     )
 
@@ -906,9 +912,10 @@ def get_user_related_complaints_with_tracking(
         except Exception:
             pass
 
-        # 2) OutgoingReport (ส่งหนังสือออก)
+        # 2) OutgoingReport (ส่งหนังสือออก) + department
         outgoing_list: List[OutgoingReport] = (
             db.query(OutgoingReport)
+              .options(joinedload(OutgoingReport.department))  # ✅ preload ชื่อหน่วยงาน
               .filter(OutgoingReport.is_active == True, OutgoingReport.complaint_id == c.id)
               .order_by(OutgoingReport.created_at.asc())
               .all()
@@ -921,18 +928,20 @@ def get_user_related_complaints_with_tracking(
                 "reference_date": _iso(getattr(r, "reference_date", None)),
                 "subject": getattr(r, "subject", None),
                 "department_id": _safe_str(getattr(r, "department_id", None)),
+                "department_name": _dept_name(r),  # ✅ ชื่อหน่วยงาน
                 "confidentiality": _enum_str(getattr(r, "confidentiality_level", None)),
                 "urgency": _enum_str(getattr(r, "urgency_level", None)),
                 "by": _safe_str(getattr(r, "created_by", None)),
                 "id": _safe_str(getattr(r, "id", None)),
             })
 
-        # 3) OutgoingReport3 (ผลพิจารณา)
+        # 3) OutgoingReport3 (ผลพิจารณา) + department (ถ้ามีความสัมพันธ์)
         latest_decision: Optional[Dict[str, Any]] = None
         decision_list = []
         if OR3Model:
             decision_list = (
                 db.query(OR3Model)
+                  .options(joinedload(getattr(OR3Model, "department", None)))  # ✅ พยายาม preload ถ้ามีความสัมพันธ์
                   .filter(OR3Model.is_active == True, OR3Model.complaint_id == c.id)
                   .order_by(OR3Model.created_at.asc())
                   .all()
@@ -955,6 +964,9 @@ def get_user_related_complaints_with_tracking(
                     "id": _safe_str(getattr(d, "id", None)),
                     "result": result_raw,
                     "result_label": None,
+                    # ✅ หน่วยงานที่ตอบกลับ (ถ้าโมเดล OR3 มีความสัมพันธ์ department)
+                    "department_id": _safe_str(getattr(d, "department_id", None)),
+                    "department_name": _dept_name(d),
                 }
                 timeline.append(item)
                 latest_decision = item
@@ -969,6 +981,7 @@ def get_user_related_complaints_with_tracking(
                 "reference_date": _iso(getattr(r, "reference_date", None)),
                 "subject": getattr(r, "subject", None),
                 "department_id": _safe_str(getattr(r, "department_id", None)),
+                "department_name": _dept_name(r),  # ✅ ชื่อหน่วยงานล่าสุดที่ส่ง
                 "created_at": _iso(getattr(r, "created_at", None)),
             }
 
@@ -1045,6 +1058,7 @@ def get_outgoing_tracking(
     - รวม OutgoingReport (ส่งหน่วยงาน) และ OutgoingReport3 (ผลพิจารณา)
     - คืน derived.suggested_next_status (ไม่แก้ DB)
     - รองรับการกรองประเภท timeline ด้วย report_type
+    *เพิ่ม department_name ใน timeline และ latest
     """
 
     # ---- helpers ----
@@ -1059,7 +1073,12 @@ def get_outgoing_tracking(
     def _safe_str(v):
         return str(v) if v is not None else None
 
-    # label ไทยของสถานะเรื่องร้องเรียน (ฝั่งเรามี enum อยู่แล้ว)
+    def _dept_name(obj) -> Optional[str]:
+        dep = getattr(obj, "department", None)
+        if dep is not None:
+            return getattr(dep, "name", None) or getattr(dep, "name_th", None) or getattr(dep, "title", None)
+        return None
+
     status_th_map = {
         "submitted": "ส่งคำร้อง",
         "sent_to_agency": "ส่งหน่วยงาน",
@@ -1070,7 +1089,6 @@ def get_outgoing_tracking(
         "completed": "เสร็จสิ้น",
         "cancelled": "ยกเลิก",
     }
-    # label ไทยของผลพิจารณา/แนวโน้ม
     decision_th_map = {
         "completed": "เสร็จสิ้น",
         "tracking": "ติดตามต่อ",
@@ -1088,9 +1106,10 @@ def get_outgoing_tracking(
     if not complaint:
         return {"error": "COMPLAINT_NOT_FOUND"}
 
-    # ---- fetch OutgoingReport (การส่งหนังสือออก) ----
+    # ---- fetch OutgoingReport (การส่งหนังสือออก) + department ----
     outgoing_list: List[OutgoingReport] = (
         db.query(OutgoingReport)
+        .options(joinedload(OutgoingReport.department))   # ✅ preload department
         .filter(
             OutgoingReport.is_active == True,
             OutgoingReport.complaint_id == complaint_id
@@ -1108,15 +1127,28 @@ def get_outgoing_tracking(
         OR3Model = None
 
     if OR3Model:
-        decision_list = (
-            db.query(OR3Model)
-            .filter(
-                OR3Model.is_active == True,
-                OR3Model.complaint_id == complaint_id
+        # พยายาม preload department ถ้ามีความสัมพันธ์
+        try:
+            decision_list = (
+                db.query(OR3Model)
+                .options(joinedload(getattr(OR3Model, "department", None)))
+                .filter(
+                    OR3Model.is_active == True,
+                    OR3Model.complaint_id == complaint_id
+                )
+                .order_by(OR3Model.created_at.asc())
+                .all()
             )
-            .order_by(OR3Model.created_at.asc())
-            .all()
-        )
+        except Exception:
+            decision_list = (
+                db.query(OR3Model)
+                .filter(
+                    OR3Model.is_active == True,
+                    OR3Model.complaint_id == complaint_id
+                )
+                .order_by(OR3Model.created_at.asc())
+                .all()
+            )
 
     # ---- build timeline ----
     timeline: List[Dict[str, Any]] = []
@@ -1145,6 +1177,7 @@ def get_outgoing_tracking(
             "reference_date": _iso(getattr(r, "reference_date", None)),
             "subject": getattr(r, "subject", None),
             "department_id": _safe_str(getattr(r, "department_id", None)),
+            "department_name": _dept_name(r),  # ✅ ชื่อหน่วยงาน
             "confidentiality": _enum_str(getattr(r, "confidentiality_level", None)),
             "urgency": _enum_str(getattr(r, "urgency_level", None)),
             "by": _safe_str(getattr(r, "created_by", None)),
@@ -1169,8 +1202,10 @@ def get_outgoing_tracking(
             "by": _safe_str(getattr(d, "created_by", None)),
             "id": _safe_str(getattr(d, "id", None)),
             "result": result_raw,
-            # label ไทยแบบหยาบจากข้อความผลลัพธ์
             "result_label": None,
+            # ✅ หน่วยงานผู้พิจารณา (ถ้ามีใน OR3)
+            "department_id": _safe_str(getattr(d, "department_id", None)),
+            "department_name": _dept_name(d),
         }
         timeline.append(item)
         latest_decision = item  # ตัวท้ายสุดคืออันล่าสุด
@@ -1185,6 +1220,7 @@ def get_outgoing_tracking(
             "reference_date": _iso(getattr(r, "reference_date", None)),
             "subject": getattr(r, "subject", None),
             "department_id": _safe_str(getattr(r, "department_id", None)),
+            "department_name": _dept_name(r),  # ✅
             "created_at": _iso(getattr(r, "created_at", None)),
         }
 
@@ -1201,7 +1237,6 @@ def get_outgoing_tracking(
             suggested_next = "tracking"
         else:
             suggested_next = "reviewed"
-        # ใส่ label ไทยของผลลัพธ์ใน timeline อันล่าสุด
         latest_decision["result_label"] = decision_th_map.get(suggested_next, suggested_next)
     elif latest_sent:
         suggested_next = "sent_to_agency"
