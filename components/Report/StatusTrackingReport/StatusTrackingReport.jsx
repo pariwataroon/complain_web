@@ -1,112 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListCollaps from "@services/TableListCollaps/TableListCollaps";
-
-const mockComplaints = [
-  {
-    id: 1,
-    claimantName: "เรียกเก็บ VAT ซ้ำซ้อน",
-    department: "ภาษีอากร",
-    responsibleOfficer: "กรมสรรพากร",
-    receiptNumber: "REC-0001",
-    referenceNumber: "1234-5-678-9",
-    workingDays: 3,
-    status: "รอดำเนินการ",
-    departmentsData: [
-      {
-        department: "ภาษีอากร",
-        receiptNumber: "REC-0001-1",
-        referenceNumber: "0000000001",
-        workingDays: 8,
-        status: "ยุติ",
-      },
-      {
-        department: "สำนักงานสรรพากรภาค 1",
-        receiptNumber: "REC-0001-2",
-        referenceNumber: "0000000002",
-        workingDays: 7,
-        status: "ไม่ยุติ",
-      },
-    ],
-  },
-  {
-    id: 2,
-    claimantName: "ขอคืนภาษีซื้อเกิน",
-    department: "ภาษีอากร",
-    responsibleOfficer: "กรมสรรพากร",
-    receiptNumber: "REC-0002",
-    referenceNumber: "2345-6-789-0",
-    workingDays: 5,
-    status: "กำลังดำเนินการ",
-    departmentsData: [
-      {
-        department: "ภาษีอากร",
-        receiptNumber: "REC-0002-1",
-        referenceNumber: "0000000100",
-        workingDays: 6,
-        status: "รอตรวจสอบ",
-      },
-    ],
-  },
-  {
-    id: 3,
-    claimantName: "ขอเบิกค่ารักษาพยาบาล",
-    department: "ค่ารักษาพยาบาล",
-    responsibleOfficer: "สำนักงานเศรษฐกิจการคลัง",
-    receiptNumber: "REC-0003",
-    referenceNumber: "3456-7-890-1",
-    workingDays: 2,
-    status: "เสร็จสิ้น",
-    departmentsData: [
-      {
-        department: "ค่ารักษาพยาบาล",
-        receiptNumber: "REC-0003-1",
-        referenceNumber: "0000001000",
-        workingDays: 2,
-        status: "อนุมัติ",
-      },
-    ],
-  },
-  {
-    id: 4,
-    claimantName: "ครุภัณฑ์ไม่ตรงสเปค",
-    department: "การจัดซื้อจัดจ้าง",
-    responsibleOfficer: "กรมบัญชีกลาง",
-    receiptNumber: "REC-0004",
-    referenceNumber: "4567-8-901-2",
-    workingDays: 7,
-    status: "รอดำเนินการ",
-    departmentsData: [
-      {
-        department: "การจัดซื้อจัดจ้าง",
-        receiptNumber: "REC-0004-1",
-        referenceNumber: "0000010000",
-        workingDays: 7,
-        status: "อยู่ระหว่างพิจารณา",
-      },
-    ],
-  },
-  {
-    id: 5,
-    claimantName: "ปรับโครงสร้างหนี้",
-    department: "หนี้ในระบบ",
-    responsibleOfficer: "สำนักงานบริหารหนี้สาธารณะ",
-    receiptNumber: "REC-0005",
-    referenceNumber: "5678-9-012-3",
-    workingDays: 4,
-    status: "กำลังดำเนินการ",
-    departmentsData: [
-      {
-        department: "หนี้ในระบบ",
-        receiptNumber: "REC-0005-1",
-        referenceNumber: "0000100000",
-        workingDays: 4,
-        status: "ดำเนินการอยู่",
-      },
-    ],
-  },
-];
+import { GetMyRelatedComplaints } from "@pages/api/complaint/complaint";
 
 const departmentOptions = [
   { value: "ภาษีอากร", label: "ภาษีอากร" },
@@ -138,10 +34,127 @@ const statusOptions = [
   { value: "เสร็จสิ้น", label: "เสร็จสิ้น" },
 ];
 
+// map สถานะ API -> 3 สถานะบน UI
+const mapStatusToUI = (code = "") => {
+  const c = String(code).toLowerCase();
+  if (["completed"].includes(c)) return "เสร็จสิ้น";
+  if (["submitted"].includes(c)) return "รอดำเนินการ";
+  if (["sent_to_agency", "in_process", "in_review", "tracking", "reviewed", "cancelled"].includes(c))
+    return "กำลังดำเนินการ";
+  return "รอดำเนินการ";
+};
+
+// จำนวนวัน (ปัจจุบัน - เวลาเริ่ม)
+const diffDaysFrom = (startISO) => {
+  try {
+    const start = new Date(startISO);
+    const now = new Date();
+    const ms = now - start;
+    const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+    return Math.max(0, days);
+  } catch {
+    return 0;
+  }
+};
+
+// จำนวนวันระหว่างสองเหตุการณ์
+const diffDaysBetween = (startISO, endISO) => {
+  try {
+    const start = new Date(startISO);
+    const end = new Date(endISO);
+    const ms = end - start;
+    const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+    return Math.max(0, days);
+  } catch {
+    return 0;
+  }
+};
+
+// เดาเลขอ้างอิงจาก subject ที่มักเป็นโค้ดภายนอก เช่น "นร0168..." ฯลฯ
+const guessRefFromSubject = (subject) => {
+  if (!subject || subject === "-") return null;
+  const s = String(subject).trim();
+  // มีตัวเลขยาวพอ และ/หรือมีเครื่องหมาย -_/ ถือว่าเป็นโค้ดอ้างอิง
+  const hasLongDigits = (s.match(/\d/g) || []).length >= 5;
+  const hasSep = /[-_/]/.test(s);
+  if (hasLongDigits || hasSep) return s;
+  return null;
+};
+
+// ดึงเลขที่อ้างอิงจาก payload ตามลำดับความสำคัญ
+const getReferenceNumber = (item) => {
+  const c = item?.complaint ?? {};
+  const latest = item?.latest ?? {};
+  const direct = c.reference_number || latest?.sent?.reference_number || latest?.decision?.reference_number;
+  if (direct) return String(direct);
+  const fromSubject = guessRefFromSubject(c.subject);
+  if (fromSubject) return fromSubject;
+  // สุดท้าย fallback เป็น complaint_number ให้ไม่ชนกับเลขรับ สรร. กรณีไม่มีจริง ๆ คุณอาจใช้ c.id ก็ได้
+  return c.complaint_number || c.id || "-";
+};
+
+// แปลง history -> แถวลูก (departmentsData)
+const buildHistoryRows = (item) => {
+  const c = item?.complaint ?? {};
+  const history = Array.isArray(item?.history) ? item.history : [];
+  if (history.length === 0) return [];
+  const refNo = getReferenceNumber(item);
+
+  return history.map((h, idx) => {
+    const prevAt = idx === 0 ? c.created_at : history[idx - 1]?.at ?? c.created_at;
+    const stepDays = diffDaysBetween(prevAt, h.at);
+    const department = h.status === "sent_to_agency" ? (c.assigned_to ?? "-") : "-";
+    return {
+      department,
+      receiptNumber: c.complaint_number ?? "-",
+      referenceNumber: refNo,                 // แสดงเลขอ้างอิงเดียวกันในทุกสเต็ป (ถ้ามีสเต็ปละเลข อนาคตค่อยสลับมาใช้ของ event)
+      workingDays: stepDays,
+      status: h.status_label ?? h.status ?? "-",
+    };
+  });
+};
+
 const StatusTrackingReport = () => {
-  const [allComplaints] = useState(mockComplaints);
-  const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
   const router = useRouter();
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchMyRelated = async () => {
+      try {
+        setLoading(true);
+        const res = await GetMyRelatedComplaints({ skip: 0, limit: 100 });
+        const items = res?.res_data?.items ?? [];
+
+        const mapped = items.map((it, idx) => {
+          const c = it?.complaint ?? {};
+          return {
+            id: c.id ?? idx + 1,
+            claimantName: c.subject ?? "-",
+            department: c.assigned_to ?? "-",
+            responsibleOfficer: c.assigned_to ?? "-",
+            receiptNumber: c.complaint_number ?? "-",
+            referenceNumber: getReferenceNumber(it),
+            workingDays: diffDaysFrom(c.created_at),
+            status: mapStatusToUI(c.status),
+            departmentsData: buildHistoryRows(it),
+          };
+        });
+
+        setAllComplaints(mapped);
+        setFilteredComplaints(mapped);
+      } catch (e) {
+        console.error("Error fetching my-related complaints:", e);
+        setAllComplaints([]);
+        setFilteredComplaints([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMyRelated();
+  }, []);
 
   const handleSearch = (filters) => {
     const {
@@ -153,59 +166,27 @@ const StatusTrackingReport = () => {
       status: fStatus,
     } = filters;
 
-    // ถ้าไม่มี filter ใดเลย ให้แสดงทั้งหมด
+    const norm = (v) => (v ?? "").toString().toLowerCase();
+
     if (!fName && !fDept && !fOfficer && !fReceipt && !fReference && !fStatus) {
       setFilteredComplaints(allComplaints);
       return;
     }
 
     const result = allComplaints.filter((item) => {
-      // ชื่อเรื่อง
-      if (
-        fName &&
-        item.claimantName.toLowerCase().includes(fName.toLowerCase())
-      ) {
-        return true;
-      }
-      // หน่วยงาน: เช็คทั้งหลักและใน departmentsData
-      if (
-        fDept &&
-        (item.department === fDept ||
-          item.departmentsData.some((d) => d.department === fDept))
-      ) {
-        return true;
-      }
-      // เจ้าหน้าที่ผู้รับผิดชอบ
-      if (fOfficer && item.responsibleOfficer === fOfficer) {
-        return true;
-      }
-      // เลขรับ สรร.
-      if (
-        fReceipt &&
-        item.receiptNumber.toLowerCase().includes(fReceipt.toLowerCase())
-      ) {
-        return true;
-      }
-      // เลขที่อ้างอิง
-      if (
-        fReference &&
-        item.referenceNumber.toLowerCase().includes(fReference.toLowerCase())
-      ) {
-        return true;
-      }
-      // สถานะเรื่อง
-      if (fStatus && item.status === fStatus) {
-        return true;
-      }
-      // ถ้าไม่ match เลย ให้กรองออก
+      if (fName && norm(item.claimantName).includes(norm(fName))) return true;
+      if (fDept && item.department === fDept) return true;
+      if (fOfficer && item.responsibleOfficer === fOfficer) return true;
+      if (fReceipt && norm(item.receiptNumber).includes(norm(fReceipt))) return true;
+      if (fReference && norm(item.referenceNumber).includes(norm(fReference))) return true;
+      if (fStatus && item.status === fStatus) return true;
       return false;
     });
 
     setFilteredComplaints(result);
   };
 
-  const handleNavigateTo = (item) =>
-    router.push(`/admin/edit/opm1111/${item.id}`);
+  const handleNavigateTo = (item) => router.push(`/admin/edit/opm1111/${item.id}`);
 
   return (
     <>
@@ -231,28 +212,14 @@ const StatusTrackingReport = () => {
         navigateTo="/admin/document/status-tracking-report"
         handleNavigateTo={handleNavigateTo}
         onSearch={handleSearch}
+        loading={loading}
         filterFields={[
           { name: "claimantName", label: "ชื่อเรื่อง", type: "text" },
-          {
-            name: "department",
-            label: "หน่วยงาน",
-            type: "select",
-            options: departmentOptions,
-          },
-          {
-            name: "responsibleOfficer",
-            label: "เจ้าหน้าที่ผู้รับผิดชอบ",
-            type: "select",
-            options: responsibleOfficerOptions,
-          },
+          { name: "department", label: "หน่วยงาน", type: "select", options: departmentOptions },
+          { name: "responsibleOfficer", label: "เจ้าหน้าที่ผู้รับผิดชอบ", type: "select", options: responsibleOfficerOptions },
           { name: "receiptNumber", label: "เลขรับ สรร.", type: "text" },
           { name: "referenceNumber", label: "เลขที่อ้างอิง", type: "text" },
-          {
-            name: "status",
-            label: "สถานะเรื่อง",
-            type: "select",
-            options: statusOptions,
-          },
+          { name: "status", label: "สถานะเรื่อง", type: "select", options: statusOptions },
         ]}
       />
     </>
