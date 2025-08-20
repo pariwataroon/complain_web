@@ -1,0 +1,60 @@
+/* บังคับให้ขึ้นหน้าใหม่ */
+.pageBreak {
+  page-break-before: always;
+  break-before: page;
+}
+
+/* หลีกเลี่ยงการถูกตัดกลางกล่อง */
+.avoidBreak {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* รูทสำหรับ export ให้เว้น margin และกำหนดขนาด A4 สวย ๆ */
+.printRoot {
+  /* กันไม่ให้มี margin/spacing แปลก ๆ เวลาแปลง */
+  background: #fff;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 16mm 14mm;
+}
+
+@media print {
+  .noPrint {
+    display: none !important;
+  }
+  .avoidBreak {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+.printRoot {
+  /* กัน layout shift ตอนแคปเจอร์ */
+  width: 100%;
+}
+
+.page {
+  /* จำลองหน้าแยก ๆ กัน */
+  page-break-after: always;
+  break-after: page;
+
+  /* กัน MUI Grid กดสูงเกินจำเป็น */
+  overflow: visible;
+}
+
+.page:last-child {
+  page-break-after: auto;
+  break-after: auto;
+}
+
+.pdfBlock {
+  /* กัน element ข้างในโดนแยกกลางคัน */
+  break-inside: avoid-page;
+}
+
+.avoidBreak {
+  break-inside: avoid-page;
+}
