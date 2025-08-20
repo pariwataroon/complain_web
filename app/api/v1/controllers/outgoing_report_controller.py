@@ -10,7 +10,7 @@ import os
 import shutil
 
 from models.outgoing_reports import OutgoingReport, OutgoingReportAttachment
-from models.comp_complaint import Complaint
+from models.comp_complaint import Complaint, ComplaintStatus, ComplaintStatusHistory
 from models.user import User
 from models.position import Position
 from models.departments import Department
@@ -761,6 +761,269 @@ def delete_outgoing_report(db: Session, report_id: UUID, current_user_id: UUID) 
         logger.error(f"Error deleting outgoing report: {str(e)}")
         logger.error(f"Stack trace: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
+
+def get_user_related_complaints_with_tracking(
+    db: Session,
+    current_user_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    complaint_type: Optional[str] = None,
+    complaint_subtype: Optional[str] = None,
+    urgency: Optional[str] = None,
+    search: Optional[str] = None,
+    complainant_name: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    รวม 'งานที่ผู้ใช้เกี่ยวข้อง' (assigned_officer หรือ ผู้ร้องเอง)
+    พร้อม timeline เหมือน get_outgoing_tracking แต่ทำเป็นรายการหลายเรื่อง + pagination
+    """
+    # ---------- helpers ----------
+    def _iso(dt):
+        return dt.isoformat() if dt else None
+
+    def _enum_str(v):
+        return getattr(v, "value", str(v)) if v is not None else None
+
+    def _safe_str(v):
+        return str(v) if v is not None else None
+
+    status_th_map = {
+        "submitted": "ส่งคำร้อง",
+        "sent_to_agency": "ส่งหน่วยงาน",
+        "in_process": "อยู่ระหว่างดำเนินการ",
+        "in_review": "อยู่ระหว่างพิจารณา",
+        "tracking": "ติดตามผลการพิจารณา",
+        "reviewed": "แจ้งผลการพิจารณา",
+        "completed": "เสร็จสิ้น",
+        "cancelled": "ยกเลิก",
+    }
+    decision_th_map = {
+        "completed": "เสร็จสิ้น",
+        "tracking": "ติดตามต่อ",
+        "reviewed": "มีผลพิจารณา",
+        "sent_to_agency": "ส่งหน่วยงานแล้ว",
+    }
+
+    # ---------- base query: งานที่ user เกี่ยวข้อง ----------
+    q = db.query(Complaint).options(
+        joinedload(Complaint.status_history)
+    ).filter(
+        or_(
+            Complaint.assigned_officer_id == current_user_id,
+            Complaint.created_by == current_user_id
+        )
+    )
+
+    # ---------- filters ----------
+    if status:
+        # รับทั้ง enum string/รหัสดิบ
+        try:
+            q = q.filter(Complaint.status == ComplaintStatus(status))
+        except Exception:
+            q = q.filter(Complaint.status == status)
+
+    if complaint_type:
+        # ช่องนี้ขึ้นกับ schema ของคุณ ถ้าเก็บเป็น text ใช้ ilike
+        try:
+            q = q.filter(Complaint.complaint_type.ilike(f"%{complaint_type}%"))
+        except Exception:
+            pass
+
+    if complaint_subtype:
+        try:
+            q = q.filter(Complaint.complaint_subtype.ilike(f"%{complaint_subtype}%"))
+        except Exception:
+            pass
+
+    if urgency:
+        # ถ้าเก็บเป็น enum ก็รับทั้ง string/enum
+        try:
+            q = q.filter(Complaint.urgency_level == urgency)
+        except Exception:
+            pass
+
+    if search:
+        # ค้นหาเบื้องต้นจากเลขคำร้อง/เรื่อง/รายละเอียด
+        try:
+            q = q.filter(
+                (Complaint.complaint_number.ilike(f"%{search}%")) |
+                (Complaint.subject.ilike(f"%{search}%")) |
+                (Complaint.description.ilike(f"%{search}%"))
+            )
+        except Exception:
+            pass
+
+    if complainant_name:
+        # หากชื่อผู้ร้องเก็บใน JSON (complainant_data) ฝั่ง DB อาจค้นยาก
+        # ตรงนี้เลือกค้นจาก subject/description เป็นหลัก และให้ FE เติมชื่อเพื่อกรอง client side ก็ได้
+        try:
+            q = q.filter(Complaint.subject.ilike(f"%{complainant_name}%"))
+        except Exception:
+            pass
+
+    # ---------- count + pagination ----------
+    total = q.count()
+    complaints: List[Complaint] = (
+        q.order_by(Complaint.updated_at.desc().nullslast(), Complaint.created_at.desc())
+         .offset(skip).limit(limit).all()
+    )
+
+    # ---------- prepare OutgoingReport3 model (ถ้ามี) ----------
+    OR3Model = None
+    try:
+        from models.outgoing_reports3 import OutgoingReport3 as OR3Model  # type: ignore
+    except Exception:
+        OR3Model = None
+
+    items: List[Dict[str, Any]] = []
+
+    for c in complaints:
+        # --- timeline per complaint ---
+        timeline: List[Dict[str, Any]] = []
+
+        # 1) status history
+        try:
+            for h in (c.status_history or []):
+                st = _enum_str(getattr(h, "status", None))
+                timeline.append({
+                    "type": "status_history",
+                    "at": _iso(getattr(h, "created_at", None) or getattr(h, "changed_at", None)),
+                    "status": st,
+                    "status_label": status_th_map.get(st, st),
+                    "note": getattr(h, "notes", None) or getattr(h, "note", None) or getattr(h, "remark", None),
+                    "by": _safe_str(getattr(h, "updated_by", None) or getattr(h, "changed_by", None)),
+                })
+        except Exception:
+            pass
+
+        # 2) OutgoingReport (ส่งหนังสือออก)
+        outgoing_list: List[OutgoingReport] = (
+            db.query(OutgoingReport)
+              .filter(OutgoingReport.is_active == True, OutgoingReport.complaint_id == c.id)
+              .order_by(OutgoingReport.created_at.asc())
+              .all()
+        )
+        for r in outgoing_list:
+            timeline.append({
+                "type": "outgoing_report",
+                "at": _iso(getattr(r, "created_at", None)),
+                "reference_number": getattr(r, "reference_number", None),
+                "reference_date": _iso(getattr(r, "reference_date", None)),
+                "subject": getattr(r, "subject", None),
+                "department_id": _safe_str(getattr(r, "department_id", None)),
+                "confidentiality": _enum_str(getattr(r, "confidentiality_level", None)),
+                "urgency": _enum_str(getattr(r, "urgency_level", None)),
+                "by": _safe_str(getattr(r, "created_by", None)),
+                "id": _safe_str(getattr(r, "id", None)),
+            })
+
+        # 3) OutgoingReport3 (ผลพิจารณา)
+        latest_decision: Optional[Dict[str, Any]] = None
+        decision_list = []
+        if OR3Model:
+            decision_list = (
+                db.query(OR3Model)
+                  .filter(OR3Model.is_active == True, OR3Model.complaint_id == c.id)
+                  .order_by(OR3Model.created_at.asc())
+                  .all()
+            )
+
+            for d in decision_list:
+                result_raw = (
+                    getattr(d, "result", None)
+                    or getattr(d, "outcome", None)
+                    or getattr(d, "decision_status", None)
+                )
+                item = {
+                    "type": "outgoing_report3",
+                    "at": _iso(getattr(d, "created_at", None)),
+                    "decision_subject": getattr(d, "subject", None),
+                    "decision_note": getattr(d, "remarks", None) or getattr(d, "note", None),
+                    "reference_number": getattr(d, "reference_number", None),
+                    "reference_date": _iso(getattr(d, "reference_date", None)),
+                    "by": _safe_str(getattr(d, "created_by", None)),
+                    "id": _safe_str(getattr(d, "id", None)),
+                    "result": result_raw,
+                    "result_label": None,
+                }
+                timeline.append(item)
+                latest_decision = item
+
+        # latest sent
+        latest_sent = None
+        if outgoing_list:
+            r = outgoing_list[-1]
+            latest_sent = {
+                "id": _safe_str(getattr(r, "id", None)),
+                "reference_number": getattr(r, "reference_number", None),
+                "reference_date": _iso(getattr(r, "reference_date", None)),
+                "subject": getattr(r, "subject", None),
+                "department_id": _safe_str(getattr(r, "department_id", None)),
+                "created_at": _iso(getattr(r, "created_at", None)),
+            }
+
+        # derive suggested next
+        current_status = _enum_str(getattr(c, "status", None))
+        suggested_next = None
+
+        if latest_decision:
+            decision_text_l = (latest_decision.get("result") or "").lower()
+            if any(k in decision_text_l for k in ["complete", "completed", "success", "สำเร็จ", "เสร็จ", "ปิดเรื่อง"]):
+                suggested_next = "completed"
+            elif any(k in decision_text_l for k in ["ติดตาม", "ต่อเนื่อง", "follow", "follow-up", "รอ", "pending", "review"]):
+                suggested_next = "tracking"
+            else:
+                suggested_next = "reviewed"
+            latest_decision["result_label"] = decision_th_map.get(suggested_next, suggested_next)
+        elif latest_sent:
+            suggested_next = "sent_to_agency"
+
+        # sort timeline
+        def _ts(x: Dict[str, Any]):
+            return x.get("at") or x.get("reference_date") or x.get("created_at") or ""
+        timeline.sort(key=_ts)
+
+        # push item
+        items.append({
+            "complaint": {
+                "id": _safe_str(getattr(c, "id", None)),
+                "complaint_number": getattr(c, "complaint_number", None),
+                "subject": getattr(c, "subject", None),
+                "status": current_status,
+                "status_label": status_th_map.get(current_status, current_status),
+                "created_at": _iso(getattr(c, "created_at", None)),
+                "updated_at": _iso(getattr(c, "updated_at", None)),
+                "assigned_officer_id": _safe_str(getattr(c, "assigned_officer_id", None)),
+                "assigned_to": getattr(c, "assigned_to", None),
+                "assigned_date": _iso(getattr(c, "assigned_date", None)),
+            },
+            "counts": {
+                "outgoing_reports": len(outgoing_list),
+                "decisions": len(decision_list) if OR3Model else 0,
+            },
+            "latest": {
+                "sent": latest_sent,
+                "decision": latest_decision,
+            },
+            "history": timeline,
+            "derived": {
+                "current_status": current_status,
+                "current_status_label": status_th_map.get(current_status, current_status),
+                "suggested_next_status": suggested_next,
+                "suggested_next_status_label": decision_th_map.get(suggested_next, suggested_next),
+            }
+        })
+
+    return {
+        "items": items,
+        "pagination": {
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "has_more": total > (skip + limit)
+        }
+    }
 
 def get_outgoing_tracking(
     db: Session,

@@ -6213,6 +6213,139 @@
 					"response": []
 				},
 				{
+					"name": "Get Complaints Grouped by Channel",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/group-by-channel?skip=0&limit=100&status=&complaint_type=&complaint_subtype=&assignee=&location=&urgency=&search=&complainant_name=",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"group-by-channel"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "100"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Optional filter by status"
+								},
+								{
+									"key": "complaint_type",
+									"value": "",
+									"description": "Optional filter by complaint type"
+								},
+								{
+									"key": "complaint_subtype",
+									"value": "",
+									"description": "Optional filter by complaint subtype"
+								},
+								{
+									"key": "assignee",
+									"value": "",
+									"description": "Optional filter by assignee"
+								},
+								{
+									"key": "location",
+									"value": "",
+									"description": "Optional filter by location"
+								},
+								{
+									"key": "urgency",
+									"value": "",
+									"description": "Optional filter by urgency"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Optional search keyword"
+								},
+								{
+									"key": "complainant_name",
+									"value": "",
+									"description": "Optional filter by complainant name"
+								}
+							]
+						},
+						"description": "ดึงรายการเรื่องร้องเรียนที่จัดกลุ่มตามช่องทางการร้องเรียน พร้อมข้อมูลเลขอ้างอิงและช่องทาง - ต้องมีสิทธิ์ setting_access"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Complaints for Assignment Form",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/assignment-form?skip=0&limit=100&status=&complaint_type=&search=",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"assignment-form"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "100"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Optional filter by status"
+								},
+								{
+									"key": "complaint_type",
+									"value": "",
+									"description": "Optional filter by complaint type"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Optional search keyword"
+								}
+							]
+						},
+						"description": "ดึงรายการเรื่องร้องเรียนทั้งหมดสำหรับฟอร์ม assignment - ต้องมีสิทธิ์ setting_access"
+					},
+					"response": []
+				},
+				{
 					"name": "Get Complaint by ID",
 					"request": {
 						"auth": {
@@ -6684,6 +6817,77 @@
 							]
 						},
 						"description": "ติดตามสถานะหลังส่งหนังสือออก - รวม OutgoingReport + OutgoingReport3 + status history - ต้องมีสิทธิ์ dashboard"
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Related Complaints",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/complaints/my-related?skip=0&limit=100&status=&complaint_type=&complaint_subtype=&urgency=&search=&complainant_name=",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"complaints",
+								"my-related"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนที่ข้าม"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนต่อหน้า"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "สถานะ"
+								},
+								{
+									"key": "complaint_type",
+									"value": "",
+									"description": "ประเภทเรื่องร้องเรียน"
+								},
+								{
+									"key": "complaint_subtype",
+									"value": "",
+									"description": "ประเภทเรื่องร้องเรียนย่อย"
+								},
+								{
+									"key": "urgency",
+									"value": "",
+									"description": "ความเร่งด่วน"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "คำค้นหา"
+								},
+								{
+									"key": "complainant_name",
+									"value": "",
+									"description": "ชื่อผู้ร้องเรียน"
+								}
+							]
+						},
+						"description": "ดึงงานทั้งหมดที่ผู้ใช้เกี่ยวข้อง (เป็นผู้รับผิดชอบ/เป็นผู้ร้องเอง) พร้อม timeline และ derived status - ต้องมีสิทธิ์ dashboard"
 					},
 					"response": []
 				}

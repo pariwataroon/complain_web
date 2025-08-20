@@ -20,7 +20,7 @@ from app.api.v1.controllers.complaint_controller import (
     get_complaint_by_id_with_assignment,
     get_complaints_grouped_by_channel
 )
-from app.api.v1.controllers.outgoing_report_controller import get_outgoing_tracking
+from app.api.v1.controllers.outgoing_report_controller import get_outgoing_tracking, get_user_related_complaints_with_tracking
 from app.api.v1.schemas.complaint import StatusUpdateRequest
 from models.comp_complaint import Complaint, ComplaintStatus, SeverityLevel, SatisfactionRating
 from config.database import get_db
@@ -683,6 +683,49 @@ async def update_complaint_satisfaction(
         "satisfaction_rating": rating.value,
         "has_comment": comment is not None
     })
+
+@router.get("/my-related", response_model=FormatResponseModel)
+async def read_my_related_complaints(
+    skip: int = Query(0, description="จำนวนที่ข้าม"),
+    limit: int = Query(100, description="จำนวนต่อหน้า"),
+    status: Optional[str] = Query(None, description="สถานะ"),
+    complaint_type: Optional[str] = Query(None, description="ประเภทเรื่องร้องเรียน"),
+    complaint_subtype: Optional[str] = Query(None, description="ประเภทเรื่องร้องเรียนย่อย"),
+    urgency: Optional[str] = Query(None, description="ความเร่งด่วน"),
+    search: Optional[str] = Query(None, description="คำค้นหา"),
+    complainant_name: Optional[str] = Query(None, description="ชื่อผู้ร้องเรียน"),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("dashboard"))  # เลือกสิทธิ์แบบเดียวกับ /by-page-type
+):
+    """
+    ดึง 'งานทั้งหมดที่ผู้ใช้เกี่ยวข้อง' (เป็นผู้รับผิดชอบ/เป็นผู้ร้องเอง)
+    พร้อม timeline (OutgoingReport, OutgoingReport3, status history) และ derived status
+    """
+    try:
+        current_user_id = UUID(current_user)
+
+        result = get_user_related_complaints_with_tracking(
+            db=db,
+            current_user_id=current_user_id,
+            skip=skip,
+            limit=limit,
+            status=status,
+            complaint_type=complaint_type,
+            complaint_subtype=complaint_subtype,
+            urgency=urgency,
+            search=search,
+            complainant_name=complainant_name
+        )
+
+        if "error" in result:
+            return format_response("5000", {"error": result["error"]})
+
+        return format_response("0000", result)
+
+    except ValueError:
+        return format_response("4000", {"error": "Invalid user ID format"})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
 
 @router.get("/{complaint_id}/outgoing-tracking", response_model=FormatResponseModel)
 async def read_outgoing_tracking(
