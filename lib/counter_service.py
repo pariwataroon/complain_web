@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from config.database import get_db
 from app.api.v1.controllers.api_log_controller import get_user_counter_from_chatbot_logs
 
-logger = logging.getLogger(__name__)
-
+from lib.logger import get_logger
+logger = get_logger(__name__)
 
 class CounterUpdateService:
     """Service สำหรับอัปเดต user counter ในพื้นหลัง"""
