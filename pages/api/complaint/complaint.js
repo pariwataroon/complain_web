@@ -248,6 +248,18 @@ const GetComplaintsByPageTypeCard = async ({
   }
 };
 
+const GetMyRelatedComplaints = async ({ skip = 0, limit = 100 } = {}) => {
+  try {
+    const response = await axiosInstance.get("/complaints/my-related", {
+      params: { skip, limit },
+    });
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching my-related complaints:", error);
+    throw error;
+  }
+};
+
 
 export {
   CreateComplaint,
@@ -267,4 +279,5 @@ export {
   GetComplaintsByPageTypeCard,
   NewsUploadAttachments,
   ConfirmAssignment,
+  GetMyRelatedComplaints,
 };
