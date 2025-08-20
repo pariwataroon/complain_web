@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
 import ButtonService from "@services/ButtonService/ButtonService";
 import InputFile from "@services/InputFile/InputFile";
-import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
@@ -13,6 +12,26 @@ import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsa
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
+import { GetComplaintsWithSearch } from "@pages/api/complaint/complaint";
+import SearchIcon from "@mui/icons-material/Search";
+import DescriptionIcon from "@mui/icons-material/Description";
+import ClearIcon from "@mui/icons-material/Clear";
+import IconButton from "@mui/material/IconButton";
+import {
+  Box, 
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  List,
+  ListItem,
+  ListItemButton,
+  TextField,
+  InputAdornment,
+  CircularProgress,
+} from "@mui/material";
 
 const InitialNotificationComplainantAgency = () => {
   const {
@@ -35,6 +54,78 @@ const InitialNotificationComplainantAgency = () => {
   const [confidentialityOptions, setConfidentialityOptions] = useState([]);
   const [urgencyOptions, setUrgencyOptions] = useState([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
+
+  const [openSearchDialog, setOpenSearchDialog] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const inputRef = useRef();
+
+    // --- เปลี่ยน useEffect เปิด Dialog ให้ยิง API ---
+    useEffect(() => {
+      if (openSearchDialog) {
+        setSearchText(""); // reset input
+        handleSearch(""); // โหลดรายการทั้งหมดทันทีที่เปิด (keyword ว่าง)
+        inputRef.current?.focus();
+      }
+    }, [openSearchDialog]);
+  
+    // --- handleSearch ยังคงเดิม (ยิง API search ด้วย keyword) ---
+  
+    const handleSearch = async (keyword) => {
+      setSearchLoading(true);
+      try {
+        const response = await GetComplaintsWithSearch({
+          skip: 0,
+          limit: 100,
+          search: keyword || "",
+        });
+  
+        console.log("API response", response);
+  
+        // ใช้ complaint_number เป็น label และ value หลัก
+        const items = Array.isArray(response?.res_data?.items)
+          ? response.res_data.items
+          : [];
+  
+        console.log("items for result", items);
+  
+        const results = items.map((item) => ({
+          ...item,
+          label: item.complaint_number || "",
+          value: item.complaint_number || "",
+        }));
+  
+        setSearchResults(results);
+        console.log("results for display", results);
+      } catch (err) {
+        setSearchResults([]);
+        console.error("handleSearch error", err);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+  
+    const handleSelectReference = (ref) => {
+      handleChange({
+        target: { name: "refNo", value: ref.complaint_number }
+      });
+      setOpenSearchDialog(false);
+    };
+  
+    const onClear = () => {
+      setSearchText("");
+      handleSearch("");
+      inputRef.current?.focus();
+    };
+  
+  useEffect(() => {
+    if (openSearchDialog) {
+      setSearchText("");
+      handleSearch("");
+      inputRef.current?.focus();
+    }
+  }, [openSearchDialog]);
 
   // ฟังก์ชันจัดการเมื่อมีการเลือกผู้ลงนาม
   const handleSignerSelect = (userInfo) => {
@@ -151,7 +242,7 @@ const InitialNotificationComplainantAgency = () => {
             p: { xs: 2, sm: 3, md: 5 },
           }}
         >
-          {/* Row 1: เรียน | เลขที่หนังสือ* | วันที่* */}
+         {/* Row 1: เรียน | เลขที่หนังสือ* (with search) | วันที่* */}
           <Box
             sx={{
               display: "grid",
@@ -159,7 +250,7 @@ const InitialNotificationComplainantAgency = () => {
               gridTemplateColumns: {
                 xs: "1fr",
                 sm: "1fr 1fr",
-                md: "6fr 3fr 3fr",
+                md: "6fr 4fr 3fr",
               },
               width: "100%",
             }}
@@ -171,31 +262,285 @@ const InitialNotificationComplainantAgency = () => {
               onChange={handleChange}
               error={!!getFieldError("salutation")}
               helperText={getFieldError("salutation")}
-              sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}
             />
 
-            <InputText
-              label={createLabel("เลขที่หนังสือ", "refNo")}
-              inputLabel="กรอกเลขที่หนังสือ"
-              name="refNo"
-              value={form.refNo}
-              onChange={handleChange}
-              error={!!getFieldError("refNo")}
-              helperText={getFieldError("refNo")}
-              sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}
-            />
-
-            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
-              <DateThaiPickerService
-                label={createLabel("วันที่", "date")}
-                value={form.date}
-                onChange={handleDateChange}
-                placeholder="เลือกวันที่"
-                error={!!getFieldError("date")}
-                helperText={getFieldError("date")}
+            {/* เลขที่หนังสือ + icon */}
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <InputText
+                label={createLabel("เลขที่หนังสือ", "refNo")}
+                inputLabel="กรอกเลขที่หนังสือ"
+                name="refNo"
+                value={form.refNo}
+                onChange={handleChange}
+                error={!!getFieldError("refNo")}
+                helperText={getFieldError("refNo")}
+                sx={{ flex: 1 }}
               />
+              <IconButton
+                onClick={() => setOpenSearchDialog(true)}
+                sx={{
+                  ml: 1,
+                  color: "blue",
+                  marginTop: "10px",
+                }}
+              >
+                <SearchIcon />
+              </IconButton>
             </Box>
+
+            {/* วันที่ */}
+            <DateThaiPickerService
+              label={createLabel("วันที่", "date")}
+              value={form.date}
+              onChange={handleDateChange}
+              placeholder="เลือกวันที่"
+              error={!!getFieldError("date")}
+              helperText={getFieldError("date")}
+            />
           </Box>
+
+           {/* Dialog สำหรับค้นหาเลข */}
+            <Dialog
+              open={openSearchDialog}
+              onClose={() => setOpenSearchDialog(false)}
+              maxWidth="sm"
+              fullWidth
+              PaperProps={{
+                style: {
+                  borderRadius: 12,
+                  background: "#f7fafd",
+                  height: 500,
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                },
+              }}
+            >
+              <DialogTitle
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <SearchIcon color="primary" />
+                ค้นหาเลขที่อ้างอิง
+              </DialogTitle>
+
+              <DialogContent>
+                {/* ช่องค้นหา */}
+                <TextField
+                  inputRef={inputRef}
+                  fullWidth
+                  size="small"
+                  placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
+                  value={searchText}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSearchText(val);
+                    handleSearch(val);
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon color="action" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchText ? (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={onClear}
+                          aria-label="clear search"
+                          edge="end"
+                        >
+                          <ClearIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
+                    style: {
+                      background: "#fff",
+                      borderRadius: 8,
+                    },
+                  }}
+                  sx={{ mb: 2 }}
+                />
+
+                {/* สถานะโหลด / ไม่พบ / รายการ */}
+                {searchLoading ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: 24,
+                    }}
+                  >
+                    <CircularProgress color="primary" />
+                    <div
+                      style={{
+                        marginTop: 8,
+                        color: "#888",
+                      }}
+                    >
+                      กำลังค้นหา...
+                    </div>
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: 32,
+                      color: "#bdbdbd",
+                    }}
+                  >
+                    <DescriptionIcon
+                      sx={{ fontSize: 48, mb: 2 }}
+                      color="disabled"
+                    />
+                    <div>ไม่พบรายการเลขที่อ้างอิง</div>
+                  </div>
+                ) : (
+                  <>
+                    <List
+                      sx={{
+                        maxHeight: 320,
+                        overflow: "auto",
+                        "&::-webkit-scrollbar": {
+                          width: "8px",
+                          background: "#f0f4fa",
+                          borderRadius: "8px",
+                        },
+                        "&::-webkit-scrollbar-thumb": {
+                          background: "#90caf9",
+                          borderRadius: "8px",
+                        },
+                        "&::-webkit-scrollbar-thumb:hover":
+                          {
+                            background: "#64b5f6",
+                          },
+                      }}
+                    >
+                      {searchResults.map((item) => {
+                        const isMaster = !!item.is_master; // fallback ถ้า undefined
+                        return (
+                          <ListItem
+                            key={item.id}
+                            disablePadding
+                          >
+                            <ListItemButton
+                              onClick={() =>
+                                handleSelectReference(item)
+                              }
+                              sx={{
+                                py: 1.5,
+                                px: 2,
+                                borderRadius: 2,
+                                mb: 0.5,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1.5,
+                                "&:hover": {
+                                  background: "#e3f2fd",
+                                },
+                              }}
+                            >
+                              {/* จุดสถานะ is_master */}
+                              <span
+                                style={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: "50%",
+                                  backgroundColor: isMaster
+                                    ? "#2ecc71"
+                                    : "#bdbdbd",
+                                  border: "2px solid #fff",
+                                  boxShadow:
+                                    "0 0 0 1px rgba(0,0,0,0.15)",
+                                  flexShrink: 0,
+                                }}
+                                title={
+                                  isMaster
+                                    ? "Master"
+                                    : "Non-master"
+                                }
+                              />
+                              <DescriptionIcon
+                                color="info"
+                                sx={{ mr: 0.5 }}
+                              />
+                              <span
+                                style={{ fontWeight: 500 }}
+                              >
+                                {item.complaint_type} -{" "}
+                                {item.complaint_number}
+                              </span>
+                            </ListItemButton>
+                          </ListItem>
+                        );
+                      })}
+                    </List>
+
+                    {/* Legend (ถ้าไม่ต้องการสามารถลบส่วนนี้ออกได้) */}
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 16,
+                        marginTop: 8,
+                        fontSize: 12,
+                        color: "#555",
+                        padding: "0 4px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            background: "#2ecc71",
+                            boxShadow:
+                              "0 0 0 1px rgba(0,0,0,0.15)",
+                          }}
+                        />
+                        Master
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            background: "#bdbdbd",
+                            boxShadow:
+                              "0 0 0 1px rgba(0,0,0,0.15)",
+                          }}
+                        />
+                        Non-master
+                      </div>
+                    </div>
+                  </>
+                )}
+              </DialogContent>
+
+              <DialogActions sx={{ px: 3, pb: 2 }}>
+                <Button
+                  onClick={() => setOpenSearchDialog(false)}
+                  variant="outlined"
+                  color="inherit"
+                >
+                  ปิด
+                </Button>
+              </DialogActions>
+            </Dialog>
 
           {/* Row 2: เรื่อง* */}
           <Box>

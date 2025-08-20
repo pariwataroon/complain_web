@@ -38,13 +38,9 @@ const StackedLineChartComponents = () => {
   const transformComplaintData = (apiData) => {
     if (!apiData?.items) return [];
 
-    return apiData.items.map((item, index) => {
+    return apiData.items.map((item) => {
       const complaint = item.complaint;
-      const claimantName = formatComplainantName(
-        complaint.complainant,
-        complaint.claimant_name
-      );
-
+      const complainant_name = formatComplainantName(complaint.complainant_name); 
       const agencyName = formatAgencyName(complaint.assigned_to);
       const complaintNumber = formatComplaintNumber(complaint.complaint_number);
       const complaintType = formatComplaintType(complaint.complaint_type);
@@ -55,9 +51,9 @@ const StackedLineChartComponents = () => {
         complaint.confirmation_status_text
       );
 
-      const transformedItem = {
+      return {
         id: complaint.id,
-        claimantName,
+        complainant_name,  
         agency: agencyName,
         ssoNo: complaintNumber,
         issue: complaintSubject,
@@ -67,7 +63,6 @@ const StackedLineChartComponents = () => {
         originalStatus: complaint.confirmation_status || complaint.status,
         rawData: complaint
       };
-      return transformedItem;
     });
   };
 
@@ -83,7 +78,6 @@ const StackedLineChartComponents = () => {
       const result = [
         ...options
       ];
-
 
       return result;
     }
@@ -115,7 +109,6 @@ const StackedLineChartComponents = () => {
       setError(null);
 
       try {
-
         const response = await GetComplaintsbyPageTypeAssignmentForm({
           page: 1,
           page_size: 100,
@@ -129,12 +122,10 @@ const StackedLineChartComponents = () => {
           setAllComplaints(transformedData);
           setFilteredComplaints(transformedData);
           setStatusOptions(generatedStatusOptions);
-
         } else {
           throw new Error(response?.res_message || "ไม่สามารถดึงข้อมูลได้");
         }
       } catch (error) {
-       
         setError(error.message);
         setAllComplaints([]);
         setFilteredComplaints([]);
@@ -147,13 +138,11 @@ const StackedLineChartComponents = () => {
     fetchComplaints();
   }, []);
 
-  // ฟังก์ชันค้นหาที่ปรับปรุงแล้ว
-  const handleSearch = ({ claimantName, agency, ssoNo, status }) => {
-    
+  const handleSearch = ({ complainant_name, agency, ssoNo, status }) => {
     const result = allComplaints.filter((item) => {
-      if (claimantName && claimantName.trim() !== "") {
-        const searchTerm = claimantName.toLowerCase().trim();
-        if (!item.claimantName.toLowerCase().includes(searchTerm)) {
+      if (complainant_name && complainant_name.trim() !== "") {
+        const searchTerm = complainant_name.toLowerCase().trim();
+        if (!item.complainant_name?.toLowerCase().includes(searchTerm)) {
           return false;
         }
       }
