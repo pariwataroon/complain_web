@@ -1,27 +1,28 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from typing import Optional
 from datetime import datetime
+from typing import Optional, List
+
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from starlette.responses import FileResponse
+from sqlalchemy.orm import Session
 
 from config.database import get_db
-from app.api.middleware.jwt_verify import verify_token
-from app.api.middleware.permission_middleware import can_read, can_create
+from app.api.middleware.permission_middleware import can_read, can_create, can_delete
+from lib.format_data import FormatResponseModel, format_response
+
 from app.api.v1.controllers.outgoing_report_controller import (
     get_outgoing_reports,
     get_outgoing_report_by_id,
     create_outgoing_report,
     get_outgoing_report_options,
     auto_fill_from_complaint,
-    DuplicateKeyError
+    DuplicateKeyError,
+    add_attachments_to_outgoing_report,
+    list_attachments_of_outgoing_report,
+    get_outgoing_report_attachment_fileinfo,
+    delete_outgoing_report_attachment_by_id,
 )
-from app.api.v1.schemas.outgoing_report import (
-    OutgoingReportCreate,
-    OutgoingReportUpdate,
-    OutgoingReport,
-    OutgoingReportOptions
-)
-from lib.format_data import FormatResponseModel, format_response
+from app.api.v1.schemas.outgoing_report import OutgoingReportCreate
 
 router = APIRouter(
     prefix="/outgoing-reports",
@@ -42,7 +43,6 @@ async def get_outgoing_reports_list(
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("dashboard"))
 ):
-    """ดึงรายการรายงานส่งออกทั้งหมด"""
     try:
         data = get_outgoing_reports(
             db=db,
@@ -56,9 +56,7 @@ async def get_outgoing_reports_list(
             date_from=date_from,
             date_to=date_to
         )
-        
         return format_response("0000", data)
-        
     except Exception as e:
         return format_response("5000", {"error": str(e)})
 
@@ -67,11 +65,9 @@ async def get_options(
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("dashboard"))
 ):
-    """ดึงตัวเลือกสำหรับ dropdown ต่างๆ"""
     try:
         options = get_outgoing_report_options(db)
         return format_response("0000", options)
-        
     except Exception as e:
         return format_response("5000", {"error": str(e)})
 
@@ -81,11 +77,9 @@ async def auto_fill_from_complaint_endpoint(
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("dashboard"))
 ):
-    """ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์ม"""
     try:
         data = auto_fill_from_complaint(db, complaint_id)
         return format_response("0000", data)
-        
     except HTTPException as e:
         return format_response("4040", {"error": e.detail})
     except Exception as e:
@@ -97,17 +91,14 @@ async def create_new_outgoing_report(
     db: Session = Depends(get_db),
     current_user: str = Depends(can_create("dashboard"))
 ):
-    """สร้างรายงานส่งออกใหม่ด้วย JSON body"""
     try:
-        report = create_outgoing_report(
+        report = await create_outgoing_report(
             db=db,
             report_data=report_data,
             current_user_id=UUID(current_user),
-            files=None  # ไม่มีไฟล์ในเวอร์ชันนี้
+            files=None
         )
-        
         return format_response("0001", report)
-        
     except DuplicateKeyError as e:
         return format_response("4090", {"error": str(e)})
     except HTTPException as e:
@@ -121,14 +112,80 @@ async def get_outgoing_report(
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("dashboard"))
 ):
-    """ดึงรายงานส่งออกตาม ID"""
     try:
         report = get_outgoing_report_by_id(db, report_id)
         return format_response("0000", report)
-        
     except HTTPException as e:
         return format_response("4040", {"error": e.detail})
     except Exception as e:
         return format_response("5000", {"error": str(e)})
 
+@router.post("/{outgoing_report_id}/attachments", response_model=FormatResponseModel)
+async def upload_outgoing_report_attachments(
+    outgoing_report_id: UUID,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_create("dashboard")),
+):
+    try:
+        data = await add_attachments_to_outgoing_report(
+            db=db,
+            outgoing_report_id=outgoing_report_id,
+            files=files,
+            current_user_id=UUID(current_user),
+        )
+        return format_response("0001", data)
+    except HTTPException as e:
+        return format_response("4040", {"error": e.detail})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
 
+@router.get("/{outgoing_report_id}/attachments", response_model=FormatResponseModel)
+async def list_outgoing_report_attachments(
+    outgoing_report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("dashboard")),
+):
+    try:
+        data = list_attachments_of_outgoing_report(db, outgoing_report_id)
+        return format_response("0000", data)
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
+@router.get("/{outgoing_report_id}/attachments/{attachment_id}/download")
+async def download_outgoing_report_attachment(
+    outgoing_report_id: UUID,
+    attachment_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("dashboard")),
+):
+    file_path, media_type, filename = get_outgoing_report_attachment_fileinfo(
+        db=db,
+        outgoing_report_id=outgoing_report_id,
+        attachment_id=attachment_id
+    )
+    return FileResponse(file_path, media_type=media_type, filename=filename)
+
+@router.delete("/{outgoing_report_id}/attachments/{attachment_id}", response_model=FormatResponseModel)
+async def delete_outgoing_report_attachment(
+    outgoing_report_id: UUID,
+    attachment_id: UUID,
+    hard_delete: bool = False,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_delete("dashboard")),
+):
+    try:
+        res = delete_outgoing_report_attachment_by_id(
+            db=db,
+            outgoing_report_id=outgoing_report_id,
+            attachment_id=attachment_id,
+            hard_delete=hard_delete
+        )
+        return format_response(res.get("code", "0001"), {
+            "message": res.get("message"),
+            "attachment_id": res.get("attachment_id")
+        })
+    except HTTPException as e:
+        return format_response("4040", {"error": e.detail})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
