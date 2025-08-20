@@ -2,7 +2,6 @@ import os
 import uuid
 import aiofiles
 import shutil
-import logging
 from fastapi import UploadFile
 from datetime import datetime, timedelta
 import mimetypes
@@ -11,8 +10,8 @@ import json
 import glob
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from lib.logger import get_logger
+logger = get_logger("lib.file_upload")
 
 # Configure upload paths
 BASE_UPLOAD_DIR = os.environ.get("UPLOAD_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "uploads")))  # Base directory for all uploads
@@ -25,9 +24,9 @@ STORAGE_CONFIG_FILE = "storage_config.json"
 # Create upload directory if it doesn't exist
 try:
     os.makedirs(BASE_UPLOAD_DIR, exist_ok=True)
-    print(f"Storage directory created/verified at: {BASE_UPLOAD_DIR}")
+    logger.info(f"Storage directory created/verified at: {BASE_UPLOAD_DIR}")
 except Exception as e:
-    print(f"Error creating uploads directory: {str(e)}")
+    logger.error(f"Error creating uploads directory: {str(e)}")
 
 def get_storage_config():
     """Load storage configuration"""
