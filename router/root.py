@@ -26,6 +26,7 @@ from app.api.v1.routers.outgoing_report_router import router as outgoing_report_
 from app.api.v1.routers.outgoing_report2_router import router as outgoing_report2_router_v1
 from app.api.v1.routers.outgoing_report3_router import router as outgoing_report3_router_v1
 from app.api.v1.routers.outgoing_report4_router import router as outgoing_report4_router_v1
+from app.api.v1.routers.outgoing_report5_router import router as outgoing_report5_router_v1
 from app.api.v1.routers.consolidated_report_router import router as consolidated_report_router_v1
 from app.api.v1.routers.chat_bot_router import router as chat_bot_router_v1
 from app.api.v1.routers.news_router import router as news_router_v1
@@ -66,6 +67,7 @@ v1_router.include_router(outgoing_report_router_v1)
 v1_router.include_router(outgoing_report2_router_v1)
 v1_router.include_router(outgoing_report3_router_v1)
 v1_router.include_router(outgoing_report4_router_v1)
+v1_router.include_router(outgoing_report5_router_v1)
 v1_router.include_router(consolidated_report_router_v1)
 v1_router.include_router(chat_bot_router_v1)
 v1_router.include_router(news_router_v1)

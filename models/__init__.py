@@ -29,6 +29,7 @@ from .outgoing_reports import OutgoingReport, OutgoingReportAttachment
 from .outgoing_reports2 import OutgoingReport2, OutgoingReportAttachment2
 from .outgoing_reports3 import OutgoingReport3, OutgoingReportAttachment3
 from .outgoing_reports4 import OutgoingReport4, OutgoingReportAttachment4
+from .outgoing_reports5 import OutgoingReport5, OutgoingReportAttachment5
 from .chat_bot import ChatBot
 from .news import News
 
@@ -43,5 +44,6 @@ __all__ = [
     'ComplaintStatusHistory', 'ComplaintType', 'ComplaintSubType', 'ComplaintChannel',
     'OutgoingReport', 'OutgoingReportAttachment', 'OutgoingReport2', 'OutgoingReportAttachment2',
     'OutgoingReport3', 'OutgoingReportAttachment3', 'OutgoingReport4', 'OutgoingReportAttachment4',
+    'OutgoingReport5', 'OutgoingReportAttachment5',
     'ChatBot', 'News'
 ]
