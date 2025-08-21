@@ -42,7 +42,7 @@ class OutgoingReport5(Base):
 
     # ผู้ลงนาม/หน่วยงาน/ผู้ปฏิบัติ (ตามโครงเดิม)
     signature_authority_user_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_users.id"), nullable=True)
-    department_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_departments.id"), nullable=False)
+    department_id = Column(UNIQUEIDENTIFIER, ForeignKey("departments.id"), nullable=True)
     user_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_users.id"), nullable=True)
 
     # ระดับความลับ/ความเร่งด่วน (เก็บเป็น string ให้เข้ากับสคีมาเดิม)
@@ -57,7 +57,7 @@ class OutgoingReport5(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     # relationships
-    department = relationship("Department")
+    department = relationship("Department", foreign_keys=[department_id])
     user = relationship("User", foreign_keys=[user_id])
     signature_authority_user = relationship("User", foreign_keys=[signature_authority_user_id])
     creator = relationship("User", foreign_keys=[created_by])
