@@ -1574,6 +1574,7 @@ def get_filter_options(db: Session) -> Dict:
         available_statuses = [
             {"value": "SUBMITTED", "label": "รับเรื่อง"},
             {"value": "SENT_TO_AGENCY", "label": "มอบหมายเจ้าหน้าที่"},
+            {"value": "SENT_TO_EXTERNAL", "label": "ส่งหน่วยงานภายนอก"},
             {"value": "IN_PROCESS", "label": "กำลังดำเนินการ"},
             {"value": "IN_REVIEW", "label": "อยู่ระหว่างพิจารณา"},
             {"value": "TRACKING", "label": "ติดตามผล"},
@@ -1770,6 +1771,7 @@ def get_thai_status(status: str) -> str:
         "SUBMITTED": "รับเรื่อง",
         "submitted": "รับเรื่อง", #กรณี lowercase
         "SENT_TO_AGENCY": "มอบหมายเจ้าหน้าที่", 
+        "SENT_TO_EXTERNAL": "ส่งหน่วยงานภายนอก",
         "IN_PROCESS": "กำลังดำเนินการ",
         "IN_REVIEW": "อยู่ระหว่างพิจารณา",
         "TRACKING": "ติดตามผล",

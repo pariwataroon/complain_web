@@ -732,6 +732,7 @@ def get_complaint_summary_bkk_year(db: Session) -> Dict[str, Any]:
     in_progress_set = [
         ComplaintStatus.SUBMITTED,
         ComplaintStatus.SENT_TO_AGENCY,
+        ComplaintStatus.SENT_TO_EXTERNAL,
         ComplaintStatus.IN_PROCESS,
         ComplaintStatus.IN_REVIEW,
         ComplaintStatus.TRACKING,

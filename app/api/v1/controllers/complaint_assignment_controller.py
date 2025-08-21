@@ -49,7 +49,8 @@ def get_thai_status(status: str) -> str:
     """แปลงสถานะเป็นภาษาไทย"""
     status_mapping = {
         "submitted": "รับเรื่อง",
-        "sent_to_agency": "มอบหมายเจ้าหน้าที่", 
+        "sent_to_agency": "มอบหมายเจ้าหน้าที่",
+        "sent_to_external": "ส่งหน่วยงานภายนอก", 
         "in_process": "กำลังดำเนินการ",
         "in_review": "อยู่ระหว่างพิจารณา",
         "tracking": "ติดตามผล",

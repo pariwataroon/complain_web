@@ -13,6 +13,7 @@ class ComplaintStatus(str, enum.Enum):
     # Based on the tracking diagrams in the images
     SUBMITTED = "submitted"                 # ส่งคำร้อง
     SENT_TO_AGENCY = "sent_to_agency"       # มอบหมายเจ้าหน้าที่
+    SENT_TO_EXTERNAL = "sent_to_external"   # ส่งหน่วยงานภายนอก
     IN_PROCESS = "in_process"               # อยู่ระหว่างดำเนินการ
     IN_REVIEW = "in_review"                 # อยู่ระหว่างการพิจารณา
     TRACKING = "tracking"                   # ติดตามผลการพิจารณา
@@ -79,7 +80,7 @@ class Complaint(Base):
         default=ComplaintStatus.SUBMITTED, 
         nullable=False,
         index=True,
-        comment="สถานะการร้องเรียน: submitted=ส่งคำร้อง, sent_to_agency=มอบหมายเจ้าหน้าที่, in_process=อยู่ระหว่างดำเนินการ, in_review=อยู่ระหว่างการพิจารณา, tracking=ติดตามผลการพิจารณา, reviewed=แจ้งผลการพิจารณา, completed=เสร็จสิ้น, cancelled=ยกเลิก"
+        comment="สถานะการร้องเรียน: submitted=ส่งคำร้อง, sent_to_agency=มอบหมายเจ้าหน้าที่, sent_to_external=ส่งหน่วยงานภายนอก, in_process=อยู่ระหว่างดำเนินการ, in_review=อยู่ระหว่างการพิจารณา, tracking=ติดตามผลการพิจารณา, reviewed=แจ้งผลการพิจารณา, completed=เสร็จสิ้น, cancelled=ยกเลิก"
     )
     
     # ข้อมูลผู้ร้องเรียน (ความเรียบง่าย - เก็บเฉพาะสิ่งที่จำเป็น)

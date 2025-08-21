@@ -670,6 +670,7 @@ def get_user_related_complaints_with_tracking(
     status_th_map = {
         "submitted": "ส่งคำร้อง",
         "sent_to_agency": "มอบหมายเจ้าหน้าที่",
+        "sent_to_external": "ส่งหน่วยงานภายนอก",
         "in_process": "อยู่ระหว่างดำเนินการ",
         "in_review": "อยู่ระหว่างพิจารณา",
         "tracking": "ติดตามผลการพิจารณา",
@@ -681,7 +682,7 @@ def get_user_related_complaints_with_tracking(
         "completed": "เสร็จสิ้น",
         "tracking": "ติดตามต่อ",
         "reviewed": "มีผลพิจารณา",
-        "sent_to_agency": "มอบหมายเจ้าหน้าที่แล้ว",
+        "sent_to_external": "ส่งหน่วยงานภายนอกแล้ว",
     }
 
     q = db.query(Complaint).options(joinedload(Complaint.status_history)).filter(
@@ -865,7 +866,9 @@ def get_user_related_complaints_with_tracking(
                 suggested_next = "reviewed"
             latest_decision["result_label"] = decision_th_map.get(suggested_next, suggested_next)
         elif latest_sent:
-            suggested_next = "sent_to_agency"
+            # ถ้ามี OutgoingReport แสดงว่าส่งหน่วยงานภายนอกแล้ว
+            # แต่ใช้ in_review เพื่อไม่ให้สับสนกับการมอบหมายเจ้าหน้าที่
+            suggested_next = "in_review"  # รอการตอบกลับจากหน่วยงานภายนอก
 
         def _ts(x: Dict[str, Any]):
             return x.get("at") or x.get("reference_date") or x.get("created_at") or ""
@@ -944,6 +947,7 @@ def get_outgoing_tracking(
     status_th_map = {
         "submitted": "ส่งคำร้อง",
         "sent_to_agency": "มอบหมายเจ้าหน้าที่",
+        "sent_to_external": "ส่งหน่วยงานภายนอก",
         "in_process": "อยู่ระหว่างดำเนินการ",
         "in_review": "อยู่ระหว่างการพิจารณา",
         "tracking": "ติดตามผลการพิจารณา",
@@ -955,7 +959,7 @@ def get_outgoing_tracking(
         "completed": "เสร็จสิ้น",
         "tracking": "ติดตามต่อ",
         "reviewed": "มีผลพิจารณา",
-        "sent_to_agency": "มอบหมายเจ้าหน้าที่แล้ว",
+        "sent_to_external": "ส่งหน่วยงานภายนอกแล้ว",
     }
 
     complaint = (
@@ -1081,7 +1085,9 @@ def get_outgoing_tracking(
             suggested_next = "reviewed"
         latest_decision["result_label"] = decision_th_map.get(suggested_next, suggested_next)
     elif latest_sent:
-        suggested_next = "sent_to_agency"
+        # ถ้ามี OutgoingReport แสดงว่าส่งหน่วยงานภายนอกแล้ว
+        # แต่ใช้ in_review เพื่อไม่ให้สับสนกับการมอบหมายเจ้าหน้าที่
+        suggested_next = "in_review"  # รอการตอบกลับจากหน่วยงานภายนอก
 
     if report_type in {"outgoing_report", "outgoing_report3", "status_history"}:
         timeline = [t for t in timeline if t.get("type") == report_type]
