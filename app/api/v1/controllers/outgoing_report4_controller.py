@@ -1,9 +1,13 @@
+from __future__ import annotations
+
+import os
+from uuid import UUID, uuid4
 from datetime import datetime
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, and_, func
-from uuid import UUID
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
+
 from fastapi import HTTPException, UploadFile
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_
 
 from models.outgoing_reports4 import OutgoingReport4, OutgoingReportAttachment4
 from models.comp_complaint import Complaint
@@ -14,60 +18,87 @@ from lib.logger import get_logger
 
 logger = get_logger("outgoing_report4_controller")
 
+# ปรับ path ได้ตามโครงโปรเจค
+BASE_UPLOAD_DIR = os.path.join("uploads", "outgoing-reports4")
+
+
 class DuplicateKeyError(Exception):
     pass
 
+
+# ------------------------- Utils -------------------------
+def _safe_str(x):
+    return str(x) if x is not None else None
+
+def _iso(dt: Optional[datetime]) -> Optional[str]:
+    return dt.isoformat() if dt else None
+
+def _ensure_dir(path: str):
+    os.makedirs(path, exist_ok=True)
+
+def _attachment_dict(att: OutgoingReportAttachment4) -> Dict[str, Any]:
+    return {
+        "id": _safe_str(att.id),
+        "file_name": getattr(att, "file_name", None),
+        "file_size": getattr(att, "file_size", None),
+        "file_type": getattr(att, "file_type", None),
+        "created_at": _iso(getattr(att, "created_at", None)),
+    }
+
+
+# ------------------------- Core CRUD -------------------------
 def create_outgoing_report4(
     db: Session,
     report_data: OutgoingReport4Create,
     current_user_id: UUID,
     files: Optional[List[UploadFile]] = None
-) -> Dict:
+) -> Dict[str, Any]:
     """สร้างรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบใหม่"""
     try:
         logger.info(f"Creating OutgoingReport4: {report_data.reference_number}")
-        
-        # ตรวจสอบ reference_number ซ้ำ
+
+        # กัน reference_number ซ้ำ
         existing = db.query(OutgoingReport4).filter(
             OutgoingReport4.reference_number == report_data.reference_number,
             OutgoingReport4.is_active == True
         ).first()
-        
         if existing:
             raise DuplicateKeyError(f"เลขอ้างอิง {report_data.reference_number} มีอยู่แล้ว")
-        
-        # ไม่ต้องตรวจสอบ complaint_id เพราะ outgoing_reports4 ไม่มี complaint_number
-        # แต่ถ้ามี complaint_id ก็ยังตรวจสอบได้ว่ามีอยู่จริงหรือไม่
+
+        # complaint_id ไม่บังคับ แต่ถ้าส่งมาก็ตรวจว่ามีจริง
         if report_data.complaint_id:
             complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
             if not complaint:
                 raise HTTPException(status_code=400, detail="ไม่พบข้อร้องเรียนที่ระบุ")
-        
-        # สร้าง object ตาม model ที่ถูกต้อง
+
         db_report = OutgoingReport4(
             reference_number=report_data.reference_number,
             reference_date=report_data.reference_date,
             subject=report_data.subject,
             signature_authority_user_id=report_data.signature_authority_user_id,
-            department_id=report_data.department_id,  # Optional ตาม model
-            user_id=report_data.user_id,  # ตาม model
-            other_department=report_data.other_department,  # ตาม model
+            department_id=report_data.department_id,
+            user_id=report_data.user_id,
+            other_department=report_data.other_department,
             confidentiality_level=report_data.confidentiality_level,
             urgency_level=report_data.urgency_level,
             remarks=report_data.remarks,
-            proposal_purpose=report_data.proposal_purpose,  # ตาม model
-            consideration_result=report_data.consideration_result,  # ตาม model
-            complaint_id=report_data.complaint_id,  # ยังคงมีได้ แต่ไม่บังคับ
-            created_by=current_user_id
+            proposal_purpose=report_data.proposal_purpose,
+            consideration_result=report_data.consideration_result,
+            complaint_id=report_data.complaint_id,
+            created_by=current_user_id,
         )
-        
+
         db.add(db_report)
         db.flush()
+
+        # แนบไฟล์ทันทีถ้ามี (optional)
+        if files:
+            _save_files_for_report(db, db_report.id, files)
+
         db.commit()
         db.refresh(db_report)
-        
         return get_outgoing_report4_by_id(db, db_report.id)
-        
+
     except DuplicateKeyError:
         db.rollback()
         raise
@@ -79,65 +110,63 @@ def create_outgoing_report4(
         logger.error(f"Error creating outgoing report4: {str(e)}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
-def get_outgoing_report4_by_id(db: Session, report_id: UUID) -> Dict:
-    """ดึงรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบตาม ID"""
+
+def get_outgoing_report4_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
+    """ดึงรายงานตาม ID (รวมไฟล์แนบ)"""
     try:
         report = db.query(OutgoingReport4).options(
             joinedload(OutgoingReport4.signature_authority_user),
             joinedload(OutgoingReport4.department),
-            joinedload(OutgoingReport4.user),  # ตาม model
+            joinedload(OutgoingReport4.user),
             joinedload(OutgoingReport4.creator),
             joinedload(OutgoingReport4.complaint),
-            joinedload(OutgoingReport4.attachments)
+            joinedload(OutgoingReport4.attachments),
         ).filter(
             OutgoingReport4.id == report_id,
             OutgoingReport4.is_active == True
         ).first()
-        
+
         if not report:
             raise HTTPException(status_code=404, detail="ไม่พบรายงานที่ระบุ")
-        
+
         return {
-            "id": str(report.id),
+            "id": _safe_str(report.id),
             "reference_number": report.reference_number,
-            "reference_date": report.reference_date.isoformat() if report.reference_date else None,
+            "reference_date": _iso(report.reference_date),
             "subject": report.subject,
             "signature_authority_user": {
-                "id": str(report.signature_authority_user_id),
-                "name": f"{report.signature_authority_user.first_name} {report.signature_authority_user.last_name}" if report.signature_authority_user else "N/A"
+                "id": _safe_str(report.signature_authority_user_id),
+                "name": f"{report.signature_authority_user.first_name} {report.signature_authority_user.last_name}"
+                if report.signature_authority_user else "N/A",
             },
             "department": {
-                "id": str(report.department_id) if report.department_id else None,
-                "name": report.department.name if report.department else "N/A"
+                "id": _safe_str(report.department_id) if report.department_id else None,
+                "name": report.department.name if report.department else "N/A",
             },
-            "user": {  # ตาม model
-                "id": str(report.user_id) if report.user_id else None,
-                "name": f"{report.user.first_name} {report.user.last_name}" if report.user else "N/A"
+            "user": {
+                "id": _safe_str(report.user_id) if report.user_id else None,
+                "name": f"{report.user.first_name} {report.user.last_name}" if report.user else "N/A",
             },
-            "other_department": report.other_department,  # ตาม model
+            "other_department": report.other_department,
             "confidentiality_level": report.confidentiality_level,
             "urgency_level": report.urgency_level,
             "remarks": report.remarks,
-            "proposal_purpose": report.proposal_purpose,  # ตาม model
-            "consideration_result": report.consideration_result,  # ตาม model
-            "complaint_id": str(report.complaint_id) if report.complaint_id else None,
-            "created_at": report.created_at.isoformat() if report.created_at else None,
+            "proposal_purpose": report.proposal_purpose,
+            "consideration_result": report.consideration_result,
+            "complaint_id": _safe_str(report.complaint_id) if report.complaint_id else None,
+            "created_at": _iso(report.created_at),
             "creator_name": f"{report.creator.first_name} {report.creator.last_name}" if report.creator else "N/A",
             "attachments": [
-                {
-                    "id": str(att.id),
-                    "file_name": att.file_name,
-                    "file_size": att.file_size,
-                    "file_type": att.file_type
-                } for att in report.attachments if att.is_active
-            ]
+                _attachment_dict(att) for att in report.attachments if getattr(att, "is_active", True)
+            ],
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting outgoing report4: {str(e)}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
+
 
 def get_outgoing_reports4(
     db: Session,
@@ -149,7 +178,7 @@ def get_outgoing_reports4(
     urgency_level: Optional[str] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None
-) -> Dict:
+) -> Dict[str, Any]:
     """ดึงรายการรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ"""
     try:
         query = db.query(OutgoingReport4).options(
@@ -157,19 +186,20 @@ def get_outgoing_reports4(
             joinedload(OutgoingReport4.department),
             joinedload(OutgoingReport4.user),
             joinedload(OutgoingReport4.complaint),
-            joinedload(OutgoingReport4.attachments)
+            joinedload(OutgoingReport4.attachments),
         ).filter(OutgoingReport4.is_active == True)
-        
+
         if search:
+            like = f"%{search}%"
             query = query.filter(
                 or_(
-                    OutgoingReport4.reference_number.ilike(f"%{search}%"),
-                    OutgoingReport4.subject.ilike(f"%{search}%"),
-                    OutgoingReport4.remarks.ilike(f"%{search}%"),
-                    OutgoingReport4.other_department.ilike(f"%{search}%")
+                    OutgoingReport4.reference_number.ilike(like),
+                    OutgoingReport4.subject.ilike(like),
+                    OutgoingReport4.remarks.ilike(like),
+                    OutgoingReport4.other_department.ilike(like),
                 )
             )
-        
+
         if department_id:
             query = query.filter(OutgoingReport4.department_id == department_id)
         if signature_authority_user_id:
@@ -180,73 +210,216 @@ def get_outgoing_reports4(
             query = query.filter(OutgoingReport4.reference_date >= date_from)
         if date_to:
             query = query.filter(OutgoingReport4.reference_date <= date_to)
-        
+
         total = query.count()
         reports = query.order_by(OutgoingReport4.created_at.desc()).offset(skip).limit(limit).all()
-        
+
         items = []
-        for report in reports:
+        for r in reports:
             items.append({
-                "id": str(report.id),
-                "reference_number": report.reference_number,
-                "reference_date": report.reference_date.isoformat() if report.reference_date else None,
-                "subject": report.subject,
-                "department_name": report.department.name if report.department else report.other_department or "N/A",
-                "signature_user_name": f"{report.signature_authority_user.first_name} {report.signature_authority_user.last_name}" if report.signature_authority_user else "N/A",
-                "urgency_level": report.urgency_level,
-                "proposal_purpose": report.proposal_purpose,
-                "consideration_result": report.consideration_result,
-                "created_at": report.created_at.isoformat() if report.created_at else None,
-                "attachment_count": len([att for att in report.attachments if att.is_active])
+                "id": _safe_str(r.id),
+                "reference_number": r.reference_number,
+                "reference_date": _iso(r.reference_date),
+                "subject": r.subject,
+                "department_name": r.department.name if r.department else (r.other_department or "N/A"),
+                "signature_user_name": (
+                    f"{r.signature_authority_user.first_name} {r.signature_authority_user.last_name}"
+                    if r.signature_authority_user else "N/A"
+                ),
+                "urgency_level": r.urgency_level,
+                "proposal_purpose": r.proposal_purpose,
+                "consideration_result": r.consideration_result,
+                "created_at": _safe_str(_iso(r.created_at)),
+                "attachment_count": len([att for att in r.attachments if getattr(att, "is_active", True)]),
             })
-        
+
         return {
             "items": items,
             "total": total,
             "page": (skip // limit) + 1,
             "size": limit,
-            "total_pages": (total + limit - 1) // limit
+            "total_pages": (total + limit - 1) // limit,
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting outgoing reports4: {str(e)}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
-def get_outgoing_report4_options(db: Session) -> Dict:
+
+def get_outgoing_report4_options(db: Session) -> Dict[str, Any]:
     """ดึงตัวเลือกสำหรับ dropdown"""
     try:
         departments = db.query(Department).filter(Department.is_active == True).order_by(Department.name).all()
         users = db.query(User).filter(User.is_active == True).order_by(User.first_name).all()
-        
+
         return {
-            "departments": [{"id": str(dept.id), "name": dept.name} for dept in departments],
-            "signature_authorities": [{"id": str(user.id), "name": f"{user.first_name} {user.last_name}"} for user in users],  # เพิ่ม
-            "users": [{"id": str(user.id), "name": f"{user.first_name} {user.last_name}"} for user in users],
+            "departments": [{"id": _safe_str(dept.id), "name": dept.name} for dept in departments],
+            "signature_authorities": [{"id": _safe_str(u.id), "name": f"{u.first_name} {u.last_name}"} for u in users],
+            "users": [{"id": _safe_str(u.id), "name": f"{u.first_name} {u.last_name}"} for u in users],
             "confidentiality_levels": ["ปกติ", "ลับ", "ลับมาก", "ลับที่สุด"],
-            "urgency_levels": ["ปกติ", "เร่งด่วน", "เร่งด่วนมาก", "เร่งด่วนที่สุด"]
+            "urgency_levels": ["ปกติ", "เร่งด่วน", "เร่งด่วนมาก", "เร่งด่วนที่สุด"],
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting options: {str(e)}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
-def auto_fill_from_complaint4(db: Session, complaint_id: UUID) -> Dict:
+
+def auto_fill_from_complaint4(db: Session, complaint_id: UUID) -> Dict[str, Any]:
     """ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์ม"""
     try:
         complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
-        
         if not complaint:
             raise HTTPException(status_code=404, detail="ไม่พบข้อร้องเรียนที่ระบุ")
-        
-        # สำหรับ outgoing_reports4 ไม่มี complaint_number เลยไม่ใส่
+
         return {
-            "complaint_id": str(complaint.id),
+            "complaint_id": _safe_str(complaint.id),
             "subject": f"แจ้งผลการให้ผู้เกี่ยวข้องทราบ - {complaint.subject}",
-            "reference_number": f"อ้างอิง-{complaint.complaint_number}" if hasattr(complaint, 'complaint_number') else None
+            "reference_number": f"อ้างอิง-{getattr(complaint, 'complaint_number', '')}".strip("-"),
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error auto filling: {str(e)}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
+
+
+# ------------------------- Attachments (รุ่น 4) -------------------------
+def _report_dir(report_id: UUID) -> str:
+    return os.path.join(BASE_UPLOAD_DIR, str(report_id))
+
+def _save_files_for_report(db: Session, report_id: UUID, files: List[UploadFile]) -> List[OutgoingReportAttachment4]:
+    """บันทึกไฟล์ลงดิสก์ + สร้างเรคอร์ดแนบ (sanitize + unique name)"""
+    saved: List[OutgoingReportAttachment4] = []
+    target_dir = _report_dir(report_id)
+    _ensure_dir(target_dir)
+
+    for f in files:
+        raw_name = f.filename or "upload.bin"
+        safe_name = os.path.basename(raw_name)              # กัน path traversal
+        unique_name = f"{uuid4().hex}_{safe_name}"         # กันชื่อชนกัน
+        file_path = os.path.join(target_dir, unique_name)
+
+        # เขียนไฟล์แบบ chunked
+        with open(file_path, "wb") as out:
+            chunk = f.file.read(8192)
+            while chunk:
+                out.write(chunk)
+                chunk = f.file.read(8192)
+
+        file_size = None
+        try:
+            file_size = str(os.path.getsize(file_path))
+        except Exception:
+            pass
+
+        att = OutgoingReportAttachment4(
+            outgoing_report_id=report_id,
+            file_name=unique_name,
+            file_path=file_path,
+            file_size=file_size,
+            file_type=getattr(f, "content_type", None),
+            is_active=True,
+        )
+        db.add(att)
+        db.flush()
+        db.refresh(att)
+        saved.append(att)
+
+    return saved
+
+
+def add_attachments_to_outgoing_report4(
+    db: Session,
+    outgoing_report_id: UUID,
+    files: List[UploadFile],
+    current_user_id: UUID,
+) -> Dict[str, Any]:
+    """อัปโหลดหลายไฟล์ให้รายงาน (รุ่น 4)"""
+    report = db.query(OutgoingReport4).filter(OutgoingReport4.id == outgoing_report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="ไม่พบรายงานส่งออกที่ระบุ")
+
+    atts = _save_files_for_report(db, outgoing_report_id, files)
+    db.commit()
+    return {
+        "outgoing_report_id": _safe_str(outgoing_report_id),
+        "attachments": [_attachment_dict(att) for att in atts],
+    }
+
+
+def list_attachments_of_outgoing_report4(db: Session, outgoing_report_id: UUID) -> Dict[str, Any]:
+    q = db.query(OutgoingReportAttachment4).filter(
+        OutgoingReportAttachment4.outgoing_report_id == outgoing_report_id
+    )
+    if hasattr(OutgoingReportAttachment4, "is_active"):
+        q = q.filter(OutgoingReportAttachment4.is_active == True)
+
+    if hasattr(OutgoingReportAttachment4, "created_at"):
+        q = q.order_by(OutgoingReportAttachment4.created_at.desc())
+
+    rows = q.all()
+    return {
+        "outgoing_report_id": _safe_str(outgoing_report_id),
+        "attachments": [_attachment_dict(r) for r in rows],
+    }
+
+
+def get_outgoing_report4_attachment_fileinfo(
+    db: Session, outgoing_report_id: UUID, attachment_id: UUID
+) -> Tuple[str, str, str]:
+    att = db.query(OutgoingReportAttachment4).filter(
+        OutgoingReportAttachment4.id == attachment_id,
+        OutgoingReportAttachment4.outgoing_report_id == outgoing_report_id,
+    ).first()
+    if not att:
+        raise HTTPException(status_code=404, detail="ไม่พบไฟล์แนบที่ระบุ")
+
+    if hasattr(att, "is_active") and not getattr(att, "is_active"):
+        raise HTTPException(status_code=404, detail="ไฟล์แนบนี้ถูกลบออกจากการแสดงผลแล้ว")
+
+    file_path = getattr(att, "file_path", None)
+    if not file_path or not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="ไม่พบไฟล์บนเซิร์ฟเวอร์")
+
+    filename = getattr(att, "file_name", None) or os.path.basename(file_path)
+    media_type = getattr(att, "file_type", None) or "application/octet-stream"
+    return file_path, media_type, filename
+
+
+def delete_outgoing_report4_attachment_by_id(
+    db: Session,
+    outgoing_report_id: UUID,
+    attachment_id: UUID,
+    hard_delete: bool = False,
+) -> Dict[str, Any]:
+    att = db.query(OutgoingReportAttachment4).filter(
+        OutgoingReportAttachment4.id == attachment_id,
+        OutgoingReportAttachment4.outgoing_report_id == outgoing_report_id,
+    ).first()
+    if not att:
+        raise HTTPException(status_code=404, detail="ไม่พบไฟล์แนบที่ระบุ")
+
+    # hard delete (ลบไฟล์จริง + ลบเรคอร์ด)
+    if hard_delete:
+        file_path = getattr(att, "file_path", None)
+        try:
+            if file_path and os.path.isfile(file_path):
+                os.remove(file_path)
+        except Exception:
+            pass
+        db.delete(att)
+        db.commit()
+        return {"code": "0003", "message": "ลบไฟล์แนบ (hard delete) เรียบร้อย", "attachment_id": _safe_str(attachment_id)}
+
+    # soft delete
+    if hasattr(att, "is_active"):
+        att.is_active = False
+        db.commit()
+        return {"code": "0001", "message": "ลบไฟล์แนบเรียบร้อย (soft delete)", "attachment_id": _safe_str(attachment_id)}
+
+    # fallback: ไม่มี is_active → ลบเรคอร์ด
+    db.delete(att)
+    db.commit()
+    return {"code": "0003", "message": "ลบเรคอร์ดไฟล์แนบ", "attachment_id": _safe_str(attachment_id)}
