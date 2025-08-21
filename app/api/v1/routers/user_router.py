@@ -87,7 +87,7 @@ async def create_new_user(
         position_ids = processed_data.get('position_ids')
         primary_position_id = processed_data.get('primary_position_id')
         
-        db_user = create_user(db, user, roles, position_ids, primary_position_id)
+        db_user = create_user(db, user, roles, position_ids, primary_position_id, force_active=True)
         result = UserResponse.model_validate(db_user).model_dump()
         return format_response("0001", result)
     except DuplicateKeyError as e:

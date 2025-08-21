@@ -112,7 +112,7 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).options(joinedload(User.title)).order_by(User.id).offset(skip).limit(limit).all()
 
 
-def create_user(db: Session, user: UserCreate, roles: list = None, position_ids: list = None, primary_position_id: UUID = None):
+def create_user(db: Session, user: UserCreate, roles: list = None, position_ids: list = None, primary_position_id: UUID = None, force_active: bool = False):
     try:
         create_data = sanitize_input_fields(user.model_dump())
 
@@ -152,6 +152,9 @@ def create_user(db: Session, user: UserCreate, roles: list = None, position_ids:
         if 'people' in [r.lower() for r in role_names]:
             is_active = False
         else:
+            is_active = True
+
+        if force_active:
             is_active = True
 
         db_user = User(
