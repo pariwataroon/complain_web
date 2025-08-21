@@ -45,7 +45,7 @@ class OutgoingReport5(Base):
     department_id = Column(UNIQUEIDENTIFIER, ForeignKey("departments.id"), nullable=True)
     user_id = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_users.id"), nullable=True)
 
-    # ระดับความลับ/ความเร่งด่วน (เก็บเป็น string ให้เข้ากับสคีมาเดิม)
+    # ระดับความลับ/ความเร่งด่วน
     confidentiality_level = Column(NVARCHAR(50), nullable=True)
     urgency_level = Column(NVARCHAR(50), nullable=True)
 
@@ -62,8 +62,14 @@ class OutgoingReport5(Base):
     signature_authority_user = relationship("User", foreign_keys=[signature_authority_user_id])
     creator = relationship("User", foreign_keys=[created_by])
     updater = relationship("User", foreign_keys=[updated_by])
-    complaint = relationship("Complaint", backref="outgoing_reports5")
-    attachments = relationship("OutgoingReportAttachment5", back_populates="outgoing_report", cascade="all, delete-orphan")
+
+    complaint = relationship("Complaint", back_populates="outgoing_reports5")
+
+    attachments = relationship(
+        "OutgoingReportAttachment5",
+        back_populates="outgoing_report",
+        cascade="all, delete-orphan"
+    )
 
 
 class OutgoingReportAttachment5(Base):
@@ -74,7 +80,7 @@ class OutgoingReportAttachment5(Base):
 
     file_name = Column(NVARCHAR(255), nullable=False)
     file_path = Column(NVARCHAR(1024), nullable=True)
-    file_url = Column(NVARCHAR(1024), nullable=True)  # ถ้ามี uploader คืน URL
+    file_url = Column(NVARCHAR(1024), nullable=True)
     file_type = Column(NVARCHAR(100), nullable=True)
     file_size = Column(NVARCHAR(100), nullable=True)
     is_active = Column(Boolean, default=True, index=True)
