@@ -9999,6 +9999,194 @@
 			"description": "API สำหรับจัดการรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ - เชื่อมโยงกับข้อร้องเรียน, หน่วยงาน, ผู้มีอำนาจลงนาม, และผู้ใช้ที่เกี่ยวข้อง (ไม่มี position_id)"
 		},
 		{
+			"name": "OUTGOING REPORTS 5 (รับเรื่องรายงานผลการพิจารณาจากหน่วยงาน)",
+			"item": [
+				{
+					"name": "Get All Outgoing Reports 5",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports5?skip=0&limit=100&search=&department_id=&signature_authority_user_id=&urgency_level=&date_from=&date_to=",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports5"],
+							"query": [
+								{"key": "skip", "value": "0", "description": "จำนวนรายการที่ข้าม"},
+								{"key": "limit", "value": "100", "description": "จำนวนรายการต่อหน้า"},
+								{"key": "search", "value": "", "description": "ค้นหาจากเลขรับเรื่อง, เรื่อง, เลขอ้างอิงจากหน่วยงาน"},
+								{"key": "department_id", "value": "", "description": "หน่วยงาน (UUID)"},
+								{"key": "signature_authority_user_id", "value": "", "description": "ผู้มีอำนาจลงนาม (UUID)"},
+								{"key": "urgency_level", "value": "", "description": "ระดับความเร่งด่วน"},
+								{"key": "date_from", "value": "", "description": "วันที่เริ่มต้น (YYYY-MM-DD)"},
+								{"key": "date_to", "value": "", "description": "วันที่สิ้นสุด (YYYY-MM-DD)"}
+							]
+						},
+						"description": "ดึงรายการรายงานผลการพิจารณาจากหน่วยงานทั้งหมด พร้อมการกรองและค้นหา"
+					}
+				},
+				{
+					"name": "Get Outgoing Report 5 Options",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports5/options",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports5", "options"]
+						},
+						"description": "ดึงตัวเลือกสำหรับ dropdown ต่างๆ ในฟอร์ม - รวมรายการหน่วยงาน, ผู้มีอำนาจลงนาม, ผู้ใช้, ระดับความลับ, ระดับความเร่งด่วน"
+					}
+				},
+				{
+					"name": "Auto Fill from Complaint 5",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports5/auto-fill/{{complaint_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports5", "auto-fill", "{{complaint_id}}"]
+						},
+						"description": "ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์มรายงานผลการพิจารณา - จะได้ข้อมูล complaint_id, complaint_number, complaint_number_date, subject"
+					}
+				},
+				{
+					"name": "Create Outgoing Report 5",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"receive_number\": \"รับ.001/2568\",\n    \"receive_date\": \"2025-08-21\",\n    \"agency_reference_number\": \"สนผ.123/2568\",\n    \"agency_reference_date\": \"2025-08-20\",\n    \"internal_register_number\": \"ทะเบียนรับ.456/2568\",\n    \"internal_register_date\": \"2025-08-21\",\n    \"present_to_director_date\": \"2025-08-22\",\n    \"complaint_number\": \"MOF-20250821-00001\",\n    \"complaint_number_date\": \"2025-08-15\",\n    \"subject\": \"เรื่อง รายงานผลการพิจารณาเรื่องร้องเรียน\",\n    \"document_number\": \"สป.กค 789/2568\",\n    \"document_date\": \"2025-08-20\",\n    \"signature_authority_user_id\": \"{{signature_user_id}}\",\n    \"department_id\": \"{{department_id}}\",\n    \"user_id\": \"{{user_id}}\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"complaint_id\": \"{{complaint_id}}\",\n    \"remarks\": \"หมายเหตุ\"\n}",
+							"options": {"raw": {"language": "json"}}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports5",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports5"]
+						},
+						"description": "สร้างรายงานรับเรื่องผลการพิจารณาจากหน่วยงานใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- receive_number: เลขรับเรื่องผลการพิจารณา (ภายใน กค.)\n- receive_date: วันที่รับเรื่องผลการพิจารณา\n- complaint_number: หมายเลขข้อร้องเรียน\n- complaint_number_date: วันที่ของข้อร้องเรียน\n- subject: เรื่อง\n- department_id: หน่วยงาน (UUID)\n\n**ฟิลด์ที่ไม่บังคับ:**\n- agency_reference_number: เลขอ้างอิงจากหน่วยงานต้นทาง\n- agency_reference_date: วันที่เลขอ้างอิงจากหน่วยงานต้นทาง\n- internal_register_number: เลขทะเบียนรับภายใน\n- internal_register_date: วันที่ทะเบียนรับภายใน\n- present_to_director_date: วันที่เสนอ ผอ./ผู้มีอำนาจ\n- document_number: เลขเอกสาร\n- document_date: วันที่เอกสาร\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- user_id: ผู้ปฏิบัติงาน (UUID)\n- confidentiality_level: ระดับความลับ\n- urgency_level: ระดับความเร่งด่วน\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง\n- remarks: หมายเหตุ"
+					}
+				},
+				{
+					"name": "Get Outgoing Report 5 by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports5/{{report5_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports5", "{{report5_id}}"]
+						},
+						"description": "ดึงรายงานรับเรื่องผลการพิจารณาตาม ID พร้อมข้อมูลครบถ้วน รวมข้อมูลหน่วยงาน, ผู้มีอำนาจลงนาม, ผู้ปฏิบัติงาน, และไฟล์แนบ"
+					}
+				},
+				{
+					"name": "Upload Outgoing Report 5 Attachments",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "files",
+									"type": "file",
+									"src": [],
+									"description": "ไฟล์แนบ (สามารถเลือกหลายไฟล์)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports5/{{report5_id}}/attachments",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports5", "{{report5_id}}", "attachments"]
+						},
+						"description": "อัปโหลดไฟล์แนบสำหรับรายงานรับเรื่องผลการพิจารณา - รองรับการอัปโหลดหลายไฟล์พร้อมกัน"
+					}
+				},
+				{
+					"name": "List Outgoing Report 5 Attachments",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports5/{{report5_id}}/attachments",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports5", "{{report5_id}}", "attachments"]
+						},
+						"description": "ดึงรายการไฟล์แนบของรายงานรับเรื่องผลการพิจารณา"
+					}
+				},
+				{
+					"name": "Download Outgoing Report 5 Attachment",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports5/{{report5_id}}/attachments/{{attachment_id}}/download",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports5", "{{report5_id}}", "attachments", "{{attachment_id}}", "download"]
+						},
+						"description": "ดาวน์โหลดไฟล์แนบจากรายงานรับเรื่องผลการพิจารณา"
+					}
+				},
+				{
+					"name": "Delete Outgoing Report 5 Attachment",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports5/{{report5_id}}/attachments/{{attachment_id}}?hard_delete=false",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports5", "{{report5_id}}", "attachments", "{{attachment_id}}"],
+							"query": [
+								{"key": "hard_delete", "value": "false", "description": "true = ลบถาวร, false = soft delete"}
+							]
+						},
+						"description": "ลบไฟล์แนบ - ลบไฟล์แนบออกจากรายงานรับเรื่องผลการพิจารณา (รองรับ soft delete และ hard delete)"
+					}
+				}
+			],
+			"description": "API สำหรับจัดการรายงานรับเรื่องผลการพิจารณาจากหน่วยงาน - เชื่อมโยงกับข้อร้องเรียน, หน่วยงาน, ผู้มีอำนาจลงนาม, และผู้ปฏิบัติงาน (Incoming acknowledgement of agency's decision/result)"
+		},
+		{
 			"name": "USER PERMISSIONS (สิทธิ์เฉพาะผู้ใช้)",
 			"item": [
 				{
