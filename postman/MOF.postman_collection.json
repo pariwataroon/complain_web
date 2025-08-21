@@ -1483,6 +1483,47 @@
 					"response": []
 				},
 				{
+					"name": "users/blocked",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/users/blocked?skip=0&limit=100",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"users",
+								"blocked"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนข้อมูลที่ข้าม (สำหรับ pagination)"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนข้อมูลสูงสุดที่แสดง (สูงสุด 100)"
+								}
+							]
+						},
+						"description": "ดึงรายชื่อผู้ใช้ที่ถูกบล็อค (is_active = false) - แสดงเฉพาะผู้ใช้ที่ถูก soft delete หรือปิดการใช้งาน\n\n**คุณสมบัติ:**\n- แสดงเฉพาะผู้ใช้ที่ is_active = false\n- รองรับ pagination ด้วย skip และ limit\n- แสดงข้อมูลพื้นฐานของผู้ใช้ พร้อม roles และ titles\n- เรียงลำดับตาม updated_at (ล่าสุดก่อน)\n\n**สิทธิ์:** ต้องมีสิทธิ์ `setting_users:read` (admin level)\n\n**ตัวอย่าง Response:**\n```json\n{\n  \"res_code\": \"0000\",\n  \"res_message\": \"SUCCESS\",\n  \"res_data\": [\n    {\n      \"id\": \"uuid\",\n      \"citizen_id\": \"1234567890123\",\n      \"email\": \"blocked@example.com\",\n      \"full_name_with_title\": \"นาย ทดสอบ บล็อค\",\n      \"is_active\": false,\n      \"updated_at\": \"2025-01-01T00:00:00Z\",\n      \"roles\": [...],\n      \"title\": {...}\n    }\n  ]\n}\n```"
+					},
+					"response": []
+				},
+				{
 					"name": "users/UUID",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
