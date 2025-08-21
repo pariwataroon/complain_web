@@ -9781,6 +9781,87 @@
 						},
 						"description": "ดึงรายงานแจ้งผู้ร้องเรียนตาม ID พร้อมข้อมูลครบถ้วน รวมข้อมูลตำแหน่ง, หน่วยงาน, ผู้มีอำนาจลงนาม, ผู้ใช้ที่เกี่ยวข้อง, และไฟล์แนบ"
 					}
+				},
+				{
+					"name": "Upload Attachments 2",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "files",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports2/{{report2_id}}/attachments",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports2", "{{report2_id}}", "attachments"]
+						},
+						"description": "อัปโหลดไฟล์แนบให้รายงานแจ้งผู้ร้องเรียน - สามารถอัปโหลดหลายไฟล์พร้อมกันได้"
+					}
+				},
+				{
+					"name": "List Attachments 2",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports2/{{report2_id}}/attachments",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports2", "{{report2_id}}", "attachments"]
+						},
+						"description": "ดึงรายการไฟล์แนบของรายงานแจ้งผู้ร้องเรียน"
+					}
+				},
+				{
+					"name": "Download Attachment 2",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports2/{{report2_id}}/attachments/{{attachment_id}}/download",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports2", "{{report2_id}}", "attachments", "{{attachment_id}}", "download"]
+						},
+						"description": "ดาวน์โหลดไฟล์แนบของรายงานแจ้งผู้ร้องเรียน"
+					}
+				},
+				{
+					"name": "Delete Attachment 2",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports2/{{report2_id}}/attachments/{{attachment_id}}?hard_delete=false",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports2", "{{report2_id}}", "attachments", "{{attachment_id}}"],
+							"query": [
+								{"key": "hard_delete", "value": "false", "description": "true = ลบถาวร, false = soft delete"}
+							]
+						},
+						"description": "ลบไฟล์แนบของรายงานแจ้งผู้ร้องเรียน (soft delete เป็นค่าเริ่มต้น)"
+					}
 				}
 			],
 			"description": "API สำหรับจัดการรายงานแจ้งผู้ร้องเรียน - เชื่อมโยงกับข้อร้องเรียน, ตำแหน่ง, หน่วยงาน, ผู้มีอำนาจลงนาม, และผู้ใช้ที่เกี่ยวข้อง"
@@ -9888,6 +9969,87 @@
 						},
 						"description": "ดึงรายงานขอทราบผลการพิจารณาตาม ID พร้อมข้อมูลครบถ้วน รวมข้อมูลตำแหน่ง, หน่วยงาน, ผู้มีอำนาจลงนาม, และไฟล์แนบ"
 					}
+				},
+				{
+					"name": "Upload Attachments 3",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "files",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports3/{{report3_id}}/attachments",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports3", "{{report3_id}}", "attachments"]
+						},
+						"description": "อัปโหลดไฟล์แนบให้รายงานขอทราบผลการพิจารณา - สามารถอัปโหลดหลายไฟล์พร้อมกันได้"
+					}
+				},
+				{
+					"name": "List Attachments 3",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports3/{{report3_id}}/attachments",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports3", "{{report3_id}}", "attachments"]
+						},
+						"description": "ดึงรายการไฟล์แนบของรายงานขอทราบผลการพิจารณา"
+					}
+				},
+				{
+					"name": "Download Attachment 3",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports3/{{report3_id}}/attachments/{{attachment_id}}/download",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports3", "{{report3_id}}", "attachments", "{{attachment_id}}", "download"]
+						},
+						"description": "ดาวน์โหลดไฟล์แนบของรายงานขอทราบผลการพิจารณา"
+					}
+				},
+				{
+					"name": "Delete Attachment 3",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports3/{{report3_id}}/attachments/{{attachment_id}}?hard_delete=false",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports3", "{{report3_id}}", "attachments", "{{attachment_id}}"],
+							"query": [
+								{"key": "hard_delete", "value": "false", "description": "true = ลบถาวร, false = soft delete"}
+							]
+						},
+						"description": "ลบไฟล์แนบของรายงานขอทราบผลการพิจารณา (soft delete เป็นค่าเริ่มต้น)"
+					}
 				}
 			],
 			"description": "API สำหรับจัดการรายงานขอทราบผลการพิจารณา - เชื่อมโยงกับข้อร้องเรียน, ตำแหน่ง, หน่วยงาน, และผู้มีอำนาจลงนาม"
@@ -9993,6 +10155,87 @@
 							"path": ["outgoing-reports4", "{{report4_id}}"]
 						},
 						"description": "ดึงรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบตาม ID พร้อมข้อมูลครบถ้วน รวมข้อมูลหน่วยงาน, ผู้มีอำนาจลงนาม, ผู้ใช้ที่เกี่ยวข้อง, และไฟล์แนบ"
+					}
+				},
+				{
+					"name": "Upload Attachments 4",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "files",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports4/{{report4_id}}/attachments",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports4", "{{report4_id}}", "attachments"]
+						},
+						"description": "อัปโหลดไฟล์แนบให้รายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ - สามารถอัปโหลดหลายไฟล์พร้อมกันได้"
+					}
+				},
+				{
+					"name": "List Attachments 4",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports4/{{report4_id}}/attachments",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports4", "{{report4_id}}", "attachments"]
+						},
+						"description": "ดึงรายการไฟล์แนบของรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ"
+					}
+				},
+				{
+					"name": "Download Attachment 4",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports4/{{report4_id}}/attachments/{{attachment_id}}/download",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports4", "{{report4_id}}", "attachments", "{{attachment_id}}", "download"]
+						},
+						"description": "ดาวน์โหลดไฟล์แนบของรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ"
+					}
+				},
+				{
+					"name": "Delete Attachment 4",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports4/{{report4_id}}/attachments/{{attachment_id}}?hard_delete=false",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports4", "{{report4_id}}", "attachments", "{{attachment_id}}"],
+							"query": [
+								{"key": "hard_delete", "value": "false", "description": "true = ลบถาวร, false = soft delete"}
+							]
+						},
+						"description": "ลบไฟล์แนบของรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ (soft delete เป็นค่าเริ่มต้น)"
 					}
 				}
 			],
