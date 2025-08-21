@@ -61,7 +61,7 @@ const Opm1111Components = () => {
     try {
       const timelineData = await GetTimelineHeader(take, timeline_type);
       const parsedData = Array.isArray(timelineData) ? timelineData : timelineData;
-      console.log({ parsedData });
+      // console.log({ parsedData });
       
       const mappedComplaints = parsedData.map((item) => ({
         case_id: item.case_id,

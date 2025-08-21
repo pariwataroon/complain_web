@@ -26,7 +26,7 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
 
     const dateOpened = watch("date_opened");
     const dateClosed = watch("date_closed");
-    console.log({ operatingsDetails });
+    // console.log({ operatingsDetails });
     
     const citizenStatusOptions = useMemo(() => [
         { value: 0, label: "อยู่ระหว่างดำเนินการ" },
@@ -181,28 +181,35 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
             return [];
         }
 
-        // ดึงข้อมูล org ที่ไม่ซ้ำกัน
-        const uniqueOrgs = [];
-        const orgMap = new Map();
+        const uniqueOfficers = [];
+        const officerMap = new Map();
 
         operatingsDetails.forEach(operation => {
-            const orgId = operation.org_id;
-            const orgText = operation.org_text;
+            
+            if (operation.org_id === "301") {
+                const officerId = operation.created_by_org;
+                const officerText = operation.created_by_text;
+                const createdBy = operation.created_by;
 
-            // ถ้ามี org_id และยังไม่เคยเพิ่มในรายการ
-            if (orgId && orgText && !orgMap.has(orgId)) {
-                orgMap.set(orgId, true);
-                uniqueOrgs.push({
-                    value: orgId,
-                    label: orgText
-                });
+                if (officerId && officerText && !officerMap.has(officerId)) {
+                    officerMap.set(officerId, true);
+                    uniqueOfficers.push({
+                        value: officerId,
+                        label: officerText,
+                        created_by: createdBy
+                    });
+                }
             }
         });
 
-        // เรียงตามชื่อ organization
-        return uniqueOrgs.sort((a, b) => a.label.localeCompare(b.label, 'th'));
+        return uniqueOfficers.sort((a, b) => a.label.localeCompare(b.label, 'th'));
     }, [operatingsDetails]);
 
+    const getSelectedOfficerCreatedBy = useCallback((selectedOrgId) => {
+        const selectedOfficer = organizationOptions.find(officer => officer.value === selectedOrgId);
+        return selectedOfficer?.created_by || getCreatedBy();
+    }, [organizationOptions, getCreatedBy]);
+    
     // Combined submit function that calls both APIs
     const handleFormSubmit = async (data) => {
         if (isSubmitting) return;
@@ -211,7 +218,7 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
             setIsSubmitting(true);
 
             const caseIdValue = getCaseId();
-            const createdBy = getCreatedBy();
+            const selectedOfficerCreatedBy = getSelectedOfficerCreatedBy(data.org_id);
 
             if (!caseIdValue) {
                 await alertError("เกิดข้อผิดพลาด", "ไม่พบข้อมูล case_id");
@@ -240,7 +247,7 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
                 case_id: caseIdValue,
                 type_id: data.type_id,
                 status_id: data.status_id,
-                created_by: createdBy,
+                created_by: selectedOfficerCreatedBy,
                 org_id: data.org_id,
                 contact_detail: data.contact_detail?.trim() || "",
                 date_opened: formatThaiDateToMySQL(data.date_opened),
@@ -471,7 +478,7 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
                                     render={({ field, fieldState: { error } }) => (
                                         <Box className={`${styles.fieldContainer} ${isSubmitting ? styles.loading : ''}`}>
                                             <Typography className={styles.fieldLabel}>
-                                                ส่งให้หน่วยงาน <span className={styles.required}>*</span>
+                                                ตอบกลับเจ้าหน้าที่ <span className={styles.required}>*</span>
                                             </Typography>
                                             <TextField
                                                 select

@@ -42,14 +42,14 @@ import ButtonSent from "@services/ButtonSent/ButtonSent";
 import CombinedReportModal from "./CombinedReportModal";
 import styles from "./DetailOPM.module.scss";
 import useDetailOPMData from "@hooks/admin/opm/useDetailOPMData";
-import { formatThaiOfficialDateTimeTimeseven } from "@utils/Formats";
+import { formatThaiOfficialDateTime } from "@utils/Formats";
 
 const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails, loading, formatDate, itemData }) => {
     const theme = useTheme();
     const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
-    // console.log({ operatingsDetails });
+    console.log({ operatingsDetails });
     
     const [reportModalOpen, setReportModalOpen] = useState(false);
 
@@ -950,19 +950,8 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                                         {operation.detail}
                                                     </Typography>
                                                 )}
-
                                                 {/* ข้อมูลเพิ่มเติม */}
                                                 <Box className={styles.commentDetails}>
-                                                    {/* รหัสดำเนินการ */}
-                                                    {operation.operating_code && (
-                                                        <Box className={styles.detailItem}>
-                                                            <BusinessIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                                                            <Typography variant="caption" color="text.secondary">
-                                                                รหัส: {operation.operating_code}
-                                                            </Typography>
-                                                        </Box>
-                                                    )}
-
                                                     {/* หน่วยงาน */}
                                                     <Box className={styles.detailItem}>
                                                         <BusinessIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
@@ -982,11 +971,11 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                                     )}
 
                                                     {/* วันที่ดำเนินการ */}
-                                                    {operation.operating_date && (
+                                                    {operation.ShowDateTime && (
                                                         <Box className={styles.detailItem}>
                                                             <DateRangeIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
                                                             <Typography variant="caption" color="text.secondary">
-                                                                วันที่ดำเนินการ: {formatThaiOfficialDateTimeTimeseven(operation.operating_date)}
+                                                                วันที่ดำเนินการ: {operation.ShowDateTime}
                                                             </Typography>
                                                         </Box>
                                                     )}

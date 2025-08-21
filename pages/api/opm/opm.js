@@ -252,6 +252,7 @@ const GetOperatings = async (case_id, take = 1000) => {
 };
 
 const AddOperating = async (submitData) => {
+  
   try {
     const token_id = Cookies.get("opm_token");
     if (!token_id) {
