@@ -669,7 +669,7 @@ def get_user_related_complaints_with_tracking(
 
     status_th_map = {
         "submitted": "ส่งคำร้อง",
-        "sent_to_agency": "ส่งหน่วยงาน",
+        "sent_to_agency": "มอบหมายเจ้าหน้าที่",
         "in_process": "อยู่ระหว่างดำเนินการ",
         "in_review": "อยู่ระหว่างพิจารณา",
         "tracking": "ติดตามผลการพิจารณา",
@@ -681,7 +681,7 @@ def get_user_related_complaints_with_tracking(
         "completed": "เสร็จสิ้น",
         "tracking": "ติดตามต่อ",
         "reviewed": "มีผลพิจารณา",
-        "sent_to_agency": "ส่งหน่วยงานแล้ว",
+        "sent_to_agency": "มอบหมายเจ้าหน้าที่แล้ว",
     }
 
     q = db.query(Complaint).options(joinedload(Complaint.status_history)).filter(
@@ -943,7 +943,7 @@ def get_outgoing_tracking(
 
     status_th_map = {
         "submitted": "ส่งคำร้อง",
-        "sent_to_agency": "ส่งหน่วยงาน",
+        "sent_to_agency": "มอบหมายเจ้าหน้าที่",
         "in_process": "อยู่ระหว่างดำเนินการ",
         "in_review": "อยู่ระหว่างการพิจารณา",
         "tracking": "ติดตามผลการพิจารณา",
@@ -955,7 +955,7 @@ def get_outgoing_tracking(
         "completed": "เสร็จสิ้น",
         "tracking": "ติดตามต่อ",
         "reviewed": "มีผลพิจารณา",
-        "sent_to_agency": "ส่งหน่วยงานแล้ว",
+        "sent_to_agency": "มอบหมายเจ้าหน้าที่แล้ว",
     }
 
     complaint = (

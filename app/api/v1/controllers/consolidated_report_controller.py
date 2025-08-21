@@ -400,7 +400,7 @@ def get_thai_status(status: str) -> str:
     status_mapping = {
         "SUBMITTED": "รับเรื่อง",
         "submitted": "รับเรื่อง",
-        "SENT_TO_AGENCY": "ส่งหน่วยงาน", 
+        "SENT_TO_AGENCY": "มอบหมายเจ้าหน้าที่", 
         "IN_PROCESS": "กำลังดำเนินการ",
         "IN_REVIEW": "อยู่ระหว่างพิจารณา",
         "TRACKING": "ติดตามผล",
@@ -445,7 +445,7 @@ def get_consolidated_report_options(db: Session) -> Dict:
             "users": [{"id": str(user.id), "name": f"{user.first_name} {user.last_name}"} for user in users],
             "statuses": [
                 {"value": "SUBMITTED", "label": "รับเรื่อง"},
-                {"value": "SENT_TO_AGENCY", "label": "ส่งหน่วยงาน"},
+                {"value": "SENT_TO_AGENCY", "label": "มอบหมายเจ้าหน้าที่"},
                 {"value": "IN_PROCESS", "label": "กำลังดำเนินการ"},
                 {"value": "IN_REVIEW", "label": "อยู่ระหว่างพิจารณา"},
                 {"value": "TRACKING", "label": "ติดตามผล"},
