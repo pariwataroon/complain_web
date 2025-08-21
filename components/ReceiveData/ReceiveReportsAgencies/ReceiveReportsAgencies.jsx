@@ -1,14 +1,38 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect} from "react";
 import { useRouter } from "next/router";
+import { useForm, Controller } from "react-hook-form";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
+import InputFile from "@services/InputFile/InputFile";
+import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
+import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsalutation";
+import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import InputText from "@services/InputText/InputText";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import ButtonService from "@services/ButtonService/ButtonService";
-import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import { alertWarning, alertSuccess } from "@utils/Alerts";
+import { GetComplaintsWithSearch } from "@pages/api/complaint/complaint";
+import SearchIcon from "@mui/icons-material/Search";
+import DescriptionIcon from "@mui/icons-material/Description";
+import ClearIcon from "@mui/icons-material/Clear";
+import IconButton from "@mui/material/IconButton";
+import {
+  Box, 
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  List,
+  ListItem,
+  ListItemButton,
+  TextField,
+  InputAdornment,
+  CircularProgress,
+} from "@mui/material";
 
 // Constants สำหรับ options
 const PROCESS_STEP_OPTIONS = [
@@ -64,6 +88,75 @@ const AGENCY_OPTIONS = [
 
 const ReceiveReportsAgencies = () => {
   const { id } = useRouter().query;
+
+  const [openSearchDialog, setOpenSearchDialog] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const inputRef = useRef();
+
+  const { control, setValue, formState: { errors } } = useForm({
+    defaultValues: {
+      attachment: null,
+      documentNo: "",
+    },
+  });
+
+  useEffect(() => {
+    if (openSearchDialog) {
+      setSearchText("");
+      handleSearch("");
+      inputRef.current?.focus();
+    }
+  }, [openSearchDialog]);
+
+  
+    const handleSearch = async (keyword) => {
+      setSearchLoading(true);
+      try {
+        const response = await GetComplaintsWithSearch({
+          skip: 0,
+          limit: 100,
+          search: keyword || "",
+        });
+  
+  
+        const items = Array.isArray(response?.res_data?.items)
+          ? response.res_data.items
+          : [];
+  
+  
+        const results = items.map((item) => ({
+          ...item,
+          label: item.complaint_number || "",
+          value: item.complaint_number || "",
+        }));
+  
+        setSearchResults(results);
+      } catch (err) {
+        setSearchResults([]);
+        console.error("handleSearch error", err);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+  
+   const handleSelectReference = (ref) => {
+      const num = ref?.complaint_number || "";
+      setForm((prev) => ({ ...prev, documentNo: num }));
+      setValue("documentNo", num, { shouldValidate: false, shouldDirty: true });
+      setOpenSearchDialog(false);
+    };
+  
+    const onClear = () => {
+      setSearchText("");
+      handleSearch("");
+      inputRef.current?.focus();
+    };
+
+    const handleFileUpload = (files) => {
+      handleFileChange(files);
+    };
 
   // Initial form state
   const initialFormState = useMemo(
@@ -192,14 +285,26 @@ const ReceiveReportsAgencies = () => {
     }
   }, [form, validateForm]);
 
-  const handleFileChange = useCallback((e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setForm((prev) => ({
-        ...prev,
-        attachment: file.name,
-      }));
+  const handleFileChange = useCallback((payload) => {
+    let files = [];
+
+    if (payload?.target?.files) {
+      // เคสส่ง event มาจาก <input type="file" />
+      files = Array.from(payload.target.files);
+    } else if (Array.isArray(payload)) {
+      // เคสส่งเป็น array ของ File
+      files = payload;
+    } else if (payload && typeof payload === "object" && "length" in payload) {
+      // เคสส่งเป็น FileList
+      files = Array.from(payload);
+    } else if (payload?.file) {
+      // เคสส่งเป็น object { file }
+      files = [payload.file];
     }
+
+    // เก็บชื่อไฟล์ไว้โชว์ในฟอร์มเดิม
+    const names = files.map((f) => f?.name).filter(Boolean).join(", ");
+    setForm((prev) => ({ ...prev, attachment: names || "" }));
   }, []);
 
   return (
@@ -414,27 +519,63 @@ const ReceiveReportsAgencies = () => {
           </Box>
 
           {/* แถวที่ 5: เลขที่หนังสือ | วันที่ */}
-          <Box
+         <Box
             sx={{
               display: "grid",
-              columnGap: 2,
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              gap: 2,
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, // เหมือนแถวอื่น
+              alignItems: "center",
             }}
           >
-            <InputText
-              label={
-                <span>
-                  เลขที่หนังสือ
-                  <span style={{ color: "red", marginLeft: 4 }}>*</span>
-                </span>
-              }
-              inputLabel="กรอกเลขที่หนังสือ"
-              name="documentNo"
-              value={form.documentNo}
-              onChange={handleChange}
-              sx={{ width: {xs: "80%", sm: "auto"}}}
-            />
-            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
+            {/* ซ้าย: เลขที่หนังสือ + ปุ่มค้นหา (อยู่นอก input และข้างๆ) */}
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto",
+                columnGap: 1,
+                alignItems: "center",
+                width: "100%",
+              }}
+            >
+              <InputText
+                label={
+                  <span>
+                    เลขที่หนังสือ
+                    <span style={{ color: "red", marginLeft: 4 }}>*</span>
+                  </span>
+                }
+                inputLabel="กรอกเลขที่หนังสือ"
+                name="documentNo"
+                value={form.documentNo}
+                onChange={handleChange}
+                sx={{ width: "100%" }}
+              />
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  mt: "12px",
+                }}
+              >
+                <IconButton
+                  onClick={() => setOpenSearchDialog(true)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  aria-label="ค้นหาเลขที่อ้างอิง"
+                  title="ค้นหาเลขที่อ้างอิง"
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    color: "blue",
+                  }}
+                >
+                  <SearchIcon />
+                </IconButton>
+              </Box>
+            </Box>
+
+            {/* ขวา: วันที่ */}
+            <Box sx={{ width: "100%", position: "relative", zIndex: 1 }}>
               <DateThaiPickerService
                 label={
                   <span>
@@ -448,6 +589,192 @@ const ReceiveReportsAgencies = () => {
               />
             </Box>
           </Box>
+
+          <Dialog
+            open={openSearchDialog}
+            onClose={() => setOpenSearchDialog(false)}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              style: {
+                borderRadius: 12,
+                background: "#f7fafd",
+                height: 500,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+              },
+            }}>
+            <DialogTitle
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}>
+              <SearchIcon color="primary" />
+              ค้นหาเลขที่อ้างอิง
+            </DialogTitle>
+
+            <DialogContent>
+              {/* ช่องค้นหา */}
+              <TextField
+                inputRef={inputRef}
+                fullWidth
+                size="small"
+                placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
+                value={searchText}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSearchText(val);
+                  handleSearch(val);
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchText ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={onClear}
+                        aria-label="clear search"
+                        edge="end"
+                      >
+                        <ClearIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                  style: {
+                    background: "#fff",
+                    borderRadius: 8,
+                  },
+                }}
+                sx={{ mb: 2 }}
+              />
+
+              {/* สถานะโหลด / ไม่พบ / รายการ */}
+              {searchLoading ? (
+                <div style={{ textAlign: "center", padding: 24 }}>
+                  <CircularProgress color="primary" />
+                  <div style={{ marginTop: 8, color: "#888" }}>กำลังค้นหา...</div>
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 32, color: "#bdbdbd" }}>
+                  <DescriptionIcon sx={{ fontSize: 48, mb: 2 }} color="disabled" />
+                  <div>ไม่พบรายการเลขที่อ้างอิง</div>
+                </div>
+              ) : (
+                <>
+                  <List
+                    sx={{
+                      maxHeight: 320,
+                      overflow: "auto",
+                      "&::-webkit-scrollbar": {
+                        width: "8px",
+                        background: "#f0f4fa",
+                        borderRadius: "8px",
+                      },
+                      "&::-webkit-scrollbar-thumb": {
+                        background: "#90caf9",
+                        borderRadius: "8px",
+                      },
+                      "&::-webkit-scrollbar-thumb:hover": {
+                        background: "#64b5f6",
+                      },
+                    }}
+                  >
+                    {searchResults.map((item) => {
+                      const isMaster = !!item.is_master; // fallback ถ้า undefined
+                      return (
+                        <ListItem key={item.id} disablePadding>
+                          <ListItemButton
+                            onClick={() => handleSelectReference(item)}
+                            sx={{
+                              py: 1.5,
+                              px: 2,
+                              borderRadius: 2,
+                              mb: 0.5,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1.5,
+                              "&:hover": {
+                                background: "#e3f2fd",
+                              },
+                            }}
+                          >
+                            {/* จุดสถานะ is_master */}
+                            <span
+                              style={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: "50%",
+                                backgroundColor: isMaster ? "#2ecc71" : "#bdbdbd",
+                                border: "2px solid #fff",
+                                boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
+                                flexShrink: 0,
+                              }}
+                              title={isMaster ? "Master" : "Non-master"}
+                            />
+                            <DescriptionIcon color="info" sx={{ mr: 0.5 }} />
+                            <span style={{ fontWeight: 500 }}>
+                              {item.complaint_type} - {item.complaint_number}
+                            </span>
+                          </ListItemButton>
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+
+                  {/* Legend (ถ้าไม่ต้องการสามารถลบได้) */}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 16,
+                      marginTop: 8,
+                      fontSize: 12,
+                      color: "#555",
+                      padding: "0 4px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: "50%",
+                          background: "#2ecc71",
+                          boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
+                        }}
+                      />
+                      Master
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: "50%",
+                          background: "#bdbdbd",
+                          boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
+                        }}
+                      />
+                      Non-master
+                    </div>
+                  </div>
+                </>
+              )}
+            </DialogContent>
+
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button
+                onClick={() => setOpenSearchDialog(false)}
+                variant="outlined"
+                color="inherit"
+              >
+                ปิด
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {/* แถวที่ 6: วันที่รับงานของเจ้าหน้าที่ | วันที่เสนองาน ผอ.สรร. */}
           <Box
@@ -518,44 +845,28 @@ const ReceiveReportsAgencies = () => {
           </Box>
 
           {/* แถวที่ 9: เอกสารแนบ */}
-          <Box sx={{ position: "relative" }}>
-            <InputText
-              label={
-                <span>
-                  เอกสารแนบ
-                  <span style={{ color: "red", marginLeft: 4 }}>*</span>
-                </span>
-              }
-              inputLabel="เลือกไฟล์"
-              name="attachment"
-              value={form.attachment}
-              onChange={handleChange}
-              InputProps={{
-                endAdornment: (
-                  <>
-                    <input
-                      type="file"
-                      id="attachment-upload"
-                      style={{ display: "none" }}
-                      onChange={handleFileChange}
-                      multiple
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    />
-                    <label
-                      htmlFor="attachment-upload"
-                      style={{ cursor: "pointer" }}
-                    >
-                      <img
-                        src="/icons/Add.png"
-                        alt="add"
-                        style={{ width: 24, height: 24, marginTop: 6 }}
-                      />
-                    </label>
-                  </>
-                ),
-              }}
-            />
-          </Box>
+          <Controller
+            name="attachment"
+            control={control}
+            render={({ field }) => (
+              <InputFile
+                label="เอกสารประกอบการร้องเรียน"
+                name={field.name}
+                onChange={(files) => {
+                  field.onChange(files);
+                  handleFileChange(files);
+                }}
+                error={Boolean(errors?.attachment)}
+                helperText={
+                  errors?.attachment?.message ||
+                  "หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"
+                }
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                maxFiles={3}
+                maxSizeMB={10}
+              />
+            )}
+          />
 
           {/* แถวที่ 10: หมายเหตุ (multiline) */}
           <Box>
