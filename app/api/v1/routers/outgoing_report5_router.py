@@ -34,17 +34,18 @@ router = APIRouter(
 # ---------- LIST ----------
 @router.get("", response_model=FormatResponseModel)
 async def get_outgoing_reports5_list(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
-    search: Optional[str] = Query(None),
-    department_id: Optional[UUID] = Query(None),
-    signature_authority_user_id: Optional[UUID] = Query(None),
-    urgency_level: Optional[str] = Query(None),
-    date_from: Optional[datetime] = Query(None),
-    date_to: Optional[datetime] = Query(None),
+    skip: int = Query(0, ge=0, description="จำนวนรายการที่ข้าม"),
+    limit: int = Query(100, ge=1, le=1000, description="จำนวนรายการต่อหน้า"),
+    search: Optional[str] = Query(None, description="ค้นหาจากเลขรับเรื่อง, เรื่อง, เลขอ้างอิงจากหน่วยงาน"),
+    department_id: Optional[UUID] = Query(None, description="หน่วยงาน"),
+    signature_authority_user_id: Optional[UUID] = Query(None, description="ผู้มีอำนาจลงนาม"),
+    urgency_level: Optional[str] = Query(None, description="ระดับความเร่งด่วน"),
+    date_from: Optional[datetime] = Query(None, description="วันที่เริ่มต้น"),
+    date_to: Optional[datetime] = Query(None, description="วันที่สิ้นสุด"),
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("dashboard")),
 ):
+    """ดึงรายการรายงานรับเรื่องผลการพิจารณาจากหน่วยงานทั้งหมด"""
     try:
         data = get_outgoing_reports5(
             db=db,
@@ -67,6 +68,7 @@ async def get_options5(
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("dashboard")),
 ):
+    """ดึงตัวเลือกสำหรับ dropdown ต่างๆ"""
     try:
         options = get_outgoing_report5_options(db)
         return format_response("0000", options)

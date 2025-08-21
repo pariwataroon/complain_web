@@ -144,7 +144,7 @@ async def upload_outgoing_report4_attachments(
 ):
     """อัปโหลดหลายไฟล์แนบให้รายงาน"""
     try:
-        data = add_attachments_to_outgoing_report4(
+        data = await add_attachments_to_outgoing_report4(
             db=db,
             outgoing_report_id=outgoing_report_id,
             files=files,
