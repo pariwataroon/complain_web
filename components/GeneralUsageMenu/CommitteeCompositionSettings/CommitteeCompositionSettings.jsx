@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Grid, Stack } from "@mui/material";
 import ButtonService from "@services/ButtonService/ButtonService";
 import AddIcon from "@mui/icons-material/Add";
 import SaveIcon from "@mui/icons-material/Save";
@@ -693,110 +693,93 @@ const CommitteeCompositionSettings = () => {
             </Box>
           </Box>
 
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "column", md: "row" },
-              mt: 2,
-              width: "100%",
-            }}
-          >
-            <Box
-              sx={{
-                width: { xs: "100%", md: "50%" },
-                pr: { xs: 0, md: 2 },
-                mb: { xs: 2, md: 0 },
-              }}
-            >
-             <Typography
-                sx={{
-                  fontWeight: "bold",
-                  color: "#2499FF",
-                  mt: { xs: 0, md: 4 },
-                }}
-              >
-                ส่วนราชการ
-              </Typography>
-              <SelectField
-                label="เลือกส่วนราชการ"
-                options={governmentOptions}
-                value={formData[`government_${number}`] || ""}
-                onChange={handleInputChange}
-                name={`government_${number}`}
-              />
-              {renderAdditionalSelects("government", number)}
-              <DepartmentButton
-                section="government"
-                signatoryNumber={number}
-                label="เพิ่มหน่วยงาน"
-              />
-            </Box>
+          <Box sx={{ width: "100%" ,  marginTop: "20px" }}>
+            <Grid container spacing={2} alignItems="flex-start">
+              {/* หัวข้อเต็มแถว */}
+              <Grid item xs={12}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", color: "#2499FF" }}>
+                  หน่วยงานรับผิดชอบเรื่องร้องเรียนร้องทุกข์
+                </Typography>
+              </Grid>
 
-            <Box sx={{ width: { xs: "100%", md: "50%" } }}>
-               <Typography
-                variant="h5"
-                sx={{ fontWeight: "bold", color: "#2499FF" }}
-              >
-                หน่วยงานรับผิดชอบเรื่องร้องเรียนร้องทุกข์
-              </Typography>
-              <Typography sx={{ fontWeight: "bold", color: "#2499FF" }}>
-                รัฐวิสาหกิจ
-              </Typography>
-              <SelectField
-                label="เลือกรัฐวิสาหกิจ"
-                options={stateEnterpriseOptions}
-                value={formData[`state_enterprise_${number}`] || ""}
-                onChange={handleInputChange}
-                name={`state_enterprise_${number}`}
-              />
-              {renderAdditionalSelects("state_enterprise", number)}
-              <DepartmentButton
-                section="state_enterprise"
-                signatoryNumber={number}
-                label="เพิ่มหน่วยงาน"
-              />
-
-              <Typography sx={{ fontWeight: "bold", color: "#2499FF", mt: 1 }}>
-                อื่นๆ
-              </Typography>
-              <SelectField
-                label="เลือกหน่วยงานอื่นๆ"
-                options={otherOptions}
-                value={formData[`other1_${number}`] || ""}
-                onChange={handleInputChange}
-                name={`other1_${number}`}
-              />
-              <Box mt={1}>
-                {otherGroupOptions.length === 0 ? (
+              <Grid item xs={12} md={6}>
+                <Stack spacing={1.5}>
+                  <Typography sx={{ fontWeight: "bold", color: "#2499FF" }}>
+                    ส่วนราชการ
+                  </Typography>
                   <SelectField
-                    label="เลือกหน่วยงานอื่นๆ (เพิ่มเติม)"
-                    options={otherOptions}
-                    value={formData[`other2_${number}`] || ""}
+                    label="เลือกส่วนราชการ"
+                    options={governmentOptions}
+                    value={formData[`government_${number}`] || ""}
                     onChange={handleInputChange}
-                    name={`other2_${number}`}
+                    name={`government_${number}`}
                   />
-                ) : (
-                  otherGroupOptions.map((group) => (
-                    <SelectField
-                      key={group.groupName}
-                      label={group.label}
-                      options={group.options}
-                      value={
-                        formData[`other_${group.groupName}_${number}`] || ""
-                      }
-                      onChange={handleInputChange}
-                      name={`other_${group.groupName}_${number}`}
-                    />
-                  ))
-                )}
-              </Box>
-              {renderAdditionalSelects("other", number)}
-              <DepartmentButton
-                section="other"
-                signatoryNumber={number}
-                label="เพิ่มหน่วยงาน"
-              />
-            </Box>
+                  {renderAdditionalSelects("government", number)}
+                  <DepartmentButton
+                    section="government"
+                    signatoryNumber={number}
+                    label="เพิ่มหน่วยงาน"
+                  />
+                </Stack>
+              </Grid>
+
+              {/* ขวา: รัฐวิสาหกิจ + อื่นๆ */}
+              <Grid item xs={12} md={6}>
+                <Stack spacing={1.5}>
+                  <Typography sx={{ fontWeight: "bold", color: "#2499FF" }}>
+                    รัฐวิสาหกิจ
+                  </Typography>
+
+                  <SelectField
+                    label="เลือกรัฐวิสาหกิจ"
+                    options={stateEnterpriseOptions}
+                    value={formData[`state_enterprise_${number}`] || ""}
+                    onChange={handleInputChange}
+                    name={`state_enterprise_${number}`}
+                  />
+                  {renderAdditionalSelects("state_enterprise", number)}
+                  <Typography sx={{ fontWeight: "bold", color: "#2499FF", mt: 0.5 }}>
+                    อื่นๆ
+                  </Typography>
+
+                  <SelectField
+                    label="เลือกหน่วยงานอื่นๆ"
+                    options={otherOptions}
+                    value={formData[`other1_${number}`] || ""}
+                    onChange={handleInputChange}
+                    name={`other1_${number}`}
+                  />
+                  <Box>
+                    {Array.isArray(otherGroupOptions) && otherGroupOptions.length > 0 ? (
+                      otherGroupOptions.map((group) => (
+                        <SelectField
+                          key={group.groupName}
+                          label={group.label}
+                          options={group.options}
+                          value={formData[`other_${group.groupName}_${number}`] || ""}
+                          onChange={handleInputChange}
+                          name={`other_${group.groupName}_${number}`}
+                        />
+                      ))
+                    ) : (
+                      <SelectField
+                        label="เลือกหน่วยงานอื่นๆ (เพิ่มเติม)"
+                        options={otherOptions}
+                        value={formData[`other2_${number}`] || ""}
+                        onChange={handleInputChange}
+                        name={`other2_${number}`}
+                      />
+                    )}
+                  </Box>
+                  {renderAdditionalSelects("other", number)}
+                  <DepartmentButton
+                    section="other"
+                    signatoryNumber={number}
+                    label="เพิ่มหน่วยงาน"
+                  />
+                </Stack>
+              </Grid>
+            </Grid>
           </Box>
 
           <Box
@@ -873,7 +856,7 @@ const CommitteeCompositionSettings = () => {
 
       <Box mt={2} display="flex" justifyContent="center">
         <ButtonService
-          label="เพิ่มผู้ลงนาม (กล่องใหม่ว่าง)"
+          label="เพิ่มกลุ่ม"
           color="#2499FF"
           iconRight={<AddIcon />}
           variant="contained"
