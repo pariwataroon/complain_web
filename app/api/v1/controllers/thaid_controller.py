@@ -99,7 +99,7 @@ def get_or_create_user_from_thaid(db: Session, thaid_data: ThaiIDTokenResponse):
         try:
             # รองรับทั้ง dict และ object
             user_id = existing_user['id'] if isinstance(existing_user, dict) else existing_user.id
-            user_obj = user_controller.get_user(db, user_id)
+            user_obj = user_controller.get_user(db, user_id, include_inactive=True)
             if user_obj and not user_obj.is_active:
                 user_obj.is_active = True
                 db.add(user_obj)
