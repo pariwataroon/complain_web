@@ -322,6 +322,17 @@ async def get_detailed_users_by_roles_endpoint(
     detailed_data = get_detailed_users_by_roles(db, skip=skip, limit=limit)
     return format_response("0000", detailed_data)
 
+@router.get("/blocked", response_model=FormatResponseModel)
+async def get_blocked_users_endpoint(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_read("setting_users"))
+):
+    from app.api.v1.controllers.user_controller import get_blocked_users
+    users = get_blocked_users(db, skip=skip, limit=limit)
+    return format_response("0000", users)
+
 @router.put("/admin/{user_id}", response_model=FormatResponseModel)
 async def admin_update_user(
     user_id: UUID,

@@ -54,6 +54,47 @@ def get_user(db: Session, user_id: int, include_inactive: bool = False):
         
     return query.first()
 
+def get_blocked_users(db: Session, skip: int = 0, limit: int = 100):
+    """ดึงรายการผู้ใช้ที่ถูกบล็อค (is_active = False) พร้อม title แบบกระชับ"""
+    users = (
+        db.query(User)
+        .options(joinedload(User.title))
+        .filter(User.is_active == False)
+        .order_by(User.updated_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    result = []
+    for user in users:
+        data = {
+            "id": user.id,
+            "email": user.email,
+            "citizen_id": user.citizen_id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone": user.phone or "",
+            "title_id": user.title_id,
+            "prefix_other": user.prefix_other or "",
+            "address": user.address or "",
+            "address_other": user.address_other or "",
+            "is_active": user.is_active,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
+            "full_name": f"{user.first_name} {user.last_name}",
+        }
+
+        if user.title_id == 1 and user.prefix_other:
+            title_name = user.prefix_other
+        elif user.title:
+            title_name = user.title.title_name
+        else:
+            title_name = None
+
+        data["title_name"] = title_name
+        data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
+        result.append(data)
+    return result
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
