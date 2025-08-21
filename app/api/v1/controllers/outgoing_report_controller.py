@@ -869,7 +869,7 @@ def get_user_related_complaints_with_tracking(
 
         def _ts(x: Dict[str, Any]):
             return x.get("at") or x.get("reference_date") or x.get("created_at") or ""
-        timeline.sort(key=_ts)
+        timeline.sort(key=_ts, reverse=True)
 
         items.append({
             "complaint": {
