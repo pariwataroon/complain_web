@@ -57,6 +57,10 @@ const AddUserModal = ({
     getValues,
   } = useCRUDFormUsers(editingUser, onUserUpdated);
 
+  useEffect(() => {
+    if (open) setValue("password", "");
+  }, [open, setValue]);
+
   const provinceCode = watch("province")?.value;
   const amphureCode = watch("districts")?.value;
 
@@ -199,7 +203,7 @@ const AddUserModal = ({
       first_name: formData.first_name || "",
       last_name: formData.last_name || "",
       email: formData.email || "",
-      password: formData.password || "TempPass2025!",
+      password: formData.password || "",
       phone: cleanPhone,
       address: formData.address || "",
       address2: formData.address2 || "",
@@ -243,6 +247,11 @@ const AddUserModal = ({
     // ไม่ต้องปิด Modal ตรงนี้ ปล่อยให้ฟอร์มอยู่
 
     const formData = getValues();
+
+    if (!formData.password || !formData.password.trim()) {
+      await alertWarning("กรุณากรอกรหัสผ่าน", "ต้องกรอกรหัสผ่านทุกครั้งที่บันทึก");
+      return;
+    }
 
     if (!formData.email || !formData.email.includes("@")) {
       await alertWarning("รูปแบบอีเมลไม่ถูกต้อง", "อีเมลต้องมีเครื่องหมาย @");
@@ -522,7 +531,7 @@ const AddUserModal = ({
       // ข้อมูลติดต่อ
       setValue("phone", editingUser.phone || "");
       setValue("email", editingUser.email || "");
-      setValue("password", "TempPass2025!");
+      setValue("password", "", { shouldValidate: true });
 
       // ข้อมูลที่อยู่
       setValue(
@@ -886,11 +895,19 @@ const AddUserModal = ({
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <InputText
-                      label="รหัสผ่าน"
+                      label={
+                        <>
+                          รหัสผ่าน <span style={{ color: "red" }}>*</span>
+                        </>
+                      }
                       placeholder="รหัสผ่าน"
                       type="password"
-                      {...register("password")}
+                      autoComplete="new-password"
+                      // {...register("password", { required: "กรุณากรอกรหัสผ่านทุกครั้ง" })}
                     />
+                    {errors.password && (
+                      <Typography color="error">{errors.password.message}</Typography>
+                    )}
                   </Grid>
                   <Grid item xs={12} sm={3}>
                     <Controller
