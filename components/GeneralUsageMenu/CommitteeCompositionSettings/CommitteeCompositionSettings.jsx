@@ -6,14 +6,17 @@ import AddIcon from "@mui/icons-material/Add";
 import SaveIcon from "@mui/icons-material/Save";
 import { useRouter } from "next/router";
 import SelectField from "@services/SelectField/SelectField";
+import SelectFieldpositionOpts from "@services/SelectFieldpositionOpts/SelectFieldpositionOpts";
 import {
   getDepartmentGroup,
-  getPositions,
   getAvailable,
   getSignatureAuthorities,
   createSignatureAuthorityGroup,
   updateSignatureAuthorityGroup,
 } from "@pages/api/department/department";
+import {
+  GetAllSelectPositionOptions,
+} from "@pages/api/allselect/allselect";
 import { alertSuccess, alertError } from "@utils/Alerts";
 import { translateResCode, isSuccessResCode } from "@utils/responseMessages";
 
@@ -56,36 +59,45 @@ const CommitteeCompositionSettings = () => {
   useEffect(() => {
     const fetchPositions = async () => {
       try {
-        const res = await getPositions();
-        if (Array.isArray(res?.res_data)) {
-          const mapped = res.res_data.map((p) => {
-            const baseName =
-              p.name ?? p.position_name ?? p.label ?? String(p.id);
+        const res = await GetAllSelectPositionOptions();
+        console.log('API Response:', res);
+
+        if (Array.isArray(res)) {
+          const mapped = res.map((p, index) => {
+            const baseName = p.name ?? p.position_name ?? p.label ?? String(p.id);
             const levelText = p.level ? ` (${p.level})` : "";
+            const uniqueLabel = `${baseName}${levelText}`;
             return {
-              label: `${baseName}${levelText}`,
+              displayLabel: uniqueLabel,
+              label: uniqueLabel,
               value: p.id ?? p.value,
               rawName: baseName,
               level: p.level || "",
               description: p.description || "",
+              uniqueId: p.id || `${baseName}_${p.level}_${index}`,
+              uniqueKey: `${baseName}_${p.level}_${p.id}`,
+              originalData: p,
+              sortOrder: index
             };
           });
-          const cleaned = mapped.filter(
-            (o) => o.label && (o.value || o.value === 0)
-          );
-          setAllPositionOptions(cleaned);
-          setAvailablePositionOptions(cleaned);
+
+          setAllPositionOptions(mapped);
+          setAvailablePositionOptions(mapped);
+          console.log('Set positions:', mapped);
         } else {
+          console.warn('API did not return array data:', res);
           setAllPositionOptions([]);
           setAvailablePositionOptions([]);
         }
-      } catch {
+      } catch (error) {
+        console.error('Error fetching positions:', error);
         setAllPositionOptions([]);
         setAvailablePositionOptions([]);
       } finally {
         positionsLoaded.current = true;
       }
     };
+
     fetchPositions();
   }, []);
 
@@ -195,21 +207,25 @@ const CommitteeCompositionSettings = () => {
         const newForm = {};
         const newAdditional = {};
         const newGroupMap = {};
-        const usedGroupNames = new Set(groups.map((g) => g.group_name));
+        const usedGroupNames = new Set();
 
         groups.forEach((group, idx) => {
           const num = idx + 1;
           newGroupMap[num] = group.group_id;
 
           let positionOption = allPositionOptions.find(
-            (p) => p.label === group.group_name
+            (p) => p.label === group.group_name || p.displayLabel === group.group_name
           );
+
           if (!positionOption) {
+            const customId = `__custom_${group.group_id}`;
             positionOption = {
+              displayLabel: group.group_name,
               label: group.group_name,
-              value: `__custom_${group.group_id}`,
+              value: customId,
               description: group.group_description || "",
               rawName: group.group_name,
+              sortOrder: 999 + idx
             };
             setAllPositionOptions((prev) => {
               if (prev.find((p) => p.value === positionOption.value))
@@ -217,7 +233,9 @@ const CommitteeCompositionSettings = () => {
               return [...prev, positionOption];
             });
           }
+
           newForm[`position_${num}`] = positionOption.value;
+          usedGroupNames.add(positionOption.label);
 
           const users = group.users || [];
           if (users.length > 0) {
@@ -316,8 +334,18 @@ const CommitteeCompositionSettings = () => {
           }
         });
 
+        const usedValues = new Set();
+        groups.forEach((group, idx) => {
+          const positionOption = allPositionOptions.find(
+            (p) => p.label === group.group_name || p.displayLabel === group.group_name
+          );
+          if (positionOption) {
+            usedValues.add(positionOption.value);
+          }
+        });
+
         setAvailablePositionOptions((prevAvail) =>
-          prevAvail.filter((opt) => !usedGroupNames.has(opt.label))
+          prevAvail.filter((opt) => !usedValues.has(opt.value))
         );
 
         setGroupIdByBox(newGroupMap);
@@ -352,6 +380,7 @@ const CommitteeCompositionSettings = () => {
       return { ...prev, [sectionKey]: [...currentSelects, Date.now()] };
     });
   };
+
 
   const DepartmentButton = ({
     section,
@@ -479,9 +508,12 @@ const CommitteeCompositionSettings = () => {
       const positionObj = allPositionOptions.find(
         (p) => p.value === positionId
       );
-      const groupName = positionObj?.label || "ไม่ระบุตำแหน่ง";
+
+      // ใช้ label (ที่มี level) สำหรับ group_name
+      const groupName = positionObj?.label || positionObj?.displayLabel || "ไม่ระบุตำแหน่ง";
       const description = positionObj?.description || "";
       const assignments = buildAssignmentsForBox(boxNumber);
+
       if (!assignments.length) {
         const msg = "กรุณาเลือกผู้ลงนามและหน่วยงานอย่างน้อย 1 รายการ";
         setBoxSaveState((prev) => ({
@@ -563,17 +595,30 @@ const CommitteeCompositionSettings = () => {
 
   const getPositionOptionsForBox = (number) => {
     const currentVal = formData[`position_${number}`];
-    if (!currentVal) return availablePositionOptions;
-    const currentOption = allPositionOptions.find(
-      (o) => o.value === currentVal
-    );
-    if (!currentOption) return availablePositionOptions;
-    const existsInAvailable = availablePositionOptions.some(
-      (o) => o.value === currentVal
-    );
-    if (existsInAvailable) return availablePositionOptions;
-    return [currentOption, ...availablePositionOptions];
+
+    const optionsToReturn = !currentVal ? availablePositionOptions : (() => {
+      const currentOption = allPositionOptions.find(
+        (o) => o.value === currentVal
+      );
+
+      if (!currentOption) {
+        return availablePositionOptions;
+      }
+
+      const existsInAvailable = availablePositionOptions.some(
+        (o) => o.value === currentVal
+      );
+
+      if (existsInAvailable) {
+        return availablePositionOptions;
+      }
+
+      return [currentOption, ...availablePositionOptions];
+    })();
+
+    return optionsToReturn;
   };
+
 
   const SignatoryBox = ({ number }) => {
     const saveState = boxSaveState[number] || {
@@ -616,7 +661,6 @@ const CommitteeCompositionSettings = () => {
           }}
         >
           <Typography variant="h6">
-            {/* {existingGroupId ? "แก้ไข" : "ผู้ลงนาม"} {number} */}
             {existingGroupId ? `กลุ่ม ${number}` : number}
           </Typography>
         </Box>
@@ -683,9 +727,9 @@ const CommitteeCompositionSettings = () => {
               >
                 ตำแหน่ง
               </Typography>
-              <SelectField
+              <SelectFieldpositionOpts
                 label="เลือกตำแหน่ง"
-                options={positionOpts}
+                options={allPositionOptions}
                 value={formData[`position_${number}`] || ""}
                 onChange={handleInputChange}
                 name={`position_${number}`}
@@ -834,7 +878,7 @@ const CommitteeCompositionSettings = () => {
       >
         <BreadcrumbsService items={breadcrumbItems} />
         <ButtonService
-          label="เพิ่มหน่วยงาน"
+          label="เพิ่มหน่วยงานในสังกัด"
           variant="outlined"
           iconLeft={<AddIcon />}
           onClick={() => router.push("/admin/settinggeneral/department/add")}
@@ -848,6 +892,21 @@ const CommitteeCompositionSettings = () => {
             border: "2px solid #0067B1",
           }}
         />
+        {/* <ButtonService
+          label="เพิ่มหน่วยงานในสังกัด"
+          variant="outlined"
+          iconLeft={<AddIcon />}
+          onClick={() => router.push("/admin/settinggeneral/department/add")}
+          sx={{
+            background: "#0067B1",
+            color: "#ffffff",
+            borderRadius: "15px",
+            padding: "8px 20px",
+            width: { xs: "100%", sm: "auto" },
+            fontSize: "16px",
+            border: "2px solid #0067B1",
+          }}
+        /> */}
       </Box>
 
       {Array.from({ length: signatoryBoxes }).map((_, index) => (

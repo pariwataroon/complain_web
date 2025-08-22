@@ -276,7 +276,6 @@ const GetOutgoingReportOptions = async (type) => {
   }
 };
 
-
 const GetAllSignatureAuthorities = async () => {
   try {
     const response = await axiosInstance.get(`/signature-authorities`);
@@ -370,6 +369,31 @@ const GetAllSignatureAuthorities = async () => {
   }
 };
 
+const GetAllSelectPositionOptions = async () => {
+  try {
+    const response = await axiosInstance.get("/positions");
+    const apiData = response?.data;
+    if (!Array.isArray(apiData?.res_data)) return [];
+
+    return apiData.res_data.map((p, index) => ({
+      label:
+        p.name && p.level
+          ? `${p.name} (${p.level})`
+          : p.name || p.level || String(p.id),
+      value: p.id,
+      description: p.description || "",
+      level: p.level || "",
+      name: p.name || "",
+      uniqueId: p.id,
+      raw: p,
+      sortOrder: index,
+    }));
+  } catch (error) {
+    console.error("Error fetching GetAllSelectPositions:", error);
+    throw error;
+  }
+};
+
 
 const GetAllSelectYears = async () => {
   try {
@@ -434,4 +458,5 @@ export {
   GetAllSignatureAuthorities,
   GetAllComplaintChannels,
   GetAllSelectYears,
+  GetAllSelectPositionOptions,
 };

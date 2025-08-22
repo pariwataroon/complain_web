@@ -21,6 +21,7 @@ const getDepartments = async () => {
     throw error;
   }
 };
+
 const getPositions = async () => {
   try {
     const response = await axiosInstance.get("/positions");
