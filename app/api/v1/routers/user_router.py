@@ -83,13 +83,37 @@ async def create_new_user(
         # ดึง roles จากข้อมูลที่ประมวลผลแล้ว
         roles = processed_data.get('processed_roles', ['staff'])
         
-        # ดึง position_ids
-        position_ids = processed_data.get('position_ids')
-        primary_position_id = processed_data.get('primary_position_id')
-        
-        db_user = create_user(db, user, roles, position_ids, primary_position_id, force_active=True)
+        # ✅ ตรวจสอบ positions ก่อนเก็บ
+        position_ids = []
+        primary_position_id = None
+        if processed_data.get('position_ids'):
+            from models.position import Position
+            valid_positions = (
+                db.query(Position)
+                .filter(Position.id.in_(processed_data['position_ids']))
+                .filter(Position.is_active == True)
+                .all()
+            )
+            # เก็บเฉพาะตำแหน่งที่มีจริง
+            position_ids = [p.id for p in valid_positions]
+
+            # ตรวจสอบ primary_position_id ด้วย
+            if processed_data.get('primary_position_id') in position_ids:
+                primary_position_id = processed_data['primary_position_id']
+
+        # เรียกสร้าง user
+        db_user = create_user(
+            db, 
+            user, 
+            roles, 
+            position_ids if position_ids else None, 
+            primary_position_id, 
+            force_active=True
+        )
+
         result = UserResponse.model_validate(db_user).model_dump()
         return format_response("0001", result)
+
     except DuplicateKeyError as e:
         print(f"DuplicateKeyError: {str(e)}")
         return format_response("4090", {"error": str(e)})
