@@ -1,34 +1,4 @@
 {
     "user_positions": [
-      {
-        "user_citizen_id": "1234567890122",
-        "position_name": "อธิบดี",
-        "position_level": "บริหารระดับสูง",
-        "is_primary": true
-      },
-      {
-        "user_citizen_id": "1234567890123",
-        "position_name": "นักวิชาการคลัง",
-        "position_level": "ปฏิบัติการ",
-        "is_primary": true
-      },
-      {
-        "user_citizen_id": "1234567890124",
-        "position_name": "หัวหน้าฝ่าย",
-        "position_level": "ชำนาญการพิเศษ",
-        "is_primary": true
-      },
-      {
-        "user_citizen_id": "1234567890125",
-        "position_name": "นักวิชาการเงินและบัญชี",
-        "position_level": "ชำนาญการ",
-        "is_primary": true
-      },
-      {
-        "user_citizen_id": "1234567890126",
-        "position_name": "ผู้อำนวยการกอง",
-        "position_level": "อำนวยการระดับต้น",
-        "is_primary": true
-      }
     ]
   }
