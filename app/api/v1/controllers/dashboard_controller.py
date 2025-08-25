@@ -29,6 +29,10 @@ _user_info_cache = {}
 STAFF_ROLES = [
     "staff", "admin", "admin_home", "supervisor", "department"
 ]
+# role ที่แสดงใน staff-workload (เฉพาะผู้ปฏิบัติงาน)
+WORKLOAD_STAFF_ROLES = [
+    "staff", "admin"
+]
 EXCLUDED_ROLES = ["people"]
 MAP_JSON_PATH = os.getenv("THAI_MAP_JSON_PATH", os.path.join("seed", "map.json"))
 
@@ -156,6 +160,27 @@ def _get_staff_list(db: Session) -> List[str]:
     staff_ids = [uid for uid in staff_ids if uid not in excluded_ids]
     return staff_ids
 
+def _get_workload_staff_list(db: Session) -> List[str]:
+    """
+    ดึงรายชื่อเจ้าหน้าที่เฉพาะผู้ปฏิบัติงาน (admin, staff) สำหรับ staff-workload
+    """
+    from models.user_role import UserRole
+    from models.role import Role
+
+    staff_users = db.query(User.id).join(UserRole, User.id == UserRole.user_id)\
+        .join(Role, UserRole.role_id == Role.id)\
+        .filter(Role.name.in_(WORKLOAD_STAFF_ROLES))\
+        .distinct().all()
+    staff_ids = [str(u.id) for u in staff_users]
+
+    excluded_users = db.query(User.id).join(UserRole, User.id == UserRole.user_id)\
+        .join(Role, UserRole.role_id == Role.id)\
+        .filter(Role.name.in_(EXCLUDED_ROLES)).distinct().all()
+    excluded_ids = set(str(u.id) for u in excluded_users)
+
+    staff_ids = [uid for uid in staff_ids if uid not in excluded_ids]
+    return staff_ids
+
 def get_staff_workload(
     db: Session, 
     skip: int = 0, 
@@ -189,8 +214,8 @@ def get_staff_workload(
             start_date = datetime(current_year, 1, 1)
             end_date = datetime.now()
 
-    # 1. ดึงรายชื่อเจ้าหน้าที่ทุกคน
-    staff_ids = _get_staff_list(db)
+    # 1. ดึงรายชื่อเจ้าหน้าที่เฉพาะผู้ปฏิบัติงาน (admin, staff)
+    staff_ids = _get_workload_staff_list(db)
 
     # 2. ดึงจำนวนเรื่องตามสถานะแยกตามเจ้าหน้าที่ (รวมคนที่ไม่มีงาน)
     status_counts = db.query(
