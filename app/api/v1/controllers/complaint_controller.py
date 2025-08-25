@@ -328,8 +328,8 @@ def prepare_complaint_model_data(
     # สร้างเลขที่เรื่องร้องเรียน
     complaint_number = generate_complaint_number(db)
     
-    # ประมวลผลข้อมูลที่อยู่
-    location_data = extract_location_data(complaint_data)
+    # ประมวลผลข้อมูลที่อยู่ พร้อมแก้ไขข้อมูลที่ไม่สมบูรณ์
+    location_data = extract_location_data(complaint_data, db)
     
     return {
         "id": uuid.uuid4(),
@@ -360,8 +360,8 @@ def prepare_complaint_model_data(
         "progress_percentage": 0
     }
 
-def extract_location_data(complaint_data: Dict) -> Dict:
-    """สกัดข้อมูลที่อยู่จากข้อมูลเรื่องร้องเรียน"""
+def extract_location_data(complaint_data: Dict, db: Session = None) -> Dict:
+    """สกัดข้อมูลที่อยู่จากข้อมูลเรื่องร้องเรียน พร้อมแก้ไขข้อมูลที่ไม่สมบูรณ์"""
     location_data = {}
     
     # ลองดึงจาก step1 (ที่อยู่ผู้ร้องเรียน)
@@ -380,6 +380,46 @@ def extract_location_data(complaint_data: Dict) -> Dict:
         if "subdistricts" in general_data and isinstance(general_data["subdistricts"], dict):
             location_data["subdistrict_id"] = general_data["subdistricts"].get("value")
             location_data["subdistrict_name"] = general_data["subdistricts"].get("label")
+    
+    # ✅ แก้ไขข้อมูลที่ไม่สมบูรณ์ (ถ้ามี db session)
+    if db and location_data:
+        try:
+            # แก้ไขกรณีมีชื่อแต่ไม่มี ID
+            if location_data.get("province_name") and not location_data.get("province_id"):
+                province_id = find_location_id_by_name(db, location_data["province_name"], "province")
+                if province_id:
+                    location_data["province_id"] = province_id
+            
+            # แก้ไขกรณีมี ID แต่ไม่มีชื่อ
+            elif location_data.get("province_id") and not location_data.get("province_name"):
+                province = db.query(Province).filter(Province.id == location_data["province_id"]).first()
+                if province:
+                    location_data["province_name"] = province.name_th
+            
+            # แก้ไข district
+            if location_data.get("district_name") and not location_data.get("district_id") and location_data.get("province_id"):
+                district_id = find_location_id_by_name(db, location_data["district_name"], "amphure", location_data["province_id"])
+                if district_id:
+                    location_data["district_id"] = district_id
+            
+            elif location_data.get("district_id") and not location_data.get("district_name"):
+                amphure = db.query(Amphure).filter(Amphure.id == location_data["district_id"]).first()
+                if amphure:
+                    location_data["district_name"] = amphure.name_th
+            
+            # แก้ไข subdistrict
+            if location_data.get("subdistrict_name") and not location_data.get("subdistrict_id") and location_data.get("district_id"):
+                subdistrict_id = find_location_id_by_name(db, location_data["subdistrict_name"], "district", location_data["district_id"])
+                if subdistrict_id:
+                    location_data["subdistrict_id"] = subdistrict_id
+            
+            elif location_data.get("subdistrict_id") and not location_data.get("subdistrict_name"):
+                district = db.query(District).filter(District.id == location_data["subdistrict_id"]).first()
+                if district:
+                    location_data["subdistrict_name"] = district.name_th
+        
+        except Exception as e:
+            logger.error(f"Error fixing location data during extraction: {str(e)}")
     
     return location_data
 
@@ -2661,8 +2701,8 @@ def prepare_complaint_model_data(
     # สร้างเลขที่เรื่องร้องเรียน
     complaint_number = generate_complaint_number(db)
     
-    # ประมวลผลข้อมูลที่อยู่
-    location_data = extract_location_data(complaint_data)
+    # ประมวลผลข้อมูลที่อยู่ พร้อมแก้ไขข้อมูลที่ไม่สมบูรณ์
+    location_data = extract_location_data(complaint_data, db)
     
     return {
         "id": uuid.uuid4(),
@@ -3727,3 +3767,180 @@ def assign_complaint_to_officer(
         logger.error(f"Failed to assign complaint {complaint_id}: {str(e)}")
         db.rollback()
         raise
+
+def normalize_location_name(name: str, location_type: str) -> List[str]:
+    """ปรับปรุงชื่อสถานที่ให้เป็นรูปแบบต่างๆ สำหรับการค้นหา"""
+    if not name or not name.strip():
+        return []
+    
+    name = name.strip()
+    variations = [name]  # เริ่มต้นด้วยชื่อต้นฉบับ
+    
+    if location_type == "province":
+        # จัดการคำนำหน้าจังหวัด
+        province_prefixes = ["จ.", "จังหวัด", "จ ", "จังหวัด "]
+        
+        # ลบคำนำหน้าออก
+        for prefix in province_prefixes:
+            if name.startswith(prefix):
+                clean_name = name[len(prefix):].strip()
+                if clean_name:
+                    variations.append(clean_name)
+        
+        # เพิ่มคำนำหน้า (ถ้าไม่มี)
+        if not any(name.startswith(p) for p in province_prefixes):
+            variations.extend([f"จังหวัด{name}", f"จ.{name}"])
+        
+        # กรณีพิเศษ
+        special_cases = {
+            "กรุงเทพ": ["กรุงเทพมหานคร", "กรุงเทพฯ", "กทม", "กทม."],
+            "กรุงเทพมหานคร": ["กรุงเทพ", "กรุงเทพฯ", "กทม", "กทม."],
+            "กรุงเทพฯ": ["กรุงเทพมหานคร", "กรุงเทพ", "กทม", "กทม."],
+            "กทม": ["กรุงเทพมหานคร", "กรุงเทพ", "กรุงเทพฯ"],
+            "กทม.": ["กรุงเทพมหานคร", "กรุงเทพ", "กรุงเทพฯ"],
+            "นนทบุรี": ["จ.นนทบุรี", "จังหวัดนนทบุรี"],
+            "ปทุมธานี": ["จ.ปทุมธานี", "จังหวัดปทุมธานี"],
+            "สมุทรปราการ": ["จ.สมุทรปราการ", "จังหวัดสมุทรปราการ"],
+        }
+        
+        # เพิ่มกรณีพิเศษ
+        base_name = name.replace("จ.", "").replace("จังหวัด", "").strip()
+        if base_name in special_cases:
+            variations.extend(special_cases[base_name])
+        
+        # เพิ่มกรณีพิเศษย้อนกลับ
+        for key, values in special_cases.items():
+            if base_name in values:
+                variations.append(key)
+                variations.extend(values)
+    
+    elif location_type == "amphure":
+        # จัดการคำนำหน้าอำเภอ
+        amphure_prefixes = ["อ.", "อำเภอ", "เมือง", "อ ", "อำเภอ "]
+        
+        # ลบคำนำหน้าออก
+        for prefix in amphure_prefixes:
+            if name.startswith(prefix):
+                clean_name = name[len(prefix):].strip()
+                if clean_name:
+                    variations.append(clean_name)
+        
+        # เพิ่มคำนำหน้า (ถ้าไม่มี)
+        if not any(name.startswith(p) for p in amphure_prefixes):
+            variations.extend([f"อำเภอ{name}", f"อ.{name}"])
+            # เพิ่ม "เมือง" สำหรับอำเภอหลัก
+            if "เมือง" not in name:
+                variations.append(f"เมือง{name}")
+        
+        # กรณีพิเศษสำหรับอำเภอ
+        special_cases = {
+            "ในเมือง": ["เมือง", "อ.เมือง", "อำเภอเมือง"],
+            "เมือง": ["ในเมือง", "อ.ในเมือง", "อำเภอในเมือง"],
+            "สำโพง": ["สามพราน", "อ.สามพราน"],
+            "สามพราน": ["สำโพง", "อ.สำโพง"],
+        }
+        
+        base_name = name.replace("อ.", "").replace("อำเภอ", "").replace("เมือง", "").strip()
+        if base_name in special_cases:
+            variations.extend(special_cases[base_name])
+    
+    elif location_type == "district":
+        # จัดการคำนำหน้าตำบล
+        district_prefixes = ["ต.", "ตำบล", "แขวง", "ต ", "ตำบล ", "แขวง "]
+        
+        # ลบคำนำหน้าออก
+        for prefix in district_prefixes:
+            if name.startswith(prefix):
+                clean_name = name[len(prefix):].strip()
+                if clean_name:
+                    variations.append(clean_name)
+        
+        # เพิ่มคำนำหน้า (ถ้าไม่มี)
+        if not any(name.startswith(p) for p in district_prefixes):
+            variations.extend([f"ตำบล{name}", f"ต.{name}", f"แขวง{name}"])
+    
+    # ลบรายการที่ซ้ำและว่างเปล่า
+    unique_variations = []
+    for var in variations:
+        if var and var.strip() and var.strip() not in unique_variations:
+            unique_variations.append(var.strip())
+    
+    return unique_variations
+
+
+def find_location_id_by_name(db: Session, name: str, location_type: str, parent_id: Optional[int] = None) -> Optional[int]:
+    """ค้นหา ID ของจังหวัด/อำเภอ/ตำบล จากชื่อ (พร้อมการค้นหาแบบ fuzzy และจัดการคำนำหน้า)"""
+    if not name or not name.strip():
+        return None
+    
+    name = name.strip()
+    
+    try:
+        # สร้างรูปแบบการค้นหาต่างๆ
+        search_variations = normalize_location_name(name, location_type)
+        
+        if location_type == "province":
+            # ค้นหาจังหวัดแบบตรงๆ ก่อน
+            for variation in search_variations:
+                province = db.query(Province).filter(Province.name_th == variation).first()
+                if province:
+                    if variation != name:
+                        logger.info(f"Found province by exact variation: {name} -> {variation} -> {province.name_th} (ID: {province.id})")
+                    return province.id
+            
+            # ค้นหาแบบ LIKE
+            for variation in search_variations:
+                province = db.query(Province).filter(Province.name_th.ilike(f"%{variation}%")).first()
+                if province:
+                    logger.info(f"Found province by fuzzy search: {name} -> {variation} -> {province.name_th} (ID: {province.id})")
+                    return province.id
+                    
+        elif location_type == "amphure" and parent_id:
+            # ค้นหาอำเภอแบบตรงๆ ก่อน
+            for variation in search_variations:
+                amphure = db.query(Amphure).filter(
+                    Amphure.name_th == variation,
+                    Amphure.province_id == parent_id
+                ).first()
+                if amphure:
+                    if variation != name:
+                        logger.info(f"Found amphure by exact variation: {name} -> {variation} -> {amphure.name_th} (ID: {amphure.id})")
+                    return amphure.id
+            
+            # ค้นหาแบบ LIKE
+            for variation in search_variations:
+                amphure = db.query(Amphure).filter(
+                    Amphure.name_th.ilike(f"%{variation}%"),
+                    Amphure.province_id == parent_id
+                ).first()
+                if amphure:
+                    logger.info(f"Found amphure by fuzzy search: {name} -> {variation} -> {amphure.name_th} (ID: {amphure.id})")
+                    return amphure.id
+                    
+        elif location_type == "district" and parent_id:
+            # ค้นหาตำบลแบบตรงๆ ก่อน
+            for variation in search_variations:
+                district = db.query(District).filter(
+                    District.name_th == variation,
+                    District.amphure_id == parent_id
+                ).first()
+                if district:
+                    if variation != name:
+                        logger.info(f"Found district by exact variation: {name} -> {variation} -> {district.name_th} (ID: {district.id})")
+                    return district.id
+            
+            # ค้นหาแบบ LIKE
+            for variation in search_variations:
+                district = db.query(District).filter(
+                    District.name_th.ilike(f"%{variation}%"),
+                    District.amphure_id == parent_id
+                ).first()
+                if district:
+                    logger.info(f"Found district by fuzzy search: {name} -> {variation} -> {district.name_th} (ID: {district.id})")
+                    return district.id
+    
+    except Exception as e:
+        logger.error(f"Error finding {location_type} ID for name '{name}': {str(e)}")
+    
+    logger.warning(f"Could not find {location_type} for name '{name}' (parent_id: {parent_id})")
+    return None
