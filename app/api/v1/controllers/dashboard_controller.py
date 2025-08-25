@@ -117,7 +117,13 @@ def _get_user_info(db: Session, staff_id: str) -> Dict:
             # ดึงข้อมูล roles
             roles = []
             if user_data.get("roles"):
-                roles = [role.get("role_name", "") for role in user_data.get("roles", [])]
+                roles = [
+                    {
+                        "role_name": role.get("role_name", ""),
+                        "role_description": role.get("role_description", "")
+                    }
+                    for role in user_data.get("roles", [])
+                ]
             
             staff_info = {
                 "id": staff_id,
