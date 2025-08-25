@@ -1,22 +1,67 @@
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
 from uuid import UUID
 from typing import Dict, Any, Optional, List
 import json
+import logging
 
-from models.comp_complaint import Complaint, ComplaintStatus
+from models.comp_complaint import Complaint
 from models.comp_complaint_types import ComplaintChannel, ComplaintType, ComplaintSubType
 from models.user import User
-from models.departments import Department
 from models.outgoing_reports import OutgoingReport
 from models.outgoing_reports2 import OutgoingReport2
 from models.outgoing_reports3 import OutgoingReport3
 from models.outgoing_reports4 import OutgoingReport4
 
-import logging
 logger = logging.getLogger(__name__)
 
+# -----------------------
+# helpers (ปลอดภัย/กัน field หาย)
+# -----------------------
+def _user_min(u: Optional[User]) -> Optional[Dict[str, Any]]:
+    if not u:
+        return None
+    return {
+        "id": str(getattr(u, "id", None)) if getattr(u, "id", None) else None,
+        "name": f"{getattr(u, 'first_name', '')} {getattr(u, 'last_name', '')}".strip() or None,
+        "email": getattr(u, "email", None),
+    }
+
+def _dept_min(d) -> Optional[Dict[str, Any]]:
+    if not d:
+        return None
+    return {
+        "id": str(getattr(d, "id", None)) if getattr(d, "id", None) else None,
+        "name": getattr(d, "name", None),
+    }
+
+def _serialize_attachments(report_obj) -> List[Dict[str, Any]]:
+    atts = []
+    try:
+        for a in (getattr(report_obj, "attachments", None) or []):
+            atts.append({
+                "id": str(getattr(a, "id", None)) if getattr(a, "id", None) else None,
+                "file_name": getattr(a, "file_name", None) or getattr(a, "filename", None),
+                "file_path": getattr(a, "file_path", None) or getattr(a, "path", None),
+                "file_size": getattr(a, "file_size", None),
+                "file_type": getattr(a, "file_type", None) or getattr(a, "mimetype", None),
+                "uploaded_at": getattr(a, "created_at", None).isoformat() if getattr(a, "created_at", None) else None,
+            })
+    except Exception as e:
+        logger.warning(f"serialize attachments error: {e}")
+    return atts
+
+def _iso(dt) -> Optional[str]:
+    return dt.isoformat() if dt else None
+
+def _fmt_bkk(dt_utc) -> str:
+    if not dt_utc:
+        return "ไม่ระบุ"
+    bangkok_tz = timezone(timedelta(hours=7))
+    try:
+        return dt_utc.replace(tzinfo=timezone.utc).astimezone(bangkok_tz).strftime("%d %b %Y")
+    except Exception:
+        return dt_utc.strftime("%d %b %Y")
 
 def get_document_storage_by_channel(
     db: Session,
@@ -409,444 +454,306 @@ def get_bulk_related_complaints(db: Session, complaint_ids: List[UUID]) -> Dict[
     
     return result
 
+# ---------------------------------
+# ฟังก์ชันหลักที่ปรับปรุง (DROP-IN)
+# ---------------------------------
 def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
     """
-    ดึงรายละเอียดเต็มของ complaint เดียว รวมถึงข้อมูลความสัมพันธ์ทั้งหมด
-    ใช้สำหรับ detail view ที่ต้องการข้อมูลครบถ้วน
+    ดึงรายละเอียดเต็มของ complaint เดียว รวมถึงความสัมพันธ์และรายงานออกทั้งหมด
+    (ฉบับปรับปรุง: เติม department/user/attachments และ complaint_number)
     """
     try:
-        # ดึงข้อมูล complaint หลัก
+        # 1) complaint หลัก
         complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
         if not complaint:
             return {"error": "Complaint not found", "detail": None}
-        
-        # ดึงข้อมูลความสัมพันธ์ทั้งหมด
-        related_info = get_related_complaints(db, complaint_id)
-        
-        # ดึงข้อมูลผู้ร้องเรียน
-        complainant_data = {}
-        try:
-            complainant_data = json.loads(complaint.complainant_data) if complaint.complainant_data else {}
-        except (json.JSONDecodeError, TypeError) as e:
-            logger.warning(f"Error parsing complainant_data for complaint {complaint.id}: {str(e)}")
-            complainant_data = {}
-        
-        # ดึงข้อมูลผู้ถูกร้องเรียน
-        respondent_data = {}
-        try:
-            respondent_data = json.loads(complaint.respondent_data) if complaint.respondent_data else {}
-        except (json.JSONDecodeError, TypeError) as e:
-            logger.warning(f"Error parsing respondent_data for complaint {complaint.id}: {str(e)}")
-            respondent_data = {}
-        
-        # ดึงข้อมูลเจ้าหน้าที่ที่รับผิดชอบ
-        assigned_officer = None
-        if complaint.assigned_officer_id:
-            assigned_officer = db.query(User).filter(User.id == complaint.assigned_officer_id).first()
-        
-        # ดึงข้อมูลผู้สร้างเรื่องร้องเรียน
-        creator = None
-        if complaint.created_by:
-            creator = db.query(User).filter(User.id == complaint.created_by).first()
-        
-        # ดึงข้อมูล channel
-        channel_info = None
-        if complaint.complaint_channel_id:
-            channel_info = db.query(ComplaintChannel).filter(
-                ComplaintChannel.id == complaint.complaint_channel_id
-            ).first()
-        
-        # 🔥 ดึงข้อมูลประวัติสถานะของเรื่องร้องเรียน
+
+        # 2) related (ใช้ของเดิมในไฟล์)
+        related_info = get_related_complaints(db, complaint_id)  # noqa: F821 (อิงฟังก์ชันเดิมในไฟล์นี้)
+
+        # 3) แยกข้อมูล JSON
+        def _safe_json(s):
+            try:
+                return json.loads(s) if s else {}
+            except Exception:
+                return {}
+        complainant_data = _safe_json(getattr(complaint, "complainant_data", None))
+        respondent_data  = _safe_json(getattr(complaint, "respondent_data", None))
+
+        # 4) users/channel
+        assigned_officer = db.query(User).filter(User.id == complaint.assigned_officer_id).first() if complaint.assigned_officer_id else None
+        creator          = db.query(User).filter(User.id == complaint.created_by).first() if complaint.created_by else None
+        channel_info     = db.query(ComplaintChannel).filter(ComplaintChannel.id == complaint.complaint_channel_id).first() if complaint.complaint_channel_id else None
+
+        # 5) status history (ใช้บล็อคเดิม—ตัดทอนเพื่อความชัด)
         status_history = []
         try:
-            # ดึงจาก table comp_complaint_status_history โดยตรง
-            from models.comp_complaint import ComplaintStatusHistory
-            status_history_records = db.query(ComplaintStatusHistory).filter(
-                ComplaintStatusHistory.complaint_id == complaint_id
-            ).order_by(ComplaintStatusHistory.changed_at.desc()).all()
-            
-            if status_history_records:
-                # แปลงจาก SQLAlchemy objects เป็น dictionaries
-                status_history = []
-                for record in status_history_records:
-                    # ดึงข้อมูลผู้ทำการเปลี่ยนแปลง
-                    changed_by_user = None
-                    if record.changed_by:
-                        changed_by_user = db.query(User).filter(User.id == record.changed_by).first()
-                    
-                    status_history.append({
-                        "status": record.status.value if hasattr(record.status, 'value') else str(record.status),
-                        "changed_at": record.changed_at.isoformat() if record.changed_at else None,
-                        "changed_by": str(record.changed_by) if record.changed_by else None,
-                        "changed_by_name": f"{changed_by_user.first_name} {changed_by_user.last_name}".strip() if changed_by_user else "ระบบ",
-                        "remark": record.notes or ""
-                    })
-            
-            # ถ้าไม่มีข้อมูลในตาราง status_history ให้ fallback
-            elif hasattr(complaint, 'status_history') and complaint.status_history:
-                # ถ้ามี status_history field ใน model และเป็น relationship
-                if isinstance(complaint.status_history, list):
-                    # ถ้าเป็น SQLAlchemy relationship objects ให้แปลงเป็น dict
-                    status_history = []
-                    for history_item in complaint.status_history:
-                        try:
-                            status_history.append({
-                                "status": history_item.status.value if hasattr(history_item.status, 'value') else str(history_item.status),
-                                "changed_at": history_item.changed_at.isoformat() if history_item.changed_at else None,
-                                "changed_by": str(history_item.changed_by) if history_item.changed_by else None,
-                                "remark": history_item.remark or ""
-                            })
-                        except Exception as e:
-                            logger.warning(f"Error converting status history item: {str(e)}")
-                            continue
-                elif isinstance(complaint.status_history, str):
-                    # ถ้าเป็น JSON string
-                    try:
-                        status_history = json.loads(complaint.status_history)
-                    except (json.JSONDecodeError, TypeError) as e:
-                        logger.warning(f"Error parsing status_history JSON for complaint {complaint.id}: {str(e)}")
-                        status_history = []
-                else:
-                    # ถ้าเป็น object อื่นๆ ให้ลองแปลง
-                    try:
-                        status_history = list(complaint.status_history) if complaint.status_history else []
-                    except Exception as e:
-                        logger.warning(f"Error converting status_history for complaint {complaint.id}: {str(e)}")
-                        status_history = []
-            else:
-                # ถ้าไม่มี status_history field ให้สร้างประวัติเบื้องต้นจากข้อมูลที่มี
-                status_history = []
-                
-                # 1. เรื่องถูกสร้างขึ้น
-                if complaint.created_at:
-                    status_history.append({
-                        "status": "submitted",
-                        "changed_at": complaint.created_at.isoformat(),
-                        "changed_by": str(complaint.created_by) if complaint.created_by else None,
-                        "remark": "เรื่องร้องเรียนถูกสร้างขึ้น"
-                    })
-                
-                # 2. ถ้ามีการมอบหมายงาน
-                if complaint.assigned_date and complaint.assigned_officer_id:
-                    status_history.append({
-                        "status": "assigned",
-                        "changed_at": complaint.assigned_date.isoformat(),
-                        "changed_by": None,  # ระบบมอบหมายงาน
-                        "remark": f"มอบหมายงานให้ {complaint.assigned_to or 'เจ้าหน้าที่'}"
-                    })
-                
-                # 3. ถ้ามีการยืนยัน/ปฏิเสธรับงาน
-                if complaint.confirm_assigned_date and complaint.confirm_assigned_status == True:
-                    status_history.append({
-                        "status": "confirmed",
-                        "changed_at": complaint.confirm_assigned_date.isoformat(),
-                        "changed_by": str(complaint.confirm_assigned_by) if complaint.confirm_assigned_by else None,
-                        "remark": "ยืนยันรับงาน"
-                    })
-                elif complaint.confirm_assigned_status == False:
-                    status_history.append({
-                        "status": "rejected",
-                        "changed_at": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None,
-                        "changed_by": str(complaint.confirm_assigned_by) if complaint.confirm_assigned_by else None,
-                        "remark": "ปฏิเสธรับงาน"
-                    })
-                
-                # 4. สถานะปัจจุบัน (ถ้าแตกต่างจาก submitted)
-                if complaint.status and complaint.status.value != "submitted":
-                    status_history.append({
-                        "status": complaint.status.value,
-                        "changed_at": complaint.updated_at.isoformat() if complaint.updated_at else complaint.created_at.isoformat(),
-                        "changed_by": None,
-                        "remark": f"สถานะปัจจุบัน: {get_thai_status(complaint.status.value)}"
-                    })
-                
-                # ถ้าไม่มี status_history เลย ให้สร้างอย่างน้อย 1 รายการ
-                if not status_history and complaint.created_at:
-                    status_history.append({
-                        "status": complaint.status.value if complaint.status else "unknown",
-                        "changed_at": complaint.created_at.isoformat(),
-                        "changed_by": str(complaint.created_by) if complaint.created_by else None,
-                        "remark": "เรื่องร้องเรียนในระบบ"
-                    })
+            from models.comp_complaint import ComplaintStatusHistory  # มีอยู่แล้ว
+            rows = db.query(ComplaintStatusHistory).filter(ComplaintStatusHistory.complaint_id == complaint_id)\
+                .order_by(ComplaintStatusHistory.changed_at.desc()).all()
+            for r in rows:
+                changed_by_user = db.query(User).filter(User.id == r.changed_by).first() if r.changed_by else None
+                status_history.append({
+                    "status": r.status.value if hasattr(r.status, "value") else str(r.status),
+                    "changed_at": _iso(r.changed_at),
+                    "changed_by": str(r.changed_by) if r.changed_by else None,
+                    "changed_by_name": (_user_min(changed_by_user) or {}).get("name") if changed_by_user else "ระบบ",
+                    "remark": getattr(r, "notes", "") or getattr(r, "remark", "") or ""
+                })
         except Exception as e:
-            logger.warning(f"Error building status_history for complaint {complaint.id}: {str(e)}")
-            status_history = []
-        
-        # 🔥 ดึงข้อมูล outgoing reports ที่เกี่ยวข้องกับ complaint นี้
-        outgoing_reports_data = {}
-        try:
-            # ดึง outgoing reports ประเภทที่ 1 (ส่งหน่วยงานที่เกี่ยวข้อง)
-            outgoing_reports1 = db.query(OutgoingReport).filter(
-                OutgoingReport.complaint_id == complaint_id,
-                OutgoingReport.is_active == True
-            ).all()
-            
-            outgoing_reports_data["type1"] = []
-            for report in outgoing_reports1:
-                outgoing_reports_data["type1"].append({
-                    "id": str(report.id),
-                    "reference_number": report.reference_number,
-                    "reference_date": report.reference_date.isoformat() if report.reference_date else None,
-                    "subject": report.subject,
-                    "complaint_number": report.complaint_number,
-                    "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,
-                    "confidentiality_level": report.confidentiality_level,
-                    "urgency_level": report.urgency_level,
-                    "remarks": report.remarks,
-                    "created_at": report.created_at.isoformat() if report.created_at else None,
-                    "type_description": "รายงานส่งหน่วยงานที่เกี่ยวข้อง"
-                })
-            
-            # ดึง outgoing reports ประเภทที่ 2 (แจ้งผู้ร้องเรียน)
-            outgoing_reports2 = db.query(OutgoingReport2).filter(
-                OutgoingReport2.complaint_id == complaint_id,
-                OutgoingReport2.is_active == True
-            ).all()
-            
-            outgoing_reports_data["type2"] = []
-            for report in outgoing_reports2:
-                outgoing_reports_data["type2"].append({
-                    "id": str(report.id),
-                    "complaint_number": report.complaint_number,
-                    "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,
-                    "subject": report.subject,
-                    "confidentiality_level": report.confidentiality_level,
-                    "urgency_level": report.urgency_level,
-                    "remarks": report.remarks,
-                    "created_at": report.created_at.isoformat() if report.created_at else None,
-                    "type_description": "รายงานแจ้งผู้ร้องเรียน"
-                })
-            
-            # ดึง outgoing reports ประเภทที่ 3 (ขอทราบผลการพิจารณา)
-            outgoing_reports3 = db.query(OutgoingReport3).filter(
-                OutgoingReport3.complaint_id == complaint_id,
-                OutgoingReport3.is_active == True
-            ).all()
-            
-            outgoing_reports_data["type3"] = []
-            for report in outgoing_reports3:
-                outgoing_reports_data["type3"].append({
-                    "id": str(report.id),
-                    "complaint_number": report.complaint_number,
-                    "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,
-                    "subject": report.subject,
-                    "confidentiality_level": report.confidentiality_level,
-                    "urgency_level": report.urgency_level,
-                    "remarks": report.remarks,
-                    "created_at": report.created_at.isoformat() if report.created_at else None,
-                    "type_description": "รายงานขอทราบผลการพิจารณา"
-                })
-            
-            # ดึง outgoing reports ประเภทที่ 4 (แจ้งผลการให้ผู้เกี่ยวข้องทราบ)
-            outgoing_reports4 = db.query(OutgoingReport4).filter(
-                OutgoingReport4.complaint_id == complaint_id,
-                OutgoingReport4.is_active == True
-            ).all()
-            
-            outgoing_reports_data["type4"] = []
-            for report in outgoing_reports4:
-                outgoing_reports_data["type4"].append({
-                    "id": str(report.id),
-                    "reference_number": report.reference_number,
-                    "reference_date": report.reference_date.isoformat() if report.reference_date else None,
-                    "subject": report.subject,
-                    "proposal_purpose": report.proposal_purpose,
-                    "consideration_result": report.consideration_result,
-                    "confidentiality_level": report.confidentiality_level,
-                    "urgency_level": report.urgency_level,
-                    "remarks": report.remarks,
-                    "created_at": report.created_at.isoformat() if report.created_at else None,
-                    "type_description": "รายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ"
-                })
-            
-            # รวม outgoing reports ทั้งหมด
-            all_outgoing_reports = []
-            for report_type, reports in outgoing_reports_data.items():
-                all_outgoing_reports.extend(reports)
-            
-            # เรียงตาม created_at (ใหม่สุดก่อน)
-            all_outgoing_reports.sort(
-                key=lambda x: datetime.fromisoformat(x["created_at"]) if x.get("created_at") else datetime.min,
-                reverse=True
-            )
-            
-            outgoing_reports_data["all"] = all_outgoing_reports
-            outgoing_reports_data["total_count"] = len(all_outgoing_reports)
-            
-        except Exception as e:
-            logger.warning(f"Error getting outgoing reports for complaint {complaint.id}: {str(e)}")
-            outgoing_reports_data = {
-                "type1": [],
-                "type2": [],
-                "type3": [],
-                "type4": [],
-                "all": [],
-                "total_count": 0
-            }
-        
-        # วันที่ร้อง (created_at)
-        received_date = ""
-        if complaint.created_at:
-            # Convert to Bangkok timezone (+07:00)
-            bangkok_tz = timezone(timedelta(hours=7))
-            bangkok_time = complaint.created_at.replace(tzinfo=timezone.utc).astimezone(bangkok_tz)
-            received_date = bangkok_time.strftime("%d %b %Y")
-        else:
-            received_date = "ไม่ระบุ"
-        
-        # สถานะการยืนยันรับงาน
-        confirmation_status = "ยังไม่ได้รับงาน"
-        if complaint.confirm_assigned_status == True:
+            logger.warning(f"status_history fallback: {e}")
+            # fallback เบื้องต้น
+            if complaint.created_at:
+                status_history = [{
+                    "status": getattr(complaint.status, "value", "submitted") or "submitted",
+                    "changed_at": _iso(complaint.created_at),
+                    "changed_by": str(complaint.created_by) if complaint.created_by else None,
+                    "changed_by_name": (_user_min(creator) or {}).get("name") if creator else "ระบบ",
+                    "remark": "เรื่องร้องเรียนถูกสร้างขึ้น"
+                }]
+
+        # 6) สรุปสถานะยืนยันรับงาน
+        if complaint.confirm_assigned_status is True:
             confirmation_status = "ยืนยันรับงานแล้ว"
-        elif complaint.confirm_assigned_status == False:
+        elif complaint.confirm_assigned_status is False:
             confirmation_status = "ปฏิเสธรับงาน"
         elif complaint.assigned_officer_id:
             confirmation_status = "รอการยืนยัน"
-        
-        # ประเภทการร้องเรียน
-        complaint_category = "เรื่องร้องเรียนใหม่"
-        if complaint.group_work:
-            complaint_category = "รับเรื่องจากคณะบัตรสนเท่ห์"
-        elif complaint.add_more_complaint_to_ref:
-            complaint_category = "เรื่องร้องเรียนเพิ่มเติม"
-        elif complaint.new_complaint:
-            complaint_category = "เรื่องร้องเรียนใหม่"
-        
-        # ดึงข้อมูลประเภทเรื่องและประเภทเรื่องย่อย
+        else:
+            confirmation_status = "ยังไม่ได้รับงาน"
+
+        # 7) ประเภท/ประเภทย่อย + หมวดหมู่
         complaint_type_name = ""
-        complaint_subtype_name = ""
-        
         if complaint.complaint_type_id:
-            complaint_type_obj = db.query(ComplaintType).filter(ComplaintType.id == complaint.complaint_type_id).first()
-            complaint_type_name = complaint_type_obj.name if complaint_type_obj else ""
-        
+            ct = db.query(ComplaintType).filter(ComplaintType.id == complaint.complaint_type_id).first()
+            complaint_type_name = getattr(ct, "name", "") if ct else ""
+
+        complaint_subtype_name = ""
         if complaint.complaint_subtype_id:
-            complaint_subtype_obj = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
-            complaint_subtype_name = complaint_subtype_obj.name if complaint_subtype_obj else ""
-        
-        # ดึงข้อมูลหน่วยงานจาก outgoing_reports
+            cst = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
+            complaint_subtype_name = getattr(cst, "name", "") if cst else ""
+
+        if getattr(complaint, "group_work", False):
+            complaint_category = "รับเรื่องจากคณะบัตรสนเท่ห์"
+        elif getattr(complaint, "add_more_complaint_to_ref", False):
+            complaint_category = "เรื่องร้องเรียนเพิ่มเติม"
+        else:
+            complaint_category = "เรื่องร้องเรียนใหม่"
+
+        # 8) รายงานออก (type1–4) + แนบข้อมูลเสริมครบ
+        outgoing_reports_data: Dict[str, List[Dict[str, Any]]] = {"type1": [], "type2": [], "type3": [], "type4": []}
+
+        # type1: ส่งหน่วยงานที่เกี่ยวข้อง
+        for r in db.query(OutgoingReport).filter(OutgoingReport.complaint_id == complaint_id, OutgoingReport.is_active == True).all():
+            signer = getattr(r, "signature_authority_user", None)
+            dept   = getattr(r, "department", None)
+            atts   = _serialize_attachments(r)
+            outgoing_reports_data["type1"].append({
+                "id": str(getattr(r, "id", "")),
+                "reference_number": getattr(r, "reference_number", None),
+                "reference_date": _iso(getattr(r, "reference_date", None)),
+                "subject": getattr(r, "subject", None),
+                "complaint_number": getattr(r, "complaint_number", None),
+                "complaint_number_date": _iso(getattr(r, "complaint_number_date", None)),
+                "confidentiality_level": getattr(r, "confidentiality_level", None),
+                "urgency_level": getattr(r, "urgency_level", None),
+                "remarks": getattr(r, "remarks", None),
+                "created_at": _iso(getattr(r, "created_at", None)),
+                "department": _dept_min(dept),
+                "signature_authority_user": _user_min(signer),
+                "attachments": atts,
+                "attachments_count": len(atts),
+                "type_description": "รายงานส่งหน่วยงานที่เกี่ยวข้อง",
+            })
+
+        # type2: แจ้งผู้ร้องเรียน/ส่วนราชการที่ส่งเรื่องมาให้ทราบ
+        for r in db.query(OutgoingReport2).filter(OutgoingReport2.complaint_id == complaint_id, OutgoingReport2.is_active == True).all():
+            dept = getattr(r, "department", None)
+            to_user = getattr(r, "to_user", None) or getattr(r, "user", None)
+            atts = _serialize_attachments(r)
+            outgoing_reports_data["type2"].append({
+                "id": str(getattr(r, "id", "")),
+                "complaint_number": getattr(r, "complaint_number", None),
+                "complaint_number_date": _iso(getattr(r, "complaint_number_date", None)),
+                "subject": getattr(r, "subject", None),
+                "confidentiality_level": getattr(r, "confidentiality_level", None),
+                "urgency_level": getattr(r, "urgency_level", None),
+                "remarks": getattr(r, "remarks", None),
+                "created_at": _iso(getattr(r, "created_at", None)),
+                "department": _dept_min(dept),
+                "recipient_user": _user_min(to_user),
+                "attachments": atts,
+                "attachments_count": len(atts),
+                "type_description": "แจ้งผู้ร้องเรียน/ส่วนราชการที่ส่งเรื่องมาให้ทราบ",
+            })
+
+        # type3: รายงานผลจากหน่วยงาน/ความคืบหน้า
+        for r in db.query(OutgoingReport3).filter(OutgoingReport3.complaint_id == complaint_id, OutgoingReport3.is_active == True).all():
+            dept = getattr(r, "department", None)
+            atts = _serialize_attachments(r)
+            outgoing_reports_data["type3"].append({
+                "id": str(getattr(r, "id", "")),
+                "complaint_number": getattr(r, "complaint_number", None),
+                "complaint_number_date": _iso(getattr(r, "complaint_number_date", None)),
+                "subject": getattr(r, "subject", None),
+                "confidentiality_level": getattr(r, "confidentiality_level", None),
+                "urgency_level": getattr(r, "urgency_level", None),
+                "remarks": getattr(r, "remarks", None),
+                "created_at": _iso(getattr(r, "created_at", None)),
+                "department": _dept_min(dept),
+                "attachments": atts,
+                "attachments_count": len(atts),
+                "type_description": "รายงานผลจากหน่วยงาน/ความคืบหน้า",
+            })
+
+        # type4: หนังสือแจ้งผลการพิจารณางาน
+        for r in db.query(OutgoingReport4).filter(OutgoingReport4.complaint_id == complaint_id, OutgoingReport4.is_active == True).all():
+            signer = getattr(r, "signature_authority_user", None)
+            dept   = getattr(r, "department", None)
+            atts   = _serialize_attachments(r)
+            outgoing_reports_data["type4"].append({
+                "id": str(getattr(r, "id", "")),
+                "reference_number": getattr(r, "reference_number", None),
+                "reference_date": _iso(getattr(r, "reference_date", None)),
+                "subject": getattr(r, "subject", None),
+                "proposal_purpose": getattr(r, "proposal_purpose", None),
+                "consideration_result": getattr(r, "consideration_result", None),
+                "confidentiality_level": getattr(r, "confidentiality_level", None),
+                "urgency_level": getattr(r, "urgency_level", None),
+                "remarks": getattr(r, "remarks", None),
+                "created_at": _iso(getattr(r, "created_at", None)),
+                "department": _dept_min(dept),
+                "signature_authority_user": _user_min(signer),
+                "attachments": atts,
+                "attachments_count": len(atts),
+                "type_description": "หนังสือแจ้งผลการพิจารณางาน",
+            })
+
+        # (ทางเลือก) type5: “ไม่อยู่ในความรับผิดชอบ” — ถ้ามีโมเดลจะถูกเติมอัตโนมัติ
+        not_our_responsibility = []
+        try:
+            from models.outgoing_reports5 import OutgoingReport5  # สร้างตามที่คุยกันก่อนหน้า
+            for r in db.query(OutgoingReport5).filter(OutgoingReport5.complaint_id == complaint_id, OutgoingReport5.is_active == True).all():
+                dept = getattr(r, "department", None)
+                atts = _serialize_attachments(r)
+                not_our_responsibility.append({
+                    "id": str(getattr(r, "id", "")),
+                    "reference_number": getattr(r, "reference_number", None),
+                    "reference_date": _iso(getattr(r, "reference_date", None)),
+                    "subject": getattr(r, "subject", None),
+                    "remarks": getattr(r, "remarks", None),
+                    "created_at": _iso(getattr(r, "created_at", None)),
+                    "department": _dept_min(dept),
+                    "attachments": atts,
+                    "attachments_count": len(atts),
+                    "type_description": "แจ้งความว่าไม่อยู่ในความรับผิดชอบ",
+                })
+        except Exception:
+            # ยังไม่มีโมเดล/ตาราง => คงไว้เป็นลิสต์ว่าง
+            pass
+
+        # รวม all + sort ใหม่สุดก่อน
+        all_out = outgoing_reports_data["type1"] + outgoing_reports_data["type2"] + outgoing_reports_data["type3"] + outgoing_reports_data["type4"]
+        all_out.sort(key=lambda x: datetime.fromisoformat(x["created_at"]) if x.get("created_at") else datetime.min, reverse=True)
+
+        outgoing_reports = {
+            **outgoing_reports_data,
+            "type5": not_our_responsibility,                 # เผื่อ UI ส่วนล่าง (แถบเหลือง)
+            "all": all_out,
+            "total_count": len(all_out),
+        }
+
+        # 9) ชื่อหน่วยงาน (แสดงหัวบัตร) — ใช้หน่วยงานจากรายงาน type1 รายการแรกถ้ามี
         agency_name = ""
         try:
-            outgoing_report = db.query(OutgoingReport).filter(
-                OutgoingReport.complaint_id == complaint_id,
-                OutgoingReport.is_active == True
-            ).first()
-            
-            if outgoing_report and outgoing_report.department:
-                agency_name = outgoing_report.department.name
-        except Exception as e:
-            logger.warning(f"Error getting agency name from outgoing_reports: {str(e)}")
-        
-        # จัดรูปแบบผลลัพธ์
-        result = {
-            "detail": {
-                "receiveDate": received_date,
-                "agency": agency_name,
-                "claimantName": complainant_data.get("name", "") or f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip(),
-                "issue": complaint.subject or "",
-                "description": complaint.description or "",
-                "issueType": complaint_type_name,
-                "subIssueType": complaint_subtype_name,
-                "responsibleOfficer": complaint.assigned_to or "",
-                "status": complaint.status.value if complaint.status else "",
-                "confirmationStatus": confirmation_status,
-                "complaintCategory": complaint_category,
-                "creator": f"{creator.first_name} {creator.last_name}".strip() if creator else "ไม่ระบุ",
-                "note": complaint.assigned_remark or "",
-                
-                # ข้อมูลเพิ่มเติมสำหรับ API
-                "id": str(complaint.id),
-                "complaint_id": str(complaint.id),
-                "status": complaint.status.value if complaint.status else "",
-                "urgency_level": complaint.urgency_level,
-                "confidentiality_level": complaint.confidentiality_level,
+            first_t1 = outgoing_reports_data["type1"][0] if outgoing_reports_data["type1"] else None
+            if first_t1 and first_t1.get("department", {}).get("name"):
+                agency_name = first_t1["department"]["name"]
+        except Exception:
+            pass
+
+        # 10) สร้างผลลัพธ์ detail (เพิ่ม complaint_number ตามที่ UI ต้องใช้)
+        detail = {
+            "receiveDate": _fmt_bkk(complaint.created_at),
+            "agency": agency_name,
+            "complaintNumber": getattr(complaint, "complaint_number", None),
+            "claimantName": complainant_data.get("name", "") or f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip(),
+            "issue": complaint.subject or "",
+            "description": complaint.description or "",
+            "issueType": complaint_type_name,
+            "subIssueType": complaint_subtype_name,
+            "responsibleOfficer": complaint.assigned_to or "",
+            "status": complaint.status.value if complaint.status else "",
+            "confirmationStatus": confirmation_status,
+            "complaintCategory": complaint_category,
+            "note": getattr(complaint, "assigned_remark", None) or "",
+            # extra meta
+            "id": str(complaint.id),
+            "complaint_id": str(complaint.id),
+            "urgency_level": getattr(complaint, "urgency_level", None),
+            "confidentiality_level": getattr(complaint, "confidentiality_level", None),
+            "is_master": complaint.parent_complaint_id is None,
+            "assigned_officer": _user_min(assigned_officer),
+            "creator": _user_min(creator),
+            "channel": {
+                "id": str(getattr(channel_info, "id", "")) if channel_info else None,
+                "name": getattr(channel_info, "name", None) if channel_info else None,
+                "description": getattr(channel_info, "description", None) if channel_info else None
+            } if channel_info else None,
+            "complainant": complainant_data,
+            "respondent": respondent_data,
+            "created_at": _iso(complaint.created_at),
+            "updated_at": _iso(complaint.updated_at),
+            "registration_date": _iso(getattr(complaint, "registration_date", None)),
+            "assigned_date": _iso(getattr(complaint, "assigned_date", None)),
+            "confirm_assigned_status": getattr(complaint, "confirm_assigned_status", None),
+            "confirm_assigned_date": _iso(getattr(complaint, "confirm_assigned_date", None)),
+            "confirm_assigned_remark": getattr(complaint, "confirm_assigned_remark", None),
+            "confirm_assigned_by": str(getattr(complaint, "confirm_assigned_by", "")) if getattr(complaint, "confirm_assigned_by", None) else None,
+            "complaint_type_flags": {
+                "new_complaint": getattr(complaint, "new_complaint", False),
+                "add_more_complaint_to_ref": getattr(complaint, "add_more_complaint_to_ref", False),
+                "group_work": getattr(complaint, "group_work", False)
+            },
+            "status_history": status_history
+        }
+
+        # 11) relationships (เดิม)
+        relationships = {
+            "parent_complaint": related_info.get("parent_complaint"),
+            "parent_chain": related_info.get("parent_chain", []),
+            "master_complaint": related_info.get("master_complaint"),
+            "child_complaints": related_info.get("child_complaints", []),
+            "sibling_complaints": related_info.get("sibling_complaints", []),
+            "all_related": related_info.get("all_related", []),
+            "total_related_count": len(related_info.get("all_related", [])),
+            "relationship_summary": {
                 "is_master": complaint.parent_complaint_id is None,
-                "assigned_officer": {
-                    "id": str(assigned_officer.id) if assigned_officer else None,
-                    "name": f"{assigned_officer.first_name} {assigned_officer.last_name}" if assigned_officer else None,
-                    "email": assigned_officer.email if assigned_officer else None
-                } if assigned_officer else None,
-                "creator": {
-                    "id": str(creator.id) if creator else None,
-                    "name": f"{creator.first_name} {creator.last_name}".strip() if creator else None,
-                    "email": creator.email if creator else None
-                } if creator else None,
-                "channel": {
-                    "id": str(channel_info.id) if channel_info else None,
-                    "name": channel_info.name if channel_info else None,
-                    "description": channel_info.description if channel_info else None
-                } if channel_info else None,
-                "complainant": complainant_data,
-                "respondent": respondent_data,
-                "created_at": complaint.created_at.isoformat() if complaint.created_at else None,
-                "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
-                "registration_date": complaint.registration_date.isoformat() if complaint.registration_date else None,
-                "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
-                
-                # ข้อมูลการยืนยันรับงาน
-                "confirm_assigned_status": complaint.confirm_assigned_status,
-                "confirm_assigned_date": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None,
-                "confirm_assigned_remark": complaint.confirm_assigned_remark,
-                "confirm_assigned_by": str(complaint.confirm_assigned_by) if complaint.confirm_assigned_by else None,
-                
-                "complaint_type_flags": {
-                    "new_complaint": complaint.new_complaint,
-                    "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
-                    "group_work": complaint.group_work
-                },
-                
-                # 🔥 ประวัติการเปลี่ยนแปลงสถานะ (สำหรับเจ้าหน้าที่ดูประวัติ)
-                "status_history": status_history
-            },
-            
-            # 🔥 ข้อมูลความสัมพันธ์เต็มรูปแบบ (เฉพาะใน detail endpoint)
-            "relationships": {
-                "parent_complaint": related_info.get("parent_complaint"),
-                "parent_chain": related_info.get("parent_chain", []),
-                "master_complaint": related_info.get("master_complaint"),
-                "child_complaints": related_info.get("child_complaints", []),
-                "sibling_complaints": related_info.get("sibling_complaints", []),
-                "all_related": related_info.get("all_related", []),  # 🔥 ข้อมูลเต็มสำหรับ detail
-                "total_related_count": len(related_info.get("all_related", [])),
-                "relationship_summary": {
-                    "is_master": complaint.parent_complaint_id is None,
-                    "has_parent": related_info.get("parent_complaint") is not None,
-                    "children_count": len(related_info.get("child_complaints", [])),
-                    "siblings_count": len(related_info.get("sibling_complaints", [])),
-                    "total_in_group": len(related_info.get("all_related", []))
-                }
-            },
-            
-            # 🔥 ข้อมูล outgoing reports ที่เกี่ยวข้อง
-            "outgoing_reports": outgoing_reports_data
+                "has_parent": related_info.get("parent_complaint") is not None,
+                "children_count": len(related_info.get("child_complaints", [])),
+                "siblings_count": len(related_info.get("sibling_complaints", [])),
+                "total_in_group": len(related_info.get("all_related", []))
+            }
         }
-        
-        # 🔥 เรียงลำดับ all_related ตาม created_at (ใหม่สุดก่อน) โดยไม่ย้าย current ไปด้านบน
-        if result.get("relationships") and result["relationships"].get("all_related"):
-            all_related = result["relationships"]["all_related"]
-            
-            # เรียงทั้งหมดตาม created_at (ใหม่สุดก่อน)
-            def parse_datetime(date_str):
-                if not date_str:
-                    return datetime.min
-                try:
-                    return datetime.fromisoformat(date_str.replace('T', ' ').replace('Z', ''))
-                except:
-                    return datetime.min
-            
-            all_related.sort(key=lambda x: parse_datetime(x.get("created_at", "")), reverse=True)
-            
-            result["relationships"]["all_related"] = all_related
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"Error getting document storage detail for {complaint_id}: {str(e)}")
+
+        # เรียง all_related ใหม่สุดก่อน (คง structure เดิม)
+        def _parse_dt(s): 
+            try:
+                return datetime.fromisoformat((s or "").replace('T', ' ').replace('Z', ''))
+            except Exception:
+                return datetime.min
+        if relationships["all_related"]:
+            relationships["all_related"].sort(key=lambda x: _parse_dt(x.get("created_at")), reverse=True)
+
         return {
-            "error": str(e),
-            "detail": None,
-            "relationships": None
+            "detail": detail,
+            "relationships": relationships,
+            "outgoing_reports": outgoing_reports,
         }
+
+    except Exception as e:
+        logger.error(f"Error getting document storage detail for {complaint_id}: {e}")
+        return {"error": str(e), "detail": None, "relationships": None}
 
 def get_document_storage_by_channel(
     db: Session,
