@@ -4,19 +4,17 @@ import Highcharts from "highcharts/highmaps";
 import HighchartsReact from "highcharts-react-official";
 import mapDataThailand from "@highcharts/map-collection/countries/th/th-all.geo.json";
 import SelectField from "@services/SelectField/SelectField";
-import {
-  GetMapJSONThailandMapData,
-} from "@pages/api/dashboard/dashboard";
-import {
-  GetAllSelectYears,
-} from "@pages/api/allselect/allselect";
+import { GetMapJSONThailandMapData } from "@pages/api/dashboard/dashboard";
+import { GetAllSelectYears } from "@pages/api/allselect/allselect";
 
 const getCurrentThaiYear = () => (new Date().getFullYear() + 543).toString();
 
 const TopLeftService = () => {
   const chartRef = useRef(null);
 
-  const [selectedStartYear, setSelectedStartYear] = useState(getCurrentThaiYear());
+  const [selectedStartYear, setSelectedStartYear] = useState(
+    getCurrentThaiYear()
+  );
   const [selectedEndYear, setSelectedEndYear] = useState(getCurrentThaiYear());
   const [selectedProvince, setSelectedProvince] = useState("ทั้งหมด");
 
@@ -106,8 +104,8 @@ const TopLeftService = () => {
     if (!mapData?.hcKeyToThaiName) return mapDataThailand;
 
     const newMap = JSON.parse(JSON.stringify(mapDataThailand));
-    newMap.features = newMap.features.filter(f =>
-      mapData.hcKeyToThaiName[f.properties["hc-key"]]
+    newMap.features = newMap.features.filter(
+      (f) => mapData.hcKeyToThaiName[f.properties["hc-key"]]
     );
     newMap.features.forEach((f) => {
       const key = f.properties["hc-key"];
@@ -124,7 +122,8 @@ const TopLeftService = () => {
 
   // Calculate merged data based on selected years and province
   const mergedData = useMemo(() => {
-    if (!mapData?.provinceValues || !selectedStartYear || !selectedEndYear) return [];
+    if (!mapData?.provinceValues || !selectedStartYear || !selectedEndYear)
+      return [];
 
     const dataMap = {};
     for (
@@ -143,7 +142,7 @@ const TopLeftService = () => {
     let result = Object.entries(dataMap).map(([key, value]) => ({
       "hc-key": key,
       value,
-      name: mapData.hcKeyToThaiName[key] || key
+      name: mapData.hcKeyToThaiName[key] || key,
     }));
 
     if (selectedProvince !== "ทั้งหมด") {
@@ -171,16 +170,16 @@ const TopLeftService = () => {
       colorAxis: {
         min: 0,
         stops: [
-          [0, '#EFEFFF'],
-          [0.5, '#4A90E2'],
-          [1, '#1976D2']
-        ]
+          [0, "#EFEFFF"],
+          [0.5, "#4A90E2"],
+          [1, "#1976D2"],
+        ],
       },
       legend: {
         enabled: true,
-        align: 'right',
-        verticalAlign: 'bottom',
-        layout: 'vertical'
+        align: "right",
+        verticalAlign: "bottom",
+        layout: "vertical",
       },
       series: [
         {
@@ -195,15 +194,15 @@ const TopLeftService = () => {
           dataLabels: {
             enabled: true,
             formatter: function () {
-              return this.point.value > 0 ? this.point.name : '';
+              return this.point.value > 0 ? this.point.name : "";
             },
-            align: 'center',
-            verticalAlign: 'middle',
+            align: "center",
+            verticalAlign: "middle",
             style: {
-              fontSize: '10px',
-              textOutline: 'none',
-              fontWeight: 'bold',
-              color: '#333'
+              fontSize: "10px",
+              textOutline: "none",
+              fontWeight: "bold",
+              color: "#333",
             },
           },
           tooltip: {
@@ -241,12 +240,12 @@ const TopLeftService = () => {
     return (
       <Box
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
           height: 400,
-          gap: 2
+          gap: 2,
         }}
       >
         <CircularProgress />
@@ -262,14 +261,14 @@ const TopLeftService = () => {
     return (
       <Box
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
           height: 400,
           gap: 2,
           p: 3,
-          textAlign: 'center'
+          textAlign: "center",
         }}
       >
         <Typography variant="h6" color="error">
@@ -285,15 +284,15 @@ const TopLeftService = () => {
             mt: 2,
             px: 3,
             py: 1,
-            border: '1px solid #1976d2',
+            border: "1px solid #1976d2",
             borderRadius: 1,
-            backgroundColor: 'transparent',
-            color: '#1976d2',
-            cursor: 'pointer',
-            '&:hover': {
-              backgroundColor: '#1976d2',
-              color: 'white'
-            }
+            backgroundColor: "transparent",
+            color: "#1976d2",
+            cursor: "pointer",
+            "&:hover": {
+              backgroundColor: "#1976d2",
+              color: "white",
+            },
           }}
         >
           ลองใหม่
@@ -309,7 +308,6 @@ const TopLeftService = () => {
         sx={{
           display: "flex",
           justifyContent: "space-between",
-          mb: 2,
           flexWrap: "wrap",
           gap: 2,
         }}
@@ -351,17 +349,16 @@ const TopLeftService = () => {
       {mapData?.statistics && (
         <Box
           sx={{
-            mb: 2,
-            p: 2,
-            backgroundColor: '#f5f5f5',
+            p: 0.5,
+            backgroundColor: "#f5f5f5",
             borderRadius: 1,
-            display: 'flex',
-            justifyContent: 'space-around',
-            flexWrap: 'wrap',
-            gap: 2
+            display: "flex",
+            justifyContent: "space-around",
+            flexWrap: "wrap",
+            gap: 2,
           }}
         >
-          <Box sx={{ textAlign: 'center' }}>
+          <Box sx={{ textAlign: "center" }}>
             <Typography variant="body2" color="textSecondary">
               รวมทั้งหมด
             </Typography>
@@ -369,20 +366,20 @@ const TopLeftService = () => {
               {mergedData.reduce((sum, item) => sum + item.value, 0)} เรื่อง
             </Typography>
           </Box>
-          <Box sx={{ textAlign: 'center' }}>
+          <Box sx={{ textAlign: "center" }}>
             <Typography variant="body2" color="textSecondary">
               จังหวัดที่มีข้อมูล
             </Typography>
             <Typography variant="h6" color="primary">
-              {mergedData.filter(item => item.value > 0).length} จังหวัด
+              {mergedData.filter((item) => item.value > 0).length} จังหวัด
             </Typography>
           </Box>
-          <Box sx={{ textAlign: 'center' }}>
+          <Box sx={{ textAlign: "center" }}>
             <Typography variant="body2" color="textSecondary">
               สูงสุด
             </Typography>
             <Typography variant="h6" color="primary">
-              {Math.max(...mergedData.map(item => item.value), 0)} เรื่อง
+              {Math.max(...mergedData.map((item) => item.value), 0)} เรื่อง
             </Typography>
           </Box>
         </Box>

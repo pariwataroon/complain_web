@@ -78,6 +78,12 @@
   overflow: hidden;
 }
 
+// Table row hover style (fix "เละ" effect)
+.tableWrapper tr:hover {
+  background-color: #e5eaff !important;
+  transition: background-color 0.18s;
+}
+
 .filterRow {
   display: flex;
   flex-wrap: wrap;

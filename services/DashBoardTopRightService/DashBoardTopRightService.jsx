@@ -20,12 +20,8 @@ import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import SelectField from "@services/SelectField/SelectField";
 import Chart from "chart.js/auto";
-import {
-  GetComplaintSummary,
-} from "@pages/api/dashboard/dashboard";
-import {
-  GetAllSelectYears,
-} from "@pages/api/allselect/allselect";
+import { GetComplaintSummary } from "@pages/api/dashboard/dashboard";
+import { GetAllSelectYears } from "@pages/api/allselect/allselect";
 
 const TopRightChart = () => {
   const theme = useTheme();
@@ -37,8 +33,18 @@ const TopRightChart = () => {
   const [openModal, setOpenModal] = useState(null);
 
   const TH_MONTHS = [
-    "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
-    "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"
+    "มกราคม",
+    "กุมภาพันธ์",
+    "มีนาคม",
+    "เมษายน",
+    "พฤษภาคม",
+    "มิถุนายน",
+    "กรกฎาคม",
+    "สิงหาคม",
+    "กันยายน",
+    "ตุลาคม",
+    "พฤศจิกายน",
+    "ธันวาคม",
   ];
 
   const getCurrentThaiYear = () => new Date().getFullYear() + 543;
@@ -70,7 +76,7 @@ const TopRightChart = () => {
   });
   const [departmentForm, setDepartmentForm] = useState({
     fromYear: String(getCurrentThaiYear()),
-    toYear:   String(getCurrentThaiYear()),
+    toYear: String(getCurrentThaiYear()),
   });
 
   const [chartData, setChartData] = useState([]);
@@ -86,11 +92,17 @@ const TopRightChart = () => {
         setYearOptions(result.yearOptions);
 
         const latest = result.yearOptions[result.yearOptions.length - 1];
-        const displayYear = result.yearOptions.some(y => String(y.value) === currentTH)
+        const displayYear = result.yearOptions.some(
+          (y) => String(y.value) === currentTH
+        )
           ? currentTH
           : String(latest?.value ?? currentTH);
 
-        setMonthlyForm(prev => ({ ...prev, year: displayYear, month: prev.month || getCurrentThaiMonthLabel() }));
+        setMonthlyForm((prev) => ({
+          ...prev,
+          year: displayYear,
+          month: prev.month || getCurrentThaiMonthLabel(),
+        }));
         setQuarterlyForm({ year: displayYear });
         setYearlyForm({ year: displayYear });
         setDepartmentForm({ fromYear: displayYear, toYear: displayYear });
@@ -102,10 +114,14 @@ const TopRightChart = () => {
           { value: String(y - 3), label: String(y - 3) },
           { value: String(y - 2), label: String(y - 2) },
           { value: String(y - 1), label: String(y - 1) },
-          { value: String(y),     label: String(y) },
+          { value: String(y), label: String(y) },
         ];
         setYearOptions(fallback);
-        setMonthlyForm(prev => ({ ...prev, year: String(y), month: prev.month || getCurrentThaiMonthLabel() }));
+        setMonthlyForm((prev) => ({
+          ...prev,
+          year: String(y),
+          month: prev.month || getCurrentThaiMonthLabel(),
+        }));
         setQuarterlyForm({ year: String(y) });
         setYearlyForm({ year: String(y) });
         setDepartmentForm({ fromYear: String(y), toYear: String(y) });
@@ -116,7 +132,11 @@ const TopRightChart = () => {
       const y = getCurrentThaiYear();
       const fallback = [{ value: String(y), label: String(y) }];
       setYearOptions(fallback);
-      setMonthlyForm(prev => ({ ...prev, year: String(y), month: prev.month || getCurrentThaiMonthLabel() }));
+      setMonthlyForm((prev) => ({
+        ...prev,
+        year: String(y),
+        month: prev.month || getCurrentThaiMonthLabel(),
+      }));
       setQuarterlyForm({ year: String(y) });
       setYearlyForm({ year: String(y) });
       setDepartmentForm({ fromYear: String(y), toYear: String(y) });
@@ -143,7 +163,7 @@ const TopRightChart = () => {
             name: dept.name,
             count: dept.count,
             color: getChartColor(index),
-            id: dept.id
+            id: dept.id,
           }));
           setChartData(processedData);
         } else {
@@ -152,7 +172,7 @@ const TopRightChart = () => {
             name: card.title.replace("เรื่องราวร้องทุกข์", "").trim(),
             count: card.count,
             color: getChartColor(index),
-            id: card.id
+            id: card.id,
           }));
           setChartData(summaryChartData);
         }
@@ -163,8 +183,8 @@ const TopRightChart = () => {
             name: "ไม่มีข้อมูล",
             count: 0,
             color: "#e0e0e0",
-            id: "no-data"
-          }
+            id: "no-data",
+          },
         ]);
       }
     } catch (err) {
@@ -175,8 +195,8 @@ const TopRightChart = () => {
           name: "เกิดข้อผิดพลาด",
           count: 0,
           color: "#f44336",
-          id: "error"
-        }
+          id: "error",
+        },
       ]);
     } finally {
       setLoading(false);
@@ -186,9 +206,21 @@ const TopRightChart = () => {
   // Generate chart colors
   const getChartColor = (index) => {
     const colors = [
-      "#1A237E", "#3949AB", "#7986CB", "#29B6F6", "#81D4FA",
-      "#FBC02D", "#FBE9A7", "#E91E63", "#F48FB1", "#4CAF50",
-      "#8BC34A", "#CDDC39", "#FF9800", "#FF5722", "#795548"
+      "#1A237E",
+      "#3949AB",
+      "#7986CB",
+      "#29B6F6",
+      "#81D4FA",
+      "#FBC02D",
+      "#FBE9A7",
+      "#E91E63",
+      "#F48FB1",
+      "#4CAF50",
+      "#8BC34A",
+      "#CDDC39",
+      "#FF9800",
+      "#FF5722",
+      "#795548",
     ];
     return colors[index % colors.length];
   };
@@ -196,10 +228,7 @@ const TopRightChart = () => {
   // Fetch initial data on component mount
   useEffect(() => {
     const fetchInitialData = async () => {
-      await Promise.all([
-        fetchYears(),
-        fetchApiData()
-      ]);
+      await Promise.all([fetchYears(), fetchApiData()]);
     };
 
     fetchInitialData();
@@ -358,7 +387,9 @@ const TopRightChart = () => {
                   {yearsLoading ? (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <CircularProgress size={16} />
-                      <Typography sx={{ fontSize: "12px" }}>กำลังโหลด...</Typography>
+                      <Typography sx={{ fontSize: "12px" }}>
+                        กำลังโหลด...
+                      </Typography>
                     </Box>
                   ) : (
                     <SelectField
@@ -422,7 +453,9 @@ const TopRightChart = () => {
                 {yearsLoading ? (
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <CircularProgress size={16} />
-                    <Typography sx={{ fontSize: "12px" }}>กำลังโหลด...</Typography>
+                    <Typography sx={{ fontSize: "12px" }}>
+                      กำลังโหลด...
+                    </Typography>
                   </Box>
                 ) : (
                   <SelectField
@@ -522,7 +555,9 @@ const TopRightChart = () => {
                 {yearsLoading ? (
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <CircularProgress size={16} />
-                    <Typography sx={{ fontSize: "12px" }}>กำลังโหลด...</Typography>
+                    <Typography sx={{ fontSize: "12px" }}>
+                      กำลังโหลด...
+                    </Typography>
                   </Box>
                 ) : (
                   <SelectField
@@ -586,7 +621,9 @@ const TopRightChart = () => {
                   {yearsLoading ? (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <CircularProgress size={16} />
-                      <Typography sx={{ fontSize: "12px" }}>กำลังโหลด...</Typography>
+                      <Typography sx={{ fontSize: "12px" }}>
+                        กำลังโหลด...
+                      </Typography>
                     </Box>
                   ) : (
                     <SelectField
@@ -608,7 +645,9 @@ const TopRightChart = () => {
                   {yearsLoading ? (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <CircularProgress size={16} />
-                      <Typography sx={{ fontSize: "12px" }}>กำลังโหลด...</Typography>
+                      <Typography sx={{ fontSize: "12px" }}>
+                        กำลังโหลด...
+                      </Typography>
                     </Box>
                   ) : (
                     <SelectField

@@ -8,40 +8,50 @@ import BottomRightService from "@services/DashBoardBottomRightService/DashBoardB
 import DashBoardCard from "@services/DashBoardCard/DashBoardCard";
 import TopStatsSwiper from "@services/TopStatsSwiper/TopStatsSwiper";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
-import {
-  GetDepartmentRanking,
-} from "@pages/api/dashboard/dashboard";
+import { GetDepartmentRanking } from "@pages/api/dashboard/dashboard";
 import {
   formatDateForAPI,
   formatThaiDateMonths,
   parseDateStringToObj,
-  chunkArray
+  chunkArray,
 } from "@utils/Formats";
 
 const DashboardComponents_Main = () => {
   const TH_MONTHS = [
-    "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
-    "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"
+    "มกราคม",
+    "กุมภาพันธ์",
+    "มีนาคม",
+    "เมษายน",
+    "พฤษภาคม",
+    "มิถุนายน",
+    "กรกฎาคม",
+    "สิงหาคม",
+    "กันยายน",
+    "ตุลาคม",
+    "พฤศจิกายน",
+    "ธันวาคม",
   ];
 
   const getCurrentADYear = () => new Date().getFullYear();
   const getCurrentThaiYear = () => getCurrentADYear() + 543;
 
   const startOfYear = (adYear) => ({ day: 1, month: 1, year: adYear });
-  const endOfYear   = (adYear) => ({ day: 31, month: 12, year: adYear });
+  const endOfYear = (adYear) => ({ day: 31, month: 12, year: adYear });
 
-const formatThaiBEFromAD = (d) =>
-  `${d.day} ${TH_MONTHS[d.month - 1]} ${d.year + 543}`;
-  const [selectedYear, setSelectedYear] = useState(String(getCurrentThaiYear()));
+  const formatThaiBEFromAD = (d) =>
+    `${d.day} ${TH_MONTHS[d.month - 1]} ${d.year + 543}`;
+  const [selectedYear, setSelectedYear] = useState(
+    String(getCurrentThaiYear())
+  );
   const data = [selectedYear] || [];
   const [departmentRanking, setDepartmentRanking] = useState({
     topDepartments: [],
-    bottomDepartments: []
+    bottomDepartments: [],
   });
   const [loading, setLoading] = useState(false);
 
   const [startDate, setStartDate] = useState(startOfYear(getCurrentADYear()));
-  const [endDate,   setEndDate]   = useState(endOfYear(getCurrentADYear())); 
+  const [endDate, setEndDate] = useState(endOfYear(getCurrentADYear()));
 
   // Function to handle department ranking data
   const handleGetDepartmentRanking = async () => {
@@ -56,40 +66,41 @@ const formatThaiBEFromAD = (d) =>
         dateFrom,
         dateTo,
         5, // limit_top
-        5  // limit_bottom
+        5 // limit_bottom
       );
 
       if (response?.filters && response?.departments) {
         // แยกข้อมูลเป็น top และ bottom departments
-        const sortedDepartments = [...response.departments].sort((a, b) => b.complaintCount - a.complaintCount);
+        const sortedDepartments = [...response.departments].sort(
+          (a, b) => b.complaintCount - a.complaintCount
+        );
 
         // เอา 5 อันดับแรก สำหรับ top
-        const topDepts = sortedDepartments.slice(0, 5).map(dept => ({
+        const topDepts = sortedDepartments.slice(0, 5).map((dept) => ({
           name: dept.departmentName,
-          count: dept.complaintCount
+          count: dept.complaintCount,
         }));
 
         // เอา 5 อันดับสุดท้าย สำหรับ bottom (เรียงจากน้อยไปมาก)
-        const bottomDepts = sortedDepartments.slice(-5).reverse().map(dept => ({
-          name: dept.departmentName,
-          count: dept.complaintCount
-        }));
+        const bottomDepts = sortedDepartments
+          .slice(-5)
+          .reverse()
+          .map((dept) => ({
+            name: dept.departmentName,
+            count: dept.complaintCount,
+          }));
 
         setDepartmentRanking({
           topDepartments: topDepts,
-          bottomDepartments: bottomDepts
+          bottomDepartments: bottomDepts,
         });
       }
     } catch (error) {
       console.error("Error fetching department ranking:", error);
       // ใช้ข้อมูล fallback ในกรณีที่ API error
       setDepartmentRanking({
-        topDepartments: [
-          { name: "ไม่สามารถโหลดข้อมูลได้", count: 0 }
-        ],
-        bottomDepartments: [
-          { name: "ไม่สามารถโหลดข้อมูลได้", count: 0 }
-        ]
+        topDepartments: [{ name: "ไม่สามารถโหลดข้อมูลได้", count: 0 }],
+        bottomDepartments: [{ name: "ไม่สามารถโหลดข้อมูลได้", count: 0 }],
       });
     } finally {
       setLoading(false);
@@ -114,7 +125,10 @@ const formatThaiBEFromAD = (d) =>
     : null;
 
   const topDepartmentChunks = chunkArray(departmentRanking.topDepartments, 5);
-  const bottomDepartmentChunks = chunkArray(departmentRanking.bottomDepartments, 5);
+  const bottomDepartmentChunks = chunkArray(
+    departmentRanking.bottomDepartments,
+    5
+  );
 
   const breadcrumbItems = [
     {
@@ -130,7 +144,7 @@ const formatThaiBEFromAD = (d) =>
   ];
 
   return (
-    <Box sx={{ p: { xs: 0.5, sm: 1, md: 1.5 } }}>
+    <Box>
       <BreadcrumbsService items={breadcrumbItems} />
 
       <Grid container spacing={{ xs: 2, sm: 3, md: 4 }} mt={1}>
@@ -265,10 +279,10 @@ const formatThaiBEFromAD = (d) =>
                     maxDate={
                       endDateWithBuddhist
                         ? new Date(
-                          endDateWithBuddhist.year,
-                          endDateWithBuddhist.month - 1,
-                          endDateWithBuddhist.day
-                        )
+                            endDateWithBuddhist.year,
+                            endDateWithBuddhist.month - 1,
+                            endDateWithBuddhist.day
+                          )
                         : null
                     }
                   />
@@ -317,10 +331,10 @@ const formatThaiBEFromAD = (d) =>
                     minDate={
                       startDateWithBuddhist
                         ? new Date(
-                          startDateWithBuddhist.year,
-                          startDateWithBuddhist.month - 1,
-                          startDateWithBuddhist.day
-                        )
+                            startDateWithBuddhist.year,
+                            startDateWithBuddhist.month - 1,
+                            startDateWithBuddhist.day
+                          )
                         : null
                     }
                   />
@@ -363,7 +377,12 @@ const formatThaiBEFromAD = (d) =>
                   flexGrow: 1,
                   display: "flex",
                   justifyContent: "center",
-                  minHeight: { xs: "100px", sm: "150px", md: "250px", lg: "350px" },
+                  minHeight: {
+                    xs: "100px",
+                    sm: "150px",
+                    md: "250px",
+                    lg: "350px",
+                  },
                   height: { xs: "auto", sm: "150px", md: "250px", lg: "350px" },
                   width: "100%",
                   marginBottom: { xs: 1, sm: 1 },
@@ -388,7 +407,12 @@ const formatThaiBEFromAD = (d) =>
                   flexGrow: 1,
                   display: "flex",
                   justifyContent: "center",
-                  minHeight: { xs: "100px", sm: "150px", md: "250px", lg: "350px" },
+                  minHeight: {
+                    xs: "100px",
+                    sm: "150px",
+                    md: "250px",
+                    lg: "350px",
+                  },
                   height: { xs: "auto", sm: "150px", md: "250px", lg: "350px" },
                   width: "100%",
                   marginBottom: { xs: 1, sm: 1 },
@@ -411,7 +435,7 @@ const formatThaiBEFromAD = (d) =>
         </Grid>
       </Grid>
     </Box>
-  )
+  );
 };
 
 export default DashboardComponents_Main;

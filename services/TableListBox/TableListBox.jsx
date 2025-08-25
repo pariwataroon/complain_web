@@ -126,15 +126,50 @@ const TableListBox = ({
   // Layout config
   const getLayoutConfig = () => {
     if (isExtraSmall) {
-      return { layout: "stacked", fieldsPerRow: 1, gap: 1, padding: 1, inputHeight: "40px", iconSize: 36 };
+      return {
+        layout: "stacked",
+        fieldsPerRow: 1,
+        gap: 1,
+        padding: 1,
+        inputHeight: "40px",
+        iconSize: 36,
+      };
     } else if (isSmall) {
-      return { layout: "stacked", fieldsPerRow: 2, gap: 1, padding: 1.5, inputHeight: "40px", iconSize: 40 };
+      return {
+        layout: "stacked",
+        fieldsPerRow: 2,
+        gap: 1,
+        padding: 1.5,
+        inputHeight: "40px",
+        iconSize: 40,
+      };
     } else if (isMedium) {
-      return { layout: "two-row", fieldsPerRow: 3, gap: 1.5, padding: 2, inputHeight: "40px", iconSize: 40 };
+      return {
+        layout: "two-row",
+        fieldsPerRow: 3,
+        gap: 1.5,
+        padding: 2,
+        inputHeight: "40px",
+        iconSize: 40,
+      };
     } else if (isLarge) {
-      return { layout: "large-responsive", fieldsPerRow: Math.min(4, filterFields.length), gap: 1.5, padding: 2, inputHeight: "40px", iconSize: 40 };
+      return {
+        layout: "large-responsive",
+        fieldsPerRow: Math.min(4, filterFields.length),
+        gap: 1.5,
+        padding: 2,
+        inputHeight: "40px",
+        iconSize: 40,
+      };
     }
-    return { layout: "single-row", fieldsPerRow: filterFields.length, gap: 1.5, padding: 2, inputHeight: "40px", iconSize: 40 };
+    return {
+      layout: "single-row",
+      fieldsPerRow: filterFields.length,
+      gap: 1.5,
+      padding: 2,
+      inputHeight: "40px",
+      iconSize: 40,
+    };
   };
   const layoutConfig = getLayoutConfig();
 
@@ -173,7 +208,12 @@ const TableListBox = ({
       }}
     >
       {/* Header (เส้น/พื้นที่) */}
-      <Box className={styles.headerBar} display="flex" alignItems="center" justifyContent="space-between" />
+      <Box
+        className={styles.headerBar}
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+      />
 
       {/* Title + Export */}
       <Box
@@ -183,9 +223,18 @@ const TableListBox = ({
         alignItems="center"
         justifyContent="space-between"
         px={isExtraSmall ? 1 : 2}
-        sx={{ flexDirection: isExtraSmall ? "column" : "row", gap: isExtraSmall ? 1 : 0 }}
+        sx={{
+          flexDirection: isExtraSmall ? "column" : "row",
+          gap: isExtraSmall ? 1 : 0,
+        }}
       >
-        <Box sx={{ fontSize: isExtraSmall ? "16px" : "18px", fontWeight: "bold", color: "#1120a3" }}>
+        <Box
+          sx={{
+            fontSize: isExtraSmall ? "16px" : "18px",
+            fontWeight: "bold",
+            color: "#1120a3",
+          }}
+        >
           {title}
         </Box>
 
@@ -193,23 +242,37 @@ const TableListBox = ({
           display="flex"
           alignItems="center"
           gap={1}
-          sx={{ flexDirection: isExtraSmall ? "column" : "row", width: isExtraSmall ? "100%" : "auto" }}
+          sx={{
+            flexDirection: isExtraSmall ? "column" : "row",
+            width: isExtraSmall ? "100%" : "auto",
+          }}
         >
           <ExportButton
             label="Export PDF"
-            sx={{ fontSize: isExtraSmall ? "12px" : "14px", minWidth: isExtraSmall ? "120px" : "auto" }}
+            sx={{
+              fontSize: isExtraSmall ? "12px" : "14px",
+              minWidth: isExtraSmall ? "120px" : "auto",
+            }}
             onClick={handleExportPDF}
           />
           <ExportButton
             label="Export Excel"
             onClick={handleExportExcel}
-            sx={{ fontSize: isExtraSmall ? "12px" : "14px", minWidth: isExtraSmall ? "120px" : "auto" }}
+            sx={{
+              fontSize: isExtraSmall ? "12px" : "14px",
+              minWidth: isExtraSmall ? "120px" : "auto",
+            }}
           />
         </Box>
       </Box>
 
       {/* Filters — Responsive Layouts */}
-      <Box width="100%" px={layoutConfig.padding} py={layoutConfig.padding} sx={{ overflow: "visible", boxSizing: "border-box" }}>
+      <Box
+        width="100%"
+        px={layoutConfig.padding}
+        py={layoutConfig.padding}
+        sx={{ overflow: "visible", boxSizing: "border-box" }}
+      >
         {layoutConfig.layout === "stacked" ? (
           <>
             <Box
@@ -232,11 +295,11 @@ const TableListBox = ({
                 sx={{
                   bgcolor: "#1120A3",
                   color: "#fff",
-                  "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                  "&:hover": { bgcolor: "#0b1580" },
                   width: layoutConfig.iconSize,
                   height: layoutConfig.iconSize,
                   borderRadius: "50%",
-                  transition: "all 0.2s ease-in-out",
+                  transition: "background-color 0.2s",
                 }}
                 title="ค้นหา"
               >
@@ -247,11 +310,11 @@ const TableListBox = ({
                 sx={{
                   bgcolor: "#dc3545",
                   color: "#fff",
-                  "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
+                  "&:hover": { bgcolor: "#c82333" },
                   width: layoutConfig.iconSize,
                   height: layoutConfig.iconSize,
                   borderRadius: "50%",
-                  transition: "all 0.2s ease-in-out",
+                  transition: "background-color 0.2s",
                 }}
                 title="ล้างการค้นหา"
               >
@@ -275,7 +338,13 @@ const TableListBox = ({
               ))}
             </Box>
 
-            <Box display="flex" alignItems="center" gap={layoutConfig.gap} mb={2} sx={{ overflow: "visible", width: "100%" }}>
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={layoutConfig.gap}
+              mb={2}
+              sx={{ overflow: "visible", width: "100%" }}
+            >
               {filterFields.slice(3).map((f) => (
                 <Box key={f.name} sx={{ flex: "1 1 0", minWidth: 0 }}>
                   {renderFilterField(f)}
@@ -287,11 +356,11 @@ const TableListBox = ({
                   sx={{
                     bgcolor: "#1120A3",
                     color: "#fff",
-                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                    "&:hover": { bgcolor: "#0b1580" },
                     width: layoutConfig.iconSize,
                     height: layoutConfig.iconSize,
                     borderRadius: "50%",
-                    transition: "all 0.2s ease-in-out",
+                    transition: "background-color 0.2s",
                     mt: 1,
                   }}
                   title="ค้นหา"
@@ -303,11 +372,11 @@ const TableListBox = ({
                   sx={{
                     bgcolor: "#dc3545",
                     color: "#fff",
-                    "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
+                    "&:hover": { bgcolor: "#c82333" },
                     width: layoutConfig.iconSize,
                     height: layoutConfig.iconSize,
                     borderRadius: "50%",
-                    transition: "all 0.2s ease-in-out",
+                    transition: "background-color 0.2s",
                     mt: 1,
                   }}
                   title="ล้างการค้นหา"
@@ -321,20 +390,31 @@ const TableListBox = ({
           <>
             <Box
               display="grid"
-              gridTemplateColumns={`repeat(${Math.min(4, filterFields.length)}, 1fr)`}
+              gridTemplateColumns={`repeat(${Math.min(
+                4,
+                filterFields.length
+              )}, 1fr)`}
               gap={layoutConfig.gap}
               mb={2}
               sx={{ overflow: "visible", width: "100%" }}
             >
-              {filterFields.slice(0, Math.min(4, filterFields.length)).map((f) => (
-                <Box key={f.name} sx={{ minWidth: 0 }}>
-                  {renderFilterField(f)}
-                </Box>
-              ))}
+              {filterFields
+                .slice(0, Math.min(4, filterFields.length))
+                .map((f) => (
+                  <Box key={f.name} sx={{ minWidth: 0 }}>
+                    {renderFilterField(f)}
+                  </Box>
+                ))}
             </Box>
 
             {filterFields.length > 4 && (
-              <Box display="flex" alignItems="center" gap={layoutConfig.gap} mb={2} sx={{ overflow: "visible", width: "100%" }}>
+              <Box
+                display="flex"
+                alignItems="center"
+                gap={layoutConfig.gap}
+                mb={2}
+                sx={{ overflow: "visible", width: "100%" }}
+              >
                 {filterFields.slice(4).map((f) => (
                   <Box key={f.name} sx={{ flex: "1 1 0", minWidth: 0 }}>
                     {renderFilterField(f)}
@@ -346,11 +426,11 @@ const TableListBox = ({
                     sx={{
                       bgcolor: "#1120A3",
                       color: "#fff",
-                      "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                      "&:hover": { bgcolor: "#0b1580" },
                       width: layoutConfig.iconSize,
                       height: layoutConfig.iconSize,
                       borderRadius: "50%",
-                      transition: "all 0.2s ease-in-out",
+                      transition: "background-color 0.2s",
                       mt: 1,
                     }}
                     title="ค้นหา"
@@ -362,11 +442,11 @@ const TableListBox = ({
                     sx={{
                       bgcolor: "#dc3545",
                       color: "#fff",
-                      "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
+                      "&:hover": { bgcolor: "#c82333" },
                       width: layoutConfig.iconSize,
                       height: layoutConfig.iconSize,
                       borderRadius: "50%",
-                      transition: "all 0.2s ease-in-out",
+                      transition: "background-color 0.2s",
                       mt: 1,
                     }}
                     title="ล้างการค้นหา"
@@ -384,11 +464,11 @@ const TableListBox = ({
                   sx={{
                     bgcolor: "#1120A3",
                     color: "#fff",
-                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                    "&:hover": { bgcolor: "#0b1580" },
                     width: layoutConfig.iconSize,
                     height: layoutConfig.iconSize,
                     borderRadius: "50%",
-                    transition: "all 0.2s ease-in-out",
+                    transition: "background-color 0.2s",
                   }}
                   title="ค้นหา"
                 >
@@ -399,11 +479,11 @@ const TableListBox = ({
                   sx={{
                     bgcolor: "#dc3545",
                     color: "#fff",
-                    "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
+                    "&:hover": { bgcolor: "#c82333" },
                     width: layoutConfig.iconSize,
                     height: layoutConfig.iconSize,
                     borderRadius: "50%",
-                    transition: "all 0.2s ease-in-out",
+                    transition: "background-color 0.2s",
                   }}
                   title="ล้างการค้นหา"
                 >
@@ -414,9 +494,17 @@ const TableListBox = ({
           </>
         ) : (
           // Single-row layout (>1305px)
-          <Box display="flex" alignItems="center" gap={layoutConfig.gap} sx={{ overflow: "visible", flexWrap: "nowrap" }}>
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={layoutConfig.gap}
+            sx={{ overflow: "visible", flexWrap: "nowrap" }}
+          >
             {filterFields.map((f) => (
-              <Box key={f.name} sx={{ flex: "1 1 0", minWidth: "140px", maxWidth: "200px" }}>
+              <Box
+                key={f.name}
+                sx={{ flex: "1 1 0", minWidth: "140px", maxWidth: "200px" }}
+              >
                 {renderFilterField(f)}
               </Box>
             ))}
@@ -427,11 +515,11 @@ const TableListBox = ({
                 sx={{
                   bgcolor: "#1120A3",
                   color: "#fff",
-                  "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                  "&:hover": { bgcolor: "#0b1580" },
                   width: layoutConfig.iconSize,
                   height: layoutConfig.iconSize,
                   borderRadius: "50%",
-                  transition: "all 0.2s ease-in-out",
+                  transition: "background-color 0.2s",
                   mt: 1,
                 }}
                 title="ค้นหา"
@@ -443,11 +531,11 @@ const TableListBox = ({
                 sx={{
                   bgcolor: "#dc3545",
                   color: "#fff",
-                  "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
+                  "&:hover": { bgcolor: "#c82333" },
                   width: layoutConfig.iconSize,
                   height: layoutConfig.iconSize,
                   borderRadius: "50%",
-                  transition: "all 0.2s ease-in-out",
+                  transition: "background-color 0.2s",
                   mt: 1,
                 }}
                 title="ล้างการค้นหา"
@@ -538,8 +626,17 @@ const TableListBox = ({
               <TableBody>
                 {pagedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={columns.length} align="center" sx={{ padding: "60px 20px", borderBottom: "none" }}>
-                      <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
+                    <TableCell
+                      colSpan={columns.length}
+                      align="center"
+                      sx={{ padding: "60px 20px", borderBottom: "none" }}
+                    >
+                      <Box
+                        display="flex"
+                        flexDirection="column"
+                        alignItems="center"
+                        gap={2}
+                      >
                         <Box
                           sx={{
                             width: 64,
@@ -551,12 +648,26 @@ const TableListBox = ({
                             justifyContent: "center",
                           }}
                         >
-                          <Typography sx={{ fontSize: "24px", color: "#6c757d" }}>📄</Typography>
+                          <Typography
+                            sx={{ fontSize: "24px", color: "#6c757d" }}
+                          >
+                            📄
+                          </Typography>
                         </Box>
-                        <Typography variant="h6" sx={{ color: "#6c757d", fontWeight: 500, fontSize: "16px" }}>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            color: "#6c757d",
+                            fontWeight: 500,
+                            fontSize: "16px",
+                          }}
+                        >
                           ไม่พบข้อมูลที่ค้นหา
                         </Typography>
-                        <Typography variant="body2" sx={{ color: "#adb5bd", fontSize: "14px" }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: "#adb5bd", fontSize: "14px" }}
+                        >
                           กรุณาลองปรับเปลี่ยนเงื่อนไขการค้นหา
                         </Typography>
                       </Box>
@@ -569,10 +680,9 @@ const TableListBox = ({
                       onClick={() => handleRowClick(item)}
                       sx={{
                         cursor: "pointer",
+                        transition: "background-color 0.18s",
                         "&:hover": {
-                          backgroundColor: "#f5f7ff",
-                          transform: "scale(1.001)",
-                          transition: "all 0.2s ease-in-out",
+                          backgroundColor: "#e5eaff",
                         },
                       }}
                     >
@@ -612,8 +722,12 @@ const TableListBox = ({
           onRowsPerPageChange={handleRowsPerPageChange}
           sx={{
             borderTop: "1px solid #eee",
-            "& .MuiTablePagination-toolbar": { fontSize: "14px", padding: "16px" },
-            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: "14px" },
+            "& .MuiTablePagination-toolbar": {
+              fontSize: "14px",
+              padding: "16px",
+            },
+            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
+              { fontSize: "14px" },
           }}
         />
       </Box>
