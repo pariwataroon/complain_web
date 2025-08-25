@@ -23,6 +23,7 @@ from seeders.positions_seeder import PositionSeeder
 from seeders.user_position_seeder import UserPositionSeeder
 from seeders.department_groups_seeder import DepartmentGroupSeeder
 from seeders.department_seeder import DepartmentSeeder
+from seeders.outside_department_seeder import OutsideDepartmentSeeder
 from seeders.venues_seeder import VenueSeeder
 from seeders.notification_seeder import NotificationSeeder
 from seeders.comp_geographies_seeder import GeographySeeder
@@ -69,6 +70,7 @@ def check_and_seed_tables():
             {"name": "user_positions", "seeder": UserPositionSeeder(), "table_prefix": ""},
             {"name": "department_groups", "seeder": DepartmentGroupSeeder(), "table_prefix": ""},
             {"name": "departments", "seeder": DepartmentSeeder(), "table_prefix": ""},
+            {"name": "outside_departments", "seeder": OutsideDepartmentSeeder(), "table_prefix": ""},
             {"name": "venues", "seeder": VenueSeeder(), "table_prefix": ""},
             {"name": "notifications", "seeder": NotificationSeeder(), "table_prefix": ""},
             {"name": "geographies", "seeder": GeographySeeder(), "table_prefix": "comp_"},
@@ -206,6 +208,11 @@ def init_database():
         logger.info("Running DepartmentSeeder directly...")
         department_seeder = DepartmentSeeder()
         department_seeder.seed()
+
+        from seeders.outside_department_seeder import OutsideDepartmentSeeder
+        logger.info("Running OutsideDepartmentSeeder directly...")
+        outside_department_seeder = OutsideDepartmentSeeder()
+        outside_department_seeder.seed()
 
         from seeders.venues_seeder import VenueSeeder
         logger.info("Running VenueSeeder directly...")

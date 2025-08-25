@@ -1,0 +1,64 @@
+{
+  "outside_departments": [
+    {
+      "name": "สำนักพระราชวัง",
+      "description": null,
+      "order_index": 1,
+      "is_active": true
+    },
+    {
+      "name": "สำนักราชเลขาธิการ",
+      "description": null,
+      "order_index": 2,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานองคมนตรี",
+      "description": null,
+      "order_index": 3,
+      "is_active": true
+    },
+    {
+      "name": "สำนักเลขาธิการคณะรัฐมนตรี",
+      "description": null,
+      "order_index": 4,
+      "is_active": true
+    },
+    {
+      "name": "สำนักนายกรัฐมนตรี",
+      "description": null,
+      "order_index": 5,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานปลัดสำนักนายกรัฐมนตรี",
+      "description": null,
+      "order_index": 6,
+      "is_active": true
+    },
+    {
+      "name": "กระทรวงยุติธรรม",
+      "description": null,
+      "order_index": 7,
+      "is_active": true
+    },
+    {
+      "name": "กระทรวงมหาดไทย",
+      "description": null,
+      "order_index": 8,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานผู้ตรวจการแผ่นดิน",
+      "description": null,
+      "order_index": 9,
+      "is_active": true
+    },
+    {
+      "name": "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ",
+      "description": null,
+      "order_index": 10,
+      "is_active": true
+    }
+  ]
+}
