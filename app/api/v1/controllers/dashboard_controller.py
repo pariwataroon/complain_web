@@ -156,19 +156,26 @@ def _get_user_info(db: Session, staff_id: str) -> Dict:
 def _get_staff_list(db: Session) -> List[str]:
     """
     ดึงรายชื่อเจ้าหน้าที่ทุกคนที่มี role ตาม STAFF_ROLES แม้ไม่มีงาน
+    แสดงเฉพาะผู้ใช้ที่ is_active = True
     """
     from models.user_role import UserRole
     from models.role import Role
 
     staff_users = db.query(User.id).join(UserRole, User.id == UserRole.user_id)\
         .join(Role, UserRole.role_id == Role.id)\
-        .filter(Role.name.in_(STAFF_ROLES))\
+        .filter(
+            Role.name.in_(STAFF_ROLES),
+            User.is_active == True
+        )\
         .distinct().all()
     staff_ids = [str(u.id) for u in staff_users]
 
     excluded_users = db.query(User.id).join(UserRole, User.id == UserRole.user_id)\
         .join(Role, UserRole.role_id == Role.id)\
-        .filter(Role.name.in_(EXCLUDED_ROLES)).distinct().all()
+        .filter(
+            Role.name.in_(EXCLUDED_ROLES),
+            User.is_active == True
+        ).distinct().all()
     excluded_ids = set(str(u.id) for u in excluded_users)
 
     staff_ids = [uid for uid in staff_ids if uid not in excluded_ids]
@@ -177,19 +184,26 @@ def _get_staff_list(db: Session) -> List[str]:
 def _get_workload_staff_list(db: Session) -> List[str]:
     """
     ดึงรายชื่อเจ้าหน้าที่เฉพาะผู้ปฏิบัติงาน (admin, staff) สำหรับ staff-workload
+    แสดงเฉพาะผู้ใช้ที่ is_active = True
     """
     from models.user_role import UserRole
     from models.role import Role
 
     staff_users = db.query(User.id).join(UserRole, User.id == UserRole.user_id)\
         .join(Role, UserRole.role_id == Role.id)\
-        .filter(Role.name.in_(WORKLOAD_STAFF_ROLES))\
+        .filter(
+            Role.name.in_(WORKLOAD_STAFF_ROLES),
+            User.is_active == True
+        )\
         .distinct().all()
     staff_ids = [str(u.id) for u in staff_users]
 
     excluded_users = db.query(User.id).join(UserRole, User.id == UserRole.user_id)\
         .join(Role, UserRole.role_id == Role.id)\
-        .filter(Role.name.in_(EXCLUDED_ROLES)).distinct().all()
+        .filter(
+            Role.name.in_(EXCLUDED_ROLES),
+            User.is_active == True
+        ).distinct().all()
     excluded_ids = set(str(u.id) for u in excluded_users)
 
     staff_ids = [uid for uid in staff_ids if uid not in excluded_ids]
