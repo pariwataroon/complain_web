@@ -1,5 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_, func
 from uuid import UUID
 from typing import Dict, Any, Optional, List
 import json
@@ -8,10 +9,12 @@ import logging
 from models.comp_complaint import Complaint
 from models.comp_complaint_types import ComplaintChannel, ComplaintType, ComplaintSubType
 from models.user import User
+from models.departments import Department
 from models.outgoing_reports import OutgoingReport
 from models.outgoing_reports2 import OutgoingReport2
 from models.outgoing_reports3 import OutgoingReport3
 from models.outgoing_reports4 import OutgoingReport4
+from models.outgoing_reports5 import OutgoingReport5
 
 logger = logging.getLogger(__name__)
 
@@ -460,18 +463,16 @@ def get_bulk_related_complaints(db: Session, complaint_ids: List[UUID]) -> Dict[
 def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
     """
     ดึงรายละเอียดเต็มของ complaint เดียว รวมถึงความสัมพันธ์และรายงานออกทั้งหมด
-    (ฉบับปรับปรุง: เติม department/user/attachments และ complaint_number)
+    ครบตาม UI: ผู้รับผิดชอบ, ผู้ร้อง, chain master/parent/child/sibling,
+    OutgoingReport 1–5, และ status timeline
     """
     try:
-        # 1) complaint หลัก
         complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
         if not complaint:
             return {"error": "Complaint not found", "detail": None}
 
-        # 2) related (ใช้ของเดิมในไฟล์)
-        related_info = get_related_complaints(db, complaint_id)  # noqa: F821 (อิงฟังก์ชันเดิมในไฟล์นี้)
+        related_info = get_related_complaints(db, complaint_id)  # มีในไฟล์เดียวกันอยู่แล้ว
 
-        # 3) แยกข้อมูล JSON
         def _safe_json(s):
             try:
                 return json.loads(s) if s else {}
@@ -480,17 +481,19 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
         complainant_data = _safe_json(getattr(complaint, "complainant_data", None))
         respondent_data  = _safe_json(getattr(complaint, "respondent_data", None))
 
-        # 4) users/channel
-        assigned_officer = db.query(User).filter(User.id == complaint.assigned_officer_id).first() if complaint.assigned_officer_id else None
-        creator          = db.query(User).filter(User.id == complaint.created_by).first() if complaint.created_by else None
-        channel_info     = db.query(ComplaintChannel).filter(ComplaintChannel.id == complaint.complaint_channel_id).first() if complaint.complaint_channel_id else None
+        # ✅ ผู้รับผิดชอบ: ใช้ object จาก assigned_officer_id เป็นหลัก
+        assigned_officer = db.query(User).filter(User.id == complaint.assigned_officer_id).first() if getattr(complaint, "assigned_officer_id", None) else None
+        # ผู้สร้าง/ช่องทาง
+        creator      = db.query(User).filter(User.id == complaint.created_by).first() if complaint.created_by else None
+        channel_info = db.query(ComplaintChannel).filter(ComplaintChannel.id == complaint.complaint_channel_id).first() if complaint.complaint_channel_id else None
 
-        # 5) status history (ใช้บล็อคเดิม—ตัดทอนเพื่อความชัด)
+        # status history
         status_history = []
         try:
-            from models.comp_complaint import ComplaintStatusHistory  # มีอยู่แล้ว
-            rows = db.query(ComplaintStatusHistory).filter(ComplaintStatusHistory.complaint_id == complaint_id)\
-                .order_by(ComplaintStatusHistory.changed_at.desc()).all()
+            from models.comp_complaint import ComplaintStatusHistory
+            rows = db.query(ComplaintStatusHistory)\
+                     .filter(ComplaintStatusHistory.complaint_id == complaint_id)\
+                     .order_by(ComplaintStatusHistory.changed_at.desc()).all()
             for r in rows:
                 changed_by_user = db.query(User).filter(User.id == r.changed_by).first() if r.changed_by else None
                 status_history.append({
@@ -500,9 +503,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                     "changed_by_name": (_user_min(changed_by_user) or {}).get("name") if changed_by_user else "ระบบ",
                     "remark": getattr(r, "notes", "") or getattr(r, "remark", "") or ""
                 })
-        except Exception as e:
-            logger.warning(f"status_history fallback: {e}")
-            # fallback เบื้องต้น
+        except Exception:
             if complaint.created_at:
                 status_history = [{
                     "status": getattr(complaint.status, "value", "submitted") or "submitted",
@@ -512,7 +513,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                     "remark": "เรื่องร้องเรียนถูกสร้างขึ้น"
                 }]
 
-        # 6) สรุปสถานะยืนยันรับงาน
+        # confirmation text
         if complaint.confirm_assigned_status is True:
             confirmation_status = "ยืนยันรับงานแล้ว"
         elif complaint.confirm_assigned_status is False:
@@ -522,7 +523,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
         else:
             confirmation_status = "ยังไม่ได้รับงาน"
 
-        # 7) ประเภท/ประเภทย่อย + หมวดหมู่
+        # ประเภท/ย่อย/หมวด
         complaint_type_name = ""
         if complaint.complaint_type_id:
             ct = db.query(ComplaintType).filter(ComplaintType.id == complaint.complaint_type_id).first()
@@ -540,14 +541,10 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
         else:
             complaint_category = "เรื่องร้องเรียนใหม่"
 
-        # 8) รายงานออก (type1–4) + แนบข้อมูลเสริมครบ
+        # ===== รายงานออก 1–4 =====
         outgoing_reports_data: Dict[str, List[Dict[str, Any]]] = {"type1": [], "type2": [], "type3": [], "type4": []}
 
-        # type1: ส่งหน่วยงานที่เกี่ยวข้อง
         for r in db.query(OutgoingReport).filter(OutgoingReport.complaint_id == complaint_id, OutgoingReport.is_active == True).all():
-            signer = getattr(r, "signature_authority_user", None)
-            dept   = getattr(r, "department", None)
-            atts   = _serialize_attachments(r)
             outgoing_reports_data["type1"].append({
                 "id": str(getattr(r, "id", "")),
                 "reference_number": getattr(r, "reference_number", None),
@@ -559,17 +556,14 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "urgency_level": getattr(r, "urgency_level", None),
                 "remarks": getattr(r, "remarks", None),
                 "created_at": _iso(getattr(r, "created_at", None)),
-                "department": _dept_min(dept),
-                "signature_authority_user": _user_min(signer),
-                "attachments": atts,
-                "attachments_count": len(atts),
+                "department": _dept_min(getattr(r, "department", None)),
+                "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
+                "attachments": _serialize_attachments(r),
+                "attachments_count": len(getattr(r, "attachments", []) or []),
                 "type_description": "รายงานส่งหน่วยงานที่เกี่ยวข้อง",
             })
 
-        # type2: แจ้งผู้ร้องเรียน/ส่วนราชการที่ส่งเรื่องมาให้ทราบ
         for r in db.query(OutgoingReport2).filter(OutgoingReport2.complaint_id == complaint_id, OutgoingReport2.is_active == True).all():
-            dept = getattr(r, "department", None)
-            to_user = getattr(r, "to_user", None) or getattr(r, "user", None)
             atts = _serialize_attachments(r)
             outgoing_reports_data["type2"].append({
                 "id": str(getattr(r, "id", "")),
@@ -580,16 +574,14 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "urgency_level": getattr(r, "urgency_level", None),
                 "remarks": getattr(r, "remarks", None),
                 "created_at": _iso(getattr(r, "created_at", None)),
-                "department": _dept_min(dept),
-                "recipient_user": _user_min(to_user),
+                "department": _dept_min(getattr(r, "department", None)),
+                "recipient_user": _user_min(getattr(r, "to_user", None) or getattr(r, "user", None)),
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "แจ้งผู้ร้องเรียน/ส่วนราชการที่ส่งเรื่องมาให้ทราบ",
             })
 
-        # type3: รายงานผลจากหน่วยงาน/ความคืบหน้า
         for r in db.query(OutgoingReport3).filter(OutgoingReport3.complaint_id == complaint_id, OutgoingReport3.is_active == True).all():
-            dept = getattr(r, "department", None)
             atts = _serialize_attachments(r)
             outgoing_reports_data["type3"].append({
                 "id": str(getattr(r, "id", "")),
@@ -600,17 +592,14 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "urgency_level": getattr(r, "urgency_level", None),
                 "remarks": getattr(r, "remarks", None),
                 "created_at": _iso(getattr(r, "created_at", None)),
-                "department": _dept_min(dept),
+                "department": _dept_min(getattr(r, "department", None)),
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "รายงานผลจากหน่วยงาน/ความคืบหน้า",
             })
 
-        # type4: หนังสือแจ้งผลการพิจารณางาน
         for r in db.query(OutgoingReport4).filter(OutgoingReport4.complaint_id == complaint_id, OutgoingReport4.is_active == True).all():
-            signer = getattr(r, "signature_authority_user", None)
-            dept   = getattr(r, "department", None)
-            atts   = _serialize_attachments(r)
+            atts = _serialize_attachments(r)
             outgoing_reports_data["type4"].append({
                 "id": str(getattr(r, "id", "")),
                 "reference_number": getattr(r, "reference_number", None),
@@ -622,48 +611,69 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "urgency_level": getattr(r, "urgency_level", None),
                 "remarks": getattr(r, "remarks", None),
                 "created_at": _iso(getattr(r, "created_at", None)),
-                "department": _dept_min(dept),
-                "signature_authority_user": _user_min(signer),
+                "department": _dept_min(getattr(r, "department", None)),
+                "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "หนังสือแจ้งผลการพิจารณางาน",
             })
 
-        # (ทางเลือก) type5: “ไม่อยู่ในความรับผิดชอบ” — ถ้ามีโมเดลจะถูกเติมอัตโนมัติ
-        not_our_responsibility = []
-        try:
-            from models.outgoing_reports5 import OutgoingReport5  # สร้างตามที่คุยกันก่อนหน้า
-            for r in db.query(OutgoingReport5).filter(OutgoingReport5.complaint_id == complaint_id, OutgoingReport5.is_active == True).all():
-                dept = getattr(r, "department", None)
-                atts = _serialize_attachments(r)
-                not_our_responsibility.append({
-                    "id": str(getattr(r, "id", "")),
-                    "reference_number": getattr(r, "reference_number", None),
-                    "reference_date": _iso(getattr(r, "reference_date", None)),
-                    "subject": getattr(r, "subject", None),
-                    "remarks": getattr(r, "remarks", None),
-                    "created_at": _iso(getattr(r, "created_at", None)),
-                    "department": _dept_min(dept),
-                    "attachments": atts,
-                    "attachments_count": len(atts),
-                    "type_description": "แจ้งความว่าไม่อยู่ในความรับผิดชอบ",
-                })
-        except Exception:
-            # ยังไม่มีโมเดล/ตาราง => คงไว้เป็นลิสต์ว่าง
-            pass
+        # ===== type5: แจ้งผลการให้ผู้เกี่ยวข้องทราบ (ตรงกับ model ใหม่) =====
+        type5_list: List[Dict[str, Any]] = []
+        for r in db.query(OutgoingReport5).filter(OutgoingReport5.complaint_id == complaint_id, OutgoingReport5.is_active == True).all():
+            atts = _serialize_attachments(r)
+            type5_list.append({
+                "id": str(getattr(r, "id", "")),
+                "receive_number": getattr(r, "receive_number", None),          # ✅ ตาม model
+                "receive_date": _iso(getattr(r, "receive_date", None)),        # ✅ ตาม model
+                "subject": getattr(r, "subject", None),
+                "complaint_number": getattr(r, "complaint_number", None),
+                "complaint_number_date": _iso(getattr(r, "complaint_number_date", None)),
+                "agency_reference_number": getattr(r, "agency_reference_number", None),
+                "agency_reference_date": _iso(getattr(r, "agency_reference_date", None)),
+                "internal_register_number": getattr(r, "internal_register_number", None),
+                "internal_register_date": _iso(getattr(r, "internal_register_date", None)),
+                "present_to_director_date": _iso(getattr(r, "present_to_director_date", None)),
+                "document_number": getattr(r, "document_number", None),
+                "document_date": _iso(getattr(r, "document_date", None)),
+                "confidentiality_level": getattr(r, "confidentiality_level", None),
+                "urgency_level": getattr(r, "urgency_level", None),
+                "remarks": getattr(r, "remarks", None),
+                "created_at": _iso(getattr(r, "created_at", None)),
+                "department": _dept_min(getattr(r, "department", None)),
+                "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
+                "user": _user_min(getattr(r, "user", None)),
+                "attachments": atts,
+                "attachments_count": len(atts),
+                "type_description": "แจ้งผลการให้ผู้เกี่ยวข้องทราบ",
+            })
 
         # รวม all + sort ใหม่สุดก่อน
-        all_out = outgoing_reports_data["type1"] + outgoing_reports_data["type2"] + outgoing_reports_data["type3"] + outgoing_reports_data["type4"]
-        all_out.sort(key=lambda x: datetime.fromisoformat(x["created_at"]) if x.get("created_at") else datetime.min, reverse=True)
+        all_out = (
+            outgoing_reports_data["type1"]
+            + outgoing_reports_data["type2"]
+            + outgoing_reports_data["type3"]
+            + outgoing_reports_data["type4"]
+            + type5_list
+        )
+        all_out.sort(
+            key=lambda x: (
+                # ใช้ created_at เป็นหลัก ถ้าไม่มีค่อย fallback ไปวันที่อื่น
+                datetime.fromisoformat(x["created_at"]) if x.get("created_at") else
+                datetime.fromisoformat(x.get("reference_date") or x.get("receive_date")) if (x.get("reference_date") or x.get("receive_date")) else
+                datetime.min
+            ),
+            reverse=True
+        )
 
         outgoing_reports = {
             **outgoing_reports_data,
-            "type5": not_our_responsibility,                 # เผื่อ UI ส่วนล่าง (แถบเหลือง)
+            "type5": type5_list,
             "all": all_out,
             "total_count": len(all_out),
         }
 
-        # 9) ชื่อหน่วยงาน (แสดงหัวบัตร) — ใช้หน่วยงานจากรายงาน type1 รายการแรกถ้ามี
+        # ชื่อหน่วยงานหัวการ์ด (ลองเดาจาก type1 อันแรก)
         agency_name = ""
         try:
             first_t1 = outgoing_reports_data["type1"][0] if outgoing_reports_data["type1"] else None
@@ -672,7 +682,9 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
         except Exception:
             pass
 
-        # 10) สร้างผลลัพธ์ detail (เพิ่ม complaint_number ตามที่ UI ต้องใช้)
+        # ✅ responsibleOfficer: ใช้ชื่อจาก assigned_officer ก่อน ถ้าไม่มีค่อยใช้ assigned_to (ข้อความเดิมในโมเดล)
+        responsible_officer_display = (_user_min(assigned_officer) or {}).get("name") if assigned_officer else (complaint.assigned_to or "")
+
         detail = {
             "receiveDate": _fmt_bkk(complaint.created_at),
             "agency": agency_name,
@@ -682,18 +694,17 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             "description": complaint.description or "",
             "issueType": complaint_type_name,
             "subIssueType": complaint_subtype_name,
-            "responsibleOfficer": complaint.assigned_to or "",
+            "responsibleOfficer": responsible_officer_display,  # ✅
             "status": complaint.status.value if complaint.status else "",
             "confirmationStatus": confirmation_status,
             "complaintCategory": complaint_category,
             "note": getattr(complaint, "assigned_remark", None) or "",
-            # extra meta
             "id": str(complaint.id),
             "complaint_id": str(complaint.id),
             "urgency_level": getattr(complaint, "urgency_level", None),
             "confidentiality_level": getattr(complaint, "confidentiality_level", None),
             "is_master": complaint.parent_complaint_id is None,
-            "assigned_officer": _user_min(assigned_officer),
+            "assigned_officer": _user_min(assigned_officer),  # object เต็มสำหรับ UI
             "creator": _user_min(creator),
             "channel": {
                 "id": str(getattr(channel_info, "id", "")) if channel_info else None,
@@ -718,7 +729,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             "status_history": status_history
         }
 
-        # 11) relationships (เดิม)
+        # relationships (parent/master/children/siblings + all_related)
         relationships = {
             "parent_complaint": related_info.get("parent_complaint"),
             "parent_chain": related_info.get("parent_chain", []),
@@ -736,8 +747,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             }
         }
 
-        # เรียง all_related ใหม่สุดก่อน (คง structure เดิม)
-        def _parse_dt(s): 
+        def _parse_dt(s):
             try:
                 return datetime.fromisoformat((s or "").replace('T', ' ').replace('Z', ''))
             except Exception:
