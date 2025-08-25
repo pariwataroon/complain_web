@@ -114,26 +114,34 @@ def _get_user_info(db: Session, staff_id: str) -> Dict:
         staff_uuid = UUID(staff_id)
         user_data = get_user_with_roles_and_titles(db, staff_uuid)
         if user_data:
+            # ดึงข้อมูล roles
+            roles = []
+            if user_data.get("roles"):
+                roles = [role.get("role_name", "") for role in user_data.get("roles", [])]
+            
             staff_info = {
                 "id": staff_id,
                 "name": user_data.get("full_name_with_title", ""),
                 "position": user_data.get("primary_position", {}).get("position_name", "") if user_data.get("primary_position") else "",
                 "email": user_data.get("email", ""),
-                "avatar": None
+                "avatar": None,
+                "roles": roles
             }
         else:
             staff_info = {
                 "id": staff_id,
                 "name": f"เจ้าหน้าที่ {staff_id[:8]}",
                 "position": "",
-                "email": ""
+                "email": "",
+                "roles": []
             }
     except ValueError:
         staff_info = {
             "id": staff_id,
             "name": staff_id,
             "position": "หน่วยงานภายนอก",
-            "email": ""
+            "email": "",
+            "roles": []
         }
     
     _user_info_cache[staff_id] = staff_info
