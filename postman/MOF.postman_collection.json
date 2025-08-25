@@ -4299,6 +4299,261 @@
 			"description": "API สำหรับจัดการข้อมูลหน่วยงาน"
 		},
 		{
+			"name": "OUTSIDE DEPARTMENTS",
+			"item": [
+				{
+					"name": "Get All Outside Departments",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outside-departments?skip=0&limit=100",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"outside-departments"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนข้อมูลที่ข้าม (สำหรับ pagination)"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนข้อมูลสูงสุดที่แสดง"
+								}
+							]
+						},
+						"description": "ดึงรายการหน่วยงานภายนอกทั้งหมด - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Outside Departments Dropdown",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outside-departments/dropdown",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"outside-departments",
+								"dropdown"
+							]
+						},
+						"description": "ดึงรายการหน่วยงานภายนอกเฉพาะ id/name สำหรับ dropdown - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Outside Department by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outside-departments/{{outside_department_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"outside-departments",
+								"{{outside_department_id}}"
+							]
+						},
+						"description": "ดึงข้อมูลหน่วยงานภายนอกตาม ID - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Outside Departments by Name",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outside-departments/search/by-name?search_term=กระทรวง&skip=0&limit=100",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"outside-departments",
+								"search",
+								"by-name"
+							],
+							"query": [
+								{
+									"key": "search_term",
+									"value": "กระทรวง",
+									"description": "คำค้นหาในชื่อหน่วยงานภายนอก"
+								},
+								{
+									"key": "skip",
+									"value": "0",
+									"description": "จำนวนข้อมูลที่ข้าม"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "จำนวนข้อมูลสูงสุดที่แสดง"
+								}
+							]
+						},
+						"description": "ค้นหาหน่วยงานภายนอกตามชื่อ - ต้องมีสิทธิ์อ่านใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Outside Department",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"กรมการศึกษาเมืองนอก\",\n    \"description\": \"หน่วยงานภายนอกสำหรับการศึกษา\",\n    \"order_index\": 100,\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outside-departments",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"outside-departments"
+							]
+						},
+						"description": "สร้างหน่วยงานภายนอกใหม่ - ต้องมีสิทธิ์สร้างใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Outside Department",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"กรมการศึกษาเมืองนอก (แก้ไข)\",\n    \"description\": \"หน่วยงานภายนอกสำหรับการศึกษา - แก้ไขแล้ว\",\n    \"order_index\": 110,\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outside-departments/{{outside_department_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"outside-departments",
+								"{{outside_department_id}}"
+							]
+						},
+						"description": "อัปเดตข้อมูลหน่วยงานภายนอก - ต้องมีสิทธิ์แก้ไขใน setting_department"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Outside Department",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outside-departments/{{outside_department_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"outside-departments",
+								"{{outside_department_id}}"
+							]
+						},
+						"description": "ลบหน่วยงานภายนอก (soft delete) - ต้องมีสิทธิ์ลบใน setting_department"
+					},
+					"response": []
+				}
+			],
+			"description": "API สำหรับจัดการข้อมูลหน่วยงานภายนอก - หน่วยงานที่ไม่ใช่ส่วนของกระทรวงการคลัง"
+		},
+		{
 			"name": "DEPARTMENT GROUPS",
 			"item": [
 				{
@@ -11570,6 +11825,11 @@
 		},
 		{
 			"key": "chat_bot_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "outside_department_id",
 			"value": "",
 			"type": "string"
 		}
