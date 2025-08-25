@@ -9,6 +9,7 @@ from .title import Title
 from .association_tables import *
 from .department_groups import DepartmentGroup
 from .departments import Department
+from .outside_departments import OutsideDepartment
 from .notification import Notification
 from .position import Position
 from .resource_groups import ResourceGroup
@@ -37,7 +38,7 @@ from .news import News
 # ระบุโมเดลที่สามารถนำเข้าเมื่อใช้ from models import *
 __all__ = [
     'Permission', 'Resource', 'Role', 'UserRole', 'User', 'Token', 'Title',
-    'DepartmentGroup', 'Department', 'Notification', 'Position', 
+    'DepartmentGroup', 'Department', 'OutsideDepartment', 'Notification', 'Position',
     'ResourceGroup', 'TimeSetting', 'UserPosition', 'Venue', 'VerificationToken',
     'Geography', 'Province', 'Amphure', 'District', 'ProjectApiKey',
     'SignatureAuthority', 'GroupSignatureAuthority', 'Complaint', 'ComplaintAttachment',
