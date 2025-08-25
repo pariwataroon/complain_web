@@ -605,7 +605,7 @@ def search_users_by_role(db: Session, role_name: str = None, skip: int = 0, limi
     
     Args:
         db: Database session
-        role_name: Role name to filter by (optional)
+        role_name: Role name(s) to filter by (optional) - can be single role or comma-separated roles
         skip: Number of records to skip (for pagination)
         limit: Maximum number of records to return
         
@@ -620,9 +620,12 @@ def search_users_by_role(db: Session, role_name: str = None, skip: int = 0, limi
         joinedload(User.roles).joinedload(UserRole.role)
     ).filter(User.is_active == True)
     
-    # If role_name is provided, filter users by that role
+    # If role_name is provided, filter users by that role(s)
     if role_name:
-        query = query.join(User.roles).join(UserRole.role).filter(Role.name == role_name)
+        # Split role_name by comma to support multiple roles
+        role_names = [name.strip() for name in role_name.split(',') if name.strip()]
+        if role_names:
+            query = query.join(User.roles).join(UserRole.role).filter(Role.name.in_(role_names))
     
     # Apply pagination and get results
     users = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
