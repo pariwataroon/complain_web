@@ -395,6 +395,43 @@ const GetAllSelectPositionOptions = async () => {
   }
 };
 
+const GetAllOutsideDepartments = async () => {
+  try {
+    const response = await axiosInstance.get("/outside-departments");
+    const apiData = response?.data;
+
+    if (apiData?.res_code !== "0000" || !Array.isArray(apiData?.res_data)) {
+      console.warn("Invalid API response:", apiData);
+      return [];
+    }
+
+    const activeDepartments = apiData.res_data
+      .filter((dept) => dept.is_active === true)
+      .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+    return activeDepartments.map((dept, index) => ({
+      label: dept.name || `หน่วยงาน ${dept.id}`,
+      value: dept.id,
+
+      name: dept.name || "",
+      description: dept.description || "",
+      orderIndex: dept.order_index || 0,
+      isActive: dept.is_active,
+
+      createdAt: dept.created_at,
+      updatedAt: dept.updated_at,
+
+      raw: dept,
+
+      uniqueId: dept.id,
+      sortOrder: index,
+    }));
+  } catch (error) {
+    console.error("Error fetching outside departments:", error);
+    return [];
+  }
+};
+
 
 const GetAllSelectYears = async () => {
   try {
@@ -460,4 +497,5 @@ export {
   GetAllComplaintChannels,
   GetAllSelectYears,
   GetAllSelectPositionOptions,
+  GetAllOutsideDepartments,
 };

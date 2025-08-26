@@ -28,7 +28,7 @@ import {
 import { ControlledDateThaiPickerService } from "@services/DateThaiPickerService/DateThaiPickerService";
 import { getDepartments } from "@pages/api/department/department";
 import {
-  GetAllSelectPositionOptions,
+  GetAllOutsideDepartments,
 } from "@pages/api/allselect/allselect";
 import { FormProvider, useForm } from "react-hook-form";
 import { alertError, alertSuccess } from "@utils/Alerts";
@@ -162,7 +162,7 @@ const SearchComplaints = () => {
   useEffect(() => {
     const fetchPositions = async () => {
       try {
-        const res = await GetAllSelectPositionOptions();
+        const res = await GetAllOutsideDepartments();
         // console.log('API Response:', res);
 
         if (Array.isArray(res)) {
@@ -1367,7 +1367,7 @@ const SearchComplaints = () => {
                         </div>
                       </div>
                       <div className={styles.fieldGroup}>
-                        <label>ตำแหน่งที่ส่งเรื่องมา กค.</label>
+                        <label>หน่วยงานอื่นที่ส่งเรื่องมายัง กค.</label>
                         <select
                           className={styles.niceSelect}
                           {...step3Methods.register("senderAgency")}
