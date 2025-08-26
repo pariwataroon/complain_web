@@ -707,21 +707,53 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
         else:
             complaint_category = "เรื่องร้องเรียนใหม่"
 
-        # ===== OutgoingReports (1–4) =====
-        outgoing_reports_data: Dict[str, List[Dict[str, Any]]] = \
-            {"type1": [], "type2": [], "type3": [], "type4": []}
+        # ===== ฟังก์ชันตรวจสอบข้อมูลขั้นต่ำ =====
+        def _validate_minimum_required_fields(report_data: Dict[str, Any], report_type: str) -> Dict[str, Any]:
+            """
+            ตรวจสอบข้อมูลขั้นต่ำที่จำเป็นสำหรับแต่ละประเภท outgoing report
+            ขั้นต่ำ อย่างน้อยต้องมี complaint_number, document_number, document_date หรือ complaint_id
+            """
+            validated_data = report_data.copy()
+            
+            # ตรวจสอบข้อมูลขั้นต่ำ
+            required_fields_check = {
+                "complaint_number": report_data.get("complaint_number"),
+                "document_number": report_data.get("document_number"), 
+                "document_date": report_data.get("document_date"),
+                "complaint_id": str(complaint_id) if complaint_id else None
+            }
+            
+            # นับจำนวนฟิลด์ที่มีข้อมูล
+            filled_fields = sum(1 for value in required_fields_check.values() if value)
+            
+            # เพิ่มข้อมูลการตรวจสอบ
+            validated_data["validation"] = {
+                "has_minimum_required": filled_fields >= 3,  # ต้องมีอย่างน้อย 3 ใน 4 ฟิลด์
+                "required_fields_status": required_fields_check,
+                "filled_fields_count": filled_fields,
+                "missing_fields": [key for key, value in required_fields_check.items() if not value],
+                "validation_message": "ครบถ้วน" if filled_fields >= 3 else f"ขาดข้อมูล {4-filled_fields} ฟิลด์"
+            }
+            
+            return validated_data
 
-        # type1
+        # ===== OutgoingReports (1–5) =====
+        outgoing_reports_data: Dict[str, List[Dict[str, Any]]] = \
+            {"type1": [], "type2": [], "type3": [], "type4": [], "type5": []}
+
+        # type1 - รายงานส่งหน่วยงานที่เกี่ยวข้อง
         for r in db.query(OutgoingReport).filter(OutgoingReport.complaint_id == complaint_id,
                                                  OutgoingReport.is_active == True).all():
             atts = _serialize_attachments(r)
-            outgoing_reports_data["type1"].append({
+            report_data = {
                 "id": str(getattr(r, "id", "")),
                 "reference_number": getattr(r, "reference_number", None),
                 "reference_date": _iso(getattr(r, "reference_date", None)),
                 "subject": getattr(r, "subject", None),
                 "complaint_number": getattr(r, "complaint_number", None),
                 "complaint_number_date": _iso(getattr(r, "complaint_number_date", None)),
+                "document_number": getattr(r, "document_number", None),
+                "document_date": _iso(getattr(r, "document_date", None)),
                 "confidentiality_level": getattr(r, "confidentiality_level", None),
                 "urgency_level": getattr(r, "urgency_level", None),
                 "remarks": getattr(r, "remarks", None),
@@ -731,17 +763,21 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "รายงานส่งหน่วยงานที่เกี่ยวข้อง",
-            })
+            }
+            validated_report = _validate_minimum_required_fields(report_data, "type1")
+            outgoing_reports_data["type1"].append(validated_report)
 
-        # type2
+        # type2 - แจ้งผู้ร้องเรียน/ส่วนราชการที่ส่งเรื่องมาให้ทราบ
         for r in db.query(OutgoingReport2).filter(OutgoingReport2.complaint_id == complaint_id,
                                                   OutgoingReport2.is_active == True).all():
             atts = _serialize_attachments(r)
-            outgoing_reports_data["type2"].append({
+            report_data = {
                 "id": str(getattr(r, "id", "")),
                 "complaint_number": getattr(r, "complaint_number", None),
                 "complaint_number_date": _iso(getattr(r, "complaint_number_date", None)),
                 "subject": getattr(r, "subject", None),
+                "document_number": getattr(r, "document_number", None),
+                "document_date": _iso(getattr(r, "document_date", None)),
                 "confidentiality_level": getattr(r, "confidentiality_level", None),
                 "urgency_level": getattr(r, "urgency_level", None),
                 "remarks": getattr(r, "remarks", None),
@@ -752,17 +788,21 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "แจ้งผู้ร้องเรียน/ส่วนราชการที่ส่งเรื่องมาให้ทราบ",
-            })
+            }
+            validated_report = _validate_minimum_required_fields(report_data, "type2")
+            outgoing_reports_data["type2"].append(validated_report)
 
-        # type3
+        # type3 - รายงานขอทราบผลการพิจารณา/ความคืบหน้า
         for r in db.query(OutgoingReport3).filter(OutgoingReport3.complaint_id == complaint_id,
                                                   OutgoingReport3.is_active == True).all():
             atts = _serialize_attachments(r)
-            outgoing_reports_data["type3"].append({
+            report_data = {
                 "id": str(getattr(r, "id", "")),
                 "complaint_number": getattr(r, "complaint_number", None),
                 "complaint_number_date": _iso(getattr(r, "complaint_number_date", None)),
                 "subject": getattr(r, "subject", None),
+                "document_number": getattr(r, "document_number", None),
+                "document_date": _iso(getattr(r, "document_date", None)),
                 "confidentiality_level": getattr(r, "confidentiality_level", None),
                 "urgency_level": getattr(r, "urgency_level", None),
                 "remarks": getattr(r, "remarks", None),
@@ -772,17 +812,23 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "รายงานผลจากหน่วยงาน/ความคืบหน้า",
-            })
+            }
+            validated_report = _validate_minimum_required_fields(report_data, "type3")
+            outgoing_reports_data["type3"].append(validated_report)
 
-        # type4
+        # type4 - แจ้งผลการให้ผู้เกี่ยวข้องทราบ
         for r in db.query(OutgoingReport4).filter(OutgoingReport4.complaint_id == complaint_id,
                                                   OutgoingReport4.is_active == True).all():
             atts = _serialize_attachments(r)
-            outgoing_reports_data["type4"].append({
+            report_data = {
                 "id": str(getattr(r, "id", "")),
                 "reference_number": getattr(r, "reference_number", None),
                 "reference_date": _iso(getattr(r, "reference_date", None)),
                 "subject": getattr(r, "subject", None),
+                "complaint_number": getattr(r, "complaint_number", None),
+                "complaint_number_date": _iso(getattr(r, "complaint_number_date", None)),
+                "document_number": getattr(r, "document_number", None),
+                "document_date": _iso(getattr(r, "document_date", None)),
                 "proposal_purpose": getattr(r, "proposal_purpose", None),
                 "consideration_result": getattr(r, "consideration_result", None),
                 "confidentiality_level": getattr(r, "confidentiality_level", None),
@@ -794,14 +840,16 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "หนังสือแจ้งผลการพิจารณางาน",
-            })
+            }
+            validated_report = _validate_minimum_required_fields(report_data, "type4")
+            outgoing_reports_data["type4"].append(validated_report)
 
-        # ===== type5: แจ้งผลการให้ผู้เกี่ยวข้องทราบ =====
+        # ===== type5: รับเรื่องรายงานผลการพิจารณาจากหน่วยงาน =====
         type5_list: List[Dict[str, Any]] = []
         for r in db.query(OutgoingReport5).filter(OutgoingReport5.complaint_id == complaint_id,
                                                   OutgoingReport5.is_active == True).all():
             atts = _serialize_attachments(r)
-            type5_list.append({
+            report_data = {
                 "id": str(getattr(r, "id", "")),
                 "receive_number": getattr(r, "receive_number", None),
                 "receive_date": _iso(getattr(r, "receive_date", None)),
@@ -825,7 +873,9 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "แจ้งผลการให้ผู้เกี่ยวข้องทราบ",
-            })
+            }
+            validated_report = _validate_minimum_required_fields(report_data, "type5")
+            type5_list.append(validated_report)
 
         # รวม all + sort ใหม่สุดก่อน
         all_out = (outgoing_reports_data["type1"]
@@ -844,11 +894,30 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             return datetime.min
         all_out.sort(key=_key_when, reverse=True)
 
+        # คำนวณสถิติการตรวจสอบข้อมูล
+        validation_summary = {
+            "total_reports": len(all_out),
+            "valid_reports": sum(1 for report in all_out if report.get("validation", {}).get("has_minimum_required", False)),
+            "invalid_reports": sum(1 for report in all_out if not report.get("validation", {}).get("has_minimum_required", False)),
+            "by_type": {}
+        }
+        
+        # สถิติตามประเภท
+        for report_type in ["type1", "type2", "type3", "type4", "type5"]:
+            type_reports = outgoing_reports_data.get(report_type, []) if report_type != "type5" else type5_list
+            validation_summary["by_type"][report_type] = {
+                "total": len(type_reports),
+                "valid": sum(1 for report in type_reports if report.get("validation", {}).get("has_minimum_required", False)),
+                "invalid": sum(1 for report in type_reports if not report.get("validation", {}).get("has_minimum_required", False)),
+                "validation_rate": round((sum(1 for report in type_reports if report.get("validation", {}).get("has_minimum_required", False)) / len(type_reports) * 100), 2) if len(type_reports) > 0 else 0
+            }
+
         outgoing_reports = {
             **outgoing_reports_data,
             "type5": type5_list,
             "all": all_out,
             "total_count": len(all_out),
+            "validation_summary": validation_summary
         }
 
         # ===== สรุป "ขั้นตอนการดำเนินการครั้งแรก" (initial_process_summary) =====
