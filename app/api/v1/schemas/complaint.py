@@ -67,6 +67,9 @@ class ComplaintListItem(BaseModel):
     assigned_remark: Optional[str] = ""
     urgency_level: Optional[str] = "LOW"
     severity_level: Optional[str] = "LOW"
+    # เพิ่มฟิลด์ phone และ description จาก complainant_data
+    complainant_phone: Optional[str] = ""
+    complainant_description: Optional[str] = ""
     
     class Config:
         from_attributes = True

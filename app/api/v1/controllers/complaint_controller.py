@@ -1726,6 +1726,11 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
             if subtype:
                 complaint_subtype_name = subtype.name
 
+        # ดึง phone และ description จาก complainant_data
+        complainant_data = ensure_dict(complaint.complainant_data)
+        complainant_phone = complainant_data.get("phone", "")
+        complainant_description = complainant_data.get("description", "")
+
         return ComplaintListItem(
             id=complaint.id,
             complaint_number=complaint.complaint_number,
@@ -1740,7 +1745,9 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
             assigned_remark=complaint.assigned_remark or "",
             urgency_level=complaint.urgency_level.lower() if complaint.urgency_level else "low",
             severity_level=complaint.severity_level.lower() if complaint.severity_level else "low",
-            complaint_subtype=complaint_subtype_name
+            complaint_subtype=complaint_subtype_name,
+            complainant_phone=complainant_phone,
+            complainant_description=complainant_description
         )
         
     except Exception as e:
@@ -1757,7 +1764,9 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
             assigned_to="",
             assigned_remark=complaint.assigned_remark or "",
             urgency_level="low",
-            severity_level="low"
+            severity_level="low",
+            complainant_phone="",
+            complainant_description=""
         )
 
 def get_display_complainant_name(complainant_data: Dict, delegate_data: Dict = None) -> str:
