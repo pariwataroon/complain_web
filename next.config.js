@@ -38,6 +38,8 @@ const baseConfig = {
       getEnv("NEXT_PUBLIC_DEBUG_MODE") === "true" ? "true" : "false",
     NEXT_PUBLIC_COMMON_VAR: process.env.NEXT_PUBLIC_COMMON_VAR || "",
     NEXT_PUBLIC_LOCALE: process.env.NEXT_PUBLIC_LOCALE || "en",
+    NEXT_PUBLIC_MAINTENANCE_MODE:
+      process.env.NEXT_PUBLIC_MAINTENANCE_MODE || "false",
   },
 
   webpack: (config, { isServer }) => {
