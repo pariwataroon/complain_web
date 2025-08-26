@@ -73,14 +73,13 @@
   gap: 8px !important;
 }
 
-// Enhanced Text field styles - matching SelectFieldPAAOPM exactly
 .textField {
   width: 100%;
   margin-bottom: 0;
 
   .MuiInputBase-root {
     height: 40px;
-    border-radius: 12px;
+    border-radius: 20px;
     color: #000000;
     background-color: #ffffff;
     font-family: inherit;
@@ -97,7 +96,7 @@
     .MuiOutlinedInput-notchedOutline {
       border-color: #1120A3;
       border-width: 1.5px;
-      border-radius: 12px;
+      border-radius: 20px;
     }
 
     &:hover {
@@ -141,18 +140,22 @@
   }
 }
 
-// Enhanced Textarea field styles - matching SelectFieldPAAOPM exactly
 .textareaField {
   width: 100%;
   margin-bottom: 0;
 
   .MuiInputBase-root {
-    border-radius: 12px;
+    border-radius: 25px;
+    /* เปลี่ยนเป็น 25px เพื่อความโค้งมากขึ้น */
     color: #000000;
     background-color: #ffffff;
     font-family: inherit;
     border: none;
     align-items: flex-start;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    /* เพิ่มเงาเล็กน้อย */
+    transition: all 0.2s ease-in-out;
+    /* เพิ่ม transition ให้ smooth */
 
     &.Mui-focused {
       .MuiOutlinedInput-notchedOutline {
@@ -160,18 +163,25 @@
         border-width: 2px;
         box-shadow: 0 0 0 3px rgba(17, 32, 163, 0.15);
       }
+
+      box-shadow: 0 2px 8px rgba(17, 32, 163, 0.12);
+      /* เงาเมื่อ focus */
     }
 
     .MuiOutlinedInput-notchedOutline {
       border-color: #1120A3;
       border-width: 1.5px;
-      border-radius: 12px;
+      border-radius: 25px;
+      /* เปลี่ยนเป็น 25px เพื่อความโค้งมากขึ้น */
     }
 
     &:hover {
       .MuiOutlinedInput-notchedOutline {
         border-color: #0d1a85;
       }
+
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      /* เงาเมื่อ hover */
     }
 
     &.Mui-error .MuiOutlinedInput-notchedOutline {
@@ -182,6 +192,7 @@
     &.Mui-disabled {
       background-color: #f8fafc;
       opacity: 0.6;
+      box-shadow: none;
 
       .MuiOutlinedInput-notchedOutline {
         border-color: #e2e8f0;

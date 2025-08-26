@@ -251,6 +251,8 @@ const GetNameDepartments = async () => {
   }
 };
 
+
+
 const GetDonutChartComplaintTypes = async (year, departmentId) => {
   try {
     const response = await axiosInstance.get(
@@ -260,55 +262,17 @@ const GetDonutChartComplaintTypes = async (year, departmentId) => {
     if (response?.data?.res_code === "0000" && response?.data?.res_data) {
       const data = response.data.res_data;
 
-      const complaintTypes = (data.departments || []).map((dept, index) => ({
-        id: dept.id || `dept_${index}`,
-        name:
-          dept.name ||
-          dept.department_name ||
-          dept.type_name ||
-          "ไม่ระบุประเภท",
-        value: dept.count || dept.complaint_count || dept.value || 0,
-        percent: dept.percent || 0,
-        formattedPercent: dept.percent ? `${dept.percent.toFixed(2)}%` : "0%",
-        color: getComplaintTypeColor(index),
-        departmentId: dept.department_id || dept.id,
-        description: dept.description || "",
-      }));
-
-      const filterInfo = {
-        year: data.filters?.year || year,
-        departmentId: data.filters?.department_id || departmentId,
-        dateRange: data.date_range_bangkok,
-      };
-
-      const statistics = {
-        totalTypes: complaintTypes.length,
-        totalComplaints: data.total || 0,
-        maxValue:
-          complaintTypes.length > 0
-            ? Math.max(...complaintTypes.map((item) => item.value))
-            : 0,
-        avgValue:
-          complaintTypes.length > 0 && data.total > 0
-            ? (data.total / complaintTypes.length).toFixed(2)
-            : 0,
-      };
-
       return {
         success: true,
-        data: complaintTypes,
-        filterInfo,
-        statistics,
+        data: data,
         total: data.total || 0,
-        isEmpty: (data.total || 0) === 0 || complaintTypes.length === 0,
+        isEmpty: (data.total || 0) === 0,
         raw: response.data,
       };
     } else {
       return {
         success: false,
         data: [],
-        filterInfo: null,
-        statistics: null,
         total: 0,
         isEmpty: true,
         message: response?.data?.res_message || "ไม่พบข้อมูล",
@@ -321,8 +285,6 @@ const GetDonutChartComplaintTypes = async (year, departmentId) => {
     return {
       success: false,
       data: [],
-      filterInfo: null,
-      statistics: null,
       total: 0,
       isEmpty: true,
       error: error.message || "เกิดข้อผิดพลาดในการดึงข้อมูล",

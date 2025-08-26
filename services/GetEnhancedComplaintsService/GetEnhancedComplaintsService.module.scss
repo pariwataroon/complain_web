@@ -1,0 +1,352 @@
+.complaintSearchContainer {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.searchButtonWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+.searchIconButton {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1976d2;
+    transition: all 0.2s ease-in-out;
+
+    &:hover {
+        background-color: rgba(25, 118, 210, 0.08);
+        transform: scale(1.1);
+    }
+}
+
+.selectedComplaint {
+    margin-top: 16px;
+    text-align: center;
+}
+
+.complaintChip {
+    display: inline-block;
+    padding: 6px 12px;
+    background-color: transparent;
+    border: 1px solid #1976d2;
+    border-radius: 16px;
+    color: #1976d2;
+    font-size: 0.875rem;
+    position: relative;
+    padding-right: 30px;
+    max-width: 300px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.chipDelete {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1976d2;
+
+    &:hover {
+        background-color: rgba(25, 118, 210, 0.1);
+    }
+}
+
+.complaintInfo {
+    margin-top: 8px;
+    color: #666;
+    font-size: 0.875rem;
+}
+
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.modalContent {
+    background: white;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 700px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modalTitle {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.closeButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    color: #666;
+
+    &:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+    }
+}
+
+.modalBody {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.searchInputContainer {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.searchInput {
+    width: 100%;
+    padding: 12px 16px 12px 45px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+
+    &:focus {
+        border-color: #1976d2;
+        box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+    }
+}
+
+.searchIcon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+}
+
+.complaintsList {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.complaintItem {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    border: 1px solid #e0e0e0;
+    background: none;
+    width: 100%;
+    cursor: pointer;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    text-align: left;
+    transition: all 0.2s;
+
+    &:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+        border-color: #1976d2;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.complaintHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.complaintNumber {
+    font-weight: 600;
+    color: #1976d2;
+    font-size: 1rem;
+    margin-bottom: 4px;
+}
+
+.complaintSubject {
+    color: #333;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.complaintDetails {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.statusBadge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: white;
+
+    // สถานะต่างๆ
+    &.รับเรื่อง {
+        background-color: #2196f3;
+    }
+
+    &.ติดตามผล {
+        background-color: #ff9800;
+    }
+
+    &.อยู่ระหว่างพิจารณา {
+        background-color: #9c27b0;
+    }
+
+    &.กำลังดำเนินการ {
+        background-color: #4caf50;
+    }
+
+    &.มอบหมายเจ้าหน้าที่ {
+        background-color: #ff5722;
+    }
+
+    &.เสร็จสิ้น {
+        background-color: #8bc34a;
+    }
+
+    // Default สำหรับสถานะอื่นๆ
+    &:not(.รับเรื่อง):not(.ติดตามผล):not(.อยู่ระหว่างพิจารณา):not(.กำลังดำเนินการ):not(.มอบหมายเจ้าหน้าที่):not(.เสร็จสิ้น) {
+        background-color: #757575;
+    }
+}
+
+.complaintType {
+    background-color: rgba(96, 125, 139, 0.1);
+    color: #607d8b;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+}
+
+.complaintMeta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.complainantName {
+    font-weight: 500;
+}
+
+.complaintDate {
+    font-style: italic;
+}
+
+.loadingSpinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #666;
+}
+
+.noResults {
+    text-align: center;
+    padding: 32px;
+    color: #666;
+}
+
+.modalFooter {
+    padding: 16px 24px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.cancelButton {
+    background: none;
+    border: none;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    color: #666;
+    font-size: 0.875rem;
+
+    &:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+    }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+    .modalContent {
+        margin: 16px;
+        max-height: calc(100vh - 32px);
+    }
+
+    .modalHeader,
+    .modalBody,
+    .modalFooter {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .complaintDetails {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .complaintMeta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .complaintChip {
+        max-width: 250px;
+    }
+}

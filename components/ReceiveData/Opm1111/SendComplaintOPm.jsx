@@ -14,6 +14,7 @@ import {
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectFieldPAAOPM from "@services/SelectFieldPAAOPM/SelectFieldPAAOPM";
 import ButtonService from "@services/ButtonService/ButtonService";
+import GetEnhancedComplaintsService from "@services/GetEnhancedComplaintsService/GetEnhancedComplaintsService";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import {
   showConfirm,
@@ -42,6 +43,7 @@ const SendComplaintOPM = () => {
   const [reporterPhone, setReporterPhone] = useState("");
   const [caseCode, setCaseCode] = useState("");
   const [complaintDetail, setComplaintDetail] = useState("");
+  const [selectedComplaintData, setSelectedComplaintData] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
@@ -99,6 +101,63 @@ const SendComplaintOPM = () => {
     isPhoneValid
   ]);
 
+  const handleComplaintSelection = useCallback((complaint) => {
+    setSelectedComplaintData(complaint);
+
+    if (complaint) {
+      if (complaint.complaint_number && complaint.complaint_number !== '-') {
+        setCaseCode(complaint.complaint_number);
+      }
+
+      if (complaint.complainant_phone && complaint.complainant_phone !== '-') {
+        setReporterPhone(complaint.complainant_phone);
+      }
+
+      if (complaint.complainant_name && complaint.complainant_name !== '-') {
+        const fullName = complaint.complainant_name.trim();
+        const nameParts = fullName.split(' ');
+
+        if (nameParts.length >= 2) {
+          const firstName = nameParts[0];
+          const lastName = nameParts.slice(1).join(' ');
+          setReporterFirstName(firstName);
+          setReporterLastName(lastName);
+        } else {
+          setReporterFirstName(fullName);
+          setReporterLastName('');
+        }
+      }
+
+      if (complaint.complainant_description && complaint.complainant_description !== '-') {
+        setComplaintDetail(complaint.complainant_description);
+      }
+
+      // if (complaint.complaint_type_id) {
+      //   setselectedType(complaint.complaint_type_id);
+      // }
+
+      // ถ้ามี status ที่ตรงกับระบบให้ set
+      // if (complaint.status) {
+      //   const statusMapping = {
+      //     'รับเรื่อง': '1',
+      //     'ติดตามผล': '2',
+      //     'อยู่ระหว่างพิจารณา': '3',
+      //     'กำลังดำเนินการ': '4',
+      //     'มอบหมายเจ้าหน้าที่': '5',
+      //     'เสร็จสิ้น': '6'
+      //   };
+
+      //   if (statusMapping[complaint.status]) {
+      //     setSelectedStatus(statusMapping[complaint.status]);
+      //   }
+      // }
+
+      // ถ้ามี created_date ให้ set วันที่สร้าง
+      if (complaint.created_at) {
+        setCreatedDate(complaint.created_at);
+      }
+    }
+  }, []);
 
   // Event handlers
   const handleProvinceChange = useCallback((event) => {
@@ -569,7 +628,19 @@ const SendComplaintOPM = () => {
               <Grid item xs={12}>
                 <Typography variant="h6" className={styles.sectionTitle}>
                   ข้อมูลการดำเนินการ
+                  <GetEnhancedComplaintsService onComplaintSelect={handleComplaintSelection} />
+                  {selectedComplaintData && (
+                    <Box sx={{ mt: 1, p: 2, bgcolor: '#e3f2fd', borderRadius: 1, border: '1px solid #2196f3' }}>
+                      <Typography variant="body2" color="primary" fontWeight="bold">
+                        ข้อมูลที่เลือก: {selectedComplaintData.complaint_number}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {selectedComplaintData.subject} | {selectedComplaintData.status}
+                      </Typography>
+                    </Box>
+                  )}
                 </Typography>
+                
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -612,6 +683,7 @@ const SendComplaintOPM = () => {
                 <Typography variant="h6" className={styles.sectionTitle}>
                   ข้อมูลผู้แจ้งเหตุ
                 </Typography>
+                
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -639,6 +711,7 @@ const SendComplaintOPM = () => {
                     fullWidth
                     className={styles.textField}
                     helperText="ใส่ได้เฉพาะตัวอักษรไทย-อังกฤษเท่านั้น"
+                    
                   />
                 </FormControl>
               </Grid>

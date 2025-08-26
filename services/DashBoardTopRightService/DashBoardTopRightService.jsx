@@ -375,6 +375,7 @@ const TopRightChart = () => {
                     onChange={handleMonthlyChange("month")}
                     name="month"
                     size="small"
+                    clearable={false}
                   />
                 </Box>
               </Box>
@@ -398,6 +399,7 @@ const TopRightChart = () => {
                       onChange={handleMonthlyChange("year")}
                       name="year"
                       size="small"
+                      clearable={false}
                     />
                   )}
                 </Box>

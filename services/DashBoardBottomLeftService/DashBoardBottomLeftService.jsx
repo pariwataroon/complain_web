@@ -39,8 +39,8 @@ const BottomLeftService = () => {
   const getCurrentThaiYear = () => new Date().getFullYear() + 543;
 
   const getCurrentFiscalYearTH = () => {
-    const ad = new Date().getFullYear();  
-    const m = new Date().getMonth(); 
+    const ad = new Date().getFullYear();
+    const m = new Date().getMonth();
     return (m >= 9) ? ad + 544 : ad + 543;
   };
 
@@ -72,7 +72,7 @@ const BottomLeftService = () => {
       } else {
         // Fallback
         const fallback = [
-          { value: (getCurrentThaiYear()-1).toString(), label: (getCurrentThaiYear()-1).toString() },
+          { value: (getCurrentThaiYear() - 1).toString(), label: (getCurrentThaiYear() - 1).toString() },
           { value: fiscalNow, label: fiscalNow }
         ];
         setYearOptions(fallback);
@@ -112,7 +112,6 @@ const BottomLeftService = () => {
     }
   };
 
-  // Fetch complaint types data
   const fetchComplaintTypes = async () => {
     if (!selectedDepartment) return;
 
@@ -120,18 +119,32 @@ const BottomLeftService = () => {
     setError(null);
 
     try {
-      const year = parseInt(selectedYear) - 543; // แปลง พ.ศ. เป็น ค.ศ.
+      const year = parseInt(selectedYear) - 543;
       const result = await GetDonutChartComplaintTypes(year, selectedDepartment);
 
       if (result.success) {
         if (result.isEmpty || result.total === 0) {
-          // ไม่มีข้อมูล
           setChartData([]);
           setError("ไม่มีข้อมูลประเภทเรื่องร้องเรียนสำหรับหน่วยงานและปีที่เลือก");
-        } else if (result.data && result.data.length > 0) {
-          setChartData(result.data);
+        } else if (result.data && result.data.departments && result.data.departments.length > 0) {
+          const firstDepartment = result.data.departments[0];
+
+          if (firstDepartment.items && Array.isArray(firstDepartment.items)) {
+            const processedData = firstDepartment.items.map((item, index) => ({
+              id: item.id || `type_${index}`,
+              name: item.name || "ไม่ระบุประเภท",
+              value: item.value || 0,
+              percent: item.percent || 0,
+              formattedPercent: item.percent ? `${item.percent.toFixed(2)}%` : "0%",
+              color: getComplaintTypeColor(index),
+            }));
+
+            setChartData(processedData);
+          } else {
+            setChartData([]);
+            setError("ไม่มีข้อมูลแยกตามประเภท");
+          }
         } else {
-          // มี total แต่ไม่มี departments data
           setChartData([]);
           setError("ไม่มีข้อมูลแยกตามประเภท");
         }

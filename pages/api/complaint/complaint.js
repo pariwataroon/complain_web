@@ -172,7 +172,7 @@ const ConfirmAssignment = async (complaint_id, remark ="ยืนยันรั
   }
 };
 
-const GetEnhancedComplaints = async ({ skip = 0, limit = 10, search = "" }) => {
+const GetEnhancedComplaints = async ({ skip = 0, limit = 100, search = "" }) => {
   try {
     const response = await axiosInstance.get("/complaints/enhanced", {
       params: { skip, limit, search },
@@ -183,6 +183,7 @@ const GetEnhancedComplaints = async ({ skip = 0, limit = 10, search = "" }) => {
     throw error;
   }
 };
+
 const GetComplaintsWithSearch = async ({
   skip = 0,
   limit = 10,
