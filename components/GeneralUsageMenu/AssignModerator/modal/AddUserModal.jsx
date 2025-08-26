@@ -31,6 +31,7 @@ import {
   GetTitleDetails,
   GetRoles,
   PutUser,
+  GetPositions,
 } from "@pages/api/settinggeneral/users";
 
 const AddUserModal = ({
@@ -40,11 +41,12 @@ const AddUserModal = ({
   editingUser,
   onUserUpdated,
 }) => {
-  // console.log("editingUser", editingUser);
   const [titleOptions, setTitleOptions] = useState([]);
   const [isFormReset, setIsFormReset] = useState(false);
   const [roleMap, setRoleMap] = useState({});
   const [roleOptions, setRoleOptions] = useState([]);
+  const [positionOptions, setPositionOptions] = useState([]);
+
   const {
     register,
     handleSubmit,
@@ -78,11 +80,11 @@ const AddUserModal = ({
       "last_name",
       "password",
       "phone",
-      "prefix_other",
       "title_id",
       "full_name",
       "group",
       "profileImage",
+      "position_id", // ✅ ใช้ position_id แทน prefix_other
       "address",
       "address2",
       "province",
@@ -94,51 +96,61 @@ const AddUserModal = ({
       "subdistricts2",
       "zipcode2",
     ];
-
     fieldsToReset.forEach((field) => setValue(field, ""));
     setValue("syncAddress", false);
     setIsFormReset(true);
   };
 
-  // Fetch title options when modal opens
+  // โหลดข้อมูลตำแหน่งเมื่อ modal เปิด
+  useEffect(() => {
+    const fetchPositions = async () => {
+      if (open) {
+        try {
+          const posData = await GetPositions();
+          if (posData && Array.isArray(posData.res_data)) {
+            const formatted = posData.res_data.map((item) => ({
+              value: String(item.id),
+              label: item.name,
+            }));
+            setPositionOptions(formatted);
+          }
+        } catch (err) {
+          console.error("Error fetching positions:", err);
+          setPositionOptions([{ value: "1", label: "เจ้าหน้าที่ทั่วไป" }]);
+        }
+      }
+    };
+
+    fetchPositions();
+  }, [open]);
+
+  // โหลดคำนำหน้า และ role
   useEffect(() => {
     const fetchTitleOptions = async () => {
       if (open) {
         try {
           const titleData = await GetTitleDetails();
-
-          if (
-            titleData &&
-            titleData.res_data &&
-            Array.isArray(titleData.res_data)
-          ) {
+          if (titleData && Array.isArray(titleData.res_data)) {
             const formattedOptions = titleData.res_data.map((item) => ({
-              value: String(item.title_id), // แปลงเป็น string
+              value: String(item.title_id),
               label: item.title_name || item.short_name,
             }));
             setTitleOptions(formattedOptions);
           }
         } catch (error) {
           console.error("Error loading title options:", error);
-
-          // ปิด Modal ก่อนแสดง warning
           onClose();
-
           setTimeout(async () => {
             await alertWarning(
               "ไม่สามารถโหลดข้อมูลคำนำหน้าได้",
               "ระบบจะใช้ข้อมูลค่าเริ่มต้น"
             );
-
-            // เปิด Modal ใหม่หลังแจ้งเตือน
             if (onReopen) {
               onReopen();
             }
           }, 100);
-
-          // ใช้ข้อมูลค่าเริ่มต้นแทน
           setTitleOptions([
-            { value: "1", label: "อื่น ๆ" }, // แปลงเป็น string
+            { value: "1", label: "อื่น ๆ" },
             { value: "2", label: "นาย" },
             { value: "3", label: "นาง" },
             { value: "4", label: "นางสาว" },
@@ -152,7 +164,6 @@ const AddUserModal = ({
         try {
           const rolesData = await GetRoles();
           if (rolesData && Array.isArray(rolesData.res_data)) {
-            // สร้าง roleMap: { [name]: id }
             const map = {};
             const options = rolesData.res_data.map((role) => ({
               value: role.id,
@@ -163,11 +174,9 @@ const AddUserModal = ({
             });
             setRoleMap(map);
             setRoleOptions(options);
-            // console.log("roleMap", map); // DEBUG
-            // console.log("roleOptions", options); // DEBUG
           }
         } catch (err) {
-          console.error("Error fetching roles from API:", err);
+          console.error("Error fetching roles:", err);
         }
       }
     };
@@ -179,7 +188,6 @@ const AddUserModal = ({
   // Reset form เมื่อเปิด Modal สำหรับสร้างใหม่
   useEffect(() => {
     if (open && !editingUser) {
-      // รอให้ Modal เปิดสมบูรณ์ก่อนแล้วค่อย reset
       setTimeout(() => {
         resetAllFormFields();
       }, 100);
@@ -188,15 +196,25 @@ const AddUserModal = ({
 
   // ฟังก์ชันสำหรับจัดรูปแบบข้อมูลก่อนส่ง API
   const formatDataForAPI = (formData) => {
-    // Clean citizen_id: remove dashes and keep only numbers
     const cleanCitizenId = formData.citizen_id
       ? formData.citizen_id.replace(/-/g, "")
       : "";
 
-    // Clean phone: remove dashes and keep only numbers
     const cleanPhone = formData.phone ? formData.phone.replace(/-/g, "") : "";
 
-    const apiData = {
+    let position_ids = [];
+    let primary_position_id = null;
+
+    if (formData.position_id) {
+      position_ids = [formData.position_id];
+      primary_position_id = formData.position_id;
+    } else if (Array.isArray(formData.position_ids)) {
+      position_ids = formData.position_ids;
+      primary_position_id =
+        formData.primary_position_id || formData.position_ids[0];
+    }
+
+    return {
       citizen_id: cleanCitizenId,
       title_id: parseInt(formData.title_id) || 3,
       prefix_other: formData.prefix_other || "",
@@ -223,13 +241,13 @@ const AddUserModal = ({
           id: formData.group,
         },
       ],
+      position_ids, // ✅ เพิ่ม
+      primary_position_id, // ✅ เพิ่ม
     };
-
-    return apiData;
   };
 
+  // handleFormSubmit
   const handleFormSubmit = async () => {
-    // ยืนยันก่อน (แต่ยังไม่ปิด Modal)
     const isConfirmed = await showConfirm(
       editingUser ? "ยืนยันการแก้ไข" : "ยืนยันการเพิ่มข้อมูล",
       editingUser
@@ -243,8 +261,6 @@ const AddUserModal = ({
       await alertInfo("ยกเลิก", "การดำเนินการถูกยกเลิก");
       return;
     }
-
-    // ไม่ต้องปิด Modal ตรงนี้ ปล่อยให้ฟอร์มอยู่
 
     const formData = getValues();
 
@@ -284,25 +300,19 @@ const AddUserModal = ({
 
       const result = await AddUsers(apiData);
 
-      if (
-        result &&
-        (result.res_code === "0000" || result.res_code === "0001")
-      ) {
+      if (result && (result.res_code === "0000" || result.res_code === "0001")) {
         if (onUserUpdated) {
           onUserUpdated();
         }
         await alertSuccess("สำเร็จ", "เพิ่มข้อมูลผู้ใช้งานสำเร็จ");
-        if (typeof resetAllFormFields === "function") {
-          resetAllFormFields();
-        }
-        onClose(); // ปิด Modal เมื่อสำเร็จเท่านั้น
+        resetAllFormFields();
+        onClose();
         return;
       } else if (result && result.res_code === "4090") {
         const errorMessage =
           result.res_data?.error ||
           result.error ||
           "ผู้ใช้งานนี้มีอยู่ในระบบแล้ว";
-
         await alertWarning("ไม่สามารถเพิ่มข้อมูลได้", errorMessage);
         return;
       } else {
@@ -313,25 +323,19 @@ const AddUserModal = ({
         return;
       }
     } else {
-      // กรณีแก้ไข: ยิง PutUser
       try {
         const apiData = formatDataForAPI(formData);
         const userId = editingUser.id || editingUser._id || editingUser.user_id;
-        if (!userId) {
-          throw new Error("ไม่พบ user ID ที่จะใช้แก้ไข");
-        }
+        if (!userId) throw new Error("ไม่พบ user ID ที่จะใช้แก้ไข");
 
         await PutUser(userId, apiData);
 
         if (onUserUpdated) {
           onUserUpdated();
         }
-
         await alertSuccess("สำเร็จ", "แก้ไขข้อมูลผู้ใช้งานสำเร็จ");
-        if (typeof resetAllFormFields === "function") {
-          resetAllFormFields();
-        }
-        onClose(); // ปิด Modal เมื่อสำเร็จเท่านั้น
+        resetAllFormFields();
+        onClose();
       } catch (error) {
         await alertError(
           "เกิดข้อผิดพลาด",
@@ -343,237 +347,68 @@ const AddUserModal = ({
 
   // Handle modal close with confirmation
   const handleModalClose = async (event, reason) => {
-    // หากปิดจาก backdrop หรือ escape key
     if (reason === "backdropClick" || reason === "escapeKeyDown") {
       const formData = getValues();
       const hasData = Object.values(formData).some(
         (value) =>
-          value !== "" &&
-          value !== null &&
-          value !== undefined &&
-          value !== false
+          value !== "" && value !== null && value !== undefined && value !== false
       );
 
       if (hasData && !editingUser) {
-        // ปิด Modal ก่อนแสดง confirmation dialog
         onClose();
-
         const isConfirmed = await showConfirm(
           "ปิดหน้าต่าง",
           "คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างใช่หรือไม่?",
           "ปิด",
           "ยกเลิก"
         );
-
         if (!isConfirmed) {
-          // ถ้ากดยกเลิก ให้เปิด Modal ใหม่
           if (onReopen) {
-            setTimeout(() => {
-              onReopen();
-            }, 100);
+            setTimeout(() => onReopen(), 100);
           } else {
-            // fallback ถ้าไม่มี onReopen function
-            setTimeout(() => {
-              window.location.reload();
-            }, 100);
+            setTimeout(() => window.location.reload(), 100);
           }
           return;
         }
-        // ถ้ากดปิด ให้ Modal ปิดไปเลย (ปิดไปแล้วด้านบน)
         return;
       } else {
-        // ถ้าไม่มีข้อมูลหรือเป็นการแก้ไข ให้ปิดเลย
         onClose();
         return;
       }
     }
-
-    // ปิด Modal สำหรับกรณีอื่น ๆ
     onClose();
   };
 
-  // Function to map role_name to our option values
-  const mapRoleNameToValue = (roleName) => {
-    const roleMapping = {
-      admin: "admin",
-      people: "people",
-      executive: "executive",
-      agency: "agency",
-      officer: "officer",
-      admin_home: "admin",
-      staff: "officer",
-      supervisor: "executive",
-      department: "agency",
-      ผู้ดูแลระบบ: "admin",
-      ประชาชน: "people",
-      ผู้บริหาร: "executive",
-      หน่วยงานในสังกัด: "agency",
-      เจ้าหน้าที่: "officer",
-      ผู้ดูแลหน้าหลัก: "admin",
-      "เจ้าหน้าที่ สรร.": "officer",
-      "ผู้บริหาร / ผู้สั่งงาน": "executive",
-      admin_mof: "admin",
-      public_mof: "people",
-      executive_mof: "executive",
-      agency_mof: "agency",
-      officer_mof: "officer",
-    };
-
-    const result = roleMapping[roleName] || "people";
-    return result;
-  };
-
-  // ฟังก์ชันสำหรับแยกคำนำหน้าจาก full_name_with_title
-  const extractTitleId = (fullNameWithTitle) => {
-    if (!fullNameWithTitle || !Array.isArray(titleOptions)) return "3";
-
-    // หาคำนำหน้าที่ตรงกัน
-    for (const option of titleOptions) {
-      if (fullNameWithTitle.startsWith(option.label)) {
-        return option.value;
-      }
-    }
-
-    return "3"; // ค่าเริ่มต้น (นาง)
-  };
-
-  // ฟังก์ชันสำหรับแยกชื่อจาก full_name_with_title
-  const extractFirstName = (fullNameWithTitle) => {
-    if (!fullNameWithTitle) return "";
-
-    const titlePrefixes = [
-      "นาย",
-      "นาง",
-      "นางสาว",
-      "เด็กชาย",
-      "เด็กหญิง",
-      "ดร.",
-      "ศ.",
-      "รศ.",
-      "ผศ.",
-    ];
-    let nameWithoutTitle = fullNameWithTitle;
-
-    for (const prefix of titlePrefixes) {
-      if (fullNameWithTitle.startsWith(prefix)) {
-        nameWithoutTitle = fullNameWithTitle.substring(prefix.length).trim();
-        break;
-      }
-    }
-
-    const nameParts = nameWithoutTitle.split(" ");
-    return nameParts[0] || "";
-  };
-
-  // ฟังก์ชันสำหรับแยกนามสกุลจาก full_name_with_title
-  const extractLastName = (fullNameWithTitle) => {
-    if (!fullNameWithTitle) return "";
-
-    const titlePrefixes = [
-      "นาย",
-      "นาง",
-      "นางสาว",
-      "เด็กชาย",
-      "เด็กหญิง",
-      "ดร.",
-      "ศ.",
-      "รศ.",
-      "ผศ.",
-    ];
-    let nameWithoutTitle = fullNameWithTitle;
-
-    for (const prefix of titlePrefixes) {
-      if (fullNameWithTitle.startsWith(prefix)) {
-        nameWithoutTitle = fullNameWithTitle.substring(prefix.length).trim();
-        break;
-      }
-    }
-
-    const nameParts = nameWithoutTitle.split(" ");
-    return nameParts.slice(1).join(" ") || "";
-  };
-
-  // Pre-fill form when editing user หรือ reset เมื่อสร้างใหม่
+  // ----------------- Pre-fill form when editing -----------------
   useEffect(() => {
     if (editingUser && open) {
-      // กรณีแก้ไขผู้ใช้ - กรอกข้อมูลจาก editingUser
-
-      // ข้อมูลพื้นฐาน
       setValue("citizen_id", editingUser.citizen_id || "");
       setValue("full_name", editingUser.full_name || "");
       setValue("group", editingUser.role_id || "");
-      setValue("prefix_other", editingUser.position || "");
+      setValue("position_id", editingUser.position_id || "");
 
-      // แยกข้อมูลชื่อ-นามสกุลจาก full_name_with_title หรือใช้ข้อมูลที่มีอยู่
       const titleId = String(
         editingUser.title_id ||
-          extractTitleId(
-            editingUser.full_name_with_title || editingUser.full_name
-          ) ||
           "3"
-      ); // แปลงเป็น string เสมอ
-
-      const firstName =
-        editingUser.first_name ||
-        extractFirstName(
-          editingUser.full_name_with_title || editingUser.full_name
-        );
-      const lastName =
-        editingUser.last_name ||
-        extractLastName(
-          editingUser.full_name_with_title || editingUser.full_name
-        );
-
+      );
       setValue("title_id", titleId);
-      setValue("first_name", firstName);
-      setValue("last_name", lastName);
-
-      // ข้อมูลติดต่อ
+      setValue("first_name", editingUser.first_name || "");
+      setValue("last_name", editingUser.last_name || "");
       setValue("phone", editingUser.phone || "");
       setValue("email", editingUser.email || "");
       setValue("password", "", { shouldValidate: true });
-
-      // ข้อมูลที่อยู่
-      setValue(
-        "address",
-        editingUser.address || editingUser.address_card || ""
-      );
-      setValue(
-        "address2",
-        editingUser.contact_address || editingUser.address_contact || ""
-      );
-
-      // ข้อมูลจังหวัด/อำเภอ/ตำบล
-      if (editingUser.province) setValue("province", editingUser.province);
-      if (editingUser.districts) setValue("districts", editingUser.districts);
-      if (editingUser.subdistricts)
-        setValue("subdistricts", editingUser.subdistricts);
-      if (editingUser.zipcode) setValue("zipcode", editingUser.zipcode);
-
-      // ข้อมูลที่อยู่ติดต่อ
-      if (editingUser.province2) setValue("province2", editingUser.province2);
-      if (editingUser.districts2)
-        setValue("districts2", editingUser.districts2);
-      if (editingUser.subdistricts2)
-        setValue("subdistricts2", editingUser.subdistricts2);
-      if (editingUser.zipcode2) setValue("zipcode2", editingUser.zipcode2);
-
-      // รูปโปรไฟล์
+      setValue("address", editingUser.address || "");
+      setValue("address2", editingUser.contact_address || "");
       setValue("profileImage", editingUser.profile_image || "");
 
-      // ใช้ setTimeout เพื่อให้แน่ใจว่า component อัปเดตแล้ว
       setTimeout(() => {
-        setValue("prefix_other", editingUser.position || "", {
+        setValue("position_id", editingUser.position_id || "", {
           shouldValidate: true,
         });
-        setValue("title_id", titleId, { shouldValidate: true });
-        setValue("first_name", firstName, { shouldValidate: true });
-        setValue("last_name", lastName, { shouldValidate: true });
       }, 200);
 
-      setIsFormReset(false); // ไม่ใช่การ reset สำหรับสร้างใหม่
+      setIsFormReset(false);
     } else if (!editingUser && open && !isFormReset) {
-      // กรณีสร้างผู้ใช้ใหม่ - reset ทันทีถ้ายังไม่ได้ reset
       resetAllFormFields();
     }
   }, [editingUser, setValue, open, isFormReset, titleOptions]);
@@ -721,26 +556,36 @@ const AddUserModal = ({
                 <Typography color="error">{errors.group.message}</Typography>
               )}
             </Grid>
-
-            <Grid item xs={12} sm={4}>
-              <Typography
-                variant="body2"
-                color="#1120A3"
-                sx={{ fontWeight: "bold" }}
-              >
-                ตำแหน่ง
-              </Typography>
-              <TextfieldService
-                fullWidth
-                placeholder="ตำแหน่ง"
-                {...register("prefix_other")}
-              />
-              {errors.prefix_other && (
-                <Typography color="error">
-                  {errors.prefix_other.message}
-                </Typography>
-              )}
-            </Grid>
+<Grid item xs={12} sm={4}>
+  <Typography
+    variant="body2"
+    color="#1120A3"
+    sx={{ fontWeight: "bold" }}
+  >
+    ตำแหน่ง
+  </Typography>
+  <Controller
+    name="position_id"   // ✅ แก้จาก prefix_other → position_id
+    control={control}
+    render={({ field: { value, onChange, ...field } }) => {
+      return (
+        <SelectMenuService
+          {...field}
+          value={value || ""}
+          handleChange={(event) => {
+            onChange(event.target.value);
+          }}
+          options={positionOptions}
+          width="100%"
+          name="position_id"
+        />
+      );
+    }}
+  />
+  {errors.position_id && (
+    <Typography color="error">{errors.position_id.message}</Typography>
+  )}
+</Grid>
 
             <Grid item xs={4} sm={4}>
               <Typography
@@ -903,7 +748,7 @@ const AddUserModal = ({
                       placeholder="รหัสผ่าน"
                       type="password"
                       autoComplete="new-password"
-                      // {...register("password", { required: "กรุณากรอกรหัสผ่านทุกครั้ง" })}
+                      {...register("password", { required: "กรุณากรอกรหัสผ่านทุกครั้ง" })}
                     />
                     {errors.password && (
                       <Typography color="error">{errors.password.message}</Typography>

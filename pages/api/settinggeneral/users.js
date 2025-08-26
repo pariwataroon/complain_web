@@ -31,27 +31,57 @@ const GetRoles = async () => {
       return response.data;
     }
   } catch (error) {
-    console.error("Error fetching title details:", error);
+    console.error("Error fetching roles:", error);
+    throw error;
+  }
+};
+
+const GetPositions = async () => {
+  try {
+    const response = await axiosInstance.get("/positions");
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error fetching positions:", error);
     throw error;
   }
 };
 
 const AddUsers = async (data) => {
   try {
-    const response = await axiosInstance.post("/users", data);
+    let position_ids = [];
+    let primary_position_id = null;
+
+    if (data.position_id) {
+      // ถ้ามีแค่ตำแหน่งเดียว
+      position_ids = [data.position_id];
+      primary_position_id = data.position_id;
+    } else if (Array.isArray(data.position_ids) && data.position_ids.length > 0) {
+      position_ids = data.position_ids;
+      primary_position_id = data.primary_position_id || data.position_ids[0];
+    }
+
+    const payload = {
+      ...data,
+      position_ids,
+      primary_position_id,
+      department_ids: data.department_ids || []
+    };
+
+    const response = await axiosInstance.post("/users", payload);
     if (response && response.data) {
       const registerData = response.data;
-      // Optional: Handle successful registration response
-      if (
-        registerData?.res_code === "0001" ||
-        registerData?.res_code === "0000"
-      ) {
+
+      // ตรวจสอบว่า user ถูกสร้างแล้วหรือยัง
+      if (["0001", "0000"].includes(registerData?.res_code)) {
         try {
           await resendVerification({ email: data.email });
         } catch (verificationError) {
           console.error("Verification resend failed:", verificationError);
         }
       }
+
       return registerData;
     }
   } catch (error) {
@@ -85,6 +115,7 @@ const resendVerification = async (payload) => {
     throw error;
   }
 };
+
 const PutUser = async (userId, data) => {
   try {
     const response = await axiosInstance.put(`/users/admin/${userId}`, data);
@@ -96,6 +127,7 @@ const PutUser = async (userId, data) => {
     throw error;
   }
 };
+
 export {
   GetDetailedStatsbyRole,
   GetTitleDetails,
@@ -103,5 +135,6 @@ export {
   DelUsers,
   resendVerification,
   GetRoles,
+  GetPositions,
   PutUser,
 };

@@ -224,48 +224,54 @@ const AccountBoxComponents = () => {
       });
 
       const rawStaff = Array.isArray(data?.staff_data) ? data.staff_data : [];
-      const nextStaff = rawStaff.map((row, idx) => {
-        const info = row?.staff_info ?? {};
-        const wl = row?.workload ?? {};
-        const wsc = wl?.status_counts ?? {};
+      const uniqueStaff = rawStaff.filter(
+        (row, idx, self) =>
+          row?.staff_info?.id &&
+          idx === self.findIndex((r) => r?.staff_info?.id === row?.staff_info?.id)
+      );
+      const nextStaff = uniqueStaff.map((row, idx) => {
+      const info = row?.staff_info ?? {};
+      const wl = row?.workload ?? {};
+      const wsc = wl?.status_counts ?? {};
 
-        // backlog: ไม่รวม cancelled และ completed
-        const backlog =
-          Number(wsc.submitted ?? 0) +
-          Number(wsc.sent_to_agency ?? 0) +
-          Number(wsc.in_process ?? 0) +
-          Number(wsc.in_review ?? 0) +
-          Number(wsc.tracking ?? 0) +
-          Number(wsc.reviewed ?? 0);
+      const backlog =
+        Number(wsc.submitted ?? 0) +
+        Number(wsc.sent_to_agency ?? 0) +
+        Number(wsc.in_process ?? 0) +
+        Number(wsc.in_review ?? 0) +
+        Number(wsc.tracking ?? 0) +
+        Number(wsc.reviewed ?? 0);
 
-        const done = Number(wsc.completed ?? 0);
-        const cancelled = Number(wsc.cancelled ?? 0);
+      const done = Number(wsc.completed ?? 0);
+      const cancelled = Number(wsc.cancelled ?? 0);
 
-        // received: ใช้ total_assigned ถ้ามี; ไม่งั้น fallback รวม backlog + done + cancelled
-        const received = Number(
-          wl.total_assigned ?? backlog + done + cancelled
-        );
+      const received = Number(
+        wl.total_assigned ?? backlog + done + cancelled
+      );
 
-        const complaints = Array.isArray(row?.latest_complaints)
-          ? row.latest_complaints.map((c) => ({
-              topic: c.subject ?? "-",
-              channel: "เว็บไซต์รับเรื่องร้องทุกข์",
-              type: statusLabel(c.status),
-              code: c.complaint_number ?? "-",
-            }))
-          : [];
+      const complaints = Array.isArray(row?.latest_complaints)
+        ? row.latest_complaints.map((c) => ({
+            topic: c.subject ?? "-",
+            channel: "เว็บไซต์รับเรื่องร้องทุกข์",
+            type: statusLabel(c.status),
+            code: c.complaint_number ?? "-",
+          }))
+        : [];
 
-        return {
-          id: info.id ?? idx + 1,
-          name: info.name ?? "ไม่ระบุชื่อ",
-          role: info.position || "เจ้าหน้าที่",
-          received,
-          backlog,
-          done,
-          complaints,
-        };
-      });
-
+      return {
+        id: info.id ?? idx + 1,
+        name: info.name ?? "ไม่ระบุชื่อ",
+        role: info.position || "", // เก็บ role ไว้ตรง ๆ
+        role_name:
+          Array.isArray(info.roles) && info.roles.length > 0
+            ? info.roles[0].role_name
+            : "-",
+        received,
+        backlog,
+        done,
+        complaints,
+      };
+    });
       setStaffStats(nextStaff);
     } catch (err) {
       console.error(err);
@@ -363,7 +369,20 @@ const AccountBoxComponents = () => {
               <Box>
                 <Typography fontWeight={600}>{staff.name}</Typography>
                 <Typography fontSize={14} mb={1}>
-                  {staff.role}
+                  {staff.role ? (
+                  <>
+                    <Typography fontSize={14} mb={0.5}>
+                      {staff.role}
+                    </Typography>
+                    <Typography fontSize={14} mb={1}>
+                      {staff.role_name}
+                    </Typography>
+                  </>
+                ) : (
+                  <Typography fontSize={14} mb={1}>
+                    {staff.role_name}
+                  </Typography>
+                )}
                 </Typography>
                 <Box display="grid" gridTemplateColumns="80px 1fr" rowGap={0.5}>
                   <Typography>รับงาน</Typography>
