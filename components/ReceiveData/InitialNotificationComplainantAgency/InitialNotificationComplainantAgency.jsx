@@ -48,6 +48,10 @@ const InitialNotificationComplainantAgency = () => {
     isFormValid,
   } = useInitialNotificationComplainantAgency();
 
+  const pickId = (o) => o?.id ?? o?.value ?? o;
+  const pickPositionId = (u) =>
+    u?.position_id ?? u?.position?.id ?? u?.positionId ?? null;
+
   // State สำหรับ dynamic data
   const [selectedSigner, setSelectedSigner] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
@@ -109,6 +113,9 @@ const InitialNotificationComplainantAgency = () => {
       handleChange({
         target: { name: "refNo", value: ref.complaint_number }
       });
+      handleChange({
+        target: { name: "complaint_id", value: ref.id }
+      });
       setOpenSearchDialog(false);
     };
   
@@ -128,19 +135,34 @@ const InitialNotificationComplainantAgency = () => {
 
   // ฟังก์ชันจัดการเมื่อมีการเลือกผู้ลงนาม
   const handleSignerSelect = (userInfo) => {
-    
+
+    handleChange({ target: { name: "signer", value: pickId(userInfo) } });
+
+  // ใส่ position_id (ไม่มี UI) ลง form
+    handleChange({ target: { name: "position_id", value: pickPositionId(userInfo) } });
 
     setSelectedSigner(userInfo);
-    // ล้างหน่วยงานที่เลือกไว้เมื่อเปลี่ยนผู้ลงนาม
+     // เซ็ต signer id (เผื่อคอมโพเนนต์ไม่ได้ยิง onChange ให้)
+    if (userInfo?.id) {   
+      handleChange({ target: { name: "signer", value: userInfo.id } });
+    }
+    // ดึง position_id จาก userInfo (ลองหลายคีย์ไว้ให้)
+    const posId =
+      userInfo?.position_id ||
+      userInfo?.position?.id ||
+      userInfo?.positionId ||
+      "";
+    handleChange({ target: { name: "position_id", value: posId } });
+
     setSelectedDepartment(null);
-    // อัพเดทค่าใน form
     handleChange({ target: { name: "department", value: "" } });
-  };
+  }
 
   const handleDepartmentSelect = (department) => {
-    
-
     setSelectedDepartment(department);
+    if (department?.id) {
+      handleChange({ target: { name: "department", value: department.id } });
+    }
   };
 
   // ฟังก์ชันดึงข้อมูล options
@@ -578,8 +600,8 @@ const InitialNotificationComplainantAgency = () => {
               name="department"
               value={form.department}
               onChange={handleChange}
+              filterBySignerId={pickId(selectedSigner)}
               onDepartmentSelect={handleDepartmentSelect}
-              filterBySignerId={selectedSigner?.value}
               error={!!getFieldError("department")}
               helperText={getFieldError("department")}
               disabled={!selectedSigner}
@@ -631,6 +653,7 @@ const InitialNotificationComplainantAgency = () => {
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxFiles={3}
               maxSizeMB={10}
+              multiple
             />
           </Box>
 

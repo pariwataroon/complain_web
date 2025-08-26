@@ -60,7 +60,16 @@ const RequestResultProgress = () => {
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
 
-  // --- เปลี่ยน useEffect เปิด Dialog ให้ยิง API ---
+  const pickId = (o) => o?.id ?? o?.value ?? o;
+  const pickPositionIdFromDept = (dept, signer) =>
+    dept?.position_id ??
+    dept?.position?.id ??
+    dept?.default_position_id ??
+    signer?.position_id ??
+    signer?.position?.id ??
+    signer?.positionId ??
+    null;
+
   useEffect(() => {
     if (openSearchDialog) {
       setSearchText(""); // reset input
@@ -107,6 +116,7 @@ const RequestResultProgress = () => {
     handleChange({
       target: { name: "refNo", value: ref.complaint_number }
     });
+    handleChange({ target: { name: "complaint_id", value: ref.id } });
     setOpenSearchDialog(false);
   };
 
@@ -133,12 +143,23 @@ useEffect(() => {
 
   const handleSignerSelect = (userInfo) => {
     setSelectedSigner(userInfo);
-    setSelectedDepartment(null);
-    handleChange({ target: { name: "department", value: "" } });
-  };
+    handleChange({ target: { name: "signer", value: userInfo?.id ?? userInfo?.value ?? "" } });
+
+    const signerPosId = userInfo?.position_id ?? userInfo?.position?.id ?? userInfo?.positionId ?? "";
+      if (signerPosId) handleChange({ target: { name: "position_id", value: signerPosId } });
+      // รีเซ็ตหน่วยงานอย่างเดียวพอ
+      setSelectedDepartment(null);
+      handleChange({ target: { name: "department", value: "" } });
+    };
 
   const handleDepartmentSelect = (department) => {
     setSelectedDepartment(department);
+    if (department) {
+      handleChange({ target: { name: "department", value: pickId(department) } });
+    }
+    const posId = pickPositionIdFromDept(department, selectedSigner);
+    // เขียนทับเฉพาะตอนที่ได้ค่าเท่านั้น
+    if (posId) handleChange({ target: { name: "position_id", value: posId } });
   };
 
   const fetchOptions = async () => {
@@ -555,7 +576,7 @@ useEffect(() => {
               value={form.department}
               onChange={handleChange}
               onDepartmentSelect={handleDepartmentSelect}
-              filterBySignerId={selectedSigner?.value}
+              filterBySignerId={selectedSigner?.id ?? selectedSigner?.value}
               error={!!getFieldError("department")}
               helperText={getFieldError("department")}
               disabled={!selectedSigner}
