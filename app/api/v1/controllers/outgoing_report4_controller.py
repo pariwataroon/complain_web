@@ -136,6 +136,8 @@ def get_outgoing_report4_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
             "reference_number": report.reference_number,
             "reference_date": _iso(report.reference_date),
             "subject": report.subject,
+            "document_number": report.document_number,
+            "document_date": _iso(report.document_date),
             "signature_authority_user": {
                 "id": _safe_str(report.signature_authority_user_id),
                 "name": f"{report.signature_authority_user.first_name} {report.signature_authority_user.last_name}"
@@ -223,6 +225,8 @@ def get_outgoing_reports4(
                 "reference_number": r.reference_number,
                 "reference_date": _iso(r.reference_date),
                 "subject": r.subject,
+                "document_number": r.document_number,
+                "document_date": _iso(r.document_date),
                 "department_name": r.department.name if r.department else (r.other_department or "N/A"),
                 "signature_user_name": (
                     f"{r.signature_authority_user.first_name} {r.signature_authority_user.last_name}"

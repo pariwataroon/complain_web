@@ -247,6 +247,8 @@ def get_outgoing_reports5(
             "receive_number": r.receive_number,
             "receive_date": _iso(r.receive_date),
             "subject": r.subject,
+            "document_number": r.document_number,
+            "document_date": _iso(r.document_date),
             "complaint_number": r.complaint_number,
             "department_name": r.department.name if r.department else "N/A",
             "signature_user_name": (

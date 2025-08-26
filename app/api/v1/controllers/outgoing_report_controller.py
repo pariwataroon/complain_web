@@ -240,6 +240,8 @@ def get_outgoing_report_by_id(db: Session, report_id: UUID) -> Dict:
             "reference_number": report.reference_number,
             "reference_date": report.reference_date.isoformat() if report.reference_date else None,
             "subject": report.subject,
+            "document_number": report.document_number,
+            "document_date": report.document_date.isoformat() if report.document_date else None,
             "complaint_number": report.complaint_number,
             "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,
             "signature_authority_user": {
@@ -372,6 +374,8 @@ def get_outgoing_reports(
                 "reference_number": report.reference_number,
                 "reference_date": report.reference_date.isoformat() if report.reference_date else None,
                 "subject": report.subject,
+                "document_number": report.document_number,
+                "document_date": report.document_date.isoformat() if report.document_date else None,
                 "complaint_number": report.complaint_number,
                 "complaint_number_date": report.complaint_number_date.isoformat() if report.complaint_number_date else None,
                 "signature_authority_user": {

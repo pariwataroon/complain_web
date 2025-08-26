@@ -146,6 +146,8 @@ def get_outgoing_report3_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
             "complaint_number": report.complaint_number,
             "complaint_number_date": _iso(report.complaint_number_date),
             "subject": report.subject,
+            "document_number": report.document_number,
+            "document_date": _iso(report.document_date),
             "department": {
                 "id": _safe_str(report.department_id) if report.department_id else None,
                 "name": report.department.name if report.department else "N/A",
@@ -233,6 +235,8 @@ def get_outgoing_reports3(
                 "complaint_number": r.complaint_number,
                 "complaint_number_date": _iso(r.complaint_number_date),
                 "subject": r.subject,
+                "document_number": r.document_number,
+                "document_date": _iso(r.document_date),
                 "position_name": r.position.name if r.position else "N/A",
                 "department_name": r.department.name if r.department else "N/A",
                 "signature_user_name": (
