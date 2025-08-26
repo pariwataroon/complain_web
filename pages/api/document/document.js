@@ -39,3 +39,19 @@ export const getDocumentStorageForCard = async ({
     return [];
   }
 };
+
+export const getDocumentStorageByComplaintId = async (complaint_id) => {
+  if (!complaint_id) return [];
+  try {
+    const { data } = await axiosInstance.get(
+      `/document-storage/${complaint_id}`
+    );
+    return data;
+  } catch (err) {
+    console.error(
+      `Error fetching document storage for complaint_id ${complaint_id}:`,
+      err
+    );
+    return [];
+  }
+};

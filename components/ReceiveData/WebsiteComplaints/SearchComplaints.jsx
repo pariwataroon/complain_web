@@ -10,7 +10,7 @@ import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService, {
   ControlledDateThaiPickerService,
 } from "@services/DateThaiPickerService/DateThaiPickerService";
-import { FormProvider, useForm, Controller } from "react-hook-form";
+import { FormProvider, useForm } from "react-hook-form";
 import styles from "./TabNav.module.scss";
 import SearchComplaintsPreview from "./SearchComplaintsPreview";
 import { alertWarning } from "@utils/Alerts";
@@ -18,6 +18,7 @@ import {
   GetAllSelectComplaintTypes,
   getSubComplaintTypeById,
   GetAllComplaintChannels,
+  GetAllOutsideDepartments,
 } from "@pages/api/allselect/allselect";
 import {
   Dialog,
@@ -83,7 +84,6 @@ const SearchComplaints = () => {
   });
 
   const [complaintTypes, setComplaintTypes] = useState([]);
-
   const [subComplaintTypes, setSubComplaintTypes] = useState([]);
   const [complaintChannels, setComplaintChannels] = useState([]); // เพิ่ม state สำหรับ channels
   const [loadingOptions, setLoadingOptions] = useState(false);
@@ -95,6 +95,10 @@ const SearchComplaints = () => {
   const fetchSubTypesTimeoutRef = useRef(null);
   const currentFetchPromiseRef = useRef(null);
   const lastFetchedIdRef = useRef("");
+
+  const [outsideDepartments, setOutsideDepartments] = useState([]);
+  const [loadingOutsideDepartments, setLoadingOutsideDepartments] =
+    useState(false);
 
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -164,6 +168,14 @@ const SearchComplaints = () => {
       inputRef.current?.focus();
     }
   }, [openSearchDialog]);
+
+  useEffect(() => {
+    setLoadingOutsideDepartments(true);
+    GetAllOutsideDepartments()
+      .then((data) => setOutsideDepartments(data))
+      .catch(() => setOutsideDepartments([]))
+      .finally(() => setLoadingOutsideDepartments(false));
+  }, []);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -441,6 +453,11 @@ const SearchComplaints = () => {
       defaultStep3Ref.current = data?.step3?.general || {};
       defaultStep4Ref.current = data?.step4?.general || {};
 
+      // เพิ่ม ref สำหรับ complaint_number
+      defaultStep3Ref.current.complaint_number = data?.complaint_number || "";
+
+      console.log("defaultStep3Ref", defaultStep3Ref);
+
       // reset form อื่น
       generalMethods.reset(defaultGeneralRef.current);
       if (defaultDelegateRef.current)
@@ -470,6 +487,12 @@ const SearchComplaints = () => {
     step3Methods.reset(defaultStep3Ref.current);
     step4Methods.reset(defaultStep4Ref.current);
   };
+
+  useEffect(() => {
+    if (defaultData?.complaint_number) {
+      step3Methods.setValue("referenceNumber4", defaultData.complaint_number);
+    }
+  }, [defaultData?.complaint_number]);
 
   // Cleanup เมื่อ component unmount
   useEffect(() => {
@@ -1045,13 +1068,13 @@ const SearchComplaints = () => {
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>
-                          เลข สรร. (สานต่อ){" "}
+                          เลข สรร. (สารบัญ){" "}
                           <span className={styles.required}>*</span>
                         </label>
                         <input
                           type="text"
                           {...step3Methods.register("referenceNumber4", {
-                            required: "กรุณากรอกเลข สรร. (สานต่อ)",
+                            required: "กรุณากรอกเลข สรร. (สารบัญ)",
                           })}
                           style={getErrorStyle("referenceNumber4")}
                         />
@@ -1092,10 +1115,20 @@ const SearchComplaints = () => {
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>หน่วยงานอื่นที่ส่งเรื่องมาที่ กค.</label>
-                        <select {...step3Methods.register("senderAgency")}>
-                          <option value="">เลือกหน่วยงาน</option>
-                          <option value="ministry1">กระทรวงการคลัง</option>
-                          <option value="ministry2">กระทรวงมหาดไทย</option>
+                        <select
+                          {...step3Methods.register("senderAgency")}
+                          disabled={loadingOutsideDepartments}
+                        >
+                          <option value="">
+                            {loadingOutsideDepartments
+                              ? "กำลังโหลดหน่วยงาน..."
+                              : "เลือกหน่วยงาน"}
+                          </option>
+                          {outsideDepartments.map((dept) => (
+                            <option key={dept.value} value={dept.value}>
+                              {dept.label}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>

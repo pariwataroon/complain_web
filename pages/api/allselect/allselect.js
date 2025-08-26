@@ -395,7 +395,6 @@ const GetAllSelectPositionOptions = async () => {
   }
 };
 
-
 const GetAllSelectYears = async () => {
   try {
     const response = await axiosInstance.get(`/dashboard/years`);
@@ -445,6 +444,33 @@ const GetAllSelectYears = async () => {
   }
 };
 
+const GetAllOutsideDepartments = async ({
+  skip = 0,
+  limit = 100,
+  active_only = true,
+} = {}) => {
+  try {
+    const response = await axiosInstance.get("/outside-departments", {
+      params: { skip, limit, active_only },
+    });
+    const apiData = response?.data;
+    if (!Array.isArray(apiData?.res_data)) return [];
+    // สามารถปรับรูปแบบ mapping option ได้ตามที่ต้องการ
+    return apiData.res_data
+      .filter((item) => item.is_active)
+      .map((item) => ({
+        value: item.id,
+        label: item.name,
+        description: item.description,
+        orderIndex: item.order_index,
+        raw: item,
+      }));
+  } catch (error) {
+    console.error("Error fetching outside departments:", error);
+    return [];
+  }
+};
+
 export {
   GetAllSelect,
   getSubComplaintTypeById,
@@ -460,4 +486,5 @@ export {
   GetAllComplaintChannels,
   GetAllSelectYears,
   GetAllSelectPositionOptions,
+  GetAllOutsideDepartments,
 };
