@@ -155,8 +155,31 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   useEffect(() => {
     const fetchStaffUsers = async () => {
       try {
-        const users = await UsersSearchByRole("staff");
-        setStaffUsers(users);
+        const users = await UsersSearchByRole();
+
+        const filteredUsers = users.filter(user => {
+          const roleDescription = user.roles?.[0]?.role_description;
+          return roleDescription !== "กลุ่มที่ 1 : ประชาชน";
+        });
+
+        const groupedUsers = filteredUsers.reduce((groups, user) => {
+          const roleDescription = user.roles?.[0]?.role_description || "ไม่ระบุกลุ่ม";
+
+          if (!groups[roleDescription]) {
+            groups[roleDescription] = [];
+          }
+          groups[roleDescription].push(user);
+          return groups;
+        }, {});
+
+        const sortedGroups = Object.keys(groupedUsers).sort().reduce((obj, key) => {
+          obj[key] = groupedUsers[key].sort((a, b) => a.label.localeCompare(b.label));
+          return obj;
+        }, {});
+
+        setStaffUsers(filteredUsers);
+        setGroupedStaffUsers(sortedGroups);
+
       } catch (err) {
         console.error("Error fetching staff users:", err);
       }

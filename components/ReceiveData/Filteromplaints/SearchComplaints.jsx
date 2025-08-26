@@ -27,7 +27,9 @@ import {
 } from "@pages/api/allselect/allselect";
 import { ControlledDateThaiPickerService } from "@services/DateThaiPickerService/DateThaiPickerService";
 import { getDepartments } from "@pages/api/department/department";
-
+import {
+  GetAllSelectPositionOptions,
+} from "@pages/api/allselect/allselect";
 import { FormProvider, useForm } from "react-hook-form";
 import { alertError, alertSuccess } from "@utils/Alerts";
 import styles from "./TabNav.module.scss";
@@ -113,6 +115,7 @@ const SearchComplaints = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [showValidation, setShowValidation] = useState(false);
   const [complaintTypes, setComplaintTypes] = useState([]);
+  const [positions, setPositions] = useState([]);
 
   const [staffUsers, setStaffUsers] = useState([]);
 
@@ -137,7 +140,7 @@ const SearchComplaints = () => {
   const [delegateData, setDelegateData] = useState({});
   const [respondentType, setRespondentType] = useState("individual");
   const [respondentData, setRespondentData] = useState({});
-
+  const [groupedStaffUsers, setGroupedStaffUsers] = useState({});
   const [previewData, setPreviewData] = useState(null);
 
   useEffect(() => {
@@ -155,6 +158,40 @@ const SearchComplaints = () => {
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
   const [searchResults, setSearchResults] = useState([]); // สมมติรายการเลขที่ได้จาก API หรือ mock
   const [searchLoading, setSearchLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchPositions = async () => {
+      try {
+        const res = await GetAllSelectPositionOptions();
+        // console.log('API Response:', res);
+
+        if (Array.isArray(res)) {
+          const mapped = res.map((p) => {
+            const baseName = p.name ?? p.position_name ?? p.label ?? String(p.id);
+            const levelText = p.level ? ` (${p.level})` : "";
+            const displayName = `${baseName}${levelText}`;
+
+            return {
+              id: p.id ?? p.value,
+              name: displayName,
+              originalData: p
+            };
+          });
+
+          setPositions(mapped);
+          // console.log('Set positions:', mapped);
+        } else {
+          console.warn('API did not return array data:', res);
+          setPositions([]);
+        }
+      } catch (error) {
+        console.error('Error fetching positions:', error);
+        setPositions([]);
+      }
+    };
+
+    fetchPositions();
+  }, []);
 
   const handleSearch = async (keyword) => {
     setSearchLoading(true);
@@ -179,7 +216,7 @@ const SearchComplaints = () => {
       }));
 
       setSearchResults(results);
-      console.log("results", results);
+      // console.log("results", results);
     } catch (error) {
       setSearchResults([]);
       console.error("handleSearch error", error);
@@ -237,8 +274,35 @@ const SearchComplaints = () => {
   useEffect(() => {
     const fetchStaffUsers = async () => {
       try {
-        const users = await UsersSearchByRole("staff");
-        setStaffUsers(users);
+        const users = await UsersSearchByRole();
+
+        // กรองออก "กลุ่มที่ 1 : ประชาชน"
+        const filteredUsers = users.filter(user => {
+          const roleDescription = user.roles?.[0]?.role_description;
+          return roleDescription !== "กลุ่มที่ 1 : ประชาชน";
+        });
+
+        // จัดกลุ่มตาม role_description
+        const groupedUsers = filteredUsers.reduce((groups, user) => {
+          const roleDescription = user.roles?.[0]?.role_description || "ไม่ระบุกลุ่ม";
+
+          if (!groups[roleDescription]) {
+            groups[roleDescription] = [];
+          }
+          groups[roleDescription].push(user);
+          return groups;
+        }, {});
+
+        // เรียงลำดับกลุ่มตาม role_description
+        const sortedGroups = Object.keys(groupedUsers).sort().reduce((obj, key) => {
+          obj[key] = groupedUsers[key].sort((a, b) => a.label.localeCompare(b.label));
+          return obj;
+        }, {});
+
+        setStaffUsers(filteredUsers); // เก็บข้อมูลที่กรองแล้วสำหรับ logic อื่น
+        setGroupedStaffUsers(sortedGroups); // เพิ่ม state สำหรับข้อมูลที่จัดกลุ่มแล้ว
+        // console.log({ users: filteredUsers, groupedUsers: sortedGroups });
+
       } catch (err) {
         console.error("Error fetching staff users:", err);
       }
@@ -319,9 +383,9 @@ const SearchComplaints = () => {
       } else if (assignmentForm.complaint_type_id) {
         complaintTypeId = assignmentForm.complaint_type_id;
       } else {
-        console.log(
-          "No complaintType available in step3Data or assignmentForm"
-        );
+        // console.log(
+        //   "No complaintType available in step3Data or assignmentForm"
+        // );
       }
 
       // === END เพิ่ม logic ===
@@ -609,7 +673,8 @@ const SearchComplaints = () => {
     const step2Data = step2Methods.getValues();
     const step3Data = step3Methods.getValues();
     const step4Data = step4Methods.getValues();
-
+    // console.log({ step4Data });
+    
     // หา senderAgencyName ตาม id ที่เลือก
     let senderAgencyName = "";
     if (step3Data.senderAgency) {
@@ -622,22 +687,22 @@ const SearchComplaints = () => {
     const selectedOfficer = staffUsers.find(
       (user) => user.value === step4Data.responsibleOfficer
     );
-
+    
     const responsibleOfficerData = selectedOfficer
       ? {
-          id: selectedOfficer.value,
-          name: selectedOfficer.label,
-          fullName: selectedOfficer.fullName || "",
-          email: selectedOfficer.email || "",
-          roles: selectedOfficer.roles || [],
-        }
+        id: selectedOfficer.value,
+        name: selectedOfficer.label,
+        fullName: selectedOfficer.fullName || "",
+        email: selectedOfficer.email || "",
+        roles: selectedOfficer.roles || [],
+      }
       : {
-          id: step4Data.responsibleOfficer || "",
-          name: "",
-          fullName: "",
-          email: "",
-          roles: [],
-        };
+        id: step4Data.responsibleOfficer || "",
+        name: "",
+        fullName: "",
+        email: "",
+        roles: [],
+      };
 
     const enhancedStep4Data = {
       ...step4Data,
@@ -898,23 +963,20 @@ const SearchComplaints = () => {
             {/* Tab Navigation - แสดงเพื่อความสวยงาม */}
             <div className={styles.tabNavV2}>
               <div
-                className={`${styles.tabV2} ${
-                  complainantType === "individual" ? styles.activeV2 : ""
-                }`}
+                className={`${styles.tabV2} ${complainantType === "individual" ? styles.activeV2 : ""
+                  }`}
               >
                 บุคคลทั่วไป
               </div>
               <div
-                className={`${styles.tabV2} ${
-                  complainantType === "corporate" ? styles.activeV2 : ""
-                }`}
+                className={`${styles.tabV2} ${complainantType === "corporate" ? styles.activeV2 : ""
+                  }`}
               >
                 นิติบุคคล
               </div>
               <div
-                className={`${styles.tabV2} ${
-                  complainantType === "government" ? styles.activeV2 : ""
-                }`}
+                className={`${styles.tabV2} ${complainantType === "government" ? styles.activeV2 : ""
+                  }`}
               >
                 หน่วยงานของรัฐ
               </div>
@@ -925,8 +987,8 @@ const SearchComplaints = () => {
                     complainantType === "corporate"
                       ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
                       : complainantType === "government"
-                      ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
-                      : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)",
+                        ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
+                        : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)",
                 }}
               />
             </div>
@@ -979,23 +1041,20 @@ const SearchComplaints = () => {
               {/* Tab Navigation for Step 2 */}
               <div className={styles.tabNavV2}>
                 <div
-                  className={`${styles.tabV2} ${
-                    respondentType === "individual" ? styles.activeV2 : ""
-                  }`}
+                  className={`${styles.tabV2} ${respondentType === "individual" ? styles.activeV2 : ""
+                    }`}
                 >
                   บุคคลทั่วไป
                 </div>
                 <div
-                  className={`${styles.tabV2} ${
-                    respondentType === "corporate" ? styles.activeV2 : ""
-                  }`}
+                  className={`${styles.tabV2} ${respondentType === "corporate" ? styles.activeV2 : ""
+                    }`}
                 >
                   นิติบุคคล
                 </div>
                 <div
-                  className={`${styles.tabV2} ${
-                    respondentType === "government" ? styles.activeV2 : ""
-                  }`}
+                  className={`${styles.tabV2} ${respondentType === "government" ? styles.activeV2 : ""
+                    }`}
                 >
                   หน่วยงานของรัฐ
                 </div>
@@ -1006,8 +1065,8 @@ const SearchComplaints = () => {
                       respondentType === "corporate"
                         ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
                         : respondentType === "government"
-                        ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
-                        : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)",
+                          ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
+                          : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)",
                   }}
                 />
               </div>
@@ -1020,8 +1079,8 @@ const SearchComplaints = () => {
                       {respondentType === "corporate"
                         ? "ข้อมูลผู้ถูกร้องเรียน (นิติบุคคล)"
                         : respondentType === "government"
-                        ? "ข้อมูลหน่วยงานของรัฐที่ถูกร้องเรียน"
-                        : "ข้อมูลผู้ถูกร้องเรียน"}
+                          ? "ข้อมูลหน่วยงานของรัฐที่ถูกร้องเรียน"
+                          : "ข้อมูลผู้ถูกร้องเรียน"}
                     </h3>
                   </div>
                   <div className={styles.sectionContent}>
@@ -1060,7 +1119,7 @@ const SearchComplaints = () => {
                               ? styles.errorField
                               : ""
                           }
-                          // ไม่ควรมี defaultValue เป็น label ให้ใช้ id เสมอ
+                        // ไม่ควรมี defaultValue เป็น label ให้ใช้ id เสมอ
                         >
                           <option value="">เลือกประเภทเรื่องร้องเรียน</option>
                           {complaintTypes.map((type) => (
@@ -1096,8 +1155,8 @@ const SearchComplaints = () => {
                             {!complaintType
                               ? "กรุณาเลือกประเภทเรื่องร้องเรียนก่อน"
                               : subComplaintTypesLoading
-                              ? "กำลังโหลด..."
-                              : "เลือกประเภทเรื่องย่อย"}
+                                ? "กำลังโหลด..."
+                                : "เลือกประเภทเรื่องย่อย"}
                           </option>
                           {subComplaintTypes.length > 0 &&
                             subComplaintTypes.map((type) => (
@@ -1308,15 +1367,15 @@ const SearchComplaints = () => {
                         </div>
                       </div>
                       <div className={styles.fieldGroup}>
-                        <label>หน่วยงานอื่นที่ส่งเรื่องมา กค.</label>
+                        <label>ตำแหน่งที่ส่งเรื่องมา กค.</label>
                         <select
                           className={styles.niceSelect}
                           {...step3Methods.register("senderAgency")}
                         >
-                          <option value="">เลือกหน่วยงาน</option>
-                          {departments.map((dept) => (
-                            <option key={dept.id} value={dept.id}>
-                              {dept.name}
+                          <option value="">เลือกตำแหน่ง</option>
+                          {positions.map((position) => (
+                            <option key={position.id} value={position.id}>
+                              {position.name}
                             </option>
                           ))}
                         </select>
@@ -1352,11 +1411,10 @@ const SearchComplaints = () => {
                         {/* เรื่องร้องเรียนใหม่ */}
                         <div className={styles.checkboxRowSingle}>
                           <label
-                            className={`${styles.checkboxItem} ${
-                              complaintFilingType === "new"
-                                ? styles.checked
-                                : ""
-                            }`}
+                            className={`${styles.checkboxItem} ${complaintFilingType === "new"
+                              ? styles.checked
+                              : ""
+                              }`}
                           >
                             <input
                               type="checkbox"
@@ -1373,11 +1431,10 @@ const SearchComplaints = () => {
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
                             <label
-                              className={`${styles.checkboxItem} ${
-                                complaintFilingType === "additional"
-                                  ? styles.checked
-                                  : ""
-                              }`}
+                              className={`${styles.checkboxItem} ${complaintFilingType === "additional"
+                                ? styles.checked
+                                : ""
+                                }`}
                             >
                               <input
                                 type="checkbox"
@@ -1595,11 +1652,10 @@ const SearchComplaints = () => {
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
                             <label
-                              className={`${styles.checkboxItem} ${
-                                complaintFilingType === "committee"
-                                  ? styles.checked
-                                  : ""
-                              }`}
+                              className={`${styles.checkboxItem} ${complaintFilingType === "committee"
+                                ? styles.checked
+                                : ""
+                                }`}
                             >
                               <input
                                 type="checkbox"
@@ -1698,8 +1754,8 @@ const SearchComplaints = () => {
                               defaultValue={
                                 defaultData?.step4?.general?.incidentDate
                                   ? new Date(
-                                      defaultData.step4.general.incidentDate
-                                    )
+                                    defaultData.step4.general.incidentDate
+                                  )
                                   : undefined
                               }
                               time={true}
@@ -1728,7 +1784,7 @@ const SearchComplaints = () => {
                         <h4>เอกสารประกอบการร้องเรียน</h4>
                         <div className={styles.attachmentList}>
                           {defaultData?.step3?.general?.attachment?.length >
-                          0 ? (
+                            0 ? (
                             defaultData.step3.general.attachment.map(
                               (file, index) => {
                                 const fileSizeMB = (
@@ -1758,9 +1814,8 @@ const SearchComplaints = () => {
                                   ) || "";
                                 const fileUrl = file.fileUrl?.startsWith("http")
                                   ? file.fileUrl
-                                  : `${baseUrl}/${
-                                      file.fileUrl?.replace(/^\//, "") || ""
-                                    }`;
+                                  : `${baseUrl}/${file.fileUrl?.replace(/^\//, "") || ""
+                                  }`;
 
                                 return (
                                   <div
@@ -1816,7 +1871,7 @@ const SearchComplaints = () => {
                       <div className={styles.fieldRow}>
                         <div className={styles.fieldGroup}>
                           <label>
-                            เจ้าหน้าที่ผู้รับผิดชอบ{" "}
+                            เจ้าหน้าที่ผู้รับผิดชอบ
                             <span className={styles.required}>*</span>
                           </label>
                           <select
@@ -1835,31 +1890,25 @@ const SearchComplaints = () => {
                                     selectedOfficer.label
                                   );
                                 } else {
-                                  step4Methods.setValue(
-                                    "responsibleOfficerId",
-                                    ""
-                                  );
-                                  step4Methods.setValue(
-                                    "responsibleOfficerName",
-                                    ""
-                                  );
+                                  step4Methods.setValue("responsibleOfficerId", "");
+                                  step4Methods.setValue("responsibleOfficerName", "");
                                 }
                                 handleFieldChange("responsibleOfficer");
                               },
                             })}
                             className={
-                              hasFieldError("responsibleOfficer")
-                                ? styles.errorField
-                                : ""
+                              hasFieldError("responsibleOfficer") ? styles.errorField : ""
                             }
                           >
-                            <option value="">
-                              เลือกเจ้าหน้าที่ผู้รับผิดชอบ
-                            </option>
-                            {staffUsers.map((user) => (
-                              <option key={user.value} value={user.value}>
-                                {user.label}
-                              </option>
+                            <option value="">เลือกเจ้าหน้าที่ผู้รับผิดชอบ</option>
+                            {Object.entries(groupedStaffUsers).map(([groupName, users]) => (
+                              <optgroup key={groupName} label={groupName}>
+                                {users.map((user) => (
+                                  <option key={user.value} value={user.value}>
+                                    {user.label}
+                                  </option>
+                                ))}
+                              </optgroup>
                             ))}
                           </select>
                           {hasFieldError("responsibleOfficer") && (

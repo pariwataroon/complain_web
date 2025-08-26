@@ -164,7 +164,8 @@ const GetZipcodeSelect = async (districtNameTH) => {
 const UsersSearchByRole = async () => {
   try {
     const response = await axiosInstance.get(
-      `/users/search/by-role?role_name=staff`
+      `/users/search/by-role`
+      // `/users/search/by-role?role_name=staff`
     );
 
     const results = response?.data?.res_data;
