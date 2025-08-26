@@ -679,7 +679,7 @@ export default function UserManagementUI() {
             {" "}
             <div className={styles.headerCell}></div>
             <div className={styles.headerCell}>เลขบัตรประชาชน</div>
-            <div className={styles.headerCell}>ชื่อผู้ใช้งานในระบบ</div>
+            <div className={styles.headerCell}>อีเมล</div>
             <div className={styles.headerCell}>ชื่อ - นามสกุลที่ลงทะเบียน</div>
             <div className={styles.headerCell}>ตำแหน่ง</div>
           </div>
@@ -770,8 +770,8 @@ export default function UserManagementUI() {
                                 </IconButton>
                               </div>
                             </div>
-                            <div className={styles.userCell}>
-                              {user.full_name}
+                            <div className={styles.userCell} style={{wordBreak: "break-word",whiteSpace: "normal",lineHeight: "1.4",}}>
+                              {user.email}
                             </div>
                             <div className={styles.userCell}>
                               {user.full_name_with_title}

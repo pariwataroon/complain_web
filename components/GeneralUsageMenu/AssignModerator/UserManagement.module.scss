@@ -1,6 +1,12 @@
 .userManagement {
   width: 100%;
 }
+.userCell {
+  word-break: break-word;   // ตัดคำเมื่อยาวเกิน
+  white-space: normal;      // ให้ขึ้นบรรทัดใหม่ได้
+  line-height: 1.4;         // ระยะบรรทัดอ่านง่าย
+}
+
 
 .headerRow {
   display: grid;
