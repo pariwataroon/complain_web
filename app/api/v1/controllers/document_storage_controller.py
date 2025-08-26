@@ -275,21 +275,107 @@ def get_related_complaints(db: Session, complaint_id: UUID) -> Dict:
             # สร้าง lookup dictionary สำหรับหา complaint_number ของ parent
             complaints_lookup = {c.id: c for c in all_related_complaints}
             
-            # แปลงเป็น dict แบบง่ายๆ ไม่เรียงก่อน
-            all_related_list = [
-                {
+            # ดึงข้อมูลเพิ่มเติมสำหรับ all_related_complaints
+            complaint_ids = [c.id for c in all_related_complaints]
+            
+            # Query ComplaintType, ComplaintSubType, ComplaintChannel
+            complaint_types = {}
+            complaint_subtypes = {}
+            complaint_channels = {}
+            outgoing_departments = {}
+            
+            if complaint_ids:
+                # ดึง complaint types
+                types_query = db.query(ComplaintType).filter(
+                    ComplaintType.id.in_([c.complaint_type_id for c in all_related_complaints if c.complaint_type_id])
+                ).all()
+                complaint_types = {ct.id: ct for ct in types_query}
+                
+                # ดึง complaint subtypes
+                subtypes_query = db.query(ComplaintSubType).filter(
+                    ComplaintSubType.id.in_([c.complaint_subtype_id for c in all_related_complaints if c.complaint_subtype_id])
+                ).all()
+                complaint_subtypes = {cs.id: cs for cs in subtypes_query}
+                
+                # ดึง complaint channels
+                channels_query = db.query(ComplaintChannel).filter(
+                    ComplaintChannel.id.in_([c.complaint_channel_id for c in all_related_complaints if c.complaint_channel_id])
+                ).all()
+                complaint_channels = {cc.id: cc for cc in channels_query}
+                
+                # ดึงหน่วยงานที่มี outgoing_report ส่งออก
+                outgoing_query = db.query(OutgoingReport, Department).join(
+                    Department, OutgoingReport.department_id == Department.id
+                ).filter(
+                    OutgoingReport.complaint_id.in_(complaint_ids),
+                    OutgoingReport.is_active == True
+                ).all()
+                
+                # จัดกลุ่มตาม complaint_id
+                for outgoing_report, department in outgoing_query:
+                    if outgoing_report.complaint_id not in outgoing_departments:
+                        outgoing_departments[outgoing_report.complaint_id] = []
+                    outgoing_departments[outgoing_report.complaint_id].append({
+                        "id": str(department.id),
+                        "name": department.name,
+                        "short_name": department.short_name,
+                        "code": department.code
+                    })
+            
+            # แปลงเป็น dict แบบครบถ้วน
+            all_related_list = []
+            for complaint in all_related_complaints:
+                # ข้อมูลพื้นฐาน
+                complaint_info = {
                     "id": str(complaint.id),
                     "complaint_number": complaint.complaint_number,
                     "subject": complaint.subject,
                     "status": complaint.status.value if complaint.status else None,
                     "is_master": complaint.parent_complaint_id is None,
-                    "is_current": complaint.id == complaint_id,  # บอกว่าเป็นเรื่องปัจจุบันหรือไม่
+                    "is_current": complaint.id == complaint_id,
                     "parent_complaint_id": str(complaint.parent_complaint_id) if complaint.parent_complaint_id else None,
                     "parent_complaint_number": complaints_lookup.get(complaint.parent_complaint_id).complaint_number if complaint.parent_complaint_id and complaint.parent_complaint_id in complaints_lookup else None,
                     "created_at": complaint.created_at.isoformat() if complaint.created_at else None,
                     "complainant_name": get_complainant_name_from_data(complaint.complainant_data)
-                } for complaint in all_related_complaints
-            ]
+                }
+                
+                # เพิ่มข้อมูล complaint type
+                if complaint.complaint_type_id and complaint.complaint_type_id in complaint_types:
+                    ct = complaint_types[complaint.complaint_type_id]
+                    complaint_info["complaint_type"] = {
+                        "id": str(ct.id),
+                        "name": ct.name,
+                        "description": getattr(ct, "description", None)
+                    }
+                else:
+                    complaint_info["complaint_type"] = None
+                
+                # เพิ่มข้อมูล complaint subtype
+                if complaint.complaint_subtype_id and complaint.complaint_subtype_id in complaint_subtypes:
+                    cs = complaint_subtypes[complaint.complaint_subtype_id]
+                    complaint_info["complaint_subtype"] = {
+                        "id": str(cs.id),
+                        "name": cs.name,
+                        "description": getattr(cs, "description", None)
+                    }
+                else:
+                    complaint_info["complaint_subtype"] = None
+                
+                # เพิ่มข้อมูล complaint channel
+                if complaint.complaint_channel_id and complaint.complaint_channel_id in complaint_channels:
+                    cc = complaint_channels[complaint.complaint_channel_id]
+                    complaint_info["complaint_channel"] = {
+                        "id": str(cc.id),
+                        "name": cc.name,
+                        "description": getattr(cc, "description", None)
+                    }
+                else:
+                    complaint_info["complaint_channel"] = None
+                
+                # เพิ่มข้อมูลหน่วยงานที่มี outgoing_report
+                complaint_info["outgoing_departments"] = outgoing_departments.get(complaint.id, [])
+                
+                all_related_list.append(complaint_info)
             
             # เก็บไว้ใน result โดยไม่เรียงก่อน - จะเรียงตอน response
             result["all_related"] = all_related_list
@@ -335,6 +421,53 @@ def get_bulk_related_complaints(db: Session, complaint_ids: List[UUID]) -> Dict[
             if complaint.parent_complaint_id not in children_by_parent:
                 children_by_parent[complaint.parent_complaint_id] = []
             children_by_parent[complaint.parent_complaint_id].append(complaint)
+    
+    # ดึงข้อมูลเพิ่มเติมสำหรับ all_complaints
+    all_complaint_ids = [c.id for c in all_complaints]
+    
+    # Query ComplaintType, ComplaintSubType, ComplaintChannel, OutgoingReport
+    complaint_types = {}
+    complaint_subtypes = {}
+    complaint_channels = {}
+    outgoing_departments = {}
+    
+    if all_complaint_ids:
+        # ดึง complaint types
+        types_query = db.query(ComplaintType).filter(
+            ComplaintType.id.in_([c.complaint_type_id for c in all_complaints if c.complaint_type_id])
+        ).all()
+        complaint_types = {ct.id: ct for ct in types_query}
+        
+        # ดึง complaint subtypes
+        subtypes_query = db.query(ComplaintSubType).filter(
+            ComplaintSubType.id.in_([c.complaint_subtype_id for c in all_complaints if c.complaint_subtype_id])
+        ).all()
+        complaint_subtypes = {cs.id: cs for cs in subtypes_query}
+        
+        # ดึง complaint channels
+        channels_query = db.query(ComplaintChannel).filter(
+            ComplaintChannel.id.in_([c.complaint_channel_id for c in all_complaints if c.complaint_channel_id])
+        ).all()
+        complaint_channels = {cc.id: cc for cc in channels_query}
+        
+        # ดึงหน่วยงานที่มี outgoing_report ส่งออก
+        outgoing_query = db.query(OutgoingReport, Department).join(
+            Department, OutgoingReport.department_id == Department.id
+        ).filter(
+            OutgoingReport.complaint_id.in_(all_complaint_ids),
+            OutgoingReport.is_active == True
+        ).all()
+        
+        # จัดกลุ่มตาม complaint_id
+        for outgoing_report, department in outgoing_query:
+            if outgoing_report.complaint_id not in outgoing_departments:
+                outgoing_departments[outgoing_report.complaint_id] = []
+            outgoing_departments[outgoing_report.complaint_id].append({
+                "id": str(department.id),
+                "name": department.name,
+                "short_name": department.short_name,
+                "code": department.code
+            })
     
     # สำหรับหา master complaints ของแต่ละกลุ่ม
     master_lookup = {}
@@ -441,9 +574,10 @@ def get_bulk_related_complaints(db: Session, complaint_ids: List[UUID]) -> Dict[
                 } for sibling in siblings
             ],
             
-            # สร้าง all_related แบบง่ายๆ ไม่เรียงก่อน - จะเรียงตอน response
+            # สร้าง all_related แบบครบถ้วน
             "all_related": [
                 {
+                    # ข้อมูลพื้นฐาน
                     "id": str(c.id),
                     "complaint_number": c.complaint_number,
                     "subject": c.subject,
@@ -453,7 +587,31 @@ def get_bulk_related_complaints(db: Session, complaint_ids: List[UUID]) -> Dict[
                     "parent_complaint_id": str(c.parent_complaint_id) if c.parent_complaint_id else None,
                     "parent_complaint_number": complaints_by_id.get(c.parent_complaint_id).complaint_number if c.parent_complaint_id and c.parent_complaint_id in complaints_by_id else None,
                     "created_at": c.created_at.isoformat() if c.created_at else None,
-                    "complainant_name": get_complainant_name_from_data(c.complainant_data)
+                    "complainant_name": get_complainant_name_from_data(c.complainant_data),
+                    
+                    # ข้อมูล complaint type
+                    "complaint_type": {
+                        "id": str(complaint_types[c.complaint_type_id].id),
+                        "name": complaint_types[c.complaint_type_id].name,
+                        "description": getattr(complaint_types[c.complaint_type_id], "description", None)
+                    } if c.complaint_type_id and c.complaint_type_id in complaint_types else None,
+                    
+                    # ข้อมูล complaint subtype
+                    "complaint_subtype": {
+                        "id": str(complaint_subtypes[c.complaint_subtype_id].id),
+                        "name": complaint_subtypes[c.complaint_subtype_id].name,
+                        "description": getattr(complaint_subtypes[c.complaint_subtype_id], "description", None)
+                    } if c.complaint_subtype_id and c.complaint_subtype_id in complaint_subtypes else None,
+                    
+                    # ข้อมูล complaint channel
+                    "complaint_channel": {
+                        "id": str(complaint_channels[c.complaint_channel_id].id),
+                        "name": complaint_channels[c.complaint_channel_id].name,
+                        "description": getattr(complaint_channels[c.complaint_channel_id], "description", None)
+                    } if c.complaint_channel_id and c.complaint_channel_id in complaint_channels else None,
+                    
+                    # ข้อมูลหน่วยงานที่มี outgoing_report
+                    "outgoing_departments": outgoing_departments.get(c.id, [])
                 } for c in all_related
             ],
             
