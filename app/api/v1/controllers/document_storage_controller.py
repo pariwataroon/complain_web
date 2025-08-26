@@ -793,6 +793,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "reference_date": _iso(getattr(r, "reference_date", None)),
                 "subject": getattr(r, "subject", None),
                 "complaint_number": getattr(r, "complaint_number", None),
+                "complaint_number_date": _iso(getattr(r, "complaint_number_date", None)),
                 "document_number": getattr(r, "document_number", None),
                 "document_date": _iso(getattr(r, "document_date", None)),
                 "complaint_id": str(complaint_id),
