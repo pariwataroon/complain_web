@@ -1344,6 +1344,9 @@ def get_complaints_enhanced(
                 "reference_date3": complaint.reference_date3.isoformat() if complaint.reference_date3 else None,
                 "reference_number4": complaint.reference_number4,
                 "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
+                # เพิ่ม document_number และ document_date
+                "document_number": complaint.document_number,
+                "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
                 "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
                 "complaint_channel_name": get_channel_name(db, complaint.complaint_channel_id) if complaint.complaint_channel_id else None
             }
@@ -1372,6 +1375,8 @@ def get_complaints_enhanced(
                     "reference_date3": None,
                     "reference_number4": None,
                     "reference_date4": None,
+                    "document_number": None,
+                    "document_date": None,
                     "complaint_channel_id": None,
                     "complaint_channel_name": None,
                     "complaint_subtype_id": None,
