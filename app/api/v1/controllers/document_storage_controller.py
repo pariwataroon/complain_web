@@ -841,28 +841,17 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "type_description": "แจ้งผลการให้ผู้เกี่ยวข้องทราบ",
             })
 
-        # รวม all + sort ใหม่สุดก่อน
-        all_out = (outgoing_reports_data["type1"]
-                   + outgoing_reports_data["type2"]
-                   + outgoing_reports_data["type3"]
-                   + outgoing_reports_data["type4"]
-                   + type5_list)
-        def _key_when(x: Dict[str, Any]) -> datetime:
-            for k in ("created_at", "reference_date", "receive_date", "document_date",
-                      "complaint_number_date", "agency_reference_date", "internal_register_date"):
-                if x.get(k):
-                    try:
-                        return datetime.fromisoformat(x[k])
-                    except Exception:
-                        pass
-            return datetime.min
-        all_out.sort(key=_key_when, reverse=True)
+        # คำนวณจำนวนรวมโดยไม่ต้องสร้าง all array
+        total_count = (len(outgoing_reports_data["type1"]) 
+                      + len(outgoing_reports_data["type2"])
+                      + len(outgoing_reports_data["type3"])
+                      + len(outgoing_reports_data["type4"])
+                      + len(type5_list))
 
         outgoing_reports = {
             **outgoing_reports_data,
             "type5": type5_list,
-            "all": all_out,
-            "total_count": len(all_out),
+            "total_count": total_count,
         }
 
         # ===== สรุป "ขั้นตอนการดำเนินการครั้งแรก" (initial_process_summary) =====
@@ -917,7 +906,6 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             "complaintCategory": complaint_category,
             "note": getattr(complaint, "assigned_remark", None) or "",
             "id": str(complaint.id),
-            "complaint_id": str(complaint.id),
             "urgency_level": getattr(complaint, "urgency_level", None),
             "confidentiality_level": getattr(complaint, "confidentiality_level", None),
             "is_master": complaint.parent_complaint_id is None,
@@ -944,7 +932,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "group_work": getattr(complaint, "group_work", False)
             },
             "status_history": status_history,
-            "initial_process_summary": initial_process_summary,  # ✅ บล็อกใหม่
+            "initial_process_summary": initial_process_summary,
         }
 
         # ===== relationships =====
