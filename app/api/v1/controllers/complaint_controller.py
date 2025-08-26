@@ -753,6 +753,12 @@ def process_complainant_data(step1: Dict) -> Dict:
         elif "general" in step1_general and step1_general["general"]:
             complainant_type = ComplainantType.INDIVIDUAL
             complainant_data = process_nested_fields(step1_general["general"])
+            
+            # เพิ่ม phone และ description ถ้ามี
+            if "phone" in step1_general["general"]:
+                complainant_data["phone"] = step1_general["general"]["phone"]
+            if "description" in step1_general["general"]:
+                complainant_data["description"] = step1_general["general"]["description"]
         
         # ถ้าไม่มีทั้งคู่ ลองใช้ activeType
         else:
@@ -767,6 +773,12 @@ def process_complainant_data(step1: Dict) -> Dict:
                 # ✅ ลบ activeType ออกก่อนประมวลผล
                 filtered_data = {k: v for k, v in step1_general.items() if k not in ["activeType", "corporate", "general", "signer", "delegate"]}
                 complainant_data = process_nested_fields(filtered_data)
+                
+                # เพิ่ม phone และ description ถ้ามี
+                if "phone" in step1_general:
+                    complainant_data["phone"] = step1_general["phone"]
+                if "description" in step1_general:
+                    complainant_data["description"] = step1_general["description"]
         
         # ตรวจสอบข้อมูลผู้รับมอบอำนาจ
         if "delegate" in step1_general and step1_general["delegate"]:
@@ -1169,6 +1181,7 @@ def get_complaints_enhanced(
     search: Optional[str] = None,
     complainant_name: Optional[str] = None,
     subject: Optional[str] = None,   # เพิ่ม subject filter
+    document_number: Optional[str] = None,  # เพิ่ม document_number filter
 ):
     """ดึงรายการข้อร้องเรียนแบบ enhanced พร้อมข้อมูลเพิ่มเติม"""
     from models.comp_complaint_types import ComplaintChannel
@@ -1203,12 +1216,17 @@ def get_complaints_enhanced(
     if urgency:
         query = query.filter(Complaint.urgency_level == urgency)
 
+    # Filter by document_number (เลขที่หนังสือ)
+    if document_number:
+        query = query.filter(Complaint.document_number.ilike(f"%{document_number}%"))
+
     # Search filter
     if search:
         search_filter = or_(
             Complaint.complaint_number.ilike(f"%{search}%"),
             Complaint.subject.ilike(f"%{search}%"),
-            Complaint.description.ilike(f"%{search}%")
+            Complaint.description.ilike(f"%{search}%"),
+            Complaint.document_number.ilike(f"%{search}%")  # เพิ่มการค้นหาเลขที่หนังสือ
         )
         query = query.filter(search_filter)
     
@@ -1376,6 +1394,7 @@ def get_complaints(
     search: Optional[str] = None,
     complainant_name: Optional[str] = None,   # เพิ่ม filter
     subject: Optional[str] = None,   # เพิ่ม subject filter
+    document_number: Optional[str] = None,  # เพิ่ม document_number filter
 ):
     query = db.query(Complaint)
     
@@ -1406,6 +1425,10 @@ def get_complaints(
     if urgency:
         query = query.filter(Complaint.urgency_level == urgency)
 
+    # Filter by document_number (เลขที่หนังสือ)
+    if document_number:
+        query = query.filter(Complaint.document_number.ilike(f"%{document_number}%"))
+
     # ปรับ search ให้มีลำดับความสำคัญที่ถูกต้อง
     if search:
         from models.comp_complaint_types import ComplaintSubType
@@ -1434,6 +1457,7 @@ def get_complaints(
             Complaint.complaint_number.ilike(f"%{search}%"),          # เลขที่เรื่อง
             Complaint.subject.ilike(f"%{search}%"),                  # หัวเรื่อง
             Complaint.description.ilike(f"%{search}%"),              # คำอธิบาย
+            Complaint.document_number.ilike(f"%{search}%"),          # เลขที่หนังสือ
             
             # 2. ข้อมูลการจัดประเภท - ความสำคัญรอง
             Complaint.complaint_type.ilike(f"%{search}%"),           # ประเภทเรื่องร้องเรียน
