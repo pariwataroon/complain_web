@@ -9716,7 +9716,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"position_id\": \"{{position_id}}\",\n  \"reference_number\": \"สป.กค 1234/2568\",\n  \"reference_date\": \"2025-06-14T10:00:00Z\",\n  \"subject\": \"ร้องเรียนเรื่องความเป็นธรรมในการจัดเก็บภาษี\",\n  \"complaint_number\": \"COMP-001-2568\",\n  \"complaint_number_date\": \"2025-06-10T09:30:00Z\",\n  \"signature_authority_user_id\": \"{{signature_user_id}}\",\n  \"department_id\": \"{{department_id}}\",\n  \"confidentiality_level\": \"ปกติ\",\n  \"urgency_level\": \"เร่งด่วน\",\n  \"remarks\": \"หมายเหตุเพิ่มเติม\",\n  \"complaint_id\": \"{{complaint_id}}\"\n}",
+                            "raw": "{\n  \"position_id\": \"{{position_id}}\",\n  \"reference_number\": \"สป.กค 1234/2568\",\n  \"reference_date\": \"2025-06-14T10:00:00Z\",\n  \"subject\": \"ร้องเรียนเรื่องความเป็นธรรมในการจัดเก็บภาษี\",\n  \"complaint_number\": \"COMP-001-2568\",\n  \"complaint_number_date\": \"2025-06-10T09:30:00Z\",\n  \"signature_authority_user_id\": \"{{signature_user_id}}\",\n  \"department_id\": \"{{department_id}}\",\n  \"confidentiality_level\": \"ปกติ\",\n  \"urgency_level\": \"เร่งด่วน\",\n  \"document_number\": \"กค 5678/2568\",\n  \"document_date\": \"2025-06-14T10:00:00Z\",\n  \"remarks\": \"หมายเหตุเพิ่มเติม\",\n  \"complaint_id\": \"{{complaint_id}}\"\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -9732,7 +9732,7 @@
                                 "outgoing-reports"
                             ]
                         },
-                        "description": "สร้างรายงานส่งออกใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- position_id: ตำแหน่งที่เกี่ยวข้อง (UUID)\n- reference_number: เลข สป.กค\n- reference_date: วันที่เอกสาร สป.กค\n- subject: เรื่อง\n- complaint_number: หมายเลขข้อร้องเรียน\n- complaint_number_date: วันที่ของข้อร้องเรียน\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- department_id: หน่วยงาน (UUID)\n- confidentiality_level: ระดับความลับ (ปกติ, ลับ, ลับมาก, ลับที่สุด)\n- urgency_level: ระดับความเร่งด่วน (ปกติ, เร่งด่วน, เร่งด่วนมาก, เร่งด่วนที่สุด)\n\n**ฟิลด์ที่ไม่บังคับ:**\n- remarks: หมายเหตุ\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง"
+                        "description": "สร้างรายงานส่งออกใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- position_id: ตำแหน่งที่เกี่ยวข้อง (UUID)\n- reference_number: เลข สป.กค\n- reference_date: วันที่เอกสาร สป.กค\n- subject: เรื่อง\n- complaint_number: หมายเลขข้อร้องเรียน\n- complaint_number_date: วันที่ของข้อร้องเรียน\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- department_id: หน่วยงาน (UUID)\n- confidentiality_level: ระดับความลับ (ปกติ, ลับ, ลับมาก, ลับที่สุด)\n- urgency_level: ระดับความเร่งด่วน (ปกติ, เร่งด่วน, เร่งด่วนมาก, เร่งด่วนที่สุด)\n- document_number: เลขที่เอกสาร\n- document_date: วันที่เอกสาร\n\n**ฟิลด์ที่ไม่บังคับ:**\n- remarks: หมายเหตุ\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง"
                     },
                     "response": []
                 },
@@ -10050,7 +10050,7 @@
 						"header": [{"key": "Content-Type", "value": "application/json"}],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"position_id\": \"38a64e67-5df6-4370-a46b-7c160c5b92f7\",\n    \"complaint_number\": \"MOF-20250624-00002\",\n    \"complaint_number_date\": \"2025-06-24\",\n    \"subject\": \"เรื่อง แจ้งผลการพิจารณาเรื่องร้องเรียน\",\n    \"signature_authority_user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"department_id\": \"85c5547d-a0d4-4ea5-a4e3-e55d94837ddd\",\n    \"user_id\": null,\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"complaint_id\": \"81edc778-d618-4bc7-ad21-8ab81b14d4e7\",\n    \"remarks\": \"หมายเหตุ\"\n}",
+							"raw": "{\n    \"position_id\": \"38a64e67-5df6-4370-a46b-7c160c5b92f7\",\n    \"complaint_number\": \"MOF-20250624-00002\",\n    \"complaint_number_date\": \"2025-06-24\",\n    \"subject\": \"เรื่อง แจ้งผลการพิจารณาเรื่องร้องเรียน\",\n    \"signature_authority_user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"department_id\": \"85c5547d-a0d4-4ea5-a4e3-e55d94837ddd\",\n    \"user_id\": null,\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"document_number\": \"กค 5678/2568\",\n    \"document_date\": \"2025-06-24T10:00:00Z\",\n    \"complaint_id\": \"81edc778-d618-4bc7-ad21-8ab81b14d4e7\",\n    \"remarks\": \"หมายเหตุ\"\n}",
 							"options": {"raw": {"language": "json"}}
 						},
 						"url": {
@@ -10058,7 +10058,7 @@
 							"host": ["{{API}}{{PREFIX}}"],
 							"path": ["outgoing-reports2"]
 						},
-						"description": "สร้างรายงานแจ้งผู้ร้องเรียนใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- position_id: ตำแหน่งที่เกี่ยวข้อง (UUID)\n- complaint_number: หมายเลขข้อร้องเรียน\n- complaint_number_date: วันที่ของข้อร้องเรียน\n- subject: เรื่อง\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- confidentiality_level: ระดับความลับ\n- urgency_level: ระดับความเร่งด่วน\n\n**ฟิลด์ที่ไม่บังคับ:**\n- department_id: หน่วยงาน (UUID)\n- user_id: ผู้ใช้ที่เกี่ยวข้อง (UUID)\n- remarks: หมายเหตุ\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง"
+						"description": "สร้างรายงานแจ้งผู้ร้องเรียนใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- position_id: ตำแหน่งที่เกี่ยวข้อง (UUID)\n- complaint_number: หมายเลขข้อร้องเรียน\n- complaint_number_date: วันที่ของข้อร้องเรียน\n- subject: เรื่อง\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- confidentiality_level: ระดับความลับ\n- urgency_level: ระดับความเร่งด่วน\n- document_number: เลขที่เอกสาร\n- document_date: วันที่เอกสาร\n\n**ฟิลด์ที่ไม่บังคับ:**\n- department_id: หน่วยงาน (UUID)\n- user_id: ผู้ใช้ที่เกี่ยวข้อง (UUID)\n- remarks: หมายเหตุ\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง"
 					}
 				},
 				{
@@ -10238,7 +10238,7 @@
 						"header": [{"key": "Content-Type", "value": "application/json"}],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"position_id\": \"38a64e67-5df6-4370-a46b-7c160c5b92f7\",\n    \"complaint_number\": \"MOF-20250624-00001\",\n    \"complaint_number_date\": \"2025-06-24\",\n    \"subject\": \"เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน\",\n    \"signature_authority_user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"department_id\": \"85c5547d-a0d4-4ea5-a4e3-e55d94837ddd\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"complaint_id\": \"81edc778-d618-4bc7-ad21-8ab81b14d4e7\",\n    \"remarks\": \"หมายเหตุ\"\n}",
+							"raw": "{\n    \"position_id\": \"38a64e67-5df6-4370-a46b-7c160c5b92f7\",\n    \"complaint_number\": \"MOF-20250624-00001\",\n    \"complaint_number_date\": \"2025-06-24\",\n    \"subject\": \"เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน\",\n    \"signature_authority_user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"department_id\": \"85c5547d-a0d4-4ea5-a4e3-e55d94837ddd\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"document_number\": \"กค 5679/2568\",\n    \"document_date\": \"2025-06-24T10:00:00Z\",\n    \"complaint_id\": \"81edc778-d618-4bc7-ad21-8ab81b14d4e7\",\n    \"remarks\": \"หมายเหตุ\"\n}",
 							"options": {"raw": {"language": "json"}}
 						},
 						"url": {
@@ -10246,7 +10246,7 @@
 							"host": ["{{API}}{{PREFIX}}"],
 							"path": ["outgoing-reports3"]
 						},
-						"description": "สร้างรายงานขอทราบผลการพิจารณาใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- position_id: ตำแหน่งที่เกี่ยวข้อง (UUID)\n- complaint_number: หมายเลขข้อร้องเรียน\n- complaint_number_date: วันที่ของข้อร้องเรียน\n- subject: เรื่อง\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- department_id: หน่วยงาน (UUID)\n- confidentiality_level: ระดับความลับ\n- urgency_level: ระดับความเร่งด่วน\n\n**ฟิลด์ที่ไม่บังคับ:**\n- remarks: หมายเหตุ\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง"
+						"description": "สร้างรายงานขอทราบผลการพิจารณาใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- position_id: ตำแหน่งที่เกี่ยวข้อง (UUID)\n- complaint_number: หมายเลขข้อร้องเรียน\n- complaint_number_date: วันที่ของข้อร้องเรียน\n- subject: เรื่อง\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- department_id: หน่วยงาน (UUID)\n- confidentiality_level: ระดับความลับ\n- urgency_level: ระดับความเร่งด่วน\n- document_number: เลขที่เอกสาร\n- document_date: วันที่เอกสาร\n\n**ฟิลด์ที่ไม่บังคับ:**\n- remarks: หมายเหตุ\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง"
 					}
 				},
 				{
@@ -10425,7 +10425,7 @@
 						"header": [{"key": "Content-Type", "value": "application/json"}],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"reference_number\": \"เลขอ้างอิง-2025-001\",\n    \"reference_date\": \"2025-06-24\",\n    \"subject\": \"เรื่อง แจ้งผลการให้ผู้เกี่ยวข้องทราบ\",\n    \"signature_authority_user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"department_id\": \"85c5547d-a0d4-4ea5-a4e3-e55d94837ddd\",\n    \"user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"other_department\": \"หน่วยงานอื่นๆ\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"remarks\": \"หมายเหตุ\",\n    \"proposal_purpose\": \"เสนอเพื่อทราบ\",\n    \"consideration_result\": \"ผลการพิจารณา\",\n    \"complaint_id\": \"81edc778-d618-4bc7-ad21-8ab81b14d4e7\"\n}",
+							"raw": "{\n    \"reference_number\": \"เลขอ้างอิง-2025-001\",\n    \"reference_date\": \"2025-06-24\",\n    \"subject\": \"เรื่อง แจ้งผลการให้ผู้เกี่ยวข้องทราบ\",\n    \"signature_authority_user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"department_id\": \"85c5547d-a0d4-4ea5-a4e3-e55d94837ddd\",\n    \"user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"other_department\": \"หน่วยงานอื่นๆ\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"document_number\": \"กค 5680/2568\",\n    \"document_date\": \"2025-06-24T10:00:00Z\",\n    \"remarks\": \"หมายเหตุ\",\n    \"proposal_purpose\": \"เสนอเพื่อทราบ\",\n    \"consideration_result\": \"ผลการพิจารณา\",\n    \"complaint_id\": \"81edc778-d618-4bc7-ad21-8ab81b14d4e7\"\n}",
 							"options": {"raw": {"language": "json"}}
 						},
 						"url": {
@@ -10433,7 +10433,7 @@
 							"host": ["{{API}}{{PREFIX}}"],
 							"path": ["outgoing-reports4"]
 						},
-						"description": "สร้างรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- reference_number: เลขอ้างอิง\n- reference_date: วันที่เอกสาร\n- subject: เรื่อง\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- confidentiality_level: ระดับความลับ\n- urgency_level: ระดับความเร่งด่วน\n\n**ฟิลด์ที่ไม่บังคับ:**\n- department_id: หน่วยงาน (UUID)\n- user_id: ผู้ใช้ที่เกี่ยวข้อง (UUID)\n- other_department: หน่วยงานอื่นๆ (ข้อความ)\n- remarks: หมายเหตุ\n- proposal_purpose: เสนอเพื่อ\n- consideration_result: ผลการพิจารณา\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง"
+						"description": "สร้างรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- reference_number: เลขอ้างอิง\n- reference_date: วันที่เอกสาร\n- subject: เรื่อง\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- confidentiality_level: ระดับความลับ\n- urgency_level: ระดับความเร่งด่วน\n- document_number: เลขที่เอกสาร\n- document_date: วันที่เอกสาร\n\n**ฟิลด์ที่ไม่บังคับ:**\n- department_id: หน่วยงาน (UUID)\n- user_id: ผู้ใช้ที่เกี่ยวข้อง (UUID)\n- other_department: หน่วยงานอื่นๆ (ข้อความ)\n- remarks: หมายเหตุ\n- proposal_purpose: เสนอเพื่อ\n- consideration_result: ผลการพิจารณา\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง"
 					}
 				},
 				{
@@ -10620,7 +10620,7 @@
 							"host": ["{{API}}{{PREFIX}}"],
 							"path": ["outgoing-reports5"]
 						},
-						"description": "สร้างรายงานรับเรื่องผลการพิจารณาจากหน่วยงานใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- receive_number: เลขรับเรื่องผลการพิจารณา (ภายใน กค.)\n- receive_date: วันที่รับเรื่องผลการพิจารณา\n- complaint_number: หมายเลขข้อร้องเรียน\n- complaint_number_date: วันที่ของข้อร้องเรียน\n- subject: เรื่อง\n- department_id: หน่วยงาน (UUID)\n\n**ฟิลด์ที่ไม่บังคับ:**\n- agency_reference_number: เลขอ้างอิงจากหน่วยงานต้นทาง\n- agency_reference_date: วันที่เลขอ้างอิงจากหน่วยงานต้นทาง\n- internal_register_number: เลขทะเบียนรับภายใน\n- internal_register_date: วันที่ทะเบียนรับภายใน\n- present_to_director_date: วันที่เสนอ ผอ./ผู้มีอำนาจ\n- document_number: เลขเอกสาร\n- document_date: วันที่เอกสาร\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- user_id: ผู้ปฏิบัติงาน (UUID)\n- confidentiality_level: ระดับความลับ\n- urgency_level: ระดับความเร่งด่วน\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง\n- remarks: หมายเหตุ"
+						"description": "สร้างรายงานรับเรื่องผลการพิจารณาจากหน่วยงานใหม่ด้วย JSON body\n\n**ฟิลด์ที่จำเป็น:**\n- receive_number: เลขรับเรื่องผลการพิจารณา (ภายใน กค.)\n- receive_date: วันที่รับเรื่องผลการพิจารณา\n- complaint_number: หมายเลขข้อร้องเรียน\n- complaint_number_date: วันที่ของข้อร้องเรียน\n- subject: เรื่อง\n- department_id: หน่วยงาน (UUID)\n- document_number: เลขที่เอกสาร\n- document_date: วันที่เอกสาร\n\n**ฟิลด์ที่ไม่บังคับ:**\n- agency_reference_number: เลขอ้างอิงจากหน่วยงานต้นทาง\n- agency_reference_date: วันที่เลขอ้างอิงจากหน่วยงานต้นทาง\n- internal_register_number: เลขทะเบียนรับภายใน\n- internal_register_date: วันที่ทะเบียนรับภายใน\n- present_to_director_date: วันที่เสนอ ผอ./ผู้มีอำนาจ\n- signature_authority_user_id: ผู้มีอำนาจลงนาม (UUID)\n- user_id: ผู้ปฏิบัติงาน (UUID)\n- confidentiality_level: ระดับความลับ\n- urgency_level: ระดับความเร่งด่วน\n- complaint_id: ID ข้อร้องเรียนที่เกี่ยวข้อง\n- remarks: หมายเหตุ"
 					}
 				},
 				{
