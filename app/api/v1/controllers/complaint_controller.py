@@ -1327,6 +1327,10 @@ def get_complaints_enhanced(
                 "complaint_type_name": complaint.complaint_type or "",
                 "is_master": True,  # default value
                 
+                # เพิ่ม phone และ description สำหรับ enhanced version
+                "complainant_phone": complainant_data.get("phone", ""),
+                "complainant_description": complaint.description or "",
+                
                 # Enhanced fields - ข้อมูลเพิ่มเติม
                 "additional_reference_number1": complaint.additional_reference_number1,
                 "additional_reference_date1": complaint.additional_reference_date1.isoformat() if complaint.additional_reference_date1 else None,
@@ -1350,10 +1354,12 @@ def get_complaints_enhanced(
             logger.error(f"Error creating enhanced complaint item: {str(e)}")
             # fallback ใช้ข้อมูลพื้นฐาน (convert Pydantic model to dict)
             try:
-                basic_item = create_complaint_list_item(complaint, db)
+                basic_item = create_complaint_list_item_enhanced(complaint, db)
                 basic_dict = basic_item.dict()
                 # เพิ่ม enhanced fields ด้วยค่าเริ่มต้น
                 basic_dict.update({
+                    "complainant_phone": "",
+                    "complainant_description": "",
                     "additional_reference_number1": None,
                     "additional_reference_date1": None,
                     "additional_reference_number2": None,
@@ -1726,13 +1732,60 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
             if subtype:
                 complaint_subtype_name = subtype.name
 
-        # ดึง phone และ description จาก complainant_data และ complaint object
+        # เอา phone และ description ออกจากฟังก์ชันนี้
+        return ComplaintListItem(
+            id=complaint.id,
+            complaint_number=complaint.complaint_number,
+            subject=complaint.subject,
+            complaint_type=get_thai_complaint_type(complaint.complaint_type),
+            status=get_thai_status(complaint.status),
+            created_at=complaint.created_at,
+            complainant_name=get_display_complainant_name(ensure_dict(complaint.complainant_data), ensure_dict(complaint.delegate_data) if complaint.delegate_data else None),
+            respondent_name=get_display_respondent_name(complaint.respondent_type, ensure_dict(complaint.respondent_data)),
+            incident_location=get_display_incident_location(complaint),
+            assigned_to=get_display_assigned_info(complaint, db),
+            assigned_remark=complaint.assigned_remark or "",
+            urgency_level=complaint.urgency_level.lower() if complaint.urgency_level else "low",
+            severity_level=complaint.severity_level.lower() if complaint.severity_level else "low",
+            complaint_subtype=complaint_subtype_name
+        )
+        
+    except Exception as e:
+        return ComplaintListItem(
+            id=complaint.id,
+            complaint_number=complaint.complaint_number or "",
+            subject=complaint.subject or "",
+            complaint_type=complaint.complaint_type or "",
+            status=get_thai_status(complaint.status),
+            created_at=complaint.created_at,
+            complainant_name="ข้อมูลไม่สมบูรณ์",
+            respondent_name="ข้อมูลไม่สมบูรณ์",
+            incident_location="",
+            assigned_to="",
+            assigned_remark=complaint.assigned_remark or "",
+            urgency_level="low",
+            severity_level="low"
+        )
+
+def create_complaint_list_item_enhanced(complaint: Complaint, db: Session = None):
+    """สร้างข้อมูลแบบ Enhanced สำหรับแสดงในรายการ พร้อม phone และ description"""
+    from app.api.v1.schemas.complaint import ComplaintListItemEnhanced
+    
+    try:
+        complaint_subtype_name = ""
+        if db and hasattr(complaint, "complaint_subtype_id") and complaint.complaint_subtype_id:
+            from models.comp_complaint_types import ComplaintSubType
+            subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
+            if subtype:
+                complaint_subtype_name = subtype.name
+
+        # ดึง phone และ description
         complainant_data = ensure_dict(complaint.complainant_data)
         complainant_phone = complainant_data.get("phone", "")
         # ใช้ description จาก complaint object แทน complainant_data
         complainant_description = complaint.description or ""
 
-        return ComplaintListItem(
+        return ComplaintListItemEnhanced(
             id=complaint.id,
             complaint_number=complaint.complaint_number,
             subject=complaint.subject,
@@ -1752,7 +1805,7 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
         )
         
     except Exception as e:
-        return ComplaintListItem(
+        return ComplaintListItemEnhanced(
             id=complaint.id,
             complaint_number=complaint.complaint_number or "",
             subject=complaint.subject or "",

@@ -67,7 +67,27 @@ class ComplaintListItem(BaseModel):
     assigned_remark: Optional[str] = ""
     urgency_level: Optional[str] = "LOW"
     severity_level: Optional[str] = "LOW"
-    # เพิ่มฟิลด์ phone และ description จาก complainant_data
+    
+    class Config:
+        from_attributes = True
+
+class ComplaintListItemEnhanced(BaseModel):
+    id: UUID
+    complaint_number: str
+    subject: str
+    complaint_type: str
+    complaint_subtype: Optional[str] = ""
+    status: str
+    created_at: datetime
+    complainant_name: str
+    respondent_name: str
+    # เพิ่มฟิลด์ใหม่
+    incident_location: Optional[str] = ""
+    assigned_to: Optional[str] = ""
+    assigned_remark: Optional[str] = ""
+    urgency_level: Optional[str] = "LOW"
+    severity_level: Optional[str] = "LOW"
+    # เพิ่มฟิลด์ phone และ description จาก complainant_data สำหรับ enhanced version
     complainant_phone: Optional[str] = ""
     complainant_description: Optional[str] = ""
     
