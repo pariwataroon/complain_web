@@ -79,6 +79,15 @@ const updateSignatureAuthorityGroup = async (groupId, payload) => {
     throw error;
   }
 };
+const getDepartmentsPrefix = async () => {
+  try {
+    const response = await axiosInstance.get("/departments");
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching departments with prefix:", error);
+    throw error;
+  }
+};
 export {
   getDepartmentGroup,
   getDepartments,
@@ -87,4 +96,5 @@ export {
   getSignatureAuthorities,
   createSignatureAuthorityGroup,
   updateSignatureAuthorityGroup,
+  getDepartmentsPrefix,
 };

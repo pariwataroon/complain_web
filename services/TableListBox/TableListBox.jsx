@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -22,6 +22,7 @@ import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportExcel } from "@utils/exportExcel";
+import { getDepartmentsPrefix } from "@pages/api/department/department";
 
 const TableListBox = ({
   data = [],
@@ -33,7 +34,7 @@ const TableListBox = ({
   filterFields = [],
 }) => {
   const router = useRouter();
-  const tableWrapperRef = useRef(null); // ใช้ wrapper เดียวสำหรับ Export PDF
+  const tableWrapperRef = useRef(null);
 
   // Breakpoints
   const isExtraSmall = useMediaQuery("(max-width:640px)");
@@ -41,6 +42,30 @@ const TableListBox = ({
   const isMedium = useMediaQuery("(max-width:1024px)");
   const isLarge = useMediaQuery("(max-width:1305px)");
   const needsScrollbar = useMediaQuery("(max-width:1200px)");
+
+  // ✅ State สำหรับ options หน่วยงาน
+  const [departmentOptions, setDepartmentOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await getDepartmentsPrefix();
+        if (Array.isArray(res?.res_data)) {
+          const mapped = res.res_data.map((dep) => ({
+            value: dep.name,
+            label: dep.name, 
+          }));
+          setDepartmentOptions(mapped);
+        } else {
+          setDepartmentOptions([]);
+        }
+      } catch (err) {
+        console.error("Error fetching departments:", err);
+        setDepartmentOptions([]);
+      }
+    };
+    fetchDepartments();
+  }, []);
 
   // Filters
   const initialFilters = filterFields.reduce((acc, f) => {
@@ -83,7 +108,7 @@ const TableListBox = ({
     exportElementToPDF(tableWrapperRef, filename);
   };
 
-  // Columns (ใช้ร่วมกันทั้งหัว/ตัวข้อมูล + colgroup)
+  // Columns
   const columns = [
     { name: "receiveDate", label: "วันที่ร้อง", width: 120 },
     { name: "agency", label: "หน่วยงาน", width: 200 },
@@ -126,50 +151,15 @@ const TableListBox = ({
   // Layout config
   const getLayoutConfig = () => {
     if (isExtraSmall) {
-      return {
-        layout: "stacked",
-        fieldsPerRow: 1,
-        gap: 1,
-        padding: 1,
-        inputHeight: "40px",
-        iconSize: 36,
-      };
+      return { layout: "stacked", fieldsPerRow: 1, gap: 1, padding: 1, inputHeight: "40px", iconSize: 36 };
     } else if (isSmall) {
-      return {
-        layout: "stacked",
-        fieldsPerRow: 2,
-        gap: 1,
-        padding: 1.5,
-        inputHeight: "40px",
-        iconSize: 40,
-      };
+      return { layout: "stacked", fieldsPerRow: 2, gap: 1, padding: 1.5, inputHeight: "40px", iconSize: 40 };
     } else if (isMedium) {
-      return {
-        layout: "two-row",
-        fieldsPerRow: 3,
-        gap: 1.5,
-        padding: 2,
-        inputHeight: "40px",
-        iconSize: 40,
-      };
+      return { layout: "two-row", fieldsPerRow: 3, gap: 1.5, padding: 2, inputHeight: "40px", iconSize: 40 };
     } else if (isLarge) {
-      return {
-        layout: "large-responsive",
-        fieldsPerRow: Math.min(4, filterFields.length),
-        gap: 1.5,
-        padding: 2,
-        inputHeight: "40px",
-        iconSize: 40,
-      };
+      return { layout: "large-responsive", fieldsPerRow: Math.min(4, filterFields.length), gap: 1.5, padding: 2, inputHeight: "40px", iconSize: 40 };
     }
-    return {
-      layout: "single-row",
-      fieldsPerRow: filterFields.length,
-      gap: 1.5,
-      padding: 2,
-      inputHeight: "40px",
-      iconSize: 40,
-    };
+    return { layout: "single-row", fieldsPerRow: filterFields.length, gap: 1.5, padding: 2, inputHeight: "40px", iconSize: 40 };
   };
   const layoutConfig = getLayoutConfig();
 
@@ -180,6 +170,7 @@ const TableListBox = ({
     "& .MuiInputBase-input": { fontSize: isExtraSmall ? "13px" : "14px" },
   });
 
+  // ✅ แก้เฉพาะตรงนี้
   const renderFilterField = (f) => {
     const commonProps = {
       fullWidth: true,
@@ -189,13 +180,18 @@ const TableListBox = ({
       size: "small",
       sx: getFilterFieldStyles(),
     };
+
+    // ถ้าเป็น field agency ใช้ departmentOptions จาก API
+    if (f.name === "agency") {
+      return <SelectField {...commonProps} options={departmentOptions} />;
+    }
+
     return f.type === "select" ? (
       <SelectField {...commonProps} options={f.options} />
     ) : (
       <InputText {...commonProps} />
     );
   };
-
   return (
     <Container
       maxWidth={false}

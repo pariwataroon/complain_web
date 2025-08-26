@@ -33,6 +33,7 @@ import {
   InputAdornment,
   CircularProgress,
 } from "@mui/material";
+import { CreateOutgoingReport5, getDepartmentsPrefix } from "@pages/api/outgoinreports/outgoinreports";
 
 // Constants สำหรับ options
 const PROCESS_STEP_OPTIONS = [
@@ -59,33 +60,6 @@ const URGENCY_OPTIONS = [
   { value: "เร่งด่วนที่สุด", label: "เร่งด่วนที่สุด" },
 ];
 
-const AGENCY_OPTIONS = [
-  { value: "กระทรวงมหาดไทย", label: "กระทรวงมหาดไทย" },
-  {
-    value: "กรมส่งเสริมการปกครองท้องถิ่น",
-    label: "กรมส่งเสริมการปกครองท้องถิ่น",
-  },
-  { value: "กรมการปกครอง", label: "กรมการปกครอง" },
-  {
-    value: "กรมป้องกันและบรรเทาสาธารณภัย",
-    label: "กรมป้องกันและบรรเทาสาธารณภัย",
-  },
-  { value: "จังหวัด", label: "จังหวัด" },
-  { value: "อำเภอ", label: "อำเภอ" },
-  { value: "องค์การบริหารส่วนจังหวัด", label: "องค์การบริหารส่วนจังหวัด" },
-  { value: "เทศบาลเมือง", label: "เทศบาลเมือง" },
-  { value: "เทศบาลตำบล", label: "เทศบาลตำบล" },
-  { value: "องค์การบริหารส่วนตำบล", label: "องค์การบริหารส่วนตำบล" },
-  { value: "กรุงเทพมหานคร", label: "กรุงเทพมหานคร" },
-  { value: "เมืองพัทยา", label: "เมืองพัทยา" },
-  {
-    value: "สำนักงานคณะกรรมการการเลือกตั้ง",
-    label: "สำนักงานคณะกรรมการการเลือกตั้ง",
-  },
-  { value: "สำนักงานตำรวจแห่งชาติ", label: "สำนักงานตำรวจแห่งชาติ" },
-  { value: "อื่นๆ", label: "อื่นๆ" },
-];
-
 const ReceiveReportsAgencies = () => {
   const { id } = useRouter().query;
 
@@ -94,6 +68,7 @@ const ReceiveReportsAgencies = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
+  const [departments, setDepartments] = useState([]);
 
   const { control, setValue, formState: { errors } } = useForm({
     defaultValues: {
@@ -101,6 +76,32 @@ const ReceiveReportsAgencies = () => {
       documentNo: "",
     },
   });
+
+useEffect(() => {
+  const fetchDepartments = async () => {
+    try {
+      const res = await getDepartmentsPrefix();
+      console.log("📌 getDepartmentsPrefix res:", res); // 👈 ดูว่ากลับมาแบบไหน
+      const data = res?.res_data || res; // เผื่อว่า API ส่ง array ตรงๆ
+
+      if (Array.isArray(data)) {
+        const mapped = data.map((dep) => ({
+          value: dep.id,    // ✅ UUID
+          label: dep.name,  // ✅ ชื่อ
+        }));
+        setDepartments(mapped);
+      } else {
+        setDepartments([]);
+      }
+    } catch (err) {
+      console.error("Error fetching departments:", err);
+      setDepartments([]);
+    }
+  };
+  fetchDepartments();
+}, []);
+
+
 
   useEffect(() => {
     if (openSearchDialog) {
@@ -110,53 +111,50 @@ const ReceiveReportsAgencies = () => {
     }
   }, [openSearchDialog]);
 
-  
-    const handleSearch = async (keyword) => {
-      setSearchLoading(true);
-      try {
-        const response = await GetComplaintsWithSearch({
-          skip: 0,
-          limit: 100,
-          search: keyword || "",
-        });
-  
-  
-        const items = Array.isArray(response?.res_data?.items)
-          ? response.res_data.items
-          : [];
-  
-  
-        const results = items.map((item) => ({
-          ...item,
-          label: item.complaint_number || "",
-          value: item.complaint_number || "",
-        }));
-  
-        setSearchResults(results);
-      } catch (err) {
-        setSearchResults([]);
-        console.error("handleSearch error", err);
-      } finally {
-        setSearchLoading(false);
-      }
-    };
-  
-   const handleSelectReference = (ref) => {
-      const num = ref?.complaint_number || "";
-      setForm((prev) => ({ ...prev, documentNo: num }));
-      setValue("documentNo", num, { shouldValidate: false, shouldDirty: true });
-      setOpenSearchDialog(false);
-    };
-  
-    const onClear = () => {
-      setSearchText("");
-      handleSearch("");
-      inputRef.current?.focus();
-    };
+  const handleSearch = async (keyword) => {
+    setSearchLoading(true);
+    try {
+      const response = await GetComplaintsWithSearch({
+        skip: 0,
+        limit: 100,
+        search: keyword || "",
+      });
 
-    const handleFileUpload = (files) => {
-      handleFileChange(files);
-    };
+      const items = Array.isArray(response?.res_data?.items)
+        ? response.res_data.items
+        : [];
+
+      const results = items.map((item) => ({
+        ...item,
+        label: item.complaint_number || "",
+        value: item.complaint_number || "",
+      }));
+
+      setSearchResults(results);
+    } catch (err) {
+      setSearchResults([]);
+      console.error("handleSearch error", err);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleSelectReference = (ref) => {
+    const num = ref?.complaint_number || "";
+    setForm((prev) => ({ ...prev, documentNo: num }));
+    setValue("documentNo", num, { shouldValidate: false, shouldDirty: true });
+    setOpenSearchDialog(false);
+  };
+
+  const onClear = () => {
+    setSearchText("");
+    handleSearch("");
+    inputRef.current?.focus();
+  };
+
+  const handleFileUpload = (files) => {
+    handleFileChange(files);
+  };
 
   // Initial form state
   const initialFormState = useMemo(
@@ -166,6 +164,7 @@ const ReceiveReportsAgencies = () => {
       processStep: "",
       confidentiality: "",
       urgency: "",
+      departmentId: "",
       agency: "",
       investigateGk: "",
       investigateDate: null,
@@ -186,76 +185,26 @@ const ReceiveReportsAgencies = () => {
   // Validation function
   const validateForm = useCallback(() => {
     const missingFields = [];
+    if (!form.referenceNo.trim()) missingFields.push("เลขที่อ้างอิง(เลข สรร.สารบัญ)");
+    if (!form.date) missingFields.push("วันที่");
+    if (!form.processStep) missingFields.push("ขั้นตอนการดำเนินการ");
+    if (!form.confidentiality) missingFields.push("ชั้นความลับ");
+    if (!form.urgency) missingFields.push("ชั้นความเร่งด่วน");
+    if (!form.departmentId) missingFields.push("หน่วยงาน");
+    if (!form.investigateGk.trim()) missingFields.push("เลขสป.กค.");
+    if (!form.investigateDate) missingFields.push("วันที่ (เลขสป.กค.)");
+    if (!form.documentNo.trim()) missingFields.push("เลขที่หนังสือ");
+    if (!form.documentDate) missingFields.push("วันที่ (เลขที่หนังสือ)");
+    if (!form.receiveWorkDate) missingFields.push("วันที่รับงานของเจ้าหน้าที่");
+    if (!form.submitWorkDate) missingFields.push("วันที่เสนองาน ผอ.สรร.");
+    if (!form.origin.trim()) missingFields.push("ต้นเรื่อง");
+    if (!form.subject.trim()) missingFields.push("เรื่อง");
+    if (!form.attachment.trim()) missingFields.push("เอกสารแนบ");
 
-    // Required fields validation
-    if (!form.referenceNo.trim()) {
-      missingFields.push("เลขที่อ้างอิง(เลข สรร.สารบัญ)");
-    }
-
-    if (!form.date) {
-      missingFields.push("วันที่");
-    }
-
-    if (!form.processStep) {
-      missingFields.push("ขั้นตอนการดำเนินการ");
-    }
-
-    if (!form.confidentiality) {
-      missingFields.push("ชั้นความลับ");
-    }
-
-    if (!form.urgency) {
-      missingFields.push("ชั้นความเร่งด่วน");
-    }
-
-    if (!form.agency) {
-      missingFields.push("หน่วยงาน");
-    }
-
-    if (!form.investigateGk.trim()) {
-      missingFields.push("เลขสป.กค.");
-    }
-
-    if (!form.investigateDate) {
-      missingFields.push("วันที่ (เลขสป.กค.)");
-    }
-
-    if (!form.documentNo.trim()) {
-      missingFields.push("เลขที่หนังสือ");
-    }
-
-    if (!form.documentDate) {
-      missingFields.push("วันที่ (เลขที่หนังสือ)");
-    }
-
-    if (!form.receiveWorkDate) {
-      missingFields.push("วันที่รับงานของเจ้าหน้าที่");
-    }
-
-    if (!form.submitWorkDate) {
-      missingFields.push("วันที่เสนองาน ผอ.สรร.");
-    }
-
-    if (!form.origin.trim()) {
-      missingFields.push("ต้นเรื่อง");
-    }
-
-    if (!form.subject.trim()) {
-      missingFields.push("เรื่อง");
-    }
-
-    if (!form.attachment.trim()) {
-      missingFields.push("เอกสารแนบ");
-    }
-
-    // Show warning alert if there are missing fields
     if (missingFields.length > 0) {
-      const message = `กรุณากรอกข้อมูลให้ครบถ้วน:\n${missingFields
-        .map((field) => `• ${field}`)
-        .join("\n")}`;
+      const message = `กรุณากรอกข้อมูลให้ครบถ้วน:\n${missingFields.map((f) => `• ${f}`).join("\n")}`;
       alertWarning("ข้อมูลไม่ครบถ้วน", message);
     }
-
     return missingFields.length === 0;
   }, [form]);
 
@@ -265,7 +214,7 @@ const ReceiveReportsAgencies = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   }, []);
 
-  // Handler สำหรับ DateThaiPickerService
+  // ✅ เพิ่ม handleDateChange ที่หายไป
   const handleDateChange = useCallback(
     (fieldName) => (thaiDate) => {
       setForm((prev) => ({ ...prev, [fieldName]: thaiDate }));
@@ -277,35 +226,55 @@ const ReceiveReportsAgencies = () => {
     setForm(initialFormState);
   }, [initialFormState]);
 
-  const handleSave = useCallback(() => {
-    if (validateForm()) {
-      console.log("Form data:", form);
-      // TODO: save form
+  const handleSave = useCallback(async () => {
+  if (validateForm()) {
+    try {
+      const payload = {
+  receive_number: form.referenceNo,
+  receive_date: form.date,
+  agency_reference_number: form.investigateGk,
+  agency_reference_date: form.investigateDate,
+  internal_register_number: form.documentNo,
+  internal_register_date: form.documentDate,
+  present_to_director_date: form.submitWorkDate,
+  complaint_number: form.documentNo,
+  complaint_number_date: form.date,
+  subject: form.subject,
+  document_number: form.documentNo,
+  document_date: form.documentDate,
+  signature_authority_user_id: form.signatureAuthorityId,
+  department_id: form.departmentId,
+  user_id: form.userId,
+  confidentiality_level: form.confidentiality,
+  urgency_level: form.urgency,
+  complaint_id: id,
+  remarks: form.remarks,
+};
+
+
+
+      const res = await CreateOutgoingReport5(payload);
+      console.log("CreateOutgoingReport5 success:", res);
       alertSuccess("สำเร็จ", "บันทึกข้อมูลเรียบร้อยแล้ว");
+    } catch (error) {
+      console.error("❌ handleSave error:", error?.response?.data || error);
+      alertWarning("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
     }
-  }, [form, validateForm]);
+  }
+}, [form, id, validateForm]);
 
   const handleFileChange = useCallback((payload) => {
     let files = [];
-
-    if (payload?.target?.files) {
-      // เคสส่ง event มาจาก <input type="file" />
-      files = Array.from(payload.target.files);
-    } else if (Array.isArray(payload)) {
-      // เคสส่งเป็น array ของ File
-      files = payload;
-    } else if (payload && typeof payload === "object" && "length" in payload) {
-      // เคสส่งเป็น FileList
-      files = Array.from(payload);
-    } else if (payload?.file) {
-      // เคสส่งเป็น object { file }
-      files = [payload.file];
-    }
-
-    // เก็บชื่อไฟล์ไว้โชว์ในฟอร์มเดิม
+    if (payload?.target?.files) files = Array.from(payload.target.files);
+    else if (Array.isArray(payload)) files = payload;
+    else if (payload && typeof payload === "object" && "length" in payload) files = Array.from(payload);
+    else if (payload?.file) files = [payload.file];
     const names = files.map((f) => f?.name).filter(Boolean).join(", ");
     setForm((prev) => ({ ...prev, attachment: names || "" }));
   }, []);
+
+
+
 
   return (
     <Box
@@ -474,13 +443,12 @@ const ReceiveReportsAgencies = () => {
                 </span>
               }
               inputLabel="เลือกหน่วยงาน"
-              name="agency"
-              value={form.agency}
+              name="departmentId" // ✅ เก็บ UUID ของหน่วยงาน
+              value={form.departmentId}
               onChange={handleChange}
-              options={AGENCY_OPTIONS}
+              options={departments} // ✅ ใช้ options จาก API
             />
           </Box>
-
           {/* แถวที่ 4: เลขสป.กค. | วันที่ */}
           <Box
             sx={{
