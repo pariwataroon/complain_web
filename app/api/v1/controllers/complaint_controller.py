@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from uuid import UUID
 from typing import List, Dict, Any, Optional
 import logging
@@ -1218,7 +1218,16 @@ def get_complaints_enhanced(
 
     # Filter by document_number (เลขที่หนังสือ)
     if document_number:
-        query = query.filter(Complaint.document_number.ilike(f"%{document_number}%"))
+        if document_number.lower() in ["not_null", "has_value", "exists"]:
+            # ค้นหาเฉพาะที่มี document_number (ไม่ใช่ null และไม่ใช่ค่าว่าง)
+            query = query.filter(
+                Complaint.document_number.isnot(None),
+                Complaint.document_number != "",
+                Complaint.document_number != " "
+            )
+        else:
+            # ค้นหาตาม pattern ที่ระบุ
+            query = query.filter(Complaint.document_number.ilike(f"%{document_number}%"))
 
     # Search filter
     if search:
@@ -1427,7 +1436,16 @@ def get_complaints(
 
     # Filter by document_number (เลขที่หนังสือ)
     if document_number:
-        query = query.filter(Complaint.document_number.ilike(f"%{document_number}%"))
+        if document_number.lower() in ["not_null", "has_value", "exists"]:
+            # ค้นหาเฉพาะที่มี document_number (ไม่ใช่ null และไม่ใช่ค่าว่าง)
+            query = query.filter(
+                Complaint.document_number.isnot(None),
+                Complaint.document_number != "",
+                Complaint.document_number != " "
+            )
+        else:
+            # ค้นหาตาม pattern ที่ระบุ
+            query = query.filter(Complaint.document_number.ilike(f"%{document_number}%"))
 
     # ปรับ search ให้มีลำดับความสำคัญที่ถูกต้อง
     if search:
@@ -1457,15 +1475,28 @@ def get_complaints(
             Complaint.complaint_number.ilike(f"%{search}%"),          # เลขที่เรื่อง
             Complaint.subject.ilike(f"%{search}%"),                  # หัวเรื่อง
             Complaint.description.ilike(f"%{search}%"),              # คำอธิบาย
-            Complaint.document_number.ilike(f"%{search}%"),          # เลขที่หนังสือ
-            
+        ]
+        
+        # เพิ่มการค้นหา document_number แบบพิเศษ
+        if search.lower() in ["not_null", "has_value", "exists"]:
+            # ค้นหาเฉพาะที่มี document_number (ไม่ใช่ null และไม่ใช่ค่าว่าง)
+            search_conditions.append(
+                and_(
+                    Complaint.document_number.isnot(None),
+                    Complaint.document_number != "",
+                    Complaint.document_number != " "
+                )
+            )
+        else:
+            # ค้นหาตาม pattern ปกติ
+            search_conditions.append(Complaint.document_number.ilike(f"%{search}%"))
+        
+        # เพิ่มการค้นหาอื่นๆ
+        search_conditions.extend([
             # 2. ข้อมูลการจัดประเภท - ความสำคัญรอง
             Complaint.complaint_type.ilike(f"%{search}%"),           # ประเภทเรื่องร้องเรียน
             ComplaintSubType.name.ilike(f"%{search}%"),              # ประเภทย่อย
-            
-            # 3. ข้อมูลบุคคล - เฉพาะเมื่อไม่ได้ระบุ complainant_name แยกต่างหาก
-            # (ถ้ามี complainant_name แล้ว จะใช้ filter แยกที่มีความละเอียดสูงกว่า)
-        ]
+        ])
         
         # เพิ่มการค้นหาชื่อบุคคลเฉพาะเมื่อไม่ได้ระบุ complainant_name แยกต่างหาก
         if not complainant_name:
