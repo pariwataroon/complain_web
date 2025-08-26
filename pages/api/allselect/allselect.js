@@ -395,43 +395,6 @@ const GetAllSelectPositionOptions = async () => {
   }
 };
 
-const GetAllOutsideDepartments = async () => {
-  try {
-    const response = await axiosInstance.get("/outside-departments");
-    const apiData = response?.data;
-
-    if (apiData?.res_code !== "0000" || !Array.isArray(apiData?.res_data)) {
-      console.warn("Invalid API response:", apiData);
-      return [];
-    }
-
-    const activeDepartments = apiData.res_data
-      .filter((dept) => dept.is_active === true)
-      .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
-
-    return activeDepartments.map((dept, index) => ({
-      label: dept.name || `หน่วยงาน ${dept.id}`,
-      value: dept.id,
-
-      name: dept.name || "",
-      description: dept.description || "",
-      orderIndex: dept.order_index || 0,
-      isActive: dept.is_active,
-
-      createdAt: dept.created_at,
-      updatedAt: dept.updated_at,
-
-      raw: dept,
-
-      uniqueId: dept.id,
-      sortOrder: index,
-    }));
-  } catch (error) {
-    console.error("Error fetching outside departments:", error);
-    return [];
-  }
-};
-
 
 const GetAllSelectYears = async () => {
   try {
@@ -479,6 +442,33 @@ const GetAllSelectYears = async () => {
       error: error.message || "เกิดข้อผิดพลาดในการดึงข้อมูล",
       raw: null,
     };
+  }
+};
+
+const GetAllOutsideDepartments = async ({
+  skip = 0,
+  limit = 100,
+  active_only = true,
+} = {}) => {
+  try {
+    const response = await axiosInstance.get("/outside-departments", {
+      params: { skip, limit, active_only },
+    });
+    const apiData = response?.data;
+    if (!Array.isArray(apiData?.res_data)) return [];
+    // สามารถปรับรูปแบบ mapping option ได้ตามที่ต้องการ
+    return apiData.res_data
+      .filter((item) => item.is_active)
+      .map((item) => ({
+        value: item.id,
+        label: item.name,
+        description: item.description,
+        orderIndex: item.order_index,
+        raw: item,
+      }));
+  } catch (error) {
+    console.error("Error fetching outside departments:", error);
+    return [];
   }
 };
 
