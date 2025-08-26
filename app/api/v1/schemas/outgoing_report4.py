@@ -32,6 +32,8 @@ class OutgoingReport4Base(BaseModel):
     other_department: Optional[str] = Field(None, description="หน่วยงานอื่นๆ")  # ตาม model
     confidentiality_level: str = Field(..., description="ระดับความลับ")
     urgency_level: str = Field(..., description="ระดับความเร่งด่วน")
+    document_number: str = Field(..., description="เลขที่เอกสาร")
+    document_date: datetime = Field(..., description="วันที่เอกสาร")
     remarks: Optional[str] = Field(None, description="หมายเหตุ")
     proposal_purpose: Optional[str] = Field(None, description="เสนอเพื่อ")  # ตาม model
     consideration_result: Optional[str] = Field(None, description="ผลการพิจารณา")  # ตาม model
@@ -47,6 +49,8 @@ class OutgoingReport4Create(BaseModel):
     other_department: Optional[str] = None  # ตาม model
     confidentiality_level: str = Field(..., max_length=50)
     urgency_level: str = Field(..., max_length=50)
+    document_number: str = Field(..., max_length=100, description="เลขที่เอกสาร")
+    document_date: datetime = Field(..., description="วันที่เอกสาร")
     remarks: Optional[str] = None
     proposal_purpose: Optional[str] = None  # ตาม model
     consideration_result: Optional[str] = None  # ตาม model
@@ -68,6 +72,8 @@ class OutgoingReport4Update(BaseModel):
     other_department: Optional[str] = None
     confidentiality_level: Optional[str] = None
     urgency_level: Optional[str] = None
+    document_number: Optional[str] = None
+    document_date: Optional[datetime] = None
     remarks: Optional[str] = None
     proposal_purpose: Optional[str] = None
     consideration_result: Optional[str] = None

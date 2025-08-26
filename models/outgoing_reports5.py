@@ -36,8 +36,8 @@ class OutgoingReport5(Base):
 
     # เนื้อหา
     subject = Column(NVARCHAR(500), nullable=False)
-    document_number = Column(NVARCHAR(100), nullable=True)
-    document_date = Column(DateTime, nullable=True)
+    document_number = Column(NVARCHAR(100), nullable=False)
+    document_date = Column(DateTime, nullable=False)
     remarks = Column(NVARCHAR(2000), nullable=True)
 
     # ผู้ลงนาม/หน่วยงาน/ผู้ปฏิบัติ (ตามโครงเดิม)

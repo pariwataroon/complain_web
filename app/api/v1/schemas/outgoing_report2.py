@@ -31,6 +31,8 @@ class OutgoingReport2Base(BaseModel):
     signature_authority_user_id: UUID = Field(..., description="ผู้มีอำนาจลงนาม")
     confidentiality_level: str = Field(..., description="ระดับความลับ")
     urgency_level: str = Field(..., description="ระดับความเร่งด่วน")
+    document_number: str = Field(..., description="เลขที่เอกสาร")
+    document_date: datetime = Field(..., description="วันที่เอกสาร")
     remarks: Optional[str] = Field(None, description="หมายเหตุ")
     complaint_id: Optional[UUID] = Field(None, description="ID ของข้อร้องเรียนที่เกี่ยวข้อง")
 
@@ -44,6 +46,8 @@ class OutgoingReport2Create(BaseModel):
     signature_authority_user_id: UUID
     confidentiality_level: str = Field(..., max_length=50)
     urgency_level: str = Field(..., max_length=50)
+    document_number: str = Field(..., max_length=100, description="เลขที่เอกสาร")
+    document_date: datetime = Field(..., description="วันที่เอกสาร")
     remarks: Optional[str] = None
     complaint_id: Optional[UUID] = None
     
@@ -63,6 +67,8 @@ class OutgoingReport2Update(BaseModel):
     signature_authority_user_id: Optional[UUID] = None
     confidentiality_level: Optional[str] = None
     urgency_level: Optional[str] = None
+    document_number: Optional[str] = None
+    document_date: Optional[datetime] = None
     remarks: Optional[str] = None
     complaint_id: Optional[UUID] = None
 

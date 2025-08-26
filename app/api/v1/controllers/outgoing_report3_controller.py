@@ -89,6 +89,8 @@ def create_outgoing_report3(
             department_id=report_data.department_id,
             confidentiality_level=report_data.confidentiality_level,
             urgency_level=report_data.urgency_level,
+            document_number=report_data.document_number,
+            document_date=report_data.document_date,
             remarks=report_data.remarks,
             complaint_id=report_data.complaint_id,
             created_by=current_user_id,

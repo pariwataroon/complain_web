@@ -19,6 +19,8 @@ class OutgoingReport3(Base):
     signature_authority_user_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), nullable=False)
     confidentiality_level = Column(NVARCHAR(50), nullable=False)
     urgency_level = Column(NVARCHAR(50), nullable=False)
+    document_number = Column(NVARCHAR(100), nullable=False)
+    document_date = Column(DateTime, nullable=False)
     remarks = Column(NVARCHAR(1000), nullable=True)
     complaint_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_complaints.id"), nullable=True)
     

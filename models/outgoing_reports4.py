@@ -20,6 +20,8 @@ class OutgoingReport4(Base):
     other_department = Column(NVARCHAR(500), nullable=True)
     confidentiality_level = Column(NVARCHAR(50), nullable=False)
     urgency_level = Column(NVARCHAR(50), nullable=False)
+    document_number = Column(NVARCHAR(100), nullable=False)
+    document_date = Column(DateTime, nullable=False)
     remarks = Column(NVARCHAR(1000), nullable=True)
     proposal_purpose = Column(NVARCHAR(1000), nullable=True)  # เสนอเพื่อ
     consideration_result = Column(NVARCHAR(2000), nullable=True)  # ผลการพิจารณา

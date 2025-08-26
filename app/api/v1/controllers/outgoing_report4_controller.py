@@ -81,6 +81,8 @@ def create_outgoing_report4(
             other_department=report_data.other_department,
             confidentiality_level=report_data.confidentiality_level,
             urgency_level=report_data.urgency_level,
+            document_number=report_data.document_number,
+            document_date=report_data.document_date,
             remarks=report_data.remarks,
             proposal_purpose=report_data.proposal_purpose,
             consideration_result=report_data.consideration_result,

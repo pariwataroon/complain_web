@@ -40,8 +40,8 @@ class OutgoingReport5Base(BaseModel):
     internal_register_number: Optional[str] = None
     internal_register_date: Optional[datetime] = None
     present_to_director_date: Optional[datetime] = None
-    document_number: Optional[str] = None
-    document_date: Optional[datetime] = None
+    document_number: str = Field(..., description="เลขที่เอกสาร")
+    document_date: datetime = Field(..., description="วันที่เอกสาร")
 
     # เชื่อม complaint
     complaint_id: Optional[UUID] = None
@@ -101,8 +101,8 @@ class OutgoingReport5(BaseModel):
     internal_register_number: Optional[str] = None
     internal_register_date: Optional[datetime] = None
     present_to_director_date: Optional[datetime] = None
-    document_number: Optional[str] = None
-    document_date: Optional[datetime] = None
+    document_number: str = Field(..., description="เลขที่เอกสาร")
+    document_date: datetime = Field(..., description="วันที่เอกสาร")
     complaint_id: Optional[UUID] = None
     remarks: Optional[str] = None
 
