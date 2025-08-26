@@ -1726,10 +1726,11 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
             if subtype:
                 complaint_subtype_name = subtype.name
 
-        # ดึง phone และ description จาก complainant_data
+        # ดึง phone และ description จาก complainant_data และ complaint object
         complainant_data = ensure_dict(complaint.complainant_data)
         complainant_phone = complainant_data.get("phone", "")
-        complainant_description = complainant_data.get("description", "")
+        # ใช้ description จาก complaint object แทน complainant_data
+        complainant_description = complaint.description or ""
 
         return ComplaintListItem(
             id=complaint.id,
