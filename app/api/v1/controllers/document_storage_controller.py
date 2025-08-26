@@ -272,6 +272,9 @@ def get_related_complaints(db: Session, complaint_id: UUID) -> Dict:
             descendants = get_all_descendants(master_id)
             all_related_complaints.extend(descendants)
             
+            # สร้าง lookup dictionary สำหรับหา complaint_number ของ parent
+            complaints_lookup = {c.id: c for c in all_related_complaints}
+            
             # แปลงเป็น dict แบบง่ายๆ ไม่เรียงก่อน
             all_related_list = [
                 {
@@ -282,6 +285,7 @@ def get_related_complaints(db: Session, complaint_id: UUID) -> Dict:
                     "is_master": complaint.parent_complaint_id is None,
                     "is_current": complaint.id == complaint_id,  # บอกว่าเป็นเรื่องปัจจุบันหรือไม่
                     "parent_complaint_id": str(complaint.parent_complaint_id) if complaint.parent_complaint_id else None,
+                    "parent_complaint_number": complaints_lookup.get(complaint.parent_complaint_id).complaint_number if complaint.parent_complaint_id and complaint.parent_complaint_id in complaints_lookup else None,
                     "created_at": complaint.created_at.isoformat() if complaint.created_at else None,
                     "complainant_name": get_complainant_name_from_data(complaint.complainant_data)
                 } for complaint in all_related_complaints
@@ -447,6 +451,7 @@ def get_bulk_related_complaints(db: Session, complaint_ids: List[UUID]) -> Dict[
                     "is_master": c.parent_complaint_id is None,
                     "is_current": c.id == complaint_id,
                     "parent_complaint_id": str(c.parent_complaint_id) if c.parent_complaint_id else None,
+                    "parent_complaint_number": complaints_by_id.get(c.parent_complaint_id).complaint_number if c.parent_complaint_id and c.parent_complaint_id in complaints_by_id else None,
                     "created_at": c.created_at.isoformat() if c.created_at else None,
                     "complainant_name": get_complainant_name_from_data(c.complainant_data)
                 } for c in all_related
