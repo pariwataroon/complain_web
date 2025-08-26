@@ -134,6 +134,10 @@ async def read_complaints_enhanced(
     complainant_name: Optional[str] = None,
     subject: Optional[str] = None,   # เพิ่ม subject filter สำหรับค้นหา "นร"
     document_number: Optional[str] = None,   # เพิ่ม document_number filter
+    reference_number: Optional[str] = None,   # เพิ่ม reference_number filter
+    reference_number2: Optional[str] = None,  # เพิ่ม reference_number2 filter
+    reference_number3: Optional[str] = None,  # เพิ่ม reference_number3 filter
+    reference_number4: Optional[str] = None,  # เพิ่ม reference_number4 filter
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("setting_access"))
 ):
@@ -151,7 +155,11 @@ async def read_complaints_enhanced(
         search=search,
         complainant_name=complainant_name,
         subject=subject,   # ส่ง subject filter ไป controller
-        document_number=document_number   # ส่ง document_number filter ไป controller
+        document_number=document_number,   # ส่ง document_number filter ไป controller
+        reference_number=reference_number,   # ส่ง reference_number filter ไป controller
+        reference_number2=reference_number2, # ส่ง reference_number2 filter ไป controller
+        reference_number3=reference_number3, # ส่ง reference_number3 filter ไป controller
+        reference_number4=reference_number4  # ส่ง reference_number4 filter ไป controller
     )
     return format_response("0000", result)
 
