@@ -14,6 +14,8 @@ class OutgoingReport4(Base):
     reference_number = Column(NVARCHAR(50), nullable=False)
     reference_date = Column(DateTime, nullable=False)
     subject = Column(NVARCHAR(500), nullable=False)
+    complaint_number = Column(NVARCHAR(50), nullable=False)
+    complaint_number_date = Column(DateTime, nullable=False)
     signature_authority_user_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), nullable=False)
     department_id = Column(UNIQUEIDENTIFIER, ForeignKey("departments.id"), nullable=True)
     user_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), nullable=True)

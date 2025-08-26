@@ -26,6 +26,8 @@ class OutgoingReport4Base(BaseModel):
     reference_number: str = Field(..., description="เลขอ้างอิง")
     reference_date: datetime = Field(..., description="วันที่เอกสาร")
     subject: str = Field(..., description="เรื่อง")
+    complaint_number: str = Field(..., description="หมายเลขข้อร้องเรียน")
+    complaint_number_date: datetime = Field(..., description="วันที่ของข้อร้องเรียน")
     signature_authority_user_id: UUID = Field(..., description="ผู้มีอำนาจลงนาม")
     department_id: Optional[UUID] = Field(None, description="หน่วยงาน")  # ตาม model nullable=True
     user_id: Optional[UUID] = Field(None, description="ผู้ใช้ที่เกี่ยวข้อง")  # ตาม model
@@ -43,6 +45,8 @@ class OutgoingReport4Create(BaseModel):
     reference_number: str = Field(..., max_length=50)
     reference_date: datetime
     subject: str = Field(..., max_length=500)
+    complaint_number: str = Field(..., max_length=50, description="หมายเลขข้อร้องเรียน")
+    complaint_number_date: datetime = Field(..., description="วันที่ของข้อร้องเรียน")
     signature_authority_user_id: UUID
     department_id: Optional[UUID] = None  # ตาม model
     user_id: Optional[UUID] = None  # ตาม model
