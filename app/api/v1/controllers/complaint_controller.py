@@ -1182,6 +1182,10 @@ def get_complaints_enhanced(
     complainant_name: Optional[str] = None,
     subject: Optional[str] = None,   # เพิ่ม subject filter
     document_number: Optional[str] = None,  # เพิ่ม document_number filter
+    reference_number: Optional[str] = None,  # เพิ่ม reference_number filter
+    reference_number2: Optional[str] = None,  # เพิ่ม reference_number2 filter
+    reference_number3: Optional[str] = None,  # เพิ่ม reference_number3 filter
+    reference_number4: Optional[str] = None,  # เพิ่ม reference_number4 filter
 ):
     """ดึงรายการข้อร้องเรียนแบบ enhanced พร้อมข้อมูลเพิ่มเติม"""
     from models.comp_complaint_types import ComplaintChannel
@@ -1229,6 +1233,47 @@ def get_complaints_enhanced(
             # ค้นหาตาม pattern ที่ระบุ
             query = query.filter(Complaint.document_number.ilike(f"%{document_number}%"))
 
+    # Filter by reference_number fields
+    if reference_number:
+        if reference_number.lower() in ["not_null", "has_value", "exists"]:
+            query = query.filter(
+                Complaint.reference_number.isnot(None),
+                Complaint.reference_number != "",
+                Complaint.reference_number != " "
+            )
+        else:
+            query = query.filter(Complaint.reference_number.ilike(f"%{reference_number}%"))
+
+    if reference_number2:
+        if reference_number2.lower() in ["not_null", "has_value", "exists"]:
+            query = query.filter(
+                Complaint.reference_number2.isnot(None),
+                Complaint.reference_number2 != "",
+                Complaint.reference_number2 != " "
+            )
+        else:
+            query = query.filter(Complaint.reference_number2.ilike(f"%{reference_number2}%"))
+
+    if reference_number3:
+        if reference_number3.lower() in ["not_null", "has_value", "exists"]:
+            query = query.filter(
+                Complaint.reference_number3.isnot(None),
+                Complaint.reference_number3 != "",
+                Complaint.reference_number3 != " "
+            )
+        else:
+            query = query.filter(Complaint.reference_number3.ilike(f"%{reference_number3}%"))
+
+    if reference_number4:
+        if reference_number4.lower() in ["not_null", "has_value", "exists"]:
+            query = query.filter(
+                Complaint.reference_number4.isnot(None),
+                Complaint.reference_number4 != "",
+                Complaint.reference_number4 != " "
+            )
+        else:
+            query = query.filter(Complaint.reference_number4.ilike(f"%{reference_number4}%"))
+
     # Search filter
     if search:
         search_filter = or_(
@@ -1237,6 +1282,43 @@ def get_complaints_enhanced(
             Complaint.description.ilike(f"%{search}%"),
             Complaint.document_number.ilike(f"%{search}%")  # เพิ่มการค้นหาเลขที่หนังสือ
         )
+        
+        # เพิ่มการค้นหาสำหรับ reference_number fields
+        if search.lower() in ["not_null", "has_value", "exists"]:
+            # ค้นหาเฉพาะที่มี reference_number ใดๆ ที่ไม่เป็น null
+            reference_search_filter = or_(
+                and_(
+                    Complaint.reference_number.isnot(None),
+                    Complaint.reference_number != "",
+                    Complaint.reference_number != " "
+                ),
+                and_(
+                    Complaint.reference_number2.isnot(None),
+                    Complaint.reference_number2 != "",
+                    Complaint.reference_number2 != " "
+                ),
+                and_(
+                    Complaint.reference_number3.isnot(None),
+                    Complaint.reference_number3 != "",
+                    Complaint.reference_number3 != " "
+                ),
+                and_(
+                    Complaint.reference_number4.isnot(None),
+                    Complaint.reference_number4 != "",
+                    Complaint.reference_number4 != " "
+                )
+            )
+            search_filter = or_(search_filter, reference_search_filter)
+        else:
+            # ค้นหาใน reference_number fields ตาม pattern ปกติ
+            reference_search_filter = or_(
+                Complaint.reference_number.ilike(f"%{search}%"),
+                Complaint.reference_number2.ilike(f"%{search}%"),
+                Complaint.reference_number3.ilike(f"%{search}%"),
+                Complaint.reference_number4.ilike(f"%{search}%")
+            )
+            search_filter = or_(search_filter, reference_search_filter)
+            
         query = query.filter(search_filter)
     
     # Filter ด้วย subject สำหรับค้นหา "นร" เท่านั้น
@@ -1415,6 +1497,10 @@ def get_complaints(
     complainant_name: Optional[str] = None,   # เพิ่ม filter
     subject: Optional[str] = None,   # เพิ่ม subject filter
     document_number: Optional[str] = None,  # เพิ่ม document_number filter
+    reference_number: Optional[str] = None,  # เพิ่ม reference_number filter
+    reference_number2: Optional[str] = None,  # เพิ่ม reference_number2 filter
+    reference_number3: Optional[str] = None,  # เพิ่ม reference_number3 filter
+    reference_number4: Optional[str] = None,  # เพิ่ม reference_number4 filter
 ):
     query = db.query(Complaint)
     
@@ -1458,6 +1544,47 @@ def get_complaints(
             # ค้นหาตาม pattern ที่ระบุ
             query = query.filter(Complaint.document_number.ilike(f"%{document_number}%"))
 
+    # Filter by reference_number fields
+    if reference_number:
+        if reference_number.lower() in ["not_null", "has_value", "exists"]:
+            query = query.filter(
+                Complaint.reference_number.isnot(None),
+                Complaint.reference_number != "",
+                Complaint.reference_number != " "
+            )
+        else:
+            query = query.filter(Complaint.reference_number.ilike(f"%{reference_number}%"))
+
+    if reference_number2:
+        if reference_number2.lower() in ["not_null", "has_value", "exists"]:
+            query = query.filter(
+                Complaint.reference_number2.isnot(None),
+                Complaint.reference_number2 != "",
+                Complaint.reference_number2 != " "
+            )
+        else:
+            query = query.filter(Complaint.reference_number2.ilike(f"%{reference_number2}%"))
+
+    if reference_number3:
+        if reference_number3.lower() in ["not_null", "has_value", "exists"]:
+            query = query.filter(
+                Complaint.reference_number3.isnot(None),
+                Complaint.reference_number3 != "",
+                Complaint.reference_number3 != " "
+            )
+        else:
+            query = query.filter(Complaint.reference_number3.ilike(f"%{reference_number3}%"))
+
+    if reference_number4:
+        if reference_number4.lower() in ["not_null", "has_value", "exists"]:
+            query = query.filter(
+                Complaint.reference_number4.isnot(None),
+                Complaint.reference_number4 != "",
+                Complaint.reference_number4 != " "
+            )
+        else:
+            query = query.filter(Complaint.reference_number4.ilike(f"%{reference_number4}%"))
+
     # ปรับ search ให้มีลำดับความสำคัญที่ถูกต้อง
     if search:
         from models.comp_complaint_types import ComplaintSubType
@@ -1498,9 +1625,39 @@ def get_complaints(
                     Complaint.document_number != " "
                 )
             )
+            # เพิ่มการค้นหาสำหรับ reference_number fields
+            search_conditions.extend([
+                and_(
+                    Complaint.reference_number.isnot(None),
+                    Complaint.reference_number != "",
+                    Complaint.reference_number != " "
+                ),
+                and_(
+                    Complaint.reference_number2.isnot(None),
+                    Complaint.reference_number2 != "",
+                    Complaint.reference_number2 != " "
+                ),
+                and_(
+                    Complaint.reference_number3.isnot(None),
+                    Complaint.reference_number3 != "",
+                    Complaint.reference_number3 != " "
+                ),
+                and_(
+                    Complaint.reference_number4.isnot(None),
+                    Complaint.reference_number4 != "",
+                    Complaint.reference_number4 != " "
+                )
+            ])
         else:
             # ค้นหาตาม pattern ปกติ
             search_conditions.append(Complaint.document_number.ilike(f"%{search}%"))
+            # เพิ่มการค้นหาใน reference_number fields
+            search_conditions.extend([
+                Complaint.reference_number.ilike(f"%{search}%"),
+                Complaint.reference_number2.ilike(f"%{search}%"),
+                Complaint.reference_number3.ilike(f"%{search}%"),
+                Complaint.reference_number4.ilike(f"%{search}%")
+            ])
         
         # เพิ่มการค้นหาอื่นๆ
         search_conditions.extend([
