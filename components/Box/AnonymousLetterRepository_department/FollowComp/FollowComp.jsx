@@ -221,7 +221,7 @@ const FollowComp = () => {
   const firstPhases = sections.filter((s) => s.status < STATUS.FINAL_NOTIFY);
   const finalPhase = sections.find((s) => s.status === STATUS.FINAL_NOTIFY);
 
-  return (
+  return
     <Box>
       <BreadcrumbsService items={breadcrumbItems} />
 
