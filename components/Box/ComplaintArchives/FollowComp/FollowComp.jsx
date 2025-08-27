@@ -195,8 +195,8 @@ const sectionConfigs = [
       ลำดับ: idx + 1,
       "ส่งหน่วยงาน(ครั้งที่ส่ง)": row.agency || "-",
       เรื่อง: row.issue || row.subject || "-",
-      เลขที่หนังสือ: row.document_number || row.reference_number || "-",
-      ลงวันที่: row.receiveDate || row.reference_date || "-",
+      เลขที่หนังสือ: row.document_number || row.document_number || "-",
+      ลงวันที่: row.document_date || row.document_date || "-",
       ผู้ลงนาม:
         row.signer ||
         (row.signature_authority_user && row.signature_authority_user.name) ||
@@ -231,8 +231,8 @@ const sectionConfigs = [
       เลขที่หนังสือ: row.document_number || row.reference_number || "-",
       ลงวันที่: row.receiveDate || row.reference_date || "-",
       เรื่อง: row.issue || row.subject || "-",
-      วันรับงาน: row.assigned_date || "-",
-      วันที่เสนองาน: row.proposed_date || "-",
+      วันรับงาน: row.reference_date || "-",
+      วันที่เสนองาน: row.created_at || "-",
       หน่วยงาน: row.agency || row.department?.name || "-",
       เอกสารแนบ:
         row.attachment_name ||
@@ -533,9 +533,9 @@ const FollowComp = () => {
     ...item,
     agency: item.department?.name || "-",
     issue: item.subject || "-",
-    document_number: item.reference_number || "-",
-    receiveDate: item.reference_date
-      ? new Date(item.reference_date).toLocaleDateString("th-TH")
+    document_number: item.document_number || "-",
+    document_date: item.document_date
+      ? new Date(item.document_date).toLocaleDateString("th-TH")
       : "-",
     signer: item.signature_authority_user?.name || "-",
     attachment_name:
@@ -557,11 +557,13 @@ const FollowComp = () => {
   const agencyReportExtra = outgoingType4.map((item, idx) => ({
     ...item,
     document_number: item.reference_number || "-",
-    receiveDate: item.reference_date
+    reference_date: item.reference_date
       ? new Date(item.reference_date).toLocaleDateString("th-TH")
       : "-",
     issue: item.subject || "-",
-    assigned_date: item.assigned_date || "-",
+    created_at: item.created_at
+      ? new Date(item.created_at).toLocaleDateString("th-TH")
+      : "-",
     proposed_date: item.proposed_date || "-",
     agency: item.department?.name || "-",
     attachment_name:
