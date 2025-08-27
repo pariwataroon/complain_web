@@ -770,7 +770,17 @@ const CommitteeCompositionSettings = () => {
               {/* ขวา: รัฐวิสาหกิจ + อื่นๆ */}
               <Grid item xs={12} md={6}>
                 <Stack spacing={1.5}>
-                  
+                  <Typography sx={{ fontWeight: "bold", color: "#2499FF" }}>
+                    รัฐวิสาหกิจ
+                  </Typography>
+
+                  <SelectField
+                    label="เลือกรัฐวิสาหกิจ"
+                    options={stateEnterpriseOptions}
+                    value={formData[`state_enterprise_${number}`] || ""}
+                    onChange={handleInputChange}
+                    name={`state_enterprise_${number}`}
+                  />
                   {renderAdditionalSelects("state_enterprise", number)}
                   <Typography sx={{ fontWeight: "bold", color: "#2499FF", mt: 0.5 }}>
                     อื่นๆ
