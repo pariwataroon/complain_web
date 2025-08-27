@@ -11,6 +11,12 @@ import {
   UploadOutgoingReportAttachments,
 } from "@pages/api/outgoinreports/outgoinreports";
 
+  const toYMD = (d) => {
+    if (!d) return null;
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
+  };
+
 export const useInitialNotificationComplainantAgency = () => {
   const router = useRouter();
   const { id } = router.query;
@@ -28,7 +34,8 @@ export const useInitialNotificationComplainantAgency = () => {
     attachment: "",
     note: "",
     position_id: "",  
-    complaint_id: "", 
+    complaint_id: "",
+    selected_complaint_number: "", // เพิ่มฟิลด์นี้เพื่อเก็บ complaint_number ที่เลือก
   });
 
   // เก็บไฟล์จริง (รองรับหลายไฟล์)
@@ -197,6 +204,7 @@ export const useInitialNotificationComplainantAgency = () => {
       note: "",
       position_id: "",
       complaint_id: "",
+      selected_complaint_number: "", // เพิ่มฟิลด์นี้
     });
     setAttachmentFiles([]);
     setErrors({});
@@ -213,8 +221,10 @@ export const useInitialNotificationComplainantAgency = () => {
 
     const payload = {
       position_id: form.position_id || "7e18e4fe-d416-4580-b4d4-2a4032f67770",
-      complaint_number: form.refNo || "",
+      complaint_number: form.refNo,
       complaint_number_date: toISOorNull(form.date),
+      document_number: "",
+      document_date: toISOorNull(form.date), 
       subject: form.subject || "",
       signature_authority_user_id: nullIfEmpty(form.signer),
       department_id: nullIfEmpty(form.department),
@@ -254,8 +264,7 @@ export const useInitialNotificationComplainantAgency = () => {
       // 2) อัปโหลดไฟล์แนบ (ถ้ามีไฟล์และสร้างสำเร็จ)
       if (createdId && attachmentFiles.length > 0) {
         const fd = new FormData();
-        // backend ต้องการ key = "files"
-+       attachmentFiles.forEach((f) => fd.append("files", f, f.name));
+        attachmentFiles.forEach((f) => fd.append("files", f, f.name));
         await UploadOutgoingReportAttachments(fd, createdId);
       }
 
@@ -320,6 +329,7 @@ export const useInitialNotificationComplainantAgency = () => {
       note: "",
       position_id: "",
       complaint_id: "",
+      selected_complaint_number: "", 
     };
     return Object.keys(initial).some((k) => form[k] !== initial[k]);
   }, [form]);

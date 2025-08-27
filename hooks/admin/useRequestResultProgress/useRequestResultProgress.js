@@ -21,6 +21,8 @@ export const useRequestResultProgress = () => {
     note: "",
     position_id: "",
     complaint_id: "",
+    department_meta: null,  
+    signer_meta: null,       
   });
 
   // เก็บไฟล์จริง (รองรับหลายไฟล์)
@@ -58,16 +60,17 @@ export const useRequestResultProgress = () => {
   const getFieldError = useCallback((fieldName) => errors[fieldName] || null, [errors]);
 
   // -------- change handlers --------
-  const handleChange = useCallback(
-    (e) => {
-      const { name, value } = e.target;
-      const finalValue = typeof value === "object" && value !== null ? value.value || "" : value;
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target ?? {};
+    const v = value ?? e?.value ?? e; // กันเคสที่ lib ส่ง value ตรง ๆ
+    const finalValue =
+      typeof v === "object" && v !== null
+        ? (v.id ?? v.value ?? "")
+        : v;
 
-      setForm((prev) => ({ ...prev, [name]: finalValue }));
-      if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
-    },
-    [errors]
-  );
+    setForm((prev) => ({ ...prev, [name]: finalValue }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
+  }, [errors]);
 
   const handleDateChange = useCallback(
     (thaiDate) => {
@@ -123,7 +126,7 @@ export const useRequestResultProgress = () => {
   );
 
   // ---------- validate ----------
-  const validateRequiredFields = useCallback(() => {
+  const validateRequiredFields = useCallback((state = form) => {
     const fieldsConfig = [
       { field: "salutation", label: "เรียน" },
       { field: "refNo", label: "เลขที่หนังสือ" },
@@ -140,7 +143,7 @@ export const useRequestResultProgress = () => {
     const missing = [];
 
     fieldsConfig.forEach(({ field, label }) => {
-      const value = form[field];
+      const value = state[field];
       if (!value && value !== 0) {
         newErrors[field] = `กรุณากรอก${label}`;
         missing.push({ field, label });
@@ -174,9 +177,18 @@ export const useRequestResultProgress = () => {
     setErrors({});
   }, []);
 
+  const tryResolvePid = (state) =>
+    state.position_id ||
+    extractPositionId(state.department_meta) ||
+    extractPositionId(state.signer_meta) ||
+    null;
+
   // ---------- SAVE ----------
-  const handleSave = useCallback(async () => {
-    const missing = validateRequiredFields();
+  const handleSave = useCallback(async (overrides = {}) => {
+    const state = { ...form, ...overrides };  
+    const resolvedPid = tryResolvePid(state);
+    state.position_id = resolvedPid || state.position_id;
+    const missing = validateRequiredFields(state);
     if (missing.length > 0) {
       const names = missing.map((m) => m.label).join(", ");
       alertError("ข้อมูลไม่ครบถ้วน", `กรุณากรอกข้อมูลในฟิลด์: ${names}`);
@@ -184,24 +196,32 @@ export const useRequestResultProgress = () => {
     }
 
     // บังคับให้ได้ position_id จากหน่วยงาน
-    if (!form.position_id) {
+    if (!state.position_id) {
       alertError("ข้อมูลไม่ครบถ้วน", "กรุณาเลือกหน่วยงานที่มีตำแหน่ง (position_id)");
       return;
     }
 
     const payload = {
-      position_id: form.position_id || "",                   
-      complaint_number: form.refNo || "",
-      complaint_number_date: toISOorNull(form.date),
-      subject: form.subject || "เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน",
-      signature_authority_user_id: nullIfEmpty(form.signer),
-      department_id: nullIfEmpty(form.department),
+      position_id: state.position_id || "",
+      complaint_number: state.refNo || "",
+      complaint_number_date: toISOorNull(state.date),
+      subject: state.subject || "เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน",
+      signature_authority_user_id: nullIfEmpty(state.signer),
+      department_id: nullIfEmpty(state.department),
       user_id: null,
-      confidentiality_level: nullIfEmpty(form.confidentiality),
-      urgency_level: nullIfEmpty(form.urgency),
-      complaint_id: nullIfEmpty(form.complaint_id),
-      remarks: form.note || "",
+      confidentiality_level: nullIfEmpty(state.confidentiality),
+      urgency_level: nullIfEmpty(state.urgency),
+      complaint_id: nullIfEmpty(state.complaint_id),
+      remarks: state.note || "",
     };
+
+    console.log('selectedDepartment', selectedDepartment);
+    console.log('selectedSigner', selectedSigner);
+    console.log('form.position_id(before)', form.position_id);
+    console.log('overridePid', 
+      form.position_id || extractPositionId(selectedDepartment) || extractPositionId(selectedSigner));
+    console.log('state.position_id(before resolve)', state.position_id);
+    console.log('resolvedPid', tryResolvePid(state));
 
     try {
       setIsLoading(true);
