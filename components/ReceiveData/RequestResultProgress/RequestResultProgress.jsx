@@ -12,7 +12,7 @@ import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsa
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
-import { GetComplaintsWithSearch } from "@pages/api/complaint/complaint";
+import { GetReDocumentComplaints } from "@pages/api/complaint/complaint";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -82,7 +82,7 @@ const RequestResultProgress = () => {
   const handleSearch = async (keyword) => {
     setSearchLoading(true);
     try {
-      const response = await GetComplaintsWithSearch({
+      const response = await GetReDocumentComplaints({
         skip: 0,
         limit: 100,
         search: keyword || "",
@@ -114,7 +114,7 @@ const RequestResultProgress = () => {
 
   const handleSelectReference = (ref) => {
     handleChange({
-      target: { name: "refNo", value: ref.complaint_number }
+      target: { name: "refNo", value: ref.document_number }
     });
     handleChange({ target: { name: "complaint_id", value: ref.id } });
     setOpenSearchDialog(false);
@@ -466,8 +466,8 @@ useEffect(() => {
                               <span
                                 style={{ fontWeight: 500 }}
                               >
-                                {item.complaint_type} -{" "}
-                                {item.complaint_number}
+                                {item.document_number}
+                               
                               </span>
                             </ListItemButton>
                           </ListItem>

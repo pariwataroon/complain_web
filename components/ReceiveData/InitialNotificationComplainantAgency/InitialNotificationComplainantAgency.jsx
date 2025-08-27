@@ -12,7 +12,7 @@ import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsa
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
-import { GetComplaintsWithSearch } from "@pages/api/complaint/complaint";
+import { GetReDocumentComplaints } from "@pages/api/complaint/complaint";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -74,12 +74,10 @@ const InitialNotificationComplainantAgency = () => {
       }
     }, [openSearchDialog]);
   
-    // --- handleSearch ยังคงเดิม (ยิง API search ด้วย keyword) ---
-  
     const handleSearch = async (keyword) => {
       setSearchLoading(true);
       try {
-        const response = await GetComplaintsWithSearch({
+        const response = await GetReDocumentComplaints({
           skip: 0,
           limit: 100,
           search: keyword || "",
@@ -87,12 +85,10 @@ const InitialNotificationComplainantAgency = () => {
   
         console.log("API response", response);
   
-        // ใช้ complaint_number เป็น label และ value หลัก
         const items = Array.isArray(response?.res_data?.items)
           ? response.res_data.items
           : [];
   
-        console.log("items for result", items);
   
         const results = items.map((item) => ({
           ...item,
@@ -111,7 +107,7 @@ const InitialNotificationComplainantAgency = () => {
   
     const handleSelectReference = (ref) => {
       handleChange({
-        target: { name: "refNo", value: ref.complaint_number }
+        target: { name: "refNo", value: ref.document_number }
       });
       handleChange({
         target: { name: "complaint_id", value: ref.id }
@@ -489,8 +485,8 @@ const InitialNotificationComplainantAgency = () => {
                               <span
                                 style={{ fontWeight: 500 }}
                               >
-                                {item.complaint_type} -{" "}
-                                {item.complaint_number}
+                                {item.document_number}
+                                {/* {item.complaint_number} */}
                               </span>
                             </ListItemButton>
                           </ListItem>

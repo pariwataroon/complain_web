@@ -53,6 +53,12 @@ const validationSchema = yup.object().shape({
   note: yup.string().optional(),
 });
 
+  const toYMD = (d) => {
+    if (!d) return null;
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
+  };
+
 // Hook หลัก
 export const useForwardToAgencyForm = () => {
   const [fileData, setFileData] = useState(null);
@@ -219,19 +225,21 @@ export const useForwardToAgencyForm = () => {
           return { success: false };
         }
 
-        const outgoingReportData = {
+       const outgoingReportData = {
           position_id: data.salutation,
-          reference_number: data.refNo,
-          reference_date: data.date1,
-          subject: data.subject,
-          complaint_number: data.bookNo,
-          complaint_number_date: data.date2,
+          reference_number: (data.refNo || "").trim(),
+          reference_date: toYMD(data.date1),
+          subject: (data.subject || "").trim(),
+          complaint_number: (data.bookNo || "").trim(),
+          complaint_number_date: toYMD(data.date2),
+          document_number: (data.bookNo || "").trim(),
+          document_date: toYMD(data.date2),
           signature_authority_user_id: data.signer,
           department_id: data.department,
           confidentiality_level: data.confidentiality,
           urgency_level: data.urgency,
           remarks: data.note || "",
-        };
+      };
 
 
         showLoading("กำลังสร้างรายงาน...");
