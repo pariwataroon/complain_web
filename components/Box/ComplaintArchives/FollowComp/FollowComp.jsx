@@ -435,6 +435,113 @@ const TableSection = ({
   </Box>
 );
 
+const STATUS_TRANSLATION = {
+  submitted: "ส่งคำร้อง",
+  sent_to_agency: "มอบหมายเจ้าหน้าที่",
+  sent_to_external: "ส่งหน่วยงานภายนอก",
+  in_process: "อยู่ระหว่างดำเนินการ",
+  in_review: "อยู่ระหว่างการพิจารณา",
+  tracking: "ติดตามผลการพิจารณา",
+  reviewed: "แจ้งผลการพิจารณา",
+  completed: "เสร็จสิ้น",
+  cancelled: "ยกเลิก",
+};
+
+function getStatusThai(status) {
+  return STATUS_TRANSLATION[status] || status || "-";
+}
+
+const StatusHistorySection = ({ statusHistory }) => (
+  <Box
+    sx={{
+      border: "1px solid #E0E0E0",
+      borderRadius: 1,
+      width: "100%",
+      maxWidth: { sm: "auto" },
+    }}
+  >
+    <Box
+      sx={{
+        background: "#EAF5FF",
+        py: 1,
+        display: "flex",
+        alignItems: "center",
+      }}
+    >
+      <Typography mx={3} sx={{ fontWeight: "bold", color: "#1120A3" }}>
+        ประวัติการเปลี่ยนสถานะ
+      </Typography>
+    </Box>
+    <Box sx={{ overflowX: { xs: "auto", sm: "unset" }, width: "100%" }}>
+      <Table sx={{ width: "100%" }}>
+        <TableHead>
+          <TableRow>
+            <TableCell
+              align="center"
+              sx={{ background: "#fff", fontWeight: "bold" }}
+            >
+              ลำดับ
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ background: "#fff", fontWeight: "bold" }}
+            >
+              วันที่เปลี่ยนแปลง
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ background: "#fff", fontWeight: "bold" }}
+            >
+              สถานะ
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ background: "#fff", fontWeight: "bold" }}
+            >
+              ผู้เปลี่ยนแปลง
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ background: "#fff", fontWeight: "bold" }}
+            >
+              หมายเหตุ
+            </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {statusHistory.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} align="center">
+                ไม่พบประวัติการเปลี่ยนสถานะ
+              </TableCell>
+            </TableRow>
+          ) : (
+            statusHistory.map((item, idx) => (
+              <TableRow key={idx}>
+                <TableCell align="center">{idx + 1}</TableCell>
+                <TableCell align="center">
+                  {new Date(item.changed_at).toLocaleString("th-TH", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </TableCell>
+                <TableCell align="center">
+                  <b>{getStatusThai(item.status)}</b>
+                </TableCell>
+                <TableCell align="center">{item.changed_by_name}</TableCell>
+                <TableCell align="center">{item.remark || "-"}</TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </Box>
+  </Box>
+);
+
 const FollowComp = () => {
   const router = useRouter();
   const { id } = router.query;
@@ -858,6 +965,13 @@ const FollowComp = () => {
               ขั้นตอนอยู่ระหว่างดำเนินการ
             </Typography>
           </Box>
+
+          {/* Section: ประวัติการเปลี่ยนสถานะ */}
+          {documentData?.detail?.status_history?.length > 0 && (
+            <StatusHistorySection
+              statusHistory={documentData.detail.status_history}
+            />
+          )}
           {/* แจ้งผลการให้ผู้เกี่ยวข้องทราบ */}
           <TableSection
             section={finalSection}

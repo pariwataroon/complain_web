@@ -446,8 +446,43 @@ const SearchComplaints = () => {
       const data = res?.res_data;
       setDefaultData(data);
 
-      // refs เก่า
-      defaultGeneralRef.current = data?.step1?.general?.general || {};
+      // เช็ค general ถ้ามี key government ซ้อน ให้ใช้ data ใน government แทน
+      let generalData = data?.step1?.general?.general;
+
+      if (
+        generalData &&
+        typeof generalData === "object" &&
+        Object.keys(generalData).length === 1 &&
+        generalData.government &&
+        typeof generalData.government === "object"
+      ) {
+        // กรณี general = { government: {...} }
+        console.log("ใช้ข้อมูลจาก general.government", generalData.government);
+        generalData = generalData.government;
+      } else if (
+        !generalData ||
+        (typeof generalData === "object" &&
+          Object.keys(generalData).length === 0)
+      ) {
+        // ไม่มีข้อมูล general หรือเป็น object ว่าง
+        if (
+          data?.step1?.general?.general?.government &&
+          Object.keys(data.step1.general.general.government).length > 0
+        ) {
+          generalData = data.step1.general.general.government;
+          console.log(
+            "Fallback: ใช้ข้อมูลจาก government แทน general",
+            generalData
+          );
+        } else {
+          generalData = {};
+          console.log("Fallback: general และ government ว่างทั้งคู่");
+        }
+      } else {
+        console.log("ใช้ข้อมูลจาก general", generalData);
+      }
+
+      defaultGeneralRef.current = generalData;
       defaultDelegateRef.current = data?.step1?.general?.delegate || null;
       defaultStep2Ref.current = data?.step2?.general?.individual || {};
       defaultStep3Ref.current = data?.step3?.general || {};
@@ -702,6 +737,15 @@ const SearchComplaints = () => {
   const currentComplaintFilingType =
     step3Methods.watch("complaint_filing_type") || "new";
 
+  // สมมติว่า defaultData คือข้อมูลที่โหลดมาแล้ว
+  const hasGovernment = !!(
+    defaultData?.step1?.general?.general?.government &&
+    Object.keys(defaultData.step1.general.general.government).length > 0
+  );
+
+  // กำหนด index ของ tab ที่ active
+  const activeTabIndex = hasGovernment ? 2 : 0;
+
   useEffect(() => {
     console.log(
       "showPreview",
@@ -801,11 +845,25 @@ const SearchComplaints = () => {
           <div className={styles.contentContainer}>
             {/* Tab Navigation */}
             <div className={styles.tabNav}>
-              <div className={`${styles.tab} ${styles.tab0} ${styles.active}`}>
+              <div
+                className={`${styles.tab} ${styles.tab0} ${
+                  activeTabIndex === 0 ? styles.active : ""
+                }`}
+              >
                 บุคคลทั่วไป
               </div>
-              <div className={`${styles.tab} ${styles.tab1}`}>นิติบุคคล</div>
-              <div className={`${styles.tab} ${styles.tab2}`}>
+              <div
+                className={`${styles.tab} ${styles.tab1} ${
+                  activeTabIndex === 1 ? styles.active : ""
+                }`}
+              >
+                นิติบุคคล
+              </div>
+              <div
+                className={`${styles.tab} ${styles.tab2} ${
+                  activeTabIndex === 2 ? styles.active : ""
+                }`}
+              >
                 หน่วยงานของรัฐ
               </div>
               <div
