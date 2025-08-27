@@ -50,6 +50,7 @@ export default function Sidebar() {
   const [menuData, setMenuData] = useState([]);
   const [notificationFilter, setNotificationFilter] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [hoverTimer, setHoverTimer] = useState(null);
 
   const notifArr = Array.isArray(notifications) ? notifications : [];
   const unreadExists = notifArr.some((n) => !n.is_read);
@@ -57,9 +58,9 @@ export default function Sidebar() {
   // ฟังก์ชันจัดการตำแหน่ง submenu สำหรับมือถือ
   const handleSubmenuPosition = () => {
     if (!isMobile) return;
-    
+
     const submenuElements = document.querySelectorAll(`.${styles.submenu}.${styles.submenuVisible}`);
-    
+
     submenuElements.forEach((submenu) => {
       const rect = submenu.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
@@ -75,7 +76,7 @@ export default function Sidebar() {
       // กำหนดตำแหน่งใหม่
       submenu.style.top = '10px';
       submenu.style.transform = 'translateY(0)';
-      
+
       // ตรวจสอบความกว้าง
       if (rect.right > viewportWidth - 20) {
         submenu.style.maxWidth = `${viewportWidth - rect.left - 20}px`;
@@ -85,7 +86,7 @@ export default function Sidebar() {
       // ตรวจสอบความสูง หลังจากปรับตำแหน่งแล้ว
       const newRect = submenu.getBoundingClientRect();
       const ulElement = submenu.querySelector('ul');
-      
+
       if (newRect.bottom > viewportHeight - 20 && ulElement) {
         const availableHeight = viewportHeight - newRect.top - 40;
         ulElement.style.maxHeight = `${availableHeight}px`;
@@ -125,29 +126,13 @@ export default function Sidebar() {
 
     if (notificationFilter === 1) {
       return notifArr.filter(
-        (n) =>
-          !(
-            n.title?.includes("ลงทะเบียน") ||
-            n.title?.includes("สมัคร") ||
-            n.title?.includes("ผู้ใช้ใหม่") ||
-            n.message?.includes("ลงทะเบียน") ||
-            n.message?.includes("สมัคร") ||
-            n.message?.includes("ผู้ใช้ใหม่") ||
-            n.type === "user_registration" ||
-            n.category === "registration"
-          )
+        (n) => n.redirect_url?.includes("/complaints/")
       );
     }
 
-    if (notificationFilter === 2) {
+    if (notificationFilter === 2) { 
       return notifArr.filter(
-        (n) =>
-          n.title?.includes("ลงทะเบียน") ||
-          n.title?.includes("สมัคร") ||
-          n.title?.includes("ผู้ใช้ใหม่") ||
-          n.message?.includes("ลงทะเบียน") ||
-          n.message?.includes("สมัคร") ||
-          n.message?.includes("ผู้ใช้ใหม่") ||
+        (n) => n.redirect_url?.includes("/users/") ||
           n.type === "user_registration" ||
           n.category === "registration"
       );
@@ -155,6 +140,42 @@ export default function Sidebar() {
 
     return notifArr;
   };
+
+  // const getFilteredNotifications = () => {
+  //   if (notificationFilter === 0) return notifArr;
+
+  //   if (notificationFilter === 1) {
+  //     return notifArr.filter(
+  //       (n) =>
+  //         !(
+  //           n.title?.includes("ลงทะเบียน") ||
+  //           n.title?.includes("สมัคร") ||
+  //           n.title?.includes("ผู้ใช้ใหม่") ||
+  //           n.message?.includes("ลงทะเบียน") ||
+  //           n.message?.includes("สมัคร") ||
+  //           n.message?.includes("ผู้ใช้ใหม่") ||
+  //           n.type === "user_registration" ||
+  //           n.category === "registration"
+  //         )
+  //     );
+  //   }
+
+  //   if (notificationFilter === 2) {
+  //     return notifArr.filter(
+  //       (n) =>
+  //         n.title?.includes("ลงทะเบียน") ||
+  //         n.title?.includes("สมัคร") ||
+  //         n.title?.includes("ผู้ใช้ใหม่") ||
+  //         n.message?.includes("ลงทะเบียน") ||
+  //         n.message?.includes("สมัคร") ||
+  //         n.message?.includes("ผู้ใช้ใหม่") ||
+  //         n.type === "user_registration" ||
+  //         n.category === "registration"
+  //     );
+  //   }
+
+  //   return notifArr;
+  // };
 
   const getNotificationCounts = () => {
     const total = notifArr.length;
@@ -281,6 +302,8 @@ export default function Sidebar() {
       try {
         const res = await getNotifications();
         const data = res?.res_data;
+        console.log({ data });
+
         setNotifications(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("ดึงข้อมูลการแจ้งเตือนล้มเหลว", err);
@@ -331,8 +354,8 @@ export default function Sidebar() {
             })),
           };
         });
-        
-        
+
+
         setMenuData(filteredMenu);
       } catch (err) {
         console.error(err);
@@ -354,7 +377,7 @@ export default function Sidebar() {
 
   const renderMenuItem = (key, IconC, submenu = []) => {
     const submenuItems = submenu.filter((item) => item.type !== "header");
-    
+
     return (
       <Box
         key={key}
@@ -391,9 +414,8 @@ export default function Sidebar() {
 
         {submenuItems.length > 0 && (
           <Box
-            className={`${styles.submenu} ${
-              openSubmenu === key ? styles.submenuVisible : ""
-            }`}
+            className={`${styles.submenu} ${openSubmenu === key ? styles.submenuVisible : ""
+              }`}
             onMouseEnter={() => !isMobile && setOpenSubmenu(key)}
             onMouseLeave={() => !isMobile && setOpenSubmenu(null)}
             onTouchStart={(e) => {
@@ -495,13 +517,28 @@ export default function Sidebar() {
       <Box className={styles.bottom}>
         {/* Bell */}
         {showNotificationBell && (
+          // <Box
+          //   className={styles.notificationContainer}
+          //   onMouseEnter={() => !isMobile && setShowNotifications(true)}
+          //   onMouseLeave={() => !isMobile && setShowNotifications(false)}
+          //   onTouchStart={() => {
+          //     if (isMobile) {
+          //       setShowNotifications(!showNotifications);
+          //     }
+          //   }}
+          // >
           <Box
             className={styles.notificationContainer}
-            onMouseEnter={() => !isMobile && setShowNotifications(true)}
-            onMouseLeave={() => !isMobile && setShowNotifications(false)}
-            onTouchStart={() => {
-              if (isMobile) {
-                setShowNotifications(!showNotifications);
+            onMouseEnter={() => {
+              if (hoverTimer) clearTimeout(hoverTimer);
+              if (!isMobile) setShowNotifications(true);
+            }}
+            onMouseLeave={() => {
+              if (!isMobile) {
+                const timer = setTimeout(() => {
+                  setShowNotifications(false);
+                }, 200);
+                setHoverTimer(timer);
               }
             }}
           >
@@ -529,9 +566,8 @@ export default function Sidebar() {
 
             <Paper
               ref={notificationRef}
-              className={`${stylesNoti.notificationBox} ${
-                showNotifications ? stylesNoti.show : ""
-              }`}
+              className={`${stylesNoti.notificationBox} ${showNotifications ? stylesNoti.show : ""
+                }`}
               onMouseEnter={() => !isMobile && setShowNotifications(true)}
               onMouseLeave={() => !isMobile && setShowNotifications(false)}
               onTouchStart={(e) => {

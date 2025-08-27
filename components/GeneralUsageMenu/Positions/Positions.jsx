@@ -30,49 +30,81 @@ const Positions = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [data, setData] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [filters, setFilters] = useState({});
-  const [apiFilters, setApiFilters] = useState({});
 
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
-  const handlePageChange = (newPage) => setPage(newPage);
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+  };
+
   const handleRowsPerPageChange = (newRowsPerPage) => {
     setRowsPerPage(newRowsPerPage);
     setPage(0);
   };
 
-  const fetchData = async () => {
+  const fetchData = async (searchFilters = {}, currentPage = page, currentRowsPerPage = rowsPerPage) => {
     setLoading(true);
     setError(null);
+
     try {
-      const response = await GetAllPositions({
-        page: page + 1,
-        limit: rowsPerPage,
-        ...apiFilters,
-      });
-      setData(response.res_data || []);
+      const skip = currentPage * currentRowsPerPage;
+      const limit = currentRowsPerPage;
+      const search = searchFilters.name && searchFilters.name.trim() ? searchFilters.name.trim() : undefined;
+      const level = searchFilters.level && searchFilters.level.trim() ? searchFilters.level.trim() : undefined;
+      const is_active = searchFilters.status !== '' ? searchFilters.status : undefined;
+
+
+      const response = await GetAllPositions(skip, limit, search, level, is_active);
+
+
+      if (response && response.res_data) {
+        if (Array.isArray(response.res_data)) {
+          setData(response.res_data);
+          setTotalCount(response.total || response.res_data.length + skip);
+        } else if (response.res_data.data) {
+          setData(response.res_data.data);
+          setTotalCount(response.res_data.total || response.res_data.data.length);
+        } else {
+          setData([]);
+          setTotalCount(0);
+        }
+      } else {
+        setData([]);
+        setTotalCount(0);
+      }
     } catch (error) {
+      console.error('Error fetching positions:', error);
       setError(error);
       setData([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   };
-  console.log('fetchData params:', { page: page + 1, limit: rowsPerPage, ...apiFilters });
 
-  useEffect(() => {
-    fetchData();
-  }, [page, rowsPerPage, apiFilters]);
+  const handleSearch = (searchFilters) => {
+    console.log('Search filters received:', searchFilters);
+    setFilters(searchFilters);
+    setPage(0);
+    fetchData(searchFilters, 0, rowsPerPage);
+  };
 
-
-  const refreshData = () => {
-    fetchData();
+  const handleDataRefresh = () => {
+    fetchData(filters, page, rowsPerPage);
   };
 
   useEffect(() => {
-  }, [data, loading, error]);
+    fetchData(filters, page, rowsPerPage);
+  }, [page, rowsPerPage]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const formattedData = useMemo(() => {
     return data.map(item => ({
@@ -84,20 +116,6 @@ const Positions = () => {
       created_at: item.created_at,
     }));
   }, [data]);
-
-  const handleSearch = (searchFilters) => {
-    console.log('handleSearch', searchFilters);
-    setFilters(searchFilters);
-    let filtersToSend = { ...searchFilters };
-    if (filtersToSend.status !== "") {
-      filtersToSend.is_active = filtersToSend.status === "true";
-    } else {
-      delete filtersToSend.is_active;
-    }
-    delete filtersToSend.status;
-    setApiFilters(filtersToSend);
-    setPage(0);
-  };
 
   return (
     <>
@@ -135,7 +153,7 @@ const Positions = () => {
         onClose={handleCloseModal}
         onSuccess={() => {
           handleCloseModal();
-          fetchData(filters, page, rowsPerPage);
+          handleDataRefresh();
         }}
       />
 
@@ -148,9 +166,9 @@ const Positions = () => {
         onPageChange={handlePageChange}
         rowsPerPage={rowsPerPage}
         onRowsPerPageChange={handleRowsPerPageChange}
-        total={data.length}
+        total={totalCount}
         onSearch={handleSearch}
-        onDataRefresh={refreshData}
+        onDataRefresh={handleDataRefresh}
         levelOptions={[
           { value: 'บริหารระดับต้น', label: 'บริหารระดับต้น' },
           { value: 'บริหารระดับสูง', label: 'บริหารระดับสูง' },

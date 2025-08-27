@@ -1,8 +1,10 @@
 import axiosInstance from "@pages/api/axiosInstance";
 
-const GetAllPositions = async () => {
+const GetAllPositions = async (skip, limit, search, level, is_active) => {
   try {
-    const { data } = await axiosInstance.get("/positions");
+    const { data } = await axiosInstance.get("/positions", {
+      params: { skip, limit, search, level, is_active }
+    });
     return data;
   } catch (error) {
     console.error("Error fetching GetAllPositions:", error);

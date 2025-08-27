@@ -13,7 +13,9 @@
   opacity: 0;
   transform: translateY(10px);
   visibility: hidden;
-  transition: all 0.2s ease;
+  transition: opacity 0.3s ease 0.1s,
+    transform 0.3s ease 0.1s,
+    visibility 0s ease 0.4s;
   scrollbar-width: thin;
   scrollbar-color: #91cbff #f0f4ff;
 
@@ -21,6 +23,7 @@
     opacity: 1;
     transform: translateY(0);
     visibility: visible;
+    transition: all 0.2s ease;
   }
 }
 
