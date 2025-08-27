@@ -261,6 +261,17 @@ const GetMyRelatedComplaints = async ({ skip = 0, limit = 100 } = {}) => {
   }
 };
 
+const GetDepartments = async () => {
+  try {
+    const response = await axiosInstance.get("/departments");
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error fetching departments:", error);
+    throw error;
+  }
+};
 
 export {
   CreateComplaint,
@@ -281,4 +292,5 @@ export {
   NewsUploadAttachments,
   ConfirmAssignment,
   GetMyRelatedComplaints,
+  GetDepartments
 };

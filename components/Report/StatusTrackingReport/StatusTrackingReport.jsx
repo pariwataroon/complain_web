@@ -2,23 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListCollaps from "@services/TableListCollaps/TableListCollaps";
-import { GetMyRelatedComplaints } from "@pages/api/complaint/complaint";
+import { GetMyRelatedComplaints, GetDepartments } from "@pages/api/complaint/complaint";
 
-/* ======================= ตัวเลือกฟิลเตอร์ ======================= */
-const departmentOptions = [
-  { value: "ภาษีอากร", label: "ภาษีอากร" },
-  { value: "ค่ารักษาพยาบาล", label: "ค่ารักษาพยาบาล" },
-  { value: "การจัดซื้อจัดจ้าง", label: "การจัดซื้อจัดจ้าง" },
-  { value: "หนี้ในระบบ", label: "หนี้ในระบบ" },
-  { value: "หนี้นอกระบบ", label: "หนี้นอกระบบ" },
-  { value: "พฤติกรรมเจ้าหน้าที่", label: "พฤติกรรมเจ้าหน้าที่" },
-  { value: "อื่นๆ", label: "อื่นๆ" },
-  { value: "โครงการสาธารณูปโภคพื้นฐาน", label: "โครงการสาธารณูปโภคพื้นฐาน" },
-  { value: "โครงการลงทะเบียนสวัสดิการ", label: "โครงการลงทะเบียนสวัสดิการ" },
-  // (หมายเหตุ: ชุดนี้เป็น “หมวดหมู่” เป็นหลัก ถ้าต้องการให้กรองตามหน่วยงานจริง
-  // อาจต้องเพิ่มรายการหน่วยงานเข้าไปให้ครบเพื่อให้ตรงกับข้อมูล)
-];
-
+/* ======================= ตัวเลือกฟิลเตอร์ (static แค่บางอัน) ======================= */
 const responsibleOfficerOptions = [
   { value: "กรมสรรพากร", label: "กรมสรรพากร" },
   { value: "สำนักงานเศรษฐกิจการคลัง", label: "สำนักงานเศรษฐกิจการคลัง" },
@@ -37,8 +23,7 @@ const statusOptions = [
   { value: "เสร็จสิ้น", label: "เสร็จสิ้น" },
 ];
 
-/* ======================= Utils แปลงค่า/คำนวนเวลา ======================= */
-// map สถานะ API -> 3 สถานะบน UI
+/* ======================= Utils ======================= */
 const mapStatusToUI = (code = "") => {
   const c = String(code).toLowerCase();
   if (["completed"].includes(c)) return "เสร็จสิ้น";
@@ -48,33 +33,28 @@ const mapStatusToUI = (code = "") => {
   return "รอดำเนินการ";
 };
 
-// จำนวนวัน (ปัจจุบัน - เวลาเริ่ม)
 const diffDaysFrom = (startISO) => {
   try {
     const start = new Date(startISO);
     const now = new Date();
     const ms = now - start;
-    const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
-    return Math.max(0, days);
+    return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
   } catch {
     return 0;
   }
 };
 
-// จำนวนวันระหว่างสองเหตุการณ์
 const diffDaysBetween = (startISO, endISO) => {
   try {
     const start = new Date(startISO);
     const end = new Date(endISO);
     const ms = end - start;
-    const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
-    return Math.max(0, days);
+    return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
   } catch {
     return 0;
   }
 };
 
-// เดาเลขอ้างอิงจาก subject ที่มักเป็นโค้ดภายนอก เช่น "นร0168..." ฯลฯ
 const guessRefFromSubject = (subject) => {
   if (!subject || subject === "-") return null;
   const s = String(subject).trim();
@@ -84,11 +64,9 @@ const guessRefFromSubject = (subject) => {
   return null;
 };
 
-// ดึงเลขที่อ้างอิงจาก payload ตามลำดับความสำคัญ
 const getReferenceNumber = (item) => {
   const c = item?.complaint ?? {};
   const latest = item?.latest ?? {};
-  // ✅ ให้ความสำคัญ “เลขหนังสือส่งออกล่าสุด” ก่อน
   const direct =
     latest?.sent?.reference_number ||
     c.reference_number ||
@@ -98,39 +76,31 @@ const getReferenceNumber = (item) => {
   const fromSubject = guessRefFromSubject(c.subject);
   if (fromSubject) return fromSubject;
 
-  // fallback
   return c.complaint_number || c.id || "-";
 };
 
-// แปลง history -> แถวลูก (departmentsData)
 const buildHistoryRows = (item) => {
   const c = item?.complaint ?? {};
   const latest = item?.latest ?? {};
   const history = Array.isArray(item?.history) ? item.history.slice() : [];
   if (history.length === 0) return [];
 
-  // เรียงตามเวลา (กันข้อมูล API ไม่เรียง)
   history.sort((a, b) => new Date(a.at) - new Date(b.at));
-
   const refNoFallback = getReferenceNumber(item);
 
   return history.map((h, idx) => {
     const prevAt = idx === 0 ? c.created_at : history[idx - 1]?.at ?? c.created_at;
     const stepDays = diffDaysBetween(prevAt, h.at);
 
-    // ค่าเริ่มต้น
     let department = "-";
     let referenceNumber = refNoFallback;
     let statusLabel = h.status_label ?? h.status ?? "-";
 
     if (h.type === "status_history") {
-      // ถ้าเป็นสเต็ป "ส่งหน่วยงาน" ให้โชว์หน่วยงานเป้าหมาย (ถ้ามี)
       if (String(h.status).toLowerCase() === "sent_to_agency") {
         department = latest?.sent?.department_name || "-";
       }
-      // statusLabel ใช้จาก status_label เดิม
     } else if (h.type === "outgoing_report") {
-      // หนังสือ/รายงานส่งออก
       department = h.department_name || latest?.sent?.department_name || "-";
       referenceNumber = h.reference_number || refNoFallback;
       statusLabel = "ทำหนังสือส่งหน่วยงาน";
@@ -152,7 +122,9 @@ const StatusTrackingReport = () => {
   const [allComplaints, setAllComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [departmentOptions, setDepartmentOptions] = useState([]); // ✅ state สำหรับหน่วยงาน
 
+  // โหลดข้อมูลเรื่องร้องเรียน
   useEffect(() => {
     const fetchMyRelated = async () => {
       try {
@@ -163,20 +135,18 @@ const StatusTrackingReport = () => {
         const mapped = items.map((it, idx) => {
           const c = it?.complaint ?? {};
           const latest = it?.latest ?? {};
-
-          // ✅ หน่วยงาน: ใช้ department_name จากหนังสือล่าสุดถ้ามี
           const deptName = latest?.sent?.department_name || "-";
 
           return {
             id: c.id ?? idx + 1,
             claimantName: c.subject ?? "-",
-            department: deptName,                         // หน่วยงาน
-            responsibleOfficer: c.assigned_to || "-",     // เจ้าหน้าที่ผู้รับผิดชอบ (บุคคล)
+            department: deptName,
+            responsibleOfficer: c.assigned_to || "-",
             receiptNumber: c.complaint_number ?? "-",
-            referenceNumber: getReferenceNumber(it),      // ให้เลขหนังสือล่าสุดมาก่อน
+            referenceNumber: getReferenceNumber(it),
             workingDays: diffDaysFrom(c.created_at),
-            status: mapStatusToUI(c.status),              // map เหลือ 3 สถานะบน UI
-            departmentsData: buildHistoryRows(it),        // รายการย่อยจาก timeline
+            status: mapStatusToUI(c.status),
+            departmentsData: buildHistoryRows(it),
           };
         });
 
@@ -184,14 +154,31 @@ const StatusTrackingReport = () => {
         setFilteredComplaints(mapped);
       } catch (e) {
         console.error("Error fetching my-related complaints:", e);
-        setAllComplaints([]);
-        setFilteredComplaints([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchMyRelated();
+  }, []);
+
+  // โหลดหน่วยงานจาก API
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await GetDepartments();
+        const list = res?.res_data ?? [];
+        const options = list.map((d) => ({
+          value: d.name,
+          label: d.name,
+        }));
+        setDepartmentOptions(options);
+      } catch (e) {
+        console.error("Error fetching departments:", e);
+      }
+    };
+
+    fetchDepartments();
   }, []);
 
   const handleSearch = (filters) => {
@@ -204,19 +191,17 @@ const StatusTrackingReport = () => {
       status: fStatus,
     } = filters;
 
-    const norm = (v) => (v ?? "").toString().toLowerCase();
+    const norm = (v) => (v ?? "").toString().toLowerCase().trim();
 
-    // ไม่มีตัวกรอง -> คืนทั้งหมด
     if (!fName && !fDept && !fOfficer && !fReceipt && !fReference && !fStatus) {
       setFilteredComplaints(allComplaints);
       return;
     }
 
-    // (ตรรกะ OR ตามเดิม — ถ้าต้องการ AND ให้เปลี่ยนเป็นตรวจทุกเงื่อนไขพร้อมกัน)
     const result = allComplaints.filter((item) => {
       if (fName && norm(item.claimantName).includes(norm(fName))) return true;
-      if (fDept && item.department === fDept) return true;
-      if (fOfficer && item.responsibleOfficer === fOfficer) return true;
+      if (fDept && norm(item.department).includes(norm(fDept))) return true;  // ✅ แก้ตรงนี้
+      if (fOfficer && norm(item.responsibleOfficer) === norm(fOfficer)) return true;
       if (fReceipt && norm(item.receiptNumber).includes(norm(fReceipt))) return true;
       if (fReference && norm(item.referenceNumber).includes(norm(fReference))) return true;
       if (fStatus && item.status === fStatus) return true;
@@ -255,7 +240,7 @@ const StatusTrackingReport = () => {
         loading={loading}
         filterFields={[
           { name: "claimantName", label: "ชื่อเรื่อง", type: "text" },
-          { name: "department", label: "หน่วยงาน", type: "select", options: departmentOptions },
+          { name: "department", label: "หน่วยงาน", type: "select", options: departmentOptions }, // ✅ ใช้ dynamic
           { name: "responsibleOfficer", label: "เจ้าหน้าที่ผู้รับผิดชอบ", type: "select", options: responsibleOfficerOptions },
           { name: "receiptNumber", label: "เลขรับ สรร.", type: "text" },
           { name: "referenceNumber", label: "เลขที่อ้างอิง", type: "text" },
