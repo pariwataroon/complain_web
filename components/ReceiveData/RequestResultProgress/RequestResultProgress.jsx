@@ -46,6 +46,7 @@ const RequestResultProgress = () => {
     handleClear,
     handleSave,
     isFormValid,
+    updateField,
   } = useRequestResultProgress();
 
   const [selectedSigner, setSelectedSigner] = useState(null);
@@ -60,25 +61,14 @@ const RequestResultProgress = () => {
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
 
-  const pickId = (o) => o?.id ?? o?.value ?? o;
-  const pickPositionIdFromDept = (dept, signer) =>
-    dept?.position_id ??
-    dept?.position?.id ??
-    dept?.default_position_id ??
-    signer?.position_id ??
-    signer?.position?.id ??
-    signer?.positionId ??
-    null;
-
   useEffect(() => {
     if (openSearchDialog) {
-      setSearchText(""); // reset input
-      handleSearch(""); // โหลดรายการทั้งหมดทันทีที่เปิด (keyword ว่าง)
+      setSearchText(""); 
+      handleSearch("");
       inputRef.current?.focus();
     }
   }, [openSearchDialog]);
 
-  // --- handleSearch ยังคงเดิม (ยิง API search ด้วย keyword) ---
   const handleSearch = async (keyword) => {
     setSearchLoading(true);
     try {
@@ -90,12 +80,10 @@ const RequestResultProgress = () => {
 
       console.log("API response", response);
 
-      // ใช้ complaint_number เป็น label และ value หลัก
       const items = Array.isArray(response?.res_data?.items)
         ? response.res_data.items
         : [];
 
-      console.log("items for result", items);
 
       const results = items.map((item) => ({
         ...item,
@@ -113,10 +101,8 @@ const RequestResultProgress = () => {
   };
 
   const handleSelectReference = (ref) => {
-    handleChange({
-      target: { name: "refNo", value: ref.document_number }
-    });
-    handleChange({ target: { name: "complaint_id", value: ref.id } });
+    updateField("refNoDisplay", ref.document_number || "");   // โชว์
+    updateField("refNo",        ref.complaint_number || "");  // ส่งจริง (MOF-xxxx)
     setOpenSearchDialog(false);
   };
 
@@ -144,22 +130,25 @@ useEffect(() => {
   const handleSignerSelect = (userInfo) => {
     setSelectedSigner(userInfo);
     handleChange({ target: { name: "signer", value: userInfo?.id ?? userInfo?.value ?? "" } });
+    updateField("signer_meta", userInfo);
 
-    const signerPosId = userInfo?.position_id ?? userInfo?.position?.id ?? userInfo?.positionId ?? "";
-      if (signerPosId) handleChange({ target: { name: "position_id", value: signerPosId } });
-      // รีเซ็ตหน่วยงานอย่างเดียวพอ
-      setSelectedDepartment(null);
-      handleChange({ target: { name: "department", value: "" } });
-    };
+    const signerPosId =
+      userInfo?.position_id ??
+      userInfo?.position?.id ??
+      userInfo?.positionId ??
+      null;
+    updateField("position_id", signerPosId || "");
+    setSelectedDepartment(null);
+    handleChange({ target: { name: "department", value: "" } });
+    updateField("department_meta", null);
+  };
 
   const handleDepartmentSelect = (department) => {
     setSelectedDepartment(department);
     if (department) {
-      handleChange({ target: { name: "department", value: pickId(department) } });
+      handleChange({ target: { name: "department", value: department?.id ?? department?.value ?? "" } });
+      updateField("department_meta", department);
     }
-    const posId = pickPositionIdFromDept(department, selectedSigner);
-    // เขียนทับเฉพาะตอนที่ได้ค่าเท่านั้น
-    if (posId) handleChange({ target: { name: "position_id", value: posId } });
   };
 
   const fetchOptions = async () => {
@@ -191,6 +180,8 @@ useEffect(() => {
     handleClear();
     setSelectedSigner(null);
     setSelectedDepartment(null);
+    updateField("signer_meta", null);
+    updateField("department_meta", null);
   };
 
   return (
@@ -267,9 +258,10 @@ useEffect(() => {
               <InputText
                 label={createLabel("เลขที่หนังสือ", "refNo")}
                 inputLabel="กรอกเลขที่หนังสือ"
-                name="refNo"
-                value={form.refNo}
-                onChange={handleChange}
+                name="refNoDisplay"       
+                value={form.refNoDisplay}
+                onChange={(e)=>updateField("refNoDisplay", e.target.value)} 
+                // onChange={handleChange}
                 error={!!getFieldError("refNo")}
                 helperText={getFieldError("refNo")}
                 sx={{ flex: 1 }}
@@ -573,8 +565,8 @@ useEffect(() => {
             <SelectFieldDepartment
               label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}
               name="department"
-              value={form.department}
-              onChange={handleChange}
+              value={selectedDepartment}
+              onChange={handleDepartmentSelect}
               onDepartmentSelect={handleDepartmentSelect}
               filterBySignerId={selectedSigner?.id ?? selectedSigner?.value}
               error={!!getFieldError("department")}
@@ -687,8 +679,8 @@ useEffect(() => {
               label={isLoading ? "กำลังบันทึก..." : "บันทึก"}
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
-              onClick={handleSave}
-              disabled={isLoading || !isFormValid() || optionsLoading}
+              onClick={() => handleSave()}
+              disabled={isLoading || optionsLoading}
               sx={{
                 backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
                 color: "#FFF",

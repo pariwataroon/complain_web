@@ -3,9 +3,13 @@ import { useRouter } from "next/router";
 import { alertSuccess, alertError, showLoading, closeAlert } from "@utils/Alerts";
 import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/api/outgoinreports/outgoinreports";
 
-export const useRequestResultProgress = () => {
-  const router = useRouter();
-  const { id } = router.query;
+  const POSITION_FALLBACK = "7e18e4fe-d416-4580-b4d4-2a4032f67770";
+  const isUUID = (s) =>
+    typeof s === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+  export const useRequestResultProgress = () => {
+    const router = useRouter();
+    const { id } = router.query;
 
   // -------- Form state --------
   const [form, setForm] = useState({
@@ -23,6 +27,7 @@ export const useRequestResultProgress = () => {
     complaint_id: "",
     department_meta: null,  
     signer_meta: null,       
+    refNoDisplay: "",
   });
 
   // เก็บไฟล์จริง (รองรับหลายไฟล์)
@@ -172,22 +177,22 @@ export const useRequestResultProgress = () => {
       note: "",
       position_id: "",
       complaint_id: "",
+      department_meta: null,
+      signer_meta: null,
+      refNoDisplay: "",
     });
     setAttachmentFiles([]);
     setErrors({});
   }, []);
 
-  const tryResolvePid = (state) =>
-    state.position_id ||
-    extractPositionId(state.department_meta) ||
-    extractPositionId(state.signer_meta) ||
-    null;
+  const tryResolvePid = (state) => state.position_id || null;
 
   // ---------- SAVE ----------
   const handleSave = useCallback(async (overrides = {}) => {
     const state = { ...form, ...overrides };  
-    const resolvedPid = tryResolvePid(state);
-    state.position_id = resolvedPid || state.position_id;
+    const candidatePid = tryResolvePid(state);
+    const finalPid = isUUID(candidatePid) ? candidatePid : POSITION_FALLBACK;
+    state.position_id = finalPid;
     const missing = validateRequiredFields(state);
     if (missing.length > 0) {
       const names = missing.map((m) => m.label).join(", ");
@@ -195,16 +200,16 @@ export const useRequestResultProgress = () => {
       return;
     }
 
-    // บังคับให้ได้ position_id จากหน่วยงาน
     if (!state.position_id) {
-      alertError("ข้อมูลไม่ครบถ้วน", "กรุณาเลือกหน่วยงานที่มีตำแหน่ง (position_id)");
-      return;
+     state.position_id = POSITION_FALLBACK;
     }
 
     const payload = {
-      position_id: state.position_id || "",
-      complaint_number: state.refNo || "",
+      position_id: state.position_id || POSITION_FALLBACK,
+      complaint_number: state.refNo || "",         
       complaint_number_date: toISOorNull(state.date),
+      document_number: "",
+      document_date: toISOorNull(form.date), 
       subject: state.subject || "เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน",
       signature_authority_user_id: nullIfEmpty(state.signer),
       department_id: nullIfEmpty(state.department),
@@ -214,15 +219,8 @@ export const useRequestResultProgress = () => {
       complaint_id: nullIfEmpty(state.complaint_id),
       remarks: state.note || "",
     };
-
-    console.log('selectedDepartment', selectedDepartment);
-    console.log('selectedSigner', selectedSigner);
-    console.log('form.position_id(before)', form.position_id);
-    console.log('overridePid', 
-      form.position_id || extractPositionId(selectedDepartment) || extractPositionId(selectedSigner));
-    console.log('state.position_id(before resolve)', state.position_id);
-    console.log('resolvedPid', tryResolvePid(state));
-
+    console.log("DEBUG payload", payload);
+    
     try {
       setIsLoading(true);
       showLoading("กำลังบันทึกข้อมูล...");
@@ -254,31 +252,34 @@ export const useRequestResultProgress = () => {
       closeAlert();
       setIsLoading(false);
 
-      const fileNames = attachmentFiles.length ? attachmentFiles.map((f) => f.name).join(", ") : null;
-      const successHtml = `
-        <div style="text-align:center;line-height:1.7">
-          <p style="margin:6px 0 14px 0;">บันทึกแบบรายงานขอทราบผลการพิจารณา / ผลความคืบหน้าเรียบร้อยแล้ว</p>
-          <p style="margin:4px 0;color:#666">รหัสรายงาน: <strong>${createdId || "-"}</strong></p>
-          <p style="margin:4px 0;color:#666">เรื่อง: <strong>${form.subject || "-"}</strong></p>
-          ${fileNames ? `<p style="margin:4px 0;color:#666">ไฟล์แนบ: <strong>${fileNames}</strong></p>` : ""}
-        </div>
-      `;
-      await alertSuccess("บันทึกสำเร็จ!", successHtml, true);
-    } catch (err) {
-      // ดักเลขซ้ำแบบ error throw (Axios)
-      const code = err?.response?.data?.res_code;
-      if (code === "4090") {
-        closeAlert();
-        setIsLoading(false);
-        return alertError("เลขหนังสือซ้ำ", err?.response?.data?.res_data?.error || "เลขหนังสือซ้ำ");
-      }
+          const fileNames =
+          attachmentFiles.length > 0
+          ? attachmentFiles.map((f) => f.name).join(", ")
+            : null;
+          const successHtml = `
+            <div style="text-align:center;line-height:1.7">
+              <p style="margin:6px 0 14px 0;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
+              <p style="margin:4px 0;color:#666">รหัสรายงาน: <strong>${createdId}</strong></p>
+              <p style="margin:4px 0;color:#666">เรื่อง: <strong>${form.subject || "-"}</strong></p>
+              ${fileNames ? `<p style="margin:4px 0;color:#666">ไฟล์แนบ: <strong>${fileNames}</strong></p>` : ""}
+                    </div>
+          `;
+          await alertSuccess("บันทึกสำเร็จ!", successHtml, true);
+        } catch (err) {
+          console.error("Save error:", err);
+          closeAlert();
+          setIsLoading(false);
 
-      console.error("Save error:", err);
-      closeAlert();
-      setIsLoading(false);
-      alertError("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
-    }
-  }, [form, attachmentFiles, validateRequiredFields]);
+          const httpStatus = err?.response?.status;
+          const data = err?.response?.data;
+          const backendMsg = data?.res_data?.error || data?.res_message || data?.message || "";
+          if (httpStatus === 409 || data?.res_code === "4090" || String(backendMsg).includes("มีอยู่แล้ว")) {
+              await alertError("เลขที่หนังสือซ้ำ", backendMsg || `เลขที่หนังสือ ${form.refNo || "-"} มีอยู่แล้ว`);
+            return;
+          }
+          alertError("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
+        }
+      }, [form, attachmentFiles, validateRequiredFields]);
 
   // ---------- utilities ----------
   const resetField = useCallback((fieldName) => {
