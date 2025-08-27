@@ -147,37 +147,55 @@ const TopRightChart = () => {
   };
 
   // Fetch data from API
-  const fetchApiData = async () => {
+  const fetchApiData = async (filterParams = null) => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await GetComplaintSummary();
-
+      // เรียก API พร้อมพารามิเตอร์กรอง
+      const result = await GetComplaintSummary(filterParams);
+      
+      console.log('API Response:', result);
+      console.log('Filter Params:', filterParams);
+      
       if (result.success) {
         setApiData(result);
 
-        // Process department data for chart
+        // ใช้ข้อมูลจาก departmentData ที่มี percent 
         if (result.departmentData && result.departmentData.length > 0) {
+          
           const processedData = result.departmentData.map((dept, index) => ({
             name: dept.name,
-            count: dept.count,
+            count: Math.round((dept.percent / 100) * result.latestMonthTotal),
             color: getChartColor(index),
             id: dept.id,
           }));
+          
+          console.log('Processed Chart Data:', processedData);
           setChartData(processedData);
-        } else {
-          // Use summary data as fallback
-          const summaryChartData = result.dashboardCards.map((card, index) => ({
+          
+        } else if (result.dashboardCards && result.dashboardCards.length > 0) {
+          const summaryData = result.dashboardCards.map((card, index) => ({
             name: card.title.replace("เรื่องราวร้องทุกข์", "").trim(),
             count: card.count,
             color: getChartColor(index),
             id: card.id,
           }));
-          setChartData(summaryChartData);
+          
+          console.log('Dashboard Chart Data:', summaryData);
+          setChartData(summaryData);
+        } else {
+          setChartData([
+            {
+              name: "ไม่มีข้อมูล",
+              count: 0,
+              color: "#e0e0e0",
+              id: "no-data",
+            },
+          ]);
         }
       } else {
-        setError(result.message || result.error || "ไม่สามารถดึงข้อมูลได้");
+        setError("ไม่สามารถดึงข้อมูลได้");
         setChartData([
           {
             name: "ไม่มีข้อมูล",
@@ -275,7 +293,7 @@ const TopRightChart = () => {
   };
 
   // Handle form changes with period update
-  const handleMonthlyChange = (field) => (e) => {
+  const handleMonthlyChange = (field) => async (e) => {
     const newForm = { ...monthlyForm, [field]: e.target.value };
     setMonthlyForm(newForm);
 
@@ -283,15 +301,25 @@ const TopRightChart = () => {
     const newPeriod = `${newForm.month} ${newForm.year}`;
     setCurrentPeriod(newPeriod);
     setCurrentMode("monthly");
+    
+    // เรียก API ใหม่พร้อมพารามิเตอร์
+    await fetchApiData({
+      mode: "monthly",
+      month: newForm.month,
+      year: newForm.year
+    });
+    
     handleCloseModal();
   };
 
-  const handleQuarterlyChange = (e) => {
+  const handleQuarterlyChange = async (e) => {
     const newForm = { year: e.target.value };
     setQuarterlyForm(newForm);
+    
+    // ไม่ต้องเรียก API ที่นี่ เพราะยังไม่ได้เลือก quarter
   };
 
-  const handleYearlyChange = (e) => {
+  const handleYearlyChange = async (e) => {
     const newForm = { year: e.target.value };
     setYearlyForm(newForm);
 
@@ -299,10 +327,17 @@ const TopRightChart = () => {
     const newPeriod = `ปี ${newForm.year}`;
     setCurrentPeriod(newPeriod);
     setCurrentMode("yearly");
+    
+    // เรียก API ใหม่
+    await fetchApiData({
+      mode: "yearly",
+      year: newForm.year
+    });
+    
     handleCloseModal();
   };
 
-  const handleDepartmentChange = (field) => (e) => {
+  const handleDepartmentChange = (field) => async (e) => {
     const newForm = { ...departmentForm, [field]: e.target.value };
     setDepartmentForm(newForm);
 
@@ -310,14 +345,29 @@ const TopRightChart = () => {
     const newPeriod = `เปรียบเทียบ ${newForm.fromYear}-${newForm.toYear}`;
     setCurrentPeriod(newPeriod);
     setCurrentMode("department");
+    
+    // เรียก API ใหม่
+    await fetchApiData({
+      mode: "department",
+      fromYear: newForm.fromYear,
+      toYear: newForm.toYear
+    });
+    
     handleCloseModal();
   };
 
-  // Handle quarter selection
-  const handleQuarterSelect = (quarterLabel) => {
+  const handleQuarterSelect = async (quarterLabel) => {
     const newPeriod = `${quarterLabel} ปี ${quarterlyForm.year}`;
     setCurrentPeriod(newPeriod);
     setCurrentMode("quarterly");
+    
+    // เรียก API ใหม่
+    await fetchApiData({
+      mode: "quarterly",
+      quarter: quarterLabel,
+      year: quarterlyForm.year
+    });
+    
     handleCloseModal();
   };
 
