@@ -24,12 +24,18 @@ router = APIRouter(
 @router.get("", response_model=FormatResponseModel)
 async def read_positions(
     skip: int = 0, 
-    limit: int = 100, 
+    limit: int = 100,
+    search: str = None,  # เพิ่ม search parameter
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("setting_users"))
 ):
-    """ดึงรายการตำแหน่งทั้งหมด"""
-    positions_data = get_positions(db, skip=skip, limit=limit)
+    """ดึงรายการตำแหน่งทั้งหมด (รองรับการค้นหา)"""
+    if search and search.strip():
+        # ถ้ามี search term ให้ใช้ search function
+        positions_data = search_positions_by_name(db, search_term=search.strip(), skip=skip, limit=limit)
+    else:
+        # ถ้าไม่มี search term ให้ดึงทั้งหมด
+        positions_data = get_positions(db, skip=skip, limit=limit)
     return format_response("0000", positions_data)
 
 @router.get("/{position_id}", response_model=FormatResponseModel)
