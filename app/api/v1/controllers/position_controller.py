@@ -61,9 +61,22 @@ def user_position_to_dict(user_position) -> Dict[str, Any]:
     return result
 
 # ฟังก์ชันจัดการข้อมูลตำแหน่ง (Position)
-def get_positions(db: Session, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+def get_positions(db: Session, skip: int = 0, limit: int = 100, is_active: bool = None, level: str = None) -> List[Dict[str, Any]]:
     """ดึงข้อมูลตำแหน่งทั้งหมด"""
-    positions = db.query(Position).filter(Position.is_active == True).order_by(Position.name).offset(skip).limit(limit).all()
+    query = db.query(Position)
+    
+    # กรองตาม is_active ถ้ามีการระบุ
+    if is_active is not None:
+        query = query.filter(Position.is_active == is_active)
+    else:
+        # ถ้าไม่ระบุ ให้แสดงเฉพาะ active (default behavior)
+        query = query.filter(Position.is_active == True)
+    
+    # กรองตาม level ถ้ามีการระบุ
+    if level:
+        query = query.filter(Position.level == level)
+    
+    positions = query.order_by(Position.name).offset(skip).limit(limit).all()
     
     logger.info(f"Retrieved {len(positions)} positions")
     
@@ -80,13 +93,25 @@ def get_position_by_id(db: Session, position_id: UUID) -> Dict[str, Any]:
     logger.warning(f"Position with ID {position_id} not found")
     return None
 
-def search_positions_by_name(db: Session, search_term: str, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+def search_positions_by_name(db: Session, search_term: str, skip: int = 0, limit: int = 100, is_active: bool = None, level: str = None) -> List[Dict[str, Any]]:
     """ค้นหาตำแหน่งตามชื่อ"""
     search_pattern = f"%{search_term}%"
-    positions = db.query(Position).filter(
-        Position.name.like(search_pattern) | Position.description.like(search_pattern),
-        Position.is_active == True
-    ).order_by(Position.name).offset(skip).limit(limit).all()
+    query = db.query(Position).filter(
+        Position.name.like(search_pattern) | Position.description.like(search_pattern)
+    )
+    
+    # กรองตาม is_active ถ้ามีการระบุ
+    if is_active is not None:
+        query = query.filter(Position.is_active == is_active)
+    else:
+        # ถ้าไม่ระบุ ให้แสดงเฉพาะ active (default behavior)
+        query = query.filter(Position.is_active == True)
+    
+    # กรองตาม level ถ้ามีการระบุ
+    if level:
+        query = query.filter(Position.level == level)
+    
+    positions = query.order_by(Position.name).offset(skip).limit(limit).all()
     
     logger.info(f"Found {len(positions)} positions matching search term '{search_term}'")
     

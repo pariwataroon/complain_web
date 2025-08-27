@@ -13,10 +13,17 @@ logger = get_logger("outside_department_controller")
 class DuplicateKeyError(Exception):
     pass
 
-def get_outside_departments(db: Session, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
-    rows = db.query(OutsideDepartment).filter(
-        OutsideDepartment.is_active == True
-    ).order_by(OutsideDepartment.order_index, OutsideDepartment.name).offset(skip).limit(limit).all()
+def get_outside_departments(db: Session, skip: int = 0, limit: int = 100, is_active: bool = None) -> List[Dict[str, Any]]:
+    query = db.query(OutsideDepartment)
+    
+    # กรองตาม is_active ถ้ามีการระบุ
+    if is_active is not None:
+        query = query.filter(OutsideDepartment.is_active == is_active)
+    else:
+        # ถ้าไม่ระบุ ให้แสดงเฉพาะ active (default behavior)
+        query = query.filter(OutsideDepartment.is_active == True)
+    
+    rows = query.order_by(OutsideDepartment.order_index, OutsideDepartment.name).offset(skip).limit(limit).all()
     return [OutsideDeptSchema.model_validate(r).model_dump() for r in rows]
 
 def get_outside_department_by_id(db: Session, outside_department_id: UUID) -> Optional[Dict[str, Any]]:
@@ -28,12 +35,20 @@ def get_outside_department_by_id(db: Session, outside_department_id: UUID) -> Op
         return OutsideDeptSchema.model_validate(row).model_dump()
     return None
 
-def search_outside_departments_by_name(db: Session, search_term: str, skip: int = 0, limit: int = 100):
+def search_outside_departments_by_name(db: Session, search_term: str, skip: int = 0, limit: int = 100, is_active: bool = None):
     pattern = f"%{search_term}%"
-    rows = db.query(OutsideDepartment).filter(
-        OutsideDepartment.is_active == True,
+    query = db.query(OutsideDepartment).filter(
         OutsideDepartment.name.like(pattern)
-    ).order_by(OutsideDepartment.name).offset(skip).limit(limit).all()
+    )
+    
+    # กรองตาม is_active ถ้ามีการระบุ
+    if is_active is not None:
+        query = query.filter(OutsideDepartment.is_active == is_active)
+    else:
+        # ถ้าไม่ระบุ ให้แสดงเฉพาะ active (default behavior)
+        query = query.filter(OutsideDepartment.is_active == True)
+    
+    rows = query.order_by(OutsideDepartment.name).offset(skip).limit(limit).all()
     return [OutsideDeptSchema.model_validate(r).model_dump() for r in rows]
 
 def create_outside_department(db: Session, data: dict) -> Dict[str, Any]:

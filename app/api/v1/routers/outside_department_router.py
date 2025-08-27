@@ -31,17 +31,18 @@ router = APIRouter(
 async def read_outside_departments(
     skip: int = 0,
     limit: int = 100,
-    search: str = None,  # เพิ่ม search parameter
+    search: str = None,  # ค้นหาตามชื่อ
+    is_active: bool = None,  # กรองตามสถานะ active/inactive
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("setting_department"))
 ):
-    """ดึงรายการ outside_department ทั้งหมด (รองรับการค้นหา)"""
+    """ดึงรายการ outside_department ทั้งหมด (รองรับการค้นหาและกรอง)"""
     if search and search.strip():
         # ถ้ามี search term ให้ใช้ search function
-        data = search_outside_departments_by_name(db, search_term=search.strip(), skip=skip, limit=limit)
+        data = search_outside_departments_by_name(db, search_term=search.strip(), is_active=is_active, skip=skip, limit=limit)
     else:
         # ถ้าไม่มี search term ให้ดึงทั้งหมด
-        data = get_outside_departments(db, skip=skip, limit=limit)
+        data = get_outside_departments(db, is_active=is_active, skip=skip, limit=limit)
     return format_response("0000", data)
 
 @router.get("/dropdown", response_model=FormatResponseModel)
