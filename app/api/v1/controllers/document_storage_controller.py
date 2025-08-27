@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional, List
 import json
 import logging
 
-from models.comp_complaint import Complaint
+from models.comp_complaint import Complaint, ComplaintAttachment
 from models.comp_complaint_types import ComplaintChannel, ComplaintType, ComplaintSubType
 from models.user import User
 from models.departments import Department
@@ -41,15 +41,30 @@ def _dept_min(d) -> Optional[Dict[str, Any]]:
 def _serialize_attachments(report_obj) -> List[Dict[str, Any]]:
     atts = []
     try:
-        for a in (getattr(report_obj, "attachments", None) or []):
-            atts.append({
-                "id": str(getattr(a, "id", None)) if getattr(a, "id", None) else None,
-                "file_name": getattr(a, "file_name", None) or getattr(a, "filename", None),
-                "file_path": getattr(a, "file_path", None) or getattr(a, "path", None),
-                "file_size": getattr(a, "file_size", None),
-                "file_type": getattr(a, "file_type", None) or getattr(a, "mimetype", None),
-                "uploaded_at": getattr(a, "created_at", None).isoformat() if getattr(a, "created_at", None) else None,
-            })
+        attachments = getattr(report_obj, "attachments", None)
+        if attachments:
+            logger.debug(f"Processing {len(attachments)} attachments for object {getattr(report_obj, 'id', 'unknown')}")
+            for a in attachments:
+                # รองรับทั้ง OutgoingReport attachments และ ComplaintAttachment
+                attachment_data = {
+                    "id": str(getattr(a, "id", None)) if getattr(a, "id", None) else None,
+                    "file_name": (getattr(a, "file_name", None) or 
+                                getattr(a, "filename", None) or 
+                                getattr(a, "original_filename", None)),
+                    "file_path": (getattr(a, "file_path", None) or 
+                                getattr(a, "path", None) or
+                                getattr(a, "stored_path", None) or
+                                getattr(a, "file_url", None)),  # เพิ่ม file_url สำหรับ ComplaintAttachment
+                    "file_size": getattr(a, "file_size", None),
+                    "file_type": (getattr(a, "file_type", None) or 
+                                getattr(a, "mimetype", None) or
+                                getattr(a, "mime_type", None)),
+                    "uploaded_at": getattr(a, "created_at", None).isoformat() if getattr(a, "created_at", None) else None,
+                }
+                atts.append(attachment_data)
+                logger.debug(f"Added attachment: {attachment_data['file_name']}")
+        else:
+            logger.debug(f"No attachments found for object {getattr(report_obj, 'id', 'unknown')}")
     except Exception as e:
         logger.warning(f"serialize attachments error: {e}")
     return atts
@@ -325,6 +340,9 @@ def get_related_complaints(db: Session, complaint_id: UUID) -> Dict:
             # แปลงเป็น dict แบบครบถ้วน
             all_related_list = []
             for complaint in all_related_complaints:
+                # ดึง attachments ของ complaint นี้
+                complaint_attachments = _serialize_attachments(complaint)
+                
                 # ข้อมูลพื้นฐาน
                 complaint_info = {
                     "id": str(complaint.id),
@@ -336,7 +354,9 @@ def get_related_complaints(db: Session, complaint_id: UUID) -> Dict:
                     "parent_complaint_id": str(complaint.parent_complaint_id) if complaint.parent_complaint_id else None,
                     "parent_complaint_number": complaints_lookup.get(complaint.parent_complaint_id).complaint_number if complaint.parent_complaint_id and complaint.parent_complaint_id in complaints_lookup else None,
                     "created_at": complaint.created_at.isoformat() if complaint.created_at else None,
-                    "complainant_name": get_complainant_name_from_data(complaint.complainant_data)
+                    "complainant_name": get_complainant_name_from_data(complaint.complainant_data),
+                    "attachments": complaint_attachments,
+                    "attachments_count": len(complaint_attachments)
                 }
                 
                 # เพิ่มข้อมูล complaint type
@@ -588,6 +608,8 @@ def get_bulk_related_complaints(db: Session, complaint_ids: List[UUID]) -> Dict[
                     "parent_complaint_number": complaints_by_id.get(c.parent_complaint_id).complaint_number if c.parent_complaint_id and c.parent_complaint_id in complaints_by_id else None,
                     "created_at": c.created_at.isoformat() if c.created_at else None,
                     "complainant_name": get_complainant_name_from_data(c.complainant_data),
+                    "attachments": _serialize_attachments(c),
+                    "attachments_count": len(_serialize_attachments(c)),
                     
                     # ข้อมูล complaint type
                     "complaint_type": {
@@ -706,6 +728,9 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             complaint_category = "เรื่องร้องเรียนเพิ่มเติม"
         else:
             complaint_category = "เรื่องร้องเรียนใหม่"
+
+        # ===== Complaint Attachments =====
+        complaint_attachments = _serialize_attachments(complaint)
 
         # ===== OutgoingReports (1–4) =====
         outgoing_reports_data: Dict[str, List[Dict[str, Any]]] = \
@@ -853,6 +878,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             **outgoing_reports_data,
             "type5": type5_list,
             "total_count": total_count,
+            "complaint_attachments": complaint_attachments
         }
 
         # ===== สรุป "ขั้นตอนการดำเนินการครั้งแรก" (initial_process_summary) =====
@@ -934,6 +960,8 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             },
             "status_history": status_history,
             "initial_process_summary": initial_process_summary,
+            "attachments": complaint_attachments,
+            "attachments_count": len(complaint_attachments),
         }
 
         # ===== relationships =====
