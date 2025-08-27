@@ -961,21 +961,21 @@ const SearchComplaints = () => {
         {defaultData ? (
           <div className={styles.contentContainer}>
             {/* Tab Navigation - แสดงเพื่อความสวยงาม */}
-            <div className={styles.tabNavV2}>
+            <div className={styles.tabNav}>
               <div
-                className={`${styles.tabV2} ${complainantType === "individual" ? styles.activeV2 : ""
+                className={`${styles.tab}  ${styles.tab0} ${complainantType === "individual" ? styles.active : ""
                   }`}
               >
                 บุคคลทั่วไป
               </div>
               <div
-                className={`${styles.tabV2} ${complainantType === "corporate" ? styles.activeV2 : ""
+                className={`${styles.tab}  ${styles.tab1} ${complainantType === "corporate" ? styles.active : ""
                   }`}
               >
                 นิติบุคคล
               </div>
               <div
-                className={`${styles.tabV2} ${complainantType === "government" ? styles.activeV2 : ""
+                className={`${styles.tab}  ${styles.tab2} ${complainantType === "government" ? styles.active : ""
                   }`}
               >
                 หน่วยงานของรัฐ
@@ -1039,21 +1039,21 @@ const SearchComplaints = () => {
               </FormProvider>
 
               {/* Tab Navigation for Step 2 */}
-              <div className={styles.tabNavV2}>
+              <div className={styles.tabNav}>
                 <div
-                  className={`${styles.tabV2} ${respondentType === "individual" ? styles.activeV2 : ""
+                  className={`${styles.tab}  ${styles.tab0} ${respondentType === "individual" ? styles.active : ""
                     }`}
                 >
                   บุคคลทั่วไป
                 </div>
                 <div
-                  className={`${styles.tabV2} ${respondentType === "corporate" ? styles.activeV2 : ""
+                  className={`${styles.tab}  ${styles.tab1} ${respondentType === "corporate" ? styles.active : ""
                     }`}
                 >
                   นิติบุคคล
                 </div>
                 <div
-                  className={`${styles.tabV2} ${respondentType === "government" ? styles.activeV2 : ""
+                  className={`${styles.tab}  ${styles.tab2} ${respondentType === "government" ? styles.active : ""
                     }`}
                 >
                   หน่วยงานของรัฐ

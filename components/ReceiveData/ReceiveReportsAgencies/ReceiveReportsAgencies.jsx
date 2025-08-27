@@ -34,7 +34,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { CreateOutgoingReport5, getDepartmentsPrefix } from "@pages/api/outgoinreports/outgoinreports";
-
+import { GetEnhancedComplaints } from "@pages/complaint/index"
 // Constants สำหรับ options
 const PROCESS_STEP_OPTIONS = [
   { value: "รับเรื่อง", label: "รับเรื่อง" },

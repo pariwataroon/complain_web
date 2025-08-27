@@ -82,7 +82,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   const [userInfo, setUserInfo] = useState(null);
   const [complaintTypes, setComplaintTypes] = useState([]);
   const [staffUsers, setStaffUsers] = useState([]);
-
+  const [groupedStaffUsers, setGroupedStaffUsers] = useState({}); 
   const pdfRef = useRef();
 
   const { handleUpdateAssignment, isSubmitting, preparedFormData } =
