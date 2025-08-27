@@ -7,7 +7,10 @@ import ImageIcon from "@mui/icons-material/Image";
 import Image from "next/image";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import ButtonService from "@services/ButtonService/ButtonService";
-import { GetComplaintByID, ConfirmAssignment } from "@pages/api/complaint/complaint";
+import {
+  GetComplaintByID,
+  ConfirmAssignment,
+} from "@pages/api/complaint/complaint";
 import {
   formatThaiDate,
   formatThaiDateTime,
@@ -101,14 +104,14 @@ const SearchComplaints = () => {
     if (isConfirmed) {
       try {
         showLoading("กำลังบันทึกข้อมูล...");
-        
+
         const result = await ConfirmAssignment(
           id,
           "ยืนยันรับงานร้องทุกข์กระทรวงการคลัง"
         );
 
         closeAlert();
-        
+
         if (result && result.res_code === "0000") {
           await alertSuccess("สำเร็จ", "บันทึกข้อมูลเรียบร้อยแล้ว");
           router.push("/admin/edit/assigned-complaints/");
@@ -116,19 +119,24 @@ const SearchComplaints = () => {
           // จัดการกรณี error 4000 - ยืนยันไปแล้ว
           const errorData = result.res_data;
           let errorMessage = "ไม่สามารถบันทึกข้อมูลได้";
-          
+
           if (errorData && errorData.error) {
             // แปลงเวลาจาก "2025-08-18 17:49" เป็นรูปแบบไทย
-            const timeMatch = errorData.error.match(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2})/);
+            const timeMatch = errorData.error.match(
+              /(\d{4}-\d{2}-\d{2} \d{2}:\d{2})/
+            );
             if (timeMatch) {
               const dateTime = new Date(timeMatch[1]);
               const thaiDateTime = formatThaiDateTime(dateTime.toISOString());
-              errorMessage = errorData.error.replace(timeMatch[1], thaiDateTime);
+              errorMessage = errorData.error.replace(
+                timeMatch[1],
+                thaiDateTime
+              );
             } else {
               errorMessage = errorData.error;
             }
           }
-          
+
           alertError("เกิดข้อผิดพลาด", errorMessage);
         } else {
           alertError("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
@@ -136,21 +144,27 @@ const SearchComplaints = () => {
       } catch (error) {
         closeAlert();
         console.error("Error saving:", error);
-        
+
         // จัดการ error response จาก API
         if (error.response && error.response.data) {
           const errorData = error.response.data;
-          
-          if (errorData.res_code === "4000" && errorData.res_data && errorData.res_data.error) {
+
+          if (
+            errorData.res_code === "4000" &&
+            errorData.res_data &&
+            errorData.res_data.error
+          ) {
             let errorMessage = errorData.res_data.error;
-            
-            const timeMatch = errorMessage.match(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2})/);
+
+            const timeMatch = errorMessage.match(
+              /(\d{4}-\d{2}-\d{2} \d{2}:\d{2})/
+            );
             if (timeMatch) {
               const dateTime = new Date(timeMatch[1]);
               const thaiDateTime = formatThaiDateTime(dateTime.toISOString());
               errorMessage = errorMessage.replace(timeMatch[1], thaiDateTime);
             }
-            
+
             alertError("เกิดข้อผิดพลาด", errorMessage);
           } else {
             alertError("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
@@ -198,7 +212,12 @@ const SearchComplaints = () => {
 
   const renderRespondentFields = () => {
     // เช็คว่ามีข้อมูลผู้ถูกร้องหรือไม่
-    if (!respondentData || respondent.category === "NO_DATA_PROVIDED" || !respondent || Object.keys(respondent).length === 0) {
+    if (
+      !respondentData ||
+      respondent.category === "NO_DATA_PROVIDED" ||
+      !respondent ||
+      Object.keys(respondent).length === 0
+    ) {
       return (
         <Grid item xs={12}>
           <Typography fontSize={16} color="text.secondary">
@@ -431,7 +450,8 @@ const SearchComplaints = () => {
             ผู้รับมอบอำนาจร้องเรียน
           </Typography>
           <Grid container spacing={2} mb={3}>
-            {delegate.activeType === "individual" && delegate.individual?.category !== "NO_DATA_PROVIDED" ? (
+            {delegate.activeType === "individual" &&
+            delegate.individual?.category !== "NO_DATA_PROVIDED" ? (
               <>
                 <InfoItem
                   label="หมายเลขประจำตัวประชาชน"
@@ -467,7 +487,8 @@ const SearchComplaints = () => {
                   value={formatPhoneNumber_null(delegate.individual?.phone)}
                 />
               </>
-            ) : delegate.activeType === "corporate" && delegate.corporate?.category !== "NO_DATA_PROVIDED" ? (
+            ) : delegate.activeType === "corporate" &&
+              delegate.corporate?.category !== "NO_DATA_PROVIDED" ? (
               <>
                 <InfoItem
                   label="หมายเลขประจำตัวประชาชน"
@@ -556,7 +577,9 @@ const SearchComplaints = () => {
             />
             <InfoItem
               label="วันที่ สป.กค."
-              value={formatThaiFullDate(complaint.assignment_form?.reference_date)}
+              value={formatThaiFullDate(
+                complaint.assignment_form?.reference_date
+              )}
             />
             <InfoItem
               label="เลข สป.สร."
@@ -564,7 +587,9 @@ const SearchComplaints = () => {
             />
             <InfoItem
               label="วันที่ สป.สร."
-              value={formatThaiFullDate(complaint.assignment_form?.reference_date2)}
+              value={formatThaiFullDate(
+                complaint.assignment_form?.reference_date2
+              )}
             />
             <InfoItem
               label="เลข สตป."
@@ -572,7 +597,9 @@ const SearchComplaints = () => {
             />
             <InfoItem
               label="วันที่ สตป."
-              value={formatThaiFullDate(complaint.assignment_form?.reference_date3)}
+              value={formatThaiFullDate(
+                complaint.assignment_form?.reference_date3
+              )}
             />
             <InfoItem
               label="เลข สรร. (สารบัญ)"
@@ -580,7 +607,9 @@ const SearchComplaints = () => {
             />
             <InfoItem
               label="วันที่ สรร."
-              value={formatThaiFullDate(complaint.assignment_form?.reference_date4)}
+              value={formatThaiFullDate(
+                complaint.assignment_form?.reference_date4
+              )}
             />
             <InfoItem
               label="เลขที่หนังสือ"
@@ -588,7 +617,9 @@ const SearchComplaints = () => {
             />
             <InfoItem
               label="วันที่หนังสือ"
-              value={formatThaiFullDate(complaint.assignment_form?.document_date)}
+              value={formatThaiFullDate(
+                complaint.assignment_form?.document_date
+              )}
             />
             <InfoItem
               label="หน่วยงานอื่นที่ส่งเรื่องมา"
@@ -596,11 +627,15 @@ const SearchComplaints = () => {
             />
             <InfoItem
               label="ชั้นความลับ"
-              value={getSecurityLevelThai(complaint.assignment_form?.confidentiality_level)}
+              value={getSecurityLevelThai(
+                complaint.assignment_form?.confidentiality_level
+              )}
             />
             <InfoItem
               label="ชั้นความเร่งด่วน"
-              value={getUrgencyLevelThai(complaint.assignment_form?.urgency_level)}
+              value={getUrgencyLevelThai(
+                complaint.assignment_form?.urgency_level
+              )}
             />
             <InfoItem
               label="ประเภทเรื่องร้องเรียน"
@@ -746,8 +781,18 @@ const SearchComplaints = () => {
           gap: 2,
         }}
       >
-        <ButtonService label="ย้อนกลับ" color="secondary" variant="outlined" onClick={handleGoBack}/>
-        <ButtonService label="บันทึก" color="ยืนยัน" variant="contained" onClick={handleSave}/>
+        <ButtonService
+          label="ย้อนกลับ"
+          color="secondary"
+          variant="outlined"
+          onClick={handleGoBack}
+        />
+        <ButtonService
+          label="บันทึก"
+          color="ยืนยัน"
+          variant="contained"
+          onClick={handleSave}
+        />
       </Box>
     </>
   );

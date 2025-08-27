@@ -102,7 +102,9 @@ const SearchComplaints = () => {
               {tabs.map((label, idx) => (
                 <div
                   key={idx}
-                  className={`${styles.tab} ${styles[`tab${idx}`]} ${active === idx ? styles.active : ""}`}
+                  className={`${styles.tab} ${styles[`tab${idx}`]} ${
+                    active === idx ? styles.active : ""
+                  }`}
                   onClick={() => setActive(idx)}
                 >
                   {label}
@@ -134,7 +136,9 @@ const SearchComplaints = () => {
               </div>
             </FormProvider>
 
-            <Box sx={{ display: "flex", justifyContent: "center", mt: 4, gap: 2 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "center", mt: 4, gap: 2 }}
+            >
               <ButtonService
                 label="ล้าง"
                 color="ล้าง"
