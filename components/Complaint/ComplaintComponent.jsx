@@ -97,7 +97,11 @@ export default function ComplaintComponent() {
     if (activeStep === 2) {
       data = formData?.[stepKey]?.general || {};
     } else {
-      data = getStepTabData(stepKey, "general");
+      const stepData = getStepTabData(stepKey, "general");
+      data = {
+        ...stepData,
+        ...formData?.[stepKey]?.general
+      };
     }
 
     const errors = {};
@@ -107,26 +111,26 @@ export default function ComplaintComponent() {
       const currentTab = tabStates.step1 || 0;
 
       if (currentTab === 0) {
-        const idCardValue = data?.general?.idCard;
-        if (!hasValue(idCardValue)) {
-          errors[`general.idCard`] = "กรุณากรอก เลขบัตรประชาชน ของผู้ร้องทุกข์";
-        } else if (idCardValue.length !== 13) {
-          errors[`general.idCard`] =
-            "กรุณากรอกเลขบัตรประจำตัวประชาชนให้ครบ 13 หลัก ของผู้ร้องทุกข์";
-        } else if (!/^\d{13}$/.test(idCardValue)) {
-          errors[`general.idCard`] =
-            "เลขบัตรประจำตัวประชาชนต้องเป็นตัวเลขเท่านั้น ของผู้ร้องทุกข์";
-        }
+        // const idCardValue = data?.general?.idCard;
+        // if (!hasValue(idCardValue)) {
+        //   errors[`general.idCard`] = "กรุณากรอก เลขบัตรประชาชน ของผู้ร้องทุกข์";
+        // } else if (idCardValue.length !== 13) {
+        //   errors[`general.idCard`] =
+        //     "กรุณากรอกเลขบัตรประจำตัวประชาชนให้ครบ 13 หลัก ของผู้ร้องทุกข์";
+        // } else if (!/^\d{13}$/.test(idCardValue)) {
+        //   errors[`general.idCard`] =
+        //     "เลขบัตรประจำตัวประชาชนต้องเป็นตัวเลขเท่านั้น ของผู้ร้องทุกข์";
+        // }
 
         const generalFields = [
-          { key: "name", label: "ชื่อ - นามสกุล" },
-          { key: "address", label: "ที่อยู่" },
-          { key: "phone", label: "หมายเลขโทรศัพท์" },
+          // { key: "name", label: "ชื่อ - นามสกุล" },
+          // { key: "address", label: "ที่อยู่" },
+          // { key: "phone", label: "หมายเลขโทรศัพท์" },
           { key: "province", label: "จังหวัด" },
           { key: "districts", label: "อำเภอ/เขต" },
           { key: "subdistricts", label: "ตำบล/แขวง" },
           { key: "zipcode", label: "รหัสไปรษณีย์" },
-          { key: "email", label: "อีเมล" },
+          // { key: "email", label: "อีเมล" },
         ];
 
         generalFields.forEach((field) => {
@@ -138,27 +142,27 @@ export default function ComplaintComponent() {
           }
         });
 
-        const emailValue = data?.general?.email;
-        if (emailValue) {
-          const emailErrors = validateEmail(emailValue);
-          if (emailErrors.length > 0) {
-            errors[`general.email`] = emailErrors[0];
-          }
-        } else {
-          errors[`general.email`] = "กรุณากรอกอีเมล ของผู้ร้องทุกข์";
-        }
-      } else if (currentTab === 1) {
-        const corpIdCardValue = data?.corporate?.idCard;
-        if (!hasValue(corpIdCardValue)) {
-          errors[`corporate.idCard`] =
-            "กรุณากรอก เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคล ของนิติบุคคล";
-        } else if (corpIdCardValue.length !== 13) {
-          errors[`corporate.idCard`] =
-            "กรุณากรอกเลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลให้ครบ 13 หลัก ของนิติบุคคล";
-        } else if (!/^\d{13}$/.test(corpIdCardValue)) {
-          errors[`corporate.idCard`] =
-            "เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลต้องเป็นตัวเลขเท่านั้น ของนิติบุคคล";
-        }
+      //   const emailValue = data?.general?.email;
+      //   if (emailValue) {
+      //     const emailErrors = validateEmail(emailValue);
+      //     if (emailErrors.length > 0) {
+      //       errors[`general.email`] = emailErrors[0];
+      //     }
+      //   } else {
+      //     errors[`general.email`] = "กรุณากรอกอีเมล ของผู้ร้องทุกข์";
+      //   }
+      // } else if (currentTab === 1) {
+      //   const corpIdCardValue = data?.corporate?.idCard;
+      //   if (!hasValue(corpIdCardValue)) {
+      //     errors[`corporate.idCard`] =
+      //       "กรุณากรอก เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคล ของนิติบุคคล";
+      //   } else if (corpIdCardValue.length !== 13) {
+      //     errors[`corporate.idCard`] =
+      //       "กรุณากรอกเลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลให้ครบ 13 หลัก ของนิติบุคคล";
+      //   } else if (!/^\d{13}$/.test(corpIdCardValue)) {
+      //     errors[`corporate.idCard`] =
+      //       "เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลต้องเป็นตัวเลขเท่านั้น ของนิติบุคคล";
+      //   }
 
         const corpFields = [
           { key: "name", label: "ชื่อ - นามสกุล" },
@@ -297,6 +301,8 @@ export default function ComplaintComponent() {
 
   const validateStepForSubmit = useCallback(async () => {
     setShouldShowValidation(true);
+
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     const { errors, isValid } = validateCurrentStep();
     setValidationErrors(errors);

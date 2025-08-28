@@ -30,7 +30,7 @@ const ComplaintPersonalForm = ({
 
   useEffect(() => {
     const autoPopulateUserData = () => {
-      if (hasAutoPopulated || !dataMe || Object.keys(dataMe).length === 0) {
+      if (hasAutoPopulated || !dataMe || Object.keys(dataMe).length === 0 || isLoadingAuthMe) {
         return;
       }
 
@@ -38,29 +38,30 @@ const ComplaintPersonalForm = ({
         setTimeout(() => {
           const newLocalData = {};
 
-          if (dataMe.citizen_id) {
+          // ตรวจสอบและใส่ข้อมูลที่มีค่า
+          if (dataMe.citizen_id?.trim()) {
             newLocalData.idCard = dataMe.citizen_id;
             onChange("idCard", dataMe.citizen_id);
           }
 
-          if (dataMe.email) {
+          if (dataMe.email?.trim()) {
             newLocalData.email = dataMe.email;
             onChange("email", dataMe.email);
           }
 
-          if (dataMe.phone) {
+          if (dataMe.phone?.trim()) {
             newLocalData.phone = dataMe.phone;
             onChange("phone", dataMe.phone);
           }
 
-          if (dataMe.full_name) {
+          if (dataMe.full_name?.trim()) {
             newLocalData.name = dataMe.full_name;
             onChange("name", dataMe.full_name);
           }
 
           setLocalData(newLocalData);
           setHasAutoPopulated(true);
-        }, 0);
+        }, 100);
 
       } catch (error) {
         console.error("Error auto-populating user data:", error);
@@ -68,7 +69,50 @@ const ComplaintPersonalForm = ({
     };
 
     autoPopulateUserData();
-  }, [onChange, hasAutoPopulated, dataMe]);
+  }, [onChange, hasAutoPopulated, dataMe, isLoadingAuthMe]);
+
+
+  // useEffect(() => {
+  //   const autoPopulateUserData = () => {
+  //     if (hasAutoPopulated || !dataMe || Object.keys(dataMe).length === 0) {
+  //       return;
+  //     }
+
+  //     try {
+  //       setTimeout(() => {
+  //         const newLocalData = {};
+
+  //         if (dataMe.citizen_id) {
+  //           newLocalData.idCard = dataMe.citizen_id;
+  //           onChange("idCard", dataMe.citizen_id);
+  //         }
+
+  //         if (dataMe.email) {
+  //           newLocalData.email = dataMe.email;
+  //           onChange("email", dataMe.email);
+  //         }
+
+  //         if (dataMe.phone) {
+  //           newLocalData.phone = dataMe.phone;
+  //           onChange("phone", dataMe.phone);
+  //         }
+
+  //         if (dataMe.full_name) {
+  //           newLocalData.name = dataMe.full_name;
+  //           onChange("name", dataMe.full_name);
+  //         }
+
+  //         setLocalData(newLocalData);
+  //         setHasAutoPopulated(true);
+  //       }, 0);
+
+  //     } catch (error) {
+  //       console.error("Error auto-populating user data:", error);
+  //     }
+  //   };
+
+  //   autoPopulateUserData();
+  // }, [onChange, hasAutoPopulated, dataMe]);
 
   const handleChange = useCallback(
     (field) => (value) => {
