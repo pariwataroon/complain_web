@@ -17,6 +17,7 @@ import {
   CreateVenue,
   DeleteVenue,
   UpdateVenue,
+  getDepartmentGroup,
 } from "@pages/api/settinggeneral/department/department";
 import { alertSuccess, showConfirm, alertError } from "@utils/Alerts";
 import SelectField from "@services/SelectField/SelectField";
@@ -41,128 +42,6 @@ const breadcrumbItems = [
   },
 ];
 
-// Mock options สำหรับส่วนราชการ
-const mockGovernmentOptions = [
-  { label: "กระทรวงมหาดไทย", value: "ministry_interior" },
-  { label: "กระทรวงการคลัง", value: "ministry_finance" },
-  { label: "กระทรวงศึกษาธิการ", value: "ministry_education" },
-  { label: "กระทรวงสาธารณสุข", value: "ministry_health" },
-  { label: "กระทรวงคมนาคม", value: "ministry_transport" },
-  { label: "กระทรวงพาณิชย์", value: "ministry_commerce" },
-  { label: "กระทรวงอุตสาหกรรม", value: "ministry_industry" },
-  { label: "กระทรวงเกษตรและสหกรณ์", value: "ministry_agriculture" },
-  {
-    label: "กระทรวงทรัพยากรธรรมชาติและสิ่งแวดล้อม",
-    value: "ministry_environment",
-  },
-  { label: "กระทรวงพลังงาน", value: "ministry_energy" },
-  { label: "กระทรวงแรงงาน", value: "ministry_labour" },
-  { label: "กระทรวงวิทยาศาสตร์และเทคโนโลยี", value: "ministry_science" },
-  {
-    label: "กระทรวงการพัฒนาสังคมและความมั่นคงของมนุษย์",
-    value: "ministry_social",
-  },
-  { label: "กระทรวงวัฒนธรรม", value: "ministry_culture" },
-  { label: "กระทรวงการท่องเที่ยวและกีฬา", value: "ministry_tourism" },
-  { label: "กระทรวงดิจิทัลเพื่อเศรษฐกิจและสังคม", value: "ministry_digital" },
-  { label: "สำนักนายกรัฐมนตรี", value: "prime_minister_office" },
-  { label: "กรมการปกครอง", value: "department_provincial" },
-  { label: "กรมส่งเสริมการปกครองท้องถิ่น", value: "department_local_admin" },
-  { label: "กรมพัฒนาที่ดิน", value: "land_development_department" },
-  { label: "กรมทรัพยากรน้ำ", value: "department_water_resources" },
-  { label: "กรมอุตุนิยมวิทยา", value: "meteorological_department" },
-  {
-    label: "กรมป้องกันและบรรเทาสาธารณภัย",
-    value: "disaster_prevention_department",
-  },
-  { label: "กรมโยธาธิการและผังเมือง", value: "public_works_department" },
-  { label: "กรมสรรพากร", value: "revenue_department" },
-];
-
-// Mock options สำหรับรัฐวิสาหกิจ
-const mockStateEnterpriseOptions = [
-  { label: "การไฟฟ้าฝ่ายผลิตแห่งประเทศไทย (กฟผ.)", value: "egat" },
-  { label: "การไฟฟ้านครหลวง (กฟน.)", value: "mea" },
-  { label: "การไฟฟ้าส่วนภูมิภาค (กฟภ.)", value: "pea" },
-  { label: "บริษัท ปตท. จำกัด (มหาชน)", value: "ptt" },
-  { label: "บริษัท ปตท. สำรวจและผลิตปิโตรเลียม จำกัด (มหาชน)", value: "pttep" },
-  { label: "บริษัท ปตท. โกลบอล เคมิคอล จำกัด (มหาชน)", value: "pttgc" },
-  { label: "การประปานครหลวง", value: "mwa" },
-  { label: "การประปาส่วนภูมิภาค", value: "pwa" },
-  { label: "การทางพิเศษแห่งประเทศไทย", value: "exat" },
-  { label: "การรถไฟแห่งประเทศไทย", value: "srt" },
-  { label: "การรถไฟฟ้าขนส่งมวลชนแห่งประเทศไทย", value: "bmta" },
-  { label: "การท่าเรือแห่งประเทศไทย", value: "pat" },
-  { label: "การท่าอากาศยานแห่งประเทศไทย", value: "aot" },
-  { label: "บริษัท ทีโอที จำกัด (มหาชน)", value: "tot" },
-  { label: "บริษัท กสท โทรคมนาคม จำกัด (มหาชน)", value: "kat" },
-  { label: "ธนาคารกรุงไทย จำกัด (มหาชน)", value: "ktb" },
-  { label: "ธนาคารกรุงเทพ จำกัด (มหาชน)", value: "bbl" },
-  { label: "ธนาคารกสิกรไทย จำกัด (มหาชน)", value: "kbank" },
-  { label: "บริษัท ไปรษณีย์ไทย จำกัด", value: "thailand_post" },
-  {
-    label: "บริษัท ท่อส่งก๊าซธรรมชาติแห่งประเทศไทย จำกัด (มหาชน)",
-    value: "pttngd",
-  },
-  { label: "การยางแห่งประเทศไทย", value: "raot" },
-  { label: "การนิคมอุตสาหกรรมแห่งประเทศไทย", value: "ieat" },
-  { label: "การไฟฟ้าส่วนภูมิภาค", value: "pea_regional" },
-  { label: "บริษัท บางจาก คอร์ปอเรชั่น จำกัด (มหาชน)", value: "bjc" },
-  { label: "บริษัท ไทยออยล์ จำกัด (มหาชน)", value: "top" },
-];
-
-// Mock options สำหรับอื่นๆ
-const mockOtherOptions = [
-  {
-    label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ (ป.ป.ช.)",
-    value: "nacc",
-  },
-  {
-    label: "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตในภาครัฐ (ป.ป.ท.)",
-    value: "pacc",
-  },
-  { label: "สำนักงานอัยการสูงสุด", value: "attorney_general" },
-  { label: "สำนักงานตำรวจแห่งชาติ", value: "royal_police" },
-  { label: "สำนักงานผู้ตรวจการแผ่นดิน", value: "ombudsman" },
-  { label: "สำนักงานศาลยุติธรรม", value: "courts_justice" },
-  { label: "สำนักงานศาลปกครอง", value: "administrative_court" },
-  {
-    label: "สำนักงานคณะกรรมการการเลือกตั้ง (กกต.)",
-    value: "election_commission",
-  },
-  {
-    label: "สำนักงานคณะกรรมการข้าราชการพลเรือน (ก.พ.)",
-    value: "civil_service_commission",
-  },
-  { label: "สำนักงานการตรวจเงินแผ่นดิน", value: "state_audit_office" },
-  { label: "ธนาคารแห่งประเทศไทย", value: "bank_of_thailand" },
-  {
-    label: "สำนักงานคณะกรรมการกำกับหลักทรัพย์และตลาดหลักทรัพย์ (ก.ล.ต.)",
-    value: "sec",
-  },
-  {
-    label: "สำนักงานคณะกรรมการคุ้มครองผู้บริโภค",
-    value: "consumer_protection",
-  },
-  {
-    label: "สำนักงานคณะกรรมการข้าราชการครู (ก.ค.ศ.)",
-    value: "teacher_council",
-  },
-  {
-    label: "สำนักงานคณะกรรมการพัฒนาการเศรษฐกิจและสังคมแห่งชาติ (สศช.)",
-    value: "nesdb",
-  },
-  { label: "องค์การบริหารส่วนจังหวัด", value: "provincial_admin" },
-  { label: "เทศบาลนคร", value: "city_municipality" },
-  { label: "เทศบาลเมือง", value: "town_municipality" },
-  { label: "เทศบาลตำบล", value: "subdistrict_municipality" },
-  { label: "องค์การบริหารส่วนตำบล (อบต.)", value: "subdistrict_admin" },
-  { label: "กรุงเทพมหานคร (กทม.)", value: "bangkok_metro" },
-  { label: "เมืองพัทยา", value: "pattaya_city" },
-  { label: "สำนักงานปลัดสำนักนายกรัฐมนตรี", value: "pmo_secretariat" },
-  { label: "สำนักข่าวกรองแห่งชาติ (สขช.)", value: "nis" },
-  { label: "สำนักงานสภาความมั่นคงแห่งชาติ (สมช.)", value: "nsc" },
-];
 
 /* -------------------------------------------------------------------------- */
 /*  component                                                                  */
@@ -185,71 +64,58 @@ const DepartmentManagement = () => {
   /* ------------------------------ state ----------------------------------- */
   const [stats, setStats] = useState({ res_data: [] });
   const [filteredStats, setFilteredStats] = useState({ res_data: [] });
-  const [stateEnterpriseOptions, setStateEnterpriseOptions] = useState(
-    mockStateEnterpriseOptions
-  );
-  const [governmentOptions, setGovernmentOptions] = useState(
-    mockGovernmentOptions
-  );
-  const [otherOptions, setOtherOptions] = useState(mockOtherOptions);
+  const [stateEnterpriseOptions, setStateEnterpriseOptions] = useState([]);
+  const [governmentOptions, setGovernmentOptions] = useState([]);
+  const [otherOptions, setOtherOptions] = useState([]);
+  /* ------------------------------- โหลดข้อมูล dropdown ------------------------------- */
+  /* ------------------------------- โหลดข้อมูล dropdown ------------------------------- */
+const fetchDropdownOptions = async () => {
+  try {
+    const res = await getDepartmentGroup(); // API จริง
+    const groups = Array.isArray(res?.res_data) ? res.res_data : [];
 
-  /* ------------------------------- useEffect -------------------------------- */
+    // หา group
+    const stateGroup = groups.find((g) => g.name === "รัฐวิสาหกิจ");
+    const govGroup = groups.find((g) => g.name === "ส่วนราชการ");
+    const otherGroup = groups.find((g) => g.name === "อื่น ๆ" || g.name === "อื่นๆ");
+
+    // map departments -> options
+    const toOptions = (arr) =>
+      Array.isArray(arr)
+        ? arr.map((d) => ({
+            label: `${d.name} (${d.short_name || ""})`, // แสดงชื่อ + ตัวย่อ
+            value: d.id, // ใช้ id จริง
+            code: d.code, // เก็บรหัสไว้ด้วย
+          }))
+        : [];
+
+    setStateEnterpriseOptions(toOptions(stateGroup?.departments));
+    setGovernmentOptions(toOptions(govGroup?.departments));
+    setOtherOptions(toOptions(otherGroup?.departments));
+
+    console.log("Dropdown Options Loaded:", {
+      gov: toOptions(govGroup?.departments),
+      state: toOptions(stateGroup?.departments),
+      other: toOptions(otherGroup?.departments),
+    });
+  } catch (err) {
+    console.error("Error fetching dropdown options:", err);
+    setGovernmentOptions([]);
+    setStateEnterpriseOptions([]);
+    setOtherOptions([]);
+  }
+};
+
+
+
+  /* ------------------------------- โหลดข้อมูลตาราง ------------------------------- */
   const fetchDepartmentDetails = async () => {
     try {
       const response = await GetDetailDepartment();
 
-      /* ---------- 1. ดึง venues เฉพาะกลุ่ม "รัฐวิสาหกิจ" ---------- */
-      const wisetakitVenues = response.res_data.flatMap((dept) =>
-        dept.venue_groups
-          .filter((g) => g.group_name === "รัฐวิสาหกิจ")
-          .flatMap((g) => g.venues)
-      );
-
-      /* ---------- 2. สร้าง options แล้วเก็บใน state ใหม่ ---------- */
-      const wisetakitOptions = wisetakitVenues.map((v) => ({
-        label: v.name, // หรือ v.short_name แล้วแต่ต้องการแสดง
-        value: v.id, // จะใช้ code / abbreviation ก็เปลี่ยนตรงนี้
-      }));
-      // Merge กับ mock data
-      setStateEnterpriseOptions([
-        ...mockStateEnterpriseOptions,
-        ...wisetakitOptions,
-      ]);
-
-      /* ---------- 1. ดึง venues เฉพาะกลุ่ม "ส่วนราชการ" ---------- */
-      const GovVenues = response.res_data.flatMap((dept) =>
-        dept.venue_groups
-          .filter((g) => g.group_name === "ส่วนราชการ")
-          .flatMap((g) => g.venues)
-      );
-
-      /* ---------- 2. สร้าง options แล้วเก็บใน state ใหม่ ---------- */
-      const govOptions = GovVenues.map((v) => ({
-        label: v.name, // หรือ v.short_name แล้วแต่ต้องการแสดง
-        value: v.id, // จะใช้ code / abbreviation ก็เปลี่ยนตรงนี้
-      }));
-      // Merge กับ mock data
-      setGovernmentOptions([...mockGovernmentOptions, ...govOptions]);
-
-      /* ---------- 1. ดึง venues เฉพาะกลุ่ม "อื่นๆ" ---------- */
-      const OtherVenues = response.res_data.flatMap((dept) =>
-        dept.venue_groups
-          .filter((g) => g.group_name === "อื่นๆ")
-          .flatMap((g) => g.venues)
-      );
-
-      /* ---------- 2. สร้าง options แล้วเก็บใน state ใหม่ ---------- */
-      const otherOpts = OtherVenues.map((v) => ({
-        label: v.name, // หรือ v.short_name แล้วแต่ต้องการแสดง
-        value: v.id, // จะใช้ code / abbreviation ก็เปลี่ยนตรงนี้
-      }));
-      // Merge กับ mock data
-      setOtherOptions([...mockOtherOptions, ...otherOpts]);
-
-      /* ---------- 3. map ข้อมูลเดิมไว้ใช้งานหน้าตาราง ---------- */
       const mappedData = response.res_data.map((department) => ({
         department_id: department.department_id || department.id,
-        role_name: department.department_code.toLowerCase(),
+        role_name: department.department_code?.toLowerCase() || "",
         role_description: department.department_name,
         users: department.venue_groups.flatMap((group) =>
           group.venues.map((venue) => ({
@@ -258,6 +124,7 @@ const DepartmentManagement = () => {
             sub_department: venue.short_name || "-",
             color_code: venue.color_code,
             group_name: group.group_name,
+            department_id: department.department_id,
           }))
         ),
       }));
@@ -266,85 +133,16 @@ const DepartmentManagement = () => {
       setFilteredStats({ res_data: mappedData });
     } catch (err) {
       console.error("Error fetching department details:", err);
-      // ใช้ mock data ถ้า API error
-      const mockData = {
-        res_data: [
-          {
-            department_id: 1,
-            role_name: "government",
-            role_description: "ส่วนราชการ",
-            users: [
-              {
-                id: 1,
-                main_department: "กระทรวงมหาดไทย",
-                sub_department: "มท.",
-                color_code: "#FF5722",
-                group_name: "ส่วนราชการ",
-              },
-              {
-                id: 2,
-                main_department: "กระทรวงการคลัง",
-                sub_department: "กค.",
-                color_code: "#4CAF50",
-                group_name: "ส่วนราชการ",
-              },
-            ],
-          },
-          {
-            department_id: 2,
-            role_name: "state_enterprise",
-            role_description: "รัฐวิสาหกิจ",
-            users: [
-              {
-                id: 3,
-                main_department: "การไฟฟ้าฝ่ายผลิตแห่งประเทศไทย",
-                sub_department: "กฟผ.",
-                color_code: "#2196F3",
-                group_name: "รัฐวิสาหกิจ",
-              },
-              {
-                id: 4,
-                main_department: "บริษัท ปตท. จำกัด (มหาชน)",
-                sub_department: "ปตท.",
-                color_code: "#FF9800",
-                group_name: "รัฐวิสาหกิจ",
-              },
-            ],
-          },
-          {
-            department_id: 3,
-            role_name: "other",
-            role_description: "อื่นๆ",
-            users: [
-              {
-                id: 5,
-                main_department:
-                  "สำนักงานคณะกรรมการป้องกันและปราบปรามการทุจริตแห่งชาติ",
-                sub_department: "ป.ป.ช.",
-                color_code: "#9C27B0",
-                group_name: "อื่นๆ",
-              },
-              {
-                id: 6,
-                main_department: "ธนาคารแห่งประเทศไทย",
-                sub_department: "ธปท.",
-                color_code: "#607D8B",
-                group_name: "อื่นๆ",
-              },
-            ],
-          },
-        ],
-      };
-      setStats(mockData);
-      setFilteredStats(mockData);
+      setStats({ res_data: [] });
+      setFilteredStats({ res_data: [] });
     }
   };
 
-  /* ------------------------------- useEffect -------------------------------- */
+  /* ------------------------------- useEffect ------------------------------- */
   useEffect(() => {
     fetchDepartmentDetails();
+    fetchDropdownOptions();
   }, []);
-
   /* ---------------------------------- data ---------------------------------- */
 
   /* ------------------------------- id helpers ------------------------------- */
@@ -356,37 +154,35 @@ const DepartmentManagement = () => {
   /* -------------------------------- handlers -------------------------------- */
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    setFormData((prev) => {
-      const updated = { ...prev, [name]: value };
-      // console.log("SelectField change →", updated);
-      return updated;
-    });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSearch = () => {
-    const { government, stateEnterprise, other } = formData;
+  const { government, stateEnterprise, other } = formData;
 
-    // ไม่มีเงื่อนไข → แสดงทั้งหมด
     if (!government && !stateEnterprise && !other) {
       setFilteredStats(stats);
       return;
     }
 
-    // กรองแต่ละ section แล้วรวมใหม่
+    const selectedIds = [government, stateEnterprise, other].filter(Boolean);
+
+    // กรอง sections
     const filteredSections = stats.res_data
       .map((section) => {
-        // เงื่อนไขของ section (government)
-        if (government && section.role_description !== government) return null;
+        // เช็คว่าตรง department_id
+        if (selectedIds.includes(section.department_id)) {
+          return section;
+        }
 
-        // เงื่อนไขของ user ภายใน (stateEnterprise / other)
-        const filteredUsers = section.users.filter((user) => {
-          const matchStateEnt = !stateEnterprise || user.id === stateEnterprise;
-          const matchOther = !other || user.sub_department === other;
-          return matchStateEnt && matchOther;
-        });
-
-        if (filteredUsers.length === 0) return null;
-        return { ...section, users: filteredUsers };
+        // ถ้าไม่ตรง section แต่มี users ที่ตรง department_id → กรอง user
+        const filteredUsers = section.users.filter((u) =>
+          selectedIds.includes(u.department_id)
+        );
+        if (filteredUsers.length > 0) {
+          return { ...section, users: filteredUsers };
+        }
+        return null;
       })
       .filter(Boolean);
 

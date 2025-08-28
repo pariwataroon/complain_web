@@ -264,8 +264,9 @@ const AddUserModal = ({
 
     const formData = getValues();
 
-    if (!formData.password || !formData.password.trim()) {
-      await alertWarning("กรุณากรอกรหัสผ่าน", "ต้องกรอกรหัสผ่านทุกครั้งที่บันทึก");
+    // ✅ เช็ก password เฉพาะตอน "เพิ่มผู้ใช้งาน"
+    if (!editingUser && (!formData.password || !formData.password.trim())) {
+      await alertWarning("กรุณากรอกรหัสผ่าน", "ต้องกรอกรหัสผ่านเมื่อเพิ่มผู้ใช้ใหม่");
       return;
     }
 
@@ -275,6 +276,7 @@ const AddUserModal = ({
     }
 
     if (!editingUser) {
+      // ------- กรณีเพิ่มผู้ใช้งาน -------
       const apiData = formatDataForAPI(formData);
 
       const requiredFields = ["citizen_id", "title_id", "first_name", "email"];
@@ -323,8 +325,15 @@ const AddUserModal = ({
         return;
       }
     } else {
+      // ------- กรณีแก้ไขผู้ใช้งาน -------
       try {
         const apiData = formatDataForAPI(formData);
+
+        // ✅ ถ้าไม่กรอกรหัสผ่าน -> ลบออก ไม่ส่งไปแก้ไข
+        if (!formData.password || !formData.password.trim()) {
+          delete apiData.password;
+        }
+
         const userId = editingUser.id || editingUser._id || editingUser.user_id;
         if (!userId) throw new Error("ไม่พบ user ID ที่จะใช้แก้ไข");
 
@@ -748,7 +757,7 @@ const AddUserModal = ({
                       placeholder="รหัสผ่าน"
                       type="password"
                       autoComplete="new-password"
-                      {...register("password", { required: "กรุณากรอกรหัสผ่านทุกครั้ง" })}
+                      {...register("password", { required: editingUser ? false : "กรุณากรอกรหัสผ่าน", })}
                     />
                     {errors.password && (
                       <Typography color="error">{errors.password.message}</Typography>

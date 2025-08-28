@@ -136,7 +136,10 @@ const CommitteeCompositionSettings = () => {
 
   function mapDepartmentsToOptions(departments) {
     if (!Array.isArray(departments)) return [];
-    return departments.map((dep) => ({ label: dep.name, value: dep.id }));
+    return departments.map((dep) => ({
+      label: dep.name,
+      value: dep.id,
+    }));
   }
 
   useEffect(() => {
@@ -145,10 +148,13 @@ const CommitteeCompositionSettings = () => {
         const res = await getDepartmentGroup();
         if (Array.isArray(res?.res_data)) {
           const resData = res.res_data;
+
+          // ✅ filter ตามชื่อ group ตรงๆ
           const stateEnterprise = resData.find((i) => i.name === "รัฐวิสาหกิจ");
           const government = resData.find((i) => i.name === "ส่วนราชการ");
           const others = resData.find((i) => i.name === "อื่น ๆ");
 
+          // set state ตาม group ที่ fix
           setStateEnterpriseOptions(
             mapDepartmentsToOptions(stateEnterprise?.departments)
           );
@@ -157,11 +163,16 @@ const CommitteeCompositionSettings = () => {
           );
           setOtherOptions(mapDepartmentsToOptions(others?.departments));
 
-          const otherGroups = resData.slice(3).map((group) => ({
-            groupName: group.name,
-            label: group.name,
-            options: mapDepartmentsToOptions(group.departments),
-          }));
+          // ✅ group อื่น ๆ (ที่ไม่ใช่ 3 อันแรก) 
+          const exclude = ["รัฐวิสาหกิจ", "ส่วนราชการ", "อื่น ๆ"];
+          const otherGroups = resData
+            .filter((g) => !exclude.includes(g.name))
+            .map((group) => ({
+              groupName: group.name,
+              label: group.name,
+              options: mapDepartmentsToOptions(group.departments),
+            }));
+
           setOtherGroupOptions(otherGroups);
         } else {
           setStateEnterpriseOptions([]);
@@ -169,7 +180,8 @@ const CommitteeCompositionSettings = () => {
           setOtherOptions([]);
           setOtherGroupOptions([]);
         }
-      } catch {
+      } catch (err) {
+        console.error("Error loading departments:", err);
         setStateEnterpriseOptions([]);
         setGovernmentOptions([]);
         setOtherOptions([]);
@@ -178,6 +190,7 @@ const CommitteeCompositionSettings = () => {
         departmentsLoaded.current = true;
       }
     };
+
     fetchOptions();
   }, []);
 
@@ -769,60 +782,66 @@ const CommitteeCompositionSettings = () => {
 
               {/* ขวา: รัฐวิสาหกิจ + อื่นๆ */}
               <Grid item xs={12} md={6}>
-                <Stack spacing={1.5}>
-                  <Typography sx={{ fontWeight: "bold", color: "#2499FF" }}>
-                    รัฐวิสาหกิจ
-                  </Typography>
+              <Stack spacing={1.5}>
+                <Typography sx={{ fontWeight: "bold", color: "#2499FF" }}>
+                  รัฐวิสาหกิจ
+                </Typography>
 
-                  <SelectField
-                    label="เลือกรัฐวิสาหกิจ"
-                    options={stateEnterpriseOptions}
-                    value={formData[`state_enterprise_${number}`] || ""}
-                    onChange={handleInputChange}
-                    name={`state_enterprise_${number}`}
-                  />
-                  {renderAdditionalSelects("state_enterprise", number)}
-                  <Typography sx={{ fontWeight: "bold", color: "#2499FF", mt: 0.5 }}>
-                    อื่นๆ
-                  </Typography>
+                <SelectField
+                  label="เลือกรัฐวิสาหกิจ"
+                  options={stateEnterpriseOptions}
+                  value={formData[`state_enterprise_${number}`] || ""}
+                  onChange={handleInputChange}
+                  name={`state_enterprise_${number}`}
+                />
+                {renderAdditionalSelects("state_enterprise", number)}
+                <DepartmentButton
+                  section="state_enterprise"
+                  signatoryNumber={number}
+                  label="เพิ่มรัฐวิสาหกิจ"
+                />
 
-                  <SelectField
-                    label="เลือกหน่วยงานอื่นๆ"
-                    options={otherOptions}
-                    value={formData[`other1_${number}`] || ""}
-                    onChange={handleInputChange}
-                    name={`other1_${number}`}
-                  />
-                  <Box>
-                    {Array.isArray(otherGroupOptions) && otherGroupOptions.length > 0 ? (
-                      otherGroupOptions.map((group) => (
-                        <SelectField
-                          key={group.groupName}
-                          label={group.label}
-                          options={group.options}
-                          value={formData[`other_${group.groupName}_${number}`] || ""}
-                          onChange={handleInputChange}
-                          name={`other_${group.groupName}_${number}`}
-                        />
-                      ))
-                    ) : (
+                <Typography sx={{ fontWeight: "bold", color: "#2499FF", mt: 0.5 }}>
+                  อื่นๆ
+                </Typography>
+
+                <SelectField
+                  label="เลือกหน่วยงานอื่นๆ"
+                  options={otherOptions}
+                  value={formData[`other1_${number}`] || ""}
+                  onChange={handleInputChange}
+                  name={`other1_${number}`}
+                />
+                <Box>
+                  {Array.isArray(otherGroupOptions) && otherGroupOptions.length > 0 ? (
+                    otherGroupOptions.map((group) => (
                       <SelectField
-                        label="เลือกหน่วยงานอื่นๆ (เพิ่มเติม)"
-                        options={otherOptions}
-                        value={formData[`other2_${number}`] || ""}
+                        key={group.groupName}
+                        label={group.label}
+                        options={group.options}
+                        value={formData[`other_${group.groupName}_${number}`] || ""}
                         onChange={handleInputChange}
-                        name={`other2_${number}`}
+                        name={`other_${group.groupName}_${number}`}
                       />
-                    )}
-                  </Box>
-                  {renderAdditionalSelects("other", number)}
-                  <DepartmentButton
-                    section="other"
-                    signatoryNumber={number}
-                    label="เพิ่มหน่วยงาน"
-                  />
-                </Stack>
-              </Grid>
+                    ))
+                  ) : (
+                    <SelectField
+                      label="เลือกหน่วยงานอื่นๆ (เพิ่มเติม)"
+                      options={otherOptions}
+                      value={formData[`other2_${number}`] || ""}
+                      onChange={handleInputChange}
+                      name={`other2_${number}`}
+                    />
+                  )}
+                </Box>
+                {renderAdditionalSelects("other", number)}
+                <DepartmentButton
+                  section="other"
+                  signatoryNumber={number}
+                  label="เพิ่มหน่วยงาน"
+                />
+              </Stack>
+            </Grid>
             </Grid>
           </Box>
 

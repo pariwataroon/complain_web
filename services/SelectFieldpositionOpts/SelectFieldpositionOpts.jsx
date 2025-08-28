@@ -14,14 +14,13 @@ const SelectFieldpositionOpts = ({
   label,
   inputLabel,
   value,
-  onChange = () => { },
+  onChange = () => {},
   name,
   options: externalOptions = [],
   optionMapper = null,
 }) => {
   const [options, setOptions] = useState([]);
-  console.log({ options });
-  
+
   useEffect(() => {
     if (externalOptions && externalOptions.length > 0) {
       const cleanedOptions = externalOptions
@@ -37,7 +36,8 @@ const SelectFieldpositionOpts = ({
               ...opt,
               value: String(opt.value ?? ""),
               label: String(opt.label ?? opt.displayLabel ?? opt.value ?? ""),
-              uniqueId: opt.uniqueId || String(opt.value ?? "") || `opt_${index}`,
+              uniqueId:
+                opt.uniqueId || String(opt.value ?? "") || `opt_${index}`,
               sortOrder: opt.sortOrder !== undefined ? opt.sortOrder : index,
             };
           }
@@ -55,19 +55,15 @@ const SelectFieldpositionOpts = ({
         return orderA - orderB;
       });
 
-      const mapped = optionMapper ? cleanedOptions.map(optionMapper) : cleanedOptions;
+      const mapped = optionMapper
+        ? cleanedOptions.map(optionMapper)
+        : cleanedOptions;
 
       setOptions(mapped);
     }
   }, [externalOptions, optionMapper]);
 
-  // **Force value เป็น string UUID เสมอ**
   const selectedValue = value == null ? "" : String(value);
-
-  // log เพื่อตรวจสอบ
-  console.log("selectedValue:", selectedValue);
-  console.log("option values:", options.map(o => o.value));
-
   const hasValue = selectedValue !== "";
 
   const handleClear = (e) => {
@@ -88,23 +84,31 @@ const SelectFieldpositionOpts = ({
 
       <TextField
         select
-        SelectProps={{ native: false }}
-        displayEmpty
         name={name}
         value={selectedValue}
         onChange={(e) => {
           onChange({ target: { name, value: String(e.target.value) } });
         }}
-        renderValue={(selected) => {
-          const selectedOption = options.find((opt) => opt.value === selected);
-          if (!selectedOption || selected === "") {
-            return (
-              <span className={styles.selectPlaceholder}>
-                {label || inputLabel}
-              </span>
+        SelectProps={{
+          native: false,
+          displayEmpty: true, // ✅ อยู่ใน SelectProps เท่านั้น
+          renderValue: (selected) => {
+            const selectedOption = options.find(
+              (opt) => opt.value === selected
             );
-          }
-          return selectedOption.displayLabel || selectedOption.label || selectedOption.value;
+            if (!selectedOption || selected === "") {
+              return (
+                <span className={styles.selectPlaceholder}>
+                  {label || inputLabel}
+                </span>
+              );
+            }
+            return (
+              selectedOption.displayLabel ||
+              selectedOption.label ||
+              selectedOption.value
+            );
+          },
         }}
         InputProps={{
           sx: {
