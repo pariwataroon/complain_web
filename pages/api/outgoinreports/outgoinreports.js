@@ -29,6 +29,16 @@ const CreateOutgoingReport3 = async (data) => {
     throw error;
   }
 };
+
+const CreateOutgoingReport4 = async (data) => {
+  try {
+    const response = await axiosInstance.post(`/outgoing-reports4`, data);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating outgoing report:", error);
+    throw error;
+  }
+};
 const CreateOutgoingReport5 = async (data) => {
   try {
     const response = await axiosInstance.post(`/outgoing-reports5`, data);
@@ -72,4 +82,4 @@ const UploadOutgoingReportAttachments = async (
   }
 };
 
-export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3 ,CreateOutgoingReport5, getDepartmentsPrefix };
+export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4 ,CreateOutgoingReport5, getDepartmentsPrefix };

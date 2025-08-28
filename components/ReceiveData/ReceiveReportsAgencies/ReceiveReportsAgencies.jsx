@@ -12,8 +12,8 @@ import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPicke
 import ButtonService from "@services/ButtonService/ButtonService";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
-import { alertWarning, alertSuccess } from "@utils/Alerts";
-import { GetComplaintsWithSearch } from "@pages/api/complaint/complaint";
+import { alertWarning, alertSuccess, closeAlert } from "@utils/Alerts";
+import { GetReferenceComplaints, GetReDocumentComplaints} from "@pages/api/complaint/complaint";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -61,9 +61,11 @@ const URGENCY_OPTIONS = [
 ];
 
 const ReceiveReportsAgencies = () => {
-  const { id } = useRouter().query;
+  const { id } = useRouter().query; 
+  const router = useRouter();
 
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
+  const [openSearchDialog2, setOpenSearchDialog2] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -81,13 +83,13 @@ useEffect(() => {
   const fetchDepartments = async () => {
     try {
       const res = await getDepartmentsPrefix();
-      console.log("📌 getDepartmentsPrefix res:", res); // 👈 ดูว่ากลับมาแบบไหน
-      const data = res?.res_data || res; // เผื่อว่า API ส่ง array ตรงๆ
+      console.log("📌 getDepartmentsPrefix res:", res); 
+      const data = res?.res_data || res; 
 
       if (Array.isArray(data)) {
         const mapped = data.map((dep) => ({
-          value: dep.id,    // ✅ UUID
-          label: dep.name,  // ✅ ชื่อ
+          value: dep.id,    
+          label: dep.name, 
         }));
         setDepartments(mapped);
       } else {
@@ -114,7 +116,7 @@ useEffect(() => {
   const handleSearch = async (keyword) => {
     setSearchLoading(true);
     try {
-      const response = await GetComplaintsWithSearch({
+      const response = await GetReDocumentComplaints({
         skip: 0,
         limit: 100,
         search: keyword || "",
@@ -126,8 +128,8 @@ useEffect(() => {
 
       const results = items.map((item) => ({
         ...item,
-        label: item.complaint_number || "",
-        value: item.complaint_number || "",
+        label: item.document_number || "",
+        value: item.document_number || "",
       }));
 
       setSearchResults(results);
@@ -140,7 +142,7 @@ useEffect(() => {
   };
 
   const handleSelectReference = (ref) => {
-    const num = ref?.complaint_number || "";
+    const num = ref?.document_number || "";
     setForm((prev) => ({ ...prev, documentNo: num }));
     setValue("documentNo", num, { shouldValidate: false, shouldDirty: true });
     setOpenSearchDialog(false);
@@ -151,6 +153,55 @@ useEffect(() => {
     handleSearch("");
     inputRef.current?.focus();
   };
+
+  useEffect(() => {
+    if (openSearchDialog2) {
+      setSearchText("");
+      handleSearch2("");
+      inputRef.current?.focus();
+    }
+  }, [openSearchDialog2]);
+  
+    const handleSearch2 = async (keyword) => {
+      setSearchLoading(true);
+      try {
+        const response = await GetReferenceComplaints({
+          skip: 0,
+          limit: 100,
+          search: keyword || "",
+        });
+  
+        const items = Array.isArray(response?.res_data?.items)
+          ? response.res_data.items
+          : [];
+  
+        const results = items.map((item) => ({
+          ...item,
+          label: item.reference_number || "",
+          value: item.reference_number || "",
+        }));
+  
+        setSearchResults(results);
+      } catch (err) {
+        setSearchResults([]);
+        console.error("handleSearch2 error", err);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+  
+    const handleSelectReference2 = (ref) => {
+      const num = ref?.reference_number || "";
+      setForm((prev) => ({ ...prev, investigateGk: num }));
+      setValue("investigateGk", num, { shouldValidate: false, shouldDirty: true });
+      setOpenSearchDialog2(false);
+    };
+  
+    const onClear2 = () => {
+      setSearchText("");
+      handleSearch2("");
+      inputRef.current?.focus();
+    };
 
   const handleFileUpload = (files) => {
     handleFileChange(files);
@@ -227,41 +278,92 @@ useEffect(() => {
   }, [initialFormState]);
 
   const handleSave = useCallback(async () => {
-  if (validateForm()) {
-    try {
-      const payload = {
-  receive_number: form.referenceNo,
-  receive_date: form.date,
-  agency_reference_number: form.investigateGk,
-  agency_reference_date: form.investigateDate,
-  internal_register_number: form.documentNo,
-  internal_register_date: form.documentDate,
-  present_to_director_date: form.submitWorkDate,
-  complaint_number: form.documentNo,
-  complaint_number_date: form.date,
-  subject: form.subject,
-  document_number: form.documentNo,
-  document_date: form.documentDate,
-  signature_authority_user_id: form.signatureAuthorityId,
-  department_id: form.departmentId,
-  user_id: form.userId,
-  confidentiality_level: form.confidentiality,
-  urgency_level: form.urgency,
-  complaint_id: id,
-  remarks: form.remarks,
-};
+  if (!validateForm()) return;
 
+  try {
+    const payload = {
+      receive_number: form.referenceNo,
+      receive_date: form.date,
+      agency_reference_number: form.investigateGk,
+      agency_reference_date: form.investigateDate,
+      internal_register_number: form.documentNo,
+      internal_register_date: form.documentDate,
+      present_to_director_date: form.submitWorkDate,
+      complaint_number: form.documentNo,
+      complaint_number_date: form.date,
+      subject: form.subject,
+      document_number: form.documentNo,
+      document_date: form.documentDate,
+      signature_authority_user_id: form.signatureAuthorityId,
+      department_id: form.departmentId,
+      user_id: form.userId,
+      confidentiality_level: form.confidentiality,
+      urgency_level: form.urgency,
+      complaint_id: id,
+      remarks: form.remarks,
+    };
 
+    const res = await CreateOutgoingReport5(payload);
 
-      const res = await CreateOutgoingReport5(payload);
-      console.log("CreateOutgoingReport5 success:", res);
-      alertSuccess("สำเร็จ", "บันทึกข้อมูลเรียบร้อยแล้ว");
-    } catch (error) {
-      console.error("❌ handleSave error:", error?.response?.data || error);
-      alertWarning("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
+    const resCode =
+      res?.res_code ?? res?.data?.res_code ?? res?.status;
+    const resMsg =
+      res?.res_data?.error ??
+      res?.data?.res_data?.error ??
+      res?.res_message ??
+      "";
+
+    if (
+      resCode === "4090" ||
+      resCode === 409 ||
+      /CONFLICT/i.test(res?.res_message || "") ||
+      /มีอยู่แล้ว|duplicate|exists|ซ้ำ/i.test(resMsg)
+    ) {
+      alertWarning("เลขอ้างอิงซ้ำ", resMsg || `เลขรับเรื่อง ${form.referenceNo} มีอยู่แล้ว`);
+      return;
     }
+
+    const reportId =
+      res?.res_data?.id ||
+      res?.res_data?.report_id ||
+      res?.id ||
+      res?.data?.id ||
+      "-";
+
+    const successMessage = `
+      <div style="text-align:center; line-height:1.6;">
+        <p style="margin-bottom:12px; font-size:16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
+        <p style="margin-bottom:8px; color:#666;">รหัสรายงาน: <strong>${reportId}</strong></p>
+        <p style="margin-bottom:8px; color:#666;">เรื่อง: <strong>${form.subject || "-"}</strong></p>
+        ${form.attachment ? `<p style="margin-bottom:0; color:#666;">ไฟล์แนบ: <strong>${form.attachment}</strong></p>` : ""}
+      </div>
+    `;
+
+    closeAlert();
+    await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
+    router.push(`/admin/box/list`);
+
+  } catch (error) {
+    const code = error?.response?.data?.res_code || error?.response?.status;
+    const serverMsg =
+      error?.response?.data?.res_data?.error ||
+      error?.response?.data?.res_message ||
+      error?.message || 
+      "";
+
+    if (
+      code === "4090" ||
+      code === 409 ||
+      /มีอยู่แล้ว|duplicate|exists|ซ้ำ/i.test(serverMsg)
+    ) {
+      alertWarning("เลขอ้างอิงซ้ำ", serverMsg || `เลขรับเรื่อง ${form.referenceNo} มีอยู่แล้ว`);
+      return;
+    }
+
+    console.error("❌ handleSave error:", error?.response?.data || error);
+    alertWarning("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
   }
-}, [form, id, validateForm]);
+}, [form, id, validateForm, router]);
 
   const handleFileChange = useCallback((payload) => {
     let files = [];
@@ -272,9 +374,6 @@ useEffect(() => {
     const names = files.map((f) => f?.name).filter(Boolean).join(", ");
     setForm((prev) => ({ ...prev, attachment: names || "" }));
   }, []);
-
-
-
 
   return (
     <Box
@@ -451,40 +550,311 @@ useEffect(() => {
           </Box>
           {/* แถวที่ 4: เลขสป.กค. | วันที่ */}
           <Box
-            sx={{
-              display: "grid",
-              columnGap: 2,
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-            }}
-          >
-            <InputText
-              label={
-                <span>
-                  เลขสป.กค.
-                  <span style={{ color: "red", marginLeft: 4 }}>*</span>
-                </span>
-              }
-              inputLabel="กรอกเลขสป.กค."
-              name="investigateGk"
-              value={form.investigateGk}
-              onChange={handleChange}
-              sx={{ width: {xs: "80%", sm: "auto"}}}
-            />
-            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
-              <DateThaiPickerService
-                label={
-                  <span>
-                    วันที่
-                    <span style={{ color: "red", marginLeft: 4 }}>*</span>
-                  </span>
-                }
-                value={form.investigateDate}
-                onChange={handleDateChange("investigateDate")}
-                sx={{ width: {xs: "80%", sm: "auto"}}}
-                placeholder="เลือกวันที่"
-              />
+          sx={{
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, 
+            alignItems: "center",
+          }}
+        >
+            <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto",
+                  columnGap: 1,
+                  alignItems: "center",
+                  width: "100%",
+                }}
+              >
+              <Box sx={{ minWidth: 0 }}>
+                <InputText
+                  label={
+                    <span>
+                      เลขสป.กค.<span style={{ color: "red", marginLeft: 4 }}>*</span>
+                    </span>
+                  }
+                  inputLabel="กรอกเลขสป.กค."
+                  name="investigateGk"
+                  value={form.investigateGk}
+                  onChange={handleChange}
+                  sx={{ width: "100%" }}
+                />
+              </Box>
+
+              <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center", 
+                    justifyContent: "center", 
+                    mt: "12px",
+                  }}
+                >
+                <IconButton
+                  onClick={() => setOpenSearchDialog2(true)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  aria-label="กรอกเลขสป.กค."
+                  title="กรอกเลขสป.กค."
+                  sx={{ width: 40, height: 40, color: "blue", p: 0 }} 
+                >
+                  <SearchIcon />
+                  </IconButton>
+                </Box>
+              </Box>
+
+              <Box sx={{ width: "100%", position: "relative", zIndex: 1 }}>
+                <DateThaiPickerService
+                  label={
+                    <span>
+                      วันที่<span style={{ color: "red", marginLeft: 4 }}>*</span>
+                    </span>
+                  }
+                  value={form.investigateDate}
+                  onChange={handleDateChange("investigateDate")}
+                  placeholder="เลือกวันที่"
+                />
+              </Box>
             </Box>
-          </Box>
+
+             {/* Dialog สำหรับค้นหาเลข */}
+              <Dialog
+                open={openSearchDialog2}
+                onClose={() => setOpenSearchDialog2(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                  style: {
+                    borderRadius: 12,
+                    background: "#f7fafd",
+                    height: 500,
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                  },
+                }}
+              >
+                <DialogTitle
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <SearchIcon color="primary" />
+                  ค้นหาเลขที่อ้างอิง
+                </DialogTitle>
+  
+                <DialogContent>
+                  {/* ช่องค้นหา */}
+                  <TextField
+                    inputRef={inputRef}
+                    fullWidth
+                    size="small"
+                    placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
+                    value={searchText}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSearchText(val);
+                      handleSearch2(val);
+                    }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon color="action" />
+                        </InputAdornment>
+                      ),
+                      endAdornment: searchText ? (
+                        <InputAdornment position="end">
+                          <IconButton
+                            size="small"
+                            onClick={onClear2}
+                            aria-label="clear search"
+                            edge="end"
+                          >
+                            <ClearIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : null,
+                      style: {
+                        background: "#fff",
+                        borderRadius: 8,
+                      },
+                    }}
+                    sx={{ mb: 2 }}
+                  />
+  
+                  {/* สถานะโหลด / ไม่พบ / รายการ */}
+                  {searchLoading ? (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: 24,
+                      }}
+                    >
+                      <CircularProgress color="primary" />
+                      <div
+                        style={{
+                          marginTop: 8,
+                          color: "#888",
+                        }}
+                      >
+                        กำลังค้นหา...
+                      </div>
+                    </div>
+                  ) : searchResults.length === 0 ? (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: 32,
+                        color: "#bdbdbd",
+                      }}
+                    >
+                      <DescriptionIcon
+                        sx={{ fontSize: 48, mb: 2 }}
+                        color="disabled"
+                      />
+                      <div>ไม่พบรายการเลขที่อ้างอิง</div>
+                    </div>
+                  ) : (
+                    <>
+                      <List
+                        sx={{
+                          maxHeight: 320,
+                          overflow: "auto",
+                          "&::-webkit-scrollbar": {
+                            width: "8px",
+                            background: "#f0f4fa",
+                            borderRadius: "8px",
+                          },
+                          "&::-webkit-scrollbar-thumb": {
+                            background: "#90caf9",
+                            borderRadius: "8px",
+                          },
+                          "&::-webkit-scrollbar-thumb:hover":
+                            {
+                              background: "#64b5f6",
+                            },
+                        }}
+                      >
+                        {searchResults.map((item) => {
+                          const isMaster = !!item.is_master; 
+                          return (
+                            <ListItem
+                              key={item.id}
+                              disablePadding
+                            >
+                              <ListItemButton
+                                onClick={() =>
+                                  handleSelectReference2(item)
+                                }
+                                sx={{
+                                  py: 1.5,
+                                  px: 2,
+                                  borderRadius: 2,
+                                  mb: 0.5,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1.5,
+                                  "&:hover": {
+                                    background: "#e3f2fd",
+                                  },
+                                }}
+                              >
+                                {/* จุดสถานะ is_master */}
+                                <span
+                                  style={{
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: "50%",
+                                    backgroundColor: isMaster
+                                      ? "#2ecc71"
+                                      : "#bdbdbd",
+                                    border: "2px solid #fff",
+                                    boxShadow:
+                                      "0 0 0 1px rgba(0,0,0,0.15)",
+                                    flexShrink: 0,
+                                  }}
+                                  title={
+                                    isMaster
+                                      ? "Master"
+                                      : "Non-master"
+                                  }
+                                />
+                                <DescriptionIcon
+                                  color="info"
+                                  sx={{ mr: 0.5 }}
+                                />
+                                <span
+                                  style={{ fontWeight: 500 }}
+                                >
+                                  {item.reference_number}
+                                </span>
+                              </ListItemButton>
+                            </ListItem>
+                          );
+                        })}
+                      </List>
+  
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 16,
+                          marginTop: 8,
+                          fontSize: 12,
+                          color: "#555",
+                          padding: "0 4px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: "50%",
+                              background: "#2ecc71",
+                              boxShadow:
+                                "0 0 0 1px rgba(0,0,0,0.15)",
+                            }}
+                          />
+                          Master
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: "50%",
+                              background: "#bdbdbd",
+                              boxShadow:
+                                "0 0 0 1px rgba(0,0,0,0.15)",
+                            }}
+                          />
+                          Non-master
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </DialogContent>
+  
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                  <Button
+                    onClick={() => setOpenSearchDialog2(false)}
+                    variant="outlined"
+                    color="inherit"
+                  >
+                    ปิด
+                  </Button>
+                </DialogActions>
+              </Dialog>
 
           {/* แถวที่ 5: เลขที่หนังสือ | วันที่ */}
          <Box
@@ -685,7 +1055,7 @@ useEffect(() => {
                             />
                             <DescriptionIcon color="info" sx={{ mr: 0.5 }} />
                             <span style={{ fontWeight: 500 }}>
-                              {item.complaint_type} - {item.complaint_number}
+                              {item.document_number}
                             </span>
                           </ListItemButton>
                         </ListItem>
