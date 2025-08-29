@@ -22,6 +22,17 @@ import {
   formatPhoneNumber_null,
   formatCitizenId_null,
 } from "@utils/Formats";
+import { Select, MenuItem, FormControl } from "@mui/material";
+// ===== helper สำหรับไฟล์แนบ =====
+const getFileExt = (filename = "") => {
+  return filename.split(".").pop()?.toLowerCase() || "";
+};
+
+const getFileIcon = (ext) => {
+  if (ext === "pdf") return <PictureAsPdfIcon sx={{ color: "#d32f2f", mr: 1 }} />;
+  if (["jpg", "jpeg", "png"].includes(ext)) return <ImageIcon sx={{ color: "#1976d2", mr: 1 }} />;
+  return <DescriptionIcon sx={{ color: "#757575", mr: 1 }} />;
+};
 
 /* ===== helper ===== */
 const normalizeValue = (v, fallback = "-") =>
@@ -262,53 +273,50 @@ const FollowStatusSummary = ({ data = {} }) => {
               </Typography>
 
               <Grid container spacing={4} mb={2}>
-                {/* คอลัมน์ซ้าย */}
-                <Grid item xs={12} md={6}>
-                  <InfoItem
-                    label="วันที่ร้องทุกข์"
-                    value={
-                      thaiDateOrDash(assignment.registration_date) ||
-                      formatThaiDate()
-                    }
-                  />
-                  <InfoItem
-                    label="ประเภทเรื่องร้องทุกข์"
-                    value={complaint.complaintType}
-                  />
-                  <InfoItem label="เรื่อง" value={complaint.subject} />
-                  <InfoItem
-                    label="ประเภทเรื่องร้องเรียน"
-                    value={complaint.complaintType}
-                  />
-                  <InfoItem
-                    label="ช่องทางเรื่องร้องเรียน"
-                    value={
-                      complaint.channel || assignment.complaint_channel_name
-                    }
-                  />
-                  <InfoItem
-                    label="กำหนดการกรอกคงเหลือ"
-                    value={`${slaDays} วัน ( ${Math.ceil(slaDays / 365)} ปี )`}
-                  />
-                  <InfoItem label="สถานะเรื่อง" value={statusThai} />
-                </Grid>
+  {/* คอลัมน์ซ้าย */}
+  <Grid item xs={12} md={6}>
+    <InfoItem
+      label="วันที่ร้องทุกข์"
+      value={thaiDateOrDash(assignment.registration_date)}
+    />
+    <InfoItem
+      label="ประเภทเรื่องร้องเรียน"
+      value={complaint.complaintType || assignment.complaint_type_name || "-"}
+    />
+    <InfoItem label="เรื่อง" value={complaint.subject || "-"} />
+    <InfoItem
+      label="ประเภทย่อยเรื่องร้องเรียน"
+      value={complaint.complaintSubtype || assignment.complaint_subtype_name || "-"}
+    />
+    <InfoItem
+      label="ช่องทางเรื่องร้องเรียน"
+      value={complaint.channel || assignment.complaint_channel_name || "-"}
+    />
+    <InfoItem
+      label="กำหนดการดำเนินการ"
+      value={`${slaDays} วัน ( ${Math.ceil(slaDays / 365)} ปี )`}
+    />
+    <InfoItem label="สถานะเรื่อง" value={statusThai} />
+  </Grid>
 
-                {/* คอลัมน์ขวา */}
-                <Grid item xs={12} md={6}>
-                  <InfoItem label="เลข สป.กค." value={`${ref1} ลว. ${ref1d}`} />
-                  <InfoItem label="เลข สป.สร." value={`${ref2} ลว. ${ref2d}`} />
-                  <InfoItem label="เลข สปถ." value={`${ref3} ลว. ${ref3d}`} />
-                  <InfoItem label="เลข สรร." value={`${ref4} ลว. ${ref4d}`} />
-                  <InfoItem
-                    label="หนังสือส่งหน่วยงาน / ถึงหน่วยงาน"
-                    value={`${outDocNo} ลว. ${outDocDate}`}
-                  />
-                  <InfoItem
-                    label="จำนวนครั้งการส่งหน่วยงาน"
-                    value={`${sendInCnt} ครั้ง (อยู่) / ${sendOutCnt} ครั้ง (ไม่อยู่)`}
-                  />
-                </Grid>
-              </Grid>
+  {/* คอลัมน์ขวา */}
+  <Grid item xs={12} md={6}>
+    <InfoItem label="เลข สป.กค." value={`${ref1 || "-"} ลว. ${ref1d}`} />
+    <InfoItem label="เลข สป.สร." value={`${ref2 || "-"} ลว. ${ref2d}`} />
+    <InfoItem label="เลข สตป." value={`${ref3 || "-"} ลว. ${ref3d}`} />
+    <InfoItem label="เลข สรร.(สารบัญ)" value={`${ref4 || "-"} ลว. ${ref4d}`} />
+    <InfoItem label="เลข สรร." value={complaint.complaintNumber || "-"} />
+    <InfoItem
+      label="หนังสือถึงหน่วยงาน / ติดตามผล"
+      value={`${outDocNo || "-"} ลว. ${outDocDate}`}
+    />
+    <InfoItem
+      label="จำนวนครั้งการส่งหน่วยงาน"
+      value={`${sendInCnt} ครั้ง (อยู่) / ${sendOutCnt} ครั้ง (ไม่อยู่)`}
+    />
+  </Grid>
+</Grid>
+
               <Divider />
 
               <Section title="ข้อมูลผู้ร้องทุกข์">
@@ -555,6 +563,7 @@ const FollowStatusSummary = ({ data = {} }) => {
               : [{}]
             ).map((r, idx) => (
               <Grid
+                key={idx} 
                 container
                 spacing={1}
                 data-pdf-block
@@ -695,6 +704,7 @@ const FollowStatusSummary = ({ data = {} }) => {
                 ]
             ).map((r, idx) => (
               <Grid
+                key={idx} 
                 container
                 spacing={1}
                 data-pdf-block
