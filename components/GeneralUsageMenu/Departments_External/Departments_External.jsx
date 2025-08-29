@@ -6,7 +6,7 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import AddIcon from "@mui/icons-material/Add";
 import ButtonService from "@services/ButtonService/ButtonService";
 import AddDepartments_ExternalModal from "./modal/AddDepartments_ExternalModal";
-import TablePositions from "@services/TablePositions/TablePositions";
+import TableDepartments_External from "@services/TableDepartments_External/TableDepartments_External";
 import { GetAllOutsideDepartments } from "@pages/api/outsideDepartments/outsideDepartments";
 
 const breadcrumbItems = [
@@ -168,7 +168,7 @@ const Departments_External = () => {
         }}
       />
 
-      <TablePositions
+      <TableDepartments_External
         data={formattedData}
         title="รายการกลุ่มหน่วยงานภายนอก"
         loading={loading}

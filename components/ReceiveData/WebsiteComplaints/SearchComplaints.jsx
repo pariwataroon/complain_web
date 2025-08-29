@@ -170,6 +170,18 @@ const SearchComplaints = () => {
   }, [openSearchDialog]);
 
   useEffect(() => {
+    if (defaultData?.step4?.general) {
+      const step4Data = defaultData.step4.general;
+      step4Methods.reset({
+        ...step4Data,
+        officerReceivedDate: step4Data.officerReceivedDate || "",
+        directorSubmittedDate: step4Data.directorSubmittedDate || "",
+        incidentDateTime: step4Data.incidentDateTime || "",
+      });
+    }
+  }, [defaultData?.step4?.general]);
+
+  useEffect(() => {
     setLoadingOutsideDepartments(true);
     GetAllOutsideDepartments()
       .then((data) => setOutsideDepartments(data))
@@ -597,7 +609,6 @@ const SearchComplaints = () => {
     const step3Data = step3Methods.getValues();
     const step4Data = step4Methods.getValues();
 
-    // Logic mapping ที่ robust สำหรับ id หรือ name ที่อาจมีแค่อย่างเดียว
     const selectedComplaintType =
       complaintTypes.find(
         (type) =>
@@ -1620,27 +1631,25 @@ const SearchComplaints = () => {
                       <div className={styles.fieldRowDate}>
                         <div className={styles.fieldGroupDate}>
                           <div className={styles.datePickerWrapper}>
-                            <DateThaiPickerService
+                            <ControlledDateThaiPickerService
                               label="วันที่รับเรื่องของเจ้าพนักงาน"
-                              value={
-                                defaultData?.step4?.general
-                                  ?.officerReceivedDate || ""
-                              }
-                              onChange={() => {}}
+                              name="officerReceivedDate"
+                              control={step4Methods.control}
+                              placeholder="กรุณาเลือกวันที่"
                               time={true}
+                              defaultValue={defaultData?.step4?.general?.officerReceivedDate || ""}
                             />
                           </div>
                         </div>
                         <div className={styles.fieldGroupDate}>
                           <div className={styles.datePickerWrapper}>
-                            <DateThaiPickerService
+                            <ControlledDateThaiPickerService
                               label="วันที่เสนองาน ผอ.สรร."
-                              value={
-                                defaultData?.step4?.general
-                                  ?.directorSubmittedDate || ""
-                              }
-                              onChange={() => {}}
+                              name="directorSubmittedDate"
+                              control={step4Methods.control}
+                              placeholder="กรุณาเลือกวันที่"
                               time={true}
+                              defaultValue={defaultData?.step4?.general?.directorSubmittedDate || ""}
                             />
                           </div>
                         </div>

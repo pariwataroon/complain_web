@@ -1,17 +1,36 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import ButtonService from "@services/ButtonService/ButtonService";
 import InputFile from "@services/InputFile/InputFile";
-import { Box, Typography } from "@mui/material";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import useInformRelatedParties from "@hooks/admin/InformRelatedParties/useInformRelatedParties";
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
+import { GetReferenceComplaints, GetReDocumentComplaints } from "@pages/api/complaint/complaint";
+import SearchIcon from "@mui/icons-material/Search";
+import DescriptionIcon from "@mui/icons-material/Description";
+import ClearIcon from "@mui/icons-material/Clear";
+import IconButton from "@mui/material/IconButton";
+import {
+  Box, 
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  List,
+  ListItem,
+  ListItemButton,
+  TextField,
+  InputAdornment,
+  CircularProgress,
+} from "@mui/material";
 
 const InformRelatedParties = () => {
   const {
@@ -36,21 +55,123 @@ const InformRelatedParties = () => {
   const [proposeForOptions, setProposeForOptions] = useState([]);
   const [decisionOptions, setDecisionOptions] = useState([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
+  const [openSearchDialog, setOpenSearchDialog] = useState(false);
+  const [openSearchDialog2, setOpenSearchDialog2] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const inputRef = useRef();
+
+  useEffect(() => {
+    if (openSearchDialog) {
+      setSearchText("");
+      handleSearch("");
+      inputRef.current?.focus();
+    }
+  }, [openSearchDialog]);
+
+  
+    const handleSearch = async (keyword) => {
+      setSearchLoading(true);
+      try {
+        const response = await GetReDocumentComplaints({
+          skip: 0,
+          limit: 100,
+          search: keyword || "",
+        });
+  
+  
+        const items = Array.isArray(response?.res_data?.items)
+          ? response.res_data.items
+          : [];
+  
+  
+        const results = items.map((item) => ({
+          ...item,
+          label: item.complaint_number || "",
+          value: item.complaint_number || "",
+        }));
+  
+        setSearchResults(results);
+      } catch (err) {
+        setSearchResults([]);
+        console.error("handleSearch error", err);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+  
+    const handleSelectReference = (ref) => {
+      handleChange("bookNo", ref.document_number, { shouldValidate: true, shouldDirty: true });
+      setOpenSearchDialog(false);
+    };
+  
+    const onClear = () => {
+      setSearchText("");
+      handleSearch("");
+      inputRef.current?.focus();
+    };
+
+
+  useEffect(() => {
+    if (openSearchDialog2) {
+      setSearchText("");
+      handleSearch2("");
+      inputRef.current?.focus();
+    }
+  }, [openSearchDialog2]);
+  
+    const handleSearch2 = async (keyword) => {
+      setSearchLoading(true);
+      try {
+        const response = await GetReferenceComplaints({
+          skip: 0,
+          limit: 100,
+          search: keyword || "",
+        });
+  
+        const items = Array.isArray(response?.res_data?.items)
+          ? response.res_data.items
+          : [];
+  
+        const results = items.map((item) => ({
+          ...item,
+          label: item.reference_number || "",
+          value: item.reference_number || "",
+        }));
+  
+        setSearchResults(results);
+      } catch (err) {
+        setSearchResults([]);
+        console.error("handleSearch2 error", err);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+  
+    const handleSelectReference2 = (ref) => {
+      handleChange("refNo", ref.reference_number);
+      setOpenSearchDialog2(false);
+    };
+  
+    const onClear2 = () => {
+      setSearchText("");
+      handleSearch2("");
+      inputRef.current?.focus();
+    };
 
   // ฟังก์ชันจัดการเมื่อมีการเลือกผู้ลงนาม
   const handleSignerSelect = (userInfo) => {
-    
-
+    console.log("👤 handleSignerSelect:", userInfo);
     setSelectedSigner(userInfo);
     // ล้างหน่วยงานที่เลือกไว้เมื่อเปลี่ยนผู้ลงนาม
     setSelectedDepartment(null);
     // อัพเดทค่าใน form
-    handleChange({ target: { name: "department", value: "" } });
+    handleChange("department", "");
   };
 
   const handleDepartmentSelect = (department) => {
-    
-
+    console.log("🏢 handleDepartmentSelect:", department);
     setSelectedDepartment(department);
   };
 
@@ -126,11 +247,19 @@ const InformRelatedParties = () => {
 
   // ฟังก์ชันล้างข้อมูลที่อัพเดทแล้ว
   const handleClearExtended = () => {
-   
-
+    console.log("🧹 handleClearExtended: Extended clearing");
     handleClear();
     setSelectedSigner(null);
     setSelectedDepartment(null);
+  };
+
+  // Custom date change handlers for different date fields
+  const handleMainDateChange = (thaiDate) => {
+    handleDateChange(thaiDate, 'date');
+  };
+
+  const handleDate2Change = (thaiDate) => {
+    handleDateChange(thaiDate, 'date2');
   };
 
   return (
@@ -183,37 +312,295 @@ const InformRelatedParties = () => {
           {/* row 1: เลขที่ สป.กค. | วันที่ */}
           <Box
             sx={{
-              display: "grid",
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
               gap: 2,
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "1fr 1fr",
-                md: "6fr 4fr",
-              },
+              alignItems: { xs: "stretch", sm: "flex-end" },
             }}
           >
-            <InputText
-              label={createLabel("เลขที่ สป.กค.", "refNo")}
-              inputLabel="กรอกเลขที่ สป.กค."
-              name="refNo"
-              value={form.refNo}
-              onChange={handleChange}
-              error={!!getFieldError("refNo")}
-              helperText={getFieldError("refNo")}
-              sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}
-            />
+            <Box sx={{ flex: 1 }}>
+              <InputText
+                label={createLabel("เลข สป.กค.", "refNo")}
+                inputLabel="กรอกเลข สป.กค."
+                name="refNo"
+                value={form.refNo}
+                onChange={handleChange}
+                error={!!getFieldError("refNo")}
+                helperText={getFieldError("refNo")}
+              />
+            </Box>
 
-            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
+            <Box sx={{ 
+              alignSelf: { xs: "flex-start", sm: "flex-end" }, 
+              display: "flex", 
+              alignItems: "flex-end",
+              mt: { xs: 0, sm: 0 }
+            }}>
+              <IconButton
+                onClick={() => setOpenSearchDialog2(true)}
+                sx={{
+                  height: "40px",
+                  width: "40px",
+                  color: "blue",
+                  marginBottom: '18px'
+                }}
+              >
+                <SearchIcon />
+              </IconButton>
+            </Box>
+
+            <Box sx={{ flex: 1 }}>
               <DateThaiPickerService
                 label={createLabel("วันที่", "date")}
                 value={form.date}
-                onChange={handleDateChange}
+                onChange={handleMainDateChange}
                 placeholder="เลือกวันที่"
                 error={!!getFieldError("date")}
                 helperText={getFieldError("date")}
               />
             </Box>
           </Box>
+
+             {/* Dialog สำหรับค้นหาเลข */}
+            <Dialog
+              open={openSearchDialog2}
+              onClose={() => setOpenSearchDialog2(false)}
+              maxWidth="sm"
+              fullWidth
+              PaperProps={{
+                style: {
+                  borderRadius: 12,
+                  background: "#f7fafd",
+                  height: 500,
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                },
+              }}
+            >
+              <DialogTitle
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <SearchIcon color="primary" />
+                ค้นหาเลขที่อ้างอิง
+              </DialogTitle>
+
+              <DialogContent>
+                {/* ช่องค้นหา */}
+                <TextField
+                  inputRef={inputRef}
+                  fullWidth
+                  size="small"
+                  placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
+                  value={searchText}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSearchText(val);
+                    handleSearch2(val);
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon color="action" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchText ? (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={onClear2}
+                          aria-label="clear search"
+                          edge="end"
+                        >
+                          <ClearIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
+                    style: {
+                      background: "#fff",
+                      borderRadius: 8,
+                    },
+                  }}
+                  sx={{ mb: 2 }}
+                />
+
+                {/* สถานะโหลด / ไม่พบ / รายการ */}
+                {searchLoading ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: 24,
+                    }}
+                  >
+                    <CircularProgress color="primary" />
+                    <div
+                      style={{
+                        marginTop: 8,
+                        color: "#888",
+                      }}
+                    >
+                      กำลังค้นหา...
+                    </div>
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: 32,
+                      color: "#bdbdbd",
+                    }}
+                  >
+                    <DescriptionIcon
+                      sx={{ fontSize: 48, mb: 2 }}
+                      color="disabled"
+                    />
+                    <div>ไม่พบรายการเลขที่อ้างอิง</div>
+                  </div>
+                ) : (
+                  <>
+                    <List
+                      sx={{
+                        maxHeight: 320,
+                        overflow: "auto",
+                        "&::-webkit-scrollbar": {
+                          width: "8px",
+                          background: "#f0f4fa",
+                          borderRadius: "8px",
+                        },
+                        "&::-webkit-scrollbar-thumb": {
+                          background: "#90caf9",
+                          borderRadius: "8px",
+                        },
+                        "&::-webkit-scrollbar-thumb:hover":
+                          {
+                            background: "#64b5f6",
+                          },
+                      }}
+                    >
+                      {searchResults.map((item) => {
+                        const isMaster = !!item.is_master; 
+                        return (
+                          <ListItem
+                            key={item.id}
+                            disablePadding
+                          >
+                            <ListItemButton
+                              onClick={() =>
+                                handleSelectReference2(item)
+                              }
+                              sx={{
+                                py: 1.5,
+                                px: 2,
+                                borderRadius: 2,
+                                mb: 0.5,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1.5,
+                                "&:hover": {
+                                  background: "#e3f2fd",
+                                },
+                              }}
+                            >
+                              {/* จุดสถานะ is_master */}
+                              <span
+                                style={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: "50%",
+                                  backgroundColor: isMaster
+                                    ? "#2ecc71"
+                                    : "#bdbdbd",
+                                  border: "2px solid #fff",
+                                  boxShadow:
+                                    "0 0 0 1px rgba(0,0,0,0.15)",
+                                  flexShrink: 0,
+                                }}
+                                title={
+                                  isMaster
+                                    ? "Master"
+                                    : "Non-master"
+                                }
+                              />
+                              <DescriptionIcon
+                                color="info"
+                                sx={{ mr: 0.5 }}
+                              />
+                              <span
+                                style={{ fontWeight: 500 }}
+                              >
+                                {item.reference_number}
+                              </span>
+                            </ListItemButton>
+                          </ListItem>
+                        );
+                      })}
+                    </List>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 16,
+                        marginTop: 8,
+                        fontSize: 12,
+                        color: "#555",
+                        padding: "0 4px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            background: "#2ecc71",
+                            boxShadow:
+                              "0 0 0 1px rgba(0,0,0,0.15)",
+                          }}
+                        />
+                        Master
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            background: "#bdbdbd",
+                            boxShadow:
+                              "0 0 0 1px rgba(0,0,0,0.15)",
+                          }}
+                        />
+                        Non-master
+                      </div>
+                    </div>
+                  </>
+                )}
+              </DialogContent>
+
+              <DialogActions sx={{ px: 3, pb: 2 }}>
+                <Button
+                  onClick={() => setOpenSearchDialog2(false)}
+                  variant="outlined"
+                  color="inherit"
+                >
+                  ปิด
+                </Button>
+              </DialogActions>
+            </Dialog>
 
           {/* row 2: เรื่อง */}
           <Box>
@@ -228,12 +615,301 @@ const InformRelatedParties = () => {
             />
           </Box>
 
+          {/* row 2.5: เพิ่มฟิลด์สำหรับ bookNo และ date2 */}
+         <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            gap: 2,
+            alignItems: { xs: "stretch", sm: "flex-end" },
+          }}
+        >
+          <Box sx={{ flex: 1 }}>
+            <InputText
+              label="เลขที่หนังสือ/เอกสาร"
+              inputLabel="กรอกเลขที่หนังสือ"
+              name="bookNo"
+              value={form.bookNo}
+              onChange={handleChange}
+              error={!!getFieldError("bookNo")}
+              helperText={getFieldError("bookNo")}
+            />
+          </Box>
+
+          <Box sx={{ 
+            alignSelf: { xs: "flex-start", sm: "flex-end" }, 
+            display: "flex", 
+            alignItems: "flex-end" 
+          }}>
+            <IconButton
+              onClick={() => setOpenSearchDialog(true)}
+              sx={{ height: 40, width: 40, color: 'blue',marginBottom: '18px' }}
+            >
+              <SearchIcon />
+            </IconButton>
+          </Box>
+
+          <Box sx={{ flex: 1 }}>
+            <DateThaiPickerService
+              label="วันที่หนังสือ/เอกสาร"
+              value={form.date2}
+              onChange={handleDate2Change}
+              placeholder="เลือกวันที่หนังสือ"
+              error={!!getFieldError("date2")}
+              helperText={getFieldError("date2")}
+            />
+          </Box>
+        </Box>
+
+      {/* Dialog สำหรับค้นหาเลข */}
+      <Dialog
+        open={openSearchDialog}
+        onClose={() => setOpenSearchDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          style: {
+            borderRadius: 12,
+            background: "#f7fafd",
+            height: 500,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+          },
+        }}
+      >
+        <DialogTitle
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <SearchIcon color="primary" />
+          ค้นหาเลขที่อ้างอิง
+        </DialogTitle>
+
+        <DialogContent>
+          {/* ช่องค้นหา */}
+          <TextField
+            inputRef={inputRef}
+            fullWidth
+            size="small"
+            placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
+            value={searchText}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSearchText(val);
+              handleSearch(val);
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: searchText ? (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={onClear}
+                    aria-label="clear search"
+                    edge="end"
+                  >
+                    <ClearIcon />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+              style: {
+                background: "#fff",
+                borderRadius: 8,
+              },
+            }}
+            sx={{ mb: 2 }}
+          />
+
+          {/* สถานะโหลด / ไม่พบ / รายการ */}
+          {searchLoading ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: 24,
+              }}
+            >
+              <CircularProgress color="primary" />
+              <div
+                style={{
+                  marginTop: 8,
+                  color: "#888",
+                }}
+              >
+                กำลังค้นหา...
+              </div>
+            </div>
+          ) : searchResults.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: 32,
+                color: "#bdbdbd",
+              }}
+            >
+              <DescriptionIcon
+                sx={{ fontSize: 48, mb: 2 }}
+                color="disabled"
+              />
+              <div>ไม่พบรายการเลขที่อ้างอิง</div>
+            </div>
+          ) : (
+            <>
+              <List
+                sx={{
+                  maxHeight: 320,
+                  overflow: "auto",
+                  "&::-webkit-scrollbar": {
+                    width: "8px",
+                    background: "#f0f4fa",
+                    borderRadius: "8px",
+                  },
+                  "&::-webkit-scrollbar-thumb": {
+                    background: "#90caf9",
+                    borderRadius: "8px",
+                  },
+                  "&::-webkit-scrollbar-thumb:hover":
+                    {
+                      background: "#64b5f6",
+                    },
+                }}
+              >
+                {searchResults.map((item) => {
+                  const isMaster = !!item.is_master; // fallback ถ้า undefined
+                  return (
+                    <ListItem
+                      key={item.id}
+                      disablePadding
+                    >
+                      <ListItemButton
+                        onClick={() =>
+                          handleSelectReference(item)
+                        }
+                        sx={{
+                          py: 1.5,
+                          px: 2,
+                          borderRadius: 2,
+                          mb: 0.5,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.5,
+                          "&:hover": {
+                            background: "#e3f2fd",
+                          },
+                        }}
+                      >
+                        {/* จุดสถานะ is_master */}
+                        <span
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            backgroundColor: isMaster
+                              ? "#2ecc71"
+                              : "#bdbdbd",
+                            border: "2px solid #fff",
+                            boxShadow:
+                              "0 0 0 1px rgba(0,0,0,0.15)",
+                            flexShrink: 0,
+                          }}
+                          title={
+                            isMaster
+                              ? "Master"
+                              : "Non-master"
+                          }
+                        />
+                        <DescriptionIcon
+                          color="info"
+                          sx={{ mr: 0.5 }}
+                        />
+                        <span
+                          style={{ fontWeight: 500 }}
+                        >
+                          {item.document_number}
+                          {/* {item.complaint_number} */}
+                        </span>
+                      </ListItemButton>
+                    </ListItem>
+                  );
+                })}
+              </List>
+
+              {/* Legend (ถ้าไม่ต้องการสามารถลบส่วนนี้ออกได้) */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 16,
+                  marginTop: 8,
+                  fontSize: 12,
+                  color: "#555",
+                  padding: "0 4px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      background: "#2ecc71",
+                      boxShadow:
+                        "0 0 0 1px rgba(0,0,0,0.15)",
+                    }}
+                  />
+                  Master
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      background: "#bdbdbd",
+                      boxShadow:
+                        "0 0 0 1px rgba(0,0,0,0.15)",
+                    }}
+                  />
+                  Non-master
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setOpenSearchDialog(false)}
+            variant="outlined"
+            color="inherit"
+          >
+            ปิด
+          </Button>
+        </DialogActions>
+      </Dialog>
+
           {/* row 3: ผู้ลงนาม | หน่วยงาน/ผู้ร้อง/อื่นๆ */}
           <Box
             sx={{
-              display: "grid",
+              display: "flex",
+              alignItems: "center",
               gap: 2,
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
             <SelectFieldSignatureAuthority

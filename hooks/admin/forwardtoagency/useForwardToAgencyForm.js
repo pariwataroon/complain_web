@@ -12,6 +12,7 @@ import {
   CreateOutgoingReport,
   UploadOutgoingReportAttachments,
 } from "@pages/api/outgoinreports/outgoinreports";
+import { useRouter } from "next/router";
 
 // Extended validation schema with file validation
 const validationSchema = yup.object().shape({
@@ -67,6 +68,7 @@ export const useForwardToAgencyForm = () => {
   // Current time and user from the input
   const currentTime = "2025-07-08 18:24:03";
   const currentUser = "vampirebeam";
+  const router = useRouter();
 
   const {
     control,
@@ -365,6 +367,7 @@ export const useForwardToAgencyForm = () => {
       `;
 
         await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
+        router.push(`/admin/box/list`);
 
         reset({
           salutation: "",

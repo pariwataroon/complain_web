@@ -284,6 +284,7 @@ export const useInitialNotificationComplainantAgency = () => {
                 </div>
       `;
       await alertSuccess("บันทึกสำเร็จ!", successHtml, true);
+      router.push(`/admin/box/list`);
     } catch (err) {
       console.error("Save error:", err);
       closeAlert();

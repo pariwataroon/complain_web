@@ -26,6 +26,7 @@ import {
   showConfirm,
 } from "@utils/Alerts";
 import useSearchComplaintsPreview from "@hooks/admin/websitecomplaints/useSearchComplaintsPreview";
+import { GetAllOutsideDepartments } from "@pages/api/allselect/allselect";
 
 const SESSION_KEY = "complaintsPreviewData";
 
@@ -43,8 +44,23 @@ const SearchComplaintsPreview = ({
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
+  const [outsideDepartments, setOutsideDepartments] = useState([]);
 
   const pdfRef = useRef();
+
+  useEffect(() => {
+    const loadOutsideDepartments = async () => {
+      try {
+        const departments = await GetAllOutsideDepartments();
+        setOutsideDepartments(departments || []);
+      } catch (error) {
+        console.error("Error loading outside departments:", error);
+        setOutsideDepartments([]);
+      }
+    };
+
+    loadOutsideDepartments();
+  }, []);
 
   useEffect(() => {
     if (!formData && id) {
@@ -65,6 +81,16 @@ const SearchComplaintsPreview = ({
   }, [id]);
 
   const { handleUpdateAssignment, isSubmitting } = useSearchComplaintsPreview();
+
+  const getSenderAgencyName = (senderAgencyId) => {
+    if (!senderAgencyId || !outsideDepartments.length) return "-";
+    
+    const department = outsideDepartments.find(
+      dept => dept.value === senderAgencyId
+    );
+    
+    return department ? department.label : senderAgencyId; 
+  };
 
   const breadcrumbItems = [
     {
@@ -754,7 +780,7 @@ const SearchComplaintsPreview = ({
               />
               <InfoItem
                 label="หน่วยงานอื่นที่ส่งเรื่องมา"
-                value={complaint.senderAgency || "-"}
+                value={getSenderAgencyName(complaint.senderAgency)}
               />
               <InfoItem
                 label="ชั้นความลับ"
@@ -785,16 +811,16 @@ const SearchComplaintsPreview = ({
               <InfoItem
                 label="วันที่รับเรื่องของเจ้าพนักงาน"
                 value={
-                  complaint?.attachment?.[0]?.created_at
-                    ? safeFormatThaiDateTime(complaint.attachment[0].created_at)
+                  additionalDetails?.officerReceivedDate
+                    ? safeFormatThaiDateTime(additionalDetails.officerReceivedDate)
                     : "-"
                 }
               />
               <InfoItem
                 label="วันที่เสนองาน ผอ.สรร."
                 value={
-                  complaint?.incidentDate
-                    ? safeFormatThaiDateTime(complaint.incidentDate)
+                  additionalDetails?.directorSubmittedDate
+                    ? safeFormatThaiDateTime(additionalDetails.directorSubmittedDate)
                     : "-"
                 }
               />
