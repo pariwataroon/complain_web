@@ -142,27 +142,27 @@ export default function ComplaintComponent() {
           }
         });
 
-      //   const emailValue = data?.general?.email;
-      //   if (emailValue) {
-      //     const emailErrors = validateEmail(emailValue);
-      //     if (emailErrors.length > 0) {
-      //       errors[`general.email`] = emailErrors[0];
-      //     }
-      //   } else {
-      //     errors[`general.email`] = "กรุณากรอกอีเมล ของผู้ร้องทุกข์";
-      //   }
-      // } else if (currentTab === 1) {
-      //   const corpIdCardValue = data?.corporate?.idCard;
-      //   if (!hasValue(corpIdCardValue)) {
-      //     errors[`corporate.idCard`] =
-      //       "กรุณากรอก เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคล ของนิติบุคคล";
-      //   } else if (corpIdCardValue.length !== 13) {
-      //     errors[`corporate.idCard`] =
-      //       "กรุณากรอกเลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลให้ครบ 13 หลัก ของนิติบุคคล";
-      //   } else if (!/^\d{13}$/.test(corpIdCardValue)) {
-      //     errors[`corporate.idCard`] =
-      //       "เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลต้องเป็นตัวเลขเท่านั้น ของนิติบุคคล";
-      //   }
+        const emailValue = data?.general?.email;
+        if (emailValue) {
+          const emailErrors = validateEmail(emailValue);
+          if (emailErrors.length > 0) {
+            // errors[`general.email`] = emailErrors[0];
+          }
+        } else {
+          // errors[`general.email`] = "กรุณากรอกอีเมล ของผู้ร้องทุกข์";
+        }
+      } else if (currentTab === 1) {
+        const corpIdCardValue = data?.corporate?.idCard;
+        if (!hasValue(corpIdCardValue)) {
+          errors[`corporate.idCard`] =
+            "กรุณากรอก เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคล ของนิติบุคคล";
+        } else if (corpIdCardValue.length !== 13) {
+          errors[`corporate.idCard`] =
+            "กรุณากรอกเลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลให้ครบ 13 หลัก ของนิติบุคคล";
+        } else if (!/^\d{13}$/.test(corpIdCardValue)) {
+          errors[`corporate.idCard`] =
+            "เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลต้องเป็นตัวเลขเท่านั้น ของนิติบุคคล";
+        }
 
         const corpFields = [
           { key: "name", label: "ชื่อ - นามสกุล" },
