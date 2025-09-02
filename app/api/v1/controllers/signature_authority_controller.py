@@ -12,6 +12,7 @@ from models.departments import Department
 from models.user import User
 from models.user_positions import UserPosition
 from models.department_groups import DepartmentGroup
+from models.title import Title
 from app.api.v1.schemas.signature_authority import SignatureAuthority as SignatureAuthoritySchema
 from app.api.v1.schemas.group_signature_authority import (
     GroupSignatureAuthority as GroupSignatureAuthoritySchema,
@@ -29,7 +30,7 @@ def get_signature_authorities(db: Session, skip: int = 0, limit: int = 100):
         # ดึงข้อมูลทั้งหมดพร้อม relationships
         result = db.query(SignatureAuthority)\
             .options(
-                joinedload(SignatureAuthority.user), 
+                joinedload(SignatureAuthority.user).joinedload(User.title), 
                 joinedload(SignatureAuthority.department),
                 joinedload(SignatureAuthority.group)
             )\
@@ -60,9 +61,17 @@ def get_signature_authorities(db: Session, skip: int = 0, limit: int = 100):
                     }
                 
                 # เพิ่มผู้ใช้ (ไม่ซ้ำ)
+                prefix = ""
+                if authority.user.title and authority.user.title.short_name:
+                    prefix = authority.user.title.short_name
+                elif authority.user.prefix_other:
+                    prefix = authority.user.prefix_other
+                
+                user_name = f"{prefix} {authority.user.first_name} {authority.user.last_name}".strip()
+                
                 user_info = {
                     "user_id": str(authority.user_id),
-                    "user_name": f"{authority.user.first_name} {authority.user.last_name}",
+                    "user_name": user_name,
                     "user_email": authority.user.email,
                     "user_is_active": authority.user.is_active
                 }
@@ -82,12 +91,20 @@ def get_signature_authorities(db: Session, skip: int = 0, limit: int = 100):
                 
             else:
                 # ไม่มีกลุ่ม - เป็นรายบุคคล
+                prefix = ""
+                if authority.user.title and authority.user.title.short_name:
+                    prefix = authority.user.title.short_name
+                elif authority.user.prefix_other:
+                    prefix = authority.user.prefix_other
+                
+                user_name = f"{prefix} {authority.user.first_name} {authority.user.last_name}".strip()
+                
                 auth_dict = {
                     "id": str(authority.id),
                     "type": "individual",
                     "user": {
                         "id": str(authority.user_id),
-                        "name": f"{authority.user.first_name} {authority.user.last_name}",
+                        "name": user_name,
                         "email": authority.user.email,
                         "is_active": authority.user.is_active
                     },
@@ -167,7 +184,7 @@ def assign_signature_authority(db: Session, authority_data: dict):
             raise HTTPException(status_code=404, detail=f"Department with ID {authority_data['department_id']} not found")
         
         # ตรวจสอบว่าผู้ใช้มีอยู่จริง
-        user = db.query(User).filter(
+        user = db.query(User).options(joinedload(User.title)).filter(
             User.id == authority_data["user_id"],
             User.is_active == True
         ).first()
@@ -197,7 +214,16 @@ def assign_signature_authority(db: Session, authority_data: dict):
         
         # สร้างข้อมูลผลลัพธ์
         auth_dict = SignatureAuthoritySchema.model_validate(db_authority).model_dump()
-        auth_dict["user_name"] = f"{user.first_name} {user.last_name}"
+        
+        # สร้าง user_name พร้อม prefix
+        prefix = ""
+        if user.title and user.title.short_name:
+            prefix = user.title.short_name
+        elif user.prefix_other:
+            prefix = user.prefix_other
+            
+        user_name = f"{prefix} {user.first_name} {user.last_name}".strip()
+        auth_dict["user_name"] = user_name
         auth_dict["department_name"] = department.name
         
         # เพิ่มข้อมูลตำแหน่งปัจจุบันของผู้ใช้
@@ -229,7 +255,10 @@ def get_authorities_by_department(db: Session, department_id: UUID):
     try:
         # แก้ไขชื่อ field ให้ตรงกับโมเดล
         result = db.query(SignatureAuthority)\
-            .options(joinedload(SignatureAuthority.user), joinedload(SignatureAuthority.department))\
+            .options(
+                joinedload(SignatureAuthority.user).joinedload(User.title), 
+                joinedload(SignatureAuthority.department)
+            )\
             .filter(
                 SignatureAuthority.department_id == department_id,
                 SignatureAuthority.is_active == True
@@ -240,11 +269,20 @@ def get_authorities_by_department(db: Session, department_id: UUID):
         # แปลงข้อมูลเป็นรูปแบบที่ต้องการ
         formatted_authorities = []
         for authority in result:
+            # สร้าง user_name พร้อม prefix
+            prefix = ""
+            if authority.user.title and authority.user.title.short_name:
+                prefix = authority.user.title.short_name
+            elif authority.user.prefix_other:
+                prefix = authority.user.prefix_other
+                
+            user_name = f"{prefix} {authority.user.first_name} {authority.user.last_name}".strip()
+            
             auth_dict = {
                 "id": str(authority.id),
                 "user": {
                     "id": str(authority.user_id),
-                    "name": f"{authority.user.first_name} {authority.user.last_name}",
+                    "name": user_name,
                     "email": authority.user.email
                 },
                 "department": {
@@ -308,7 +346,7 @@ def get_available_users(db: Session, skip: int = 0, limit: int = 100):
     """รับรายการผู้ใช้ที่สามารถกำหนดเป็นผู้มีอำนาจลงนามได้"""
     try:
         # ดึงข้อมูลผู้ใช้ที่สถานะยังใช้งานอยู่
-        users = db.query(User).filter(
+        users = db.query(User).options(joinedload(User.title)).filter(
             User.is_active == True
         ).order_by(User.first_name, User.last_name).offset(skip).limit(limit).all()
         
@@ -329,10 +367,19 @@ def get_available_users(db: Session, skip: int = 0, limit: int = 100):
             
             # สามารถดึงข้อมูลหน่วยงานของผู้ใช้ได้ถ้ามีการเก็บข้อมูลในระบบ
             # (ปรับตามโครงสร้างข้อมูลจริง)
+            
+            # สร้าง user_name พร้อม prefix
+            prefix = ""
+            if user.title and user.title.short_name:
+                prefix = user.title.short_name
+            elif user.prefix_other:
+                prefix = user.prefix_other
+                
+            user_name = f"{prefix} {user.first_name} {user.last_name}".strip()
                 
             result.append({
                 "id": user.id,
-                "name": f"{user.first_name} {user.last_name}",
+                "name": user_name,
                 "email": user.email,
                 "position": position_name,
                 "department": department_name
