@@ -345,7 +345,7 @@ const ComplaintIDService = ({ complaint }) => {
               style={{ objectFit: "contain" }}
             />
             <Typography variant="h6" fontWeight="bold" ml={2}>
-              แบบรับคำร้องเรียน / ร้องทุกข์กระทรวงการคลังหห
+              แบบรับคำร้องเรียน / ร้องทุกข์กระทรวงการคลัง
             </Typography>
           </Box>
 
