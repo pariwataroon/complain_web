@@ -18,6 +18,10 @@ import {
   DeleteVenue,
   UpdateVenue,
   getDepartmentGroup,
+  // ===== เพิ่ม API สำหรับสร้างหน่วยงานหลัก =====
+  CreateDepartment,
+  getDepartmentGroups,
+  postDepartment,
 } from "@pages/api/settinggeneral/department/department";
 import { alertSuccess, showConfirm, alertError } from "@utils/Alerts";
 import SelectField from "@services/SelectField/SelectField";
@@ -42,7 +46,6 @@ const breadcrumbItems = [
   },
 ];
 
-
 /* -------------------------------------------------------------------------- */
 /*  component                                                                  */
 /* -------------------------------------------------------------------------- */
@@ -53,6 +56,9 @@ const DepartmentManagement = () => {
   const [addSectionIdx, setAddSectionIdx] = useState(null); // section index for Add modal
   const [editUser, setEditUser] = useState(null); // user object for Edit modal
   const [deleteUser, setDeleteUser] = useState(null); // user object for Delete modal
+
+  // เพิ่ม state สำหรับ Add Main Department Modal
+  const [openAddMainDepartment, setOpenAddMainDepartment] = useState(false);
 
   // search form
   const [formData, setFormData] = useState({
@@ -68,45 +74,44 @@ const DepartmentManagement = () => {
   const [governmentOptions, setGovernmentOptions] = useState([]);
   const [otherOptions, setOtherOptions] = useState([]);
   /* ------------------------------- โหลดข้อมูล dropdown ------------------------------- */
-  /* ------------------------------- โหลดข้อมูล dropdown ------------------------------- */
-const fetchDropdownOptions = async () => {
-  try {
-    const res = await getDepartmentGroup(); // API จริง
-    const groups = Array.isArray(res?.res_data) ? res.res_data : [];
+  const fetchDropdownOptions = async () => {
+    try {
+      const res = await getDepartmentGroup(); // API จริง
+      const groups = Array.isArray(res?.res_data) ? res.res_data : [];
 
-    // หา group
-    const stateGroup = groups.find((g) => g.name === "รัฐวิสาหกิจ");
-    const govGroup = groups.find((g) => g.name === "ส่วนราชการ");
-    const otherGroup = groups.find((g) => g.name === "อื่น ๆ" || g.name === "อื่นๆ");
+      // หา group
+      const stateGroup = groups.find((g) => g.name === "รัฐวิสาหกิจ");
+      const govGroup = groups.find((g) => g.name === "ส่วนราชการ");
+      const otherGroup = groups.find(
+        (g) => g.name === "อื่น ๆ" || g.name === "อื่นๆ"
+      );
 
-    // map departments -> options
-    const toOptions = (arr) =>
-      Array.isArray(arr)
-        ? arr.map((d) => ({
-            label: `${d.name} (${d.short_name || ""})`, // แสดงชื่อ + ตัวย่อ
-            value: d.id, // ใช้ id จริง
-            code: d.code, // เก็บรหัสไว้ด้วย
-          }))
-        : [];
+      // map departments -> options
+      const toOptions = (arr) =>
+        Array.isArray(arr)
+          ? arr.map((d) => ({
+              label: `${d.name} (${d.short_name || ""})`, // แสดงชื่อ + ตัวย่อ
+              value: d.id, // ใช้ id จริง
+              code: d.code, // เก็บรหัสไว้ด้วย
+            }))
+          : [];
 
-    setStateEnterpriseOptions(toOptions(stateGroup?.departments));
-    setGovernmentOptions(toOptions(govGroup?.departments));
-    setOtherOptions(toOptions(otherGroup?.departments));
+      setStateEnterpriseOptions(toOptions(stateGroup?.departments));
+      setGovernmentOptions(toOptions(govGroup?.departments));
+      setOtherOptions(toOptions(otherGroup?.departments));
 
-    console.log("Dropdown Options Loaded:", {
-      gov: toOptions(govGroup?.departments),
-      state: toOptions(stateGroup?.departments),
-      other: toOptions(otherGroup?.departments),
-    });
-  } catch (err) {
-    console.error("Error fetching dropdown options:", err);
-    setGovernmentOptions([]);
-    setStateEnterpriseOptions([]);
-    setOtherOptions([]);
-  }
-};
-
-
+      // console.log("Dropdown Options Loaded:", {
+      //   gov: toOptions(govGroup?.departments),
+      //   state: toOptions(stateGroup?.departments),
+      //   other: toOptions(otherGroup?.departments),
+      // });
+    } catch (err) {
+      console.error("Error fetching dropdown options:", err);
+      setGovernmentOptions([]);
+      setStateEnterpriseOptions([]);
+      setOtherOptions([]);
+    }
+  };
 
   /* ------------------------------- โหลดข้อมูลตาราง ------------------------------- */
   const fetchDepartmentDetails = async () => {
@@ -138,6 +143,39 @@ const fetchDropdownOptions = async () => {
     }
   };
 
+  const [mainDepartmentGroupOptions, setMainDepartmentGroupOptions] = useState(
+    []
+  );
+
+  // โหลด main department group options สำหรับ modal เพิ่มหน่วยงานหลัก
+  const fetchMainDepartmentGroups = async () => {
+    try {
+      const res = await getDepartmentGroups();
+      // สมมติ res.res_data เป็น array ที่ต้องการ
+      // ตัวอย่าง { id: 1, name: "ส่วนราชการ" }
+      if (Array.isArray(res?.res_data)) {
+        setMainDepartmentGroupOptions(
+          res.res_data.map((g) => ({
+            label: g.name,
+            value: g.id, // หรือ g.id ถ้าอยากได้เป็น id
+          }))
+        );
+      } else {
+        setMainDepartmentGroupOptions([]);
+      }
+    } catch (e) {
+      setMainDepartmentGroupOptions([]);
+    }
+  };
+
+  // เรียกโหลด group options เมื่อเปิด modal เพิ่มหน่วยงานหลัก
+  useEffect(() => {
+    if (openAddMainDepartment) {
+      fetchMainDepartmentGroups();
+    }
+    // eslint-disable-next-line
+  }, [openAddMainDepartment]);
+
   /* ------------------------------- useEffect ------------------------------- */
   useEffect(() => {
     fetchDepartmentDetails();
@@ -158,7 +196,7 @@ const fetchDropdownOptions = async () => {
   };
 
   const handleSearch = () => {
-  const { government, stateEnterprise, other } = formData;
+    const { government, stateEnterprise, other } = formData;
 
     if (!government && !stateEnterprise && !other) {
       setFilteredStats(stats);
@@ -194,6 +232,156 @@ const fetchDropdownOptions = async () => {
       ...prev,
       [idx]: !prev[idx],
     }));
+  };
+
+  /* -------------------------------------------------------------------------- */
+  /*  Add Main Department Modal                                                 */
+  /* -------------------------------------------------------------------------- */
+  /*  Add Main Department Modal                                                 */
+  /* -------------------------------------------------------------------------- */
+  const AddMainDepartmentModal = ({ open, onClose }) => {
+    // option กลุ่มหลัก (group_id)
+    const [groupId, setGroupId] = useState("");
+    const [mainDepartment, setMainDepartment] = useState(""); // name
+    const [departmentCode, setDepartmentCode] = useState(""); // code
+    const [shortName, setShortName] = useState(""); // short_name
+
+    // เมื่อ modal เปิดใหม่ ให้ reset form
+    useEffect(() => {
+      if (open) {
+        setGroupId("");
+        setMainDepartment("");
+        setDepartmentCode("");
+        setShortName("");
+      }
+    }, [open]);
+
+    const handleSave = async () => {
+      if (!mainDepartment || !groupId || !departmentCode || !shortName) {
+        alertError("กรุณากรอกข้อมูลให้ครบถ้วน", "");
+        return;
+      }
+      try {
+        const payload = {
+          name: mainDepartment,
+          short_name: shortName,
+          code: departmentCode,
+          parent_id: null,
+          group_id: groupId,
+          order_index: 100,
+          is_active: true,
+        };
+        await postDepartment(payload);
+        await fetchDepartmentDetails();
+        await fetchDropdownOptions();
+        alertSuccess("สำเร็จ!", "เพิ่มหน่วยงานหลักเรียบร้อยแล้ว");
+        onClose();
+      } catch (error) {
+        console.error("postDepartment error:", error);
+        alertError("เกิดข้อผิดพลาด", "ไม่สามารถเพิ่มหน่วยงานหลักได้");
+      }
+    };
+
+    return (
+      <Modal open={open} onClose={onClose}>
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 24,
+            p: 4,
+            width: 500,
+          }}
+        >
+          <Typography variant="h5" color="#1120A3" mb={2}>
+            เพิ่มหน่วยงานหลัก
+          </Typography>
+          {/* ประเภทกลุ่ม (group_id) */}
+          <Typography fontSize={18} mb={1} color="#1120A3">
+            ประเภท <span style={{ color: "red" }}>*</span>
+          </Typography>
+          <SelectField
+            label="เลือกประเภท"
+            options={mainDepartmentGroupOptions}
+            value={groupId}
+            onChange={(e) => setGroupId(e.target.value)}
+            name="group_id"
+          />
+          {/* ชื่อหน่วยงานหลัก */}
+          <Typography fontSize={18} mb={1} color="#1120A3" mt={2}>
+            ชื่อหน่วยงานหลัก <span style={{ color: "red" }}>*</span>
+          </Typography>
+          <TextfieldService
+            value={mainDepartment}
+            onChange={(e) => setMainDepartment(e.target.value)}
+            placeholder="ชื่อหน่วยงานหลัก"
+            name="main_department"
+          />
+          {/* ตัวย่อหน่วยงาน */}
+          <Typography fontSize={18} mb={1} color="#1120A3" mt={2}>
+            ตัวย่อหน่วยงาน <span style={{ color: "red" }}>*</span>
+          </Typography>
+          <TextfieldService
+            value={shortName}
+            onChange={(e) => setShortName(e.target.value)}
+            placeholder="ตัวย่อหน่วยงาน"
+            name="short_name"
+          />
+          {/* รหัสหน่วยงานหลัก */}
+          <Typography fontSize={18} mb={1} color="#1120A3" mt={2}>
+            รหัสหน่วยงานหลัก <span style={{ color: "red" }}>*</span>
+          </Typography>
+          <TextfieldService
+            value={departmentCode}
+            onChange={(e) => setDepartmentCode(e.target.value)}
+            placeholder="รหัสหน่วยงานหลัก"
+            name="department_code"
+          />
+          {/* Actions */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 1,
+              mt: 4,
+            }}
+          >
+            <ButtonService
+              label="ยกเลิก"
+              variant="outlined"
+              onClick={onClose}
+              color="#50ADFF"
+              iconLeft={<CloseOutlinedIcon />}
+              sx={{
+                width: "48%",
+                height: 56,
+                borderRadius: 15,
+                fontSize: 20,
+                "&:hover": { backgroundColor: "#D0E8FC", boxShadow: "none" },
+              }}
+            />
+            <ButtonService
+              label="ยืนยัน"
+              variant="contained"
+              onClick={handleSave}
+              iconRight={<CheckOutlinedIcon />}
+              color="#2499FF"
+              sx={{
+                width: "48%",
+                height: 56,
+                borderRadius: 15,
+                fontSize: 20,
+                "&:hover": { backgroundColor: "#2499FF" },
+              }}
+            />
+          </Box>
+        </Box>
+      </Modal>
+    );
   };
 
   /* -------------------------------------------------------------------------- */
@@ -707,7 +895,7 @@ const fetchDropdownOptions = async () => {
             />
           </Box>
         ))}
-        <Box sx={{ flex: "0 0 auto" }}>
+        <Box sx={{ flex: "0 0 auto", display: "flex", gap: 1 }}>
           <ButtonService
             label="ค้นหา"
             variant="contained"
@@ -721,10 +909,31 @@ const fetchDropdownOptions = async () => {
               px: 3,
               height: 40,
               boxShadow: 2,
-
               "&:hover": { backgroundColor: "#0067B1" },
             }}
             iconRight={<SearchIcon />}
+          />
+          {/* ===== ปุ่มเพิ่มหน่วยงานหลัก ===== */}
+          <ButtonService
+            label="เพิ่มหน่วยงานหลัก"
+            variant="contained"
+            color="success"
+            onClick={() => setOpenAddMainDepartment(true)}
+            sx={{
+              marginBottom: 17,
+              backgroundColor: "#43A047",
+              color: "#ffffff",
+              borderRadius: 30,
+              px: 3,
+              height: 40,
+              boxShadow: 2,
+              fontWeight: "bold",
+              fontSize: 16, // เพิ่มขนาดอักษรหรือลดตามต้องการ
+              minWidth: 180, // กำหนดความกว้างขั้นต่ำให้พอสำหรับข้อความ
+              whiteSpace: "nowrap", // บังคับข้อความไม่ขึ้นบรรทัดใหม่
+              "&:hover": { backgroundColor: "#388E3C" },
+            }}
+            iconRight={<AddCircleOutlineOutlinedIcon />}
           />
         </Box>
       </Box>
@@ -850,6 +1059,10 @@ const fetchDropdownOptions = async () => {
       {/* -------------------------------------------------------------------- */}
       {/*  modals                                                               */}
       {/* -------------------------------------------------------------------- */}
+      <AddMainDepartmentModal
+        open={openAddMainDepartment}
+        onClose={() => setOpenAddMainDepartment(false)}
+      />
       <AddUserModal
         open={addSectionIdx !== null}
         sectionIdx={addSectionIdx}
