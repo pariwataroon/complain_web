@@ -7,8 +7,10 @@ from lib.logger import get_logger
 
 from models.department_groups import DepartmentGroup
 from models.departments import Department
+from models.venues import Venue
 from app.api.v1.schemas.department_groups import DepartmentGroup as DepartmentGroupSchema
 from app.api.v1.schemas.department import Department as DepartmentSchema
+from app.api.v1.schemas.venues import Venue as VenueSchema
 
 logger = get_logger("department_group_controller")
 
@@ -35,7 +37,7 @@ def get_department_group_by_id(db: Session, group_id: UUID):
     return None
 
 def get_department_groups_with_departments(db: Session, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
-    """Get department groups with their departments"""
+    """Get department groups with their departments and venues"""
     # ดึงข้อมูลกลุ่มหน่วยงานทั้งหมด
     groups = db.query(DepartmentGroup).filter(
         DepartmentGroup.is_active == True
@@ -51,10 +53,49 @@ def get_department_groups_with_departments(db: Session, skip: int = 0, limit: in
         
         group_dict = DepartmentGroupSchema.model_validate(group).model_dump()
         
-        # เพิ่มข้อมูลหน่วยงาน
+        # เพิ่มข้อมูลหน่วยงานพร้อม venues
         dept_dicts = []
         if departments:
-            dept_dicts = [DepartmentSchema.model_validate(dept).model_dump() for dept in departments]
+            for dept in departments:
+                dept_dict = DepartmentSchema.model_validate(dept).model_dump()
+                
+                # ดึงรายการสถานที่ในแต่ละ department
+                venues = db.query(Venue).filter(
+                    Venue.department_id == dept.id,
+                    Venue.is_active == True
+                ).order_by(Venue.group_name, Venue.order_index).all()
+                
+                # จัดกลุ่มสถานที่ตาม group_name ภายใน department
+                venue_groups = {}
+                venue_dicts = []
+                
+                if venues:
+                    for venue in venues:
+                        venue_dict = VenueSchema.model_validate(venue).model_dump()
+                        # ลบข้อมูล department เพื่อลดความซ้ำซ้อน
+                        if "department" in venue_dict:
+                            del venue_dict["department"]
+                        venue_dicts.append(venue_dict)
+                        
+                        group_name = venue.group_name or 'ไม่ระบุกลุ่ม'
+                        if group_name not in venue_groups:
+                            venue_groups[group_name] = []
+                        venue_groups[group_name].append(venue_dict)
+                
+                # แปลง venue_groups เป็น list
+                venue_groups_list = []
+                for group_name, venues_in_group in venue_groups.items():
+                    venue_groups_list.append({
+                        "group_name": group_name,
+                        "venues": venues_in_group,
+                        "total_venues": len(venues_in_group)
+                    })
+                
+                # เพิ่มข้อมูล venues ใน department
+                dept_dict["venue_groups"] = venue_groups_list
+                dept_dict["total_venues"] = len(venue_dicts)
+                
+                dept_dicts.append(dept_dict)
         
         group_dict["departments"] = dept_dicts
         group_dict["total_departments"] = len(dept_dicts)
