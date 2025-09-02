@@ -544,14 +544,31 @@ def get_user_with_roles_titles_and_address(db: Session, user_id: UUID):
     }
 
     # Get title name - prioritize prefix_other for "Other" titles
+    title_object = None
     if user.title_id == 1 and user.prefix_other:
         title_name = user.prefix_other
+        title_object = {
+            "title_id": 1,
+            "value": 1,
+            "label": user.prefix_other,
+            "title_name": "อื่น ๆ",
+            "short_name": "อื่น ๆ",
+            "custom_name": user.prefix_other
+        }
     elif user.title:
         title_name = user.title.title_name
+        title_object = {
+            "title_id": user.title.title_id,
+            "value": user.title.title_id,
+            "label": user.title.title_name,
+            "title_name": user.title.title_name,
+            "short_name": user.title.short_name
+        }
     else:
         title_name = None
 
     user_data["title_name"] = title_name
+    user_data["title"] = title_object
     user_data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
 
     # Add user roles information
@@ -603,9 +620,23 @@ def get_user_with_roles_titles_and_address(db: Session, user_id: UUID):
 
     # เพิ่มข้อมูลที่อยู่แบบรายละเอียด สำหรับที่อยู่หลัก
     address_details = {}
+    province_object = None
+    amphure_object = None
+    district_object = None
+    
     if user.province_id:
         province = db.query(Province).filter(Province.id == user.province_id).first()
         if province:
+            province_object = {
+                "id": province.id,
+                "value": province.id,
+                "label": province.name_th,
+                "name": province.name_th,
+                "name_en": province.name_en,
+                "code": province.code,
+                "geography_id": province.geography_id
+            }
+            address_details["province"] = province_object
             address_details["province_id"] = province.id
             address_details["province_name"] = province.name_th
             address_details["province_code"] = province.code
@@ -613,6 +644,17 @@ def get_user_with_roles_titles_and_address(db: Session, user_id: UUID):
     if user.district_id:
         amphure = db.query(Amphure).filter(Amphure.id == user.district_id).first()
         if amphure:
+            amphure_object = {
+                "id": amphure.id,
+                "value": amphure.id,
+                "label": amphure.name_th,
+                "name": amphure.name_th,
+                "name_en": amphure.name_en,
+                "code": amphure.code,
+                "province_id": amphure.province_id
+            }
+            address_details["amphure"] = amphure_object
+            address_details["districts"] = amphure_object  # alias สำหรับ frontend
             address_details["amphure_id"] = amphure.id
             address_details["amphure_name"] = amphure.name_th
             address_details["amphure_code"] = amphure.code
@@ -620,12 +662,29 @@ def get_user_with_roles_titles_and_address(db: Session, user_id: UUID):
     if user.subdistrict_id:
         district = db.query(District).filter(District.id == user.subdistrict_id).first()
         if district:
+            district_object = {
+                "id": district.id,
+                "value": district.id,
+                "label": district.name_th,
+                "name": district.name_th,
+                "name_en": district.name_en,
+                "zip_code": district.zip_code,
+                "amphure_id": district.amphure_id
+            }
+            address_details["district"] = district_object
+            address_details["subdistricts"] = district_object  # alias สำหรับ frontend
             address_details["district_id"] = district.id
             address_details["district_name"] = district.name_th
             address_details["district_zipcode"] = district.zip_code
 
     if user.zipcode:
-        address_details["zipcode"] = user.zipcode
+        zipcode_object = {
+            "value": user.zipcode,
+            "label": str(user.zipcode),
+            "name": str(user.zipcode)
+        }
+        address_details["zipcode"] = zipcode_object
+        address_details["zipcode_value"] = user.zipcode
 
     # สร้างที่อยู่แบบเต็ม
     full_address_parts = []
@@ -645,9 +704,24 @@ def get_user_with_roles_titles_and_address(db: Session, user_id: UUID):
 
     # เพิ่มข้อมูลที่อยู่อื่น (ถ้ามี)
     address_other_details = {}
+    province2_object = None
+    amphure2_object = None
+    district2_object = None
+    
     if user.province2_id:
         province2 = db.query(Province).filter(Province.id == user.province2_id).first()
         if province2:
+            province2_object = {
+                "id": province2.id,
+                "value": province2.id,
+                "label": province2.name_th,
+                "name": province2.name_th,
+                "name_en": province2.name_en,
+                "code": province2.code,
+                "geography_id": province2.geography_id
+            }
+            address_other_details["province"] = province2_object
+            address_other_details["province2"] = province2_object  # alias สำหรับ frontend
             address_other_details["province_id"] = province2.id
             address_other_details["province_name"] = province2.name_th
             address_other_details["province_code"] = province2.code
@@ -655,6 +729,17 @@ def get_user_with_roles_titles_and_address(db: Session, user_id: UUID):
     if user.district2_id:
         amphure2 = db.query(Amphure).filter(Amphure.id == user.district2_id).first()
         if amphure2:
+            amphure2_object = {
+                "id": amphure2.id,
+                "value": amphure2.id,
+                "label": amphure2.name_th,
+                "name": amphure2.name_th,
+                "name_en": amphure2.name_en,
+                "code": amphure2.code,
+                "province_id": amphure2.province_id
+            }
+            address_other_details["amphure"] = amphure2_object
+            address_other_details["districts2"] = amphure2_object  # alias สำหรับ frontend
             address_other_details["amphure_id"] = amphure2.id
             address_other_details["amphure_name"] = amphure2.name_th
             address_other_details["amphure_code"] = amphure2.code
@@ -662,12 +747,30 @@ def get_user_with_roles_titles_and_address(db: Session, user_id: UUID):
     if user.subdistrict2_id:
         district2 = db.query(District).filter(District.id == user.subdistrict2_id).first()
         if district2:
+            district2_object = {
+                "id": district2.id,
+                "value": district2.id,
+                "label": district2.name_th,
+                "name": district2.name_th,
+                "name_en": district2.name_en,
+                "zip_code": district2.zip_code,
+                "amphure_id": district2.amphure_id
+            }
+            address_other_details["district"] = district2_object
+            address_other_details["subdistricts2"] = district2_object  # alias สำหรับ frontend
             address_other_details["district_id"] = district2.id
             address_other_details["district_name"] = district2.name_th
             address_other_details["district_zipcode"] = district2.zip_code
 
     if user.zipcode2:
-        address_other_details["zipcode"] = user.zipcode2
+        zipcode2_object = {
+            "value": user.zipcode2,
+            "label": str(user.zipcode2),
+            "name": str(user.zipcode2)
+        }
+        address_other_details["zipcode"] = zipcode2_object
+        address_other_details["zipcode2"] = zipcode2_object  # alias สำหรับ frontend
+        address_other_details["zipcode_value"] = user.zipcode2
 
     # สร้างที่อยู่อื่นแบบเต็ม
     full_address_other_parts = []
