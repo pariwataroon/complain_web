@@ -48,16 +48,16 @@ import { GetOperatingsSelect } from "@pages/api/opm/opm";
 import { formatThaiShortDateTime } from "@utils/Formats";
 
 const statusReadOptions = [
-  { value: '', label: "ทั้งหมด" },
-  { value: 'read', label: "รับเรื่อง" },
-  { value: 'unread', label: "ยังไม่รับเรื่อง" },
+  { value: "", label: "ทั้งหมด" },
+  { value: "read", label: "รับเรื่อง" },
+  { value: "unread", label: "ยังไม่รับเรื่อง" },
 ];
 
 // เพิ่ม options สำหรับ timeline type
 const timelineTypeOptions = [
-  { value: 'A', label: "ทั้งหมด" },
-  { value: 'I', label: "งานใหม่" },
-  { value: 'P', label: "งานกำลังดำเนินการ" },
+  { value: "A", label: "ทั้งหมด" },
+  { value: "I", label: "งานใหม่" },
+  { value: "P", label: "งานกำลังดำเนินการ" },
 ];
 
 const columns = [
@@ -65,7 +65,12 @@ const columns = [
   { name: "customer_name", label: "ชื่อผู้เดือดร้อน", width: 80, priority: 2 },
   { name: "type_text", label: "ประเภทเรืองร้องทุกข์", width: 100, priority: 4 },
   { name: "ShowDateTime", label: "วันที่และเวลา", width: 120, priority: 4 },
-  { name: "main_status_text", label: "สถานะหลักของ สปน.", width: 160, priority: 2 },
+  {
+    name: "main_status_text",
+    label: "สถานะหลักของ สปน.",
+    width: 160,
+    priority: 2,
+  },
   { name: "status_text", label: "สถานะย่อยของ สปน.", width: 80, priority: 4 },
   { name: "isRead", label: "สถานะการคลัง", width: 80, priority: 2 },
 ];
@@ -77,24 +82,31 @@ const checkPMOfficeSubmission = (operatingsDetails) => {
       hasPMOfficeSubmission: false,
       submissionCount: 0,
       lastSubmissionDate: null,
-      submissions: []
+      submissions: [],
     };
   }
 
   // คำสำคัญสำหรับตรวจสอบหน่วยงาน
   const PM_OFFICE_KEYWORDS = [
-    'สำนักงานปลัดสำนักนายกรัฐมนตรี',
-    'สปน',
-    'สำนักนายกรัฐมนตรี',
-    'ปลัดสำนักนายกรัฐมนตรี',
-    'Prime Minister Office',
-    'PMO'
+    "สำนักงานปลัดสำนักนายกรัฐมนตรี",
+    "สปน",
+    "สำนักนายกรัฐมนตรี",
+    "ปลัดสำนักนายกรัฐมนตรี",
+    "Prime Minister Office",
+    "PMO",
   ];
 
   const submissions = [];
 
-  operatingsDetails.forEach(operation => {
-    const { org_text, detail, operating_type_text, operating_date, officer_text, created_by_text } = operation;
+  operatingsDetails.forEach((operation) => {
+    const {
+      org_text,
+      detail,
+      operating_type_text,
+      operating_date,
+      officer_text,
+      created_by_text,
+    } = operation;
 
     // ตรวจสอบใน org_text, detail, operating_type_text, officer_text, created_by_text
     const textToCheck = [
@@ -102,10 +114,13 @@ const checkPMOfficeSubmission = (operatingsDetails) => {
       detail,
       operating_type_text,
       officer_text,
-      created_by_text
-    ].filter(Boolean).join(' ').toLowerCase();
+      created_by_text,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
 
-    const isPMOfficeSubmission = PM_OFFICE_KEYWORDS.some(keyword =>
+    const isPMOfficeSubmission = PM_OFFICE_KEYWORDS.some((keyword) =>
       textToCheck.includes(keyword.toLowerCase())
     );
 
@@ -116,7 +131,7 @@ const checkPMOfficeSubmission = (operatingsDetails) => {
         detail: detail,
         type: operating_type_text,
         officer: officer_text || created_by_text,
-        operation: operation
+        operation: operation,
       });
     }
   });
@@ -128,15 +143,15 @@ const checkPMOfficeSubmission = (operatingsDetails) => {
     hasPMOfficeSubmission: submissions.length > 0,
     submissionCount: submissions.length,
     lastSubmissionDate: submissions.length > 0 ? submissions[0].date : null,
-    submissions: submissions
+    submissions: submissions,
   };
 };
 
 const getVisibleColumns = (columns) => {
   if (typeof window !== "undefined") {
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+    const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
     if (isMobile) {
       return columns.filter((col) => col.priority <= 2);
     }
@@ -152,19 +167,24 @@ const TableListOPM = ({
   title = "",
   navigateTo = "",
   filterFields = [],
-  onRowsPerPageChange = () => { },
-  onTimelineTypeChange = () => { }, // เพิ่ม prop สำหรับ timeline type change
+  onRowsPerPageChange = () => {},
+  onTimelineTypeChange = () => {}, // เพิ่ม prop สำหรับ timeline type change
   currentTimelineType = "I", // เพิ่ม prop สำหรับ current timeline type
   showPMOfficeIndicator = true,
 }) => {
   const router = useRouter();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
   const visibleColumns = getVisibleColumns(columns);
   const extendedFilterFields = [
     ...filterFields,
-    { name: "isRead", label: "สถานะอ่านแล้ว", type: "select", options: statusReadOptions },
+    {
+      name: "isRead",
+      label: "สถานะอ่านแล้ว",
+      type: "select",
+      options: statusReadOptions,
+    },
   ];
 
   const initialFilters = useMemo(
@@ -209,17 +229,20 @@ const TableListOPM = ({
             if (pmOfficeStatus.hasPMOfficeSubmission) {
               pmOfficeCases.push({
                 ...item,
-                ...pmOfficeStatus
+                ...pmOfficeStatus,
               });
             }
 
             return { case_id: item.case_id, ...pmOfficeStatus };
           } catch (error) {
-            console.error(`Error checking PM Office submission for case ${item.case_id}:`, error);
+            console.error(
+              `Error checking PM Office submission for case ${item.case_id}:`,
+              error
+            );
             pmOfficeMap.set(item.case_id, {
               hasPMOfficeSubmission: false,
               submissionCount: 0,
-              submissions: []
+              submissions: [],
             });
             return null;
           }
@@ -230,16 +253,18 @@ const TableListOPM = ({
 
         // แสดง notification ถ้ามีเคสที่มีข้อมูลจาก PM Office (เฉพาะครั้งแรก)
         if (pmOfficeCases.length > 0 && !hasShownPMOfficeAlert) {
-          const totalSubmissions = pmOfficeCases.reduce((sum, c) => sum + c.submissionCount, 0);
+          const totalSubmissions = pmOfficeCases.reduce(
+            (sum, c) => sum + c.submissionCount,
+            0
+          );
           setPMOfficeNotification({
             count: pmOfficeCases.length,
             totalSubmissions,
-            cases: pmOfficeCases
+            cases: pmOfficeCases,
           });
           setShowPMOfficeAlert(true);
           setHasShownPMOfficeAlert(true);
         }
-
       } catch (error) {
         console.error("Error checking PM Office submissions:", error);
       } finally {
@@ -253,15 +278,18 @@ const TableListOPM = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       // เพิ่ม PM Office status เข้าไปในข้อมูล
-      const dataWithPMOfficeStatus = (data || []).map(item => {
+      const dataWithPMOfficeStatus = (data || []).map((item) => {
         const pmOfficeStatus = pmOfficeStatusMap.get(item.case_id) || {
           hasPMOfficeSubmission: false,
-          submissionCount: 0
+          submissionCount: 0,
         };
         return {
           ...item,
           ...pmOfficeStatus,
-          statusPriority: calculateStatusPriority(item.status_text, pmOfficeStatus)
+          statusPriority: calculateStatusPriority(
+            item.status_text,
+            pmOfficeStatus
+          ),
         };
       });
 
@@ -318,7 +346,8 @@ const TableListOPM = ({
   };
 
   const pagedData = useMemo(
-    () => filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    () =>
+      filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
     [filteredData, page, rowsPerPage]
   );
 
@@ -415,10 +444,11 @@ const TableListOPM = ({
       </Box>
 
       {columns
-        .filter((col) =>
-          col.name !== "secret_id" &&
-          col.name !== "main_status_text" && // ไม่แสดง filter สำหรับสถานะหลักของ สปน.
-          col.name !== "status_text" // ไม่แสดง filter สำหรับสถานะย่อยของ สปน.
+        .filter(
+          (col) =>
+            col.name !== "secret_id" &&
+            col.name !== "main_status_text" && // ไม่แสดง filter สำหรับสถานะหลักของ สปน.
+            col.name !== "status_text" // ไม่แสดง filter สำหรับสถานะย่อยของ สปน.
         )
         .map((col) =>
           col.name === "isRead" ? (
@@ -444,7 +474,12 @@ const TableListOPM = ({
             </Box>
           )
         )}
-      <Box display="flex" gap={1} justifyContent="center" sx={{ minWidth: 120 }}>
+      <Box
+        display="flex"
+        gap={1}
+        justifyContent="center"
+        sx={{ minWidth: 120 }}
+      >
         <Button
           variant="contained"
           startIcon={<SearchIcon />}
@@ -477,13 +512,19 @@ const TableListOPM = ({
       <Box display="flex" alignItems="center" gap={0.5}>
         <Typography>{item.case_code}</Typography>
         {pmOfficeStatus?.hasPMOfficeSubmission && (
-          <Tooltip title={`มีข้อมูลจากสำนักงานปลัดสำนักนายกรัฐมนตรี ${pmOfficeStatus.submissionCount} รายการ`}>
-            <Badge badgeContent={pmOfficeStatus.submissionCount} color="primary" max={99}>
+          <Tooltip
+            title={`มีข้อมูลจากสำนักงานปลัดสำนักนายกรัฐมนตรี ${pmOfficeStatus.submissionCount} รายการ`}
+          >
+            <Badge
+              badgeContent={pmOfficeStatus.submissionCount}
+              color="primary"
+              max={99}
+            >
               <BusinessIcon
                 sx={{
                   color: blue[600],
                   fontSize: 16,
-                  animation: 'pulse 2s infinite'
+                  animation: "pulse 2s infinite",
                 }}
               />
             </Badge>
@@ -506,12 +547,10 @@ const TableListOPM = ({
           sx={{
             color: blue[600],
             fontSize: 16,
-            animation: 'blink 1.5s infinite'
+            animation: "blink 1.5s infinite",
           }}
         />
-        <Typography sx={{ fontWeight: 500 }}>
-          {item.customer_name}
-        </Typography>
+        <Typography sx={{ fontWeight: 500 }}>{item.customer_name}</Typography>
       </Box>
     );
   };
@@ -529,12 +568,21 @@ const TableListOPM = ({
               cursor: "pointer",
               "&:hover": { backgroundColor: "#f5f7ff" },
               border: "1px solid #e0e0e0",
-              backgroundColor: pmOfficeStatus?.hasPMOfficeSubmission ? 'rgba(33, 150, 243, 0.05)' : 'transparent',
-              borderLeft: pmOfficeStatus?.hasPMOfficeSubmission ? '4px solid #2196f3' : 'none'
+              backgroundColor: pmOfficeStatus?.hasPMOfficeSubmission
+                ? "rgba(33, 150, 243, 0.05)"
+                : "transparent",
+              borderLeft: pmOfficeStatus?.hasPMOfficeSubmission
+                ? "4px solid #2196f3"
+                : "none",
             }}
           >
             <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={1}
+              >
                 <Typography variant="body2" color="primary" fontWeight="bold">
                   #{page * rowsPerPage + idx + 1}
                 </Typography>
@@ -556,32 +604,51 @@ const TableListOPM = ({
 
               {visibleColumns.map((col) => (
                 <Box key={col.name} mb={1}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                  >
                     {col.label}
                   </Typography>
                   <Typography variant="body2" fontWeight="medium">
-                    {col.name === "case_code" ? renderCaseCodeCell(item) :
-                      col.name === "customer_name" ? renderCustomerNameCell(item) :
-                        col.name === "ShowDateTime" ? formatThaiShortDateTime(item.ShowDateTime) || "-" :
-                        renderCellValue(col, item)}
+                    {col.name === "case_code"
+                      ? renderCaseCodeCell(item)
+                      : col.name === "customer_name"
+                      ? renderCustomerNameCell(item)
+                      : col.name === "ShowDateTime"
+                      ? formatThaiShortDateTime(item.ShowDateTime) || "-"
+                      : renderCellValue(col, item)}
                   </Typography>
                 </Box>
               ))}
 
-              {!isMobile && columns.filter(col => col.priority > 2).length > 0 && (
-                <Box mt={2} pt={1} borderTop="1px solid #e0e0e0">
-                  <Typography variant="caption" color="text.secondary" gutterBottom>
-                    ข้อมูลเพิ่มเติม
-                  </Typography>
-                  {columns.filter(col => col.priority > 2).map((col) => (
-                    <Typography key={col.name} variant="caption" display="block">
-                      {col.label}: {col.name === "ShowDateTime" ?
-                        formatThaiShortDateTime(item[col.name]) || "-" :
-                        item[col.name] ?? "-"}
+              {!isMobile &&
+                columns.filter((col) => col.priority > 2).length > 0 && (
+                  <Box mt={2} pt={1} borderTop="1px solid #e0e0e0">
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      gutterBottom
+                    >
+                      ข้อมูลเพิ่มเติม
                     </Typography>
-                  ))}
-                </Box>
-              )}
+                    {columns
+                      .filter((col) => col.priority > 2)
+                      .map((col) => (
+                        <Typography
+                          key={col.name}
+                          variant="caption"
+                          display="block"
+                        >
+                          {col.label}:{" "}
+                          {col.name === "ShowDateTime"
+                            ? formatThaiShortDateTime(item[col.name]) || "-"
+                            : item[col.name] ?? "-"}
+                        </Typography>
+                      ))}
+                  </Box>
+                )}
             </CardContent>
           </Card>
         );
@@ -627,7 +694,9 @@ const TableListOPM = ({
     return item[col.name] ?? "-";
   };
 
-  const pmOfficeCasesCount = Array.from(pmOfficeStatusMap.values()).filter(status => status.hasPMOfficeSubmission).length;
+  const pmOfficeCasesCount = Array.from(pmOfficeStatusMap.values()).filter(
+    (status) => status.hasPMOfficeSubmission
+  ).length;
 
   return (
     <Container
@@ -642,14 +711,26 @@ const TableListOPM = ({
     >
       <style jsx>{`
         @keyframes pulse {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-          100% { transform: scale(1); }
+          0% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.05);
+          }
+          100% {
+            transform: scale(1);
+          }
         }
-        
+
         @keyframes blink {
-          0%, 50% { opacity: 1; }
-          51%, 100% { opacity: 0.3; }
+          0%,
+          50% {
+            opacity: 1;
+          }
+          51%,
+          100% {
+            opacity: 0.3;
+          }
         }
       `}</style>
 
@@ -658,12 +739,12 @@ const TableListOPM = ({
         open={showPMOfficeAlert}
         autoHideDuration={10000}
         onClose={handleClosePMOfficeAlert}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={handleClosePMOfficeAlert}
           severity="info"
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           <AlertTitle>
             <BusinessIcon sx={{ mr: 1 }} />
@@ -671,7 +752,8 @@ const TableListOPM = ({
           </AlertTitle>
           {pmOfficeNotification && (
             <>
-              มี <strong>{pmOfficeNotification.count} เคส</strong> ที่มีข้อมูลจากสำนักงานปลัดสำนักนายกรัฐมนตรี
+              มี <strong>{pmOfficeNotification.count} เคส</strong>{" "}
+              ที่มีข้อมูลจากสำนักงานปลัดสำนักนายกรัฐมนตรี
               <br />
               กรุณาตรวจสอบเคสที่มีเครื่องหมาย 🏢 ในตาราง
             </>
@@ -717,31 +799,24 @@ const TableListOPM = ({
         </Box>
       </Box>
 
-      {/* Search Bar - Desktop */}
       {!isMobile && (
-        <Box width="100%" px={2} py={1}>
+        <Box width="100%" py={1} marginLeft={2}>
           <Box
             display="flex"
             alignItems="center"
-            width="100%"
+            width="max-content"
             gap={2}
-            sx={{ minWidth: 0 }}
+            sx={{
+              minWidth: "100%",
+              maxWidth: "none",
+            }}
           >
-            <Box
-              display="flex"
-              alignItems="center"
-              gap={2}
-              sx={{
-                flex: 1,
-                minWidth: 0,
-                overflowX: "auto",
-              }}
-            >
-              {/* Timeline Type Filter */}
+            {/* filters */}
+            <Box display="flex" alignItems="center" gap={2}>
               <Box
                 sx={{
-                  minWidth: 160,
-                  maxWidth: 220,
+                  minWidth: 140,
+                  maxWidth: 180,
                   flex: "1 1 0",
                   flexShrink: 1,
                 }}
@@ -757,21 +832,22 @@ const TableListOPM = ({
               </Box>
 
               {visibleColumns
-                .filter((col) =>
-                  col.name !== "main_status_text" && // ไม่แสดง filter สำหรับสถานะหลักของ สปน.
-                  col.name !== "status_text" // ไม่แสดง filter สำหรับสถานะย่อยของ สปน.
+                .filter(
+                  (col) =>
+                    col.name !== "main_status_text" &&
+                    col.name !== "status_text"
                 )
                 .map((col) => (
                   <Box
                     key={col.name}
                     sx={{
-                      minWidth: 160,
-                      maxWidth: 220,
+                      minWidth: 140,
+                      maxWidth: 180,
                       flex: "1 1 0",
                       flexShrink: 1,
                     }}
                   >
-                    {col.name === 'isRead' ? (
+                    {col.name === "isRead" ? (
                       <SelectField
                         fullWidth
                         label={col.label}
@@ -792,13 +868,14 @@ const TableListOPM = ({
                   </Box>
                 ))}
             </Box>
+            {/* ปุ่ม */}
             <Box
               display="flex"
               alignItems="center"
               gap={1}
               sx={{
                 flexShrink: 0,
-                minWidth: isTablet ? 180 : 260,
+                minWidth: 0,
               }}
             >
               <IconButton
@@ -809,6 +886,7 @@ const TableListOPM = ({
                   "&:hover": { bgcolor: "#0b1580" },
                   width: 40,
                   height: 40,
+                  flexShrink: 0,
                 }}
               >
                 <SearchIcon />
@@ -821,6 +899,7 @@ const TableListOPM = ({
                   "&:hover": { bgcolor: "#0b1580" },
                   width: 40,
                   height: 40,
+                  flexShrink: 0,
                 }}
               >
                 <SearchOffIcon />
@@ -830,13 +909,14 @@ const TableListOPM = ({
                 size={isTablet ? "small" : "medium"}
                 onClick={() => handleRowSend(selectedItem)}
                 sx={{
-                  maxWidth: 300,
-                  minWidth: 90,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  fontSize: isTablet ? '0.9rem' : '1rem',
-                  px: 2
+                  maxWidth: 150,
+                  minWidth: 80,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  fontSize: isTablet ? "0.9rem" : "1rem",
+                  px: 2,
+                  flexShrink: 0,
                 }}
               />
             </Box>
@@ -898,7 +978,9 @@ const TableListOPM = ({
           <Box display="flex" justifyContent="center" py={4}>
             <CircularProgress />
             <Typography sx={{ ml: 2 }}>
-              {isCheckingPMOffice ? "กำลังตรวจสอบข้อมูลจาก สปน...." : "กำลังโหลดข้อมูล..."}
+              {isCheckingPMOffice
+                ? "กำลังตรวจสอบข้อมูลจาก สปน...."
+                : "กำลังโหลดข้อมูล..."}
             </Typography>
           </Box>
         ) : filteredData.length === 0 ? (
@@ -919,7 +1001,7 @@ const TableListOPM = ({
                     key={col.name}
                     sx={{
                       width: isTablet ? col.width * 0.8 : col.width,
-                      fontSize: isTablet ? '0.875rem' : '1rem'
+                      fontSize: isTablet ? "0.875rem" : "1rem",
                     }}
                   >
                     {col.label}
@@ -937,8 +1019,12 @@ const TableListOPM = ({
                     sx={{
                       cursor: "pointer",
                       "&:hover": { backgroundColor: "#f5f7ff" },
-                      backgroundColor: pmOfficeStatus?.hasPMOfficeSubmission ? 'rgba(33, 150, 243, 0.05)' : 'transparent',
-                      borderLeft: pmOfficeStatus?.hasPMOfficeSubmission ? '4px solid #2196f3' : 'none'
+                      backgroundColor: pmOfficeStatus?.hasPMOfficeSubmission
+                        ? "rgba(33, 150, 243, 0.05)"
+                        : "transparent",
+                      borderLeft: pmOfficeStatus?.hasPMOfficeSubmission
+                        ? "4px solid #2196f3"
+                        : "none",
                     }}
                   >
                     <TableCell
@@ -947,7 +1033,7 @@ const TableListOPM = ({
                         width: 80,
                         fontWeight: 600,
                         color: "#1120A3",
-                        fontSize: isTablet ? '0.875rem' : '1rem'
+                        fontSize: isTablet ? "0.875rem" : "1rem",
                       }}
                     >
                       {page * rowsPerPage + idx + 1}
@@ -957,7 +1043,7 @@ const TableListOPM = ({
                         key={col.name}
                         sx={{
                           width: isTablet ? col.width * 0.8 : col.width,
-                          fontSize: isTablet ? '0.875rem' : '1rem'
+                          fontSize: isTablet ? "0.875rem" : "1rem",
                         }}
                       >
                         {renderCellValue(col, item)}

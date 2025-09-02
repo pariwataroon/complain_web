@@ -60,4 +60,49 @@ const getDepartmentGroup = async () => {
   }
 };
 
-export { GetDetailDepartment, CreateVenue, DeleteVenue, UpdateVenue , getDepartmentGroup};
+const getDepartmentGroups = async () => {
+  try {
+    const response = await axiosInstance.get("/department-groups");
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching complaints-assignment:", error);
+    throw error;
+  }
+};
+
+const postDepartment = async ({
+  name,
+  short_name,
+  code,
+  parent_id = null,
+  group_id,
+  order_index = 100,
+  is_active = true,
+}) => {
+  try {
+    const payload = {
+      name,
+      short_name,
+      code,
+      parent_id,
+      group_id,
+      order_index,
+      is_active,
+    };
+    const response = await axiosInstance.post("/departments", payload);
+    return response?.data;
+  } catch (error) {
+    console.error("Error posting department:", error);
+    throw error;
+  }
+};
+
+export {
+  GetDetailDepartment,
+  CreateVenue,
+  DeleteVenue,
+  UpdateVenue,
+  getDepartmentGroup,
+  getDepartmentGroups,
+  postDepartment,
+};

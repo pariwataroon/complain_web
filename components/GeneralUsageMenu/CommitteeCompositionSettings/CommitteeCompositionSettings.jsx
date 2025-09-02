@@ -14,9 +14,7 @@ import {
   createSignatureAuthorityGroup,
   updateSignatureAuthorityGroup,
 } from "@pages/api/department/department";
-import {
-  GetAllSelectPositionOptions,
-} from "@pages/api/allselect/allselect";
+import { GetAllSelectPositionOptions } from "@pages/api/allselect/allselect";
 import { alertSuccess, alertError } from "@utils/Alerts";
 import { translateResCode, isSuccessResCode } from "@utils/responseMessages";
 
@@ -64,7 +62,8 @@ const CommitteeCompositionSettings = () => {
 
         if (Array.isArray(res)) {
           const mapped = res.map((p, index) => {
-            const baseName = p.name ?? p.position_name ?? p.label ?? String(p.id);
+            const baseName =
+              p.name ?? p.position_name ?? p.label ?? String(p.id);
             const levelText = p.level ? ` (${p.level})` : "";
             const uniqueLabel = `${baseName}${levelText}`;
             return {
@@ -77,7 +76,7 @@ const CommitteeCompositionSettings = () => {
               uniqueId: p.id || `${baseName}_${p.level}_${index}`,
               uniqueKey: `${baseName}_${p.level}_${p.id}`,
               originalData: p,
-              sortOrder: index
+              sortOrder: index,
             };
           });
 
@@ -85,12 +84,12 @@ const CommitteeCompositionSettings = () => {
           setAvailablePositionOptions(mapped);
           // console.log('Set positions:', mapped);
         } else {
-          console.warn('API did not return array data:', res);
+          console.warn("API did not return array data:", res);
           setAllPositionOptions([]);
           setAvailablePositionOptions([]);
         }
       } catch (error) {
-        console.error('Error fetching positions:', error);
+        console.error("Error fetching positions:", error);
         setAllPositionOptions([]);
         setAvailablePositionOptions([]);
       } finally {
@@ -137,9 +136,41 @@ const CommitteeCompositionSettings = () => {
   function mapDepartmentsToOptions(departments) {
     if (!Array.isArray(departments)) return [];
     return departments.map((dep) => ({
-      label: dep.name,
+      label: dep.name + (dep.short_name ? ` (${dep.short_name})` : ""),
       value: dep.id,
+      short_name: dep.short_name,
+      code: dep.code,
+      ...dep,
     }));
+  }
+
+  // ดึง venues จาก venue_groups ของแต่ละ department ในรัฐวิสาหกิจ
+  function mapAllVenueOptionsFromDepartments(departments) {
+    let venues = [];
+    if (!Array.isArray(departments)) return [];
+    departments.forEach((dep) => {
+      if (Array.isArray(dep.venue_groups)) {
+        dep.venue_groups.forEach((vg) => {
+          if (Array.isArray(vg.venues)) {
+            venues = venues.concat(
+              vg.venues.map((venue) => ({
+                label:
+                  venue.name +
+                  (venue.short_name ? ` (${venue.short_name})` : ""),
+                value: venue.id,
+                short_name: venue.short_name,
+                code: venue.code,
+                isVenue: true,
+                venue_group: vg.group_name,
+                parent_department: dep.name,
+                ...venue,
+              }))
+            );
+          }
+        });
+      }
+    });
+    return venues;
   }
 
   useEffect(() => {
@@ -149,21 +180,41 @@ const CommitteeCompositionSettings = () => {
         if (Array.isArray(res?.res_data)) {
           const resData = res.res_data;
 
-          // ✅ filter ตามชื่อ group ตรงๆ
+          // --- รัฐวิสาหกิจ ---
           const stateEnterprise = resData.find((i) => i.name === "รัฐวิสาหกิจ");
-          const government = resData.find((i) => i.name === "ส่วนราชการ");
-          const others = resData.find((i) => i.name === "อื่น ๆ");
-
-          // set state ตาม group ที่ fix
-          setStateEnterpriseOptions(
-            mapDepartmentsToOptions(stateEnterprise?.departments)
+          const stateEnterpriseDepts = mapDepartmentsToOptions(
+            stateEnterprise?.departments
           );
+
+          // venues จากทุก department > venue_groups > venues
+          const stateEnterpriseVenues = mapAllVenueOptionsFromDepartments(
+            stateEnterprise?.departments
+          );
+
+          const stateEnterpriseOptionsCombined = [
+            ...stateEnterpriseDepts,
+            ...stateEnterpriseVenues,
+          ];
+
+          // log ดู options ของ รัฐวิสาหกิจ
+          console.log(
+            "รัฐวิสาหกิจ options (with venues):",
+            stateEnterpriseOptionsCombined
+          );
+
+          setStateEnterpriseOptions(stateEnterpriseOptionsCombined);
+
+          // --- ส่วนราชการ ---
+          const government = resData.find((i) => i.name === "ส่วนราชการ");
           setGovernmentOptions(
             mapDepartmentsToOptions(government?.departments)
           );
+
+          // --- อื่น ๆ ---
+          const others = resData.find((i) => i.name === "อื่น ๆ");
           setOtherOptions(mapDepartmentsToOptions(others?.departments));
 
-          // ✅ group อื่น ๆ (ที่ไม่ใช่ 3 อันแรก) 
+          // --- group อื่น ๆ (ที่ไม่ใช่ 3 อันแรก) ---
           const exclude = ["รัฐวิสาหกิจ", "ส่วนราชการ", "อื่น ๆ"];
           const otherGroups = resData
             .filter((g) => !exclude.includes(g.name))
@@ -172,7 +223,6 @@ const CommitteeCompositionSettings = () => {
               label: group.name,
               options: mapDepartmentsToOptions(group.departments),
             }));
-
           setOtherGroupOptions(otherGroups);
         } else {
           setStateEnterpriseOptions([]);
@@ -227,7 +277,9 @@ const CommitteeCompositionSettings = () => {
           newGroupMap[num] = group.group_id;
 
           let positionOption = allPositionOptions.find(
-            (p) => p.label === group.group_name || p.displayLabel === group.group_name
+            (p) =>
+              p.label === group.group_name ||
+              p.displayLabel === group.group_name
           );
 
           if (!positionOption) {
@@ -238,7 +290,7 @@ const CommitteeCompositionSettings = () => {
               value: customId,
               description: group.group_description || "",
               rawName: group.group_name,
-              sortOrder: 999 + idx
+              sortOrder: 999 + idx,
             };
             setAllPositionOptions((prev) => {
               if (prev.find((p) => p.value === positionOption.value))
@@ -350,7 +402,9 @@ const CommitteeCompositionSettings = () => {
         const usedValues = new Set();
         groups.forEach((group, idx) => {
           const positionOption = allPositionOptions.find(
-            (p) => p.label === group.group_name || p.displayLabel === group.group_name
+            (p) =>
+              p.label === group.group_name ||
+              p.displayLabel === group.group_name
           );
           if (positionOption) {
             usedValues.add(positionOption.value);
@@ -393,7 +447,6 @@ const CommitteeCompositionSettings = () => {
       return { ...prev, [sectionKey]: [...currentSelects, Date.now()] };
     });
   };
-
 
   const DepartmentButton = ({
     section,
@@ -523,7 +576,8 @@ const CommitteeCompositionSettings = () => {
       );
 
       // ใช้ label (ที่มี level) สำหรับ group_name
-      const groupName = positionObj?.label || positionObj?.displayLabel || "ไม่ระบุตำแหน่ง";
+      const groupName =
+        positionObj?.label || positionObj?.displayLabel || "ไม่ระบุตำแหน่ง";
       const description = positionObj?.description || "";
       const assignments = buildAssignmentsForBox(boxNumber);
 
@@ -609,29 +663,30 @@ const CommitteeCompositionSettings = () => {
   const getPositionOptionsForBox = (number) => {
     const currentVal = formData[`position_${number}`];
 
-    const optionsToReturn = !currentVal ? availablePositionOptions : (() => {
-      const currentOption = allPositionOptions.find(
-        (o) => o.value === currentVal
-      );
+    const optionsToReturn = !currentVal
+      ? availablePositionOptions
+      : (() => {
+          const currentOption = allPositionOptions.find(
+            (o) => o.value === currentVal
+          );
 
-      if (!currentOption) {
-        return availablePositionOptions;
-      }
+          if (!currentOption) {
+            return availablePositionOptions;
+          }
 
-      const existsInAvailable = availablePositionOptions.some(
-        (o) => o.value === currentVal
-      );
+          const existsInAvailable = availablePositionOptions.some(
+            (o) => o.value === currentVal
+          );
 
-      if (existsInAvailable) {
-        return availablePositionOptions;
-      }
+          if (existsInAvailable) {
+            return availablePositionOptions;
+          }
 
-      return [currentOption, ...availablePositionOptions];
-    })();
+          return [currentOption, ...availablePositionOptions];
+        })();
 
     return optionsToReturn;
   };
-
 
   const SignatoryBox = ({ number }) => {
     const saveState = boxSaveState[number] || {
@@ -686,7 +741,7 @@ const CommitteeCompositionSettings = () => {
               display: "flex",
               flexDirection: { xs: "column", md: "row" },
               width: "100%",
-              gap: 2, 
+              gap: 2,
             }}
           >
             <Box
@@ -750,11 +805,14 @@ const CommitteeCompositionSettings = () => {
             </Box>
           </Box>
 
-          <Box sx={{ width: "100%" ,  marginTop: "20px" }}>
+          <Box sx={{ width: "100%", marginTop: "20px" }}>
             <Grid container spacing={2} alignItems="flex-start">
               {/* หัวข้อเต็มแถว */}
               <Grid item xs={12}>
-                <Typography variant="h5" sx={{ fontWeight: "bold", color: "#2499FF" }}>
+                <Typography
+                  variant="h5"
+                  sx={{ fontWeight: "bold", color: "#2499FF" }}
+                >
                   หน่วยงานรับผิดชอบเรื่องร้องเรียนร้องทุกข์
                 </Typography>
               </Grid>
@@ -782,66 +840,71 @@ const CommitteeCompositionSettings = () => {
 
               {/* ขวา: รัฐวิสาหกิจ + อื่นๆ */}
               <Grid item xs={12} md={6}>
-              <Stack spacing={1.5}>
-                <Typography sx={{ fontWeight: "bold", color: "#2499FF" }}>
-                  รัฐวิสาหกิจ
-                </Typography>
+                <Stack spacing={1.5}>
+                  <Typography sx={{ fontWeight: "bold", color: "#2499FF" }}>
+                    รัฐวิสาหกิจ
+                  </Typography>
 
-                <SelectField
-                  label="เลือกรัฐวิสาหกิจ"
-                  options={stateEnterpriseOptions}
-                  value={formData[`state_enterprise_${number}`] || ""}
-                  onChange={handleInputChange}
-                  name={`state_enterprise_${number}`}
-                />
-                {renderAdditionalSelects("state_enterprise", number)}
-                <DepartmentButton
-                  section="state_enterprise"
-                  signatoryNumber={number}
-                  label="เพิ่มรัฐวิสาหกิจ"
-                />
+                  <SelectField
+                    label="เลือกรัฐวิสาหกิจ"
+                    options={stateEnterpriseOptions} // <-- ตอนนี้ options รวมทั้ง dept และ venue แล้ว
+                    value={formData[`state_enterprise_${number}`] || ""}
+                    onChange={handleInputChange}
+                    name={`state_enterprise_${number}`}
+                  />
+                  {renderAdditionalSelects("state_enterprise", number)}
+                  <DepartmentButton
+                    section="state_enterprise"
+                    signatoryNumber={number}
+                    label="เพิ่มรัฐวิสาหกิจ"
+                  />
 
-                <Typography sx={{ fontWeight: "bold", color: "#2499FF", mt: 0.5 }}>
-                  อื่นๆ
-                </Typography>
+                  <Typography
+                    sx={{ fontWeight: "bold", color: "#2499FF", mt: 0.5 }}
+                  >
+                    อื่นๆ
+                  </Typography>
 
-                <SelectField
-                  label="เลือกหน่วยงานอื่นๆ"
-                  options={otherOptions}
-                  value={formData[`other1_${number}`] || ""}
-                  onChange={handleInputChange}
-                  name={`other1_${number}`}
-                />
-                <Box>
-                  {Array.isArray(otherGroupOptions) && otherGroupOptions.length > 0 ? (
-                    otherGroupOptions.map((group) => (
+                  <SelectField
+                    label="เลือกหน่วยงานอื่นๆ"
+                    options={otherOptions}
+                    value={formData[`other1_${number}`] || ""}
+                    onChange={handleInputChange}
+                    name={`other1_${number}`}
+                  />
+                  <Box>
+                    {Array.isArray(otherGroupOptions) &&
+                    otherGroupOptions.length > 0 ? (
+                      otherGroupOptions.map((group) => (
+                        <SelectField
+                          key={group.groupName}
+                          label={group.label}
+                          options={group.options}
+                          value={
+                            formData[`other_${group.groupName}_${number}`] || ""
+                          }
+                          onChange={handleInputChange}
+                          name={`other_${group.groupName}_${number}`}
+                        />
+                      ))
+                    ) : (
                       <SelectField
-                        key={group.groupName}
-                        label={group.label}
-                        options={group.options}
-                        value={formData[`other_${group.groupName}_${number}`] || ""}
+                        label="เลือกหน่วยงานอื่นๆ (เพิ่มเติม)"
+                        options={otherOptions}
+                        value={formData[`other2_${number}`] || ""}
                         onChange={handleInputChange}
-                        name={`other_${group.groupName}_${number}`}
+                        name={`other2_${number}`}
                       />
-                    ))
-                  ) : (
-                    <SelectField
-                      label="เลือกหน่วยงานอื่นๆ (เพิ่มเติม)"
-                      options={otherOptions}
-                      value={formData[`other2_${number}`] || ""}
-                      onChange={handleInputChange}
-                      name={`other2_${number}`}
-                    />
-                  )}
-                </Box>
-                {renderAdditionalSelects("other", number)}
-                <DepartmentButton
-                  section="other"
-                  signatoryNumber={number}
-                  label="เพิ่มหน่วยงาน"
-                />
-              </Stack>
-            </Grid>
+                    )}
+                  </Box>
+                  {renderAdditionalSelects("other", number)}
+                  <DepartmentButton
+                    section="other"
+                    signatoryNumber={number}
+                    label="เพิ่มหน่วยงาน"
+                  />
+                </Stack>
+              </Grid>
             </Grid>
           </Box>
 
