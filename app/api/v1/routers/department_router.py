@@ -91,9 +91,9 @@ async def create_department_endpoint(
         db_dept = create_department(db, data)
 
         return format_response("0001", {
-            "id": db_dept.id,
-            "code": db_dept.code,
-            "created_at": db_dept.created_at
+            "id": db_dept["id"],
+            "code": db_dept["code"],
+            "created_at": db_dept["created_at"]
         })
 
     except DuplicateKeyError as e:
@@ -119,9 +119,9 @@ async def update_department_endpoint(
             raise HTTPException(status_code=404, detail=f"Department with ID {department_id} not found")
 
         response_data = {
-            "id": db_department.id,
-            "code": db_department.code,
-            "updated_at": db_department.updated_at
+            "id": db_department["id"],
+            "code": db_department["code"],
+            "updated_at": db_department["updated_at"]
         }
 
         return format_response("0002", response_data)
