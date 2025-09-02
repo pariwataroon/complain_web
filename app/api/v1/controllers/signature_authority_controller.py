@@ -35,7 +35,10 @@ def get_signature_authorities(db: Session, skip: int = 0, limit: int = 100):
                 joinedload(SignatureAuthority.group)
             )\
             .filter(SignatureAuthority.is_active == True)\
-            .order_by(SignatureAuthority.created_at.desc())\
+            .order_by(
+                SignatureAuthority.group_signature_authorities_id.asc().nulls_last(),
+                SignatureAuthority.created_at.asc()
+            )\
             .offset(skip).limit(limit).all()
         
         # จัดกลุ่มข้อมูล
@@ -126,9 +129,15 @@ def get_signature_authorities(db: Session, skip: int = 0, limit: int = 100):
             group_data["total_members"] = len(group_data["users"])
             group_data["total_departments"] = len(group_data["departments"])
         
+        # เรียงกลุ่มตาม created_at เพื่อให้สอดคล้องกับการเรียงลำดับใน query
+        sorted_groups = sorted(
+            grouped_authorities.values(), 
+            key=lambda x: x["created_at"]
+        )
+        
         # รวมผลลัพธ์
         final_result = {
-            "groups": list(grouped_authorities.values()),
+            "groups": sorted_groups,
             "individuals": individual_authorities,
             "summary": {
                 "total_groups": len(grouped_authorities),
@@ -438,7 +447,7 @@ def get_users_with_signature_by_department_group(db: Session, skip: int = 0, lim
         # ดึงข้อมูลผู้มีอำนาจลงนามทั้งหมด
         authorities = db.query(SignatureAuthority)\
             .options(
-                joinedload(SignatureAuthority.user),
+                joinedload(SignatureAuthority.user).joinedload(User.title),
                 joinedload(SignatureAuthority.department).joinedload(Department.group)
             )\
             .filter(SignatureAuthority.is_active == True)\
