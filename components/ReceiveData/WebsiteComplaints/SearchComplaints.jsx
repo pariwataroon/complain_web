@@ -408,46 +408,92 @@ const SearchComplaints = () => {
     }
   }, [id]);
 
-  useEffect(() => {
-    // เงื่อนไข: ต้องมีทั้ง defaultData และ complaintTypes (และข้อมูลใน general)
-    if (
-      defaultData?.step3?.general?.complaintType &&
-      complaintTypes.length > 0
-    ) {
-      const step3General = defaultData.step3.general;
-      const complaintTypeName = step3General.complaintType;
-      const matchedType = complaintTypes.find(
-        (type) => type.name === complaintTypeName
-      );
-      const complaintTypeId = matchedType ? matchedType.id : "";
+// preload เมื่อ defaultData มา
+useEffect(() => {
+  if (defaultData?.step3?.general || defaultData?.assignment_form) {
+    const step3General = defaultData?.step3?.general || {};
+    const assignmentForm = defaultData?.assignment_form || {};
 
-      // Map complaintChannel ด้วย
-      let complaintChannelId = "";
-      if (step3General.complaintChannel && complaintChannels.length > 0) {
-        const matchedChannel = complaintChannels.find(
-          (channel) => channel.name === step3General.complaintChannel
-        );
-        complaintChannelId = matchedChannel ? matchedChannel.id : "";
-      }
+    const typeId =
+      step3General.complaint_type_id || assignmentForm.complaint_type_id || "";
+    const subTypeId =
+      step3General.complaint_subtype_id ||
+      assignmentForm.complaint_subtype_id ||
+      "";
+    const subTypeName =
+      step3General.complaint_subtype_data?.name ||
+      assignmentForm.complaint_subtype_name ||
+      "";
 
-      // Reset form ด้วย id ที่ map แล้ว
-      step3Methods.reset({
-        ...step3General,
-        complaintTypeId: String(complaintTypeId),
-        complaintSubType: step3General.complaintSubType || "",
-        complaintChannel: complaintChannelId || "",
-        complaint_filing_type: step3General.complaint_filing_type || "new",
-      });
+    // reset ค่า
+    step3Methods.reset({
+      complaintTypeId: typeId,
+      complaintSubType: subTypeId, // ใส่ id ไปก่อน
+      subject: step3General.subject || assignmentForm.subject || "",
+      description: step3General.description || "",
+      incidentDate: step3General.incidentDate
+        ? new Date(step3General.incidentDate)
+        : "",
+      attachment: step3General.attachment || [],
 
-      setSelectedComplaintTypeId(complaintTypeId);
+      complaintChannel: assignmentForm.complaint_channel_id || "",
+      complaint_filing_type: assignmentForm.complaint_filing_type || "new",
 
-      // autoload sub types ถ้ามี id เดิม
-      if (complaintTypeId) {
-        fetchSubComplaintTypes(complaintTypeId);
-      }
+      referenceNumber1: assignmentForm.reference_number || "",
+      referenceDate2: assignmentForm.reference_date
+        ? new Date(assignmentForm.reference_date)
+        : "",
+      referenceNumber2: assignmentForm.reference_number2 || "",
+      referenceDate2Optional: assignmentForm.reference_date2
+        ? new Date(assignmentForm.reference_date2)
+        : "",
+      referenceNumber3: assignmentForm.reference_number3 || "",
+      referenceDate3: assignmentForm.reference_date3
+        ? new Date(assignmentForm.reference_date3)
+        : "",
+      referenceNumber4: assignmentForm.reference_number4 || "",
+      referenceDate4: assignmentForm.reference_date4
+        ? new Date(assignmentForm.reference_date4)
+        : "",
+      documentNumber: assignmentForm.document_number || "",
+      documentDate: assignmentForm.document_date
+        ? new Date(assignmentForm.document_date)
+        : "",
+      senderAgency: assignmentForm.agency_sender || "",
+      securityLevel: assignmentForm.confidentiality_level || "normal",
+      urgencyLevel: assignmentForm.urgency_level || "low",
+    });
+
+    // โหลด subtypes ถ้ามี typeId
+    if (typeId) {
+      fetchSubComplaintTypes(typeId);
+      setSelectedComplaintTypeId(typeId);
     }
-    // eslint-disable-next-line
-  }, [defaultData, complaintTypes, complaintChannels]);
+  }
+}, [defaultData, complaintTypes, complaintChannels]);
+
+
+// effect ที่สอง: set ค่า complaintSubType หลัง subComplaintTypes โหลด
+useEffect(() => {
+  if (!subComplaintTypes.length) return;
+
+  const subTypeId =
+    defaultData?.step3?.general?.complaint_subtype_id ||
+    defaultData?.assignment_form?.complaint_subtype_id;
+  const subTypeName =
+    defaultData?.step3?.general?.complaint_subtype_data?.name ||
+    defaultData?.assignment_form?.complaint_subtype_name;
+
+  if (subTypeId) {
+    step3Methods.setValue("complaintSubType", subTypeId);
+  } else if (subTypeName) {
+    const matched = subComplaintTypes.find((s) => s.name === subTypeName);
+    if (matched) {
+      step3Methods.setValue("complaintSubType", matched.id);
+    }
+  }
+}, [subComplaintTypes, defaultData]);
+
 
   const fetchComplaints = async (id) => {
     setLoading(true);
@@ -576,7 +622,7 @@ const SearchComplaints = () => {
   const handleSubmit = async () => {
     const fieldsToValidate = [
       "complaintTypeId",
-      "complaintSubType",
+      // "complaintSubType",
       "complaintChannel",
       "subject",
       "referenceNumber1",
@@ -988,19 +1034,17 @@ const SearchComplaints = () => {
 
                       <div className={styles.fieldGroup}>
                         <label>
-                          ประเภทเรื่องย่อย{" "}
-                          <span className={styles.required}>*</span>
+                          ประเภทเรื่องย่อย
                         </label>
                         <select
-                          {...step3Methods.register("complaintSubType", {
-                            required: "กรุณาเลือกประเภทเรื่องย่อย",
-                          })}
-                          style={getErrorStyle("complaintSubType")}
-                          disabled={
-                            !isValidId(selectedComplaintTypeId) ||
-                            loadingSubTypes
-                          }
-                        >
+  {...step3Methods.register("complaintSubType")}
+  style={getErrorStyle("complaintSubType")}
+  disabled={
+    !isValidId(selectedComplaintTypeId) ||
+    loadingSubTypes
+  }
+>
+
                           <option value="">
                             {!isValidId(selectedComplaintTypeId)
                               ? "กรุณาเลือกประเภทเรื่องร้องเรียนก่อน"
@@ -1016,7 +1060,7 @@ const SearchComplaints = () => {
                             </option>
                           ))}
                         </select>
-                        {getErrorMessage("complaintSubType")}
+                        {/* {getErrorMessage("complaintSubType")} */}
                       </div>
 
                       {/* แก้ไขส่วนนี้ - เพิ่ม validation */}
