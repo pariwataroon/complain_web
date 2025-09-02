@@ -781,10 +781,9 @@ useEffect(() => {
                                   color="info"
                                   sx={{ mr: 0.5 }}
                                 />
-                                <span
-                                  style={{ fontWeight: 500 }}
-                                >
-                                  {item.reference_number}
+                                 <span style={{ fontWeight: 500 }}>
+                                  {item.complaint_number}
+                                  <span style={{ marginLeft: 8 }}>{item.subject}</span>
                                 </span>
                               </ListItemButton>
                             </ListItem>

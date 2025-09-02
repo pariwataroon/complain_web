@@ -1037,14 +1037,13 @@ useEffect(() => {
                           ประเภทเรื่องย่อย
                         </label>
                         <select
-  {...step3Methods.register("complaintSubType")}
-  style={getErrorStyle("complaintSubType")}
-  disabled={
-    !isValidId(selectedComplaintTypeId) ||
-    loadingSubTypes
-  }
->
-
+                          {...step3Methods.register("complaintSubType")}
+                          style={getErrorStyle("complaintSubType")}
+                          disabled={
+                            !isValidId(selectedComplaintTypeId) ||
+                            loadingSubTypes
+                          }
+                        >
                           <option value="">
                             {!isValidId(selectedComplaintTypeId)
                               ? "กรุณาเลือกประเภทเรื่องร้องเรียนก่อน"
@@ -1060,7 +1059,7 @@ useEffect(() => {
                             </option>
                           ))}
                         </select>
-                        {/* {getErrorMessage("complaintSubType")} */}
+                        {getErrorMessage("complaintSubType")}
                       </div>
 
                       {/* แก้ไขส่วนนี้ - เพิ่ม validation */}

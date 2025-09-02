@@ -528,6 +528,60 @@ const SearchComplaints = () => {
     }
   };
 
+  const extractDateFromSarabun = (text) => {
+    if (!text) return null;
+
+    const m = text.match(/(\d{4})[-/ ]?(\d{2})[-/ ]?(\d{2})/);
+    if (!m) return null;
+
+    let year = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10);
+    const day = parseInt(m[3], 10);
+
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+    // ถ้าเป็นปี พ.ศ. แปลงเป็น ค.ศ.
+    if (year >= 2400) year -= 543;
+
+    const dt = new Date(year, month - 1, day);
+
+    // ตรวจซ้ำให้ชัวร์
+    if (
+      dt.getFullYear() !== year ||
+      dt.getMonth() !== month - 1 ||
+      dt.getDate() !== day
+    ) {
+      return null;
+    }
+    return dt;
+  };
+
+  const onRefNo4Change = (e) => {
+    handleFieldChange("referenceNumber4");
+    const v = e && e.target ? e.target.value : "";
+    const dt = extractDateFromSarabun(v);
+    if (dt) {
+      step3Methods.setValue("referenceDate4", dt, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+      setValidationErrors((prev) => {
+        if (!prev || !prev.referenceDate4) return prev || {};
+        const n = { ...prev };
+        delete n.referenceDate4;
+        return n;
+      });
+    }
+  };
+
+  useEffect(() => {
+  const v = step3Methods.getValues("referenceNumber4");
+  const dt = extractDateFromSarabun(v);
+  if (dt) {
+    step3Methods.setValue("referenceDate4", dt);
+  }
+}, [defaultData, previewData]);
+
   const validateForm = () => {
     const errors = {};
     let hasErrors = false;
@@ -545,24 +599,24 @@ const SearchComplaints = () => {
       hasErrors = true;
     }
 
-    // ประเภทเรื่องย่อย *
-    if (
-      !step3Data.complaintSubType ||
-      (typeof step3Data.complaintSubType === "string" &&
-        step3Data.complaintSubType.trim() === "")
-    ) {
-      errors.complaintSubType = "กรุณาเลือกประเภทเรื่องย่อย";
-      hasErrors = true;
-    }
+    // // ประเภทเรื่องย่อย *
+    // if (
+    //   !step3Data.complaintSubType ||
+    //   (typeof step3Data.complaintSubType === "string" &&
+    //     step3Data.complaintSubType.trim() === "")
+    // ) {
+    //   errors.complaintSubType = "กรุณาเลือกประเภทเรื่องย่อย";
+    //   hasErrors = true;
+    // }
 
-    // เรื่อง *
-    if (
-      !step3Data.subject ||
-      (typeof step3Data.subject === "string" && step3Data.subject.trim() === "")
-    ) {
-      errors.subject = "กรุณากรอกเรื่อง";
-      hasErrors = true;
-    }
+    // // เรื่อง *
+    // if (
+    //   !step3Data.subject ||
+    //   (typeof step3Data.subject === "string" && step3Data.subject.trim() === "")
+    // ) {
+    //   errors.subject = "กรุณากรอกเรื่อง";
+    //   hasErrors = true;
+    // }
 
     // เลข สป.กค. *
     if (
@@ -1144,28 +1198,17 @@ const SearchComplaints = () => {
                         )}
                       </div>
                       <div className={styles.fieldGroup}>
-                        <label>
-                          ประเภทเรื่องย่อย{" "}
-                          <span className={styles.required}>*</span>
-                        </label>
+                        <label>ประเภทเรื่องย่อย</label>
                         <select
-                          {...step3Methods.register("complaintSubType", {
-                            onChange: () =>
-                              handleFieldChange("complaintSubType"),
-                          })}
-                          className={
-                            hasFieldError("complaintSubType")
-                              ? styles.errorField
-                              : ""
-                          }
-                          disabled={!complaintType || subComplaintTypesLoading} // <---- **ต้องแก้ตรงนี้**
+                          {...step3Methods.register("complaintSubType")}
+                          disabled={!complaintType || subComplaintTypesLoading}
                         >
                           <option value="">
                             {!complaintType
                               ? "กรุณาเลือกประเภทเรื่องร้องเรียนก่อน"
                               : subComplaintTypesLoading
                               ? "กำลังโหลด..."
-                              : "เลือกประเภทเรื่องย่อย"}
+                              : "เลือกประเภทเรื่องย่อย (ถ้ามี)"}
                           </option>
                           {subComplaintTypes.length > 0 &&
                             subComplaintTypes.map((type) => (
@@ -1174,11 +1217,6 @@ const SearchComplaints = () => {
                               </option>
                             ))}
                         </select>
-                        {hasFieldError("complaintSubType") && (
-                          <span className={styles.errorText}>
-                            {getFieldError("complaintSubType")}
-                          </span>
-                        )}
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>ช่องทางเรื่องร้องเรียน</label>
@@ -1315,26 +1353,18 @@ const SearchComplaints = () => {
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>
-                          เลข สรร. (สารบัญ){" "}
-                          <span className={styles.required}>*</span>
+                          เลข สรร. (สารบัญ) <span className={styles.required}>*</span>
                         </label>
                         <input
                           type="text"
                           {...step3Methods.register("referenceNumber4", {
-                            onChange: () =>
-                              handleFieldChange("referenceNumber4"),
+                            onChange: onRefNo4Change, 
                           })}
-                          className={
-                            hasFieldError("referenceNumber4")
-                              ? styles.errorField
-                              : ""
-                          }
+                          className={hasFieldError("referenceNumber4") ? styles.errorField : ""}
                           placeholder="กรุณากรอกเลข สรร. (สารบัญ)"
                         />
                         {hasFieldError("referenceNumber4") && (
-                          <span className={styles.errorText}>
-                            {getFieldError("referenceNumber4")}
-                          </span>
+                          <span className={styles.errorText}>{getFieldError("referenceNumber4")}</span>
                         )}
                       </div>
                       <div className={styles.fieldGroupDate}>
@@ -1381,7 +1411,7 @@ const SearchComplaints = () => {
                           className={styles.niceSelect}
                           {...step3Methods.register("senderAgency")}
                         >
-                          <option value="">เลือกตำแหน่ง</option>
+                          <option value="">เลือกหน่วยงาน</option>
                           {positions.map((position) => (
                             <option key={position.id} value={position.id}>
                               {position.name}
