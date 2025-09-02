@@ -36,6 +36,7 @@ async def read_users(
 @router.get("/{user_id}", response_model=FormatResponseModel)
 async def read_user(
     user_id: UUID, 
+    include_address: bool = False,
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
@@ -58,7 +59,11 @@ async def read_user(
             )
     
     # ดึงข้อมูลผู้ใช้พร้อมกับรายละเอียดบทบาทและคำนำหน้า
-    user = get_user_with_roles_and_titles(db, user_id)
+    if include_address:
+        from app.api.v1.controllers.user_controller import get_user_with_roles_titles_and_address
+        user = get_user_with_roles_titles_and_address(db, user_id)
+    else:
+        user = get_user_with_roles_and_titles(db, user_id)
     
     if user is None:
         raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")
@@ -338,12 +343,13 @@ async def get_user_counts_by_role(
 async def get_detailed_users_by_roles_endpoint(
     skip: int = 0,
     limit: int = 100,
+    include_address_summary: bool = False,
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("setting_users"))
 ):
     from app.api.v1.controllers.user_controller import get_detailed_users_by_roles
     
-    detailed_data = get_detailed_users_by_roles(db, skip=skip, limit=limit)
+    detailed_data = get_detailed_users_by_roles(db, skip=skip, limit=limit, include_address_summary=include_address_summary)
     return format_response("0000", detailed_data)
 
 @router.get("/blocked", response_model=FormatResponseModel)
