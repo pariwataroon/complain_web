@@ -719,6 +719,9 @@ def get_users_count_by_roles(db: Session):
 
 def get_detailed_users_by_roles(db: Session, role_id: UUID = None, skip: int = 0, limit: int = 100):
     from models.role import Role
+    from models.comp_provinces import Province
+    from models.comp_amphures import Amphure
+    from models.comp_districts import District
     
     # สร้าง query พื้นฐานสำหรับ roles
     roles_query = db.query(Role).filter(Role.is_active == True).order_by(Role.order_index)
@@ -785,6 +788,95 @@ def get_detailed_users_by_roles(db: Session, role_id: UUID = None, skip: int = 0
 
                 user_data["title_name"] = title_name
                 user_data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
+                
+                # เพิ่มข้อมูลที่อยู่แบบรายละเอียด สำหรับที่อยู่หลัก
+                address_details = {}
+                if user.province_id:
+                    province = db.query(Province).filter(Province.id == user.province_id).first()
+                    if province:
+                        address_details["province_id"] = province.id
+                        address_details["province_name"] = province.name_th
+                        address_details["province_code"] = province.code
+                
+                if user.district_id:
+                    amphure = db.query(Amphure).filter(Amphure.id == user.district_id).first()
+                    if amphure:
+                        address_details["amphure_id"] = amphure.id
+                        address_details["amphure_name"] = amphure.name_th
+                        address_details["amphure_code"] = amphure.code
+                
+                if user.subdistrict_id:
+                    district = db.query(District).filter(District.id == user.subdistrict_id).first()
+                    if district:
+                        address_details["district_id"] = district.id
+                        address_details["district_name"] = district.name_th
+                        address_details["district_zipcode"] = district.zip_code
+                
+                if user.zipcode:
+                    address_details["zipcode"] = user.zipcode
+                
+                # สร้างที่อยู่แบบเต็ม
+                full_address_parts = []
+                if user.address:
+                    full_address_parts.append(user.address)
+                if address_details.get("district_name"):
+                    full_address_parts.append(f"ตำบล{address_details['district_name']}")
+                if address_details.get("amphure_name"):
+                    full_address_parts.append(f"อำเภอ{address_details['amphure_name']}")
+                if address_details.get("province_name"):
+                    full_address_parts.append(f"จังหวัด{address_details['province_name']}")
+                if user.zipcode:
+                    full_address_parts.append(str(user.zipcode))
+                
+                address_details["full_address"] = " ".join(full_address_parts) if full_address_parts else ""
+                user_data["address_details"] = address_details
+                
+                # เพิ่มข้อมูลที่อยู่อื่น (ถ้ามี)
+                address_other_details = {}
+                if user.province2_id:
+                    province2 = db.query(Province).filter(Province.id == user.province2_id).first()
+                    if province2:
+                        address_other_details["province_id"] = province2.id
+                        address_other_details["province_name"] = province2.name_th
+                        address_other_details["province_code"] = province2.code
+                
+                if user.district2_id:
+                    amphure2 = db.query(Amphure).filter(Amphure.id == user.district2_id).first()
+                    if amphure2:
+                        address_other_details["amphure_id"] = amphure2.id
+                        address_other_details["amphure_name"] = amphure2.name_th
+                        address_other_details["amphure_code"] = amphure2.code
+                
+                if user.subdistrict2_id:
+                    district2 = db.query(District).filter(District.id == user.subdistrict2_id).first()
+                    if district2:
+                        address_other_details["district_id"] = district2.id
+                        address_other_details["district_name"] = district2.name_th
+                        address_other_details["district_zipcode"] = district2.zip_code
+                
+                if user.zipcode2:
+                    address_other_details["zipcode"] = user.zipcode2
+                
+                # สร้างที่อยู่อื่นแบบเต็ม
+                full_address_other_parts = []
+                if user.address_other:
+                    full_address_other_parts.append(user.address_other)
+                if address_other_details.get("district_name"):
+                    full_address_other_parts.append(f"ตำบล{address_other_details['district_name']}")
+                if address_other_details.get("amphure_name"):
+                    full_address_other_parts.append(f"อำเภอ{address_other_details['amphure_name']}")
+                if address_other_details.get("province_name"):
+                    full_address_other_parts.append(f"จังหวัด{address_other_details['province_name']}")
+                if user.zipcode2:
+                    full_address_other_parts.append(str(user.zipcode2))
+                
+                address_other_details["full_address"] = " ".join(full_address_other_parts) if full_address_other_parts else ""
+                user_data["address_other_details"] = address_other_details
+                
+                # เพิ่มข้อมูลเพิ่มเติมเกี่ยวกับที่อยู่
+                user_data["sync_address"] = user.sync_address
+                user_data["group_type"] = user.group_type or ""
+                user_data["profile_image"] = user.profile_image or ""
                 
                 users_data.append(user_data)
         
