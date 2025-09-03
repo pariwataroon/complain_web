@@ -15,7 +15,8 @@ from app.api.v1.controllers.dashboard_controller import get_years_api, get_full_
 # นำเข้า controller สำหรับ dashboard
 from app.api.v1.controllers.dashboard_controller import (
     get_staff_workload,
-    get_staff_performance
+    get_staff_performance,
+    get_complaint_summary_flexible
 )
 
 router = APIRouter(
@@ -108,19 +109,34 @@ async def get_map_json_endpoint(
     
 @router.get("/summary", response_model=FormatResponseModel)
 async def get_complaint_summary_endpoint(
+    period_type: str = Query("yearly", description="ประเภทของช่วงเวลา: monthly, quarterly, yearly, compare"),
+    year: Optional[int] = Query(None, description="ปี ค.ศ. สำหรับการค้นหา (ถ้าไม่ระบุ ใช้ปีปัจจุบัน)"),
+    month: Optional[int] = Query(None, description="เดือน (1-12) สำหรับ period_type=monthly"),
+    quarter: Optional[int] = Query(None, description="ไตรมาส (1-4) สำหรับ period_type=quarterly"),
+    compare_year: Optional[int] = Query(None, description="ปีที่ต้องการเปรียบเทียบ สำหรับ period_type=compare"),
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("dashboard"))
 ):
     """
-    สรุปเรื่องร้องเรียนแบบสั้น:
-    - total: ทั้งหมดในปีปัจจุบัน (ตาม BKK)
-    - in_progress: สถานะที่ยังดำเนินการ
-    - completed: COMPLETED + REVIEWED
-    ช่วงเวลาเหมือน get_full_map_json_from_db (BKK-year -> UTC)
+    สรุปเรื่องร้องเรียนแบบยืดหยุ่น:
+    - period_type: monthly, quarterly, yearly, compare
+    - monthly: ข้อมูลรายเดือน (ต้องระบุ year และ month)
+    - quarterly: ข้อมูลรายไตรมาส (ต้องระบุ year และ quarter)
+    - yearly: ข้อมูลรายปี (ถ้าไม่ระบุ year ใช้ปีปัจจุบัน)
+    - compare: เปรียบเทียบ 2 ปี (ต้องระบุ year และ compare_year)
     """
     try:
-        result = get_complaint_summary_bkk_year(db)
+        result = get_complaint_summary_flexible(
+            db, 
+            period_type=period_type,
+            year=year,
+            month=month,
+            quarter=quarter,
+            compare_year=compare_year
+        )
         return format_response("0000", result)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         import traceback
         traceback.print_exc()

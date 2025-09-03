@@ -1249,6 +1249,504 @@ def _bkk_to_utc_range(date_from_bkk: Optional[datetime], date_to_bkk: Optional[d
     return bkk_from, bkk_to, utc_from, utc_to
 
 
+def get_complaint_summary_flexible(
+    db: Session,
+    period_type: str = "yearly",
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+    quarter: Optional[int] = None,
+    compare_year: Optional[int] = None
+) -> Dict[str, Any]:
+    """
+    สรุปเรื่องร้องเรียนแบบยืดหยุ่น รองรับ 4 รูปแบบ:
+    1. monthly: รายเดือน
+    2. quarterly: รายไตรมาส  
+    3. yearly: รายปี
+    4. compare: เปรียบเทียบ 2 ปี
+    """
+    # เวลาไทย
+    tz_bkk = ZoneInfo("Asia/Bangkok") if ZoneInfo else None
+    now_bkk = datetime.now(tz_bkk) if tz_bkk else datetime.now()
+    
+    if period_type == "yearly":
+        return _get_yearly_summary(db, year, now_bkk, tz_bkk)
+    elif period_type == "monthly":
+        return _get_monthly_summary(db, year, month, now_bkk, tz_bkk)
+    elif period_type == "quarterly":
+        return _get_quarterly_summary(db, year, quarter, now_bkk, tz_bkk)
+    elif period_type == "compare":
+        return _get_compare_summary(db, year, compare_year, now_bkk, tz_bkk)
+    else:
+        raise ValueError(f"ไม่รองรับ period_type: {period_type}")
+
+def _get_yearly_summary(db: Session, year: Optional[int], now_bkk: datetime, tz_bkk) -> Dict[str, Any]:
+    """สรุปข้อมูลรายปี"""
+    current_year_g = year if year else now_bkk.year
+    
+    # กรอบเวลาปีปัจจุบัน
+    bkk_start = datetime(current_year_g, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(current_year_g, 1, 1, 0, 0, 0)
+    bkk_end = datetime(current_year_g, 12, 31, 23, 59, 59, 999999, tzinfo=tz_bkk) if tz_bkk else datetime(current_year_g, 12, 31, 23, 59, 59, 999999)
+    utc_start = bkk_start.astimezone(timezone.utc) if bkk_start.tzinfo else bkk_start
+    utc_end = bkk_end.astimezone(timezone.utc) if bkk_end.tzinfo else bkk_end
+    
+    # กรอบเวลาปีก่อนหน้า
+    prev_year = current_year_g - 1
+    bkk_prev_start = datetime(prev_year, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(prev_year, 1, 1, 0, 0, 0)
+    bkk_prev_end = datetime(prev_year, 12, 31, 23, 59, 59, 999999, tzinfo=tz_bkk) if tz_bkk else datetime(prev_year, 12, 31, 23, 59, 59, 999999)
+    utc_prev_start = bkk_prev_start.astimezone(timezone.utc) if bkk_prev_start.tzinfo else bkk_prev_start
+    utc_prev_end = bkk_prev_end.astimezone(timezone.utc) if bkk_prev_end.tzinfo else bkk_prev_end
+    
+    # นับข้อมูลปีปัจจุบัน
+    current_counts = _count_complaints_by_status(db, utc_start, utc_end)
+    
+    # นับข้อมูลปีก่อนหน้า
+    prev_counts = _count_complaints_by_status(db, utc_prev_start, utc_prev_end)
+    
+    # คำนวณ YoY
+    yoy_data = _calculate_yoy_comparison(current_counts, prev_counts)
+    
+    # กราฟรายเดือนของปีปัจจุบัน
+    monthly_chart = _get_monthly_chart_data(db, current_year_g, tz_bkk)
+    
+    return {
+        "period_type": "yearly",
+        "year": current_year_g,
+        "date_range_bangkok": {
+            "from": bkk_start.isoformat(),
+            "to": bkk_end.isoformat()
+        },
+        "date_range_utc": {
+            "from": utc_start.isoformat(),
+            "to": utc_end.isoformat()
+        },
+        "summary": {
+            "total": int(current_counts["total"]),
+            "in_progress": int(current_counts["in_progress"]),
+            "completed": int(current_counts["completed"]),
+            "yoy": {
+                "compare_with_year": prev_year,
+                "total": yoy_data["total"],
+                "in_progress": yoy_data["in_progress"],
+                "completed": yoy_data["completed"]
+            }
+        },
+        "chart_data": {
+            "monthly_breakdown": monthly_chart
+        }
+    }
+
+def _get_monthly_summary(db: Session, year: Optional[int], month: Optional[int], now_bkk: datetime, tz_bkk) -> Dict[str, Any]:
+    """สรุปข้อมูลรายเดือน"""
+    current_year = year if year else now_bkk.year
+    current_month = month if month else now_bkk.month
+    
+    if not (1 <= current_month <= 12):
+        raise ValueError("เดือนต้องอยู่ระหว่าง 1-12")
+    
+    # กรอบเวลาเดือนปัจจุบัน
+    bkk_start = datetime(current_year, current_month, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(current_year, current_month, 1, 0, 0, 0)
+    
+    # วันสุดท้ายของเดือน
+    if current_month == 12:
+        next_month_start = datetime(current_year + 1, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(current_year + 1, 1, 1, 0, 0, 0)
+    else:
+        next_month_start = datetime(current_year, current_month + 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(current_year, current_month + 1, 1, 0, 0, 0)
+    
+    bkk_end = next_month_start - timedelta(microseconds=1)
+    utc_start = bkk_start.astimezone(timezone.utc) if bkk_start.tzinfo else bkk_start
+    utc_end = bkk_end.astimezone(timezone.utc) if bkk_end.tzinfo else bkk_end
+    
+    # เดือนเดียวกันของปีก่อน
+    prev_year = current_year - 1
+    bkk_prev_start = datetime(prev_year, current_month, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(prev_year, current_month, 1, 0, 0, 0)
+    if current_month == 12:
+        prev_next_month_start = datetime(prev_year + 1, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(prev_year + 1, 1, 1, 0, 0, 0)
+    else:
+        prev_next_month_start = datetime(prev_year, current_month + 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(prev_year, current_month + 1, 1, 0, 0, 0)
+    
+    bkk_prev_end = prev_next_month_start - timedelta(microseconds=1)
+    utc_prev_start = bkk_prev_start.astimezone(timezone.utc) if bkk_prev_start.tzinfo else bkk_prev_start
+    utc_prev_end = bkk_prev_end.astimezone(timezone.utc) if bkk_prev_end.tzinfo else bkk_prev_end
+    
+    # นับข้อมูล
+    current_counts = _count_complaints_by_status(db, utc_start, utc_end)
+    prev_counts = _count_complaints_by_status(db, utc_prev_start, utc_prev_end)
+    
+    # คำนวณ YoY
+    yoy_data = _calculate_yoy_comparison(current_counts, prev_counts)
+    
+    # กราฟรายวันของเดือน
+    daily_chart = _get_daily_chart_data(db, current_year, current_month, tz_bkk)
+    
+    return {
+        "period_type": "monthly",
+        "year": current_year,
+        "month": current_month,
+        "date_range_bangkok": {
+            "from": bkk_start.isoformat(),
+            "to": bkk_end.isoformat()
+        },
+        "date_range_utc": {
+            "from": utc_start.isoformat(),
+            "to": utc_end.isoformat()
+        },
+        "summary": {
+            "total": int(current_counts["total"]),
+            "in_progress": int(current_counts["in_progress"]),
+            "completed": int(current_counts["completed"]),
+            "yoy": {
+                "compare_with_period": f"{prev_year}-{current_month:02d}",
+                "total": yoy_data["total"],
+                "in_progress": yoy_data["in_progress"],
+                "completed": yoy_data["completed"]
+            }
+        },
+        "chart_data": {
+            "daily_breakdown": daily_chart
+        }
+    }
+
+def _get_quarterly_summary(db: Session, year: Optional[int], quarter: Optional[int], now_bkk: datetime, tz_bkk) -> Dict[str, Any]:
+    """สรุปข้อมูลรายไตรมาส"""
+    current_year = year if year else now_bkk.year
+    current_quarter = quarter if quarter else ((now_bkk.month - 1) // 3) + 1
+    
+    if not (1 <= current_quarter <= 4):
+        raise ValueError("ไตรมาสต้องอยู่ระหว่าง 1-4")
+    
+    # กำหนดช่วงเดือนของไตรมาส
+    quarter_months = {
+        1: (1, 3),   # Q1: มกราคม-มีนาคม
+        2: (4, 6),   # Q2: เมษายน-มิถุนายน
+        3: (7, 9),   # Q3: กรกฎาคม-กันยายน
+        4: (10, 12)  # Q4: ตุลาคม-ธันวาคม
+    }
+    
+    start_month, end_month = quarter_months[current_quarter]
+    
+    # กรอบเวลาไตรมาสปัจจุบัน
+    bkk_start = datetime(current_year, start_month, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(current_year, start_month, 1, 0, 0, 0)
+    
+    # วันสุดท้ายของไตรมาส
+    if end_month == 12:
+        next_quarter_start = datetime(current_year + 1, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(current_year + 1, 1, 1, 0, 0, 0)
+    else:
+        next_quarter_start = datetime(current_year, end_month + 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(current_year, end_month + 1, 1, 0, 0, 0)
+    
+    bkk_end = next_quarter_start - timedelta(microseconds=1)
+    utc_start = bkk_start.astimezone(timezone.utc) if bkk_start.tzinfo else bkk_start
+    utc_end = bkk_end.astimezone(timezone.utc) if bkk_end.tzinfo else bkk_end
+    
+    # ไตรมาสเดียวกันของปีก่อน
+    prev_year = current_year - 1
+    bkk_prev_start = datetime(prev_year, start_month, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(prev_year, start_month, 1, 0, 0, 0)
+    if end_month == 12:
+        prev_next_quarter_start = datetime(prev_year + 1, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(prev_year + 1, 1, 1, 0, 0, 0)
+    else:
+        prev_next_quarter_start = datetime(prev_year, end_month + 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(prev_year, end_month + 1, 1, 0, 0, 0)
+    
+    bkk_prev_end = prev_next_quarter_start - timedelta(microseconds=1)
+    utc_prev_start = bkk_prev_start.astimezone(timezone.utc) if bkk_prev_start.tzinfo else bkk_prev_start
+    utc_prev_end = bkk_prev_end.astimezone(timezone.utc) if bkk_prev_end.tzinfo else bkk_prev_end
+    
+    # นับข้อมูล
+    current_counts = _count_complaints_by_status(db, utc_start, utc_end)
+    prev_counts = _count_complaints_by_status(db, utc_prev_start, utc_prev_end)
+    
+    # คำนวณ YoY
+    yoy_data = _calculate_yoy_comparison(current_counts, prev_counts)
+    
+    # กราฟรายเดือนของไตรมาส
+    quarterly_chart = _get_quarterly_chart_data(db, current_year, current_quarter, tz_bkk)
+    
+    return {
+        "period_type": "quarterly",
+        "year": current_year,
+        "quarter": current_quarter,
+        "quarter_months": f"{start_month:02d}-{end_month:02d}",
+        "date_range_bangkok": {
+            "from": bkk_start.isoformat(),
+            "to": bkk_end.isoformat()
+        },
+        "date_range_utc": {
+            "from": utc_start.isoformat(),
+            "to": utc_end.isoformat()
+        },
+        "summary": {
+            "total": int(current_counts["total"]),
+            "in_progress": int(current_counts["in_progress"]),
+            "completed": int(current_counts["completed"]),
+            "yoy": {
+                "compare_with_period": f"{prev_year}-Q{current_quarter}",
+                "total": yoy_data["total"],
+                "in_progress": yoy_data["in_progress"],
+                "completed": yoy_data["completed"]
+            }
+        },
+        "chart_data": {
+            "monthly_breakdown": quarterly_chart
+        }
+    }
+
+def _get_compare_summary(db: Session, year: Optional[int], compare_year: Optional[int], now_bkk: datetime, tz_bkk) -> Dict[str, Any]:
+    """เปรียบเทียบข้อมูล 2 ปี"""
+    year1 = year if year else now_bkk.year
+    year2 = compare_year
+    
+    if not year2:
+        raise ValueError("ต้องระบุ compare_year สำหรับการเปรียบเทียบ")
+    
+    if year1 == year2:
+        raise ValueError("ปีที่เปรียบเทียบต้องไม่เหมือนกัน")
+    
+    # ข้อมูลปีที่ 1
+    bkk_start1 = datetime(year1, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year1, 1, 1, 0, 0, 0)
+    bkk_end1 = datetime(year1, 12, 31, 23, 59, 59, 999999, tzinfo=tz_bkk) if tz_bkk else datetime(year1, 12, 31, 23, 59, 59, 999999)
+    utc_start1 = bkk_start1.astimezone(timezone.utc) if bkk_start1.tzinfo else bkk_start1
+    utc_end1 = bkk_end1.astimezone(timezone.utc) if bkk_end1.tzinfo else bkk_end1
+    
+    # ข้อมูลปีที่ 2
+    bkk_start2 = datetime(year2, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year2, 1, 1, 0, 0, 0)
+    bkk_end2 = datetime(year2, 12, 31, 23, 59, 59, 999999, tzinfo=tz_bkk) if tz_bkk else datetime(year2, 12, 31, 23, 59, 59, 999999)
+    utc_start2 = bkk_start2.astimezone(timezone.utc) if bkk_start2.tzinfo else bkk_start2
+    utc_end2 = bkk_end2.astimezone(timezone.utc) if bkk_end2.tzinfo else bkk_end2
+    
+    # นับข้อมูล
+    counts1 = _count_complaints_by_status(db, utc_start1, utc_end1)
+    counts2 = _count_complaints_by_status(db, utc_start2, utc_end2)
+    
+    # คำนวณการเปรียบเทียบ
+    comparison = _calculate_yoy_comparison(counts1, counts2)
+    
+    # กราฟเปรียบเทียบรายเดือน
+    compare_chart = _get_compare_chart_data(db, year1, year2, tz_bkk)
+    
+    return {
+        "period_type": "compare",
+        "year1": year1,
+        "year2": year2,
+        "data": {
+            "year1": {
+                "year": year1,
+                "total": int(counts1["total"]),
+                "in_progress": int(counts1["in_progress"]),
+                "completed": int(counts1["completed"]),
+                "date_range_bangkok": {
+                    "from": bkk_start1.isoformat(),
+                    "to": bkk_end1.isoformat()
+                }
+            },
+            "year2": {
+                "year": year2,
+                "total": int(counts2["total"]),
+                "in_progress": int(counts2["in_progress"]),
+                "completed": int(counts2["completed"]),
+                "date_range_bangkok": {
+                    "from": bkk_start2.isoformat(),
+                    "to": bkk_end2.isoformat()
+                }
+            },
+            "comparison": {
+                "total": comparison["total"],
+                "in_progress": comparison["in_progress"],
+                "completed": comparison["completed"]
+            }
+        },
+        "chart_data": {
+            "monthly_comparison": compare_chart
+        }
+    }
+
+def _count_complaints_by_status(db: Session, utc_start: datetime, utc_end: datetime) -> Dict[str, int]:
+    """นับจำนวนเรื่องร้องเรียนตามสถานะ"""
+    completed_set = [ComplaintStatus.COMPLETED, ComplaintStatus.REVIEWED]
+    in_progress_set = [
+        ComplaintStatus.SUBMITTED,
+        ComplaintStatus.SENT_TO_AGENCY,
+        ComplaintStatus.SENT_TO_EXTERNAL,
+        ComplaintStatus.IN_PROCESS,
+        ComplaintStatus.IN_REVIEW,
+        ComplaintStatus.TRACKING,
+    ]
+    
+    total = db.query(func.count(Complaint.id))\
+        .filter(Complaint.created_at.between(utc_start, utc_end))\
+        .scalar() or 0
+    
+    in_progress = db.query(func.count(Complaint.id))\
+        .filter(
+            Complaint.created_at.between(utc_start, utc_end),
+            Complaint.status.in_(in_progress_set)
+        ).scalar() or 0
+    
+    completed = db.query(func.count(Complaint.id))\
+        .filter(
+            Complaint.created_at.between(utc_start, utc_end),
+            Complaint.status.in_(completed_set)
+        ).scalar() or 0
+    
+    return {
+        "total": total,
+        "in_progress": in_progress,
+        "completed": completed
+    }
+
+def _calculate_yoy_comparison(current: Dict[str, int], previous: Dict[str, int]) -> Dict[str, Any]:
+    """คำนวณการเปรียบเทียบ YoY"""
+    yoy_total = _calc_yoy_label_and_values(current["total"], previous["total"])
+    yoy_inprogress = _calc_yoy_label_and_values(current["in_progress"], previous["in_progress"])
+    yoy_completed = _calc_yoy_label_and_values(current["completed"], previous["completed"])
+    
+    return {
+        "total": yoy_total,
+        "in_progress": yoy_inprogress,
+        "completed": yoy_completed
+    }
+
+def _get_monthly_chart_data(db: Session, year: int, tz_bkk) -> List[Dict[str, Any]]:
+    """สร้างข้อมูลกราฟรายเดือน"""
+    chart_data = []
+    
+    for month in range(1, 13):
+        # กรอบเวลาเดือน
+        bkk_start = datetime(year, month, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year, month, 1, 0, 0, 0)
+        
+        if month == 12:
+            next_month_start = datetime(year + 1, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year + 1, 1, 1, 0, 0, 0)
+        else:
+            next_month_start = datetime(year, month + 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year, month + 1, 1, 0, 0, 0)
+        
+        bkk_end = next_month_start - timedelta(microseconds=1)
+        utc_start = bkk_start.astimezone(timezone.utc) if bkk_start.tzinfo else bkk_start
+        utc_end = bkk_end.astimezone(timezone.utc) if bkk_end.tzinfo else bkk_end
+        
+        # นับข้อมูล
+        counts = _count_complaints_by_status(db, utc_start, utc_end)
+        
+        chart_data.append({
+            "month": month,
+            "month_name": ["", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+                          "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"][month],
+            "total": counts["total"],
+            "in_progress": counts["in_progress"],
+            "completed": counts["completed"]
+        })
+    
+    return chart_data
+
+def _get_daily_chart_data(db: Session, year: int, month: int, tz_bkk) -> List[Dict[str, Any]]:
+    """สร้างข้อมูลกราฟรายวัน"""
+    from calendar import monthrange
+    
+    chart_data = []
+    _, days_in_month = monthrange(year, month)
+    
+    for day in range(1, days_in_month + 1):
+        # กรอบเวลาวัน
+        bkk_start = datetime(year, month, day, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year, month, day, 0, 0, 0)
+        bkk_end = datetime(year, month, day, 23, 59, 59, 999999, tzinfo=tz_bkk) if tz_bkk else datetime(year, month, day, 23, 59, 59, 999999)
+        utc_start = bkk_start.astimezone(timezone.utc) if bkk_start.tzinfo else bkk_start
+        utc_end = bkk_end.astimezone(timezone.utc) if bkk_end.tzinfo else bkk_end
+        
+        # นับข้อมูล
+        counts = _count_complaints_by_status(db, utc_start, utc_end)
+        
+        chart_data.append({
+            "day": day,
+            "date": f"{year}-{month:02d}-{day:02d}",
+            "total": counts["total"],
+            "in_progress": counts["in_progress"],
+            "completed": counts["completed"]
+        })
+    
+    return chart_data
+
+def _get_quarterly_chart_data(db: Session, year: int, quarter: int, tz_bkk) -> List[Dict[str, Any]]:
+    """สร้างข้อมูลกราฟรายเดือนของไตรมาส"""
+    quarter_months = {
+        1: [1, 2, 3],
+        2: [4, 5, 6],
+        3: [7, 8, 9],
+        4: [10, 11, 12]
+    }
+    
+    months = quarter_months[quarter]
+    chart_data = []
+    
+    for month in months:
+        # กรอบเวลาเดือน
+        bkk_start = datetime(year, month, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year, month, 1, 0, 0, 0)
+        
+        if month == 12:
+            next_month_start = datetime(year + 1, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year + 1, 1, 1, 0, 0, 0)
+        else:
+            next_month_start = datetime(year, month + 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year, month + 1, 1, 0, 0, 0)
+        
+        bkk_end = next_month_start - timedelta(microseconds=1)
+        utc_start = bkk_start.astimezone(timezone.utc) if bkk_start.tzinfo else bkk_start
+        utc_end = bkk_end.astimezone(timezone.utc) if bkk_end.tzinfo else bkk_end
+        
+        # นับข้อมูล
+        counts = _count_complaints_by_status(db, utc_start, utc_end)
+        
+        chart_data.append({
+            "month": month,
+            "month_name": ["", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+                          "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"][month],
+            "total": counts["total"],
+            "in_progress": counts["in_progress"],
+            "completed": counts["completed"]
+        })
+    
+    return chart_data
+
+def _get_compare_chart_data(db: Session, year1: int, year2: int, tz_bkk) -> List[Dict[str, Any]]:
+    """สร้างข้อมูลกราฟเปรียบเทียบรายเดือน"""
+    chart_data = []
+    
+    for month in range(1, 13):
+        # ข้อมูลปีที่ 1
+        bkk_start1 = datetime(year1, month, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year1, month, 1, 0, 0, 0)
+        if month == 12:
+            next_month_start1 = datetime(year1 + 1, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year1 + 1, 1, 1, 0, 0, 0)
+        else:
+            next_month_start1 = datetime(year1, month + 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year1, month + 1, 1, 0, 0, 0)
+        bkk_end1 = next_month_start1 - timedelta(microseconds=1)
+        utc_start1 = bkk_start1.astimezone(timezone.utc) if bkk_start1.tzinfo else bkk_start1
+        utc_end1 = bkk_end1.astimezone(timezone.utc) if bkk_end1.tzinfo else bkk_end1
+        
+        # ข้อมูลปีที่ 2
+        bkk_start2 = datetime(year2, month, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year2, month, 1, 0, 0, 0)
+        if month == 12:
+            next_month_start2 = datetime(year2 + 1, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year2 + 1, 1, 1, 0, 0, 0)
+        else:
+            next_month_start2 = datetime(year2, month + 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year2, month + 1, 1, 0, 0, 0)
+        bkk_end2 = next_month_start2 - timedelta(microseconds=1)
+        utc_start2 = bkk_start2.astimezone(timezone.utc) if bkk_start2.tzinfo else bkk_start2
+        utc_end2 = bkk_end2.astimezone(timezone.utc) if bkk_end2.tzinfo else bkk_end2
+        
+        # นับข้อมูล
+        counts1 = _count_complaints_by_status(db, utc_start1, utc_end1)
+        counts2 = _count_complaints_by_status(db, utc_start2, utc_end2)
+        
+        chart_data.append({
+            "month": month,
+            "month_name": ["", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+                          "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"][month],
+            f"year_{year1}": {
+                "total": counts1["total"],
+                "in_progress": counts1["in_progress"],
+                "completed": counts1["completed"]
+            },
+            f"year_{year2}": {
+                "total": counts2["total"],
+                "in_progress": counts2["in_progress"],
+                "completed": counts2["completed"]
+            }
+        })
+    
+    return chart_data
+
 def get_department_ranking_by_date(
     db: Session,
     date_from: Optional[str] = None,
