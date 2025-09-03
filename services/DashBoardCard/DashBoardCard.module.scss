@@ -38,10 +38,12 @@
   justify-content: space-between;
   position: relative;
   overflow: hidden;
+  // Smooth animations
+  transition: all 0.2s ease-in-out;
 
   // Add subtle backdrop effect
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -80,9 +82,6 @@
     padding: 16px;
     border-radius: 12px;
   }
-
-  // Smooth animations
-  transition: all 0.2s ease-in-out;
 
   &:hover {
     transform: translateY(-2px);
@@ -285,15 +284,16 @@
 // Loading state animation
 .card {
   &.loading {
-
     .title,
     .count,
     .trendText,
     .compareText {
-      background: linear-gradient(90deg,
-          rgba(255, 255, 255, 0.2) 25%,
-          rgba(255, 255, 255, 0.4) 50%,
-          rgba(255, 255, 255, 0.2) 75%);
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.2) 25%,
+        rgba(255, 255, 255, 0.4) 50%,
+        rgba(255, 255, 255, 0.2) 75%
+      );
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
       border-radius: 4px;
