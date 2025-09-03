@@ -140,6 +140,18 @@ async def create_outgoing_report(
 
         db.commit()
 
+        # ✅ เปลี่ยนสถานะของ complaint เป็น sent_to_external เมื่อมีการสร้าง outgoing_report
+        if complaint:
+            try:
+                from models.comp_complaint import ComplaintStatus
+                complaint.status = ComplaintStatus.SENT_TO_EXTERNAL
+                db.add(complaint)
+                db.commit()
+                logger.info(f"Updated complaint {complaint.id} status to SENT_TO_EXTERNAL")
+            except Exception as e:
+                logger.warning(f"Could not update complaint status: {e}")
+                # ไม่ rollback เพราะ outgoing_report สำคัญกว่า
+        
         # refresh หลัก ๆ
         db.refresh(db_report)
 

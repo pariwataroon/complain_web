@@ -917,6 +917,9 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
 
         # ===== detail =====
         responsible_officer_display = (_user_min(assigned_officer) or {}).get("name") if assigned_officer else (complaint.assigned_to or "")
+        
+        # ✅ ตรวจสอบสถานะการมอบหมาย
+        is_assigned = bool(assigned_officer or complaint.assigned_to)
 
         detail = {
             "receiveDate": _fmt_bkk(complaint.created_at),
@@ -936,6 +939,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             "urgency_level": getattr(complaint, "urgency_level", None),
             "confidentiality_level": getattr(complaint, "confidentiality_level", None),
             "is_master": complaint.parent_complaint_id is None,
+            "is_assigned": is_assigned,  # ✅ เพิ่ม field ใหม่
             "assigned_officer": _user_min(assigned_officer),
             "creator": _user_min(creator),
             "channel": ({
@@ -1268,6 +1272,9 @@ def get_document_storage_by_channel(
             except Exception as e:
                 logger.warning(f"Error getting agency name from outgoing_reports: {str(e)}")
             
+            # ✅ ตรวจสอบสถานะการมอบหมาย
+            is_assigned = bool(complaint.assigned_officer_id or complaint.assigned_to)
+            
             items.append({
                 "receiveDate": received_date,  # 🔥 วันที่ร้อง (created_at)
                 "agency": agency_name,
@@ -1289,6 +1296,7 @@ def get_document_storage_by_channel(
                 "urgency_level": complaint.urgency_level,
                 "confidentiality_level": complaint.confidentiality_level,
                 "is_master": complaint.parent_complaint_id is None,
+                "is_assigned": is_assigned,  # ✅ เพิ่ม field ใหม่
                 "assigned_officer": {
                     "id": str(assigned_officer.id) if assigned_officer else None,
                     "name": f"{assigned_officer.first_name} {assigned_officer.last_name}" if assigned_officer else None
@@ -1352,11 +1360,23 @@ def get_document_storage_by_channel(
             "page_type": page_type,
             "legend": {
                 "receiveDate": "วันที่ยื่นเรื่องร้องเรียน (วันที่สร้างเรื่อง)",
+                "is_assigned": "สถานะการมอบหมาย: true=มีการมอบหมายแล้ว, false=ยังไม่ได้มอบหมาย",
                 "confirmationStatus": {
                     "ยืนยันรับงานแล้ว": "เจ้าหน้าที่ยืนยันรับงานแล้ว",
                     "ปฏิเสธรับงาน": "เจ้าหน้าที่ปฏิเสธรับงาน",
                     "รอการยืนยัน": "มอบหมายแล้วแต่ยังไม่ได้ยืนยัน",
                     "ยังไม่ได้รับงาน": "ยังไม่ได้มอบหมายให้ใคร"
+                },
+                "status": {
+                    "submitted": "รับเรื่อง",
+                    "sent_to_agency": "มอบหมายเจ้าหน้าที่",
+                    "sent_to_external": "ส่งหน่วยงานภายนอก",
+                    "in_process": "กำลังดำเนินการ",
+                    "in_review": "อยู่ระหว่างพิจารณา",
+                    "tracking": "ติดตามผล",
+                    "reviewed": "แจ้งผลการพิจารณา",
+                    "completed": "เสร็จสิ้น",
+                    "cancelled": "ยกเลิก"
                 }
             },
             "performance_note": "📝 นี่คือ summary listing ที่ปรับปรุงแล้วเพื่อ performance - ไม่รวม all_related ครบถ้วน ใช้ GET /document-storage/{complaint_id} สำหรับรายละเอียดเต็ม"
