@@ -3,7 +3,7 @@ from typing import List, Optional
 from uuid import UUID
 from fastapi import HTTPException
 from datetime import datetime
-from sqlalchemy import func
+from sqlalchemy import func, case
 from lib.logger import get_logger
 
 from models.signature_authorities import SignatureAuthority
@@ -28,6 +28,7 @@ def get_signature_authorities(db: Session, skip: int = 0, limit: int = 100):
     """ดึงรายการผู้มีอำนาจลงนามทั้งหมด จัดกลุ่มตาม group_signature_authorities_id"""
     try:
         # ดึงข้อมูลทั้งหมดพร้อม relationships
+        # ใช้ CASE WHEN เพื่อจัดการ NULL values ใน SQL Server
         result = db.query(SignatureAuthority)\
             .options(
                 joinedload(SignatureAuthority.user).joinedload(User.title), 
@@ -36,7 +37,11 @@ def get_signature_authorities(db: Session, skip: int = 0, limit: int = 100):
             )\
             .filter(SignatureAuthority.is_active == True)\
             .order_by(
-                SignatureAuthority.group_signature_authorities_id.asc().nulls_last(),
+                case(
+                    (SignatureAuthority.group_signature_authorities_id.is_(None), 1),
+                    else_=0
+                ),
+                SignatureAuthority.group_signature_authorities_id.asc(),
                 SignatureAuthority.created_at.asc()
             )\
             .offset(skip).limit(limit).all()
