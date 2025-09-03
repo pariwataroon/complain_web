@@ -35,11 +35,10 @@ const GetMeAllComplaints = async ({
 const GetComplaintsGroupedbyChannel = async ({
   skip = 0,
   limit = 10,
-  status = "SUBMITTED",
 }) => {
   try {
     const response = await axiosInstance.get("/complaints/group-by-channel", {
-      params: { skip, limit, status },
+      params: { skip, limit},
     });
     return response?.data;
   } catch (error) {

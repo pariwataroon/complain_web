@@ -11,7 +11,7 @@ const breadcrumbItems = [
       <img
         src="/icons/Pencil.png"
         alt="pencil"
-        style={{ width: 24, height: 24, marginBottom: -8 }}
+            style={{ width: 24, height: 24, marginBottom: -8 }}
       />
     ),
   },
@@ -53,6 +53,65 @@ const mockAgencyOptions = [
 const safeIncludes = (text, query) =>
   (text ?? "").toString().toLowerCase().includes((query ?? "").toString().toLowerCase());
 
+const SUBJECT_LEFT_OFFSET = 14;
+
+const toBool = (v) => {
+  if (v === true || v === false) return v;
+  if (v === 1 || v === "1") return true;
+  if (v === 0 || v === "0") return false;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (["true", "t", "y", "yes", "assigned", "enable", "enabled"].includes(s)) return true;
+    if (["false", "f", "n", "no", "unassigned", "disable", "disabled", ""].includes(s)) return false;
+  }
+  return undefined;
+};
+
+const hasValue = (v) =>
+  v !== null &&
+  v !== undefined &&
+  !(typeof v === "string" && v.trim() === "");
+
+const getIsAssigned = (item) => {
+  const candidates = [
+    item?.is_assigned,
+    item?.isAssigned,
+    item?.assigned,
+    item?.assignment?.is_assigned,
+    item?.assignment?.assigned,
+    item?.body?.is_assigned,
+    item?.body?.assigned,
+    item?.body?.isAssigned,
+    item?.step4?.general?.is_assigned,
+    item?.step4?.general?.assigned,
+    item?.step4?.is_assigned,
+    item?.step3?.general?.is_assigned,
+    item?.step3?.is_assigned,
+    item?.step2?.general?.is_assigned,
+    item?.step1?.general?.is_assigned,
+  ];
+
+  for (const c of candidates) {
+    const b = toBool(c);
+    if (b !== undefined) return b;
+  }
+
+  const heuristicsTruthy = [
+    item?.assigned_date,
+    item?.assignment?.assigned_date,
+    item?.assignment?.assignee_id,
+    item?.assignment?.assignee,
+    item?.step4?.general?.assigned_date,
+    item?.step4?.general?.assignee_id,
+    item?.step3?.general?.assigned_date,
+    item?.step3?.general?.assignee_id,
+  ].some(hasValue);
+
+  if (heuristicsTruthy) return true;
+
+  return false; // default
+};
+
 const SearchComplaints = () => {
   const [allComplaints, setAllComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
@@ -65,53 +124,77 @@ const SearchComplaints = () => {
         const items = res?.res_data?.items || [];
 
         const mapped = items.map((item) => {
-          // สถานะ (รองรับหลายแหล่ง)
           const status =
             item?.body?.status ??
             item?.status ??
             item?.step4?.general?.status ??
             item?.step3?.general?.status ??
-            "";
+            "-";
 
-          const isReceived = status === "รับเรื่อง";
+          const isAssigned = getIsAssigned(item);
 
-          // ค่าดิบเลขที่ส่วนรับราชการ (ไว้ค้นหา + แสดง)
-          const docGovRaw = item.reference_number4 || "-";
+          const docGovRaw = item?.reference_number4 || "-";
+          const subjectRaw = item?.subject || "-";
 
-          return {
-            id: item.id,
-            name: item.complainant_name || "-",
-            citizenId: item.citizen_id || "-",
-            subject: item.subject || "-",
-            docKk: item.reference_number || "-",
-            docSr: item.reference_number2 || "-",
-            docStp: item.reference_number3 || "-",
-            docGov: (
+          const subjectWithDot = (
+            <div
+              style={{
+                position: "relative",
+                minWidth: 0,
+                paddingLeft: SUBJECT_LEFT_OFFSET,
+                marginLeft: -SUBJECT_LEFT_OFFSET,   
+              }}
+            >
               <span
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  width: "100%",
+                  position: "absolute",
+                  left: 0,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  backgroundColor: isAssigned ? "#2ecc71" : "#bdbdbd",
+                }}
+                title={isAssigned ? "มอบหมายแล้ว" : "ยังไม่มอบหมาย"}
+                aria-label={isAssigned ? "assigned" : "unassigned"}
+              />
+              <span
+                style={{
+                  display: "inline-block",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 }}
               >
-                <span>{docGovRaw}</span>
-                <span
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    backgroundColor: isReceived ? "#2ecc71" : "#bdbdbd",
-                  }}
-                  title={status || "ไม่ระบุสถานะ"}
-                />
+                {subjectRaw}
               </span>
-            ),
+            </div>
+          );
 
-            // เก็บสตริงดิบไว้กรอง
+          return {
+            id: item?.id,
+            name: item?.complainant_name || "-",
+            citizenId: item?.citizen_id || "-",
+
+            // แสดงเป็น JSX พร้อมจุด
+            subject: subjectWithDot,
+            // เก็บค่าสตริงสำหรับค้นหา
+            subjectRaw,
+
+            docKk: item?.reference_number || "-",
+            docSr: item?.reference_number2 || "-",
+            docStp: item?.reference_number3 || "-",
+
+            // แสดงเป็นสตริงล้วน
+            docGov: docGovRaw,
             docGovRaw,
-            agency: item.incident_location || "-",
+
+            agency: item?.incident_location || "-",
             status: status || "-",
+
+            // เก็บไว้เผื่อ TableList ใช้ต่อ
+            is_assigned: isAssigned,
           };
         });
 
@@ -133,9 +216,9 @@ const SearchComplaints = () => {
     const result = allComplaints.filter((item) => {
       if (claimantName && !safeIncludes(item.name, claimantName)) return false;
       if (citizenId && !safeIncludes(item.citizenId, citizenId)) return false;
-      if (subject && !safeIncludes(item.subject, subject)) return false;
 
-      // ใช้ค่าสตริงดิบในการค้นหา (ไม่ติด JSX/dot)
+      if (subject && !safeIncludes(item.subjectRaw, subject)) return false;
+
       if (docGov && !safeIncludes(item.docGovRaw, docGov)) return false;
 
       if (agency && item.agency !== agency) return false;
