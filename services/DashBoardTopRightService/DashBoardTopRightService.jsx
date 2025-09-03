@@ -70,16 +70,25 @@ const TopRightChart = () => {
   });
   const [quarterlyForm, setQuarterlyForm] = useState({
     year: String(getCurrentThaiYear()),
+    quarter: null, // เพิ่ม quarter state
   });
   const [yearlyForm, setYearlyForm] = useState({
     year: String(getCurrentThaiYear()),
   });
   const [departmentForm, setDepartmentForm] = useState({
-    fromYear: String(getCurrentThaiYear()),
-    toYear: String(getCurrentThaiYear()),
+    fromYear: String(getCurrentThaiYear() - 1), 
+    toYear: String(getCurrentThaiYear()), 
   });
 
   const [chartData, setChartData] = useState([]);
+
+  const toInt = (v) =>
+    v == null ? null : parseInt(String(v).replace(/[^\d]/g, ""), 10);
+    const toTH = (y) => {
+      const n = toInt(y);
+      if (!n) return "";
+      return n >= 2400 ? n : n + 543; 
+  };
 
   // Fetch years data from API
   const fetchYears = async () => {
@@ -89,26 +98,48 @@ const TopRightChart = () => {
       const currentTH = String(getCurrentThaiYear());
 
       if (result?.success && Array.isArray(result?.yearOptions)) {
-        setYearOptions(result.yearOptions);
+        // setYearOptions(result.yearOptions);
 
-        const latest = result.yearOptions[result.yearOptions.length - 1];
-        const displayYear = result.yearOptions.some(
-          (y) => String(y.value) === currentTH
-        )
-          ? currentTH
-          : String(latest?.value ?? currentTH);
+        // const latest = result.yearOptions[result.yearOptions.length - 1];
+        // const displayYear = result.yearOptions.some(
+        //   (y) => String(y.value) === currentTH
+        // )
+        //   ? currentTH
+        //   : String(latest?.value ?? currentTH);
+
+        const thOptions = result.yearOptions.map((y) => {
+        const rawVal = y?.value ?? y;
+        return {
+          value: String(toTH(rawVal)),
+          label: String(toTH(y?.label ?? rawVal)),
+        };
+      });
+      setYearOptions(thOptions);
+
+      const latest = thOptions[thOptions.length - 1];
+      const displayYear = thOptions.some((y) => String(y.value) === currentTH)
+        ? currentTH
+        : String(latest?.value ?? currentTH);
 
         setMonthlyForm((prev) => ({
           ...prev,
           year: displayYear,
           month: prev.month || getCurrentThaiMonthLabel(),
         }));
-        setQuarterlyForm({ year: displayYear });
+        setQuarterlyForm((prev) => ({ 
+          ...prev, 
+          year: displayYear 
+        }));
         setYearlyForm({ year: displayYear });
-        setDepartmentForm({ fromYear: displayYear, toYear: displayYear });
+        setDepartmentForm((prev) => ({ 
+          ...prev, 
+          toYear: displayYear,
+          fromYear: prev.fromYear || String(Number(displayYear) - 1)
+        }));
 
         setCurrentPeriod(`${getCurrentThaiMonthLabel()} ${displayYear}`);
       } else {
+        // Fallback years
         const y = getCurrentThaiYear();
         const fallback = [
           { value: String(y - 3), label: String(y - 3) },
@@ -117,14 +148,21 @@ const TopRightChart = () => {
           { value: String(y), label: String(y) },
         ];
         setYearOptions(fallback);
+        
         setMonthlyForm((prev) => ({
           ...prev,
           year: String(y),
           month: prev.month || getCurrentThaiMonthLabel(),
         }));
-        setQuarterlyForm({ year: String(y) });
+        setQuarterlyForm((prev) => ({ 
+          ...prev, 
+          year: String(y) 
+        }));
         setYearlyForm({ year: String(y) });
-        setDepartmentForm({ fromYear: String(y), toYear: String(y) });
+        setDepartmentForm({
+          fromYear: String(y - 1),
+          toYear: String(y)
+        });
         setCurrentPeriod(`${getCurrentThaiMonthLabel()} ${y}`);
       }
     } catch (err) {
@@ -132,43 +170,50 @@ const TopRightChart = () => {
       const y = getCurrentThaiYear();
       const fallback = [{ value: String(y), label: String(y) }];
       setYearOptions(fallback);
+      
       setMonthlyForm((prev) => ({
         ...prev,
         year: String(y),
         month: prev.month || getCurrentThaiMonthLabel(),
       }));
-      setQuarterlyForm({ year: String(y) });
+      setQuarterlyForm((prev) => ({ 
+        ...prev, 
+        year: String(y) 
+      }));
       setYearlyForm({ year: String(y) });
-      setDepartmentForm({ fromYear: String(y), toYear: String(y) });
+      setDepartmentForm({
+        fromYear: String(y - 1),
+        toYear: String(y)
+      });
       setCurrentPeriod(`${getCurrentThaiMonthLabel()} ${y}`);
     } finally {
       setYearsLoading(false);
     }
   };
 
-  // Fetch data from API
+  // Improved fetchApiData function
   const fetchApiData = async (filterParams = null) => {
     setLoading(true);
     setError(null);
 
     try {
-      // เรียก API พร้อมพารามิเตอร์กรอง
+      console.log('Fetching API data with params:', filterParams);
+      
       const result = await GetComplaintSummary(filterParams);
       
       console.log('API Response:', result);
-      console.log('Filter Params:', filterParams);
       
       if (result.success) {
         setApiData(result);
 
-        // ใช้ข้อมูลจาก departmentData ที่มี percent 
+        // Process chart data based on the response
         if (result.departmentData && result.departmentData.length > 0) {
-          
           const processedData = result.departmentData.map((dept, index) => ({
             name: dept.name,
-            count: Math.round((dept.percent / 100) * result.latestMonthTotal),
+            count: dept.count || Math.round((dept.percent / 100) * result.latestMonthTotal),
             color: getChartColor(index),
             id: dept.id,
+            percent: dept.percent || 0,
           }));
           
           console.log('Processed Chart Data:', processedData);
@@ -180,6 +225,7 @@ const TopRightChart = () => {
             count: card.count,
             color: getChartColor(index),
             id: card.id,
+            percent: 0,
           }));
           
           console.log('Dashboard Chart Data:', summaryData);
@@ -191,6 +237,7 @@ const TopRightChart = () => {
               count: 0,
               color: "#e0e0e0",
               id: "no-data",
+              percent: 0,
             },
           ]);
         }
@@ -202,6 +249,7 @@ const TopRightChart = () => {
             count: 0,
             color: "#e0e0e0",
             id: "no-data",
+            percent: 0,
           },
         ]);
       }
@@ -214,6 +262,7 @@ const TopRightChart = () => {
           count: 0,
           color: "#f44336",
           id: "error",
+          percent: 0,
         },
       ]);
     } finally {
@@ -292,76 +341,81 @@ const TopRightChart = () => {
     setOpenModal(null);
   };
 
-  // Handle form changes with period update
-  const handleMonthlyChange = (field) => async (e) => {
-    const newForm = { ...monthlyForm, [field]: e.target.value };
+  // FIXED: Handle form changes with proper API calls
+  const handleMonthlyChange = (field) => (e) => {
+    const newValue = e.target.value;
+    const newForm = { ...monthlyForm, [field]: newValue };
     setMonthlyForm(newForm);
+    
+    // Don't auto-submit on intermediate changes
+    // User will need to close modal or make final selection
+  };
 
-    // Update period display
-    const newPeriod = `${newForm.month} ${newForm.year}`;
+  const handleMonthlySubmit = async () => {
+    const newPeriod = `${monthlyForm.month} ${monthlyForm.year}`;
     setCurrentPeriod(newPeriod);
     setCurrentMode("monthly");
     
-    // เรียก API ใหม่พร้อมพารามิเตอร์
     await fetchApiData({
       mode: "monthly",
-      month: newForm.month,
-      year: newForm.year
+      month: monthlyForm.month,
+      year: monthlyForm.year
     });
     
     handleCloseModal();
   };
 
-  const handleQuarterlyChange = async (e) => {
-    const newForm = { year: e.target.value };
+  const handleQuarterlyChange = (e) => {
+    const newForm = { ...quarterlyForm, year: e.target.value };
     setQuarterlyForm(newForm);
-    
-    // ไม่ต้องเรียก API ที่นี่ เพราะยังไม่ได้เลือก quarter
   };
 
-  const handleYearlyChange = async (e) => {
-    const newForm = { year: e.target.value };
+  const handleYearlyChange = (e) => {
+    const newForm = { ...yearlyForm, year: e.target.value };
     setYearlyForm(newForm);
+  };
 
-    // Update period display
-    const newPeriod = `ปี ${newForm.year}`;
+  const handleYearlySubmit = async () => {
+    const newPeriod = `ปี ${yearlyForm.year}`;
     setCurrentPeriod(newPeriod);
     setCurrentMode("yearly");
     
-    // เรียก API ใหม่
     await fetchApiData({
       mode: "yearly",
-      year: newForm.year
+      year: yearlyForm.year
     });
     
     handleCloseModal();
   };
 
-  const handleDepartmentChange = (field) => async (e) => {
-    const newForm = { ...departmentForm, [field]: e.target.value };
+  const handleDepartmentChange = (field) => (e) => {
+    const newValue = e.target.value;
+    const newForm = { ...departmentForm, [field]: newValue };
     setDepartmentForm(newForm);
+  };
 
-    // Update period display
-    const newPeriod = `เปรียบเทียบ ${newForm.fromYear}-${newForm.toYear}`;
+  const handleDepartmentSubmit = async () => {
+    const newPeriod = `เปรียบเทียบ ${departmentForm.fromYear}-${departmentForm.toYear}`;
     setCurrentPeriod(newPeriod);
     setCurrentMode("department");
     
-    // เรียก API ใหม่
     await fetchApiData({
-      mode: "department",
-      fromYear: newForm.fromYear,
-      toYear: newForm.toYear
+      mode: "compare",
+      fromYear: departmentForm.fromYear,
+      toYear: departmentForm.toYear
     });
     
     handleCloseModal();
   };
 
   const handleQuarterSelect = async (quarterLabel) => {
+    const newForm = { ...quarterlyForm, quarter: quarterLabel };
+    setQuarterlyForm(newForm);
+    
     const newPeriod = `${quarterLabel} ปี ${quarterlyForm.year}`;
     setCurrentPeriod(newPeriod);
     setCurrentMode("quarterly");
     
-    // เรียก API ใหม่
     await fetchApiData({
       mode: "quarterly",
       quarter: quarterLabel,
@@ -371,7 +425,7 @@ const TopRightChart = () => {
     handleCloseModal();
   };
 
-  // Render Modal Content
+  // Render Modal Content with improved submit handling
   const renderModalContent = () => {
     switch (openModal) {
       case "monthly":
@@ -453,6 +507,21 @@ const TopRightChart = () => {
                     />
                   )}
                 </Box>
+              </Box>
+
+              {/* Add submit button */}
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={handleMonthlySubmit}
+                  disabled={loading}
+                  sx={{ 
+                    minWidth: 120,
+                    fontSize: "14px"
+                  }}
+                >
+                  {loading ? <CircularProgress size={20} /> : "แสดงข้อมูล"}
+                </Button>
               </Box>
             </Box>
           </Paper>
@@ -544,8 +613,13 @@ const TopRightChart = () => {
                         borderColor: "#1976d2",
                         backgroundColor: "rgba(25, 118, 210, 0.04)",
                       },
+                      ...(quarterlyForm.quarter === quarter.label && {
+                        borderColor: "#1976d2",
+                        backgroundColor: "rgba(25, 118, 210, 0.08)",
+                      }),
                     }}
                     onClick={() => handleQuarterSelect(quarter.label)}
+                    disabled={loading}
                   >
                     <Typography sx={{ fontSize: "13px", fontWeight: "500" }}>
                       {quarter.label}
@@ -599,7 +673,7 @@ const TopRightChart = () => {
               สถิติเรื่องราวร้องทุกข์ประจำปี
             </Typography>
 
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
               <Typography sx={{ fontSize: "14px", minWidth: "30px" }}>
                 ปี :
               </Typography>
@@ -621,6 +695,21 @@ const TopRightChart = () => {
                   />
                 )}
               </Box>
+            </Box>
+
+            {/* Add submit button */}
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <Button
+                variant="contained"
+                onClick={handleYearlySubmit}
+                disabled={loading}
+                sx={{ 
+                  minWidth: 120,
+                  fontSize: "14px"
+                }}
+              >
+                {loading ? <CircularProgress size={20} /> : "แสดงข้อมูล"}
+              </Button>
             </Box>
           </Paper>
         );
@@ -666,8 +755,8 @@ const TopRightChart = () => {
 
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Typography sx={{ fontSize: "14px", minWidth: "30px" }}>
-                  ปี :
+                <Typography sx={{ fontSize: "14px", minWidth: "80px" }}>
+                  ปีเปรียบเทียบ :
                 </Typography>
                 <Box sx={{ minWidth: 150 }}>
                   {yearsLoading ? (
@@ -690,8 +779,8 @@ const TopRightChart = () => {
               </Box>
 
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Typography sx={{ fontSize: "14px", minWidth: "30px" }}>
-                  ปี :
+                <Typography sx={{ fontSize: "14px", minWidth: "80px" }}>
+                  ปีปัจจุบัน :
                 </Typography>
                 <Box sx={{ minWidth: 150 }}>
                   {yearsLoading ? (
@@ -712,6 +801,21 @@ const TopRightChart = () => {
                   )}
                 </Box>
               </Box>
+
+              {/* Add submit button */}
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={handleDepartmentSubmit}
+                  disabled={loading}
+                  sx={{ 
+                    minWidth: 120,
+                    fontSize: "14px"
+                  }}
+                >
+                  {loading ? <CircularProgress size={20} /> : "แสดงข้อมูล"}
+                </Button>
+              </Box>
             </Box>
           </Paper>
         );
@@ -721,7 +825,7 @@ const TopRightChart = () => {
     }
   };
 
-  // Chart effect
+  // Chart effect (unchanged)
   useEffect(() => {
     if (!chartRef.current || loading) return;
 
@@ -839,7 +943,7 @@ const TopRightChart = () => {
   const open = Boolean(anchorEl);
 
   // Loading state
-  if (loading) {
+  if (loading && !chartData.length) {
     return (
       <Box
         sx={{
@@ -1039,7 +1143,7 @@ const TopRightChart = () => {
             <Button
               size="small"
               variant="outlined"
-              onClick={fetchApiData}
+              onClick={() => fetchApiData()}
               sx={{ fontSize: "10px", py: 0.5, px: 1 }}
             >
               ลองใหม่

@@ -186,17 +186,18 @@ const CommitteeCompositionSettings = () => {
             stateEnterprise?.departments
           );
 
-          // venues จากทุก department > venue_groups > venues
-          const stateEnterpriseVenues = mapAllVenueOptionsFromDepartments(
-            stateEnterprise?.departments
-          );
+          // // venues จากทุก department > venue_groups > venues
+          // const stateEnterpriseVenues = mapAllVenueOptionsFromDepartments(
+          //   stateEnterprise?.departments
+          // );
 
-          const stateEnterpriseOptionsCombined = [
-            ...stateEnterpriseDepts,
-            ...stateEnterpriseVenues,
-          ];
+          // const stateEnterpriseOptionsCombined = [
+          //   ...stateEnterpriseDepts,
+          //   ...stateEnterpriseVenues,
+          // ];
 
-          setStateEnterpriseOptions(stateEnterpriseOptionsCombined);
+          // setStateEnterpriseOptions(stateEnterpriseOptionsCombined);
+          setStateEnterpriseOptions(stateEnterpriseDepts);
 
           // --- ส่วนราชการ ---
           const government = resData.find((i) => i.name === "ส่วนราชการ");
@@ -900,6 +901,8 @@ const CommitteeCompositionSettings = () => {
   };
 
   const SignatoryBox = ({ number }) => {
+
+    const ribbonText = `กลุ่ม ${number}`;
     const saveState = boxSaveState[number] || {
       saving: false,
       deleting: false,
@@ -938,14 +941,16 @@ const CommitteeCompositionSettings = () => {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            transform: "rotate(180deg)",
-            writingMode: "vertical-lr",
+            writingMode: "horizontal-tb",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
             color: "white",
             fontWeight: "bold",
           }}
         >
           <Typography variant="h6">
-            {existingGroupId ? `กลุ่ม ${number}` : number}
+            {ribbonText}
           </Typography>
         </Box>
 
@@ -1073,12 +1078,18 @@ const CommitteeCompositionSettings = () => {
 
                   <SelectField
                     label="เลือกรัฐวิสาหกิจ"
-                    options={getFilteredOptionsForField(
-                      "state_enterprise",
-                      number,
-                      stateEnterpriseOptions,
-                      `state_enterprise_${number}`
-                    )}
+                    // options={getFilteredOptionsForField(
+                    //   "state_enterprise",
+                    //   number,
+                    //   stateEnterpriseOptions,
+                    //   `state_enterprise_${number}`
+                    // )}
+                      options={getFilteredOptionsForField(
+                        "state_enterprise",
+                        number,
+                        stateEnterpriseOptions.filter(o => !o.isVenue),
+                        `state_enterprise_${number}`
+                      )}
                     value={formData[`state_enterprise_${number}`] || ""}
                     onChange={handleInputChange}
                     name={`state_enterprise_${number}`}

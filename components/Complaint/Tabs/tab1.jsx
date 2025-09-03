@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import styles from "./TabNav.module.scss";
 import ComplaintPersonalForm from "@services/ComplaintPersonal/ComplaintPersonalForm";
 import ComplaintMinistryMainForm from "@services/ComplaintMinistryMain/ComplaintMinistryMainForm";
-import { getAuthMe } from "@pages/api/role/role"
+import { getAuthMe } from "@pages/api/role/role";
 
 const tabs = ["บุคคลทั่วไป", "นิติบุคคล", "หน่วยงานของรัฐ"];
 const underlineColors = ["#0B1F8F", "#3FA9F5", "#EDC458"];
@@ -21,45 +21,76 @@ const Tab1 = ({
   const [authMeData, setAuthMeData] = useState({});
   const [isLoadingAuthMe, setIsLoadingAuthMe] = useState(false);
 
-  // ฟังก์ชันตรวจสอบ roles จาก cookie (ดึงมาจาก Dashboard)
+  // อ่าน roles จาก cookie (ฝั่ง Dashboard ใส่มาให้)
   const getUserRoles = () => {
     try {
       const cookies = document.cookie.split(";").reduce((acc, cookie) => {
         const [key, value] = cookie.trim().split("=");
-        if (key && value) {
-          acc[key] = value;
-        }
+        if (key && value) acc[key] = value;
         return acc;
       }, {});
-
       const infoCookie = cookies.info;
-
       if (infoCookie) {
         const parsed = JSON.parse(decodeURIComponent(infoCookie));
         let userRoles = [];
-
         if (typeof parsed.roles === "string") {
           userRoles = JSON.parse(parsed.roles);
         } else if (Array.isArray(parsed.roles)) {
           userRoles = parsed.roles;
         }
-
         return userRoles;
       }
     } catch (err) {
       console.error("Error parsing cookie or roles:", err);
     }
-
     return [];
   };
 
-  // ดึงข้อมูลจาก getAuthMe API
+  // ====== กรอง error ของฟิลด์ที่อยู่ทิ้งทั้งหมด (ไม่ให้บังคับกรอก) ======
+  const addressKeys = useMemo(
+    () => [
+      "province", "district", "districts",
+      "subdistrict", "subdistricts",
+      "zipcode", "zip_code", "zipCode",
+    ],
+    []
+  );
+
+  const stripAddressErrors = useMemo(() => {
+    // deep clone แบบง่าย
+    const cloned = JSON.parse(JSON.stringify(validationErrors || {}));
+
+    const removeAddress = (obj) => {
+      if (!obj || typeof obj !== "object") return;
+
+      // ลบคีย์ที่เป็นฟิลด์ที่อยู่โดยตรง
+      addressKeys.forEach((k) => {
+        if (k in obj) delete obj[k];
+      });
+
+      // เดินลงไปในทุกก้อน (รองรับโครงสร้างซ้อน)
+      Object.keys(obj).forEach((k) => {
+        const v = obj[k];
+        if (v && typeof v === "object") removeAddress(v);
+        // กันเคส key เป็นรูป general.province / signer.zipcode เป็นต้น
+        if (
+          addressKeys.some((ak) => k === ak || k.endsWith("." + ak))
+        ) {
+          delete obj[k];
+        }
+      });
+    };
+
+    removeAddress(cloned);
+    return cloned;
+  }, [validationErrors, addressKeys]);
+
+  // ดึงข้อมูล auth me
   useEffect(() => {
     const fetchAuthMeData = async () => {
       try {
         setIsLoadingAuthMe(true);
         const response = await getAuthMe();
-
         if (response && response.res_code === "0000" && response.res_data) {
           setAuthMeData(response.res_data);
         } else {
@@ -73,48 +104,32 @@ const Tab1 = ({
         setIsLoadingAuthMe(false);
       }
     };
-
     fetchAuthMeData();
   }, []);
 
-  // ตรวจสอบสิทธิ์การเข้าถึง tab หน่วยงานของรัฐ
+  // ตรวจสิทธิ์ tab หน่วยงานรัฐ
   useEffect(() => {
     const roles = getUserRoles();
     setUserRoles(roles);
-
-    const allowedRoles = [
-      "admin",
-      "staff",
-      "supervisor",
-      "department",
-      "admin_home",
-    ];
+    const allowedRoles = ["admin", "staff", "supervisor", "department", "admin_home"];
     const hasAccess = allowedRoles.some((role) => roles.includes(role));
     setHasGovernmentAccess(hasAccess);
   }, []);
 
   const handleTabChange = (newTab) => {
-    // ถ้าพยายามเข้า tab หน่วยงานของรัฐ แต่ไม่มีสิทธิ์ ให้ return
     if (newTab === 2 && !hasGovernmentAccess) {
       console.log("ไม่มีสิทธิ์เข้าถึง tab หน่วยงานของรัฐ");
       return;
     }
-
-    if (onTabChange) {
-      onTabChange("step1", newTab);
-    }
+    if (onTabChange) onTabChange("step1", newTab);
   };
 
   const handleUpdate = useMemo(() => {
     return (type) => (name, value) => {
       const prev = tabData[type] || {};
-      const updated = {
-        ...prev,
-        [name]: value,
-      };
+      const updated = { ...prev, [name]: value };
 
       let updatedData = {};
-
       if (currentTab === 0) {
         updatedData = {
           general: type === "general" ? updated : tabData.general || {},
@@ -127,21 +142,18 @@ const Tab1 = ({
         };
       } else if (currentTab === 2) {
         updatedData = {
-          government:
-            type === "government" ? updated : tabData.government || {},
+          government: type === "government" ? updated : tabData.government || {},
         };
       }
-
       updateStepData(stepKey, "general", updatedData);
     };
   }, [stepKey, tabData, currentTab, updateStepData]);
 
-  // แยก Logic การรีเซ็ต address fields
+  // ถ้า province เปลี่ยน ค่อยรีเซ็ต อำเภอ/ตำบล/รหัส — (แค่ความสะดวก, ไม่เกี่ยวกับการบังคับกรอก)
   useEffect(() => {
-    const resetAddressFields = (type, provinceName) => {
+    const resetAddressFields = (type, provinceValue) => {
       const currentData = tabData[type] || {};
-
-      if (currentData.province?.value !== provinceName) {
+      if (currentData.province?.value !== provinceValue) {
         handleUpdate(type)("districts", "");
         handleUpdate(type)("subdistricts", "");
         handleUpdate(type)("zipcode", "");
@@ -149,7 +161,6 @@ const Tab1 = ({
     };
 
     if (currentTab === 0) {
-      // บุคคลทั่วไป
       if (tabData.general?.province) {
         resetAddressFields("general", tabData.general.province.value);
       }
@@ -157,7 +168,6 @@ const Tab1 = ({
         resetAddressFields("delegate", tabData.delegate.province.value);
       }
     } else if (currentTab === 1) {
-      // นิติบุคคล
       if (tabData.corporate?.province) {
         resetAddressFields("corporate", tabData.corporate.province.value);
       }
@@ -165,7 +175,6 @@ const Tab1 = ({
         resetAddressFields("signer", tabData.signer.province.value);
       }
     } else if (currentTab === 2) {
-      // หน่วยงานของรัฐ
       if (tabData.government?.province) {
         resetAddressFields("government", tabData.government.province.value);
       }
@@ -184,17 +193,11 @@ const Tab1 = ({
     <div className={styles.container}>
       <div className={styles.tabNav}>
         {tabs.map((label, idx) => {
-          // ซ่อน tab หน่วยงานของรัฐ ถ้าไม่มีสิทธิ์
-          if (idx === 2 && !hasGovernmentAccess) {
-            return null;
-          }
-
+          if (idx === 2 && !hasGovernmentAccess) return null;
           return (
             <div
               key={idx}
-              className={`${styles.tab} ${styles[`tab${idx}`]} ${
-                currentTab === idx ? styles.active : ""
-              }`}
+              className={`${styles.tab} ${styles[`tab${idx}`]} ${currentTab === idx ? styles.active : ""}`}
               onClick={() => handleTabChange(idx)}
             >
               {label}
@@ -207,7 +210,6 @@ const Tab1 = ({
         />
       </div>
 
-      {/* ใช้ currentTab แทน active */}
       {currentTab === 0 && (
         <>
           <div className={styles.formContainer}>
@@ -215,7 +217,7 @@ const Tab1 = ({
               data={tabData.general || {}}
               onChange={handleUpdate("general")}
               title="ข้อมูลผู้ร้องทุกข์"
-              validationErrors={validationErrors}
+              validationErrors={stripAddressErrors}     
               shouldShowValidation={shouldShowValidation}
               fieldPrefix="general"
               formType="mandatory"
@@ -227,7 +229,7 @@ const Tab1 = ({
               data={tabData.delegate || {}}
               onChange={handleUpdate("delegate")}
               title="ข้อมูลผู้รับมอบอำนาจร้องทุกข์"
-              validationErrors={validationErrors}
+              validationErrors={stripAddressErrors}    
               shouldShowValidation={shouldShowValidation}
               fieldPrefix="delegate"
               formType="optional"
@@ -243,7 +245,7 @@ const Tab1 = ({
               data={tabData.corporate || {}}
               onChange={handleUpdate("corporate")}
               title="ข้อมูลผู้ร้องทุกข์ (นิติบุคคล)"
-              validationErrors={validationErrors}
+              validationErrors={stripAddressErrors}     
               shouldShowValidation={shouldShowValidation}
               fieldPrefix="corporate"
               formType="mandatory"
@@ -254,7 +256,7 @@ const Tab1 = ({
               data={tabData.signer || {}}
               onChange={handleUpdate("signer")}
               title="ข้อมูลผู้มีอำนาจลงนาม"
-              validationErrors={validationErrors}
+              validationErrors={stripAddressErrors}     
               shouldShowValidation={shouldShowValidation}
               fieldPrefix="signer"
               formType="optional"
@@ -263,7 +265,6 @@ const Tab1 = ({
         </>
       )}
 
-      {/* แสดง tab หน่วยงานของรัฐ เฉพาะเมื่อมีสิทธิ์ */}
       {currentTab === 2 && hasGovernmentAccess && (
         <>
           <div className={styles.formContainer}>
@@ -271,7 +272,7 @@ const Tab1 = ({
               data={tabData.government || {}}
               onChange={handleUpdate("government")}
               title="ข้อมูลผู้ร้องทุกข์ (หน่วยงานของรัฐ)"
-              validationErrors={validationErrors}
+              validationErrors={stripAddressErrors}      
               shouldShowValidation={shouldShowValidation}
               fieldPrefix="government"
               formType="mandatory"
