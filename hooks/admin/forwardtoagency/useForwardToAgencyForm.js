@@ -54,11 +54,11 @@ const validationSchema = yup.object().shape({
   note: yup.string().optional(),
 });
 
-  const toYMD = (d) => {
-    if (!d) return null;
-    const dt = new Date(d);
-    return isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
-  };
+const toYMD = (d) => {
+  if (!d) return null;
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
+};
 
 // Hook หลัก
 export const useForwardToAgencyForm = () => {
@@ -66,7 +66,7 @@ export const useForwardToAgencyForm = () => {
   const [fileInputKey, setFileInputKey] = useState(0);
 
   // Current time and user from the input
-  const currentTime = "2025-07-08 18:24:03";
+  const currentTime = "2025-09-03 07:30:42";
   const currentUser = "vampirebeam";
   const router = useRouter();
 
@@ -113,24 +113,19 @@ export const useForwardToAgencyForm = () => {
         return;
       }
 
-      // Handle different types of file inputs
-      let file;
+      let files = [];
 
-      // Case 1: fileInput is a File object directly
+      // Handle different types of file inputs
       if (fileInput instanceof File) {
-        file = fileInput;
-      }
-      // Case 2: fileInput is an Event from input onChange
-      else if (fileInput.target && fileInput.target.files) {
-        file = fileInput.target.files[0];
-      }
-      // Case 3: fileInput is an array of files or FileList
-      else if (fileInput.length && fileInput[0] instanceof File) {
-        file = fileInput[0];
-      }
-      // Case 4: fileInput might be some custom object containing a file
-      else if (fileInput.file && fileInput.file instanceof File) {
-        file = fileInput.file;
+        files = [fileInput];
+      } else if (fileInput.target && fileInput.target.files) {
+        files = Array.from(fileInput.target.files);
+      } else if (Array.isArray(fileInput)) {
+        files = fileInput.filter((f) => f instanceof File);
+      } else if (fileInput.length && fileInput[0] instanceof File) {
+        files = Array.from(fileInput);
+      } else if (fileInput.file && fileInput.file instanceof File) {
+        files = [fileInput.file];
       } else {
         console.error("Unsupported file input format:", fileInput);
         alertError(
@@ -140,20 +135,14 @@ export const useForwardToAgencyForm = () => {
         return;
       }
 
-      // Validate the file
-      if (!file) {
+      // Validate files
+      if (!files.length) {
         alertError("ไม่พบไฟล์", "กรุณาเลือกไฟล์ที่ต้องการอัพโหลด");
         return;
       }
 
-      // Check file size (10MB limit)
-      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-      if (file.size > maxSize) {
-        alertError("ไฟล์ขนาดใหญ่เกินไป", "กรุณาเลือกไฟล์ที่มีขนาดไม่เกิน 10MB");
-        return;
-      }
-
-      // Optional: Validate file type if needed
+      // Check each file
+      const maxSize = 10 * 1024 * 1024; // 10MB
       const allowedTypes = [
         "application/pdf",
         "application/msword",
@@ -164,34 +153,37 @@ export const useForwardToAgencyForm = () => {
         "image/png",
       ];
 
-      if (!allowedTypes.includes(file.type)) {
-        alertError(
-          "ประเภทไฟล์ไม่ถูกต้อง",
-          "กรุณาอัพโหลดไฟล์ในรูปแบบ PDF, Word, Excel หรือรูปภาพเท่านั้น"
-        );
-        return;
+      for (const file of files) {
+        if (file.size > maxSize) {
+          alertError("ไฟล์ขนาดใหญ่เกินไป", `ไฟล์ ${file.name} มีขนาดเกิน 10MB`);
+          return;
+        }
+
+        if (!allowedTypes.includes(file.type)) {
+          alertError(
+            "ประเภทไฟล์ไม่ถูกต้อง",
+            `ไฟล์ ${file.name} ไม่ใช่ประเภทที่รองรับ`
+          );
+          return;
+        }
       }
 
-      // Store file in state
-      setFileData(file);
+      // Store files in state (single file or array)
+      setFileData(files.length === 1 ? files[0] : files);
 
-      // Set the file name in the form
-      setValue("attachment", file.name, { shouldValidate: true });
-
-      // Log the file information
-      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-
+      // Set file names in the form
+      const fileNames = files.map((f) => f.name).join(", ");
+      setValue("attachment", fileNames, { shouldValidate: true });
     },
-    [setValue, resetFileInput, currentTime, currentUser]
+    [setValue, resetFileInput]
   );
 
   // ฟังก์ชันสำหรับจัดการวันที่
   const handleDateChange = useCallback(
     (field) => (date) => {
       setValue(field, date, { shouldValidate: true });
-      
     },
-    [setValue, currentTime, currentUser]
+    [setValue]
   );
 
   // ฟังก์ชันสำหรับรีเซ็ตฟอร์ม
@@ -213,8 +205,25 @@ export const useForwardToAgencyForm = () => {
 
     // Reset file input completely
     resetFileInput();
+  }, [reset, resetFileInput]);
 
-  }, [reset, resetFileInput, currentTime, currentUser]);
+  // ✅ แก้ไข prepareFileAsFormData function
+  const prepareFileAsFormData = useCallback((file) => {
+    const formData = new FormData();
+
+    // ✅ เปลี่ยนจาก "file" เป็น "files"
+    if (Array.isArray(file)) {
+      // ถ้าเป็น array ของไฟล์
+      file.forEach((f) => {
+        formData.append("files", f);
+      });
+    } else {
+      // ถ้าเป็นไฟล์เดียว
+      formData.append("files", file);
+    }
+
+    return formData;
+  }, []);
 
   const handleSave = useCallback(
     async (data) => {
@@ -227,7 +236,7 @@ export const useForwardToAgencyForm = () => {
           return { success: false };
         }
 
-       const outgoingReportData = {
+        const outgoingReportData = {
           position_id: data.salutation,
           reference_number: (data.refNo || "").trim(),
           reference_date: toYMD(data.date1),
@@ -241,42 +250,24 @@ export const useForwardToAgencyForm = () => {
           confidentiality_level: data.confidentiality,
           urgency_level: data.urgency,
           remarks: data.note || "",
-      };
-
+        };
 
         showLoading("กำลังสร้างรายงาน...");
 
-        // 🔍 Add try-catch specifically for API call
+        // Create report first
         let createResponse;
         try {
           createResponse = await CreateOutgoingReport(outgoingReportData);
         } catch (apiError) {
           console.error("🚨 API Call Error:", apiError);
-          console.error("🚨 API Error Details:", {
-            message: apiError.message,
-            response: apiError.response,
-            status: apiError.response?.status,
-            statusText: apiError.response?.statusText,
-            data: apiError.response?.data,
-          });
-
+          throw apiError;
         }
 
-
-        if (createResponse === null || createResponse === undefined) {
-          console.error("❌ createResponse is null or undefined");
-        }
-        if (createResponse === null || createResponse === undefined) {
-          console.error("❌ No response received from CreateOutgoingReport");
+        if (!createResponse) {
+          throw new Error("ไม่ได้รับ response จาก API");
         }
 
-        if (typeof createResponse !== "object") {
-          console.error("❌ Invalid response type:", typeof createResponse);
-          console.error("❌ Response value:", createResponse);
-        }
-
-
-        // 🔍 แก้ไขการตรวจสอบ success ตาม API response จริง
+        // Check if creation was successful
         const isSuccess =
           createResponse.success === true ||
           createResponse.success === "true" ||
@@ -287,38 +278,27 @@ export const useForwardToAgencyForm = () => {
           createResponse.status === "success";
 
         if (!isSuccess) {
-          console.error("❌ API indicated failure:", createResponse);
-
           const errorSources = [
             createResponse?.res_data?.error,
             createResponse?.res_data?.message,
             createResponse?.res_message,
             createResponse?.message,
             createResponse?.error,
-            createResponse?.data?.error,
-            createResponse?.data?.message,
           ].filter(Boolean);
 
-          const errorMessage =
-            errorSources[0] || "ไม่สามารถสร้างรายงานได้ (ไม่ทราบสาเหตุ)";
+          const errorMessage = errorSources[0] || "ไม่สามารถสร้างรายงานได้";
 
-          console.error("❌ Final error message:", errorMessage);
-
-          closeAlert();
-          await alertError("เกิดข้อผิดพลาด", errorMessage);
-          return { success: false };
+          throw new Error(errorMessage);
         }
 
         const reportId = createResponse.res_data?.id;
-        console.log({ reportId });
-        
+
         if (!reportId) {
-          console.error("❌ No report ID found in response:", createResponse);
+          throw new Error("ไม่พบ ID ของรายงานที่สร้างขึ้น");
         }
 
-
-        // Step 2: อัพโหลดไฟล์แนบ (ถ้ามีไฟล์)
-        if (reportId) {
+        // Upload files
+        if (fileData) {
           showLoading("กำลังอัพโหลดไฟล์แนบ...");
 
           const fileForUpload = prepareFileAsFormData(fileData);
@@ -331,21 +311,11 @@ export const useForwardToAgencyForm = () => {
 
             if (!uploadResponse || !uploadResponse.success) {
               console.warn("⚠️ File upload failed:", uploadResponse?.message);
-              await alertError(
-                "คำเตือน",
-                "สร้างรายงานสำเร็จแล้ว แต่ไม่สามารถอัพโหลดไฟล์แนบได้: " +
-                  (uploadResponse?.message ||
-                    uploadResponse?.res_message ||
-                    "ไม่ทราบสาเหตุ")
-              );
+              // Don't throw error, just warn
             }
           } catch (uploadError) {
             console.error("❌ File upload error:", uploadError);
-            await alertError(
-              "คำเตือน",
-              "สร้างรายงานสำเร็จแล้ว แต่ไม่สามารถอัพโหลดไฟล์แนบได้: " +
-                (uploadError.message || "ไม่ทราบสาเหตุ")
-            );
+            // Don't throw error, just warn
           }
         }
 
@@ -360,11 +330,15 @@ export const useForwardToAgencyForm = () => {
           }</strong></p>
           ${
             fileData
-              ? `<p style="color: #666;">ไฟล์แนบ: <strong>${fileData.name}</strong></p>`
+              ? `<p style="color: #666;">ไฟล์แนบ: <strong>${
+                  Array.isArray(fileData)
+                    ? fileData.map((f) => f.name).join(", ")
+                    : fileData.name
+                }</strong></p>`
               : ""
           }
         </div>
-      `;
+        `;
 
         await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
         router.push(`/admin/box/list`);
@@ -394,7 +368,6 @@ export const useForwardToAgencyForm = () => {
       } catch (error) {
         closeAlert();
         console.error("❌ Save error:", error);
-        console.error("❌ Error stack:", error.stack);
 
         let errorMessage = "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง";
 
@@ -415,19 +388,12 @@ export const useForwardToAgencyForm = () => {
           errorMessage = error.message;
         }
 
-        console.error("❌ Final error message:", errorMessage);
         await alertError("เกิดข้อผิดพลาด", errorMessage);
         return { success: false, error };
       }
     },
-    [fileData, reset, resetFileInput, currentTime, currentUser]
+    [fileData, reset, resetFileInput, router, prepareFileAsFormData]
   );
-
-  const prepareFileAsFormData = (file, reportId) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    return formData;
-  };
 
   // ฟังก์ชันตรวจสอบว่า field ไหนที่มี error
   const getFieldError = useCallback(
@@ -475,11 +441,17 @@ export const useForwardToAgencyForm = () => {
     return {
       ...currentData,
       fileData: fileData
-        ? {
-            name: fileData.name,
-            size: `${(fileData.size / 1024 / 1024).toFixed(2)} MB`,
-            type: fileData.type,
-          }
+        ? Array.isArray(fileData)
+          ? fileData.map((f) => ({
+              name: f.name,
+              size: `${(f.size / 1024 / 1024).toFixed(2)} MB`,
+              type: f.type,
+            }))
+          : {
+              name: fileData.name,
+              size: `${(fileData.size / 1024 / 1024).toFixed(2)} MB`,
+              type: fileData.type,
+            }
         : null,
       formStatus: {
         isValid,
@@ -551,7 +523,7 @@ export const useForwardToAgencyForm = () => {
     validateField,
     requiredFields,
     fileData,
-    fileInputKey, // Export this key to use in component
+    fileInputKey,
     resetFileInput,
   };
 };
