@@ -88,6 +88,22 @@ const getDepartmentsPrefix = async () => {
     throw error;
   }
 };
+
+const deleteSignatureAuthorityGroup = async (groupId) => {
+  try {
+    const response = await axiosInstance.delete(
+      `/signature-authorities/groups/${groupId}`
+    );
+    return response?.data;
+  } catch (error) {
+    console.error(
+      `Error deleting /signature-authorities/groups/${groupId}:`,
+      error
+    );
+    throw error;
+  }
+};
+
 export {
   getDepartmentGroup,
   getDepartments,
@@ -97,4 +113,5 @@ export {
   createSignatureAuthorityGroup,
   updateSignatureAuthorityGroup,
   getDepartmentsPrefix,
+  deleteSignatureAuthorityGroup,
 };

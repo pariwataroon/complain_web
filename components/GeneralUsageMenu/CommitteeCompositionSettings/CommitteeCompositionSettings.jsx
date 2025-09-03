@@ -4,6 +4,7 @@ import { Box, Typography, Grid, Stack } from "@mui/material";
 import ButtonService from "@services/ButtonService/ButtonService";
 import AddIcon from "@mui/icons-material/Add";
 import SaveIcon from "@mui/icons-material/Save";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useRouter } from "next/router";
 import SelectField from "@services/SelectField/SelectField";
 import SelectFieldpositionOpts from "@services/SelectFieldpositionOpts/SelectFieldpositionOpts";
@@ -13,9 +14,10 @@ import {
   getSignatureAuthorities,
   createSignatureAuthorityGroup,
   updateSignatureAuthorityGroup,
+  deleteSignatureAuthorityGroup,
 } from "@pages/api/department/department";
 import { GetAllSelectPositionOptions } from "@pages/api/allselect/allselect";
-import { alertSuccess, alertError } from "@utils/Alerts";
+import { alertSuccess, alertError, showConfirm } from "@utils/Alerts";
 import { translateResCode, isSuccessResCode } from "@utils/responseMessages";
 
 const breadcrumbItems = [
@@ -660,6 +662,134 @@ const CommitteeCompositionSettings = () => {
     }
   };
 
+  // ฟังก์ชันลบกลุ่ม
+  const handleDeleteBox = async (boxNumber) => {
+    const existingGroupId = groupIdByBox[boxNumber];
+
+    if (!existingGroupId) {
+      // หากไม่มี group_id แสดงว่ายังไม่ได้บันทึก ให้ลบออกจาก UI เลย
+      const confirmed = await showConfirm(
+        "ยืนยันการลบ",
+        "คุณต้องการลบกลุ่มนี้ใช่หรือไม่?",
+        "ลบ",
+        "ยกเลิก"
+      );
+
+      if (confirmed) {
+        removeBoxFromUI(boxNumber);
+        alertSuccess("ลบสำเร็จ", "ลบกลุ่มเรียบร้อยแล้ว");
+      }
+      return;
+    }
+
+    // ยืนยันการลบ
+    const confirmed = await showConfirm(
+      "ยืนยันการลบกลุ่ม",
+      "คุณต้องการลบกลุ่มนี้ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้",
+      "ลบ",
+      "ยกเลิก"
+    );
+
+    if (!confirmed) return;
+
+    // เปลี่ยนสถานะเป็นกำลังลบ
+    setBoxSaveState((prev) => ({
+      ...prev,
+      [boxNumber]: { deleting: true, success: null, error: null },
+    }));
+
+    try {
+      const res = await deleteSignatureAuthorityGroup(existingGroupId);
+      const code = res?.res_code;
+      const backendMsg = res?.res_message;
+      const thaiMsg = translateResCode(code, backendMsg);
+
+      if (isSuccessResCode(code)) {
+        // ลบสำเร็จ - ลบออกจาก UI
+        removeBoxFromUI(boxNumber);
+        alertSuccess("ลบสำเร็จ", thaiMsg || "ลบกลุ่มเรียบร้อยแล้ว");
+      } else {
+        const errText = thaiMsg || "ไม่สามารถลบได้";
+        setBoxSaveState((prev) => ({
+          ...prev,
+          [boxNumber]: { deleting: false, success: null, error: errText },
+        }));
+        alertError("ลบล้มเหลว", errText);
+      }
+    } catch (e) {
+      const code = e?.response?.data?.res_code;
+      const backendMsg =
+        e?.response?.data?.res_message || e?.response?.data?.message;
+      const translated = translateResCode(code, backendMsg || e.message, true);
+
+      setBoxSaveState((prev) => ({
+        ...prev,
+        [boxNumber]: {
+          deleting: false,
+          success: null,
+          error: translated,
+        },
+      }));
+      alertError("เกิดข้อผิดพลาด", translated);
+    }
+  };
+
+  // ฟังก์ชันลบ box ออกจาก UI
+  const removeBoxFromUI = (boxNumber) => {
+    // ลบข้อมูลใน formData ที่เกี่ยวข้องกับ box นี้
+    setFormData((prev) => {
+      const newData = { ...prev };
+      Object.keys(newData).forEach((key) => {
+        if (key.includes(`_${boxNumber}`)) {
+          delete newData[key];
+        }
+      });
+      return newData;
+    });
+
+    // ลบข้อมูลใน additionalSelects
+    setAdditionalSelects((prev) => {
+      const newData = { ...prev };
+      Object.keys(newData).forEach((key) => {
+        if (key.includes(`_${boxNumber}`)) {
+          delete newData[key];
+        }
+      });
+      return newData;
+    });
+
+    // ลบ group ID
+    setGroupIdByBox((prev) => {
+      const newData = { ...prev };
+      delete newData[boxNumber];
+      return newData;
+    });
+
+    // ลบ save state
+    setBoxSaveState((prev) => {
+      const newData = { ...prev };
+      delete newData[boxNumber];
+      return newData;
+    });
+
+    // คืนค่า position option ให้สามารถเลือกได้อีกครั้ง
+    const positionId = formData[`position_${boxNumber}`];
+    if (positionId) {
+      const positionOption = allPositionOptions.find(
+        (opt) => opt.value === positionId
+      );
+      if (positionOption) {
+        setAvailablePositionOptions((prev) => {
+          if (prev.some((opt) => opt.value === positionId)) return prev;
+          return [...prev, positionOption];
+        });
+      }
+    }
+
+    // ลดจำนวน box ลง 1
+    setSignatoryBoxes((prev) => Math.max(1, prev - 1));
+  };
+
   const getPositionOptionsForBox = (number) => {
     const currentVal = formData[`position_${number}`];
 
@@ -691,13 +821,18 @@ const CommitteeCompositionSettings = () => {
   const SignatoryBox = ({ number }) => {
     const saveState = boxSaveState[number] || {
       saving: false,
+      deleting: false,
       success: null,
       error: null,
     };
     const assignmentsPreview = buildAssignmentsForBox(number);
     const hasPosition = !!formData[`position_${number}`];
     const disabledSave =
-      saveState.saving || !hasPosition || assignmentsPreview.length === 0;
+      saveState.saving ||
+      saveState.deleting ||
+      !hasPosition ||
+      assignmentsPreview.length === 0;
+    const disabledDelete = saveState.saving || saveState.deleting;
     const positionOpts = getPositionOptionsForBox(number);
     const existingGroupId = groupIdByBox[number];
 
@@ -912,9 +1047,9 @@ const CommitteeCompositionSettings = () => {
             sx={{
               mt: 3,
               display: "flex",
-              flexDirection: "column",
+              flexDirection: { xs: "column", sm: "row" },
               alignItems: "flex-start",
-              gap: 1,
+              gap: 2,
             }}
           >
             <ButtonService
@@ -937,6 +1072,24 @@ const CommitteeCompositionSettings = () => {
                 fontSize: "15px",
                 "&:hover": {
                   background: disabledSave ? "#b5c6d4" : "#0067B1",
+                },
+              }}
+            />
+
+            <ButtonService
+              label={saveState.deleting ? "กำลังลบ..." : "ลบกลุ่ม"}
+              variant="contained"
+              iconLeft={<DeleteIcon />}
+              disabled={disabledDelete}
+              onClick={() => handleDeleteBox(number)}
+              sx={{
+                background: disabledDelete ? "#b5c6d4" : "#f44336",
+                color: "#ffffff",
+                borderRadius: "12px",
+                padding: "8px 20px",
+                fontSize: "15px",
+                "&:hover": {
+                  background: disabledDelete ? "#b5c6d4" : "#d32f2f",
                 },
               }}
             />
@@ -974,21 +1127,6 @@ const CommitteeCompositionSettings = () => {
             border: "2px solid #0067B1",
           }}
         />
-        {/* <ButtonService
-          label="เพิ่มหน่วยงานในสังกัด"
-          variant="outlined"
-          iconLeft={<AddIcon />}
-          onClick={() => router.push("/admin/settinggeneral/department/add")}
-          sx={{
-            background: "#0067B1",
-            color: "#ffffff",
-            borderRadius: "15px",
-            padding: "8px 20px",
-            width: { xs: "100%", sm: "auto" },
-            fontSize: "16px",
-            border: "2px solid #0067B1",
-          }}
-        /> */}
       </Box>
 
       {Array.from({ length: signatoryBoxes }).map((_, index) => (

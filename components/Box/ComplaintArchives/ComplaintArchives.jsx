@@ -5,36 +5,66 @@ import TableListBox from "@services/TableListBox/TableListBox";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import { getDocumentStorageForWebsite } from "@pages/api/document/document";
 
-/* ---------- สถานะ: Mapping 2 ทาง + helper ---------- */
+/* ---------- สถานะ: Mapping 2 ทาง + helper + สี ---------- */
 const statusMapEnToTh = {
-  submitted: "รับเรื่อง",
-  sent_to_agency: "ส่งหน่วยงาน",
-  in_process: "กำลังดำเนินการ",
-  in_review: "อยู่ระหว่างพิจารณา",
-  tracking: "ติดตามผล",
+  submitted: "ส่งคำร้อง",
+  sent_to_agency: "มอบหมายเจ้าหน้าที่",
+  sent_to_external: "ส่งหน่วยงานภายนอก",
+  in_process: "อยู่ระหว่างดำเนินการ",
+  in_review: "อยู่ระหว่างการพิจารณา",
+  tracking: "ติดตามผลการพิจารณา",
   reviewed: "แจ้งผลการพิจารณา",
   completed: "เสร็จสิ้น",
   cancelled: "ยกเลิก",
 };
+
+const statusColors = {
+  submitted: "#FFA726", // ส้ม
+  sent_to_agency: "#42A5F5", // ฟ้า
+  sent_to_external: "#AB47BC", // ม่วง
+  in_process: "#26C6DA", // ฟ้าอ่อน
+  in_review: "#FFCA28", // เหลือง
+  tracking: "#FF7043", // ส้มแดง
+  reviewed: "#66BB6A", // เขียวอ่อน
+  completed: "#4CAF50", // เขียว
+  cancelled: "#EF5350", // แดง
+};
+
 const statusMapThToEn = Object.fromEntries(
   Object.entries(statusMapEnToTh).map(([en, th]) => [th, en])
 );
+
 const getThaiStatus = (en) => statusMapEnToTh[en] ?? (en || "-");
 const getEnglishStatus = (th) => statusMapThToEn[th] ?? (th || "-");
+const getStatusColor = (en) => statusColors[en] ?? "#9E9E9E";
 
 /* ---------- วันเวลา: รองรับทั้ง ISO และ "16 Aug 2025" ---------- */
 const formatThaiDateFlexible = (dateStr) => {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return "-";
-  const thaiMonths = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+  const thaiMonths = [
+    "ม.ค.",
+    "ก.พ.",
+    "มี.ค.",
+    "เม.ย.",
+    "พ.ค.",
+    "มิ.ย.",
+    "ก.ค.",
+    "ส.ค.",
+    "ก.ย.",
+    "ต.ค.",
+    "พ.ย.",
+    "ธ.ค.",
+  ];
   const day = d.getDate();
   const month = thaiMonths[d.getMonth()];
   const year = d.getFullYear() + 543;
   return `${day} ${month} ${year}`;
 };
 
-const displayOrDash = (v) => (v === undefined || v === null || v === "" ? "-" : v);
+const displayOrDash = (v) =>
+  v === undefined || v === null || v === "" ? "-" : v;
 
 /* ---------- แปลงข้อมูลจาก API -> แถวของตาราง ---------- */
 const transformComplaintData = (apiItems) => {
@@ -47,9 +77,7 @@ const transformComplaintData = (apiItems) => {
         : formatThaiDateFlexible(item.created_at);
 
     const agency =
-      item.complainant?.government?.agencyName?.name ??
-      item.agency ??
-      "-";
+      item.complainant?.government?.agencyName?.name ?? item.agency ?? "-";
 
     const claimantName =
       item.complainant?.government?.fullName ??
@@ -62,14 +90,14 @@ const transformComplaintData = (apiItems) => {
     const subIssueType = displayOrDash(item.subIssueType);
 
     const responsibleOfficer =
-      item.responsibleOfficer ??
-      item.assigned_officer?.name ??
-      "ไม่ได้มอบหมาย";
+      item.responsibleOfficer ?? item.assigned_officer?.name ?? "ไม่ได้มอบหมาย";
 
     const statusEn = item.status || "-";
     const statusTh = getThaiStatus(statusEn);
 
-    const complaintNumber = displayOrDash(item.master_complaint?.complaint_number);
+    const complaintNumber = displayOrDash(
+      item.master_complaint?.complaint_number
+    );
 
     return {
       id,
@@ -80,8 +108,9 @@ const transformComplaintData = (apiItems) => {
       issueType,
       subIssueType,
       responsibleOfficer,
-      status: statusTh,   // แสดงไทย
+      status: statusTh, // แสดงไทย
       statusEn: statusEn, // เก็บอังกฤษใช้ใน URL
+      statusColor: getStatusColor(statusEn), // เพิ่มสีสำหรับแสดงผล
       note: displayOrDash(item.note),
       complaintNumber,
     };
@@ -111,7 +140,8 @@ const extractFilterOptionsFromItems = (items) => {
     if (item.subIssueType) subIssueTypes.push(item.subIssueType);
 
     // หน่วยงาน (จากผู้ร้องภาครัฐ)
-    const agencyName = item.complainant?.government?.agencyName?.name ?? item.agency;
+    const agencyName =
+      item.complainant?.government?.agencyName?.name ?? item.agency;
     if (agencyName) agencies.push(agencyName);
 
     // เจ้าหน้าที่รับผิดชอบ
@@ -137,7 +167,7 @@ const ComplaintArchives = () => {
   const [filteredComplaints, setFilteredComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ตัวเลือกฟิลเตอร์ที่ “ดึงจาก API”
+  // ตัวเลือกฟิลเตอร์ที่ "ดึงจาก API"
   const [filterOptions, setFilterOptions] = useState({
     issueTypeOptions: [],
     subIssueTypeOptions: [],
@@ -243,7 +273,10 @@ const ComplaintArchives = () => {
         // ถ้า error ให้ยังแสดงตัวเลือกสถานะจาก mapping ไว้ก่อน
         setFilterOptions((prev) => ({
           ...prev,
-          statusOptions: Object.values(statusMapEnToTh).map((th) => ({ value: th, label: th })),
+          statusOptions: Object.values(statusMapEnToTh).map((th) => ({
+            value: th,
+            label: th,
+          })),
         }));
       } finally {
         setLoading(false);
@@ -291,11 +324,36 @@ const ComplaintArchives = () => {
         filterFields={[
           { name: "claimantName", label: "ชื่อผู้ร้อง", type: "text" },
           { name: "issue", label: "เรื่อง", type: "text" },
-          { name: "issueType", label: "ประเภทเรื่อง", type: "select", options: filterOptions.issueTypeOptions },
-          { name: "subIssueType", label: "ประเภทเรื่องย่อย", type: "select", options: filterOptions.subIssueTypeOptions },
-          { name: "agency", label: "หน่วยงาน", type: "select", options: filterOptions.agencyOptions },
-          { name: "responsibleOfficer", label: "เจ้าหน้าที่รับผิดชอบ", type: "select", options: filterOptions.responsibleOfficerOptions },
-          { name: "status", label: "สถานะเรื่อง", type: "select", options: filterOptions.statusOptions },
+          {
+            name: "issueType",
+            label: "ประเภทเรื่อง",
+            type: "select",
+            options: filterOptions.issueTypeOptions,
+          },
+          {
+            name: "subIssueType",
+            label: "ประเภทเรื่องย่อย",
+            type: "select",
+            options: filterOptions.subIssueTypeOptions,
+          },
+          {
+            name: "agency",
+            label: "หน่วยงาน",
+            type: "select",
+            options: filterOptions.agencyOptions,
+          },
+          {
+            name: "responsibleOfficer",
+            label: "เจ้าหน้าที่รับผิดชอบ",
+            type: "select",
+            options: filterOptions.responsibleOfficerOptions,
+          },
+          {
+            name: "status",
+            label: "สถานะเรื่อง",
+            type: "select",
+            options: filterOptions.statusOptions,
+          },
         ]}
       />
     </>
