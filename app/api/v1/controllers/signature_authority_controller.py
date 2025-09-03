@@ -1110,3 +1110,72 @@ def update_signature_authority_group(db: Session, group_id: UUID, group_data: di
             status_code=500,
             detail=f"Failed to update signature authority group: {str(e)}"
         )
+
+def delete_signature_authority_group(db: Session, group_id: UUID):
+    """ลบกลุ่มผู้มีอำนาจลงนาม (soft delete) พร้อมการมอบหมายที่เกี่ยวข้อง"""
+    try:
+        # ตรวจสอบความถูกต้องของ group_id
+        if not group_id:
+            logger.error("Group ID is missing")
+            raise HTTPException(status_code=400, detail="Group ID is required")
+            
+        if not isinstance(group_id, UUID):
+            try:
+                group_id = UUID(str(group_id))
+            except ValueError:
+                logger.error(f"Invalid group ID format: {group_id}")
+                raise HTTPException(status_code=400, detail="Invalid group ID format")
+        
+        # ค้นหากลุ่มที่ต้องการลบ
+        db_group = db.query(GroupSignatureAuthority).filter(
+            GroupSignatureAuthority.id == group_id,
+            GroupSignatureAuthority.is_active == True
+        ).first()
+        
+        if not db_group:
+            logger.error(f"Signature authority group with ID {group_id} not found")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Signature authority group with ID {group_id} not found"
+            )
+        
+        # นับจำนวนการมอบหมายที่จะถูกลบ
+        related_assignments = db.query(SignatureAuthority).filter(
+            SignatureAuthority.group_signature_authorities_id == group_id,
+            SignatureAuthority.is_active == True
+        ).all()
+        
+        assignments_count = len(related_assignments)
+        
+        # ลบการมอบหมายที่เกี่ยวข้องทั้งหมด (soft delete)
+        for assignment in related_assignments:
+            assignment.is_active = False
+            assignment.end_date = datetime.now()
+            logger.debug(f"Deactivated signature authority assignment: {assignment.id}")
+        
+        # ลบกลุ่ม (soft delete)
+        db_group.is_active = False
+        db_group.updated_at = datetime.now()
+        
+        db.commit()
+        
+        logger.info(f"Successfully deleted signature authority group: {db_group.name} (ID: {group_id}) with {assignments_count} related assignments")
+        
+        return {
+            "id": str(group_id),
+            "group_name": db_group.name,
+            "deleted_assignments_count": assignments_count,
+            "deleted_at": datetime.now(),
+            "message": f"Successfully deleted group '{db_group.name}' and {assignments_count} related assignments"
+        }
+        
+    except HTTPException as e:
+        db.rollback()
+        raise e
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting signature authority group: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete signature authority group: {str(e)}"
+        )

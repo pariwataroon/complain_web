@@ -11,7 +11,7 @@ from app.api.v1.controllers.signature_authority_controller import (
     remove_signature_authority, get_users_with_signature_by_department_group,
     create_bulk_signature_authorities, get_signature_authority_groups,
     create_signature_authority_group, get_signature_authority_group_by_id,
-    update_signature_authority_group
+    update_signature_authority_group, delete_signature_authority_group
 )
 from app.api.v1.schemas.signature_authority import (
     SignatureAuthorityCreate, SignatureAuthority, SignatureAuthorityUpdate
@@ -241,6 +241,21 @@ async def update_signature_authority_group_endpoint(
         return format_response("0000", result)
     except DuplicateKeyError as e:
         return format_response("4090", {"error": str(e)})
+    except HTTPException as e:
+        return format_response(f"{e.status_code}", {"error": e.detail})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
+@router.delete("/groups/{group_id}", response_model=FormatResponseModel)
+async def delete_signature_authority_group_endpoint(
+    group_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_delete("setting_users"))
+):
+    """ลบกลุ่มผู้มีอำนาจลงนาม พร้อมการมอบหมายที่เกี่ยวข้อง"""
+    try:
+        result = delete_signature_authority_group(db, group_id)
+        return format_response("0003", result)
     except HTTPException as e:
         return format_response(f"{e.status_code}", {"error": e.detail})
     except Exception as e:
