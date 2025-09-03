@@ -5146,6 +5146,36 @@
 						"description": "อัปเดตกลุ่มผู้มีอำนาจลงนาม - ช่วยในการแก้ไขข้อมูลกลุ่มและปรับเปลี่ยนการมอบหมายสิทธิ์\n\n**คุณสมบัติ:**\n- อัปเดตชื่อและคำอธิบายกลุ่ม\n- ป้องกันการใช้ชื่อกลุ่มซ้ำ\n- แทนที่การมอบหมายเดิมทั้งหมดด้วยข้อมูลใหม่\n- ตรวจสอบความถูกต้องของ UUID และข้อมูลผู้ใช้/หน่วยงาน\n- รองรับการเพิ่ม/ลด/แก้ไขสมาชิกและหน่วยงาน\n\n**สิทธิ์:** ต้องมีสิทธิ์ `setting_users:update` (admin level)\n\n**หมายเหตุ:**\n- การอัปเดตจะลบการมอบหมายเดิมทั้งหมดและสร้างใหม่ตามข้อมูลที่ส่งมา\n- ตรวจสอบว่าชื่อกลุ่มไม่ซ้ำกับกลุ่มอื่น\n- รองรับ placeholder detection สำหรับ UUID\n\n**Response:**\n```json\n{\n  \"res_code\": \"0000\",\n  \"res_message\": \"UPDATE_DATA_SUCCESSFULLY\",\n  \"res_data\": {\n    \"id\": \"uuid\",\n    \"group_name\": \"ผู้อำนวยการกลุ่มงานพัฒนาระบบ (อัปเดต)\",\n    \"description\": \"กลุ่มผู้มีอำนาจลงนาม...\",\n    \"assignments\": [...],\n    \"total_assignments\": 5,\n    \"updated_at\": \"2025-07-09T09:45:00Z\"\n  }\n}\n```"
 					},
 					"response": []
+				},
+				{
+					"name": "Delete Group Signature Authority",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/signature-authorities/groups/{{group_id}}",
+							"host": [
+								"{{API}}{{PREFIX}}"
+							],
+							"path": [
+								"signature-authorities",
+								"groups",
+								"{{group_id}}"
+							]
+						},
+						"description": "ลบกลุ่มผู้มีอำนาจลงนาม พร้อมการมอบหมายที่เกี่ยวข้องทั้งหมด (Soft Delete)\n\n**คุณสมบัติ:**\n- ลบกลุ่มและการมอบหมายแบบ Soft Delete (is_active = false)\n- ไม่ลบข้อมูลออกจากฐานข้อมูลจริง - เก็บประวัติไว้\n- ส่งคืนจำนวนการมอบหมายที่ถูกลบ\n- รองรับการ Restore ข้อมูลในอนาคต\n\n**สิทธิ์:** ต้องมีสิทธิ์ `setting_users:delete` (admin level)\n\n**Response Success:**\n```json\n{\n  \"res_code\": \"0003\",\n  \"res_message\": \"DELETE_DATA_SUCCESSFULLY\",\n  \"res_data\": {\n    \"id\": \"{{group_id}}\",\n    \"group_name\": \"กลุ่มผู้ลงนาม 1\",\n    \"deleted_assignments_count\": 5,\n    \"deleted_at\": \"2025-09-03T10:30:45.123000\",\n    \"message\": \"Successfully deleted group 'กลุ่มผู้ลงนาม 1' and 5 related assignments\"\n  }\n}\n```\n\n**Response Error (404):**\n```json\n{\n  \"res_code\": \"404\",\n  \"res_message\": \"NOT_FOUND\",\n  \"res_data\": {\n    \"error\": \"Signature authority group with ID {{group_id}} not found\"\n  }\n}\n```"
+					},
+					"response": []
 				}
 			],
 			"description": "API สำหรับจัดการผู้มีอำนาจลงนามเอกสาร - เชื่อมโยงผู้ใช้กับหน่วยงานโดยตรง โดยใช้ข้อมูลตำแหน่งจาก user_positions\n\n**คุณสมบัติใหม่:**\n- Group Signature Authority - จัดการผู้ใช้หลายคนในหลายหน่วยงานพร้อมกัน\n- Bulk Creation - สร้างสิทธิการลงนามจำนวนมากในครั้งเดียว\n- Group Management - จัดกลุ่มผู้มีอำนาจลงนามเพื่อความสะดวกในการบริหารจัดการ"
