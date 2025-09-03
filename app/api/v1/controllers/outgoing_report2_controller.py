@@ -56,14 +56,14 @@ def create_outgoing_report2(
     try:
         logger.info(f"Creating OutgoingReport2: {report_data.complaint_number}")
 
-        # ตรวจสอบ complaint_number ซ้ำ
+        # ตรวจสอบ document_number ซ้ำ (แทน complaint_number เพราะเรื่องเดียวกันอาจส่งหลายหน่วย)
         existing = db.query(OutgoingReport2).filter(
-            OutgoingReport2.complaint_number == report_data.complaint_number,
+            OutgoingReport2.document_number == report_data.document_number,
             OutgoingReport2.is_active == True
         ).first()
 
         if existing:
-            raise DuplicateKeyError(f"เลขหนังสือ {report_data.complaint_number} มีอยู่แล้ว")
+            raise DuplicateKeyError(f"เลขเอกสาร {report_data.document_number} มีอยู่แล้ว")
 
         # ตรวจสอบความสอดคล้องระหว่าง complaint_id และ complaint_number
         if report_data.complaint_id:
