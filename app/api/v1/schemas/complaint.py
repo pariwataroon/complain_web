@@ -67,6 +67,7 @@ class ComplaintListItem(BaseModel):
     assigned_remark: Optional[str] = ""
     urgency_level: Optional[str] = "LOW"
     severity_level: Optional[str] = "LOW"
+    is_assigned: Optional[bool] = False  # เพิ่มฟิลด์สำหรับตรวจสอบสถานะการมอบหมาย
     
     class Config:
         from_attributes = True
@@ -90,6 +91,7 @@ class ComplaintListItemEnhanced(BaseModel):
     # เพิ่มฟิลด์ phone และ description จาก complainant_data สำหรับ enhanced version
     complainant_phone: Optional[str] = ""
     complainant_description: Optional[str] = ""
+    is_assigned: Optional[bool] = False  # เพิ่มฟิลด์สำหรับตรวจสอบสถานะการมอบหมาย
     
     class Config:
         from_attributes = True

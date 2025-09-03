@@ -1386,6 +1386,13 @@ def get_complaints_enhanced(
                 except Exception:
                     pass
             
+            # ตรวจสอบสถานะการมอบหมาย
+            is_assigned = bool(
+                complaint.assigned_officer_id or 
+                complaint.assigned_to or 
+                (hasattr(complaint, "assigned_date") and complaint.assigned_date)
+            )
+            
             enhanced_item = {
                 "id": str(complaint.id),
                 "complaint_number": complaint.complaint_number,
@@ -1405,6 +1412,7 @@ def get_complaints_enhanced(
                 "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
                 "complaint_type_name": complaint.complaint_type or "",
                 "is_master": True,  # default value
+                "is_assigned": is_assigned,  # เพิ่มฟิลด์สำหรับตรวจสอบสถานะการมอบหมาย
                 
                 # เพิ่ม phone และ description สำหรับ enhanced version
                 "complainant_phone": complainant_data.get("phone", ""),
@@ -1891,6 +1899,13 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
             if subtype:
                 complaint_subtype_name = subtype.name
 
+        # ตรวจสอบสถานะการมอบหมาย
+        is_assigned = bool(
+            complaint.assigned_officer_id or 
+            complaint.assigned_to or 
+            (hasattr(complaint, "assigned_date") and complaint.assigned_date)
+        )
+
         # เอา phone และ description ออกจากฟังก์ชันนี้
         return ComplaintListItem(
             id=complaint.id,
@@ -1906,7 +1921,8 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
             assigned_remark=complaint.assigned_remark or "",
             urgency_level=complaint.urgency_level.lower() if complaint.urgency_level else "low",
             severity_level=complaint.severity_level.lower() if complaint.severity_level else "low",
-            complaint_subtype=complaint_subtype_name
+            complaint_subtype=complaint_subtype_name,
+            is_assigned=is_assigned
         )
         
     except Exception as e:
@@ -1923,7 +1939,8 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
             assigned_to="",
             assigned_remark=complaint.assigned_remark or "",
             urgency_level="low",
-            severity_level="low"
+            severity_level="low",
+            is_assigned=False
         )
 
 def create_complaint_list_item_enhanced(complaint: Complaint, db: Session = None):
@@ -1937,6 +1954,13 @@ def create_complaint_list_item_enhanced(complaint: Complaint, db: Session = None
             subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
             if subtype:
                 complaint_subtype_name = subtype.name
+
+        # ตรวจสอบสถานะการมอบหมาย
+        is_assigned = bool(
+            complaint.assigned_officer_id or 
+            complaint.assigned_to or 
+            (hasattr(complaint, "assigned_date") and complaint.assigned_date)
+        )
 
         # ดึง phone และ description
         complainant_data = ensure_dict(complaint.complainant_data)
@@ -1960,7 +1984,8 @@ def create_complaint_list_item_enhanced(complaint: Complaint, db: Session = None
             severity_level=complaint.severity_level.lower() if complaint.severity_level else "low",
             complaint_subtype=complaint_subtype_name,
             complainant_phone=complainant_phone,
-            complainant_description=complainant_description
+            complainant_description=complainant_description,
+            is_assigned=is_assigned
         )
         
     except Exception as e:
@@ -1979,7 +2004,8 @@ def create_complaint_list_item_enhanced(complaint: Complaint, db: Session = None
             urgency_level="low",
             severity_level="low",
             complainant_phone="",
-            complainant_description=""
+            complainant_description="",
+            is_assigned=False
         )
 
 def get_display_complainant_name(complainant_data: Dict, delegate_data: Dict = None) -> str:
@@ -3715,6 +3741,13 @@ def create_grouped_complaint_item(db: Session, complaint: Complaint) -> Dict:
             if subtype:
                 complaint_subtype = subtype.name
         
+        # ตรวจสอบสถานะการมอบหมาย
+        is_assigned = bool(
+            complaint.assigned_officer_id or 
+            complaint.assigned_to or 
+            (hasattr(complaint, "assigned_date") and complaint.assigned_date)
+        )
+        
         return {
             "id": str(complaint.id),
             "complaint_number": complaint.complaint_number,
@@ -3735,6 +3768,7 @@ def create_grouped_complaint_item(db: Session, complaint: Complaint) -> Dict:
             "assigned_to": complaint.assigned_to or "",
             "urgency_level": complaint.urgency_level.lower() if complaint.urgency_level else "low",
             "severity_level": complaint.severity_level.lower() if complaint.severity_level else "low",
+            "is_assigned": is_assigned,
             
             # Reference fields
             "additional_reference_number1": complaint.additional_reference_number1,
@@ -3767,6 +3801,7 @@ def create_grouped_complaint_item(db: Session, complaint: Complaint) -> Dict:
             "assigned_to": "",
             "urgency_level": "low",
             "severity_level": "low",
+            "is_assigned": False,
             "additional_reference_number1": None,
             "additional_reference_date1": None,
             "additional_reference_number2": None,
