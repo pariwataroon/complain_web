@@ -21,10 +21,7 @@ from models.comp_districts import District
 from models.comp_complaint_types import ComplaintType, ComplaintSubType, ComplaintChannel
 from app.api.v1.schemas.complaint import ComplaintListItem
 from app.api.v1.schemas.notification import NotificationCreate
-from models.comp_complaint_types import ComplaintType, ComplaintSubType, ComplaintChannel
 from app.api.v1.controllers.geography_controller import model_to_dict
-from models.user import User
-from app.api.v1.controllers.complaint_assignment_controller import get_assignment_form_data
 import app.api.v1.controllers.notification_controller as notification_controller
 
 logger = logging.getLogger(__name__)
