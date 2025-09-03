@@ -709,17 +709,7 @@ def get_signature_authority_groups(db: Session, skip: int = 0, limit: int = 100)
 def create_signature_authority_group(db: Session, group_data: dict):
     """สร้างกลุ่มผู้ลงนามพร้อมการมอบหมายแบบใหม่ (ไม่กระทบ bulk endpoint เดิม)"""
     try:
-        # ตรวจสอบว่ามีชื่อกลุ่มซ้ำหรือไม่
-        existing_group = db.query(GroupSignatureAuthority).filter(
-            GroupSignatureAuthority.name == group_data["group_name"],
-            GroupSignatureAuthority.is_active == True
-        ).first()
-        
-        if existing_group:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Group name '{group_data['group_name']}' already exists. Use PUT to update existing group."
-            )
+        # ไม่ตรวจสอบชื่อกลุ่มซ้ำ เพราะระบบรองรับชื่อกลุ่มซ้ำได้ (Primary Key คือ ID)
         
         # สร้างกลุ่มใหม่
         db_group = GroupSignatureAuthority(
@@ -990,20 +980,8 @@ def update_signature_authority_group(db: Session, group_id: UUID, group_data: di
                 detail=f"Signature authority group with ID {group_id} not found"
             )
         
-        # ตรวจสอบชื่อซ้ำ (ยกเว้นกลุ่มปัจจุบัน)
+        # ไม่ตรวจสอบชื่อซ้ำ เพราะระบบรองรับชื่อกลุ่มซ้ำได้ (Primary Key คือ ID)
         if "group_name" in group_data:
-            existing_group = db.query(GroupSignatureAuthority).filter(
-                GroupSignatureAuthority.name == group_data["group_name"],
-                GroupSignatureAuthority.is_active == True,
-                GroupSignatureAuthority.id != group_id
-            ).first()
-            
-            if existing_group:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Group name '{group_data['group_name']}' already exists"
-                )
-            
             db_group.name = group_data["group_name"]
         
         # อัปเดตคำอธิบาย
