@@ -6,9 +6,12 @@ import {
   Box,
   Typography,
   Grid,
+  CircularProgress,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
 import { Controller } from "react-hook-form";
-import { Add } from "@mui/icons-material";
+import { Add, Visibility, VisibilityOff } from "@mui/icons-material";
 import TextfieldService from "@services/TextfieldService/TextfieldService";
 import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import InputText from "@services/InputText/InputText";
@@ -32,6 +35,7 @@ import {
   GetRoles,
   PutUser,
   GetPositions,
+  GetUserById,
 } from "@pages/api/settinggeneral/users";
 
 const AddUserModal = ({
@@ -46,6 +50,12 @@ const AddUserModal = ({
   const [roleMap, setRoleMap] = useState({});
   const [roleOptions, setRoleOptions] = useState([]);
   const [positionOptions, setPositionOptions] = useState([]);
+  const [viewUserData, setViewUserData] = useState(null);
+  const [loadingUserData, setLoadingUserData] = useState(false);
+  const [isPasswordUnlocked, setIsPasswordUnlocked] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // เพิ่ม state สำหรับ toggle password
+
+  console.log("editingUser", editingUser);
 
   const {
     register,
@@ -59,8 +69,150 @@ const AddUserModal = ({
     getValues,
   } = useCRUDFormUsers(editingUser, onUserUpdated);
 
+  // หากมี editingUser ให้โหลดข้อมูล user detail
   useEffect(() => {
-    if (open) setValue("password", "");
+    let ignore = false;
+    async function fetchUserData() {
+      if (open && editingUser?.id) {
+        setLoadingUserData(true);
+        setViewUserData(null);
+        try {
+          const res = await GetUserById(editingUser.id);
+          if (!ignore) {
+            const userData = res?.res_data || null;
+            setViewUserData(userData);
+
+            // ถ้าได้ข้อมูลแล้ว ให้ pre-fill ฟอร์ม
+            if (userData) {
+              setValue("citizen_id", userData.citizen_id || "");
+              setValue("full_name", userData.full_name || "");
+
+              // หา role ที่ตรงกับ roles ที่ได้จาก API
+              const userRole = userData.roles?.[0];
+              if (userRole) {
+                setValue("group", userRole.role_id || "");
+              }
+
+              // แก้ไขการ set ค่า position - รองรับทั้ง primary_position และ positions array
+              if (userData.primary_position) {
+                // ใช้ position_id จาก primary_position
+                setValue(
+                  "position_id",
+                  String(
+                    userData.primary_position.position_id ||
+                      userData.primary_position.id ||
+                      ""
+                  )
+                );
+              } else if (userData.positions && userData.positions.length > 0) {
+                // ใช้ position แรกจาก positions array หากไม่มี primary_position
+                const firstPosition = userData.positions[0];
+                setValue(
+                  "position_id",
+                  String(firstPosition.position_id || firstPosition.id || "")
+                );
+              }
+
+              const titleId = String(userData.title_id || "3");
+              setValue("title_id", titleId);
+              setValue("first_name", userData.first_name || "");
+              setValue("last_name", userData.last_name || "");
+              setValue("phone", userData.phone || "");
+              setValue("email", userData.email || "");
+              setValue("password", "");
+              setValue("address", userData.address || "");
+
+              // ตั้งค่าที่อยู่ติดต่อ
+              setValue("address2", userData.address_other || "");
+              setValue("profileImage", userData.profile_image || "");
+
+              // ตั้งค่าจังหวัด อำเภอ ตำบล รหัสไปรษณีย์ (ที่อยู่หลัก)
+              if (userData.address_details) {
+                const addr = userData.address_details;
+                if (addr.province) {
+                  setValue("province", {
+                    value: addr.province.id,
+                    label: addr.province.name,
+                  });
+                }
+                if (addr.amphure || addr.districts) {
+                  const amphure = addr.amphure || addr.districts;
+                  setValue("districts", {
+                    value: amphure.id,
+                    label: amphure.name,
+                  });
+                }
+                if (addr.district || addr.subdistricts) {
+                  const district = addr.district || addr.subdistricts;
+                  setValue("subdistricts", {
+                    value: district.id,
+                    label: district.name,
+                  });
+                }
+                if (addr.zipcode) {
+                  setValue("zipcode", {
+                    value: addr.zipcode.value || addr.zipcode_value,
+                    label: String(addr.zipcode.value || addr.zipcode_value),
+                  });
+                }
+              }
+
+              // ตั้งค่าจังหวัด อำเภอ ตำบล รหัสไปรษณีย์ (ที่อยู่ติดต่อ)
+              if (userData.address_other_details) {
+                const addr2 = userData.address_other_details;
+                if (addr2.province || addr2.province2) {
+                  const province = addr2.province || addr2.province2;
+                  setValue("province2", {
+                    value: province.id,
+                    label: province.name,
+                  });
+                }
+                if (addr2.amphure || addr2.districts2) {
+                  const amphure = addr2.amphure || addr2.districts2;
+                  setValue("districts2", {
+                    value: amphure.id,
+                    label: amphure.name,
+                  });
+                }
+                if (addr2.district || addr2.subdistricts2) {
+                  const district = addr2.district || addr2.subdistricts2;
+                  setValue("subdistricts2", {
+                    value: district.id,
+                    label: district.name,
+                  });
+                }
+                if (addr2.zipcode || addr2.zipcode2) {
+                  const zipcode = addr2.zipcode || addr2.zipcode2;
+                  setValue("zipcode2", {
+                    value: zipcode.value || addr2.zipcode_value,
+                    label: String(zipcode.value || addr2.zipcode_value),
+                  });
+                }
+              }
+
+              setValue("syncAddress", userData.sync_address || false);
+            }
+          }
+        } catch (err) {
+          if (!ignore) setViewUserData("error");
+        }
+        setLoadingUserData(false);
+      } else {
+        setViewUserData(null);
+      }
+    }
+    fetchUserData();
+    return () => {
+      ignore = true;
+    };
+  }, [open, editingUser, setValue]);
+
+  useEffect(() => {
+    if (open) {
+      setValue("password", "");
+      setIsPasswordUnlocked(false);
+      setShowPassword(false); // reset password visibility เมื่อเปิด modal
+    }
   }, [open, setValue]);
 
   const provinceCode = watch("province")?.value;
@@ -84,7 +236,7 @@ const AddUserModal = ({
       "full_name",
       "group",
       "profileImage",
-      "position_id", // ✅ ใช้ position_id แทน prefix_other
+      "position_id",
       "address",
       "address2",
       "province",
@@ -99,6 +251,8 @@ const AddUserModal = ({
     fieldsToReset.forEach((field) => setValue(field, ""));
     setValue("syncAddress", false);
     setIsFormReset(true);
+    setIsPasswordUnlocked(false);
+    setShowPassword(false); // reset password visibility
   };
 
   // โหลดข้อมูลตำแหน่งเมื่อ modal เปิด
@@ -241,8 +395,8 @@ const AddUserModal = ({
           id: formData.group,
         },
       ],
-      position_ids, // ✅ เพิ่ม
-      primary_position_id, // ✅ เพิ่ม
+      position_ids,
+      primary_position_id,
     };
   };
 
@@ -264,9 +418,11 @@ const AddUserModal = ({
 
     const formData = getValues();
 
-    // ✅ เช็ก password เฉพาะตอน "เพิ่มผู้ใช้งาน"
     if (!editingUser && (!formData.password || !formData.password.trim())) {
-      await alertWarning("กรุณากรอกรหัสผ่าน", "ต้องกรอกรหัสผ่านเมื่อเพิ่มผู้ใช้ใหม่");
+      await alertWarning(
+        "กรุณากรอกรหัสผ่าน",
+        "ต้องกรอกรหัสผ่านเมื่อเพิ่มผู้ใช้ใหม่"
+      );
       return;
     }
 
@@ -302,7 +458,10 @@ const AddUserModal = ({
 
       const result = await AddUsers(apiData);
 
-      if (result && (result.res_code === "0000" || result.res_code === "0001")) {
+      if (
+        result &&
+        (result.res_code === "0000" || result.res_code === "0001")
+      ) {
         if (onUserUpdated) {
           onUserUpdated();
         }
@@ -329,7 +488,6 @@ const AddUserModal = ({
       try {
         const apiData = formatDataForAPI(formData);
 
-        // ✅ ถ้าไม่กรอกรหัสผ่าน -> ลบออก ไม่ส่งไปแก้ไข
         if (!formData.password || !formData.password.trim()) {
           delete apiData.password;
         }
@@ -360,7 +518,10 @@ const AddUserModal = ({
       const formData = getValues();
       const hasData = Object.values(formData).some(
         (value) =>
-          value !== "" && value !== null && value !== undefined && value !== false
+          value !== "" &&
+          value !== null &&
+          value !== undefined &&
+          value !== false
       );
 
       if (hasData && !editingUser) {
@@ -388,44 +549,12 @@ const AddUserModal = ({
     onClose();
   };
 
-  // ----------------- Pre-fill form when editing -----------------
-  useEffect(() => {
-    if (editingUser && open) {
-      setValue("citizen_id", editingUser.citizen_id || "");
-      setValue("full_name", editingUser.full_name || "");
-      setValue("group", editingUser.role_id || "");
-      setValue("position_id", editingUser.position_id || "");
-
-      const titleId = String(
-        editingUser.title_id ||
-          "3"
-      );
-      setValue("title_id", titleId);
-      setValue("first_name", editingUser.first_name || "");
-      setValue("last_name", editingUser.last_name || "");
-      setValue("phone", editingUser.phone || "");
-      setValue("email", editingUser.email || "");
-      setValue("password", "", { shouldValidate: true });
-      setValue("address", editingUser.address || "");
-      setValue("address2", editingUser.contact_address || "");
-      setValue("profileImage", editingUser.profile_image || "");
-
-      setTimeout(() => {
-        setValue("position_id", editingUser.position_id || "", {
-          shouldValidate: true,
-        });
-      }, 200);
-
-      setIsFormReset(false);
-    } else if (!editingUser && open && !isFormReset) {
-      resetAllFormFields();
-    }
-  }, [editingUser, setValue, open, isFormReset, titleOptions]);
-
   // Reset state เมื่อปิด Modal
   useEffect(() => {
     if (!open) {
       setIsFormReset(false);
+      setIsPasswordUnlocked(false);
+      setShowPassword(false); // reset password visibility
     }
   }, [open]);
 
@@ -445,6 +574,55 @@ const AddUserModal = ({
       setValue("zipcode2", zipcode);
     }
   }, [syncAddress, setValue, watch]);
+
+  // ถ้ากำลังโหลดข้อมูล user ให้แสดง loading
+  if (editingUser && loadingUserData) {
+    return (
+      <Dialog
+        open={open}
+        onClose={handleModalClose}
+        maxWidth="lg"
+        fullWidth
+        sx={{
+          "& .MuiBackdrop-root": {
+            backgroundColor: "rgba(0, 0, 0, 0.3)",
+          },
+          "& .MuiDialog-paper": {
+            backgroundColor: "#ffffff",
+            borderRadius: "12px",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: "bold",
+            fontSize: 24,
+            textAlign: "center",
+            color: "#1120A3",
+            backgroundColor: "#ffffff",
+          }}
+        >
+          แก้ไขข้อมูลผู้ใช้งาน
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            padding: 4,
+            backgroundColor: "#ffffff",
+          }}
+        >
+          <Box
+            minHeight={200}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            <CircularProgress />
+          </Box>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog
@@ -466,29 +644,32 @@ const AddUserModal = ({
       <DialogTitle
         sx={{
           fontWeight: "bold",
-          fontSize: 24,
+          fontSize: { xs: 20, sm: 24 },
           textAlign: "center",
-          mb: 2,
           color: "#1120A3",
           backgroundColor: "#ffffff",
+          pb: 1, // ลดระยะห่างด้านล่าง
         }}
       >
         {editingUser ? "แก้ไขข้อมูลผู้ใช้งาน" : "เพิ่มข้อมูลผู้ใช้งาน"}
       </DialogTitle>
       <DialogContent
         sx={{
-          padding: 4,
+          padding: { xs: 2, sm: 3 }, // ลดระยะห่าง
           backgroundColor: "#ffffff",
+          pt: 1, // ลดระยะห่างด้านบน
         }}
       >
         <form>
-          <Grid container spacing={2}>
+          <Grid container spacing={1.5}>
+            {" "}
+            {/* ลดระยะห่างจาก 2 เป็น 1.5 */}
             {/* Row 1 */}
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} md={4}>
               <Typography
                 variant="body2"
                 color="#1120A3"
-                sx={{ fontWeight: "bold" }}
+                sx={{ fontWeight: "bold", mb: 0.5 }} // ลดระยะห่าง
               >
                 เลขบัตรประชาชน <span style={{ color: "red" }}>*</span>
               </Typography>
@@ -509,17 +690,16 @@ const AddUserModal = ({
               />
 
               {errors.citizen_id && (
-                <Typography color="error">
+                <Typography color="error" sx={{ mt: 0.5 }}>
                   {errors.citizen_id.message}
                 </Typography>
               )}
             </Grid>
-
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} md={4}>
               <Typography
                 variant="body2"
                 color="#1120A3"
-                sx={{ fontWeight: "bold" }}
+                sx={{ fontWeight: "bold", mb: 0.5 }}
               >
                 ชื่อผู้ใช้งาน <span style={{ color: "red" }}>*</span>
               </Typography>
@@ -529,17 +709,16 @@ const AddUserModal = ({
                 {...register("full_name")}
               />
               {errors.full_name && (
-                <Typography color="error">
+                <Typography color="error" sx={{ mt: 0.5 }}>
                   {errors.full_name.message}
                 </Typography>
               )}
             </Grid>
-
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} md={4}>
               <Typography
                 variant="body2"
                 color="#1120A3"
-                sx={{ fontWeight: "bold" }}
+                sx={{ fontWeight: "bold", mb: 0.5 }}
               >
                 กลุ่มสิทธิ์ <span style={{ color: "red" }}>*</span>
               </Typography>
@@ -562,45 +741,48 @@ const AddUserModal = ({
                 }}
               />
               {errors.group && (
-                <Typography color="error">{errors.group.message}</Typography>
+                <Typography color="error" sx={{ mt: 0.5 }}>
+                  {errors.group.message}
+                </Typography>
               )}
             </Grid>
-<Grid item xs={12} sm={4}>
-  <Typography
-    variant="body2"
-    color="#1120A3"
-    sx={{ fontWeight: "bold" }}
-  >
-    ตำแหน่ง
-  </Typography>
-  <Controller
-    name="position_id"   // ✅ แก้จาก prefix_other → position_id
-    control={control}
-    render={({ field: { value, onChange, ...field } }) => {
-      return (
-        <SelectMenuService
-          {...field}
-          value={value || ""}
-          handleChange={(event) => {
-            onChange(event.target.value);
-          }}
-          options={positionOptions}
-          width="100%"
-          name="position_id"
-        />
-      );
-    }}
-  />
-  {errors.position_id && (
-    <Typography color="error">{errors.position_id.message}</Typography>
-  )}
-</Grid>
-
-            <Grid item xs={4} sm={4}>
+            <Grid item xs={12} md={4}>
               <Typography
                 variant="body2"
                 color="#1120A3"
-                sx={{ fontWeight: "bold" }}
+                sx={{ fontWeight: "bold", mb: 0.5 }}
+              >
+                ตำแหน่ง
+              </Typography>
+              <Controller
+                name="position_id"
+                control={control}
+                render={({ field: { value, onChange, ...field } }) => {
+                  return (
+                    <SelectMenuService
+                      {...field}
+                      value={value || ""}
+                      handleChange={(event) => {
+                        onChange(event.target.value);
+                      }}
+                      options={positionOptions}
+                      width="100%"
+                      name="position_id"
+                    />
+                  );
+                }}
+              />
+              {errors.position_id && (
+                <Typography color="error" sx={{ mt: 0.5 }}>
+                  {errors.position_id.message}
+                </Typography>
+              )}
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Typography
+                variant="body2"
+                color="#1120A3"
+                sx={{ fontWeight: "bold", mb: 0.5 }}
               >
                 รูปโปรไฟล์
               </Typography>
@@ -654,13 +836,17 @@ const AddUserModal = ({
                 }}
               />
             </Grid>
-
-            <Grid item xs={12} sm={6} md={7}>
+            {/* Mobile: แบ่งเป็น 2 column, Desktop: แบ่งตาม design เดิม */}
+            <Grid item xs={12} lg={7}>
               <Box>
-                <Typography className={styles.title}>
+                <Typography className={styles.title} sx={{ mb: 1 }}>
+                  {" "}
+                  {/* ลดระยะห่าง */}
                   ข้อมูลผู้ใช้เพิ่มเติม
                 </Typography>
-                <Grid container spacing={2}>
+                <Grid container spacing={1.5}>
+                  {" "}
+                  {/* ลดระยะห่าง */}
                   <Grid item xs={12}>
                     <Controller
                       name="citizen_id"
@@ -668,13 +854,13 @@ const AddUserModal = ({
                       render={({ field }) => <IDCardInput {...field} />}
                     />
                   </Grid>
-                  {/* แถวคำนำหน้า ชื่อ นามสกุล */}
-                  <Grid item xs={12} sm={3}>
+                  {/* แถวคำนำหน้า ชื่อ นามสกุล - Responsive */}
+                  <Grid item xs={12} sm={4} lg={2.5}>
                     <Box>
                       <Typography
                         variant="body2"
                         color="#1120A3"
-                        sx={{ fontWeight: "bold", mb: 1 }}
+                        sx={{ fontWeight: "bold", mb: 0.5 }}
                       >
                         คำนำหน้า <span style={{ color: "red" }}>*</span>
                       </Typography>
@@ -685,7 +871,7 @@ const AddUserModal = ({
                           return (
                             <SelectMenuService
                               {...field}
-                              value={String(value || "")} // แปลงเป็น string เสมอ
+                              value={String(value || "")}
                               handleChange={(event) => {
                                 onChange(event.target.value);
                               }}
@@ -697,13 +883,13 @@ const AddUserModal = ({
                         }}
                       />
                       {errors.title_id && (
-                        <Typography color="error">
+                        <Typography color="error" sx={{ mt: 0.5 }}>
                           {errors.title_id.message}
                         </Typography>
                       )}
                     </Box>
                   </Grid>
-                  <Grid item xs={12} sm={4.5}>
+                  <Grid item xs={12} sm={4} lg={4.75}>
                     <InputText
                       label={
                         <>
@@ -714,14 +900,14 @@ const AddUserModal = ({
                       {...register("first_name")}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={4.5}>
+                  <Grid item xs={12} sm={4} lg={4.75}>
                     <InputText
                       label="นามสกุล"
                       placeholder="นามสกุล"
                       {...register("last_name")}
                     />
                   </Grid>
-                  {/* ย้าย ที่อยู่ที่ตามบัตรประชาชน ไว้อีกบรรทัด */}
+                  {/* ที่อยู่ที่ตามบัตรประชาชน */}
                   <Grid item xs={12}>
                     <InputText
                       label="ที่อยู่ที่ตามบัตรประชาชน"
@@ -747,7 +933,13 @@ const AddUserModal = ({
                       {...register("email")}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  {/* แถวรหัสผ่านและปุ่มแก้ไข - Responsive */}
+                  <Grid
+                    item
+                    xs={12}
+                    sm={editingUser ? 8 : 12}
+                    lg={editingUser ? 8.5 : 6}
+                  >
                     <InputText
                       label={
                         <>
@@ -755,15 +947,79 @@ const AddUserModal = ({
                         </>
                       }
                       placeholder="รหัสผ่าน"
-                      type="password"
+                      type={showPassword ? "text" : "password"} // เปลี่ยน type ตาม state
                       autoComplete="new-password"
-                      {...register("password", { required: editingUser ? false : "กรุณากรอกรหัสผ่าน", })}
+                      disabled={editingUser && !isPasswordUnlocked}
+                      {...register("password", {
+                        required: editingUser ? false : "กรุณากรอกรหัสผ่าน",
+                      })}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label="toggle password visibility"
+                              onClick={() => setShowPassword(!showPassword)}
+                              onMouseDown={(event) => event.preventDefault()}
+                              edge="end"
+                              sx={{
+                                color: "#1120A3",
+                                "&:hover": {
+                                  backgroundColor: "rgba(17, 32, 163, 0.04)",
+                                },
+                              }}
+                            >
+                              {showPassword ? (
+                                <VisibilityOff />
+                              ) : (
+                                <Visibility />
+                              )}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
                     />
                     {errors.password && (
-                      <Typography color="error">{errors.password.message}</Typography>
+                      <Typography color="error" sx={{ mt: 0.5 }}>
+                        {errors.password.message}
+                      </Typography>
                     )}
                   </Grid>
-                  <Grid item xs={12} sm={3}>
+                  {editingUser && (
+                    <Grid item xs={12} sm={4} lg={3.5}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "end",
+                          height: "100%",
+                          marginTop: { xs: 0, sm: "-16px" },
+                        }}
+                      >
+                        <ButtonService
+                          label={isPasswordUnlocked ? "ล็อค" : "แก้ไขรหัสผ่าน"}
+                          variant={
+                            isPasswordUnlocked ? "contained" : "outlined"
+                          }
+                          color={isPasswordUnlocked ? "#ff5722" : "#2499FF"}
+                          onClick={() => {
+                            setIsPasswordUnlocked(!isPasswordUnlocked);
+                            if (!isPasswordUnlocked) {
+                              setValue("password", "");
+                            }
+                          }}
+                          sx={{
+                            borderRadius: "8px",
+                            height: "40px",
+                            fontSize: { xs: "11px", sm: "12px" },
+                            fontWeight: "bold",
+                            width: "100%",
+                            whiteSpace: "nowrap",
+                          }}
+                        />
+                      </Box>
+                    </Grid>
+                  )}
+                  {/* จังหวัด อำเภอ แบบ 2x2 ตามรูป */}
+                  <Grid item xs={12} sm={6} lg={6}>
                     <Controller
                       name="province"
                       control={control}
@@ -772,7 +1028,7 @@ const AddUserModal = ({
                       )}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={3}>
+                  <Grid item xs={12} sm={6} lg={6}>
                     <Controller
                       name="districts"
                       control={control}
@@ -785,7 +1041,7 @@ const AddUserModal = ({
                       )}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={3}>
+                  <Grid item xs={12} sm={6} lg={6}>
                     <Controller
                       name="subdistricts"
                       control={control}
@@ -798,7 +1054,7 @@ const AddUserModal = ({
                       )}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={3}>
+                  <Grid item xs={12} sm={6} lg={6}>
                     <Controller
                       name="zipcode"
                       control={control}
@@ -818,7 +1074,8 @@ const AddUserModal = ({
                 </Grid>
               </Box>
             </Grid>
-            <Grid item md={1} sx={{ display: { xs: "none", md: "block" } }}>
+            {/* Divider - Hidden on mobile */}
+            <Grid item lg={1} sx={{ display: { xs: "none", lg: "block" } }}>
               <Box
                 sx={{
                   height: "100%",
@@ -828,15 +1085,18 @@ const AddUserModal = ({
                 }}
               />
             </Grid>
-
             <Grid
               item
               xs={12}
-              sm={6}
-              md={4}
-              sx={{ paddingTop: "20px", marginTop: "130px" }}
+              lg={4}
+              sx={{
+                paddingTop: { xs: "8px", lg: "8px" },
+                marginTop: { xs: "0px", lg: "40px" }, // ลดระยะห่าง
+              }}
             >
-              <Grid container spacing={2}>
+              <Grid container spacing={1.5}>
+                {" "}
+                {/* ลดระยะห่าง */}
                 <Grid item xs={12}>
                   <InputText
                     label="ที่อยู่ที่สามารถติดต่อได้"
@@ -844,11 +1104,12 @@ const AddUserModal = ({
                     {...register("address2")}
                   />
                   {errors.address2 && (
-                    <Typography color="error">
+                    <Typography color="error" sx={{ mt: 0.5 }}>
                       {errors.address2.message}
                     </Typography>
                   )}
                 </Grid>
+                {/* จังหวัด อำเภอ แบบ 2x2 ตามรูป */}
                 <Grid item xs={12} sm={6}>
                   <Controller
                     name="province2"
@@ -902,7 +1163,9 @@ const AddUserModal = ({
                   />
                 </Grid>
               </Grid>
-              <Box>
+              <Box sx={{ mt: 1.5 }}>
+                {" "}
+                {/* ลดระยะห่าง */}
                 <label
                   style={{
                     display: "flex",
@@ -920,9 +1183,10 @@ const AddUserModal = ({
                 </label>
               </Box>
             </Grid>
-
             {/* Button Section */}
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} sx={{ pt: 1.5 }}>
+              {" "}
+              {/* ลดระยะห่าง */}
               <ButtonService
                 label="ยกเลิก"
                 variant="outlined"
@@ -931,13 +1195,15 @@ const AddUserModal = ({
                 disabled={isSubmitting}
                 sx={{
                   borderRadius: "15px",
-                  height: "45px",
+                  height: "40px",
                   fontSize: "16px",
                   fontWeight: "bold",
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} sx={{ pt: 1.5 }}>
+              {" "}
+              {/* ลดระยะห่าง */}
               <ButtonService
                 label={editingUser ? "บันทึกการแก้ไข" : "บันทึก"}
                 color="บันทึก"
@@ -945,7 +1211,7 @@ const AddUserModal = ({
                 disabled={isSubmitting}
                 sx={{
                   borderRadius: "15px",
-                  height: "45px",
+                  height: "40px",
                   fontSize: "16px",
                   fontWeight: "bold",
                 }}

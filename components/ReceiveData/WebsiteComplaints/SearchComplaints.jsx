@@ -170,16 +170,26 @@ const SearchComplaints = () => {
   }, [openSearchDialog]);
 
   useEffect(() => {
-    if (defaultData?.step4?.general) {
-      const step4Data = defaultData.step4.general;
-      step4Methods.reset({
-        ...step4Data,
-        officerReceivedDate: step4Data.officerReceivedDate || "",
-        directorSubmittedDate: step4Data.directorSubmittedDate || "",
-        incidentDateTime: step4Data.incidentDateTime || "",
-      });
-    }
-  }, [defaultData?.step4?.general]);
+  if (defaultData) {
+    const assignmentForm = defaultData.assignment_form || {};
+    const step3General = defaultData.step3?.general || {};
+    const step4General = defaultData.step4?.general || {};
+
+    step4Methods.reset({
+      officerReceivedDate: assignmentForm.assigned_date
+        ? new Date(assignmentForm.assigned_date)
+        : "",
+      directorSubmittedDate: assignmentForm.director_submitted_date   // ✅ แก้ตรงนี้
+        ? new Date(assignmentForm.director_submitted_date)
+        : "",
+      incidentDateTime: step3General.incidentDate
+        ? new Date(step3General.incidentDate)
+        : "",
+    });
+  }
+}, [defaultData, step4Methods]);
+
+
 
   useEffect(() => {
     setLoadingOutsideDepartments(true);
@@ -408,66 +418,100 @@ const SearchComplaints = () => {
     }
   }, [id]);
 
-// preload เมื่อ defaultData มา
 useEffect(() => {
   if (defaultData?.step3?.general || defaultData?.assignment_form) {
     const step3General = defaultData?.step3?.general || {};
     const assignmentForm = defaultData?.assignment_form || {};
+    const step4General = defaultData?.step4?.general || {};
 
-    const typeId =
-      step3General.complaint_type_id || assignmentForm.complaint_type_id || "";
-    const subTypeId =
-      step3General.complaint_subtype_id ||
-      assignmentForm.complaint_subtype_id ||
-      "";
-    const subTypeName =
-      step3General.complaint_subtype_data?.name ||
-      assignmentForm.complaint_subtype_name ||
-      "";
+    // === Map ช่องทางเรื่องร้องเรียน ===
+    let matchedChannelId = "";
+    if (step3General.complaint_channel_id) {
+      matchedChannelId = step3General.complaint_channel_id;
+    } else if (
+      step3General.complaint_channel_name &&
+      complaintChannels.length > 0
+    ) {
+      const matched = complaintChannels.find(
+        (ch) => ch.name === step3General.complaint_channel_name
+      );
+      if (matched) matchedChannelId = matched.id;
+    } else if (assignmentForm.complaint_channel_id) {
+      matchedChannelId = assignmentForm.complaint_channel_id;
+    }
 
-    // reset ค่า
     step3Methods.reset({
-      complaintTypeId: typeId,
-      complaintSubType: subTypeId, // ใส่ id ไปก่อน
+      // ประเภท
+      complaintTypeId:
+        step3General.complaint_type_id || assignmentForm.complaint_type_id || "",
+      complaintSubType:
+        step3General.complaint_subtype_id || assignmentForm.complaint_subtype_id || "",
       subject: step3General.subject || assignmentForm.subject || "",
       description: step3General.description || "",
       incidentDate: step3General.incidentDate
         ? new Date(step3General.incidentDate)
         : "",
-      attachment: step3General.attachment || [],
 
-      complaintChannel: assignmentForm.complaint_channel_id || "",
-      complaint_filing_type: assignmentForm.complaint_filing_type || "new",
+      // ช่องทางเรื่องร้องเรียน
+      complaintChannel: matchedChannelId,
 
+      // === mapping วันที่ ===
       referenceNumber1: assignmentForm.reference_number || "",
-      referenceDate2: assignmentForm.reference_date
+      referenceDate1: assignmentForm.reference_date
         ? new Date(assignmentForm.reference_date)
         : "",
+
       referenceNumber2: assignmentForm.reference_number2 || "",
-      referenceDate2Optional: assignmentForm.reference_date2
+      referenceDate2: assignmentForm.reference_date2
         ? new Date(assignmentForm.reference_date2)
-        : "",
+        : "", // สป.สร.
+
       referenceNumber3: assignmentForm.reference_number3 || "",
       referenceDate3: assignmentForm.reference_date3
         ? new Date(assignmentForm.reference_date3)
-        : "",
+        : "", // สตป.
+
       referenceNumber4: assignmentForm.reference_number4 || "",
       referenceDate4: assignmentForm.reference_date4
         ? new Date(assignmentForm.reference_date4)
-        : "",
+        : "", // สรร.(สารบัญ)
+
       documentNumber: assignmentForm.document_number || "",
       documentDate: assignmentForm.document_date
         ? new Date(assignmentForm.document_date)
-        : "",
+        : "", // เลขที่หนังสือ
+
+      additionalReference1: assignmentForm.additional_reference_number1 || "",
+      additionalReferenceDate1: assignmentForm.additional_reference_date1
+        ? new Date(assignmentForm.additional_reference_date1)
+        : "", // อ้างอิง (สารบัญ)
+
+      additionalReference2: assignmentForm.additional_reference_number2 || "",
+      additionalReferenceDate2: assignmentForm.additional_reference_date2
+        ? new Date(assignmentForm.additional_reference_date2)
+        : "", // อ้างอิง (สานต่อ)
+
       senderAgency: assignmentForm.agency_sender || "",
       securityLevel: assignmentForm.confidentiality_level || "normal",
       urgencyLevel: assignmentForm.urgency_level || "low",
     });
 
-    // โหลด subtypes ถ้ามี typeId
-    if (typeId) {
-      fetchSubComplaintTypes(typeId);
-      setSelectedComplaintTypeId(typeId);
+    step4Methods.reset({
+      officerReceivedDate: assignmentForm.assigned_date
+        ? new Date(assignmentForm.assigned_date)
+        : "", // วันที่รับเรื่องของเจ้าพนักงาน
+      directorSubmittedDate: step4General.directorSubmittedDate
+        ? new Date(step4General.directorSubmittedDate)
+        : "", // วันที่เสนองาน ผอ.สรร.
+      incidentDateTime: step3General.incidentDate
+        ? new Date(step3General.incidentDate)
+        : "", // วันเวลาที่เกิดเหตุ
+    });
+
+    // โหลด subtypes
+    if (assignmentForm.complaint_type_id) {
+      fetchSubComplaintTypes(assignmentForm.complaint_type_id);
+      setSelectedComplaintTypeId(assignmentForm.complaint_type_id);
     }
   }
 }, [defaultData, complaintTypes, complaintChannels]);
@@ -619,161 +663,213 @@ useEffect(() => {
     );
   };
 
-  const handleSubmit = async () => {
-    const fieldsToValidate = [
-      "complaintTypeId",
-      // "complaintSubType",
-      "complaintChannel",
-      "subject",
-      "referenceNumber1",
-      "referenceDate2",
-      "referenceNumber3",
-      "referenceDate3",
-      "referenceNumber4",
-      "referenceDate4",
-    ];
+  const formatDateForAPI = (date) => {
+  if (!date) return null;
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const seconds = String(d.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`; 
+};
 
-    const isValid = await step3Methods.trigger(fieldsToValidate);
 
-    if (!isValid) {
-      const errors = step3Methods.formState.errors;
-      const errorMessages = Object.entries(errors).map(([field, error]) => {
-        return `• ${error.message}`;
-      });
+const handleSubmit = async () => {
+  const fieldsToValidate = [
+    "complaintTypeId",
+    "complaintChannel",
+    "subject",
+    "referenceNumber1",
+    "referenceDate1", // แก้เป็น referenceDate1 (สป.กค.)
+    "referenceNumber2",
+    "referenceDate2", // สป.สร.
+    "referenceNumber3",
+    "referenceDate3", // สตป.
+    "referenceNumber4",
+    "referenceDate4", // สรร.
+  ];
 
-      alertWarning(
-        "ข้อมูลไม่ครบถ้วน",
-        `กรุณาแก้ไขข้อมูลดังต่อไปนี้:<br/><br/>${errorMessages.join("<br/>")}`,
-        true
-      );
-      return;
+  const isValid = await step3Methods.trigger(fieldsToValidate);
+  if (!isValid) {
+    const errors = step3Methods.formState.errors;
+    const errorMessages = Object.entries(errors).map(([field, error]) => {
+      return `• ${error.message}`;
+    });
+
+    alertWarning(
+      "ข้อมูลไม่ครบถ้วน",
+      `กรุณาแก้ไขข้อมูลดังต่อไปนี้:<br/><br/>${errorMessages.join("<br/>")}`,
+      true
+    );
+    return;
+  }
+
+  const generalData = generalMethods.getValues();
+  const delegateData = delegateMethods.getValues();
+  const step2Data = step2Methods.getValues();
+  const step3Data = step3Methods.getValues();
+  const step4Data = step4Methods.getValues();
+
+  // === Debug log วันที่ก่อนส่ง ===
+  console.log("👉 officerReceivedDate (วันที่รับเรื่องของเจ้าพนักงาน):", step4Data.officerReceivedDate);
+  console.log("👉 directorSubmittedDate (วันที่เสนองาน ผอ.สรร.):", step4Data.directorSubmittedDate);
+
+  // === Mapping ประเภท ===
+  const selectedComplaintType =
+    complaintTypes.find(
+      (type) =>
+        type.id === step3Data.complaintTypeId ||
+        type.name === step3Data.complaintType ||
+        type.name === step3Data.complaintTypeName
+    ) || null;
+
+  const selectedSubComplaintType =
+    subComplaintTypes.find(
+      (subType) =>
+        subType.id === step3Data.complaintSubType ||
+        subType.name === step3Data.complaintSubTypeName
+    ) || null;
+
+  const selectedComplaintChannel =
+    complaintChannels.find(
+      (channel) =>
+        channel.id === step3Data.complaintChannel ||
+        channel.name === step3Data.complaintChannelName
+    ) || null;
+
+  const complaintTypeId =
+    step3Data.complaintTypeId ||
+    step3Data.complaint_type_id ||
+    selectedComplaintType?.id ||
+    "-";
+  const complaintTypeName =
+    step3Data.complaintTypeName ||
+    step3Data.complaintType ||
+    selectedComplaintType?.name ||
+    "-";
+  const complaintTypeData =
+    step3Data.complaintTypeData ||
+    step3Data.complaint_type_data ||
+    selectedComplaintType ||
+    null;
+
+  const complaintSubTypeId =
+    step3Data.complaintSubType ||
+    step3Data.complaint_subtype_id ||
+    selectedSubComplaintType?.id ||
+    "-";
+  const complaintSubTypeName =
+    step3Data.complaintSubTypeName ||
+    step3Data.complaint_subtype ||
+    selectedSubComplaintType?.name ||
+    "-";
+  const complaintSubTypeData =
+    step3Data.complaintSubTypeData ||
+    step3Data.complaint_subtype_data ||
+    selectedSubComplaintType ||
+    null;
+
+  const complaintChannelId =
+    step3Data.complaintChannel ||
+    step3Data.complaint_channel_id ||
+    selectedComplaintChannel?.id ||
+    "-";
+  const complaintChannelName =
+    step3Data.complaintChannelName ||
+    step3Data.complaint_channel ||
+    selectedComplaintChannel?.name ||
+    "-";
+  const complaintChannelData =
+    step3Data.complaintChannelData ||
+    step3Data.complaint_channel_data ||
+    selectedComplaintChannel ||
+    null;
+
+  // === Mapper วันที่ ===
+  const submitData = {
+    id: defaultData?.id,
+    step1: {
+      general: {
+        general: generalData,
+        delegate: defaultDelegateRef.current ? delegateData : null,
+      },
+    },
+    step2: {
+      general: {
+        individual: step2Data,
+      },
+    },
+
+    step3: {
+      general: {
+        ...step3Data,
+
+        subject: step3Data.subject,
+        description: step3Data.description,
+
+        complaintType: complaintTypeName,
+        complaintTypeId,
+        complaintTypeName,
+        complaintTypeData,
+
+        complaintSubType: complaintSubTypeName,
+        complaintSubTypeId,
+        complaintSubTypeName,
+        complaintSubTypeData,
+
+        complaintChannel: complaintChannelName,
+        complaintChannelId,
+        complaintChannelName,
+        complaintChannelData,
+
+        reference_number: step3Data.referenceNumber1,
+        reference_date: formatDateForAPI(step3Data.referenceDate1),  // สป.กค.
+        reference_number2: step3Data.referenceNumber2,
+        reference_date2: formatDateForAPI(step3Data.referenceDate2), // สป.สร.
+        reference_number3: step3Data.referenceNumber3,
+        reference_date3: formatDateForAPI(step3Data.referenceDate3), // สตป.
+        reference_number4: step3Data.referenceNumber4,
+        reference_date4: formatDateForAPI(step3Data.referenceDate4), // สรร.(สารบัญ)
+        document_number: step3Data.documentNumber,
+        document_date: formatDateForAPI(step3Data.documentDate),     // หนังสือ
+        additional_reference_number1: step3Data.additionalReference1,
+        additional_reference_date1: formatDateForAPI(step3Data.additionalReferenceDate1), // อ้างอิง(สารบัญ)
+        additional_reference_number2: step3Data.additionalReference2,
+        additional_reference_date2: formatDateForAPI(step3Data.additionalReferenceDate2), // อ้างอิง(สานต่อ)
+      },
+    },
+    step4: {
+      general: {
+        ...step4Data,
+        assigned_date: formatDateForAPI(step4Data.officerReceivedDate),    // ✅ วันที่รับเรื่องของเจ้าพนักงาน
+        director_submitted_date: formatDateForAPI(step4Data.directorSubmittedDate), // ✅ วันที่เสนองาน ผอ.สรร.
+        incident_date: formatDateForAPI(step4Data.incidentDateTime),
+      },
+    },
+    assignment_form: {
+      ...defaultData?.assignment_form,
+      reference_date: formatDateForAPI(step3Data.referenceDate1),
+      reference_date2: formatDateForAPI(step3Data.referenceDate2),
+      reference_date3: formatDateForAPI(step3Data.referenceDate3),
+      reference_date4: formatDateForAPI(step3Data.referenceDate4),
+      document_date: formatDateForAPI(step3Data.documentDate),
+      additional_reference_date1: formatDateForAPI(step3Data.additionalReferenceDate1),
+      additional_reference_date2: formatDateForAPI(step3Data.additionalReferenceDate2),
+      assigned_date: formatDateForAPI(step4Data.officerReceivedDate),          // ✅ รับเรื่อง
+      director_submitted_date: formatDateForAPI(step4Data.directorSubmittedDate), // ✅ เสนองาน ผอ.สรร.
     }
-
-    const generalData = generalMethods.getValues();
-    const delegateData = delegateMethods.getValues();
-    const step2Data = step2Methods.getValues();
-    const step3Data = step3Methods.getValues();
-    const step4Data = step4Methods.getValues();
-
-    const selectedComplaintType =
-      complaintTypes.find(
-        (type) =>
-          type.id === step3Data.complaintTypeId ||
-          type.name === step3Data.complaintType ||
-          type.name === step3Data.complaintTypeName
-      ) || null;
-    const selectedSubComplaintType =
-      subComplaintTypes.find(
-        (subType) =>
-          subType.id === step3Data.complaintSubType ||
-          subType.name === step3Data.complaintSubTypeName
-      ) || null;
-    const selectedComplaintChannel =
-      complaintChannels.find(
-        (channel) =>
-          channel.id === step3Data.complaintChannel ||
-          channel.name === step3Data.complaintChannelName
-      ) || null;
-
-    // ถ้าไม่มี id ให้ส่ง "-"
-    const complaintTypeId =
-      step3Data.complaintTypeId ||
-      step3Data.complaint_type_id ||
-      selectedComplaintType?.id ||
-      "-";
-    const complaintTypeName =
-      step3Data.complaintTypeName ||
-      step3Data.complaintType ||
-      selectedComplaintType?.name ||
-      "-";
-    const complaintTypeData =
-      step3Data.complaintTypeData ||
-      step3Data.complaint_type_data ||
-      selectedComplaintType ||
-      null;
-
-    const complaintSubTypeId =
-      step3Data.complaintSubType ||
-      step3Data.complaint_subtype_id ||
-      selectedSubComplaintType?.id ||
-      "-";
-    const complaintSubTypeName =
-      step3Data.complaintSubTypeName ||
-      step3Data.complaint_subtype ||
-      selectedSubComplaintType?.name ||
-      "-";
-    const complaintSubTypeData =
-      step3Data.complaintSubTypeData ||
-      step3Data.complaint_subtype_data ||
-      selectedSubComplaintType ||
-      null;
-
-    const complaintChannelId =
-      step3Data.complaintChannel ||
-      step3Data.complaint_channel_id ||
-      selectedComplaintChannel?.id ||
-      "-";
-    const complaintChannelName =
-      step3Data.complaintChannelName ||
-      step3Data.complaint_channel ||
-      selectedComplaintChannel?.name ||
-      "-";
-    const complaintChannelData =
-      step3Data.complaintChannelData ||
-      step3Data.complaint_channel_data ||
-      selectedComplaintChannel ||
-      null;
-
-    const submitData = {
-      id: defaultData?.id,
-      step1: {
-        general: {
-          general: generalData,
-          delegate: defaultDelegateRef.current ? delegateData : null,
-        },
-      },
-      step2: {
-        general: {
-          individual: step2Data,
-        },
-      },
-      step3: {
-        general: {
-          ...step3Data,
-          complaintType: complaintTypeName,
-          complaintTypeId,
-          complaintTypeID: complaintTypeId,
-          complaintTypeName,
-          complaintTypeData,
-          complaint_type: complaintTypeName,
-          complaint_type_id: complaintTypeId,
-          complaint_type_data: complaintTypeData,
-
-          complaintSubType: complaintSubTypeName,
-          complaintSubTypeID: complaintSubTypeId,
-          complaintSubTypeName: complaintSubTypeName,
-          complaintSubTypeData: complaintSubTypeData,
-          complaint_subtype: complaintSubTypeName,
-          complaint_subtype_id: complaintSubTypeId,
-          complaint_subtype_data: complaintSubTypeData,
-
-          complaintChannel: complaintChannelName,
-          complaintChannelID: complaintChannelId,
-          complaintChannelName: complaintChannelName,
-          complaintChannelData: complaintChannelData,
-          complaint_channel: complaintChannelName,
-          complaint_channel_id: complaintChannelId,
-          complaint_channel_data: complaintChannelData,
-        },
-      },
-      step4: {
-        general: step4Data,
-      },
-    };
-
-    setPreviewData(submitData);
-    setShowPreview(true);
   };
+
+  // === Debug log หลัง mapping ===
+  console.log("🚀 submitData.step4.general:", submitData.step4.general);
+  console.log("🚀 submitData.assignment_form:", submitData.assignment_form);
+
+  setPreviewData(submitData);
+  setShowPreview(true);
+};
+
 
   const handleComplaintTypeChange = (type) => {
     step3Methods.setValue("isNewComplaint", false);
@@ -1126,11 +1222,10 @@ useEffect(() => {
                           วันที่ <span className={styles.required}>*</span>
                         </label>
                         <ControlledDateThaiPickerService
-                          name="referenceDate2"
+                          name="referenceDate1"
                           control={step3Methods.control}
                           placeholder="กรุณาเลือกวันที่"
                           rules={{ required: "กรุณาเลือกวันที่" }}
-                          required={true}
                         />
                       </div>
                       <div className={styles.fieldGroup}>
@@ -1143,8 +1238,8 @@ useEffect(() => {
                       </div>
                       <div className={styles.fieldGroupDate}>
                         <label>วันที่</label>
-                        <DateThaiPickerService
-                          name="referenceDate2Optional"
+                        <ControlledDateThaiPickerService
+                          name="referenceDate2"
                           control={step3Methods.control}
                           placeholder="กรุณาเลือกวันที่"
                         />
@@ -1174,8 +1269,6 @@ useEffect(() => {
                           name="referenceDate3"
                           control={step3Methods.control}
                           placeholder="กรุณาเลือกวันที่"
-                          rules={{ required: "กรุณาเลือกวันที่" }}
-                          required={true}
                         />
                       </div>
                       <div className={styles.fieldGroup}>
@@ -1200,8 +1293,6 @@ useEffect(() => {
                           name="referenceDate4"
                           control={step3Methods.control}
                           placeholder="กรุณาเลือกวันที่"
-                          rules={{ required: "กรุณาเลือกวันที่" }}
-                          required={true}
                         />
                       </div>
                     </div>
@@ -1217,13 +1308,11 @@ useEffect(() => {
                       </div>
                       <div className={styles.fieldGroupDate}>
                         <label>วันที่</label>
-                        <div className={styles.datePickerWrapper}>
-                          <DateThaiPickerService
-                            name="documentDate"
-                            control={step3Methods.control}
-                            placeholder="กรุณาเลือกวันที่"
-                          />
-                        </div>
+                        <ControlledDateThaiPickerService
+                          name="documentDate"
+                          control={step3Methods.control}
+                          placeholder="กรุณาเลือกวันที่"
+                        />
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>หน่วยงานอื่นที่ส่งเรื่องมาที่ กค.</label>
@@ -1589,11 +1678,6 @@ useEffect(() => {
                                   <ControlledDateThaiPickerService
                                     name="additionalReferenceDate1"
                                     control={step3Methods.control}
-                                    disabled={
-                                      currentComplaintFilingType !==
-                                      "additional"
-                                    }
-                                    placeholder="กรุณาเลือกวันที่"
                                   />
                                 </div>
                               </div>
@@ -1640,13 +1724,9 @@ useEffect(() => {
                               <div className={styles.fieldWithLabelDate}>
                                 <label>วันที่</label>
                                 <div className={styles.datePickerWrapper}>
-                                  <DateThaiPickerService
+                                  <ControlledDateThaiPickerService
                                     name="additionalReferenceDate2"
                                     control={step3Methods.control}
-                                    disabled={
-                                      currentComplaintFilingType !== "committee"
-                                    }
-                                    placeholder="กรุณาเลือกวันที่"
                                   />
                                 </div>
                               </div>
@@ -1675,25 +1755,22 @@ useEffect(() => {
                         <div className={styles.fieldGroupDate}>
                           <div className={styles.datePickerWrapper}>
                             <ControlledDateThaiPickerService
-                              label="วันที่รับเรื่องของเจ้าพนักงาน"
+                            label="วันที่รับเรื่องของเจ้าพนักงาน"
                               name="officerReceivedDate"
                               control={step4Methods.control}
-                              placeholder="กรุณาเลือกวันที่"
                               time={true}
-                              defaultValue={defaultData?.step4?.general?.officerReceivedDate || ""}
                             />
                           </div>
                         </div>
                         <div className={styles.fieldGroupDate}>
                           <div className={styles.datePickerWrapper}>
                             <ControlledDateThaiPickerService
-                              label="วันที่เสนองาน ผอ.สรร."
-                              name="directorSubmittedDate"
-                              control={step4Methods.control}
-                              placeholder="กรุณาเลือกวันที่"
-                              time={true}
-                              defaultValue={defaultData?.step4?.general?.directorSubmittedDate || ""}
-                            />
+                                label="วันที่เสนองาน ผอ.สรร."
+                                name="directorSubmittedDate"
+                                control={step4Methods.control}
+                                placeholder="กรุณาเลือกวันที่"
+                                time={true}
+                              />
                           </div>
                         </div>
                       </div>
@@ -1704,6 +1781,7 @@ useEffect(() => {
                           <div className={styles.datePickerWrapper}>
                             <DateThaiPickerService
                               label="วันและเวลาที่เกิดเหตุ"
+                              control={step4Methods.control}
                               value={
                                 defaultData?.step4?.general?.incidentDateTime ||
                                 "2023-11-01T14:37:00"

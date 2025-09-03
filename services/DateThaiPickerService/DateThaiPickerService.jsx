@@ -91,8 +91,14 @@ const DateThaiPickerService = ({
 
       // ถ้าเป็น string ที่มี T (ISO format)
       if (typeof apiDate === 'string' && apiDate.includes('T')) {
-        dateObj = new Date(apiDate);
+      const [datePart, timePart] = apiDate.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      let hour = 0, minute = 0;
+      if (timePart) {
+        [hour, minute] = timePart.split(':').map(Number);
       }
+      dateObj = new Date(year, month - 1, day, hour, minute, 0);
+    }
       // ถ้าเป็น string ธรรมดา
       else if (typeof apiDate === 'string') {
         dateObj = new Date(apiDate);
@@ -154,7 +160,7 @@ const DateThaiPickerService = ({
         dateObj = new Date(year, month, day, 0, 0, 0, 0);
       }
 
-      return dateObj.toISOString();
+      return dateObj.toLocaleString("sv-SE"); 
     } catch (error) {
       console.error('Error formatting to API date:', error);
       return null;

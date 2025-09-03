@@ -57,7 +57,10 @@ const AddUsers = async (data) => {
       // ถ้ามีแค่ตำแหน่งเดียว
       position_ids = [data.position_id];
       primary_position_id = data.position_id;
-    } else if (Array.isArray(data.position_ids) && data.position_ids.length > 0) {
+    } else if (
+      Array.isArray(data.position_ids) &&
+      data.position_ids.length > 0
+    ) {
       position_ids = data.position_ids;
       primary_position_id = data.primary_position_id || data.position_ids[0];
     }
@@ -66,7 +69,7 @@ const AddUsers = async (data) => {
       ...data,
       position_ids,
       primary_position_id,
-      department_ids: data.department_ids || []
+      department_ids: data.department_ids || [],
     };
 
     const response = await axiosInstance.post("/users", payload);
@@ -128,6 +131,20 @@ const PutUser = async (userId, data) => {
   }
 };
 
+const GetUserById = async (userId) => {
+  try {
+    const response = await axiosInstance.get(
+      `/users/${userId}?include_address=true`
+    );
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error fetching user by ID:", error);
+    throw error;
+  }
+};
+
 export {
   GetDetailedStatsbyRole,
   GetTitleDetails,
@@ -137,4 +154,5 @@ export {
   GetRoles,
   GetPositions,
   PutUser,
+  GetUserById,
 };
