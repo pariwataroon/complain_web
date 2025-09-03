@@ -27,7 +27,7 @@ import {
 } from "@utils/Alerts";
 import useSearchComplaintsPreview from "@hooks/admin/websitecomplaints/useSearchComplaintsPreview";
 import { GetAllOutsideDepartments } from "@pages/api/allselect/allselect";
-
+import styles from "./TabNav.module.scss";
 const SESSION_KEY = "complaintsPreviewData";
 
 const SearchComplaintsPreview = ({
@@ -798,11 +798,14 @@ const SearchComplaintsPreview = ({
                 label="วันและเวลาที่เกิดเหตุ"
                 value={formatThaiDateTime(additionalDetails.incidentDateTime)}
               />
+              {/* รายละเอียดเรื่องร้องทุกข์ */}
               <Grid item xs={12}>
-                <InfoItem
-                  label="รายละเอียดเรื่องร้องทุกข์"
-                  value={additionalDetails.additionalDescription || "-"}
-                />
+                <Typography fontSize={16} style={{ whiteSpace: "pre-line" }}>
+                  <Box component="span" fontWeight="bold">
+                    รายละเอียดเรื่องร้องทุกข์:
+                  </Box>{" "}
+                  {complaint.description || "-"}
+                </Typography>
               </Grid>
             </Grid>
 
