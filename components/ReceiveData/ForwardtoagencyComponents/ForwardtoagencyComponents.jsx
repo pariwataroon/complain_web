@@ -111,7 +111,14 @@ const ForwardtoagencyComponents = () => {
     };
   
     const handleSelectReference = (ref) => {
-      setValue("bookNo", ref.document_number, { shouldValidate: true, shouldDirty: true });
+      setValue("document_number", ref.document_number || "", {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+      setValue("document_date", ref.document_date || null, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
       setOpenSearchDialog(false);
     };
   
@@ -159,11 +166,20 @@ const ForwardtoagencyComponents = () => {
         setSearchLoading(false);
       }
     };
+    
   
-    const handleSelectReference2 = (ref) => {
-      setValue("refNo", ref.reference_number, { shouldValidate: true, shouldDirty: true });
-      setOpenSearchDialog2(false);
-    };
+      const handleSelectReference2 = (ref) => {
+        setValue("complaint_number", ref.complaint_number || "", {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+        setValue("complaint_number_date", ref.complaint_number_date || null, {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+        setOpenSearchDialog2(false);
+      };
+
   
     const onClear2 = () => {
       setSearchText("");
@@ -343,7 +359,6 @@ const ForwardtoagencyComponents = () => {
             }}
           >
             <Controller
-              
               name="salutation"
               control={control}
               render={({ field }) => (
@@ -354,24 +369,32 @@ const ForwardtoagencyComponents = () => {
                   onChange={(e) => field.onChange(e.target.value)}
                   error={!!getFieldError("salutation")}
                   helperText={getFieldError("salutation")}
-                  sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}
+                  sx={{
+                    position: "relative",
+                    zIndex: 1,
+                    width: { xs: "80%", sm: "auto" },
+                  }}
                 />
               )}
             />
-  
+
             <Controller
-              name="refNo"
+              name="complaint_number"
               control={control}
               render={({ field }) => (
                 <InputText
-                  label={createLabel("เลข สป.กค.", "refNo")}
+                  label={createLabel("เลข สป.กค.", "complaint_number")}
                   inputLabel="กรอกเลข สป.กค."
-                  name="refNo"
+                  name="complaint_number"
                   value={field.value}
                   onChange={field.onChange}
-                  error={!!getFieldError("refNo")}
-                  helperText={getFieldError("refNo")}
-                  sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}
+                  error={!!getFieldError("complaint_number")}
+                  helperText={getFieldError("complaint_number")}
+                  sx={{
+                    position: "relative",
+                    zIndex: 1,
+                    width: { xs: "80%", sm: "auto" },
+                  }}
                 />
               )}
             />
@@ -380,7 +403,7 @@ const ForwardtoagencyComponents = () => {
               <IconButton
                 onClick={() => setOpenSearchDialog2(true)}
                 sx={{
-                  height: "40px",  
+                  height: "40px",
                   width: "40px",
                   marginTop: "10px",
                   color: "blue",
@@ -390,7 +413,7 @@ const ForwardtoagencyComponents = () => {
               </IconButton>
             </Box>
 
-             {/* Dialog สำหรับค้นหาเลข */}
+            {/* ✅ Dialog เดิมยังคงอยู่ */}
             <Dialog
               open={openSearchDialog2}
               onClose={() => setOpenSearchDialog2(false)}
@@ -455,23 +478,11 @@ const ForwardtoagencyComponents = () => {
                   sx={{ mb: 2 }}
                 />
 
-                {/* สถานะโหลด / ไม่พบ / รายการ */}
+                {/* Loading / Empty / Results */}
                 {searchLoading ? (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: 24,
-                    }}
-                  >
+                  <div style={{ textAlign: "center", padding: 24 }}>
                     <CircularProgress color="primary" />
-                    <div
-                      style={{
-                        marginTop: 8,
-                        color: "#888",
-                      }}
-                    >
-                      กำลังค้นหา...
-                    </div>
+                    <div style={{ marginTop: 8, color: "#888" }}>กำลังค้นหา...</div>
                   </div>
                 ) : searchResults.length === 0 ? (
                   <div
@@ -502,23 +513,17 @@ const ForwardtoagencyComponents = () => {
                           background: "#90caf9",
                           borderRadius: "8px",
                         },
-                        "&::-webkit-scrollbar-thumb:hover":
-                          {
-                            background: "#64b5f6",
-                          },
+                        "&::-webkit-scrollbar-thumb:hover": {
+                          background: "#64b5f6",
+                        },
                       }}
                     >
                       {searchResults.map((item) => {
-                        const isMaster = !!item.is_master; 
+                        const isMaster = !!item.is_master;
                         return (
-                          <ListItem
-                            key={item.id}
-                            disablePadding
-                          >
+                          <ListItem key={item.id} disablePadding>
                             <ListItemButton
-                              onClick={() =>
-                                handleSelectReference2(item)
-                              }
+                              onClick={() => handleSelectReference2(item)}
                               sx={{
                                 py: 1.5,
                                 px: 2,
@@ -538,83 +543,23 @@ const ForwardtoagencyComponents = () => {
                                   width: 12,
                                   height: 12,
                                   borderRadius: "50%",
-                                  backgroundColor: isMaster
-                                    ? "#2ecc71"
-                                    : "#bdbdbd",
+                                  backgroundColor: isMaster ? "#2ecc71" : "#bdbdbd",
                                   border: "2px solid #fff",
-                                  boxShadow:
-                                    "0 0 0 1px rgba(0,0,0,0.15)",
+                                  boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
                                   flexShrink: 0,
                                 }}
-                                title={
-                                  isMaster
-                                    ? "Master"
-                                    : "Non-master"
-                                }
+                                title={isMaster ? "Master" : "Non-master"}
                               />
-                              <DescriptionIcon
-                                color="info"
-                                sx={{ mr: 0.5 }}
-                              />
-                            <span style={{ fontWeight: 500 }}>
-                              {item.complaint_number}
-                              <span style={{ marginLeft: 8 }}>{item.subject}</span>
-                            </span>
+                              <DescriptionIcon color="info" sx={{ mr: 0.5 }} />
+                              <span style={{ fontWeight: 500 }}>
+                                {item.complaint_number}
+                                <span style={{ marginLeft: 8 }}>{item.subject}</span>
+                              </span>
                             </ListItemButton>
                           </ListItem>
                         );
                       })}
                     </List>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 16,
-                        marginTop: 8,
-                        fontSize: 12,
-                        color: "#555",
-                        padding: "0 4px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: "50%",
-                            background: "#2ecc71",
-                            boxShadow:
-                              "0 0 0 1px rgba(0,0,0,0.15)",
-                          }}
-                        />
-                        Master
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: "50%",
-                            background: "#bdbdbd",
-                            boxShadow:
-                              "0 0 0 1px rgba(0,0,0,0.15)",
-                          }}
-                        />
-                        Non-master
-                      </div>
-                    </div>
                   </>
                 )}
               </DialogContent>
@@ -630,18 +575,21 @@ const ForwardtoagencyComponents = () => {
               </DialogActions>
             </Dialog>
 
-            <Box sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}>
+            {/* ✅ วันที่ของ complaint_number */}
+            <Box
+              sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}
+            >
               <Controller
-                name="date1"
+                name="complaint_number_date"
                 control={control}
                 render={({ field }) => (
                   <DateThaiPickerService
-                    label={createLabel("วันที่", "date1")}
+                    label={createLabel("วันที่", "complaint_number_date")}
                     value={field.value}
-                    onChange={handleDateChange("date1")}
+                    onChange={handleDateChange("complaint_number_date")}
                     placeholder="เลือกวันที่"
-                    error={!!getFieldError("date1")}
-                    helperText={getFieldError("date1")}
+                    error={!!getFieldError("complaint_number_date")}
+                    helperText={getFieldError("complaint_number_date")}
                     maxDate={new Date().toISOString()}
                   />
                 )}
@@ -680,301 +628,43 @@ const ForwardtoagencyComponents = () => {
               },
             }}
           >
+            {/* เลขที่หนังสือ */}
             <Controller
-              name="bookNo"
+              name="document_number"
               control={control}
               render={({ field }) => (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  {/* กล่อง input */}
-                  <InputText
-                    label={createLabel("เลขที่หนังสือ", "bookNo")}
-                    inputLabel="กรอกเลขที่หนังสือ"
-                    name="bookNo"
-                    value={field.value}
-                    onChange={field.onChange}
-                    error={!!getFieldError("bookNo")}
-                    helperText={getFieldError("bookNo")}
-                    sx={{ flex: 1 }}
-                  />
-
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <IconButton
-                      onClick={() => setOpenSearchDialog(true)}
-                      sx={{
-                        height: "40px",  
-                        width: "40px",
-                        marginTop: "10px",
-                        color: "blue",
-                      }}
-                    >
-                      <SearchIcon />
-                    </IconButton>
-                  </Box>
-                </Box>
+                <InputText
+                  label={createLabel("เลขที่หนังสือ", "document_number")}
+                  inputLabel="กรอกเลขที่หนังสือ"
+                  name="document_number"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={!!getFieldError("document_number")}
+                  helperText={getFieldError("document_number")}
+                />
               )}
             />
 
-           {/* Dialog สำหรับค้นหาเลข */}
-            <Dialog
-              open={openSearchDialog}
-              onClose={() => setOpenSearchDialog(false)}
-              maxWidth="sm"
-              fullWidth
-              PaperProps={{
-                style: {
-                  borderRadius: 12,
-                  background: "#f7fafd",
-                  height: 500,
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-                },
-              }}
-            >
-              <DialogTitle
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <SearchIcon color="primary" />
-                ค้นหาเลขที่อ้างอิง
-              </DialogTitle>
-
-              <DialogContent>
-                {/* ช่องค้นหา */}
-                <TextField
-                  inputRef={inputRef}
-                  fullWidth
-                  size="small"
-                  placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
-                  value={searchText}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSearchText(val);
-                    handleSearch(val);
-                  }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon color="action" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: searchText ? (
-                      <InputAdornment position="end">
-                        <IconButton
-                          size="small"
-                          onClick={onClear}
-                          aria-label="clear search"
-                          edge="end"
-                        >
-                          <ClearIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ) : null,
-                    style: {
-                      background: "#fff",
-                      borderRadius: 8,
-                    },
-                  }}
-                  sx={{ mb: 2 }}
-                />
-
-                {/* สถานะโหลด / ไม่พบ / รายการ */}
-                {searchLoading ? (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: 24,
-                    }}
-                  >
-                    <CircularProgress color="primary" />
-                    <div
-                      style={{
-                        marginTop: 8,
-                        color: "#888",
-                      }}
-                    >
-                      กำลังค้นหา...
-                    </div>
-                  </div>
-                ) : searchResults.length === 0 ? (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: 32,
-                      color: "#bdbdbd",
-                    }}
-                  >
-                    <DescriptionIcon
-                      sx={{ fontSize: 48, mb: 2 }}
-                      color="disabled"
-                    />
-                    <div>ไม่พบรายการเลขที่อ้างอิง</div>
-                  </div>
-                ) : (
-                  <>
-                    <List
-                      sx={{
-                        maxHeight: 320,
-                        overflow: "auto",
-                        "&::-webkit-scrollbar": {
-                          width: "8px",
-                          background: "#f0f4fa",
-                          borderRadius: "8px",
-                        },
-                        "&::-webkit-scrollbar-thumb": {
-                          background: "#90caf9",
-                          borderRadius: "8px",
-                        },
-                        "&::-webkit-scrollbar-thumb:hover":
-                          {
-                            background: "#64b5f6",
-                          },
-                      }}
-                    >
-                      {searchResults.map((item) => {
-                        const isMaster = !!item.is_master; // fallback ถ้า undefined
-                        return (
-                          <ListItem
-                            key={item.id}
-                            disablePadding
-                          >
-                            <ListItemButton
-                              onClick={() =>
-                                handleSelectReference(item)
-                              }
-                              sx={{
-                                py: 1.5,
-                                px: 2,
-                                borderRadius: 2,
-                                mb: 0.5,
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 1.5,
-                                "&:hover": {
-                                  background: "#e3f2fd",
-                                },
-                              }}
-                            >
-                              {/* จุดสถานะ is_master */}
-                              <span
-                                style={{
-                                  width: 12,
-                                  height: 12,
-                                  borderRadius: "50%",
-                                  backgroundColor: isMaster
-                                    ? "#2ecc71"
-                                    : "#bdbdbd",
-                                  border: "2px solid #fff",
-                                  boxShadow:
-                                    "0 0 0 1px rgba(0,0,0,0.15)",
-                                  flexShrink: 0,
-                                }}
-                                title={
-                                  isMaster
-                                    ? "Master"
-                                    : "Non-master"
-                                }
-                              />
-                              <DescriptionIcon
-                                color="info"
-                                sx={{ mr: 0.5 }}
-                              />
-                              <span
-                                style={{ fontWeight: 500 }}
-                              >
-                                {item.document_number}
-                                {/* {item.complaint_number} */}
-                              </span>
-                            </ListItemButton>
-                          </ListItem>
-                        );
-                      })}
-                    </List>
-
-                    {/* Legend (ถ้าไม่ต้องการสามารถลบส่วนนี้ออกได้) */}
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 16,
-                        marginTop: 8,
-                        fontSize: 12,
-                        color: "#555",
-                        padding: "0 4px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: "50%",
-                            background: "#2ecc71",
-                            boxShadow:
-                              "0 0 0 1px rgba(0,0,0,0.15)",
-                          }}
-                        />
-                        Master
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: "50%",
-                            background: "#bdbdbd",
-                            boxShadow:
-                              "0 0 0 1px rgba(0,0,0,0.15)",
-                          }}
-                        />
-                        Non-master
-                      </div>
-                    </div>
-                  </>
-                )}
-              </DialogContent>
-
-              <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button
-                  onClick={() => setOpenSearchDialog(false)}
-                  variant="outlined"
-                  color="inherit"
-                >
-                  ปิด
-                </Button>
-              </DialogActions>
-            </Dialog>
-
+            {/* วันที่หนังสือ */}
             <Box sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}>
               <Controller
-                name="date2"
+                name="document_date"
                 control={control}
                 render={({ field }) => (
                   <DateThaiPickerService
-                    label={createLabel("วันที่", "date2")}
+                    label={createLabel("วันที่หนังสือ", "document_date")}
                     value={field.value}
-                    onChange={handleDateChange("date2")}
+                    onChange={handleDateChange("document_date")}
                     placeholder="เลือกวันที่"
-                    error={!!getFieldError("date2")}
-                    helperText={getFieldError("date2")}
+                    error={!!getFieldError("document_date")}
+                    helperText={getFieldError("document_date")}
                     maxDate={new Date().toISOString()}
                   />
                 )}
               />
             </Box>
 
+            {/* ผู้ลงนาม */}
             <Controller
               name="signer"
               control={control}

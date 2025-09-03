@@ -612,18 +612,15 @@ useEffect(() => {
   };
 
   const handleReset = () => {
-    // ล้าง API calls ที่รอค้างอยู่
-    clearSubTypes();
+  clearSubTypes();
 
-    // Reset forms
-    generalMethods.reset(defaultGeneralRef.current);
-    if (defaultDelegateRef.current) {
-      delegateMethods.reset(defaultDelegateRef.current);
-    }
-    step2Methods.reset(defaultStep2Ref.current);
-    step3Methods.reset(defaultStep3Ref.current);
-    step4Methods.reset(defaultStep4Ref.current);
-  };
+  generalMethods.reset(defaultData?.step1?.general?.general || {});
+  delegateMethods.reset(defaultData?.step1?.general?.delegate || {});
+  step2Methods.reset(defaultData?.step2?.general?.individual || {});
+  step3Methods.reset(defaultData?.step3?.general || {});
+  step4Methods.reset(defaultData?.step4?.general || {});
+};
+
 
   useEffect(() => {
     if (defaultData?.complaint_number) {
@@ -682,7 +679,7 @@ const handleSubmit = async () => {
     "complaintChannel",
     "subject",
     "referenceNumber1",
-    "referenceDate1", // แก้เป็น referenceDate1 (สป.กค.)
+    "referenceDate1", // สป.กค.
     "referenceNumber2",
     "referenceDate2", // สป.สร.
     "referenceNumber3",
@@ -691,6 +688,7 @@ const handleSubmit = async () => {
     "referenceDate4", // สรร.
   ];
 
+  // ✅ Validate เฉพาะ Step3 (ข้อมูลเรื่องร้องทุกข์)
   const isValid = await step3Methods.trigger(fieldsToValidate);
   if (!isValid) {
     const errors = step3Methods.formState.errors;
@@ -706,6 +704,7 @@ const handleSubmit = async () => {
     return;
   }
 
+  // ✅ ดึงค่าจากทุก Step
   const generalData = generalMethods.getValues();
   const delegateData = delegateMethods.getValues();
   const step2Data = step2Methods.getValues();
@@ -801,7 +800,6 @@ const handleSubmit = async () => {
         individual: step2Data,
       },
     },
-
     step3: {
       general: {
         ...step3Data,
@@ -832,8 +830,10 @@ const handleSubmit = async () => {
         reference_date3: formatDateForAPI(step3Data.referenceDate3), // สตป.
         reference_number4: step3Data.referenceNumber4,
         reference_date4: formatDateForAPI(step3Data.referenceDate4), // สรร.(สารบัญ)
+
         document_number: step3Data.documentNumber,
-        document_date: formatDateForAPI(step3Data.documentDate),     // หนังสือ
+        document_date: formatDateForAPI(step3Data.documentDate), // หนังสือ
+
         additional_reference_number1: step3Data.additionalReference1,
         additional_reference_date1: formatDateForAPI(step3Data.additionalReferenceDate1), // อ้างอิง(สารบัญ)
         additional_reference_number2: step3Data.additionalReference2,
@@ -859,16 +859,31 @@ const handleSubmit = async () => {
       additional_reference_date2: formatDateForAPI(step3Data.additionalReferenceDate2),
       assigned_date: formatDateForAPI(step4Data.officerReceivedDate),          // ✅ รับเรื่อง
       director_submitted_date: formatDateForAPI(step4Data.directorSubmittedDate), // ✅ เสนองาน ผอ.สรร.
-    }
+    },
   };
 
   // === Debug log หลัง mapping ===
+  console.log("🚀 submitData.step1.general:", submitData.step1.general);
+  console.log("🚀 submitData.step2.general:", submitData.step2.general);
+  console.log("🚀 submitData.step3.general:", submitData.step3.general);
   console.log("🚀 submitData.step4.general:", submitData.step4.general);
   console.log("🚀 submitData.assignment_form:", submitData.assignment_form);
 
+  // ✅ เก็บไว้ใน state
   setPreviewData(submitData);
   setShowPreview(true);
+
+  // ✅ redirect ไป Preview
+  router.replace(
+    {
+      pathname: `/admin/edit/website-complaints/${defaultData?.id}`,
+      query: { preview: "" },
+    },
+    undefined,
+    { shallow: true }
+  );
 };
+
 
 
   const handleComplaintTypeChange = (type) => {
@@ -1036,6 +1051,7 @@ const handleSubmit = async () => {
                     <ComplaintPersonalFormAPI
                       data={defaultGeneralRef.current}
                       formType="complainant"
+                      // dis={false}
                     />
                   </div>
                 </div>
@@ -1053,6 +1069,7 @@ const handleSubmit = async () => {
                     <ComplaintPersonalFormAPI
                       data={defaultDelegateRef.current}
                       formType="delegate"
+                      // dis={false}
                     />
                   </div>
                 </div>
@@ -1064,17 +1081,24 @@ const handleSubmit = async () => {
                   บุคคลทั่วไป
                 </div>
                 <div
-                  className={`${styles.tab} ${styles.tab1} ${styles.active}`}
+                  className={`${styles.tab} ${styles.tabV2} ${styles.active2}`}
                 >
                   นิติบุคคล
                 </div>
-                <div className={`${styles.tab} ${styles.tab2}`}>
+                <div className={`${styles.tabV2} ${styles.tab2} ${styles.active2}`}>
                   หน่วยงานของรัฐ
                 </div>
                 <div
-                  className={styles.underlineBar}
-                  style={{ backgroundColor: "#3FA9F5" }}
-                />
+                className={styles.underlineBarV2}
+                style={{
+                  background:
+                    complainantType === "corporate"
+                      ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
+                      : complainantType === "government"
+                      ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
+                      : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)",
+                }}
+              />
               </div>
 
               {/* Section 3: ข้อมูลผู้ถูกร้องเรียน */}
@@ -1089,6 +1113,7 @@ const handleSubmit = async () => {
                     <ComplaintPersonalFormAPI
                       data={defaultStep2Ref.current}
                       formType="complainee"
+                      // dis={false}
                     />
                   </div>
                 </div>
@@ -1802,6 +1827,7 @@ const handleSubmit = async () => {
                           disabled
                           className={styles.disabledTextarea}
                           {...step3Methods.register("description")}
+                          // dis={false}
                         />
                       </div>
 
