@@ -60,7 +60,6 @@ const CommitteeCompositionSettings = () => {
     const fetchPositions = async () => {
       try {
         const res = await GetAllSelectPositionOptions();
-        // console.log('API Response:', res);
 
         if (Array.isArray(res)) {
           const mapped = res.map((p, index) => {
@@ -84,7 +83,6 @@ const CommitteeCompositionSettings = () => {
 
           setAllPositionOptions(mapped);
           setAvailablePositionOptions(mapped);
-          // console.log('Set positions:', mapped);
         } else {
           console.warn("API did not return array data:", res);
           setAllPositionOptions([]);
@@ -197,12 +195,6 @@ const CommitteeCompositionSettings = () => {
             ...stateEnterpriseDepts,
             ...stateEnterpriseVenues,
           ];
-
-          // log ดู options ของ รัฐวิสาหกิจ
-          console.log(
-            "รัฐวิสาหกิจ options (with venues):",
-            stateEnterpriseOptionsCombined
-          );
 
           setStateEnterpriseOptions(stateEnterpriseOptionsCombined);
 
@@ -385,16 +377,17 @@ const CommitteeCompositionSettings = () => {
                 });
               }
             }
+            // แก้ไขการ prefill dynamic groups
             Object.entries(dynamicGroupMap).forEach(([gName, ids]) => {
               if (!ids.length) return;
               newForm[`other_${gName}_${num}`] = ids[0];
               if (ids.length > 1) {
-                const key = `other_${num}`;
-                if (!newAdditional[key]) newAdditional[key] = [];
+                const key = `other_${gName}_${num}`;
+                newAdditional[key] = [];
                 ids.slice(1).forEach((id) => {
                   const addId = Date.now() + Math.random();
                   newAdditional[key].push(addId);
-                  newForm[`other_${num}_additional_${addId}`] = id;
+                  newForm[`other_${gName}_${num}_additional_${addId}`] = id;
                 });
               }
             });
@@ -477,40 +470,111 @@ const CommitteeCompositionSettings = () => {
 
   const addSignatoryBox = () => setSignatoryBoxes((c) => c + 1);
 
+  // ฟังก์ชันสำหรับรวบรวมค่าที่ถูกใช้ในการ์ดเดียวกัน (ไม่ใช่การ์ดอื่น)
+  const getUsedValuesInSameCard = (
+    section,
+    cardNumber,
+    excludeFieldName = null
+  ) => {
+    const usedValues = new Set();
+
+    // เก็บค่าหลัก
+    const mainFieldName = `${section}_${cardNumber}`;
+    const mainValue = formData[mainFieldName];
+    if (mainValue && mainFieldName !== excludeFieldName) {
+      usedValues.add(mainValue);
+    }
+
+    // เก็บค่าจาก additional selects ในการ์ดเดียวกัน
+    const additionalKey = `${section}_${cardNumber}`;
+    if (additionalSelects[additionalKey]) {
+      additionalSelects[additionalKey].forEach((id) => {
+        const additionalFieldName = `${section}_${cardNumber}_additional_${id}`;
+        const additionalValue = formData[additionalFieldName];
+        if (additionalValue && additionalFieldName !== excludeFieldName) {
+          usedValues.add(additionalValue);
+        }
+      });
+    }
+
+    return usedValues;
+  };
+
+  // ฟังก์ชันสำหรับสร้าง options ที่กรองแล้วสำหรับแต่ละ field ในการ์ด
+  const getFilteredOptionsForField = (
+    section,
+    cardNumber,
+    allOptions,
+    fieldName = null
+  ) => {
+    const usedValues = getUsedValuesInSameCard(section, cardNumber, fieldName);
+    const currentValue = formData[fieldName] || "";
+
+    // กรอง options ที่ไม่ได้ถูกใช้ในการ์ดเดียวกัน
+    const filteredOptions = allOptions.filter(
+      (option) => !usedValues.has(option.value) || option.value === currentValue
+    );
+
+    return filteredOptions;
+  };
+
   const renderAdditionalSelects = (section, signatoryNumber) => {
     const sectionKey = `${section}_${signatoryNumber}`;
     const selects = additionalSelects[sectionKey] || [];
-    let options = [];
+    let allOptions = [];
+
     switch (section) {
       case "name":
-        options = signatoryOptions;
+        allOptions = signatoryOptions;
         break;
       case "state_enterprise":
-        options = stateEnterpriseOptions;
+        allOptions = stateEnterpriseOptions;
         break;
       case "government":
-        options = governmentOptions;
+        allOptions = governmentOptions;
         break;
       case "other":
-        options = otherOptions;
+        allOptions = otherOptions;
         break;
       default:
-        options = [];
+        // ตรวจสอบว่าเป็น dynamic group หรือไม่
+        const groupName = section.replace("other_", "");
+        const dynamicGroup = otherGroupOptions.find(
+          (g) => g.groupName === groupName
+        );
+        if (dynamicGroup) {
+          allOptions = dynamicGroup.options;
+        } else {
+          allOptions = [];
+        }
     }
-    return selects.map((id) => (
-      <Box mt={1} key={id}>
-        <SelectField
-          options={options}
-          value={
-            formData[`${section}_${signatoryNumber}_additional_${id}`] || ""
-          }
-          onChange={handleInputChange}
-          name={`${section}_${signatoryNumber}_additional_${id}`}
-        />
-      </Box>
-    ));
+
+    return selects.map((id) => {
+      const fieldName = `${section}_${signatoryNumber}_additional_${id}`;
+      const currentValue = formData[fieldName] || "";
+
+      // กรอง options สำหรับ additional select นี้ (ซ่อนที่ใช้ในการ์ดเดียวกัน)
+      const filteredOptions = getFilteredOptionsForField(
+        section,
+        signatoryNumber,
+        allOptions,
+        fieldName
+      );
+
+      return (
+        <Box mt={1} key={id}>
+          <SelectField
+            options={filteredOptions}
+            value={currentValue}
+            onChange={handleInputChange}
+            name={fieldName}
+          />
+        </Box>
+      );
+    });
   };
 
+  // แก้ไขฟังก์ชัน collectDepartmentIdsForBox
   const collectDepartmentIdsForBox = (i) => {
     const deptFields = new Set([
       `state_enterprise_${i}`,
@@ -519,10 +583,12 @@ const CommitteeCompositionSettings = () => {
       `other2_${i}`,
     ]);
 
+    // เพิ่ม dynamic group fields
     otherGroupOptions.forEach((g) =>
       deptFields.add(`other_${g.groupName}_${i}`)
     );
 
+    // เพิ่ม additional fields สำหรับ basic sections
     ["state_enterprise", "government", "other"].forEach((sec) => {
       const key = `${sec}_${i}`;
       if (additionalSelects[key]) {
@@ -532,9 +598,20 @@ const CommitteeCompositionSettings = () => {
       }
     });
 
+    // เพิ่ม additional fields สำหรับ dynamic groups
+    otherGroupOptions.forEach((g) => {
+      const key = `other_${g.groupName}_${i}`;
+      if (additionalSelects[key]) {
+        additionalSelects[key].forEach((id) =>
+          deptFields.add(`other_${g.groupName}_${i}_additional_${id}`)
+        );
+      }
+    });
+
+    // รวบรวม department IDs จากทุก fields
     const departmentIds = Array.from(deptFields)
       .map((f) => formData[f])
-      .filter((v) => v && typeof v === "string");
+      .filter((v) => v && typeof v === "string" && v.trim() !== "");
 
     return Array.from(new Set(departmentIds));
   };
@@ -551,10 +628,13 @@ const CommitteeCompositionSettings = () => {
     if (!userIds.length) return [];
     const departmentIds = collectDepartmentIdsForBox(i);
     if (!departmentIds.length) return [];
-    return userIds.map((uid) => ({
+
+    const assignments = userIds.map((uid) => ({
       user_id: uid,
       department_ids: departmentIds,
     }));
+
+    return assignments;
   };
 
   const handleSaveBox = async (boxNumber) => {
@@ -646,6 +726,7 @@ const CommitteeCompositionSettings = () => {
         alertError(isUpdate ? "อัปเดตล้มเหลว" : "บันทึกล้มเหลว", errText);
       }
     } catch (e) {
+      console.error("Error saving box:", e);
       const code = e?.response?.data?.res_code;
       const backendMsg =
         e?.response?.data?.res_message || e?.response?.data?.message;
@@ -899,7 +980,12 @@ const CommitteeCompositionSettings = () => {
               </Typography>
               <SelectField
                 label="เลือกผู้ลงนาม"
-                options={signatoryOptions}
+                options={getFilteredOptionsForField(
+                  "name",
+                  number,
+                  signatoryOptions,
+                  `name_${number}`
+                )}
                 value={formData[`name_${number}`] || ""}
                 onChange={handleInputChange}
                 name={`name_${number}`}
@@ -959,7 +1045,12 @@ const CommitteeCompositionSettings = () => {
                   </Typography>
                   <SelectField
                     label="เลือกส่วนราชการ"
-                    options={governmentOptions}
+                    options={getFilteredOptionsForField(
+                      "government",
+                      number,
+                      governmentOptions,
+                      `government_${number}`
+                    )}
                     value={formData[`government_${number}`] || ""}
                     onChange={handleInputChange}
                     name={`government_${number}`}
@@ -982,7 +1073,12 @@ const CommitteeCompositionSettings = () => {
 
                   <SelectField
                     label="เลือกรัฐวิสาหกิจ"
-                    options={stateEnterpriseOptions} // <-- ตอนนี้ options รวมทั้ง dept และ venue แล้ว
+                    options={getFilteredOptionsForField(
+                      "state_enterprise",
+                      number,
+                      stateEnterpriseOptions,
+                      `state_enterprise_${number}`
+                    )}
                     value={formData[`state_enterprise_${number}`] || ""}
                     onChange={handleInputChange}
                     name={`state_enterprise_${number}`}
@@ -1002,42 +1098,70 @@ const CommitteeCompositionSettings = () => {
 
                   <SelectField
                     label="เลือกหน่วยงานอื่นๆ"
-                    options={otherOptions}
+                    options={getFilteredOptionsForField(
+                      "other",
+                      number,
+                      otherOptions,
+                      `other1_${number}`
+                    )}
                     value={formData[`other1_${number}`] || ""}
                     onChange={handleInputChange}
                     name={`other1_${number}`}
                   />
-                  <Box>
-                    {Array.isArray(otherGroupOptions) &&
-                    otherGroupOptions.length > 0 ? (
-                      otherGroupOptions.map((group) => (
+                  {renderAdditionalSelects("other", number)}
+                  <DepartmentButton
+                    section="other"
+                    signatoryNumber={number}
+                    label="เพิ่มหน่วยงานอื่นๆ"
+                  />
+
+                  {/* Dynamic groups - แสดงก่อน SelectField อื่นๆ (เพิ่มเติม) */}
+                  {Array.isArray(otherGroupOptions) &&
+                    otherGroupOptions.length > 0 &&
+                    otherGroupOptions.map((group) => (
+                      <Box key={group.groupName}>
                         <SelectField
-                          key={group.groupName}
                           label={group.label}
-                          options={group.options}
+                          options={getFilteredOptionsForField(
+                            `other_${group.groupName}`,
+                            number,
+                            group.options,
+                            `other_${group.groupName}_${number}`
+                          )}
                           value={
                             formData[`other_${group.groupName}_${number}`] || ""
                           }
                           onChange={handleInputChange}
                           name={`other_${group.groupName}_${number}`}
                         />
-                      ))
-                    ) : (
-                      <SelectField
-                        label="เลือกหน่วยงานอื่นๆ (เพิ่มเติม)"
-                        options={otherOptions}
-                        value={formData[`other2_${number}`] || ""}
-                        onChange={handleInputChange}
-                        name={`other2_${number}`}
-                      />
-                    )}
-                  </Box>
-                  {renderAdditionalSelects("other", number)}
-                  <DepartmentButton
-                    section="other"
-                    signatoryNumber={number}
-                    label="เพิ่มหน่วยงาน"
-                  />
+                        {renderAdditionalSelects(
+                          `other_${group.groupName}`,
+                          number
+                        )}
+                        <DepartmentButton
+                          section={`other_${group.groupName}`}
+                          signatoryNumber={number}
+                          label={`เพิ่ม${group.label}`}
+                        />
+                      </Box>
+                    ))}
+
+                  {/* SelectField อื่นๆ (เพิ่มเติม) - แสดงเฉพาะเมื่อไม่มี dynamic groups */}
+                  {(!Array.isArray(otherGroupOptions) ||
+                    otherGroupOptions.length === 0) && (
+                    <SelectField
+                      label="เลือกหน่วยงานอื่นๆ (เพิ่มเติม)"
+                      options={getFilteredOptionsForField(
+                        "other",
+                        number,
+                        otherOptions,
+                        `other2_${number}`
+                      )}
+                      value={formData[`other2_${number}`] || ""}
+                      onChange={handleInputChange}
+                      name={`other2_${number}`}
+                    />
+                  )}
                 </Stack>
               </Grid>
             </Grid>
