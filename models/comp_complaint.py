@@ -154,6 +154,8 @@ class Complaint(Base):
     # เลขที่หนังสือ (แยกต่างหากจาก reference_number3)
     document_number = Column(NVARCHAR(100), nullable=True, comment="เลขที่หนังสือ")
     document_date = Column(DateTime, nullable=True, comment="วันที่หนังสือ")
+    # วันที่เสนอผู้อำนวยการ
+    director_submission_date = Column(DateTime, nullable=True, comment="วันที่เสนอผู้อำนวยการ")
     
     # ข้อมูลวันที่ลงทะเบียน
     registration_date = Column(DateTime, nullable=True)

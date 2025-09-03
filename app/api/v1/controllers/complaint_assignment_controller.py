@@ -31,7 +31,14 @@ def validate_assignment_data(assignment_data: Dict[str, Any]) -> Dict:
             errors.append("ระดับความเร่งด่วนไม่ถูกต้อง")
     
     # ตรวจสอบรูปแบบวันที่
-    date_fields = ["reference_date", "reference_date2", "reference_date3", "reference_date4", "document_date"]
+    date_fields = [
+        "reference_date",
+        "reference_date2",
+        "reference_date3",
+        "reference_date4",
+        "document_date",
+        "director_submission_date"
+    ]
     for field in date_fields:
         if field in assignment_data and assignment_data[field]:
             try:
@@ -331,6 +338,23 @@ def update_complaint_assignment_data(
 
         if "document_date" in assignment_data and assignment_data["document_date"]:
             complaint.document_date = datetime.fromisoformat(assignment_data["document_date"].replace('Z', '+00:00'))
+
+        # ✅ บันทึก director_submission_date (วันที่เสนอผู้อำนวยการ)
+        if "director_submission_date" in assignment_data:
+            old_value = complaint.director_submission_date
+            new_value = assignment_data["director_submission_date"]
+            if new_value:
+                try:
+                    parsed = datetime.fromisoformat(str(new_value).replace('Z', '+00:00'))
+                except ValueError:
+                    return {"success": False, "message": "รูปแบบวันที่เสนอผู้อำนวยการไม่ถูกต้อง"}
+                complaint.director_submission_date = parsed
+            else:
+                complaint.director_submission_date = None
+            if old_value != complaint.director_submission_date:
+                old_txt = old_value.isoformat() if old_value else 'ไม่ระบุ'
+                new_txt = complaint.director_submission_date.isoformat() if complaint.director_submission_date else 'ไม่ระบุ'
+                changes.append(f"วันที่เสนอผอ.: {old_txt} → {new_txt}")
 
         # ✅ บันทึก assigned_agency
         if "assigned_agency" in assignment_data:
@@ -649,6 +673,7 @@ def get_assignment_form_data(db: Session, complaint_id: UUID) -> Dict:
             # Document Info
             "document_number": complaint.document_number,
             "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
+            "director_submission_date": complaint.director_submission_date.isoformat() if complaint.director_submission_date else None,
             
             # Classification Levels
             "confidentiality_level": complaint.confidentiality_level,
@@ -1496,6 +1521,7 @@ def get_complaints_by_page_type_with_assignment_form(
                 # Document Info
                 "document_number": complaint.document_number,
                 "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
+                "director_submission_date": complaint.director_submission_date.isoformat() if complaint.director_submission_date else None,
                 
                 # Levels & Classifications
                 "confidentiality_level": complaint.confidentiality_level,
