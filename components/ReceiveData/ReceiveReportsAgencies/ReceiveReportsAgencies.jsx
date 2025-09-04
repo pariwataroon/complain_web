@@ -61,8 +61,12 @@ const URGENCY_OPTIONS = [
 ];
 
 const ReceiveReportsAgencies = () => {
-  const { id } = useRouter().query; 
   const router = useRouter();
+  const { id, complaint_id, complaint_number } = router.query;
+  const complaintId =
+    (Array.isArray(id) ? id[0] : id) ||
+    (Array.isArray(complaint_id) ? complaint_id[0] : complaint_id) ||
+    null;
 
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
   const [openSearchDialog2, setOpenSearchDialog2] = useState(false);
@@ -177,8 +181,8 @@ useEffect(() => {
   
         const results = items.map((item) => ({
           ...item,
-          label: item.reference_number || "",
-          value: item.reference_number || "",
+          label: item.complaint_number || "",
+          value: item.complaint_number || "",
         }));
   
         setSearchResults(results);
@@ -191,7 +195,7 @@ useEffect(() => {
     };
   
     const handleSelectReference2 = (ref) => {
-      const num = ref?.reference_number || "";
+      const num = ref?.complaint_number || "";
       setForm((prev) => ({ ...prev, investigateGk: num }));
       setValue("investigateGk", num, { shouldValidate: false, shouldDirty: true });
       setOpenSearchDialog2(false);
@@ -232,6 +236,14 @@ useEffect(() => {
   );
 
   const [form, setForm] = useState(initialFormState);
+
+   useEffect(() => {
+    if (complaint_number) {
+      setForm(prev => ({ ...prev, investigateGk: complaint_number }));
+    }
+  }, [complaint_number]);
+
+  const toISO = (v) => (v ? new Date(v).toISOString() : null)
 
   // Validation function
   const validateForm = useCallback(() => {
@@ -283,23 +295,23 @@ useEffect(() => {
   try {
     const payload = {
       receive_number: form.referenceNo,
-      receive_date: form.date,
+      receive_date: toISO(form.date),       
       agency_reference_number: form.investigateGk,
-      agency_reference_date: form.investigateDate,
+      agency_reference_date: toISO(form.investigateDate),
       internal_register_number: form.documentNo,
-      internal_register_date: form.documentDate,
-      present_to_director_date: form.submitWorkDate,
-      complaint_number: form.documentNo,
-      complaint_number_date: form.date,
+      internal_register_date: toISO(form.documentDate),
+      present_to_director_date: toISO(form.submitWorkDate),
+      complaint_number: form.investigateGk,
+      complaint_number_date: toISO(form.investigateDate),
       subject: form.subject,
       document_number: form.documentNo,
-      document_date: form.documentDate,
+      document_date: toISO(form.documentDate),
       signature_authority_user_id: form.signatureAuthorityId,
       department_id: form.departmentId,
       user_id: form.userId,
       confidentiality_level: form.confidentiality,
       urgency_level: form.urgency,
-      complaint_id: id,
+      complaint_id: complaintId,
       remarks: form.remarks,
     };
 
@@ -341,11 +353,11 @@ useEffect(() => {
 
     closeAlert();
     await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
-    router.push(`/admin/box/list`);
+      router.push(`/admin/box/list`);
 
   } catch (error) {
     const code = error?.response?.data?.res_code || error?.response?.status;
-    const serverMsg =
+    const serverMsg =0
       error?.response?.data?.res_data?.error ||
       error?.response?.data?.res_message ||
       error?.message || 
@@ -895,7 +907,7 @@ useEffect(() => {
                   mt: "12px",
                 }}
               >
-                <IconButton
+                {/* <IconButton
                   onClick={() => setOpenSearchDialog(true)}
                   onMouseDown={(e) => e.preventDefault()}
                   aria-label="ค้นหาเลขที่อ้างอิง"
@@ -907,7 +919,7 @@ useEffect(() => {
                   }}
                 >
                   <SearchIcon />
-                </IconButton>
+                </IconButton> */}
               </Box>
             </Box>
 

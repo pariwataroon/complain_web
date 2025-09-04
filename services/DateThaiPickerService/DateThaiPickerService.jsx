@@ -32,6 +32,48 @@ const DateThaiPickerService = ({
   // ตรวจสอบ disabled state
   const isDisabled = disabled || dis;
 
+  // สร้างรายการปี พ.ศ. (ย้อนหลัง 10 ปี + เคารพ minDate/maxDate + รวมปีที่เลือกไว้เสมอ)
+const generateYearOptions = () => {
+  const today = new Date();
+  const current = today.getFullYear();
+
+  // base: ย้อนหลัง 10 ปีจนถึงปีปัจจุบัน
+  let minY = current - 10;
+  let maxY = current;
+
+  // ถ้ามี minDate / maxDate ให้เคารพช่วงนั้นด้วย
+  if (minDate) {
+    const min = new Date(minDate).getFullYear();
+    if (!isNaN(min)) minY = Math.max(minY, min);
+  }
+  if (maxDate) {
+    const max = new Date(maxDate).getFullYear();
+    if (!isNaN(max)) maxY = Math.min(maxY, max);
+  }
+
+  // ถ้าผู้ใช้เลือกปีที่อยู่นอกช่วง (เช่นโหลดค่าจาก API) ให้เติมปีนั้นเข้ามา
+  const selectedY = selectedDate?.year;
+  if (selectedY && !isNaN(selectedY)) {
+    minY = Math.min(minY, selectedY);
+    maxY = Math.max(maxY, selectedY);
+  }
+
+  // กันเคส min > max (เช่นกำหนด maxDate เก่ากว่าช่วง 10 ปีมาก)
+  if (minY > maxY) {
+    // fallback: ใช้ปีเดียว (maxY) เพื่อให้ยังเลือกได้
+    minY = maxY;
+  }
+
+  const years = [];
+  for (let y = minY; y <= maxY; y++) {
+    years.push({
+      value: y,                  // ค.ศ. เก็บเป็นค่า
+      label: (y + 543).toString() // แสดงเป็น พ.ศ.
+    });
+  }
+  return years;
+};
+
   // แก้ไขการตั้งค่า initial month และ year
   const [currentMonth, setCurrentMonth] = useState(() => {
     if (value && typeof value === 'object' && value.month) {
@@ -201,16 +243,16 @@ const DateThaiPickerService = ({
   };
 
   // สร้างรายการปี พ.ศ.
-  const generateYearOptions = () => {
-    const years = [];
-    for (let buddhistYear = 2400; buddhistYear <= 2700; buddhistYear++) {
-      years.push({
-        value: buddhistYear - 543,
-        label: buddhistYear.toString(),
-      });
-    }
-    return years;
-  };
+  // const generateYearOptions = () => {
+  //   const years = [];
+  //   for (let buddhistYear = 2400; buddhistYear <= 2700; buddhistYear++) {
+  //     years.push({
+  //       value: buddhistYear - 543,
+  //       label: buddhistYear.toString(),
+  //     });
+  //   }
+  //   return years;
+  // };
 
   // สร้างรายการชั่วโมงและนาที
   const generateTimeOptions = () => {
