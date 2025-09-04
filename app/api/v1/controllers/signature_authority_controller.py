@@ -43,8 +43,7 @@ def get_signature_authorities(db: Session, skip: int = 0, limit: int = 100):
                 ),
                 SignatureAuthority.group_signature_authorities_id.asc(),
                 SignatureAuthority.created_at.asc()
-            )\
-            .offset(skip).limit(limit).all()
+            ).all()
         
         # จัดกลุ่มข้อมูล
         grouped_authorities = {}
@@ -140,14 +139,19 @@ def get_signature_authorities(db: Session, skip: int = 0, limit: int = 100):
             key=lambda x: x["created_at"]
         )
         
+        # นำ skip/limit มาใช้ที่ระดับกลุ่ม เพื่อไม่ให้ข้อมูลผู้ใช้/หน่วยงานของกลุ่มถูกตัดทอน
+        paged_groups = sorted_groups[skip: skip + limit] if limit is not None else sorted_groups[skip:]
+        
         # รวมผลลัพธ์
         final_result = {
-            "groups": sorted_groups,
+            "groups": paged_groups,
             "individuals": individual_authorities,
             "summary": {
                 "total_groups": len(grouped_authorities),
                 "total_individuals": len(individual_authorities),
-                "total_records": len(result)
+                "total_records": sum(
+                    1 for _ in db.query(SignatureAuthority).filter(SignatureAuthority.is_active == True)
+                )
             }
         }
         
