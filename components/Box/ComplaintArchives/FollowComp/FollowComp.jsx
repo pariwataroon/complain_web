@@ -310,14 +310,15 @@ const addButtonHandlers = {
         complaint_number: complaintNumber || "",
       },
     }),
-  AGENCY_REPORT: (router, complaintId, complaintNumber) =>
-    router.push({
-      pathname: "/admin/edit/report/",
-      query: {
-        complaint_id: complaintId || "",
-        complaint_number: complaintNumber || "",
+  AGENCY_REPORT: (router, complaintId, complaintNumber, createdAt) =>
+   router.push({
+     pathname: "/admin/edit/report/",
+     query: {
+       complaint_id: complaintId || "",
+       complaint_number: complaintNumber || "",
+       created_at: createdAt || "",
       },
-    }),
+   }),
   FINAL_NOTIFY: (router, complaintId, complaintNumber) =>
     router.push({
       pathname: "/admin/edit/inform-related-parties/",
@@ -711,42 +712,43 @@ const FollowComp = () => {
     ? documentData.items.filter(requestUpdateSection.filter)
     : [];
   const requestUpdateRows = [...requestUpdateItems, ...requestUpdateExtra];
-
-  // AGENCY_REPORT (type4)
-  const agencyReportSection = sectionConfigs[4];
-  const agencyReportHeaders = agencyReportSection.headers;
-  const agencyReportRowMapper = agencyReportSection.rowMapper;
-  const outgoingType4 = outgoing_reports.type4 || [];
-  const agencyReportExtra = outgoingType4.map((item, idx) => ({
-    ...item,
-    document_number: item.reference_number || "-",
-    reference_date: item.reference_date
-      ? new Date(item.reference_date).toLocaleDateString("th-TH")
+  
+// AGENCY_REPORT (เปลี่ยนมาใช้ outgoing5)
+const agencyReportSection = sectionConfigs[4];
+const agencyReportHeaders = agencyReportSection.headers;
+const agencyReportRowMapper = agencyReportSection.rowMapper;
+const outgoingType5 = outgoing_reports.type5 || [];
+const agencyReportRows = outgoingType5.map((item) => ({
+ ...item,
+  document_number: item.document_number || item.reference_number || "-",
+  reference_date: item.document_date
+    ? new Date(item.document_date).toLocaleDateString("th-TH")
+    : item.reference_date
+    ? new Date(item.reference_date).toLocaleDateString("th-TH")
+    : "-",
+  issue: item.subject || "-",
+  created_at: item.created_at
+    ? new Date(item.created_at).toLocaleDateString("th-TH")
+    : "-",
+  agency: item.department?.name || "-",
+  attachment_name:
+    item.attachments && item.attachments.length > 0
+      ? item.attachments.map((a) => a.file_name || a.name).join(", ")
       : "-",
-    issue: item.subject || "-",
-    created_at: item.created_at
-      ? new Date(item.created_at).toLocaleDateString("th-TH")
-      : "-",
-    proposed_date: item.proposed_date || "-",
-    agency: item.department?.name || "-",
-    attachment_name:
-      item.attachments && item.attachments.length > 0
-        ? item.attachments.map((a) => a.file_name || a.name).join(", ")
-        : "-",
-    id: item.id,
-  }));
+  id: item.id,
+}));
   const agencyReportItems = Array.isArray(documentData?.items)
     ? documentData.items.filter(agencyReportSection.filter)
     : [];
-  const agencyReportRows = [...agencyReportItems, ...agencyReportExtra];
+  // const agencyReportRows = [...agencyReportItems, ...agencyReportExtra];
 
   // FINAL_NOTIFY (type5)
   const finalSection = sectionConfigs.find((s) => s.key === "FINAL_NOTIFY");
   const finalHeaders = finalSection.headers;
   const finalRowMapper = finalSection.rowMapper;
-  const outgoingType5 = outgoing_reports?.type5?.length
-    ? outgoing_reports.type5
-    : outgoing_reports?.type4 || [];
+  // const outgoingType5 = outgoing_reports?.type5?.length
+  //   ? outgoing_reports.type5
+  //   : outgoing_reports?.type4 || [];
   const finalNotifyExtra = outgoingType5.map((item, idx) => ({
     ...item,
     agency: item.department?.name || "-",
@@ -1046,18 +1048,16 @@ const FollowComp = () => {
             headers={agencyReportHeaders}
             rows={agencyReportRows}
             rowMapper={agencyReportRowMapper}
-            onAdd={() =>
-              addButtonHandlers.AGENCY_REPORT(
-                router,
-                id,
-                documentData?.detail?.complaintNumber ||
-                  documentData?.relationships?.master_complaint
-                    ?.complaint_number ||
-                  documentData?.relationships?.all_related?.[0]
-                    ?.complaint_number ||
-                  ""
-              )
-            }
+           onAdd={() =>
+            addButtonHandlers.AGENCY_REPORT(
+              router,
+              id,
+              documentData?.detail?.complaintNumber ||
+                documentData?.relationships?.master_complaint?.complaint_number ||
+                documentData?.relationships?.all_related?.[0]?.complaint_number ||
+                ""
+            )
+          }
             router={router}
             handleOpenDocument={handleOpenDocument}
             handleManage={handleManage}

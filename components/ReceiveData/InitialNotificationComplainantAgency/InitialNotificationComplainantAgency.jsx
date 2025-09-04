@@ -314,19 +314,8 @@ const InitialNotificationComplainantAgency = () => {
               helperText={getFieldError("salutation")}
             />
 
-            {/* เลข สป.กค. */}
-            <InputText
-              label={createLabel("เลข สป.กค.", "complaint_number")}
-              inputLabel="กรอกเลข สป.กค."
-              name="complaint_number"
-              value={form.complaint_number || ""}
-              onChange={handleChange}
-              error={!!getFieldError("complaint_number")}
-              helperText={getFieldError("complaint_number")}
-            />
-
             {/* เลขที่หนังสือ + icon */}
-            <Box sx={{ display: "flex", alignItems: "center" }}>
+           
               <InputText
                 label={createLabel("เลขที่หนังสือ", "refNo")}
                 inputLabel="กรอกเลขที่หนังสือ"
@@ -336,6 +325,19 @@ const InitialNotificationComplainantAgency = () => {
                 error={!!getFieldError("refNo")}
                 helperText={getFieldError("refNo")}
                 sx={{ flex: 1 }}
+              />
+           
+
+            {/* เลข สป.กค. */}
+             <Box sx={{ display: "flex", alignItems: "center" }}>
+            <InputText
+              label={createLabel("เลข สป.กค.", "complaint_number")}
+              inputLabel="กรอกเลข สป.กค."
+              name="complaint_number"
+              value={form.complaint_number || ""}
+              onChange={handleChange}
+              error={!!getFieldError("complaint_number")}
+              helperText={getFieldError("complaint_number")}
               />
               <IconButton
                 onClick={() => setOpenSearchDialog(true)}
@@ -347,7 +349,7 @@ const InitialNotificationComplainantAgency = () => {
               >
                 <SearchIcon />
               </IconButton>
-            </Box>
+           </Box>
 
             {/* วันที่ */}
             <DateThaiPickerService
@@ -529,8 +531,8 @@ const InitialNotificationComplainantAgency = () => {
                               <span
                                 style={{ fontWeight: 500 }}
                               >
-                                {item.document_number}
-                                {/* {item.complaint_number} */}
+                                {item.complaint_number}
+                                {item.subject}
                               </span>
                             </ListItemButton>
                           </ListItem>
