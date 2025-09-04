@@ -3,6 +3,8 @@ import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import {
   GetComplaintByID,
   GetComplaintsWithSearch,
+  GetAssignmentCompleteByAdmin,
+  UpdateAssignmentCompleteByAdmin
 } from "@pages/api/complaint/complaint";
 import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/ComplaintPersonalFormAPI";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
@@ -13,7 +15,6 @@ import DateThaiPickerService, {
 import { FormProvider, useForm } from "react-hook-form";
 import styles from "./TabNav.module.scss";
 import SearchComplaintsPreview from "./SearchComplaintsPreview";
-import { alertWarning } from "@utils/Alerts";
 import {
   GetAllSelectComplaintTypes,
   getSubComplaintTypeById,
@@ -37,6 +38,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ClearIcon from "@mui/icons-material/Clear";
 import IconButton from "@mui/material/IconButton";
+import { alertSuccess, alertError, alertWarning } from "@utils/Alerts";
 
 const breadcrumbItems = [
   {
@@ -106,6 +108,45 @@ const SearchComplaints = () => {
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
 
+
+  useEffect(() => {
+  const fetchAssignmentComplete = async () => {
+    if (!defaultData?.id) return;
+
+    try {
+      const res = await GetAssignmentCompleteByAdmin(defaultData.id);
+
+      if (res?.res_code === "0000" && res?.res_data?.complaint) {
+        const complaint = res.res_data.complaint;
+
+        console.log("📌 Assignment complaint:", complaint);
+
+        // ✅ ใช้ path ที่ถูกต้อง
+        step4Methods.setValue(
+          "officerReceivedDate",
+          complaint.assigned_date ? new Date(complaint.assigned_date) : ""
+        );
+
+        step4Methods.setValue(
+          "directorSubmittedDate",
+          complaint.director_submission_date
+            ? new Date(complaint.director_submission_date)
+            : ""
+        );
+      } else {
+        console.warn("ไม่พบข้อมูล assignment:", res);
+      }
+    } catch (error) {
+      console.error("Error fetching assignment complete:", error);
+    }
+  };
+
+  fetchAssignmentComplete();
+}, [defaultData?.id, step4Methods]);
+
+
+
+
   // --- เปลี่ยน useEffect เปิด Dialog ให้ยิง API ---
   useEffect(() => {
     if (openSearchDialog) {
@@ -114,6 +155,45 @@ const SearchComplaints = () => {
       inputRef.current?.focus();
     }
   }, [openSearchDialog]);
+
+// --- ตอนดึงจาก API ---
+useEffect(() => {
+  const fetchAssignment = async () => {
+    if (!defaultData?.id) return;
+
+    try {
+      // เรียก API หลัก
+      const res = await GetComplaintByID(defaultData.id);
+
+      if (res?.res_code === "0000" && res?.res_data?.complaint) {
+        const complaint = res.res_data.complaint;
+
+        // ดึงค่าที่เกี่ยวข้องกับ assignment
+        const assignedDate = complaint.assigned_date;
+        const directorSubmittedDate = complaint.director_submission_date;
+
+        // เซ็ตค่าไปที่ react-hook-form
+        step4Methods.setValue(
+          "officerReceivedDate",
+          assignedDate ? new Date(assignedDate) : ""
+        );
+        step4Methods.setValue(
+          "directorSubmittedDate",
+          directorSubmittedDate ? new Date(directorSubmittedDate) : ""
+        );
+      } else {
+        console.warn("ไม่พบข้อมูล assignment ใน complaint:", res);
+      }
+    } catch (error) {
+      console.error("Error fetching assignment complete:", error);
+    }
+  };
+
+  fetchAssignment();
+}, [defaultData?.id, step4Methods]);
+
+
+
 
   // --- handleSearch ยังคงเดิม (ยิง API search ด้วย keyword) ---
 
@@ -172,22 +252,22 @@ const SearchComplaints = () => {
   useEffect(() => {
   if (defaultData) {
     const assignmentForm = defaultData.assignment_form || {};
-    const step3General = defaultData.step3?.general || {};
-    const step4General = defaultData.step4?.general || {};
+    const step3General = defaultData.step3?.general || {}; // ✅ เพิ่มบรรทัดนี้
 
     step4Methods.reset({
       officerReceivedDate: assignmentForm.assigned_date
         ? new Date(assignmentForm.assigned_date)
         : "",
-      directorSubmittedDate: assignmentForm.director_submission_date   
+      directorSubmittedDate: assignmentForm.director_submission_date
         ? new Date(assignmentForm.director_submission_date)
         : "",
-      incidentDateTime: step3General.incidentDate
+      incidentDateTime: step3General.incidentDate   // ✅ ใช้ได้แล้ว
         ? new Date(step3General.incidentDate)
         : "",
     });
   }
 }, [defaultData, step4Methods]);
+
 
   const buddhistYYYYMMDDToDate = (yyyymmddStr) => {
     if (!/^\d{8}$/.test(yyyymmddStr)) return null;
@@ -758,8 +838,8 @@ const handleSubmit = async () => {
   const step4Data = step4Methods.getValues();
 
   // === Debug log วันที่ก่อนส่ง ===
-  console.log("👉 officerReceivedDate (วันที่รับเรื่องของเจ้าพนักงาน):", step4Data.officerReceivedDate);
-  console.log("👉 directorSubmittedDate (วันที่เสนองาน ผอ.สรร.):", step4Data.directorSubmittedDate);
+  console.log("👉 officerReceivedDate:", step4Data.officerReceivedDate);
+  console.log("👉 directorSubmittedDate:", step4Data.directorSubmittedDate);
 
   // === Mapping ประเภท ===
   const selectedComplaintType =
@@ -869,28 +949,34 @@ const handleSubmit = async () => {
         complaintChannelData,
 
         reference_number: step3Data.referenceNumber1,
-        reference_date: formatDateForAPI(step3Data.referenceDate1),  // สป.กค.
+        reference_date: formatDateForAPI(step3Data.referenceDate1),
         reference_number2: step3Data.referenceNumber2,
-        reference_date2: formatDateForAPI(step3Data.referenceDate2), // สป.สร.
+        reference_date2: formatDateForAPI(step3Data.referenceDate2),
         reference_number3: step3Data.referenceNumber3,
-        reference_date3: formatDateForAPI(step3Data.referenceDate3), // สตป.
+        reference_date3: formatDateForAPI(step3Data.referenceDate3),
         reference_number4: step3Data.referenceNumber4,
-        reference_date4: formatDateForAPI(step3Data.referenceDate4), // สรร.(สารบัญ)
+        reference_date4: formatDateForAPI(step3Data.referenceDate4),
 
         document_number: step3Data.documentNumber,
-        document_date: formatDateForAPI(step3Data.documentDate), // หนังสือ
+        document_date: formatDateForAPI(step3Data.documentDate),
 
         additional_reference_number1: step3Data.additionalReference1,
-        additional_reference_date1: formatDateForAPI(step3Data.additionalReferenceDate1), // อ้างอิง(สารบัญ)
+        additional_reference_date1: formatDateForAPI(
+          step3Data.additionalReferenceDate1
+        ),
         additional_reference_number2: step3Data.additionalReference2,
-        additional_reference_date2: formatDateForAPI(step3Data.additionalReferenceDate2), // อ้างอิง(สานต่อ)
+        additional_reference_date2: formatDateForAPI(
+          step3Data.additionalReferenceDate2
+        ),
       },
     },
     step4: {
       general: {
         ...step4Data,
-        assigned_date: formatDateForAPI(step4Data.officerReceivedDate),    
-        director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate), 
+        assigned_date: formatDateForAPI(step4Data.officerReceivedDate),
+        director_submission_date: formatDateForAPI(
+          step4Data.directorSubmittedDate
+        ),
         incident_date: formatDateForAPI(step4Data.incidentDateTime),
       },
     },
@@ -901,10 +987,16 @@ const handleSubmit = async () => {
       reference_date3: formatDateForAPI(step3Data.referenceDate3),
       reference_date4: formatDateForAPI(step3Data.referenceDate4),
       document_date: formatDateForAPI(step3Data.documentDate),
-      additional_reference_date1: formatDateForAPI(step3Data.additionalReferenceDate1),
-      additional_reference_date2: formatDateForAPI(step3Data.additionalReferenceDate2),
-      assigned_date: formatDateForAPI(step4Data.officerReceivedDate), 
-      director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate), 
+      additional_reference_date1: formatDateForAPI(
+        step3Data.additionalReferenceDate1
+      ),
+      additional_reference_date2: formatDateForAPI(
+        step3Data.additionalReferenceDate2
+      ),
+      assigned_date: formatDateForAPI(step4Data.officerReceivedDate),
+      director_submission_date: formatDateForAPI(
+        step4Data.directorSubmittedDate
+      ),
     },
   };
 
@@ -915,20 +1007,46 @@ const handleSubmit = async () => {
   console.log("🚀 submitData.step4.general:", submitData.step4.general);
   console.log("🚀 submitData.assignment_form:", submitData.assignment_form);
 
-  // ✅ เก็บไว้ใน state
-  setPreviewData(submitData);
-  setShowPreview(true);
+  // ✅ ยิง API เพื่อบันทึกจริง
+  try {
+    const res = await UpdateAssignmentCompleteByAdmin(
+      defaultData.id,
+      submitData.assignment_form
+    );
 
-  // ✅ redirect ไป Preview
-  router.replace(
-    {
-      pathname: `/admin/edit/website-complaints/${defaultData?.id}`,
-      query: { preview: "" },
-    },
-    undefined,
-    { shallow: true }
-  );
+    console.log("✅ UpdateAssignmentCompleteByAdmin response:", res);
+
+    if (res?.res_code === "0000") {
+      // alertSuccess("บันทึกสำเร็จ", "ข้อมูลได้รับการบันทึกแล้ว");
+
+      // เก็บ preview ไว้แสดง
+      setPreviewData(submitData);
+      setShowPreview(true);
+
+      // redirect ไปหน้า Preview
+      router.replace(
+        {
+          pathname: `/admin/edit/website-complaints/${defaultData?.id}`,
+          query: { preview: "" },
+        },
+        undefined,
+        { shallow: true }
+      );
+    } else {
+      alertError(
+        "ข้อผิดพลาด",
+        res?.res_desc || "ไม่สามารถบันทึกข้อมูลได้"
+      );
+    }
+  } catch (err) {
+    console.error("❌ Error UpdateAssignmentCompleteByAdmin:", err);
+    alertError(
+      "ข้อผิดพลาด",
+      err.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล"
+    );
+  }
 };
+
 
 
 

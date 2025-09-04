@@ -189,6 +189,12 @@ const FollowStatus = () => {
         const res = await GetComplaintByID(id);
         const payload = res?.res_data ?? res?.data ?? res; // เผื่อรูปแบบ response ต่างกัน
         const mapped = mapComplaintData(payload);
+              // เติมชื่อผู้บันทึก/ผู้รับผิดชอบถ้ามีใน assignment_form
+              const recorderName = payload?.updated_by || payload?.created_by || "";
+              const responsibleOfficerName =
+                payload?.assignment_form?.assigned_officer_name || "";
+              mapped.recorderName = recorderName;
+              mapped.responsibleOfficerName = responsibleOfficerName;
         if (alive) setData(mapped);
       } catch (e) {
         console.error("[FollowStatus] GetComplaintByID error:", e);

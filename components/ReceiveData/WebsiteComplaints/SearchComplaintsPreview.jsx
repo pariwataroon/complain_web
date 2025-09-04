@@ -7,7 +7,7 @@ import ImageIcon from "@mui/icons-material/Image";
 import Image from "next/image";
 import Cookies from "js-cookie";
 import ButtonService from "@services/ButtonService/ButtonService";
-import { GetComplaintByID } from "@pages/api/complaint/complaint";
+// import { GetComplaintByID } from "@pages/api/complaint/complaint";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import {
   formatThaiDate,
@@ -28,6 +28,11 @@ import {
 import useSearchComplaintsPreview from "@hooks/admin/websitecomplaints/useSearchComplaintsPreview";
 import { GetAllOutsideDepartments } from "@pages/api/allselect/allselect";
 import styles from "./TabNav.module.scss";
+import {
+  GetComplaintByID,
+  // GetAssignmentCompleteByAdmin,
+  UpdateAssignmentCompleteByAdmin,
+} from "@pages/api/complaint/complaint";
 const SESSION_KEY = "complaintsPreviewData";
 
 const SearchComplaintsPreview = ({
@@ -169,21 +174,18 @@ const SearchComplaintsPreview = ({
     let cancelled = false;
     setLoading(true);
     setError(null);
+    // --- หลังจากดึง formData จาก API แล้ว (ใน useEffect load data) ---
     GetComplaintByID(id)
-      .then((response) => {
-        if (cancelled) return;
-        if (response?.res_code === "0000" && response?.res_data) {
-          setFormData(response.res_data);
-          setError(null);
-          sessionStorage.setItem(
-            SESSION_KEY,
-            JSON.stringify(response.res_data)
-          );
-        } else {
-          setFormData(null);
-          setError(response?.res_desc || "ไม่สามารถดึงข้อมูลได้");
-        }
-      })
+   .then((complaintRes) => {
+     if (complaintRes?.res_code === "0000" && complaintRes?.res_data) {
+       const data = complaintRes.res_data;
+       // ✅ normalize เฉพาะข้อมูลจาก complaintRes
+       const normalized = normalizeAssignmentData(data);
+       setFormData(normalized);
+       sessionStorage.setItem(SESSION_KEY, JSON.stringify(normalized));
+     }
+   })
+
       .catch(() => {
         if (cancelled) return;
         setFormData(null);
@@ -223,89 +225,145 @@ const SearchComplaintsPreview = ({
     }
   };
 
-  const handleSubmit = async () => {
-    if (!id) {
-      alertError("ข้อผิดพลาด", "ไม่พบ ID เรื่องร้องทุกข์");
-      return;
-    }
-    if (!formData) {
-      alertError("ข้อผิดพลาด", "ไม่พบข้อมูลที่จะส่ง");
-      return;
-    }
-    if (!userInfo) {
-      alertError("ข้อผิดพลาด", "ไม่พบข้อมูลผู้ใช้");
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const step3Data = formData.step3?.general || {};
-      const step4Data = formData.step4?.general || {};
-
-      // ดึง uuid ที่ log ถูกต้อง
-      let complaintTypeId =
-        step3Data.complaintTypeID ||
-        step3Data.complaintTypeId ||
-        step3Data.complaint_type_id ||
-        step3Data.complaintType ||
-        "";
-      let complaintSubTypeId = step3Data.complaintSubTypeID || "";
-      let complaintChannelId =
-        step3Data.complaintChannelID ||
-        step3Data.complaintChannelId ||
-        step3Data.complaint_channel_id ||
-        step3Data.complaintChannelData?.id ||
-        "";
-
-      // ตรวจสอบ uuid
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(complaintTypeId)) complaintTypeId = "";
-      if (!uuidRegex.test(complaintSubTypeId)) complaintSubTypeId = "";
-      if (!uuidRegex.test(complaintChannelId)) complaintChannelId = "";
-
-      console.log("complaintSubTypeId:", complaintSubTypeId);
-      console.log("complaintChannelId:", complaintChannelId);
-
-      // เตรียมข้อมูลให้ตรงกับ API (ใช้ id ที่ log)
-      const mappedFormData = {
-        ...formData,
-        step3: {
-          general: {
-            ...step3Data,
-            complaintTypeID: complaintTypeId,
-            complaintSubType: complaintSubTypeId, // ใช้ ID ที่ log
-            complaintChannel: complaintChannelId, // ใช้ ID ที่ log
-          },
-        },
-        step4: {
-          general: {
-            ...step4Data,
-          },
-        },
-      };
-
-      await handleUpdateAssignment(id, mappedFormData, userInfo);
-
-      alertSuccess(
-        "บันทึกสำเร็จ",
-        "ข้อมูลได้รับการบันทึกและดำเนินการเสร็จสิ้นแล้ว"
-      );
-      sessionStorage.removeItem("complaintsFormData");
-      setTimeout(() => {
-        router.push("/admin/edit/website-complaints/");
-      }, 1500);
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      alertError(
-        "ข้อผิดพลาด",
-        error.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล"
-      );
-    } finally {
-      setSubmitting(false);
-    }
+  const normalizeAssignmentData = (resData) => {
+  return {
+    ...resData,
+    step1: resData.step1 || {},
+    step2: resData.step2 || {},
+    step3: resData.step3 || {},
+    step4: resData.step4 || {},
+    complaint: {
+      ...resData.assignment_form, // ✅ merge assignment_form
+      ...resData.step3?.general,  // merge subject, complaint_type ฯลฯ
+    },
   };
+};
+
+const handleSubmit = async () => {
+  if (!id) {
+    alertError("ข้อผิดพลาด", "ไม่พบ ID เรื่องร้องทุกข์");
+    return;
+  }
+  if (!formData) {
+    alertError("ข้อผิดพลาด", "ไม่พบข้อมูลที่จะส่ง");
+    return;
+  }
+  if (!userInfo) {
+    alertError("ข้อผิดพลาด", "ไม่พบข้อมูลผู้ใช้");
+    return;
+  }
+
+  setSubmitting(true);
+
+  try {
+    const step3Data = formData.step3?.general || {};
+    const step4Data = formData.step4?.general || {};
+
+    // --- ตรวจสอบ UUID ---
+    let complaintTypeId =
+      step3Data.complaintTypeID ||
+      step3Data.complaintTypeId ||
+      step3Data.complaint_type_id ||
+      step3Data.complaintType ||
+      "";
+    let complaintSubTypeId = step3Data.complaintSubTypeID || "";
+    let complaintChannelId =
+      step3Data.complaintChannelID ||
+      step3Data.complaintChannelId ||
+      step3Data.complaint_channel_id ||
+      step3Data.complaintChannelData?.id ||
+      "";
+
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(complaintTypeId)) complaintTypeId = "";
+    if (!uuidRegex.test(complaintSubTypeId)) complaintSubTypeId = "";
+    if (!uuidRegex.test(complaintChannelId)) complaintChannelId = "";
+
+    console.log("complaintSubTypeId:", complaintSubTypeId);
+    console.log("complaintChannelId:", complaintChannelId);
+
+    // --- เตรียมข้อมูล mappedFormData ---
+    const mappedFormData = {
+      ...formData,
+      // ✅ STEP1: ผู้ร้องทุกข์ + ผู้มอบอำนาจ
+  step1: {
+    general: {
+      general: formData?.step1?.general?.general || {},   // ผู้ร้องทุกข์
+      delegate: formData?.step1?.general?.delegate || {}, // ผู้มอบอำนาจ
+    },
+  },
+
+  // ✅ STEP2: ผู้ถูกร้องเรียน
+  step2: {
+    general: {
+      individual: formData?.step2?.general?.individual || {},
+    },
+  },
+      
+      step3: {
+        general: {
+          ...step3Data,
+          complaintTypeID: complaintTypeId,
+          complaintSubType: complaintSubTypeId, // ใช้ UUID
+          complaintChannel: complaintChannelId, // ใช้ UUID
+        },
+      },
+      step4: {
+        general: {
+          // map ให้ตรงกับ API (snake_case)
+          assigned_date: step4Data.officerReceivedDate || null,
+          director_submission_date: step4Data.directorSubmittedDate || null,
+          incident_date: step4Data.incidentDateTime || null,
+        },
+      },
+    };
+
+    // ✅ Helper: แปลงวันที่เป็น YYYY-MM-DD HH:mm:ss
+    const formatDateForAPI = (date) => {
+      if (!date) return null;
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return null;
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const hours = String(d.getHours()).padStart(2, "0");
+      const minutes = String(d.getMinutes()).padStart(2, "0");
+      const seconds = String(d.getSeconds()).padStart(2, "0");
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
+
+
+    // --- STEP3: บันทึกข้อมูลร้องเรียน ---
+    await handleUpdateAssignment(id, mappedFormData, userInfo);
+
+    // --- STEP4: บันทึกวันรับเรื่อง/วันเสนองาน ---
+    await UpdateAssignmentCompleteByAdmin(id, {
+    assigned_date: formatDateForAPI(step4Data.officerReceivedDate),
+    director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate),
+    incident_date: formatDateForAPI(step4Data.incidentDateTime),
+  });
+
+
+
+
+    alertSuccess("บันทึกสำเร็จ", "ข้อมูลได้รับการบันทึกแล้ว");
+
+    // ✅ ใช้ key ให้ตรงกัน
+    sessionStorage.removeItem("complaintsPreviewData");
+
+    router.push("/admin/edit/website-complaints/");
+  } catch (error) {
+    console.error("Error submitting form:", error);
+    alertError(
+      "ข้อผิดพลาด",
+      error.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล"
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   const handleBackClick = () => {
     sessionStorage.removeItem(SESSION_KEY);
@@ -796,7 +854,11 @@ const SearchComplaintsPreview = ({
               />
               <InfoItem
                 label="วันและเวลาที่เกิดเหตุ"
-                value={formatThaiDateTime(additionalDetails.incidentDateTime)}
+                value={
+                  additionalDetails.incidentDateTime
+                    ? safeFormatThaiDateTime(additionalDetails.incidentDateTime)
+                    : "-"
+                }
               />
               {/* รายละเอียดเรื่องร้องทุกข์ */}
               <Grid item xs={12}>
@@ -814,7 +876,7 @@ const SearchComplaintsPreview = ({
               <InfoItem
                 label="วันที่รับเรื่องของเจ้าพนักงาน"
                 value={
-                  additionalDetails?.officerReceivedDate
+                  additionalDetails.officerReceivedDate
                     ? safeFormatThaiDateTime(additionalDetails.officerReceivedDate)
                     : "-"
                 }
@@ -822,7 +884,7 @@ const SearchComplaintsPreview = ({
               <InfoItem
                 label="วันที่เสนองาน ผอ.สรร."
                 value={
-                  additionalDetails?.directorSubmittedDate
+                  additionalDetails.directorSubmittedDate
                     ? safeFormatThaiDateTime(additionalDetails.directorSubmittedDate)
                     : "-"
                 }

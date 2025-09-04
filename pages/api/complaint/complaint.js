@@ -134,6 +134,16 @@ const NewsUploadAttachments = async (formDataUpload) => {
   }
 };
 
+const GetAssignmentCompleteByAdmin = async (id) => {
+  try {
+    const res = await axiosInstance.get(`/complaints-assignment/${id}/assignment-form`);
+    return res.data;
+  } catch (error) {
+    console.error("Error in GetAssignmentCompleteByAdmin:", error);
+    throw error;
+  }
+};
+
 const UpdateAssignmentCompleteByAdmin = async (complaint_id, formData) => {
   try {
     const response = await axiosInstance.put(
@@ -324,4 +334,5 @@ export {
   GetReferenceComplaints,
   GetReDocumentComplaints,
   GetDepartments,
+  GetAssignmentCompleteByAdmin
 };
