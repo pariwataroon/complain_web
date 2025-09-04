@@ -125,8 +125,8 @@ const sectionConfigs = [
       ลำดับ: idx + 1,
       "หน่วยงาน(ครั้งที่ส่ง)": row.agency || "-",
       เรื่อง: row.issue || row.subject || "-",
-      เลขที่หนังสือ: row.document_number || row.reference_number || "-",
-      ลงวันที่: row.receiveDate || row.reference_date || "-",
+  เลขที่หนังสือ: row.document_number || "-",
+  ลงวันที่: row.document_date || "-",
       ผู้ลงนาม:
         row.signer ||
         (row.signature_authority_user && row.signature_authority_user.name) ||
@@ -587,9 +587,9 @@ const FollowComp = () => {
     ...item,
     agency: item.department?.name || "-",
     issue: item.subject || "-",
-    document_number: item.reference_number || "-",
-    receiveDate: item.reference_date
-      ? new Date(item.reference_date).toLocaleDateString("th-TH")
+  document_number: item.document_number || "-",
+    document_date: item.document_date
+      ? new Date(item.document_date).toLocaleDateString("th-TH")
       : "-",
     signer: item.signature_authority_user?.name || "-",
     attachment_name:
