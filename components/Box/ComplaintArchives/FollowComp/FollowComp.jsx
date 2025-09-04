@@ -12,10 +12,21 @@ import {
   IconButton,
   Stack,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Link as MuiLink,
 } from "@mui/material";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import FolderIcon from "@mui/icons-material/Folder";
 import { getDocumentStorageByComplaintId } from "@pages/api/document/document";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import DescriptionIcon from "@mui/icons-material/Description";
+import ImageIcon from "@mui/icons-material/Image";
 
 // 1. Define English-status constants
 const STATUS = {
@@ -336,7 +347,7 @@ const TableSection = ({
   rowMapper,
   onAdd,
   router,
-  handleOpenDocument,
+  onOpenAttachments,
   handleManage,
 }) => (
   <Box
@@ -401,14 +412,12 @@ const TableSection = ({
               return (
                 <TableRow key={rowObj.id || idx}>
                   {headers.map((h) => {
-                    if (h === "เอกสารแนบ") {
+        if (h === "เอกสารแนบ") {
                       return (
                         <TableCell key={h} align="center">
                           <IconButton
                             size="small"
-                            onClick={() =>
-                              handleOpenDocument(rowObj["เอกสารแนบ"])
-                            }
+          onClick={() => onOpenAttachments && onOpenAttachments(section.key, row, rowObj)}
                             sx={{
                               color: "#1976d2",
                               "&:hover": {
@@ -594,6 +603,86 @@ const FollowComp = () => {
   const { id } = router.query;
   const [documentData, setDocumentData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  const [attachmentsList, setAttachmentsList] = useState([]);
+  const [attachmentsTitle, setAttachmentsTitle] = useState("เอกสารแนบ");
+
+  const getFileExt = (filename = "") => filename.split(".").pop()?.toLowerCase() || "";
+  const getFileIcon = (ext) => {
+    if (ext === "pdf") return <PictureAsPdfIcon sx={{ color: "#d32f2f" }} />;
+    if (["jpg", "jpeg", "png", "gif", "bmp", "webp"].includes(ext)) return <ImageIcon sx={{ color: "#1976d2" }} />;
+    return <DescriptionIcon sx={{ color: "#757575" }} />;
+  };
+  const getDownloadUrl = (file = {}) => {
+    const url =
+      file.fileUrl ||
+      file.file_url ||
+      file.url ||
+      file.path ||
+      file.file_path ||
+      "";
+    if (!url) return null;
+    if (typeof url === "string" && url.startsWith("http")) return url;
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+    const trimmed = typeof url === "string" ? (url.startsWith("/") ? url : `/${url}`) : "";
+    return `${base}${trimmed}`;
+  };
+
+  const openAttachments = (sectionKey, rowRaw, rowDisplay) => {
+    try {
+      setAttachmentsLoading(true);
+      let files = [];
+      let title = `เอกสารแนบ (${sectionKey})`;
+
+      const relAll = documentData?.relationships?.all_related || [];
+      const out = documentData?.outgoing_reports || {};
+      const findById = (arr = [], idVal) => (arr || []).find((x) => x?.id === idVal) || null;
+
+      switch (sectionKey) {
+        case "RECEIVED": {
+          const found = findById(relAll, rowDisplay?.id);
+          files = found?.attachments || [];
+          title = `เอกสารแนบ - รับเรื่อง (${found?.complaint_number || "-"})`;
+          break;
+        }
+        case "FORWARDED": {
+          files = rowRaw?.attachments || findById(out?.type1, rowDisplay?.id)?.attachments || [];
+          title = `เอกสารแนบ - ส่งหน่วยงานที่เกี่ยวข้อง`;
+          break;
+        }
+        case "INITIAL_NOTIFY": {
+          files = rowRaw?.attachments || findById(out?.type2, rowDisplay?.id)?.attachments || [];
+          title = `เอกสารแนบ - แจ้งเบื้องต้น`;
+          break;
+        }
+        case "REQUEST_UPDATE": {
+          files = rowRaw?.attachments || findById(out?.type3, rowDisplay?.id)?.attachments || [];
+          title = `เอกสารแนบ - ขอทราบผล/ความคืบหน้า`;
+          break;
+        }
+        case "AGENCY_REPORT": {
+          files = rowRaw?.attachments || findById(out?.type5, rowDisplay?.id)?.attachments || [];
+          title = `เอกสารแนบ - หนังสือแจ้งผลพิจารณาหน่วยงาน`;
+          break;
+        }
+        case "FINAL_NOTIFY": {
+          // อาจเก็บใน type5 เช่นกัน หรือมีเฉพาะใน rowRaw
+          files = rowRaw?.attachments || findById(out?.type5, rowDisplay?.id)?.attachments || [];
+          title = `เอกสารแนบ - แจ้งผลผู้เกี่ยวข้องทราบ`;
+          break;
+        }
+        default: {
+          files = [];
+        }
+      }
+      setAttachmentsTitle(title);
+      setAttachmentsList(Array.isArray(files) ? files : []);
+      setAttachmentsOpen(true);
+    } finally {
+      setAttachmentsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -867,7 +956,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
             {receivedSection.title}
           </Typography>
         </Box>
-        <Box sx={{ overflowX: { xs: "auto", sm: "unset" }, width: "100%" }}>
+  <Box sx={{ overflowX: { xs: "auto", sm: "unset" }, width: "100%" }}>
           <Table sx={{ width: "100%" }}>
             <TableHead>
               <TableRow>
@@ -895,14 +984,12 @@ const agencyReportRows = outgoingType5.map((item) => ({
                   return (
                     <TableRow key={rowObj.id || idx}>
                       {receivedHeaders.map((h) => {
-                        if (h === "เอกสารแนบ") {
+      if (h === "เอกสารแนบ") {
                           return (
                             <TableCell key={h} align="center">
                               <IconButton
                                 size="small"
-                                onClick={() =>
-                                  handleOpenDocument(rowObj["เอกสารแนบ"])
-                                }
+        onClick={() => openAttachments("RECEIVED", row, rowObj)}
                                 sx={{
                                   color: "#1976d2",
                                   "&:hover": {
@@ -996,7 +1083,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
               )
             }
             router={router}
-            handleOpenDocument={handleOpenDocument}
+            onOpenAttachments={openAttachments}
             handleManage={handleManage}
           />
           {/* แจ้งผู้ร้องเรียนส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น */}
@@ -1017,7 +1104,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
               )
             }
             router={router}
-            handleOpenDocument={handleOpenDocument}
+            onOpenAttachments={openAttachments}
             handleManage={handleManage}
           />
           {/* ขอทราบผลการพิจารณา / ผลความคืบหน้า */}
@@ -1039,7 +1126,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
               )
             }
             router={router}
-            handleOpenDocument={handleOpenDocument}
+            onOpenAttachments={openAttachments}
             handleManage={handleManage}
           />
           {/* หนังสือแจ้งผลพิจารณาหน่วยงาน */}
@@ -1059,7 +1146,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
             )
           }
             router={router}
-            handleOpenDocument={handleOpenDocument}
+            onOpenAttachments={openAttachments}
             handleManage={handleManage}
           />
           <Box
@@ -1100,11 +1187,45 @@ const agencyReportRows = outgoingType5.map((item) => ({
               )
             }
             router={router}
-            handleOpenDocument={handleOpenDocument}
+            onOpenAttachments={openAttachments}
             handleManage={handleManage}
           />
         </>
       )}
+
+      {/* Attachments Modal */}
+      <Dialog open={attachmentsOpen} onClose={() => setAttachmentsOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{attachmentsTitle}</DialogTitle>
+        <DialogContent dividers>
+          {attachmentsLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", my: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : attachmentsList.length === 0 ? (
+            <Typography align="center">ไม่มีไฟล์แนบ</Typography>
+          ) : (
+            <List>
+              {attachmentsList.map((f, idx) => {
+                const name = f.file_name || f.name || f.original_name || `ไฟล์แนบ ${idx + 1}`;
+                const ext = getFileExt(name);
+                const href = getDownloadUrl(f);
+                return (
+                  <ListItem key={idx} disableGutters>
+                    <ListItemIcon sx={{ minWidth: 36 }}>{getFileIcon(ext)}</ListItemIcon>
+                    {href ? (
+                      <MuiLink href={href} target="_blank" rel="noreferrer" underline="hover">
+                        <ListItemText primary={name} />
+                      </MuiLink>
+                    ) : (
+                      <ListItemText primary={name} />
+                    )}
+                  </ListItem>
+                );
+              })}
+            </List>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };
