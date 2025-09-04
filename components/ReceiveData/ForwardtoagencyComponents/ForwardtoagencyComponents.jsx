@@ -164,14 +164,35 @@ const ForwardtoagencyComponents = () => {
     };
   
     const handleSelectReference2 = (ref) => {
-      setValue("complaint_number", ref.complaint_number, { shouldValidate: true, shouldDirty: true });
-      if (ref.complaint_number_date) {
-        // ✅ เก็บเป็น local date string เพื่อไม่ให้ timezone เพี้ยน
-        const localDate = new Date(ref.complaint_number_date);
-        const yyyy = localDate.getFullYear();
-        const mm = String(localDate.getMonth() + 1).padStart(2, "0");
-        const dd = String(localDate.getDate()).padStart(2, "0");
-        setValue("complaint_number_date", `${yyyy}-${mm}-${dd}`, { shouldValidate: true, shouldDirty: true });
+      if (!ref) {
+        setOpenSearchDialog2(false);
+        return;
+      }
+      // เซ็ตเลข สป.กค. (รองรับทั้ง complaint_number และ reference_number)
+      setValue(
+        "complaint_number",
+        ref.complaint_number || ref.reference_number || "",
+        { shouldValidate: true, shouldDirty: true }
+      );
+      // เก็บ complaint_id เพื่อส่งไปกับ body
+      setValue(
+        "complaint_id",
+        ref.id || ref.complaint_id || "",
+        { shouldValidate: true, shouldDirty: true }
+      );
+      // เติมวันที่อัตโนมัติหากมี (รองรับทั้ง complaint_number_date และ reference_date)
+      const dateStr = ref.complaint_number_date || ref.reference_date;
+      if (dateStr) {
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          setValue("complaint_number_date", `${yyyy}-${mm}-${dd}`, {
+            shouldValidate: true,
+            shouldDirty: true,
+          });
+        }
       }
       setOpenSearchDialog2(false);
     };

@@ -111,6 +111,7 @@ export const useForwardToAgencyForm = () => {
     defaultValues: {
       salutation: "",
       complaint_number: "",
+      complaint_id: "",
       complaint_number_date: null,
       subject: "",
       document_number: "",
@@ -270,6 +271,7 @@ export const useForwardToAgencyForm = () => {
           reference_date: toYMD(data.complaint_number_date),        // ใช้ complaint_number_date เป็น reference_date
           subject: (data.subject || "").trim(),
           complaint_number: (data.complaint_number || "").trim(),   // เลข สป.กค.
+          complaint_id: data.complaint_id || null,
           complaint_number_date: toYMD(data.complaint_number_date),
           document_number: (data.document_number || "").trim(),
           document_date: toYMD(data.document_date),
@@ -318,8 +320,8 @@ export const useForwardToAgencyForm = () => {
 
           // throw new Error(errorMessage);
           closeAlert();
-  await alertError("เกิดข้อผิดพลาด", errorMessage);
-  return { success: false, error: errorMessage };
+          await alertError("เกิดข้อผิดพลาด", errorMessage);
+          return { success: false, error: errorMessage };
         }
 
         const reportId = createResponse.res_data?.id;
@@ -356,17 +358,14 @@ export const useForwardToAgencyForm = () => {
         <div style="text-align: center; line-height: 1.6;">
           <p style="margin-bottom: 15px; font-size: 16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
           <p style="margin-bottom: 10px; color: #666;">รหัสรายงาน: <strong>${reportId}</strong></p>
-          <p style="margin-bottom: 10px; color: #666;">เรื่อง: <strong>${
-            data.subject
+          <p style="margin-bottom: 10px; color: #666;">เรื่อง: <strong>${data.subject
           }</strong></p>
-          ${
-            fileData
-              ? `<p style="color: #666;">ไฟล์แนบ: <strong>${
-                  Array.isArray(fileData)
-                    ? fileData.map((f) => f.name).join(", ")
-                    : fileData.name
-                }</strong></p>`
-              : ""
+          ${fileData
+            ? `<p style="color: #666;">ไฟล์แนบ: <strong>${Array.isArray(fileData)
+              ? fileData.map((f) => f.name).join(", ")
+              : fileData.name
+            }</strong></p>`
+            : ""
           }
         </div>
         `;
@@ -377,6 +376,7 @@ export const useForwardToAgencyForm = () => {
         reset({
           salutation: "",
           complaint_number: "",
+          complaint_id: "",
           complaint_number_date: null,
           subject: "",
           document_number: "",
@@ -474,15 +474,15 @@ export const useForwardToAgencyForm = () => {
       fileData: fileData
         ? Array.isArray(fileData)
           ? fileData.map((f) => ({
-              name: f.name,
-              size: `${(f.size / 1024 / 1024).toFixed(2)} MB`,
-              type: f.type,
-            }))
+            name: f.name,
+            size: `${(f.size / 1024 / 1024).toFixed(2)} MB`,
+            type: f.type,
+          }))
           : {
-              name: fileData.name,
-              size: `${(fileData.size / 1024 / 1024).toFixed(2)} MB`,
-              type: fileData.type,
-            }
+            name: fileData.name,
+            size: `${(fileData.size / 1024 / 1024).toFixed(2)} MB`,
+            type: fileData.type,
+          }
         : null,
       formStatus: {
         isValid,
@@ -497,7 +497,7 @@ export const useForwardToAgencyForm = () => {
             (value) => value !== "" && value !== null && value !== undefined
           ).length /
             requiredFields.length) *
-            100
+          100
         ),
       },
       metadata: {
