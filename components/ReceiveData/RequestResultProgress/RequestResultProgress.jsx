@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
@@ -102,8 +102,10 @@ const RequestResultProgress = () => {
   };
 
   const handleSelectReference = (ref) => {
-    updateField("refNoDisplay", ref.document_number || "");  
-    updateField("refNo",        ref.complaint_number || ""); 
+    updateField("refNo", ref.complaint_number || "");
+      if (ref?.complaint_id || ref?.id) {
+        updateField("complaint_id", ref.complaint_id || ref.id);
+      }
     setOpenSearchDialog(false);
   };
 
@@ -130,8 +132,8 @@ const RequestResultProgress = () => {
   
         const results = items.map((item) => ({
           ...item,
-          label: item.reference_number || "",
-          value: item.reference_number || "",
+          label: item.complaint_number  || "",
+          value: item.complaint_number  || "",
         }));
   
         setSearchResults(results);
@@ -144,7 +146,7 @@ const RequestResultProgress = () => {
     };
   
     const handleSelectReference2 = (ref) => {
-      setValue("refNo1", ref.reference_number, { shouldValidate: true, shouldDirty: true });
+      setValue("refNo1", ref.complaint_number , { shouldValidate: true, shouldDirty: true });
       setOpenSearchDialog2(false);
     };
   
@@ -294,21 +296,16 @@ useEffect(() => {
               error={!!getFieldError("salutation")}
               helperText={getFieldError("salutation")}
             />
-
-            {/* เลขที่หนังสือ + icon */}
-            <Box sx={{ display: "flex", alignItems: "center" }}>
+            {/* เลขที่หนังสือ */}
               <InputText
-                label={createLabel("เลขที่หนังสือ", "refNo")}
+                label={createLabel("เลขที่หนังสือ", "docNo")}
                 inputLabel="กรอกเลขที่หนังสือ"
-                name="refNoDisplay"       
-                value={form.refNoDisplay}
-                onChange={(e)=>updateField("refNoDisplay", e.target.value)} 
-                // onChange={handleChange}
-                error={!!getFieldError("refNo")}
-                helperText={getFieldError("refNo")}
-                sx={{ flex: 1 }}
+                name="docNo"
+                value={form.docNo}
+                onChange={handleChange}
+                error={!!getFieldError("docNo")}
+                helperText={getFieldError("docNo")}  
               />
-            </Box>
 
             {/* วันที่ */}
             <DateThaiPickerService
@@ -490,8 +487,8 @@ useEffect(() => {
                               <span
                                 style={{ fontWeight: 500 }}
                               >
-                                {item.document_number}
-                                {/* {item.} */}
+                                {item.complaint_number}
+                                {item.subject}
                               </span>
                             </ListItemButton>
                           </ListItem>
@@ -593,14 +590,13 @@ useEffect(() => {
             {/* เลขที่หนังสือ + icon */}
             <Box sx={{ display: "flex", alignItems: "center" }}>
               <InputText
-                label={createLabel("สป กค.", "refNo1")}
-                inputLabel="สป กค"
-                name="refNoDisplay"       
-                value={form.refNoDisplay}
-                onChange={(e)=>updateField("refNoDisplay", e.target.value)} 
-                // onChange={handleChange}
-                error={!!getFieldError("refNo1")}
-                helperText={getFieldError("refNo1")}
+                label={createLabel("เลข สป.กค.", "refNo")}
+                inputLabel="กรอกเลข สป.กค."
+                name="refNo"
+                value={form.refNo}
+                onChange={handleChange}
+                error={!!getFieldError("refNo")}
+                helperText={getFieldError("refNo")}
                 sx={{ flex: 1 }}
               />
               <IconButton
@@ -785,8 +781,8 @@ useEffect(() => {
                               <span
                                 style={{ fontWeight: 500 }}
                               >
-                                {item.document_number}
-                                {/* {item.} */}
+                                {item.complaint_number}
+                                {item.subject}
                               </span>
                             </ListItemButton>
                           </ListItem>

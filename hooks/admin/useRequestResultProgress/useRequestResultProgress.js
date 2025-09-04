@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { alertSuccess, alertError, showLoading, closeAlert } from "@utils/Alerts";
 import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/api/outgoinreports/outgoinreports";
@@ -9,12 +9,20 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
   export const useRequestResultProgress = () => {
     const router = useRouter();
-    const { id } = router.query;
+    const { id, complaint_id, complaint_number } = router.query;
+    const complaintId =
+      (Array.isArray(id) ? id[0] : id) ||
+      (Array.isArray(complaint_id) ? complaint_id[0] : complaint_id) ||
+      null;
+    const complaintNumberFromQuery = Array.isArray(complaint_number)
+      ? complaint_number[0]
+      : complaint_number || "";
 
   // -------- Form state --------
   const [form, setForm] = useState({
     salutation: "",
-    refNo: "",
+    refNo: complaintNumberFromQuery || "",
+    docNo: "",
     date: null,
     subject: "",
     department: "",
@@ -27,8 +35,20 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
     complaint_id: "",
     department_meta: null,  
     signer_meta: null,       
-    refNoDisplay: "",
+    // refNoDisplay: "",
   });
+
+  useEffect(() => {
+    if (complaintNumberFromQuery && !form.refNo) {
+      setForm(prev => ({ ...prev, refNo: complaintNumberFromQuery }));
+    }
+  }, [complaintNumberFromQuery]); // eslint-disable-line
+
+   useEffect(() => {
+    if (complaintId && !form.complaint_id) {
+     setForm((prev) => ({ ...prev, complaint_id: complaintId }));
+    }
+   }, [complaintId]);
 
   // เก็บไฟล์จริง (รองรับหลายไฟล์)
   const [attachmentFiles, setAttachmentFiles] = useState([]);
@@ -40,6 +60,7 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
   const requiredFields = [
     "salutation",
     "refNo",
+    "docNo", 
     "date",
     "subject",
     "department",
@@ -134,7 +155,8 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
   const validateRequiredFields = useCallback((state = form) => {
     const fieldsConfig = [
       { field: "salutation", label: "เรียน" },
-      { field: "refNo", label: "เลขที่หนังสือ" },
+      { field: "refNo", label: "เลข สป.กค." },
+      { field: "docNo", label: "เลขที่หนังสือ" },
       { field: "date", label: "วันที่" },
       { field: "subject", label: "เรื่อง" },
       { field: "department", label: "หน่วยงาน / ผู้ร้อง" },
@@ -167,6 +189,7 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
     setForm({
       salutation: "",
       refNo: "",
+      docNo: "",
       date: null,
       subject: "",
       department: "",
@@ -179,7 +202,7 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
       complaint_id: "",
       department_meta: null,
       signer_meta: null,
-      refNoDisplay: "",
+      // refNoDisplay: "",
     });
     setAttachmentFiles([]);
     setErrors({});
@@ -206,10 +229,10 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
 
     const payload = {
       position_id: state.position_id || POSITION_FALLBACK,
-      complaint_number: state.refNo || "",         
+      complaint_number: state.refNo || "",  
       complaint_number_date: toISOorNull(state.date),
-      document_number: state.refNo1,
-      document_date: toISOorNull(form.date), 
+      document_number: state.docNo || "",  
+      document_date: toISOorNull(state.date), 
       subject: state.subject || "เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน",
       signature_authority_user_id: nullIfEmpty(state.signer),
       department_id: nullIfEmpty(state.department),

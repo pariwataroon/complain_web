@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   alertSuccess,
@@ -38,13 +38,20 @@ const toYMD = (thaiDate) => {
 
 export const useInformRelatedParties = () => {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, complaint_id, complaint_number } = router.query;
+  const complaintId =
+    (Array.isArray(id) ? id[0] : id) ||
+    (Array.isArray(complaint_id) ? complaint_id[0] : complaint_id) ||
+    null;
+  const complaintNumberFromQuery = Array.isArray(complaint_number)
+    ? complaint_number[0]
+    : complaint_number || "";
 
   // Initial form state
   const initialFormState = useMemo(
     () => ({
       salutation: "", // position_id
-      refNo: "", // reference_number
+      refNo:  complaintNumberFromQuery || "", // reference_number
       date: null, // reference_date (will be converted with toYMD)
       subject: "", // subject
       bookNo: "", // complaint_number และ document_number (ใช้ค่าเดียวกัน)
@@ -61,6 +68,12 @@ export const useInformRelatedParties = () => {
     }),
     []
   );
+
+  useEffect(() => {
+    if (complaintNumberFromQuery && !form.refNo) {
+      setForm(prev => ({ ...prev, refNo: complaintNumberFromQuery }));
+    }
+  }, [complaintNumberFromQuery]);
 
   const [form, setForm] = useState(initialFormState);
   const [errors, setErrors] = useState({});
@@ -292,11 +305,11 @@ export const useInformRelatedParties = () => {
   // ฟังก์ชันสร้าง request body ตาม format ที่กำหนด - แก้ไข position_id
   const createRequestBody = useCallback(() => {
     const body = {
-      position_id: POSITION_FALLBACK, // ใช้ค่าคงที่แทน state.position_id
+      position_id: POSITION_FALLBACK,
       reference_number: (form.refNo || "").trim(),
       reference_date: toYMD(form.date),
       subject: (form.subject || "").trim(),
-      complaint_number: (form.bookNo || "").trim(),
+      complaint_number: (form.refNo || "").trim(),
       complaint_number_date: toYMD(form.date2),
       document_number: (form.bookNo || "").trim(),
       document_date: toYMD(form.date2),
@@ -309,12 +322,13 @@ export const useInformRelatedParties = () => {
       decision: form.decision,
       attachment: form.attachment,
       proposal_purpose: form.proposeFor,
-      consideration_result: form.decision, 
+      consideration_result: form.decision,
+      complaint_id: complaintId,   
     };
 
     console.log("📦 createRequestBody:", body);
     return body;
-  }, [form]);
+  }, [form, complaintId]);
 
   // ฟังก์ชันบันทึกข้อมูล - แก้ไขให้อัปโหลดไฟล์ด้วย
   const handleSave = useCallback(async () => {
@@ -357,24 +371,23 @@ export const useInformRelatedParties = () => {
       }
 
        closeAlert();
+        const reportId = response.id;
 
         const successMessage = `
-        <div style="text-align: center; line-height: 1.6;">
-          <p style="margin-bottom: 15px; font-size: 16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
-          <p style="margin-bottom: 10px; color: #666;">รหัสรายงาน: <strong>${reportId}</strong></p>
-          <p style="margin-bottom: 10px; color: #666;">เรื่อง: <strong>${
-            data.subject
-          }</strong></p>
-          ${
-            fileData
-              ? `<p style="color: #666;">ไฟล์แนบ: <strong>${fileData.name}</strong></p>`
-              : ""
-          }
-        </div>
-      `;
+          <div style="text-align: center; line-height: 1.6;">
+            <p style="margin-bottom: 15px; font-size: 16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
+            <p style="margin-bottom: 10px; color: #666;">รหัสรายงาน: <strong>${reportId}</strong></p>
+            <p style="margin-bottom: 10px; color: #666;">เรื่อง: <strong>${form.subject}</strong></p>
+            ${
+              uploadedFiles.length > 0
+                ? `<p style="color: #666;">ไฟล์แนบ: <strong>${uploadedFiles.map(f => f.name).join(", ")}</strong></p>`
+                : ""
+            }
+          </div>
+        `;
 
       await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
-      router.push(`/admin/box/list`);
+      router.push(`/admin/box/list/${requestBody.complaint_id}?status=final_notify`);
 
       // Reset form after successful save
       handleClear();
