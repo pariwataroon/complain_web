@@ -232,7 +232,7 @@ const ForwardtoagencyComponents = () => {
   // Prefill from query params when navigating from FollowComp
   useEffect(() => {
     if (!router || !router.query) return;
-    const { complaint_id, complaint_number } = router.query;
+    const { complaint_id, complaint_number, created_at } = router.query;
     if (complaint_id) {
       setValue("complaint_id", complaint_id, {
         shouldValidate: true,
@@ -244,6 +244,15 @@ const ForwardtoagencyComponents = () => {
         shouldValidate: true,
         shouldDirty: true,
       });
+    }
+    if (created_at) {
+      const d = new Date(String(created_at));
+      if (!isNaN(d.getTime())) {
+        setValue("complaint_number_date", d, {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+      }
     }
   }, [router?.query, setValue]);
 

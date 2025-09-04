@@ -278,12 +278,13 @@ const sectionConfigs = [
 
 // Add button handlers for each section (customize these to fit your actual create routes)
 const addButtonHandlers = {
-  FORWARDED: (router, complaintId, complaintNumber) =>
+  FORWARDED: (router, complaintId, complaintNumber, createdAt) =>
     router.push({
       pathname: "/admin/edit/forward-to-agency/",
       query: {
         complaint_id: complaintId || "",
         complaint_number: complaintNumber || "",
+        created_at: createdAt || "",
       },
     }),
   INITIAL_NOTIFY: (router) =>
@@ -929,7 +930,8 @@ const FollowComp = () => {
                 documentData?.detail?.complaintNumber ||
                   documentData?.relationships?.master_complaint?.complaint_number ||
                   documentData?.relationships?.all_related?.[0]?.complaint_number ||
-                  ""
+                  "",
+                documentData?.detail?.created_at || ""
               )
             }
             router={router}
