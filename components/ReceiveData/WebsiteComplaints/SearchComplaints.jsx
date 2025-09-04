@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import {
   GetComplaintByID,
   GetComplaintsWithSearch,
@@ -179,8 +179,8 @@ const SearchComplaints = () => {
       officerReceivedDate: assignmentForm.assigned_date
         ? new Date(assignmentForm.assigned_date)
         : "",
-      directorSubmittedDate: assignmentForm.director_submitted_date   // ✅ แก้ตรงนี้
-        ? new Date(assignmentForm.director_submitted_date)
+      directorSubmittedDate: assignmentForm.director_submission_date   
+        ? new Date(assignmentForm.director_submission_date)
         : "",
       incidentDateTime: step3General.incidentDate
         ? new Date(step3General.incidentDate)
@@ -189,7 +189,53 @@ const SearchComplaints = () => {
   }
 }, [defaultData, step4Methods]);
 
+  const buddhistYYYYMMDDToDate = (yyyymmddStr) => {
+    if (!/^\d{8}$/.test(yyyymmddStr)) return null;
+    const yearThai = parseInt(yyyymmddStr.slice(0, 4), 10);
+    const month = parseInt(yyyymmddStr.slice(4, 6), 10);
+    const day = parseInt(yyyymmddStr.slice(6, 8), 10);
 
+    // ตรวจความสมเหตุสมผลแบบคร่าว ๆ
+    if (yearThai < 2400 || yearThai > 2800) return null;
+    if (month < 1 || month > 12) return null;
+    if (day < 1 || day > 31) return null;
+
+    const yearAD = yearThai - 543;
+    return new Date(yearAD, month - 1, day, 0, 0, 0);
+  };
+
+  const extractYYYYMMDDFromRef = (refNo) => {
+    if (!refNo) return null;
+    // จับบล็อคเลข 8 หลักแรกที่เจอ
+    const m = refNo.match(/(\d{8})/);
+    return m ? m[1] : null;
+  };
+
+  const refNo4 = step3Methods.watch("referenceNumber4");
+
+  useEffect(() => {
+    if (!refNo4) return;
+
+    const yyyymmddThai = extractYYYYMMDDFromRef(refNo4);
+    if (!yyyymmddThai) return;
+
+    const parsedDate = buddhistYYYYMMDDToDate(yyyymmddThai);
+    if (!parsedDate) return;
+
+    const current = step3Methods.getValues("referenceDate4");
+    const sameDay =
+      current instanceof Date &&
+      current.getFullYear() === parsedDate.getFullYear() &&
+      current.getMonth() === parsedDate.getMonth() &&
+      current.getDate() === parsedDate.getDate();
+
+    if (!sameDay) {
+      step3Methods.setValue("referenceDate4", parsedDate, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [refNo4, step3Methods]);
 
   useEffect(() => {
     setLoadingOutsideDepartments(true);
@@ -499,13 +545,13 @@ useEffect(() => {
     step4Methods.reset({
       officerReceivedDate: assignmentForm.assigned_date
         ? new Date(assignmentForm.assigned_date)
-        : "", // วันที่รับเรื่องของเจ้าพนักงาน
-      directorSubmittedDate: step4General.directorSubmittedDate
-        ? new Date(step4General.directorSubmittedDate)
-        : "", // วันที่เสนองาน ผอ.สรร.
+        : "",
+      directorSubmittedDate: assignmentForm.director_submission_date
+        ? new Date(assignmentForm.director_submission_date)
+        : "",
       incidentDateTime: step3General.incidentDate
         ? new Date(step3General.incidentDate)
-        : "", // วันเวลาที่เกิดเหตุ
+        : "",
     });
 
     // โหลด subtypes
@@ -843,8 +889,8 @@ const handleSubmit = async () => {
     step4: {
       general: {
         ...step4Data,
-        assigned_date: formatDateForAPI(step4Data.officerReceivedDate),    // ✅ วันที่รับเรื่องของเจ้าพนักงาน
-        director_submitted_date: formatDateForAPI(step4Data.directorSubmittedDate), // ✅ วันที่เสนองาน ผอ.สรร.
+        assigned_date: formatDateForAPI(step4Data.officerReceivedDate),    
+        director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate), 
         incident_date: formatDateForAPI(step4Data.incidentDateTime),
       },
     },
@@ -857,8 +903,8 @@ const handleSubmit = async () => {
       document_date: formatDateForAPI(step3Data.documentDate),
       additional_reference_date1: formatDateForAPI(step3Data.additionalReferenceDate1),
       additional_reference_date2: formatDateForAPI(step3Data.additionalReferenceDate2),
-      assigned_date: formatDateForAPI(step4Data.officerReceivedDate),          // ✅ รับเรื่อง
-      director_submitted_date: formatDateForAPI(step4Data.directorSubmittedDate), // ✅ เสนองาน ผอ.สรร.
+      assigned_date: formatDateForAPI(step4Data.officerReceivedDate), 
+      director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate), 
     },
   };
 
@@ -1081,24 +1127,17 @@ const handleSubmit = async () => {
                   บุคคลทั่วไป
                 </div>
                 <div
-                  className={`${styles.tab} ${styles.tabV2} ${styles.active2}`}
+                  className={`${styles.tab} ${styles.tab1} ${styles.active}`}
                 >
                   นิติบุคคล
                 </div>
-                <div className={`${styles.tabV2} ${styles.tab2} ${styles.active2}`}>
+                <div className={`${styles.tab} ${styles.tab2}`}>
                   หน่วยงานของรัฐ
                 </div>
                 <div
-                className={styles.underlineBarV2}
-                style={{
-                  background:
-                    complainantType === "corporate"
-                      ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
-                      : complainantType === "government"
-                      ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
-                      : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)",
-                }}
-              />
+                  className={styles.underlineBar}
+                  style={{ backgroundColor: "#3FA9F5" }}
+                />
               </div>
 
               {/* Section 3: ข้อมูลผู้ถูกร้องเรียน */}

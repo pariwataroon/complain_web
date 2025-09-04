@@ -208,7 +208,7 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
       position_id: state.position_id || POSITION_FALLBACK,
       complaint_number: state.refNo || "",         
       complaint_number_date: toISOorNull(state.date),
-      document_number: "",
+      document_number: state.refNo1,
       document_date: toISOorNull(form.date), 
       subject: state.subject || "เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน",
       signature_authority_user_id: nullIfEmpty(state.signer),

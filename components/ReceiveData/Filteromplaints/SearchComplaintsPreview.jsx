@@ -775,15 +775,11 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
             <Grid container spacing={2} mb={3}>
               <InfoItem
                 label="วันที่รับเรื่องของเจ้าพนักงาน"
-                value={formatThaiFullDateTime(
-                  additionalDetails.officerReceivedDate || "-"
-                )}
+                value={formatThaiFullDateTime(additionalDetails.officer_received_date || "-")}
               />
               <InfoItem
                 label="วันที่เสนองาน ผอ.สรร."
-                value={formatThaiFullDateTime(
-                  additionalDetails.directorSubmittedDate || "-"
-                )}
+                value={formatThaiFullDateTime(additionalDetails.director_submission_date || "-")}
               />
             </Grid>
 

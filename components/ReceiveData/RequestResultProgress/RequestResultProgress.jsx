@@ -56,6 +56,7 @@ const RequestResultProgress = () => {
   const [optionsLoading, setOptionsLoading] = useState(true);
 
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
+  const [openSearchDialog2, setOpenSearchDialog2] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -101,8 +102,8 @@ const RequestResultProgress = () => {
   };
 
   const handleSelectReference = (ref) => {
-    updateField("refNoDisplay", ref.document_number || "");   // โชว์
-    updateField("refNo",        ref.complaint_number || "");  // ส่งจริง (MOF-xxxx)
+    updateField("refNoDisplay", ref.document_number || "");  
+    updateField("refNo",        ref.complaint_number || ""); 
     setOpenSearchDialog(false);
   };
 
@@ -111,6 +112,47 @@ const RequestResultProgress = () => {
     handleSearch("");
     inputRef.current?.focus();
   };
+
+  const handleSearch2 = async (keyword) => {
+      setSearchLoading(true);
+      try {
+        const response = await GetReferenceComplaints({
+          skip: 0,
+          limit: 100,
+          search: keyword || "",
+        });
+  
+  
+        const items = Array.isArray(response?.res_data?.items)
+          ? response.res_data.items
+          : [];
+  
+  
+        const results = items.map((item) => ({
+          ...item,
+          label: item.reference_number || "",
+          value: item.reference_number || "",
+        }));
+  
+        setSearchResults(results);
+      } catch (err) {
+        setSearchResults([]);
+        console.error("handleSearch2 error", err);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+  
+    const handleSelectReference2 = (ref) => {
+      setValue("refNo1", ref.reference_number, { shouldValidate: true, shouldDirty: true });
+      setOpenSearchDialog2(false);
+    };
+  
+    const onClear2 = () => {
+      setSearchText("");
+      handleSearch2("");
+      inputRef.current?.focus();
+    };
 
 useEffect(() => {
   if (openSearchDialog) {
@@ -266,16 +308,6 @@ useEffect(() => {
                 helperText={getFieldError("refNo")}
                 sx={{ flex: 1 }}
               />
-              <IconButton
-                onClick={() => setOpenSearchDialog(true)}
-                sx={{
-                  ml: 1,
-                  color: "blue",
-                  marginTop: "10px",
-                }}
-              >
-                <SearchIcon />
-              </IconButton>
             </Box>
 
             {/* วันที่ */}
@@ -459,7 +491,7 @@ useEffect(() => {
                                 style={{ fontWeight: 500 }}
                               >
                                 {item.document_number}
-                               
+                                {/* {item.} */}
                               </span>
                             </ListItemButton>
                           </ListItem>
@@ -544,6 +576,288 @@ useEffect(() => {
               helperText={getFieldError("subject")}
             />
           </Box>
+
+           <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "1fr 1fr",
+                md: "6fr 4fr 3fr",
+              },
+              width: "100%",
+            }}
+          >
+
+            {/* เลขที่หนังสือ + icon */}
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <InputText
+                label={createLabel("สป กค.", "refNo1")}
+                inputLabel="สป กค"
+                name="refNoDisplay"       
+                value={form.refNoDisplay}
+                onChange={(e)=>updateField("refNoDisplay", e.target.value)} 
+                // onChange={handleChange}
+                error={!!getFieldError("refNo1")}
+                helperText={getFieldError("refNo1")}
+                sx={{ flex: 1 }}
+              />
+              <IconButton
+                onClick={() => setOpenSearchDialog(true)}
+                sx={{
+                  ml: 1,
+                  color: "blue",
+                  marginTop: "10px",
+                }}
+              >
+                <SearchIcon />
+              </IconButton>
+            </Box>
+          </Box>
+
+           {/* Dialog สำหรับค้นหาเลข */}
+            <Dialog
+              open={openSearchDialog}
+              onClose={() => setOpenSearchDialog(false)}
+              maxWidth="sm"
+              fullWidth
+              PaperProps={{
+                style: {
+                  borderRadius: 12,
+                  background: "#f7fafd",
+                  height: 500,
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                },
+              }}
+            >
+              <DialogTitle
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <SearchIcon color="primary" />
+                ค้นหาเลขที่อ้างอิง
+              </DialogTitle>
+
+              <DialogContent>
+                {/* ช่องค้นหา */}
+                <TextField
+                  inputRef={inputRef}
+                  fullWidth
+                  size="small"
+                  placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
+                  value={searchText}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSearchText(val);
+                    handleSearch(val);
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon color="action" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchText ? (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={onClear}
+                          aria-label="clear search"
+                          edge="end"
+                        >
+                          <ClearIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
+                    style: {
+                      background: "#fff",
+                      borderRadius: 8,
+                    },
+                  }}
+                  sx={{ mb: 2 }}
+                />
+
+                {/* สถานะโหลด / ไม่พบ / รายการ */}
+                {searchLoading ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: 24,
+                    }}
+                  >
+                    <CircularProgress color="primary" />
+                    <div
+                      style={{
+                        marginTop: 8,
+                        color: "#888",
+                      }}
+                    >
+                      กำลังค้นหา...
+                    </div>
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: 32,
+                      color: "#bdbdbd",
+                    }}
+                  >
+                    <DescriptionIcon
+                      sx={{ fontSize: 48, mb: 2 }}
+                      color="disabled"
+                    />
+                    <div>ไม่พบรายการเลขที่อ้างอิง</div>
+                  </div>
+                ) : (
+                  <>
+                    <List
+                      sx={{
+                        maxHeight: 320,
+                        overflow: "auto",
+                        "&::-webkit-scrollbar": {
+                          width: "8px",
+                          background: "#f0f4fa",
+                          borderRadius: "8px",
+                        },
+                        "&::-webkit-scrollbar-thumb": {
+                          background: "#90caf9",
+                          borderRadius: "8px",
+                        },
+                        "&::-webkit-scrollbar-thumb:hover":
+                          {
+                            background: "#64b5f6",
+                          },
+                      }}
+                    >
+                      {searchResults.map((item) => {
+                        const isMaster = !!item.is_master; // fallback ถ้า undefined
+                        return (
+                          <ListItem
+                            key={item.id}
+                            disablePadding
+                          >
+                            <ListItemButton
+                              onClick={() =>
+                                handleSelectReference(item)
+                              }
+                              sx={{
+                                py: 1.5,
+                                px: 2,
+                                borderRadius: 2,
+                                mb: 0.5,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1.5,
+                                "&:hover": {
+                                  background: "#e3f2fd",
+                                },
+                              }}
+                            >
+                              {/* จุดสถานะ is_master */}
+                              <span
+                                style={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: "50%",
+                                  backgroundColor: isMaster
+                                    ? "#2ecc71"
+                                    : "#bdbdbd",
+                                  border: "2px solid #fff",
+                                  boxShadow:
+                                    "0 0 0 1px rgba(0,0,0,0.15)",
+                                  flexShrink: 0,
+                                }}
+                                title={
+                                  isMaster
+                                    ? "Master"
+                                    : "Non-master"
+                                }
+                              />
+                              <DescriptionIcon
+                                color="info"
+                                sx={{ mr: 0.5 }}
+                              />
+                              <span
+                                style={{ fontWeight: 500 }}
+                              >
+                                {item.document_number}
+                                {/* {item.} */}
+                              </span>
+                            </ListItemButton>
+                          </ListItem>
+                        );
+                      })}
+                    </List>
+
+                    {/* Legend (ถ้าไม่ต้องการสามารถลบส่วนนี้ออกได้) */}
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 16,
+                        marginTop: 8,
+                        fontSize: 12,
+                        color: "#555",
+                        padding: "0 4px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            background: "#2ecc71",
+                            boxShadow:
+                              "0 0 0 1px rgba(0,0,0,0.15)",
+                          }}
+                        />
+                        Master
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            background: "#bdbdbd",
+                            boxShadow:
+                              "0 0 0 1px rgba(0,0,0,0.15)",
+                          }}
+                        />
+                        Non-master
+                      </div>
+                    </div>
+                  </>
+                )}
+              </DialogContent>
+
+              <DialogActions sx={{ px: 3, pb: 2 }}>
+                <Button
+                  onClick={() => setOpenSearchDialog(false)}
+                  variant="outlined"
+                  color="inherit"
+                >
+                  ปิด
+                </Button>
+              </DialogActions>
+            </Dialog>
 
           {/* Row 3: ผู้ลงนาม* */}
           <Box>
