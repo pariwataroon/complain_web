@@ -278,7 +278,14 @@ const sectionConfigs = [
 
 // Add button handlers for each section (customize these to fit your actual create routes)
 const addButtonHandlers = {
-  FORWARDED: (router) => router.push("/admin/edit/forward-to-agency/"),
+  FORWARDED: (router, complaintId, complaintNumber) =>
+    router.push({
+      pathname: "/admin/edit/forward-to-agency/",
+      query: {
+        complaint_id: complaintId || "",
+        complaint_number: complaintNumber || "",
+      },
+    }),
   INITIAL_NOTIFY: (router) =>
     router.push("/admin/edit/initial-notification-to-complainant-or-agency/"),
   REQUEST_UPDATE: (router) =>
@@ -915,7 +922,16 @@ const FollowComp = () => {
             headers={forwardedHeaders}
             rows={forwardedFilteredRows}
             rowMapper={forwardedRowMapper}
-            onAdd={() => addButtonHandlers.FORWARDED(router)}
+            onAdd={() =>
+              addButtonHandlers.FORWARDED(
+                router,
+                id,
+                documentData?.detail?.complaintNumber ||
+                  documentData?.relationships?.master_complaint?.complaint_number ||
+                  documentData?.relationships?.all_related?.[0]?.complaint_number ||
+                  ""
+              )
+            }
             router={router}
             handleOpenDocument={handleOpenDocument}
             handleManage={handleManage}

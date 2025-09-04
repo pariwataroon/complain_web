@@ -79,36 +79,30 @@ const ForwardtoagencyComponents = () => {
     }
   }, [openSearchDialog]);
 
-  
-    const handleSearch = async (keyword) => {
-      setSearchLoading(true);
-      try {
-        const response = await GetReDocumentComplaints({
-          skip: 0,
-          limit: 100,
-          search: keyword || "",
-        });
-  
-  
-        const items = Array.isArray(response?.res_data?.items)
-          ? response.res_data.items
-          : [];
-  
-  
-        const results = items.map((item) => ({
-          ...item,
-          label: item.complaint_number || "",
-          value: item.complaint_number || "",
-        }));
-  
-        setSearchResults(results);
-      } catch (err) {
-        setSearchResults([]);
-        console.error("handleSearch error", err);
-      } finally {
-        setSearchLoading(false);
-      }
-    };
+  const handleSearch = async (keyword) => {
+    setSearchLoading(true);
+    try {
+      const response = await GetReDocumentComplaints({
+        skip: 0,
+        limit: 100,
+        search: keyword || "",
+      });
+      const items = Array.isArray(response?.res_data?.items)
+        ? response.res_data.items
+        : [];
+      const results = items.map((item) => ({
+        ...item,
+        label: item.complaint_number || "",
+        value: item.complaint_number || "",
+      }));
+      setSearchResults(results);
+    } catch (err) {
+      setSearchResults([]);
+      console.error("handleSearch error", err);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
   
     // const handleSelectReference = (ref) => {
     //   setValue("document_number", ref.document_number, { shouldValidate: true, shouldDirty: true });
@@ -234,6 +228,24 @@ const ForwardtoagencyComponents = () => {
     getCurrentFormData,
     fileInputKey, // Get the fileInputKey
   } = useForwardToAgencyForm();
+
+  // Prefill from query params when navigating from FollowComp
+  useEffect(() => {
+    if (!router || !router.query) return;
+    const { complaint_id, complaint_number } = router.query;
+    if (complaint_id) {
+      setValue("complaint_id", complaint_id, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+    if (complaint_number) {
+      setValue("complaint_number", String(complaint_number), {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+  }, [router?.query, setValue]);
 
   const handleSignerSelect = (userInfo) => {
     setSelectedSigner(userInfo);
