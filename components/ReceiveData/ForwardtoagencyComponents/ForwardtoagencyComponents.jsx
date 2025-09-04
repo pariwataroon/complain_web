@@ -52,6 +52,10 @@ const ForwardtoagencyComponents = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
+  // Keep labels from API until options are loaded, then map to select values
+  const [pendingPrefill, setPendingPrefill] = useState(null);
+  // Read-only list of attachments already on the server for this report
+  const [existingAttachments, setExistingAttachments] = useState([]);
   const onSubmit = async (data) => {
     const confidentialityObj = confidentialityOptions.find(
       opt => String(opt.value) === String(data.confidentiality)
@@ -230,6 +234,65 @@ const ForwardtoagencyComponents = () => {
     fileInputKey, // Get the fileInputKey
   } = useForwardToAgencyForm();
 
+  // Helper: map option label to value and set field
+  const setSelectByLabel = useCallback(
+    (fieldName, label, options) => {
+      if (!label || !Array.isArray(options) || options.length === 0) return;
+      const match = options.find(
+        (opt) => String(opt.label).trim() === String(label).trim()
+      );
+      if (match) {
+        setValue(fieldName, match.value, { shouldDirty: false });
+      }
+    },
+    [setValue]
+  );
+
+  // Helper: fill form from outgoing report data
+  const fillFormFromReport = useCallback(
+    (d) => {
+      if (!d) return;
+      // Core fields
+      const positionId = d.position_id || d.position?.id || "";
+      setValue("salutation", positionId, { shouldDirty: false });
+
+      setValue(
+        "complaint_number",
+        d.complaint_number || d.reference_number || "",
+        { shouldDirty: false }
+      );
+      setValue("complaint_id", d.complaint_id || d.related_complaint?.id || "", { shouldDirty: false });
+
+      const cnumDate = d.complaint_number_date || d.reference_date;
+      if (cnumDate) setValue("complaint_number_date", new Date(cnumDate), { shouldDirty: false });
+
+      setValue("subject", d.subject || d.related_complaint?.subject || "", { shouldDirty: false });
+
+      setValue("document_number", d.document_number || "", { shouldDirty: false });
+      if (d.document_date) setValue("document_date", new Date(d.document_date), { shouldDirty: false });
+
+      const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || "";
+      setValue("signer", signerId, { shouldDirty: false });
+      if (signerId) setSelectedSigner({ value: signerId });
+
+      setValue("department", d.department?.id || d.department_id || "", { shouldDirty: false });
+
+      // Note/Remarks
+      setValue("note", d.remarks || "", { shouldDirty: false });
+
+      // Store labels temporarily to map after options load
+      setPendingPrefill({
+        confidentialityLabel: d.confidentiality_level || "",
+        urgencyLabel: d.urgency_level || "",
+      });
+
+  // Attachments (read-only display)
+  const atts = Array.isArray(d.attachments) ? d.attachments : [];
+  setExistingAttachments(atts);
+    },
+    [setValue]
+  );
+
   // Prefill from query params when navigating from FollowComp
   useEffect(() => {
     if (!router || !router.query) return;
@@ -269,24 +332,47 @@ const ForwardtoagencyComponents = () => {
         const d = data || {};
         if (cancelled || !d) return;
         // Map API fields to form
-        setValue("salutation", d.position_id || "", { shouldDirty: false });
-        setValue("complaint_number", d.complaint_number || d.reference_number || "", { shouldDirty: false });
-        setValue("complaint_id", d.complaint_id || "", { shouldDirty: false });
-        if (d.complaint_number_date) setValue("complaint_number_date", new Date(d.complaint_number_date), { shouldDirty: false });
-        setValue("subject", d.subject || "", { shouldDirty: false });
-        setValue("document_number", d.document_number || "", { shouldDirty: false });
-        if (d.document_date) setValue("document_date", new Date(d.document_date), { shouldDirty: false });
-  const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || "";
-  setValue("signer", signerId, { shouldDirty: false });
-  if (signerId) setSelectedSigner({ value: signerId });
-        setValue("department", d.department?.id || d.department_id || "", { shouldDirty: false });
-        // confidentiality/urgency may be label; keep as-is if numeric options expected elsewhere
+        fillFormFromReport(d);
       } catch (err) {
         console.error("Failed to prefill report by id", err);
       }
     })();
     return () => { cancelled = true; };
-  }, [router?.query?.id, setValue]);
+  }, [router?.query?.id, setValue, fillFormFromReport]);
+
+  // Prefill when query contains outgoing_report_id (non-dynamic route)
+  useEffect(() => {
+    const reportId = router?.query?.outgoing_report_id;
+    if (!reportId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await GetOutgoingReportById(reportId);
+        const data = res?.res_data || res?.data || res;
+        const d = data || {};
+        if (cancelled || !d) return;
+        fillFormFromReport(d);
+      } catch (err) {
+        console.error("Failed to prefill by outgoing_report_id", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [router?.query?.outgoing_report_id, fillFormFromReport]);
+
+  // Apply pending confidentiality/urgency once options are ready
+  useEffect(() => {
+    if (optionsLoading) return;
+    if (!pendingPrefill) return;
+    const { confidentialityLabel, urgencyLabel } = pendingPrefill;
+    if (confidentialityLabel) {
+      setSelectByLabel("confidentiality", confidentialityLabel, confidentialityOptions);
+    }
+    if (urgencyLabel) {
+      setSelectByLabel("urgency", urgencyLabel, urgencyOptions);
+    }
+    // Clear after applying
+    setPendingPrefill(null);
+  }, [optionsLoading, pendingPrefill, confidentialityOptions, urgencyOptions, setSelectByLabel]);
 
   const handleSignerSelect = (userInfo) => {
     setSelectedSigner(userInfo);
@@ -858,6 +944,29 @@ const ForwardtoagencyComponents = () => {
                 />
               )}
             />
+
+            {/* Read-only server attachments (if editing/existing) */}
+            {existingAttachments?.length > 0 && (
+              <Box sx={{ mt: 1.5 }}>
+                <Typography variant="subtitle2" sx={{ color: "#1120A3", mb: 0.5 }}>
+                  ไฟล์แนบเดิมจากระบบ
+                </Typography>
+                <List dense sx={{ py: 0 }}>
+                  {existingAttachments.map((att) => (
+                    <ListItem key={att.id} sx={{ py: 0 }}>
+                      <DescriptionIcon fontSize="small" sx={{ mr: 1, color: "#90caf9" }} />
+                      <Typography fontSize={13} sx={{ mr: 1 }}>
+                        {att.file_name || att.name || "ไฟล์แนบ"}
+                      </Typography>
+                      <Typography fontSize={12} color="text.secondary">
+                        {att.file_type || ""}
+                        {att.file_size ? ` • ${(Number(att.file_size) / 1024).toFixed(0)} KB` : ""}
+                      </Typography>
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
+            )}
           </Box>
 
           {/* Row 7: หมายเหตุ */}
