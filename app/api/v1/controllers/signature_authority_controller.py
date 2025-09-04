@@ -994,22 +994,25 @@ def update_signature_authority_group(db: Session, group_id: UUID, group_data: di
         updated_assignments = []
         
         if "assignments" in group_data:
-            # ลบการมอบหมายเดิมทั้งหมดในกลุ่มนี้
-            existing_assignments = db.query(SignatureAuthority).filter(
-                SignatureAuthority.group_signature_authorities_id == group_id,
-                SignatureAuthority.is_active == True
+            # โหลดการมอบหมายทั้งหมดในกลุ่ม (ทั้ง active และ inactive) เพื่อป้องกันข้อมูลซ้ำ
+            existing_rows = db.query(SignatureAuthority).filter(
+                SignatureAuthority.group_signature_authorities_id == group_id
             ).all()
             
-            for assignment in existing_assignments:
-                assignment.is_active = False
-                assignment.end_date = datetime.now()
-            
-            # สร้างการมอบหมายใหม่
+            # จัดกลุ่มตาม (user_id, department_id)
+            from collections import defaultdict
+            rows_by_pair = defaultdict(list)
+            for row in existing_rows:
+                rows_by_pair[(str(row.user_id), str(row.department_id))].append(row)
+
+            # สร้างชุด desired pairs จาก payload
+            desired_pairs = set()
+            normalized_assignments = []
             for assignment in group_data["assignments"]:
                 user_id = assignment["user_id"]
                 department_ids = assignment["department_ids"]
-                
-                # ตรวจสอบรูปแบบ UUID ของ user_id
+
+                # ตรวจสอบและแปลง user_id ให้เป็น UUID
                 try:
                     if isinstance(user_id, str):
                         if user_id.startswith("{{") and user_id.endswith("}}"):
@@ -1017,30 +1020,22 @@ def update_signature_authority_group(db: Session, group_id: UUID, group_data: di
                                 status_code=400,
                                 detail=f"Invalid user_id format: {user_id} (placeholder detected)"
                             )
-                        user_id = UUID(user_id)
-                    elif not isinstance(user_id, UUID):
-                        user_id = UUID(str(user_id))
+                        user_uuid = UUID(user_id)
+                    elif isinstance(user_id, UUID):
+                        user_uuid = user_id
+                    else:
+                        user_uuid = UUID(str(user_id))
                 except ValueError:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Invalid user_id format: {user_id}"
-                    )
-                
+                    raise HTTPException(status_code=400, detail=f"Invalid user_id format: {user_id}")
+
                 # ตรวจสอบว่าผู้ใช้มีอยู่จริง
-                user = db.query(User).filter(
-                    User.id == user_id,
-                    User.is_active == True
-                ).first()
-                
+                user = db.query(User).filter(User.id == user_uuid, User.is_active == True).first()
                 if not user:
-                    raise HTTPException(
-                        status_code=404,
-                        detail=f"User with ID {user_id} not found"
-                    )
-                
-                # สร้างการมอบหมายสำหรับแต่ละหน่วยงาน
+                    raise HTTPException(status_code=404, detail=f"User with ID {user_uuid} not found")
+
+                # ตรวจสอบและเก็บ department_ids
+                dept_uuid_list = []
                 for dept_id in department_ids:
-                    # ตรวจสอบรูปแบบ UUID ของ department_id
                     try:
                         if isinstance(dept_id, str):
                             if dept_id.startswith("{{") and dept_id.endswith("}}"):
@@ -1048,43 +1043,181 @@ def update_signature_authority_group(db: Session, group_id: UUID, group_data: di
                                     status_code=400,
                                     detail=f"Invalid department_id format: {dept_id} (placeholder detected)"
                                 )
-                            dept_id = UUID(dept_id)
-                        elif not isinstance(dept_id, UUID):
-                            dept_id = UUID(str(dept_id))
+                            dept_uuid = UUID(dept_id)
+                        elif isinstance(dept_id, UUID):
+                            dept_uuid = dept_id
+                        else:
+                            dept_uuid = UUID(str(dept_id))
                     except ValueError:
-                        raise HTTPException(
-                            status_code=400,
-                            detail=f"Invalid department_id format: {dept_id}"
-                        )
-                    
+                        raise HTTPException(status_code=400, detail=f"Invalid department_id format: {dept_id}")
+
                     # ตรวจสอบว่าหน่วยงานมีอยู่จริง
                     department = db.query(Department).filter(
-                        Department.id == dept_id,
+                        Department.id == dept_uuid,
                         Department.is_active == True
                     ).first()
-                    
                     if not department:
-                        raise HTTPException(
-                            status_code=404,
-                            detail=f"Department with ID {dept_id} not found"
-                        )
-                    
-                    # สร้างการมอบหมายใหม่
-                    new_assignment = SignatureAuthority(
-                        user_id=user_id,
-                        department_id=dept_id,
-                        group_signature_authorities_id=group_id,
-                        is_active=True
-                    )
-                    db.add(new_assignment)
-                    db.flush()
-                    
-                    updated_assignments.append({
-                        "id": str(new_assignment.id),
-                        "user_id": str(new_assignment.user_id),
-                        "department_id": str(new_assignment.department_id),
-                        "status": "created"
-                    })
+                        raise HTTPException(status_code=404, detail=f"Department with ID {dept_uuid} not found")
+
+                    desired_pairs.add((str(user_uuid), str(dept_uuid)))
+                    dept_uuid_list.append(dept_uuid)
+
+                normalized_assignments.append({
+                    "user_uuid": user_uuid,
+                    "department_uuids": dept_uuid_list
+                })
+
+            now = datetime.now()
+
+            # Reactivate or create assignments for desired pairs
+            for entry in normalized_assignments:
+                user_uuid = entry["user_uuid"]
+                for dept_uuid in entry["department_uuids"]:
+                    pair_key = (str(user_uuid), str(dept_uuid))
+                    rows = rows_by_pair.get(pair_key, [])
+
+                    if rows:
+                        # เลือกแถวเป้าหมาย: ถ้ามี active อยู่แล้วใช้แถวนั้น, ไม่เช่นนั้นใช้แถวที่ updated_at/created_at ล่าสุด
+                        target = None
+                        active_rows = [r for r in rows if r.is_active]
+                        if active_rows:
+                            target = active_rows[0]
+                        else:
+                            # เลือกตัวที่ล่าสุด
+                            target = sorted(
+                                rows,
+                                key=lambda r: (r.updated_at or r.created_at or now),
+                                reverse=True
+                            )[0]
+
+                        # ทำให้ target เป็น active และ clear end_date
+                        target.is_active = True
+                        target.end_date = None
+                        target.updated_at = func.now()
+                        target.group_signature_authorities_id = group_id
+
+                        # ปิดทับแถวอื่นๆ ใน pair เดียวกันให้ inactive เพื่อให้เหลือ active แค่ 1
+                        for r in rows:
+                            if r is not target and r.is_active:
+                                r.is_active = False
+                                if r.end_date is None:
+                                    r.end_date = now
+                                r.updated_at = func.now()
+
+                        # ป้องกันแถว active ซ้ำในตาราง (ข้ามกลุ่ม) สำหรับ pair เดียวกัน
+                        other_active = db.query(SignatureAuthority).filter(
+                            SignatureAuthority.user_id == user_uuid,
+                            SignatureAuthority.department_id == dept_uuid,
+                            SignatureAuthority.id != target.id,
+                            SignatureAuthority.is_active == True
+                        ).all()
+                        for r in other_active:
+                            r.is_active = False
+                            if r.end_date is None:
+                                r.end_date = now
+                            r.updated_at = func.now()
+
+                        updated_assignments.append({
+                            "id": str(target.id),
+                            "user_id": str(user_uuid),
+                            "department_id": str(dept_uuid),
+                            "status": "reactivated" if not active_rows else "kept"
+                        })
+                    else:
+                        # ไม่พบในกลุ่มนี้ ตรวจสอบว่ามี active assignment ในกลุ่มอื่นหรือไม่
+                        existing_any = db.query(SignatureAuthority).filter(
+                            SignatureAuthority.user_id == user_uuid,
+                            SignatureAuthority.department_id == dept_uuid,
+                            SignatureAuthority.is_active == True
+                        ).first()
+
+                        if existing_any and existing_any.group_signature_authorities_id != group_id:
+                            # ย้าย assignment มายังกกลุ่มนี้ เพื่อหลีกเลี่ยงการซ้ำซ้อนข้ามกลุ่ม
+                            existing_any.group_signature_authorities_id = group_id
+                            existing_any.updated_at = func.now()
+                            updated_assignments.append({
+                                "id": str(existing_any.id),
+                                "user_id": str(user_uuid),
+                                "department_id": str(dept_uuid),
+                                "status": "moved"
+                            })
+                            # Deactivate other actives for same pair (if any)
+                            other_active = db.query(SignatureAuthority).filter(
+                                SignatureAuthority.user_id == user_uuid,
+                                SignatureAuthority.department_id == dept_uuid,
+                                SignatureAuthority.id != existing_any.id,
+                                SignatureAuthority.is_active == True
+                            ).all()
+                            for r in other_active:
+                                r.is_active = False
+                                if r.end_date is None:
+                                    r.end_date = now
+                                r.updated_at = func.now()
+                        else:
+                            # มองหาบรรทัดที่ inactive สำหรับ pair เดียวกันเพื่อ reuse
+                            existing_inactive = db.query(SignatureAuthority).filter(
+                                SignatureAuthority.user_id == user_uuid,
+                                SignatureAuthority.department_id == dept_uuid,
+                                SignatureAuthority.is_active == False
+                            ).order_by(
+                                (SignatureAuthority.updated_at.desc().nullslast()),
+                                (SignatureAuthority.created_at.desc().nullslast())
+                            ).first()
+
+                            if existing_inactive:
+                                existing_inactive.is_active = True
+                                existing_inactive.end_date = None
+                                existing_inactive.group_signature_authorities_id = group_id
+                                existing_inactive.updated_at = func.now()
+                                updated_assignments.append({
+                                    "id": str(existing_inactive.id),
+                                    "user_id": str(user_uuid),
+                                    "department_id": str(dept_uuid),
+                                    "status": "reactivated_inactive"
+                                })
+                            else:
+                                # ไม่เคยมีมาก่อน -> สร้างใหม่
+                                new_assignment = SignatureAuthority(
+                                    user_id=user_uuid,
+                                    department_id=dept_uuid,
+                                    group_signature_authorities_id=group_id,
+                                    is_active=True
+                                )
+                                db.add(new_assignment)
+                                db.flush()
+                                updated_assignments.append({
+                                    "id": str(new_assignment.id),
+                                    "user_id": str(user_uuid),
+                                    "department_id": str(dept_uuid),
+                                    "status": "created"
+                                })
+                            # Deactivate other actives for same pair (if any)
+                            other_active = db.query(SignatureAuthority).filter(
+                                SignatureAuthority.user_id == user_uuid,
+                                SignatureAuthority.department_id == dept_uuid,
+                                SignatureAuthority.id != new_assignment.id,
+                                SignatureAuthority.is_active == True
+                            ).all()
+                            for r in other_active:
+                                r.is_active = False
+                                if r.end_date is None:
+                                    r.end_date = now
+                                r.updated_at = func.now()
+
+            # Deactivate pairs that are no longer desired
+            for pair_key, rows in rows_by_pair.items():
+                if pair_key not in desired_pairs:
+                    for r in rows:
+                        if r.is_active:
+                            r.is_active = False
+                            r.end_date = now
+                            r.updated_at = func.now()
+                            updated_assignments.append({
+                                "id": str(r.id),
+                                "user_id": pair_key[0],
+                                "department_id": pair_key[1],
+                                "status": "deactivated"
+                            })
         
         db.commit()
         
