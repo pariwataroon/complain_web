@@ -17,6 +17,8 @@ import {
   formatThaiFullDate,
   formatThaiFullDateTime,
   parseThaiName,
+  resolveTitleFromList,
+  formatFullNameFromParts,
 } from "@utils/Formats";
 import CheckIcon from "@mui/icons-material/Check";
 import { exportElementToPDF } from "@utils/exportPDF";
@@ -92,6 +94,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   const [complaintTypes, setComplaintTypes] = useState([]);
   const [staffUsers, setStaffUsers] = useState([]);
   const [groupedStaffUsers, setGroupedStaffUsers] = useState({}); 
+  const [titleOptions, setTitleOptions] = useState([]);
   const pdfRef = useRef();
 
   const { handleUpdateAssignment, isSubmitting, preparedFormData } =
@@ -158,6 +161,26 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
       }
     };
     fetchComplaintTypes();
+  }, []);
+
+  // ดึงรายการคำนำหน้าจากหลังบ้าน เพื่อใช้ resolve title_id/prefix_other ให้เป็นเนื้อเดียวกัน
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+  const { GetAllSelect } = await import("@pages/api/allselect/allselect");
+  const res = await GetAllSelect();
+        if (active && res?.res_code === "0000") {
+          setTitleOptions(Array.isArray(res.res_data) ? res.res_data : []);
+        }
+      } catch (e) {
+        console.error("Error fetching title options:", e);
+        setTitleOptions([]);
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   // เพิ่ม useEffect สำหรับดึงข้อมูล staff users
@@ -400,23 +423,50 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   const splitThaiName = (fullName) => parseThaiName(fullName);
   // ข้อมูลจาก step1 (ผู้ร้องทุกข์)
   const complainant = step1.general?.general || {};
-
-  const { title, firstName, lastName } = splitThaiName(complainant.name);
+  // พยายาม resolve จาก title_id/prefix_other ถ้ามี มิฉะนั้น fallback parseThaiName
+  const complainantTitle = resolveTitleFromList(
+    complainant.title_id,
+    complainant.prefix_other,
+    titleOptions
+  );
+  const { title, firstName, lastName } = complainantTitle
+    ? { title: complainantTitle, firstName: complainant.first_name || splitThaiName(complainant.name).firstName, lastName: complainant.last_name || splitThaiName(complainant.name).lastName }
+    : splitThaiName(complainant.name);
   const delegate = step1.general?.delegate || {};
   const {
     title: delegateTitle,
     firstName: delegateFirstName,
     lastName: delegateLastName,
-  } = splitThaiName(delegate.name);
+  } = (() => {
+    const t = resolveTitleFromList(delegate.title_id, delegate.prefix_other, titleOptions);
+    if (t) {
+      return {
+        title: t,
+        firstName: delegate.first_name || splitThaiName(delegate.name).firstName,
+        lastName: delegate.last_name || splitThaiName(delegate.name).lastName,
+      };
+    }
+    return splitThaiName(delegate.name);
+  })();
 
   // ข้อมูลจาก step2 (ผู้ถูกร้องเรียน)
   const respondent = step2.general?.individual || {};
 
-  const {
-    title: respondentTitle,
-    firstName: respondentFirstName,
-    lastName: respondentLastName,
-  } = splitThaiName(respondent.name);
+  const { title: respondentTitle, firstName: respondentFirstName, lastName: respondentLastName } = (() => {
+    const t = resolveTitleFromList(
+      respondent.title_id,
+      respondent.prefix_other,
+      titleOptions
+    );
+    if (t) {
+      return {
+        title: t,
+        firstName: respondent.first_name || splitThaiName(respondent.name).firstName,
+        lastName: respondent.last_name || splitThaiName(respondent.name).lastName,
+      };
+    }
+    return splitThaiName(respondent.name);
+  })();
   // ข้อมูลจาก step3 (เรื่องร้องทุกข์)
   const complaint = step3.general || {};
 
@@ -462,10 +512,20 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   };
 
   // Current user name for display
-  const currentUserName = userInfo
-    ? `${userInfo.first_name || ""} ${userInfo.last_name || ""}`.trim() ||
-      "ผู้ใช้ไม่ระบุชื่อ"
-    : "กำลังโหลด...";
+  const currentUserName = (() => {
+    if (!userInfo) return "กำลังโหลด...";
+    // ถ้า userInfo มี title_id/prefix_other ให้ resolve ชื่อเต็มอย่างเป็นทางการ
+    const fullName = formatFullNameFromParts(
+      {
+        title_id: userInfo.title_id,
+        prefix_other: userInfo.prefix_other,
+        first_name: userInfo.first_name,
+        last_name: userInfo.last_name,
+      },
+      titleOptions
+    );
+    return fullName || `${userInfo.first_name || ""} ${userInfo.last_name || ""}`.trim() || "ผู้ใช้ไม่ระบุชื่อ";
+  })();
 
   // Resolve responsible officer's display name consistently
   const responsibleOfficerName = (() => {
@@ -478,11 +538,39 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
       "";
     if (id) {
       const found = staffUsers.find((u) => u.value === id || u.id === id);
-      if (found) return found.fullName || found.label || found.name || id;
+      if (found) {
+        // ถ้า API ส่ง full_name_with_title อยู่แล้วใน label ให้ใช้เลย
+        if (found.label) return found.label;
+        // มิฉะนั้นพยายามประกอบจากส่วนประกอบถ้ามี
+        const composed = formatFullNameFromParts(
+          {
+            title_id: found.title_id,
+            prefix_other: found.prefix_other,
+            first_name: found.first_name || found.fullName?.split(" ")[0],
+            last_name: found.last_name || found.fullName?.split(" ")[1],
+          },
+          titleOptions
+        );
+        return composed || found.fullName || found.name || id;
+      }
     }
     // Fallback to fields inside object or the raw string
     if (typeof ro === "object") {
-      return ro.fullName || ro.name || ro.label || "-";
+      return (
+        ro.label ||
+        formatFullNameFromParts(
+          {
+            title_id: ro.title_id,
+            prefix_other: ro.prefix_other,
+            first_name: ro.first_name,
+            last_name: ro.last_name,
+          },
+          titleOptions
+        ) ||
+        ro.fullName ||
+        ro.name ||
+        "-"
+      );
     }
     return ro || "-";
   })();

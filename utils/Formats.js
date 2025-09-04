@@ -626,3 +626,44 @@ export const chunkArray = (array, chunkSize = 5) => {
   }
   return chunks.length > 0 ? chunks : [[]];
 };
+
+// แปลง title_id/prefix_other ให้เป็นคำนำหน้าสำหรับแสดงผล โดยอาศัยรายการคำนำหน้าจาก API
+// titlesList รูปแบบ [{ title_id, short_name, title_name }, ...]
+export function resolveTitleFromList(titleId, prefixOther, titlesList = []) {
+  if (titleId === null || titleId === undefined || titleId === "") {
+    // ไม่มี titleId ให้ใช้ prefixOther ถ้ามี ไม่งั้นคืนค่าว่าง
+    const other = (prefixOther || "").toString().trim();
+    return other || "";
+  }
+
+  const idNum = Number(titleId);
+  const list = Array.isArray(titlesList) ? titlesList : [];
+  const found = list.find((t) => Number(t.title_id) === idNum);
+
+  // title_id = 1 หมายถึง "อื่น ๆ" หาก prefix_other ไม่ว่างให้ใช้ prefix_other แทน
+  if (idNum === 1) {
+    const other = (prefixOther || "").toString().trim();
+    if (other) return other;
+    return found?.short_name || found?.title_name || "อื่น ๆ";
+  }
+
+  // กรณีทั่วไป ใช้ short_name เป็นหลัก รองลงมา title_name
+  if (found) {
+    return found.short_name || found.title_name || "";
+  }
+
+  // ไม่พบในรายการ: fallback เป็น prefixOther ถ้ามี หรือค่าว่าง
+  const other = (prefixOther || "").toString().trim();
+  return other || "";
+}
+
+// สร้างชื่อเต็มจากส่วนประกอบ title_id/prefix_other + first_name + last_name
+export function formatFullNameFromParts(
+  { title_id, prefix_other, first_name, last_name } = {},
+  titlesList = []
+) {
+  const title = resolveTitleFromList(title_id, prefix_other, titlesList);
+  const first = (first_name || "").toString().trim();
+  const last = (last_name || "").toString().trim();
+  return [title, first, last].filter(Boolean).join(" ").trim();
+}
