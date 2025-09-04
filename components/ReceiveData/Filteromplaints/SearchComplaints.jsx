@@ -732,13 +732,24 @@ const SearchComplaints = () => {
     const step4Data = step4Methods.getValues();
     // console.log({ step4Data });
 
-    // หา senderAgencyName ตาม id ที่เลือก
+    // หา senderAgencyName ตาม id ที่เลือก (อิงชุดเดียวกับ dropdown คือ positions)
     let senderAgencyName = "";
-    if (step3Data.senderAgency) {
-      const foundDept = departments.find(
-        (dept) => dept.id === step3Data.senderAgency
+    const selectedAgencyId = step3Data.senderAgency;
+    if (selectedAgencyId !== undefined && selectedAgencyId !== null && selectedAgencyId !== "") {
+      // ค้นหาใน positions ก่อน (ข้อมูลจาก GetAllOutsideDepartments ที่ใช้ใน select)
+      const foundPos = positions.find(
+        (pos) => String(pos.id) === String(selectedAgencyId)
       );
-      senderAgencyName = foundDept ? foundDept.name : "";
+      if (foundPos) {
+        senderAgencyName = foundPos.name || foundPos.label || "";
+      } else {
+        // เผื่อกรณีมีข้อมูลจาก getDepartments เดิม ให้ลองค้นหา fallback
+        const foundDept = departments.find(
+          (dept) => String(dept.id) === String(selectedAgencyId)
+        );
+        senderAgencyName =
+          (foundDept && (foundDept.name || foundDept.department_name || foundDept.label)) || "";
+      }
     }
 
     const selectedOfficer = staffUsers.find(
