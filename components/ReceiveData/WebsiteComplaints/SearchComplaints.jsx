@@ -108,45 +108,6 @@ const SearchComplaints = () => {
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
 
-
-  useEffect(() => {
-  const fetchAssignmentComplete = async () => {
-    if (!defaultData?.id) return;
-
-    try {
-      const res = await GetAssignmentCompleteByAdmin(defaultData.id);
-
-      if (res?.res_code === "0000" && res?.res_data?.complaint) {
-        const complaint = res.res_data.complaint;
-
-        console.log("📌 Assignment complaint:", complaint);
-
-        // ✅ ใช้ path ที่ถูกต้อง
-        step4Methods.setValue(
-          "officerReceivedDate",
-          complaint.assigned_date ? new Date(complaint.assigned_date) : ""
-        );
-
-        step4Methods.setValue(
-          "directorSubmittedDate",
-          complaint.director_submission_date
-            ? new Date(complaint.director_submission_date)
-            : ""
-        );
-      } else {
-        console.warn("ไม่พบข้อมูล assignment:", res);
-      }
-    } catch (error) {
-      console.error("Error fetching assignment complete:", error);
-    }
-  };
-
-  fetchAssignmentComplete();
-}, [defaultData?.id, step4Methods]);
-
-
-
-
   // --- เปลี่ยน useEffect เปิด Dialog ให้ยิง API ---
   useEffect(() => {
     if (openSearchDialog) {
@@ -156,43 +117,102 @@ const SearchComplaints = () => {
     }
   }, [openSearchDialog]);
 
-// --- ตอนดึงจาก API ---
+  // ✅ ใช้ useEffect หลักนี้แทน
 useEffect(() => {
-  const fetchAssignment = async () => {
-    if (!defaultData?.id) return;
+  async function fetchAll() {
+    if (!id) return;
+    setLoading(true);
 
     try {
-      // เรียก API หลัก
-      const res = await GetComplaintByID(defaultData.id);
+      // ดึง complaint + assignment พร้อมกัน
+      const [complaintRes, assignmentRes] = await Promise.all([
+        GetComplaintByID(id),
+        GetAssignmentCompleteByAdmin(id),
+      ]);
+      const complaint = complaintRes?.res_data || {};
+      const assignment = assignmentRes?.res_data?.complaint || {};
 
-      if (res?.res_code === "0000" && res?.res_data?.complaint) {
-        const complaint = res.res_data.complaint;
+      // ดึง dropdown ทุกตัว
+      const [
+        complaintTypesResponse,
+        channelsResponse,
+        outsideDepartmentsResponse,
+      ] = await Promise.all([
+        GetAllSelectComplaintTypes(),
+        GetAllComplaintChannels(),
+        GetAllOutsideDepartments(),
+      ]);
+      setComplaintTypes(complaintTypesResponse?.res_data || []);
+      setComplaintChannels(channelsResponse?.res_data?.items?.map(i => ({id: i.id, name: i.name})) || []);
+      setOutsideDepartments(outsideDepartmentsResponse || []);
 
-        // ดึงค่าที่เกี่ยวข้องกับ assignment
-        const assignedDate = complaint.assigned_date;
-        const directorSubmittedDate = complaint.director_submission_date;
+      // Map ข้อมูล assignment เข้า defaultData
+      const merged = { ...complaint, assignment_form: assignment };
+      setDefaultData(merged);
 
-        // เซ็ตค่าไปที่ react-hook-form
-        step4Methods.setValue(
-          "officerReceivedDate",
-          assignedDate ? new Date(assignedDate) : ""
-        );
-        step4Methods.setValue(
-          "directorSubmittedDate",
-          directorSubmittedDate ? new Date(directorSubmittedDate) : ""
-        );
+      // Map ประเภทหลัก
+      let complaintTypeId =
+        assignment.complaint_type_id || complaint?.step3?.general?.complaint_type_id || "";
+      setSelectedComplaintTypeId(complaintTypeId);
+
+      // โหลด subComplaintTypes
+      if (complaintTypeId) {
+        const subTypesRes = await getSubComplaintTypeById(complaintTypeId);
+        setSubComplaintTypes(subTypesRes?.res_data?.items?.map(i => ({
+          id: i.id,
+          name: i.name
+        })) || []);
       } else {
-        console.warn("ไม่พบข้อมูล assignment ใน complaint:", res);
+        setSubComplaintTypes([]);
       }
-    } catch (error) {
-      console.error("Error fetching assignment complete:", error);
+
+      // reset ฟอร์มทั้งหมด
+      generalMethods.reset(merged?.step1?.general?.general || {});
+      delegateMethods.reset(merged?.step1?.general?.delegate || {});
+      step2Methods.reset(merged?.step2?.general?.individual || {});
+      step3Methods.reset({
+        ...merged?.step3?.general,
+        complaintTypeId: complaintTypeId,
+        complaintSubType: assignment.complaint_subtype_id || merged?.step3?.general?.complaint_subtype_id || "",
+        complaintChannel: assignment.complaint_channel_id || merged?.step3?.general?.complaint_channel_id || "",
+        subject: assignment.subject || merged?.step3?.general?.subject || "",
+        description: merged?.step3?.general?.description || "",
+        incidentDate: merged?.step3?.general?.incidentDate ? new Date(merged.step3.general.incidentDate) : "",
+        referenceNumber1: assignment.reference_number || "",
+        referenceDate1: assignment.reference_date ? new Date(assignment.reference_date) : "",
+        referenceNumber2: assignment.reference_number2 || "",
+        referenceDate2: assignment.reference_date2 ? new Date(assignment.reference_date2) : "",
+        referenceNumber3: assignment.reference_number3 || "",
+        referenceDate3: assignment.reference_date3 ? new Date(assignment.reference_date3) : "",
+        referenceNumber4: assignment.reference_number4 || "",
+        referenceDate4: assignment.reference_date4 ? new Date(assignment.reference_date4) : "",
+        documentNumber: assignment.document_number || "",
+        documentDate: assignment.document_date ? new Date(assignment.document_date) : "",
+        additionalReference1: assignment.additional_reference_number1 || "",
+        additionalReferenceDate1: assignment.additional_reference_date1 ? new Date(assignment.additional_reference_date1) : "",
+        additionalReference2: assignment.additional_reference_number2 || "",
+        additionalReferenceDate2: assignment.additional_reference_date2 ? new Date(assignment.additional_reference_date2) : "",
+        senderAgency: assignment.agency_sender || "",
+        securityLevel: assignment.confidentiality_level || "normal",
+        urgencyLevel: assignment.urgency_level || "low",
+      });
+      step4Methods.reset({
+        officerReceivedDate: assignment.assigned_date ? new Date(assignment.assigned_date) : "",
+        directorSubmittedDate: assignment.director_submission_date ? new Date(assignment.director_submission_date) : "",
+        incidentDateTime: merged?.step3?.general?.incidentDate ? new Date(merged.step3.general.incidentDate) : "",
+      });
+    } catch (err) {
+      setError("โหลดข้อมูลไม่สำเร็จ");
+      setComplaintTypes([]);
+      setComplaintChannels([]);
+      setOutsideDepartments([]);
+      setSubComplaintTypes([]);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  fetchAssignment();
-}, [defaultData?.id, step4Methods]);
-
-
+  }
+  fetchAll();
+}, [id]);
 
 
   // --- handleSearch ยังคงเดิม (ยิง API search ด้วย keyword) ---
@@ -248,25 +268,6 @@ useEffect(() => {
       inputRef.current?.focus();
     }
   }, [openSearchDialog]);
-
-  useEffect(() => {
-  if (defaultData) {
-    const assignmentForm = defaultData.assignment_form || {};
-    const step3General = defaultData.step3?.general || {}; // ✅ เพิ่มบรรทัดนี้
-
-    step4Methods.reset({
-      officerReceivedDate: assignmentForm.assigned_date
-        ? new Date(assignmentForm.assigned_date)
-        : "",
-      directorSubmittedDate: assignmentForm.director_submission_date
-        ? new Date(assignmentForm.director_submission_date)
-        : "",
-      incidentDateTime: step3General.incidentDate   // ✅ ใช้ได้แล้ว
-        ? new Date(step3General.incidentDate)
-        : "",
-    });
-  }
-}, [defaultData, step4Methods]);
 
 
   const buddhistYYYYMMDDToDate = (yyyymmddStr) => {

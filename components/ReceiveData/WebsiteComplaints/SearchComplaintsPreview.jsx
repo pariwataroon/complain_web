@@ -235,6 +235,11 @@ const SearchComplaintsPreview = ({
     complaint: {
       ...resData.assignment_form, // ✅ merge assignment_form
       ...resData.step3?.general,  // merge subject, complaint_type ฯลฯ
+      urgencyLevel: resData.assignment_form?.urgency_level 
+              || resData.step3?.general?.urgency_level 
+              || resData.step4?.general?.urgency_level 
+              || "low",
+
     },
   };
 };
@@ -317,6 +322,10 @@ const handleSubmit = async () => {
           incident_date: step4Data.incidentDateTime || null,
         },
       },
+      assignment_form: {
+    ...formData.assignment_form,
+    urgency_level: step3Data.urgencyLevel || "low", 
+  },
     };
 
     // ✅ Helper: แปลงวันที่เป็น YYYY-MM-DD HH:mm:ss
@@ -846,7 +855,11 @@ const handleSubmit = async () => {
               />
               <InfoItem
                 label="ชั้นความเร่งด่วน"
-                value={urgencyLevelMap[complaint.urgencyLevel] || "-"}
+                value={
+                  urgencyLevelMap[complaint.urgencyLevel] ||
+                  urgencyLevelMap[complaint.urgency_level] ||
+                  "-"
+                }
               />
               <InfoItem
                 label="ประเภทเรื่องร้องเรียน"
