@@ -397,29 +397,58 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   }
 
   function splitThaiName(fullName) {
-    if (!fullName) return { title: "", firstName: "", lastName: "" };
-    const parts = fullName.trim().split(" ");
+    const text = (fullName || "").trim().replace(/\s+/g, " ");
+    if (!text) return { title: "", firstName: "", lastName: "" };
+
+    // รายการคำนำหน้าที่พบบ่อย (พิมพ์ตามที่ผู้ใช้กรอก โดยไม่บังคับเว้นวรรค)
+    const titles = [
+      "นาย",
+      "นาง",
+      "นางสาว",
+      "ด.ช.",
+      "ด.ญ.",
+      "ดร.",
+      "ร.ต.",
+      "ร.ท.",
+      "ร.อ.",
+      "ว่าที่ ร.ต.",
+      "ว่าที่ ร.ท.",
+      "ว่าที่ ร.อ.",
+    ];
+
+    const parts = text.split(" ");
+
+    // เคสทั่วไป: มีเว้นวรรคครบ 3 ส่วนขึ้นไป => [คำนำหน้า, ชื่อ, นามสกุล...]
     if (parts.length >= 3) {
-      // ชื่อนามสกุล + คำนำหน้า (ที่มีช่องว่าง เช่น "ดร. สมชาย ใจดี")
       return {
         title: parts[0],
         firstName: parts[1],
         lastName: parts.slice(2).join(" "),
       };
     }
+
+    // เคส 2 ส่วน เช่น "นายต่อพงษ์ วรกุล" หรือ "นาย ต่อพงษ์"
     if (parts.length === 2) {
-      // คำนำหน้า ชื่อ-นามสกุล
-      return {
-        title: parts[0],
-        firstName: parts[1],
-        lastName: "",
-      };
+      let first = parts[0];
+      const last = parts[1];
+      // ถ้า first รวมคำนำหน้ากับชื่อไว้ด้วยกัน เช่น "นายต่อพงษ์"
+      const matchedTitle = titles.find((t) => first.startsWith(t));
+      if (matchedTitle && first.length > matchedTitle.length) {
+        const givenName = first.slice(matchedTitle.length);
+        return { title: matchedTitle, firstName: givenName, lastName: last };
+      }
+      // ปกติ: first = คำนำหน้า, last = ชื่อ (ไม่มีนามสกุล)
+      return { title: first, firstName: last, lastName: "" };
     }
-    return {
-      title: "",
-      firstName: fullName,
-      lastName: "",
-    };
+
+    // เคส 1 ส่วน เช่น กรอกเฉพาะชื่อ หรือกรอกเป็น "นายต่อพงษ์วรกุล"
+    const one = parts[0];
+    const matchedTitle = titles.find((t) => one.startsWith(t));
+    if (matchedTitle && one.length > matchedTitle.length) {
+      const rest = one.slice(matchedTitle.length);
+      return { title: matchedTitle, firstName: rest, lastName: "" };
+    }
+    return { title: "", firstName: one, lastName: "" };
   }
   // ข้อมูลจาก step1 (ผู้ร้องทุกข์)
   const complainant = step1.general?.general || {};
