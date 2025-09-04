@@ -12,6 +12,7 @@ import {
   CreateOutgoingReport,
   UploadOutgoingReportAttachments,
 } from "@pages/api/outgoinreports/outgoinreports";
+import axiosInstance from "@pages/api/axiosInstance";
 import { useRouter } from "next/router";
 
 // Extended validation schema with file validation
@@ -330,25 +331,66 @@ export const useForwardToAgencyForm = () => {
           throw new Error("ไม่พบ ID ของรายงานที่สร้างขึ้น");
         }
 
-        // Upload files
+        // Upload files with multi-strategy fallback
         if (fileData) {
           showLoading("กำลังอัพโหลดไฟล์แนบ...");
 
-          const fileForUpload = prepareFileAsFormData(fileData);
-
-          try {
-            const uploadResponse = await UploadOutgoingReportAttachments(
-              fileForUpload,
-              reportId
-            );
-
-            if (!uploadResponse || !uploadResponse.success) {
-              console.warn("⚠️ File upload failed:", uploadResponse?.message);
-              // Don't throw error, just warn
+          const buildFormData = (useSingleKey = false) => {
+            const formData = new FormData();
+            if (Array.isArray(fileData)) {
+              fileData.forEach((f) => formData.append(useSingleKey ? 'file' : 'files', f, f.name));
+            } else {
+              formData.append(useSingleKey ? 'file' : 'files', fileData, fileData.name);
             }
-          } catch (uploadError) {
-            console.error("❌ File upload error:", uploadError);
-            // Don't throw error, just warn
+            return formData;
+          };
+
+          let uploadOk = false;
+          let lastErrorMsg = '';
+
+          // Attempt 1: /outgoing-reports/{id}/attachments (generic endpoint)
+          try {
+            const up1 = await UploadOutgoingReportAttachments(buildFormData(false), reportId);
+            uploadOk = !!(up1 && (up1.success === true || up1.res_code === '0001'));
+            if (!uploadOk) {
+              lastErrorMsg = up1?.res_data?.error || up1?.res_message || up1?.message || '';
+            }
+          } catch (err1) {
+            const data = err1?.response?.data;
+            lastErrorMsg = data?.res_data?.error || data?.res_message || err1.message || '';
+            console.error('Upload attempt #1 (generic) failed', data || err1);
+          }
+
+          // Attempt 2: /outgoing-reports/{id}/attachments with single file key
+          if (!uploadOk && Array.isArray(fileData) && fileData.length === 1) {
+            try {
+              const up2 = await UploadOutgoingReportAttachments(buildFormData(true), reportId);
+              uploadOk = !!(up2 && (up2.success === true || up2.res_code === '0001'));
+              if (!uploadOk) {
+                lastErrorMsg = up2?.res_data?.error || up2?.res_message || up2?.message || lastErrorMsg;
+              }
+            } catch (err2) {
+              const data = err2?.response?.data;
+              lastErrorMsg = data?.res_data?.error || data?.res_message || err2.message || lastErrorMsg;
+              console.error('Upload attempt #2 (single key) failed', data || err2);
+            }
+          }
+
+          // Attempt 3: direct API call to /outgoing-reports/{id}/attachments
+          if (!uploadOk) {
+            try {
+              const up3 = await axiosInstance.post(`/outgoing-reports/${reportId}/attachments`, buildFormData(false));
+              uploadOk = !!up3?.data;
+            } catch (err3) {
+              const data = err3?.response?.data;
+              lastErrorMsg = data?.res_data?.error || data?.res_message || err3.message || lastErrorMsg;
+              console.error('Upload attempt #3 (direct API) failed', data || err3);
+            }
+          }
+
+          if (!uploadOk) {
+            console.warn('⚠️ บันทึกรายงานสำเร็จแต่แนบไฟล์ไม่สำเร็จ', lastErrorMsg);
+            // Don't throw error, just warn user
           }
         }
 

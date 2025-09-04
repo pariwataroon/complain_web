@@ -10,11 +10,31 @@ import {
   CreateOutgoingReport2,
   UploadOutgoingReportAttachments,
 } from "@pages/api/outgoinreports/outgoinreports";
+import axiosInstance from "@pages/api/axiosInstance";
 
 const toYMD = (d) => {
   if (!d) return null;
   const dt = new Date(d);
   return isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
+};
+
+// แปลงเลข สป.กค. (complaint_number) รูปแบบ MOF-YYYYMMDD(-suffix) => Thai date object
+// รองรับปีพ.ศ. ( > 2400 ) จะลบ 543 ให้เป็น ค.ศ. ภายใน ก่อนสร้าง Date จริง
+const parseComplaintNumberToThaiDate = (val) => {
+  if (!val || typeof val !== 'string') return null;
+  const cleaned = val.trim();
+  const m = cleaned.match(/MOF-(\d{8})(?:-[A-Za-z0-9]+)?/i);
+  if (!m) return null;
+  const raw = m[1]; // YYYYMMDD
+  if (raw.length !== 8) return null;
+  let year = parseInt(raw.slice(0,4),10);
+  const month = parseInt(raw.slice(4,6),10);
+  const day = parseInt(raw.slice(6,8),10);
+  if (!year || !month || !day) return null;
+  if (year > 2400) year -= 543; // พ.ศ. -> ค.ศ.
+  const d = new Date(year, month-1, day);
+  if (isNaN(d.getTime())) return null;
+  return { day: d.getDate(), month: d.getMonth()+1, year: d.getFullYear(), buddhistYear: d.getFullYear()+543 };
 };
 
 export const useInitialNotificationComplainantAgency = () => {
@@ -100,17 +120,33 @@ export const useInitialNotificationComplainantAgency = () => {
   );
 
   // -------- change handlers --------
-  const handleChange = useCallback(
-    (e) => {
-      const { name, value } = e.target;
-      const finalValue =
-        typeof value === "object" && value !== null ? value.value || "" : value;
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    const finalValue = typeof value === 'object' && value !== null ? value.value || '' : value;
 
-      setForm((prev) => ({ ...prev, [name]: finalValue }));
-      if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
-    },
-    [errors]
-  );
+    if (name === 'complaint_number') {
+      const parsed = parseComplaintNumberToThaiDate(finalValue);
+      setForm(prev => ({ ...prev, complaint_number: finalValue, ...(parsed ? { date: parsed } : {}) }));
+      if (errors.complaint_number) setErrors(prev => ({ ...prev, complaint_number: null }));
+      if (parsed && errors.date) setErrors(prev => ({ ...prev, date: null }));
+      return;
+    }
+
+    setForm(prev => ({ ...prev, [name]: finalValue }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+  }, [errors]);
+
+  // เฝ้า complaint_number เผื่อพิมพ์ครบทีหลังโดยไม่มี onChange (edge / paste แบบช้า)
+  useEffect(() => {
+    const val = form.complaint_number;
+    const parsed = parseComplaintNumberToThaiDate(val);
+    const cur = form.date;
+    const isSame = cur && parsed && cur.day === parsed.day && cur.month === parsed.month && cur.year === parsed.year;
+    if (parsed && !isSame) {
+      setForm(prev => ({ ...prev, date: parsed }));
+      if (errors.date) setErrors(prev => ({ ...prev, date: null }));
+    }
+  }, [form.complaint_number]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDateChange = useCallback(
     (thaiDate) => {
@@ -206,7 +242,27 @@ export const useInitialNotificationComplainantAgency = () => {
   };
 
   // แปลง UUID ให้เป็น simple (ตัดขีด) กันเหนียวตาม error ของ API
-  const toISOorNull = (v) => (v ? new Date(v).toISOString() : null);
+  // ป้องกัน RangeError: Invalid time value รองรับรูปแบบ {day,month,year} หรือ Date/string
+  const toISOorNull = (v) => {
+    if (!v) return null;
+    try {
+      // Thai date object from picker
+      if (typeof v === 'object' && v.day && v.month && v.year) {
+        const d = new Date(v.year, v.month - 1, v.day);
+        return isNaN(d.getTime()) ? null : d.toISOString();
+      }
+      // Already a Date
+      if (v instanceof Date) {
+        return isNaN(v.getTime()) ? null : v.toISOString();
+      }
+      // String or number
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d.toISOString();
+    } catch (e) {
+      console.warn('toISOorNull parse failed', v, e);
+      return null;
+    }
+  };
   const nullIfEmpty = (v) => (v === undefined || v === null || v === "" ? null : v);
 
   const handleClear = useCallback(() => {
@@ -237,6 +293,28 @@ export const useInitialNotificationComplainantAgency = () => {
       const names = missing.map((m) => m.label).join(", ");
       alertError("ข้อมูลไม่ครบถ้วน", `กรุณากรอกข้อมูลในฟิลด์: ${names}`);
       return;
+    }
+
+    // ตรวจไฟล์ก่อนอัปโหลด
+    if (attachmentFiles.length) {
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const allowed = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "image/jpeg",
+        "image/png",
+      ];
+      const oversize = attachmentFiles.find(f => f.size > maxSize);
+      if (oversize) {
+        alertError("ไฟล์ใหญ่เกินไป", `ไฟล์ ${oversize.name} เกิน 10MB`);
+        return;
+      }
+      const badType = attachmentFiles.find(f => !allowed.includes(f.type));
+      if (badType) {
+        alertError("ประเภทไฟล์ไม่รองรับ", `ไฟล์ ${badType.name} ไม่ใช่ประเภทที่รองรับ`);
+        return;
+      }
     }
 
     const payload = {
@@ -275,17 +353,94 @@ export const useInitialNotificationComplainantAgency = () => {
       }
 
       // ไอดีที่สร้าง (รองรับหลายรูปแบบ)
-      const createdId =
-        createRes?.res_data?.id ??
-        createRes?.data?.id ??
-        createRes?.id ??
-        null;
+      const extractReportId = (resp) => {
+        if (!resp) return null;
+        const candidates = [
+          resp?.res_data?.id,
+          resp?.res_data?.report_id,
+          resp?.res_data?.outgoing_report_id,
+          resp?.data?.id,
+          resp?.id,
+        ].filter(Boolean);
+        if (candidates.length) return candidates[0];
+        try {
+          const stack = [resp];
+          while (stack.length) {
+            const cur = stack.pop();
+            if (cur && typeof cur === 'object') {
+              if (Object.prototype.hasOwnProperty.call(cur,'id') && cur.id) return cur.id;
+              Object.values(cur).forEach(v => { if (v && typeof v === 'object') stack.push(v); });
+            }
+          }
+        } catch(_){}
+        return null;
+      };
+      const createdId = extractReportId(createRes);
+
+      if (!createdId) {
+        closeAlert();
+        setIsLoading(false);
+        await alertError("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานที่สร้างได้ กรุณาลองใหม่อีกครั้ง");
+        return;
+      }
 
       // 2) อัปโหลดไฟล์แนบ (ถ้ามีไฟล์และสร้างสำเร็จ)
       if (createdId && attachmentFiles.length > 0) {
-        const fd = new FormData();
-        attachmentFiles.forEach((f) => fd.append("files", f, f.name));
-        await UploadOutgoingReportAttachments(fd, createdId);
+        // กลยุทธ์การอัปโหลดหลายขั้น (ลดโอกาส 500 ภายใน)
+        // 1) พยายาม endpoint เฉพาะ type2 ก่อน
+        // 2) ถ้าไม่สำเร็จ ลอง endpoint ทั่วไป (UploadOutgoingReportAttachments -> /outgoing-reports/{id}/attachments)
+        // 3) ถ้าไม่สำเร็จและมีไฟล์เดียว ลองเปลี่ยน key เป็น 'file'
+        const buildFormData = (useSingleKey = false) => {
+          const formData = new FormData();
+            attachmentFiles.forEach((f) => formData.append(useSingleKey ? 'file' : 'files', f, f.name));
+          return formData;
+        };
+
+        let uploadOk = false;
+        let lastErrorMsg = '';
+
+        // Attempt 1: /outgoing-reports2/{id}/attachments (คาดว่า correct สำหรับ CreateOutgoingReport2)
+        try {
+          const up1 = await axiosInstance.post(`/outgoing-reports2/${createdId}/attachments`, buildFormData(false));
+          uploadOk = !!up1?.data;
+        } catch (err1) {
+          const data = err1?.response?.data;
+          lastErrorMsg = data?.res_data?.error || data?.res_message || err1.message || '';
+          console.error('Upload attempt #1 (type2) failed', data || err1);
+        }
+
+        // Attempt 2: generic endpoint (ถ้ายังไม่สำเร็จ)
+        if (!uploadOk) {
+          try {
+            const up2 = await UploadOutgoingReportAttachments(buildFormData(false), createdId);
+            uploadOk = !!(up2 && (up2.success === true || up2.res_code === '0001'));
+            if (!uploadOk) {
+              const data2 = up2;
+              lastErrorMsg = data2?.res_data?.error || data2?.res_message || lastErrorMsg;
+            }
+          } catch (err2) {
+            const data = err2?.response?.data;
+            lastErrorMsg = data?.res_data?.error || data?.res_message || err2.message || lastErrorMsg;
+            console.error('Upload attempt #2 (generic) failed', data || err2);
+          }
+        }
+
+        // Attempt 3: single key 'file' (ไฟล์เดียว) เผื่อ backend รอแบบ single
+        if (!uploadOk && attachmentFiles.length === 1) {
+          try {
+            const up3 = await axiosInstance.post(`/outgoing-reports2/${createdId}/attachments`, buildFormData(true));
+            uploadOk = !!up3?.data;
+          } catch (err3) {
+            const data = err3?.response?.data;
+            lastErrorMsg = data?.res_data?.error || data?.res_message || err3.message || lastErrorMsg;
+            console.error('Upload attempt #3 (single file key) failed', data || err3);
+          }
+        }
+
+        if (!uploadOk) {
+          console.warn('⚠️ บันทึกรายงานสำเร็จแต่แนบไฟล์ไม่สำเร็จ', lastErrorMsg);
+          await alertError('แนบไฟล์ไม่สำเร็จ', lastErrorMsg || 'ระบบไม่สามารถแนบไฟล์ได้ กรุณาลองใหม่');
+        }
       }
 
       closeAlert();

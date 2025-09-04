@@ -228,6 +228,19 @@ useEffect(() => {
     updateField("department_meta", null);
   };
 
+  const handleRefNoBlur = useCallback((e) => {
+    // Re-run parsing via shared handleChange (hook already parses name==='refNo')
+    handleChange(e);
+  }, [handleChange]);
+
+  const handleRefNoPaste = useCallback((e) => {
+    // Wait next tick so pasted value is in the input, then trigger parsing
+    setTimeout(() => {
+      const val = e.target?.value || "";
+      handleChange({ target: { name: 'refNo', value: val } });
+    }, 0);
+  }, [handleChange]);
+
   return (
     <Box
       px={{ xs: 2, sm: 3, md: 5, lg: 8 }}
@@ -595,6 +608,8 @@ useEffect(() => {
                 name="refNo"
                 value={form.refNo}
                 onChange={handleChange}
+                onBlur={handleRefNoBlur}
+                onPaste={handleRefNoPaste}
                 error={!!getFieldError("refNo")}
                 helperText={getFieldError("refNo")}
                 sx={{ flex: 1 }}
@@ -610,6 +625,14 @@ useEffect(() => {
                 <SearchIcon />
               </IconButton>
             </Box>
+            <DateThaiPickerService
+              label={createLabel("วันที่", "date")}
+              value={form.date}
+              onChange={handleDateChange}
+              placeholder="เลือกวันที่"
+              error={!!getFieldError("date")}
+              helperText={getFieldError("date")}
+            />
           </Box>
 
            {/* Dialog สำหรับค้นหาเลข */}

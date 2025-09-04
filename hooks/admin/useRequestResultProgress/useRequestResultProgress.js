@@ -2,11 +2,36 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { alertSuccess, alertError, showLoading, closeAlert } from "@utils/Alerts";
 import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/api/outgoinreports/outgoinreports";
+import axiosInstance from "@pages/api/axiosInstance";
 
   const POSITION_FALLBACK = "7e18e4fe-d416-4580-b4d4-2a4032f67770";
   const isUUID = (s) =>
     typeof s === "string" &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+
+  // แปลงเลข สป.กค. => Thai date object {day,month,year,buddhistYear}
+  // รองรับรูปแบบ:
+  //   MOF-YYYYMMDD
+  //   MOF-YYYYMMDD-00001 (optional suffix)
+  //   เคสพิมพ์ยังไม่ครบ -> จะยังไม่ตั้งค่า
+  const parseRefNoToThaiDate = (val) => {
+    if (!val || typeof val !== 'string') return null;
+    const cleaned = val.trim();
+    // จับ YYYYMMDD โดย suffix หลังวันที่เป็นทางเลือก
+    const m = cleaned.match(/MOF-(\d{8})(?:-\w+)?/i);
+    if (!m) return null;
+    const raw = m[1]; // YYYYMMDD (อาจเป็น พ.ศ. หรือ ค.ศ.)
+    if (raw.length !== 8) return null;
+    let year = parseInt(raw.slice(0,4),10);
+    const month = parseInt(raw.slice(4,6),10);
+    const day = parseInt(raw.slice(6,8),10);
+    if (!year || !month || !day) return null;
+    if (year > 2400) year -= 543; // แปลง พ.ศ. -> ค.ศ.
+    const d = new Date(year, month-1, day);
+    if (isNaN(d.getTime())) return null;
+    return { day: d.getDate(), month: d.getMonth()+1, year: d.getFullYear(), buddhistYear: d.getFullYear()+543 };
+  };
+
   export const useRequestResultProgress = () => {
     const router = useRouter();
     const { id, complaint_id, complaint_number } = router.query;
@@ -40,7 +65,8 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
 
   useEffect(() => {
     if (complaintNumberFromQuery && !form.refNo) {
-      setForm(prev => ({ ...prev, refNo: complaintNumberFromQuery }));
+      const parsed = parseRefNoToThaiDate(complaintNumberFromQuery);
+      setForm(prev => ({ ...prev, refNo: complaintNumberFromQuery, ...(parsed ? { date: parsed } : {}) }));
     }
   }, [complaintNumberFromQuery]); // eslint-disable-line
 
@@ -63,7 +89,7 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
     "docNo", 
     "date",
     "subject",
-    "department",
+    // "department",  // ทำให้ไม่บังคับกรอกหน่วยงาน
     "signer",
     "confidentiality",
     "urgency",
@@ -88,15 +114,37 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
   // -------- change handlers --------
   const handleChange = useCallback((e) => {
     const { name, value } = e.target ?? {};
-    const v = value ?? e?.value ?? e; // กันเคสที่ lib ส่ง value ตรง ๆ
-    const finalValue =
-      typeof v === "object" && v !== null
-        ? (v.id ?? v.value ?? "")
-        : v;
+    const v = value ?? e?.value ?? e;
+    const finalValue = (typeof v === 'object' && v !== null) ? (v.id ?? v.value ?? '') : v;
 
-    setForm((prev) => ({ ...prev, [name]: finalValue }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
+    if (name === 'refNo') {
+      const parsed = parseRefNoToThaiDate(finalValue);
+      setForm(prev => ({ ...prev, refNo: finalValue, ...(parsed ? { date: parsed } : {}) }));
+      if (errors.refNo) setErrors(prev => ({ ...prev, refNo: null }));
+      if (parsed && errors.date) setErrors(prev => ({ ...prev, date: null }));
+      return;
+    }
+
+    setForm(prev => ({ ...prev, [name]: finalValue }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   }, [errors]);
+
+  // เฝ้าการเปลี่ยน refNo เพื่อ auto-parse แม้ผู้ใช้พิมพ์ครบทีหลัง (ไม่มี blur)
+  useEffect(() => {
+    if (!form) return;
+    const refVal = form.refNo || "";
+    const parsed = parseRefNoToThaiDate(refVal);
+    // เปรียบเทียบ date ปัจจุบันกับ parsed
+    const current = form.date;
+    const isSame = current && parsed && current.day === parsed.day && current.month === parsed.month && current.year === parsed.year;
+    if (parsed && !isSame) {
+      setForm(prev => ({ ...prev, date: parsed }));
+      if (errors.date) setErrors(prev => ({ ...prev, date: null }));
+    } else if (!parsed && current) {
+      // ถ้าลบรูปแบบออกให้ล้างวันที่ (ต้องการคงไว้ก็ลบบรรทัดนี้ได้)
+      setForm(prev => ({ ...prev, date: null }));
+    }
+  }, [form.refNo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDateChange = useCallback(
     (thaiDate) => {
@@ -159,7 +207,7 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
       { field: "docNo", label: "เลขที่หนังสือ" },
       { field: "date", label: "วันที่" },
       { field: "subject", label: "เรื่อง" },
-      { field: "department", label: "หน่วยงาน / ผู้ร้อง" },
+      // { field: "department", label: "หน่วยงาน / ผู้ร้อง" }, // ยกเลิกการบังคับ
       { field: "signer", label: "ผู้ลงนาม" },
       { field: "confidentiality", label: "ชั้นความลับ" },
       { field: "urgency", label: "ชั้นความเร่งด่วน" },
@@ -182,7 +230,17 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
   }, [form]);
 
   // ---------- helpers ----------
-  const toISOorNull = (v) => (v ? new Date(v).toISOString() : null);
+  const toISOorNull = (v) => {
+    if (!v) return null;
+    try {
+      if (typeof v === 'object' && v.day && v.month && v.year) {
+        return new Date(v.year, v.month - 1, v.day).toISOString();
+      }
+      return new Date(v).toISOString();
+    } catch {
+      return null;
+    }
+  };
   const nullIfEmpty = (v) => (v === undefined || v === null || v === "" ? null : v);
 
   const handleClear = useCallback(() => {
@@ -227,21 +285,24 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
      state.position_id = POSITION_FALLBACK;
     }
 
+    // Build payload; department_id optional (omit if empty/invalid to avoid UUID validation error)
+    const deptId = state.department && isUUID(state.department) ? state.department : null;
     const payload = {
       position_id: state.position_id || POSITION_FALLBACK,
-      complaint_number: state.refNo || "",  
+      salutation: state.salutation || "",
+      complaint_number: state.refNo || "",
       complaint_number_date: toISOorNull(state.date),
-      document_number: state.docNo || "",  
-      document_date: toISOorNull(state.date), 
+      document_number: state.docNo || "",
+      document_date: toISOorNull(state.date),
       subject: state.subject || "เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน",
       signature_authority_user_id: nullIfEmpty(state.signer),
-      department_id: nullIfEmpty(state.department),
       user_id: null,
       confidentiality_level: nullIfEmpty(state.confidentiality),
       urgency_level: nullIfEmpty(state.urgency),
       complaint_id: nullIfEmpty(state.complaint_id),
       remarks: state.note || "",
     };
+    if (deptId) payload.department_id = deptId;
     console.log("DEBUG payload", payload);
     
     try {
@@ -264,12 +325,58 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
         createRes?.id ??
         null;
 
-      // 2) อัปโหลดไฟล์แนบ (ถ้ามีไฟล์และสร้างสำเร็จ)
+      // 2) อัปโหลดไฟล์แนบ (ถ้ามีไฟล์และสร้างสำเร็จ) - Multi-strategy fallback
       if (createdId && attachmentFiles.length > 0) {
-        const fd = new FormData();
-        // ต้องใช้ key = "files" (ซ้ำ key ได้หลายครั้ง)
-        attachmentFiles.forEach((f) => fd.append("files", f, f.name));
-        await UploadOutgoingReportAttachments(fd, createdId);
+        const buildFormData = (useSingleKey = false) => {
+          const formData = new FormData();
+          attachmentFiles.forEach((f) => formData.append(useSingleKey ? 'file' : 'files', f, f.name));
+          return formData;
+        };
+
+        let uploadOk = false;
+        let lastErrorMsg = '';
+
+        // Attempt 1: /outgoing-reports3/{id}/attachments (specific for CreateOutgoingReport3)
+        try {
+          const up1 = await axiosInstance.post(`/outgoing-reports3/${createdId}/attachments`, buildFormData(false));
+          uploadOk = !!up1?.data;
+        } catch (err1) {
+          const data = err1?.response?.data;
+          lastErrorMsg = data?.res_data?.error || data?.res_message || err1.message || '';
+          console.error('Upload attempt #1 (type3) failed', data || err1);
+        }
+
+        // Attempt 2: generic endpoint /outgoing-reports/{id}/attachments
+        if (!uploadOk) {
+          try {
+            const up2 = await UploadOutgoingReportAttachments(buildFormData(false), createdId);
+            uploadOk = !!(up2 && (up2.success === true || up2.res_code === '0001'));
+            if (!uploadOk) {
+              lastErrorMsg = up2?.res_data?.error || up2?.res_message || up2?.message || lastErrorMsg;
+            }
+          } catch (err2) {
+            const data = err2?.response?.data;
+            lastErrorMsg = data?.res_data?.error || data?.res_message || err2.message || lastErrorMsg;
+            console.error('Upload attempt #2 (generic) failed', data || err2);
+          }
+        }
+
+        // Attempt 3: single file key (if only one file)
+        if (!uploadOk && attachmentFiles.length === 1) {
+          try {
+            const up3 = await axiosInstance.post(`/outgoing-reports3/${createdId}/attachments`, buildFormData(true));
+            uploadOk = !!up3?.data;
+          } catch (err3) {
+            const data = err3?.response?.data;
+            lastErrorMsg = data?.res_data?.error || data?.res_message || err3.message || lastErrorMsg;
+            console.error('Upload attempt #3 (single file key) failed', data || err3);
+          }
+        }
+
+        if (!uploadOk) {
+          console.warn('⚠️ บันทึกรายงานสำเร็จแต่แนบไฟล์ไม่สำเร็จ', lastErrorMsg);
+          await alertError('แนบไฟล์ไม่สำเร็จ', lastErrorMsg || 'ระบบไม่สามารถแนบไฟล์ได้ กรุณาลองใหม่');
+        }
       }
 
       closeAlert();
@@ -291,11 +398,22 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
           router.push(`/admin/box/list`);
         } catch (err) {
           console.error("Save error:", err);
+          if (err?.response) {
+            console.error("Response status:", err.response.status);
+            console.error("Response data:", err.response.data);
+          }
           closeAlert();
           setIsLoading(false);
 
           const httpStatus = err?.response?.status;
           const data = err?.response?.data;
+          if (httpStatus === 422) {
+            const serverMsg = data?.res_data?.error || data?.res_message || data?.message || "Validation error (422)";
+            // Show which fields are missing if backend returns them
+            const detail = typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data);
+            await alertError("ข้อมูลไม่ถูกต้อง (422)", serverMsg + "\n" + detail);
+            return;
+          }
           const backendMsg = data?.res_data?.error || data?.res_message || data?.message || "";
           if (httpStatus === 409 || data?.res_code === "4090" || String(backendMsg).includes("มีอยู่แล้ว")) {
               await alertError("เลขที่หนังสือซ้ำ", backendMsg || `เลขที่หนังสือ ${form.refNo || "-"} มีอยู่แล้ว`);
@@ -314,8 +432,15 @@ import { CreateOutgoingReport3, UploadOutgoingReportAttachments } from "@pages/a
 
   const updateField = useCallback(
     (fieldName, value) => {
-      setForm((prev) => ({ ...prev, [fieldName]: value }));
-      if (errors[fieldName]) setErrors((prev) => ({ ...prev, [fieldName]: null }));
+      if (fieldName === 'refNo') {
+        const parsed = parseRefNoToThaiDate(value);
+        setForm(prev => ({ ...prev, refNo: value, ...(parsed ? { date: parsed } : {}) }));
+        if (errors.refNo) setErrors(prev => ({ ...prev, refNo: null }));
+        if (parsed && errors.date) setErrors(prev => ({ ...prev, date: null }));
+        return;
+      }
+      setForm(prev => ({ ...prev, [fieldName]: value }));
+      if (errors[fieldName]) setErrors(prev => ({ ...prev, [fieldName]: null }));
     },
     [errors]
   );

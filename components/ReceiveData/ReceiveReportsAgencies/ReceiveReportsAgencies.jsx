@@ -33,7 +33,8 @@ import {
   InputAdornment,
   CircularProgress,
 } from "@mui/material";
-import { CreateOutgoingReport5, getDepartmentsPrefix } from "@pages/api/outgoinreports/outgoinreports";
+import { CreateOutgoingReport5, getDepartmentsPrefix, UploadOutgoingReportAttachments } from "@pages/api/outgoinreports/outgoinreports";
+import axiosInstance from "@pages/api/axiosInstance";
 import { GetEnhancedComplaints } from "@pages/complaint/index"
 // Constants สำหรับ options
 const PROCESS_STEP_OPTIONS = [
@@ -82,6 +83,8 @@ const ReceiveReportsAgencies = () => {
       documentNo: "",
     },
   });
+  // เก็บไฟล์จริงที่เลือก
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
 useEffect(() => {
   const fetchDepartments = async () => {
@@ -196,7 +199,10 @@ useEffect(() => {
   
     const handleSelectReference2 = (ref) => {
       const num = ref?.complaint_number || "";
-      setForm((prev) => ({ ...prev, investigateGk: num }));
+      const obj = parseInvestigateGk(num);
+      // eslint-disable-next-line no-console
+      console.log('[handleSelectReference2] selected ->', { num, obj });
+      setForm((prev) => ({ ...prev, investigateGk: num, investigateDate: obj }));
       setValue("investigateGk", num, { shouldValidate: false, shouldDirty: true });
       setOpenSearchDialog2(false);
     };
@@ -239,11 +245,26 @@ useEffect(() => {
 
    useEffect(() => {
     if (complaint_number) {
-      setForm(prev => ({ ...prev, investigateGk: complaint_number }));
+      const parsed = parseInvestigateGk ? parseInvestigateGk(complaint_number) : null;
+      // eslint-disable-next-line no-console
+      console.log('[init complaint_number] ', { complaint_number, parsed });
+      setForm(prev => ({ ...prev, investigateGk: complaint_number, investigateDate: parsed || prev.investigateDate }));
     }
   }, [complaint_number]);
 
-  const toISO = (v) => (v ? new Date(v).toISOString() : null)
+  const toISO = (v) => {
+    if (!v) return null;
+    try {
+      // ถ้าเป็น object ที่มี day/month/year
+      if (typeof v === 'object' && v.day && v.month && v.year) {
+        return new Date(v.year, v.month - 1, v.day).toISOString();
+      }
+      // ถ้าเป็น string หรือ Date
+      return new Date(v).toISOString();
+    } catch (e) {
+      return null;
+    }
+  };
 
   // Validation function
   const validateForm = useCallback(() => {
@@ -272,10 +293,58 @@ useEffect(() => {
   }, [form]);
 
   // Memoized handlers
-  const handleChange = useCallback((e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+  const parseInvestigateGk = useCallback((raw) => {
+    if (!raw || typeof raw !== 'string') return null;
+    const match = raw.match(/MOF-(\d{8})-\d+/i);
+    if (!match) return null;
+    const dateStr = match[1];
+    let year = parseInt(dateStr.slice(0, 4), 10);
+    const month = parseInt(dateStr.slice(4, 6), 10);
+    const day = parseInt(dateStr.slice(6, 8), 10);
+    if (year > 2400) year = year - 543;
+    const d = new Date(year, month - 1, day);
+    if (isNaN(d.getTime())) return null;
+    return {
+      day: d.getDate(),
+      month: d.getMonth() + 1,
+      year: d.getFullYear(),
+      buddhistYear: d.getFullYear() + 543,
+    };
   }, []);
+
+  const handleInvestigateBlur = useCallback((e) => {
+    const val = e?.target?.value || '';
+    const obj = parseInvestigateGk(val);
+    if (obj) {
+      // eslint-disable-next-line no-console
+      console.log('[investigateGk blur] parsed ->', { val, obj });
+      setForm((prev) => ({ ...prev, investigateGk: val, investigateDate: obj }));
+    }
+  }, [parseInvestigateGk]);
+
+  const handleInvestigatePaste = useCallback((e) => {
+    const pasted = e?.clipboardData?.getData('Text') || '';
+    const obj = parseInvestigateGk(pasted);
+    if (obj) {
+      // eslint-disable-next-line no-console
+      console.log('[investigateGk paste] parsed ->', { pasted, obj });
+      setForm((prev) => ({ ...prev, investigateGk: pasted, investigateDate: obj }));
+    }
+  }, [parseInvestigateGk]);
+
+  const handleChange = useCallback((e) => {
+     const { name, value } = e.target;
+    if (name === 'investigateGk') {
+      const obj = parseInvestigateGk(value);
+      if (obj) {
+        // eslint-disable-next-line no-console
+        console.debug('[investigateGk change] parsed ->', { value, obj });
+        setForm((prev) => ({ ...prev, [name]: value, investigateDate: obj }));
+        return;
+      }
+    }
+    setForm((prev) => ({ ...prev, [name]: value }));
+   }, []);
 
   // ✅ เพิ่ม handleDateChange ที่หายไป
   const handleDateChange = useCallback(
@@ -315,7 +384,31 @@ useEffect(() => {
       remarks: form.remarks,
     };
 
-    const res = await CreateOutgoingReport5(payload);
+  const res = await CreateOutgoingReport5(payload);
+
+    // --- helper to extract id ---
+    const extractReportId = (resp) => {
+      if (!resp) return null;
+      const candidates = [
+        resp?.res_data?.id,
+        resp?.res_data?.report_id,
+        resp?.res_data?.outgoing_report_id,
+        resp?.data?.id,
+        resp?.id,
+      ].filter(Boolean);
+      if (candidates.length) return candidates[0];
+      try {
+        const stack = [resp];
+        while (stack.length) {
+          const cur = stack.pop();
+          if (cur && typeof cur === 'object') {
+            if (Object.prototype.hasOwnProperty.call(cur, 'id') && cur.id) return cur.id;
+            Object.values(cur).forEach(v => { if (v && typeof v === 'object') stack.push(v); });
+          }
+        }
+      } catch(_){}
+      return null;
+    };
 
     const resCode =
       res?.res_code ?? res?.data?.res_code ?? res?.status;
@@ -335,19 +428,62 @@ useEffect(() => {
       return;
     }
 
-    const reportId =
-      res?.res_data?.id ||
-      res?.res_data?.report_id ||
-      res?.id ||
-      res?.data?.id ||
-      "-";
+    const reportId = extractReportId(res);
+
+    if (!reportId) {
+      alertWarning("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานที่สร้างได้ กรุณาลองใหม่");
+      return;
+    }
+
+    // อัปโหลดไฟล์แนบจริง (ถ้ามี) พร้อมตรวจสอบเงื่อนไข/ขนาด/ชนิด
+    if (uploadedFiles.length) {
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg',
+        'image/png'
+      ];
+      const oversize = uploadedFiles.find(f => f.size > 10 * 1024 * 1024);
+      if (oversize) {
+        alertWarning('ไฟล์ใหญ่เกินไป', `ไฟล์ ${oversize.name} เกิน 10MB`);
+        return;
+      }
+      const invalid = uploadedFiles.find(f => !allowedTypes.includes(f.type));
+      if (invalid) {
+        alertWarning('ประเภทไฟล์ไม่ถูกต้อง', `ไฟล์ ${invalid.name} ไม่รองรับ`);
+        return;
+      }
+
+      const fd = new FormData();
+      uploadedFiles.forEach(f => fd.append('files', f, f.name));
+      let uploadSucceeded = false;
+      try {
+        const upRes = await UploadOutgoingReportAttachments(fd, reportId);
+        uploadSucceeded = !!(upRes && (upRes.success === true || upRes.res_code === '0001'));
+        if (!uploadSucceeded && (upRes?.res_code === '4040' || /NOT_FOUND/i.test(upRes?.res_message || ''))) {
+          // ลอง endpoint สำรองสำหรับ type5
+          try {
+            const altRes = await axiosInstance.post(`/outgoing-reports5/${reportId}/attachments`, fd);
+            uploadSucceeded = !!altRes?.data;
+          } catch (altErr) {
+            console.error('Fallback upload (type5) failed', altErr?.response?.data || altErr);
+          }
+        }
+      } catch (err) {
+        console.error('Upload attachments failed', err?.response?.data || err);
+      }
+      if (!uploadSucceeded) {
+        console.warn('⚠️ แนบไฟล์ไม่สำเร็จหรือบางไฟล์แนบไม่สำเร็จ');
+      }
+    }
 
     const successMessage = `
       <div style="text-align:center; line-height:1.6;">
         <p style="margin-bottom:12px; font-size:16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
         <p style="margin-bottom:8px; color:#666;">รหัสรายงาน: <strong>${reportId}</strong></p>
         <p style="margin-bottom:8px; color:#666;">เรื่อง: <strong>${form.subject || "-"}</strong></p>
-        ${form.attachment ? `<p style="margin-bottom:0; color:#666;">ไฟล์แนบ: <strong>${form.attachment}</strong></p>` : ""}
+  ${form.attachment ? `<p style=\"margin-bottom:0; color:#666;\">ไฟล์แนบ: <strong>${form.attachment}</strong></p>` : ""}
       </div>
     `;
 
@@ -381,11 +517,18 @@ useEffect(() => {
     let files = [];
     if (payload?.target?.files) files = Array.from(payload.target.files);
     else if (Array.isArray(payload)) files = payload;
-    else if (payload && typeof payload === "object" && "length" in payload) files = Array.from(payload);
+    else if (payload && typeof payload === 'object' && 'length' in payload) files = Array.from(payload);
     else if (payload?.file) files = [payload.file];
-    const names = files.map((f) => f?.name).filter(Boolean).join(", ");
-    setForm((prev) => ({ ...prev, attachment: names || "" }));
+    const names = files.map(f => f?.name).filter(Boolean).join(', ');
+    setForm(prev => ({ ...prev, attachment: names || '' }));
+    setUploadedFiles(files);
   }, []);
+
+  // Log form changes for debugging
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('[form change]', { investigateGk: form.investigateGk, investigateDate: form.investigateDate });
+  }, [form.investigateGk, form.investigateDate]);
 
   return (
     <Box
@@ -589,6 +732,8 @@ useEffect(() => {
                   name="investigateGk"
                   value={form.investigateGk}
                   onChange={handleChange}
+                  onBlur={handleInvestigateBlur}
+                  onPaste={handleInvestigatePaste}
                   sx={{ width: "100%" }}
                 />
               </Box>
@@ -1229,6 +1374,17 @@ useEffect(() => {
               rows={4}
             />
           </Box>
+
+          {/* DEBUG: แสดงค่าสำหรับดีบัก (เฉพาะโหมดพัฒนา) */}
+          {/* {process.env.NODE_ENV !== 'production' && (
+            <Box sx={{ p: 2, bgcolor: '#fff', border: '1px solid #eee', borderRadius: 1, mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>DEBUG</Typography>
+              <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, margin: 0 }}>
+                {JSON.stringify({ investigateGk: form.investigateGk, investigateDate: form.investigateDate }, null, 2)}
+              </pre>
+            </Box>
+          )} */}
+
         </Box>
 
         {/* action buttons */}

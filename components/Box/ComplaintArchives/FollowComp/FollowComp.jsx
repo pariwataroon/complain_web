@@ -849,14 +849,12 @@ const agencyReportRows = outgoingType5.map((item) => ({
     : [];
   // const agencyReportRows = [...agencyReportItems, ...agencyReportExtra];
 
-  // FINAL_NOTIFY (type5)
+  // FINAL_NOTIFY (เปลี่ยนมาใช้ outgoing4)
   const finalSection = sectionConfigs.find((s) => s.key === "FINAL_NOTIFY");
   const finalHeaders = finalSection.headers;
   const finalRowMapper = finalSection.rowMapper;
-  // const outgoingType5 = outgoing_reports?.type5?.length
-  //   ? outgoing_reports.type5
-  //   : outgoing_reports?.type4 || [];
-  const finalNotifyExtra = outgoingType5.map((item, idx) => ({
+  const outgoingType4 = outgoing_reports.type4 || [];
+  const finalNotifyExtra = outgoingType4.map((item, idx) => ({
     ...item,
     agency: item.department?.name || "-",
     complaint_id: item.complaint_id || id,

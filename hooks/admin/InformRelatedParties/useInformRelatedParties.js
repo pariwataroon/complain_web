@@ -10,6 +10,7 @@ import {
   CreateOutgoingReport4,
   UploadOutgoingReportAttachments,
 } from "@pages/api/outgoinreports/outgoinreports";
+import axiosInstance from "@pages/api/axiosInstance";
 
 const POSITION_FALLBACK = "7e18e4fe-d416-4580-b4d4-2a4032f67770";
 
@@ -274,7 +275,7 @@ export const useInformRelatedParties = () => {
     return missingFields;
   }, [form]);
 
-  // ฟังก์ชันอัปโหลดไฟล์
+  // ฟังก์ชันอัปโหลดไฟล์ - Multi-strategy fallback
   const uploadFiles = useCallback(async (reportId) => {
     if (!uploadedFiles || uploadedFiles.length === 0) {
       console.log("ℹ️ No files to upload");
@@ -283,23 +284,64 @@ export const useInformRelatedParties = () => {
 
     console.log("📤 Uploading files:", uploadedFiles.map(f => f.name));
     
-    try {
-      const uploadPromises = uploadedFiles.map(async (file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('report_id', reportId);
-        formData.append('file_type', 'attachment');
-        
-        return await UploadOutgoingReportAttachments(formData);
-      });
+    const buildFormData = (useSingleKey = false) => {
+      const formData = new FormData();
+      uploadedFiles.forEach((f) => formData.append(useSingleKey ? 'file' : 'files', f, f.name));
+      return formData;
+    };
 
-      const uploadResults = await Promise.all(uploadPromises);
-      console.log("✅ Files uploaded successfully:", uploadResults);
-      return uploadResults;
-    } catch (error) {
-      console.error("❌ File upload error:", error);
-      throw new Error(`ไม่สามารถอัปโหลดไฟล์ได้: ${error.message}`);
+    let uploadOk = false;
+    let lastErrorMsg = '';
+
+    // Attempt 1: /outgoing-reports4/{id}/attachments (specific for CreateOutgoingReport4)
+    try {
+      const up1 = await axiosInstance.post(`/outgoing-reports4/${reportId}/attachments`, buildFormData(false));
+      uploadOk = !!up1?.data;
+      console.log("✅ Upload attempt #1 (type4) succeeded");
+    } catch (err1) {
+      const data = err1?.response?.data;
+      lastErrorMsg = data?.res_data?.error || data?.res_message || err1.message || '';
+      console.error('Upload attempt #1 (type4) failed', data || err1);
     }
+
+    // Attempt 2: generic endpoint /outgoing-reports/{id}/attachments
+    if (!uploadOk) {
+      try {
+        const up2 = await UploadOutgoingReportAttachments(buildFormData(false), reportId);
+        uploadOk = !!(up2 && (up2.success === true || up2.res_code === '0001'));
+        if (uploadOk) {
+          console.log("✅ Upload attempt #2 (generic) succeeded");
+        } else {
+          lastErrorMsg = up2?.res_data?.error || up2?.res_message || up2?.message || lastErrorMsg;
+        }
+      } catch (err2) {
+        const data = err2?.response?.data;
+        lastErrorMsg = data?.res_data?.error || data?.res_message || err2.message || lastErrorMsg;
+        console.error('Upload attempt #2 (generic) failed', data || err2);
+      }
+    }
+
+    // Attempt 3: single file key (if only one file)
+    if (!uploadOk && uploadedFiles.length === 1) {
+      try {
+        const up3 = await axiosInstance.post(`/outgoing-reports4/${reportId}/attachments`, buildFormData(true));
+        uploadOk = !!up3?.data;
+        if (uploadOk) {
+          console.log("✅ Upload attempt #3 (single file key) succeeded");
+        }
+      } catch (err3) {
+        const data = err3?.response?.data;
+        lastErrorMsg = data?.res_data?.error || data?.res_message || err3.message || lastErrorMsg;
+        console.error('Upload attempt #3 (single file key) failed', data || err3);
+      }
+    }
+
+    if (!uploadOk) {
+      console.warn('⚠️ บันทึกรายงานสำเร็จแต่แนบไฟล์ไม่สำเร็จ', lastErrorMsg);
+      throw new Error(lastErrorMsg || 'ระบบไม่สามารถแนบไฟล์ได้');
+    }
+
+    return uploadedFiles.map(f => ({ name: f.name, success: true }));
   }, [uploadedFiles]);
 
   // ฟังก์ชันสร้าง request body ตาม format ที่กำหนด - แก้ไข position_id
@@ -387,7 +429,7 @@ export const useInformRelatedParties = () => {
         `;
 
       await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
-      router.push(`/admin/box/list/${requestBody.complaint_id}?status=final_notify`);
+      router.push(`/admin/box/list`);
 
       // Reset form after successful save
       handleClear();
