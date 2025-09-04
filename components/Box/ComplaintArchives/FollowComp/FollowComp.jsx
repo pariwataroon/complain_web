@@ -125,8 +125,8 @@ const sectionConfigs = [
       ลำดับ: idx + 1,
       "หน่วยงาน(ครั้งที่ส่ง)": row.agency || "-",
       เรื่อง: row.issue || row.subject || "-",
-      เลขที่หนังสือ: row.document_number || row.reference_number || "-",
-      ลงวันที่: row.receiveDate || row.reference_date || "-",
+  เลขที่หนังสือ: row.document_number || "-",
+  ลงวันที่: row.document_date || "-",
       ผู้ลงนาม:
         row.signer ||
         (row.signature_authority_user && row.signature_authority_user.name) ||
@@ -278,7 +278,14 @@ const sectionConfigs = [
 
 // Add button handlers for each section (customize these to fit your actual create routes)
 const addButtonHandlers = {
-  FORWARDED: (router) => router.push("/admin/edit/forward-to-agency/"),
+  FORWARDED: (router, complaintId, complaintNumber) =>
+    router.push({
+      pathname: "/admin/edit/forward-to-agency/",
+      query: {
+        complaint_id: complaintId || "",
+        complaint_number: complaintNumber || "",
+      },
+    }),
   INITIAL_NOTIFY: (router) =>
     router.push("/admin/edit/initial-notification-to-complainant-or-agency/"),
   REQUEST_UPDATE: (router) =>
@@ -587,9 +594,9 @@ const FollowComp = () => {
     ...item,
     agency: item.department?.name || "-",
     issue: item.subject || "-",
-    document_number: item.reference_number || "-",
-    receiveDate: item.reference_date
-      ? new Date(item.reference_date).toLocaleDateString("th-TH")
+  document_number: item.document_number || "-",
+    document_date: item.document_date
+      ? new Date(item.document_date).toLocaleDateString("th-TH")
       : "-",
     signer: item.signature_authority_user?.name || "-",
     attachment_name:
@@ -915,7 +922,16 @@ const FollowComp = () => {
             headers={forwardedHeaders}
             rows={forwardedFilteredRows}
             rowMapper={forwardedRowMapper}
-            onAdd={() => addButtonHandlers.FORWARDED(router)}
+            onAdd={() =>
+              addButtonHandlers.FORWARDED(
+                router,
+                id,
+                documentData?.detail?.complaintNumber ||
+                  documentData?.relationships?.master_complaint?.complaint_number ||
+                  documentData?.relationships?.all_related?.[0]?.complaint_number ||
+                  ""
+              )
+            }
             router={router}
             handleOpenDocument={handleOpenDocument}
             handleManage={handleManage}

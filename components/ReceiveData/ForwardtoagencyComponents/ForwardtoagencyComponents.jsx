@@ -79,41 +79,38 @@ const ForwardtoagencyComponents = () => {
     }
   }, [openSearchDialog]);
 
+  const handleSearch = async (keyword) => {
+    setSearchLoading(true);
+    try {
+      const response = await GetReDocumentComplaints({
+        skip: 0,
+        limit: 100,
+        search: keyword || "",
+      });
+      const items = Array.isArray(response?.res_data?.items)
+        ? response.res_data.items
+        : [];
+      const results = items.map((item) => ({
+        ...item,
+        label: item.complaint_number || "",
+        value: item.complaint_number || "",
+      }));
+      setSearchResults(results);
+    } catch (err) {
+      setSearchResults([]);
+      console.error("handleSearch error", err);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
   
-    const handleSearch = async (keyword) => {
-      setSearchLoading(true);
-      try {
-        const response = await GetReDocumentComplaints({
-          skip: 0,
-          limit: 100,
-          search: keyword || "",
-        });
-  
-  
-        const items = Array.isArray(response?.res_data?.items)
-          ? response.res_data.items
-          : [];
-  
-  
-        const results = items.map((item) => ({
-          ...item,
-          label: item.complaint_number || "",
-          value: item.complaint_number || "",
-        }));
-  
-        setSearchResults(results);
-      } catch (err) {
-        setSearchResults([]);
-        console.error("handleSearch error", err);
-      } finally {
-        setSearchLoading(false);
-      }
-    };
-  
-    const handleSelectReference = (ref) => {
-      setValue("bookNo", ref.document_number, { shouldValidate: true, shouldDirty: true });
-      setOpenSearchDialog(false);
-    };
+    // const handleSelectReference = (ref) => {
+    //   setValue("document_number", ref.document_number, { shouldValidate: true, shouldDirty: true });
+    //   if (ref.document_date) {
+    //     setValue("document_date", new Date(ref.document_date), { shouldValidate: true, shouldDirty: true });
+    //   }
+    //   setOpenSearchDialog(false);
+    // };
   
     const onClear = () => {
       setSearchText("");
@@ -161,7 +158,36 @@ const ForwardtoagencyComponents = () => {
     };
   
     const handleSelectReference2 = (ref) => {
-      setValue("refNo", ref.reference_number, { shouldValidate: true, shouldDirty: true });
+      if (!ref) {
+        setOpenSearchDialog2(false);
+        return;
+      }
+      // เซ็ตเลข สป.กค. (รองรับทั้ง complaint_number และ reference_number)
+      setValue(
+        "complaint_number",
+        ref.complaint_number || ref.reference_number || "",
+        { shouldValidate: true, shouldDirty: true }
+      );
+      // เก็บ complaint_id เพื่อส่งไปกับ body
+      setValue(
+        "complaint_id",
+        ref.id || ref.complaint_id || "",
+        { shouldValidate: true, shouldDirty: true }
+      );
+      // เติมวันที่อัตโนมัติหากมี (รองรับทั้ง complaint_number_date และ reference_date)
+      const dateStr = ref.complaint_number_date || ref.reference_date;
+      if (dateStr) {
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          setValue("complaint_number_date", `${yyyy}-${mm}-${dd}`, {
+            shouldValidate: true,
+            shouldDirty: true,
+          });
+        }
+      }
       setOpenSearchDialog2(false);
     };
   
@@ -202,6 +228,24 @@ const ForwardtoagencyComponents = () => {
     getCurrentFormData,
     fileInputKey, // Get the fileInputKey
   } = useForwardToAgencyForm();
+
+  // Prefill from query params when navigating from FollowComp
+  useEffect(() => {
+    if (!router || !router.query) return;
+    const { complaint_id, complaint_number } = router.query;
+    if (complaint_id) {
+      setValue("complaint_id", complaint_id, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+    if (complaint_number) {
+      setValue("complaint_number", String(complaint_number), {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+  }, [router?.query, setValue]);
 
   const handleSignerSelect = (userInfo) => {
     setSelectedSigner(userInfo);
