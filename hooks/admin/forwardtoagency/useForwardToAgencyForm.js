@@ -20,39 +20,60 @@ const validationSchema = yup.object().shape({
     .string()
     .required("กรุณาเลือกคำขึ้นต้น")
     .notOneOf([""], "กรุณาเลือกคำขึ้นต้น"),
-  refNo: yup
+
+  complaint_number: yup
     .string()
     .required("กรุณากรอกเลข สป.กค.")
     .min(1, "กรุณากรอกเลข สป.กค."),
-  date1: yup.string().nullable().required("กรุณาเลือกวันที่"),
+
+  complaint_number_date: yup
+    .string()
+    .nullable()
+    .required("กรุณาเลือกวันที่ของเลข สป.กค."),
+
   subject: yup
     .string()
     .required("กรุณากรอกเรื่อง")
     .min(5, "เรื่องต้องมีอย่างน้อย 5 ตัวอักษร"),
-  bookNo: yup
+
+  document_number: yup
     .string()
     .required("กรุณากรอกเลขที่หนังสือ")
     .min(1, "กรุณากรอกเลขที่หนังสือ"),
-  date2: yup.string().nullable().required("กรุณาเลือกวันที่"),
+
+  document_date: yup
+    .string()
+    .nullable()
+    .required("กรุณาเลือกวันที่หนังสือ"),
+
   signer: yup
     .string()
     .required("กรุณาเลือกผู้ลงนาม")
     .notOneOf([""], "กรุณาเลือกผู้ลงนาม"),
+
   department: yup
     .string()
     .required("กรุณาเลือกหน่วยงาน")
     .notOneOf([""], "กรุณาเลือกหน่วยงาน"),
+
   confidentiality: yup
     .string()
     .required("กรุณาเลือกชั้นความลับ")
     .notOneOf([""], "กรุณาเลือกชั้นความลับ"),
+
   urgency: yup
     .string()
     .required("กรุณาเลือกชั้นความเร่งด่วน")
     .notOneOf([""], "กรุณาเลือกชั้นความเร่งด่วน"),
-  attachment: yup.string().required("กรุณาแนบเอกสาร").min(1, "กรุณาแนบเอกสาร"),
+
+  attachment: yup
+    .string()
+    .required("กรุณาแนบเอกสาร")
+    .min(1, "กรุณาแนบเอกสาร"),
+
   note: yup.string().optional(),
 });
+
 
 const toYMD = (d) => {
   if (!d) return null;
@@ -81,18 +102,18 @@ export const useForwardToAgencyForm = () => {
     resolver: yupResolver(validationSchema),
     mode: "onChange",
     defaultValues: {
-      position_id: "",
-      reference_number: "",
-      reference_date: null,
-      subject: "",
+      salutation: "",
       complaint_number: "",
       complaint_number_date: null,
-      signature_authority_user_id: "",
-      department_id: "",
-      confidentiality_level: "null",
-      urgency_level: "null",
+      subject: "",
+      document_number: "",
+      document_date: null,
+      signer: "",
+      department: "",
+      confidentiality: "",
+      urgency: "",
       attachment: "",
-      remarks: "",
+      note: "",
     },
   });
 
@@ -190,11 +211,11 @@ export const useForwardToAgencyForm = () => {
   const handleClear = useCallback(() => {
     reset({
       salutation: "",
-      refNo: "",
-      date1: null,
+      complaint_number: "",
+      complaint_number_date: null,
       subject: "",
-      bookNo: "",
-      date2: null,
+      document_number: "",
+      document_date: null,
       signer: "",
       department: "",
       confidentiality: "",
@@ -238,13 +259,13 @@ export const useForwardToAgencyForm = () => {
 
         const outgoingReportData = {
           position_id: data.salutation,
-          reference_number: (data.refNo || "").trim(),
-          reference_date: toYMD(data.date1),
+          reference_number: (data.complaint_number || "").trim(),  // เลข สป.กค.
+          reference_date: toYMD(data.complaint_number_date),       // วันที่ของเลข สป.กค.
           subject: (data.subject || "").trim(),
-          complaint_number: (data.bookNo || "").trim(),
-          complaint_number_date: toYMD(data.date2),
-          document_number: (data.bookNo || "").trim(),
-          document_date: toYMD(data.date2),
+          complaint_number: (data.complaint_number || "").trim(),  // เลข สป.กค.
+          complaint_number_date: toYMD(data.complaint_number_date),// วันที่ของเลข สป.กค.
+          document_number: (data.document_number || "").trim(),    // เลขที่หนังสือ
+          document_date: toYMD(data.document_date),                // วันที่หนังสือ
           signature_authority_user_id: data.signer,
           department_id: data.department,
           confidentiality_level: data.confidentiality,
@@ -288,7 +309,10 @@ export const useForwardToAgencyForm = () => {
 
           const errorMessage = errorSources[0] || "ไม่สามารถสร้างรายงานได้";
 
-          throw new Error(errorMessage);
+          // throw new Error(errorMessage);
+          closeAlert();
+  await alertError("เกิดข้อผิดพลาด", errorMessage);
+  return { success: false, error: errorMessage };
         }
 
         const reportId = createResponse.res_data?.id;
@@ -345,11 +369,11 @@ export const useForwardToAgencyForm = () => {
 
         reset({
           salutation: "",
-          refNo: "",
-          date1: null,
+          complaint_number: "",
+          complaint_number_date: null,
           subject: "",
-          bookNo: "",
-          date2: null,
+          document_number: "",
+          document_date: null,
           signer: "",
           department: "",
           confidentiality: "",
@@ -407,11 +431,11 @@ export const useForwardToAgencyForm = () => {
   const isRequired = useCallback((fieldName) => {
     const requiredFields = [
       "salutation",
-      "refNo",
-      "date1",
+      "complaint_number",
+      "complaint_number_date",
       "subject",
-      "bookNo",
-      "date2",
+      "document_number",
+      "document_date",
       "signer",
       "department",
       "confidentiality",
@@ -426,11 +450,11 @@ export const useForwardToAgencyForm = () => {
     const currentData = watch();
     const requiredFields = [
       "salutation",
-      "refNo",
-      "date1",
+      "complaint_number",
+      "complaint_number_date",
       "subject",
-      "bookNo",
-      "date2",
+      "document_number",
+      "document_date",
       "signer",
       "department",
       "confidentiality",
@@ -493,11 +517,11 @@ export const useForwardToAgencyForm = () => {
 
   const requiredFields = [
     "salutation",
-    "refNo",
-    "date1",
+    "complaint_number",
+    "complaint_number_date",
     "subject",
-    "bookNo",
-    "date2",
+    "document_number",
+    "document_date",
     "signer",
     "department",
     "confidentiality",

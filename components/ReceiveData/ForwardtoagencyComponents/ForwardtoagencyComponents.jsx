@@ -111,14 +111,7 @@ const ForwardtoagencyComponents = () => {
     };
   
     const handleSelectReference = (ref) => {
-      setValue("document_number", ref.document_number || "", {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-      setValue("document_date", ref.document_date || null, {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
+      setValue("bookNo", ref.document_number, { shouldValidate: true, shouldDirty: true });
       setOpenSearchDialog(false);
     };
   
@@ -166,20 +159,11 @@ const ForwardtoagencyComponents = () => {
         setSearchLoading(false);
       }
     };
-    
   
-      const handleSelectReference2 = (ref) => {
-        setValue("complaint_number", ref.complaint_number || "", {
-          shouldValidate: true,
-          shouldDirty: true,
-        });
-        setValue("complaint_number_date", ref.complaint_number_date || null, {
-          shouldValidate: true,
-          shouldDirty: true,
-        });
-        setOpenSearchDialog2(false);
-      };
-
+    const handleSelectReference2 = (ref) => {
+      setValue("refNo", ref.reference_number, { shouldValidate: true, shouldDirty: true });
+      setOpenSearchDialog2(false);
+    };
   
     const onClear2 = () => {
       setSearchText("");
@@ -358,6 +342,7 @@ const ForwardtoagencyComponents = () => {
               width: "100%",
             }}
           >
+            {/* เรียน */}
             <Controller
               name="salutation"
               control={control}
@@ -369,15 +354,12 @@ const ForwardtoagencyComponents = () => {
                   onChange={(e) => field.onChange(e.target.value)}
                   error={!!getFieldError("salutation")}
                   helperText={getFieldError("salutation")}
-                  sx={{
-                    position: "relative",
-                    zIndex: 1,
-                    width: { xs: "80%", sm: "auto" },
-                  }}
+                  sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}
                 />
               )}
             />
 
+            {/* เลข สป.กค. */}
             <Controller
               name="complaint_number"
               control={control}
@@ -390,15 +372,12 @@ const ForwardtoagencyComponents = () => {
                   onChange={field.onChange}
                   error={!!getFieldError("complaint_number")}
                   helperText={getFieldError("complaint_number")}
-                  sx={{
-                    position: "relative",
-                    zIndex: 1,
-                    width: { xs: "80%", sm: "auto" },
-                  }}
+                  sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}
                 />
               )}
             />
 
+            {/* ปุ่มค้นหาเลข สป.กค. */}
             <Box sx={{ display: "flex", alignItems: "center" }}>
               <IconButton
                 onClick={() => setOpenSearchDialog2(true)}
@@ -413,7 +392,7 @@ const ForwardtoagencyComponents = () => {
               </IconButton>
             </Box>
 
-            {/* ✅ Dialog เดิมยังคงอยู่ */}
+            {/* Dialog สำหรับค้นหาเลข สป.กค. */}
             <Dialog
               open={openSearchDialog2}
               onClose={() => setOpenSearchDialog2(false)}
@@ -478,11 +457,23 @@ const ForwardtoagencyComponents = () => {
                   sx={{ mb: 2 }}
                 />
 
-                {/* Loading / Empty / Results */}
+                {/* สถานะโหลด / ไม่พบ / รายการ */}
                 {searchLoading ? (
-                  <div style={{ textAlign: "center", padding: 24 }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: 24,
+                    }}
+                  >
                     <CircularProgress color="primary" />
-                    <div style={{ marginTop: 8, color: "#888" }}>กำลังค้นหา...</div>
+                    <div
+                      style={{
+                        marginTop: 8,
+                        color: "#888",
+                      }}
+                    >
+                      กำลังค้นหา...
+                    </div>
                   </div>
                 ) : searchResults.length === 0 ? (
                   <div
@@ -492,10 +483,7 @@ const ForwardtoagencyComponents = () => {
                       color: "#bdbdbd",
                     }}
                   >
-                    <DescriptionIcon
-                      sx={{ fontSize: 48, mb: 2 }}
-                      color="disabled"
-                    />
+                    <DescriptionIcon sx={{ fontSize: 48, mb: 2 }} color="disabled" />
                     <div>ไม่พบรายการเลขที่อ้างอิง</div>
                   </div>
                 ) : (
@@ -565,36 +553,28 @@ const ForwardtoagencyComponents = () => {
               </DialogContent>
 
               <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button
-                  onClick={() => setOpenSearchDialog2(false)}
-                  variant="outlined"
-                  color="inherit"
-                >
+                <Button onClick={() => setOpenSearchDialog2(false)} variant="outlined" color="inherit">
                   ปิด
                 </Button>
               </DialogActions>
             </Dialog>
 
-            {/* ✅ วันที่ของ complaint_number */}
-            <Box
-              sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}
-            >
-              <Controller
-                name="complaint_number_date"
-                control={control}
-                render={({ field }) => (
-                  <DateThaiPickerService
-                    label={createLabel("วันที่", "complaint_number_date")}
-                    value={field.value}
-                    onChange={handleDateChange("complaint_number_date")}
-                    placeholder="เลือกวันที่"
-                    error={!!getFieldError("complaint_number_date")}
-                    helperText={getFieldError("complaint_number_date")}
-                    maxDate={new Date().toISOString()}
-                  />
-                )}
-              />
-            </Box>
+            {/* วันที่ของเลข สป.กค. */}
+            <Controller
+              name="complaint_number_date"
+              control={control}
+              render={({ field }) => (
+                <DateThaiPickerService
+                  label={createLabel("วันที่", "complaint_number_date")}
+                  value={field.value}
+                  onChange={handleDateChange("complaint_number_date")}
+                  placeholder="เลือกวันที่"
+                  error={!!getFieldError("complaint_number_date")}
+                  helperText={getFieldError("complaint_number_date")}
+                  maxDate={new Date().toISOString()}
+                />
+              )}
+            />
           </Box>
 
           {/* Row 2: เรื่อง */}
@@ -633,15 +613,18 @@ const ForwardtoagencyComponents = () => {
               name="document_number"
               control={control}
               render={({ field }) => (
-                <InputText
-                  label={createLabel("เลขที่หนังสือ", "document_number")}
-                  inputLabel="กรอกเลขที่หนังสือ"
-                  name="document_number"
-                  value={field.value}
-                  onChange={field.onChange}
-                  error={!!getFieldError("document_number")}
-                  helperText={getFieldError("document_number")}
-                />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <InputText
+                    label={createLabel("เลขที่หนังสือ", "document_number")}
+                    inputLabel="กรอกเลขที่หนังสือ"
+                    name="document_number"
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={!!getFieldError("document_number")}
+                    helperText={getFieldError("document_number")}
+                    sx={{ flex: 1 }}
+                  />
+                </Box>
               )}
             />
 
@@ -652,7 +635,7 @@ const ForwardtoagencyComponents = () => {
                 control={control}
                 render={({ field }) => (
                   <DateThaiPickerService
-                    label={createLabel("วันที่หนังสือ", "document_date")}
+                    label={createLabel("วันที่", "document_date")}
                     value={field.value}
                     onChange={handleDateChange("document_date")}
                     placeholder="เลือกวันที่"
