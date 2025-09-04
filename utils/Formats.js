@@ -151,9 +151,8 @@ export function formatThaiFullDate(isoString) {
     return null;
   }
 
-  return `วัน${d.format("dddd")}ที่ ${d.format("D MMMM")} พ.ศ. ${
-    d.year() + 543
-  }`;
+  return `วัน${d.format("dddd")}ที่ ${d.format("D MMMM")} พ.ศ. ${d.year() + 543
+    }`;
 }
 
 // แปลง ISO เป็นรูปแบบสั้น (DD/MM/YYYY)
@@ -208,9 +207,8 @@ export function formatThaiFullDateTime(isoString) {
     return null;
   }
 
-  return `วัน${d.format("dddd")}ที่ ${d.format("D MMMM")} พ.ศ. ${
-    d.year() + 543
-  } เวลา ${d.format("HH:mm")} น.`;
+  return `วัน${d.format("dddd")}ที่ ${d.format("D MMMM")} พ.ศ. ${d.year() + 543
+    } เวลา ${d.format("HH:mm")} น.`;
 }
 
 // แปลง ISO เป็นรูปแบบสั้นพร้อมเวลา (DD/MM/YYYY HH:MM)
@@ -383,6 +381,70 @@ export function truncateText(text, maxLength = 50) {
   if (!text) return "-";
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength) + "...";
+}
+
+// แยกคำนำหน้า ชื่อ และนามสกุลจากข้อความภาษาไทยแบบยืดหยุ่น
+// รองรับกรณีคำนำหน้าเขียนติดกับชื่อ (เช่น "นายต่อพงษ์ วรกุล") หรือมีช่องว่างหลายแบบ
+export function parseThaiName(fullNameInput) {
+  const text = (fullNameInput || "").toString().trim().replace(/\s+/g, " ");
+  if (!text) return { title: "", firstName: "", lastName: "" };
+
+  // เรียงจากยาวไปสั้นเพื่อ match ที่ถูกต้องกว่า
+  const titles = [
+    "ว่าที่ ร้อยตำรวจเอก", "ว่าที่ ร้อยตำรวจโท", "ว่าที่ ร้อยตำรวจตรี",
+    "ว่าที่ พันตำรวจเอก", "ว่าที่ พันตำรวจโท", "ว่าที่ พันตำรวจตรี",
+    "ว่าที่ ร้อยเอก", "ว่าที่ ร้อยโท", "ว่าที่ ร้อยตรี",
+    "ว่าที่ ร.ต.อ.", "ว่าที่ ร.ต.ท.", "ว่าที่ ร.ต.ต.",
+    "ว่าที่ ร.อ.", "ว่าที่ ร.ท.", "ว่าที่ ร.ต.",
+    "ศาสตราจารย์ ดร.", "รองศาสตราจารย์ ดร.", "ผู้ช่วยศาสตราจารย์ ดร.",
+    "ศาสตราจารย์", "รองศาสตราจารย์", "ผู้ช่วยศาสตราจารย์",
+    "ดร.",
+    "พลตำรวจเอก", "พลตำรวจโท", "พลตำรวจตรี",
+    "พันตำรวจเอก", "พันตำรวจโท", "พันตำรวจตรี",
+    "ร้อยตำรวจเอก", "ร้อยตำรวจโท", "ร้อยตำรวจตรี",
+    "ร้อยเอก", "ร้อยโท", "ร้อยตรี",
+    "คุณ", "นาย", "นาง", "นางสาว", "ด.ช.", "ด.ญ.",
+  ];
+
+  // ทำเวอร์ชันไม่มีช่องวรรคของบางคำนำหน้าที่พบบ่อย เพื่อรองรับแบบเขียนติด
+  const compactTitles = new Set(
+    titles
+      .concat(["ว่าที่ร้อยเอก", "ว่าที่ร้อยโท", "ว่าที่ร้อยตรี", "ว่าที่ร.ต.", "ว่าที่ร.อ.", "ว่าที่ร.ท."])
+      .map((t) => t.replace(/\s+/g, ""))
+  );
+
+  // helper สำหรับคืนผล
+  const pack = (t, f, l) => ({ title: t || "", firstName: f || "", lastName: l || "" });
+
+  const parts = text.split(" ");
+
+  // 1) ถ้าเริ่มด้วยคำนำหน้าชัดเจน (ตรง ๆ)
+  if (titles.includes(parts[0])) {
+    if (parts.length >= 3) return pack(parts[0], parts[1], parts.slice(2).join(" "));
+    if (parts.length === 2) return pack(parts[0], parts[1], "");
+    return pack(parts[0], "", "");
+  }
+
+  // 2) ถ้าคำนำหน้าเขียนติดกับชื่อ เช่น "นายต่อพงษ์ วรกุล" หรือ "ด.ช.ปริญญา เหลิมศักดิ์"
+  //    ลองหา title แบบไม่มีช่องวรรคที่ขึ้นต้น string
+  const firstToken = parts[0];
+  const firstCompact = firstToken.replace(/\s+/g, "");
+  // หา candidate titles ที่เป็น prefix ของ firstCompact โดยเลือกตัวที่ยาวที่สุด
+  let best = "";
+  for (const t of compactTitles) {
+    if (firstCompact.startsWith(t) && t.length > best.length) best = t;
+  }
+  if (best && firstCompact.length > best.length) {
+    const titleExpanded = titles.find((t) => t.replace(/\s+/g, "") === best) || best;
+    const restFirst = firstCompact.slice(best.length);
+    const firstName = restFirst; // ส่วนที่เหลือของ token แรกหลังตัดคำนำหน้า
+    const lastName = parts.slice(1).join(" ");
+    return pack(titleExpanded, firstName, lastName);
+  }
+
+  // 3) เคสทั่วไปที่ไม่มีคำนำหน้า: แยกเป็นชื่อ/นามสกุล
+  if (parts.length >= 2) return pack("", parts[0], parts.slice(1).join(" "));
+  return pack("", text, "");
 }
 
 // ฟังก์ชันจัดรูปแบบชื่อคน

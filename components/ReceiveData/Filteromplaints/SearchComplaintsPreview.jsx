@@ -16,6 +16,7 @@ import {
   formatCitizenId_null,
   formatThaiFullDate,
   formatThaiFullDateTime,
+  parseThaiName,
 } from "@utils/Formats";
 import CheckIcon from "@mui/icons-material/Check";
 import { exportElementToPDF } from "@utils/exportPDF";
@@ -396,60 +397,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
     }
   }
 
-  function splitThaiName(fullName) {
-    const text = (fullName || "").trim().replace(/\s+/g, " ");
-    if (!text) return { title: "", firstName: "", lastName: "" };
-
-    // รายการคำนำหน้าที่พบบ่อย (พิมพ์ตามที่ผู้ใช้กรอก โดยไม่บังคับเว้นวรรค)
-    const titles = [
-      "นาย",
-      "นาง",
-      "นางสาว",
-      "ด.ช.",
-      "ด.ญ.",
-      "ดร.",
-      "ร.ต.",
-      "ร.ท.",
-      "ร.อ.",
-      "ว่าที่ ร.ต.",
-      "ว่าที่ ร.ท.",
-      "ว่าที่ ร.อ.",
-    ];
-
-    const parts = text.split(" ");
-
-    // เคสทั่วไป: มีเว้นวรรคครบ 3 ส่วนขึ้นไป => [คำนำหน้า, ชื่อ, นามสกุล...]
-    if (parts.length >= 3) {
-      return {
-        title: parts[0],
-        firstName: parts[1],
-        lastName: parts.slice(2).join(" "),
-      };
-    }
-
-    // เคส 2 ส่วน เช่น "นายต่อพงษ์ วรกุล" หรือ "นาย ต่อพงษ์"
-    if (parts.length === 2) {
-      let first = parts[0];
-      const last = parts[1];
-      // ถ้า first รวมคำนำหน้ากับชื่อไว้ด้วยกัน เช่น "นายต่อพงษ์"
-      const matchedTitle = titles.find((t) => first.startsWith(t));
-      if (matchedTitle && first.length > matchedTitle.length) {
-        const givenName = first.slice(matchedTitle.length);
-        return { title: matchedTitle, firstName: givenName, lastName: last };
-      }
-      // ปกติ: first = คำนำหน้า, last = ชื่อ (ไม่มีนามสกุล)
-      return { title: first, firstName: last, lastName: "" };
-    }
-
-    // เคส 1 ส่วน เช่น กรอกเฉพาะชื่อ หรือกรอกเป็น "นายต่อพงษ์วรกุล"
-    const one = parts[0];
-    const matchedTitle = titles.find((t) => one.startsWith(t));
-    if (matchedTitle && one.length > matchedTitle.length) {
-      const rest = one.slice(matchedTitle.length);
-      return { title: matchedTitle, firstName: rest, lastName: "" };
-    }
-    return { title: "", firstName: one, lastName: "" };
-  }
+  const splitThaiName = (fullName) => parseThaiName(fullName);
   // ข้อมูลจาก step1 (ผู้ร้องทุกข์)
   const complainant = step1.general?.general || {};
 
@@ -523,22 +471,20 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   const responsibleOfficerName = (() => {
     const ro = additionalDetails?.responsibleOfficer;
     if (!ro) return "-";
-    // If it's a plain id string, try to resolve from staffUsers
-    if (typeof ro === "string") {
-      const found = staffUsers.find(
-        (u) => u.value === ro || u.id === ro
-      );
-      return (
-        found?.fullName || found?.label || found?.name || ro || "-"
-      );
+    // Try to resolve by id first for consistency
+    const id =
+      (typeof ro === "object" && (ro.id || ro.value)) ||
+      (typeof ro === "string" && ro) ||
+      "";
+    if (id) {
+      const found = staffUsers.find((u) => u.value === id || u.id === id);
+      if (found) return found.fullName || found.label || found.name || id;
     }
-    // Object: prefer fullName -> name -> label; if still missing, try resolve by id
-    const base = ro.fullName || ro.name || ro.label;
-    if (base) return base;
-    const id = ro.id || ro.value;
-    if (!id) return "-";
-    const found = staffUsers.find((u) => u.value === id || u.id === id);
-    return found?.fullName || found?.label || found?.name || "-";
+    // Fallback to fields inside object or the raw string
+    if (typeof ro === "object") {
+      return ro.fullName || ro.name || ro.label || "-";
+    }
+    return ro || "-";
   })();
 
   return (

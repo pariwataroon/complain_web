@@ -21,6 +21,7 @@ import {
   formatThaiDateTime,
   formatPhoneNumber_null,
   formatCitizenId_null,
+  parseThaiName,
 } from "@utils/Formats";
 import { Select, MenuItem, FormControl } from "@mui/material";
 // ===== helper สำหรับไฟล์แนบ =====
@@ -237,6 +238,14 @@ const FollowStatusSummary = ({ data = {} }) => {
       </Typography>
     </Grid>
   );
+
+  // ระบุชื่อผู้บันทึก และผู้รับผิดชอบจากข้อมูลที่มี
+  const recorderName = data?.recorderName || data?.updated_by || "-";
+  const responsibleName =
+    data?.responsibleOfficerName ||
+    data?.assignment_form?.assigned_officer_name ||
+    agencyReports?.[0]?.reporter_name ||
+    "-";
   return (
     <Box>
       <div ref={pdfRef} id="pdfRoot" className={styles.printRoot}>
@@ -812,7 +821,7 @@ const FollowStatusSummary = ({ data = {} }) => {
                   <Box component="span" fontWeight={700}>
                     ลงชื่อเจ้าหน้าที่บันทึกข้อมูล
                   </Box>{" "}
-                  : {normalizeValue(left.name)}
+                  : {normalizeValue(recorderName)}
                 </Typography>
                 <Typography fontSize={13} color="text.secondary">
                   วันที่ : {formatThaiDate()}
@@ -823,7 +832,7 @@ const FollowStatusSummary = ({ data = {} }) => {
                   <Box component="span" fontWeight={700}>
                     ลงชื่อเจ้าหน้าที่ผู้รับผิดชอบ
                   </Box>{" "}
-                  : {normalizeValue(agencyReports?.[0]?.reporter_name)}
+                  : {normalizeValue(responsibleName)}
                 </Typography>
                 <Typography fontSize={13} color="text.secondary">
                   วันที่ :{" "}
