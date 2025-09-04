@@ -65,13 +65,9 @@ async def create_outgoing_report(
         logger.info(f"Report data: {report_data}")
         logger.info(f"Current user ID: {current_user_id} (type: {type(current_user_id)})")
 
-        # ตรวจซ้ำ reference_number
-        existing = db.query(OutgoingReport).filter(
-            OutgoingReport.reference_number == report_data.reference_number,
-            OutgoingReport.is_active == True
-        ).first()
-        if existing:
-            raise DuplicateKeyError(f"เลข สป.กค {report_data.reference_number} มีอยู่แล้ว")
+    # อนุญาตให้ reference_number ซ้ำได้ (อ้างอิงเรื่องเดียวกันได้หลายครั้ง)
+    # เดิมมีการตรวจซ้ำแบบ global ซึ่งขัดกับกติกางาน จึงตัดออก
+    # หากต้องการ uniqueness แบบจำเพาะ ให้ไปกำหนดใน DB หรือปรับเงื่อนไขให้แคบลง (เช่น ต่อ complaint_id)
 
         # validate foreign keys หลัก ๆ
         position = db.query(Position).filter(Position.id == report_data.position_id, Position.is_active == True).first()
