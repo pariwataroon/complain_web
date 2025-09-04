@@ -97,94 +97,219 @@ const GetMapJSONThailandMapData = async () => {
 };
 
 //!! 2
-const GetComplaintSummary = async () => {
+const GetComplaintSummary = async (filterParams = null) => {
   try {
-    const currentYearTH = new Date().getFullYear() + 543;
-    const response = await axiosInstance.get("/dashboard/summary");
+    const currentYearCE = new Date().getFullYear();
+
+    const toInt = (v) =>
+      v == null ? null : parseInt(String(v).replace(/[^\d]/g, ""), 10);
+
+    const toCE = (y) => {
+      const n = toInt(y);
+      if (!n) return null;
+      return n >= 2400 ? n - 543 : n;
+    };
+
+    const toTH = (y) => {
+      const n = toInt(y);
+      if (!n) return null;
+      return n >= 2400 ? n : n + 543;
+    };
+
+    let urlParams = new URLSearchParams();
+
+    if (filterParams) {
+      switch (filterParams.mode) {
+        case "monthly": {
+          urlParams.append("period_type", "monthly");
+          urlParams.append("year", toCE(filterParams.year) ?? currentYearCE);
+
+          const monthMap = {
+            "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
+            "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "สิงหาคม": 8,
+            "กันยายน": 9, "ตุลาคม": 10, "พฤศจิกายน": 11, "ธันวาคม": 12,
+          };
+          if (filterParams.month && monthMap[filterParams.month]) {
+            urlParams.append("month", monthMap[filterParams.month]);
+          }
+          break;
+        }
+
+        case "quarterly": {
+          urlParams.append("period_type", "quarterly");
+          urlParams.append("year", toCE(filterParams.year) ?? currentYearCE);
+
+          const quarterMap = {
+            "ไตรมาสที่ 1": 1, "ไตรมาสที่ 2": 2, "ไตรมาสที่ 3": 3, "ไตรมาสที่ 4": 4,
+          };
+          if (filterParams.quarter && quarterMap[filterParams.quarter]) {
+            urlParams.append("quarter", quarterMap[filterParams.quarter]);
+          }
+          break;
+        }
+
+        case "yearly": {
+          urlParams.append("period_type", "yearly");
+          urlParams.append("year", toCE(filterParams.year) ?? currentYearCE);
+          break;
+        }
+
+        case "department": 
+        case "compare": {
+          urlParams.append("period_type", "compare");
+          urlParams.append("year", toCE(filterParams.toYear ?? filterParams.year) ?? currentYearCE);
+          urlParams.append(
+            "compare_year",
+            toCE(filterParams.fromYear) ??
+              ((toCE(filterParams.toYear ?? filterParams.year) ?? currentYearCE) - 1)
+          );
+          break;
+        }
+
+        default:
+          break;
+      }
+    }
+
+    const apiUrl = urlParams.toString()
+      ? `/dashboard/summary?${urlParams.toString()}`
+      : "/dashboard/summary";
+
+    const response = await axiosInstance.get(apiUrl);
 
     if (response?.data?.res_code === "0000" && response?.data?.res_data) {
-      const { summary, latest_month_by_department, date_range_bangkok } =
-        response.data.res_data;
+      const resd = response?.data?.res_data || {};
+      const summary = resd?.summary || null;
+      const latest_month_by_department = resd?.latest_month_by_department || null;
+      const date_range_bangkok =
+        resd?.date_range_bangkok || latest_month_by_department?.date_range_bangkok || null;
+      const chart_data = resd?.chart_data || null;
 
-      const dashboardCards = [
+      const baseToYearCE =
+        toCE(filterParams?.toYear ?? filterParams?.year) ??
+        toCE(resd?.year) ??
+        currentYearCE;
+
+      const compareCE =
+        toCE(filterParams?.fromYear) ??
+        summary?.yoy?.compare_with_year ??
+        toCE(resd?.compare_year) ??
+        (baseToYearCE - 1);
+
+      const cards = [
         {
           id: "total",
           title: "เรื่องราวร้องทุกข์ทั้งหมด",
-          count: summary.total,
+          count: Number(summary?.total ?? 0),
           unit: "เรื่อง",
           gradient: "cardBrown",
-          trend: summary.yoy.total.pct_change_label,
-          trendValue: summary.yoy.total.diff,
-          compareYear: (currentYearTH),
-          isPositive: summary.yoy.total.diff >= 0,
-          previousValue: summary.yoy.total.previous,
-          currentValue: summary.yoy.total.current,
+          trend: summary?.yoy?.total?.pct_change_label || "0%",
+          trendValue: summary?.yoy?.total?.diff ?? 0,
+          compareYear: toTH(compareCE),
+          compareYearCE: compareCE,
+          isPositive: (summary?.yoy?.total?.diff ?? 0) >= 0,
+          previousValue: summary?.yoy?.total?.previous ?? 0,
+          currentValue: summary?.yoy?.total?.current ?? Number(summary?.total ?? 0),
         },
         {
           id: "completed",
           title: "เรื่องราวร้องทุกข์ยุติ",
-          count: summary.completed,
+          count: Number(summary?.completed ?? 0),
           unit: "เรื่อง",
           gradient: "cardBlue",
-          trend: summary.yoy.completed.pct_change_label,
-          trendValue: summary.yoy.completed.diff,
-          compareYear: (currentYearTH),
-          isPositive: summary.yoy.completed.diff >= 0,
-          previousValue: summary.yoy.completed.previous,
-          currentValue: summary.yoy.completed.current,
+          trend: summary?.yoy?.completed?.pct_change_label || "0%",
+          trendValue: summary?.yoy?.completed?.diff ?? 0,
+          compareYear: toTH(compareCE),
+          compareYearCE: compareCE,
+          isPositive: (summary?.yoy?.completed?.diff ?? 0) >= 0,
+          previousValue: summary?.yoy?.completed?.previous ?? 0,
+          currentValue:
+            summary?.yoy?.completed?.current ?? Number(summary?.completed ?? 0),
         },
         {
           id: "in_progress",
           title: "เรื่องราวร้องทุกข์ดำเนินการ",
-          count: summary.in_progress,
+          count: Number(summary?.in_progress ?? 0),
           unit: "เรื่อง",
           gradient: "cardPink",
-          trend: summary.yoy.in_progress.pct_change_label,
-          trendValue: summary.yoy.in_progress.diff,
-          compareYear: (currentYearTH),
-          isPositive: summary.yoy.in_progress.diff >= 0,
-          previousValue: summary.yoy.in_progress.previous,
-          currentValue: summary.yoy.in_progress.current,
+          trend: summary?.yoy?.in_progress?.pct_change_label || "0%",
+          trendValue: summary?.yoy?.in_progress?.diff ?? 0,
+          compareYear: toTH(compareCE),
+          compareYearCE: compareCE,
+          isPositive: (summary?.yoy?.in_progress?.diff ?? 0) >= 0,
+          previousValue: summary?.yoy?.in_progress?.previous ?? 0,
+          currentValue:
+            summary?.yoy?.in_progress?.current ?? Number(summary?.in_progress ?? 0),
         },
       ];
 
-      const departmentData = latest_month_by_department.items.map(
-        (item, index) => ({
+      let departmentData = [];
+      if (latest_month_by_department?.items) {
+        departmentData = latest_month_by_department.items.map((item, index) => ({
           id: item.id,
           name: item.name,
-          count: item.count,
-          percent: item.percent,
-          formattedPercent: `${item.percent.toFixed(2)}%`,
+          count: Number(item.count ?? 0),
+          percent: Number(item.percent ?? 0),
+          formattedPercent: `${Number(item.percent ?? 0).toFixed(2)}%`,
           rank: index + 1,
-        })
-      );
+        }));
+      } else if (chart_data?.monthly_breakdown) {
+        const monthlyTotals = chart_data.monthly_breakdown
+          .filter((m) => Number(m.total ?? 0) > 0)
+          .map((m, index) => ({
+            id: `month-${m.month}`,
+            name: m.month_name,
+            count: Number(m.total ?? 0),
+            percent: 0,
+            formattedPercent: "0%",
+            rank: index + 1,
+          }));
+        const totalCount = monthlyTotals.reduce((s, i) => s + i.count, 0);
+        departmentData = totalCount
+          ? monthlyTotals.map((i) => ({
+              ...i,
+              percent: (i.count / totalCount) * 100,
+              formattedPercent: `${((i.count / totalCount) * 100).toFixed(2)}%`,
+            }))
+          : monthlyTotals;
+      }
 
       return {
         success: true,
-        dashboardCards,
+        dashboardCards: cards,
         departmentData,
-        compareWithYear: summary.yoy.compare_with_year,
-        dateRange: date_range_bangkok,
-        latestMonthTotal: latest_month_by_department.total,
-        latestMonthRange: latest_month_by_department.date_range_bangkok,
+        compareWithYear: toTH(compareCE),
+        dateRange: date_range_bangkok ?? null,
+        latestMonthTotal: Number(
+          latest_month_by_department?.total ?? summary?.total ?? 0
+        ), // จุดที่เคยพัง แก้ให้มี default
+        latestMonthRange:
+          latest_month_by_department?.date_range_bangkok ??
+          date_range_bangkok ??
+          null,
+        chartData: chart_data || null,
+        periodType: resd?.period_type ?? null,
+        year: resd?.year ?? null,      
+        quarter: resd?.quarter ?? null,
+        month: resd?.month ?? null,
         raw: response.data,
       };
-    } else {
-      return {
-        success: false,
-        dashboardCards: [],
-        departmentData: [],
-        message: response?.data?.res_message || "ไม่พบข้อมูล",
-        raw: response?.data,
-      };
     }
+
+    return {
+      success: false,
+      dashboardCards: [],
+      departmentData: [],
+      message: response?.data?.res_message || "ไม่พบข้อมูล",
+      raw: response?.data,
+    };
   } catch (error) {
     console.error("Error fetching complaint summary:", error);
     return {
       success: false,
       dashboardCards: [],
       departmentData: [],
-      error: error.message || "เกิดข้อผิดพลาดในการดึงข้อมูล",
+      error: error?.message || "เกิดข้อผิดพลาดในการดึงข้อมูล",
     };
   }
 };
