@@ -112,6 +112,11 @@ const InitialNotificationComplainantAgency = () => {
       handleChange({
         target: { name: "complaint_id", value: ref.id }
       });
+      if (ref?.complaint_number) {
+        handleChange({
+          target: { name: "complaint_number", value: ref.complaint_number }
+        });
+      }
       setOpenSearchDialog(false);
     };
   
@@ -259,7 +264,7 @@ const InitialNotificationComplainantAgency = () => {
             p: { xs: 2, sm: 3, md: 5 },
           }}
         >
-         {/* Row 1: เรียน | เลขที่หนังสือ* (with search) | วันที่* */}
+         {/* Row 1: เรียน | เลข สป.กค. | เลขที่หนังสือ* (with search) | วันที่* */}
           <Box
             sx={{
               display: "grid",
@@ -267,7 +272,7 @@ const InitialNotificationComplainantAgency = () => {
               gridTemplateColumns: {
                 xs: "1fr",
                 sm: "1fr 1fr",
-                md: "6fr 4fr 3fr",
+                md: "4fr 4fr 3fr 3fr",
               },
               width: "100%",
             }}
@@ -279,6 +284,17 @@ const InitialNotificationComplainantAgency = () => {
               onChange={handleChange}
               error={!!getFieldError("salutation")}
               helperText={getFieldError("salutation")}
+            />
+
+            {/* เลข สป.กค. */}
+            <InputText
+              label={createLabel("เลข สป.กค.", "complaint_number")}
+              inputLabel="กรอกเลข สป.กค."
+              name="complaint_number"
+              value={form.complaint_number || ""}
+              onChange={handleChange}
+              error={!!getFieldError("complaint_number")}
+              helperText={getFieldError("complaint_number")}
             />
 
             {/* เลขที่หนังสือ + icon */}

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   alertSuccess,
@@ -11,11 +11,11 @@ import {
   UploadOutgoingReportAttachments,
 } from "@pages/api/outgoinreports/outgoinreports";
 
-  const toYMD = (d) => {
-    if (!d) return null;
-    const dt = new Date(d);
-    return isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
-  };
+const toYMD = (d) => {
+  if (!d) return null;
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
+};
 
 export const useInitialNotificationComplainantAgency = () => {
   const router = useRouter();
@@ -33,8 +33,9 @@ export const useInitialNotificationComplainantAgency = () => {
     urgency: "",
     attachment: "",
     note: "",
-    position_id: "",  
+    position_id: "",
     complaint_id: "",
+    complaint_number: "",
     selected_complaint_number: "", // เพิ่มฟิลด์นี้เพื่อเก็บ complaint_number ที่เลือก
   });
 
@@ -43,6 +44,24 @@ export const useInitialNotificationComplainantAgency = () => {
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+
+  // -------- Prefill from query (complaint_id, complaint_number, created_at) --------
+  useEffect(() => {
+    if (!router?.isReady) return;
+    const { complaint_id: qId, complaint_number: qNum, created_at } = router.query || {};
+    if (!qId && !qNum && !created_at) return;
+
+    setForm((prev) => {
+      let next = { ...prev };
+      if (qId && !next.complaint_id) next.complaint_id = String(qId);
+      if (qNum && !next.complaint_number) next.complaint_number = String(qNum);
+      if (created_at && !next.date) {
+        const d = new Date(created_at);
+        if (!isNaN(d.getTime())) next.date = d;
+      }
+      return next;
+    });
+  }, [router?.isReady, router?.query]);
 
   // -------- Required fields (ตามที่ให้ไว้) --------
   const requiredFields = [
@@ -204,6 +223,7 @@ export const useInitialNotificationComplainantAgency = () => {
       note: "",
       position_id: "",
       complaint_id: "",
+      complaint_number: "",
       selected_complaint_number: "", // เพิ่มฟิลด์นี้
     });
     setAttachmentFiles([]);
@@ -221,10 +241,10 @@ export const useInitialNotificationComplainantAgency = () => {
 
     const payload = {
       position_id: form.position_id || "7e18e4fe-d416-4580-b4d4-2a4032f67770",
-      complaint_number: form.refNo,
+      complaint_number: form.complaint_number || "",
       complaint_number_date: toISOorNull(form.date),
-      document_number: "",
-      document_date: toISOorNull(form.date), 
+      document_number: form.refNo || "",
+      document_date: toISOorNull(form.date),
       subject: form.subject || "",
       signature_authority_user_id: nullIfEmpty(form.signer),
       department_id: nullIfEmpty(form.department),
@@ -243,15 +263,15 @@ export const useInitialNotificationComplainantAgency = () => {
       const createRes = await CreateOutgoingReport2(payload);
 
       const resCode = createRes?.res_code ?? createRes?.data?.res_code;
-      const resMsg  = createRes?.res_message ?? createRes?.data?.res_message;
-      const resErr  = createRes?.res_data?.error ?? createRes?.data?.res_data?.error;
+      const resMsg = createRes?.res_message ?? createRes?.data?.res_message;
+      const resErr = createRes?.res_data?.error ?? createRes?.data?.res_data?.error;
       const isConflict =
-          resCode === "4090" || resMsg === "CONFLICT" || String(resErr || "").includes("มีอยู่แล้ว");
+        resCode === "4090" || resMsg === "CONFLICT" || String(resErr || "").includes("มีอยู่แล้ว");
       if (isConflict) {
         closeAlert();
         setIsLoading(false);
         await alertError("เลขที่หนังสือซ้ำ", resErr || `เลขที่หนังสือ ${form.refNo || "-"} มีอยู่แล้ว`);
-        return; 
+        return;
       }
 
       // ไอดีที่สร้าง (รองรับหลายรูปแบบ)
@@ -272,9 +292,9 @@ export const useInitialNotificationComplainantAgency = () => {
       setIsLoading(false);
 
       const fileNames =
-      attachmentFiles.length > 0
-       ? attachmentFiles.map((f) => f.name).join(", ")
-        : null;
+        attachmentFiles.length > 0
+          ? attachmentFiles.map((f) => f.name).join(", ")
+          : null;
       const successHtml = `
         <div style="text-align:center;line-height:1.7">
           <p style="margin:6px 0 14px 0;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
@@ -294,7 +314,7 @@ export const useInitialNotificationComplainantAgency = () => {
       const data = err?.response?.data;
       const backendMsg = data?.res_data?.error || data?.res_message || data?.message || "";
       if (httpStatus === 409 || data?.res_code === "4090" || String(backendMsg).includes("มีอยู่แล้ว")) {
-          await alertError("เลขที่หนังสือซ้ำ", backendMsg || `เลขที่หนังสือ ${form.refNo || "-"} มีอยู่แล้ว`);
+        await alertError("เลขที่หนังสือซ้ำ", backendMsg || `เลขที่หนังสือ ${form.refNo || "-"} มีอยู่แล้ว`);
         return;
       }
       alertError("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
@@ -330,7 +350,8 @@ export const useInitialNotificationComplainantAgency = () => {
       note: "",
       position_id: "",
       complaint_id: "",
-      selected_complaint_number: "", 
+      complaint_number: "",
+      selected_complaint_number: "",
     };
     return Object.keys(initial).some((k) => form[k] !== initial[k]);
   }, [form]);

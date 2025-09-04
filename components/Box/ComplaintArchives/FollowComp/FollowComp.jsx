@@ -287,8 +287,15 @@ const addButtonHandlers = {
         created_at: createdAt || "",
       },
     }),
-  INITIAL_NOTIFY: (router) =>
-    router.push("/admin/edit/initial-notification-to-complainant-or-agency/"),
+  INITIAL_NOTIFY: (router, complaintId, complaintNumber, createdAt) =>
+    router.push({
+      pathname: "/admin/edit/initial-notification-to-complainant-or-agency/",
+      query: {
+        complaint_id: complaintId || "",
+        complaint_number: complaintNumber || "",
+        created_at: createdAt || "",
+      },
+    }),
   REQUEST_UPDATE: (router) =>
     router.push("/admin/edit/request-result-or-progress/"),
   AGENCY_REPORT: (router) => router.push("/admin/edit/report/"),
@@ -944,7 +951,17 @@ const FollowComp = () => {
             headers={initialNotifyHeaders}
             rows={initialNotifyRows}
             rowMapper={initialNotifyRowMapper}
-            onAdd={() => addButtonHandlers.INITIAL_NOTIFY(router)}
+            onAdd={() =>
+              addButtonHandlers.INITIAL_NOTIFY(
+                router,
+                id,
+                documentData?.detail?.complaintNumber ||
+                  documentData?.relationships?.master_complaint?.complaint_number ||
+                  documentData?.relationships?.all_related?.[0]?.complaint_number ||
+                  "",
+                documentData?.detail?.created_at || ""
+              )
+            }
             router={router}
             handleOpenDocument={handleOpenDocument}
             handleManage={handleManage}
