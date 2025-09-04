@@ -66,7 +66,11 @@ const handleManage = (sectionKey, id, router) => {
       router.push(`/admin/edit/report/${id}`);
       break;
     case "FINAL_NOTIFY":
-      router.push(`/admin/edit/inform-related-parties/${id}`);
+      const complaintId = router.query?.id || id;
+      router.push({
+        pathname: "/admin/edit/inform-related-parties/",
+        query: { complaint_id: complaintId },
+      });
       break;
     default:
       break;
@@ -125,8 +129,8 @@ const sectionConfigs = [
       ลำดับ: idx + 1,
       "หน่วยงาน(ครั้งที่ส่ง)": row.agency || "-",
       เรื่อง: row.issue || row.subject || "-",
-  เลขที่หนังสือ: row.document_number || "-",
-  ลงวันที่: row.document_date || "-",
+      เลขที่หนังสือ: row.document_number || "-",
+      ลงวันที่: row.document_date || "-",
       ผู้ลงนาม:
         row.signer ||
         (row.signature_authority_user && row.signature_authority_user.name) ||
@@ -250,6 +254,7 @@ const sectionConfigs = [
     title: "แจ้งผลการให้ผู้เกี่ยวข้องทราบ",
     headers: [
       "ลำดับ",
+      // "เลขคำร้อง (complaint_id)",
       "ถึงหน่วยงาน / ผู้ร้อง / อื่นๆ (ครั้งที่แจ้งผล)",
       "เลขที่หนังสือ",
       "เรื่อง",
@@ -259,6 +264,7 @@ const sectionConfigs = [
     ],
     rowMapper: (row, idx) => ({
       ลำดับ: idx + 1,
+      // "เลขคำร้อง (complaint_id)": row.complaint_id || row.complaint?.id || "-",
       "ถึงหน่วยงาน / ผู้ร้อง / อื่นๆ (ครั้งที่แจ้งผล)":
         row.agency || row.department?.name || "-",
       เลขที่หนังสือ: row.document_number || row.reference_number || "-",
@@ -284,22 +290,40 @@ const addButtonHandlers = {
       query: {
         complaint_id: complaintId || "",
         complaint_number: complaintNumber || "",
-        created_at: createdAt || "",
       },
     }),
-  INITIAL_NOTIFY: (router, complaintId, complaintNumber, createdAt) =>
+  INITIAL_NOTIFY: (router, complaintId, complaintNumber) =>
     router.push({
       pathname: "/admin/edit/initial-notification-to-complainant-or-agency/",
       query: {
         complaint_id: complaintId || "",
         complaint_number: complaintNumber || "",
-        created_at: createdAt || "",
       },
     }),
-  REQUEST_UPDATE: (router) =>
-    router.push("/admin/edit/request-result-or-progress/"),
-  AGENCY_REPORT: (router) => router.push("/admin/edit/report/"),
-  FINAL_NOTIFY: (router) => router.push("/admin/edit/inform-related-parties/"),
+  REQUEST_UPDATE: (router, complaintId, complaintNumber) =>
+    router.push({
+      pathname: "/admin/edit/request-result-or-progress/",
+      query: {
+        complaint_id: complaintId || "",
+        complaint_number: complaintNumber || "",
+      },
+    }),
+  AGENCY_REPORT: (router, complaintId, complaintNumber) =>
+    router.push({
+      pathname: "/admin/edit/report/",
+      query: {
+        complaint_id: complaintId || "",
+        complaint_number: complaintNumber || "",
+      },
+    }),
+  FINAL_NOTIFY: (router, complaintId, complaintNumber) =>
+    router.push({
+      pathname: "/admin/edit/inform-related-parties/",
+      query: {
+        complaint_id: complaintId || "",
+        complaint_number: complaintNumber || "",
+      },
+    }),
 };
 
 const TableSection = ({
@@ -404,8 +428,13 @@ const TableSection = ({
                           <IconButton
                             size="small"
                             onClick={() => {
-                              if (rowObj.id) {
-                                handleManage(section.key, rowObj.id, router);
+                              const complaintId = router.query?.id;
+                              const targetId =
+                                section.key === "FINAL_NOTIFY"
+                                  ? complaintId
+                                  : rowObj.id;
+                              if (targetId) {
+                                handleManage(section.key, targetId, router);
                               } else {
                                 console.error(
                                   "Error: ID is missing for this row."
@@ -583,8 +612,18 @@ const FollowComp = () => {
     }
   };
 
-  // ข้อมูล all_related สำหรับตารางรับเรื่องราวร้องทุกข์
   const allRelated = documentData?.relationships?.all_related || [];
+
+  // ให้เลือกเลข สรร. ที่น่าเชื่อถือที่สุด: จาก master ก่อน, รองลงมา all_related แถวแรก, สุดท้ายจาก detail
+  const baseComplaintNumber =
+    allRelated.find((it) => it?.is_master)?.complaint_number ||
+    documentData?.relationships?.master_complaint?.complaint_number ||
+    allRelated?.[0]?.complaint_number ||
+    documentData?.detail?.complaintNumber ||
+    "";
+
+  // ข้อมูล all_related สำหรับตารางรับเรื่องราวร้องทุกข์
+  // const allRelated = documentData?.relationships?.all_related || [];
   const receivedSection = sectionConfigs[0];
   const receivedHeaders = receivedSection.headers;
   const receivedRowMapper = receivedSection.rowMapper;
@@ -602,7 +641,7 @@ const FollowComp = () => {
     ...item,
     agency: item.department?.name || "-",
     issue: item.subject || "-",
-  document_number: item.document_number || "-",
+    document_number: item.document_number || "-",
     document_date: item.document_date
       ? new Date(item.document_date).toLocaleDateString("th-TH")
       : "-",
@@ -703,14 +742,20 @@ const FollowComp = () => {
   const finalSection = sectionConfigs.find((s) => s.key === "FINAL_NOTIFY");
   const finalHeaders = finalSection.headers;
   const finalRowMapper = finalSection.rowMapper;
-  const outgoingType5 = outgoing_reports.type5 || [];
+  const outgoingType5 = outgoing_reports?.type5?.length
+    ? outgoing_reports.type5
+    : outgoing_reports?.type4 || [];
   const finalNotifyExtra = outgoingType5.map((item, idx) => ({
     ...item,
     agency: item.department?.name || "-",
+    complaint_id: item.complaint_id || id,
     document_number: item.document_number || item.reference_number || "-",
-    receiveDate: item.receive_date
-      ? new Date(item.receive_date).toLocaleDateString("th-TH")
-      : "-",
+    receiveDate:
+      item.receive_date || item.document_date || item.reference_date
+        ? new Date(
+            item.receive_date || item.document_date || item.reference_date
+          ).toLocaleDateString("th-TH")
+        : "-",
     issue: item.subject || "-",
     attachment_name:
       item.attachments && item.attachments.length > 0
@@ -719,8 +764,11 @@ const FollowComp = () => {
     id: item.id,
   }));
   const finalNotifyItems = Array.isArray(documentData?.items)
-    ? documentData.items.filter(finalSection.filter)
+    ? documentData.items
+        .filter(finalSection.filter)
+        .map((it) => ({ ...it, complaint_id: it.complaint_id || id }))
     : [];
+
   const finalNotifyRows = [...finalNotifyItems, ...finalNotifyExtra];
 
   const handleImageClick = () => {
@@ -935,8 +983,10 @@ const FollowComp = () => {
                 router,
                 id,
                 documentData?.detail?.complaintNumber ||
-                  documentData?.relationships?.master_complaint?.complaint_number ||
-                  documentData?.relationships?.all_related?.[0]?.complaint_number ||
+                  documentData?.relationships?.master_complaint
+                    ?.complaint_number ||
+                  documentData?.relationships?.all_related?.[0]
+                    ?.complaint_number ||
                   "",
                 documentData?.detail?.created_at || ""
               )
@@ -956,10 +1006,11 @@ const FollowComp = () => {
                 router,
                 id,
                 documentData?.detail?.complaintNumber ||
-                  documentData?.relationships?.master_complaint?.complaint_number ||
-                  documentData?.relationships?.all_related?.[0]?.complaint_number ||
-                  "",
-                documentData?.detail?.created_at || ""
+                  documentData?.relationships?.master_complaint
+                    ?.complaint_number ||
+                  documentData?.relationships?.all_related?.[0]
+                    ?.complaint_number ||
+                  ""
               )
             }
             router={router}
@@ -972,7 +1023,18 @@ const FollowComp = () => {
             headers={requestUpdateHeaders}
             rows={requestUpdateRows}
             rowMapper={requestUpdateRowMapper}
-            onAdd={() => addButtonHandlers.REQUEST_UPDATE(router)}
+            onAdd={() =>
+              addButtonHandlers.REQUEST_UPDATE(
+                router,
+                id,
+                documentData?.detail?.complaintNumber ||
+                  documentData?.relationships?.master_complaint
+                    ?.complaint_number ||
+                  documentData?.relationships?.all_related?.[0]
+                    ?.complaint_number ||
+                  ""
+              )
+            }
             router={router}
             handleOpenDocument={handleOpenDocument}
             handleManage={handleManage}
@@ -983,7 +1045,18 @@ const FollowComp = () => {
             headers={agencyReportHeaders}
             rows={agencyReportRows}
             rowMapper={agencyReportRowMapper}
-            onAdd={() => addButtonHandlers.AGENCY_REPORT(router)}
+            onAdd={() =>
+              addButtonHandlers.AGENCY_REPORT(
+                router,
+                id,
+                documentData?.detail?.complaintNumber ||
+                  documentData?.relationships?.master_complaint
+                    ?.complaint_number ||
+                  documentData?.relationships?.all_related?.[0]
+                    ?.complaint_number ||
+                  ""
+              )
+            }
             router={router}
             handleOpenDocument={handleOpenDocument}
             handleManage={handleManage}
@@ -1013,7 +1086,18 @@ const FollowComp = () => {
             headers={finalHeaders}
             rows={finalNotifyRows}
             rowMapper={finalRowMapper}
-            onAdd={() => addButtonHandlers.FINAL_NOTIFY(router)}
+            onAdd={() =>
+              addButtonHandlers.FINAL_NOTIFY(
+                router,
+                id,
+                documentData?.detail?.complaintNumber ||
+                  documentData?.relationships?.master_complaint
+                    ?.complaint_number ||
+                  documentData?.relationships?.all_related?.[0]
+                    ?.complaint_number ||
+                  ""
+              )
+            }
             router={router}
             handleOpenDocument={handleOpenDocument}
             handleManage={handleManage}

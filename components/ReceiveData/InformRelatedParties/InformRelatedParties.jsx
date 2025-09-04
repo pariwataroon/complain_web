@@ -136,8 +136,8 @@ const InformRelatedParties = () => {
   
         const results = items.map((item) => ({
           ...item,
-          label: item.reference_number || "",
-          value: item.reference_number || "",
+          label: item.complaint_number || "",
+          value: item.complaint_number || "",
         }));
   
         setSearchResults(results);
@@ -149,8 +149,30 @@ const InformRelatedParties = () => {
       }
     };
   
-    const handleSelectReference2 = (ref) => {
-      handleChange("refNo", ref.reference_number);
+   const handleSelectReference2 = (ref) => {
+      if (!ref) {
+        setOpenSearchDialog2(false);
+        return;
+      }
+      const number = ref.complaint_number || ref.reference_number || "";
+      handleChange("refNo", number);
+
+      const setYMD = (dstr) => {
+        const d = new Date(dstr);
+        if (isNaN(d.getTime())) return null;
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      };
+
+      if (ref.reference_date) {
+        handleDateChange(setYMD(ref.reference_date), "date");
+      }
+      if (ref.complaint_number_date) {
+        handleDateChange(setYMD(ref.complaint_number_date), "date2");
+      }
+
       setOpenSearchDialog2(false);
     };
   
@@ -529,6 +551,7 @@ const InformRelatedParties = () => {
                               />
                                <span style={{ fontWeight: 500 }}>
                                 {item.complaint_number}
+                                {item.subject}
                                 <span style={{ marginLeft: 8 }}>{item.subject}</span>
                               </span>
                             </ListItemButton>
@@ -640,12 +663,12 @@ const InformRelatedParties = () => {
             display: "flex", 
             alignItems: "flex-end" 
           }}>
-            <IconButton
+            {/* <IconButton
               onClick={() => setOpenSearchDialog(true)}
               sx={{ height: 40, width: 40, color: 'blue',marginBottom: '18px' }}
             >
               <SearchIcon />
-            </IconButton>
+            </IconButton> */}
           </Box>
 
           <Box sx={{ flex: 1 }}>
