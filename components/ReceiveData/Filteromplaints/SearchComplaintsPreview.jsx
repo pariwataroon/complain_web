@@ -39,21 +39,29 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   const [previewData, setPreviewData] = useState(null);
 
   useEffect(() => {
+    // ให้ข้อมูลที่มาจาก props มีความสำคัญกว่า sessionStorage เสมอ
+    if (data) {
+      try {
+        sessionStorage.setItem(DATA_SESSION_KEY, JSON.stringify(data));
+      } catch {}
+      setPreviewData(data);
+      setFormData(data);
+      return;
+    }
+
+    // ถ้าไม่มี props ค่อย fallback ไปที่ sessionStorage
     const stored = sessionStorage.getItem(DATA_SESSION_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored);
-      setPreviewData(parsed);
-      setFormData(parsed); // สำคัญตรงนี้
-      console.log("set previewData and formData from sessionStorage");
-    } else if (data) {
-      sessionStorage.setItem(DATA_SESSION_KEY, JSON.stringify(data));
-      setPreviewData(data);
-      setFormData(data); // สำคัญตรงนี้
-      console.log(
-        "set sessionStorage, previewData and formData from props.data (first enter)"
-      );
+      try {
+        const parsed = JSON.parse(stored);
+        setPreviewData(parsed);
+        setFormData(parsed);
+      } catch (e) {
+        console.warn("Invalid preview data in sessionStorage", e);
+        sessionStorage.removeItem(DATA_SESSION_KEY);
+      }
     }
-  }, []);
+  }, [data]);
 
   const router = useRouter();
 
@@ -482,6 +490,28 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
       "ผู้ใช้ไม่ระบุชื่อ"
     : "กำลังโหลด...";
 
+  // Resolve responsible officer's display name consistently
+  const responsibleOfficerName = (() => {
+    const ro = additionalDetails?.responsibleOfficer;
+    if (!ro) return "-";
+    // If it's a plain id string, try to resolve from staffUsers
+    if (typeof ro === "string") {
+      const found = staffUsers.find(
+        (u) => u.value === ro || u.id === ro
+      );
+      return (
+        found?.fullName || found?.label || found?.name || ro || "-"
+      );
+    }
+    // Object: prefer fullName -> name -> label; if still missing, try resolve by id
+    const base = ro.fullName || ro.name || ro.label;
+    if (base) return base;
+    const id = ro.id || ro.value;
+    if (!id) return "-";
+    const found = staffUsers.find((u) => u.value === id || u.id === id);
+    return found?.fullName || found?.label || found?.name || "-";
+  })();
+
   return (
     <>
       <BreadcrumbsService items={breadcrumbItems} />
@@ -761,13 +791,13 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
               />
               <InfoItem
                 label="วันและเวลาที่เกิดเหตุ"
-                value={formatThaiDateTime(additionalDetails.incidentDateTime)}
+                value={formatThaiDateTime(additionalDetails.incidentDate || complaint.incidentDate)}
               />
             </Grid>
             <Grid item xs={12} mb={3}>
               <InfoItem
                 label="รายละเอียดเรื่องร้องทุกข์"
-                value={additionalDetails.additionalDescription || "-"}
+                value={complaint.description || additionalDetails.additionalDescription || "-"}
               />
             </Grid>
 
@@ -775,11 +805,11 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
             <Grid container spacing={2} mb={3}>
               <InfoItem
                 label="วันที่รับเรื่องของเจ้าพนักงาน"
-                value={formatThaiFullDateTime(additionalDetails.officer_received_date || "-")}
+                value={formatThaiFullDateTime(additionalDetails.officerReceivedDate || "-")}
               />
               <InfoItem
                 label="วันที่เสนองาน ผอ.สรร."
-                value={formatThaiFullDateTime(additionalDetails.director_submission_date || "-")}
+                value={formatThaiFullDateTime(additionalDetails.directorSubmittedDate || "-")}
               />
             </Grid>
 
@@ -874,7 +904,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
               <Grid item xs={6}>
                 <Typography fontSize={16} fontWeight="bold">
                   ลงชื่อเจ้าหน้าที่ผู้รับผิดชอบ:{" "}
-                  {additionalDetails.responsibleOfficer?.fullName || ""}
+                  {responsibleOfficerName}
                 </Typography>
                 <Typography fontSize={14} color="text.secondary">
                   วันที่: {formatThaiDate(new Date().toISOString())}
