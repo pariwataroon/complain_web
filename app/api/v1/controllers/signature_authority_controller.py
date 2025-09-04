@@ -1164,15 +1164,19 @@ def update_signature_authority_group(db: Session, group_id: UUID, group_data: di
                                 SignatureAuthority.department_id == dept_uuid,
                                 SignatureAuthority.is_active == False
                             ).order_by(
-                                (SignatureAuthority.updated_at.desc().nullslast()),
-                                (SignatureAuthority.created_at.desc().nullslast())
+                                case((SignatureAuthority.updated_at.is_(None), 1), else_=0).asc(),
+                                SignatureAuthority.updated_at.desc(),
+                                case((SignatureAuthority.created_at.is_(None), 1), else_=0).asc(),
+                                SignatureAuthority.created_at.desc()
                             ).first()
 
+                            target_id = None
                             if existing_inactive:
                                 existing_inactive.is_active = True
                                 existing_inactive.end_date = None
                                 existing_inactive.group_signature_authorities_id = group_id
                                 existing_inactive.updated_at = func.now()
+                                target_id = existing_inactive.id
                                 updated_assignments.append({
                                     "id": str(existing_inactive.id),
                                     "user_id": str(user_uuid),
@@ -1189,6 +1193,7 @@ def update_signature_authority_group(db: Session, group_id: UUID, group_data: di
                                 )
                                 db.add(new_assignment)
                                 db.flush()
+                                target_id = new_assignment.id
                                 updated_assignments.append({
                                     "id": str(new_assignment.id),
                                     "user_id": str(user_uuid),
@@ -1199,7 +1204,7 @@ def update_signature_authority_group(db: Session, group_id: UUID, group_data: di
                             other_active = db.query(SignatureAuthority).filter(
                                 SignatureAuthority.user_id == user_uuid,
                                 SignatureAuthority.department_id == dept_uuid,
-                                SignatureAuthority.id != new_assignment.id,
+                                SignatureAuthority.id != target_id,
                                 SignatureAuthority.is_active == True
                             ).all()
                             for r in other_active:
