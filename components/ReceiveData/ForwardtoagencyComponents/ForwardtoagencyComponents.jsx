@@ -14,6 +14,7 @@ import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthori
 import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsalutation";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
+import { GetOutgoingReportById } from "@pages/api/outgoinreports/outgoinreports";
 import { GetReDocumentComplaints, GetReferenceComplaints } from "@pages/api/complaint/complaint";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -255,6 +256,37 @@ const ForwardtoagencyComponents = () => {
       }
     }
   }, [router?.query, setValue]);
+
+  // Prefill when editing an existing type1 report via /[id]
+  useEffect(() => {
+    const editId = router?.query?.id;
+    if (!editId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await GetOutgoingReportById(editId);
+        const data = res?.res_data || res?.data || res;
+        const d = data || {};
+        if (cancelled || !d) return;
+        // Map API fields to form
+        setValue("salutation", d.position_id || "", { shouldDirty: false });
+        setValue("complaint_number", d.complaint_number || d.reference_number || "", { shouldDirty: false });
+        setValue("complaint_id", d.complaint_id || "", { shouldDirty: false });
+        if (d.complaint_number_date) setValue("complaint_number_date", new Date(d.complaint_number_date), { shouldDirty: false });
+        setValue("subject", d.subject || "", { shouldDirty: false });
+        setValue("document_number", d.document_number || "", { shouldDirty: false });
+        if (d.document_date) setValue("document_date", new Date(d.document_date), { shouldDirty: false });
+  const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || "";
+  setValue("signer", signerId, { shouldDirty: false });
+  if (signerId) setSelectedSigner({ value: signerId });
+        setValue("department", d.department?.id || d.department_id || "", { shouldDirty: false });
+        // confidentiality/urgency may be label; keep as-is if numeric options expected elsewhere
+      } catch (err) {
+        console.error("Failed to prefill report by id", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [router?.query?.id, setValue]);
 
   const handleSignerSelect = (userInfo) => {
     setSelectedSigner(userInfo);

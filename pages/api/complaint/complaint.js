@@ -38,7 +38,7 @@ const GetComplaintsGroupedbyChannel = async ({
 }) => {
   try {
     const response = await axiosInstance.get("/complaints/group-by-channel", {
-      params: { skip, limit},
+      params: { skip, limit },
     });
     return response?.data;
   } catch (error) {
@@ -150,7 +150,7 @@ const UpdateAssignmentCompleteByAdmin = async (complaint_id, formData) => {
   }
 };
 
-const ConfirmAssignment = async (complaint_id, remark ="ยืนยันรับงานร้องทุกข์กระทรวงการคลัง") => {
+const ConfirmAssignment = async (complaint_id, remark = "ยืนยันรับงานร้องทุกข์กระทรวงการคลัง") => {
   try {
     const requestBody = {
       confirm_status: true,
@@ -161,7 +161,7 @@ const ConfirmAssignment = async (complaint_id, remark ="ยืนยันรั
       `/complaints-assignment/${complaint_id}/confirm-assignment`,
       requestBody
     );
-    
+
     if (response && response.data) {
       return response.data;
     }
@@ -219,8 +219,8 @@ const GetComplaintsByPageType = async ({
   try {
     const response = await axiosInstance.get(
       `/complaints-assignment/by-page-type`, {
-        params: { page_type: pageType, skip, limit, },
-      }
+      params: { page_type: pageType, skip, limit, },
+    }
     );
     return response?.data;
   } catch (error) {
@@ -236,7 +236,7 @@ const GetComplaintsByPageTypeCard = async ({
 }) => {
   try {
     const response = await axiosInstance.get(
-      `/complaints-assignment/by-page-type`, 
+      `/complaints-assignment/by-page-type`,
       {
         params: { page_type: pageType, skip, limit, },
       }
@@ -263,31 +263,31 @@ const GetMyRelatedComplaints = async ({ skip = 0, limit = 100 } = {}) => {
 const GetReferenceComplaints = async ({
   skip = 0,
   limit = 100,
-  }) => {
-    try {
-      const response = await axiosInstance.get("/complaints/enhanced?reference_number=not_null", {
-        params: { skip, limit },
-      });
-      return response?.data;
-    } catch (error) {
-      console.error("Error fetching complaints:", error);
-      throw error;
-    }
+}) => {
+  try {
+    const response = await axiosInstance.get("/complaints/enhanced", {
+      params: { skip, limit },
+    });
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching complaints:", error);
+    throw error;
+  }
 };
 
 const GetReDocumentComplaints = async ({
   skip = 0,
   limit = 100,
-  }) => {
-    try {
-      const response = await axiosInstance.get("/complaints/enhanced?document_number=not_null", {
-        params: { skip, limit },
-      });
-      return response?.data;
-    } catch (error) {
-      console.error("Error fetching complaints:", error);
-      throw error;
-    }
+}) => {
+  try {
+    const response = await axiosInstance.get("/complaints/enhanced?document_number=not_null", {
+      params: { skip, limit },
+    });
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching complaints:", error);
+    throw error;
+  }
 };
 
 const GetDepartments = async () => {

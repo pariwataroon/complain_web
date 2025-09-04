@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
@@ -12,6 +13,7 @@ import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsa
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
+import { GetOutgoingReport2ById } from "@pages/api/outgoinreports/outgoinreports";
 import { GetReDocumentComplaints } from "@pages/api/complaint/complaint";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -47,6 +49,7 @@ const InitialNotificationComplainantAgency = () => {
     handleSave,
     isFormValid,
   } = useInitialNotificationComplainantAgency();
+  const router = useRouter();
 
   const pickId = (o) => o?.id ?? o?.value ?? o;
   const pickPositionId = (u) =>
@@ -215,6 +218,31 @@ const InitialNotificationComplainantAgency = () => {
     setSelectedSigner(null);
     setSelectedDepartment(null);
   };
+
+  // Prefill when editing existing type2 report via /[id]
+  useEffect(() => {
+    const editId = router?.query?.id;
+    if (!editId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await GetOutgoingReport2ById(editId);
+        const d = res?.res_data || res?.data || res;
+        if (cancelled || !d) return;
+        handleChange({ target: { name: "complaint_number", value: d.complaint_number || d.reference_number || "" } });
+        handleChange({ target: { name: "complaint_id", value: d.complaint_id || "" } });
+  handleChange({ target: { name: "subject", value: d.subject || "" } });
+        handleChange({ target: { name: "refNo", value: d.document_number || "" } });
+        if (d.complaint_number_date) handleDateChange(new Date(d.complaint_number_date));
+  handleChange({ target: { name: "signer", value: d.signature_authority_user?.id || d.signature_authority_user_id || "" } });
+  handleChange({ target: { name: "department", value: d.department?.id || d.department_id || "" } });
+        // Optionally set signer/department when components mount
+      } catch (err) {
+        console.error("Failed to prefill type2 report by id", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [router?.query?.id]);
 
   return (
     <Box

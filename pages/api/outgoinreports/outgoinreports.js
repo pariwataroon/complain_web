@@ -10,6 +10,29 @@ const CreateOutgoingReport = async (data) => {
   }
 };
 
+// ----- READ existing reports -----
+const GetOutgoingReportById = async (id) => {
+  if (!id) throw new Error("Missing id for GetOutgoingReportById");
+  try {
+    const response = await axiosInstance.get(`/outgoing-reports/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching outgoing report by id:", error?.response?.data || error.message);
+    throw error;
+  }
+};
+
+const GetOutgoingReport2ById = async (id) => {
+  if (!id) throw new Error("Missing id for GetOutgoingReport2ById");
+  try {
+    const response = await axiosInstance.get(`/outgoing-reports2/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching outgoing report2 by id:", error?.response?.data || error.message);
+    throw error;
+  }
+};
+
 const CreateOutgoingReport2 = async (data) => {
   try {
     const response = await axiosInstance.post(`/outgoing-reports2`, data);
@@ -82,4 +105,4 @@ const UploadOutgoingReportAttachments = async (
   }
 };
 
-export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4 ,CreateOutgoingReport5, getDepartmentsPrefix };
+export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4, CreateOutgoingReport5, getDepartmentsPrefix, GetOutgoingReportById, GetOutgoingReport2ById };
