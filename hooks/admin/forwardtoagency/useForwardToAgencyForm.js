@@ -78,8 +78,15 @@ const validationSchema = yup.object().shape({
 const toYMD = (d) => {
   if (!d) return null;
   const dt = new Date(d);
-  return isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
+
+  // ใช้ค่า Local แทน UTC
+  const yyyy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+
+  return `${yyyy}-${mm}-${dd}`;
 };
+
 
 // Hook หลัก
 export const useForwardToAgencyForm = () => {
@@ -259,13 +266,13 @@ export const useForwardToAgencyForm = () => {
 
         const outgoingReportData = {
           position_id: data.salutation,
-          reference_number: (data.complaint_number || "").trim(),  // เลข สป.กค.
-          reference_date: toYMD(data.complaint_number_date),       // วันที่ของเลข สป.กค.
+          reference_number: (data.complaint_number || "").trim(),   // ใช้ complaint_number เป็น reference
+          reference_date: toYMD(data.complaint_number_date),        // ใช้ complaint_number_date เป็น reference_date
           subject: (data.subject || "").trim(),
-          complaint_number: (data.complaint_number || "").trim(),  // เลข สป.กค.
-          complaint_number_date: toYMD(data.complaint_number_date),// วันที่ของเลข สป.กค.
-          document_number: (data.document_number || "").trim(),    // เลขที่หนังสือ
-          document_date: toYMD(data.document_date),                // วันที่หนังสือ
+          complaint_number: (data.complaint_number || "").trim(),   // เลข สป.กค.
+          complaint_number_date: toYMD(data.complaint_number_date),
+          document_number: (data.document_number || "").trim(),
+          document_date: toYMD(data.document_date),
           signature_authority_user_id: data.signer,
           department_id: data.department,
           confidentiality_level: data.confidentiality,

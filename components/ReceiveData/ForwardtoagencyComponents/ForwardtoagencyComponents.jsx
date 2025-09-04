@@ -110,10 +110,13 @@ const ForwardtoagencyComponents = () => {
       }
     };
   
-    const handleSelectReference = (ref) => {
-      setValue("bookNo", ref.document_number, { shouldValidate: true, shouldDirty: true });
-      setOpenSearchDialog(false);
-    };
+    // const handleSelectReference = (ref) => {
+    //   setValue("document_number", ref.document_number, { shouldValidate: true, shouldDirty: true });
+    //   if (ref.document_date) {
+    //     setValue("document_date", new Date(ref.document_date), { shouldValidate: true, shouldDirty: true });
+    //   }
+    //   setOpenSearchDialog(false);
+    // };
   
     const onClear = () => {
       setSearchText("");
@@ -161,7 +164,15 @@ const ForwardtoagencyComponents = () => {
     };
   
     const handleSelectReference2 = (ref) => {
-      setValue("refNo", ref.reference_number, { shouldValidate: true, shouldDirty: true });
+      setValue("complaint_number", ref.complaint_number, { shouldValidate: true, shouldDirty: true });
+      if (ref.complaint_number_date) {
+        // ✅ เก็บเป็น local date string เพื่อไม่ให้ timezone เพี้ยน
+        const localDate = new Date(ref.complaint_number_date);
+        const yyyy = localDate.getFullYear();
+        const mm = String(localDate.getMonth() + 1).padStart(2, "0");
+        const dd = String(localDate.getDate()).padStart(2, "0");
+        setValue("complaint_number_date", `${yyyy}-${mm}-${dd}`, { shouldValidate: true, shouldDirty: true });
+      }
       setOpenSearchDialog2(false);
     };
   
