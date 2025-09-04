@@ -615,18 +615,36 @@ const FollowComp = () => {
     return <DescriptionIcon sx={{ color: "#757575" }} />;
   };
   const getDownloadUrl = (file = {}) => {
-    const url =
+    const raw =
       file.fileUrl ||
       file.file_url ||
       file.url ||
       file.path ||
       file.file_path ||
       "";
-    if (!url) return null;
-    if (typeof url === "string" && url.startsWith("http")) return url;
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-    const trimmed = typeof url === "string" ? (url.startsWith("/") ? url : `/${url}`) : "";
-    return `${base}${trimmed}`;
+    if (!raw) return null;
+    if (typeof raw === "string" && raw.startsWith("http")) return raw;
+
+    const ensureLeading = (s) => (s.startsWith("/") ? s : `/${s}`);
+    const url = ensureLeading(String(raw));
+
+    const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
+    // Origin without /api or /api/vN
+    const origin = apiBase.replace(/\/api(?:\/v\d+)?$/, "");
+    // API root without version, ends with /api
+    const apiRootNoVer = apiBase.replace(/\/v\d+$/, "");
+
+    // Case 1: already has /api/uploads in path -> just prefix with origin
+    if (url.startsWith("/api/uploads/")) {
+      return `${origin}${url}`;
+    }
+    // Case 2: plain /uploads -> prefix with /api (no version)
+    if (url.startsWith("/uploads/")) {
+      const root = /\/api$/.test(apiRootNoVer) ? apiRootNoVer : `${origin}/api`;
+      return `${root}${url}`;
+    }
+    // Fallback: join with apiBase as-is
+    return `${apiBase}${url}`;
   };
 
   const openAttachments = (sectionKey, rowRaw, rowDisplay) => {
