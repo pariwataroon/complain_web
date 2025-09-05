@@ -60,23 +60,32 @@ const Positions = () => {
 
 
       const response = await GetAllPositions(skip, limit, search, level, is_active);
+      let rows = [];
+      let total = 0;
 
-
-      if (response && response.res_data) {
-        if (Array.isArray(response.res_data)) {
-          setData(response.res_data);
-          setTotalCount(response.total || response.res_data.length + skip);
-        } else if (response.res_data.data) {
-          setData(response.res_data.data);
-          setTotalCount(response.res_data.total || response.res_data.data.length);
-        } else {
-          setData([]);
-          setTotalCount(0);
+      if (response) {
+        const rd = response.res_data;
+        if (Array.isArray(rd)) {
+          rows = rd;
+          total = Number(response.total || rd.total || rd.totalCount || rd.count);
+        } else if (rd && typeof rd === 'object') {
+          if (Array.isArray(rd.data)) {
+            rows = rd.data;
+            total = Number(rd.total || rd.totalCount || rd.count || response.total);
+          }
         }
-      } else {
-        setData([]);
-        setTotalCount(0);
       }
+
+      if (!Number.isFinite(total)) {
+        if (rows.length === limit) {
+            total = skip + rows.length + 1;
+        } else {
+            total = skip + rows.length;
+        }
+      }
+
+      setData(rows);
+      setTotalCount(total);
     } catch (error) {
       console.error('Error fetching positions:', error);
       setError(error);

@@ -548,12 +548,6 @@ const StatusHistorySection = ({ statusHistory }) => (
               align="center"
               sx={{ background: "#fff", fontWeight: "bold" }}
             >
-              สถานะ
-            </TableCell>
-            <TableCell
-              align="center"
-              sx={{ background: "#fff", fontWeight: "bold" }}
-            >
               ผู้เปลี่ยนแปลง
             </TableCell>
             <TableCell
@@ -561,6 +555,12 @@ const StatusHistorySection = ({ statusHistory }) => (
               sx={{ background: "#fff", fontWeight: "bold" }}
             >
               หมายเหตุ
+            </TableCell>
+            <TableCell
+              align="center"
+              sx={{ background: "#fff", fontWeight: "bold" }}
+            >
+              สถานะ
             </TableCell>
           </TableRow>
         </TableHead>
@@ -634,17 +634,25 @@ const FollowComp = () => {
     // API root without version, ends with /api
     const apiRootNoVer = apiBase.replace(/\/v\d+$/, "");
 
-    // Case 1: already has /api/uploads in path -> just prefix with origin
+    // สำหรับ outgoing reports ให้ใช้ path เดียวกับ complaints
+    const currentId = window.location.pathname.split('/').pop() || 'default';
+    const filename = url.split('/').pop();
+
+    // กำหนด path ให้ใช้ /uploads/complaints เสมอ
+    let finalUrl;
     if (url.startsWith("/api/uploads/")) {
-      return `${origin}${url}`;
-    }
-    // Case 2: plain /uploads -> prefix with /api (no version)
-    if (url.startsWith("/uploads/")) {
+      // แก้ path ให้เป็น complaints
+      finalUrl = `${origin}/api/uploads/complaints/${currentId}/${filename}`;
+    } else if (url.startsWith("/uploads/")) {
+      // แก้ path ให้เป็น complaints
       const root = /\/api$/.test(apiRootNoVer) ? apiRootNoVer : `${origin}/api`;
-      return `${root}${url}`;
+      finalUrl = `${root}/uploads/complaints/${currentId}/${filename}`;
+    } else {
+      // สำหรับ filename เฉย ๆ ให้สร้าง path complaints
+      finalUrl = `${apiBase}/uploads/complaints/${currentId}/${filename}`;
     }
-    // Fallback: join with apiBase as-is
-    return `${apiBase}${url}`;
+    
+    return finalUrl;
   };
 
   const openAttachments = (sectionKey, rowRaw, rowDisplay) => {

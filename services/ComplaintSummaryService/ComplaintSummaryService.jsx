@@ -22,9 +22,15 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import CheckIcon from "@mui/icons-material/Check";
 import UploadOutlinedIcon from "@mui/icons-material/UploadOutlined";
 
-const ComplaintSummaryService = ({ data = {}, handleSubmit = {} }) => {
+const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) => {
   const router = useRouter();
   const [complaintId, setComplaintId] = useState(null);
+
+  // Log ข้อมูลที่รับเข้ามา
+  console.log("ComplaintSummaryService received data:", data);
+  console.log("Complainant:", data?.complainant);
+  console.log("Delegate:", data?.delegate);
+  console.log("Respondent:", data?.respondent);
 
   // เช็คว่ามี 'complaint.id' ใน data หรือไม่
   useEffect(() => {
@@ -43,18 +49,44 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {} }) => {
       console.error("Complaint ID is missing.");
     }
   };
+
+  const handleConfirm = () => {
+    // รีเฟรชข้อมูลก่อนกลับ
+    if (onRefresh) {
+      onRefresh();
+    }
+    router.back();
+  };
   const pdfRef = useRef();
+  
+  // ใช้ข้อมูลที่ map มาแล้วจาก data
+  const complainant = data?.complainant || {};
+  const delegate = data?.delegate || {};
+  const respondent = data?.respondent || {};
+  const complaint = data?.complaint || {};
+  const files = data?.files || [];
+
+  // ข้อมูลเดิมสำหรับ backward compatibility (ถ้ามี)
   const {
-    complainant = {},
-    delegate = {},
     corporate = {},
     signer = {},
-    respondent = {},
     corporateS2 = {},
     government = {},
-    complaint = {},
-    files = [],
   } = data;
+
+  // Helper function เพื่อตรวจสอบว่ามีข้อมูลหรือไม่
+  const hasData = (obj) => {
+    return obj && Object.values(obj).some(value => value && value !== "");
+  };
+
+  // กำหนดประเภทผู้ร้องทุกข์
+  const complainantType = hasData(complainant) ? 'complainant' : hasData(government) ? 'government' : hasData(corporate) ? 'corporate' : 'individual';
+  const delegateType = hasData(delegate) ? 'delegate' : hasData(signer) ? 'signer' : 'none';
+  const respondentType = hasData(respondent) ? 'respondent' : hasData(government) ? 'government' : hasData(corporateS2) ? 'corporate' : 'individual';
+
+  console.log('Data types detected:', { complainantType, delegateType, respondentType });
+  console.log('Mapped data received:', { complainant, delegate, respondent, complaint });
+  console.log('Original data:', data);
 
   const InfoItem = ({ label, value }) => (
     <Grid item xs={12} sm={6}>
@@ -134,149 +166,161 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {} }) => {
               <InfoItem
                 label="หมายเลขประจำตัวประชาชน"
                 value={formatCitizenId_null(
-                  complainant.idCard || corporate.idCard
+                  complainant.idCard || corporate.idCard || government.idCard
                 )}
               />
               <InfoItem
                 label="ชื่อ - นามสกุล"
-                value={complainant.name || corporate.name}
+                value={complainant.name || corporate.name || government.name}
               />
               <InfoItem
                 label="ที่อยู่ที่ติดต่อได้"
-                value={complainant.address || corporate.address}
+                value={complainant.address || corporate.address || government.address}
               />
               <InfoItem
                 label="ตำบล/แขวง"
-                value={complainant.subdistricts || corporate.subdistricts}
+                value={complainant.subdistricts || corporate.subdistricts || government.subdistricts}
               />
               <InfoItem
                 label="อำเภอ/เขต"
-                value={complainant.district || corporate.district}
+                value={complainant.district || corporate.district || government.district}
               />
               <InfoItem
                 label="จังหวัด"
-                value={complainant.province || corporate.province}
+                value={complainant.province || corporate.province || government.province}
               />
               <InfoItem
                 label="รหัสไปรษณีย์"
-                value={complainant.zipcode || corporate.zipcode}
+                value={complainant.zipcode || corporate.zipcode || government.zipcode}
               />
               <InfoItem
                 label="อีเมล"
-                value={complainant.email || corporate.email}
+                value={complainant.email || corporate.email || government.email}
               />
               <InfoItem
                 label="หมายเลขโทรศัพท์"
                 value={formatPhoneNumber_null(
-                  complainant.phone || corporate.phone
+                  complainant.phone || corporate.phone || government.phone
                 )}
               />
             </Grid>
           </Section>
 
           <Section title="ผู้รับมอบอำนาจร้องเรียน">
-            <Grid container spacing={2} mb={3}>
-              <InfoItem
-                label="หมายเลขประจำตัวประชาชน"
-                value={formatCitizenId_null(delegate.idCard || signer.idCard)}
-              />
-              <InfoItem
-                label="ชื่อ - นามสกุล"
-                value={delegate.name || signer.name}
-              />
-              <InfoItem
-                label="ที่อยู่ที่ติดต่อได้"
-                value={delegate.address || signer.address}
-              />
-              <InfoItem
-                label="ตำบล/แขวง"
-                value={delegate.subdistricts || signer.subdistricts}
-              />
-              <InfoItem
-                label="อำเภอ/เขต"
-                value={delegate.district || signer.district}
-              />
-              <InfoItem
-                label="จังหวัด"
-                value={delegate.province || signer.province}
-              />
-              <InfoItem
-                label="รหัสไปรษณีย์"
-                value={delegate.zipcode || signer.zipcode}
-              />
-              <InfoItem label="อีเมล" value={delegate.email || signer.email} />
-              <InfoItem
-                label="หมายเลขโทรศัพท์"
-                value={formatPhoneNumber_null(delegate.phone || signer.phone)}
-              />
-            </Grid>
+            {hasData(delegate) || hasData(signer) ? (
+              <Grid container spacing={2} mb={3}>
+                <InfoItem
+                  label="หมายเลขประจำตัวประชาชน"
+                  value={formatCitizenId_null(delegate.idCard || signer.idCard)}
+                />
+                <InfoItem
+                  label="ชื่อ - นามสกุล"
+                  value={delegate.name || signer.name}
+                />
+                <InfoItem
+                  label="ที่อยู่ที่ติดต่อได้"
+                  value={delegate.address || signer.address}
+                />
+                <InfoItem
+                  label="ตำบล/แขวง"
+                  value={delegate.subdistricts || signer.subdistricts}
+                />
+                <InfoItem
+                  label="อำเภอ/เขต"
+                  value={delegate.district || signer.district}
+                />
+                <InfoItem
+                  label="จังหวัด"
+                  value={delegate.province || signer.province}
+                />
+                <InfoItem
+                  label="รหัสไปรษณีย์"
+                  value={delegate.zipcode || signer.zipcode}
+                />
+                <InfoItem label="อีเมล" value={delegate.email || signer.email} />
+                <InfoItem
+                  label="หมายเลขโทรศัพท์"
+                  value={formatPhoneNumber_null(delegate.phone || signer.phone)}
+                />
+              </Grid>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', p: 2 }}>
+                ไม่มีข้อมูลผู้รับมอบอำนาจ
+              </Typography>
+            )}
           </Section>
 
           <Section title="ข้อมูลผู้ถูกร้อง (ข้อมูลจากผู้ร้องทุกข์)">
-            <Grid container spacing={2} mb={3}>
-              <InfoItem
-                label="หมายเลขประจำตัวประชาชน"
-                value={formatCitizenId_null(
-                  respondent.idCard || corporateS2.idCard || government.idCard
-                )}
-              />
-              <InfoItem
-                label="ชื่อ - นามสกุล"
-                value={respondent.name || corporateS2.name || government.name}
-              />
-              <InfoItem
-                label="ที่อยู่ที่ติดต่อได้"
-                value={
-                  respondent.address ||
-                  corporateS2.address ||
-                  government.address
-                }
-              />
-              <InfoItem
-                label="ตำบล/แขวง"
-                value={
-                  respondent.subdistricts ||
-                  corporateS2.subdistricts ||
-                  government.subdistricts
-                }
-              />
-              <InfoItem
-                label="อำเภอ/เขต"
-                value={
-                  respondent.district ||
-                  corporateS2.district ||
-                  government.district
-                }
-              />
-              <InfoItem
-                label="จังหวัด"
-                value={
-                  respondent.province ||
-                  corporateS2.province ||
-                  government.province
-                }
-              />
-              <InfoItem
-                label="รหัสไปรษณีย์"
-                value={
-                  respondent.zipcode ||
-                  corporateS2.zipcode ||
-                  government.zipcode
-                }
-              />
-              <InfoItem
-                label="อีเมล"
-                value={
-                  respondent.email || corporateS2.email || government.email
-                }
-              />
-              <InfoItem
-                label="หมายเลขโทรศัพท์"
-                value={formatPhoneNumber_null(
-                  respondent.phone || corporateS2.phone || government.phone
-                )}
-              />
-            </Grid>
+            {hasData(respondent) || hasData(corporateS2) || hasData(government) ? (
+              <Grid container spacing={2} mb={3}>
+                <InfoItem
+                  label="หมายเลขประจำตัวประชาชน"
+                  value={formatCitizenId_null(
+                    respondent.idCard || corporateS2.idCard || government.idCard
+                  )}
+                />
+                <InfoItem
+                  label="ชื่อ - นามสกุล"
+                  value={respondent.name || corporateS2.name || government.name}
+                />
+                <InfoItem
+                  label="ที่อยู่ที่ติดต่อได้"
+                  value={
+                    respondent.address ||
+                    corporateS2.address ||
+                    government.address
+                  }
+                />
+                <InfoItem
+                  label="ตำบล/แขวง"
+                  value={
+                    respondent.subdistricts ||
+                    corporateS2.subdistricts ||
+                    government.subdistricts
+                  }
+                />
+                <InfoItem
+                  label="อำเภอ/เขต"
+                  value={
+                    respondent.district ||
+                    corporateS2.district ||
+                    government.district
+                  }
+                />
+                <InfoItem
+                  label="จังหวัด"
+                  value={
+                    respondent.province ||
+                    corporateS2.province ||
+                    government.province
+                  }
+                />
+                <InfoItem
+                  label="รหัสไปรษณีย์"
+                  value={
+                    respondent.zipcode ||
+                    corporateS2.zipcode ||
+                    government.zipcode
+                  }
+                />
+                <InfoItem
+                  label="อีเมล"
+                  value={
+                    respondent.email || corporateS2.email || government.email
+                  }
+                />
+                <InfoItem
+                  label="หมายเลขโทรศัพท์"
+                  value={formatPhoneNumber_null(
+                    respondent.phone || corporateS2.phone || government.phone
+                  )}
+                />
+              </Grid>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', p: 2 }}>
+                ไม่มีข้อมูลผู้ถูกร้องเรียน
+              </Typography>
+            )}
           </Section>
 
           <Section title="ข้อมูลเรื่องร้องทุกข์">
@@ -368,7 +412,7 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {} }) => {
                 label="ยืนยัน"
                 color="ยืนยัน"
                 variant="contained"
-                onClick={() => router.back()}
+                onClick={handleConfirm}
                 iconRight={<CheckIcon />}
                 sx={{ width: { xs: "100%", sm: "auto" } }} 
               />

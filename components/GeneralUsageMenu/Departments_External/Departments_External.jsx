@@ -64,20 +64,54 @@ const Departments_External = () => {
         delete queryParams.status;
       }
 
-      console.log('API Query Parameters:', queryParams);
-
       const response = await GetAllOutsideDepartments(queryParams);
 
-      console.log('API Response:', response);
-
+      // Debug: ดู response structure
+      console.log('Full API Response:', JSON.stringify(response, null, 2));
+      
       if (response && response.res_data) {
         // ตรวจสอบว่า API ส่ง pagination info มาหรือไม่
         if (Array.isArray(response.res_data)) {
           setData(response.res_data);
-          setTotalCount(response.total || response.res_data.length);
+          // แก้ไขการตั้งค่า totalCount - ใช้ total จาก response หรือ count ถ้ามี
+          let actualTotal = response.total || response.count || response.total_count;
+          
+          // ถ้า API ไม่ส่ง total และมีข้อมูลเท่ากับ limit แสดงว่าอาจมีข้อมูลเพิ่ม
+          if (!actualTotal && response.res_data.length === currentRowsPerPage) {
+            // Estimate total หรือใช้จำนวนที่มากกว่า limit เพื่อให้ pagination ทำงาน
+            actualTotal = (currentPage + 2) * currentRowsPerPage; // สมมติว่ามีอย่างน้อย 1 หน้าถัดไป
+          } else if (!actualTotal) {
+            actualTotal = response.res_data.length;
+          }
+          
+          console.log('Setting totalCount to:', actualTotal, 'from response fields:', {
+            'response.total': response.total,
+            'response.count': response.count, 
+            'response.total_count': response.total_count,
+            'data.length': response.res_data.length,
+            'calculated': actualTotal
+          });
+          setTotalCount(actualTotal);
         } else if (response.res_data.data) {
           setData(response.res_data.data);
-          setTotalCount(response.res_data.total || response.res_data.data.length);
+          let actualTotal = response.res_data.total || response.res_data.count || response.total || response.count;
+          
+          // ถ้า API ไม่ส่ง total และมีข้อมูลเท่ากับ limit แสดงว่าอาจมีข้อมูลเพิ่ม
+          if (!actualTotal && response.res_data.data.length === currentRowsPerPage) {
+            actualTotal = (currentPage + 2) * currentRowsPerPage;
+          } else if (!actualTotal) {
+            actualTotal = response.res_data.data.length;
+          }
+          
+          console.log('Setting totalCount to:', actualTotal, 'from nested response fields:', {
+            'response.res_data.total': response.res_data.total,
+            'response.res_data.count': response.res_data.count,
+            'response.total': response.total,
+            'response.count': response.count,
+            'data.length': response.res_data.data.length,
+            'calculated': actualTotal
+          });
+          setTotalCount(actualTotal);
         } else {
           setData([]);
           setTotalCount(0);
@@ -97,7 +131,6 @@ const Departments_External = () => {
   };
 
   const handleSearch = (searchFilters) => {
-    console.log('Search filters received:', searchFilters);
     setFilters(searchFilters);
     setPage(0);
     fetchData(searchFilters, 0, rowsPerPage);
