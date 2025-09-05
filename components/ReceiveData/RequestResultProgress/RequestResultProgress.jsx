@@ -240,6 +240,7 @@ useEffect(() => {
       handleChange({ target: { name: 'refNo', value: val } });
     }, 0);
   }, [handleChange]);
+  const [tabSelected, setTabSelected] = useState("department");
 
   return (
     <Box
@@ -278,7 +279,62 @@ useEffect(() => {
             แบบรายงานขอทราบผลการพิจารณา / ผลความคืบหน้า
           </Typography>
         </Box>
-
+        {/* --- NEW: Tab Switch for Department / Complainant --- */}
+        <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 2 }}>
+          <Box sx={{ display: "flex", ml: 3 }}>
+            <Button
+              disableRipple
+              variant="text"
+              color="inherit"
+              sx={{
+                borderRadius: 0,
+                fontWeight: 600,
+                px: 3,
+                py: 1.2,
+                fontSize: "1.06rem",
+                minWidth: 0,
+                bgcolor: "transparent",
+                color: tabSelected === "department" ? "#1120A3" : "#666",
+                borderBottom: tabSelected === "department" ? "2.5px solid #1120A3" : "2.5px solid transparent",
+                boxShadow: "none",
+                transition: "color 0.15s, border-bottom 0.15s",
+                "&:hover": {
+                  bgcolor: "transparent",
+                  color: "#1120A3",
+                },
+              }}
+              onClick={() => setTabSelected("department")}
+            >
+              หน่วยงาน
+            </Button>
+            <Button
+              disableRipple
+              variant="text"
+              color="inherit"
+              sx={{
+                borderRadius: 0,
+                fontWeight: 600,
+                px: 3,
+                py: 1.2,
+                fontSize: "1.06rem",
+                minWidth: 0,
+                bgcolor: "transparent",
+                color: tabSelected === "complainant" ? "#1120A3" : "#666",
+                borderBottom: tabSelected === "complainant" ? "2.5px solid #1120A3" : "2.5px solid transparent",
+                boxShadow: "none",
+                transition: "color 0.15s, border-bottom 0.15s",
+                "&:hover": {
+                  bgcolor: "transparent",
+                  color: "#1120A3",
+                },
+              }}
+              onClick={() => setTabSelected("complainant")}
+            >
+              ผู้ร้อง
+            </Button>
+          </Box>
+        </Box>
+        {/* --- END TAB SWITCH --- */}
         <Box
           component="form"
           sx={{
@@ -895,8 +951,9 @@ useEffect(() => {
 
           {/* Row 4: หน่วยงาน / ผู้ร้อง* */}
           <Box>
+            {tabSelected === "department" ? (
             <SelectFieldDepartment
-              label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}
+              label={createLabel("หน่วยงาน", "department")}
               name="department"
               value={selectedDepartment}
               onChange={handleDepartmentSelect}
@@ -907,6 +964,20 @@ useEffect(() => {
               disabled={!selectedSigner}
               placeholder={selectedSigner ? "เลือกหน่วยงาน" : "เลือกผู้ลงนามก่อน"}
             />
+          ) : (
+            <SelectFieldDepartment
+              label={createLabel("ผู้ร้อง", "department")}
+              name="department"
+              value={selectedDepartment}
+              onChange={handleDepartmentSelect}
+              onDepartmentSelect={handleDepartmentSelect}
+              filterBySignerId={selectedSigner?.id ?? selectedSigner?.value}
+              error={!!getFieldError("department")}
+              helperText={getFieldError("department")}
+              disabled={!selectedSigner}
+              placeholder={selectedSigner ? "เลือกผู้ร้อง" : "เลือกผู้ลงนามก่อน"}
+            />
+          )}
           </Box>
 
           {/* Row 5: ชั้นความลับ*, ชั้นความเร่งด่วน* */}
