@@ -286,195 +286,189 @@ export const useInitialNotificationComplainantAgency = () => {
     setErrors({});
   }, []);
 
-  // ---------- SAVE ----------
-  const handleSave = useCallback(async () => {
-    const missing = validateRequiredFields();
-    if (missing.length > 0) {
-      const names = missing.map((m) => m.label).join(", ");
-      alertError("ข้อมูลไม่ครบถ้วน", `กรุณากรอกข้อมูลในฟิลด์: ${names}`);
+// ---------- SAVE ----------
+const handleSave = useCallback(async () => {
+  const missing = validateRequiredFields();
+  if (missing.length > 0) {
+    const names = missing.map((m) => m.label).join(", ");
+    alertError("ข้อมูลไม่ครบถ้วน", `กรุณากรอกข้อมูลในฟิลด์: ${names}`);
+    return;
+  }
+
+  // ตรวจไฟล์ก่อนอัปโหลด
+  if (attachmentFiles.length) {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowed = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/png",
+    ];
+    const oversize = attachmentFiles.find(f => f.size > maxSize);
+    if (oversize) {
+      alertError("ไฟล์ใหญ่เกินไป", `ไฟล์ ${oversize.name} เกิน 10MB`);
+      return;
+    }
+    const badType = attachmentFiles.find(f => !allowed.includes(f.type));
+    if (badType) {
+      alertError("ประเภทไฟล์ไม่รองรับ", `ไฟล์ ${badType.name} ไม่ใช่ประเภทที่รองรับ`);
+      return;
+    }
+  }
+
+  const payload = {
+    position_id: form.position_id || "7e18e4fe-d416-4580-b4d4-2a4032f67770",
+    complaint_number: form.complaint_number || "",
+    complaint_number_date: toISOorNull(form.date),
+    document_number: form.refNo || "",
+    document_date: toISOorNull(form.date),
+    subject: form.subject || "",
+    signature_authority_user_id: nullIfEmpty(form.signer),
+    department_id: nullIfEmpty(form.department),
+    user_id: null,
+    confidentiality_level: nullIfEmpty(form.confidentiality),
+    urgency_level: nullIfEmpty(form.urgency),
+    complaint_id: nullIfEmpty(form.complaint_id),
+    remarks: form.note || "",
+  };
+
+  try {
+    setIsLoading(true);
+    showLoading("กำลังบันทึกข้อมูล...");
+
+    // 1) สร้างรายการออกหนังสือ
+    const createRes = await CreateOutgoingReport2(payload);
+
+    const extractReportId = (resp) => {
+      if (!resp) return null;
+      const candidates = [
+        resp?.res_data?.id,
+        resp?.res_data?.report_id,
+        resp?.res_data?.outgoing_report_id,
+        resp?.data?.id,
+        resp?.id,
+      ].filter(Boolean);
+      if (candidates.length) return candidates[0];
+      try {
+        const stack = [resp];
+        while (stack.length) {
+          const cur = stack.pop();
+          if (cur && typeof cur === 'object') {
+            if (Object.prototype.hasOwnProperty.call(cur,'id') && cur.id) return cur.id;
+            Object.values(cur).forEach(v => { if (v && typeof v === 'object') stack.push(v); });
+          }
+        }
+      } catch(_){}
+      return null;
+    };
+    const createdId = extractReportId(createRes);
+
+    if (!createdId) {
+      closeAlert();
+      setIsLoading(false);
+      await alertError("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานที่สร้างได้ กรุณาลองใหม่อีกครั้ง");
       return;
     }
 
-    // ตรวจไฟล์ก่อนอัปโหลด
-    if (attachmentFiles.length) {
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      const allowed = [
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "image/jpeg",
-        "image/png",
-      ];
-      const oversize = attachmentFiles.find(f => f.size > maxSize);
-      if (oversize) {
-        alertError("ไฟล์ใหญ่เกินไป", `ไฟล์ ${oversize.name} เกิน 10MB`);
-        return;
-      }
-      const badType = attachmentFiles.find(f => !allowed.includes(f.type));
-      if (badType) {
-        alertError("ประเภทไฟล์ไม่รองรับ", `ไฟล์ ${badType.name} ไม่ใช่ประเภทที่รองรับ`);
-        return;
-      }
-    }
+    // 2) อัปโหลดไฟล์แนบ (ถ้ามีไฟล์และสร้างสำเร็จ)
+    if (attachmentFiles.length > 0) {
+      showLoading("กำลังอัพโหลดไฟล์แนบ...");
 
-    const payload = {
-      position_id: form.position_id || "7e18e4fe-d416-4580-b4d4-2a4032f67770",
-      complaint_number: form.complaint_number || "",
-      complaint_number_date: toISOorNull(form.date),
-      document_number: form.refNo || "",
-      document_date: toISOorNull(form.date),
-      subject: form.subject || "",
-      signature_authority_user_id: nullIfEmpty(form.signer),
-      department_id: nullIfEmpty(form.department),
-      user_id: null,
-      confidentiality_level: nullIfEmpty(form.confidentiality),
-      urgency_level: nullIfEmpty(form.urgency),
-      complaint_id: nullIfEmpty(form.complaint_id),
-      remarks: form.note || "",
-    };
-
-    try {
-      setIsLoading(true);
-      showLoading("กำลังบันทึกข้อมูล...");
-
-      // 1) สร้างรายการออกหนังสือ
-      const createRes = await CreateOutgoingReport2(payload);
-
-      const resCode = createRes?.res_code ?? createRes?.data?.res_code;
-      const resMsg = createRes?.res_message ?? createRes?.data?.res_message;
-      const resErr = createRes?.res_data?.error ?? createRes?.data?.res_data?.error;
-      const isConflict =
-        resCode === "4090" || resMsg === "CONFLICT" || String(resErr || "").includes("มีอยู่แล้ว");
-      if (isConflict) {
-        closeAlert();
-        setIsLoading(false);
-        await alertError("เลขที่หนังสือซ้ำ", resErr || `เลขที่หนังสือ ${form.refNo || "-"} มีอยู่แล้ว`);
-        return;
-      }
-
-      // ไอดีที่สร้าง (รองรับหลายรูปแบบ)
-      const extractReportId = (resp) => {
-        if (!resp) return null;
-        const candidates = [
-          resp?.res_data?.id,
-          resp?.res_data?.report_id,
-          resp?.res_data?.outgoing_report_id,
-          resp?.data?.id,
-          resp?.id,
-        ].filter(Boolean);
-        if (candidates.length) return candidates[0];
-        try {
-          const stack = [resp];
-          while (stack.length) {
-            const cur = stack.pop();
-            if (cur && typeof cur === 'object') {
-              if (Object.prototype.hasOwnProperty.call(cur,'id') && cur.id) return cur.id;
-              Object.values(cur).forEach(v => { if (v && typeof v === 'object') stack.push(v); });
-            }
-          }
-        } catch(_){}
-        return null;
+      // ฟังก์ชัน build FormData (key ตามจำนวนไฟล์)
+      const buildFormData = (useSingleKey = false) => {
+        const formData = new FormData();
+        if (attachmentFiles.length === 1) {
+          formData.append(useSingleKey ? 'file' : 'files', attachmentFiles[0], attachmentFiles[0].name);
+        } else {
+          attachmentFiles.forEach(f => formData.append(useSingleKey ? 'file' : 'files', f, f.name));
+        }
+        return formData;
       };
-      const createdId = extractReportId(createRes);
 
-      if (!createdId) {
-        closeAlert();
-        setIsLoading(false);
-        await alertError("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานที่สร้างได้ กรุณาลองใหม่อีกครั้ง");
-        return;
+      let uploadOk = false;
+      let lastErrorMsg = "";
+
+      // Attempt 1: ใช้ UploadOutgoingReportAttachments กับ key 'files'
+      try {
+        const up1 = await UploadOutgoingReportAttachments(buildFormData(false), createdId);
+        uploadOk = !!(up1 && (up1.success === true || up1.res_code === '0001'));
+        if (!uploadOk) {
+          lastErrorMsg = up1?.res_data?.error || up1?.res_message || up1?.message || '';
+        }
+      } catch (err1) {
+        const data = err1?.response?.data;
+        lastErrorMsg = data?.res_data?.error || data?.res_message || err1.message || '';
+        console.error('Upload attempt #1 (UploadOutgoingReportAttachments, files) failed', data || err1);
       }
 
-      // 2) อัปโหลดไฟล์แนบ (ถ้ามีไฟล์และสร้างสำเร็จ)
-      if (createdId && attachmentFiles.length > 0) {
-        // กลยุทธ์การอัปโหลดหลายขั้น (ลดโอกาส 500 ภายใน)
-        // 1) พยายาม endpoint เฉพาะ type2 ก่อน
-        // 2) ถ้าไม่สำเร็จ ลอง endpoint ทั่วไป (UploadOutgoingReportAttachments -> /outgoing-reports/{id}/attachments)
-        // 3) ถ้าไม่สำเร็จและมีไฟล์เดียว ลองเปลี่ยน key เป็น 'file'
-        const buildFormData = (useSingleKey = false) => {
-          const formData = new FormData();
-            attachmentFiles.forEach((f) => formData.append(useSingleKey ? 'file' : 'files', f, f.name));
-          return formData;
-        };
-
-        let uploadOk = false;
-        let lastErrorMsg = '';
-
-        // Attempt 1: /outgoing-reports2/{id}/attachments (คาดว่า correct สำหรับ CreateOutgoingReport2)
+      // Attempt 2: ใช้ UploadOutgoingReportAttachments กับ key 'file' (กรณีไฟล์เดียว)
+      if (!uploadOk && attachmentFiles.length === 1) {
         try {
-          const up1 = await axiosInstance.post(`/outgoing-reports2/${createdId}/attachments`, buildFormData(false));
-          uploadOk = !!up1?.data;
-        } catch (err1) {
-          const data = err1?.response?.data;
-          lastErrorMsg = data?.res_data?.error || data?.res_message || err1.message || '';
-          console.error('Upload attempt #1 (type2) failed', data || err1);
-        }
-
-        // Attempt 2: generic endpoint (ถ้ายังไม่สำเร็จ)
-        if (!uploadOk) {
-          try {
-            const up2 = await UploadOutgoingReportAttachments(buildFormData(false), createdId);
-            uploadOk = !!(up2 && (up2.success === true || up2.res_code === '0001'));
-            if (!uploadOk) {
-              const data2 = up2;
-              lastErrorMsg = data2?.res_data?.error || data2?.res_message || lastErrorMsg;
-            }
-          } catch (err2) {
-            const data = err2?.response?.data;
-            lastErrorMsg = data?.res_data?.error || data?.res_message || err2.message || lastErrorMsg;
-            console.error('Upload attempt #2 (generic) failed', data || err2);
+          const up2 = await UploadOutgoingReportAttachments(buildFormData(true), createdId);
+          uploadOk = !!(up2 && (up2.success === true || up2.res_code === '0001'));
+          if (!uploadOk) {
+            lastErrorMsg = up2?.res_data?.error || up2?.res_message || up2?.message || lastErrorMsg;
           }
-        }
-
-        // Attempt 3: single key 'file' (ไฟล์เดียว) เผื่อ backend รอแบบ single
-        if (!uploadOk && attachmentFiles.length === 1) {
-          try {
-            const up3 = await axiosInstance.post(`/outgoing-reports2/${createdId}/attachments`, buildFormData(true));
-            uploadOk = !!up3?.data;
-          } catch (err3) {
-            const data = err3?.response?.data;
-            lastErrorMsg = data?.res_data?.error || data?.res_message || err3.message || lastErrorMsg;
-            console.error('Upload attempt #3 (single file key) failed', data || err3);
-          }
-        }
-
-        if (!uploadOk) {
-          console.warn('⚠️ บันทึกรายงานสำเร็จแต่แนบไฟล์ไม่สำเร็จ', lastErrorMsg);
-          await alertError('แนบไฟล์ไม่สำเร็จ', lastErrorMsg || 'ระบบไม่สามารถแนบไฟล์ได้ กรุณาลองใหม่');
+        } catch (err2) {
+          const data = err2?.response?.data;
+          lastErrorMsg = data?.res_data?.error || data?.res_message || err2.message || lastErrorMsg;
+          console.error('Upload attempt #2 (UploadOutgoingReportAttachments, file) failed', data || err2);
         }
       }
 
-      closeAlert();
-      setIsLoading(false);
-
-      const fileNames =
-        attachmentFiles.length > 0
-          ? attachmentFiles.map((f) => f.name).join(", ")
-          : null;
-      const successHtml = `
-        <div style="text-align:center;line-height:1.7">
-          <p style="margin:6px 0 14px 0;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
-          <p style="margin:4px 0;color:#666">รหัสรายงาน: <strong>${createdId}</strong></p>
-          <p style="margin:4px 0;color:#666">เรื่อง: <strong>${form.subject || "-"}</strong></p>
-          ${fileNames ? `<p style="margin:4px 0;color:#666">ไฟล์แนบ: <strong>${fileNames}</strong></p>` : ""}
-                </div>
-      `;
-      await alertSuccess("บันทึกสำเร็จ!", successHtml, true);
-      router.push(`/admin/box/list`);
-    } catch (err) {
-      console.error("Save error:", err);
-      closeAlert();
-      setIsLoading(false);
-
-      const httpStatus = err?.response?.status;
-      const data = err?.response?.data;
-      const backendMsg = data?.res_data?.error || data?.res_message || data?.message || "";
-      if (httpStatus === 409 || data?.res_code === "4090" || String(backendMsg).includes("มีอยู่แล้ว")) {
-        await alertError("เลขที่หนังสือซ้ำ", backendMsg || `เลขที่หนังสือ ${form.refNo || "-"} มีอยู่แล้ว`);
-        return;
+      // Attempt 3: ยิงตรงด้วย axios ไป /outgoing-reports2/{id}/attachments กับ key 'files'
+      if (!uploadOk) {
+        try {
+          const up3 = await axiosInstance.post(`/outgoing-reports2/${createdId}/attachments`, buildFormData(false));
+          uploadOk = !!up3?.data;
+        } catch (err3) {
+          const data = err3?.response?.data;
+          lastErrorMsg = data?.res_data?.error || data?.res_message || err3.message || lastErrorMsg;
+          console.error('Upload attempt #3 (direct, files) failed', data || err3);
+        }
       }
-      alertError("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
+
+      if (!uploadOk) {
+        console.warn('⚠️ บันทึกรายงานสำเร็จแต่แนบไฟล์ไม่สำเร็จ', lastErrorMsg);
+        await alertError('แนบไฟล์ไม่สำเร็จ', lastErrorMsg || 'ระบบไม่สามารถแนบไฟล์ได้ กรุณาลองใหม่');
+      }
     }
-  }, [form, attachmentFiles, validateRequiredFields]);
+
+    closeAlert();
+    setIsLoading(false);
+
+    const fileNames =
+      attachmentFiles.length > 0
+        ? attachmentFiles.map((f) => f.name).join(", ")
+        : null;
+    const successHtml = `
+      <div style="text-align:center;line-height:1.7">
+        <p style="margin:6px 0 14px 0;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
+        <p style="margin:4px 0;color:#666">รหัสรายงาน: <strong>${createdId}</strong></p>
+        <p style="margin:4px 0;color:#666">เรื่อง: <strong>${form.subject || "-"}</strong></p>
+        ${fileNames ? `<p style="margin:4px 0;color:#666">ไฟล์แนบ: <strong>${fileNames}</strong></p>` : ""}
+      </div>
+    `;
+    await alertSuccess("บันทึกสำเร็จ!", successHtml, true);
+    router.push(`/admin/box/list`);
+  } catch (err) {
+    console.error("Save error:", err);
+    closeAlert();
+    setIsLoading(false);
+
+    const httpStatus = err?.response?.status;
+    const data = err?.response?.data;
+    const backendMsg = data?.res_data?.error || data?.res_message || data?.message || "";
+    if (httpStatus === 409 || data?.res_code === "4090" || String(backendMsg).includes("มีอยู่แล้ว")) {
+      await alertError("เลขที่หนังสือซ้ำ", backendMsg || `เลขที่หนังสือ ${form.refNo || "-"} มีอยู่แล้ว`);
+      return;
+    }
+    alertError("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
+  }
+}, [form, attachmentFiles, validateRequiredFields]);
+
+// ... ส่วนอื่น ๆ ของ hook และ export เหมือนเดิม ...
 
   // ---------- utilities ----------
   const resetField = useCallback((fieldName) => {

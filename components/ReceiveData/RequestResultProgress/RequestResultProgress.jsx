@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
@@ -12,6 +13,7 @@ import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsa
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
+import { GetOutgoingReport3ById } from "@pages/api/outgoinreports/outgoinreports";
 import { GetReDocumentComplaints } from "@pages/api/complaint/complaint";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -48,7 +50,9 @@ const RequestResultProgress = () => {
     isFormValid,
     updateField,
   } = useRequestResultProgress();
+  const router = useRouter();
 
+  // State สำหรับ dynamic data
   const [selectedSigner, setSelectedSigner] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [confidentialityOptions, setConfidentialityOptions] = useState([]);
@@ -61,6 +65,72 @@ const RequestResultProgress = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
+
+  // Prefill when editing existing type2 report via /[id] (เหมือน InitialNotificationComplainantAgency)
+  useEffect(() => {
+    const editId = router?.query?.id;
+    if (!editId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        console.log("id to fetch", editId); 
+        const res = await GetOutgoingReport3ById(editId);
+        const d = res?.res_data || res?.data || res;
+        if (cancelled || !d) return;
+
+        // Core ids / numbers
+        updateField('complaint_number', d.complaint_number || d.reference_number || '');
+        updateField('complaint_id', d.complaint_id || '');
+        updateField('refNo', d.document_number || '');
+        updateField('docNo', d.document_number || '');
+        updateField('subject', d.subject || '');
+        updateField('salutation', d.position?.id || "");
+        // ผู้ลงนาม: setSelectedSigner และ updateField("signer", id)
+        const signerObj = d.signature_authority_user || null;
+        const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || '';
+        setSelectedSigner(signerObj);
+        updateField("signer", signerId);
+        updateField("signer_meta", signerObj);
+        const posId =
+          signerObj?.position_id ||
+          signerObj?.position?.id ||
+          signerObj?.positionId ||
+          "";
+        updateField("position_id", posId);
+
+        // หน่วยงาน (id และ object)
+        updateField("department", d.department?.id || "");
+        setSelectedDepartment(d.department || null);
+        updateField("department_meta", d.department || null);
+
+        // Date (priority: complaint_number_date > document_date > created_at)
+        const dateSrc = d.complaint_number_date || d.document_date || d.created_at;
+        if (dateSrc) {
+          const dt = new Date(dateSrc);
+          if (!isNaN(dt.getTime())) handleDateChange(dt);
+        }
+
+        // Confidentiality / Urgency
+        if (d.confidentiality_level !== undefined && d.confidentiality_level !== null)
+          updateField('confidentiality', d.confidentiality_level);
+        if (d.urgency_level !== undefined && d.urgency_level !== null)
+          updateField('urgency', d.urgency_level);
+
+        // หมายเหตุ
+        if (d.remarks) updateField('note', d.remarks);
+
+        // Attachments
+        const atts = Array.isArray(d.attachments) ? d.attachments : [];
+        if (atts.length) {
+          const names = atts.map(a => a.original_name || a.file_name || a.name || '').filter(Boolean).join(', ');
+          if (names) updateField('attachment', names);
+        }
+      } catch (err) {
+        console.error('Failed to prefill type2 report by id', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [router?.query?.id]);
 
   useEffect(() => {
     if (openSearchDialog) {
@@ -79,12 +149,9 @@ const RequestResultProgress = () => {
         search: keyword || "",
       });
 
-      console.log("API response", response);
-
       const items = Array.isArray(response?.res_data?.items)
         ? response.res_data.items
         : [];
-
 
       const results = items.map((item) => ({
         ...item,
@@ -103,9 +170,9 @@ const RequestResultProgress = () => {
 
   const handleSelectReference = (ref) => {
     updateField("refNo", ref.complaint_number || "");
-      if (ref?.complaint_id || ref?.id) {
-        updateField("complaint_id", ref.complaint_id || ref.id);
-      }
+    if (ref?.complaint_id || ref?.id) {
+      updateField("complaint_id", ref.complaint_id || ref.id);
+    }
     setOpenSearchDialog(false);
   };
 
@@ -115,65 +182,15 @@ const RequestResultProgress = () => {
     inputRef.current?.focus();
   };
 
-  const handleSearch2 = async (keyword) => {
-      setSearchLoading(true);
-      try {
-        const response = await GetReferenceComplaints({
-          skip: 0,
-          limit: 100,
-          search: keyword || "",
-        });
-  
-  
-        const items = Array.isArray(response?.res_data?.items)
-          ? response.res_data.items
-          : [];
-  
-  
-        const results = items.map((item) => ({
-          ...item,
-          label: item.complaint_number  || "",
-          value: item.complaint_number  || "",
-        }));
-  
-        setSearchResults(results);
-      } catch (err) {
-        setSearchResults([]);
-        console.error("handleSearch2 error", err);
-      } finally {
-        setSearchLoading(false);
-      }
-    };
-  
-    const handleSelectReference2 = (ref) => {
-      setValue("refNo1", ref.complaint_number , { shouldValidate: true, shouldDirty: true });
-      setOpenSearchDialog2(false);
-    };
-  
-    const onClear2 = () => {
-      setSearchText("");
-      handleSearch2("");
-      inputRef.current?.focus();
-    };
-
-useEffect(() => {
-  if (openSearchDialog) {
-    setSearchText("");
-    handleSearch("");
-    inputRef.current?.focus();
-  }
-}, [openSearchDialog]);
-
   const normalizeOptions = (labelsInOrder) =>
-  labelsInOrder.map((label, idx) => ({
-    value: idx + 1,
-    label,
-  }));
-
+    labelsInOrder.map((label, idx) => ({
+      value: idx + 1,
+      label,
+    }));
 
   const handleSignerSelect = (userInfo) => {
     setSelectedSigner(userInfo);
-    handleChange({ target: { name: "signer", value: userInfo?.id ?? userInfo?.value ?? "" } });
+    updateField("signer", userInfo?.id ?? userInfo?.value ?? "");
     updateField("signer_meta", userInfo);
 
     const signerPosId =
@@ -183,35 +200,33 @@ useEffect(() => {
       null;
     updateField("position_id", signerPosId || "");
     setSelectedDepartment(null);
-    handleChange({ target: { name: "department", value: "" } });
+    updateField("department", "");
     updateField("department_meta", null);
   };
 
   const handleDepartmentSelect = (department) => {
     setSelectedDepartment(department);
     if (department) {
-      handleChange({ target: { name: "department", value: department?.id ?? department?.value ?? "" } });
+      updateField("department", department?.id ?? department?.value ?? "");
       updateField("department_meta", department);
     }
   };
 
   const fetchOptions = async () => {
-  try {
-    setOptionsLoading(true);
+    try {
+      setOptionsLoading(true);
 
-    const confidentialityLabels = ["ปกติ", "ลับ", "ลับมาก", "ลับที่สุด"];
-    const urgencyLabels = ["ปกติ", "เร่งด่วน", "เร่งด่วนมาก", "เร่งด่วนที่สุด"];
+      const confidentialityLabels = ["ปกติ", "ลับ", "ลับมาก", "ลับที่สุด"];
+      const urgencyLabels = ["ปกติ", "เร่งด่วน", "เร่งด่วนมาก", "เร่งด่วนที่สุด"];
 
-    setConfidentialityOptions(normalizeOptions(confidentialityLabels));
-    setUrgencyOptions(normalizeOptions(urgencyLabels));
-
-  } catch (error) {
-    console.error("❌ Error:", error);
-  } finally {
-    setOptionsLoading(false);
-  }
-};
-
+      setConfidentialityOptions(normalizeOptions(confidentialityLabels));
+      setUrgencyOptions(normalizeOptions(urgencyLabels));
+    } catch (error) {
+      console.error("❌ Error:", error);
+    } finally {
+      setOptionsLoading(false);
+    }
+  };
 
   // โหลดข้อมูล options เมื่อ component mount
   useEffect(() => {
@@ -220,7 +235,6 @@ useEffect(() => {
 
   // ฟังก์ชันล้างข้อมูลที่อัพเดทแล้ว
   const handleClearExtended = () => {
-   
     handleClear();
     setSelectedSigner(null);
     setSelectedDepartment(null);
@@ -229,17 +243,16 @@ useEffect(() => {
   };
 
   const handleRefNoBlur = useCallback((e) => {
-    // Re-run parsing via shared handleChange (hook already parses name==='refNo')
     handleChange(e);
   }, [handleChange]);
 
   const handleRefNoPaste = useCallback((e) => {
-    // Wait next tick so pasted value is in the input, then trigger parsing
     setTimeout(() => {
       const val = e.target?.value || "";
       handleChange({ target: { name: 'refNo', value: val } });
     }, 0);
   }, [handleChange]);
+
   const [tabSelected, setTabSelected] = useState("department");
 
   return (

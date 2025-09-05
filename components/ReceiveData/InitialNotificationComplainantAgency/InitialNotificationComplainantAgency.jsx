@@ -137,30 +137,28 @@ const InitialNotificationComplainantAgency = () => {
     }
   }, [openSearchDialog]);
 
-  // ฟังก์ชันจัดการเมื่อมีการเลือกผู้ลงนาม
+  // ฟังก์ชันจัดการเมื่อมีการเลือกผู้ลงนาม (ฉบับปรับปรุงตามต้นแบบที่ดีที่สุด)
   const handleSignerSelect = (userInfo) => {
-
-    handleChange({ target: { name: "signer", value: pickId(userInfo) } });
-
-  // ใส่ position_id (ไม่มี UI) ลง form
-    handleChange({ target: { name: "position_id", value: pickPositionId(userInfo) } });
-
+    // เซ็ต state สำหรับผู้ลงนาม (object ทั้งตัว)
     setSelectedSigner(userInfo);
-     // เซ็ต signer id (เผื่อคอมโพเนนต์ไม่ได้ยิง onChange ให้)
-    if (userInfo?.id) {   
-      handleChange({ target: { name: "signer", value: userInfo.id } });
-    }
-    // ดึง position_id จาก userInfo (ลองหลายคีย์ไว้ให้)
+
+    // เซ็ตค่า id ผู้ลงนามเข้า form (ใช้ทั้ง userInfo.id และ fallback)
+    const signerId = userInfo?.id ?? userInfo?.value ?? "";
+    handleChange({ target: { name: "signer", value: signerId } });
+
+    // ดึง position_id หลายคีย์ (รองรับทุกกรณี)
     const posId =
-      userInfo?.position_id ||
-      userInfo?.position?.id ||
-      userInfo?.positionId ||
+      userInfo?.position_id ??
+      userInfo?.position?.id ??
+      userInfo?.positionId ??
       "";
+
     handleChange({ target: { name: "position_id", value: posId } });
 
+    // ทุกครั้งที่เปลี่ยนผู้ลงนาม ให้ล้างหน่วยงานที่เลือกไว้
     setSelectedDepartment(null);
     handleChange({ target: { name: "department", value: "" } });
-  }
+  };
 
   const handleDepartmentSelect = (department) => {
     setSelectedDepartment(department);
@@ -219,58 +217,74 @@ const InitialNotificationComplainantAgency = () => {
     setSelectedDepartment(null);
   };
 
-  // Prefill when editing existing type2 report via /[id]
-  useEffect(() => {
-    const editId = router?.query?.id;
-    if (!editId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await GetOutgoingReport2ById(editId);
-        const d = res?.res_data || res?.data || res;
-        if (cancelled || !d) return;
+  /// Prefill when editing existing type2 report via /[id]
+useEffect(() => {
+  const editId = router?.query?.id;
+  if (!editId) return;
+  let cancelled = false;
+  (async () => {
+    try {
+      const res = await GetOutgoingReport2ById(editId);
+      const d = res?.res_data || res?.data || res;
+      if (cancelled || !d) return;
 
-        // Core ids / numbers
-        handleChange({ target: { name: 'complaint_number', value: d.complaint_number || d.reference_number || '' } });
-        handleChange({ target: { name: 'complaint_id', value: d.complaint_id || '' } });
-        handleChange({ target: { name: 'refNo', value: d.document_number || '' } });
+      // Core ids / numbers
+      handleChange({ target: { name: 'complaint_number', value: d.complaint_number || d.reference_number || '' } });
+      handleChange({ target: { name: 'complaint_id', value: d.complaint_id || '' } });
+      handleChange({ target: { name: 'refNo', value: d.document_number || '' } });
 
-        // Subject & salutation
-        handleChange({ target: { name: 'subject', value: d.subject || '' } });
-        if (d.salutation) handleChange({ target: { name: 'salutation', value: d.salutation } });
+      // Subject
+      handleChange({ target: { name: 'subject', value: d.subject || '' } });
 
-        // Date (priority: complaint_number_date > document_date > created_at)
-        const dateSrc = d.complaint_number_date || d.document_date || d.created_at;
-        if (dateSrc) {
-          const dt = new Date(dateSrc);
-          if (!isNaN(dt.getTime())) handleDateChange(dt);
-        }
+      // เรียน/ถึง (ชื่อ position)
+      handleChange({ target: { name: 'salutation', value: d.position?.id || "" } });
 
-        // Confidentiality / Urgency
-        if (d.confidentiality_level !== undefined && d.confidentiality_level !== null)
-          handleChange({ target: { name: 'confidentiality', value: d.confidentiality_level } });
-        if (d.urgency_level !== undefined && d.urgency_level !== null)
-          handleChange({ target: { name: 'urgency', value: d.urgency_level } });
+      // ผู้ลงนาม (id และ object)
+      // --- แก้ตรงนี้: Set ทั้ง selectedSigner และฟอร์ม ---
+      const signerObj = d.signature_authority_user || null;
+      const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || '';
+      setSelectedSigner(signerObj);
+      handleChange({ target: { name: 'signer', value: signerId } });
+      // Position id (ถ้ามี)
+      const posId =
+        signerObj?.position_id ||
+        signerObj?.position?.id ||
+        signerObj?.positionId ||
+        "";
+      handleChange({ target: { name: 'position_id', value: posId } });
 
-        // Signer and Department
-        handleChange({ target: { name: 'signer', value: d.signature_authority_user?.id || d.signature_authority_user_id || '' } });
-        handleChange({ target: { name: 'department', value: d.department?.id || d.department_id || '' } });
+      // หน่วยงาน (id)
+      handleChange({ target: { name: 'department', value: d.department?.id || "" } });
+      setSelectedDepartment(d.department || null);
 
-        // Remarks -> note
-        if (d.remarks) handleChange({ target: { name: 'note', value: d.remarks } });
-
-        // Show existing attachments as names (user still re-uploads if needed)
-        const atts = Array.isArray(d.attachments) ? d.attachments : [];
-        if (atts.length) {
-          const names = atts.map(a => a.original_name || a.file_name || a.name || '').filter(Boolean).join(', ');
-          if (names) handleChange({ target: { name: 'attachment', value: names } });
-        }
-      } catch (err) {
-        console.error('Failed to prefill type2 report by id', err);
+      // Date (priority: complaint_number_date > document_date > created_at)
+      const dateSrc = d.complaint_number_date || d.document_date || d.created_at;
+      if (dateSrc) {
+        const dt = new Date(dateSrc);
+        if (!isNaN(dt.getTime())) handleDateChange(dt);
       }
-    })();
-    return () => { cancelled = true; };
-  }, [router?.query?.id]);
+
+      // Confidentiality / Urgency
+      if (d.confidentiality_level !== undefined && d.confidentiality_level !== null)
+        handleChange({ target: { name: 'confidentiality', value: d.confidentiality_level } });
+      if (d.urgency_level !== undefined && d.urgency_level !== null)
+        handleChange({ target: { name: 'urgency', value: d.urgency_level } });
+
+      // หมายเหตุ
+      if (d.remarks) handleChange({ target: { name: 'note', value: d.remarks } });
+
+      // Attachments
+      const atts = Array.isArray(d.attachments) ? d.attachments : [];
+      if (atts.length) {
+        const names = atts.map(a => a.original_name || a.file_name || a.name || '').filter(Boolean).join(', ');
+        if (names) handleChange({ target: { name: 'attachment', value: names } });
+      }
+    } catch (err) {
+      console.error('Failed to prefill type2 report by id', err);
+    }
+  })();
+  return () => { cancelled = true; };
+}, [router?.query?.id]);
   const [tabSelected, setTabSelected] = useState("department");
   return (
     <Box
@@ -727,6 +741,7 @@ const InitialNotificationComplainantAgency = () => {
               onUserSelect={handleSignerSelect}
               error={!!getFieldError("signer")}
               helperText={getFieldError("signer")}
+              required={true}
               placeholder="เลือกผู้ลงนาม"
               showUserInfo={false}
             />

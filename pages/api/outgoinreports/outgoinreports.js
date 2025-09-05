@@ -52,6 +52,16 @@ const CreateOutgoingReport3 = async (data) => {
     throw error;
   }
 };
+const GetOutgoingReport3ById = async (id) => {
+  if (!id) throw new Error("Missing id for GetOutgoingReport3ById");
+  try {
+    const response = await axiosInstance.get(`/outgoing-reports3/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching outgoing report2 by id:", error?.response?.data || error.message);
+    throw error;
+  }
+};
 
 const CreateOutgoingReport4 = async (data) => {
   try {
@@ -105,4 +115,56 @@ const UploadOutgoingReportAttachments = async (
   }
 };
 
-export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4, CreateOutgoingReport5, getDepartmentsPrefix, GetOutgoingReportById, GetOutgoingReport2ById };
+const UploadOutgoingReport5Attachments = async (
+  formData,
+  outgoing_report_id
+) => {
+  if (!outgoing_report_id) {
+    console.error("❌ ไม่พบ report ID ในการอัพโหลดไฟล์แนบ");
+    return {
+      success: false,
+      res_message: "ไม่พบ report ID ในการอัพโหลดไฟล์แนบ",
+    };
+  }
+  
+  // Debug FormData contents
+  if (formData instanceof FormData) {
+    console.log('📋 FormData contents:');
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  ${key}:`, { name: value.name, size: value.size, type: value.type });
+      } else {
+        console.log(`  ${key}:`, value);
+      }
+    }
+  }
+  
+  try {
+    const endpoint = `/outgoing-reports5/${outgoing_report_id}/attachments`;
+    
+    const response = await axiosInstance.post(endpoint, formData);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error uploading attachments:", {
+      status: error?.response?.status,
+      statusText: error?.response?.statusText,
+      data: error?.response?.data,
+      message: error?.message,
+      config: {
+        url: error?.config?.url,
+        method: error?.config?.method,
+        headers: error?.config?.headers
+      }
+    });
+    
+    // Return a structured error response instead of throwing
+    return {
+      success: false,
+      res_message: error?.response?.data?.res_message || error?.message || 'การอัพโหลดไฟล์ล้มเหลว',
+      res_code: error?.response?.status?.toString() || 'UPLOAD_ERROR'
+    };
+  }
+};
+
+
+export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4, CreateOutgoingReport5, getDepartmentsPrefix, GetOutgoingReportById, GetOutgoingReport2ById, GetOutgoingReport3ById, UploadOutgoingReport5Attachments };
