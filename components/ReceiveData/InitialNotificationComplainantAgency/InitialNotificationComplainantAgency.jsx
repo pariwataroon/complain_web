@@ -229,16 +229,44 @@ const InitialNotificationComplainantAgency = () => {
         const res = await GetOutgoingReport2ById(editId);
         const d = res?.res_data || res?.data || res;
         if (cancelled || !d) return;
-        handleChange({ target: { name: "complaint_number", value: d.complaint_number || d.reference_number || "" } });
-        handleChange({ target: { name: "complaint_id", value: d.complaint_id || "" } });
-  handleChange({ target: { name: "subject", value: d.subject || "" } });
-        handleChange({ target: { name: "refNo", value: d.document_number || "" } });
-        if (d.complaint_number_date) handleDateChange(new Date(d.complaint_number_date));
-  handleChange({ target: { name: "signer", value: d.signature_authority_user?.id || d.signature_authority_user_id || "" } });
-  handleChange({ target: { name: "department", value: d.department?.id || d.department_id || "" } });
-        // Optionally set signer/department when components mount
+
+        // Core ids / numbers
+        handleChange({ target: { name: 'complaint_number', value: d.complaint_number || d.reference_number || '' } });
+        handleChange({ target: { name: 'complaint_id', value: d.complaint_id || '' } });
+        handleChange({ target: { name: 'refNo', value: d.document_number || '' } });
+
+        // Subject & salutation
+        handleChange({ target: { name: 'subject', value: d.subject || '' } });
+        if (d.salutation) handleChange({ target: { name: 'salutation', value: d.salutation } });
+
+        // Date (priority: complaint_number_date > document_date > created_at)
+        const dateSrc = d.complaint_number_date || d.document_date || d.created_at;
+        if (dateSrc) {
+          const dt = new Date(dateSrc);
+          if (!isNaN(dt.getTime())) handleDateChange(dt);
+        }
+
+        // Confidentiality / Urgency
+        if (d.confidentiality_level !== undefined && d.confidentiality_level !== null)
+          handleChange({ target: { name: 'confidentiality', value: d.confidentiality_level } });
+        if (d.urgency_level !== undefined && d.urgency_level !== null)
+          handleChange({ target: { name: 'urgency', value: d.urgency_level } });
+
+        // Signer and Department
+        handleChange({ target: { name: 'signer', value: d.signature_authority_user?.id || d.signature_authority_user_id || '' } });
+        handleChange({ target: { name: 'department', value: d.department?.id || d.department_id || '' } });
+
+        // Remarks -> note
+        if (d.remarks) handleChange({ target: { name: 'note', value: d.remarks } });
+
+        // Show existing attachments as names (user still re-uploads if needed)
+        const atts = Array.isArray(d.attachments) ? d.attachments : [];
+        if (atts.length) {
+          const names = atts.map(a => a.original_name || a.file_name || a.name || '').filter(Boolean).join(', ');
+          if (names) handleChange({ target: { name: 'attachment', value: names } });
+        }
       } catch (err) {
-        console.error("Failed to prefill type2 report by id", err);
+        console.error('Failed to prefill type2 report by id', err);
       }
     })();
     return () => { cancelled = true; };
@@ -292,7 +320,7 @@ const InitialNotificationComplainantAgency = () => {
             p: { xs: 2, sm: 3, md: 5 },
           }}
         >
-         {/* Row 1: เรียน | เลข สป.กค. | เลขที่หนังสือ* (with search) | วันที่* */}
+         {/* Row 1: เรียน | เลขที่หนังสือ | วันที่ */}
           <Box
             sx={{
               display: "grid",
@@ -300,58 +328,73 @@ const InitialNotificationComplainantAgency = () => {
               gridTemplateColumns: {
                 xs: "1fr",
                 sm: "1fr 1fr",
-                md: "4fr 4fr 3fr 3fr",
+                md: "4fr 4fr 4fr",
               },
               width: "100%",
             }}
           >
             <SelectFieldsalutation
-              label={createLabel("เรียน", "salutation")}
+              label={createLabel("เรียน/ถึง", "salutation")}
               name="salutation"
               value={form.salutation}
               onChange={handleChange}
               error={!!getFieldError("salutation")}
               helperText={getFieldError("salutation")}
             />
-
-            {/* เลขที่หนังสือ + icon */}
-           
-              <InputText
-                label={createLabel("เลขที่หนังสือ", "refNo")}
-                inputLabel="กรอกเลขที่หนังสือ"
-                name="refNo"
-                value={form.refNo}
-                onChange={handleChange}
-                error={!!getFieldError("refNo")}
-                helperText={getFieldError("refNo")}
-                sx={{ flex: 1 }}
-              />
-           
-
-            {/* เลข สป.กค. */}
-             <Box sx={{ display: "flex", alignItems: "center" }}>
+            {/* เลขที่หนังสือ */}
             <InputText
-              label={createLabel("เลข สป.กค.", "complaint_number")}
-              inputLabel="กรอกเลข สป.กค."
-              name="complaint_number"
-              value={form.complaint_number || ""}
+              label={createLabel("เลขที่หนังสือ", "refNo")}
+              inputLabel="กรอกเลขที่หนังสือ"
+              name="refNo"
+              value={form.refNo}
               onChange={handleChange}
-              error={!!getFieldError("complaint_number")}
-              helperText={getFieldError("complaint_number")}
+              error={!!getFieldError("refNo")}
+              helperText={getFieldError("refNo")}
+              sx={{ flex: 1 }}
+            />
+            {/* วันที่ (ใช้ร่วมทั้งเอกสารและเลข สป.กค.) */}
+            <DateThaiPickerService
+              label={createLabel("วันที่", "date")}
+              value={form.date}
+              onChange={handleDateChange}
+              placeholder="เลือกวันที่"
+              error={!!getFieldError("date")}
+              helperText={getFieldError("date")}
+            />
+          </Box>
+
+          {/* Row 1.1: เลข สป.กค. | วันที่ (จัดแนวยาว 2 ช่อง) */}
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "1fr 1fr",
+                md: "8fr 4fr",
+              },
+              width: "100%",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <InputText
+                label={createLabel("เลข สป.กค.", "complaint_number")}
+                inputLabel="กรอกเลข สป.กค."
+                name="complaint_number"
+                value={form.complaint_number || ""}
+                onChange={handleChange}
+                onBlur={(e) => handleChange(e)}
+                onPaste={(e) => { setTimeout(() => { handleChange({ target: { name: 'complaint_number', value: e.target.value } }); }, 0); }}
+                error={!!getFieldError("complaint_number")}
+                helperText={getFieldError("complaint_number")}
               />
               <IconButton
                 onClick={() => setOpenSearchDialog(true)}
-                sx={{
-                  ml: 1,
-                  color: "blue",
-                  marginTop: "10px",
-                }}
+                sx={{ ml: 1, color: "blue", marginTop: "10px" }}
               >
                 <SearchIcon />
               </IconButton>
-           </Box>
-
-            {/* วันที่ */}
+            </Box>
             <DateThaiPickerService
               label={createLabel("วันที่", "date")}
               value={form.date}
@@ -635,7 +678,7 @@ const InitialNotificationComplainantAgency = () => {
           </Box>
          
 
-          {/* Row 4: หน่วยงาน / ผู้ร้อง* */}
+          {/* Row 4: หน่วยงาน / ผู้ร้อง* (เปิดใช้งานให้เลือกได้เพื่อไม่ให้ validation ค้าง) */}
           <Box>
             <SelectFieldDepartment
               label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}

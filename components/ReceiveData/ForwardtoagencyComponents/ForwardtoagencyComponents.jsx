@@ -519,7 +519,7 @@ const ForwardtoagencyComponents = () => {
               control={control}
               render={({ field }) => (
                 <SelectFieldsalutation
-                  label={createLabel("เรียน", "salutation")}
+                  label={createLabel("เรียน/ถึง", "salutation")}
                   name="salutation"
                   value={field.value}
                   onChange={(e) => field.onChange(e.target.value)}
