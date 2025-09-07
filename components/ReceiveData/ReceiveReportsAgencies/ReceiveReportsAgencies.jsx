@@ -33,7 +33,7 @@ import {
   InputAdornment,
   CircularProgress,
 } from "@mui/material";
-import { CreateOutgoingReport5, getDepartmentsPrefix, UploadOutgoingReportAttachments } from "@pages/api/outgoinreports/outgoinreports";
+import { CreateOutgoingReport5, getDepartmentsPrefix, UploadOutgoingReport5Attachments } from "@pages/api/outgoinreports/outgoinreports";
 import axiosInstance from "@pages/api/axiosInstance";
 import { GetEnhancedComplaints } from "@pages/complaint/index"
 // Constants สำหรับ options
@@ -456,24 +456,57 @@ useEffect(() => {
       }
 
       const fd = new FormData();
-      uploadedFiles.forEach(f => fd.append('files', f, f.name));
+      console.log('📁 Total files to upload:', uploadedFiles.length);
+      
+      uploadedFiles.forEach((f, index) => {
+        console.log(`📎 Adding file ${index + 1}:`, { 
+          name: f.name, 
+          size: f.size, 
+          type: f.type,
+          lastModified: f.lastModified 
+        });
+        fd.append('files', f, f.name);
+      });
+      
+      // ตรวจสอบว่า FormData มีข้อมูลหรือไม่
+      console.log('📋 FormData entries count:', [...fd.entries()].length);
+      
+      console.log('📤 Starting file upload for reportId:', reportId);
       let uploadSucceeded = false;
       try {
-        const upRes = await UploadOutgoingReportAttachments(fd, reportId);
-        uploadSucceeded = !!(upRes && (upRes.success === true || upRes.res_code === '0001'));
-        if (!uploadSucceeded && (upRes?.res_code === '4040' || /NOT_FOUND/i.test(upRes?.res_message || ''))) {
-          // ลอง endpoint สำรองสำหรับ type5
+        const upRes = await UploadOutgoingReport5Attachments(fd, reportId);
+        console.log('📤 Upload response:', upRes);
+        
+        // ตรวจสอบความสำเร็จของการอัพโหลด
+        uploadSucceeded = !!(upRes && (upRes.success === true || upRes.res_code === '0001' || upRes.success !== false));
+        
+        // หากไม่สำเร็จ ลองใช้ fallback endpoint
+        if (!uploadSucceeded && (upRes?.res_code === '4040' || upRes?.res_code === '404' || /NOT_FOUND/i.test(upRes?.res_message || ''))) {
+          console.log('🔄 Trying fallback endpoint...');
           try {
             const altRes = await axiosInstance.post(`/outgoing-reports5/${reportId}/attachments`, fd);
+            console.log('🔄 Fallback response:', altRes?.data);
             uploadSucceeded = !!altRes?.data;
           } catch (altErr) {
-            console.error('Fallback upload (type5) failed', altErr?.response?.data || altErr);
+            console.error('❌ Fallback upload (type5) failed', altErr?.response?.data || altErr);
           }
         }
+        
+        // หากยังไม่สำเร็จ แสดง error message
+        if (!uploadSucceeded && upRes?.res_message) {
+          alertWarning('ไม่สามารถอัพโหลดไฟล์ได้', upRes.res_message);
+        }
+        
       } catch (err) {
-        console.error('Upload attachments failed', err?.response?.data || err);
+        console.error('❌ Upload attachments failed', err?.response?.data || err);
+        // แสดง error message ให้ผู้ใช้เห็น
+        alertWarning('ไม่สามารถอัพโหลดไฟล์ได้', 
+          err?.response?.data?.res_message || err?.message || 'เกิดข้อผิดพลาดในการอัพโหลดไฟล์');
       }
-      if (!uploadSucceeded) {
+      
+      if (uploadSucceeded) {
+        console.log('✅ File upload successful!');
+      } else {
         console.warn('⚠️ แนบไฟล์ไม่สำเร็จหรือบางไฟล์แนบไม่สำเร็จ');
       }
     }

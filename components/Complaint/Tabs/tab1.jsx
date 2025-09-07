@@ -107,6 +107,47 @@ const Tab1 = ({
     fetchAuthMeData();
   }, []);
 
+  // ตรวจสอบและอัพเดทข้อมูล auto-populate เมื่อได้ข้อมูล authMe แล้ว
+  useEffect(() => {
+    if (authMeData && Object.keys(authMeData).length > 0 && !isLoadingAuthMe) {
+      // ตรวจสอบว่าข้อมูลใน tabData.general ยังไม่มี หรือไม่ครบ ถึงจะ auto-populate
+      const currentGeneralData = tabData.general || {};
+      const shouldAutoPopulate = !currentGeneralData.idCard && !currentGeneralData.email && !currentGeneralData.phone;
+      
+      if (shouldAutoPopulate && currentTab === 0) {
+        console.log("Auto-populating data from authMe:", authMeData);
+        
+        // สร้างข้อมูลที่จะ auto-populate
+        const autoPopulatedData = {};
+        
+        if (authMeData.citizen_id?.trim()) {
+          autoPopulatedData.idCard = authMeData.citizen_id;
+        }
+        if (authMeData.email?.trim()) {
+          autoPopulatedData.email = authMeData.email;
+        }
+        if (authMeData.phone?.trim()) {
+          autoPopulatedData.phone = authMeData.phone;
+        }
+        if (authMeData.full_name?.trim()) {
+          autoPopulatedData.name = authMeData.full_name;
+        }
+
+        // อัพเดทข้อมูลโดยตรงถ้ามีข้อมูลที่จะ populate
+        if (Object.keys(autoPopulatedData).length > 0) {
+          const updatedData = {
+            ...tabData,
+            general: {
+              ...currentGeneralData,
+              ...autoPopulatedData
+            }
+          };
+          updateStepData(stepKey, "general", updatedData);
+        }
+      }
+    }
+  }, [authMeData, isLoadingAuthMe, tabData, currentTab, stepKey, updateStepData]);
+
   // ตรวจสิทธิ์ tab หน่วยงานรัฐ
   useEffect(() => {
     const roles = getUserRoles();
@@ -126,25 +167,32 @@ const Tab1 = ({
 
   const handleUpdate = useMemo(() => {
     return (type) => (name, value) => {
+      // ใช้ tabData[type] ที่มีอยู่แล้ว หรือ object ว่างถ้าไม่มี
       const prev = tabData[type] || {};
       const updated = { ...prev, [name]: value };
 
-      let updatedData = {};
+      // สร้าง updatedData โดยรักษาข้อมูลเดิมทั้งหมดและอัพเดทเฉพาะส่วนที่เปลี่ยน
+      let updatedData = { ...tabData }; // รักษาข้อมูลเดิมทั้งหมด
+      
       if (currentTab === 0) {
         updatedData = {
-          general: type === "general" ? updated : tabData.general || {},
-          delegate: type === "delegate" ? updated : tabData.delegate || {},
+          ...updatedData,
+          general: type === "general" ? updated : updatedData.general || {},
+          delegate: type === "delegate" ? updated : updatedData.delegate || {},
         };
       } else if (currentTab === 1) {
         updatedData = {
-          corporate: type === "corporate" ? updated : tabData.corporate || {},
-          signer: type === "signer" ? updated : tabData.signer || {},
+          ...updatedData,
+          corporate: type === "corporate" ? updated : updatedData.corporate || {},
+          signer: type === "signer" ? updated : updatedData.signer || {},
         };
       } else if (currentTab === 2) {
         updatedData = {
-          government: type === "government" ? updated : tabData.government || {},
+          ...updatedData,
+          government: type === "government" ? updated : updatedData.government || {},
         };
       }
+      
       updateStepData(stepKey, "general", updatedData);
     };
   }, [stepKey, tabData, currentTab, updateStepData]);
@@ -222,6 +270,7 @@ const Tab1 = ({
               fieldPrefix="general"
               formType="mandatory"
               dataMe={authMeData}
+              isLoadingAuthMe={isLoadingAuthMe}
             />
           </div>
           <div className={styles.formContainer2}>

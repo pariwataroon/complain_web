@@ -512,10 +512,8 @@ const TableDepartments_External = ({
           count={total}
           rowsPerPage={rowsPerPage}
           page={page}
-          onPageChange={(_, newPage) => onPageChange(newPage)}
-          onRowsPerPageChange={(e) =>
-            onRowsPerPageChange(parseInt(e.target.value, 10))
-          }
+          onPageChange={(event, newPage) => onPageChange(newPage)}
+          onRowsPerPageChange={(e) => onRowsPerPageChange(parseInt(e.target.value, 10))}
           labelRowsPerPage="แถวต่อหน้า:"
           labelDisplayedRows={({ from, to, count }) =>
             `${from}-${to} จาก ${count !== -1 ? count : `มากกว่า ${to}`}`
