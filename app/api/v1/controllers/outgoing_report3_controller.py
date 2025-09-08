@@ -84,13 +84,65 @@ def create_outgoing_report3(
     try:
         logger.info(f"Creating OutgoingReport3: {report_data.complaint_number}")
 
+        # ตรวจสอบตำแหน่ง และกรณีเลือก "อื่นๆ" ต้องระบุ position_other_text
+        position = db.query(Position).filter(Position.id == report_data.position_id, Position.is_active == True).first()
+        if not position:
+            raise HTTPException(status_code=404, detail="ไม่พบตำแหน่งที่ระบุ")
+        try:
+            pos_name = (position.name or "").strip().lower()
+            if pos_name in {"อื่นๆ", "อื่น ๆ", "other", "others"} and not getattr(report_data, "position_other_text", None):
+                raise HTTPException(status_code=400, detail="กรุณาระบุ 'ตำแหน่งอื่นๆ' เมื่อเลือกตำแหน่งเป็น 'อื่นๆ'")
+        except AttributeError:
+            pass
+
         # ตรวจสอบ document_number ซ้ำ (แทน complaint_number เพราะเรื่องเดียวกันอาจส่งหลายหน่วย)
         existing = db.query(OutgoingReport3).filter(
             OutgoingReport3.document_number == report_data.document_number,
             OutgoingReport3.is_active == True
         ).first()
         if existing:
-            raise DuplicateKeyError(f"เลขเอกสาร {report_data.document_number} มีอยู่แล้ว")
+            # Upsert: อัปเดตเมื่อ complaint_number ซ้ำ, ถ้าไม่ซ้ำถือว่า conflict
+            if (existing.complaint_number or "") == (report_data.complaint_number or ""):
+                existing.position_id = report_data.position_id
+                if hasattr(existing, "position_other_text"):
+                    existing.position_other_text = getattr(report_data, "position_other_text", None)
+                existing.complaint_number = report_data.complaint_number
+                existing.complaint_number_date = report_data.complaint_number_date
+                existing.subject = report_data.subject
+                existing.signature_authority_user_id = report_data.signature_authority_user_id
+                existing.department_id = report_data.department_id
+                existing.confidentiality_level = report_data.confidentiality_level
+                existing.urgency_level = report_data.urgency_level
+                existing.document_number = report_data.document_number
+                existing.document_date = report_data.document_date
+                existing.remarks = report_data.remarks
+                existing.complaint_id = report_data.complaint_id
+                existing.updated_by = current_user_id
+
+                db.flush()
+
+                # แนบไฟล์เพิ่มเติมถ้ามี
+                if files:
+                    _save_files_for_report(db, existing.id, files)
+
+                db.commit()
+
+                # ประวัติ: อัปเดตข้อมูลแบบรายงาน 3
+                if report_data.complaint_id:
+                    try:
+                        complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+                        note = (
+                            f"อัปเดตแบบรายงานขอทราบผล/ความคืบหน้า | เอกสารเลขที่: {existing.document_number or '-'} | "
+                            f"เรื่อง: {existing.subject or '-'}"
+                        )
+                        cur = getattr(complaint, "status", ComplaintStatus.TRACKING)
+                        _update_status_and_log(db, complaint, cur, note, current_user_id)
+                    except Exception as e:
+                        logger.warning(f"OR3 upsert history failed: {e}")
+
+                return get_outgoing_report3_by_id(db, existing.id)
+            else:
+                raise DuplicateKeyError(f"เลขเอกสาร {report_data.document_number} มีอยู่แล้ว")
 
         # ตรวจสอบความสอดคล้อง complaint_id ↔ complaint_number
         if report_data.complaint_id:
@@ -147,9 +199,9 @@ def create_outgoing_report3(
         db.refresh(db_report)
         return get_outgoing_report3_by_id(db, db_report.id)
 
-    except DuplicateKeyError:
+    except DuplicateKeyError as e:
         db.rollback()
-        raise
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         db.rollback()
         raise
@@ -298,7 +350,7 @@ def get_outgoing_reports3(
 
     except Exception as e:
         logger.error(f"Error getting outgoing reports3: {str(e)}")
-    raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 def get_outgoing_report3_options(db: Session) -> Dict[str, Any]:
     """ดึงตัวเลือกสำหรับ dropdown"""
     try:

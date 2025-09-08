@@ -127,7 +127,86 @@ async def create_outgoing_report(
         if report_data.complaint_id:
             complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
 
-        # สร้าง OutgoingReport
+        # หากมีเรคอร์ดเดิมที่ document_number + complaint_number ซ้ำ ให้ "อัปเดต" แทนการสร้างใหม่
+        existing_doc = (
+            db.query(OutgoingReport)
+            .filter(
+                OutgoingReport.document_number == report_data.document_number,
+                OutgoingReport.is_active == True,
+            )
+            .first()
+        )
+        if existing_doc:
+            if (existing_doc.complaint_number or "") == (report_data.complaint_number or ""):
+                # อัปเดตข้อมูลเดิม
+                existing_doc.position_id = report_data.position_id
+                if hasattr(existing_doc, "position_other_text"):
+                    existing_doc.position_other_text = getattr(report_data, "position_other_text", None)
+                existing_doc.reference_number = report_data.reference_number
+                existing_doc.reference_date = report_data.reference_date
+                existing_doc.subject = report_data.subject
+                existing_doc.complaint_number = report_data.complaint_number
+                existing_doc.complaint_number_date = report_data.complaint_number_date
+                existing_doc.signature_authority_user_id = report_data.signature_authority_user_id
+                existing_doc.department_id = report_data.department_id
+                existing_doc.confidentiality_level = report_data.confidentiality_level
+                existing_doc.urgency_level = report_data.urgency_level
+                existing_doc.document_number = report_data.document_number
+                existing_doc.document_date = report_data.document_date
+                existing_doc.remarks = report_data.remarks
+                existing_doc.complaint_id = report_data.complaint_id
+                existing_doc.updated_by = current_user_id
+
+                db.flush()
+
+                # แนบไฟล์เพิ่ม (ถ้ามี)
+                attachment_list: List[OutgoingReportAttachment] = []
+                if files:
+                    for file in files:
+                        try:
+                            info = await save_upload_file(file, f"outgoing-reports/{str(existing_doc.id)}")
+                            att = OutgoingReportAttachment()
+                            _set_if_has(
+                                att,
+                                outgoing_report_id=existing_doc.id,
+                                file_name=info.get("filename") or file.filename,
+                                file_path=info.get("file_url"),
+                                file_size=str(info.get("file_size")) if info.get("file_size") is not None else None,
+                                file_type=info.get("file_type"),
+                                is_active=True,
+                            )
+                            if hasattr(att, "file_url"):
+                                att.file_url = info.get("file_url")
+                            db.add(att)
+                            db.flush()
+                            db.refresh(att)
+                            attachment_list.append(att)
+                        except Exception as e:
+                            logger.warning(f"Could not save file {getattr(file, 'filename', '?')}: {e}")
+
+                db.commit()
+
+                # บันทึกประวัติ: อัปเดตข้อมูลหนังสือส่งออก
+                if complaint:
+                    try:
+                        dept_name = department.name if department else None
+                        note = (
+                            f"อัปเดตข้อมูลหนังสือส่งออกถึงหน่วยงาน: {dept_name or '-'} | "
+                            f"เลขอ้างอิง: {existing_doc.reference_number or '-'} | "
+                            f"เรื่อง: {existing_doc.subject or '-'}"
+                        )
+                        current_status = getattr(complaint, "status", ComplaintStatus.SENT_TO_EXTERNAL) or ComplaintStatus.SENT_TO_EXTERNAL
+                        _update_status_and_log(db, complaint, current_status, note, current_user_id)
+                    except Exception as e:
+                        logger.warning(f"Could not update complaint history after upsert (v1): {e}")
+
+                db.refresh(existing_doc)
+                return get_outgoing_report_by_id(db, existing_doc.id)
+            else:
+                # document_number ซ้ำ แต่คนละ complaint_number → ถือว่าผิดพลาด
+                raise DuplicateKeyError(f"เลขที่เอกสาร {report_data.document_number} มีอยู่แล้ว")
+
+        # สร้าง OutgoingReport ใหม่
         db_report = OutgoingReport(
             position_id=report_data.position_id,
             position_other_text=getattr(report_data, "position_other_text", None),
@@ -179,7 +258,7 @@ async def create_outgoing_report(
 
         db.commit()
 
-        # ✅ อัปเดตสถานะ + บันทึกประวัติ เมื่อมีการสร้างหนังสือส่งออก
+    # ✅ อัปเดตสถานะ + บันทึกประวัติ เมื่อมีการสร้างหนังสือส่งออก
         if complaint:
             try:
                 dept_name = department.name if department else None
@@ -256,7 +335,7 @@ async def create_outgoing_report(
 
     except DuplicateKeyError:
         db.rollback()
-        raise
+        raise HTTPException(status_code=400, detail="เลขที่เอกสารซ้ำกับข้อมูลอื่น")
     except HTTPException:
         db.rollback()
         raise

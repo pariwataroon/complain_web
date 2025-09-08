@@ -83,14 +83,66 @@ def create_outgoing_report2(
     try:
         logger.info(f"Creating OutgoingReport2: {report_data.complaint_number}")
 
+        # ตรวจสอบตำแหน่ง และกรณีเลือก "อื่นๆ" ต้องระบุ position_other_text
+        position = db.query(Position).filter(Position.id == report_data.position_id, Position.is_active == True).first()
+        if not position:
+            raise HTTPException(status_code=404, detail="ไม่พบตำแหน่งที่ระบุ")
+        try:
+            pos_name = (position.name or "").strip().lower()
+            if pos_name in {"อื่นๆ", "อื่น ๆ", "other", "others"} and not getattr(report_data, "position_other_text", None):
+                raise HTTPException(status_code=400, detail="กรุณาระบุ 'ตำแหน่งอื่นๆ' เมื่อเลือกตำแหน่งเป็น 'อื่นๆ'")
+        except AttributeError:
+            pass
+
         # ตรวจสอบ document_number ซ้ำ (แทน complaint_number เพราะเรื่องเดียวกันอาจส่งหลายหน่วย)
         existing = db.query(OutgoingReport2).filter(
             OutgoingReport2.document_number == report_data.document_number,
             OutgoingReport2.is_active == True
         ).first()
-
         if existing:
-            raise DuplicateKeyError(f"เลขเอกสาร {report_data.document_number} มีอยู่แล้ว")
+            # Upsert: อัปเดตเมื่อ complaint_number ซ้ำ, ถ้าไม่ซ้ำถือว่า conflict
+            if (existing.complaint_number or "") == (report_data.complaint_number or ""):
+                existing.position_id = report_data.position_id
+                if hasattr(existing, "position_other_text"):
+                    existing.position_other_text = getattr(report_data, "position_other_text", None)
+                existing.complaint_number = report_data.complaint_number
+                existing.complaint_number_date = report_data.complaint_number_date
+                existing.subject = report_data.subject
+                existing.signature_authority_user_id = report_data.signature_authority_user_id
+                existing.department_id = report_data.department_id
+                existing.user_id = report_data.user_id
+                existing.confidentiality_level = report_data.confidentiality_level
+                existing.urgency_level = report_data.urgency_level
+                existing.document_number = report_data.document_number
+                existing.document_date = report_data.document_date
+                existing.remarks = report_data.remarks
+                existing.complaint_id = report_data.complaint_id
+                existing.updated_by = current_user_id
+
+                db.flush()
+
+                # แนบไฟล์เพิ่มเติมถ้ามี
+                if files:
+                    _save_files_for_report(db, existing.id, files)
+
+                db.commit()
+
+                # ประวัติ: อัปเดตข้อมูลแบบรายงาน 2
+                if report_data.complaint_id:
+                    try:
+                        complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+                        note = (
+                            f"อัปเดตแบบรายงานแจ้งผู้ร้อง/หน่วยงานทราบเบื้องต้น | เอกสารเลขที่: {existing.document_number or '-'} | "
+                            f"เรื่อง: {existing.subject or '-'}"
+                        )
+                        cur = getattr(complaint, "status", ComplaintStatus.IN_PROCESS)
+                        _update_status_and_log(db, complaint, cur, note, current_user_id)
+                    except Exception as e:
+                        logger.warning(f"OR2 upsert history failed: {e}")
+
+                return get_outgoing_report2_by_id(db, existing.id)
+            else:
+                raise DuplicateKeyError(f"เลขเอกสาร {report_data.document_number} มีอยู่แล้ว")
 
         # ตรวจสอบความสอดคล้องระหว่าง complaint_id และ complaint_number
         if report_data.complaint_id:
@@ -158,9 +210,9 @@ def create_outgoing_report2(
         db.refresh(db_report)
         return get_outgoing_report2_by_id(db, db_report.id)
 
-    except DuplicateKeyError:
+    except DuplicateKeyError as e:
         db.rollback()
-        raise
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         db.rollback()
         raise
