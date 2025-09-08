@@ -24,6 +24,7 @@ class OutgoingReportAttachment(OutgoingReportAttachmentBase):
 class OutgoingReportBase(BaseModel):
     # 🔥 แก้ไข: ใช้ position_id แทน report_type
     position_id: UUID = Field(..., description="ตำแหน่งที่เกี่ยวข้อง")
+    position_other_text: Optional[str] = Field(None, description="ระบุตำแหน่ง (เมื่อเลือก 'อื่นๆ')")
     
     # 🔥 แก้ไข: ใช้ reference_number และ reference_date
     reference_number: str = Field(..., description="เลข สป.กค")
@@ -55,6 +56,7 @@ class OutgoingReportBase(BaseModel):
 
 class OutgoingReportCreate(BaseModel):
     position_id: UUID
+    position_other_text: Optional[str] = None
     reference_number: str = Field(..., max_length=50)
     reference_date: datetime
     subject: str = Field(..., max_length=500)
@@ -77,6 +79,7 @@ class OutgoingReportCreate(BaseModel):
 
 class OutgoingReportUpdate(BaseModel):
     position_id: Optional[UUID] = None
+    position_other_text: Optional[str] = None
     reference_number: Optional[str] = None
     reference_date: Optional[datetime] = None
     subject: Optional[str] = None

@@ -12,6 +12,8 @@ class OutgoingReport3(Base):
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4, index=True)
     
     position_id = Column(UNIQUEIDENTIFIER, ForeignKey("positions.id"), nullable=False)
+    # กรณีเลือกตำแหน่งเป็น "อื่นๆ" ให้ระบุข้อความตำแหน่งที่นี่
+    position_other_text = Column(NVARCHAR(255), nullable=True)
     complaint_number = Column(NVARCHAR(50), nullable=False)
     complaint_number_date = Column(DateTime, nullable=False)
     subject = Column(NVARCHAR(500), nullable=False)

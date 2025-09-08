@@ -107,6 +107,13 @@ async def create_outgoing_report(
         position = db.query(Position).filter(Position.id == report_data.position_id, Position.is_active == True).first()
         if not position:
             raise HTTPException(status_code=404, detail="ไม่พบตำแหน่งที่ระบุ")
+        # ถ้าเลือกตำแหน่งเป็น "อื่นๆ" บังคับให้กรอก position_other_text
+        try:
+            pos_name = (position.name or "").strip().lower()
+            if pos_name in {"อื่นๆ", "อื่น ๆ", "other", "others"} and not getattr(report_data, "position_other_text", None):
+                raise HTTPException(status_code=400, detail="กรุณาระบุ 'ตำแหน่งอื่นๆ' เมื่อเลือกตำแหน่งเป็น 'อื่นๆ'")
+        except AttributeError:
+            pass
 
         signature_user = db.query(User).filter(User.id == report_data.signature_authority_user_id, User.is_active == True).first()
         if not signature_user:
@@ -123,6 +130,7 @@ async def create_outgoing_report(
         # สร้าง OutgoingReport
         db_report = OutgoingReport(
             position_id=report_data.position_id,
+            position_other_text=getattr(report_data, "position_other_text", None),
             reference_number=report_data.reference_number,
             reference_date=report_data.reference_date,
             subject=report_data.subject,
@@ -202,6 +210,7 @@ async def create_outgoing_report(
                 "level": position.level,
                 "description": position.description
             },
+            "position_other_text": getattr(db_report, "position_other_text", None),
             "reference_number": db_report.reference_number,
             "reference_date": db_report.reference_date.isoformat() if db_report.reference_date else None,
             "subject": db_report.subject,
@@ -287,6 +296,7 @@ def get_outgoing_report_by_id(db: Session, report_id: UUID) -> Dict:
                 "level": report.position.level if report.position else None,
                 "description": report.position.description if report.position else None
             },
+            "position_other_text": getattr(report, "position_other_text", None),
             "reference_number": report.reference_number,
             "reference_date": report.reference_date.isoformat() if report.reference_date else None,
             "subject": report.subject,
@@ -421,6 +431,7 @@ def get_outgoing_reports(
                     "name": report.position.name if report.position else "N/A",
                     "level": report.position.level if report.position else None
                 },
+                "position_other_text": getattr(report, "position_other_text", None),
                 "reference_number": report.reference_number,
                 "reference_date": report.reference_date.isoformat() if report.reference_date else None,
                 "subject": report.subject,

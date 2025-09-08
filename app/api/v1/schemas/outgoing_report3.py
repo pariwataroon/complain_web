@@ -23,6 +23,7 @@ class OutgoingReport3Attachment(OutgoingReport3AttachmentBase):
 
 class OutgoingReport3Base(BaseModel):
     position_id: UUID = Field(..., description="ตำแหน่งที่เกี่ยวข้อง")
+    position_other_text: Optional[str] = Field(None, description="ระบุตำแหน่ง (เมื่อเลือก 'อื่นๆ')")
     complaint_number: str = Field(..., description="หมายเลขข้อร้องเรียน")  # ตาม model
     complaint_number_date: datetime = Field(..., description="วันที่ของข้อร้องเรียน")  # ตาม model
     subject: str = Field(..., description="เรื่อง")
@@ -37,6 +38,7 @@ class OutgoingReport3Base(BaseModel):
 
 class OutgoingReport3Create(BaseModel):
     position_id: UUID
+    position_other_text: Optional[str] = None
     complaint_number: str = Field(..., max_length=50)  # ตาม model
     complaint_number_date: datetime  # ตาม model
     subject: str = Field(..., max_length=500)
@@ -57,6 +59,7 @@ class OutgoingReport3Create(BaseModel):
 
 class OutgoingReport3Update(BaseModel):
     position_id: Optional[UUID] = None
+    position_other_text: Optional[str] = None
     complaint_number: Optional[str] = None
     complaint_number_date: Optional[datetime] = None
     subject: Optional[str] = None

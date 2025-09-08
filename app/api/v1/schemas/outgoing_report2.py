@@ -23,6 +23,7 @@ class OutgoingReport2Attachment(OutgoingReport2AttachmentBase):
 
 class OutgoingReport2Base(BaseModel):
     position_id: UUID = Field(..., description="ตำแหน่งที่เกี่ยวข้อง")
+    position_other_text: Optional[str] = Field(None, description="ระบุตำแหน่ง (เมื่อเลือก 'อื่นๆ')")
     complaint_number: str = Field(..., description="หมายเลขข้อร้องเรียน")
     complaint_number_date: datetime = Field(..., description="วันที่ของข้อร้องเรียน")
     subject: str = Field(..., description="เรื่อง")
@@ -38,6 +39,7 @@ class OutgoingReport2Base(BaseModel):
 
 class OutgoingReport2Create(BaseModel):
     position_id: UUID
+    position_other_text: Optional[str] = None
     complaint_number: str = Field(..., max_length=50)
     complaint_number_date: datetime
     subject: str = Field(..., max_length=500)
@@ -59,6 +61,7 @@ class OutgoingReport2Create(BaseModel):
 
 class OutgoingReport2Update(BaseModel):
     position_id: Optional[UUID] = None
+    position_other_text: Optional[str] = None
     complaint_number: Optional[str] = None
     complaint_number_date: Optional[datetime] = None
     subject: Optional[str] = None

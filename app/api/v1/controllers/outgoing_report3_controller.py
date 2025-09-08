@@ -108,6 +108,7 @@ def create_outgoing_report3(
 
         db_report = OutgoingReport3(
             position_id=report_data.position_id,
+            position_other_text=getattr(report_data, "position_other_text", None),
             complaint_number=report_data.complaint_number,
             complaint_number_date=report_data.complaint_number_date,
             subject=report_data.subject,
@@ -182,6 +183,7 @@ def get_outgoing_report3_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
                 "id": _safe_str(report.position_id),
                 "name": report.position.name if report.position else "N/A",
             },
+            "position_other_text": getattr(report, "position_other_text", None),
             "complaint_number": report.complaint_number,
             "complaint_number_date": _iso(report.complaint_number_date),
             "subject": report.subject,
@@ -275,6 +277,7 @@ def get_outgoing_reports3(
                 "document_number": r.document_number,
                 "document_date": _iso(r.document_date),
                 "position_name": r.position.name if r.position else "N/A",
+                "position_other_text": getattr(r, "position_other_text", None),
                 "department_name": r.department.name if r.department else "N/A",
                 "signature_user_name": (
                     f"{r.signature_authority_user.first_name} {r.signature_authority_user.last_name}"
