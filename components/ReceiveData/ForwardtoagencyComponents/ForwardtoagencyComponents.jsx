@@ -56,6 +56,29 @@ const ForwardtoagencyComponents = () => {
   const [pendingPrefill, setPendingPrefill] = useState(null);
   // Read-only list of attachments already on the server for this report
   const [existingAttachments, setExistingAttachments] = useState([]);
+
+  // Build absolute URL from file_path and normalize Windows-style paths
+  const normalizeFilePath = useCallback((p) => {
+    if (!p) return "";
+    let s = String(p);
+    // Replace backslashes with slashes
+    s = s.replace(/\\\\/g, "/").replace(/\\/g, "/");
+    // Trim any local prefix before /uploads
+    const idx = s.lastIndexOf("/uploads/");
+    if (idx !== -1) s = s.substring(idx);
+    if (!s.startsWith("/")) s = `/${s}`;
+    return s;
+  }, []);
+
+  const buildFileUrl = useCallback((p) => {
+    if (!p) return "";
+    const normalized = normalizeFilePath(p);
+    if (/^https?:\/\//i.test(normalized)) return normalized;
+  // Use API base without trailing slash and strip version segment like /v1
+  const baseRaw = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
+  const base = baseRaw.replace(/\/api\/v\d+$/, "/api");
+  return `${base}${normalized}`;
+  }, [normalizeFilePath]);
   const onSubmit = async (data) => {
     const confidentialityObj = confidentialityOptions.find(
       opt => String(opt.value) === String(data.confidentiality)
@@ -1016,7 +1039,15 @@ const ForwardtoagencyComponents = () => {
                     <ListItem key={att.id} sx={{ py: 0 }}>
                       <DescriptionIcon fontSize="small" sx={{ mr: 1, color: "#90caf9" }} />
                       <Typography fontSize={13} sx={{ mr: 1 }}>
-                        {att.file_name || att.name || "ไฟล์แนบ"}
+                        <a
+                          href={buildFileUrl(att.file_path)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "#1976d2", textDecoration: "none" }}
+                          title={att.file_path}
+                        >
+                          {att.file_name || att.name || "ไฟล์แนบ"}
+                        </a>
                       </Typography>
                       <Typography fontSize={12} color="text.secondary">
                         {att.file_type || ""}

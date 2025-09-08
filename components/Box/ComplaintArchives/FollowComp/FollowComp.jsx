@@ -648,8 +648,9 @@ const FollowComp = () => {
       const root = /\/api$/.test(apiRootNoVer) ? apiRootNoVer : `${origin}/api`;
       finalUrl = `${root}/uploads/complaints/${currentId}/${filename}`;
     } else {
-      // สำหรับ filename เฉย ๆ ให้สร้าง path complaints
-      finalUrl = `${apiBase}/uploads/complaints/${currentId}/${filename}`;
+      // สำหรับ filename เฉย ๆ ให้สร้าง path complaints (ไม่ใช้ /api/vN)
+      const root = /\/api$/.test(apiRootNoVer) ? apiRootNoVer : `${origin}/api`;
+      finalUrl = `${root}/uploads/complaints/${currentId}/${filename}`;
     }
     
     return finalUrl;
