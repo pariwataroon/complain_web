@@ -623,37 +623,37 @@ const FollowComp = () => {
       file.file_path ||
       "";
     if (!raw) return null;
-    if (typeof raw === "string" && raw.startsWith("http")) return raw;
+    if (typeof raw === "string" && /^https?:\/\//i.test(raw)) return raw;
 
-    const ensureLeading = (s) => (s.startsWith("/") ? s : `/${s}`);
-    const url = ensureLeading(String(raw));
+    // Normalize path and preserve the server-provided uploads structure
+    const normalizePath = (s) => {
+      let v = String(s).replace(/\\\\/g, "/").replace(/\\/g, "/");
+      const apiIdx = v.indexOf("/api/uploads/");
+      if (apiIdx >= 0) v = v.substring(apiIdx);
+      else {
+        const upIdx = v.indexOf("/uploads/");
+        if (upIdx >= 0) v = v.substring(upIdx);
+      }
+      if (!v.startsWith("/")) v = `/${v}`;
+      return v;
+    };
+
+    const normalized = normalizePath(raw);
 
     const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
-    // Origin without /api or /api/vN
-    const origin = apiBase.replace(/\/api(?:\/v\d+)?$/, "");
-    // API root without version, ends with /api
-    const apiRootNoVer = apiBase.replace(/\/v\d+$/, "");
+    const apiNoVer = apiBase.replace(/\/v\d+$/, ""); // ends with /api
+    const origin = apiNoVer.replace(/\/api$/, "");
 
-    // สำหรับ outgoing reports ให้ใช้ path เดียวกับ complaints
-    const currentId = window.location.pathname.split('/').pop() || 'default';
-    const filename = url.split('/').pop();
-
-    // กำหนด path ให้ใช้ /uploads/complaints เสมอ
-    let finalUrl;
-    if (url.startsWith("/api/uploads/")) {
-      // แก้ path ให้เป็น complaints
-      finalUrl = `${origin}/api/uploads/complaints/${currentId}/${filename}`;
-    } else if (url.startsWith("/uploads/")) {
-      // แก้ path ให้เป็น complaints
-      const root = /\/api$/.test(apiRootNoVer) ? apiRootNoVer : `${origin}/api`;
-      finalUrl = `${root}/uploads/complaints/${currentId}/${filename}`;
-    } else {
-      // สำหรับ filename เฉย ๆ ให้สร้าง path complaints (ไม่ใช้ /api/vN)
-      const root = /\/api$/.test(apiRootNoVer) ? apiRootNoVer : `${origin}/api`;
-      finalUrl = `${root}/uploads/complaints/${currentId}/${filename}`;
+    if (normalized.startsWith("/api/")) {
+      // Already includes /api prefix
+      return `${origin}${normalized}`;
     }
-    
-    return finalUrl;
+    if (normalized.startsWith("/uploads/")) {
+      // Prepend API root without version
+      return `${apiNoVer}${normalized}`;
+    }
+    // Fallback
+    return `${apiNoVer}${normalized}`;
   };
 
   const openAttachments = (sectionKey, rowRaw, rowDisplay) => {
