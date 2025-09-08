@@ -82,8 +82,60 @@ def create_outgoing_report4(
     """สร้างรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบใหม่"""
     try:
         logger.info(f"Creating OutgoingReport4: {report_data.reference_number}")
+        
+        # อัปเดตแทนถ้า document_number + complaint_number ซ้ำ (upsert)
+        existing_doc = db.query(OutgoingReport4).filter(
+            OutgoingReport4.document_number == report_data.document_number,
+            OutgoingReport4.is_active == True
+        ).first()
+        if existing_doc:
+            if (existing_doc.complaint_number or "") == (report_data.complaint_number or ""):
+                # อัปเดตข้อมูลเดิม
+                existing_doc.reference_number = report_data.reference_number
+                existing_doc.reference_date = report_data.reference_date
+                existing_doc.subject = report_data.subject
+                existing_doc.complaint_number = report_data.complaint_number
+                existing_doc.complaint_number_date = report_data.complaint_number_date
+                existing_doc.signature_authority_user_id = report_data.signature_authority_user_id
+                existing_doc.department_id = report_data.department_id
+                existing_doc.user_id = report_data.user_id
+                existing_doc.other_department = report_data.other_department
+                existing_doc.confidentiality_level = report_data.confidentiality_level
+                existing_doc.urgency_level = report_data.urgency_level
+                existing_doc.document_number = report_data.document_number
+                existing_doc.document_date = report_data.document_date
+                existing_doc.remarks = report_data.remarks
+                existing_doc.proposal_purpose = report_data.proposal_purpose
+                existing_doc.consideration_result = report_data.consideration_result
+                existing_doc.complaint_id = report_data.complaint_id
+                existing_doc.updated_by = current_user_id
 
-        # กัน reference_number ซ้ำ
+                db.flush()
+
+                # แนบไฟล์เพิ่มถ้ามี
+                if files:
+                    _save_files_for_report(db, existing_doc.id, files)
+
+                db.commit()
+
+                # ประวัติ: อัปเดตแบบรายงาน 4
+                if report_data.complaint_id:
+                    try:
+                        complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+                        note = (
+                            f"อัปเดตแบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ | อ้างอิง: {existing_doc.reference_number or '-'} | "
+                            f"เรื่อง: {existing_doc.subject or '-'}"
+                        )
+                        cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
+                        _update_status_and_log(db, complaint, cur, note, current_user_id)
+                    except Exception as e:
+                        logger.warning(f"OR4 upsert history failed: {e}")
+
+                return get_outgoing_report4_by_id(db, existing_doc.id)
+            else:
+                raise DuplicateKeyError(f"เลขที่เอกสาร {report_data.document_number} มีอยู่แล้ว")
+
+        # กัน reference_number ซ้ำ (กรณีไม่ได้เข้าเงื่อนไข upsert)
         existing = db.query(OutgoingReport4).filter(
             OutgoingReport4.reference_number == report_data.reference_number,
             OutgoingReport4.is_active == True
@@ -143,9 +195,9 @@ def create_outgoing_report4(
         db.refresh(db_report)
         return get_outgoing_report4_by_id(db, db_report.id)
 
-    except DuplicateKeyError:
+    except DuplicateKeyError as e:
         db.rollback()
-        raise
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         db.rollback()
         raise

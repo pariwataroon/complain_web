@@ -75,7 +75,74 @@ async def create_outgoing_report5(
         report_data = OutgoingReport5Create(**report_data)
 
     try:
-        # กันเลขซ้ำโดยใช้ receive_number
+        # Upsert rule: document_number + complaint_number ซ้ำ → อัปเดตเรคอร์ดเดิม
+        existing_doc = db.query(OutgoingReport5).filter(
+            OutgoingReport5.document_number == report_data.document_number,
+            OutgoingReport5.is_active == True
+        ).first()
+
+        if existing_doc:
+            # document_number ซ้ำ และ complaint_number ตรงกัน → อัปเดต
+            if (existing_doc.complaint_number or "") == (report_data.complaint_number or ""):
+                existing_doc.receive_number = report_data.receive_number
+                existing_doc.receive_date = report_data.receive_date
+                existing_doc.agency_reference_number = report_data.agency_reference_number
+                existing_doc.agency_reference_date = report_data.agency_reference_date
+                existing_doc.internal_register_number = report_data.internal_register_number
+                existing_doc.internal_register_date = report_data.internal_register_date
+                existing_doc.present_to_director_date = report_data.present_to_director_date
+                existing_doc.complaint_id = report_data.complaint_id
+                existing_doc.complaint_number = report_data.complaint_number
+                existing_doc.complaint_number_date = report_data.complaint_number_date
+                existing_doc.subject = report_data.subject
+                existing_doc.document_number = report_data.document_number
+                existing_doc.document_date = report_data.document_date
+                existing_doc.remarks = report_data.remarks
+                existing_doc.signature_authority_user_id = report_data.signature_authority_user_id
+                existing_doc.department_id = report_data.department_id
+                existing_doc.user_id = report_data.user_id
+                existing_doc.confidentiality_level = report_data.confidentiality_level
+                existing_doc.urgency_level = report_data.urgency_level
+                existing_doc.updated_by = current_user_id
+
+                db.flush()
+
+                # แนบไฟล์เพิ่ม (optional)
+                if files:
+                    for f in files:
+                        info = await save_upload_file(f, f"outgoing-reports5/{existing_doc.id}")
+                        att = OutgoingReportAttachment5(
+                            outgoing_report_id=existing_doc.id,
+                            file_name=info.get("filename") or f.filename,
+                            file_path=info.get("file_url"),
+                            file_url=info.get("file_url"),
+                            file_type=info.get("file_type"),
+                            file_size=str(info.get("file_size")) if info.get("file_size") is not None else None,
+                            is_active=True,
+                        )
+                        db.add(att)
+                        db.flush()
+                        db.refresh(att)
+
+                db.commit()
+
+                # ประวัติ: อัปเดต OR5
+                if report_data.complaint_id:
+                    try:
+                        complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+                        note = (
+                            f"อัปเดตแบบรับเรื่องรายงานผลการพิจารณาจากหน่วยงาน | เลขรับ: {existing_doc.receive_number or '-'} | เรื่อง: {existing_doc.subject or '-'}"
+                        )
+                        cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
+                        _update_status_and_log(db, complaint, cur, note, current_user_id)
+                    except Exception as e:
+                        logger.warning(f"OR5 upsert history failed: {e}")
+
+                return get_outgoing_report5_by_id(db, existing_doc.id)
+            # document_number ซ้ำ แต่ complaint_number ต่างกัน → ผิดเงื่อนไข
+            raise DuplicateKeyError(f"เลขที่เอกสาร {report_data.document_number} มีอยู่แล้ว")
+
+        # กันเลขซ้ำโดยใช้ receive_number ในกรณีสร้างใหม่
         dup = db.query(OutgoingReport5).filter(
             OutgoingReport5.receive_number == report_data.receive_number,
             OutgoingReport5.is_active == True
@@ -88,15 +155,13 @@ async def create_outgoing_report5(
         if not dept:
             raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานที่ระบุ")
 
-        sig_user = None
         if report_data.signature_authority_user_id:
             sig_user = db.query(User).filter(User.id == report_data.signature_authority_user_id, User.is_active == True).first()
             if not sig_user:
                 raise HTTPException(status_code=404, detail="ไม่พบผู้มีอำนาจลงนามที่ระบุ")
 
-        complaint = None
         if report_data.complaint_id:
-            complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+            _ = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
 
         # insert
         rec = OutgoingReport5(
@@ -127,17 +192,15 @@ async def create_outgoing_report5(
             created_by=current_user_id
         )
         db.add(rec)
-        db.flush()  # เพื่อให้ได้ id
+        db.flush()
 
         # แนบไฟล์ (optional)
-        uploaded = []
         if files:
             for f in files:
                 info = await save_upload_file(f, f"outgoing-reports5/{rec.id}")
                 att = OutgoingReportAttachment5(
                     outgoing_report_id=rec.id,
                     file_name=info.get("filename") or f.filename,
-                    # store web-relative path in file_path for frontend
                     file_path=info.get("file_url"),
                     file_url=info.get("file_url"),
                     file_type=info.get("file_type"),
@@ -147,18 +210,16 @@ async def create_outgoing_report5(
                 db.add(att)
                 db.flush()
                 db.refresh(att)
-                uploaded.append(att)
 
         db.commit()
 
-        # ✅ OR5: รับเรื่องผลพิจารณาจากหน่วยงาน → สามารถขยับสถานะเป็น REVIEWED/COMPLETED ตามบริบท
+        # ✅ OR5: ประวัติหลังสร้างใหม่
         if report_data.complaint_id:
             try:
                 complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
                 note = (
                     f"บันทึกรับเรื่องผลการพิจารณาจากหน่วยงาน | เลขรับ: {rec.receive_number or '-'} | เรื่อง: {rec.subject or '-'}"
                 )
-                # heuristic: ถ้ามี consideration_result หรือ document_number → REVIEWED มิฉะนั้น TRACKING
                 target = ComplaintStatus.REVIEWED
                 _update_status_and_log(db, complaint, target, note, current_user_id)
             except Exception as e:
@@ -167,9 +228,9 @@ async def create_outgoing_report5(
         db.refresh(rec)
         return get_outgoing_report5_by_id(db, rec.id)
 
-    except DuplicateKeyError:
+    except DuplicateKeyError as e:
         db.rollback()
-        raise
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         db.rollback()
         raise
