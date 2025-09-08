@@ -45,6 +45,13 @@ def _serialize_attachments(report_obj) -> List[Dict[str, Any]]:
         if attachments:
             logger.debug(f"Processing {len(attachments)} attachments for object {getattr(report_obj, 'id', 'unknown')}")
             for a in attachments:
+                # ข้ามไฟล์ที่ไม่ active (รองรับทั้ง False และ 0)
+                if hasattr(a, "is_active"):
+                    try:
+                        if not bool(getattr(a, "is_active")):
+                            continue
+                    except Exception:
+                        pass
                 # รองรับทั้ง OutgoingReport attachments และ ComplaintAttachment
                 attachment_data = {
                     "id": str(getattr(a, "id", None)) if getattr(a, "id", None) else None,

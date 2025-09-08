@@ -1,6 +1,6 @@
 import traceback
 from datetime import datetime
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, with_loader_criteria
 from sqlalchemy import or_, func
 from uuid import UUID
 from typing import Dict, Any, Optional, List, Tuple, Union
@@ -358,7 +358,9 @@ def get_outgoing_report_by_id(db: Session, report_id: UUID) -> Dict:
             joinedload(OutgoingReport.creator),
             joinedload(OutgoingReport.updater),
             joinedload(OutgoingReport.complaint),
-            joinedload(OutgoingReport.attachments)
+            joinedload(OutgoingReport.attachments),
+            # กรอง attachments ตั้งแต่ตอน SELECT ให้ได้เฉพาะแถวที่ is_active
+            with_loader_criteria(OutgoingReportAttachment, OutgoingReportAttachment.is_active == True, include_aliases=True)
         ).filter(
             OutgoingReport.id == report_id,
             OutgoingReport.is_active == True
@@ -416,6 +418,7 @@ def get_outgoing_report_by_id(db: Session, report_id: UUID) -> Dict:
                 "subject": report.complaint.subject,
                 "status": report.complaint.status.value if hasattr(report.complaint, 'status') and report.complaint.status else None
             } if report.complaint else None,
+            # attachments ถูกกรอง is_active ตั้งแต่ SELECT แล้ว
             "attachments": [
                 {
                     "id": str(att.id),
@@ -424,9 +427,9 @@ def get_outgoing_report_by_id(db: Session, report_id: UUID) -> Dict:
                     "file_size": att.file_size,
                     "file_type": att.file_type,
                     "created_at": getattr(att, "created_at", None).isoformat() if getattr(att, "created_at", None) else None
-                } for att in report.attachments if getattr(att, "is_active", True)
+                } for att in report.attachments
             ],
-            "attachment_count": len([att for att in report.attachments if getattr(att, "is_active", True)])
+            "attachment_count": len(report.attachments)
         }
 
         return response_data
@@ -461,7 +464,9 @@ def get_outgoing_reports(
             joinedload(OutgoingReport.department),
             joinedload(OutgoingReport.creator),
             joinedload(OutgoingReport.complaint),
-            joinedload(OutgoingReport.attachments)
+            joinedload(OutgoingReport.attachments),
+            # กรอง attachments ให้โหลดเฉพาะ is_active
+            with_loader_criteria(OutgoingReportAttachment, OutgoingReportAttachment.is_active == True, include_aliases=True)
         ).filter(OutgoingReport.is_active == True)
 
         if search:
@@ -545,6 +550,7 @@ def get_outgoing_reports(
                     "subject": report.complaint.subject,
                     "status": report.complaint.status.value if hasattr(report.complaint, 'status') and report.complaint.status else None
                 } if report.complaint else None,
+                # with_loader_criteria ทำให้รายชื่อไฟล์เป็นเฉพาะ active แล้ว
                 "attachments": [
                     {
                         "id": str(att.id),
@@ -553,9 +559,9 @@ def get_outgoing_reports(
                         "file_size": att.file_size,
                         "file_type": att.file_type,
                         "created_at": getattr(att, "created_at", None).isoformat() if getattr(att, "created_at", None) else None
-                    } for att in report.attachments if getattr(att, "is_active", True)
+                    } for att in report.attachments
                 ],
-                "attachment_count": len([att for att in report.attachments if getattr(att, "is_active", True)])
+                "attachment_count": len(report.attachments)
             }
             items.append(item)
 
@@ -1391,7 +1397,9 @@ def get_outgoing_report_attachment_fileinfo(
     """
     att = db.query(OutgoingReportAttachment).filter(
         OutgoingReportAttachment.id == attachment_id,
-        OutgoingReportAttachment.outgoing_report_id == outgoing_report_id
+        OutgoingReportAttachment.outgoing_report_id == outgoing_report_id,
+        # ไม่ดึงแถวที่ inactive
+        OutgoingReportAttachment.is_active == True if hasattr(OutgoingReportAttachment, "is_active") else True,
     ).first()
     if not att:
         raise HTTPException(status_code=404, detail="ไม่พบไฟล์แนบที่ระบุ")

@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
 
 from fastapi import HTTPException, UploadFile
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, with_loader_criteria
 from sqlalchemy import or_
 
 from models.outgoing_reports4 import OutgoingReport4, OutgoingReportAttachment4
@@ -217,6 +217,7 @@ def get_outgoing_report4_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
             joinedload(OutgoingReport4.creator),
             joinedload(OutgoingReport4.complaint),
             joinedload(OutgoingReport4.attachments),
+            with_loader_criteria(OutgoingReportAttachment4, OutgoingReportAttachment4.is_active == True, include_aliases=True),
         ).filter(
             OutgoingReport4.id == report_id,
             OutgoingReport4.is_active == True
@@ -256,9 +257,8 @@ def get_outgoing_report4_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
             "complaint_id": _safe_str(report.complaint_id) if report.complaint_id else None,
             "created_at": _iso(report.created_at),
             "creator_name": f"{report.creator.first_name} {report.creator.last_name}" if report.creator else "N/A",
-            "attachments": [
-                _attachment_dict(att) for att in report.attachments if getattr(att, "is_active", True)
-            ],
+            # กรองตั้งแต่ SELECT แล้ว
+            "attachments": [_attachment_dict(att) for att in report.attachments],
         }
 
     except HTTPException:
@@ -287,6 +287,7 @@ def get_outgoing_reports4(
             joinedload(OutgoingReport4.user),
             joinedload(OutgoingReport4.complaint),
             joinedload(OutgoingReport4.attachments),
+            with_loader_criteria(OutgoingReportAttachment4, OutgoingReportAttachment4.is_active == True, include_aliases=True),
         ).filter(OutgoingReport4.is_active == True)
 
         if search:
@@ -332,7 +333,7 @@ def get_outgoing_reports4(
                 "proposal_purpose": r.proposal_purpose,
                 "consideration_result": r.consideration_result,
                 "created_at": _safe_str(_iso(r.created_at)),
-                "attachment_count": len([att for att in r.attachments if getattr(att, "is_active", True)]),
+                "attachment_count": len(r.attachments),
             })
 
         return {
@@ -497,6 +498,7 @@ def get_outgoing_report4_attachment_fileinfo(
     att = db.query(OutgoingReportAttachment4).filter(
         OutgoingReportAttachment4.id == attachment_id,
         OutgoingReportAttachment4.outgoing_report_id == outgoing_report_id,
+        OutgoingReportAttachment4.is_active == True if hasattr(OutgoingReportAttachment4, "is_active") else True,
     ).first()
     if not att:
         raise HTTPException(status_code=404, detail="ไม่พบไฟล์แนบที่ระบุ")

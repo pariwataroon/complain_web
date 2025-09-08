@@ -6,7 +6,7 @@ from datetime import datetime
 import os
 
 from fastapi import HTTPException, UploadFile
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, with_loader_criteria
 from sqlalchemy import or_
 
 from models.outgoing_reports5 import OutgoingReport5, OutgoingReportAttachment5
@@ -249,6 +249,8 @@ def get_outgoing_report5_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
         joinedload(OutgoingReport5.creator),
         joinedload(OutgoingReport5.complaint),
         joinedload(OutgoingReport5.attachments),
+        # โหลดความสัมพันธ์ attachments โดยกรอง is_active ตั้งแต่ชั้น SELECT
+        with_loader_criteria(OutgoingReportAttachment5, OutgoingReportAttachment5.is_active == True, include_aliases=True),
     ).filter(
         OutgoingReport5.id == report_id,
         OutgoingReport5.is_active == True
@@ -293,8 +295,9 @@ def get_outgoing_report5_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
         "complaint_id": _safe_str(rec.complaint_id) if rec.complaint_id else None,
         "created_at": _iso(rec.created_at),
         "updated_at": _iso(rec.updated_at),
-        "attachments": [_attachment_dict(a) for a in rec.attachments if getattr(a, "is_active", True)],
-        "attachment_count": len([a for a in rec.attachments if getattr(a, "is_active", True)])
+    # ไม่ต้องกรองซ้ำ เพราะกรองตั้งแต่ตอน SELECT ด้วย with_loader_criteria แล้ว
+    "attachments": [_attachment_dict(a) for a in rec.attachments],
+    "attachment_count": len(rec.attachments)
     }
 
 
@@ -314,6 +317,8 @@ def get_outgoing_reports5(
         joinedload(OutgoingReport5.department),
         joinedload(OutgoingReport5.signature_authority_user),
         joinedload(OutgoingReport5.attachments),
+        # กรอง attachments เป็น is_active ตั้งแต่ SELECT
+        with_loader_criteria(OutgoingReportAttachment5, OutgoingReportAttachment5.is_active == True, include_aliases=True),
     ).filter(OutgoingReport5.is_active == True)
 
     if search:
@@ -357,7 +362,8 @@ def get_outgoing_reports5(
             ),
             "urgency_level": r.urgency_level,
             "created_at": _iso(r.created_at),
-            "attachment_count": len([a for a in r.attachments if getattr(a, "is_active", True)]),
+            # with_loader_criteria ทำให้ r.attachments มีเฉพาะที่ is_active แล้ว
+            "attachment_count": len(r.attachments),
         })
 
     return {
@@ -450,13 +456,17 @@ async def add_attachments_to_outgoing_report5(
 def list_attachments_of_outgoing_report5(db: Session, outgoing_report_id: UUID) -> Dict[str, Any]:
     rows = (
         db.query(OutgoingReportAttachment5)
-        .filter(OutgoingReportAttachment5.outgoing_report_id == outgoing_report_id)
+        .filter(
+            OutgoingReportAttachment5.outgoing_report_id == outgoing_report_id,
+            OutgoingReportAttachment5.is_active == True,
+        )
         .order_by(OutgoingReportAttachment5.created_at.desc())
         .all()
     )
     return {
         "outgoing_report_id": _safe_str(outgoing_report_id),
-        "attachments": [_attachment_dict(r) for r in rows if getattr(r, "is_active", True)],
+        # กรอง is_active ตั้งแต่ใน query แล้ว
+        "attachments": [_attachment_dict(r) for r in rows],
     }
 
 
@@ -465,10 +475,16 @@ def get_outgoing_report5_attachment_fileinfo(
 ) -> Tuple[str, str, str]:
     att = db.query(OutgoingReportAttachment5).filter(
         OutgoingReportAttachment5.id == attachment_id,
-        OutgoingReportAttachment5.outgoing_report_id == outgoing_report_id
+        OutgoingReportAttachment5.outgoing_report_id == outgoing_report_id,
+        # ไม่ดึงไฟล์ที่ inactive ตั้งแต่ชั้น SELECT
+        OutgoingReportAttachment5.is_active == True,
     ).first()
     if not att:
         raise HTTPException(status_code=404, detail="ไม่พบไฟล์แนบที่ระบุ")
+
+    # (สำรอง) ป้องกันกรณีไม่ตรง schema
+    if hasattr(att, "is_active") and not getattr(att, "is_active"):
+        raise HTTPException(status_code=404, detail="ไฟล์แนบนี้ถูกลบออกจากการแสดงผลแล้ว")
 
     file_path = getattr(att, "file_path", None)
     if not file_path:
