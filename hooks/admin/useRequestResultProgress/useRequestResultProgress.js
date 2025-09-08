@@ -83,6 +83,8 @@ export const useRequestResultProgress = () => {
   // -------- Form state --------
   const [form, setForm] = useState({
     salutation: "",
+    salutation_is_other: false,
+    position_other_text: "",
     refNo: complaintNumberFromQuery || "",
     docNo: "",
     date: null,
@@ -198,6 +200,8 @@ export const useRequestResultProgress = () => {
   const handleClear = useCallback(() => {
     setForm({
       salutation: "",
+      salutation_is_other: false,
+      position_other_text: "",
       refNo: "",
       docNo: "",
       date: null,
@@ -259,6 +263,12 @@ export const useRequestResultProgress = () => {
         if (parsed && errors.date) setErrors((prev) => ({ ...prev, date: null }));
         return;
       }
+      // Toggle off 'other' clears text
+      if (name === 'salutation_is_other' && !v) {
+        setForm((prev) => ({ ...prev, position_other_text: "", salutation_is_other: false }));
+        if (errors.position_other_text) setErrors((prev) => ({ ...prev, position_other_text: null }));
+        return;
+      }
       setForm((prev) => ({ ...prev, [name]: v }));
       if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
     },
@@ -289,6 +299,7 @@ export const useRequestResultProgress = () => {
   const validateRequiredFields = useCallback((state = form) => {
     const fieldsConfig = [
       { field: "salutation", label: "เรียน" },
+      ...(state.salutation_is_other ? [{ field: 'position_other_text', label: 'ตำแหน่ง (อื่นๆ)' }] : []),
       { field: "refNo", label: "เลข สป.กค." },
       { field: "docNo", label: "เลขที่หนังสือ" },
       { field: "date", label: "วันที่" },
@@ -313,9 +324,16 @@ export const useRequestResultProgress = () => {
 
   // ---- Form Valid ----
   const isFormValid = useCallback(
-    () => requiredFields.every((f) => form[f] !== undefined && form[f] !== null && form[f] !== ""),
+    () => requiredFields.every((f) => form[f] !== undefined && form[f] !== null && form[f] !== "") && (!form.salutation_is_other || !!form.position_other_text),
     [form]
   );
+
+  // canSave similar to Forward page: focus only on required fields and 'อื่นๆ' rule
+  const canSave = useCallback(() => {
+    const baseOk = requiredFields.every((f) => form[f] !== undefined && form[f] !== null && form[f] !== "");
+    const otherOk = !form.salutation_is_other || !!form.position_other_text;
+    return baseOk && otherOk;
+  }, [form]);
 
   // ---- SAVE ----
   const handleSave = useCallback(
@@ -337,6 +355,7 @@ export const useRequestResultProgress = () => {
       const deptId = state.department && isUUID(state.department) ? state.department : null;
       const payload = {
         position_id: state.position_id || POSITION_FALLBACK,
+        position_other_text: (state.salutation_is_other || state.position_other_text) ? (state.position_other_text || "").trim() : "",
         salutation: state.salutation || "",
         complaint_number: state.refNo || "",
         complaint_number_date: toISOorNull(state.date),
@@ -535,6 +554,7 @@ export const useRequestResultProgress = () => {
     createLabel,
     getFieldError,
     isFormValid,
+    canSave,
     hasFormChanges,
 
     handleChange,

@@ -13,7 +13,7 @@ import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsa
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
-import { GetOutgoingReport3ById } from "@pages/api/outgoinreports/outgoinreports";
+import { GetOutgoingReport3ById, DeleteOutgoingReportAttachment } from "@pages/api/outgoinreports/outgoinreports";
 import { GetReDocumentComplaints } from "@pages/api/complaint/complaint";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -44,11 +44,13 @@ const RequestResultProgress = () => {
     getFieldError,
     handleChange,
     handleDateChange,
-    handleFileUpload,
+  handleFileChange,
     handleClear,
     handleSave,
     isFormValid,
     updateField,
+  canSave,
+  fileInputKey,
   } = useRequestResultProgress();
   const router = useRouter();
 
@@ -65,6 +67,25 @@ const RequestResultProgress = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
+  const [existingAttachments, setExistingAttachments] = useState([]);
+
+  const normalizeFilePath = useCallback((p) => {
+    if (!p) return "";
+    let s = String(p);
+    s = s.replace(/\\\\/g, "/").replace(/\\/g, "/");
+    const idx = s.lastIndexOf("/uploads/");
+    if (idx !== -1) s = s.substring(idx);
+    if (!s.startsWith("/")) s = `/${s}`;
+    return s;
+  }, []);
+  const buildFileUrl = useCallback((p) => {
+    if (!p) return "";
+    const normalized = normalizeFilePath(p);
+    if (/^https?:\/\//i.test(normalized)) return normalized;
+    const baseRaw = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
+    const base = baseRaw.replace(/\/api\/v\d+$/, "/api");
+    return `${base}${normalized}`;
+  }, [normalizeFilePath]);
 
   // Prefill when editing existing type2 report via /[id] (เหมือน InitialNotificationComplainantAgency)
   useEffect(() => {
@@ -85,6 +106,10 @@ const RequestResultProgress = () => {
         updateField('docNo', d.document_number || '');
         updateField('subject', d.subject || '');
         updateField('salutation', d.position?.id || "");
+        const posName = d.position?.name || d.position_name || "";
+        const isOther = posName === "อื่นๆ";
+        updateField('salutation_is_other', !!isOther);
+        if (isOther) updateField('position_other_text', d.position_other_text || "");
         // ผู้ลงนาม: setSelectedSigner และ updateField("signer", id)
         const signerObj = d.signature_authority_user || null;
         const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || '';
@@ -100,8 +125,16 @@ const RequestResultProgress = () => {
 
         // หน่วยงาน (id และ object)
         updateField("department", d.department?.id || "");
-        setSelectedDepartment(d.department || null);
-        updateField("department_meta", d.department || null);
+        const deptObj = d.department
+          ? {
+              value: d.department.id,
+              label: d.department.name,
+              code: d.department.code || "",
+              shortName: d.department.shortName || "",
+            }
+          : null;
+        setSelectedDepartment(deptObj);
+        updateField("department_meta", deptObj);
 
         // Date (priority: complaint_number_date > document_date > created_at)
         const dateSrc = d.complaint_number_date || d.document_date || d.created_at;
@@ -121,6 +154,7 @@ const RequestResultProgress = () => {
 
         // Attachments
         const atts = Array.isArray(d.attachments) ? d.attachments : [];
+        setExistingAttachments(atts);
         if (atts.length) {
           const names = atts.map(a => a.original_name || a.file_name || a.name || '').filter(Boolean).join(', ');
           if (names) updateField('attachment', names);
@@ -375,9 +409,29 @@ const RequestResultProgress = () => {
               name="salutation"
               value={form.salutation}
               onChange={handleChange}
+              onUserSelect={(opt) => {
+                const isOther = (opt?.name || opt?.label) === "อื่นๆ";
+                handleChange({ target: { name: 'salutation_is_other', value: isOther } });
+                if (!isOther) {
+                  handleChange({ target: { name: 'position_other_text', value: '' } });
+                }
+              }}
               error={!!getFieldError("salutation")}
               helperText={getFieldError("salutation")}
             />
+            {form.salutation_is_other && (
+              <Box sx={{ minWidth: 240 }}>
+                <InputText
+                  label={createLabel("ระบุตำแหน่ง (อื่นๆ)", "position_other_text")}
+                  inputLabel="กรอกตำแหน่ง (อื่นๆ)"
+                  name="position_other_text"
+                  value={form.position_other_text || ""}
+                  onChange={handleChange}
+                  error={!!getFieldError("position_other_text")}
+                  helperText={getFieldError("position_other_text")}
+                />
+              </Box>
+            )}
             {/* เลขที่หนังสือ */}
               <InputText
                 label={createLabel("เลขที่หนังสือ", "docNo")}
@@ -1029,14 +1083,31 @@ const RequestResultProgress = () => {
           {/* Row 6: เอกสารแนบ* - เปลี่ยนเป็น InputFile */}
           <Box sx={{ position: "relative" }}>
             <InputFile
+              key={fileInputKey}
               label={createLabel("เอกสารประกอบการร้องเรียน", "attachment")}
               name="attachment"
-              onChange={handleFileUpload}
+              onChange={handleFileChange}
               error={!!getFieldError("attachment")}
               helperText={getFieldError("attachment") || "หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"}
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxFiles={3}
               maxSizeMB={10}
+              existingFiles={existingAttachments}
+              getFileUrl={(att) => buildFileUrl(att.file_path)}
+              onDeleteExisting={async (att) => {
+                const reportId = router?.query?.id || null;
+                if (!reportId || !att?.id) return false;
+                const res = await DeleteOutgoingReportAttachment({
+                  outgoing_report_id: reportId,
+                  attachment_id: att.id,
+                });
+                if (res?.success === false) {
+                  alert(res?.res_message || "ลบไฟล์ไม่สำเร็จ");
+                  return false;
+                }
+                setExistingAttachments((prev) => prev.filter((x) => x.id !== att.id));
+                return true;
+              }}
             />
           </Box>
 
@@ -1097,18 +1168,18 @@ const RequestResultProgress = () => {
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={() => handleSave()}
-              disabled={isLoading || optionsLoading}
+              disabled={isLoading || !canSave() || optionsLoading}
               sx={{
-                backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
+                backgroundColor: canSave() && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
                 color: "#FFF",
                 width: "100%",
                 height: "55px",
                 fontSize: "20px",
                 fontWeight: "600",
                 "&:hover": {
-                  backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
-                  transform: isFormValid() && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
-                  boxShadow: isFormValid() && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
+                  backgroundColor: canSave() && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
+                  transform: canSave() && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
+                  boxShadow: canSave() && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
                 },
                 "&:disabled": {
                   backgroundColor: "#cccccc",
