@@ -144,17 +144,23 @@ const SelectFieldDepartment = ({
         fetchDepartments();
     }, [filterBySignerId]);
 
-    // รักษาค่าที่ Prefill: ล้างเฉพาะเมื่อค่าปัจจุบันไม่อยู่ในรายการใหม่
+    // รักษาค่าที่ Prefill: อย่าลบค่าที่มีอยู่จนกว่ารายการจะโหลดครบถ้วน
     useEffect(() => {
-        if (!filterBySignerId) return;
-        const exists = options.some(opt => String(opt.value) === String(selectedValue));
-        if (!exists && selectedValue) {
-            setSelectedDepartment(null);
-            onChange({ target: { name, value: "" } });
-            onDepartmentSelect(null);
+        // หากยังไม่มีผู้ลงนาม หรือกำลังโหลดรายการ ให้คงค่าเดิมไว้ก่อน
+        if (!filterBySignerId || loading) return;
+
+        // เมื่อโหลดเสร็จ: ถ้าค่าปัจจุบันมี และอยู่ในรายการ ให้ sync selectedDepartment เพื่อแสดง label
+        if (selectedValue) {
+            const match = options.find(opt => String(opt.value) === String(selectedValue));
+            if (match) {
+                setSelectedDepartment(match);
+            } else {
+                // ถ้าไม่พบในรายการ (เช่น กรองโดยผู้ลงนามคนใหม่) ให้คงค่าไว้ ไม่ลบทิ้งอัตโนมัติ
+                // ผู้ใช้สามารถกดเคลียร์เองได้จากปุ่ม X
+            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filterBySignerId, options]);
+    }, [filterBySignerId, options, loading]);
 
     return (
         <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>

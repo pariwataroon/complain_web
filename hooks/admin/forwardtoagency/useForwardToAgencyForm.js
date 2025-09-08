@@ -17,18 +17,21 @@ import axiosInstance from "@pages/api/axiosInstance";
 
 // Extended validation schema with file validation
 const validationSchema = yup.object().shape({
+  salutation_is_other: yup.boolean().default(false),
   salutation: yup
     .string()
     .required("กรุณาเลือกคำขึ้นต้น")
     .notOneOf([""], "กรุณาเลือกคำขึ้นต้น"),
   // เมื่อเลือก 'อื่นๆ' ให้ต้องระบุข้อความเพิ่มเติม (ใช้ flag salutation_is_other)
-  position_other_text: yup.string().when("salutation_is_other", (isOther, schema) => {
-    return isOther
-      ? schema
+  position_other_text: yup
+    .string()
+    .when("salutation_is_other", {
+      is: true,
+      then: (schema) => schema
         .required("กรุณาระบุตำแหน่ง (อื่นๆ)")
-        .min(2, "กรุณาระบุอย่างน้อย 2 ตัวอักษร")
-      : schema.optional().nullable();
-  }),
+        .min(2, "กรุณาระบุอย่างน้อย 2 ตัวอักษร"),
+      otherwise: (schema) => schema.optional().nullable(),
+    }),
 
   complaint_number: yup
     .string()
@@ -36,7 +39,8 @@ const validationSchema = yup.object().shape({
     .min(1, "กรุณากรอกเลข สป.กค."),
 
   complaint_number_date: yup
-    .string()
+    .date()
+    .typeError("กรุณาเลือกวันที่ของเลข สป.กค.")
     .nullable()
     .required("กรุณาเลือกวันที่ของเลข สป.กค."),
 
@@ -51,7 +55,8 @@ const validationSchema = yup.object().shape({
     .min(1, "กรุณากรอกเลขที่หนังสือ"),
 
   document_date: yup
-    .string()
+    .date()
+    .typeError("กรุณาเลือกวันที่หนังสือ")
     .nullable()
     .required("กรุณาเลือกวันที่หนังสือ"),
 
@@ -66,19 +71,26 @@ const validationSchema = yup.object().shape({
     .notOneOf([""], "กรุณาเลือกหน่วยงาน"),
 
   confidentiality: yup
-    .string()
-    .required("กรุณาเลือกชั้นความลับ")
-    .notOneOf([""], "กรุณาเลือกชั้นความลับ"),
+    .mixed()
+    .test(
+      "confidentiality-required",
+      "กรุณาเลือกชั้นความลับ",
+      (val) => val !== undefined && val !== null && val !== ""
+    ),
 
   urgency: yup
-    .string()
-    .required("กรุณาเลือกชั้นความเร่งด่วน")
-    .notOneOf([""], "กรุณาเลือกชั้นความเร่งด่วน"),
+    .mixed()
+    .test(
+      "urgency-required",
+      "กรุณาเลือกชั้นความเร่งด่วน",
+      (val) => val !== undefined && val !== null && val !== ""
+    ),
 
+  // หมายเหตุ: ในหน้าแก้ไข ไม่จำเป็นต้องแนบไฟล์ใหม่ หากมีไฟล์เดิมอยู่แล้ว
   attachment: yup
     .string()
-    .required("กรุณาแนบเอกสาร")
-    .min(1, "กรุณาแนบเอกสาร"),
+    .nullable()
+    .optional(),
 
   note: yup.string().optional(),
 });
@@ -137,10 +149,12 @@ export const useForwardToAgencyForm = () => {
     reset,
     setValue,
     watch,
+    trigger,
     formState: { errors, isValid, isDirty },
   } = useForm({
     resolver: yupResolver(validationSchema),
     mode: "onChange",
+    shouldUnregister: true,
     defaultValues: {
       salutation: "",
       salutation_is_other: false,
@@ -296,11 +310,7 @@ export const useForwardToAgencyForm = () => {
       try {
         showLoading("กำลังบันทึกข้อมูล...");
 
-        if (!fileData) {
-          closeAlert();
-          alertError("ไม่พบไฟล์แนบ", "กรุณาอัพโหลดไฟล์ก่อนบันทึกข้อมูล");
-          return { success: false };
-        }
+        // หมายเหตุ: ไม่บังคับอัพโหลดไฟล์ใหม่ หากไฟล์เดิมครบหรือผู้ใช้ไม่ต้องการแนบเพิ่ม
 
         const outgoingReportData = {
           position_id: data.salutation,
@@ -534,7 +544,6 @@ export const useForwardToAgencyForm = () => {
       "department",
       "confidentiality",
       "urgency",
-      "attachment",
     ];
     return requiredFields.includes(fieldName);
   }, []);
@@ -621,12 +630,12 @@ export const useForwardToAgencyForm = () => {
     "department",
     "confidentiality",
     "urgency",
-    "attachment",
   ];
 
   return {
     control,
     handleSubmit,
+    trigger,
     errors,
     isValid,
     isDirty,

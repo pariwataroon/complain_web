@@ -180,5 +180,29 @@ const UploadOutgoingReport5Attachments = async (
   }
 };
 
+// DELETE existing attachment
+const DeleteOutgoingReportAttachment = async ({ outgoing_report_id, attachment_id }) => {
+  if (!outgoing_report_id || !attachment_id) {
+    return {
+      success: false,
+      res_message: "missing outgoing_report_id or attachment_id",
+    };
+  }
+  try {
+    const endpoint = `/outgoing-reports/${outgoing_report_id}/attachments/${attachment_id}`;
+    const response = await axiosInstance.delete(endpoint);
+    return response.data || { success: true };
+  } catch (error) {
+    const status = error?.response?.status;
+    const data = error?.response?.data;
+    console.error("Error deleting attachment:", { status, data });
+    return {
+      success: false,
+      res_message: data?.res_message || error?.message || "DELETE_FAILED",
+      res_code: String(status || "500"),
+    };
+  }
+};
 
-export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4, CreateOutgoingReport5, getDepartmentsPrefix, GetOutgoingReportById, GetOutgoingReport2ById, GetOutgoingReport3ById, UploadOutgoingReport5Attachments };
+
+export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4, CreateOutgoingReport5, getDepartmentsPrefix, GetOutgoingReportById, GetOutgoingReport2ById, GetOutgoingReport3ById, UploadOutgoingReport5Attachments, DeleteOutgoingReportAttachment };

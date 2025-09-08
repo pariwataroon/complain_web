@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
     Box,
     TextField,
@@ -20,11 +20,21 @@ const InputFile = ({
     maxSizeMB = 10,
     error,
     required = false,
+    // New: existing attachments from server
+    existingFiles = [],
+    onDeleteExisting = null,
+    getFileUrl = null,
+    allowDeleteExisting = true,
     ...props
 }) => {
     const fileRef = useRef();
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [errorMsg, setErrorMsg] = useState("");
+    const [localExisting, setLocalExisting] = useState([]);
+
+    useEffect(() => {
+        setLocalExisting(Array.isArray(existingFiles) ? existingFiles : []);
+    }, [existingFiles]);
 
     const isValidFileType = (file) => {
         const validExtensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
@@ -43,7 +53,8 @@ const InputFile = ({
     const handleFileSelect = (e) => {
         const files = Array.from(e.target.files);
 
-        const remainingSlots = maxFiles - selectedFiles.length;
+        const combinedCount = (localExisting?.length || 0) + selectedFiles.length;
+        const remainingSlots = maxFiles - combinedCount;
 
         if (files.length > remainingSlots) {
             setErrorMsg(`สามารถเพิ่มได้อีก ${remainingSlots} ไฟล์ (รวมทั้งหมดไม่เกิน ${maxFiles} ไฟล์)`);
@@ -67,7 +78,7 @@ const InputFile = ({
             return;
         }
 
-        const updatedFiles = [...selectedFiles, ...newFiles];
+    const updatedFiles = [...selectedFiles, ...newFiles];
 
         const totalSizeMB = calculateTotalSize(updatedFiles);
         if (totalSizeMB > maxSizeMB) {
@@ -97,8 +108,30 @@ const InputFile = ({
         onChange(maxFiles === 1 ? (newFiles.length > 0 ? newFiles[0] : null) : newFiles);
     };
 
-    const isMaxReached = selectedFiles.length >= maxFiles;
+    const combinedCount = (localExisting?.length || 0) + selectedFiles.length;
+    const isMaxReached = combinedCount >= maxFiles;
     const currentTotalSizeMB = calculateTotalSize(selectedFiles);
+
+    const handleDeleteExistingClick = async (att, idx) => {
+        if (!allowDeleteExisting) return;
+        const confirmed = window.confirm("ต้องการลบไฟล์นี้หรือไม่?");
+        if (!confirmed) return;
+        try {
+            if (typeof onDeleteExisting === "function") {
+                const res = await onDeleteExisting(att);
+                // If success (truthy), optimistically remove from local list
+                if (res !== false) {
+                    setLocalExisting((prev) => prev.filter((_, i) => i !== idx));
+                }
+            } else {
+                // No handler provided; just remove locally
+                setLocalExisting((prev) => prev.filter((_, i) => i !== idx));
+            }
+        } catch (e) {
+            console.error("Delete existing attachment failed", e);
+            alert("ลบไฟล์ไม่สำเร็จ");
+        }
+    };
 
     // สร้าง label แบบ custom ที่มี * สีแดง
     const renderLabel = () => {
@@ -140,7 +173,7 @@ const InputFile = ({
                     placeholder={
                         isMaxReached
                             ? `อัปโหลดครบแล้ว ${maxFiles} ไฟล์`
-                            : `อัปโหลดไฟล์ประกอบ (${selectedFiles.length}/${maxFiles})`
+                            : `อัปโหลดไฟล์ประกอบ (${combinedCount}/${maxFiles})`
                     }
                     error={error || !!errorMsg}
                     InputProps={{
@@ -174,6 +207,56 @@ const InputFile = ({
                 multiple={maxFiles > 1}
                 onChange={handleFileSelect}
             />
+
+            {localExisting.length > 0 && (
+                <Box mt={1.5}>
+                    <Typography variant="subtitle2" sx={{ color: "#1120A3", mb: 0.5 }}>
+                        เอกสารประกอบการร้องเรียน (เดิม)
+                    </Typography>
+                    <Stack spacing={0.5}>
+                        {localExisting.map((att, idx) => {
+                            const name = att.file_name || att.name || att.originalname || `ไฟล์แนบ #${idx + 1}`;
+                            const sizeKB = att.file_size ? (Number(att.file_size) / 1024).toFixed(0) : null;
+                            const href = typeof getFileUrl === "function" ? getFileUrl(att) : (att.url || att.file_url || att.file_path || "");
+                            return (
+                                <Box
+                                    key={att.id || `${name}-${idx}`}
+                                    sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        background: "#F6F8FF",
+                                        px: 2,
+                                        py: 1,
+                                        borderRadius: "8px",
+                                        color: "#1120A3",
+                                    }}
+                                >
+                                    <InsertDriveFile sx={{ fontSize: 20, mr: 1 }} />
+                                    <Typography fontSize={14} noWrap sx={{ flex: 1 }} title={name}>
+                                        {href ? (
+                                            <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                                                {name}
+                                            </a>
+                                        ) : (
+                                            name
+                                        )}
+                                    </Typography>
+                                    {sizeKB && (
+                                        <Typography fontSize={12} sx={{ color: "#666", mr: 1 }}>
+                                            ({sizeKB} KB)
+                                        </Typography>
+                                    )}
+                                    {allowDeleteExisting && (
+                                        <IconButton size="small" onClick={() => handleDeleteExistingClick(att, idx)} sx={{ color: "#ff5252" }}>
+                                            <Close fontSize="small" />
+                                        </IconButton>
+                                    )}
+                                </Box>
+                            );
+                        })}
+                    </Stack>
+                </Box>
+            )}
 
             {selectedFiles.length > 0 && (
                 <Box mt={1}>
@@ -217,9 +300,9 @@ const InputFile = ({
                         ))}
                     </Stack>
                     <Typography variant="caption" sx={{ color: "#666", mt: 1, display: "block" }}>
-                        อัปโหลดแล้ว {selectedFiles.length} / {maxFiles} ไฟล์
-                        | ขนาดรวม: {currentTotalSizeMB.toFixed(2)} / {maxSizeMB} MB
-                        {selectedFiles.length < maxFiles && " (คลิกเพื่อเพิ่มไฟล์)"}
+                        อัปโหลดแล้ว {combinedCount} / {maxFiles} ไฟล์
+                        | ขนาดรวมไฟล์ใหม่: {currentTotalSizeMB.toFixed(2)} / {maxSizeMB} MB
+                        {!isMaxReached && " (คลิกเพื่อเพิ่มไฟล์)"}
                     </Typography>
                 </Box>
             )}

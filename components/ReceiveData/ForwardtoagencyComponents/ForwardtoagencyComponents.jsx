@@ -9,6 +9,7 @@ import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPicke
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import InputFile from "@services/InputFile/InputFile";
+import { DeleteOutgoingReportAttachment } from "@pages/api/outgoinreports/outgoinreports";
 import { useForwardToAgencyForm } from "@hooks/admin/forwardtoagency/useForwardToAgencyForm";
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsalutation";
@@ -207,10 +208,8 @@ const ForwardtoagencyComponents = () => {
       if (dateStr) {
         const d = new Date(dateStr);
         if (!isNaN(d.getTime())) {
-          const yyyy = d.getFullYear();
-          const mm = String(d.getMonth() + 1).padStart(2, "0");
-          const dd = String(d.getDate()).padStart(2, "0");
-          setValue("complaint_number_date", `${yyyy}-${mm}-${dd}`, {
+          // Store as Date object to match yup.date() and DateThaiPicker expectations
+          setValue("complaint_number_date", d, {
             shouldValidate: true,
             shouldDirty: true,
           });
@@ -244,6 +243,7 @@ const ForwardtoagencyComponents = () => {
     control,
     handleSubmit,
     setValue,
+    trigger,
   watch,
     errors,
     isValid,
@@ -274,44 +274,44 @@ const ForwardtoagencyComponents = () => {
 
   // Helper: fill form from outgoing report data
   const fillFormFromReport = useCallback(
-    (d) => {
+    async (d) => {
       if (!d) return;
       // Core fields
   // กรณี 'อื่นๆ' ให้ตั้งค่า flag และเติมข้อความประกอบ
       const posName = d.position?.name || "";
   const isOther = posName === "อื่นๆ" || !!d.position_other_text;
   const positionId = d.position_id || d.position?.id || "";
-  setValue("salutation", positionId, { shouldDirty: false });
+  setValue("salutation", positionId, { shouldDirty: false, shouldValidate: true });
   setValue("salutation_is_other", !!isOther, { shouldDirty: false });
       if (isOther && d.position_other_text) {
-        setValue("position_other_text", d.position_other_text, { shouldDirty: false });
+        setValue("position_other_text", d.position_other_text, { shouldDirty: false, shouldValidate: true });
       }
 
       setValue(
         "complaint_number",
         d.complaint_number || d.reference_number || "",
-        { shouldDirty: false }
+        { shouldDirty: false, shouldValidate: true }
       );
       setValue("complaint_id", d.complaint_id || d.related_complaint?.id || "", { shouldDirty: false });
 
       const cnumDate = d.complaint_number_date || d.reference_date;
-      if (cnumDate) setValue("complaint_number_date", new Date(cnumDate), { shouldDirty: false });
+  if (cnumDate) setValue("complaint_number_date", new Date(cnumDate), { shouldDirty: false, shouldValidate: true });
 
-      setValue("subject", d.subject || d.related_complaint?.subject || "", { shouldDirty: false });
+  setValue("subject", d.subject || d.related_complaint?.subject || "", { shouldDirty: false, shouldValidate: true });
 
-      setValue("document_number", d.document_number || "", { shouldDirty: false });
-      if (d.document_date) setValue("document_date", new Date(d.document_date), { shouldDirty: false });
+  setValue("document_number", d.document_number || "", { shouldDirty: false, shouldValidate: true });
+  if (d.document_date) setValue("document_date", new Date(d.document_date), { shouldDirty: false, shouldValidate: true });
 
   const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || "";
-  setValue("signer", signerId, { shouldDirty: false });
+  setValue("signer", signerId, { shouldDirty: false, shouldValidate: true });
   if (signerId) setSelectedSigner({ value: signerId });
 
   // Prefill department if present
   const deptId = d.department?.id || d.department_id || "";
-  setValue("department", deptId, { shouldDirty: false });
+  setValue("department", deptId, { shouldDirty: false, shouldValidate: true });
 
       // Note/Remarks
-      setValue("note", d.remarks || "", { shouldDirty: false });
+  setValue("note", d.remarks || "", { shouldDirty: false });
 
       // Store labels temporarily to map after options load
       setPendingPrefill({
@@ -322,8 +322,10 @@ const ForwardtoagencyComponents = () => {
   // Attachments (read-only display)
   const atts = Array.isArray(d.attachments) ? d.attachments : [];
   setExistingAttachments(atts);
+      // Validate the form after initial prefill of required fields
+      try { await trigger(); } catch {}
     },
-    [setValue]
+    [setValue, trigger]
   );
 
   // Prefill from query params when navigating from FollowComp
@@ -521,7 +523,7 @@ const ForwardtoagencyComponents = () => {
 
         <Box
           component="form"
-          onSubmit={handleSubmit(handleSave)}
+          onSubmit={handleSubmit(onSubmit)}
           sx={{
             display: "flex",
             flexDirection: "column",
@@ -563,10 +565,8 @@ const ForwardtoagencyComponents = () => {
                       shouldDirty: true,
                     });
                     if (!isOther) {
-                      setValue("position_other_text", "", {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      });
+                      // Clear other text and validation immediately
+                      setValue("position_other_text", "", { shouldValidate: true, shouldDirty: true });
                     }
                   }}
                   // ส่งผ่านข้อความของ 'อื่นๆ' ให้ component ควบคุมร่วมกัน
@@ -1024,40 +1024,28 @@ const ForwardtoagencyComponents = () => {
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   maxFiles={3}
                   maxSizeMB={10}
+                  existingFiles={existingAttachments}
+                  getFileUrl={(att) => buildFileUrl(att.file_path)}
+                  onDeleteExisting={async (att) => {
+                    const reportId = router?.query?.id || null;
+                    if (!reportId || !att?.id) return false;
+                    const res = await DeleteOutgoingReportAttachment({
+                      outgoing_report_id: reportId,
+                      attachment_id: att.id,
+                    });
+                    if (res?.success === false) {
+                      alert(res?.res_message || "ลบไฟล์ไม่สำเร็จ");
+                      return false;
+                    }
+                    // Refresh existing list in state after successful delete
+                    setExistingAttachments((prev) => prev.filter((x) => x.id !== att.id));
+                    return true;
+                  }}
                 />
               )}
             />
 
-            {/* Read-only server attachments (if editing/existing) */}
-            {existingAttachments?.length > 0 && (
-              <Box sx={{ mt: 1.5 }}>
-                <Typography variant="subtitle2" sx={{ color: "#1120A3", mb: 0.5 }}>
-                  ไฟล์แนบเดิมจากระบบ
-                </Typography>
-                <List dense sx={{ py: 0 }}>
-                  {existingAttachments.map((att) => (
-                    <ListItem key={att.id} sx={{ py: 0 }}>
-                      <DescriptionIcon fontSize="small" sx={{ mr: 1, color: "#90caf9" }} />
-                      <Typography fontSize={13} sx={{ mr: 1 }}>
-                        <a
-                          href={buildFileUrl(att.file_path)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: "#1976d2", textDecoration: "none" }}
-                          title={att.file_path}
-                        >
-                          {att.file_name || att.name || "ไฟล์แนบ"}
-                        </a>
-                      </Typography>
-                      <Typography fontSize={12} color="text.secondary">
-                        {att.file_type || ""}
-                        {att.file_size ? ` • ${(Number(att.file_size) / 1024).toFixed(0)} KB` : ""}
-                      </Typography>
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )}
+            {/* Existing attachments are now rendered inside InputFile with delete support */}
           </Box>
 
           {/* Row 7: หมายเหตุ */}
