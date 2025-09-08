@@ -137,7 +137,8 @@ async def create_outgoing_report5(
                 att = OutgoingReportAttachment5(
                     outgoing_report_id=rec.id,
                     file_name=info.get("filename") or f.filename,
-                    file_path=info.get("file_path"),
+                    # store web-relative path in file_path for frontend
+                    file_path=info.get("file_url"),
                     file_url=info.get("file_url"),
                     file_type=info.get("file_type"),
                     file_size=str(info.get("file_size")) if info.get("file_size") is not None else None,
