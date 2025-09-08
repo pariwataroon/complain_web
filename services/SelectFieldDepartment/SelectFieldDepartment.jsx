@@ -144,19 +144,17 @@ const SelectFieldDepartment = ({
         fetchDepartments();
     }, [filterBySignerId]);
 
-    // ล้างค่าเมื่อ filterBySignerId เปลี่ยน
+    // รักษาค่าที่ Prefill: ล้างเฉพาะเมื่อค่าปัจจุบันไม่อยู่ในรายการใหม่
     useEffect(() => {
-        if (filterBySignerId) {
+        if (!filterBySignerId) return;
+        const exists = options.some(opt => String(opt.value) === String(selectedValue));
+        if (!exists && selectedValue) {
             setSelectedDepartment(null);
-            onChange({
-                target: {
-                    name,
-                    value: "",
-                },
-            });
+            onChange({ target: { name, value: "" } });
             onDepartmentSelect(null);
         }
-    }, [filterBySignerId]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filterBySignerId, options]);
 
     return (
         <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>

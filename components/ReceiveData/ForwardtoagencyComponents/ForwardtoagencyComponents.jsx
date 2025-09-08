@@ -221,6 +221,7 @@ const ForwardtoagencyComponents = () => {
     control,
     handleSubmit,
     setValue,
+  watch,
     errors,
     isValid,
     isDirty,
@@ -253,8 +254,15 @@ const ForwardtoagencyComponents = () => {
     (d) => {
       if (!d) return;
       // Core fields
-      const positionId = d.position_id || d.position?.id || "";
-      setValue("salutation", positionId, { shouldDirty: false });
+  // กรณี 'อื่นๆ' ให้ตั้งค่า flag และเติมข้อความประกอบ
+      const posName = d.position?.name || "";
+  const isOther = posName === "อื่นๆ" || !!d.position_other_text;
+  const positionId = d.position_id || d.position?.id || "";
+  setValue("salutation", positionId, { shouldDirty: false });
+  setValue("salutation_is_other", !!isOther, { shouldDirty: false });
+      if (isOther && d.position_other_text) {
+        setValue("position_other_text", d.position_other_text, { shouldDirty: false });
+      }
 
       setValue(
         "complaint_number",
@@ -271,11 +279,13 @@ const ForwardtoagencyComponents = () => {
       setValue("document_number", d.document_number || "", { shouldDirty: false });
       if (d.document_date) setValue("document_date", new Date(d.document_date), { shouldDirty: false });
 
-      const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || "";
-      setValue("signer", signerId, { shouldDirty: false });
-      if (signerId) setSelectedSigner({ value: signerId });
+  const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || "";
+  setValue("signer", signerId, { shouldDirty: false });
+  if (signerId) setSelectedSigner({ value: signerId });
 
-      setValue("department", d.department?.id || d.department_id || "", { shouldDirty: false });
+  // Prefill department if present
+  const deptId = d.department?.id || d.department_id || "";
+  setValue("department", deptId, { shouldDirty: false });
 
       // Note/Remarks
       setValue("note", d.remarks || "", { shouldDirty: false });
@@ -523,12 +533,62 @@ const ForwardtoagencyComponents = () => {
                   name="salutation"
                   value={field.value}
                   onChange={(e) => field.onChange(e.target.value)}
-                  error={!!getFieldError("salutation")}
-                  helperText={getFieldError("salutation")}
+                  onUserSelect={(opt) => {
+                    const isOther = (opt?.name || opt?.label) === "อื่นๆ";
+                    setValue("salutation_is_other", isOther, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    });
+                    if (!isOther) {
+                      setValue("position_other_text", "", {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      });
+                    }
+                  }}
+                  // ส่งผ่านข้อความของ 'อื่นๆ' ให้ component ควบคุมร่วมกัน
+                  otherText={watch("position_other_text")}
+                  onOtherTextChange={(txt) =>
+                    setValue("position_other_text", txt, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  error={
+                    !!(
+                      getFieldError("salutation") ||
+                      (watch("salutation_is_other") && getFieldError("position_other_text"))
+                    )
+                  }
+                  helperText={
+                    getFieldError("salutation") ||
+                    (watch("salutation_is_other") && getFieldError("position_other_text")) ||
+                    ""
+                  }
                   sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}
                 />
               )}
             />
+
+            {watch("salutation_is_other") && (
+              <Box sx={{ flex: 1, minWidth: 240 }}>
+                <Controller
+                  name="position_other_text"
+                  control={control}
+                  render={({ field }) => (
+                    <InputText
+                      label={createLabel("ระบุตำแหน่ง (อื่นๆ)", "position_other_text")}
+                      inputLabel="กรอกตำแหน่ง (อื่นๆ)"
+                      name="position_other_text"
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={!!getFieldError("position_other_text")}
+                      helperText={getFieldError("position_other_text")}
+                    />
+                  )}
+                />
+              </Box>
+            )}
 
             {/* เลข สป.กค. */}
             <Controller

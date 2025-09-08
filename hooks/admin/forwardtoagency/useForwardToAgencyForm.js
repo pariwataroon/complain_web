@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useCallback, useState } from "react";
+import { useRouter } from "next/router";
 import {
   alertSuccess,
   alertError,
@@ -13,7 +14,6 @@ import {
   UploadOutgoingReportAttachments,
 } from "@pages/api/outgoinreports/outgoinreports";
 import axiosInstance from "@pages/api/axiosInstance";
-import { useRouter } from "next/router";
 
 // Extended validation schema with file validation
 const validationSchema = yup.object().shape({
@@ -21,6 +21,14 @@ const validationSchema = yup.object().shape({
     .string()
     .required("กรุณาเลือกคำขึ้นต้น")
     .notOneOf([""], "กรุณาเลือกคำขึ้นต้น"),
+  // เมื่อเลือก 'อื่นๆ' ให้ต้องระบุข้อความเพิ่มเติม (ใช้ flag salutation_is_other)
+  position_other_text: yup.string().when("salutation_is_other", (isOther, schema) => {
+    return isOther
+      ? schema
+        .required("กรุณาระบุตำแหน่ง (อื่นๆ)")
+        .min(2, "กรุณาระบุอย่างน้อย 2 ตัวอักษร")
+      : schema.optional().nullable();
+  }),
 
   complaint_number: yup
     .string()
@@ -88,6 +96,30 @@ const toYMD = (d) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+// Fallback mapping from numeric value to API label (in case caller passes numbers)
+const levelLabelMap = {
+  confidentiality: {
+    1: "ปกติ",
+    2: "ลับ",
+    3: "ลับมาก",
+    4: "ลับที่สุด",
+  },
+  urgency: {
+    1: "ปกติ",
+    2: "เร่งด่วน",
+    3: "เร่งด่วนมาก",
+    4: "เร่งด่วนที่สุด",
+  },
+};
+
+const mapLevel = (val, type) => {
+  if (val == null) return "";
+  // If already a non-numeric string, return as is
+  if (typeof val === "string" && isNaN(Number(val))) return val;
+  const n = Number(val);
+  return levelLabelMap[type]?.[n] || String(val);
+};
+
 
 // Hook หลัก
 export const useForwardToAgencyForm = () => {
@@ -111,6 +143,8 @@ export const useForwardToAgencyForm = () => {
     mode: "onChange",
     defaultValues: {
       salutation: "",
+      salutation_is_other: false,
+      position_other_text: "",
       complaint_number: "",
       complaint_id: "",
       complaint_number_date: null,
@@ -220,6 +254,8 @@ export const useForwardToAgencyForm = () => {
   const handleClear = useCallback(() => {
     reset({
       salutation: "",
+      salutation_is_other: false,
+      position_other_text: "",
       complaint_number: "",
       complaint_number_date: null,
       subject: "",
@@ -268,6 +304,10 @@ export const useForwardToAgencyForm = () => {
 
         const outgoingReportData = {
           position_id: data.salutation,
+          // ส่งข้อความกรณีเลือก "อื่นๆ" (ใช้ flag หรือมีค่าจริง)
+          position_other_text: (data.salutation_is_other || data.position_other_text)
+            ? (data.position_other_text || "").trim()
+            : "",
           reference_number: (data.complaint_number || "").trim(),   // ใช้ complaint_number เป็น reference
           reference_date: toYMD(data.complaint_number_date),        // ใช้ complaint_number_date เป็น reference_date
           subject: (data.subject || "").trim(),
@@ -278,10 +318,13 @@ export const useForwardToAgencyForm = () => {
           document_date: toYMD(data.document_date),
           signature_authority_user_id: data.signer,
           department_id: data.department,
-          confidentiality_level: data.confidentiality,
-          urgency_level: data.urgency,
+          confidentiality_level: mapLevel(data.confidentiality, "confidentiality"),
+          urgency_level: mapLevel(data.urgency, "urgency"),
           remarks: data.note || "",
         };
+
+        // Debug payload for 422 troubleshooting (visible in dev console)
+        try { console.debug("OutgoingReport payload", outgoingReportData); } catch { }
 
         showLoading("กำลังสร้างรายงาน...");
 
@@ -417,6 +460,8 @@ export const useForwardToAgencyForm = () => {
 
         reset({
           salutation: "",
+          salutation_is_other: false,
+          position_other_text: "",
           complaint_number: "",
           complaint_id: "",
           complaint_number_date: null,
@@ -566,6 +611,7 @@ export const useForwardToAgencyForm = () => {
 
   const requiredFields = [
     "salutation",
+    // position_other_text: required เฉพาะเมื่อเลือก 'อื่นๆ' จึงไม่ใส่ในชุดบังคับหลัก
     "complaint_number",
     "complaint_number_date",
     "subject",

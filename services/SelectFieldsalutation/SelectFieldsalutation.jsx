@@ -25,6 +25,9 @@ const SelectFieldsalutation = ({
   disabled = false,
   onUserSelect = () => {},
   showUserInfo = false,
+  // เพิ่มรองรับกรณี "อื่นๆ"
+  otherText = "",
+  onOtherTextChange = () => {},
   ...props
 }) => {
   const [options, setOptions] = useState([]);
@@ -40,8 +43,9 @@ const SelectFieldsalutation = ({
         setLoading(true);
         setApiError(null);
 
-        const positions = await GetOutgoingReportOptions("positions");
-        setOptions(Array.isArray(positions) ? positions : []);
+  const positions = await GetOutgoingReportOptions("positions");
+  const arr = Array.isArray(positions) ? positions : [];
+  setOptions(arr);
       } catch (error) {
         setApiError("ไม่สามารถโหลดข้อมูลตำแหน่งได้");
         setOptions([]);
@@ -73,6 +77,7 @@ const SelectFieldsalutation = ({
     setSelectedUser(null);
     onChange({ target: { name, value: "" } });
     onUserSelect(null);
+  onOtherTextChange("");
     inputRef.current?.focus();
   };
 
@@ -132,22 +137,26 @@ const SelectFieldsalutation = ({
 
   // เมื่อเลือกหรือพิมพ์
   const handleAutoChange = (event, newValue) => {
+    // Always use the selected option's UUID (value). Do not allow arbitrary strings.
     let actualValue = "";
     let selectedObj = null;
-    if (typeof newValue === "string") {
-      actualValue = newValue;
-      selectedObj = { label: newValue, value: newValue };
-    } else if (newValue && typeof newValue === "object") {
-      actualValue = newValue.value || newValue.label || "";
+    if (newValue && typeof newValue === "object") {
+      actualValue = newValue.value || "";
       selectedObj = newValue;
+    } else {
+      // cleared or invalid selection
+      actualValue = "";
+      selectedObj = null;
     }
     setSelectedUser(selectedObj);
-    setInputText(newValue?.name || "");
+    const isOther = (newValue?.name || newValue?.label) === "อื่นๆ";
+    setInputText(isOther ? otherText || "" : newValue?.name || "");
+    if (!isOther) onOtherTextChange("");
     onChange({ target: { name, value: actualValue } });
     onUserSelect(selectedObj);
   };
 
-  // สำหรับ autocomplete controlled input
+  // สำหรับ autocomplete controlled input (search-only; do not sync with otherText)
   const handleInputChange = (event, newInputValue, reason) => {
     if (reason === "clear") {
       setInputText("");
@@ -181,6 +190,8 @@ const SelectFieldsalutation = ({
   // เงื่อนไข placeholder: ถ้ายังไม่พิมพ์หรือเลือกค่า ให้ label อยู่ตรงกลาง (textAlign:left)
   const showPlaceholderCenter = !inputText && !getOptionFromValue(value);
 
+  // ไม่ sync otherText มาที่ช่อง Autocomplete เพื่อให้ผู้ใช้พิมพ์ในช่องเฉพาะ (ระบุตำแหน่ง (อื่นๆ))
+
   return (
     <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
       {label && (
@@ -198,7 +209,8 @@ const SelectFieldsalutation = ({
         </Typography>
       )}
       <Autocomplete
-        freeSolo
+  freeSolo={false}
+  disableClearable
         options={options}
         loading={loading}
         filterOptions={filterOptions}
@@ -304,8 +316,9 @@ const SelectFieldsalutation = ({
                   opacity: 0.8,
                 },
               },
-              endAdornment: (
+        endAdornment: (
                 <>
+          {params.InputProps.endAdornment}
                   {loading ? (
                     <InputAdornment position="end">
                       <CircularProgress size={16} sx={{ color: "#1120A3", ml: 1 }} />
@@ -344,7 +357,13 @@ const SelectFieldsalutation = ({
                     fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
                   },
             }}
-            placeholder={showPlaceholderCenter ? inputLabel : ""}
+            placeholder={
+              ((getOptionFromValue(value)?.name || getOptionFromValue(value)?.label) === "อื่นๆ")
+                ? "ระบุตำแหน่ง (อื่นๆ)"
+                : showPlaceholderCenter
+                ? inputLabel
+                : ""
+            }
           />
         )}
         {...props}

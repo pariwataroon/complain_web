@@ -5,8 +5,22 @@ const CreateOutgoingReport = async (data) => {
     const response = await axiosInstance.post(`/outgoing-reports`, data);
     return response.data;
   } catch (error) {
-    console.error("Error creating outgoing report:", error);
-    throw error;
+    const status = error?.response?.status;
+    const dataResp = error?.response?.data;
+    console.error("Error creating outgoing report:", {
+      status,
+      data: dataResp,
+      message: error?.message,
+    });
+    // Return a structured error payload so callers can show a friendly alert instead of crashing dev overlay
+    return (
+      dataResp || {
+        success: false,
+        res_code: String(status || "422"),
+        res_message: "CREATE_OUTGOING_REPORT_FAILED",
+        res_data: { error: error?.message || "Request failed" },
+      }
+    );
   }
 };
 
@@ -126,7 +140,7 @@ const UploadOutgoingReport5Attachments = async (
       res_message: "ไม่พบ report ID ในการอัพโหลดไฟล์แนบ",
     };
   }
-  
+
   // Debug FormData contents
   if (formData instanceof FormData) {
     console.log('📋 FormData contents:');
@@ -138,10 +152,10 @@ const UploadOutgoingReport5Attachments = async (
       }
     }
   }
-  
+
   try {
     const endpoint = `/outgoing-reports5/${outgoing_report_id}/attachments`;
-    
+
     const response = await axiosInstance.post(endpoint, formData);
     return response.data;
   } catch (error) {
@@ -156,7 +170,7 @@ const UploadOutgoingReport5Attachments = async (
         headers: error?.config?.headers
       }
     });
-    
+
     // Return a structured error response instead of throwing
     return {
       success: false,
