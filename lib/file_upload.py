@@ -127,31 +127,43 @@ async def save_upload_file(
         unique_id = str(uuid.uuid4())[:8]
         new_filename = f"{timestamp}_{unique_id}{file_extension}"
         
+        # Normalize folder for outgoing reports series → unify to 'outgoing-reports'
+        normalized_folder = folder
+        try:
+            if isinstance(folder, str):
+                head, sep, tail = folder.partition("/")
+                if head.startswith("outgoing-reports"):
+                    # outgoing-reports, outgoing-reports2..5 → outgoing-reports
+                    head = "outgoing-reports"
+                    normalized_folder = head + ("/" + tail if tail else "")
+        except Exception:
+            normalized_folder = folder
+
         # Get date-based folder path
         today = datetime.now()
         year = str(today.year)
         month = str(today.month).zfill(2)
         day = str(today.day).zfill(2)
         # If this is a complaint file, expect folder to be like 'complaints/{complaint_id}'
-        if folder.startswith("complaints/"):
+        if normalized_folder.startswith("complaints/"):
             # Save under uploads/{year}/{month}/{day}/complaints/{complaint_id}/filename
-            parts = folder.split("/", 1)
+            parts = normalized_folder.split("/", 1)
             complaint_id = parts[1] if len(parts) > 1 else "unknown"
             upload_folder = os.path.join(BASE_UPLOAD_DIR, year, month, day, "complaints", complaint_id)
             os.makedirs(upload_folder, exist_ok=True)
             relative_path = f"{year}/{month}/{day}/complaints/{complaint_id}/{new_filename}"
-        elif folder.startswith("users/"):
+        elif normalized_folder.startswith("users/"):
             # Save under uploads/{year}/{month}/{day}/users/{user_id}/filename
-            parts = folder.split("/", 1)
+            parts = normalized_folder.split("/", 1)
             user_id = parts[1] if len(parts) > 1 else "unknown"
             upload_folder = os.path.join(BASE_UPLOAD_DIR, year, month, day, "users", user_id)
             os.makedirs(upload_folder, exist_ok=True)
             relative_path = f"{year}/{month}/{day}/users/{user_id}/{new_filename}"
         else:
             # Default: uploads/{year}/{month}/{day}/{folder}/filename
-            upload_folder = os.path.join(BASE_UPLOAD_DIR, year, month, day, folder)
+            upload_folder = os.path.join(BASE_UPLOAD_DIR, year, month, day, normalized_folder)
             os.makedirs(upload_folder, exist_ok=True)
-            relative_path = f"{year}/{month}/{day}/{folder}/{new_filename}"
+            relative_path = f"{year}/{month}/{day}/{normalized_folder}/{new_filename}"
 
         # Create full path
         file_path = os.path.join(upload_folder, new_filename)
