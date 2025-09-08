@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 
 from models.outgoing_reports3 import OutgoingReport3, OutgoingReportAttachment3
-from lib.file_upload import get_storage_config
+from lib.file_upload import get_storage_config, get_now_tz
 from models.comp_complaint import Complaint, ComplaintStatus
 from models.user import User
 from models.position import Position
@@ -400,7 +400,12 @@ def _save_files_for_report(db: Session, report_id: UUID, files: List[UploadFile]
     """บันทึกไฟล์จริงลงดิสก์ + สร้างเรคอร์ดแนบ (sanitize ชื่อและ unique เสมอ)"""
     saved: List[OutgoingReportAttachment3] = []
     base_dir = get_storage_config().get("base_dir")
-    target_dir = os.path.join(base_dir, "outgoing-reports3", str(report_id))
+    
+    now = get_now_tz()
+    y = str(now.year)
+    m = str(now.month).zfill(2)
+    d = str(now.day).zfill(2)
+    target_dir = os.path.join(base_dir, y, m, d, "outgoing-reports", str(report_id))
     _ensure_dir(target_dir)
 
     for f in files:
@@ -422,13 +427,13 @@ def _save_files_for_report(db: Session, report_id: UUID, files: List[UploadFile]
         except Exception:
             pass
 
-        # derive web-relative
-        rel_web = f"/uploads/outgoing-reports3/{report_id}/{unique_name}"
+        # derive web-relative (date-based)
+        rel_web = f"/uploads/{y}/{m}/{d}/outgoing-reports/{report_id}/{unique_name}"
 
         att = OutgoingReportAttachment3(
             outgoing_report_id=report_id,
             file_name=unique_name,
-            file_path=rel_web or file_path,
+            file_path=rel_web,
             file_size=file_size,
             file_type=getattr(f, "content_type", None),
             is_active=True,

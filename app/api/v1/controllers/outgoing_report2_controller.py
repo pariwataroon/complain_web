@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, func
 
 from models.outgoing_reports2 import OutgoingReport2, OutgoingReportAttachment2
-from lib.file_upload import get_storage_config
+from lib.file_upload import get_storage_config, get_now_tz
 from models.comp_complaint import Complaint, ComplaintStatus
 from models.user import User
 from models.position import Position
@@ -413,11 +413,15 @@ def _report_dir(report_id: UUID) -> str:
     return os.path.join(BASE_UPLOAD_DIR, str(report_id))
 
 def _save_files_for_report(db: Session, report_id: UUID, files: List[UploadFile]) -> List[OutgoingReportAttachment2]:
-    """บันทึกไฟล์จริงลงดิสก์ + สร้างเรคอร์ดแนบ"""
+    """บันทึกไฟล์จริงลงดิสก์ + สร้างเรคอร์ดแนบ (จัดเก็บตามวันที่ YYYY/MM/DD)"""
     saved: List[OutgoingReportAttachment2] = []
-    # Write under storage base_dir to ensure /uploads mapping works
     base_dir = get_storage_config().get("base_dir")
-    target_dir = os.path.join(base_dir, "outgoing-reports2", str(report_id))
+
+    now = get_now_tz()
+    y = str(now.year)
+    m = str(now.month).zfill(2)
+    d = str(now.day).zfill(2)
+    target_dir = os.path.join(base_dir, y, m, d, "outgoing-reports", str(report_id))
     _ensure_dir(target_dir)
 
     for f in files:
@@ -426,17 +430,21 @@ def _save_files_for_report(db: Session, report_id: UUID, files: List[UploadFile]
         unique_name = f"{uuid4().hex}_{safe_name}"
         file_path = os.path.join(target_dir, unique_name)
 
+        # write in chunks to handle large files
         with open(file_path, "wb") as out:
-            out.write(f.file.read())
+            chunk = f.file.read(8192)
+            while chunk:
+                out.write(chunk)
+                chunk = f.file.read(8192)
 
         file_size = None
         try:
             file_size = str(os.path.getsize(file_path))
         except Exception:
-            pass
+            file_size = None
 
-        # Compute web-relative path for frontend
-        rel_web = f"/uploads/outgoing-reports2/{report_id}/{unique_name}"
+        # Web-relative path for frontend and static serving
+        rel_web = f"/uploads/{y}/{m}/{d}/outgoing-reports/{report_id}/{unique_name}"
 
         att = OutgoingReportAttachment2(
             outgoing_report_id=report_id,

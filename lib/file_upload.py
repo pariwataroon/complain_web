@@ -4,6 +4,7 @@ import aiofiles
 import shutil
 from fastapi import UploadFile
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import mimetypes
 from typing import Dict, Any, Optional, List
 import json
@@ -17,6 +18,7 @@ logger = get_logger("lib.file_upload")
 BASE_UPLOAD_DIR = os.environ.get("UPLOAD_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "uploads")))  # Base directory for all uploads
 MAX_FILE_SIZE = int(os.environ.get("MAX_FILE_SIZE", 10 * 1024 * 1024))  # 10MB default max file size
 FILE_RETENTION_DAYS = int(os.environ.get("FILE_RETENTION_DAYS", 30))  # Default 30 days retention
+UPLOAD_TZ = os.environ.get("UPLOAD_TZ", "Asia/Bangkok")  # Default timezone for date-based folders
 
 # Storage configuration file
 STORAGE_CONFIG_FILE = "storage_config.json"
@@ -51,12 +53,21 @@ def save_storage_config(config):
     with open(config_path, 'w') as f:
         json.dump(config, f, indent=2)
 
+def get_now_tz() -> datetime:
+    """Return current time in the configured upload timezone (default Asia/Bangkok)."""
+    try:
+        return datetime.now(ZoneInfo(UPLOAD_TZ))
+    except Exception:
+        # Fallback to naive local time
+        return datetime.now()
+
 def get_date_folder_path(base_folder="general", date=None):
     """
     Generate a folder path based on date: uploads/base_folder/year/month/day/
     """
     if date is None:
-        date = datetime.now()
+        # Use configured timezone for consistency
+        date = get_now_tz()
     
     year = str(date.year)
     month = str(date.month).zfill(2)
@@ -116,7 +127,7 @@ async def save_upload_file(
             raise ValueError(f"File type '{content_type}' not allowed. Allowed types: {allowed_types}")
         
         # Generate a unique filename with timestamp and UUID
-        timestamp = datetime.now().strftime("%H%M%S")
+        timestamp = get_now_tz().strftime("%H%M%S")
         original_filename = file.filename
         if original_filename:
             file_extension = os.path.splitext(original_filename)[1]
@@ -139,8 +150,8 @@ async def save_upload_file(
         except Exception:
             normalized_folder = folder
 
-        # Get date-based folder path
-        today = datetime.now()
+        # Get date-based folder path (timezone-aware)
+        today = get_now_tz()
         year = str(today.year)
         month = str(today.month).zfill(2)
         day = str(today.day).zfill(2)
@@ -313,7 +324,7 @@ def cleanup_expired_files(folder: str = None) -> Dict[str, int]:
     metadata_pattern = os.path.join(base_dir, "**", "*.meta")
     meta_files = glob.glob(metadata_pattern, recursive=True)
     
-    now = datetime.now()
+    now = get_now_tz()
     
     for meta_file in meta_files:
         try:
