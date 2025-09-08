@@ -243,13 +243,11 @@ def get_outgoing_reports3(
 
         if search:
             like = f"%{search}%"
-            q = q.filter(
-                or_(
-                    OutgoingReport3.complaint_number.ilike(like),
-                    OutgoingReport3.subject.ilike(like),
-                    OutgoingReport3.remarks.ilike(like),
-                )
-            )
+            q = q.filter(or_(
+                OutgoingReport3.complaint_number.ilike(like),
+                OutgoingReport3.subject.ilike(like),
+                OutgoingReport3.remarks.ilike(like),
+            ))
 
         if position_id:
             q = q.filter(OutgoingReport3.position_id == position_id)
@@ -287,7 +285,6 @@ def get_outgoing_reports3(
                 "created_at": _iso(r.created_at),
                 "attachment_count": len([att for att in r.attachments if getattr(att, "is_active", True)]),
             })
-
         return {
             "items": items,
             "total": total,
@@ -298,9 +295,7 @@ def get_outgoing_reports3(
 
     except Exception as e:
         logger.error(f"Error getting outgoing reports3: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
-
-
+    raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 def get_outgoing_report3_options(db: Session) -> Dict[str, Any]:
     """ดึงตัวเลือกสำหรับ dropdown"""
     try:
@@ -411,7 +406,7 @@ def add_attachments_to_outgoing_report3(
         if getattr(report, "complaint_id", None):
             complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
         note = (
-            f"แนบเอกสารเพิ่มเติม (OutgoingReport3) จำนวน {len(atts)} ไฟล์ | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'}"
+            f"แนบเอกสารเพิ่มเติม แบบรายงานขอทราบผลการพิจารณา / ผลความคืบหน้า จำนวน {len(atts)} ไฟล์ | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'}"
         )
         cur = getattr(complaint, "status", ComplaintStatus.TRACKING)
         _update_status_and_log(db, complaint, cur, note, current_user_id)
@@ -512,7 +507,7 @@ def delete_outgoing_report3_attachment_by_id(
             if report and getattr(report, "complaint_id", None):
                 complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
             note = (
-                f"ลบไฟล์แนบแบบถาวร (OutgoingReport3) | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+                f"ลบไฟล์แนบแบบถาวร แบบรายงานขอทราบผลการพิจารณา / ผลความคืบหน้า | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
             )
             cur = getattr(complaint, "status", ComplaintStatus.TRACKING)
             _update_status_and_log(db, complaint, cur, note, user_id=None)
@@ -531,7 +526,7 @@ def delete_outgoing_report3_attachment_by_id(
             if report and getattr(report, "complaint_id", None):
                 complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
             note = (
-                f"ลบไฟล์แนบ (soft) (OutgoingReport3) | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+                f"ลบไฟล์แนบ (soft delete) แบบรายงานขอทราบผลการพิจารณา / ผลความคืบหน้า | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
             )
             cur = getattr(complaint, "status", ComplaintStatus.TRACKING)
             _update_status_and_log(db, complaint, cur, note, user_id=None)
@@ -549,7 +544,7 @@ def delete_outgoing_report3_attachment_by_id(
         if report and getattr(report, "complaint_id", None):
             complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
         note = (
-            f"ลบเรคอร์ดไฟล์แนบ (OutgoingReport3) | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+            f"ลบเรคอร์ดไฟล์แนบ แบบรายงานขอทราบผลการพิจารณา / ผลความคืบหน้า | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
         )
         cur = getattr(complaint, "status", ComplaintStatus.TRACKING)
         _update_status_and_log(db, complaint, cur, note, user_id=None)

@@ -239,14 +239,12 @@ def get_outgoing_reports4(
 
         if search:
             like = f"%{search}%"
-            query = query.filter(
-                or_(
-                    OutgoingReport4.reference_number.ilike(like),
-                    OutgoingReport4.subject.ilike(like),
-                    OutgoingReport4.remarks.ilike(like),
-                    OutgoingReport4.other_department.ilike(like),
-                )
-            )
+            query = query.filter(or_(
+                OutgoingReport4.reference_number.ilike(like),
+                OutgoingReport4.subject.ilike(like),
+                OutgoingReport4.remarks.ilike(like),
+                OutgoingReport4.other_department.ilike(like),
+            ))
 
         if department_id:
             query = query.filter(OutgoingReport4.department_id == department_id)
@@ -406,7 +404,7 @@ def add_attachments_to_outgoing_report4(
         if getattr(report, "complaint_id", None):
             complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
         note = (
-            f"แนบเอกสารเพิ่มเติม (OutgoingReport4) จำนวน {len(atts)} ไฟล์ | อ้างอิง: {getattr(report, 'reference_number', None) or '-'}"
+            f"แนบเอกสารเพิ่มเติม แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ จำนวน {len(atts)} ไฟล์ | อ้างอิง: {getattr(report, 'reference_number', None) or '-'}"
         )
         cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
         _update_status_and_log(db, complaint, cur, note, current_user_id)
@@ -507,7 +505,7 @@ def delete_outgoing_report4_attachment_by_id(
             if report and getattr(report, "complaint_id", None):
                 complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
             note = (
-                f"ลบไฟล์แนบแบบถาวร (OutgoingReport4) | อ้างอิง: {getattr(report, 'reference_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+                f"ลบไฟล์แนบแบบถาวร แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ | อ้างอิง: {getattr(report, 'reference_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
             )
             cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
             _update_status_and_log(db, complaint, cur, note, user_id=None)
@@ -526,7 +524,7 @@ def delete_outgoing_report4_attachment_by_id(
             if report and getattr(report, "complaint_id", None):
                 complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
             note = (
-                f"ลบไฟล์แนบ (soft) (OutgoingReport4) | อ้างอิง: {getattr(report, 'reference_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+                f"ลบไฟล์แนบ (soft delete) แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ | อ้างอิง: {getattr(report, 'reference_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
             )
             cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
             _update_status_and_log(db, complaint, cur, note, user_id=None)
@@ -544,7 +542,7 @@ def delete_outgoing_report4_attachment_by_id(
         if report and getattr(report, "complaint_id", None):
             complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
         note = (
-            f"ลบเรคอร์ดไฟล์แนบ (OutgoingReport4) | อ้างอิง: {getattr(report, 'reference_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+            f"ลบเรคอร์ดไฟล์แนบ แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ | อ้างอิง: {getattr(report, 'reference_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
         )
         cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
         _update_status_and_log(db, complaint, cur, note, user_id=None)

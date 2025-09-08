@@ -373,7 +373,7 @@ async def add_attachments_to_outgoing_report5(
         if getattr(rec, "complaint_id", None):
             complaint = db.query(Complaint).filter(Complaint.id == rec.complaint_id).first()
         note = (
-            f"แนบเอกสารเพิ่มเติม (OutgoingReport5) จำนวน {len(saved)} ไฟล์ | เลขรับ: {getattr(rec, 'receive_number', None) or '-'}"
+            f"แนบเอกสารเพิ่มเติม แบบรับเรื่องรายงานผลการพิจารณาจากหน่วยงาน จำนวน {len(saved)} ไฟล์ | เลขรับ: {getattr(rec, 'receive_number', None) or '-'}"
         )
         cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
         _update_status_and_log(db, complaint, cur, note, current_user_id)
@@ -463,7 +463,7 @@ def delete_outgoing_report5_attachment_by_id(
             if rec and getattr(rec, "complaint_id", None):
                 complaint = db.query(Complaint).filter(Complaint.id == rec.complaint_id).first()
             note = (
-                f"ลบไฟล์แนบแบบถาวร (OutgoingReport5) | เลขรับ: {getattr(rec, 'receive_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+                f"ลบไฟล์แนบแบบถาวร แบบรับเรื่องรายงานผลการพิจารณาจากหน่วยงาน | เลขรับ: {getattr(rec, 'receive_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
             )
             cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
             _update_status_and_log(db, complaint, cur, note, user_id=None)
@@ -481,7 +481,7 @@ def delete_outgoing_report5_attachment_by_id(
             if rec and getattr(rec, "complaint_id", None):
                 complaint = db.query(Complaint).filter(Complaint.id == rec.complaint_id).first()
             note = (
-                f"ลบไฟล์แนบ (soft) (OutgoingReport5) | เลขรับ: {getattr(rec, 'receive_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+                f"ลบไฟล์แนบ (soft delete) แบบรับเรื่องรายงานผลการพิจารณาจากหน่วยงาน | เลขรับ: {getattr(rec, 'receive_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
             )
             cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
             _update_status_and_log(db, complaint, cur, note, user_id=None)
@@ -498,7 +498,7 @@ def delete_outgoing_report5_attachment_by_id(
         if rec and getattr(rec, "complaint_id", None):
             complaint = db.query(Complaint).filter(Complaint.id == rec.complaint_id).first()
         note = (
-            f"ลบเรคอร์ดไฟล์แนบ (OutgoingReport5) | เลขรับ: {getattr(rec, 'receive_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+            f"ลบเรคอร์ดไฟล์แนบ แบบรับเรื่องรายงานผลการพิจารณาจากหน่วยงาน | เลขรับ: {getattr(rec, 'receive_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
         )
         cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
         _update_status_and_log(db, complaint, cur, note, user_id=None)

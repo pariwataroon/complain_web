@@ -419,7 +419,7 @@ def add_attachments_to_outgoing_report2(
         if getattr(report, "complaint_id", None):
             complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
         note = (
-            f"แนบเอกสารเพิ่มเติม (OutgoingReport2) จำนวน {len(atts)} ไฟล์ | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'}"
+            f"แนบเอกสารเพิ่มเติม แบบรายงานแจ้งผู้ร้องเรียน / ส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น จำนวน {len(atts)} ไฟล์ | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'}"
         )
         cur = getattr(complaint, "status", ComplaintStatus.IN_PROCESS)
         _update_status_and_log(db, complaint, cur, note, current_user_id)
@@ -522,7 +522,7 @@ def delete_outgoing_report2_attachment_by_id(
             if report and getattr(report, "complaint_id", None):
                 complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
             note = (
-                f"ลบไฟล์แนบแบบถาวร (OutgoingReport2) | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+                f"ลบไฟล์แนบแบบถาวร แบบรายงานแจ้งผู้ร้องเรียน / ส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
             )
             cur = getattr(complaint, "status", ComplaintStatus.IN_PROCESS)
             _update_status_and_log(db, complaint, cur, note, current_user_id=None)
@@ -541,7 +541,7 @@ def delete_outgoing_report2_attachment_by_id(
             if report and getattr(report, "complaint_id", None):
                 complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
             note = (
-                f"ลบไฟล์แนบ (soft) (OutgoingReport2) | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+                f"ลบไฟล์แนบ (soft delete) แบบรายงานแจ้งผู้ร้องเรียน / ส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
             )
             cur = getattr(complaint, "status", ComplaintStatus.IN_PROCESS)
             _update_status_and_log(db, complaint, cur, note, current_user_id=None)
@@ -559,7 +559,7 @@ def delete_outgoing_report2_attachment_by_id(
         if report and getattr(report, "complaint_id", None):
             complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
         note = (
-            f"ลบเรคอร์ดไฟล์แนบ (OutgoingReport2) | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+            f"ลบเรคอร์ดไฟล์แนบ แบบรายงานแจ้งผู้ร้องเรียน / ส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น | เอกสารเลขที่: {getattr(report, 'document_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
         )
         cur = getattr(complaint, "status", ComplaintStatus.IN_PROCESS)
         _update_status_and_log(db, complaint, cur, note, current_user_id=None)
