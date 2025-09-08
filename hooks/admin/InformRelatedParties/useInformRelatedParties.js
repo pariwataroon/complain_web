@@ -21,17 +21,17 @@ const isUUID = (s) =>
 // Helper function to convert Thai date to YMD format
 const toYMD = (thaiDate) => {
   if (!thaiDate) return null;
-  
+
   // If it's already in YYYY-MM-DD format, return as is
   if (typeof thaiDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(thaiDate)) {
     return thaiDate;
   }
-  
+
   // If it's a Date object, convert to YYYY-MM-DD
   if (thaiDate instanceof Date) {
     return thaiDate.toISOString().split('T')[0];
   }
-  
+
   // Handle Thai date format conversion logic here
   // This is a placeholder - implement based on your DateThaiPickerService format
   return thaiDate;
@@ -52,7 +52,7 @@ export const useInformRelatedParties = () => {
   const initialFormState = useMemo(
     () => ({
       salutation: "", // position_id
-      refNo:  complaintNumberFromQuery || "", // reference_number
+      refNo: complaintNumberFromQuery || "", // reference_number
       date: null, // reference_date (will be converted with toYMD)
       subject: "", // subject
       bookNo: "", // complaint_number และ document_number (ใช้ค่าเดียวกัน)
@@ -81,6 +81,7 @@ export const useInformRelatedParties = () => {
   const [isLoading, setIsLoading] = useState(false);
   // เพิ่ม state สำหรับเก็บไฟล์จริง
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   // ฟิลด์ที่จำเป็นต้องกรอก
   const requiredFields = [
@@ -131,7 +132,7 @@ export const useInformRelatedParties = () => {
   const handleChange = useCallback(
     (nameOrEvent, value, options = {}) => {
       let name, finalValue;
-      
+
       // Handle different input formats
       if (typeof nameOrEvent === 'string') {
         // Direct call: handleChange("refNo", "value")
@@ -149,8 +150,8 @@ export const useInformRelatedParties = () => {
 
       console.log("🔥 handleChange:", name, "=", finalValue);
 
-      setForm((prev) => ({ 
-        ...prev, 
+      setForm((prev) => ({
+        ...prev,
         [name]: finalValue,
         // Sync details and note fields
         ...(name === 'details' && { note: finalValue }),
@@ -180,33 +181,33 @@ export const useInformRelatedParties = () => {
     [errors]
   );
 
-  // Handler สำหรับ file upload (InputFile component) - แก้ไขให้เก็บไฟล์จริง
+  // Handler สำหรับ file upload (รองรับ InputFile: File | File[] | null)
   const handleFileUpload = useCallback(
-    (files) => {
-      console.log("📎 handleFileUpload:", files);
+    (input) => {
+      console.log("📎 handleFileUpload:", input);
 
-      if (files && files.length > 0) {
-        // เก็บไฟล์จริงสำหรับอัปโหลด
-        setUploadedFiles(files);
-        
-        // แสดงชื่อไฟล์ในฟอร์ม
-        const fileNames = files.map((file) => file.name).join(", ");
-        setForm((prev) => ({
-          ...prev,
-          attachment: fileNames,
-        }));
-
-        // ล้าง error ของไฟล์
-        if (errors.attachment) {
-          setErrors((prev) => ({ ...prev, attachment: null }));
-        }
-      } else {
-        // ถ้าไม่มีไฟล์ ให้ล้างข้อมูล
+      if (!input) {
         setUploadedFiles([]);
-        setForm((prev) => ({
-          ...prev,
-          attachment: "",
-        }));
+        setForm((prev) => ({ ...prev, attachment: "" }));
+        setFileInputKey((k) => k + 1);
+        return;
+      }
+
+      let files = [];
+      if (input instanceof File) {
+        files = [input];
+      } else if (Array.isArray(input) && input.length > 0 && input[0] instanceof File) {
+        files = input;
+      } else {
+        // Unknown input, ignore
+        return;
+      }
+
+      setUploadedFiles(files);
+      const fileNames = files.map((f) => f.name).join(", ");
+      setForm((prev) => ({ ...prev, attachment: fileNames }));
+      if (errors.attachment) {
+        setErrors((prev) => ({ ...prev, attachment: null }));
       }
     },
     [errors.attachment]
@@ -221,7 +222,7 @@ export const useInformRelatedParties = () => {
       if (file) {
         // เก็บไฟล์จริง
         setUploadedFiles([file]);
-        
+
         setForm((prev) => ({
           ...prev,
           attachment: file.name,
@@ -242,6 +243,7 @@ export const useInformRelatedParties = () => {
     setForm(initialFormState);
     setErrors({});
     setUploadedFiles([]); // ล้างไฟล์ที่อัปโหลด
+    setFileInputKey((k) => k + 1);
   }, [initialFormState]);
 
   // ฟังก์ชันตรวจสอบข้อมูลที่จำเป็น
@@ -283,7 +285,7 @@ export const useInformRelatedParties = () => {
     }
 
     console.log("📤 Uploading files:", uploadedFiles.map(f => f.name));
-    
+
     const buildFormData = (useSingleKey = false) => {
       const formData = new FormData();
       uploadedFiles.forEach((f) => formData.append(useSingleKey ? 'file' : 'files', f, f.name));
@@ -365,7 +367,7 @@ export const useInformRelatedParties = () => {
       attachment: form.attachment,
       proposal_purpose: form.proposeFor,
       consideration_result: form.decision,
-      complaint_id: complaintId,   
+      complaint_id: complaintId,
     };
 
     console.log("📦 createRequestBody:", body);
@@ -375,7 +377,7 @@ export const useInformRelatedParties = () => {
   // ฟังก์ชันบันทึกข้อมูล - แก้ไขให้อัปโหลดไฟล์ด้วย
   const handleSave = useCallback(async () => {
     console.log("💾 handleSave: Starting save process");
-    
+
     const missingFields = validateRequiredFields();
 
     if (missingFields.length > 0) {
@@ -406,25 +408,24 @@ export const useInformRelatedParties = () => {
       // Step 2: อัปโหลดไฟล์ (ถ้ามี) 
       if (response && response.id && uploadedFiles.length > 0) {
         console.log("📤 Starting file upload for report ID:", response.id);
-        
+
         showLoading("กำลังอัปโหลดไฟล์...");
         await uploadFiles(response.id);
         console.log("✅ Files uploaded successfully");
       }
 
-       closeAlert();
-        const reportId = response.id;
+      closeAlert();
+      const reportId = response.id;
 
-        const successMessage = `
+      const successMessage = `
           <div style="text-align: center; line-height: 1.6;">
             <p style="margin-bottom: 15px; font-size: 16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
             <p style="margin-bottom: 10px; color: #666;">รหัสรายงาน: <strong>${reportId}</strong></p>
             <p style="margin-bottom: 10px; color: #666;">เรื่อง: <strong>${form.subject}</strong></p>
-            ${
-              uploadedFiles.length > 0
-                ? `<p style="color: #666;">ไฟล์แนบ: <strong>${uploadedFiles.map(f => f.name).join(", ")}</strong></p>`
-                : ""
-            }
+            ${uploadedFiles.length > 0
+          ? `<p style="color: #666;">ไฟล์แนบ: <strong>${uploadedFiles.map(f => f.name).join(", ")}</strong></p>`
+          : ""
+        }
           </div>
         `;
 
@@ -437,7 +438,7 @@ export const useInformRelatedParties = () => {
     } catch (error) {
       closeAlert();
       setIsLoading(false);
-      
+
       console.error("❌ Save error:", error);
 
       alertError(
@@ -458,8 +459,8 @@ export const useInformRelatedParties = () => {
   const updateField = useCallback(
     (fieldName, value) => {
       console.log("📝 updateField:", fieldName, "=", value);
-      setForm((prev) => ({ 
-        ...prev, 
+      setForm((prev) => ({
+        ...prev,
         [fieldName]: value,
         // Sync details and note fields
         ...(fieldName === 'details' && { note: value }),
@@ -489,6 +490,14 @@ export const useInformRelatedParties = () => {
     });
   }, [form, requiredFields]);
 
+  // canSave focuses on required-only validation like other forms
+  const canSave = useCallback(() => {
+    return requiredFields.every((f) => {
+      const v = form[f];
+      return !(v === undefined || v === null || v === "");
+    });
+  }, [form, requiredFields]);
+
   return {
     // State
     form,
@@ -496,12 +505,14 @@ export const useInformRelatedParties = () => {
     isLoading,
     id,
     uploadedFiles, // เพิ่มไฟล์ที่อัปโหลด
+    fileInputKey,
 
     // Validation helpers
     isRequired,
     createLabel,
     getFieldError,
     isFormValid,
+    canSave,
     hasFormChanges,
 
     // Form handlers

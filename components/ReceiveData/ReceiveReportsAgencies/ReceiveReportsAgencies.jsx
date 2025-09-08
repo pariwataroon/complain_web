@@ -1,12 +1,10 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect} from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useForm, Controller } from "react-hook-form";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputFile from "@services/InputFile/InputFile";
-import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
-import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsalutation";
-import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
+// Removed unused imports: SelectFieldSignatureAuthority, SelectFieldsalutation, SelectFieldDepartment
 import InputText from "@services/InputText/InputText";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import ButtonService from "@services/ButtonService/ButtonService";
@@ -35,7 +33,7 @@ import {
 } from "@mui/material";
 import { CreateOutgoingReport5, getDepartmentsPrefix, UploadOutgoingReport5Attachments } from "@pages/api/outgoinreports/outgoinreports";
 import axiosInstance from "@pages/api/axiosInstance";
-import { GetEnhancedComplaints } from "@pages/complaint/index"
+// Removed unused import: GetEnhancedComplaints
 // Constants สำหรับ options
 const PROCESS_STEP_OPTIONS = [
   { value: "รับเรื่อง", label: "รับเรื่อง" },
@@ -85,6 +83,13 @@ const ReceiveReportsAgencies = () => {
   });
   // เก็บไฟล์จริงที่เลือก
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [fileInputKey, setFileInputKey] = useState(0);
+
+  // Safe equality check to avoid redundant state updates
+  const isEqual = useCallback((a, b) => {
+    if (a === b) return true;
+    try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
+  }, []);
 
 useEffect(() => {
   const fetchDepartments = async () => {
@@ -150,7 +155,7 @@ useEffect(() => {
 
   const handleSelectReference = (ref) => {
     const num = ref?.document_number || "";
-    setForm((prev) => ({ ...prev, documentNo: num }));
+    setForm((prev) => (isEqual(prev.documentNo, num) ? prev : { ...prev, documentNo: num }));
     setValue("documentNo", num, { shouldValidate: false, shouldDirty: true });
     setOpenSearchDialog(false);
   };
@@ -202,7 +207,10 @@ useEffect(() => {
       const obj = parseInvestigateGk(num);
       // eslint-disable-next-line no-console
       console.log('[handleSelectReference2] selected ->', { num, obj });
-      setForm((prev) => ({ ...prev, investigateGk: num, investigateDate: obj }));
+      setForm((prev) => {
+        const next = { ...prev, investigateGk: num, investigateDate: obj };
+        return (isEqual(prev.investigateGk, next.investigateGk) && isEqual(prev.investigateDate, next.investigateDate)) ? prev : next;
+      });
       setValue("investigateGk", num, { shouldValidate: false, shouldDirty: true });
       setOpenSearchDialog2(false);
     };
@@ -248,7 +256,10 @@ useEffect(() => {
       const parsed = parseInvestigateGk ? parseInvestigateGk(complaint_number) : null;
       // eslint-disable-next-line no-console
       console.log('[init complaint_number] ', { complaint_number, parsed });
-      setForm(prev => ({ ...prev, investigateGk: complaint_number, investigateDate: parsed || prev.investigateDate }));
+      setForm(prev => {
+        const next = { ...prev, investigateGk: complaint_number, investigateDate: parsed || prev.investigateDate };
+        return (isEqual(prev.investigateGk, next.investigateGk) && isEqual(prev.investigateDate, next.investigateDate)) ? prev : next;
+      });
     }
   }, [complaint_number]);
 
@@ -318,9 +329,12 @@ useEffect(() => {
     if (obj) {
       // eslint-disable-next-line no-console
       console.log('[investigateGk blur] parsed ->', { val, obj });
-      setForm((prev) => ({ ...prev, investigateGk: val, investigateDate: obj }));
+      setForm((prev) => {
+        const next = { ...prev, investigateGk: val, investigateDate: obj };
+        return (isEqual(prev.investigateGk, next.investigateGk) && isEqual(prev.investigateDate, next.investigateDate)) ? prev : next;
+      });
     }
-  }, [parseInvestigateGk]);
+  }, [parseInvestigateGk, isEqual]);
 
   const handleInvestigatePaste = useCallback((e) => {
     const pasted = e?.clipboardData?.getData('Text') || '';
@@ -328,35 +342,76 @@ useEffect(() => {
     if (obj) {
       // eslint-disable-next-line no-console
       console.log('[investigateGk paste] parsed ->', { pasted, obj });
-      setForm((prev) => ({ ...prev, investigateGk: pasted, investigateDate: obj }));
+      setForm((prev) => {
+        const next = { ...prev, investigateGk: pasted, investigateDate: obj };
+        return (isEqual(prev.investigateGk, next.investigateGk) && isEqual(prev.investigateDate, next.investigateDate)) ? prev : next;
+      });
     }
-  }, [parseInvestigateGk]);
+  }, [parseInvestigateGk, isEqual]);
 
   const handleChange = useCallback((e) => {
-     const { name, value } = e.target;
+    const { name, value } = e?.target ?? {};
+    if (!name) return; // guard unknown field
     if (name === 'investigateGk') {
       const obj = parseInvestigateGk(value);
       if (obj) {
         // eslint-disable-next-line no-console
         console.debug('[investigateGk change] parsed ->', { value, obj });
-        setForm((prev) => ({ ...prev, [name]: value, investigateDate: obj }));
+        setForm((prev) => {
+          const next = { ...prev, [name]: value, investigateDate: obj };
+          return (isEqual(prev[name], value) && isEqual(prev.investigateDate, obj)) ? prev : next;
+        });
         return;
       }
     }
-    setForm((prev) => ({ ...prev, [name]: value }));
-   }, []);
+    setForm((prev) => (isEqual(prev[name], value) ? prev : { ...prev, [name]: value }));
+   }, [parseInvestigateGk, isEqual]);
 
   // ✅ เพิ่ม handleDateChange ที่หายไป
   const handleDateChange = useCallback(
     (fieldName) => (thaiDate) => {
-      setForm((prev) => ({ ...prev, [fieldName]: thaiDate }));
+      setForm((prev) => (isEqual(prev[fieldName], thaiDate) ? prev : { ...prev, [fieldName]: thaiDate }));
     },
-    []
+    [isEqual]
   );
 
   const handleClear = useCallback(() => {
     setForm(initialFormState);
+    setUploadedFiles([]);
+    setFileInputKey((k) => k + 1);
   }, [initialFormState]);
+
+  // Normalize SelectField onChange payloads (event | value | option)
+  const makeSelectHandler = useCallback(
+    (fieldName) => (evOrVal) => {
+      const value = evOrVal?.target?.value ?? evOrVal?.value ?? evOrVal ?? "";
+      setForm((prev) => (isEqual(prev[fieldName], value) ? prev : { ...prev, [fieldName]: value }));
+    },
+    [isEqual]
+  );
+
+  // Simple Save gating similar to other pages
+  const canSave = useCallback(() => {
+    const f = form;
+    const required = [
+      f.referenceNo?.trim(),
+      f.date,
+      f.processStep,
+      f.confidentiality,
+      f.urgency,
+      f.departmentId,
+      f.investigateGk?.trim(),
+      f.investigateDate,
+      f.documentNo?.trim(),
+      f.documentDate,
+      f.receiveWorkDate,
+      f.submitWorkDate,
+      f.origin?.trim(),
+      f.subject?.trim(),
+      (f.attachment?.trim() || uploadedFiles.length > 0),
+    ];
+    return required.every(Boolean);
+  }, [form, uploadedFiles]);
 
   const handleSave = useCallback(async () => {
   if (!validateForm()) return;
@@ -526,7 +581,7 @@ useEffect(() => {
 
   } catch (error) {
     const code = error?.response?.data?.res_code || error?.response?.status;
-    const serverMsg =0
+    const serverMsg =
       error?.response?.data?.res_data?.error ||
       error?.response?.data?.res_message ||
       error?.message || 
@@ -553,9 +608,9 @@ useEffect(() => {
     else if (payload && typeof payload === 'object' && 'length' in payload) files = Array.from(payload);
     else if (payload?.file) files = [payload.file];
     const names = files.map(f => f?.name).filter(Boolean).join(', ');
-    setForm(prev => ({ ...prev, attachment: names || '' }));
-    setUploadedFiles(files);
-  }, []);
+    setForm(prev => (isEqual(prev.attachment, names || '') ? prev : { ...prev, attachment: names || '' }));
+    setUploadedFiles((prev) => (isEqual(prev, files) ? prev : files));
+  }, [isEqual]);
 
   // Log form changes for debugging
   useEffect(() => {
@@ -677,7 +732,7 @@ useEffect(() => {
               inputLabel="เลือกขั้นตอนการดำเนินการ"
               name="processStep"
               value={form.processStep}
-              onChange={handleChange}
+              onChange={makeSelectHandler("processStep")}
               options={PROCESS_STEP_OPTIONS}
               // sx={{ width: {xs: "80%", sm: "auto"}}}
             />
@@ -702,7 +757,7 @@ useEffect(() => {
               inputLabel="เลือกชั้นความลับ"
               name="confidentiality"
               value={form.confidentiality}
-              onChange={handleChange}
+              onChange={makeSelectHandler("confidentiality")}
               options={CONFIDENTIALITY_OPTIONS}
             />
             <SelectField
@@ -715,7 +770,7 @@ useEffect(() => {
               inputLabel="เลือกชั้นความเร่งด่วน"
               name="urgency"
               value={form.urgency}
-              onChange={handleChange}
+              onChange={makeSelectHandler("urgency")}
               options={URGENCY_OPTIONS}
             />
           </Box>
@@ -732,7 +787,7 @@ useEffect(() => {
               inputLabel="เลือกหน่วยงาน"
               name="departmentId" // ✅ เก็บ UUID ของหน่วยงาน
               value={form.departmentId}
-              onChange={handleChange}
+              onChange={makeSelectHandler("departmentId")}
               options={departments} // ✅ ใช้ options จาก API
             />
           </Box>
@@ -1377,6 +1432,7 @@ useEffect(() => {
             control={control}
             render={({ field }) => (
               <InputFile
+                key={fileInputKey}
                 label="เอกสารประกอบการร้องเรียน"
                 name={field.name}
                 onChange={(files) => {
@@ -1459,6 +1515,7 @@ useEffect(() => {
                 height: "55px",
                 fontSize: "24px",
               }}
+              disabled={!canSave()}
             />
           </Box>
         </Box>

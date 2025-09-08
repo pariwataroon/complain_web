@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
@@ -11,6 +12,7 @@ import useInformRelatedParties from "@hooks/admin/InformRelatedParties/useInform
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
+import { DeleteOutgoingReportAttachment, GetOutgoingReportById } from "@pages/api/outgoinreports/outgoinreports";
 import { GetReferenceComplaints, GetReDocumentComplaints } from "@pages/api/complaint/complaint";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -45,6 +47,8 @@ const InformRelatedParties = () => {
     handleClear,
     handleSave,
     isFormValid,
+  fileInputKey,
+  canSave,
   } = useInformRelatedParties();
 
   // State สำหรับ dynamic data
@@ -61,6 +65,27 @@ const InformRelatedParties = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
+  const router = useRouter();
+
+  // Existing attachments (when editing) and helpers to view/delete
+  const [existingAttachments, setExistingAttachments] = useState([]);
+  const normalizeFilePath = useCallback((p) => {
+    if (!p) return "";
+    let s = String(p);
+    s = s.replace(/\\\\/g, "/").replace(/\\/g, "/");
+    const idx = s.lastIndexOf("/uploads/");
+    if (idx !== -1) s = s.substring(idx);
+    if (!s.startsWith("/")) s = `/${s}`;
+    return s;
+  }, []);
+  const buildFileUrl = useCallback((p) => {
+    if (!p) return "";
+    const normalized = normalizeFilePath(p);
+    if (/^https?:\/\//i.test(normalized)) return normalized;
+    const baseRaw = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
+    const base = baseRaw.replace(/\/api\/v\d+$/, "/api");
+    return `${base}${normalized}`;
+  }, [normalizeFilePath]);
 
   useEffect(() => {
     if (openSearchDialog) {
@@ -184,17 +209,21 @@ const InformRelatedParties = () => {
 
   // ฟังก์ชันจัดการเมื่อมีการเลือกผู้ลงนาม
   const handleSignerSelect = (userInfo) => {
-    console.log("👤 handleSignerSelect:", userInfo);
     setSelectedSigner(userInfo);
-    // ล้างหน่วยงานที่เลือกไว้เมื่อเปลี่ยนผู้ลงนาม
+    // set signer id and position id into form
+    const signerId = userInfo?.id ?? userInfo?.value ?? "";
+    const positionId = userInfo?.position_id ?? userInfo?.position?.id ?? userInfo?.positionId ?? "";
+    handleChange({ target: { name: "signer", value: signerId } });
+    if (positionId) handleChange({ target: { name: "salutation", value: positionId } });
+    // Clear department on signer change
     setSelectedDepartment(null);
-    // อัพเดทค่าใน form
-    handleChange("department", "");
+    handleChange({ target: { name: "department", value: "" } });
   };
 
   const handleDepartmentSelect = (department) => {
-    console.log("🏢 handleDepartmentSelect:", department);
     setSelectedDepartment(department);
+    const deptId = department?.id ?? department?.value ?? "";
+    handleChange({ target: { name: "department", value: deptId } });
   };
 
   const fetchOptions = async () => {
@@ -273,6 +302,7 @@ const InformRelatedParties = () => {
     handleClear();
     setSelectedSigner(null);
     setSelectedDepartment(null);
+  setExistingAttachments([]);
   };
 
   // Custom date change handlers for different date fields
@@ -284,6 +314,71 @@ const InformRelatedParties = () => {
     handleDateChange(thaiDate, 'date2');
   };
   const [tabSelected, setTabSelected] = useState("department");
+
+  // Prefill when editing an existing report via /[id]
+  useEffect(() => {
+    const editId = router?.query?.id;
+    if (!editId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await GetOutgoingReportById(editId);
+        const d = res?.res_data || res?.data || res;
+        if (cancelled || !d) return;
+
+        // IDs and numbers
+        handleChange({ target: { name: "refNo", value: d.reference_number || d.complaint_number || d.document_number || "" } });
+        handleDateChange(d.reference_date ? new Date(d.reference_date) : (d.created_at ? new Date(d.created_at) : null), "date");
+
+        // Additional book/document info
+        handleChange({ target: { name: "bookNo", value: d.document_number || "" } });
+        if (d.document_date) handleDateChange(new Date(d.document_date), "date2");
+        else if (d.complaint_number_date) handleDateChange(new Date(d.complaint_number_date), "date2");
+
+        // Subject
+        handleChange({ target: { name: "subject", value: d.subject || "" } });
+
+        // Signer
+        const signerObj = d.signature_authority_user || null;
+        const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || "";
+        setSelectedSigner(signerObj);
+        handleChange({ target: { name: "signer", value: signerId } });
+
+        // Department
+        handleChange({ target: { name: "department", value: d.department?.id || "" } });
+        const deptObj = d.department
+          ? { value: d.department.id, label: d.department.name, code: d.department.code || "", shortName: d.department.short_name || d.department.shortName || "" }
+          : null;
+        setSelectedDepartment(deptObj);
+
+        // Confidentiality / Urgency
+        if (d.confidentiality_level !== undefined && d.confidentiality_level !== null) {
+          handleChange({ target: { name: "confidentiality", value: d.confidentiality_level } });
+        }
+        if (d.urgency_level !== undefined && d.urgency_level !== null) {
+          handleChange({ target: { name: "urgency", value: d.urgency_level } });
+        }
+
+        // Propose / Decision
+        if (d.propose_for || d.proposal_purpose) handleChange({ target: { name: "proposeFor", value: d.propose_for || d.proposal_purpose } });
+        if (d.decision || d.consideration_result) handleChange({ target: { name: "decision", value: d.decision || d.consideration_result } });
+
+        // Note / details
+        if (d.remarks) handleChange({ target: { name: "note", value: d.remarks } });
+
+        // Attachments
+        const atts = Array.isArray(d.attachments) ? d.attachments : [];
+        setExistingAttachments(atts);
+        if (atts.length) {
+          const names = atts.map(a => a.original_name || a.file_name || a.name || "").filter(Boolean).join(", ");
+          if (names) handleChange({ target: { name: "attachment", value: names } });
+        }
+      } catch (e) {
+        console.error("Prefill type4 report failed", e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [router?.query?.id]);
 
   return (
     <Box
@@ -1099,6 +1194,7 @@ const InformRelatedParties = () => {
           {/* row 6: เอกสารแนบ - เปลี่ยนเป็น InputFile */}
           <Box sx={{ position: "relative" }}>
             <InputFile
+              key={fileInputKey}
               label={createLabel("เอกสารแนบ", "attachment")}
               name="attachment"
               onChange={handleFileUpload}
@@ -1107,6 +1203,23 @@ const InformRelatedParties = () => {
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxFiles={3}
               maxSizeMB={10}
+              multiple
+              existingFiles={existingAttachments}
+              getFileUrl={(att) => buildFileUrl(att.file_path)}
+              onDeleteExisting={async (att) => {
+                const reportId = router?.query?.id || null;
+                if (!reportId || !att?.id) return false;
+                const res = await DeleteOutgoingReportAttachment({
+                  outgoing_report_id: reportId,
+                  attachment_id: att.id,
+                });
+                if (res?.success === false) {
+                  alert(res?.res_message || "ลบไฟล์ไม่สำเร็จ");
+                  return false;
+                }
+                setExistingAttachments((prev) => prev.filter((x) => x.id !== att.id));
+                return true;
+              }}
             />
           </Box>
 
@@ -1167,18 +1280,18 @@ const InformRelatedParties = () => {
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={handleSave}
-              disabled={isLoading || !isFormValid() || optionsLoading}
+              disabled={isLoading || !canSave() || optionsLoading}
               sx={{
-                backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
+                backgroundColor: canSave() && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
                 color: "#FFF",
                 width: "100%",
                 height: "55px",
                 fontSize: "20px",
                 fontWeight: "600",
                 "&:hover": {
-                  backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
-                  transform: isFormValid() && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
-                  boxShadow: isFormValid() && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
+                  backgroundColor: canSave() && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
+                  transform: canSave() && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
+                  boxShadow: canSave() && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
                 },
                 "&:disabled": {
                   backgroundColor: "#cccccc",

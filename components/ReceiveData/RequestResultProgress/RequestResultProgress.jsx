@@ -87,6 +87,15 @@ const RequestResultProgress = () => {
     return `${base}${normalized}`;
   }, [normalizeFilePath]);
 
+  // Normalize SelectField onChange payloads (event | value | option)
+  const makeSelectHandler = useCallback(
+    (fieldName) => (evOrVal) => {
+      const value = evOrVal?.target?.value ?? evOrVal?.value ?? evOrVal ?? "";
+      updateField(fieldName, value);
+    },
+    [updateField]
+  );
+
   // Prefill when editing existing type2 report via /[id] (เหมือน InitialNotificationComplainantAgency)
   useEffect(() => {
     const editId = router?.query?.id;
@@ -223,8 +232,11 @@ const RequestResultProgress = () => {
     }));
 
   const handleSignerSelect = (userInfo) => {
+    const nextId = userInfo?.id ?? userInfo?.value ?? "";
+    const currId = selectedSigner?.id ?? selectedSigner?.value ?? "";
+    if (nextId === currId) return; // no change
     setSelectedSigner(userInfo);
-    updateField("signer", userInfo?.id ?? userInfo?.value ?? "");
+    updateField("signer", nextId);
     updateField("signer_meta", userInfo);
 
     const signerPosId =
@@ -239,9 +251,12 @@ const RequestResultProgress = () => {
   };
 
   const handleDepartmentSelect = (department) => {
+    const nextId = department?.id ?? department?.value ?? "";
+    const currId = selectedDepartment?.id ?? selectedDepartment?.value ?? "";
+    if (nextId === currId) return; // no change
     setSelectedDepartment(department);
     if (department) {
-      updateField("department", department?.id ?? department?.value ?? "");
+      updateField("department", nextId);
       updateField("department_meta", department);
     }
   };
@@ -452,250 +467,7 @@ const RequestResultProgress = () => {
               error={!!getFieldError("date")}
               helperText={getFieldError("date")}
             />
-          </Box>
-
-           {/* Dialog สำหรับค้นหาเลข */}
-            <Dialog
-              open={openSearchDialog}
-              onClose={() => setOpenSearchDialog(false)}
-              maxWidth="sm"
-              fullWidth
-              PaperProps={{
-                style: {
-                  borderRadius: 12,
-                  background: "#f7fafd",
-                  height: 500,
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-                },
-              }}
-            >
-              <DialogTitle
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <SearchIcon color="primary" />
-                ค้นหาเลขที่อ้างอิง
-              </DialogTitle>
-
-              <DialogContent>
-                {/* ช่องค้นหา */}
-                <TextField
-                  inputRef={inputRef}
-                  fullWidth
-                  size="small"
-                  placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
-                  value={searchText}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSearchText(val);
-                    handleSearch(val);
-                  }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon color="action" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: searchText ? (
-                      <InputAdornment position="end">
-                        <IconButton
-                          size="small"
-                          onClick={onClear}
-                          aria-label="clear search"
-                          edge="end"
-                        >
-                          <ClearIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ) : null,
-                    style: {
-                      background: "#fff",
-                      borderRadius: 8,
-                    },
-                  }}
-                  sx={{ mb: 2 }}
-                />
-
-                {/* สถานะโหลด / ไม่พบ / รายการ */}
-                {searchLoading ? (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: 24,
-                    }}
-                  >
-                    <CircularProgress color="primary" />
-                    <div
-                      style={{
-                        marginTop: 8,
-                        color: "#888",
-                      }}
-                    >
-                      กำลังค้นหา...
-                    </div>
-                  </div>
-                ) : searchResults.length === 0 ? (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: 32,
-                      color: "#bdbdbd",
-                    }}
-                  >
-                    <DescriptionIcon
-                      sx={{ fontSize: 48, mb: 2 }}
-                      color="disabled"
-                    />
-                    <div>ไม่พบรายการเลขที่อ้างอิง</div>
-                  </div>
-                ) : (
-                  <>
-                    <List
-                      sx={{
-                        maxHeight: 320,
-                        overflow: "auto",
-                        "&::-webkit-scrollbar": {
-                          width: "8px",
-                          background: "#f0f4fa",
-                          borderRadius: "8px",
-                        },
-                        "&::-webkit-scrollbar-thumb": {
-                          background: "#90caf9",
-                          borderRadius: "8px",
-                        },
-                        "&::-webkit-scrollbar-thumb:hover":
-                          {
-                            background: "#64b5f6",
-                          },
-                      }}
-                    >
-                      {searchResults.map((item) => {
-                        const isMaster = !!item.is_master; // fallback ถ้า undefined
-                        return (
-                          <ListItem
-                            key={item.id}
-                            disablePadding
-                          >
-                            <ListItemButton
-                              onClick={() =>
-                                handleSelectReference(item)
-                              }
-                              sx={{
-                                py: 1.5,
-                                px: 2,
-                                borderRadius: 2,
-                                mb: 0.5,
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 1.5,
-                                "&:hover": {
-                                  background: "#e3f2fd",
-                                },
-                              }}
-                            >
-                              {/* จุดสถานะ is_master */}
-                              <span
-                                style={{
-                                  width: 12,
-                                  height: 12,
-                                  borderRadius: "50%",
-                                  backgroundColor: isMaster
-                                    ? "#2ecc71"
-                                    : "#bdbdbd",
-                                  border: "2px solid #fff",
-                                  boxShadow:
-                                    "0 0 0 1px rgba(0,0,0,0.15)",
-                                  flexShrink: 0,
-                                }}
-                                title={
-                                  isMaster
-                                    ? "Master"
-                                    : "Non-master"
-                                }
-                              />
-                              <DescriptionIcon
-                                color="info"
-                                sx={{ mr: 0.5 }}
-                              />
-                              <span
-                                style={{ fontWeight: 500 }}
-                              >
-                                {item.complaint_number}
-                                {item.subject}
-                              </span>
-                            </ListItemButton>
-                          </ListItem>
-                        );
-                      })}
-                    </List>
-
-                    {/* Legend (ถ้าไม่ต้องการสามารถลบส่วนนี้ออกได้) */}
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 16,
-                        marginTop: 8,
-                        fontSize: 12,
-                        color: "#555",
-                        padding: "0 4px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: "50%",
-                            background: "#2ecc71",
-                            boxShadow:
-                              "0 0 0 1px rgba(0,0,0,0.15)",
-                          }}
-                        />
-                        Master
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: "50%",
-                            background: "#bdbdbd",
-                            boxShadow:
-                              "0 0 0 1px rgba(0,0,0,0.15)",
-                          }}
-                        />
-                        Non-master
-                      </div>
-                    </div>
-                  </>
-                )}
-              </DialogContent>
-
-              <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button
-                  onClick={() => setOpenSearchDialog(false)}
-                  variant="outlined"
-                  color="inherit"
-                >
-                  ปิด
-                </Button>
-              </DialogActions>
-            </Dialog>
+            </Box>
 
           {/* Row 2: เรื่อง* */}
           <Box>
@@ -1059,7 +831,7 @@ const RequestResultProgress = () => {
               label={createLabel("ชั้นความลับ", "confidentiality")}
               name="confidentiality"
               value={form.confidentiality}
-              onChange={handleChange}
+              onChange={makeSelectHandler("confidentiality")}
               options={confidentialityOptions}
               error={!!getFieldError("confidentiality")}
               helperText={getFieldError("confidentiality")}
@@ -1071,7 +843,7 @@ const RequestResultProgress = () => {
               label={createLabel("ชั้นความเร่งด่วน", "urgency")}
               name="urgency"
               value={form.urgency}
-              onChange={handleChange}
+              onChange={makeSelectHandler("urgency")}
               options={urgencyOptions}
               error={!!getFieldError("urgency")}
               helperText={getFieldError("urgency")}

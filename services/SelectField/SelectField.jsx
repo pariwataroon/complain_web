@@ -70,50 +70,45 @@ const SelectField = ({
     });
   };
 
+  // Effect 1: Use provided external options (no dependency on label to avoid JSX identity churn)
   useEffect(() => {
+    if (!(externalOptions && externalOptions.length > 0)) return;
+
+    const cleanedOptions = externalOptions
+      .filter((opt) => {
+        if (typeof opt === "object" && opt !== null) {
+          return opt.value !== undefined && opt.label !== undefined;
+        }
+        return typeof opt === "string" || typeof opt === "number";
+      })
+      .map((opt) => {
+        if (typeof opt === "object" && opt !== null) {
+          return {
+            value: String(opt.value || ""),
+            label: String(opt.label || ""),
+          };
+        }
+        return { value: String(opt), label: String(opt) };
+      });
+
+    const mapped = optionMapper ? cleanedOptions.map(optionMapper) : cleanedOptions;
+    setOptions(mapped);
+  }, [externalOptions, optionMapper]);
+
+  // Effect 2: Fetch options only when no external options are provided
+  useEffect(() => {
+    if (externalOptions && externalOptions.length > 0) return;
+
+    // เงื่อนไขสำหรับ location fields
+    if (
+      (label === "อำเภอ/เขต" && !provinceCode) ||
+      (label === "ตำบล/แขวง" && !amphureCode) ||
+      (label === "รหัสไปรษณีย์" && !amphureCode)
+    ) {
+      return;
+    }
+
     const fetchOptions = async () => {
-      // ถ้ามี external options ให้ใช้เลย ไม่ต้อง fetch
-      if (externalOptions && externalOptions.length > 0) {
-        // แก้ไข: ตรวจสอบและทำความสะอาด externalOptions
-        const cleanedOptions = externalOptions
-          .filter((opt) => {
-            // กรองเฉพาะ options ที่ valid
-            if (typeof opt === "object" && opt !== null) {
-              return opt.value !== undefined && opt.label !== undefined;
-            }
-            return typeof opt === "string" || typeof opt === "number";
-          })
-          .map((opt) => {
-            // แปลงให้เป็น format ที่ถูกต้อง
-            if (typeof opt === "object" && opt !== null) {
-              return {
-                value: String(opt.value || ""),
-                label: String(opt.label || ""),
-              };
-            }
-            return {
-              value: String(opt),
-              label: String(opt),
-            };
-          });
-
-        const mapped = optionMapper
-          ? cleanedOptions.map(optionMapper)
-          : cleanedOptions;
-
-        setOptions(mapped);
-        return;
-      }
-
-      // เงื่อนไขสำหรับ location fields
-      if (
-        (label === "อำเภอ/เขต" && !provinceCode) ||
-        (label === "ตำบล/แขวง" && !amphureCode) ||
-        (label === "รหัสไปรษณีย์" && !amphureCode)
-      ) {
-        return;
-      }
-
       try {
         let response = null;
 
@@ -135,25 +130,16 @@ const SelectField = ({
         }
 
         const finalResponse = Array.isArray(response) ? response : [];
-        const mapped = optionMapper
-          ? finalResponse.map(optionMapper)
-          : finalResponse;
+        const mapped = optionMapper ? finalResponse.map(optionMapper) : finalResponse;
         setOptions(mapped);
       } catch (error) {
-        console.error("Failed to fetch or map options:", error);
+        console.error("Failed to fetch or map options:")
         setOptions([]);
       }
     };
 
     fetchOptions();
-  }, [
-    label,
-    externalOptions,
-    optionMapper,
-    districtCode,
-    amphureCode,
-    provinceCode,
-  ]);
+  }, [externalOptions, optionMapper, label, districtCode, amphureCode, provinceCode]);
 
   useEffect(() => {
     if (!provinceCode) return;

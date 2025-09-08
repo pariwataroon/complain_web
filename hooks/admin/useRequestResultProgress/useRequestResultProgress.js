@@ -19,6 +19,7 @@ const requiredFields = [
   "docNo",
   "date",
   "subject",
+  "department",
   "signer",
   "confidentiality",
   "urgency",
@@ -106,6 +107,17 @@ export const useRequestResultProgress = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
+  // Lightweight deep-ish equality to prevent redundant state updates
+  const isEqual = (a, b) => {
+    if (a === b) return true;
+    try {
+      // Handles simple objects/arrays/dates (date objects stringify to ISO)
+      return JSON.stringify(a) === JSON.stringify(b);
+    } catch {
+      return false;
+    }
+  };
+
   // Prefill from query
   useEffect(() => {
     if (complaintNumberFromQuery && !form.refNo) {
@@ -191,7 +203,10 @@ export const useRequestResultProgress = () => {
   // ---- Date Change ----
   const handleDateChange = useCallback(
     (date) => {
-      setForm((prev) => ({ ...prev, date }));
+      setForm((prev) => {
+        if (isEqual(prev.date, date)) return prev;
+        return { ...prev, date };
+      });
     },
     []
   );
@@ -254,11 +269,11 @@ export const useRequestResultProgress = () => {
       // Special case for refNo
       if (name === "refNo") {
         const parsed = parseRefNoToThaiDate(v);
-        setForm((prev) => ({
-          ...prev,
-          refNo: v,
-          ...(parsed ? { date: parsed } : {}),
-        }));
+        setForm((prev) => {
+          const next = { ...prev, refNo: v, ...(parsed ? { date: parsed } : {}) };
+          if (isEqual(prev.refNo, next.refNo) && isEqual(prev.date, next.date)) return prev;
+          return next;
+        });
         if (errors.refNo) setErrors((prev) => ({ ...prev, refNo: null }));
         if (parsed && errors.date) setErrors((prev) => ({ ...prev, date: null }));
         return;
@@ -269,7 +284,10 @@ export const useRequestResultProgress = () => {
         if (errors.position_other_text) setErrors((prev) => ({ ...prev, position_other_text: null }));
         return;
       }
-      setForm((prev) => ({ ...prev, [name]: v }));
+      setForm((prev) => {
+        if (isEqual(prev[name], v)) return prev;
+        return { ...prev, [name]: v };
+      });
       if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
     },
     [errors]
@@ -280,16 +298,19 @@ export const useRequestResultProgress = () => {
     (fieldName, value) => {
       if (fieldName === "refNo") {
         const parsed = parseRefNoToThaiDate(value);
-        setForm((prev) => ({
-          ...prev,
-          refNo: value,
-          ...(parsed ? { date: parsed } : {}),
-        }));
+        setForm((prev) => {
+          const next = { ...prev, refNo: value, ...(parsed ? { date: parsed } : {}) };
+          if (isEqual(prev.refNo, next.refNo) && isEqual(prev.date, next.date)) return prev;
+          return next;
+        });
         if (errors.refNo) setErrors((prev) => ({ ...prev, refNo: null }));
         if (parsed && errors.date) setErrors((prev) => ({ ...prev, date: null }));
         return;
       }
-      setForm((prev) => ({ ...prev, [fieldName]: value }));
+      setForm((prev) => {
+        if (isEqual(prev[fieldName], value)) return prev;
+        return { ...prev, [fieldName]: value };
+      });
       if (errors[fieldName]) setErrors((prev) => ({ ...prev, [fieldName]: null }));
     },
     [errors]
@@ -304,6 +325,7 @@ export const useRequestResultProgress = () => {
       { field: "docNo", label: "เลขที่หนังสือ" },
       { field: "date", label: "วันที่" },
       { field: "subject", label: "เรื่อง" },
+      { field: "department", label: "หน่วยงาน / ผู้ร้อง" },
       { field: "signer", label: "ผู้ลงนาม" },
       { field: "confidentiality", label: "ชั้นความลับ" },
       { field: "urgency", label: "ชั้นความเร่งด่วน" },

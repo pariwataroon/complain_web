@@ -287,9 +287,17 @@ useEffect(() => {
         "";
       handleChange({ target: { name: 'position_id', value: posId } });
 
-      // หน่วยงาน (id)
+      // หน่วยงาน (id + object for SelectFieldDepartment)
       handleChange({ target: { name: 'department', value: d.department?.id || "" } });
-      setSelectedDepartment(d.department || null);
+      const deptObj = d.department
+        ? {
+            value: d.department.id,
+            label: d.department.name,
+            code: d.department.code || "",
+            shortName: d.department.short_name || d.department.shortName || "",
+          }
+        : null;
+      setSelectedDepartment(deptObj);
 
       // Date (priority: complaint_number_date > document_date > created_at)
       const dateSrc = d.complaint_number_date || d.document_date || d.created_at;
@@ -809,10 +817,10 @@ useEffect(() => {
               <SelectFieldDepartment
                 label={createLabel("หน่วยงาน", "department")}
                 name="department"
-                value={form.department}
-                onChange={handleChange}
-                filterBySignerId={pickId(selectedSigner)}
+                value={selectedDepartment}
+                onChange={handleDepartmentSelect}
                 onDepartmentSelect={handleDepartmentSelect}
+                filterBySignerId={pickId(selectedSigner)}
                 error={!!getFieldError("department")}
                 helperText={getFieldError("department")}
                 disabled={!selectedSigner}
@@ -822,10 +830,10 @@ useEffect(() => {
               <SelectFieldDepartment
                 label={createLabel("ผู้ร้อง", "department")}
                 name="department"
-                value={form.department}
-                onChange={handleChange}
-                filterBySignerId={pickId(selectedSigner)}
+                value={selectedDepartment}
+                onChange={handleDepartmentSelect}
                 onDepartmentSelect={handleDepartmentSelect}
+                filterBySignerId={pickId(selectedSigner)}
                 error={!!getFieldError("department")}
                 helperText={getFieldError("department")}
                 disabled={!selectedSigner}
@@ -956,18 +964,18 @@ useEffect(() => {
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={handleSave}
-              disabled={isLoading || !canSave || optionsLoading}
+              disabled={isLoading || !canSave() || optionsLoading}
               sx={{
-                backgroundColor: canSave && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
+                backgroundColor: canSave() && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
                 color: "#FFF",
                 width: "100%",
                 height: "55px",
                 fontSize: "20px",
                 fontWeight: "600",
                 "&:hover": {
-                  backgroundColor: canSave && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
-                  transform: canSave && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
-                  boxShadow: canSave && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
+                  backgroundColor: canSave() && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
+                  transform: canSave() && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
+                  boxShadow: canSave() && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
                 },
                 "&:disabled": {
                   backgroundColor: "#cccccc",
