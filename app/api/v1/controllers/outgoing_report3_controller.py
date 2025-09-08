@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 
 from models.outgoing_reports3 import OutgoingReport3, OutgoingReportAttachment3
+from lib.file_upload import get_storage_config
 from models.comp_complaint import Complaint, ComplaintStatus
 from models.user import User
 from models.position import Position
@@ -348,7 +349,8 @@ def _report_dir(report_id: UUID) -> str:
 def _save_files_for_report(db: Session, report_id: UUID, files: List[UploadFile]) -> List[OutgoingReportAttachment3]:
     """บันทึกไฟล์จริงลงดิสก์ + สร้างเรคอร์ดแนบ (sanitize ชื่อและ unique เสมอ)"""
     saved: List[OutgoingReportAttachment3] = []
-    target_dir = _report_dir(report_id)
+    base_dir = get_storage_config().get("base_dir")
+    target_dir = os.path.join(base_dir, "outgoing-reports3", str(report_id))
     _ensure_dir(target_dir)
 
     for f in files:
@@ -370,10 +372,13 @@ def _save_files_for_report(db: Session, report_id: UUID, files: List[UploadFile]
         except Exception:
             pass
 
+        # derive web-relative
+        rel_web = f"/uploads/outgoing-reports3/{report_id}/{unique_name}"
+
         att = OutgoingReportAttachment3(
             outgoing_report_id=report_id,
             file_name=unique_name,
-            file_path=file_path,
+            file_path=rel_web or file_path,
             file_size=file_size,
             file_type=getattr(f, "content_type", None),
             is_active=True,
@@ -450,12 +455,23 @@ def get_outgoing_report3_attachment_fileinfo(
         raise HTTPException(status_code=404, detail="ไฟล์แนบนี้ถูกลบออกจากการแสดงผลแล้ว")
 
     file_path = getattr(att, "file_path", None)
-    if not file_path or not os.path.isfile(file_path):
+    if not file_path:
+        raise HTTPException(status_code=404, detail="ไม่พบไฟล์บนเซิร์ฟเวอร์")
+
+    abs_path = file_path
+    try:
+        if isinstance(file_path, str) and file_path.startswith("/uploads/"):
+            base_dir = get_storage_config().get("base_dir")
+            rel = file_path[len("/uploads/"):].lstrip("/\\")
+            abs_path = os.path.join(base_dir, rel)
+    except Exception:
+        pass
+    if not os.path.isfile(abs_path):
         raise HTTPException(status_code=404, detail="ไม่พบไฟล์บนเซิร์ฟเวอร์")
 
     filename = getattr(att, "file_name", None) or os.path.basename(file_path)
     media_type = getattr(att, "file_type", None) or "application/octet-stream"
-    return file_path, media_type, filename
+    return abs_path, media_type, filename
 
 
 def delete_outgoing_report3_attachment_by_id(
@@ -474,9 +490,17 @@ def delete_outgoing_report3_attachment_by_id(
     # hard delete (ลบไฟล์จริง + ลบเรคอร์ด)
     if hard_delete:
         file_path = getattr(att, "file_path", None)
+        abs_path = file_path
         try:
-            if file_path and os.path.isfile(file_path):
-                os.remove(file_path)
+            if isinstance(file_path, str) and file_path.startswith("/uploads/"):
+                base_dir = get_storage_config().get("base_dir")
+                rel = file_path[len("/uploads/"):].lstrip("/\\")
+                abs_path = os.path.join(base_dir, rel)
+        except Exception:
+            pass
+        try:
+            if abs_path and os.path.isfile(abs_path):
+                os.remove(abs_path)
         except Exception:
             pass
         db.delete(att)

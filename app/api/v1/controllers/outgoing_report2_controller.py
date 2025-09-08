@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, func
 
 from models.outgoing_reports2 import OutgoingReport2, OutgoingReportAttachment2
+from lib.file_upload import get_storage_config
 from models.comp_complaint import Complaint, ComplaintStatus
 from models.user import User
 from models.position import Position
@@ -20,7 +21,7 @@ from lib.logger import get_logger
 logger = get_logger("outgoing_report2_controller")
 
 # ======== Config พื้นฐานในการจัดเก็บไฟล์แนบ ========
-BASE_UPLOAD_DIR = os.path.join("uploads", "outgoing-reports2")  # ปรับได้ตามโครงโปรเจค
+BASE_UPLOAD_DIR = os.path.join("uploads", "outgoing-reports2")  # legacy local dir (not used for new saves)
 
 class DuplicateKeyError(Exception):
     pass
@@ -353,12 +354,15 @@ def auto_fill_from_complaint2(db: Session, complaint_id: UUID) -> Dict[str, Any]
 
 # ------------------------- Attachments (รุ่น 2) -------------------------
 def _report_dir(report_id: UUID) -> str:
+    # Keep for backward-compat where absolute paths were stored previously
     return os.path.join(BASE_UPLOAD_DIR, str(report_id))
 
 def _save_files_for_report(db: Session, report_id: UUID, files: List[UploadFile]) -> List[OutgoingReportAttachment2]:
     """บันทึกไฟล์จริงลงดิสก์ + สร้างเรคอร์ดแนบ"""
     saved: List[OutgoingReportAttachment2] = []
-    target_dir = _report_dir(report_id)
+    # Write under storage base_dir to ensure /uploads mapping works
+    base_dir = get_storage_config().get("base_dir")
+    target_dir = os.path.join(base_dir, "outgoing-reports2", str(report_id))
     _ensure_dir(target_dir)
 
     for f in files:
@@ -367,22 +371,22 @@ def _save_files_for_report(db: Session, report_id: UUID, files: List[UploadFile]
         unique_name = f"{uuid4().hex}_{safe_name}"
         file_path = os.path.join(target_dir, unique_name)
 
-        # เขียนไฟล์ลงดิสก์
         with open(file_path, "wb") as out:
-            # ใช้ .read() ทีเดียวเพื่อความเรียบง่าย (ไฟล์ราชการทั่วไปขนาดไม่ใหญ่มาก)
             out.write(f.file.read())
 
-        # คำนวณขนาดไฟล์
         file_size = None
         try:
             file_size = str(os.path.getsize(file_path))
         except Exception:
             pass
 
+        # Compute web-relative path for frontend
+        rel_web = f"/uploads/outgoing-reports2/{report_id}/{unique_name}"
+
         att = OutgoingReportAttachment2(
             outgoing_report_id=report_id,
-            file_name=unique_name, 
-            file_path=file_path,
+            file_name=unique_name,
+            file_path=rel_web,
             file_size=file_size,
             file_type=getattr(f, "content_type", None),
             is_active=True,
@@ -459,12 +463,25 @@ def get_outgoing_report2_attachment_fileinfo(
         raise HTTPException(status_code=404, detail="ไฟล์แนบนี้ถูกลบออกจากการแสดงผลแล้ว")
 
     file_path = getattr(att, "file_path", None)
-    if not file_path or not os.path.isfile(file_path):
+    if not file_path:
+        raise HTTPException(status_code=404, detail="ไม่พบไฟล์บนเซิร์ฟเวอร์")
+
+    # Map web path to absolute if needed
+    abs_path = file_path
+    try:
+        if isinstance(file_path, str) and file_path.startswith("/uploads/"):
+            base_dir = get_storage_config().get("base_dir")
+            rel = file_path[len("/uploads/"):].lstrip("/\\")
+            abs_path = os.path.join(base_dir, rel)
+    except Exception:
+        pass
+
+    if not os.path.isfile(abs_path):
         raise HTTPException(status_code=404, detail="ไม่พบไฟล์บนเซิร์ฟเวอร์")
 
     filename = getattr(att, "file_name", None) or os.path.basename(file_path)
     media_type = getattr(att, "file_type", None) or "application/octet-stream"
-    return file_path, media_type, filename
+    return abs_path, media_type, filename
 
 
 def delete_outgoing_report2_attachment_by_id(
@@ -483,11 +500,18 @@ def delete_outgoing_report2_attachment_by_id(
     # hard delete: ลบทั้ง record + ลบไฟล์จริง
     if hard_delete:
         file_path = getattr(att, "file_path", None)
+        abs_path = file_path
         try:
-            if file_path and os.path.isfile(file_path):
-                os.remove(file_path)
+            if isinstance(file_path, str) and file_path.startswith("/uploads/"):
+                base_dir = get_storage_config().get("base_dir")
+                rel = file_path[len("/uploads/"):].lstrip("/\\")
+                abs_path = os.path.join(base_dir, rel)
         except Exception:
-            # ไม่ต้อง fail ถ้าลบไฟล์บนดิสก์ไม่ได้
+            pass
+        try:
+            if abs_path and os.path.isfile(abs_path):
+                os.remove(abs_path)
+        except Exception:
             pass
         db.delete(att)
         db.commit()

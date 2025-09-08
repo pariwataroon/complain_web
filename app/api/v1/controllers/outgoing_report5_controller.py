@@ -14,7 +14,7 @@ from models.comp_complaint import Complaint, ComplaintStatus
 from models.user import User
 from models.departments import Department
 from app.api.v1.schemas.outgoing_report5 import OutgoingReport5Create, OutgoingReport5Update
-from lib.file_upload import save_upload_file, delete_upload_file
+from lib.file_upload import save_upload_file, delete_upload_file, get_storage_config
 from lib.logger import get_logger
 
 logger = get_logger("outgoing_report5_controller")
@@ -352,7 +352,8 @@ async def add_attachments_to_outgoing_report5(
         att = OutgoingReportAttachment5(
             outgoing_report_id=outgoing_report_id,
             file_name=info.get("filename") or f.filename,
-            file_path=info.get("file_path"),
+            # store web-relative path in file_path for frontend
+            file_path=info.get("file_url"),
             file_url=info.get("file_url"),
             file_type=info.get("file_type"),
             file_size=str(info.get("file_size")) if info.get("file_size") is not None else None,
@@ -408,12 +409,23 @@ def get_outgoing_report5_attachment_fileinfo(
         raise HTTPException(status_code=404, detail="ไม่พบไฟล์แนบที่ระบุ")
 
     file_path = getattr(att, "file_path", None)
-    if not file_path or not os.path.isfile(file_path):
+    if not file_path:
+        raise HTTPException(status_code=404, detail="ไม่พบไฟล์บนเซิร์ฟเวอร์")
+    # map to absolute if necessary
+    abs_path = file_path
+    try:
+        if isinstance(file_path, str) and file_path.startswith("/uploads/"):
+            base_dir = get_storage_config().get("base_dir")
+            rel = file_path[len("/uploads/"):].lstrip("/\\")
+            abs_path = os.path.join(base_dir, rel)
+    except Exception:
+        pass
+    if not os.path.isfile(abs_path):
         raise HTTPException(status_code=404, detail="ไม่พบไฟล์บนเซิร์ฟเวอร์")
 
     filename = getattr(att, "file_name", None) or os.path.basename(file_path)
     media_type = getattr(att, "file_type", None) or "application/octet-stream"
-    return file_path, media_type, filename
+    return abs_path, media_type, filename
 
 
 def delete_outgoing_report5_attachment_by_id(
@@ -431,8 +443,14 @@ def delete_outgoing_report5_attachment_by_id(
 
     if hard_delete:
         try:
-            if getattr(att, "file_path", None):
-                delete_upload_file(att.file_path)
+            abs_path = getattr(att, "file_path", None)
+            fp = abs_path
+            if isinstance(fp, str) and fp.startswith("/uploads/"):
+                base_dir = get_storage_config().get("base_dir")
+                rel = fp[len("/uploads/"):].lstrip("/\\")
+                abs_path = os.path.join(base_dir, rel)
+            if abs_path:
+                delete_upload_file(abs_path)
         except Exception:
             pass
         db.delete(att)

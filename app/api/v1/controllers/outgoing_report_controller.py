@@ -14,7 +14,7 @@ from models.position import Position
 from models.departments import Department
 from app.api.v1.schemas.outgoing_report import OutgoingReportCreate, OutgoingReportUpdate
 from lib.logger import get_logger
-from lib.file_upload import save_upload_file, delete_upload_file
+from lib.file_upload import save_upload_file, delete_upload_file, get_storage_config
 
 logger = get_logger("outgoing_report_controller")
 
@@ -152,7 +152,8 @@ async def create_outgoing_report(
                         att,
                         outgoing_report_id=db_report.id,
                         file_name=info.get("filename") or file.filename,
-                        file_path=info.get("file_path"),
+                        # store web-relative path for frontend usage
+                        file_path=info.get("file_url"),
                         file_size=str(info.get("file_size")) if info.get("file_size") is not None else None,
                         file_type=info.get("file_type"),
                         is_active=True
@@ -1222,7 +1223,8 @@ async def add_attachments_to_outgoing_report(
             att,
             outgoing_report_id=outgoing_report_id,
             file_name=info.get("filename") or f.filename,
-            file_path=info.get("file_path"),
+            # store web-relative path for frontend usage
+            file_path=info.get("file_url"),
             file_size=str(info.get("file_size")) if info.get("file_size") is not None else None,
             file_type=info.get("file_type"),
             is_active=True,
@@ -1308,12 +1310,25 @@ def get_outgoing_report_attachment_fileinfo(
         raise HTTPException(status_code=404, detail="ไฟล์แนบนี้ถูกลบออกจากการแสดงผลแล้ว")
 
     file_path = getattr(att, "file_path", None)
-    if not file_path or not os.path.isfile(file_path):
+    if not file_path:
         raise HTTPException(status_code=404, detail="ไม่พบไฟล์บนเซิร์ฟเวอร์")
 
-    filename = getattr(att, "file_name", None) or os.path.basename(file_path)
+    # map web-relative to absolute disk path if needed
+    abs_path = file_path
+    try:
+        if isinstance(file_path, str) and file_path.startswith("/uploads/"):
+            base_dir = get_storage_config().get("base_dir")
+            rel = file_path[len("/uploads/"):].lstrip("/\\")
+            abs_path = os.path.join(base_dir, rel)
+    except Exception:
+        pass
+
+    if not os.path.isfile(abs_path):
+        raise HTTPException(status_code=404, detail="ไม่พบไฟล์บนเซิร์ฟเวอร์")
+
+    filename = getattr(att, "file_name", None) or os.path.basename(abs_path)
     media_type = getattr(att, "file_type", None) or "application/octet-stream"
-    return file_path, media_type, filename
+    return abs_path, media_type, filename
 
 
 def delete_outgoing_report_attachment_by_id(
@@ -1336,9 +1351,17 @@ def delete_outgoing_report_attachment_by_id(
 
     if hard_delete:
         file_path = getattr(att, "file_path", None)
-        if file_path and os.path.isfile(file_path):
+        abs_path = file_path
+        try:
+            if isinstance(file_path, str) and file_path.startswith("/uploads/"):
+                base_dir = get_storage_config().get("base_dir")
+                rel = file_path[len("/uploads/"):].lstrip("/\\")
+                abs_path = os.path.join(base_dir, rel)
+        except Exception:
+            pass
+        if abs_path and os.path.isfile(abs_path):
             try:
-                delete_upload_file(file_path)
+                delete_upload_file(abs_path)
             except Exception:
                 pass
         report_id_for_log = getattr(att, "outgoing_report_id", None)
