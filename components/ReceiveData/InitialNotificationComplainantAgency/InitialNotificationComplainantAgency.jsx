@@ -15,6 +15,7 @@ import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDe
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
 import { GetOutgoingReport2ById } from "@pages/api/outgoinreports/outgoinreports";
 import { GetReDocumentComplaints } from "@pages/api/complaint/complaint";
+import { DeleteOutgoingReportAttachment } from "@pages/api/outgoinreports/outgoinreports";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -48,6 +49,9 @@ const InitialNotificationComplainantAgency = () => {
     handleClear,
     handleSave,
     isFormValid,
+  isRequired,
+  fileInputKey,
+  canSave,
   } = useInitialNotificationComplainantAgency();
   const router = useRouter();
 
@@ -67,6 +71,29 @@ const InitialNotificationComplainantAgency = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
+
+  // Read-only list of attachments already on the server for this report
+  const [existingAttachments, setExistingAttachments] = useState([]);
+
+  // Build absolute URL from file_path and normalize Windows-style paths (same as Forward component)
+  const normalizeFilePath = useCallback((p) => {
+    if (!p) return "";
+    let s = String(p);
+    s = s.replace(/\\\\/g, "/").replace(/\\/g, "/");
+    const idx = s.lastIndexOf("/uploads/");
+    if (idx !== -1) s = s.substring(idx);
+    if (!s.startsWith("/")) s = `/${s}`;
+    return s;
+  }, []);
+
+  const buildFileUrl = useCallback((p) => {
+    if (!p) return "";
+    const normalized = normalizeFilePath(p);
+    if (/^https?:\/\//i.test(normalized)) return normalized;
+    const baseRaw = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
+    const base = baseRaw.replace(/\/api\/v\d+$/, "/api");
+    return `${base}${normalized}`;
+  }, [normalizeFilePath]);
 
     // --- เปลี่ยน useEffect เปิด Dialog ให้ยิง API ---
     useEffect(() => {
@@ -238,6 +265,13 @@ useEffect(() => {
 
       // เรียน/ถึง (ชื่อ position)
       handleChange({ target: { name: 'salutation', value: d.position?.id || "" } });
+      // ตั้งค่าสถานะ 'อื่นๆ' เมื่อ position.name เป็น 'อื่นๆ' และเติมข้อความประกอบ
+      const posName = d.position?.name || "";
+      const isOther = posName === "อื่นๆ";
+      handleChange({ target: { name: 'salutation_is_other', value: isOther } });
+      if (isOther && d.position_other_text) {
+        handleChange({ target: { name: 'position_other_text', value: d.position_other_text } });
+      }
 
       // ผู้ลงนาม (id และ object)
       // --- แก้ตรงนี้: Set ทั้ง selectedSigner และฟอร์ม ---
@@ -275,6 +309,7 @@ useEffect(() => {
 
       // Attachments
       const atts = Array.isArray(d.attachments) ? d.attachments : [];
+      setExistingAttachments(atts);
       if (atts.length) {
         const names = atts.map(a => a.original_name || a.file_name || a.name || '').filter(Boolean).join(', ');
         if (names) handleChange({ target: { name: 'attachment', value: names } });
@@ -407,9 +442,29 @@ useEffect(() => {
               name="salutation"
               value={form.salutation}
               onChange={handleChange}
+              onUserSelect={(opt) => {
+                const isOther = (opt?.name || opt?.label) === "อื่นๆ";
+                handleChange({ target: { name: 'salutation_is_other', value: isOther } });
+                if (!isOther) {
+                  handleChange({ target: { name: 'position_other_text', value: '' } });
+                }
+              }}
               error={!!getFieldError("salutation")}
               helperText={getFieldError("salutation")}
             />
+            {form.salutation_is_other && (
+              <Box sx={{ minWidth: 240 }}>
+                <InputText
+                  label={createLabel("ระบุตำแหน่ง (อื่นๆ)", "position_other_text")}
+                  inputLabel="กรอกตำแหน่ง (อื่นๆ)"
+                  name="position_other_text"
+                  value={form.position_other_text || ""}
+                  onChange={handleChange}
+                  error={!!getFieldError("position_other_text")}
+                  helperText={getFieldError("position_other_text")}
+                />
+              </Box>
+            )}
             {/* เลขที่หนังสือ */}
             <InputText
               label={createLabel("เลขที่หนังสือ", "refNo")}
@@ -815,6 +870,7 @@ useEffect(() => {
           {/* Row 6: เอกสารแนบ* */}
           <Box sx={{ position: "relative" }}>
             <InputFile
+              key={fileInputKey}
               label={createLabel("เอกสารประกอบการร้องเรียน", "attachment")}
               name="attachment"
               onChange={handleFileUpload}
@@ -824,6 +880,22 @@ useEffect(() => {
               maxFiles={3}
               maxSizeMB={10}
               multiple
+              existingFiles={existingAttachments}
+              getFileUrl={(att) => buildFileUrl(att.file_path)}
+              onDeleteExisting={async (att) => {
+                const reportId = router?.query?.id || null;
+                if (!reportId || !att?.id) return false;
+                const res = await DeleteOutgoingReportAttachment({
+                  outgoing_report_id: reportId,
+                  attachment_id: att.id,
+                });
+                if (res?.success === false) {
+                  alert(res?.res_message || "ลบไฟล์ไม่สำเร็จ");
+                  return false;
+                }
+                setExistingAttachments((prev) => prev.filter((x) => x.id !== att.id));
+                return true;
+              }}
             />
           </Box>
 
@@ -884,18 +956,18 @@ useEffect(() => {
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={handleSave}
-              disabled={isLoading || !isFormValid() || optionsLoading}
+              disabled={isLoading || !canSave || optionsLoading}
               sx={{
-                backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
+                backgroundColor: canSave && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
                 color: "#FFF",
                 width: "100%",
                 height: "55px",
                 fontSize: "20px",
                 fontWeight: "600",
                 "&:hover": {
-                  backgroundColor: isFormValid() && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
-                  transform: isFormValid() && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
-                  boxShadow: isFormValid() && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
+                  backgroundColor: canSave && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
+                  transform: canSave && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
+                  boxShadow: canSave && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
                 },
                 "&:disabled": {
                   backgroundColor: "#cccccc",
