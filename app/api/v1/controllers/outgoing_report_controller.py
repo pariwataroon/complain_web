@@ -47,6 +47,40 @@ def _attachment_dict(att):
 
 
 # =========================
+# Complaint status/history helpers
+# =========================
+def _update_status_and_log(
+    db: Session,
+    complaint: Optional[Complaint],
+    target_status: ComplaintStatus,
+    notes: str,
+    user_id: Optional[UUID] = None,
+) -> None:
+    """อัปเดตสถานะข้อร้องเรียน (ถ้าจำเป็น) และบันทึกประวัติสถานะพร้อมหมายเหตุ
+
+    - ถ้าสถานะปัจจุบันไม่ใช่ target_status: ใช้ update_complaint_status() เพื่อเปลี่ยนสถานะและสร้าง history
+    - ถ้าสถานะปัจจุบันเท่ากับ target_status: บันทึก history เพิ่มด้วยสถานะเดิม (create_status_history)
+    """
+    if not complaint:
+        return
+    try:
+        # import แบบภายในฟังก์ชันเพื่อหลีกเลี่ยงวงจรการ import
+        from app.api.v1.controllers.complaint_controller import (
+            update_complaint_status,
+            create_status_history,
+        )
+
+        current = getattr(complaint, "status", None)
+        if current != target_status:
+            update_complaint_status(db, complaint.id, target_status, notes, user_id)
+        else:
+            # สถานะเดิมเหมือนเดิม → แค่เพิ่มประวัติให้ครบถ้วน
+            create_status_history(db, complaint.id, target_status, notes, user_id)
+    except Exception as e:
+        logger.warning(f"Could not update complaint status/log history: {e}")
+
+
+# =========================
 # Create
 # =========================
 async def create_outgoing_report(
@@ -136,17 +170,24 @@ async def create_outgoing_report(
 
         db.commit()
 
-        # ✅ เปลี่ยนสถานะของ complaint เป็น sent_to_external เมื่อมีการสร้าง outgoing_report
+        # ✅ อัปเดตสถานะ + บันทึกประวัติ เมื่อมีการสร้างหนังสือส่งออก
         if complaint:
             try:
-                from models.comp_complaint import ComplaintStatus
-                complaint.status = ComplaintStatus.SENT_TO_EXTERNAL
-                db.add(complaint)
-                db.commit()
-                logger.info(f"Updated complaint {complaint.id} status to SENT_TO_EXTERNAL")
+                dept_name = department.name if department else None
+                note = (
+                    f"สร้างหนังสือส่งออกถึงหน่วยงาน: {dept_name or '-'} | "
+                    f"เลขอ้างอิง: {db_report.reference_number or '-'} | "
+                    f"เรื่อง: {db_report.subject or '-'}"
+                )
+                _update_status_and_log(
+                    db,
+                    complaint,
+                    ComplaintStatus.SENT_TO_EXTERNAL,
+                    note,
+                    current_user_id,
+                )
             except Exception as e:
-                logger.warning(f"Could not update complaint status: {e}")
-                # ไม่ rollback เพราะ outgoing_report สำคัญกว่า
+                logger.warning(f"Could not update complaint status/history after creating outgoing report: {e}")
         
         # refresh หลัก ๆ
         db.refresh(db_report)
@@ -629,6 +670,21 @@ def delete_outgoing_report(db: Session, report_id: UUID, current_user_id: UUID) 
 
         db.commit()
         logger.info(f"Deleted report: {report.reference_number}")
+
+        # ✅ บันทึกประวัติสถานะของ complaint ว่ามีการยกเลิก/ปิดการแสดงรายงานส่งออกนี้
+        try:
+            complaint = None
+            if getattr(report, "complaint_id", None):
+                complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+            if complaint:
+                note = (
+                    f"ยกเลิกรายงานส่งออก (soft delete) | เลขอ้างอิง: {report.reference_number or '-'} "
+                    f"| เรื่อง: {report.subject or '-'}"
+                )
+                current_status = getattr(complaint, "status", ComplaintStatus.SENT_TO_EXTERNAL) or ComplaintStatus.SENT_TO_EXTERNAL
+                _update_status_and_log(db, complaint, current_status, note, current_user_id)
+        except Exception as e:
+            logger.warning(f"Could not log history after deleting outgoing report: {e}")
 
         return {
             "id": str(report_id),
@@ -1186,6 +1242,23 @@ async def add_attachments_to_outgoing_report(
         saved.append(payload)
 
     db.commit()
+    
+    # ✅ บันทึกประวัติสถานะ: แนบเอกสารเพิ่มเติมให้หนังสือส่งออก
+    try:
+        complaint = None
+        if getattr(report, "complaint_id", None):
+            complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+        if complaint:
+            note = (
+                f"แนบเอกสารเพิ่มเติม {len(saved)} ไฟล์ สำหรับหนังสืออ้างอิง: "
+                f"{getattr(report, 'reference_number', None) or '-'}"
+            )
+            # คงสถานะเดิมถ้ายังเป็นการดำเนินการภายนอก
+            target_status = getattr(complaint, "status", ComplaintStatus.SENT_TO_EXTERNAL) or ComplaintStatus.SENT_TO_EXTERNAL
+            _update_status_and_log(db, complaint, target_status, note, current_user_id)
+    except Exception as e:
+        logger.warning(f"Could not log history for adding attachments: {e}")
+
     return {
         "outgoing_report_id": str(outgoing_report_id),
         "attachments": saved
@@ -1268,15 +1341,63 @@ def delete_outgoing_report_attachment_by_id(
                 delete_upload_file(file_path)
             except Exception:
                 pass
+        report_id_for_log = getattr(att, "outgoing_report_id", None)
         db.delete(att)
         db.commit()
+
+        # ✅ บันทึกประวัติสถานะหลังลบไฟล์ (hard delete)
+        try:
+            if report_id_for_log:
+                report = db.query(OutgoingReport).filter(OutgoingReport.id == report_id_for_log).first()
+                if report and getattr(report, "complaint_id", None):
+                    complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+                    if complaint:
+                        note = (
+                            f"ลบไฟล์แนบ (hard delete) จากหนังสืออ้างอิง: {getattr(report, 'reference_number', None) or '-'}"
+                        )
+                        current_status = getattr(complaint, "status", ComplaintStatus.SENT_TO_EXTERNAL) or ComplaintStatus.SENT_TO_EXTERNAL
+                        _update_status_and_log(db, complaint, current_status, note, None)
+        except Exception as e:
+            logger.warning(f"Could not log history after hard delete attachment: {e}")
+
         return {"code": "0003", "message": "ลบไฟล์แนบ (hard delete) เรียบร้อย", "attachment_id": str(attachment_id)}
 
     if hasattr(att, "is_active"):
         setattr(att, "is_active", False)
         db.commit()
+
+        # ✅ บันทึกประวัติสถานะหลังลบไฟล์ (soft delete)
+        try:
+            report = db.query(OutgoingReport).filter(OutgoingReport.id == att.outgoing_report_id).first()
+            if report and getattr(report, "complaint_id", None):
+                complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+                if complaint:
+                    note = (
+                        f"ลบไฟล์แนบ (soft delete) จากหนังสืออ้างอิง: {getattr(report, 'reference_number', None) or '-'}"
+                    )
+                    current_status = getattr(complaint, "status", ComplaintStatus.SENT_TO_EXTERNAL) or ComplaintStatus.SENT_TO_EXTERNAL
+                    _update_status_and_log(db, complaint, current_status, note, None)
+        except Exception as e:
+            logger.warning(f"Could not log history after soft delete attachment: {e}")
+
         return {"code": "0001", "message": "ลบไฟล์แนบเรียบร้อย (soft delete)", "attachment_id": str(attachment_id)}
 
+    report_id_for_log = getattr(att, "outgoing_report_id", None)
     db.delete(att)
     db.commit()
+
+    try:
+        if report_id_for_log:
+            report = db.query(OutgoingReport).filter(OutgoingReport.id == report_id_for_log).first()
+            if report and getattr(report, "complaint_id", None):
+                complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+                if complaint:
+                    note = (
+                        f"ลบไฟล์แนบ (record delete) จากหนังสืออ้างอิง: {getattr(report, 'reference_number', None) or '-'}"
+                    )
+                    current_status = getattr(complaint, "status", ComplaintStatus.SENT_TO_EXTERNAL) or ComplaintStatus.SENT_TO_EXTERNAL
+                    _update_status_and_log(db, complaint, current_status, note, None)
+    except Exception as e:
+        logger.warning(f"Could not log history after record delete attachment: {e}")
+
     return {"code": "0003", "message": "ลบเรคอร์ดไฟล์แนบ (no is_active field)", "attachment_id": str(attachment_id)}

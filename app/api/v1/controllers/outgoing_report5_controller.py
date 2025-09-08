@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 
 from models.outgoing_reports5 import OutgoingReport5, OutgoingReportAttachment5
-from models.comp_complaint import Complaint
+from models.comp_complaint import Complaint, ComplaintStatus
 from models.user import User
 from models.departments import Department
 from app.api.v1.schemas.outgoing_report5 import OutgoingReport5Create, OutgoingReport5Update
@@ -37,6 +37,31 @@ def _attachment_dict(att: OutgoingReportAttachment5) -> Dict[str, Any]:
         "file_size": getattr(att, "file_size", None),
         "created_at": _iso(getattr(att, "created_at", None)),
     }
+
+
+# ------------------------- Complaint status/history helpers -------------------------
+def _update_status_and_log(
+    db: Session,
+    complaint: Optional[Complaint],
+    target_status: ComplaintStatus,
+    notes: str,
+    user_id: Optional[UUID] = None,
+) -> None:
+    if not complaint:
+        return
+    try:
+        from app.api.v1.controllers.complaint_controller import (
+            update_complaint_status,
+            create_status_history,
+        )
+
+        current = getattr(complaint, "status", None)
+        if current != target_status:
+            update_complaint_status(db, complaint.id, target_status, notes, user_id)
+        else:
+            create_status_history(db, complaint.id, target_status, notes, user_id)
+    except Exception as e:
+        logger.warning(f"Could not update complaint status/log history (OR5): {e}")
 
 
 # ========= CREATE =========
@@ -124,8 +149,21 @@ async def create_outgoing_report5(
                 uploaded.append(att)
 
         db.commit()
-        db.refresh(rec)
 
+        # ✅ OR5: รับเรื่องผลพิจารณาจากหน่วยงาน → สามารถขยับสถานะเป็น REVIEWED/COMPLETED ตามบริบท
+        if report_data.complaint_id:
+            try:
+                complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+                note = (
+                    f"บันทึกรับเรื่องผลการพิจารณาจากหน่วยงาน | เลขรับ: {rec.receive_number or '-'} | เรื่อง: {rec.subject or '-'}"
+                )
+                # heuristic: ถ้ามี consideration_result หรือ document_number → REVIEWED มิฉะนั้น TRACKING
+                target = ComplaintStatus.REVIEWED
+                _update_status_and_log(db, complaint, target, note, current_user_id)
+            except Exception as e:
+                logger.warning(f"OR5 post-create status/history failed: {e}")
+
+        db.refresh(rec)
         return get_outgoing_report5_by_id(db, rec.id)
 
     except DuplicateKeyError:
@@ -326,6 +364,20 @@ async def add_attachments_to_outgoing_report5(
         saved.append(att)
 
     db.commit()
+
+    # ✅ ประวัติ: แนบเอกสารเพิ่มเติม (รุ่น 5)
+    try:
+        complaint = None
+        if getattr(rec, "complaint_id", None):
+            complaint = db.query(Complaint).filter(Complaint.id == rec.complaint_id).first()
+        note = (
+            f"แนบเอกสารเพิ่มเติม (OutgoingReport5) จำนวน {len(saved)} ไฟล์ | เลขรับ: {getattr(rec, 'receive_number', None) or '-'}"
+        )
+        cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
+        _update_status_and_log(db, complaint, cur, note, current_user_id)
+    except Exception as e:
+        logger.warning(f"OR5 attach history failed: {e}")
+
     return {
         "outgoing_report_id": _safe_str(outgoing_report_id),
         "attachments": [_attachment_dict(a) for a in saved],
@@ -385,13 +437,52 @@ def delete_outgoing_report5_attachment_by_id(
             pass
         db.delete(att)
         db.commit()
+        # ✅ ประวัติ
+        try:
+            rec = db.query(OutgoingReport5).filter(OutgoingReport5.id == outgoing_report_id).first()
+            complaint = None
+            if rec and getattr(rec, "complaint_id", None):
+                complaint = db.query(Complaint).filter(Complaint.id == rec.complaint_id).first()
+            note = (
+                f"ลบไฟล์แนบแบบถาวร (OutgoingReport5) | เลขรับ: {getattr(rec, 'receive_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+            )
+            cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
+            _update_status_and_log(db, complaint, cur, note, user_id=None)
+        except Exception as e:
+            logger.warning(f"OR5 delete attach history failed: {e}")
         return {"code": "0003", "message": "ลบไฟล์แนบ (hard delete) เรียบร้อย", "attachment_id": _safe_str(attachment_id)}
 
     if hasattr(att, "is_active"):
         att.is_active = False
         db.commit()
+        # ✅ ประวัติ
+        try:
+            rec = db.query(OutgoingReport5).filter(OutgoingReport5.id == outgoing_report_id).first()
+            complaint = None
+            if rec and getattr(rec, "complaint_id", None):
+                complaint = db.query(Complaint).filter(Complaint.id == rec.complaint_id).first()
+            note = (
+                f"ลบไฟล์แนบ (soft) (OutgoingReport5) | เลขรับ: {getattr(rec, 'receive_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+            )
+            cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
+            _update_status_and_log(db, complaint, cur, note, user_id=None)
+        except Exception as e:
+            logger.warning(f"OR5 delete attach history failed: {e}")
         return {"code": "0001", "message": "ลบไฟล์แนบเรียบร้อย (soft delete)", "attachment_id": _safe_str(attachment_id)}
 
     db.delete(att)
     db.commit()
+    # ✅ ประวัติ
+    try:
+        rec = db.query(OutgoingReport5).filter(OutgoingReport5.id == outgoing_report_id).first()
+        complaint = None
+        if rec and getattr(rec, "complaint_id", None):
+            complaint = db.query(Complaint).filter(Complaint.id == rec.complaint_id).first()
+        note = (
+            f"ลบเรคอร์ดไฟล์แนบ (OutgoingReport5) | เลขรับ: {getattr(rec, 'receive_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+        )
+        cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
+        _update_status_and_log(db, complaint, cur, note, user_id=None)
+    except Exception as e:
+        logger.warning(f"OR5 delete attach history failed: {e}")
     return {"code": "0003", "message": "ลบเรคอร์ดไฟล์แนบ", "attachment_id": _safe_str(attachment_id)}

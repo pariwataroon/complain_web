@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 
 from models.outgoing_reports4 import OutgoingReport4, OutgoingReportAttachment4
-from models.comp_complaint import Complaint
+from models.comp_complaint import Complaint, ComplaintStatus
 from models.user import User
 from models.departments import Department
 from app.api.v1.schemas.outgoing_report4 import OutgoingReport4Create, OutgoingReport4Update
@@ -44,6 +44,31 @@ def _attachment_dict(att: OutgoingReportAttachment4) -> Dict[str, Any]:
         "file_type": getattr(att, "file_type", None),
         "created_at": _iso(getattr(att, "created_at", None)),
     }
+
+
+# ------------------------- Complaint status/history helpers -------------------------
+def _update_status_and_log(
+    db: Session,
+    complaint: Optional[Complaint],
+    target_status: ComplaintStatus,
+    notes: str,
+    user_id: Optional[UUID] = None,
+) -> None:
+    if not complaint:
+        return
+    try:
+        from app.api.v1.controllers.complaint_controller import (
+            update_complaint_status,
+            create_status_history,
+        )
+
+        current = getattr(complaint, "status", None)
+        if current != target_status:
+            update_complaint_status(db, complaint.id, target_status, notes, user_id)
+        else:
+            create_status_history(db, complaint.id, target_status, notes, user_id)
+    except Exception as e:
+        logger.warning(f"Could not update complaint status/log history (OR4): {e}")
 
 
 # ------------------------- Core CRUD -------------------------
@@ -100,6 +125,20 @@ def create_outgoing_report4(
             _save_files_for_report(db, db_report.id, files)
 
         db.commit()
+
+        # ✅ OR4: แจ้งผลการให้ผู้เกี่ยวข้องทราบ → ปกติยังคง In review/Reviewed → แค่บันทึกประวัติ
+        if report_data.complaint_id:
+            try:
+                complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+                note = (
+                    f"สร้างแบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ | อ้างอิง: {db_report.reference_number or '-'} | "
+                    f"เรื่อง: {db_report.subject or '-'}"
+                )
+                cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
+                _update_status_and_log(db, complaint, cur, note, current_user_id)
+            except Exception as e:
+                logger.warning(f"OR4 post-create status/history failed: {e}")
+
         db.refresh(db_report)
         return get_outgoing_report4_by_id(db, db_report.id)
 
@@ -355,6 +394,20 @@ def add_attachments_to_outgoing_report4(
 
     atts = _save_files_for_report(db, outgoing_report_id, files)
     db.commit()
+
+    # ✅ ประวัติ: แนบเอกสารเพิ่มเติม (รุ่น 4)
+    try:
+        complaint = None
+        if getattr(report, "complaint_id", None):
+            complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+        note = (
+            f"แนบเอกสารเพิ่มเติม (OutgoingReport4) จำนวน {len(atts)} ไฟล์ | อ้างอิง: {getattr(report, 'reference_number', None) or '-'}"
+        )
+        cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
+        _update_status_and_log(db, complaint, cur, note, current_user_id)
+    except Exception as e:
+        logger.warning(f"OR4 attach history failed: {e}")
+
     return {
         "outgoing_report_id": _safe_str(outgoing_report_id),
         "attachments": [_attachment_dict(att) for att in atts],
@@ -423,15 +476,54 @@ def delete_outgoing_report4_attachment_by_id(
             pass
         db.delete(att)
         db.commit()
+        # ✅ ประวัติ
+        try:
+            report = db.query(OutgoingReport4).filter(OutgoingReport4.id == outgoing_report_id).first()
+            complaint = None
+            if report and getattr(report, "complaint_id", None):
+                complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+            note = (
+                f"ลบไฟล์แนบแบบถาวร (OutgoingReport4) | อ้างอิง: {getattr(report, 'reference_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+            )
+            cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
+            _update_status_and_log(db, complaint, cur, note, user_id=None)
+        except Exception as e:
+            logger.warning(f"OR4 delete attach history failed: {e}")
         return {"code": "0003", "message": "ลบไฟล์แนบ (hard delete) เรียบร้อย", "attachment_id": _safe_str(attachment_id)}
 
     # soft delete
     if hasattr(att, "is_active"):
         att.is_active = False
         db.commit()
+        # ✅ ประวัติ
+        try:
+            report = db.query(OutgoingReport4).filter(OutgoingReport4.id == outgoing_report_id).first()
+            complaint = None
+            if report and getattr(report, "complaint_id", None):
+                complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+            note = (
+                f"ลบไฟล์แนบ (soft) (OutgoingReport4) | อ้างอิง: {getattr(report, 'reference_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+            )
+            cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
+            _update_status_and_log(db, complaint, cur, note, user_id=None)
+        except Exception as e:
+            logger.warning(f"OR4 delete attach history failed: {e}")
         return {"code": "0001", "message": "ลบไฟล์แนบเรียบร้อย (soft delete)", "attachment_id": _safe_str(attachment_id)}
 
     # fallback: ไม่มี is_active → ลบเรคอร์ด
     db.delete(att)
     db.commit()
+    # ✅ ประวัติ
+    try:
+        report = db.query(OutgoingReport4).filter(OutgoingReport4.id == outgoing_report_id).first()
+        complaint = None
+        if report and getattr(report, "complaint_id", None):
+            complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+        note = (
+            f"ลบเรคอร์ดไฟล์แนบ (OutgoingReport4) | อ้างอิง: {getattr(report, 'reference_number', None) or '-'} | ไฟล์: {getattr(att, 'file_name', None) or '-'}"
+        )
+        cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
+        _update_status_and_log(db, complaint, cur, note, user_id=None)
+    except Exception as e:
+        logger.warning(f"OR4 delete attach history failed: {e}")
     return {"code": "0003", "message": "ลบเรคอร์ดไฟล์แนบ", "attachment_id": _safe_str(attachment_id)}
