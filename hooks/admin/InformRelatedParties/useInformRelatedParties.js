@@ -277,7 +277,7 @@ export const useInformRelatedParties = () => {
     return missingFields;
   }, [form]);
 
-  // ฟังก์ชันอัปโหลดไฟล์ - Multi-strategy fallback
+  // ฟังก์ชันอัปโหลดไฟล์ - Multi-strategy fallback (เฉพาะ type4)
   const uploadFiles = useCallback(async (reportId) => {
     if (!uploadedFiles || uploadedFiles.length === 0) {
       console.log("ℹ️ No files to upload");
@@ -286,19 +286,23 @@ export const useInformRelatedParties = () => {
 
     console.log("📤 Uploading files:", uploadedFiles.map(f => f.name));
 
-    const buildFormData = (useSingleKey = false) => {
+    const buildFormData = (key = 'files') => {
       const formData = new FormData();
-      uploadedFiles.forEach((f) => formData.append(useSingleKey ? 'file' : 'files', f, f.name));
+      if (key === 'file' && uploadedFiles.length === 1) {
+        formData.append('file', uploadedFiles[0], uploadedFiles[0].name);
+      } else {
+        uploadedFiles.forEach((f) => formData.append(key, f, f.name));
+      }
       return formData;
     };
 
     let uploadOk = false;
     let lastErrorMsg = '';
 
-    // Attempt 1: /outgoing-reports4/{id}/attachments (specific for CreateOutgoingReport4)
+    // Attempt 1: /outgoing-reports4/{id}/attachments (key: files)
     try {
-      const up1 = await axiosInstance.post(`/outgoing-reports4/${reportId}/attachments`, buildFormData(false));
-      uploadOk = !!up1?.data;
+      const up1 = await axiosInstance.post(`/outgoing-reports4/${reportId}/attachments`, buildFormData('files'));
+      uploadOk = !!(up1 && (up1.status >= 200 && up1.status < 300));
       console.log("✅ Upload attempt #1 (type4) succeeded");
     } catch (err1) {
       const data = err1?.response?.data;
@@ -306,28 +310,24 @@ export const useInformRelatedParties = () => {
       console.error('Upload attempt #1 (type4) failed', data || err1);
     }
 
-    // Attempt 2: generic endpoint /outgoing-reports/{id}/attachments
+    // Attempt 2: /outgoing-reports4/{id}/attachments (key: attachments)
     if (!uploadOk) {
       try {
-        const up2 = await UploadOutgoingReportAttachments(buildFormData(false), reportId);
-        uploadOk = !!(up2 && (up2.success === true || up2.res_code === '0001'));
-        if (uploadOk) {
-          console.log("✅ Upload attempt #2 (generic) succeeded");
-        } else {
-          lastErrorMsg = up2?.res_data?.error || up2?.res_message || up2?.message || lastErrorMsg;
-        }
+        const up2 = await axiosInstance.post(`/outgoing-reports4/${reportId}/attachments`, buildFormData('attachments'));
+        uploadOk = !!(up2 && (up2.status >= 200 && up2.status < 300));
+        if (uploadOk) console.log("✅ Upload attempt #2 (attachments key) succeeded");
       } catch (err2) {
         const data = err2?.response?.data;
         lastErrorMsg = data?.res_data?.error || data?.res_message || err2.message || lastErrorMsg;
-        console.error('Upload attempt #2 (generic) failed', data || err2);
+        console.error('Upload attempt #2 (attachments key) failed', data || err2);
       }
     }
 
     // Attempt 3: single file key (if only one file)
     if (!uploadOk && uploadedFiles.length === 1) {
       try {
-        const up3 = await axiosInstance.post(`/outgoing-reports4/${reportId}/attachments`, buildFormData(true));
-        uploadOk = !!up3?.data;
+        const up3 = await axiosInstance.post(`/outgoing-reports4/${reportId}/attachments`, buildFormData('file'));
+        uploadOk = !!(up3 && (up3.status >= 200 && up3.status < 300));
         if (uploadOk) {
           console.log("✅ Upload attempt #3 (single file key) succeeded");
         }
@@ -335,6 +335,23 @@ export const useInformRelatedParties = () => {
         const data = err3?.response?.data;
         lastErrorMsg = data?.res_data?.error || data?.res_message || err3.message || lastErrorMsg;
         console.error('Upload attempt #3 (single file key) failed', data || err3);
+      }
+    }
+
+    // Attempt 4: generic endpoint /outgoing-reports/{id}/attachments (key: files)
+    if (!uploadOk) {
+      try {
+        const up4 = await UploadOutgoingReportAttachments(buildFormData('files'), reportId);
+        uploadOk = !!(up4 && (up4.success === true || up4.res_code === '0001' || up4.data));
+        if (!uploadOk) {
+          lastErrorMsg = up4?.res_data?.error || up4?.res_message || up4?.message || lastErrorMsg;
+        } else {
+          console.log("✅ Upload attempt #4 (generic) succeeded");
+        }
+      } catch (err4) {
+        const data = err4?.response?.data;
+        lastErrorMsg = data?.res_data?.error || data?.res_message || err4.message || lastErrorMsg;
+        console.error('Upload attempt #4 (generic) failed', data || err4);
       }
     }
 
@@ -405,17 +422,25 @@ export const useInformRelatedParties = () => {
       const response = await CreateOutgoingReport4(requestBody);
       console.log("✅ Main data saved:", response);
 
-      // Step 2: อัปโหลดไฟล์ (ถ้ามี) 
-      if (response && response.id && uploadedFiles.length > 0) {
-        console.log("📤 Starting file upload for report ID:", response.id);
+      // ดึงรหัสรายงานให้แน่นอน
+      const createdId = response?.id || response?.res_data?.id || null;
+      if (!createdId) {
+        closeAlert();
+        setIsLoading(false);
+        await alertError("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานที่สร้างได้ กรุณาลองใหม่อีกครั้ง");
+        return;
+      }
 
+      // Step 2: อัปโหลดไฟล์ (ถ้ามี)
+      if (uploadedFiles.length > 0) {
+        console.log("📤 Starting file upload for report ID:", createdId);
         showLoading("กำลังอัปโหลดไฟล์...");
-        await uploadFiles(response.id);
+        await uploadFiles(createdId);
         console.log("✅ Files uploaded successfully");
       }
 
       closeAlert();
-      const reportId = response.id;
+      const reportId = createdId;
 
       const successMessage = `
           <div style="text-align: center; line-height: 1.6;">
@@ -429,7 +454,7 @@ export const useInformRelatedParties = () => {
           </div>
         `;
 
-      await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
+  await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
       router.push(`/admin/box/list`);
 
       // Reset form after successful save

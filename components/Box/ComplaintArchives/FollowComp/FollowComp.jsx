@@ -27,6 +27,11 @@ import { getDocumentStorageByComplaintId } from "@pages/api/document/document";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ImageIcon from "@mui/icons-material/Image";
+import CloseIcon from "@mui/icons-material/Close";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
+import ZoomOutIcon from "@mui/icons-material/ZoomOut";
+import DownloadIcon from "@mui/icons-material/Download";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 
 // 1. Define English-status constants
 const STATUS = {
@@ -608,6 +613,13 @@ const FollowComp = () => {
   const [attachmentsList, setAttachmentsList] = useState([]);
   const [attachmentsTitle, setAttachmentsTitle] = useState("เอกสารแนบ");
 
+  // Preview modal state (PDF-like viewer)
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState("");
+  const [previewName, setPreviewName] = useState("");
+  const [previewType, setPreviewType] = useState("image"); // 'image' | 'pdf'
+  const [previewZoom, setPreviewZoom] = useState(1);
+
   const getFileExt = (filename = "") => filename.split(".").pop()?.toLowerCase() || "";
   const getFileIcon = (ext) => {
     if (ext === "pdf") return <PictureAsPdfIcon sx={{ color: "#d32f2f" }} />;
@@ -654,6 +666,23 @@ const FollowComp = () => {
     }
     // Fallback
     return `${apiNoVer}${normalized}`;
+  };
+
+  const canPreview = (ext = "") => {
+    const e = String(ext).toLowerCase();
+    if (["pdf"].includes(e)) return true;
+    if (["jpg", "jpeg", "png", "gif", "bmp", "webp"].includes(e)) return true;
+    return false;
+  };
+
+  const openPreview = (href, name, ext) => {
+    if (!href) return;
+    setPreviewSrc(href);
+    setPreviewName(name || "ไฟล์แนบ");
+    const e = (ext || "").toLowerCase();
+    setPreviewType(e === "pdf" ? "pdf" : "image");
+    setPreviewZoom(1);
+    setPreviewOpen(true);
   };
 
   const openAttachments = (sectionKey, rowRaw, rowDisplay) => {
@@ -1237,19 +1266,102 @@ const agencyReportRows = outgoingType5.map((item) => ({
                 return (
                   <ListItem key={idx} disableGutters>
                     <ListItemIcon sx={{ minWidth: 36 }}>{getFileIcon(ext)}</ListItemIcon>
-                    {href ? (
-                      <MuiLink href={href} target="_blank" rel="noreferrer" underline="hover">
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                      {href && canPreview(ext) ? (
+                        <MuiLink component="button" type="button" underline="hover" onClick={() => openPreview(href, name, ext)} sx={{ textAlign: 'left', flexGrow: 1 }}>
+                          <ListItemText primary={name} />
+                        </MuiLink>
+                      ) : href ? (
+                        <MuiLink href={href} target="_blank" rel="noreferrer" underline="hover" sx={{ flexGrow: 1 }}>
+                          <ListItemText primary={name} />
+                        </MuiLink>
+                      ) : (
                         <ListItemText primary={name} />
-                      </MuiLink>
-                    ) : (
-                      <ListItemText primary={name} />
-                    )}
+                      )}
+                      {href && (
+                        <>
+                          <IconButton size="small" onClick={() => window.open(href, '_blank', 'noreferrer')}>
+                            <OpenInNewIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" onClick={() => {
+                            const a = document.createElement('a');
+                            a.href = href;
+                            a.download = name || 'download';
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                          }}>
+                            <DownloadIcon fontSize="small" />
+                          </IconButton>
+                        </>
+                      )}
+                    </Box>
                   </ListItem>
                 );
               })}
             </List>
           )}
         </DialogContent>
+      </Dialog>
+
+      {/* PDF-like preview modal */}
+      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} fullScreen>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#1e1e1e' }}>
+          {/* Toolbar */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, bgcolor: '#2c2c2c', color: '#fff' }}>
+            <IconButton color="inherit" onClick={() => setPreviewOpen(false)}>
+              <CloseIcon sx={{ color: '#fff' }} />
+            </IconButton>
+            <Typography sx={{ flexGrow: 1 }} noWrap title={previewName}>{previewName}</Typography>
+            {previewType === 'image' && (
+              <>
+                <IconButton color="inherit" onClick={() => setPreviewZoom((z) => Math.max(0.25, parseFloat((z - 0.1).toFixed(2))))}>
+                  <ZoomOutIcon sx={{ color: '#fff' }} />
+                </IconButton>
+                <Typography variant="body2" sx={{ minWidth: 48, textAlign: 'center' }}>{Math.round(previewZoom * 100)}%</Typography>
+                <IconButton color="inherit" onClick={() => setPreviewZoom((z) => Math.min(4, parseFloat((z + 0.1).toFixed(2))))}>
+                  <ZoomInIcon sx={{ color: '#fff' }} />
+                </IconButton>
+              </>
+            )}
+            <IconButton color="inherit" onClick={() => {
+              const a = document.createElement('a');
+              a.href = previewSrc;
+              a.download = previewName || 'download';
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            }}>
+              <DownloadIcon sx={{ color: '#fff' }} />
+            </IconButton>
+            <IconButton color="inherit" onClick={() => window.open(previewSrc, '_blank', 'noreferrer') }>
+              <OpenInNewIcon sx={{ color: '#fff' }} />
+            </IconButton>
+          </Box>
+
+          {/* Content area */}
+          <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
+            {previewType === 'pdf' ? (
+              <Box sx={{ width: '100%', height: '100%', bgcolor: '#1e1e1e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Box sx={{ width: '100%', height: '100%', bgcolor: '#1e1e1e' }}>
+                  <iframe
+                    title={previewName}
+                    src={previewSrc + (previewSrc.includes('#') ? '' : '#toolbar=0')}
+                    style={{ border: 'none', width: '100%', height: '100%' }}
+                  />
+                </Box>
+              </Box>
+            ) : (
+              <Box sx={{ bgcolor: '#1e1e1e', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                <Box sx={{ bgcolor: '#ffffff', boxShadow: 3, p: 2 }}>
+                  <Box sx={{ transform: `scale(${previewZoom})`, transformOrigin: 'top left' }}>
+                    <img src={previewSrc} alt={previewName} style={{ display: 'block', maxWidth: '100%', height: 'auto' }} />
+                  </Box>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </Box>
       </Dialog>
     </Box>
   );

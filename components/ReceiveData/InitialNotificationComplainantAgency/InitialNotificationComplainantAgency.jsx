@@ -188,10 +188,16 @@ const InitialNotificationComplainantAgency = () => {
   };
 
   const handleDepartmentSelect = (department) => {
-    setSelectedDepartment(department);
-    if (department?.id) {
-      handleChange({ target: { name: "department", value: department.id } });
+    // Support both event-like and option-object inputs
+    if (department && department.target && Object.prototype.hasOwnProperty.call(department.target, "value")) {
+      const v = department.target.value;
+      handleChange({ target: { name: "department", value: v } });
+      return;
     }
+
+    setSelectedDepartment(department);
+    const depId = department?.id ?? department?.value ?? "";
+    handleChange({ target: { name: "department", value: depId } });
   };
 
   // ฟังก์ชันดึงข้อมูล options

@@ -346,6 +346,66 @@ export const useInitialNotificationComplainantAgency = () => {
       remarks: form.note || "",
     };
 
+    // Helper: upload attachments for type2 endpoint with fallbacks
+    const uploadType2Attachments = async (reportId) => {
+      if (!reportId || attachmentFiles.length === 0) return true;
+
+      const buildFormData = (useSingleKey = false) => {
+        const fd = new FormData();
+        if (useSingleKey && attachmentFiles.length === 1) {
+          fd.append('file', attachmentFiles[0], attachmentFiles[0].name);
+        } else {
+          attachmentFiles.forEach((f) => fd.append('files', f, f.name));
+        }
+        return fd;
+      };
+
+      let ok = false;
+      let lastErr = '';
+
+      // Attempt #1: correct type2 endpoint with 'files'
+      try {
+        const r1 = await axiosInstance.post(`/outgoing-reports2/${reportId}/attachments`, buildFormData(false));
+        ok = !!r1?.data;
+      } catch (e1) {
+        const data = e1?.response?.data;
+        lastErr = data?.res_data?.error || data?.res_message || e1.message || '';
+        console.error('Upload type2 attempt #1 failed', data || e1);
+      }
+
+      // Attempt #2: generic endpoint (some backends accept this) with 'files'
+      if (!ok) {
+        try {
+          const r2 = await UploadOutgoingReportAttachments(buildFormData(false), reportId);
+          ok = !!(r2 && (r2.success === true || r2.res_code === '0001' || r2.data));
+          if (!ok) {
+            lastErr = r2?.res_data?.error || r2?.res_message || r2?.message || lastErr;
+          }
+        } catch (e2) {
+          const data = e2?.response?.data;
+          lastErr = data?.res_data?.error || data?.res_message || e2.message || lastErr;
+          console.error('Upload generic attempt failed', data || e2);
+        }
+      }
+
+      // Attempt #3: type2 endpoint with single key 'file' (if one file)
+      if (!ok && attachmentFiles.length === 1) {
+        try {
+          const r3 = await axiosInstance.post(`/outgoing-reports2/${reportId}/attachments`, buildFormData(true));
+          ok = !!r3?.data;
+        } catch (e3) {
+          const data = e3?.response?.data;
+          lastErr = data?.res_data?.error || data?.res_message || e3.message || lastErr;
+          console.error('Upload type2 attempt #3 (single) failed', data || e3);
+        }
+      }
+
+      if (!ok) {
+        await alertError('แนบไฟล์ไม่สำเร็จ', lastErr || 'ระบบไม่สามารถแนบไฟล์ได้ กรุณาลองใหม่');
+      }
+      return ok;
+    };
+
     try {
       setIsLoading(true);
       showLoading("กำลังบันทึกข้อมูล...");
@@ -387,65 +447,7 @@ export const useInitialNotificationComplainantAgency = () => {
       // 2) อัปโหลดไฟล์แนบ (ถ้ามีไฟล์และสร้างสำเร็จ)
       if (attachmentFiles.length > 0) {
         showLoading("กำลังอัพโหลดไฟล์แนบ...");
-
-        // ฟังก์ชัน build FormData (key ตามจำนวนไฟล์)
-        const buildFormData = (useSingleKey = false) => {
-          const formData = new FormData();
-          if (attachmentFiles.length === 1) {
-            formData.append(useSingleKey ? 'file' : 'files', attachmentFiles[0], attachmentFiles[0].name);
-          } else {
-            attachmentFiles.forEach(f => formData.append(useSingleKey ? 'file' : 'files', f, f.name));
-          }
-          return formData;
-        };
-
-        let uploadOk = false;
-        let lastErrorMsg = "";
-
-        // Attempt 1: ใช้ UploadOutgoingReportAttachments กับ key 'files'
-        try {
-          const up1 = await UploadOutgoingReportAttachments(buildFormData(false), createdId);
-          uploadOk = !!(up1 && (up1.success === true || up1.res_code === '0001'));
-          if (!uploadOk) {
-            lastErrorMsg = up1?.res_data?.error || up1?.res_message || up1?.message || '';
-          }
-        } catch (err1) {
-          const data = err1?.response?.data;
-          lastErrorMsg = data?.res_data?.error || data?.res_message || err1.message || '';
-          console.error('Upload attempt #1 (UploadOutgoingReportAttachments, files) failed', data || err1);
-        }
-
-        // Attempt 2: ใช้ UploadOutgoingReportAttachments กับ key 'file' (กรณีไฟล์เดียว)
-        if (!uploadOk && attachmentFiles.length === 1) {
-          try {
-            const up2 = await UploadOutgoingReportAttachments(buildFormData(true), createdId);
-            uploadOk = !!(up2 && (up2.success === true || up2.res_code === '0001'));
-            if (!uploadOk) {
-              lastErrorMsg = up2?.res_data?.error || up2?.res_message || up2?.message || lastErrorMsg;
-            }
-          } catch (err2) {
-            const data = err2?.response?.data;
-            lastErrorMsg = data?.res_data?.error || data?.res_message || err2.message || lastErrorMsg;
-            console.error('Upload attempt #2 (UploadOutgoingReportAttachments, file) failed', data || err2);
-          }
-        }
-
-        // Attempt 3: ยิงตรงด้วย axios ไป /outgoing-reports2/{id}/attachments กับ key 'files'
-        if (!uploadOk) {
-          try {
-            const up3 = await axiosInstance.post(`/outgoing-reports2/${createdId}/attachments`, buildFormData(false));
-            uploadOk = !!up3?.data;
-          } catch (err3) {
-            const data = err3?.response?.data;
-            lastErrorMsg = data?.res_data?.error || data?.res_message || err3.message || lastErrorMsg;
-            console.error('Upload attempt #3 (direct, files) failed', data || err3);
-          }
-        }
-
-        if (!uploadOk) {
-          console.warn('⚠️ บันทึกรายงานสำเร็จแต่แนบไฟล์ไม่สำเร็จ', lastErrorMsg);
-          await alertError('แนบไฟล์ไม่สำเร็จ', lastErrorMsg || 'ระบบไม่สามารถแนบไฟล์ได้ กรุณาลองใหม่');
-        }
+        await uploadType2Attachments(createdId);
       }
 
       closeAlert();
