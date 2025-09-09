@@ -1,23 +1,30 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+  useEffect,
+} from "react";
 import { useRouter } from "next/router";
 import { useForm, Controller } from "react-hook-form";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
-import InputFile from "@services/InputFile/InputFile";
-// Removed unused imports: SelectFieldSignatureAuthority, SelectFieldsalutation, SelectFieldDepartment
 import InputText from "@services/InputText/InputText";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import ButtonService from "@services/ButtonService/ButtonService";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import { alertWarning, alertSuccess, closeAlert } from "@utils/Alerts";
-import { GetReferenceComplaints, GetReDocumentComplaints} from "@pages/api/complaint/complaint";
+import {
+  GetReferenceComplaints,
+  GetReDocumentComplaints,
+} from "@pages/api/complaint/complaint";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ClearIcon from "@mui/icons-material/Clear";
 import IconButton from "@mui/material/IconButton";
 import {
-  Box, 
+  Box,
   Typography,
   Dialog,
   DialogTitle,
@@ -31,9 +38,13 @@ import {
   InputAdornment,
   CircularProgress,
 } from "@mui/material";
-import { CreateOutgoingReport5, getDepartmentsPrefix, UploadOutgoingReport5Attachments } from "@pages/api/outgoinreports/outgoinreports";
+import {
+  CreateOutgoingReport5,
+  getDepartmentsPrefix,
+  UploadOutgoingReport5Attachments,
+} from "@pages/api/outgoinreports/outgoinreports";
 import axiosInstance from "@pages/api/axiosInstance";
-// Removed unused import: GetEnhancedComplaints
+
 // Constants สำหรับ options
 const PROCESS_STEP_OPTIONS = [
   { value: "รับเรื่อง", label: "รับเรื่อง" },
@@ -75,57 +86,114 @@ const ReceiveReportsAgencies = () => {
   const inputRef = useRef();
   const [departments, setDepartments] = useState([]);
 
-  const { control, setValue, formState: { errors } } = useForm({
+  const {
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm({
     defaultValues: {
       attachment: null,
       documentNo: "",
     },
   });
+
   // เก็บไฟล์จริงที่เลือก
   const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [fileInputKey, setFileInputKey] = useState(0);
 
-  // Safe equality check to avoid redundant state updates
-  const isEqual = useCallback((a, b) => {
-    if (a === b) return true;
-    try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
+  // Initial form state
+  const initialFormState = useMemo(
+    () => ({
+      referenceNo: "",
+      date: null,
+      processStep: "",
+      confidentiality: "",
+      urgency: "",
+      departmentId: "",
+      agency: "",
+      investigateGk: "",
+      investigateDate: null,
+      documentNo: "",
+      documentDate: null,
+      receiveWorkDate: null,
+      submitWorkDate: null,
+      origin: "",
+      subject: "",
+      remarks: "",
+    }),
+    []
+  );
+
+  const [form, setForm] = useState(initialFormState);
+
+  // Parse function for investigateGk
+  const parseInvestigateGk = useCallback((raw) => {
+    if (!raw || typeof raw !== "string") return null;
+    const match = raw.match(/MOF-(\d{8})-\d+/i);
+    if (!match) return null;
+    const dateStr = match[1];
+    let year = parseInt(dateStr.slice(0, 4), 10);
+    const month = parseInt(dateStr.slice(4, 6), 10);
+    const day = parseInt(dateStr.slice(6, 8), 10);
+    if (year > 2400) year = year - 543;
+    const d = new Date(year, month - 1, day);
+    if (isNaN(d.getTime())) return null;
+    return {
+      day: d.getDate(),
+      month: d.getMonth() + 1,
+      year: d.getFullYear(),
+      buddhistYear: d.getFullYear() + 543,
+    };
   }, []);
 
-useEffect(() => {
-  const fetchDepartments = async () => {
-    try {
-      const res = await getDepartmentsPrefix();
-      console.log("📌 getDepartmentsPrefix res:", res); 
-      const data = res?.res_data || res; 
+  // Fetch departments
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await getDepartmentsPrefix();
+        console.log("📌 getDepartmentsPrefix res:", res);
+        const data = res?.res_data || res;
 
-      if (Array.isArray(data)) {
-        const mapped = data.map((dep) => ({
-          value: dep.id,    
-          label: dep.name, 
-        }));
-        setDepartments(mapped);
-      } else {
+        if (Array.isArray(data)) {
+          const mapped = data.map((dep) => ({
+            value: dep.id,
+            label: dep.name,
+          }));
+          setDepartments(mapped);
+        } else {
+          setDepartments([]);
+        }
+      } catch (err) {
+        console.error("Error fetching departments:", err);
         setDepartments([]);
       }
-    } catch (err) {
-      console.error("Error fetching departments:", err);
-      setDepartments([]);
-    }
-  };
-  fetchDepartments();
-}, []);
+    };
+    fetchDepartments();
+  }, []);
 
-
-
+  // FIXED: Initialize form with complaint_number - add proper dependency and comparison
   useEffect(() => {
-    if (openSearchDialog) {
-      setSearchText("");
-      handleSearch("");
-      inputRef.current?.focus();
-    }
-  }, [openSearchDialog]);
+    if (complaint_number) {
+      const parsed = parseInvestigateGk(complaint_number);
+      console.log("[init complaint_number] ", { complaint_number, parsed });
 
-  const handleSearch = async (keyword) => {
+      setForm((prev) => {
+        // Check if values are actually different
+        if (
+          prev.investigateGk === complaint_number &&
+          JSON.stringify(prev.investigateDate) === JSON.stringify(parsed)
+        ) {
+          return prev; // No change needed
+        }
+        return {
+          ...prev,
+          investigateGk: complaint_number,
+          investigateDate: parsed || prev.investigateDate,
+        };
+      });
+    }
+  }, [complaint_number]); // Removed parseInvestigateGk dependency
+
+  const handleSearch = useCallback(async (keyword) => {
     setSearchLoading(true);
     try {
       const response = await GetReDocumentComplaints({
@@ -151,247 +219,322 @@ useEffect(() => {
     } finally {
       setSearchLoading(false);
     }
-  };
+  }, []);
 
-  const handleSelectReference = (ref) => {
-    const num = ref?.document_number || "";
-    setForm((prev) => (isEqual(prev.documentNo, num) ? prev : { ...prev, documentNo: num }));
-    setValue("documentNo", num, { shouldValidate: false, shouldDirty: true });
-    setOpenSearchDialog(false);
-  };
+  const handleSelectReference = useCallback(
+    (ref) => {
+      const num = ref?.document_number || "";
+      setForm((prev) => {
+        if (prev.documentNo === num) return prev;
+        return { ...prev, documentNo: num };
+      });
+      setValue("documentNo", num, { shouldValidate: false, shouldDirty: true });
+      setOpenSearchDialog(false);
+    },
+    []
+  );
 
-  const onClear = () => {
+  const onClear = useCallback(() => {
     setSearchText("");
-    handleSearch("");
+    setSearchResults([]);
     inputRef.current?.focus();
-  };
+  }, []);
+
+  useEffect(() => {
+    if (openSearchDialog) {
+      setSearchText("");
+      setSearchResults([]);
+      inputRef.current?.focus();
+    }
+  }, [openSearchDialog]);
+
+  const handleSearch2 = useCallback(async (keyword) => {
+    setSearchLoading(true);
+    try {
+      const response = await GetReferenceComplaints({
+        skip: 0,
+        limit: 100,
+        search: keyword || "",
+      });
+
+      const items = Array.isArray(response?.res_data?.items)
+        ? response.res_data.items
+        : [];
+
+      const results = items.map((item) => ({
+        ...item,
+        label: item.complaint_number || "",
+        value: item.complaint_number || "",
+      }));
+
+      setSearchResults(results);
+    } catch (err) {
+      setSearchResults([]);
+      console.error("handleSearch2 error", err);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  const onClear2 = useCallback(() => {
+    setSearchText("");
+    setSearchResults([]);
+    inputRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (openSearchDialog2) {
       setSearchText("");
-      handleSearch2("");
+      setSearchResults([]);
       inputRef.current?.focus();
     }
   }, [openSearchDialog2]);
-  
-    const handleSearch2 = async (keyword) => {
-      setSearchLoading(true);
-      try {
-        const response = await GetReferenceComplaints({
-          skip: 0,
-          limit: 100,
-          search: keyword || "",
-        });
-  
-        const items = Array.isArray(response?.res_data?.items)
-          ? response.res_data.items
-          : [];
-  
-        const results = items.map((item) => ({
-          ...item,
-          label: item.complaint_number || "",
-          value: item.complaint_number || "",
-        }));
-  
-        setSearchResults(results);
-      } catch (err) {
-        setSearchResults([]);
-        console.error("handleSearch2 error", err);
-      } finally {
-        setSearchLoading(false);
-      }
-    };
-  
-    const handleSelectReference2 = (ref) => {
+
+  const handleFileUpload = useCallback((files) => {
+    let processedFiles = [];
+    if (files?.target?.files) processedFiles = Array.from(files.target.files);
+    else if (Array.isArray(files)) processedFiles = files;
+    else if (files && typeof files === "object" && "length" in files)
+      processedFiles = Array.from(files);
+    else if (files?.file) processedFiles = [files.file];
+
+    console.log("🔧 handleFileUpload:", { processedFiles: processedFiles.length, files: processedFiles.map(f => f.name) });
+
+    // เก็บเฉพาะ files ไม่ sync กับ form state เพื่อหลีกเลี่ยง loop
+    setUploadedFiles(processedFiles);
+  }, []);
+
+  // FIXED: handleSelectReference2 with proper comparison
+  const handleSelectReference2 = useCallback(
+    (ref) => {
       const num = ref?.complaint_number || "";
       const obj = parseInvestigateGk(num);
-      // eslint-disable-next-line no-console
-      console.log('[handleSelectReference2] selected ->', { num, obj });
+      console.log("[handleSelectReference2] selected ->", { num, obj });
+
       setForm((prev) => {
-        const next = { ...prev, investigateGk: num, investigateDate: obj };
-        return (isEqual(prev.investigateGk, next.investigateGk) && isEqual(prev.investigateDate, next.investigateDate)) ? prev : next;
+        // Check if values are actually different
+        if (
+          prev.investigateGk === num &&
+          JSON.stringify(prev.investigateDate) === JSON.stringify(obj)
+        ) {
+          return prev;
+        }
+        return { ...prev, investigateGk: num, investigateDate: obj };
       });
-      setValue("investigateGk", num, { shouldValidate: false, shouldDirty: true });
+
+      setValue("investigateGk", num, {
+        shouldValidate: false,
+        shouldDirty: true,
+      });
       setOpenSearchDialog2(false);
-    };
-  
-    const onClear2 = () => {
-      setSearchText("");
-      handleSearch2("");
-      inputRef.current?.focus();
-    };
-
-  const handleFileUpload = (files) => {
-    handleFileChange(files);
-  };
-
-  // Initial form state
-  const initialFormState = useMemo(
-    () => ({
-      referenceNo: "",
-      date: null,
-      processStep: "",
-      confidentiality: "",
-      urgency: "",
-      departmentId: "",
-      agency: "",
-      investigateGk: "",
-      investigateDate: null,
-      documentNo: "",
-      documentDate: null,
-      receiveWorkDate: null,
-      submitWorkDate: null,
-      origin: "",
-      subject: "",
-      attachment: "",
-      remarks: "",
-    }),
+    },
     []
   );
-
-  const [form, setForm] = useState(initialFormState);
-
-   useEffect(() => {
-    if (complaint_number) {
-      const parsed = parseInvestigateGk ? parseInvestigateGk(complaint_number) : null;
-      // eslint-disable-next-line no-console
-      console.log('[init complaint_number] ', { complaint_number, parsed });
-      setForm(prev => {
-        const next = { ...prev, investigateGk: complaint_number, investigateDate: parsed || prev.investigateDate };
-        return (isEqual(prev.investigateGk, next.investigateGk) && isEqual(prev.investigateDate, next.investigateDate)) ? prev : next;
-      });
-    }
-  }, [complaint_number]);
 
   const toISO = (v) => {
     if (!v) return null;
     try {
-      // ถ้าเป็น object ที่มี day/month/year
-      if (typeof v === 'object' && v.day && v.month && v.year) {
+      if (typeof v === "object" && v.day && v.month && v.year) {
         return new Date(v.year, v.month - 1, v.day).toISOString();
       }
-      // ถ้าเป็น string หรือ Date
       return new Date(v).toISOString();
     } catch (e) {
       return null;
     }
   };
 
-  // Validation function
+  // Validation function - เปลี่ยนเป็น useCallback เพื่อให้ใช้ current form state
   const validateForm = useCallback(() => {
+    console.log("🔍 Validating form:", {
+      form,
+      uploadedFiles: uploadedFiles.length,
+      fileNames: uploadedFiles.map(f => f.name)
+    });
+
     const missingFields = [];
-    if (!form.referenceNo.trim()) missingFields.push("เลขที่อ้างอิง(เลข สรร.สารบัญ)");
-    if (!form.date) missingFields.push("วันที่");
-    if (!form.processStep) missingFields.push("ขั้นตอนการดำเนินการ");
-    if (!form.confidentiality) missingFields.push("ชั้นความลับ");
-    if (!form.urgency) missingFields.push("ชั้นความเร่งด่วน");
-    if (!form.departmentId) missingFields.push("หน่วยงาน");
-    if (!form.investigateGk.trim()) missingFields.push("เลขสป.กค.");
-    if (!form.investigateDate) missingFields.push("วันที่ (เลขสป.กค.)");
-    if (!form.documentNo.trim()) missingFields.push("เลขที่หนังสือ");
-    if (!form.documentDate) missingFields.push("วันที่ (เลขที่หนังสือ)");
-    if (!form.receiveWorkDate) missingFields.push("วันที่รับงานของเจ้าหน้าที่");
-    if (!form.submitWorkDate) missingFields.push("วันที่เสนองาน ผอ.สรร.");
-    if (!form.origin.trim()) missingFields.push("ต้นเรื่อง");
-    if (!form.subject.trim()) missingFields.push("เรื่อง");
-    if (!form.attachment.trim()) missingFields.push("เอกสารแนบ");
+    
+    // Check each field with logging
+    if (!form.referenceNo?.trim()) {
+      console.log("❌ Missing referenceNo:", form.referenceNo);
+      missingFields.push("เลขที่อ้างอิง(เลข สรร.สารบัญ)");
+    }
+    if (!form.date) {
+      console.log("❌ Missing date:", form.date);
+      missingFields.push("วันที่");
+    }
+    if (!form.processStep) {
+      console.log("❌ Missing processStep:", form.processStep);
+      missingFields.push("ขั้นตอนการดำเนินการ");
+    }
+    if (!form.confidentiality) {
+      console.log("❌ Missing confidentiality:", form.confidentiality);
+      missingFields.push("ชั้นความลับ");
+    }
+    if (!form.urgency) {
+      console.log("❌ Missing urgency:", form.urgency);
+      missingFields.push("ชั้นความเร่งด่วน");
+    }
+    if (!form.departmentId) {
+      console.log("❌ Missing departmentId:", form.departmentId);
+      missingFields.push("หน่วยงาน");
+    }
+    if (!form.investigateGk?.trim()) {
+      console.log("❌ Missing investigateGk:", form.investigateGk);
+      missingFields.push("เลขสป.กค.");
+    }
+    if (!form.investigateDate) {
+      console.log("❌ Missing investigateDate:", form.investigateDate);
+      missingFields.push("วันที่ (เลขสป.กค.)");
+    }
+    if (!form.documentNo?.trim()) {
+      console.log("❌ Missing documentNo:", form.documentNo);
+      missingFields.push("เลขที่หนังสือ");
+    }
+    if (!form.documentDate) {
+      console.log("❌ Missing documentDate:", form.documentDate);
+      missingFields.push("วันที่ (เลขที่หนังสือ)");
+    }
+    if (!form.receiveWorkDate) {
+      console.log("❌ Missing receiveWorkDate:", form.receiveWorkDate);
+      missingFields.push("วันที่รับงานของเจ้าหน้าที่");
+    }
+    if (!form.submitWorkDate) {
+      console.log("❌ Missing submitWorkDate:", form.submitWorkDate);
+      missingFields.push("วันที่เสนองาน ผอ.สรร.");
+    }
+    if (!form.origin?.trim()) {
+      console.log("❌ Missing origin:", form.origin);
+      missingFields.push("ต้นเรื่อง");
+    }
+    if (!form.subject?.trim()) {
+      console.log("❌ Missing subject:", form.subject);
+      missingFields.push("เรื่อง");
+    }
+    if (uploadedFiles.length === 0) {
+      console.log("❌ Missing files:", uploadedFiles.length);
+      missingFields.push("เอกสารแนบ");
+    }
+
+    console.log("🔍 Missing fields:", missingFields);
 
     if (missingFields.length > 0) {
-      const message = `กรุณากรอกข้อมูลให้ครบถ้วน:\n${missingFields.map((f) => `• ${f}`).join("\n")}`;
+      const message = `กรุณากรอกข้อมูลให้ครบถ้วน:\n${missingFields
+        .map((f) => `• ${f}`)
+        .join("\n")}`;
       alertWarning("ข้อมูลไม่ครบถ้วน", message);
     }
     return missingFields.length === 0;
-  }, [form]);
+  }, [form, uploadedFiles]);
 
-  // Memoized handlers
-  const parseInvestigateGk = useCallback((raw) => {
-    if (!raw || typeof raw !== 'string') return null;
-    const match = raw.match(/MOF-(\d{8})-\d+/i);
-    if (!match) return null;
-    const dateStr = match[1];
-    let year = parseInt(dateStr.slice(0, 4), 10);
-    const month = parseInt(dateStr.slice(4, 6), 10);
-    const day = parseInt(dateStr.slice(6, 8), 10);
-    if (year > 2400) year = year - 543;
-    const d = new Date(year, month - 1, day);
-    if (isNaN(d.getTime())) return null;
-    return {
-      day: d.getDate(),
-      month: d.getMonth() + 1,
-      year: d.getFullYear(),
-      buddhistYear: d.getFullYear() + 543,
-    };
-  }, []);
-
-  const handleInvestigateBlur = useCallback((e) => {
-    const val = e?.target?.value || '';
-    const obj = parseInvestigateGk(val);
-    if (obj) {
-      // eslint-disable-next-line no-console
-      console.log('[investigateGk blur] parsed ->', { val, obj });
-      setForm((prev) => {
-        const next = { ...prev, investigateGk: val, investigateDate: obj };
-        return (isEqual(prev.investigateGk, next.investigateGk) && isEqual(prev.investigateDate, next.investigateDate)) ? prev : next;
-      });
-    }
-  }, [parseInvestigateGk, isEqual]);
-
-  const handleInvestigatePaste = useCallback((e) => {
-    const pasted = e?.clipboardData?.getData('Text') || '';
-    const obj = parseInvestigateGk(pasted);
-    if (obj) {
-      // eslint-disable-next-line no-console
-      console.log('[investigateGk paste] parsed ->', { pasted, obj });
-      setForm((prev) => {
-        const next = { ...prev, investigateGk: pasted, investigateDate: obj };
-        return (isEqual(prev.investigateGk, next.investigateGk) && isEqual(prev.investigateDate, next.investigateDate)) ? prev : next;
-      });
-    }
-  }, [parseInvestigateGk, isEqual]);
-
-  const handleChange = useCallback((e) => {
-    const { name, value } = e?.target ?? {};
-    if (!name) return; // guard unknown field
-    if (name === 'investigateGk') {
-      const obj = parseInvestigateGk(value);
+  // FIXED: handleInvestigateBlur with proper comparison
+  const handleInvestigateBlur = useCallback(
+    (e) => {
+      const val = e?.target?.value || "";
+      const obj = parseInvestigateGk(val);
       if (obj) {
-        // eslint-disable-next-line no-console
-        console.debug('[investigateGk change] parsed ->', { value, obj });
+        console.log("[investigateGk blur] parsed ->", { val, obj });
         setForm((prev) => {
-          const next = { ...prev, [name]: value, investigateDate: obj };
-          return (isEqual(prev[name], value) && isEqual(prev.investigateDate, obj)) ? prev : next;
+          if (
+            prev.investigateGk === val &&
+            JSON.stringify(prev.investigateDate) === JSON.stringify(obj)
+          ) {
+            return prev;
+          }
+          return { ...prev, investigateGk: val, investigateDate: obj };
         });
-        return;
       }
-    }
-    setForm((prev) => (isEqual(prev[name], value) ? prev : { ...prev, [name]: value }));
-   }, [parseInvestigateGk, isEqual]);
+    },
+    []
+  );
 
-  // ✅ เพิ่ม handleDateChange ที่หายไป
+  // FIXED: handleInvestigatePaste with proper comparison
+  const handleInvestigatePaste = useCallback(
+    (e) => {
+      const pasted = e?.clipboardData?.getData("Text") || "";
+      const obj = parseInvestigateGk(pasted);
+      if (obj) {
+        console.log("[investigateGk paste] parsed ->", { pasted, obj });
+        setForm((prev) => {
+          if (
+            prev.investigateGk === pasted &&
+            JSON.stringify(prev.investigateDate) === JSON.stringify(obj)
+          ) {
+            return prev;
+          }
+          return { ...prev, investigateGk: pasted, investigateDate: obj };
+        });
+      }
+    },
+    []
+  );
+
+  // FIXED: handleChange with proper comparison
+  const handleChange = useCallback(
+    (e) => {
+      const { name, value } = e?.target ?? {};
+      if (!name) return;
+
+      console.log("🔧 handleChange:", { name, value });
+
+      if (name === "investigateGk") {
+        const obj = parseInvestigateGk(value);
+        if (obj) {
+          console.debug("[investigateGk change] parsed ->", { value, obj });
+          setForm((prev) => {
+            if (
+              prev.investigateGk === value &&
+              JSON.stringify(prev.investigateDate) === JSON.stringify(obj)
+            ) {
+              return prev;
+            }
+            return { ...prev, investigateGk: value, investigateDate: obj };
+          });
+          return;
+        }
+      }
+
+      setForm((prev) => {
+        if (prev[name] === value) return prev;
+        return { ...prev, [name]: value };
+      });
+    },
+    [parseInvestigateGk]
+  );
+
+  // handleDateChange
   const handleDateChange = useCallback(
     (fieldName) => (thaiDate) => {
-      setForm((prev) => (isEqual(prev[fieldName], thaiDate) ? prev : { ...prev, [fieldName]: thaiDate }));
+      console.log("🔧 handleDateChange:", { fieldName, thaiDate });
+      setForm((prev) => {
+        if (JSON.stringify(prev[fieldName]) === JSON.stringify(thaiDate)) {
+          return prev;
+        }
+        return { ...prev, [fieldName]: thaiDate };
+      });
     },
-    [isEqual]
+    []
   );
 
   const handleClear = useCallback(() => {
     setForm(initialFormState);
     setUploadedFiles([]);
-    setFileInputKey((k) => k + 1);
-  }, [initialFormState]);
+  }, []);
 
-  // Normalize SelectField onChange payloads (event | value | option)
+  // Normalize SelectField onChange payloads
   const makeSelectHandler = useCallback(
     (fieldName) => (evOrVal) => {
       const value = evOrVal?.target?.value ?? evOrVal?.value ?? evOrVal ?? "";
-      setForm((prev) => (isEqual(prev[fieldName], value) ? prev : { ...prev, [fieldName]: value }));
+      console.log("🔧 makeSelectHandler:", { fieldName, value, evOrVal });
+      setForm((prev) => {
+        if (prev[fieldName] === value) return prev;
+        return { ...prev, [fieldName]: value };
+      });
     },
-    [isEqual]
+    []
   );
 
-  // Simple Save gating similar to other pages
-  const canSave = useCallback(() => {
+  // Save gating - ใช้ useMemo แทน useCallback เพื่อให้คำนวณใหม่เมื่อ dependencies เปลี่ยน
+  const canSave = useMemo(() => {
     const f = form;
     const required = [
       f.referenceNo?.trim(),
@@ -408,215 +551,261 @@ useEffect(() => {
       f.submitWorkDate,
       f.origin?.trim(),
       f.subject?.trim(),
-      (f.attachment?.trim() || uploadedFiles.length > 0),
+      uploadedFiles.length > 0,
     ];
     return required.every(Boolean);
   }, [form, uploadedFiles]);
 
   const handleSave = useCallback(async () => {
-  if (!validateForm()) return;
+    // Inline validation using current state
+    console.log("🔍 Current state in handleSave:", { form, uploadedFiles: uploadedFiles.length });
+    
+    const missingFields = [];
+    if (!form.referenceNo?.trim()) missingFields.push("เลขที่อ้างอิง(เลข สรร.สารบัญ)");
+    if (!form.date) missingFields.push("วันที่");
+    if (!form.processStep) missingFields.push("ขั้นตอนการดำเนินการ");
+    if (!form.confidentiality) missingFields.push("ชั้นความลับ");
+    if (!form.urgency) missingFields.push("ชั้นความเร่งด่วน");
+    if (!form.departmentId) missingFields.push("หน่วยงาน");
+    if (!form.investigateGk?.trim()) missingFields.push("เลขสป.กค.");
+    if (!form.investigateDate) missingFields.push("วันที่ (เลขสป.กค.)");
+    if (!form.documentNo?.trim()) missingFields.push("เลขที่หนังสือ");
+    if (!form.documentDate) missingFields.push("วันที่ (เลขที่หนังสือ)");
+    if (!form.receiveWorkDate) missingFields.push("วันที่รับงานของเจ้าหน้าที่");
+    if (!form.submitWorkDate) missingFields.push("วันที่เสนองาน ผอ.สรร.");
+    if (!form.origin?.trim()) missingFields.push("ต้นเรื่อง");
+    if (!form.subject?.trim()) missingFields.push("เรื่อง");
+    if (uploadedFiles.length === 0) missingFields.push("เอกสารแนบ");
 
-  try {
-    const payload = {
-      receive_number: form.referenceNo,
-      receive_date: toISO(form.date),       
-      agency_reference_number: form.investigateGk,
-      agency_reference_date: toISO(form.investigateDate),
-      internal_register_number: form.documentNo,
-      internal_register_date: toISO(form.documentDate),
-      present_to_director_date: toISO(form.submitWorkDate),
-      complaint_number: form.investigateGk,
-      complaint_number_date: toISO(form.investigateDate),
-      subject: form.subject,
-      document_number: form.documentNo,
-      document_date: toISO(form.documentDate),
-      signature_authority_user_id: form.signatureAuthorityId,
-      department_id: form.departmentId,
-      user_id: form.userId,
-      confidentiality_level: form.confidentiality,
-      urgency_level: form.urgency,
-      complaint_id: complaintId,
-      remarks: form.remarks,
-    };
+    if (missingFields.length > 0) {
+      const message = `กรุณากรอกข้อมูลให้ครบถ้วน:\n${missingFields.map((f) => `• ${f}`).join("\n")}`;
+      alertWarning("ข้อมูลไม่ครบถ้วน", message);
+      return;
+    }
 
-  const res = await CreateOutgoingReport5(payload);
+    try {
+      const payload = {
+        receive_number: form.referenceNo,
+        receive_date: toISO(form.date),
+        agency_reference_number: form.investigateGk,
+        agency_reference_date: toISO(form.investigateDate),
+        internal_register_number: form.documentNo,
+        internal_register_date: toISO(form.documentDate),
+        present_to_director_date: toISO(form.submitWorkDate),
+        complaint_number: form.investigateGk,
+        complaint_number_date: toISO(form.investigateDate),
+        subject: form.subject,
+        document_number: form.documentNo,
+        document_date: toISO(form.documentDate),
+        signature_authority_user_id: form.signatureAuthorityId,
+        department_id: form.departmentId,
+        user_id: form.userId,
+        confidentiality_level: form.confidentiality,
+        urgency_level: form.urgency,
+        complaint_id: complaintId,
+        remarks: form.remarks,
+      };
 
-    // --- helper to extract id ---
-    const extractReportId = (resp) => {
-      if (!resp) return null;
-      const candidates = [
-        resp?.res_data?.id,
-        resp?.res_data?.report_id,
-        resp?.res_data?.outgoing_report_id,
-        resp?.data?.id,
-        resp?.id,
-      ].filter(Boolean);
-      if (candidates.length) return candidates[0];
-      try {
-        const stack = [resp];
-        while (stack.length) {
-          const cur = stack.pop();
-          if (cur && typeof cur === 'object') {
-            if (Object.prototype.hasOwnProperty.call(cur, 'id') && cur.id) return cur.id;
-            Object.values(cur).forEach(v => { if (v && typeof v === 'object') stack.push(v); });
+      const res = await CreateOutgoingReport5(payload);
+
+      // Helper to extract id
+      const extractReportId = (resp) => {
+        if (!resp) return null;
+        const candidates = [
+          resp?.res_data?.id,
+          resp?.res_data?.report_id,
+          resp?.res_data?.outgoing_report_id,
+          resp?.data?.id,
+          resp?.id,
+        ].filter(Boolean);
+        if (candidates.length) return candidates[0];
+        try {
+          const stack = [resp];
+          while (stack.length) {
+            const cur = stack.pop();
+            if (cur && typeof cur === "object") {
+              if (Object.prototype.hasOwnProperty.call(cur, "id") && cur.id)
+                return cur.id;
+              Object.values(cur).forEach((v) => {
+                if (v && typeof v === "object") stack.push(v);
+              });
+            }
           }
+        } catch (_) {}
+        return null;
+      };
+
+      const resCode = res?.res_code ?? res?.data?.res_code ?? res?.status;
+      const resMsg =
+        res?.res_data?.error ??
+        res?.data?.res_data?.error ??
+        res?.res_message ??
+        "";
+
+      if (
+        resCode === "4090" ||
+        resCode === 409 ||
+        /CONFLICT/i.test(res?.res_message || "") ||
+        /มีอยู่แล้ว|duplicate|exists|ซ้ำ/i.test(resMsg)
+      ) {
+        alertWarning(
+          "เลขอ้างอิงซ้ำ",
+          resMsg || `เลขรับเรื่อง ${form.referenceNo} มีอยู่แล้ว`
+        );
+        return;
+      }
+
+      const reportId = extractReportId(res);
+
+      if (!reportId) {
+        alertWarning(
+          "ไม่พบรหัสรายงาน",
+          "ระบบไม่สามารถดึงรหัสรายงานที่สร้างได้ กรุณาลองใหม่"
+        );
+        return;
+      }
+
+      // Upload attachments if any
+      if (uploadedFiles.length) {
+        const allowedTypes = [
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "image/jpeg",
+          "image/png",
+        ];
+        const oversize = uploadedFiles.find((f) => f.size > 10 * 1024 * 1024);
+        if (oversize) {
+          alertWarning("ไฟล์ใหญ่เกินไป", `ไฟล์ ${oversize.name} เกิน 10MB`);
+          return;
         }
-      } catch(_){}
-      return null;
-    };
+        const invalid = uploadedFiles.find(
+          (f) => !allowedTypes.includes(f.type)
+        );
+        if (invalid) {
+          alertWarning(
+            "ประเภทไฟล์ไม่ถูกต้อง",
+            `ไฟล์ ${invalid.name} ไม่รองรับ`
+          );
+          return;
+        }
 
-    const resCode =
-      res?.res_code ?? res?.data?.res_code ?? res?.status;
-    const resMsg =
-      res?.res_data?.error ??
-      res?.data?.res_data?.error ??
-      res?.res_message ??
-      "";
+        const fd = new FormData();
+        console.log("📁 Total files to upload:", uploadedFiles.length);
 
-    if (
-      resCode === "4090" ||
-      resCode === 409 ||
-      /CONFLICT/i.test(res?.res_message || "") ||
-      /มีอยู่แล้ว|duplicate|exists|ซ้ำ/i.test(resMsg)
-    ) {
-      alertWarning("เลขอ้างอิงซ้ำ", resMsg || `เลขรับเรื่อง ${form.referenceNo} มีอยู่แล้ว`);
-      return;
-    }
-
-    const reportId = extractReportId(res);
-
-    if (!reportId) {
-      alertWarning("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานที่สร้างได้ กรุณาลองใหม่");
-      return;
-    }
-
-    // อัปโหลดไฟล์แนบจริง (ถ้ามี) พร้อมตรวจสอบเงื่อนไข/ขนาด/ชนิด
-    if (uploadedFiles.length) {
-      const allowedTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'image/jpeg',
-        'image/png'
-      ];
-      const oversize = uploadedFiles.find(f => f.size > 10 * 1024 * 1024);
-      if (oversize) {
-        alertWarning('ไฟล์ใหญ่เกินไป', `ไฟล์ ${oversize.name} เกิน 10MB`);
-        return;
-      }
-      const invalid = uploadedFiles.find(f => !allowedTypes.includes(f.type));
-      if (invalid) {
-        alertWarning('ประเภทไฟล์ไม่ถูกต้อง', `ไฟล์ ${invalid.name} ไม่รองรับ`);
-        return;
-      }
-
-      const fd = new FormData();
-      console.log('📁 Total files to upload:', uploadedFiles.length);
-      
-      uploadedFiles.forEach((f, index) => {
-        console.log(`📎 Adding file ${index + 1}:`, { 
-          name: f.name, 
-          size: f.size, 
-          type: f.type,
-          lastModified: f.lastModified 
+        uploadedFiles.forEach((f, index) => {
+          console.log(`📎 Adding file ${index + 1}:`, {
+            name: f.name,
+            size: f.size,
+            type: f.type,
+            lastModified: f.lastModified,
+          });
+          fd.append("files", f, f.name);
         });
-        fd.append('files', f, f.name);
-      });
-      
-      // ตรวจสอบว่า FormData มีข้อมูลหรือไม่
-      console.log('📋 FormData entries count:', [...fd.entries()].length);
-      
-      console.log('📤 Starting file upload for reportId:', reportId);
-      let uploadSucceeded = false;
-      try {
-        const upRes = await UploadOutgoingReport5Attachments(fd, reportId);
-        console.log('📤 Upload response:', upRes);
-        
-        // ตรวจสอบความสำเร็จของการอัพโหลด
-        uploadSucceeded = !!(upRes && (upRes.success === true || upRes.res_code === '0001' || upRes.success !== false));
-        
-        // หากไม่สำเร็จ ลองใช้ fallback endpoint
-        if (!uploadSucceeded && (upRes?.res_code === '4040' || upRes?.res_code === '404' || /NOT_FOUND/i.test(upRes?.res_message || ''))) {
-          console.log('🔄 Trying fallback endpoint...');
-          try {
-            const altRes = await axiosInstance.post(`/outgoing-reports5/${reportId}/attachments`, fd);
-            console.log('🔄 Fallback response:', altRes?.data);
-            uploadSucceeded = !!altRes?.data;
-          } catch (altErr) {
-            console.error('❌ Fallback upload (type5) failed', altErr?.response?.data || altErr);
+
+        console.log("📋 FormData entries count:", [...fd.entries()].length);
+        console.log("📤 Starting file upload for reportId:", reportId);
+
+        let uploadSucceeded = false;
+        try {
+          const upRes = await UploadOutgoingReport5Attachments(fd, reportId);
+          console.log("📤 Upload response:", upRes);
+
+          uploadSucceeded = !!(
+            upRes &&
+            (upRes.success === true ||
+              upRes.res_code === "0001" ||
+              upRes.success !== false)
+          );
+
+          if (
+            !uploadSucceeded &&
+            (upRes?.res_code === "4040" ||
+              upRes?.res_code === "404" ||
+              /NOT_FOUND/i.test(upRes?.res_message || ""))
+          ) {
+            console.log("🔄 Trying fallback endpoint...");
+            try {
+              const altRes = await axiosInstance.post(
+                `/outgoing-reports5/${reportId}/attachments`,
+                fd
+              );
+              console.log("🔄 Fallback response:", altRes?.data);
+              uploadSucceeded = !!altRes?.data;
+            } catch (altErr) {
+              console.error(
+                "❌ Fallback upload (type5) failed",
+                altErr?.response?.data || altErr
+              );
+            }
           }
-        }
-        
-        // หากยังไม่สำเร็จ แสดง error message
-        if (!uploadSucceeded && upRes?.res_message) {
-          alertWarning('ไม่สามารถอัพโหลดไฟล์ได้', upRes.res_message);
-        }
-        
-      } catch (err) {
-        console.error('❌ Upload attachments failed', err?.response?.data || err);
-        // แสดง error message ให้ผู้ใช้เห็น
-        alertWarning('ไม่สามารถอัพโหลดไฟล์ได้', 
-          err?.response?.data?.res_message || err?.message || 'เกิดข้อผิดพลาดในการอัพโหลดไฟล์');
-      }
-      
-      if (uploadSucceeded) {
-        console.log('✅ File upload successful!');
-      } else {
-        console.warn('⚠️ แนบไฟล์ไม่สำเร็จหรือบางไฟล์แนบไม่สำเร็จ');
-      }
-    }
 
-    const successMessage = `
-      <div style="text-align:center; line-height:1.6;">
-        <p style="margin-bottom:12px; font-size:16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
-        <p style="margin-bottom:8px; color:#666;">รหัสรายงาน: <strong>${reportId}</strong></p>
-        <p style="margin-bottom:8px; color:#666;">เรื่อง: <strong>${form.subject || "-"}</strong></p>
-  ${form.attachment ? `<p style=\"margin-bottom:0; color:#666;\">ไฟล์แนบ: <strong>${form.attachment}</strong></p>` : ""}
-      </div>
-    `;
+          if (!uploadSucceeded && upRes?.res_message) {
+            alertWarning("ไม่สามารถอัพโหลดไฟล์ได้", upRes.res_message);
+          }
+        } catch (err) {
+          console.error(
+            "❌ Upload attachments failed",
+            err?.response?.data || err
+          );
+          alertWarning(
+            "ไม่สามารถอัพโหลดไฟล์ได้",
+            err?.response?.data?.res_message ||
+              err?.message ||
+              "เกิดข้อผิดพลาดในการอัพโหลดไฟล์"
+          );
+        }
 
-    closeAlert();
-    await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
+        if (uploadSucceeded) {
+          console.log("✅ File upload successful!");
+        } else {
+          console.warn("⚠️ แนบไฟล์ไม่สำเร็จหรือบางไฟล์แนบไม่สำเร็จ");
+        }
+      }
+
+      const successMessage = `
+        <div style="text-align:center; line-height:1.6;">
+          <p style="margin-bottom:12px; font-size:16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
+          <p style="margin-bottom:8px; color:#666;">รหัสรายงาน: <strong>${reportId}</strong></p>
+          <p style="margin-bottom:8px; color:#666;">เรื่อง: <strong>${
+            form.subject || "-"
+          }</strong></p>
+          ${
+            uploadedFiles.length > 0
+              ? `<p style="margin-bottom:0; color:#666;">ไฟล์แนบ: <strong>${uploadedFiles.map(f => f.name).join(', ')}</strong></p>`
+              : ""
+          }
+        </div>
+      `;
+
+      closeAlert();
+      await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
       router.push(`/admin/box/list`);
+    } catch (error) {
+      const code = error?.response?.data?.res_code || error?.response?.status;
+      const serverMsg =
+        error?.response?.data?.res_data?.error ||
+        error?.response?.data?.res_message ||
+        error?.message ||
+        "";
 
-  } catch (error) {
-    const code = error?.response?.data?.res_code || error?.response?.status;
-    const serverMsg =
-      error?.response?.data?.res_data?.error ||
-      error?.response?.data?.res_message ||
-      error?.message || 
-      "";
+      if (
+        code === "4090" ||
+        code === 409 ||
+        /มีอยู่แล้ว|duplicate|exists|ซ้ำ/i.test(serverMsg)
+      ) {
+        alertWarning(
+          "เลขอ้างอิงซ้ำ",
+          serverMsg || `เลขรับเรื่อง ${form.referenceNo} มีอยู่แล้ว`
+        );
+        return;
+      }
 
-    if (
-      code === "4090" ||
-      code === 409 ||
-      /มีอยู่แล้ว|duplicate|exists|ซ้ำ/i.test(serverMsg)
-    ) {
-      alertWarning("เลขอ้างอิงซ้ำ", serverMsg || `เลขรับเรื่อง ${form.referenceNo} มีอยู่แล้ว`);
-      return;
+      console.error("❌ handleSave error:", error?.response?.data || error);
+      alertWarning("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
     }
+  }, [form, uploadedFiles, complaintId, router]);
 
-    console.error("❌ handleSave error:", error?.response?.data || error);
-    alertWarning("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
-  }
-}, [form, id, validateForm, router]);
-
-  const handleFileChange = useCallback((payload) => {
-    let files = [];
-    if (payload?.target?.files) files = Array.from(payload.target.files);
-    else if (Array.isArray(payload)) files = payload;
-    else if (payload && typeof payload === 'object' && 'length' in payload) files = Array.from(payload);
-    else if (payload?.file) files = [payload.file];
-    const names = files.map(f => f?.name).filter(Boolean).join(', ');
-    setForm(prev => (isEqual(prev.attachment, names || '') ? prev : { ...prev, attachment: names || '' }));
-    setUploadedFiles((prev) => (isEqual(prev, files) ? prev : files));
-  }, [isEqual]);
-
-  // Log form changes for debugging
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('[form change]', { investigateGk: form.investigateGk, investigateDate: form.investigateDate });
-  }, [form.investigateGk, form.investigateDate]);
 
   return (
     <Box
@@ -642,15 +831,15 @@ useEffect(() => {
         ]}
       />
 
-     <Box
-  sx={{
-    border: "2px solid #2499FF",
-    borderTopRightRadius: 15,
-    width: "100%", // ใช้ความกว้างเต็มหน้าจอ
-    maxWidth: { xs: "100%", sm: "auto" }, // ความกว้าง 100% สำหรับหน้าจอขนาดเล็ก และ auto สำหรับขนาดใหญ่
-    overflow: "hidden", // ป้องกันไม่ให้กล่องล้นขอบ
-  }}
->
+      <Box
+        sx={{
+          border: "2px solid #2499FF",
+          borderTopRightRadius: 15,
+          width: "100%",
+          maxWidth: { xs: "100%", sm: "auto" },
+          overflow: "hidden",
+        }}
+      >
         {/* top gradient */}
         <Box
           sx={{
@@ -690,7 +879,6 @@ useEffect(() => {
                 xs: "1fr",
                 sm: "1fr 1fr",
                 md: "4fr 3fr 4fr",
-                
               },
               width: "100%",
             }}
@@ -706,9 +894,15 @@ useEffect(() => {
               name="referenceNo"
               value={form.referenceNo}
               onChange={handleChange}
-              sx={{ width: {xs: "80%", sm: "auto"}}}
+              sx={{ width: { xs: "80%", sm: "auto" } }}
             />
-            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
+            <Box
+              sx={{
+                position: "relative",
+                zIndex: 1,
+                width: { xs: "80%", sm: "auto" },
+              }}
+            >
               <DateThaiPickerService
                 label={
                   <span>
@@ -721,21 +915,26 @@ useEffect(() => {
                 placeholder="เลือกวันที่"
               />
             </Box>
-            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
-            <SelectField
-              label={
-                <span>
-                  ขั้นตอนการดำเนินการ
-                  <span style={{ color: "red", marginLeft: 4 }}>*</span>
-                </span>
-              }
-              inputLabel="เลือกขั้นตอนการดำเนินการ"
-              name="processStep"
-              value={form.processStep}
-              onChange={makeSelectHandler("processStep")}
-              options={PROCESS_STEP_OPTIONS}
-              // sx={{ width: {xs: "80%", sm: "auto"}}}
-            />
+            <Box
+              sx={{
+                position: "relative",
+                zIndex: 1,
+                width: { xs: "80%", sm: "auto" },
+              }}
+            >
+              <SelectField
+                label={
+                  <span>
+                    ขั้นตอนการดำเนินการ
+                    <span style={{ color: "red", marginLeft: 4 }}>*</span>
+                  </span>
+                }
+                inputLabel="เลือกขั้นตอนการดำเนินการ"
+                name="processStep"
+                value={form.processStep}
+                onChange={makeSelectHandler("processStep")}
+                options={PROCESS_STEP_OPTIONS}
+              />
             </Box>
           </Box>
 
@@ -785,35 +984,37 @@ useEffect(() => {
                 </span>
               }
               inputLabel="เลือกหน่วยงาน"
-              name="departmentId" // ✅ เก็บ UUID ของหน่วยงาน
+              name="departmentId"
               value={form.departmentId}
               onChange={makeSelectHandler("departmentId")}
-              options={departments} // ✅ ใช้ options จาก API
+              options={departments}
             />
           </Box>
+
           {/* แถวที่ 4: เลขสป.กค. | วันที่ */}
           <Box
-          sx={{
-            display: "grid",
-            gap: 2,
-            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, 
-            alignItems: "center",
-          }}
-        >
+            sx={{
+              display: "grid",
+              gap: 2,
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              alignItems: "center",
+            }}
+          >
             <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto",
-                  columnGap: 1,
-                  alignItems: "center",
-                  width: "100%",
-                }}
-              >
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto",
+                columnGap: 1,
+                alignItems: "center",
+                width: "100%",
+              }}
+            >
               <Box sx={{ minWidth: 0 }}>
                 <InputText
                   label={
                     <span>
-                      เลขสป.กค.<span style={{ color: "red", marginLeft: 4 }}>*</span>
+                      เลขสป.กค.
+                      <span style={{ color: "red", marginLeft: 4 }}>*</span>
                     </span>
                   }
                   inputLabel="กรอกเลขสป.กค."
@@ -827,289 +1028,249 @@ useEffect(() => {
               </Box>
 
               <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center", 
-                    justifyContent: "center", 
-                    mt: "12px",
-                  }}
-                >
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  mt: "12px",
+                }}
+              >
                 <IconButton
                   onClick={() => setOpenSearchDialog2(true)}
                   onMouseDown={(e) => e.preventDefault()}
                   aria-label="กรอกเลขสป.กค."
                   title="กรอกเลขสป.กค."
-                  sx={{ width: 40, height: 40, color: "blue", p: 0 }} 
+                  sx={{ width: 40, height: 40, color: "blue", p: 0 }}
                 >
                   <SearchIcon />
-                  </IconButton>
-                </Box>
-              </Box>
-
-              <Box sx={{ width: "100%", position: "relative", zIndex: 1 }}>
-                <DateThaiPickerService
-                  label={
-                    <span>
-                      วันที่<span style={{ color: "red", marginLeft: 4 }}>*</span>
-                    </span>
-                  }
-                  value={form.investigateDate}
-                  onChange={handleDateChange("investigateDate")}
-                  placeholder="เลือกวันที่"
-                />
+                </IconButton>
               </Box>
             </Box>
 
-             {/* Dialog สำหรับค้นหาเลข */}
-              <Dialog
-                open={openSearchDialog2}
-                onClose={() => setOpenSearchDialog2(false)}
-                maxWidth="sm"
+            <Box sx={{ width: "100%", position: "relative", zIndex: 1 }}>
+              <DateThaiPickerService
+                label={
+                  <span>
+                    วันที่<span style={{ color: "red", marginLeft: 4 }}>*</span>
+                  </span>
+                }
+                value={form.investigateDate}
+                onChange={handleDateChange("investigateDate")}
+                placeholder="เลือกวันที่"
+              />
+            </Box>
+          </Box>
+
+          {/* Dialog สำหรับค้นหาเลข สป.กค. */}
+          <Dialog
+            open={openSearchDialog2}
+            onClose={() => setOpenSearchDialog2(false)}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              style: {
+                borderRadius: 12,
+                background: "#f7fafd",
+                height: 500,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+              },
+            }}
+          >
+            <DialogTitle
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <SearchIcon color="primary" />
+              ค้นหาเลขที่อ้างอิง
+            </DialogTitle>
+
+            <DialogContent>
+              <TextField
+                inputRef={inputRef}
                 fullWidth
-                PaperProps={{
+                size="small"
+                placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
+                value={searchText}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSearchText(val);
+                  handleSearch2(val);
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchText ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={onClear2}
+                        aria-label="clear search"
+                        edge="end"
+                      >
+                        <ClearIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
                   style: {
-                    borderRadius: 12,
-                    background: "#f7fafd",
-                    height: 500,
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                    background: "#fff",
+                    borderRadius: 8,
                   },
                 }}
-              >
-                <DialogTitle
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
+                sx={{ mb: 2 }}
+              />
+
+              {searchLoading ? (
+                <div style={{ textAlign: "center", padding: 24 }}>
+                  <CircularProgress color="primary" />
+                  <div style={{ marginTop: 8, color: "#888" }}>
+                    กำลังค้นหา...
+                  </div>
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div
+                  style={{ textAlign: "center", padding: 32, color: "#bdbdbd" }}
                 >
-                  <SearchIcon color="primary" />
-                  ค้นหาเลขที่อ้างอิง
-                </DialogTitle>
-  
-                <DialogContent>
-                  {/* ช่องค้นหา */}
-                  <TextField
-                    inputRef={inputRef}
-                    fullWidth
-                    size="small"
-                    placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
-                    value={searchText}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setSearchText(val);
-                      handleSearch2(val);
-                    }}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon color="action" />
-                        </InputAdornment>
-                      ),
-                      endAdornment: searchText ? (
-                        <InputAdornment position="end">
-                          <IconButton
-                            size="small"
-                            onClick={onClear2}
-                            aria-label="clear search"
-                            edge="end"
-                          >
-                            <ClearIcon />
-                          </IconButton>
-                        </InputAdornment>
-                      ) : null,
-                      style: {
-                        background: "#fff",
-                        borderRadius: 8,
+                  <DescriptionIcon
+                    sx={{ fontSize: 48, mb: 2 }}
+                    color="disabled"
+                  />
+                  <div>ไม่พบรายการเลขที่อ้างอิง</div>
+                </div>
+              ) : (
+                <>
+                  <List
+                    sx={{
+                      maxHeight: 320,
+                      overflow: "auto",
+                      "&::-webkit-scrollbar": {
+                        width: "8px",
+                        background: "#f0f4fa",
+                        borderRadius: "8px",
+                      },
+                      "&::-webkit-scrollbar-thumb": {
+                        background: "#90caf9",
+                        borderRadius: "8px",
+                      },
+                      "&::-webkit-scrollbar-thumb:hover": {
+                        background: "#64b5f6",
                       },
                     }}
-                    sx={{ mb: 2 }}
-                  />
-  
-                  {/* สถานะโหลด / ไม่พบ / รายการ */}
-                  {searchLoading ? (
-                    <div
-                      style={{
-                        textAlign: "center",
-                        padding: 24,
-                      }}
-                    >
-                      <CircularProgress color="primary" />
-                      <div
-                        style={{
-                          marginTop: 8,
-                          color: "#888",
-                        }}
-                      >
-                        กำลังค้นหา...
-                      </div>
-                    </div>
-                  ) : searchResults.length === 0 ? (
-                    <div
-                      style={{
-                        textAlign: "center",
-                        padding: 32,
-                        color: "#bdbdbd",
-                      }}
-                    >
-                      <DescriptionIcon
-                        sx={{ fontSize: 48, mb: 2 }}
-                        color="disabled"
-                      />
-                      <div>ไม่พบรายการเลขที่อ้างอิง</div>
-                    </div>
-                  ) : (
-                    <>
-                      <List
-                        sx={{
-                          maxHeight: 320,
-                          overflow: "auto",
-                          "&::-webkit-scrollbar": {
-                            width: "8px",
-                            background: "#f0f4fa",
-                            borderRadius: "8px",
-                          },
-                          "&::-webkit-scrollbar-thumb": {
-                            background: "#90caf9",
-                            borderRadius: "8px",
-                          },
-                          "&::-webkit-scrollbar-thumb:hover":
-                            {
-                              background: "#64b5f6",
-                            },
-                        }}
-                      >
-                        {searchResults.map((item) => {
-                          const isMaster = !!item.is_master; 
-                          return (
-                            <ListItem
-                              key={item.id}
-                              disablePadding
-                            >
-                              <ListItemButton
-                                onClick={() =>
-                                  handleSelectReference2(item)
-                                }
-                                sx={{
-                                  py: 1.5,
-                                  px: 2,
-                                  borderRadius: 2,
-                                  mb: 0.5,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1.5,
-                                  "&:hover": {
-                                    background: "#e3f2fd",
-                                  },
-                                }}
-                              >
-                                {/* จุดสถานะ is_master */}
-                                <span
-                                  style={{
-                                    width: 12,
-                                    height: 12,
-                                    borderRadius: "50%",
-                                    backgroundColor: isMaster
-                                      ? "#2ecc71"
-                                      : "#bdbdbd",
-                                    border: "2px solid #fff",
-                                    boxShadow:
-                                      "0 0 0 1px rgba(0,0,0,0.15)",
-                                    flexShrink: 0,
-                                  }}
-                                  title={
-                                    isMaster
-                                      ? "Master"
-                                      : "Non-master"
-                                  }
-                                />
-                                <DescriptionIcon
-                                  color="info"
-                                  sx={{ mr: 0.5 }}
-                                />
-                                 <span style={{ fontWeight: 500 }}>
-                                  {item.complaint_number}
-                                  <span style={{ marginLeft: 8 }}>{item.subject}</span>
-                                </span>
-                              </ListItemButton>
-                            </ListItem>
-                          );
-                        })}
-                      </List>
-  
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 16,
-                          marginTop: 8,
-                          fontSize: 12,
-                          color: "#555",
-                          padding: "0 4px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 10,
-                              height: 10,
-                              borderRadius: "50%",
-                              background: "#2ecc71",
-                              boxShadow:
-                                "0 0 0 1px rgba(0,0,0,0.15)",
-                            }}
-                          />
-                          Master
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 10,
-                              height: 10,
-                              borderRadius: "50%",
-                              background: "#bdbdbd",
-                              boxShadow:
-                                "0 0 0 1px rgba(0,0,0,0.15)",
-                            }}
-                          />
-                          Non-master
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </DialogContent>
-  
-                <DialogActions sx={{ px: 3, pb: 2 }}>
-                  <Button
-                    onClick={() => setOpenSearchDialog2(false)}
-                    variant="outlined"
-                    color="inherit"
                   >
-                    ปิด
-                  </Button>
-                </DialogActions>
-              </Dialog>
+                    {searchResults.map((item) => {
+                      const isMaster = !!item.is_master;
+                      return (
+                        <ListItem key={item.id} disablePadding>
+                          <ListItemButton
+                            onClick={() => handleSelectReference2(item)}
+                            sx={{
+                              py: 1.5,
+                              px: 2,
+                              borderRadius: 2,
+                              mb: 0.5,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1.5,
+                              "&:hover": {
+                                background: "#e3f2fd",
+                              },
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: "50%",
+                                backgroundColor: isMaster
+                                  ? "#2ecc71"
+                                  : "#bdbdbd",
+                                border: "2px solid #fff",
+                                boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
+                                flexShrink: 0,
+                              }}
+                              title={isMaster ? "Master" : "Non-master"}
+                            />
+                            <DescriptionIcon color="info" sx={{ mr: 0.5 }} />
+                            <span style={{ fontWeight: 500 }}>
+                              {item.complaint_number}
+                              <span style={{ marginLeft: 8 }}>
+                                {item.subject}
+                              </span>
+                            </span>
+                          </ListItemButton>
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 16,
+                      marginTop: 8,
+                      fontSize: 12,
+                      color: "#555",
+                      padding: "0 4px",
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
+                      <span
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: "50%",
+                          background: "#2ecc71",
+                          boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
+                        }}
+                      />
+                      Master
+                    </div>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
+                      <span
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: "50%",
+                          background: "#bdbdbd",
+                          boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
+                        }}
+                      />
+                      Non-master
+                    </div>
+                  </div>
+                </>
+              )}
+            </DialogContent>
+
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button
+                onClick={() => setOpenSearchDialog2(false)}
+                variant="outlined"
+                color="inherit"
+              >
+                ปิด
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {/* แถวที่ 5: เลขที่หนังสือ | วันที่ */}
-         <Box
+          <Box
             sx={{
               display: "grid",
               gap: 2,
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, // เหมือนแถวอื่น
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
               alignItems: "center",
             }}
           >
-            {/* ซ้าย: เลขที่หนังสือ + ปุ่มค้นหา (อยู่นอก input และข้างๆ) */}
             <Box
               sx={{
                 display: "grid",
@@ -1135,28 +1296,15 @@ useEffect(() => {
               <Box
                 sx={{
                   display: "flex",
-                  alignItems: "center", 
-                  justifyContent: "center", 
+                  alignItems: "center",
+                  justifyContent: "center",
                   mt: "12px",
                 }}
               >
-                {/* <IconButton
-                  onClick={() => setOpenSearchDialog(true)}
-                  onMouseDown={(e) => e.preventDefault()}
-                  aria-label="ค้นหาเลขที่อ้างอิง"
-                  title="ค้นหาเลขที่อ้างอิง"
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    color: "blue",
-                  }}
-                >
-                  <SearchIcon />
-                </IconButton> */}
+                {/* Search button commented out */}
               </Box>
             </Box>
 
-            {/* ขวา: วันที่ */}
             <Box sx={{ width: "100%", position: "relative", zIndex: 1 }}>
               <DateThaiPickerService
                 label={
@@ -1172,6 +1320,7 @@ useEffect(() => {
             </Box>
           </Box>
 
+          {/* Dialog สำหรับค้นหาเลขที่หนังสือ */}
           <Dialog
             open={openSearchDialog}
             onClose={() => setOpenSearchDialog(false)}
@@ -1184,19 +1333,20 @@ useEffect(() => {
                 height: 500,
                 boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
               },
-            }}>
+            }}
+          >
             <DialogTitle
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-              }}>
+              }}
+            >
               <SearchIcon color="primary" />
               ค้นหาเลขที่อ้างอิง
             </DialogTitle>
 
             <DialogContent>
-              {/* ช่องค้นหา */}
               <TextField
                 inputRef={inputRef}
                 fullWidth
@@ -1234,15 +1384,21 @@ useEffect(() => {
                 sx={{ mb: 2 }}
               />
 
-              {/* สถานะโหลด / ไม่พบ / รายการ */}
               {searchLoading ? (
                 <div style={{ textAlign: "center", padding: 24 }}>
                   <CircularProgress color="primary" />
-                  <div style={{ marginTop: 8, color: "#888" }}>กำลังค้นหา...</div>
+                  <div style={{ marginTop: 8, color: "#888" }}>
+                    กำลังค้นหา...
+                  </div>
                 </div>
               ) : searchResults.length === 0 ? (
-                <div style={{ textAlign: "center", padding: 32, color: "#bdbdbd" }}>
-                  <DescriptionIcon sx={{ fontSize: 48, mb: 2 }} color="disabled" />
+                <div
+                  style={{ textAlign: "center", padding: 32, color: "#bdbdbd" }}
+                >
+                  <DescriptionIcon
+                    sx={{ fontSize: 48, mb: 2 }}
+                    color="disabled"
+                  />
                   <div>ไม่พบรายการเลขที่อ้างอิง</div>
                 </div>
               ) : (
@@ -1266,7 +1422,7 @@ useEffect(() => {
                     }}
                   >
                     {searchResults.map((item) => {
-                      const isMaster = !!item.is_master; // fallback ถ้า undefined
+                      const isMaster = !!item.is_master;
                       return (
                         <ListItem key={item.id} disablePadding>
                           <ListItemButton
@@ -1284,13 +1440,14 @@ useEffect(() => {
                               },
                             }}
                           >
-                            {/* จุดสถานะ is_master */}
                             <span
                               style={{
                                 width: 12,
                                 height: 12,
                                 borderRadius: "50%",
-                                backgroundColor: isMaster ? "#2ecc71" : "#bdbdbd",
+                                backgroundColor: isMaster
+                                  ? "#2ecc71"
+                                  : "#bdbdbd",
                                 border: "2px solid #fff",
                                 boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
                                 flexShrink: 0,
@@ -1307,7 +1464,6 @@ useEffect(() => {
                     })}
                   </List>
 
-                  {/* Legend (ถ้าไม่ต้องการสามารถลบได้) */}
                   <div
                     style={{
                       display: "flex",
@@ -1318,7 +1474,9 @@ useEffect(() => {
                       padding: "0 4px",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
                       <span
                         style={{
                           width: 10,
@@ -1330,7 +1488,9 @@ useEffect(() => {
                       />
                       Master
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
                       <span
                         style={{
                           width: 10,
@@ -1366,7 +1526,13 @@ useEffect(() => {
               gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
-            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
+            <Box
+              sx={{
+                position: "relative",
+                zIndex: 1,
+                width: { xs: "80%", sm: "auto" },
+              }}
+            >
               <DateThaiPickerService
                 label={
                   <span>
@@ -1379,7 +1545,13 @@ useEffect(() => {
                 placeholder="เลือกวันที่"
               />
             </Box>
-            <Box sx={{ position: "relative", zIndex: 1, width: {xs: "80%", sm: "auto"}}}>
+            <Box
+              sx={{
+                position: "relative",
+                zIndex: 1,
+                width: { xs: "80%", sm: "auto" },
+              }}
+            >
               <DateThaiPickerService
                 label={
                   <span>
@@ -1427,29 +1599,33 @@ useEffect(() => {
           </Box>
 
           {/* แถวที่ 9: เอกสารแนบ */}
-          <Controller
-            name="attachment"
-            control={control}
-            render={({ field }) => (
-              <InputFile
-                key={fileInputKey}
-                label="เอกสารประกอบการร้องเรียน"
-                name={field.name}
-                onChange={(files) => {
-                  field.onChange(files);
-                  handleFileChange(files);
-                }}
-                error={Boolean(errors?.attachment)}
-                helperText={
-                  errors?.attachment?.message ||
-                  "หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"
-                }
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                maxFiles={3}
-                maxSizeMB={10}
-              />
+          <Box>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
+              เอกสารประกอบการร้องเรียน
+              <span style={{ color: "red", marginLeft: 4 }}>*</span>
+            </Typography>
+            <input
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              onChange={handleFileUpload}
+              style={{
+                width: "100%",
+                padding: "10px",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+                fontSize: "16px"
+              }}
+            />
+            <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: "block" }}>
+              หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB
+            </Typography>
+            {uploadedFiles.length > 0 && (
+              <Typography variant="body2" sx={{ mt: 1, color: "green" }}>
+                ไฟล์ที่เลือก: {uploadedFiles.map(f => f.name).join(', ')}
+              </Typography>
             )}
-          />
+          </Box>
 
           {/* แถวที่ 10: หมายเหตุ (multiline) */}
           <Box>
@@ -1463,17 +1639,6 @@ useEffect(() => {
               rows={4}
             />
           </Box>
-
-          {/* DEBUG: แสดงค่าสำหรับดีบัก (เฉพาะโหมดพัฒนา) */}
-          {/* {process.env.NODE_ENV !== 'production' && (
-            <Box sx={{ p: 2, bgcolor: '#fff', border: '1px solid #eee', borderRadius: 1, mb: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>DEBUG</Typography>
-              <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, margin: 0 }}>
-                {JSON.stringify({ investigateGk: form.investigateGk, investigateDate: form.investigateDate }, null, 2)}
-              </pre>
-            </Box>
-          )} */}
-
         </Box>
 
         {/* action buttons */}
@@ -1515,7 +1680,7 @@ useEffect(() => {
                 height: "55px",
                 fontSize: "24px",
               }}
-              disabled={!canSave()}
+              disabled={!canSave}
             />
           </Box>
         </Box>
