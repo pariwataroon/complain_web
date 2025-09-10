@@ -51,6 +51,16 @@
       "override_role": false
     },
     {
+      "role_name": "department",
+      "user_citizen_id": null,
+      "resource_name": "homepage_chatbot",
+      "can_create": false,
+      "can_read": true,
+      "can_update": false,
+      "can_delete": false,
+      "override_role": false
+    },
+    {
       "role_name": "people",
       "user_citizen_id": null,
       "resource_name": "homepage_news",
