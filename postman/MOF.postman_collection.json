@@ -10345,6 +10345,28 @@
 					}
 				},
 				{
+					"name": "Get My Outgoing Reports 3",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports3/me?skip=0&limit=100&search=&date_from=&date_to=",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports3", "me"],
+							"query": [
+								{"key": "skip", "value": "0", "description": "จำนวนรายการที่ข้าม"},
+								{"key": "limit", "value": "100", "description": "จำนวนรายการต่อหน้า"},
+								{"key": "search", "value": "", "description": "ค้นหา (เลขข้อร้องเรียน/เรื่อง/เลขหนังสือ/หมายเหตุ)"},
+								{"key": "date_from", "value": "", "description": "วันที่เริ่มต้น (YYYY-MM-DD)"},
+								{"key": "date_to", "value": "", "description": "วันที่สิ้นสุด (YYYY-MM-DD)"}
+							]
+						},
+						"description": "ดึงรายการเอกสารรุ่น 3 ของผู้ใช้ปัจจุบัน ใช้คู่กับ /document-storage/me เพื่ออัพเดตผลพิจารณาของงานตัวเอง"
+					},
+					"response": []
+				},
+				{
 					"name": "Get Outgoing Report 3 by ID",
 					"request": {
 						"auth": {

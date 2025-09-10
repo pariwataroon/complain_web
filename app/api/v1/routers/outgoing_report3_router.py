@@ -7,9 +7,12 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from starlette.responses import FileResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from config.database import get_db
+from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import can_read, can_create, can_delete, can_update
+from models.outgoing_reports3 import OutgoingReport3
 from app.api.v1.controllers.outgoing_report3_controller import (
     get_outgoing_reports3,
     get_outgoing_report3_by_id,
@@ -22,6 +25,7 @@ from app.api.v1.controllers.outgoing_report3_controller import (
     delete_outgoing_report3_attachment_by_id,
     update_outgoing_report3,
     DuplicateKeyError,
+    get_my_outgoing_reports3_list,
 )
 from app.api.v1.schemas.outgoing_report3 import (
     OutgoingReport3Create,
@@ -115,7 +119,35 @@ async def create_new_outgoing_report3(
     except Exception as e:
         return format_response("5000", {"error": str(e)})
 
-# ---------- GET BY ID ----------
+@router.get("/me", response_model=FormatResponseModel)
+async def get_my_outgoing_reports3(
+    skip: int = Query(0, ge=0, description="จำนวนรายการที่ข้าม"),
+    limit: int = Query(100, ge=1, le=1000, description="จำนวนรายการต่อหน้า"),
+    search: Optional[str] = Query(None, description="ค้นหาจากเลขหนังสือ, เรื่อง, หมายเหตุ"),
+    date_from: Optional[datetime] = Query(None, description="วันที่เริ่มต้น (อิง document_date)"),
+    date_to: Optional[datetime] = Query(None, description="วันที่สิ้นสุด (อิง document_date)"),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token),
+):
+    """รายการเอกสารรุ่น 3 ของผู้ใช้ปัจจุบัน (สำหรับจับคู่ /document-storage/me)
+
+    เงื่อนไขหลัก: created_by = current_user
+    ตัวกรองเสริม: search (complaint_number/subject/document_number/remarks), date_from/date_to
+    """
+    try:
+        data = get_my_outgoing_reports3_list(
+            db=db,
+            current_user_id=UUID(current_user),
+            skip=skip,
+            limit=limit,
+            search=search,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        return format_response("0000", data)
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
 @router.get("/{report_id}", response_model=FormatResponseModel)
 async def get_outgoing_report3(
     report_id: UUID,

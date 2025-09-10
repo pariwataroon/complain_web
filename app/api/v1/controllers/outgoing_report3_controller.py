@@ -352,6 +352,74 @@ def get_outgoing_reports3(
     except Exception as e:
         logger.error(f"Error getting outgoing reports3: {str(e)}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
+
+def get_my_outgoing_reports3_list(
+    db: Session,
+    current_user_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    search: Optional[str] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+) -> List[Dict[str, Any]]:
+    """รายการเอกสารรุ่น 3 ของผู้ใช้ปัจจุบัน (me) โดยอ้างอิง created_by
+
+    - ตัวกรอง: search (complaint_number/subject/document_number/remarks), date_from/date_to (อิง document_date)
+    - เรียงลำดับ: created_at DESC
+    - รองรับการแบ่งหน้า skip/limit
+    """
+    try:
+        q = db.query(OutgoingReport3).filter(
+            OutgoingReport3.is_active == True,
+            OutgoingReport3.created_by == current_user_id,
+        )
+
+        if search:
+            like = f"%{search}%"
+            # ใช้ ilike เพื่อไม่สนตัวพิมพ์เล็ก/ใหญ่ หาก DB รองรับ
+            q = q.filter(
+                or_(
+                    OutgoingReport3.complaint_number.ilike(like),
+                    OutgoingReport3.subject.ilike(like),
+                    OutgoingReport3.document_number.ilike(like),
+                    OutgoingReport3.remarks.ilike(like),
+                )
+            )
+
+        if date_from is not None:
+            q = q.filter(OutgoingReport3.document_date >= date_from)
+        if date_to is not None:
+            q = q.filter(OutgoingReport3.document_date <= date_to)
+
+        rows = (
+            q.order_by(OutgoingReport3.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+        items: List[Dict[str, Any]] = []
+        for r in rows:
+            items.append({
+                "id": _safe_str(r.id),
+                "complaint_number": getattr(r, "complaint_number", None),
+                "complaint_number_date": _iso(getattr(r, "complaint_number_date", None)),
+                "subject": getattr(r, "subject", None),
+                "document_number": getattr(r, "document_number", None),
+                "document_date": _iso(getattr(r, "document_date", None)),
+                "confidentiality_level": getattr(r, "confidentiality_level", None),
+                "urgency_level": getattr(r, "urgency_level", None),
+                "department_id": _safe_str(getattr(r, "department_id", None)) if getattr(r, "department_id", None) else None,
+                "signature_authority_user_id": _safe_str(getattr(r, "signature_authority_user_id", None)) if getattr(r, "signature_authority_user_id", None) else None,
+                "created_at": _iso(getattr(r, "created_at", None)),
+                "updated_at": _iso(getattr(r, "updated_at", None)),
+            })
+
+        return items
+    except Exception as e:
+        logger.error(f"Error getting my outgoing reports3: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
+
 def get_outgoing_report3_options(db: Session) -> Dict[str, Any]:
     """ดึงตัวเลือกสำหรับ dropdown"""
     try:
