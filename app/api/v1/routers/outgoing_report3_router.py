@@ -12,6 +12,7 @@ from sqlalchemy import or_
 from config.database import get_db
 from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import can_read, can_create, can_delete, can_update
+from app.api.v1.controllers.permission_controller import check_permission_by_name
 from models.outgoing_reports3 import OutgoingReport3
 from app.api.v1.controllers.outgoing_report3_controller import (
     get_outgoing_reports3,
@@ -220,9 +221,27 @@ async def delete_outgoing_report3_attachment(
     attachment_id: UUID,
     hard_delete: bool = False,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_delete("dashboard")),
+    current_user: str = Depends(verify_token),
 ):
     try:
+        user_id = UUID(current_user)
+
+        # 1) มีสิทธิ์ลบผ่าน permission system?
+        has_perm = False
+        try:
+            has_perm = check_permission_by_name(db, user_id, "dashboard", "delete")
+        except Exception:
+            has_perm = False
+
+        # 2) เจ้าของเรคอร์ด (report.created_by == current user)?
+        is_owner = False
+        report = db.query(OutgoingReport3).filter(OutgoingReport3.id == outgoing_report_id).first()
+        if report and getattr(report, "created_by", None) == user_id:
+            is_owner = True
+
+        if not (has_perm or is_owner):
+            raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์ลบไฟล์แนบ (ไม่ใช่เจ้าของและไม่มีสิทธิ์ลบ)")
+
         res = delete_outgoing_report3_attachment_by_id(
             db=db,
             outgoing_report_id=outgoing_report_id,
@@ -234,7 +253,9 @@ async def delete_outgoing_report3_attachment(
             "attachment_id": res.get("attachment_id"),
         })
     except HTTPException as e:
-        return format_response("4040", {"error": e.detail})
+        # 403 / 404
+        code = "4040" if e.status_code == 404 else "4030"
+        return format_response(code, {"error": e.detail})
     except Exception as e:
         return format_response("5000", {"error": str(e)})
 
