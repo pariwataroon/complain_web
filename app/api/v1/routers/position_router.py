@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
+from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import can_create, can_read, can_update, can_delete
 from app.api.v1.controllers.position_controller import (
     DuplicateKeyError, create_position, update_position, delete_position,
@@ -29,7 +30,7 @@ async def read_positions(
     is_active: bool = None,  # กรองตามสถานะ active/inactive
     level: str = None,  # กรองตามระดับตำแหน่ง
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงรายการตำแหน่งทั้งหมด (รองรับการค้นหาและกรอง)"""
     if search and search.strip():
