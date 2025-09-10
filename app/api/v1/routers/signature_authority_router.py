@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
 
+from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
 from app.api.v1.controllers.signature_authority_controller import (
     DuplicateKeyError, assign_signature_authority,
@@ -36,7 +37,7 @@ async def read_signature_authorities(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงรายการผู้มีอำนาจลงนามทั้งหมด"""
     authorities_data = get_signature_authorities(db, skip=skip, limit=limit)
@@ -68,7 +69,7 @@ async def get_available_departments_endpoint(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงรายการหน่วยงานที่สามารถกำหนดผู้มีอำนาจลงนามได้"""
     try:
@@ -105,7 +106,7 @@ async def assign_signature_authority_endpoint(
 async def read_signature_authorities_by_department(
     department_id: UUID,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_users"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงรายการผู้มีอำนาจลงนามตามหน่วยงาน"""
     try:
