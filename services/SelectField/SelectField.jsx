@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
   MenuItem,
-  TextField,
+  Select,
   FormControl,
-  InputLabel,
   Typography,
   IconButton,
   InputAdornment,
@@ -21,7 +20,7 @@ const SelectField = ({
   label,
   inputLabel,
   value,
-  onChange = () => { },
+  onChange = () => {},
   name,
   districtCode,
   amphureCode,
@@ -32,7 +31,7 @@ const SelectField = ({
 }) => {
   const [options, setOptions] = useState([]);
 
-  // แก้ไข: กรอง externalOptions ให้แน่ใจว่าไม่มี invalid objects
+  // กรอง externalOptions ให้แน่ใจว่าไม่มี invalid objects
   const validOptions = options.filter((opt) => {
     if (typeof opt === "object" && opt !== null) {
       return opt.value !== undefined && opt.label !== undefined;
@@ -40,19 +39,14 @@ const SelectField = ({
     return typeof opt === "string" || typeof opt === "number";
   });
 
-  // แก้ไข: เอา placeholder option สีเทาออก - ใช้เฉพาะ validOptions
   const allOptions = [...validOptions];
 
-  // แก้ไขการจัดการ selectedValue
+  // จัดการ selectedValue
   const selectedValue = (() => {
     if (value === null || value === undefined) return "";
-
-    // ถ้า value เป็น object ให้ใช้ value.value
     if (typeof value === "object" && value !== null) {
       return value.value || "";
     }
-
-    // ถ้า value เป็น string ให้ใช้เลย
     return String(value);
   })();
 
@@ -61,7 +55,7 @@ const SelectField = ({
 
   // ฟังก์ชันลบค่า
   const handleClear = (e) => {
-    e.stopPropagation(); // ป้องกันไม่ให้เปิด dropdown
+    e.stopPropagation();
     onChange({
       target: {
         name,
@@ -70,10 +64,9 @@ const SelectField = ({
     });
   };
 
-  // Effect 1: Use provided external options (no dependency on label to avoid JSX identity churn)
+  // Effect 1: Use provided external options
   useEffect(() => {
     if (!(externalOptions && externalOptions.length > 0)) return;
-
     const cleanedOptions = externalOptions
       .filter((opt) => {
         if (typeof opt === "object" && opt !== null) {
@@ -90,7 +83,6 @@ const SelectField = ({
         }
         return { value: String(opt), label: String(opt) };
       });
-
     const mapped = optionMapper ? cleanedOptions.map(optionMapper) : cleanedOptions;
     setOptions(mapped);
   }, [externalOptions, optionMapper]);
@@ -98,8 +90,6 @@ const SelectField = ({
   // Effect 2: Fetch options only when no external options are provided
   useEffect(() => {
     if (externalOptions && externalOptions.length > 0) return;
-
-    // เงื่อนไขสำหรับ location fields
     if (
       (label === "อำเภอ/เขต" && !provinceCode) ||
       (label === "ตำบล/แขวง" && !amphureCode) ||
@@ -107,11 +97,9 @@ const SelectField = ({
     ) {
       return;
     }
-
     const fetchOptions = async () => {
       try {
         let response = null;
-
         if (label === "จังหวัด") {
           response = await GetProvincesSelect();
         } else if (label === "อำเภอ/เขต") {
@@ -128,22 +116,19 @@ const SelectField = ({
           });
           response = Array.from(zipMap.values());
         }
-
         const finalResponse = Array.isArray(response) ? response : [];
         const mapped = optionMapper ? finalResponse.map(optionMapper) : finalResponse;
         setOptions(mapped);
       } catch (error) {
-        console.error("Failed to fetch or map options:")
+        console.error("Failed to fetch or map options:");
         setOptions([]);
       }
     };
-
     fetchOptions();
   }, [externalOptions, optionMapper, label, districtCode, amphureCode, provinceCode]);
 
   useEffect(() => {
     if (!provinceCode) return;
-
     if (
       label === "อำเภอ/เขต" ||
       label === "ตำบล/แขวง" ||
@@ -155,7 +140,6 @@ const SelectField = ({
 
   useEffect(() => {
     if (!amphureCode) return;
-
     if (label === "ตำบล/แขวง" || label === "รหัสไปรษณีย์") {
       onChange({ target: { name, value: "" } });
     }
@@ -172,30 +156,24 @@ const SelectField = ({
         </Typography>
       )}
 
-      <TextField
-        select
+      <Select
         displayEmpty
         name={name}
         value={selectedValue}
         onChange={(e) => {
           const selectedVal = e.target.value;
-
-          // ส่งค่าเป็น string ไม่ใช่ object
           onChange({
             target: {
               name,
-              value: selectedVal, // ส่งเป็น string value ตรงๆ
+              value: selectedVal,
             },
           });
         }}
         renderValue={(selected) => {
-          // หา option ที่ตรงกับ selected value
           const selectedOption = allOptions.find((opt) => {
             const optValue = typeof opt === "object" ? opt.value : opt;
             return optValue === selected;
           });
-
-          // แก้ไข: ถ้าไม่เจอหรือเป็นค่าว่าง แสดง placeholder
           if (!selectedOption || selected === "") {
             return (
               <span className={styles.selectPlaceholder}>
@@ -203,20 +181,18 @@ const SelectField = ({
               </span>
             );
           }
-
-          // แสดง label ของ option ที่เลือก
           return selectedOption.label || String(selectedOption);
         }}
-        InputProps={{
-          sx: {
-            height: "40px",
-            borderRadius: "10px",
-            color: "#1120A3",
-            "& fieldset": {
-              borderColor: "#1120A3",
-            },
+        sx={{
+          height: "40px",
+          borderRadius: "10px",
+          color: "#1120A3",
+          "& fieldset": {
+            borderColor: "#1120A3",
           },
-          endAdornment: hasValue && (
+        }}
+        endAdornment={
+          hasValue && (
             <InputAdornment position="end">
               <IconButton
                 onClick={handleClear}
@@ -234,8 +210,8 @@ const SelectField = ({
                 <CloseIcon fontSize="small" />
               </IconButton>
             </InputAdornment>
-          ),
-        }}
+          )
+        }
       >
         {allOptions.map((opt, idx) => {
           const isPrimitive = typeof opt !== "object";
@@ -246,22 +222,19 @@ const SelectField = ({
             ? String(opt)
             : String(opt.label || opt.value || "");
           const isDisabled = isPrimitive ? false : opt.disabled ?? false;
-
-          // แก้ไข: ไม่แสดง option ที่เป็น "[object Object]"
           if (
             optionLabel === "[object Object]" ||
             optionValue === "[object Object]"
           ) {
             return null;
           }
-
           return (
             <MenuItem key={idx} value={optionValue} disabled={isDisabled}>
               {optionLabel}
             </MenuItem>
           );
         })}
-      </TextField>
+      </Select>
     </FormControl>
   );
 };

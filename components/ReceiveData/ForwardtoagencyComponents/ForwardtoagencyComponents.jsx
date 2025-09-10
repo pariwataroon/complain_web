@@ -344,15 +344,15 @@ const ForwardtoagencyComponents = () => {
         shouldDirty: true,
       });
     }
-    if (created_at) {
-      const d = new Date(String(created_at));
-      if (!isNaN(d.getTime())) {
-        setValue("complaint_number_date", d, {
-          shouldValidate: true,
-          shouldDirty: true,
-        });
-      }
-    }
+    // if (created_at) {
+    //   const d = new Date(String(created_at));
+    //   if (!isNaN(d.getTime())) {
+    //     setValue("complaint_number_date", d, {
+    //       shouldValidate: true,
+    //       shouldDirty: true,
+    //     });
+    //   }
+    // }
   }, [router?.query, setValue]);
 
   // Prefill when editing an existing type1 report via /[id]
@@ -612,6 +612,29 @@ const ForwardtoagencyComponents = () => {
                 />
               </Box>
             )}
+
+            {/*  หน่วยงาน */}
+          <Controller
+              name="department"
+              control={control}
+              render={({ field }) => (
+                <SelectFieldDepartment
+                  label={createLabel("หน่วยงาน", "department")}
+                  name="department"
+                  value={field.value}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  onDepartmentSelect={handleDepartmentSelect}
+                  filterBySignerId={selectedSigner?.value}
+                  error={!!getFieldError("department")}
+                  helperText={getFieldError("department")}
+                  required={isRequired("department")}
+                  disabled={!selectedSigner}
+                  placeholder={
+                    selectedSigner ? "เลือกหน่วยงาน" : "เลือกผู้ลงนามก่อน"
+                  }
+                />
+              )}
+            />
 
             {/* เลข สป.กค. */}
             <Controller
@@ -920,31 +943,6 @@ const ForwardtoagencyComponents = () => {
                   showUserInfo={false}
                   size="small"
                   sx={{ position: "relative", zIndex: 1, width: { xs: "80%", sm: "auto" } }}
-                />
-              )}
-            />
-          </Box>
-
-          {/* Row 4: หน่วยงาน */}
-          <Box sx={{ display: "grid", gridTemplateColumns: "1fr" }}>
-            <Controller
-              name="department"
-              control={control}
-              render={({ field }) => (
-                <SelectFieldDepartment
-                  label={createLabel("หน่วยงาน", "department")}
-                  name="department"
-                  value={field.value}
-                  onChange={(e) => field.onChange(e.target.value)}
-                  onDepartmentSelect={handleDepartmentSelect}
-                  filterBySignerId={selectedSigner?.value}
-                  error={!!getFieldError("department")}
-                  helperText={getFieldError("department")}
-                  required={isRequired("department")}
-                  disabled={!selectedSigner}
-                  placeholder={
-                    selectedSigner ? "เลือกหน่วยงาน" : "เลือกผู้ลงนามก่อน"
-                  }
                 />
               )}
             />

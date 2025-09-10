@@ -373,62 +373,6 @@ useEffect(() => {
             แบบรายงานแจ้งผู้ร้องเรียน / ส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น
           </Typography>
         </Box>
-        {/* --- NEW: Tab Switch for Department / Complainant --- */}
-        <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 2 }}>
-          <Box sx={{ display: "flex", ml: 3 }}>
-            <Button
-              disableRipple
-              variant="text"
-              color="inherit"
-              sx={{
-                borderRadius: 0,
-                fontWeight: 600,
-                px: 3,
-                py: 1.2,
-                fontSize: "1.06rem",
-                minWidth: 0,
-                bgcolor: "transparent",
-                color: tabSelected === "department" ? "#1120A3" : "#666",
-                borderBottom: tabSelected === "department" ? "2.5px solid #1120A3" : "2.5px solid transparent",
-                boxShadow: "none",
-                transition: "color 0.15s, border-bottom 0.15s",
-                "&:hover": {
-                  bgcolor: "transparent",
-                  color: "#1120A3",
-                },
-              }}
-              onClick={() => setTabSelected("department")}
-            >
-              หน่วยงาน
-            </Button>
-            <Button
-              disableRipple
-              variant="text"
-              color="inherit"
-              sx={{
-                borderRadius: 0,
-                fontWeight: 600,
-                px: 3,
-                py: 1.2,
-                fontSize: "1.06rem",
-                minWidth: 0,
-                bgcolor: "transparent",
-                color: tabSelected === "complainant" ? "#1120A3" : "#666",
-                borderBottom: tabSelected === "complainant" ? "2.5px solid #1120A3" : "2.5px solid transparent",
-                boxShadow: "none",
-                transition: "color 0.15s, border-bottom 0.15s",
-                "&:hover": {
-                  bgcolor: "transparent",
-                  color: "#1120A3",
-                },
-              }}
-              onClick={() => setTabSelected("complainant")}
-            >
-              ผู้ร้อง
-            </Button>
-          </Box>
-        </Box>
-        {/* --- END TAB SWITCH --- */}
         <Box
           component="form"
           sx={{
@@ -443,12 +387,7 @@ useEffect(() => {
             sx={{
               display: "grid",
               gap: 2,
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "1fr 1fr",
-                md: "4fr 4fr 4fr",
-              },
-              width: "100%",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
             <SelectFieldsalutation
@@ -479,7 +418,30 @@ useEffect(() => {
                 />
               </Box>
             )}
-            {/* เลขที่หนังสือ */}
+            {/* --- Row 4: หน่วยงาน / ผู้ร้อง  --- */}
+            <SelectFieldDepartment
+              label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}
+              name="department"
+              value={selectedDepartment}
+              onChange={handleDepartmentSelect}
+              onDepartmentSelect={handleDepartmentSelect}
+              filterBySignerId={pickId(selectedSigner)}
+              error={!!getFieldError("department")}
+              helperText={getFieldError("department")}
+              disabled={!selectedSigner}
+              placeholder={selectedSigner ? "เลือกหน่วยงาน / ผู้ร้อง" : "เลือกผู้ลงนามก่อน"}
+            />
+            
+          </Box>
+
+          <Box
+          sx={{
+              display: "grid",
+              gap: 2,
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            }}
+        >
+          {/* เลขที่หนังสือ */}
             <InputText
               label={createLabel("เลขที่หนังสือ", "refNo")}
               inputLabel="กรอกเลขที่หนังสือ"
@@ -499,19 +461,13 @@ useEffect(() => {
               error={!!getFieldError("date")}
               helperText={getFieldError("date")}
             />
-          </Box>
-
+            </Box>
           {/* Row 1.1: เลข สป.กค. | วันที่ (จัดแนวยาว 2 ช่อง) */}
           <Box
             sx={{
               display: "grid",
               gap: 2,
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "1fr 1fr",
-                md: "8fr 4fr",
-              },
-              width: "100%",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -814,38 +770,6 @@ useEffect(() => {
               placeholder="เลือกผู้ลงนาม"
               showUserInfo={false}
             />
-          </Box>
-         
-
-          {/* --- Row 4: หน่วยงาน / ผู้ร้อง (Tab controlled) --- */}
-          <Box>
-            {tabSelected === "department" ? (
-              <SelectFieldDepartment
-                label={createLabel("หน่วยงาน", "department")}
-                name="department"
-                value={selectedDepartment}
-                onChange={handleDepartmentSelect}
-                onDepartmentSelect={handleDepartmentSelect}
-                filterBySignerId={pickId(selectedSigner)}
-                error={!!getFieldError("department")}
-                helperText={getFieldError("department")}
-                disabled={!selectedSigner}
-                placeholder={selectedSigner ? "เลือกหน่วยงาน" : "เลือกผู้ลงนามก่อน"}
-              />
-            ) : (
-              <SelectFieldDepartment
-                label={createLabel("ผู้ร้อง", "department")}
-                name="department"
-                value={selectedDepartment}
-                onChange={handleDepartmentSelect}
-                onDepartmentSelect={handleDepartmentSelect}
-                filterBySignerId={pickId(selectedSigner)}
-                error={!!getFieldError("department")}
-                helperText={getFieldError("department")}
-                disabled={!selectedSigner}
-                placeholder={selectedSigner ? "เลือกผู้ร้อง" : "เลือกผู้ลงนามก่อน"}
-              />
-            )}
           </Box>
 
           {/* Row 5: ชั้นความลับ*, ชั้นความเร่งด่วน* */}

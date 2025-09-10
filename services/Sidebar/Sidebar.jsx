@@ -302,7 +302,7 @@ export default function Sidebar() {
       try {
         const res = await getNotifications();
         const data = res?.res_data;
-        console.log({ data });
+        // console.log({ data });
 
         setNotifications(Array.isArray(data) ? data : []);
       } catch (err) {

@@ -11,14 +11,13 @@ const breadcrumbItems = [
       <img
         src="/icons/Pencil.png"
         alt="pencil"
-            style={{ width: 24, height: 24, marginBottom: -8 }}
+        style={{ width: 24, height: 24, marginBottom: -8 }}
       />
     ),
   },
   { label: "สืบค้นเรื่องร้องเรียน" },
 ];
 
-// Mockup data สำหรับ agencyOptions
 const mockAgencyOptions = [
   { value: "", label: "เลือกหน่วยงาน" },
   { value: "กระทรวงมหาดไทย", label: "กระทรวงมหาดไทย" },
@@ -115,13 +114,17 @@ const getIsAssigned = (item) => {
 const SearchComplaints = () => {
   const [allComplaints, setAllComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    let isMounted = true;
     const fetchData = async () => {
+      setIsLoading(true);
       try {
         const res = await GetEnhancedComplaints({ skip: 0, limit: 100 });
-        const items = res?.res_data?.items || [];
+        // ป้องกัน res_data หรือ items เป็น undefined/null
+        const items = Array.isArray(res?.res_data?.items) ? res.res_data.items : [];
 
         const mapped = items.map((item) => {
           const status =
@@ -133,8 +136,8 @@ const SearchComplaints = () => {
 
           const isAssigned = getIsAssigned(item);
 
-          const docGovRaw = item?.reference_number4 || "-";
-          const subjectRaw = item?.subject || "-";
+          const docGovRaw = item?.reference_number4 ?? "-";
+          const subjectRaw = item?.subject ?? "-";
 
           const subjectWithDot = (
             <div
@@ -173,39 +176,39 @@ const SearchComplaints = () => {
           );
 
           return {
-            id: item?.id,
-            name: item?.complainant_name || "-",
-            citizenId: item?.citizen_id || "-",
-
-            // แสดงเป็น JSX พร้อมจุด
+            id: item?.id ?? "-",
+            name: item?.complainant_name ?? "-",
+            citizenId: item?.citizen_id ?? "-",
             subject: subjectWithDot,
-            // เก็บค่าสตริงสำหรับค้นหา
             subjectRaw,
-
-            docKk: item?.reference_number || "-",
-            docSr: item?.reference_number2 || "-",
-            docStp: item?.reference_number3 || "-",
-
-            // แสดงเป็นสตริงล้วน
+            docKk: item?.reference_number ?? "-",
+            docSr: item?.reference_number2 ?? "-",
+            docStp: item?.reference_number3 ?? "-",
             docGov: docGovRaw,
             docGovRaw,
-
-            agency: item?.incident_location || "-",
-            status: status || "-",
-
-            // เก็บไว้เผื่อ TableList ใช้ต่อ
+            agency: item?.incident_location ?? "-",
+            status: status ?? "-",
             is_assigned: isAssigned,
           };
         });
 
-        setAllComplaints(mapped);
-        setFilteredComplaints(mapped);
+        if (isMounted) {
+          setAllComplaints(mapped);
+          setFilteredComplaints(mapped);
+        }
       } catch (err) {
         console.error("โหลดข้อมูลร้องเรียนล้มเหลว:", err);
+        if (isMounted) {
+          setAllComplaints([]);
+          setFilteredComplaints([]);
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
 
     fetchData();
+    return () => { isMounted = false; };
   }, []);
 
   const handleNavigateTo = () => router.push("/admin/edit/search/Filteromplaints");
@@ -216,16 +219,12 @@ const SearchComplaints = () => {
     const result = allComplaints.filter((item) => {
       if (claimantName && !safeIncludes(item.name, claimantName)) return false;
       if (citizenId && !safeIncludes(item.citizenId, citizenId)) return false;
-
       if (subject && !safeIncludes(item.subjectRaw, subject)) return false;
-
       if (docGov && !safeIncludes(item.docGovRaw, docGov)) return false;
-
       if (agency && item.agency !== agency) return false;
       if (docKk && !safeIncludes(item.docKk, docKk)) return false;
       if (docSr && !safeIncludes(item.docSr, docSr)) return false;
       if (docStp && !safeIncludes(item.docStp, docStp)) return false;
-
       return true;
     });
 
@@ -235,15 +234,18 @@ const SearchComplaints = () => {
   return (
     <>
       <BreadcrumbsService items={breadcrumbItems} />
-
-      <TableList
-        data={filteredComplaints}
-        title="สืบค้นเรื่องร้องเรียน"
-        navigateTo="/admin/edit/search"
-        onSearch={handleSearch}
-        handleNavigateTo={handleNavigateTo}
-        agencyOptions={mockAgencyOptions}
-      />
+      {isLoading ? (
+        <div style={{ textAlign: "center", margin: 40 }}>กำลังโหลดข้อมูล...</div>
+      ) : (
+        <TableList
+          data={Array.isArray(filteredComplaints) ? filteredComplaints : []}
+          title="สืบค้นเรื่องร้องเรียน"
+          navigateTo="/admin/edit/search"
+          onSearch={handleSearch}
+          handleNavigateTo={handleNavigateTo}
+          agencyOptions={mockAgencyOptions}
+        />
+      )}
     </>
   );
 };

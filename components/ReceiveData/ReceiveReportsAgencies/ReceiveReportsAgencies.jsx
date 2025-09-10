@@ -116,7 +116,7 @@ const ReceiveReportsAgencies = () => {
       documentDate: null,
       receiveWorkDate: null,
       submitWorkDate: null,
-      origin: "",
+      // origin: "",
       subject: "",
       remarks: "",
     }),
@@ -402,10 +402,10 @@ const ReceiveReportsAgencies = () => {
       console.log("❌ Missing submitWorkDate:", form.submitWorkDate);
       missingFields.push("วันที่เสนองาน ผอ.สรร.");
     }
-    if (!form.origin?.trim()) {
-      console.log("❌ Missing origin:", form.origin);
-      missingFields.push("ต้นเรื่อง");
-    }
+    // if (!form.origin?.trim()) {
+    //   console.log("❌ Missing origin:", form.origin);
+    //   missingFields.push("ต้นเรื่อง");
+    // }
     if (!form.subject?.trim()) {
       console.log("❌ Missing subject:", form.subject);
       missingFields.push("เรื่อง");
@@ -549,7 +549,7 @@ const ReceiveReportsAgencies = () => {
       f.documentDate,
       f.receiveWorkDate,
       f.submitWorkDate,
-      f.origin?.trim(),
+      // f.origin?.trim(),
       f.subject?.trim(),
       uploadedFiles.length > 0,
     ];
@@ -573,7 +573,7 @@ const ReceiveReportsAgencies = () => {
     if (!form.documentDate) missingFields.push("วันที่ (เลขที่หนังสือ)");
     if (!form.receiveWorkDate) missingFields.push("วันที่รับงานของเจ้าหน้าที่");
     if (!form.submitWorkDate) missingFields.push("วันที่เสนองาน ผอ.สรร.");
-    if (!form.origin?.trim()) missingFields.push("ต้นเรื่อง");
+    // if (!form.origin?.trim()) missingFields.push("ต้นเรื่อง");
     if (!form.subject?.trim()) missingFields.push("เรื่อง");
     if (uploadedFiles.length === 0) missingFields.push("เอกสารแนบ");
 
@@ -1567,7 +1567,7 @@ const ReceiveReportsAgencies = () => {
           </Box>
 
           {/* แถวที่ 7: ต้นเรื่อง */}
-          <Box>
+          {/* <Box>
             <InputText
               label={
                 <span>
@@ -1580,7 +1580,7 @@ const ReceiveReportsAgencies = () => {
               value={form.origin}
               onChange={handleChange}
             />
-          </Box>
+          </Box> */}
 
           {/* แถวที่ 8: เรื่อง */}
           <Box>
