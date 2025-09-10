@@ -173,7 +173,7 @@ async def upload_outgoing_report3_attachments(
     current_user: str = Depends(can_create("dashboard")),
 ):
     try:
-        data = await add_attachments_to_outgoing_report3(
+        data = add_attachments_to_outgoing_report3(
             db=db,
             outgoing_report_id=outgoing_report_id,
             files=files,

@@ -92,7 +92,7 @@ async def create_new_outgoing_report(
     current_user: str = Depends(can_create("dashboard"))
 ):
     try:
-        report = await create_outgoing_report(
+        report = create_outgoing_report(
             db=db,
             report_data=report_data,
             current_user_id=UUID(current_user),
@@ -128,7 +128,7 @@ async def upload_outgoing_report_attachments(
     current_user: str = Depends(can_create("dashboard")),
 ):
     try:
-        data = await add_attachments_to_outgoing_report(
+        data = add_attachments_to_outgoing_report(
             db=db,
             outgoing_report_id=outgoing_report_id,
             files=files,

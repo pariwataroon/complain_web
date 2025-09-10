@@ -115,7 +115,7 @@ async def create_new_outgoing_report5(
     current_user: str = Depends(can_create("dashboard")),
 ):
     try:
-        result = await create_outgoing_report5(
+        result = create_outgoing_report5(
             db=db,
             report_data=report_data,
             current_user_id=UUID(current_user),
@@ -154,7 +154,7 @@ async def upload_outgoing_report5_attachments(
     current_user: str = Depends(can_create("dashboard")),
 ):
     try:
-        data = await add_attachments_to_outgoing_report5(
+        data = add_attachments_to_outgoing_report5(
             db=db,
             outgoing_report_id=outgoing_report_id,
             files=files,
