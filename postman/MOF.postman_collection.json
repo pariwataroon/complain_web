@@ -10151,6 +10151,29 @@
 					}
 				},
 				{
+					"name": "Update Outgoing Report 2",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+						},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"position_id\": \"38a64e67-5df6-4370-a46b-7c160c5b92f7\",\n    \"position_other_text\": \"เจ้าหน้าที่งานประชาสัมพันธ์ (แก้ไข)\",\n    \"complaint_number\": \"MOF-20250624-00002\",\n    \"complaint_number_date\": \"2025-06-24\",\n    \"subject\": \"เรื่อง แจ้งผลการพิจารณาเรื่องร้องเรียน (ปรับปรุง)\",\n    \"signature_authority_user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"department_id\": \"85c5547d-a0d4-4ea5-a4e3-e55d94837ddd\",\n    \"user_id\": null,\n    \"confidentiality_level\": \"ลับ\",\n    \"urgency_level\": \"ด่วน\",\n    \"document_number\": \"กค 5678/2568-แก้ไข\",\n    \"document_date\": \"2025-06-25T10:00:00Z\",\n    \"remarks\": \"ปรับปรุงข้อมูลบางส่วน\"\n}",
+							"options": {"raw": {"language": "json"}}
+						},
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports2/{{report2_id}}",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports2", "{{report2_id}}"]
+						},
+						"description": "อัปเดตรายงานแจ้งผู้ร้องเรียนตาม ID - ส่งเฉพาะฟิลด์ที่ต้องการแก้ไขได้ รองรับ partial update; สำเร็จจะได้ res_code = 0002"
+					},
+					"response": []
+				},
+				{
 					"name": "Upload Attachments 2",
 					"request": {
 						"auth": {
@@ -10337,6 +10360,22 @@
 						},
 						"description": "ดึงรายงานขอทราบผลการพิจารณาตาม ID พร้อมข้อมูลครบถ้วน รวมข้อมูลตำแหน่ง, หน่วยงาน, ผู้มีอำนาจลงนาม, และไฟล์แนบ"
 					}
+				},
+				{
+					"name": "Update Outgoing Report 3",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"position_id\": \"38a64e67-5df6-4370-a46b-7c160c5b92f7\",\n    \"position_other_text\": \"ตำแหน่งระบุเอง (แก้ไข)\",\n    \"subject\": \"เรื่อง ขอทราบผลการพิจารณา (ปรับปรุง)\",\n    \"department_id\": \"85c5547d-a0d4-4ea5-a4e3-e55d94837ddd\",\n    \"confidentiality_level\": \"ลับ\",\n    \"urgency_level\": \"ด่วนมาก\",\n    \"document_number\": \"กค 5679/2568-ปรับ\",\n    \"document_date\": \"2025-06-25T10:30:00Z\",\n    \"remarks\": \"ปรับปรุงรายละเอียดและหมายเหตุ\"\n}",
+							"options": {"raw": {"language": "json"}}
+						},
+						"url": {"raw": "{{API}}{{PREFIX}}/outgoing-reports3/{{report3_id}}", "host": ["{{API}}{{PREFIX}}"], "path": ["outgoing-reports3", "{{report3_id}}"]},
+						"description": "อัปเดตรายงานขอทราบผลการพิจารณาตาม ID - ส่งเฉพาะฟิลด์ที่ต้องการแก้ไขได้ รองรับ partial update; สำเร็จจะได้ res_code = 0002"
+					},
+					"response": []
 				},
 				{
 					"name": "Upload Attachments 3",
@@ -10526,6 +10565,22 @@
 					}
 				},
 				{
+					"name": "Update Outgoing Report 4",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reference_number\": \"เลขอ้างอิง-2025-001-ปรับ\",\n    \"reference_date\": \"2025-06-25\",\n    \"subject\": \"เรื่อง แจ้งผลการให้ผู้เกี่ยวข้องทราบ (แก้ไข)\",\n    \"signature_authority_user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"department_id\": \"85c5547d-a0d4-4ea5-a4e3-e55d94837ddd\",\n    \"user_id\": \"0195d822-24ef-43d4-89db-926e1277a158\",\n    \"other_department\": \"หน่วยงานอื่นๆ (แก้ไข)\",\n    \"confidentiality_level\": \"ลับ\",\n    \"urgency_level\": \"ด่วน\",\n    \"document_number\": \"กค 5680/2568-ปรับ\",\n    \"document_date\": \"2025-06-25T10:00:00Z\",\n    \"remarks\": \"แก้ไขข้อความ\",\n    \"proposal_purpose\": \"เสนอเพื่อพิจารณา\",\n    \"consideration_result\": \"ผลการพิจารณา (แก้ไข)\"\n}",
+							"options": {"raw": {"language": "json"}}
+						},
+						"url": {"raw": "{{API}}{{PREFIX}}/outgoing-reports4/{{report4_id}}", "host": ["{{API}}{{PREFIX}}"], "path": ["outgoing-reports4", "{{report4_id}}"]},
+						"description": "อัปเดตรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบตาม ID - ส่งเฉพาะฟิลด์ที่ต้องการแก้ไขได้ รองรับ partial update; สำเร็จจะได้ res_code = 0002"
+					},
+					"response": []
+				},
+				{
 					"name": "Upload Attachments 4",
 					"request": {
 						"auth": {
@@ -10711,6 +10766,22 @@
 						},
 						"description": "ดึงรายงานรับเรื่องผลการพิจารณาตาม ID พร้อมข้อมูลครบถ้วน รวมข้อมูลหน่วยงาน, ผู้มีอำนาจลงนาม, ผู้ปฏิบัติงาน, และไฟล์แนบ"
 					}
+				},
+				{
+					"name": "Update Outgoing Report 5",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"receive_number\": \"รับ.001/2568-ปรับ\",\n    \"receive_date\": \"2025-08-22\",\n    \"agency_reference_number\": \"สนผ.123/2568-แก้ไข\",\n    \"agency_reference_date\": \"2025-08-21\",\n    \"internal_register_number\": \"ทะเบียนรับ.456/2568-อัปเดต\",\n    \"internal_register_date\": \"2025-08-22\",\n    \"present_to_director_date\": \"2025-08-23\",\n    \"subject\": \"เรื่อง รายงานผลการพิจารณา (อัปเดต)\",\n    \"document_number\": \"สป.กค 789/2568-ปรับ\",\n    \"document_date\": \"2025-08-21\",\n    \"signature_authority_user_id\": \"{{signature_user_id}}\",\n    \"department_id\": \"{{department_id}}\",\n    \"user_id\": \"{{user_id}}\",\n    \"confidentiality_level\": \"ลับ\",\n    \"urgency_level\": \"ด่วนมาก\",\n    \"remarks\": \"อัปเดตข้อมูลเพิ่มเติม\"\n}",
+							"options": {"raw": {"language": "json"}}
+						},
+						"url": {"raw": "{{API}}{{PREFIX}}/outgoing-reports5/{{report5_id}}", "host": ["{{API}}{{PREFIX}}"], "path": ["outgoing-reports5", "{{report5_id}}"]},
+						"description": "อัปเดตรายงานรับเรื่องผลการพิจารณาจากหน่วยงานตาม ID - ส่งเฉพาะฟิลด์ที่ต้องการแก้ไขได้ รองรับ partial update; สำเร็จจะได้ res_code = 0002"
+					},
+					"response": []
 				},
 				{
 					"name": "Upload Outgoing Report 5 Attachments",
