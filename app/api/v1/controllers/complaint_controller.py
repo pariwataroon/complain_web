@@ -2108,20 +2108,31 @@ def get_thai_complaint_type(complaint_type: str) -> str:
     }
     return type_mapping.get(complaint_type, complaint_type)
 
-def get_thai_status(status: str) -> str:
-    """แปลงสถานะเป็นภาษาไทย"""
+def get_thai_status(status) -> str:
+    """แปลงสถานะเป็นภาษาไทย (รองรับทั้ง Enum และ string)"""
     status_mapping = {
         "SUBMITTED": "รับเรื่อง",
-        "submitted": "รับเรื่อง", #กรณี lowercase
-        "SENT_TO_AGENCY": "มอบหมายเจ้าหน้าที่", 
+        "SENT_TO_AGENCY": "มอบหมายเจ้าหน้าที่",
         "SENT_TO_EXTERNAL": "ส่งหน่วยงานภายนอก",
         "IN_PROCESS": "กำลังดำเนินการ",
         "IN_REVIEW": "อยู่ระหว่างพิจารณา",
         "TRACKING": "ติดตามผล",
         "REVIEWED": "แจ้งผลการพิจารณา",
-        "COMPLETED": "เสร็จสิ้น"
+        "COMPLETED": "เสร็จสิ้น",
+        "CANCELLED": "ยกเลิก",
     }
-    return status_mapping.get(status.upper() if status else "", status)  # ✅ ใช้ upper()
+
+    if not status:
+        return ""
+
+    # รองรับ Enum และ string
+    try:
+        raw = getattr(status, "value", status)
+        s = str(raw).upper()
+    except Exception:
+        s = str(status).upper()
+
+    return status_mapping.get(s, s)
 
 def ensure_dict(data: Any) -> Dict:
     """แปลงข้อมูลให้เป็น dict"""
@@ -2243,7 +2254,9 @@ def update_complaint_status(db: Session, complaint_id: uuid.UUID, new_status: Co
     
     if not complaint:
         return None
-    
+    # เก็บค่าเดิมไว้สำหรับเปรียบเทียบ/แจ้งเตือน
+    old_status = complaint.status
+
     complaint.status = new_status
     complaint.updated_at = datetime.now()
     
@@ -2253,7 +2266,6 @@ def update_complaint_status(db: Session, complaint_id: uuid.UUID, new_status: Co
     create_status_history(db, complaint_id, new_status, notes, user_id)
     
     try:
-        old_status = complaint.status
         if should_notify_status_change(old_status, new_status):
             # ดึงข้อมูลผู้ร้องเรียน
             complainant_data = ensure_dict(complaint.complainant_data)
@@ -4007,18 +4019,24 @@ def assign_complaint_to_officer(
         if not complaint:
             raise ValueError("ไม่พบเรื่องร้องเรียน")
         
+        # เก็บสถานะเดิม
+        prev_status = complaint.status
+
         # บันทึกข้อมูลการมอบหมาย
         complaint.assigned_to = assigned_to
         complaint.assigned_officer_id = assigned_officer_id
         complaint.assigned_date = datetime.now()
         complaint.updated_at = datetime.now()
-        
+        # อัปเดตสถานะเป็น SENT_TO_AGENCY หากยังไม่ได้เป็นสถานะนี้
+        if complaint.status != ComplaintStatus.SENT_TO_AGENCY:
+            complaint.status = ComplaintStatus.SENT_TO_AGENCY
+
         # สร้างประวัติ
         assignment_notes = notes or "มอบหมายเรื่องร้องเรียนให้เจ้าหน้าที่"
         if assigned_to:
             assignment_notes += f" ({assigned_to})"
-        
-        create_status_history(db, complaint_id, complaint.status, assignment_notes, user_id)
+        # บันทึกประวัติด้วยสถานะล่าสุด (SENT_TO_AGENCY)
+        create_status_history(db, complaint_id, ComplaintStatus.SENT_TO_AGENCY, assignment_notes, user_id)
         
         # ✅ สร้าง notification สำหรับการมอบหมายงาน
         try:
