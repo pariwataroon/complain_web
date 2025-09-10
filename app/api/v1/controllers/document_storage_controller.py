@@ -88,27 +88,6 @@ def _fmt_bkk(dt_utc) -> str:
     except Exception:
         return dt_utc.strftime("%d %b %Y")
 
-def get_document_storage_by_channel(
-    db: Session,
-    page_type: str = "website",  # "website" หรือ "card"
-    skip: int = 0,
-    limit: int = 100,
-    status: Optional[str] = None,
-    complaint_type: Optional[str] = None,
-    complaint_subtype: Optional[str] = None,
-    assignee: Optional[str] = None,
-    location: Optional[str] = None,
-    urgency: Optional[str] = None,
-    search: Optional[str] = None,
-    complainant_name: Optional[str] = None
-) -> Dict:
-    """
-    ดึงข้อมูลคลังเอกสารแบ่งตามช่องทาง (สำหรับ listing/summary เท่านั้น)
-    
-    หมายเหตุ: endpoint นี้ให้ข้อมูลสรุปเท่านั้น ไม่รวม all_related เพื่อ performance
-    สำหรับรายละเอียดเต็มของแต่ละเรื่อง ให้ใช้ get_document_storage_detail()
-    """
-
 def get_parent_chain(db: Session, complaint_id: UUID, visited_ids: set = None) -> List[Dict]:
     """
     ตามหา parent chain แบบ recursive จนถึง master complaint สูงสุด
@@ -1021,7 +1000,8 @@ def get_document_storage_by_channel(
     location: Optional[str] = None,
     urgency: Optional[str] = None,
     search: Optional[str] = None,
-    complainant_name: Optional[str] = None
+    complainant_name: Optional[str] = None,
+    user_id: Optional[UUID] = None
 ) -> Dict:
     """ดึงข้อมูลคลังเอกสารแบ่งตามช่องทาง (สำหรับ listing - ข้อมูลสรุป)"""
     try:
@@ -1069,6 +1049,70 @@ def get_document_storage_by_channel(
         query = db.query(Complaint).filter(
             Complaint.complaint_channel_id.in_(channel_ids)
         )
+
+        # จำกัดเฉพาะเรื่องที่เกี่ยวข้องกับผู้ใช้ (ถ้ามี user_id)
+        if user_id:
+            query = query.filter(
+                or_(
+                    Complaint.created_by == user_id,
+                    Complaint.assigned_officer_id == user_id,
+                    Complaint.confirm_assigned_by == user_id,
+                    # ผู้ใช้เกี่ยวข้องกับรายงานออกชนิดต่างๆ ที่ผูกกับเรื่องนี้
+                    db.query(OutgoingReport.id).filter(
+                        and_(
+                            OutgoingReport.complaint_id == Complaint.id,
+                            or_(
+                                OutgoingReport.created_by == user_id,
+                                OutgoingReport.updated_by == user_id,
+                                OutgoingReport.signature_authority_user_id == user_id
+                            )
+                        )
+                    ).exists(),
+                    db.query(OutgoingReport2.id).filter(
+                        and_(
+                            OutgoingReport2.complaint_id == Complaint.id,
+                            or_(
+                                OutgoingReport2.created_by == user_id,
+                                OutgoingReport2.updated_by == user_id,
+                                OutgoingReport2.signature_authority_user_id == user_id,
+                                OutgoingReport2.user_id == user_id
+                            )
+                        )
+                    ).exists(),
+                    db.query(OutgoingReport3.id).filter(
+                        and_(
+                            OutgoingReport3.complaint_id == Complaint.id,
+                            or_(
+                                OutgoingReport3.created_by == user_id,
+                                OutgoingReport3.updated_by == user_id,
+                                OutgoingReport3.signature_authority_user_id == user_id
+                            )
+                        )
+                    ).exists(),
+                    db.query(OutgoingReport4.id).filter(
+                        and_(
+                            OutgoingReport4.complaint_id == Complaint.id,
+                            or_(
+                                OutgoingReport4.created_by == user_id,
+                                OutgoingReport4.updated_by == user_id,
+                                OutgoingReport4.signature_authority_user_id == user_id,
+                                OutgoingReport4.user_id == user_id
+                            )
+                        )
+                    ).exists(),
+                    db.query(OutgoingReport5.id).filter(
+                        and_(
+                            OutgoingReport5.complaint_id == Complaint.id,
+                            or_(
+                                OutgoingReport5.created_by == user_id,
+                                OutgoingReport5.updated_by == user_id,
+                                OutgoingReport5.signature_authority_user_id == user_id,
+                                OutgoingReport5.user_id == user_id
+                            )
+                        )
+                    ).exists()
+                )
+            )
         
         # Apply filters
         if status:

@@ -65,6 +65,44 @@ async def get_document_storage(
             "error": str(e)
         })
 
+@router.get("/me", response_model=FormatResponseModel)
+async def get_my_document_storage(
+    page_type: str = Query("website", description="ประเภทหน้า: 'website' หรือ 'card'"),
+    skip: int = Query(0, description="จำนวนที่ข้าม"),
+    limit: int = Query(100, description="จำนวนต่อหน้า"),
+    status: Optional[str] = Query(None, description="สถานะ"),
+    complaint_type: Optional[str] = Query(None, description="ประเภทเรื่องร้องเรียน"),
+    complaint_subtype: Optional[str] = Query(None, description="ประเภทเรื่องร้องเรียนย่อย"),
+    assignee: Optional[str] = Query(None, description="ผู้รับผิดชอบ"),
+    location: Optional[str] = Query(None, description="สถานที่"),
+    urgency: Optional[str] = Query(None, description="ความเร่งด่วน"),
+    search: Optional[str] = Query(None, description="คำค้นหา"),
+    complainant_name: Optional[str] = Query(None, description="ชื่อผู้ร้องเรียน"),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """เหมือน GET /document-storage แต่จำกัดเฉพาะเรื่องที่เกี่ยวข้องกับผู้ใช้ปัจจุบัน"""
+    try:
+        user_id = UUID(current_user)
+        result = get_document_storage_by_channel(
+            db=db,
+            page_type=page_type,
+            skip=skip,
+            limit=limit,
+            status=status,
+            complaint_type=complaint_type,
+            complaint_subtype=complaint_subtype,
+            assignee=assignee,
+            location=location,
+            urgency=urgency,
+            search=search,
+            complainant_name=complainant_name,
+            user_id=user_id
+        )
+        return format_response("0000", result)
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
 @router.get("/statistics", response_model=FormatResponseModel)
 async def get_statistics(
     page_type: str = Query("website", description="ประเภทหน้า: 'website' หรือ 'card'"),
