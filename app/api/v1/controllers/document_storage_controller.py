@@ -15,6 +15,8 @@ from models.outgoing_reports2 import OutgoingReport2
 from models.outgoing_reports3 import OutgoingReport3
 from models.outgoing_reports4 import OutgoingReport4
 from models.outgoing_reports5 import OutgoingReport5
+from models.user_role import UserRole
+from models.role import Role
 
 logger = logging.getLogger(__name__)
 
@@ -1052,6 +1054,17 @@ def get_document_storage_by_channel(
 
         # จำกัดเฉพาะเรื่องที่เกี่ยวข้องกับผู้ใช้ (ถ้ามี user_id)
         if user_id:
+            # ตรวจสอบสิทธิ์ admin เพื่อยกเว้นเงื่อนไขบางอย่างสำหรับ /me
+            is_admin = False
+            try:
+                is_admin = db.query(Role).join(UserRole, UserRole.role_id == Role.id).filter(
+                    UserRole.user_id == user_id,
+                    Role.name.ilike('admin'),
+                    Role.is_active == True
+                ).first() is not None
+            except Exception as e:
+                logger.warning(f"check admin role failed for user {user_id}: {e}")
+
             query = query.filter(
                 or_(
                     Complaint.created_by == user_id,
@@ -1113,6 +1126,8 @@ def get_document_storage_by_channel(
                     ).exists()
                 )
             )
+            if not is_admin:
+                query = query.filter(Complaint.confirm_assigned_status == True)
         
         # Apply filters
         if status:
