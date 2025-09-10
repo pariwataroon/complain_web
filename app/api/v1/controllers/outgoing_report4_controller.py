@@ -608,3 +608,55 @@ def delete_outgoing_report4_attachment_by_id(
     except Exception as e:
         logger.warning(f"OR4 delete attach history failed: {e}")
     return {"code": "0003", "message": "ลบเรคอร์ดไฟล์แนบ", "attachment_id": _safe_str(attachment_id)}
+
+
+# ------------------------- Update -------------------------
+def update_outgoing_report4(
+    db: Session,
+    report_id: UUID,
+    report_data: OutgoingReport4Update,
+    current_user_id: UUID,
+) -> Dict[str, Any]:
+    """อัปเดตรายงาน (รุ่น 4) ตาม ID"""
+    try:
+        rec = db.query(OutgoingReport4).filter(
+            OutgoingReport4.id == report_id,
+            OutgoingReport4.is_active == True
+        ).first()
+        if not rec:
+            raise HTTPException(status_code=404, detail="ไม่พบรายงานที่ระบุ")
+
+        # กันเลขเอกสารซ้ำ ถ้ามีการเปลี่ยน
+        if report_data.document_number is not None and report_data.document_number != rec.document_number:
+            dup = db.query(OutgoingReport4).filter(
+                OutgoingReport4.document_number == report_data.document_number,
+                OutgoingReport4.id != report_id,
+                OutgoingReport4.is_active == True,
+            ).first()
+            if dup:
+                raise DuplicateKeyError(f"เลขเอกสาร {report_data.document_number} มีอยู่แล้ว")
+
+        # ถ้าส่ง complaint_id มา ตรวจว่ามีจริง
+        if report_data.complaint_id is not None:
+            complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+            if not complaint:
+                raise HTTPException(status_code=400, detail="ไม่พบข้อร้องเรียนที่ระบุ")
+
+        for field, value in report_data.model_dump(exclude_unset=True).items():
+            setattr(rec, field, value)
+        rec.updated_by = current_user_id
+
+        db.commit()
+        db.refresh(rec)
+        return get_outgoing_report4_by_id(db, rec.id)
+
+    except DuplicateKeyError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating outgoing report4: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")

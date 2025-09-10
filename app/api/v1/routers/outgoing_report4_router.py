@@ -9,7 +9,7 @@ from starlette.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from config.database import get_db
-from app.api.middleware.permission_middleware import can_read, can_create, can_delete
+from app.api.middleware.permission_middleware import can_read, can_create, can_delete, can_update
 from app.api.v1.controllers.outgoing_report4_controller import (
     get_outgoing_reports4,
     get_outgoing_report4_by_id,
@@ -20,6 +20,7 @@ from app.api.v1.controllers.outgoing_report4_controller import (
     list_attachments_of_outgoing_report4,
     get_outgoing_report4_attachment_fileinfo,
     delete_outgoing_report4_attachment_by_id,
+    update_outgoing_report4,
     DuplicateKeyError,
 )
 from app.api.v1.schemas.outgoing_report4 import (
@@ -207,6 +208,22 @@ async def delete_outgoing_report4_attachment(
             "message": res.get("message"),
             "attachment_id": res.get("attachment_id"),
         })
+    except HTTPException as e:
+        return format_response("4040", {"error": e.detail})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
+# ---------- UPDATE (PUT) ----------
+@router.put("/{report_id}", response_model=FormatResponseModel)
+async def update_outgoing_report4_endpoint(
+    report_id: UUID,
+    report_data: OutgoingReport4Update,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("dashboard")),
+):
+    try:
+        data = update_outgoing_report4(db, report_id, report_data, UUID(current_user))
+        return format_response("0002", data)
     except HTTPException as e:
         return format_response("4040", {"error": e.detail})
     except Exception as e:

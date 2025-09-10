@@ -389,6 +389,70 @@ def get_outgoing_report5_options(db: Session) -> Dict[str, Any]:
     }
 
 
+# ========= UPDATE =========
+def update_outgoing_report5(
+    db: Session,
+    report_id: UUID,
+    report_data: OutgoingReport5Update,
+    current_user_id: UUID,
+) -> Dict[str, Any]:
+    try:
+        rec = db.query(OutgoingReport5).filter(
+            OutgoingReport5.id == report_id,
+            OutgoingReport5.is_active == True
+        ).first()
+        if not rec:
+            raise HTTPException(status_code=404, detail="ไม่พบรายการที่ระบุ")
+
+        # ป้องกันเลขเอกสารซ้ำ ถ้ามีการแก้ไข
+        if report_data.document_number is not None and report_data.document_number != rec.document_number:
+            dup = db.query(OutgoingReport5).filter(
+                OutgoingReport5.document_number == report_data.document_number,
+                OutgoingReport5.id != report_id,
+                OutgoingReport5.is_active == True,
+            ).first()
+            if dup:
+                raise DuplicateKeyError(f"เลขที่เอกสาร {report_data.document_number} มีอยู่แล้ว")
+
+        # ตรวจหน่วยงาน/ผู้ลงนามเมื่อมีการเปลี่ยน
+        if report_data.department_id is not None:
+            dept = db.query(Department).filter(Department.id == report_data.department_id, Department.is_active == True).first()
+            if not dept:
+                raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานที่ระบุ")
+        if report_data.signature_authority_user_id is not None:
+            sig = db.query(User).filter(User.id == report_data.signature_authority_user_id, User.is_active == True).first()
+            if not sig:
+                raise HTTPException(status_code=404, detail="ไม่พบผู้มีอำนาจลงนามที่ระบุ")
+
+        # ตรวจความสอดคล้อง complaint_number กับ complaint_id ถ้าส่งมาพร้อมกัน
+        if (report_data.complaint_id is not None) and (report_data.complaint_number is not None):
+            c = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+            if not c:
+                raise HTTPException(status_code=404, detail="ไม่พบข้อร้องเรียนที่ระบุ")
+            if c.complaint_number != report_data.complaint_number:
+                raise HTTPException(status_code=400, detail="หมายเลขข้อร้องเรียนไม่ตรงกับข้อร้องเรียนที่เลือก")
+
+        # อัปเดตเฉพาะฟิลด์ที่ส่งมา
+        for field, value in report_data.model_dump(exclude_unset=True).items():
+            setattr(rec, field, value)
+        rec.updated_by = current_user_id
+
+        db.commit()
+        db.refresh(rec)
+        return get_outgoing_report5_by_id(db, rec.id)
+
+    except DuplicateKeyError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Update OutgoingReport5 error: {e}")
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
+
+
 # ========= AUTO-FILL =========
 def auto_fill_from_complaint5(db: Session, complaint_id: UUID) -> Dict[str, Any]:
     c = db.query(Complaint).filter(Complaint.id == complaint_id).first()

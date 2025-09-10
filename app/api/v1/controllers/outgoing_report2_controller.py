@@ -15,7 +15,7 @@ from models.comp_complaint import Complaint, ComplaintStatus
 from models.user import User
 from models.position import Position
 from models.departments import Department
-from app.api.v1.schemas.outgoing_report2 import OutgoingReport2Create
+from app.api.v1.schemas.outgoing_report2 import OutgoingReport2Create, OutgoingReport2Update
 from lib.logger import get_logger
 
 logger = get_logger("outgoing_report2_controller")
@@ -405,6 +405,61 @@ def auto_fill_from_complaint2(db: Session, complaint_id: UUID) -> Dict[str, Any]
         raise
     except Exception as e:
         logger.error(f"Error auto filling: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
+
+
+# ------------------------- Update -------------------------
+def update_outgoing_report2(
+    db: Session,
+    report_id: UUID,
+    report_data: OutgoingReport2Update,
+    current_user_id: UUID,
+) -> Dict[str, Any]:
+    """อัปเดต OutgoingReport2 ตาม ID (เฉพาะฟิลด์ที่ส่งมา)"""
+    try:
+        rec = db.query(OutgoingReport2).filter(
+            OutgoingReport2.id == report_id,
+            OutgoingReport2.is_active == True
+        ).first()
+        if not rec:
+            raise HTTPException(status_code=404, detail="ไม่พบรายงานที่ระบุ")
+
+        # กันเลขเอกสารซ้ำ ถ้ามีการเปลี่ยน
+        if report_data.document_number is not None and report_data.document_number != rec.document_number:
+            dup = db.query(OutgoingReport2).filter(
+                OutgoingReport2.document_number == report_data.document_number,
+                OutgoingReport2.id != report_id,
+                OutgoingReport2.is_active == True,
+            ).first()
+            if dup:
+                raise DuplicateKeyError(f"เลขเอกสาร {report_data.document_number} มีอยู่แล้ว")
+
+        # ตรวจความสอดคล้อง complaint_id ↔ complaint_number เมื่อทั้งคู่ถูกส่งมา
+        if (report_data.complaint_id is not None) and (report_data.complaint_number is not None):
+            complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+            if not complaint:
+                raise HTTPException(status_code=400, detail="ไม่พบข้อร้องเรียนที่ระบุ")
+            if complaint.complaint_number != report_data.complaint_number:
+                raise HTTPException(status_code=400, detail="หมายเลขข้อร้องเรียนไม่ตรงกับข้อร้องเรียนที่เลือก")
+
+        # อัปเดตเฉพาะที่ส่งมา
+        for field, value in report_data.model_dump(exclude_unset=True).items():
+            setattr(rec, field, value)
+        rec.updated_by = current_user_id
+
+        db.commit()
+        db.refresh(rec)
+        return get_outgoing_report2_by_id(db, rec.id)
+
+    except DuplicateKeyError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating outgoing report2: {str(e)}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
 
