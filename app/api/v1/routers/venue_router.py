@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
 import bleach
 
+from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
 from app.api.v1.controllers.venue_controller import (
     DuplicateKeyError, create_venue, delete_venue,
@@ -26,7 +27,7 @@ async def read_venues(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_department"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงรายการสถานที่ทั้งหมด"""
     venues_data = get_venues(db, skip=skip, limit=limit)
@@ -37,7 +38,7 @@ async def read_venues_by_group(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_department"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงข้อมูลสถานที่แบ่งตามกลุ่ม"""
     grouped_data = get_venues_by_group(db, skip=skip, limit=limit)
@@ -48,7 +49,7 @@ async def read_venues_by_department(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_department"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงข้อมูลสถานที่แบ่งตามหน่วยงาน และจัดกลุ่มภายในอีกที"""
     grouped_data = get_venues_grouped_by_department(db, skip=skip, limit=limit)
@@ -58,7 +59,7 @@ async def read_venues_by_department(
 async def read_venue(
     venue_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_department"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงข้อมูลสถานที่ตาม ID"""
     venue = get_venue_by_id(db, venue_id=venue_id)
@@ -72,7 +73,7 @@ async def search_venues_by_department_endpoint(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_department"))
+    current_user: str = Depends(verify_token)
 ):
     """ค้นหาสถานที่ตามหน่วยงาน"""
     venues = search_venues_by_department(db, department_id=department_id, skip=skip, limit=limit)
@@ -84,7 +85,7 @@ async def search_venues_by_name_endpoint(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_department"))
+    current_user: str = Depends(verify_token)
 ):
     """ค้นหาสถานที่ตามชื่อ รหัส หรือตัวย่อ"""
     venues = search_venues_by_name(db, search_term=search_term, skip=skip, limit=limit)

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
 import bleach
 
+from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import permission_required, can_create, can_read, can_update, can_delete
 from app.api.v1.controllers.department_controller import (
     DuplicateKeyError, create_department, delete_department,
@@ -26,7 +27,7 @@ async def read_departments(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_department"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงรายการหน่วยงานทั้งหมด"""
     departments_data = get_departments(db, skip=skip, limit=limit)
@@ -37,7 +38,7 @@ async def read_departments_by_group(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_department"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงข้อมูลหน่วยงานแบ่งตามกลุ่ม"""
     grouped_data = get_departments_by_group(db, skip=skip, limit=limit)
@@ -48,7 +49,7 @@ async def read_departments_with_venues(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_department"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงข้อมูลหน่วยงานพร้อมสถานที่"""
     departments_with_venues = get_departments_with_venues(db, skip=skip, limit=limit)
@@ -58,7 +59,7 @@ async def read_departments_with_venues(
 async def read_department(
     department_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_department"))
+    current_user: str = Depends(verify_token)
 ):
     """ดึงข้อมูลหน่วยงานตาม ID"""
     department = get_department_by_id(db, department_id=department_id)
@@ -72,7 +73,7 @@ async def search_departments_by_name_endpoint(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("setting_department"))
+    current_user: str = Depends(verify_token)
 ):
     """ค้นหาหน่วยงานตามชื่อ รหัส หรือตัวย่อ"""
     departments = search_departments_by_name(db, search_term=search_term, skip=skip, limit=limit)
