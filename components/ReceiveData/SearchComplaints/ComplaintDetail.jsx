@@ -332,11 +332,20 @@ const ComplaintDetail = () => {
   if (!id) return <div>No Complaint ID</div>;
   if (loading) return <div>Loading...</div>;
   
-  console.log("Data validation:", {
-    hasComplainantData,
-    hasDelegateData, 
-    hasRespondentData
-  });
+  // Define validation flags to prevent ReferenceError and for debugging/use later
+  const hasComplainantData = !!(
+    data?.complainant &&
+    Object.values(data.complainant).some((val) => val !== null && val !== undefined && val !== "")
+  );
+  const hasDelegateData = !!(
+    data?.delegate &&
+    Object.values(data.delegate).some((val) => val !== null && val !== undefined && val !== "")
+  );
+  const hasRespondentData = !!(
+    data?.respondent &&
+    Object.values(data.respondent).some((val) => val !== null && val !== undefined && val !== "")
+  );
+
   console.log("=======================================");
 
   return <ComplaintSummaryService 
