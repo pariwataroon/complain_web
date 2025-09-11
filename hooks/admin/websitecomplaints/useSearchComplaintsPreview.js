@@ -29,7 +29,7 @@ const useSearchComplaintsPreview = () => {
       const currentDateTime = new Date().toISOString();
       const currentUser = userInfo
         ? `${userInfo.first_name || ""} ${userInfo.last_name || ""}`.trim() ||
-          "ผู้ใช้ไม่ระบุชื่อ"
+        "ผู้ใช้ไม่ระบุชื่อ"
         : "ผู้ใช้ไม่ระบุชื่อ";
 
       // Get user ID for assigned_officer_id
@@ -176,7 +176,7 @@ const useSearchComplaintsPreview = () => {
       console.log("=== API Response ===", response);
 
       // ตรวจสอบผลลัพธ์
-      if (response?.res_code === "0000") {
+      if (response?.success || response?.res_code === "0000" || (response?.httpStatus >= 200 && response?.httpStatus < 300)) {
         console.log("✅ API Success - res_code: 0000");
         alertSuccess("บันทึกข้อมูลเรียบร้อยแล้ว");
         return response;
