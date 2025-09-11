@@ -10891,6 +10891,143 @@
 			"description": "API สำหรับจัดการรายงานรับเรื่องผลการพิจารณาจากหน่วยงาน - เชื่อมโยงกับข้อร้องเรียน, หน่วยงาน, ผู้มีอำนาจลงนาม, และผู้ปฏิบัติงาน (Incoming acknowledgement of agency's decision/result)"
 		},
 		{
+			"name": "OUTGOING REPORTS 6 (รายงานนำเรียนผู้ตรวจ)",
+			"item": [
+				{
+					"name": "Get All Outgoing Reports 6",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports6?skip=0&limit=100&search=&department_id=&signature_authority_user_id=&urgency_level=&date_from=&date_to=",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports6"],
+							"query": [
+								{"key": "skip", "value": "0", "description": "จำนวนรายการที่ข้าม"},
+								{"key": "limit", "value": "100", "description": "จำนวนรายการต่อหน้า"},
+								{"key": "search", "value": "", "description": "ค้นหาจากเลขอ้างอิง, เรื่อง, หมายเลขข้อร้องเรียน"},
+								{"key": "department_id", "value": "", "description": "หน่วยงาน (UUID)"},
+								{"key": "signature_authority_user_id", "value": "", "description": "ผู้มีอำนาจลงนาม (UUID)"},
+								{"key": "urgency_level", "value": "", "description": "ระดับความเร่งด่วน"},
+								{"key": "date_from", "value": "", "description": "วันที่เริ่มต้น (YYYY-MM-DD)"},
+								{"key": "date_to", "value": "", "description": "วันที่สิ้นสุด (YYYY-MM-DD)"}
+							]
+						},
+						"description": "ดึงรายการรายงานนำเรียนผู้ตรวจทั้งหมด พร้อมการกรองและค้นหา"
+					}
+				},
+				{
+					"name": "Get Outgoing Report 6 Options",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{API}}{{PREFIX}}/outgoing-reports6/options", "host": ["{{API}}{{PREFIX}}"], "path": ["outgoing-reports6", "options"]},
+						"description": "ดึงตัวเลือกสำหรับ dropdown ต่างๆ ในฟอร์ม - รวมรายการหน่วยงาน, ผู้มีอำนาจลงนาม, ผู้ใช้, ระดับความลับ, ระดับความเร่งด่วน"
+					}
+				},
+				{
+					"name": "Auto Fill from Complaint 6",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{API}}{{PREFIX}}/outgoing-reports6/auto-fill/{{complaint_id}}", "host": ["{{API}}{{PREFIX}}"], "path": ["outgoing-reports6", "auto-fill", "{{complaint_id}}"]},
+						"description": "ดึงข้อมูลจากข้อร้องเรียนมาเติมในฟอร์มรายงานนำเรียนผู้ตรวจ - จะได้ข้อมูล complaint_id, complaint_number, complaint_number_date, subject"
+					}
+				},
+				{
+					"name": "Create Outgoing Report 6",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reference_number\": \"เลขอ้างอิง-2025-006\",\n    \"reference_date\": \"2025-09-11T10:00:00Z\",\n    \"subject\": \"เรื่อง รายงานนำเรียนผู้ตรวจ\",\n    \"complaint_number\": \"MOF-20250911-00001\",\n    \"complaint_number_date\": \"2025-09-10T00:00:00Z\",\n    \"signature_authority_user_id\": \"{{signature_user_id}}\",\n    \"department_id\": \"{{department_id}}\",\n    \"user_id\": \"{{user_id}}\",\n    \"other_department\": \"หน่วยงานอื่นๆ\",\n    \"confidentiality_level\": \"ปกติ\",\n    \"urgency_level\": \"ปกติ\",\n    \"document_number\": \"สป.กค 123/2568\",\n    \"document_date\": \"2025-09-11T10:00:00Z\",\n    \"remarks\": \"หมายเหตุ\",\n    \"proposal_purpose\": \"เสนอเพื่อทราบ\",\n    \"consideration_result\": \"ผลการพิจารณาเบื้องต้น\",\n    \"complaint_id\": \"{{complaint_id}}\"\n}",
+							"options": {"raw": {"language": "json"}}
+						},
+						"url": {"raw": "{{API}}{{PREFIX}}/outgoing-reports6", "host": ["{{API}}{{PREFIX}}"], "path": ["outgoing-reports6"]},
+						"description": "สร้างรายงานนำเรียนผู้ตรวจใหม่ด้วย JSON body"
+					}
+				},
+				{
+					"name": "Get Outgoing Report 6 by ID",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{API}}{{PREFIX}}/outgoing-reports6/{{report6_id}}", "host": ["{{API}}{{PREFIX}}"], "path": ["outgoing-reports6", "{{report6_id}}"]},
+						"description": "ดึงรายงานนำเรียนผู้ตรวจตาม ID พร้อมข้อมูลครบถ้วน รวมข้อมูลหน่วยงาน, ผู้มีอำนาจลงนาม, ผู้ใช้ที่เกี่ยวข้อง, และไฟล์แนบ"
+					}
+				},
+				{
+					"name": "Update Outgoing Report 6",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reference_number\": \"เลขอ้างอิง-2025-006-ปรับ\",\n    \"reference_date\": \"2025-09-12T10:00:00Z\",\n    \"subject\": \"เรื่อง รายงานนำเรียนผู้ตรวจ (แก้ไข)\",\n    \"signature_authority_user_id\": \"{{signature_user_id}}\",\n    \"department_id\": \"{{department_id}}\",\n    \"user_id\": \"{{user_id}}\",\n    \"other_department\": \"หน่วยงานอื่นๆ (แก้ไข)\",\n    \"confidentiality_level\": \"ลับ\",\n    \"urgency_level\": \"ด่วน\",\n    \"document_number\": \"สป.กค 123/2568-ปรับ\",\n    \"document_date\": \"2025-09-12T10:00:00Z\",\n    \"remarks\": \"แก้ไขข้อความ\",\n    \"proposal_purpose\": \"เสนอเพื่อพิจารณา\",\n    \"consideration_result\": \"ผลการพิจารณา (แก้ไข)\"\n}",
+							"options": {"raw": {"language": "json"}}
+						},
+						"url": {"raw": "{{API}}{{PREFIX}}/outgoing-reports6/{{report6_id}}", "host": ["{{API}}{{PREFIX}}"], "path": ["outgoing-reports6", "{{report6_id}}"]},
+						"description": "อัปเดตรายงานนำเรียนผู้ตรวจตาม ID - ส่งเฉพาะฟิลด์ที่ต้องการแก้ไขได้ รองรับ partial update; สำเร็จจะได้ res_code = 0002"
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Attachments 6",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [],
+						"body": {"mode": "formdata", "formdata": [{"key": "files", "type": "file", "src": []}]},
+						"url": {"raw": "{{API}}{{PREFIX}}/outgoing-reports6/{{report6_id}}/attachments", "host": ["{{API}}{{PREFIX}}"], "path": ["outgoing-reports6", "{{report6_id}}", "attachments"]},
+						"description": "อัปโหลดไฟล์แนบให้รายงานนำเรียนผู้ตรวจ - สามารถอัปโหลดหลายไฟล์พร้อมกันได้"
+					}
+				},
+				{
+					"name": "List Attachments 6",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{API}}{{PREFIX}}/outgoing-reports6/{{report6_id}}/attachments", "host": ["{{API}}{{PREFIX}}"], "path": ["outgoing-reports6", "{{report6_id}}", "attachments"]},
+						"description": "ดึงรายการไฟล์แนบของรายงานนำเรียนผู้ตรวจ"
+					}
+				},
+				{
+					"name": "Download Attachment 6",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{API}}{{PREFIX}}/outgoing-reports6/{{report6_id}}/attachments/{{attachment_id}}/download", "host": ["{{API}}{{PREFIX}}"], "path": ["outgoing-reports6", "{{report6_id}}", "attachments", "{{attachment_id}}", "download"]},
+						"description": "ดาวน์โหลดไฟล์แนบของรายงานนำเรียนผู้ตรวจ"
+					}
+				},
+				{
+					"name": "Delete Attachment 6",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/outgoing-reports6/{{report6_id}}/attachments/{{attachment_id}}?hard_delete=false",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["outgoing-reports6", "{{report6_id}}", "attachments", "{{attachment_id}}"],
+							"query": [{"key": "hard_delete", "value": "false", "description": "true = ลบถาวร, false = soft delete"}]
+						},
+						"description": "ลบไฟล์แนบของรายงานนำเรียนผู้ตรวจ (soft delete เป็นค่าเริ่มต้น)"
+					}
+				}
+			],
+			"description": "API สำหรับจัดการรายงานนำเรียนผู้ตรวจ - เชื่อมโยงกับข้อร้องเรียน, หน่วยงาน, ผู้มีอำนาจลงนาม, และผู้ใช้ที่เกี่ยวข้อง"
+		},
+		{
 			"name": "USER PERMISSIONS (สิทธิ์เฉพาะผู้ใช้)",
 			"item": [
 				{
