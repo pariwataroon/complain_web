@@ -120,11 +120,31 @@ const ComplaintIDService = ({ complaint }) => {
     if (!url) return "";
     const s = typeof url === "string" ? url : String(url);
     if (/^https?:\/\//i.test(s)) return s;
-    // Prefer API base for static uploads
+    // Special handling for static uploads paths
+    // Desired: https://<origin>/api/uploads/.... (not /api/v1/uploads)
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+    const originFromBase = (() => {
+      try {
+        return apiBase ? new URL(apiBase).origin : "";
+      } catch {
+        return "";
+      }
+    })();
+    const origin = originFromBase || (typeof window !== "undefined" ? window.location.origin : "");
+
+    if (s.startsWith("/uploads/")) {
+      if (origin) return `${origin}/api${s}`;
+      // SSR fallback
+      return s;
+    }
+    if (s.startsWith("/api/uploads/")) {
+      if (origin) return `${origin}${s}`;
+      return s;
+    }
+
+    // Generic join: prefer apiBase; fallback to origin
     if (apiBase) return joinUrl(apiBase, s);
-    // Fallback to current origin
-    if (typeof window !== "undefined") return joinUrl(window.location.origin, s);
+    if (origin) return joinUrl(origin, s);
     return s;
   };
 
