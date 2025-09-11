@@ -12,7 +12,7 @@ import useInformRelatedParties from "@hooks/admin/InformRelatedParties/useInform
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
-import { DeleteOutgoingReportAttachment, GetOutgoingReportById } from "@pages/api/outgoinreports/outgoinreports";
+import { DeleteOutgoingReportAttachment, DeleteOutgoingReport4Attachment, GetOutgoingReportById } from "@pages/api/outgoinreports/outgoinreports";
 import { GetReferenceComplaints, GetReDocumentComplaints } from "@pages/api/complaint/complaint";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -47,8 +47,12 @@ const InformRelatedParties = () => {
     handleClear,
     handleSave,
     isFormValid,
-  fileInputKey,
-  canSave,
+    fileInputKey,
+    canSave,
+    isEditing,
+  report4Id,
+  existingAttachments,
+  setExistingAttachments,
   } = useInformRelatedParties();
 
   // State สำหรับ dynamic data
@@ -68,7 +72,8 @@ const InformRelatedParties = () => {
   const router = useRouter();
 
   // Existing attachments (when editing) and helpers to view/delete
-  const [existingAttachments, setExistingAttachments] = useState([]);
+  // existingAttachments now managed inside hook; we just consume
+  // existingAttachments handled by hook
   const normalizeFilePath = useCallback((p) => {
     if (!p) return "";
     let s = String(p);
@@ -315,70 +320,7 @@ const InformRelatedParties = () => {
   };
   const [tabSelected, setTabSelected] = useState("department");
 
-  // Prefill when editing an existing report via /[id]
-  useEffect(() => {
-    const editId = router?.query?.id;
-    if (!editId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await GetOutgoingReportById(editId);
-        const d = res?.res_data || res?.data || res;
-        if (cancelled || !d) return;
-
-        // IDs and numbers
-        handleChange({ target: { name: "refNo", value: d.reference_number || d.complaint_number || d.document_number || "" } });
-        handleDateChange(d.reference_date ? new Date(d.reference_date) : (d.created_at ? new Date(d.created_at) : null), "date");
-
-        // Additional book/document info
-        handleChange({ target: { name: "bookNo", value: d.document_number || "" } });
-        if (d.document_date) handleDateChange(new Date(d.document_date), "date2");
-        else if (d.complaint_number_date) handleDateChange(new Date(d.complaint_number_date), "date2");
-
-        // Subject
-        handleChange({ target: { name: "subject", value: d.subject || "" } });
-
-        // Signer
-        const signerObj = d.signature_authority_user || null;
-        const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || "";
-        setSelectedSigner(signerObj);
-        handleChange({ target: { name: "signer", value: signerId } });
-
-        // Department
-        handleChange({ target: { name: "department", value: d.department?.id || "" } });
-        const deptObj = d.department
-          ? { value: d.department.id, label: d.department.name, code: d.department.code || "", shortName: d.department.short_name || d.department.shortName || "" }
-          : null;
-        setSelectedDepartment(deptObj);
-
-        // Confidentiality / Urgency
-        if (d.confidentiality_level !== undefined && d.confidentiality_level !== null) {
-          handleChange({ target: { name: "confidentiality", value: d.confidentiality_level } });
-        }
-        if (d.urgency_level !== undefined && d.urgency_level !== null) {
-          handleChange({ target: { name: "urgency", value: d.urgency_level } });
-        }
-
-        // Propose / Decision
-        if (d.propose_for || d.proposal_purpose) handleChange({ target: { name: "proposeFor", value: d.propose_for || d.proposal_purpose } });
-        if (d.decision || d.consideration_result) handleChange({ target: { name: "decision", value: d.decision || d.consideration_result } });
-
-        // Note / details
-        if (d.remarks) handleChange({ target: { name: "note", value: d.remarks } });
-
-        // Attachments
-        const atts = Array.isArray(d.attachments) ? d.attachments : [];
-        setExistingAttachments(atts);
-        if (atts.length) {
-          const names = atts.map(a => a.original_name || a.file_name || a.name || "").filter(Boolean).join(", ");
-          if (names) handleChange({ target: { name: "attachment", value: names } });
-        }
-      } catch (e) {
-        console.error("Prefill type4 report failed", e);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [router?.query?.id]);
+  // Remove legacy prefill (replacement handled inside hook).
 
   return (
     <Box
@@ -414,7 +356,7 @@ const InformRelatedParties = () => {
         {/* subtitle */}
         <Box sx={{ textAlign: "center", py: 2 }}>
           <Typography variant="h5" fontWeight="bold" color="#1120A3">
-            แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ
+            {isEditing ? "แก้ไขรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ" : "แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ"}
           </Typography>
         </Box>
         <Box
@@ -1136,17 +1078,31 @@ const InformRelatedParties = () => {
               existingFiles={existingAttachments}
               getFileUrl={(att) => buildFileUrl(att.file_path)}
               onDeleteExisting={async (att) => {
-                const reportId = router?.query?.id || null;
+                const reportId = report4Id || router?.query?.report4_id || router?.query?.id || null;
                 if (!reportId || !att?.id) return false;
-                const res = await DeleteOutgoingReportAttachment({
+                // Try type4 specific endpoint first
+                let res = await DeleteOutgoingReport4Attachment({
                   outgoing_report_id: reportId,
                   attachment_id: att.id,
                 });
                 if (res?.success === false) {
+                  // fallback generic
+                  res = await DeleteOutgoingReportAttachment({
+                    outgoing_report_id: reportId,
+                    attachment_id: att.id,
+                  });
+                }
+                if (res?.success === false) {
                   alert(res?.res_message || "ลบไฟล์ไม่สำเร็จ");
                   return false;
                 }
-                setExistingAttachments((prev) => prev.filter((x) => x.id !== att.id));
+                setExistingAttachments((prev) => {
+                  const updated = prev.filter((x) => x.id !== att.id);
+                  return updated;
+                });
+                // Update attachment field (names) after deletion
+                const remainingNames = (existingAttachments.filter(x => x.id !== att.id).map(a => a.original_name || a.file_name || a.name || "").filter(Boolean)).join(", ");
+                handleChange("attachment", remainingNames);
                 return true;
               }}
             />
@@ -1205,7 +1161,7 @@ const InformRelatedParties = () => {
 
           <Box sx={{ width: { xs: "100%", md: "18%" } }}>
             <ButtonService
-              label={isLoading ? "กำลังบันทึก..." : "บันทึก"}
+              label={isLoading ? (isEditing ? "กำลังอัปเดต..." : "กำลังบันทึก...") : (isEditing ? "อัปเดต" : "บันทึก")}
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={handleSave}

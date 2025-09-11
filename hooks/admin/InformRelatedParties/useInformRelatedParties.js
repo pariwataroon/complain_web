@@ -9,6 +9,8 @@ import {
 import {
   CreateOutgoingReport4,
   UploadOutgoingReportAttachments,
+  GetOutgoingReport4ById,
+  UpdateOutgoingReport4,
 } from "@pages/api/outgoinreports/outgoinreports";
 import axiosInstance from "@pages/api/axiosInstance";
 
@@ -39,11 +41,14 @@ const toYMD = (thaiDate) => {
 
 export const useInformRelatedParties = () => {
   const router = useRouter();
-  const { id, complaint_id, complaint_number } = router.query;
+  const { id, complaint_id, complaint_number, report4_id } = router.query;
+  // complaint id separate from report4 editing id
   const complaintId =
-    (Array.isArray(id) ? id[0] : id) ||
     (Array.isArray(complaint_id) ? complaint_id[0] : complaint_id) ||
+    (Array.isArray(id) ? id[0] : id) ||
     null;
+  // editing target (report4 primary id)
+  const report4Id = Array.isArray(report4_id) ? report4_id[0] : report4_id || null;
   const complaintNumberFromQuery = Array.isArray(complaint_number)
     ? complaint_number[0]
     : complaint_number || "";
@@ -78,10 +83,13 @@ export const useInformRelatedParties = () => {
 
   const [form, setForm] = useState(initialFormState);
   const [errors, setErrors] = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [loadedReportId, setLoadedReportId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   // เพิ่ม state สำหรับเก็บไฟล์จริง
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [existingAttachments, setExistingAttachments] = useState([]);
 
   // ฟิลด์ที่จำเป็นต้องกรอก
   const requiredFields = [
@@ -94,6 +102,7 @@ export const useInformRelatedParties = () => {
     "urgency",
     "proposeFor",
     "decision",
+    // attachment: allow empty if editing and there are existing attachments already
     "attachment",
   ];
 
@@ -265,6 +274,7 @@ export const useInformRelatedParties = () => {
     const missingFields = [];
 
     fieldsConfig.forEach(({ field, label }) => {
+      if (field === 'attachment' && isEditing && existingAttachments.length > 0) return; // skip attachment requirement when editing with existing attachments
       const value = form[field];
       if (!value || value === "" || value === null) {
         newErrors[field] = `กรุณากรอก${label}`;
@@ -365,6 +375,18 @@ export const useInformRelatedParties = () => {
 
   // ฟังก์ชันสร้าง request body ตาม format ที่กำหนด - แก้ไข position_id
   const createRequestBody = useCallback(() => {
+    // Map numbers (select values) to API expected string labels
+    const confidentialityNumberToString = (val) => {
+      const map = { 1: 'ปกติ', 2: 'ลับ', 3: 'ลับมาก', 4: 'ลับที่สุด' };
+      if (typeof val === 'string') return map[Number(val)] || val; // already string label or numeric string
+      return map[val] || null;
+    };
+    const urgencyNumberToString = (val) => {
+      // Sample body from user shows 'ด่วน', 'ด่วนมาก', 'ด่วนที่สุด'
+      const map = { 1: 'ปกติ', 2: 'ด่วน', 3: 'ด่วนมาก', 4: 'ด่วนที่สุด' };
+      if (typeof val === 'string') return map[Number(val)] || val; // keep original if already label
+      return map[val] || null;
+    };
     const body = {
       position_id: POSITION_FALLBACK,
       reference_number: (form.refNo || "").trim(),
@@ -376,8 +398,8 @@ export const useInformRelatedParties = () => {
       document_date: toYMD(form.date2),
       signature_authority_user_id: form.signer,
       department_id: form.department,
-      confidentiality_level: form.confidentiality,
-      urgency_level: form.urgency,
+      confidentiality_level: confidentialityNumberToString(form.confidentiality),
+      urgency_level: urgencyNumberToString(form.urgency),
       remarks: form.note || form.details || "",
       propose_for: form.proposeFor,
       decision: form.decision,
@@ -391,7 +413,7 @@ export const useInformRelatedParties = () => {
     return body;
   }, [form, complaintId]);
 
-  // ฟังก์ชันบันทึกข้อมูล - แก้ไขให้อัปโหลดไฟล์ด้วย
+  // ฟังก์ชันบันทึกข้อมูล - รองรับทั้ง create และ update
   const handleSave = useCallback(async () => {
     console.log("💾 handleSave: Starting save process");
 
@@ -416,31 +438,40 @@ export const useInformRelatedParties = () => {
       showLoading("กำลังบันทึกข้อมูล...");
 
       const requestBody = createRequestBody();
-      console.log("🚀 Sending request with body:", requestBody);
+      console.log("🚀 Sending request with body:", requestBody, "editing:", isEditing, "target:", loadedReportId || report4Id);
 
-      // Step 1: บันทึกข้อมูลหลัก
-      const response = await CreateOutgoingReport4(requestBody);
-      console.log("✅ Main data saved:", response);
+      let effectiveId = loadedReportId || report4Id;
+      let response;
+      if (isEditing && effectiveId) {
+        // UPDATE flow
+        console.log("✏️ Updating existing outgoing report4", effectiveId);
+        response = await UpdateOutgoingReport4(effectiveId, requestBody);
+      } else {
+        // CREATE flow
+        response = await CreateOutgoingReport4(requestBody);
+      }
+      console.log("✅ Main data saved/updated:", response);
 
-      // ดึงรหัสรายงานให้แน่นอน
-      const createdId = response?.id || response?.res_data?.id || null;
+      // ดึงรหัสรายงานให้แน่นอน (create หรือ update return)
+      const createdId = response?.id || response?.res_data?.id || effectiveId || null;
       if (!createdId) {
         closeAlert();
         setIsLoading(false);
-        await alertError("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานที่สร้างได้ กรุณาลองใหม่อีกครั้ง");
+        await alertError("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานได้ กรุณาลองใหม่อีกครั้ง");
         return;
       }
+      effectiveId = createdId;
 
-      // Step 2: อัปโหลดไฟล์ (ถ้ามี)
-      if (uploadedFiles.length > 0) {
-        console.log("📤 Starting file upload for report ID:", createdId);
+      // อัปโหลดไฟล์เฉพาะกรณีที่มีไฟล์ใหม่ (ไฟล์ existingAttachments จัดการหน้า component)
+  if (uploadedFiles.length > 0) {
+        console.log("📤 Starting file upload for report ID:", effectiveId);
         showLoading("กำลังอัปโหลดไฟล์...");
-        await uploadFiles(createdId);
+        await uploadFiles(effectiveId);
         console.log("✅ Files uploaded successfully");
       }
 
       closeAlert();
-      const reportId = createdId;
+      const reportId = effectiveId;
 
       const successMessage = `
           <div style="text-align: center; line-height: 1.6;">
@@ -455,7 +486,7 @@ export const useInformRelatedParties = () => {
         `;
 
   await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
-      router.push(`/admin/box/list`);
+  router.push(`/admin/box/list`);
 
       // Reset form after successful save
       handleClear();
@@ -471,7 +502,7 @@ export const useInformRelatedParties = () => {
         error?.message || "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง"
       );
     }
-  }, [form, validateRequiredFields, createRequestBody, uploadFiles, uploadedFiles, handleClear]);
+  }, [form, validateRequiredFields, createRequestBody, uploadFiles, uploadedFiles, handleClear, isEditing, loadedReportId, report4Id]);
 
   // ฟังก์ชันสำหรับรีเซ็ตข้อมูลเฉพาะฟิลด์
   const resetField = useCallback((fieldName) => {
@@ -523,13 +554,71 @@ export const useInformRelatedParties = () => {
     });
   }, [form, requiredFields]);
 
+  // โหลดข้อมูลเพื่อแก้ไขเมื่อมี report4_id ใน query (หรือ id ที่เป็น type4)
+  useEffect(() => {
+    const targetId = report4Id; // ใช้ query report4_id ชัดเจน
+    if (!targetId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setIsLoading(true);
+        const res = await GetOutgoingReport4ById(targetId);
+        const d = res?.res_data || res?.data || res;
+        if (!d || cancelled) return;
+        setIsEditing(true);
+        setLoadedReportId(d.id);
+        // map fields
+        handleChange("refNo", d.reference_number || d.complaint_number || d.document_number || "");
+  if (d.reference_date) handleDateChange(toYMD(d.reference_date), "date");
+        if (d.document_date) handleDateChange(d.document_date, "date2");
+        else if (d.complaint_number_date) handleDateChange(d.complaint_number_date, "date2");
+        handleChange("subject", d.subject || "");
+        handleChange("bookNo", d.document_number || "");
+        handleChange("signer", d.signature_authority_user_id || d.signature_authority_user?.id || "");
+        handleChange("department", d.department_id || d.department?.id || "");
+      // Convert incoming string labels to numeric select value if needed
+      const confidentialityStringToNumber = (val) => {
+        if (val == null || val === '') return '';
+        const map = { 'ปกติ': 1, 'ลับ': 2, 'ลับมาก': 3, 'ลับที่สุด': 4 };
+        if (typeof val === 'number') return val;
+        return map[val] || '';
+      };
+      const urgencyStringToNumber = (val) => {
+        if (val == null || val === '') return '';
+        const map = { 'ปกติ': 1, 'ด่วน': 2, 'เร่งด่วน': 2, 'ด่วนมาก': 3, 'เร่งด่วนมาก': 3, 'ด่วนที่สุด': 4, 'เร่งด่วนที่สุด': 4 };
+        if (typeof val === 'number') return val;
+        return map[val] || '';
+      };
+      if (d.confidentiality_level != null) handleChange("confidentiality", confidentialityStringToNumber(d.confidentiality_level));
+      if (d.urgency_level != null) handleChange("urgency", urgencyStringToNumber(d.urgency_level));
+        handleChange("proposeFor", d.propose_for || d.proposal_purpose || "");
+        handleChange("decision", d.decision || d.consideration_result || "");
+        if (d.remarks) handleChange("note", d.remarks);
+        const atts = Array.isArray(d.attachments) ? d.attachments : [];
+        setExistingAttachments(atts);
+        if (atts.length) {
+          const names = atts.map(a => a.original_name || a.file_name || a.name || "").filter(Boolean).join(", ");
+          if (names) handleChange("attachment", names);
+        }
+      } catch (e) {
+        console.error("Load outgoing-report4 for edit failed", e);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [report4Id]);
+
   return {
     // State
     form,
     errors,
     isLoading,
     id,
+    isEditing,
+    report4Id: loadedReportId || report4Id,
     uploadedFiles, // เพิ่มไฟล์ที่อัปโหลด
+  existingAttachments,
     fileInputKey,
 
     // Validation helpers
@@ -554,6 +643,15 @@ export const useInformRelatedParties = () => {
     updateField,
     createRequestBody,
     uploadFiles, // เพิ่มฟังก์ชันอัปโหลดไฟล์
+  setExistingAttachments,
+  removeExistingAttachment: (attachmentId) => {
+    setExistingAttachments(prev => {
+      const updated = prev.filter(a => a.id !== attachmentId);
+      const names = updated.map(a => a.original_name || a.file_name || a.name || "").filter(Boolean).join(", ");
+      setForm(f => ({ ...f, attachment: names }));
+      return updated;
+    });
+  },
   };
 };
 

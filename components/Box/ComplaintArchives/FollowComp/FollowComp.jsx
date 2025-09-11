@@ -76,16 +76,27 @@ const handleManage = (sectionKey, id, router) => {
       );
       break;
     case "REQUEST_UPDATE":
-      router.push(`/admin/edit/request-result-or-progress/${id}`);
+      {
+        const complaintId2 = router.query?.id || null;
+        router.push({
+          pathname: `/admin/edit/request-result-or-progress/${id}`,
+          query: { complaint_id: complaintId2, outgoing_report3_id: id, report3_id: id },
+        });
+      }
       break;
-    case "AGENCY_REPORT":
-      router.push(`/admin/edit/report/${id}`);
+    case "AGENCY_REPORT": {
+      const complaintId2 = router.query?.id || null;
+      router.push({
+        pathname: "/admin/edit/report/",
+        query: { complaint_id: complaintId2, outgoing_report5_id: id, report5_id: id },
+      });
       break;
+    }
     case "FINAL_NOTIFY":
-      const complaintId = router.query?.id || id;
+      const complaintId = router.query?.id || null;
       router.push({
         pathname: "/admin/edit/inform-related-parties/",
-        query: { complaint_id: complaintId },
+        query: { complaint_id: complaintId, report4_id: id },
       });
       break;
     default:
@@ -445,17 +456,16 @@ const TableSection = ({
                           <IconButton
                             size="small"
                             onClick={() => {
-                              const complaintId = router.query?.id;
-                              const targetId =
-                                section.key === "FINAL_NOTIFY"
-                                  ? complaintId
-                                  : rowObj.id;
-                              if (targetId) {
-                                handleManage(section.key, targetId, router);
+                              if (section.key === "FINAL_NOTIFY") {
+                                // rowObj.id is the outgoing report4 id
+                                if (rowObj.id) {
+                                  handleManage(section.key, rowObj.id, router);
+                                } else {
+                                  console.error("Missing outgoing report4 id for FINAL_NOTIFY row");
+                                }
                               } else {
-                                console.error(
-                                  "Error: ID is missing for this row."
-                                );
+                                // other sections use rowObj.id directly
+                                if (rowObj.id) handleManage(section.key, rowObj.id, router);
                               }
                             }}
                             sx={{

@@ -9,6 +9,9 @@ import {
 import {
   CreateOutgoingReport3,
   UploadOutgoingReportAttachments,
+  UploadOutgoingReport3Attachments,
+  UpdateOutgoingReport3,
+  GetOutgoingReport3ById,
 } from "@pages/api/outgoinreports/outgoinreports";
 import axiosInstance from "@pages/api/axiosInstance";
 
@@ -17,7 +20,8 @@ const requiredFields = [
   "salutation",
   "refNo",
   "docNo",
-  "date",
+  "docDate",      // แยกวันที่หนังสือ
+  "refDate",      // แยกวันที่ สป.กค.
   "subject",
   "department",
   "signer",
@@ -72,11 +76,13 @@ const nullIfEmpty = (v) =>
 
 export const useRequestResultProgress = () => {
   const router = useRouter();
-  const { id, complaint_id, complaint_number } = router.query;
+  const { id, complaint_id, complaint_number, outgoing_report3_id, report3_id } = router.query;
   const complaintId =
     (Array.isArray(id) ? id[0] : id) ||
     (Array.isArray(complaint_id) ? complaint_id[0] : complaint_id) ||
     null;
+
+  const editReportId = (Array.isArray(outgoing_report3_id) ? outgoing_report3_id[0] : outgoing_report3_id) || (Array.isArray(report3_id) ? report3_id[0] : report3_id) || null;
   const complaintNumberFromQuery = Array.isArray(complaint_number)
     ? complaint_number[0]
     : complaint_number || "";
@@ -87,8 +93,9 @@ export const useRequestResultProgress = () => {
     salutation_is_other: false,
     position_other_text: "",
     refNo: complaintNumberFromQuery || "",
-    docNo: "",
-    date: null,
+  docNo: "",
+  docDate: null,
+  refDate: null,
     subject: "",
     department: "",
     signer: "",
@@ -103,6 +110,7 @@ export const useRequestResultProgress = () => {
   });
 
   const [attachmentFiles, setAttachmentFiles] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0); // For file input reset
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -118,7 +126,7 @@ export const useRequestResultProgress = () => {
     }
   };
 
-  // Prefill from query
+  // Prefill from query reference (complaint number)
   useEffect(() => {
     if (complaintNumberFromQuery && !form.refNo) {
       const parsed = parseRefNoToThaiDate(complaintNumberFromQuery);
@@ -129,6 +137,41 @@ export const useRequestResultProgress = () => {
       }));
     }
   }, [complaintNumberFromQuery]); // eslint-disable-line
+  // Load existing report for edit mode
+  useEffect(() => {
+    if (!editReportId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await GetOutgoingReport3ById(editReportId);
+        const d = res?.res_data || res?.data || res;
+        if (!d || cancelled) return;
+        setIsEditing(true);
+        setForm(prev => ({
+          ...prev,
+          salutation: d.salutation || prev.salutation,
+          salutation_is_other: !!d.position_other_text,
+          position_other_text: d.position_other_text || "",
+          refNo: d.complaint_number || d.document_number || prev.refNo,
+          docNo: d.document_number || prev.docNo,
+          docDate: d.document_date ? new Date(d.document_date) : (d.complaint_number_date ? new Date(d.complaint_number_date) : prev.docDate),
+          refDate: d.complaint_number_date ? new Date(d.complaint_number_date) : (d.document_date ? new Date(d.document_date) : prev.refDate),
+          subject: d.subject || prev.subject,
+          department: d.department?.id || d.department_id || prev.department,
+          signer: d.signature_authority_user?.id || d.signature_authority_user_id || prev.signer,
+          confidentiality: d.confidentiality_level ?? prev.confidentiality,
+          urgency: d.urgency_level ?? prev.urgency,
+          attachment: Array.isArray(d.attachments) && d.attachments.length ? d.attachments.map(a => a.original_name || a.file_name || a.name).filter(Boolean).join(', ') : prev.attachment,
+          note: d.remarks || prev.note,
+          position_id: d.position_id || prev.position_id,
+          complaint_id: d.complaint_id || prev.complaint_id,
+        }));
+      } catch (e) {
+        console.error('Load report3 (edit) failed', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [editReportId]);
 
   useEffect(() => {
     if (complaintId && !form.complaint_id) {
@@ -219,7 +262,8 @@ export const useRequestResultProgress = () => {
       position_other_text: "",
       refNo: "",
       docNo: "",
-      date: null,
+  docDate: null,
+  refDate: null,
       subject: "",
       department: "",
       signer: "",
@@ -268,14 +312,14 @@ export const useRequestResultProgress = () => {
       const v = value ?? e?.value ?? e;
       // Special case for refNo
       if (name === "refNo") {
-        const parsed = parseRefNoToThaiDate(v);
+        const parsed = parseRefNoToThaiDate(v); // auto-fill only refDate
         setForm((prev) => {
-          const next = { ...prev, refNo: v, ...(parsed ? { date: parsed } : {}) };
-          if (isEqual(prev.refNo, next.refNo) && isEqual(prev.date, next.date)) return prev;
+          const next = { ...prev, refNo: v, ...(parsed ? { refDate: parsed } : {}) };
+          if (isEqual(prev.refNo, next.refNo) && isEqual(prev.refDate, next.refDate)) return prev;
           return next;
         });
         if (errors.refNo) setErrors((prev) => ({ ...prev, refNo: null }));
-        if (parsed && errors.date) setErrors((prev) => ({ ...prev, date: null }));
+        if (parsed && errors.refDate) setErrors((prev) => ({ ...prev, refDate: null }));
         return;
       }
       // Toggle off 'other' clears text
@@ -299,12 +343,12 @@ export const useRequestResultProgress = () => {
       if (fieldName === "refNo") {
         const parsed = parseRefNoToThaiDate(value);
         setForm((prev) => {
-          const next = { ...prev, refNo: value, ...(parsed ? { date: parsed } : {}) };
-          if (isEqual(prev.refNo, next.refNo) && isEqual(prev.date, next.date)) return prev;
+          const next = { ...prev, refNo: value, ...(parsed ? { refDate: parsed } : {}) };
+          if (isEqual(prev.refNo, next.refNo) && isEqual(prev.refDate, next.refDate)) return prev;
           return next;
         });
         if (errors.refNo) setErrors((prev) => ({ ...prev, refNo: null }));
-        if (parsed && errors.date) setErrors((prev) => ({ ...prev, date: null }));
+        if (parsed && errors.refDate) setErrors((prev) => ({ ...prev, refDate: null }));
         return;
       }
       setForm((prev) => {
@@ -322,8 +366,9 @@ export const useRequestResultProgress = () => {
       { field: "salutation", label: "เรียน" },
       ...(state.salutation_is_other ? [{ field: 'position_other_text', label: 'ตำแหน่ง (อื่นๆ)' }] : []),
       { field: "refNo", label: "เลข สป.กค." },
-      { field: "docNo", label: "เลขที่หนังสือ" },
-      { field: "date", label: "วันที่" },
+  { field: "docNo", label: "เลขที่หนังสือ" },
+  { field: "docDate", label: "วันที่หนังสือ" },
+  { field: "refDate", label: "วันที่ สป.กค." },
       { field: "subject", label: "เรื่อง" },
       { field: "department", label: "หน่วยงาน / ผู้ร้อง" },
       { field: "signer", label: "ผู้ลงนาม" },
@@ -346,7 +391,7 @@ export const useRequestResultProgress = () => {
 
   // ---- Form Valid ----
   const isFormValid = useCallback(
-    () => requiredFields.every((f) => form[f] !== undefined && form[f] !== null && form[f] !== "") && (!form.salutation_is_other || !!form.position_other_text),
+  () => requiredFields.every((f) => form[f] !== undefined && form[f] !== null && form[f] !== "") && (!form.salutation_is_other || !!form.position_other_text),
     [form]
   );
 
@@ -380,9 +425,9 @@ export const useRequestResultProgress = () => {
         position_other_text: (state.salutation_is_other || state.position_other_text) ? (state.position_other_text || "").trim() : "",
         salutation: state.salutation || "",
         complaint_number: state.refNo || "",
-        complaint_number_date: toISOorNull(state.date),
+  complaint_number_date: toISOorNull(state.refDate),
         document_number: state.docNo || "",
-        document_date: toISOorNull(state.date),
+  document_date: toISOorNull(state.docDate),
         subject: state.subject || "เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน",
         signature_authority_user_id: nullIfEmpty(state.signer),
         user_id: null,
@@ -397,8 +442,17 @@ export const useRequestResultProgress = () => {
         setIsLoading(true);
         showLoading("กำลังบันทึกข้อมูล...");
 
-        // 1) Create record
-        const createRes = await CreateOutgoingReport3(payload);
+        let createRes = null;
+        if (editReportId) {
+          try {
+            createRes = await UpdateOutgoingReport3(editReportId, payload);
+          } catch (e) {
+            console.error('Update report3 failed', e);
+            throw e;
+          }
+        } else {
+          createRes = await CreateOutgoingReport3(payload);
+        }
 
         // Error: duplicate
         if (createRes?.res_code === "4090") {
@@ -407,11 +461,7 @@ export const useRequestResultProgress = () => {
           return alertError("เลขหนังสือซ้ำ", createRes?.res_data?.error || "เลขหนังสือซ้ำ");
         }
 
-        const createdId =
-          createRes?.res_data?.id ??
-          createRes?.data?.id ??
-          createRes?.id ??
-          null;
+  const createdId = editReportId || createRes?.res_data?.id || createRes?.data?.id || createRes?.id || null;
 
         // 2) Upload attachments
         if (createdId && attachmentFiles.length > 0) {
@@ -431,7 +481,7 @@ export const useRequestResultProgress = () => {
           };
           // Attempt 1: multi-files
           try {
-            const up1 = await UploadOutgoingReportAttachments(buildFormData(false), createdId);
+            const up1 = await UploadOutgoingReport3Attachments(buildFormData(false), createdId);
             uploadOk = !!(up1 && (up1.success === true || up1.res_code === "0001"));
             if (!uploadOk) {
               lastErrorMsg = up1?.res_data?.error || up1?.res_message || up1?.message || "";
@@ -444,7 +494,7 @@ export const useRequestResultProgress = () => {
           // Attempt 2: single file key
           if (!uploadOk && attachmentFiles.length === 1) {
             try {
-              const up2 = await UploadOutgoingReportAttachments(buildFormData(true), createdId);
+              const up2 = await UploadOutgoingReport3Attachments(buildFormData(true), createdId);
               uploadOk = !!(up2 && (up2.success === true || up2.res_code === "0001"));
               if (!uploadOk) {
                 lastErrorMsg = up2?.res_data?.error || up2?.res_message || up2?.message || lastErrorMsg;
@@ -485,13 +535,12 @@ export const useRequestResultProgress = () => {
             : null;
         const successHtml = `
           <div style="text-align:center;line-height:1.7">
-            <p style="margin:6px 0 14px 0;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
+            <p style="margin:6px 0 14px 0;">${editReportId ? 'อัพเดตแบบรายงานเรียบร้อยแล้ว' : 'บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว'}</p>
             <p style="margin:4px 0;color:#666">รหัสรายงาน: <strong>${createdId}</strong></p>
             <p style="margin:4px 0;color:#666">เรื่อง: <strong>${form.subject || "-"}</strong></p>
-            ${fileNames ? `<p style="margin:4px 0;color:#666">ไฟล์แนบ: <strong>${fileNames}</strong></p>` : ""}
-          </div>
-        `;
-        await alertSuccess("บันทึกสำเร็จ!", successHtml, true);
+            ${fileNames ? `<p style=\"margin:4px 0;color:#666\">ไฟล์แนบ: <strong>${fileNames}</strong></p>` : ''}
+          </div>`;
+        await alertSuccess(editReportId ? "อัพเดตสำเร็จ!" : "บันทึกสำเร็จ!", successHtml, true);
         router.push(`/admin/box/list`);
         handleClear();
       } catch (err) {
@@ -540,7 +589,7 @@ export const useRequestResultProgress = () => {
         );
       }
     },
-    [form, attachmentFiles, validateRequiredFields, handleClear, router]
+  [form, attachmentFiles, validateRequiredFields, handleClear, router, editReportId]
   );
 
   // ---- Form Change ----
@@ -549,7 +598,8 @@ export const useRequestResultProgress = () => {
       salutation: "",
       refNo: "",
       docNo: "",
-      date: null,
+      docDate: null,
+      refDate: null,
       subject: "",
       department: "",
       signer: "",
@@ -586,7 +636,9 @@ export const useRequestResultProgress = () => {
     handleSave,
     updateField,
     validateRequiredFields,
-    resetFileInput,
+  resetFileInput,
+  isEditing: !!editReportId,
+  editReportId,
   };
 };
 
