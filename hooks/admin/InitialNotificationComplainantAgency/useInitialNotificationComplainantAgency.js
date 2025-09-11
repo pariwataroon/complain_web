@@ -6,35 +6,101 @@ import {
   showLoading,
   closeAlert,
 } from "@utils/Alerts";
+import axiosInstance from "@pages/api/axiosInstance";
 import {
   CreateOutgoingReport2,
   UploadOutgoingReportAttachments,
+  GetOutgoingReport2ById,
 } from "@pages/api/outgoinreports/outgoinreports";
-import axiosInstance from "@pages/api/axiosInstance";
+
+export const UpdateOutgoingReport2 = async (id, data) => {
+  if (!id) throw new Error("Missing id for UpdateOutgoingReport2");
+  try {
+    const response = await axiosInstance.put(`/outgoing-reports2/${id}`, data);
+    return response.data;
+  } catch (errorPut) {
+    const statusPut = errorPut?.response?.status;
+    try {
+      const responsePatch = await axiosInstance.patch(`/outgoing-reports2/${id}`, data);
+      return responsePatch.data;
+    } catch (errorPatch) {
+      console.error("Error updating outgoing report2:", {
+        putStatus: statusPut,
+        putData: errorPut?.response?.data,
+        patchStatus: errorPatch?.response?.status,
+        patchData: errorPatch?.response?.data,
+        message: errorPatch?.message,
+      });
+      throw errorPatch;
+    }
+  }
+};
+
+export const DeleteOutgoingReport2Attachment = async ({ outgoing_report_id, attachment_id }) => {
+  if (!outgoing_report_id || !attachment_id) {
+    return { success: false, res_message: "missing outgoing_report_id or attachment_id" };
+  }
+  try {
+    const endpoint = `/outgoing-reports2/${outgoing_report_id}/attachments/${attachment_id}`;
+    const response = await axiosInstance.delete(endpoint);
+    return response.data || { success: true };
+  } catch (error) {
+    const status = error?.response?.status;
+    const data = error?.response?.data;
+    console.error("Error deleting attachment (type2):", { status, data });
+    return { success: false, res_message: data?.res_message || error?.message || "DELETE_FAILED", res_code: String(status || "500") };
+  }
+};
+
+function parseIsoToThaiDate(isoString) {
+  const m = typeof isoString === "string" && isoString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const year = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10);
+  const day = parseInt(m[3], 10);
+  return {
+    day,
+    month,
+    year,
+    buddhistYear: year + 543,
+  };
+}
 
 const toYMD = (d) => {
   if (!d) return null;
-  const dt = new Date(d);
-  return isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
+  if (typeof d === "object" && d.year && d.month && d.day) {
+    const yyyy = d.year;
+    const mm = String(d.month).padStart(2, "0");
+    const dd = String(d.day).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  if (d instanceof Date) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate());
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  if (typeof d === "string") {
+    const isoParsed = parseIsoToThaiDate(d);
+    if (isoParsed) return `${isoParsed.year}-${String(isoParsed.month).padStart(2, "0")}-${String(isoParsed.day).padStart(2, "0")}`;
+    return null;
+  }
+  return null;
 };
 
-// แปลงเลข สป.กค. (complaint_number) รูปแบบ MOF-YYYYMMDD(-suffix) => Thai date object
-// รองรับปีพ.ศ. ( > 2400 ) จะลบ 543 ให้เป็น ค.ศ. ภายใน ก่อนสร้าง Date จริง
 const parseComplaintNumberToThaiDate = (val) => {
   if (!val || typeof val !== 'string') return null;
   const cleaned = val.trim();
   const m = cleaned.match(/MOF-(\d{8})(?:-[A-Za-z0-9]+)?/i);
   if (!m) return null;
-  const raw = m[1]; // YYYYMMDD
+  const raw = m[1];
   if (raw.length !== 8) return null;
   let year = parseInt(raw.slice(0, 4), 10);
   const month = parseInt(raw.slice(4, 6), 10);
   const day = parseInt(raw.slice(6, 8), 10);
   if (!year || !month || !day) return null;
-  if (year > 2400) year -= 543; // พ.ศ. -> ค.ศ.
-  const d = new Date(year, month - 1, day);
-  if (isNaN(d.getTime())) return null;
-  return { day: d.getDate(), month: d.getMonth() + 1, year: d.getFullYear(), buddhistYear: d.getFullYear() + 543 };
+  if (year > 2400) year -= 543;
+  return { day, month, year, buddhistYear: year + 543 };
 };
 
 export const useInitialNotificationComplainantAgency = () => {
@@ -47,7 +113,9 @@ export const useInitialNotificationComplainantAgency = () => {
     salutation_is_other: false,
     position_other_text: "",
     refNo: "",
-    date: null,
+    document_date: null,
+    complaint_number: "",
+    complaint_number_date: null,
     subject: "",
     department: "",
     signer: "",
@@ -57,8 +125,7 @@ export const useInitialNotificationComplainantAgency = () => {
     note: "",
     position_id: "",
     complaint_id: "",
-    complaint_number: "",
-    selected_complaint_number: "", // เพิ่มฟิลด์นี้เพื่อเก็บ complaint_number ที่เลือก
+    selected_complaint_number: "",
   });
 
   // เก็บไฟล์จริง (รองรับหลายไฟล์)
@@ -68,30 +135,74 @@ export const useInitialNotificationComplainantAgency = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // -------- Prefill from query (complaint_id, complaint_number, created_at) --------
-  useEffect(() => {
-    if (!router?.isReady) return;
-    const { complaint_id: qId, complaint_number: qNum, created_at } = router.query || {};
-    if (!qId && !qNum && !created_at) return;
+  // ไฟล์แนบที่มีอยู่ในเซิร์ฟเวอร์ (สำหรับ mode edit)
+  const [existingAttachments, setExistingAttachments] = useState([]);
 
+  // -------- EDIT mode: โหลดข้อมูลจาก API และ sync attachments --------
+  useEffect(() => {
+    if (!router?.isReady || !id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await GetOutgoingReport2ById(id);
+        const d = res?.res_data || res?.data || res;
+        if (cancelled || !d) return;
+
+        setForm((prev) => ({
+          ...prev,
+          complaint_number: d.complaint_number || d.reference_number || "",
+          complaint_id: d.complaint_id || "",
+          refNo: d.document_number || "",
+          subject: d.subject || "",
+          salutation: d.position?.id || "",
+          salutation_is_other: (d.position?.name || "") === "อื่นๆ",
+          position_other_text: d.position_other_text || "",
+          signer: d.signature_authority_user?.id || d.signature_authority_user_id || "",
+          position_id: d.signature_authority_user?.position_id ||
+                        d.signature_authority_user?.position?.id ||
+                        d.signature_authority_user?.positionId || "",
+          department: d.department?.id || "",
+          document_date: d.document_date ? parseIsoToThaiDate(d.document_date) : null,
+          complaint_number_date: d.complaint_number_date ? parseIsoToThaiDate(d.complaint_number_date) : null,
+          confidentiality: d.confidentiality_level !== undefined && d.confidentiality_level !== null ? String(d.confidentiality_level) : "",
+          urgency: d.urgency_level !== undefined && d.urgency_level !== null ? String(d.urgency_level) : "",
+          note: d.remarks || "",
+          selected_complaint_number: "",
+        }));
+
+        const atts = Array.isArray(d.attachments) ? d.attachments : [];
+        setExistingAttachments(atts);
+        // อัพเดทชื่อไฟล์แนบในฟอร์ม (แสดงไฟล์ปัจจุบันจาก API)
+        if (atts.length) {
+          const names = atts.map(a => a.file_name || a.original_name || a.name || '').filter(Boolean).join(', ');
+          setForm((prev) => ({ ...prev, attachment: names }));
+        } else {
+          setForm((prev) => ({ ...prev, attachment: "" }));
+        }
+      } catch (err) {}
+    })();
+    return () => { cancelled = true; };
+  }, [router?.isReady, id]);
+
+  // -------- CREATE mode: Prefill จาก query --------
+  useEffect(() => {
+    if (!router?.isReady || id) return;
+    const { complaint_id: qId, complaint_number: qNum } = router.query || {};
     setForm((prev) => {
       let next = { ...prev };
       if (qId && !next.complaint_id) next.complaint_id = String(qId);
       if (qNum && !next.complaint_number) next.complaint_number = String(qNum);
-      if (created_at && !next.date) {
-        const d = new Date(created_at);
-        if (!isNaN(d.getTime())) next.date = d;
-      }
       return next;
     });
-  }, [router?.isReady, router?.query]);
+  }, [router?.isReady, router?.query, id]);
 
-  // -------- Required fields (ตามที่ให้ไว้) --------
+  // -------- Required fields --------
   const requiredFields = [
     "salutation",
-    // position_other_text will be required only when salutation_is_other is true
     "refNo",
-    "date",
+    "document_date",
+    "complaint_number",
+    "complaint_number_date",
     "subject",
     "department",
     "signer",
@@ -123,61 +234,74 @@ export const useInitialNotificationComplainantAgency = () => {
     [errors]
   );
 
-  // -------- change handlers --------
+  // การเปลี่ยนค่าฟิลด์ในฟอร์ม
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     const finalValue = typeof value === 'object' && value !== null ? value.value || '' : value;
-
-    if (name === 'complaint_number') {
-      const parsed = parseComplaintNumberToThaiDate(finalValue);
-      setForm(prev => ({ ...prev, complaint_number: finalValue, ...(parsed ? { date: parsed } : {}) }));
-      if (errors.complaint_number) setErrors(prev => ({ ...prev, complaint_number: null }));
-      if (parsed && errors.date) setErrors(prev => ({ ...prev, date: null }));
-      return;
-    }
-
     setForm(prev => ({ ...prev, [name]: finalValue }));
-    // dynamic validation for Other position
+
     if (name === 'salutation_is_other' && !finalValue) {
-      // clear other text if toggled off
       setForm(prev => ({ ...prev, position_other_text: "" }));
       if (errors.position_other_text) setErrors(prev => ({ ...prev, position_other_text: null }));
     }
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   }, [errors]);
 
-  // เฝ้า complaint_number เผื่อพิมพ์ครบทีหลังโดยไม่มี onChange (edge / paste แบบช้า)
-  useEffect(() => {
-    const val = form.complaint_number;
-    const parsed = parseComplaintNumberToThaiDate(val);
-    const cur = form.date;
-    const isSame = cur && parsed && cur.day === parsed.day && cur.month === parsed.month && cur.year === parsed.year;
-    if (parsed && !isSame) {
-      setForm(prev => ({ ...prev, date: parsed }));
-      if (errors.date) setErrors(prev => ({ ...prev, date: null }));
-    }
-  }, [form.complaint_number]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleDateChange = useCallback(
-    (thaiDate) => {
-      setForm((prev) => ({ ...prev, date: thaiDate }));
-      if (errors.date) setErrors((prev) => ({ ...prev, date: null }));
+  const handleDocumentDateChange = useCallback(
+    (value) => {
+      let dateObj;
+      if (typeof value === "string") {
+        dateObj = parseIsoToThaiDate(value);
+      } else if (value && value.day && value.month && value.year) {
+        dateObj = value;
+      } else if (value instanceof Date) {
+        dateObj = {
+          day: value.getDate(),
+          month: value.getMonth() + 1,
+          year: value.getFullYear(),
+          buddhistYear: value.getFullYear() + 543,
+        };
+      } else {
+        dateObj = null;
+      }
+      setForm(prev => ({ ...prev, document_date: dateObj }));
+      if (errors.document_date) setErrors(prev => ({ ...prev, document_date: null }));
     },
-    [errors.date]
+    [errors.document_date]
   );
 
-  // ---------- รูป: รองรับหลายไฟล์ ----------
+  const handleComplaintNumberDateChange = useCallback(
+    (value) => {
+      let dateObj;
+      if (typeof value === "string") {
+        dateObj = parseIsoToThaiDate(value);
+      } else if (value && value.day && value.month && value.year) {
+        dateObj = value;
+      } else if (value instanceof Date) {
+        dateObj = {
+          day: value.getDate(),
+          month: value.getMonth() + 1,
+          year: value.getFullYear(),
+          buddhistYear: value.getFullYear() + 543,
+        };
+      } else {
+        dateObj = null;
+      }
+      setForm(prev => ({ ...prev, complaint_number_date: dateObj }));
+      if (errors.complaint_number_date) setErrors(prev => ({ ...prev, complaint_number_date: null }));
+    },
+    [errors.complaint_number_date]
+  );
+
   const handleFileUpload = useCallback(
     (input) => {
       let files = [];
-
       if (!input) {
         setAttachmentFiles([]);
         setForm((prev) => ({ ...prev, attachment: "" }));
         setFileInputKey(k => k + 1);
         return;
       }
-
       if (input instanceof File) {
         files = [input];
       } else if (Array.isArray(input) && input[0] instanceof File) {
@@ -192,7 +316,6 @@ export const useInitialNotificationComplainantAgency = () => {
         console.warn("Unsupported file input:", input);
         return;
       }
-
       setAttachmentFiles(files);
       const names = files.map((f) => f.name).join(", ");
       setForm((prev) => ({ ...prev, attachment: names }));
@@ -201,7 +324,6 @@ export const useInitialNotificationComplainantAgency = () => {
     [errors.attachment]
   );
 
-  // legacy: input[type=file]
   const handleFileChange = useCallback(
     (e) => {
       const files = e?.target?.files ? Array.from(e.target.files) : [];
@@ -213,14 +335,14 @@ export const useInitialNotificationComplainantAgency = () => {
     [errors.attachment]
   );
 
-  // ---------- validate ----------
   const validateRequiredFields = useCallback(() => {
     const fieldsConfig = [
       { field: "salutation", label: "เรียน" },
-      // add conditional required rule for other text
       ...(form.salutation_is_other ? [{ field: "position_other_text", label: "ตำแหน่ง (อื่นๆ)" }] : []),
       { field: "refNo", label: "เลขที่หนังสือ" },
-      { field: "date", label: "วันที่" },
+      { field: "document_date", label: "วันที่หนังสือ" },
+      { field: "complaint_number", label: "เลข สป.กค." },
+      { field: "complaint_number_date", label: "วันที่ สป.กค." },
       { field: "subject", label: "เรื่อง" },
       { field: "department", label: "หน่วยงาน / ผู้ร้อง" },
       { field: "signer", label: "ผู้ลงนาม" },
@@ -244,45 +366,17 @@ export const useInitialNotificationComplainantAgency = () => {
     return missing;
   }, [form]);
 
-  // ---------- helpers ----------
-  const toNullString = (v) =>
-    v === undefined || v === null || v === "" ? "null" : String(v);
-
-  const toDateISOOrNullString = (value) => {
-    if (!value) return "null";
-    const d = new Date(value);
-    return isNaN(d.getTime()) ? "null" : d.toISOString();
-  };
-
-  // แปลง UUID ให้เป็น simple (ตัดขีด) กันเหนียวตาม error ของ API
-  // ป้องกัน RangeError: Invalid time value รองรับรูปแบบ {day,month,year} หรือ Date/string
-  const toISOorNull = (v) => {
-    if (!v) return null;
-    try {
-      // Thai date object from picker
-      if (typeof v === 'object' && v.day && v.month && v.year) {
-        const d = new Date(v.year, v.month - 1, v.day);
-        return isNaN(d.getTime()) ? null : d.toISOString();
-      }
-      // Already a Date
-      if (v instanceof Date) {
-        return isNaN(v.getTime()) ? null : v.toISOString();
-      }
-      // String or number
-      const d = new Date(v);
-      return isNaN(d.getTime()) ? null : d.toISOString();
-    } catch (e) {
-      console.warn('toISOorNull parse failed', v, e);
-      return null;
-    }
-  };
   const nullIfEmpty = (v) => (v === undefined || v === null || v === "" ? null : v);
 
   const handleClear = useCallback(() => {
     setForm({
       salutation: "",
+      salutation_is_other: false,
+      position_other_text: "",
       refNo: "",
-      date: null,
+      document_date: null,
+      complaint_number: "",
+      complaint_number_date: null,
       subject: "",
       department: "",
       signer: "",
@@ -292,14 +386,52 @@ export const useInitialNotificationComplainantAgency = () => {
       note: "",
       position_id: "",
       complaint_id: "",
-      complaint_number: "",
-      selected_complaint_number: "", // เพิ่มฟิลด์นี้
+      selected_complaint_number: "",
     });
     setAttachmentFiles([]);
     setErrors({});
+    setExistingAttachments([]);
   }, []);
 
-  // ---------- SAVE ----------
+  const resetField = useCallback((fieldName) => {
+    setForm((prev) => ({ ...prev, [fieldName]: "" }));
+    setErrors((prev) => ({ ...prev, [fieldName]: null }));
+    if (fieldName === "attachment") setAttachmentFiles([]);
+  }, []);
+
+  const updateField = useCallback(
+    (fieldName, value) => {
+      setForm((prev) => ({ ...prev, [fieldName]: value }));
+      if (errors[fieldName]) setErrors((prev) => ({ ...prev, [fieldName]: null }));
+    },
+    [errors]
+  );
+
+  // DELETE ATTACHMENT: No alert; refetch attachments after delete from API
+  const handleDeleteExistingAttachment = useCallback(
+    async (att) => {
+      const reportId = router?.query?.id || id || null;
+      if (!reportId || !att?.id) return false;
+      await DeleteOutgoingReport2Attachment({
+        outgoing_report_id: reportId,
+        attachment_id: att.id,
+      });
+
+      // Refetch data after delete (sync UI with API)
+      try {
+        const res = await GetOutgoingReport2ById(reportId);
+        const d = res?.res_data || res?.data || res;
+        const atts = Array.isArray(d.attachments) ? d.attachments : [];
+        setExistingAttachments(atts);
+        const names = atts.map(a => a.file_name || a.original_name || a.name || '').filter(Boolean).join(', ');
+        setForm((prev) => ({ ...prev, attachment: names }));
+      } catch (err) {}
+      return true;
+    },
+    [router?.query?.id, id]
+  );
+
+    // ---------- SAVE ----------
   const handleSave = useCallback(async () => {
     const missing = validateRequiredFields();
     if (missing.length > 0) {
@@ -310,7 +442,7 @@ export const useInitialNotificationComplainantAgency = () => {
 
     // ตรวจไฟล์ก่อนอัปโหลด
     if (attachmentFiles.length) {
-      const maxSize = 10 * 1024 * 1024; // 10MB
+      const maxSize = 10 * 1024 * 1024;
       const allowed = [
         "application/pdf",
         "application/msword",
@@ -333,9 +465,9 @@ export const useInitialNotificationComplainantAgency = () => {
     const payload = {
       position_id: form.position_id || "7e18e4fe-d416-4580-b4d4-2a4032f67770",
       complaint_number: form.complaint_number || "",
-      complaint_number_date: toISOorNull(form.date),
+      complaint_number_date: toYMD(form.complaint_number_date),
       document_number: form.refNo || "",
-      document_date: toISOorNull(form.date),
+      document_date: toYMD(form.document_date),
       subject: form.subject || "",
       signature_authority_user_id: nullIfEmpty(form.signer),
       department_id: nullIfEmpty(form.department),
@@ -345,8 +477,8 @@ export const useInitialNotificationComplainantAgency = () => {
       complaint_id: nullIfEmpty(form.complaint_id),
       remarks: form.note || "",
     };
+    console.log("OutgoingReport2 payload", payload);
 
-    // Helper: upload attachments for type2 endpoint with fallbacks
     const uploadType2Attachments = async (reportId) => {
       if (!reportId || attachmentFiles.length === 0) return true;
 
@@ -363,7 +495,6 @@ export const useInitialNotificationComplainantAgency = () => {
       let ok = false;
       let lastErr = '';
 
-      // Attempt #1: correct type2 endpoint with 'files'
       try {
         const r1 = await axiosInstance.post(`/outgoing-reports2/${reportId}/attachments`, buildFormData(false));
         ok = !!r1?.data;
@@ -373,7 +504,6 @@ export const useInitialNotificationComplainantAgency = () => {
         console.error('Upload type2 attempt #1 failed', data || e1);
       }
 
-      // Attempt #2: generic endpoint (some backends accept this) with 'files'
       if (!ok) {
         try {
           const r2 = await UploadOutgoingReportAttachments(buildFormData(false), reportId);
@@ -388,7 +518,6 @@ export const useInitialNotificationComplainantAgency = () => {
         }
       }
 
-      // Attempt #3: type2 endpoint with single key 'file' (if one file)
       if (!ok && attachmentFiles.length === 1) {
         try {
           const r3 = await axiosInstance.post(`/outgoing-reports2/${reportId}/attachments`, buildFormData(true));
@@ -410,7 +539,6 @@ export const useInitialNotificationComplainantAgency = () => {
       setIsLoading(true);
       showLoading("กำลังบันทึกข้อมูล...");
 
-      // 1) สร้างรายการออกหนังสือ
       const createRes = await CreateOutgoingReport2(payload);
 
       const extractReportId = (resp) => {
@@ -444,7 +572,6 @@ export const useInitialNotificationComplainantAgency = () => {
         return;
       }
 
-      // 2) อัปโหลดไฟล์แนบ (ถ้ามีไฟล์และสร้างสำเร็จ)
       if (attachmentFiles.length > 0) {
         showLoading("กำลังอัพโหลดไฟล์แนบ...");
         await uploadType2Attachments(createdId);
@@ -482,44 +609,6 @@ export const useInitialNotificationComplainantAgency = () => {
       alertError("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
     }
   }, [form, attachmentFiles, validateRequiredFields]);
-
-  // ... ส่วนอื่น ๆ ของ hook และ export เหมือนเดิม ...
-
-  // ---------- utilities ----------
-  const resetField = useCallback((fieldName) => {
-    setForm((prev) => ({ ...prev, [fieldName]: "" }));
-    setErrors((prev) => ({ ...prev, [fieldName]: null }));
-    if (fieldName === "attachment") setAttachmentFiles([]);
-  }, []);
-
-  const updateField = useCallback(
-    (fieldName, value) => {
-      setForm((prev) => ({ ...prev, [fieldName]: value }));
-      if (errors[fieldName]) setErrors((prev) => ({ ...prev, [fieldName]: null }));
-    },
-    [errors]
-  );
-
-  const hasFormChanges = useCallback(() => {
-    const initial = {
-      salutation: "",
-      refNo: "",
-      date: null,
-      subject: "",
-      department: "",
-      signer: "",
-      confidentiality: "",
-      urgency: "",
-      attachment: "",
-      note: "",
-      position_id: "",
-      complaint_id: "",
-      complaint_number: "",
-      selected_complaint_number: "",
-    };
-    return Object.keys(initial).some((k) => form[k] !== initial[k]);
-  }, [form]);
-
   const isFormValid = useCallback(
     () =>
       requiredFields.every((f) => {
@@ -529,7 +618,6 @@ export const useInitialNotificationComplainantAgency = () => {
     [form, requiredFields]
   );
 
-  // canSave focuses on required-only validation like Forward component
   const canSave = useCallback(() => {
     const baseOk = requiredFields.every((f) => {
       const v = form[f];
@@ -539,35 +627,56 @@ export const useInitialNotificationComplainantAgency = () => {
     return baseOk && otherOk;
   }, [form, requiredFields]);
 
+  const hasFormChanges = useCallback(() => {
+    const initial = {
+      salutation: "",
+      salutation_is_other: false,
+      position_other_text: "",
+      refNo: "",
+      document_date: null,
+      complaint_number: "",
+      complaint_number_date: null,
+      subject: "",
+      department: "",
+      signer: "",
+      confidentiality: "",
+      urgency: "",
+      attachment: "",
+      note: "",
+      position_id: "",
+      complaint_id: "",
+      selected_complaint_number: "",
+    };
+    return Object.keys(initial).some((k) => form[k] !== initial[k]);
+  }, [form]);
+
   return {
-    // State
     form,
     errors,
     isLoading,
     id,
-
-    // Validation helpers
     isRequired,
     createLabel,
     getFieldError,
     isFormValid,
-    isRequired,
     fileInputKey,
     canSave,
     hasFormChanges,
-
-    // Form handlers
     handleChange,
-    handleDateChange,
+    handleDocumentDateChange,
+    handleComplaintNumberDateChange,
     handleFileUpload,
     handleFileChange,
     handleClear,
     handleSave,
-
-    // Utility
     validateRequiredFields,
     resetField,
     updateField,
+    UpdateOutgoingReport2,
+    DeleteOutgoingReport2Attachment,
+    existingAttachments,
+    setExistingAttachments,
+    handleDeleteExistingAttachment,
   };
 };
 

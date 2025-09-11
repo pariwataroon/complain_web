@@ -36,6 +36,29 @@ const GetOutgoingReportById = async (id) => {
   }
 };
 
+const UpdateOutgoingReport = async (id, data) => {
+  if (!id) throw new Error("Missing id for UpdateOutgoingReport5");
+  try {
+    const response = await axiosInstance.put(`/outgoing-reports/${id}`, data);
+    return response.data;
+  } catch (errorPut) {
+    const statusPut = errorPut?.response?.status;
+    try {
+      const responsePatch = await axiosInstance.patch(`/outgoing-reports/${id}`, data);
+      return responsePatch.data;
+    } catch (errorPatch) {
+      console.error("Error updating outgoing report5:", {
+        putStatus: statusPut,
+        putData: errorPut?.response?.data,
+        patchStatus: errorPatch?.response?.status,
+        patchData: errorPatch?.response?.data,
+        message: errorPatch?.message,
+      });
+      throw errorPatch;
+    }
+  }
+};
+
 const GetOutgoingReport2ById = async (id) => {
   if (!id) throw new Error("Missing id for GetOutgoingReport2ById");
   try {
@@ -54,6 +77,29 @@ const CreateOutgoingReport2 = async (data) => {
   } catch (error) {
     console.error("Error creating outgoing report:", error);
     throw error;
+  }
+};
+
+const UpdateOutgoingReport2 = async (id, data) => {
+  if (!id) throw new Error("Missing id for UpdateOutgoingReport5");
+  try {
+    const response = await axiosInstance.put(`/outgoing-reports2/${id}`, data);
+    return response.data;
+  } catch (errorPut) {
+    const statusPut = errorPut?.response?.status;
+    try {
+      const responsePatch = await axiosInstance.patch(`/outgoing-reports2/${id}`, data);
+      return responsePatch.data;
+    } catch (errorPatch) {
+      console.error("Error updating outgoing report5:", {
+        putStatus: statusPut,
+        putData: errorPut?.response?.data,
+        patchStatus: errorPatch?.response?.status,
+        patchData: errorPatch?.response?.data,
+        message: errorPatch?.message,
+      });
+      throw errorPatch;
+    }
   }
 };
 
@@ -77,6 +123,29 @@ const GetOutgoingReport3ById = async (id) => {
   }
 };
 
+const UpdateOutgoingReport3 = async (id, data) => {
+  if (!id) throw new Error("Missing id for UpdateOutgoingReport5");
+  try {
+    const response = await axiosInstance.put(`/outgoing-reports3/${id}`, data);
+    return response.data;
+  } catch (errorPut) {
+    const statusPut = errorPut?.response?.status;
+    try {
+      const responsePatch = await axiosInstance.patch(`/outgoing-reports3/${id}`, data);
+      return responsePatch.data;
+    } catch (errorPatch) {
+      console.error("Error updating outgoing report5:", {
+        putStatus: statusPut,
+        putData: errorPut?.response?.data,
+        patchStatus: errorPatch?.response?.status,
+        patchData: errorPatch?.response?.data,
+        message: errorPatch?.message,
+      });
+      throw errorPatch;
+    }
+  }
+};
+
 const CreateOutgoingReport4 = async (data) => {
   try {
     const response = await axiosInstance.post(`/outgoing-reports4`, data);
@@ -86,6 +155,40 @@ const CreateOutgoingReport4 = async (data) => {
     throw error;
   }
 };
+
+const GetOutgoingReport4ById = async (id) => {
+  if (!id) throw new Error("Missing id for GetOutgoingReport4ById");
+  try {
+    const response = await axiosInstance.get(`/outgoing-reports4/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching outgoing report4 by id:", error?.response?.data || error.message);
+    throw error;
+  }
+};
+
+const UpdateOutgoingReport4 = async (id, data) => {
+  if (!id) throw new Error("Missing id for UpdateOutgoingReport4");
+  try {
+    const response = await axiosInstance.put(`/outgoing-reports4/${id}`, data);
+    return response.data;
+  } catch (errorPut) {
+    const statusPut = errorPut?.response?.status;
+    try {
+      const responsePatch = await axiosInstance.patch(`/outgoing-reports4/${id}`, data);
+      return responsePatch.data;
+    } catch (errorPatch) {
+      console.error("Error updating outgoing report4:", {
+        putStatus: statusPut,
+        putData: errorPut?.response?.data,
+        patchStatus: errorPatch?.response?.status,
+        patchData: errorPatch?.response?.data,
+        message: errorPatch?.message,
+      });
+      throw errorPatch;
+    }
+  }
+};
 const CreateOutgoingReport5 = async (data) => {
   try {
     const response = await axiosInstance.post(`/outgoing-reports5`, data);
@@ -93,6 +196,40 @@ const CreateOutgoingReport5 = async (data) => {
   } catch (error) {
     console.error("Error creating outgoing report5:", error?.response?.data || error.message);
     throw error;
+  }
+};
+
+const GetOutgoingReport5ById = async (id) => {
+  if (!id) throw new Error("Missing id for GetOutgoingReport5ById");
+  try {
+    const response = await axiosInstance.get(`/outgoing-reports5/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching outgoing report5 by id:", error?.response?.data || error.message);
+    throw error;
+  }
+};
+
+const UpdateOutgoingReport5 = async (id, data) => {
+  if (!id) throw new Error("Missing id for UpdateOutgoingReport5");
+  try {
+    const response = await axiosInstance.put(`/outgoing-reports5/${id}`, data);
+    return response.data;
+  } catch (errorPut) {
+    const statusPut = errorPut?.response?.status;
+    try {
+      const responsePatch = await axiosInstance.patch(`/outgoing-reports5/${id}`, data);
+      return responsePatch.data;
+    } catch (errorPatch) {
+      console.error("Error updating outgoing report5:", {
+        putStatus: statusPut,
+        putData: errorPut?.response?.data,
+        patchStatus: errorPatch?.response?.status,
+        patchData: errorPatch?.response?.data,
+        message: errorPatch?.message,
+      });
+      throw errorPatch;
+    }
   }
 };
 
@@ -180,13 +317,9 @@ const UploadOutgoingReport5Attachments = async (
   }
 };
 
-// DELETE existing attachment
 const DeleteOutgoingReportAttachment = async ({ outgoing_report_id, attachment_id }) => {
   if (!outgoing_report_id || !attachment_id) {
-    return {
-      success: false,
-      res_message: "missing outgoing_report_id or attachment_id",
-    };
+    return { success: false, res_message: "missing outgoing_report_id or attachment_id" };
   }
   try {
     const endpoint = `/outgoing-reports/${outgoing_report_id}/attachments/${attachment_id}`;
@@ -196,13 +329,74 @@ const DeleteOutgoingReportAttachment = async ({ outgoing_report_id, attachment_i
     const status = error?.response?.status;
     const data = error?.response?.data;
     console.error("Error deleting attachment:", { status, data });
-    return {
-      success: false,
-      res_message: data?.res_message || error?.message || "DELETE_FAILED",
-      res_code: String(status || "500"),
-    };
+    return { success: false, res_message: data?.res_message || error?.message || "DELETE_FAILED", res_code: String(status || "500") };
+  }
+};
+
+const DeleteOutgoingReport2Attachment = async ({ outgoing_report_id, attachment_id }) => {
+  if (!outgoing_report_id || !attachment_id) {
+    return { success: false, res_message: "missing outgoing_report_id or attachment_id" };
+  }
+  try {
+    const endpoint = `/outgoing-reports2/${outgoing_report_id}/attachments/${attachment_id}`;
+    const response = await axiosInstance.delete(endpoint);
+    return response.data || { success: true };
+  } catch (error) {
+    const status = error?.response?.status;
+    const data = error?.response?.data;
+    console.error("Error deleting attachment (type2):", { status, data });
+    return { success: false, res_message: data?.res_message || error?.message || "DELETE_FAILED", res_code: String(status || "500") };
+  }
+};
+
+const DeleteOutgoingReport3Attachment = async ({ outgoing_report_id, attachment_id }) => {
+  if (!outgoing_report_id || !attachment_id) {
+    return { success: false, res_message: "missing outgoing_report_id or attachment_id" };
+  }
+  try {
+    const endpoint = `/outgoing-reports3/${outgoing_report_id}/attachments/${attachment_id}`;
+    const response = await axiosInstance.delete(endpoint);
+    return response.data || { success: true };
+  } catch (error) {
+    const status = error?.response?.status;
+    const data = error?.response?.data;
+    console.error("Error deleting attachment (type3):", { status, data });
+    return { success: false, res_message: data?.res_message || error?.message || "DELETE_FAILED", res_code: String(status || "500") };
+  }
+};
+
+const DeleteOutgoingReport4Attachment = async ({ outgoing_report_id, attachment_id }) => {
+  if (!outgoing_report_id || !attachment_id) {
+    return { success: false, res_message: "missing outgoing_report_id or attachment_id" };
+  }
+  try {
+    const endpoint = `/outgoing-reports4/${outgoing_report_id}/attachments/${attachment_id}`;
+    const response = await axiosInstance.delete(endpoint);
+    return response.data || { success: true };
+  } catch (error) {
+    const status = error?.response?.status;
+    const data = error?.response?.data;
+    console.error("Error deleting attachment (type4):", { status, data });
+    return { success: false, res_message: data?.res_message || error?.message || "DELETE_FAILED", res_code: String(status || "500") };
   }
 };
 
 
-export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4, CreateOutgoingReport5, getDepartmentsPrefix, GetOutgoingReportById, GetOutgoingReport2ById, GetOutgoingReport3ById, UploadOutgoingReport5Attachments, DeleteOutgoingReportAttachment };
+const DeleteOutgoingReport5Attachment = async ({ outgoing_report_id, attachment_id }) => {
+  if (!outgoing_report_id || !attachment_id) {
+    return { success: false, res_message: "missing outgoing_report_id or attachment_id" };
+  }
+  try {
+    const endpoint = `/outgoing-reports5/${outgoing_report_id}/attachments/${attachment_id}`;
+    const response = await axiosInstance.delete(endpoint);
+    return response.data || { success: true };
+  } catch (error) {
+    const status = error?.response?.status;
+    const data = error?.response?.data;
+    console.error("Error deleting attachment (type5):", { status, data });
+    return { success: false, res_message: data?.res_message || error?.message || "DELETE_FAILED", res_code: String(status || "500") };
+  }
+};
+
+
+export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4, CreateOutgoingReport5, getDepartmentsPrefix, GetOutgoingReportById, GetOutgoingReport2ById, GetOutgoingReport3ById, UploadOutgoingReport5Attachments, DeleteOutgoingReportAttachment, DeleteOutgoingReport4Attachment, GetOutgoingReport4ById, UpdateOutgoingReport4, GetOutgoingReport5ById, UpdateOutgoingReport5 };
