@@ -3209,6 +3209,9 @@ def get_complaint_by_id_with_assignment_data(db: Session, complaint: Complaint) 
             "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
             "assigned_to": complaint.assigned_to,
             "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
+            # ✅ เพิ่มวันที่ยืนยันรับงานและวันที่เสนอผู้อำนวยการ (top-level)
+            "confirm_assigned_date": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None,
+            "director_submission_date": complaint.director_submission_date.isoformat() if complaint.director_submission_date else None,
             "resolution_summary": complaint.resolution_summary,
             "resolved_date": complaint.resolved_date.isoformat() if complaint.resolved_date else None,
         }
@@ -3230,6 +3233,9 @@ def get_complaint_by_id_with_assignment_data(db: Session, complaint: Complaint) 
             "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
             "document_number": complaint.document_number,
             "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
+            # ✅ เพิ่มวันที่ยืนยันรับงานและวันที่เสนอผู้อำนวยการ
+            "confirm_assigned_date": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None,
+            "director_submission_date": complaint.director_submission_date.isoformat() if complaint.director_submission_date else None,
             "confidentiality_level": complaint.confidentiality_level,
             "urgency_level": complaint.urgency_level,
             "complaint_filing_type": complaint.complaint_filing_type,
@@ -3457,6 +3463,9 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             "updated_at": complaint.updated_at.isoformat() if complaint.updated_at else None,
             "assigned_to": complaint.assigned_to,
             "assigned_date": complaint.assigned_date.isoformat() if complaint.assigned_date else None,
+            # ✅ เพิ่มวันที่ยืนยันรับงานและวันที่เสนอผู้อำนวยการ (top-level)
+            "confirm_assigned_date": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None,
+            "director_submission_date": complaint.director_submission_date.isoformat() if complaint.director_submission_date else None,
             "resolution_summary": complaint.resolution_summary,
             "resolved_date": complaint.resolved_date.isoformat() if complaint.resolved_date else None,
         }
@@ -3481,6 +3490,9 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             # Document Info
             "document_number": complaint.document_number,
             "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
+            # ✅ เพิ่มวันที่ยืนยันรับงานและวันที่เสนอผู้อำนวยการ
+            "confirm_assigned_date": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None,
+            "director_submission_date": complaint.director_submission_date.isoformat() if complaint.director_submission_date else None,
             
             # Levels & Classifications
             "confidentiality_level": complaint.confidentiality_level,
