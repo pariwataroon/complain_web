@@ -1065,12 +1065,16 @@ const agencyReportRows = outgoingType5.map((item) => ({
 
       <Box
         sx={{
-          background: "#EDF7EA",
-          py: 2,
+          background: "#E8F5E9",
+          border: "1px solid #A5D6A7",
+          borderRadius: 1,
+          py: 1.5,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           width: "100%",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+          mb: 2,
         }}
       >
         <Typography mx={3}>
@@ -1094,7 +1098,17 @@ const agencyReportRows = outgoingType5.map((item) => ({
         </IconButton>
       </Box>
 
-      <Box sx={{ background: "#FBEAE9", py: 2, width: "100%" }}>
+      <Box
+        sx={{
+          background: "#FBEAE9",
+          border: "1px solid #F8BBD0",
+          borderRadius: 1,
+          py: 1.5,
+          width: "100%",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+          mb: 2,
+        }}
+      >
         <Typography mx={3}>
           ชื่อผู้ร้อง:{" "}
           {documentData?.detail?.claimantName ||
@@ -1137,14 +1151,15 @@ const agencyReportRows = outgoingType5.map((item) => ({
           borderRadius: 1,
           width: "100%",
           maxWidth: { sm: "auto" },
+          mb: 2,
         }}
       >
-        <Box sx={{ background: "#EAF5FF", py: 1 }}>
+        <Box sx={{ background: "#EAF5FF", py: 1.5 }}>
           <Typography mx={3} sx={{ fontWeight: "bold", color: "#1120A3" }}>
             {receivedSection.title}
           </Typography>
         </Box>
-  <Box sx={{ overflowX: { xs: "auto", sm: "unset" }, width: "100%" }}>
+        <Box sx={{ overflowX: { xs: "auto", sm: "unset" }, width: "100%" }}>
           <Table sx={{ width: "100%" }}>
             <TableHead>
               <TableRow>
