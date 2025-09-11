@@ -471,8 +471,12 @@ const SearchComplaints = () => {
           ...(complaintTypes.find((t) => t.value === complaintTypeId) || {}),
         },
 
+        // ประเภทเรื่องย่อย: ใช้ complaint_subtype_id (ใหม่) ถ้าไม่มี fallback ไปค่าเดิมที่เคยใช้ผิดคือ complaint_type
         complaintSubType:
-          assignmentForm.complaint_type || step3Data.complaintSubType || "",
+          assignmentForm.complaint_subtype_id ||
+          assignmentForm.complaint_type ||
+          step3Data.complaintSubType ||
+          "",
         additionalReference1:
           assignmentForm.additional_reference_number1 ||
           step3Data.additionalReference1 ||
@@ -532,8 +536,12 @@ const SearchComplaints = () => {
           } else {
             setSubComplaintTypes([]);
           }
-          // ถ้าไม่มีค่าเดิมของ complaintSubType ให้ reset เป็นค่าว่าง
-          if (!(assignmentForm.complaint_type || step3Data.complaintSubType)) {
+          // ถ้าไม่มีค่าเดิมของ complaintSubType (ตรวจทั้ง complaint_subtype_id และ complaint_type เพื่อ backward compat) ให้ reset เป็นค่าว่าง
+          if (!(
+            assignmentForm.complaint_subtype_id ||
+            assignmentForm.complaint_type ||
+            step3Data.complaintSubType
+          )) {
             step3Methods.setValue("complaintSubType", "");
           }
         } catch (e) {
@@ -1804,7 +1812,7 @@ const SearchComplaints = () => {
                               name="officerReceivedDate"
                               control={step4Methods.control}
                               defaultValue={
-                                defaultData?.assignment_form?.registration_date
+                                defaultData?.assignment_form?.confirm_assigned_date
                               }
                               time={true}
                             />
@@ -1817,8 +1825,7 @@ const SearchComplaints = () => {
                               name="directorSubmittedDate"
                               control={step4Methods.control}
                               defaultValue={
-                                defaultData?.step4?.general
-                                  ?.directorSubmittedDate
+                                defaultData?.assignment_form?.director_submission_date
                               }
                               time={true}
                             />

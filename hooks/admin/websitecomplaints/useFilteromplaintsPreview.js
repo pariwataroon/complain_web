@@ -71,10 +71,16 @@ const useFilteromplaintsPreview = () => {
         preparedData.document_date = step3Data.documentDate;
       }
 
-      // หน่วยงานที่ส่งเรื่องมาถึง กค.
-      if (step3Data.senderAgency) {
-        preparedData.agency_sender = step3Data.senderAgency;
+      // หน่วยงานที่ส่งเรื่องมาถึง กค. (กันค่าหาย: ใช้ค่าจากฟอร์มหรือ fallback จาก assignment_form)
+      const senderAgencyId =
+        step3Data.senderAgency ??
+        formData?.assignment_form?.agency_sender ??
+        formData?.step3?.general?.agency_sender ??
+        null;
+      if (senderAgencyId) {
+        preparedData.agency_sender = senderAgencyId;
       }
+      // console.debug("[prepared] agency_sender:", preparedData.agency_sender);
 
       // เรื่อง
       if (step3Data.subject) {
@@ -168,9 +174,9 @@ const useFilteromplaintsPreview = () => {
         preparedData.complaint_type_id = step3Data.complaintType;
       }
 
-      // ประเภทเรื่องย่อย
+      // ประเภทเรื่องย่อย (แก้ mapping ให้ถูกต้อง: backend ต้องการ complaint_subtype_id)
       if (step3Data.complaintSubType) {
-        preparedData.complaint_type = step3Data.complaintSubType;
+        preparedData.complaint_subtype_id = step3Data.complaintSubType;
       }
 
       // วันที่รับเรื่องและเสนองาน
@@ -214,10 +220,8 @@ const useFilteromplaintsPreview = () => {
         preparedData
       );
 
-
-
       // ตรวจสอบผลลัพธ์
-      if (response?.res_code === "0000") {
+      if (response?.success || response?.res_code === "0000" || (response?.httpStatus >= 200 && response?.httpStatus < 300)) {
         alertSuccess("บันทึกข้อมูลเรียบร้อยแล้ว");
         return response;
       } else if (response?.res_code === "4000") {
@@ -232,7 +236,8 @@ const useFilteromplaintsPreview = () => {
         throw new Error(response?.res_desc || "การส่งข้อมูลไม่สำเร็จ");
       }
     } catch (error) {
-      console.error("❌ Error in handleUpdateAssignment:", error);
+      // แสดงรายละเอียดจาก server ถ้ามี
+      const serverMsg = error?.response?.data?.res_desc || error?.message;
 
       // แสดง error message ที่เหมาะสม
       if (
@@ -240,7 +245,7 @@ const useFilteromplaintsPreview = () => {
         !error.message.includes("การส่งข้อมูลไม่สำเร็จ") &&
         !error.message.includes("กรุณาเลือกเจ้าหน้าที่ผู้รับผิดชอบ")
       ) {
-        alertError("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+        alertError(serverMsg || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
       }
 
       throw error;
