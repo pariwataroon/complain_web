@@ -92,7 +92,7 @@ async def create_new_outgoing_report(
     current_user: str = Depends(can_create("dashboard"))
 ):
     try:
-        report = create_outgoing_report(
+        report = await create_outgoing_report(
             db=db,
             report_data=report_data,
             current_user_id=UUID(current_user),
