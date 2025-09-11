@@ -1,311 +1,415 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useCallback, useState, useMemo, useEffect, useRef } from "react";
 import { Box, Grid, Typography } from "@mui/material";
 import styles from "./TabNav.module.scss";
-import InputText from "@services/InputText/InputText";
-import SelectFieldType from "@services/SelectFieldType/SelectFieldType";
-import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
-import InputFile from "@services/InputFile/InputFile";
-import InputTextarea from "@services/InputTextarea/InputTextarea";
-import { GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
 
 const Tab3 = ({
   stepKey,
-  tabData,
+  tabData = {},
   updateStepData,
   validationErrors = {},
   shouldShowValidation = false
 }) => {
-  const [form, setForm] = useState({});
-  const [complaintTypes, setComplaintTypes] = useState([]);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const initializationRef = useRef(false);
-  const lastSyncRef = useRef(null);
-  const updateCountRef = useRef(0);
+  
+  console.log("🔍 Tab3 rendered with:", { stepKey, tabData });
 
-  /* ---------- Helper Functions ---------- */
-
-  const forceSyncToParent = useCallback((data, source = "unknown") => {
-    updateCountRef.current += 1;
-    const dataString = JSON.stringify(data);
-
-    if (lastSyncRef.current !== dataString) {
-      lastSyncRef.current = dataString;
-
-      try {
-        updateStepData(stepKey, "general", data);
-      } catch (error) {
-        console.error("=== SYNC ERROR ===", {
-          source,
-          error,
-          data
-        });
-      }
-    }
-  }, [stepKey, updateStepData]);
-
-  /* ---------- Event Handlers ---------- */
-
-  const handleChange = (field) => (valueOrEvent) => {
-    let value = valueOrEvent?.target?.value ?? valueOrEvent;
-
-    if (field === "complaintType") {
-      const selectedType = complaintTypes.find((type) => type.value === value);
-      value = selectedType?.label || value;
-    }
-
-    setForm(currentForm => {
-      const updated = { ...currentForm, [field]: value };
-      setTimeout(() => forceSyncToParent(updated, `handleChange-${field}`), 0);
-      return updated;
+  // 🎯 SAFE: ใช้ useCallback เพื่อป้องกัน re-render
+  const handleChange = useCallback((fieldName, value) => {
+    console.log(`Field ${fieldName} changed:`, value);
+    
+    updateStepData(stepKey, "general", {
+      ...tabData,
+      [fieldName]: value
     });
+  }, [stepKey, tabData, updateStepData]);
+
+  const COLOR_PRIMARY = "#1120A3";
+  const COLOR_BORDER = COLOR_PRIMARY;
+  const HEIGHT_INPUT = 46; 
+  const FONT_SIZE_INPUT = 14;
+
+  const baseInput = {
+    width: "100%",
+    height: HEIGHT_INPUT + "px",
+    padding: "0 14px",
+    border: `1px solid ${COLOR_BORDER}`,
+    borderRadius: "6px",
+    fontSize: FONT_SIZE_INPUT,
+    fontFamily: "inherit",
+    outline: "none",
+    color: COLOR_PRIMARY,
+    backgroundColor: "#fff",
+    boxSizing: "border-box",
+    transition: "border-color .15s, box-shadow .15s",
   };
 
-  const handleDateChange = useCallback((isoString) => {
-    let processedValue = isoString;
-    if (!isoString) {
-      processedValue = new Date().toISOString();
-    }
-
-    setForm(currentForm => {
-      const updated = {
-        ...currentForm,
-        incidentDate: processedValue
-      };
-
-      setTimeout(() => forceSyncToParent(updated, "handleDateChange"), 0);
-      return updated;
-    });
-
-  }, [forceSyncToParent]);
-
-  const handleFileChange = useCallback((files) => {
-   
-
-    let processedFiles = null;
-
-    if (files) {
-      if (Array.isArray(files)) {
-       
-        const validFiles = files.filter(file =>
-          file && typeof file === 'object' && (file.name || file.size)
-        );
-
-        if (validFiles.length > 0) {
-          processedFiles = validFiles.slice(0, 3);
-          
-        }
-      } else if (typeof files === 'object' && files !== null && (files.name || files.size)) {
-        
-      } else {
-        console.warn("=== Invalid File Format ===", {
-          files,
-          type: typeof files,
-          isObject: typeof files === 'object',
-          isNull: files === null,
-          hasName: !!files?.name,
-          hasSize: !!files?.size
-        });
-      }
-    } else {
-    }
-
-
-    setForm(currentForm => {
-      const updated = { ...currentForm, attachment: processedFiles };
-
-      setTimeout(() => {
-        forceSyncToParent(updated, "handleFileChange");
-      }, 0);
-
-      return updated;
-    });
-
-  }, [forceSyncToParent, stepKey, form.attachment]);
-
-  const getFieldError = (fieldName) => {
-    return shouldShowValidation ? validationErrors[fieldName] : "";
+  const inputStyle = {
+    ...baseInput,
   };
 
-  const hasFieldError = (fieldName) => {
-    return shouldShowValidation && !!getFieldError(fieldName);
+  const disabledInput = {
+    ...baseInput,
+    backgroundColor: "#fff",
+    color: "#4f5a6a",
+    cursor: "not-allowed",
   };
 
-  /* ---------- useEffects ---------- */
+  const selectStyle = {
+    ...baseInput,
+    cursor: "pointer",
+  };
+
+  const labelStyle = {
+    color: COLOR_PRIMARY,
+    fontWeight: 500,
+    marginBottom: 4,
+    display: "block",
+    fontSize: 14,
+    lineHeight: 1.2,
+  };
+
+  const requiredStyle = { color: "#f44336", marginLeft: 4 };
+
+  const containerStyle = { marginBottom: 16 };
+
+  const textareaStyle = {
+    ...baseInput,
+    padding: "10px 14px",
+    height: "auto",
+    minHeight: 140,
+    lineHeight: 1.5,
+    resize: "vertical",
+  };
+
+  const fileBarStyle = {
+    position: "relative",
+    width: "100%",
+    border: `1px solid ${COLOR_BORDER}`,
+    borderRadius: 6,
+    height: HEIGHT_INPUT + "px",
+    display: "flex",
+    alignItems: "center",
+    padding: "0 14px",
+    gap: 10,
+    background: "#fff",
+    boxSizing: "border-box",
+  };
+
+  const fileLabelTextStyle = {
+    color: "#4f5a6a",
+    fontSize: FONT_SIZE_INPUT,
+    flex: 1,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  };
+
+  const plusButtonStyle = {
+    fontSize: 20,
+    lineHeight: 1,
+    color: COLOR_PRIMARY,
+    fontWeight: 600,
+    pointerEvents: "none",
+    userSelect: "none",
+    paddingRight: 4
+  };
+
+  const hiddenFileInputOverlay = {
+    position: "absolute",
+    inset: 0,
+    opacity: 0,
+    cursor: "pointer",
+    width: "100%",
+  };
+
+  const noteStyle = { color: "#6c6f7a", fontSize: 12, marginTop: 6, lineHeight: 1.4 };
+
+  const dateWrapper = { position: "relative" };
+  const dateIconStyle = {
+    position: "absolute",
+    top: "50%",
+    right: 12,
+    transform: "translateY(-50%)",
+    fontSize: 16,
+    color: COLOR_PRIMARY,
+    pointerEvents: "none",
+  };
+
+  // ==== Custom Calendar (Thai) ====
+  const thaiDays = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"]; // abbreviations
+  const thaiMonths = [
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+  ];
+
+  const [openCal, setOpenCal] = useState(false);
+  // simplified calendar (no extra month/year panel toggle to mimic provided UI)
+  const selectedDate = tabData.incidentDate ? new Date(tabData.incidentDate) : null;
+  const initial = selectedDate || new Date();
+  const [viewMonth, setViewMonth] = useState(initial.getMonth());
+  const [viewYear, setViewYear] = useState(initial.getFullYear());
+  const calRef = useRef(null);
 
   useEffect(() => {
-    if (!initializationRef.current) {
-      const defaultChannel = "เว็บไซต์แจ้งเรื่องราวร้องทุกข์";
-      const initialData = { channel: defaultChannel, ...(tabData || {}) };
-
-      setForm(initialData);
-      setIsInitialized(true);
-      initializationRef.current = true;
-      forceSyncToParent(initialData, "initialization");
-    }
-  }, [forceSyncToParent, tabData]);
-
-  useEffect(() => {
-    if (isInitialized && tabData && Object.keys(tabData).length > 0) {
-      setForm(currentForm => {
-        const merged = { ...tabData };
-
-        Object.keys(currentForm).forEach(key => {
-          if (currentForm[key] !== null && currentForm[key] !== undefined) {
-            if (typeof currentForm[key] === 'string' && currentForm[key] !== "") {
-              merged[key] = currentForm[key];
-            } else if (typeof currentForm[key] !== 'string') {
-              merged[key] = currentForm[key];
-            }
-          }
-        });
-
-        const hasChanges = JSON.stringify(currentForm) !== JSON.stringify(merged);
-
-        if (hasChanges) {
-          setTimeout(() => forceSyncToParent(merged, "tabDataUpdate"), 0);
-        }
-
-        return hasChanges ? merged : currentForm;
-      });
-    }
-  }, [tabData, isInitialized, forceSyncToParent]);
-
- 
-
-  useEffect(() => {
-    const fetchComplaintTypes = async () => {
-      try {
-        const response = await GetAllSelectComplaintTypes();
-        if (response?.res_code === "0000") {
-          const activeTypes = response.res_data
-            .filter((t) => t.is_active)
-            .map((t) => ({ value: t.id, label: t.name }));
-          setComplaintTypes(activeTypes);
-        }
-      } catch (err) {
-        console.error("Error fetching complaint types:", err);
+    const handleClick = (e) => {
+      if (!calRef.current) return;
+      if (!calRef.current.contains(e.target)) {
+        setOpenCal(false);
       }
     };
-    fetchComplaintTypes();
-  }, []);
+    if (openCal) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [openCal]);
 
-  useEffect(() => {
-    let isChecking = false;
+  const daysInMonth = useMemo(() => {
+    const firstDay = new Date(viewYear, viewMonth, 1);
+    const lastDay = new Date(viewYear, viewMonth + 1, 0);
+    const startWeekday = firstDay.getDay();
+    const arr = [];
+    for (let i = 0; i < startWeekday; i++) arr.push(null);
+    for (let d = 1; d <= lastDay.getDate(); d++) arr.push(d);
+    return arr;
+  }, [viewMonth, viewYear]);
 
-    const checkDatePickerValue = () => {
-      if (isChecking) return; 
+  const calContainerStyle = {
+    position: 'absolute',
+    top: 'calc(100% + 6px)',
+    left: 0,
+    background: '#fff',
+    border: '1px solid #dfe4ec',
+    borderRadius: 10,
+    boxShadow: '0 6px 20px rgba(0,0,0,0.10)',
+    zIndex: 50,
+    width: 340,
+    padding: '10px 14px 14px 14px'
+  };
 
-      const dateInput = document.querySelector(`input[name="incidentDate"]`);
-      if (dateInput && dateInput.value) {
-        const displayValue = dateInput.value;
+  const calHeaderStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 };
+  const navBtnStyle = { cursor: 'pointer', width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:'50%', background:'#f3f5f9', color: COLOR_PRIMARY, fontSize: 16, userSelect: 'none', border:'1px solid #e2e8f0' };
+  const monthLabelStyle = { fontWeight: 600, fontSize: 15, color: COLOR_PRIMARY };
+  const weekdayRowStyle = { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 8, fontSize: 12, color: COLOR_PRIMARY, textAlign: 'center' };
+  const weekdayCellStyle = { background:'#eef3f9', borderRadius:6, padding:'6px 0', fontWeight:600, letterSpacing:'0.5px' };
+  const daysGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 };
+  const dayCellBase = { height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, cursor: 'pointer', borderRadius: 8, color: COLOR_PRIMARY, transition:'all .12s', fontWeight:500 };
+  const dayCellEmpty = { height: 34 };
+  const todayBtnRow = { display: 'flex', gap: 10, marginTop: 14 };
+  const todayBtnStyle = { flex: 1, height: 38, borderRadius: 8, fontSize: 13, cursor: 'pointer', border: `1px solid ${COLOR_PRIMARY}`, background: COLOR_PRIMARY, color: '#fff', fontWeight: 600, boxShadow:'0 2px 4px rgba(0,0,0,0.1)' };
+  const clearBtnStyle = { flex: 1, height: 38, borderRadius: 8, fontSize: 13, cursor: 'pointer', border: '1px solid #d0d5dd', background: '#fff', color: COLOR_PRIMARY, fontWeight:600 };
 
-        if (displayValue && !form.incidentDate) {
-          isChecking = true; 
+  const selectedBg = '#F5A000';
+  const hoverBg = '#FFF4DA';
 
-          const fallbackDate = new Date().toISOString();
+  // Year options (ย้อนหลัง 10 ปี ถึงปีปัจจุบัน + ensure selected year in range)
+  const generateYearOptions = () => { // (kept for potential future extension)
+    const current = new Date().getFullYear();
+    const years = [];
+    for (let y = current - 10; y <= current; y++) years.push(y);
+    return years;
+  };
 
-          setTimeout(() => {
-            handleDateChange(fallbackDate);
-            isChecking = false;
-          }, 100);
-        }
-      }
-    };
+  const formatDisplayDate = (dateObj) => {
+    if (!dateObj) return '';
+    const day = dateObj.getDate();
+    const monthName = thaiMonths[dateObj.getMonth()];
+    const buddhistYear = dateObj.getFullYear() + 543;
+    return `${day} ${monthName} พ.ศ. ${buddhistYear}`;
+  };
+  const displayDateText = formatDisplayDate(selectedDate);
+  const handleSelectDay = (d) => {
+    if (!d) return;
+    const dateObj = new Date(viewYear, viewMonth, d);
+    const yyyy = dateObj.getFullYear();
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(d).padStart(2, '0');
+    handleChange('incidentDate', `${yyyy}-${mm}-${dd}`);
+    setOpenCal(false);
+  // no panel toggle
+  };
 
-    const interval = setInterval(checkDatePickerValue, 3000);
-    return () => clearInterval(interval);
-  }, [form.incidentDate, handleDateChange]);
+  const handleToday = () => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    handleChange('incidentDate', `${yyyy}-${mm}-${dd}`);
+    setViewMonth(now.getMonth());
+    setViewYear(now.getFullYear());
+    setOpenCal(false);
+  // no panel toggle
+  };
+
+  const handleClear = () => {
+    handleChange('incidentDate', '');
+    setOpenCal(false);
+  // no panel toggle
+  };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.formContainer}>
-        <Box>
-          <Typography className={styles.title}>
+    <div className={styles.container} style={{background:'transparent', padding:0}}>
+      <div className={styles.formContainer} style={{boxShadow:'0 4px 18px rgba(0,0,0,0.06)', border:'1px solid #eceff3', padding:'28px 32px'}}> 
+          <Typography className={styles.title} sx={{mb: 2, fontSize: 16, fontWeight: 600, color: COLOR_PRIMARY, mt:0}}>
             รายละเอียดเรื่องราวร้องทุกข์
           </Typography>
 
-          <Grid container spacing={2}>
+          <Grid container spacing={3}>
+            {/* ช่องทางร้องทุกข์ */}
             <Grid item xs={12} sm={6}>
-              <InputText
-                label="ช่องทางร้องทุกข์"
-                value={form.channel || ""}
-                name="channel"
-                InputProps={{ readOnly: true }}
-                error={hasFieldError("channel")}
-                helperText={getFieldError("channel")}
-                required
-              />
+              <div style={containerStyle}>
+                <label style={labelStyle}>ช่องทางร้องทุกข์<span style={requiredStyle}>*</span></label>
+                <input
+                  type="text"
+                  value="เว็บไซต์แจ้งเรื่องราวร้องทุกข์"
+                  disabled
+                  style={disabledInput}
+                />
+              </div>
             </Grid>
 
+            {/* ประเภทเรื่องร้องทุกข์ */}
             <Grid item xs={12} sm={6}>
-              <SelectFieldType
-                label="ประเภทเรื่องราวร้องทุกข์"
-                name="complaintType"
-                value={form.complaintType || ""}
-                options={complaintTypes}
-                onChange={handleChange("complaintType")}
-                error={hasFieldError("complaintType")}
-                helperText={getFieldError("complaintType")}
-                required
-              />
+              <div style={containerStyle}>
+                <label style={labelStyle}>ประเภทเรื่องร้องทุกข์<span style={requiredStyle}>*</span></label>
+                <select 
+                  value={tabData.complaintType || ""}
+                  onChange={(e) => handleChange("complaintType", e.target.value)}
+                  style={selectStyle}
+                >
+                  <option value="" disabled style={{ color: "#999" }}>เลือกประเภทเรื่องร้องทุกข์</option>
+                  <option value="ร้องเรียน">ร้องเรียน</option>
+                  <option value="ร้องทุกข์">ร้องทุกข์</option>
+                  <option value="เสนอแนะ">เสนอแนะ</option>
+                  <option value="แจ้งเบาะแส">แจ้งเบาะแส</option>
+                  <option value="อื่นๆ">อื่นๆ</option>
+                </select>
+              </div>
             </Grid>
 
+            {/* หัวข้อเรื่อง */}
             <Grid item xs={12}>
-              <InputText
-                label="ชื่อเรื่อง"
-                name="subject"
-                value={form.subject || ""}
-                onChange={handleChange("subject")}
-                error={hasFieldError("subject")}
-                helperText={getFieldError("subject")}
-                required
-              />
+              <div style={containerStyle}>
+                <label style={labelStyle}>ชื่อเรื่อง<span style={requiredStyle}>*</span></label>
+                <input
+                  type="text"
+                  value={tabData.subject || ""}
+                  onChange={(e) => handleChange("subject", e.target.value)}
+                  placeholder=""
+                  style={inputStyle}
+                />
+              </div>
             </Grid>
 
+            {/* วันที่เกิดเหตุ */}
             <Grid item xs={12}>
-              <DateThaiPickerService
-                label="วันและเวลาที่เกิดเหตุ"
-                name="incidentDate"
-                value={form.incidentDate || ""}
-                onChange={handleDateChange}
-                error={hasFieldError("incidentDate")}
-                helperText={getFieldError("incidentDate")}
-                time={true}
-                required={true}
-                placeholder="กรุณาเลือกวันที่และเวลา"
-              />
+              <div style={containerStyle}>
+                <label style={labelStyle}>วันและเวลาที่เกิดเหตุ<span style={requiredStyle}>*</span></label>
+                <div style={dateWrapper}>
+                  <div
+                    style={{
+                      ...inputStyle,
+                      display: 'flex',
+                      alignItems: 'center',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      paddingRight: 34
+                    }}
+                    onClick={() => setOpenCal(o => !o)}
+                  >
+                    <span style={{ color: tabData.incidentDate ? COLOR_PRIMARY : '#999', fontSize: FONT_SIZE_INPUT }}>
+                      {tabData.incidentDate ? displayDateText : 'กรุณาเลือกวันที่และเวลา.....'}
+                    </span>
+                    <span style={dateIconStyle}>🕒</span>
+                  </div>
+                  {openCal && (
+                    <div ref={calRef} style={calContainerStyle}>
+                      <div style={calHeaderStyle}>
+                        <span style={navBtnStyle} onClick={(e)=>{e.stopPropagation(); setViewMonth(m=>{ if(m===0){ setViewYear(y=>y-1); return 11;} return m-1;});}}>‹</span>
+                        <span style={monthLabelStyle}>{thaiMonths[viewMonth]} {viewYear + 543}</span>
+                        <span style={navBtnStyle} onClick={(e)=>{e.stopPropagation(); setViewMonth(m=>{ if(m===11){ setViewYear(y=>y+1); return 0;} return m+1;});}}>›</span>
+                      </div>
+                      <div style={weekdayRowStyle}>
+                        {thaiDays.map(d=> <div key={d} style={weekdayCellStyle}>{d}</div>)}
+                      </div>
+                      <div style={daysGridStyle}>
+                        {daysInMonth.map((d,i)=>{
+                          if(!d) return <div key={i} style={dayCellEmpty}/>;
+                          const isSel = selectedDate && d===selectedDate.getDate() && viewMonth===selectedDate.getMonth() && viewYear===selectedDate.getFullYear();
+                          return (
+                            <div
+                              key={i}
+                              onClick={(e)=>{e.stopPropagation(); handleSelectDay(d);}}
+                              style={{
+                                ...dayCellBase,
+                                background: isSel ? selectedBg : '#fff',
+                                color: isSel ? '#fff' : COLOR_PRIMARY,
+                                boxShadow: isSel ? '0 2px 4px rgba(0,0,0,0.15)' : 'none'
+                              }}
+                              onMouseEnter={e=>{ if(!isSel) e.currentTarget.style.background=hoverBg; }}
+                              onMouseLeave={e=>{ if(!isSel) e.currentTarget.style.background='#fff'; }}
+                            >{d}</div>
+                          );
+                        })}
+                      </div>
+                      <div style={todayBtnRow}>
+                        <button type="button" style={todayBtnStyle} onClick={(e)=>{e.stopPropagation(); handleToday();}}>วันนี้</button>
+                        <button type="button" style={clearBtnStyle} onClick={(e)=>{e.stopPropagation(); handleClear();}}>ล้าง</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </Grid>
 
+            {/* รายละเอียดเรื่องร้องทุกข์ */}
             <Grid item xs={12}>
-              <InputTextarea
-                label="รายละเอียดเหตุการณ์"
-                name="description"
-                value={form.description || ""}
-                onChange={handleChange("description")}
-                error={hasFieldError("description")}
-                helperText={getFieldError("description")}
-                required={true}
-                placeholder="กรุณากรอกรายละเอียดเหตุการณ์..."
-                minRows={4}
-              />
+              <div style={containerStyle}>
+                <label style={labelStyle}>รายละเอียดเหตุการณ์<span style={requiredStyle}>*</span></label>
+                <textarea
+                  value={tabData.description || ""}
+                  onChange={(e) => handleChange("description", e.target.value)}
+                  placeholder="กรุณากรอกรายละเอียดเหตุการณ์..."
+                  rows={5}
+                  style={textareaStyle}
+                />
+              </div>
             </Grid>
 
+            {/* ไฟล์แนบ */}
             <Grid item xs={12}>
-              <InputFile
-                label="เอกสารประกอบการร้องเรียน"
-                name="attachment"
-                onChange={(files) => {
-                  handleFileChange(files);
-                }}
-                error={hasFieldError("attachment")}
-                helperText={getFieldError("attachment") || "หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"}
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                maxFiles={3}
-                maxSizeMB={10}
-              />
+              <div style={containerStyle}>
+        <label style={labelStyle}>เอกสารประกอบการร้องเรียน</label>
+                <div style={fileBarStyle}>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                    onChange={(e) => {
+          const files = Array.from(e.target.files).slice(0,3);
+          handleChange("attachment", files);
+                    }}
+                    style={hiddenFileInputOverlay}
+                  />
+                  <span style={fileLabelTextStyle}>
+                    {tabData.attachment?.length
+                      ? `อัปโหลดไฟล์ประกอบ (${tabData.attachment.length}/3)`
+                      : "อัปโหลดไฟล์ประกอบ (0/3)"}
+                  </span>
+                  <span style={plusButtonStyle}>+</span>
+                </div>
+                <div style={noteStyle}>
+                  หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB
+                </div>
+                {tabData.attachment && tabData.attachment.length > 0 && (
+                    <div style={{ 
+                      marginTop: "12px", 
+                      color: "#1120A3", 
+                      fontSize: "14px",
+                      fontWeight: 600 
+                    }}>
+                      ✅ ไฟล์ที่เลือก: {tabData.attachment.length} ไฟล์
+                    </div>
+                  )}
+              </div>
             </Grid>
           </Grid>
-        </Box>
       </div>
     </div>
   );
