@@ -313,6 +313,34 @@ const SearchComplaints = () => {
     fetchStaffUsers();
   }, []);
 
+  // Prefill responsible officer from last saved value (assigned_officer_id)
+  useEffect(() => {
+    const assignedId = defaultData?.assignment_form?.assigned_officer_id;
+    if (!assignedId) return;
+
+    const value = String(assignedId);
+    // Find officer details for name mapping
+    const selectedOfficer = (staffUsers || []).find(
+      (u) => String(u.value) === value
+    );
+
+    // Set select value
+    step4Methods.setValue("responsibleOfficer", value, {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: false,
+    });
+
+    // Also set helper fields if used elsewhere
+    if (selectedOfficer) {
+      step4Methods.setValue("responsibleOfficerId", selectedOfficer.value);
+      step4Methods.setValue(
+        "responsibleOfficerName",
+        selectedOfficer.label || selectedOfficer.fullName || ""
+      );
+    }
+  }, [defaultData?.assignment_form?.assigned_officer_id, staffUsers]);
+
   // Fetch complaint data when ID changes
   useEffect(() => {
     if (id && complaintTypes.length > 0) {
@@ -1373,6 +1401,7 @@ const SearchComplaints = () => {
                           })}
                           className={hasFieldError("referenceNumber4") ? styles.errorField : ""}
                           placeholder="กรุณากรอกเลข สรร. (สารบัญ)"
+                          disabled
                         />
                         {hasFieldError("referenceNumber4") && (
                           <span className={styles.errorText}>{getFieldError("referenceNumber4")}</span>
@@ -1391,6 +1420,7 @@ const SearchComplaints = () => {
                             helperText={getFieldError("referenceDate4")}
                             onChange={() => handleFieldChange("referenceDate4")}
                             required
+                            disabled
                           />
                         </div>
                       </div>
