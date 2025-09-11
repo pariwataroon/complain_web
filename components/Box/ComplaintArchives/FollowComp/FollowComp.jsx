@@ -1273,25 +1273,6 @@ const agencyReportRows = outgoingType5.map((item) => ({
             handleManage={handleManage}
             meta={complaintMeta}
           />
-          <Box
-            sx={{
-              background: "#FFF9C4",
-              py: 2,
-              borderRadius: 1,
-              width: "100%",
-            }}
-          >
-            <Typography mx={3} align="center">
-              ขั้นตอนอยู่ระหว่างดำเนินการ
-            </Typography>
-          </Box>
-
-          {/* Section: ประวัติการเปลี่ยนสถานะ */}
-          {documentData?.detail?.status_history?.length > 0 && (
-            <StatusHistorySection
-              statusHistory={documentData.detail.status_history}
-            />
-          )}
           {/* แจ้งผลการให้ผู้เกี่ยวข้องทราบ */}
           <TableSection
             section={finalSection}
@@ -1315,6 +1296,27 @@ const agencyReportRows = outgoingType5.map((item) => ({
             handleManage={handleManage}
             meta={complaintMeta}
           />
+
+          {/* ขั้นตอนอยู่ระหว่างดำเนินการ */}
+          <Box
+            sx={{
+              background: "#FFF9C4",
+              py: 2,
+              borderRadius: 1,
+              width: "100%",
+            }}
+          >
+            <Typography mx={3} align="center">
+              ขั้นตอนอยู่ระหว่างดำเนินการ
+            </Typography>
+          </Box>
+
+          {/* Section: ประวัติการเปลี่ยนสถานะ */}
+          {documentData?.detail?.status_history?.length > 0 && (
+            <StatusHistorySection
+              statusHistory={documentData.detail.status_history}
+            />
+          )}
         </>
       )}
 
