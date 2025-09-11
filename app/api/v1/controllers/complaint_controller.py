@@ -1814,6 +1814,10 @@ def get_complaints(
             list_item_dict["complaint_type_id"] = complaint_type_id
             list_item_dict["complaint_type_name"] = complaint_type_name
             
+            # ✅ เพิ่มข้อมูลวันที่สำคัญ
+            list_item_dict["confirm_assigned_date"] = complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None
+            list_item_dict["director_submission_date"] = complaint.director_submission_date.isoformat() if complaint.director_submission_date else None
+
             # ✅ เพิ่ม is_master key เพื่อบอกสถานะ parent/child (คำนวณง่ายๆ)
             list_item_dict["is_master"] = complaint.parent_complaint_id is None
             
