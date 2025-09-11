@@ -43,6 +43,46 @@ const STATUS = {
   FINAL_NOTIFY: 6,
 };
 
+// Section color themes to improve visual separation
+const SECTION_STYLES = {
+  RECEIVED: {
+    boxBg: "#E3F2FD", // light blue
+    headerBg: "#1565C0",
+    headerColor: "#ffffff",
+    border: "#90CAF9",
+  },
+  FORWARDED: {
+    boxBg: "#E0F7FA", // light cyan
+    headerBg: "#00838F",
+    headerColor: "#ffffff",
+    border: "#80DEEA",
+  },
+  INITIAL_NOTIFY: {
+    boxBg: "#FFF8E1", // light amber
+    headerBg: "#FF8F00",
+    headerColor: "#1A1A1A",
+    border: "#FFE082",
+  },
+  REQUEST_UPDATE: {
+    boxBg: "#FFF3E0", // light orange
+    headerBg: "#EF6C00",
+    headerColor: "#1A1A1A",
+    border: "#FFCC80",
+  },
+  AGENCY_REPORT: {
+    boxBg: "#F3E5F5", // light purple
+    headerBg: "#6A1B9A",
+    headerColor: "#ffffff",
+    border: "#CE93D8",
+  },
+  FINAL_NOTIFY: {
+    boxBg: "#E8F5E9", // light green
+    headerBg: "#2E7D32",
+    headerColor: "#ffffff",
+    border: "#A5D6A7",
+  },
+};
+
 const breadcrumbItems = [
   {
     label: "เมนูคลังเอกสาร",
@@ -403,22 +443,28 @@ const TableSection = ({
 }) => (
   <Box
     sx={{
-      border: "1px solid #E0E0E0",
+      border: `1px solid ${SECTION_STYLES[section.key]?.border || '#E0E0E0'}`,
       borderRadius: 1,
       width: "100%",
       maxWidth: { sm: "auto" },
+      background: SECTION_STYLES[section.key]?.boxBg || '#FFFFFF',
+      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      mb: 3,
     }}
   >
     <Box
       sx={{
-        background: "#EAF5FF",
-        py: 1,
+        background: SECTION_STYLES[section.key]?.headerBg || "#EAF5FF",
+        color: SECTION_STYLES[section.key]?.headerColor || "#1120A3",
+        py: 1.2,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        borderTopLeftRadius: 4,
+        borderTopRightRadius: 4,
       }}
     >
-      <Typography mx={3} sx={{ fontWeight: "bold", color: "#1120A3" }}>
+      <Typography mx={3} sx={{ fontWeight: "bold" }}>
         {section.title}
       </Typography>
       {onAdd && (
@@ -430,6 +476,7 @@ const TableSection = ({
               width: "28px",
               height: "28px",
               cursor: "pointer",
+              filter: "invert(1) brightness(2)",
             }}
           />
         </IconButton>
@@ -561,6 +608,35 @@ function getStatusThai(status) {
   return STATUS_TRANSLATION[status] || status || "-";
 }
 
+// สีอิงแนวทางจาก TableListBox/ComplaintArchives
+const STATUS_COLORS = {
+  submitted: "#FFA726",
+  sent_to_agency: "#42A5F5",
+  sent_to_external: "#AB47BC",
+  in_process: "#26C6DA",
+  in_review: "#FFCA28",
+  tracking: "#FF7043",
+  reviewed: "#66BB6A",
+  completed: "#4CAF50",
+  cancelled: "#EF5350",
+};
+
+function getStatusColor(status) {
+  return STATUS_COLORS[status] || "#9E9E9E";
+}
+
+// Utility: hex to rgba for tinted backgrounds
+function hexToRgba(hex, alpha = 0.1) {
+  const h = hex.replace('#', '');
+  const bigint = parseInt(h.length === 3
+    ? h.split('').map((c) => c + c).join('')
+    : h, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 const StatusHistorySection = ({ statusHistory }) => (
   <Box
     sx={{
@@ -568,17 +644,23 @@ const StatusHistorySection = ({ statusHistory }) => (
       borderRadius: 1,
       width: "100%",
       maxWidth: { sm: "auto" },
+      background: "#F9FAFB",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      mb: 3,
     }}
   >
     <Box
       sx={{
-        background: "#EAF5FF",
-        py: 1,
+        background: "#1223A5",
+        color: "#ffffff",
+        py: 1.2,
         display: "flex",
         alignItems: "center",
+        borderTopLeftRadius: 4,
+        borderTopRightRadius: 4,
       }}
     >
-      <Typography mx={3} sx={{ fontWeight: "bold", color: "#1120A3" }}>
+      <Typography mx={3} sx={{ fontWeight: "bold" }}>
         ประวัติการเปลี่ยนสถานะ
       </Typography>
     </Box>
@@ -586,34 +668,19 @@ const StatusHistorySection = ({ statusHistory }) => (
       <Table sx={{ width: "100%" }}>
         <TableHead>
           <TableRow>
-            <TableCell
-              align="center"
-              sx={{ background: "#fff", fontWeight: "bold" }}
-            >
+            <TableCell align="center" sx={{ background: "#fff", fontWeight: "bold" }}>
               ลำดับ
             </TableCell>
-            <TableCell
-              align="center"
-              sx={{ background: "#fff", fontWeight: "bold" }}
-            >
+            <TableCell align="center" sx={{ background: "#fff", fontWeight: "bold" }}>
               วันที่เปลี่ยนแปลง
             </TableCell>
-            <TableCell
-              align="center"
-              sx={{ background: "#fff", fontWeight: "bold" }}
-            >
+            <TableCell align="center" sx={{ background: "#fff", fontWeight: "bold" }}>
               ผู้เปลี่ยนแปลง
             </TableCell>
-            <TableCell
-              align="center"
-              sx={{ background: "#fff", fontWeight: "bold" }}
-            >
+            <TableCell align="center" sx={{ background: "#fff", fontWeight: "bold" }}>
               หมายเหตุ
             </TableCell>
-            <TableCell
-              align="center"
-              sx={{ background: "#fff", fontWeight: "bold" }}
-            >
+            <TableCell align="center" sx={{ background: "#fff", fontWeight: "bold" }}>
               สถานะ
             </TableCell>
           </TableRow>
@@ -638,11 +705,11 @@ const StatusHistorySection = ({ statusHistory }) => (
                     minute: "2-digit",
                   })}
                 </TableCell>
+                <TableCell align="center">{item.changed_by_name || '-'}</TableCell>
+                <TableCell align="center">{item.remark || '-'}</TableCell>
                 <TableCell align="center">
                   <b>{getStatusThai(item.status)}</b>
                 </TableCell>
-                <TableCell align="center">{item.changed_by_name}</TableCell>
-                <TableCell align="center">{item.remark || "-"}</TableCell>
               </TableRow>
             ))
           )}
@@ -1036,24 +1103,32 @@ const agencyReportRows = outgoingType5.map((item) => ({
         </Typography>
       </Box>
 
-      <Box sx={{ background: "#91CBFF", py: 2, width: "100%" }}>
-        <Stack direction="row" alignItems="center" spacing={2} sx={{ px: 3 }}>
-          <Typography variant="h6" sx={{ color: "#000" }}>
-            ขั้นตอนดำเนินการ
-          </Typography>
-          <img
-            src="/icons/Add.png"
-            alt="Add"
-            style={{
-              width: "24px",
-              height: "24px",
-              cursor: "pointer",
-              marginLeft: "auto",
+      {/* ขั้นตอนอยู่ระหว่างดำเนินการ (แสดงตาม detail.status) */}
+      {(() => {
+        const statusEn = documentData?.detail?.status || "-";
+        const statusTh = getStatusThai(statusEn);
+        const color = getStatusColor(statusEn);
+        const bg = hexToRgba(color, 0.12);
+        return (
+          <Box
+            sx={{
+              background: bg,
+              border: `1px solid ${color}`,
+              borderRadius: 1,
+              py: 2,
+              px: 3,
+              mb: 3,
             }}
-            onClick={handleImageClick}
-          />
-        </Stack>
-      </Box>
+          >
+            <Typography variant="h6" sx={{ fontWeight: "bold", color, mb: 0.5 }}>
+              ขั้นตอนอยู่ระหว่างดำเนินการ
+            </Typography>
+            <Typography sx={{ color: "#1A1A1A" }}>
+              สถานะปัจจุบัน: <b style={{ color }}>{statusTh}</b>
+            </Typography>
+          </Box>
+        );
+      })()}
 
       {/* "รับเรื่องราวร้องทุกข์" */}
       <Box
@@ -1296,20 +1371,6 @@ const agencyReportRows = outgoingType5.map((item) => ({
             handleManage={handleManage}
             meta={complaintMeta}
           />
-
-          {/* ขั้นตอนอยู่ระหว่างดำเนินการ */}
-          <Box
-            sx={{
-              background: "#FFF9C4",
-              py: 2,
-              borderRadius: 1,
-              width: "100%",
-            }}
-          >
-            <Typography mx={3} align="center">
-              ขั้นตอนอยู่ระหว่างดำเนินการ
-            </Typography>
-          </Box>
 
           {/* Section: ประวัติการเปลี่ยนสถานะ */}
           {documentData?.detail?.status_history?.length > 0 && (
