@@ -85,6 +85,9 @@ def update_complaint_assignment_data(
             assignment_data["reference_number1"] = assignment_data["reference_number"]
         if "reference_date" in assignment_data and "reference_date1" not in assignment_data:
             assignment_data["reference_date1"] = assignment_data["reference_date"]
+        # รองรับ alias: agency_sender -> assigned_agency (frontend อาจส่งมาเป็น agency_sender)
+        if "agency_sender" in assignment_data and "assigned_agency" not in assignment_data:
+            assignment_data["assigned_agency"] = assignment_data["agency_sender"]
 
         complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
         
