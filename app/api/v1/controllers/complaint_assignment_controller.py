@@ -10,8 +10,6 @@ from models.comp_complaint import (
 )
 from models.user import User
 from models.comp_complaint_types import ComplaintType, ComplaintSubType, ComplaintChannel
-from models.departments import Department
-from models.outside_departments import OutsideDepartment
 
 import logging
 logger = logging.getLogger(__name__)
@@ -402,29 +400,9 @@ def update_complaint_assignment_data(
         # ✅ บันทึก assigned_agency
         if "assigned_agency" in assignment_data:
             old_value = complaint.agency_sender
-            new_value_raw = assignment_data["assigned_agency"]
-            resolved_value = new_value_raw
-
-            # ถ้าส่งมาเป็น UUID ให้ลอง map เป็นชื่อหน่วยงานจากตาราง departments ก่อน
-            if isinstance(new_value_raw, str):
-                try:
-                    dep_id = UUID(str(new_value_raw))
-                    # ลองค้นหาใน Department (หน่วยงานภายใน)
-                    dept = db.query(Department).filter(Department.id == dep_id).first()
-                    if dept and getattr(dept, "name", None):
-                        resolved_value = dept.name
-                    else:
-                        # ถ้าไม่พบ ลองค้นหาใน OutsideDepartment (หน่วยงานภายนอก)
-                        o_dept = db.query(OutsideDepartment).filter(OutsideDepartment.id == dep_id).first()
-                        if o_dept and getattr(o_dept, "name", None):
-                            resolved_value = o_dept.name
-                except Exception:
-                    # ไม่ใช่ UUID หรือหา dept ไม่เจอ ก็เก็บตามที่ส่งมา
-                    pass
-
-            complaint.agency_sender = resolved_value
-            if resolved_value != old_value:
-                changes.append(f"หน่วยงานที่ส่ง: {old_value} → {resolved_value}")
+            complaint.agency_sender = assignment_data["assigned_agency"]
+            if assignment_data["assigned_agency"] != old_value:
+                changes.append(f"หน่วยงานที่ส่ง: {old_value} → {assignment_data['assigned_agency']}")
 
         # ✅ บันทึก complaint_filing_type
         if "complaint_filing_type" in assignment_data:
