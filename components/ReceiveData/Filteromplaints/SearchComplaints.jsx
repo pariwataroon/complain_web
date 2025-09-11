@@ -1993,6 +1993,11 @@ const SearchComplaints = () => {
                             rows={4}
                             {...step4Methods.register("screeningRemarks")}
                             placeholder="ให้หน่วยงานทำการชี้แจงผลกระทบความล่าช้าและเสนอแนวทางแก้ไข..."
+                            defaultValue={
+                              defaultData?.assignment_form?.assigned_remark
+                                ? defaultData?.assignment_form?.assigned_remark
+                                : ""
+                            }
                             className={styles.textarea}
                           />
                         </div>
