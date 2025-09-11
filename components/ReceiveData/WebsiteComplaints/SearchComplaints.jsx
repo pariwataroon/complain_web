@@ -996,7 +996,13 @@ const handleSubmit = async () => {
     step4: {
       general: {
         ...step4Data,
-        assigned_date: formatDateForAPI(step4Data.officerReceivedDate),
+        // officerReceivedDate -> confirm_assigned_date (ไม่แทน assigned_date)
+        confirm_assigned_date: formatDateForAPI(step4Data.officerReceivedDate),
+        // เก็บ assigned_date ดั้งเดิมไว้ในข้อมูล (ไม่แก้ หาก backend ต้องใช้เทียบ diff)
+        assigned_date:
+          defaultData?.assignment_form?.assigned_date ||
+          defaultData?.assigned_date ||
+          null,
         director_submission_date: formatDateForAPI(
           step4Data.directorSubmittedDate
         ),
@@ -1016,7 +1022,13 @@ const handleSubmit = async () => {
       additional_reference_date2: formatDateForAPI(
         step3Data.additionalReferenceDate2
       ),
-      assigned_date: formatDateForAPI(step4Data.officerReceivedDate),
+      // อย่าเขียนทับ assigned_date เดิม; ส่งค่าเดิมกลับไป
+      assigned_date:
+        defaultData?.assignment_form?.assigned_date ||
+        defaultData?.assigned_date ||
+        null,
+      // ส่ง confirm_assigned_date ที่ผู้ใช้แก้
+      confirm_assigned_date: formatDateForAPI(step4Data.officerReceivedDate),
       director_submission_date: formatDateForAPI(
         step4Data.directorSubmittedDate
       ),
@@ -1039,7 +1051,7 @@ const handleSubmit = async () => {
 
     console.log("✅ UpdateAssignmentCompleteByAdmin response:", res);
 
-    if (res?.res_code === "0000") {
+  if (["0000", "0002"].includes(res?.res_code)) {
       // alertSuccess("บันทึกสำเร็จ", "ข้อมูลได้รับการบันทึกแล้ว");
 
       // เก็บ preview ไว้แสดง
