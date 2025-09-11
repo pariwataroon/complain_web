@@ -8754,7 +8754,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"assigned_officer_id\": \"{{user_id}}\",\n    \"assigned_remark\": \"ตั้งใจทำงาน\",\n    \"assigned_date\": \"2025-06-07T16:00:00Z\",\n    \"assignment_reason\": \"มีความเชี่ยวชาญด้านการทุจริตและมีประสบการณ์ในการจัดการเรื่องร้องเรียนประเภทนี้\",\n    \"complaint_type_id\": \"f48f6097-9731-48ec-8bcb-0cf40c8a9c98\",\n    \"complaint_subtype_id\": \"ae43cb1d-2ff8-476d-b4f5-bf847abcfdff\",\n    \"complaint_channel_id\": \"a44ea290-31df-4898-a6d0-4f4d25e129e3\",\n    \"registration_date\": \"2025-06-07T00:00:00Z\",\n    \"confidentiality_level\": \"confidential\",\n    \"urgency_level\": \"high\",\n    \"reference_number1\": \"REF-2025-001\",\n    \"reference_date1\": \"2025-01-15T00:00:00Z\",\n    \"reference_number2\": \"REF-2025-002\",\n    \"reference_date2\": \"2025-01-16T00:00:00Z\",\n    \"reference_number3\": \"REF-2025-003\",\n    \"reference_date3\": \"2025-01-17T00:00:00Z\",\n    \"reference_number4\": \"REF-2025-004\",\n    \"reference_date4\": \"2025-01-18T00:00:00Z\",\n    \"complaint_filing_type\": \"new\",\n    \"document_number\": \"DOC-2025-12345\",\n    \"document_date\": \"2025-01-14T00:00:00Z\",\n    \"director_submission_date\": \"2025-01-14T00:00:00Z\",\n    \"assigned_agency\": \"กรมการขนส่งทางบก\",\n    \"new_complaint\": true,\n    \"add_more_complaint_to_ref\": false,\n    \"group_work\": false,\n    \"regulation_reference\": \"มาตรา 15 แห่งพระราชบัญญัติระเบียบบริหารราชการแผ่นดิน\"\n}",
+							"raw": "{\n    \"assigned_officer_id\": \"{{user_id}}\",\n    \"assigned_remark\": \"ตั้งใจทำงาน\",\n    \"assigned_date\": \"2025-06-07T16:00:00Z\",\n    \"assignment_reason\": \"มีความเชี่ยวชาญด้านการทุจริตและมีประสบการณ์ในการจัดการเรื่องร้องเรียนประเภทนี้\",\n    \"complaint_type_id\": \"f48f6097-9731-48ec-8bcb-0cf40c8a9c98\",\n    \"complaint_subtype_id\": \"ae43cb1d-2ff8-476d-b4f5-bf847abcfdff\",\n    \"complaint_channel_id\": \"a44ea290-31df-4898-a6d0-4f4d25e129e3\",\n    \"registration_date\": \"2025-06-07T00:00:00Z\",\n    \"confidentiality_level\": \"confidential\",\n    \"urgency_level\": \"high\",\n    \"reference_number\": \"REF-2025-001\",\n    \"reference_date\": \"2025-01-15T00:00:00Z\",\n    \"reference_number2\": \"REF-2025-002\",\n    \"reference_date2\": \"2025-01-16T00:00:00Z\",\n    \"reference_number3\": \"REF-2025-003\",\n    \"reference_date3\": \"2025-01-17T00:00:00Z\",\n    \"reference_number4\": \"REF-2025-004\",\n    \"reference_date4\": \"2025-01-18T00:00:00Z\",\n    \"complaint_filing_type\": \"new\",\n    \"document_number\": \"DOC-2025-12345\",\n    \"document_date\": \"2025-01-14T00:00:00Z\",\n    \"director_submission_date\": \"2025-01-14T00:00:00Z\",\n    \"assigned_agency\": \"กรมการขนส่งทางบก\",\n    \"new_complaint\": true,\n    \"add_more_complaint_to_ref\": false,\n    \"group_work\": false,\n    \"regulation_reference\": \"มาตรา 15 แห่งพระราชบัญญัติระเบียบบริหารราชการแผ่นดิน\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -8889,7 +8889,7 @@
 								"link-related"
 							]
 						},
-						"description": "เชื่อมโยงเรื่องร้องเรียนที่เกี่ยวข้อง"
+						"description": "เชื่อมโยงเรื่องร้องเรียนที่เกี่ยวข้อง (สถานะ: ปิดใช้งานใน API ชั่วคราว)"
 					},
 					"response": []
 				},
@@ -9006,7 +9006,7 @@
 								}
 							]
 						},
-						"description": "ค้นหาเรื่องร้องเรียนสำหรับการอ้างอิง"
+						"description": "ค้นหาเรื่องร้องเรียนสำหรับการอ้างอิง (สถานะ: ปิดใช้งานใน API ชั่วคราว)"
 					},
 					"response": []
 				},
@@ -9045,7 +9045,7 @@
 								"additional-reference"
 							]
 						},
-						"description": "เพิ่มเลขอ้างอิงเรื่องเพิ่มเติม"
+						"description": "เพิ่มเลขอ้างอิงเรื่องเพิ่มเติม (สถานะ: ปิดใช้งานใน API ชั่วคราว)"
 					},
 					"response": []
 				},
@@ -12132,6 +12132,52 @@
 		},
 		{
 			"key": "outside_department_id",
+			"value": "",
+			"type": "string"
+		}
+		,
+		{
+			"key": "outgoing_report_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "report2_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "report3_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "report4_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "report5_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "report6_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "position_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "signature_user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "department_id",
 			"value": "",
 			"type": "string"
 		}
