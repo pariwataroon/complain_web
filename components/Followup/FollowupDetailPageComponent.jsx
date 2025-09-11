@@ -19,6 +19,7 @@ import { formatThaiDate } from "@utils/Formats";
 import { exportElementToPDF } from "@utils/exportPDF";
 import styles from "./FollowupDetailPage.module.scss";
 
+// Canonical steps for display
 const STEP_DEFS = [
   { key: "submitted", label: "รับเรื่องร้องเรียน" },
   { key: "sent", label: "ส่งหน่วยงาน" },
@@ -26,6 +27,55 @@ const STEP_DEFS = [
   { key: "reviewed", label: "ติดตามผลการพิจารณาจากหน่วยงาน" },
   { key: "resolved", label: "การดำเนินการเสร็จสิ้น" },
 ];
+
+// Map various backend status strings to the above step keys
+const STATUS_ALIAS = {
+  submitted: ["submitted", "SUBMITTED", "received", "RECEIVED"],
+  sent: ["sent", "SENT", "sent_to_agency", "forwarded", "FORWARDED"],
+  in_progress: [
+    "in_progress",
+    "IN_PROGRESS",
+    "processing",
+    "PROCESSING",
+    "pending",
+    "PENDING",
+  ],
+  reviewed: [
+    "reviewed",
+    "REVIEWED",
+    "request_update",
+    "REQUEST_UPDATE",
+    "initial_notify",
+    "INITIAL_NOTIFY",
+    "agency_report",
+    "AGENCY_REPORT",
+  ],
+  resolved: [
+    "resolved",
+    "RESOLVED",
+    "final_notify",
+    "FINAL_NOTIFY",
+    "closed",
+    "CLOSED",
+    "done",
+    "DONE",
+  ],
+};
+
+const normalizeStatus = (status) => {
+  if (!status) return "submitted";
+  const s = String(status);
+  // quick exact match first
+  for (const key of Object.keys(STATUS_ALIAS)) {
+    if (STATUS_ALIAS[key].includes(s)) return key;
+  }
+  // case-insensitive fallback
+  const low = s.toLowerCase();
+  for (const key of Object.keys(STATUS_ALIAS)) {
+    if (STATUS_ALIAS[key].map((v) => v.toLowerCase()).includes(low)) return key;
+  }
+  return "submitted";
+};
 
 export default function FollowupDetailPage() {
   const router = useRouter();
@@ -65,17 +115,19 @@ export default function FollowupDetailPage() {
 
     const history = complaint.status_history ?? [];
     const lastStatus = complaint.status;
+    const lastKey = normalizeStatus(lastStatus);
 
     const built = STEP_DEFS.map((def) => {
-      const logs = history.filter((h) => h.status === def.key);
+      const logs = history.filter((h) => normalizeStatus(h.status) === def.key);
 
       const description = logs.map((log) => {
-        const dateTH = formatThaiDate(log.changed_at);
-        return `${log.notes} (${dateTH})`;
+        const dateTH = formatThaiDate(log.changed_at || log.changedAt || log.date);
+        const note = log.notes || log.note || log.message || "-";
+        return `${note} (${dateTH})`;
       });
 
-      const isDone = logs.length > 0 && def.key !== lastStatus;
-      const isActive = def.key === lastStatus;
+      const isDone = logs.length > 0 && def.key !== lastKey;
+      const isActive = def.key === lastKey;
 
       let icon;
       if (isDone)
@@ -87,10 +139,7 @@ export default function FollowupDetailPage() {
       return { label: def.label, icon, description };
     });
 
-    const idx = Math.max(
-      0,
-      STEP_DEFS.findIndex((s) => s.key === lastStatus)
-    );
+    const idx = Math.max(0, STEP_DEFS.findIndex((s) => s.key === lastKey));
     return { steps: built, activeStep: idx };
   }, [complaint]);
 

@@ -97,25 +97,55 @@ const ComplaintIDService = ({ complaint }) => {
   };
 
   const getFileExt = (filename) =>
-    filename.slice(filename.lastIndexOf(".")).toLowerCase();
+    (filename || "").slice((filename || "").lastIndexOf(".")).toLowerCase();
+
+  // Join base and path safely
+  const joinUrl = (base, path) => {
+    if (!base) return path;
+    const b = base.replace(/\/$/, "");
+    const p = (path || "").startsWith("/") ? path : `/${path || ""}`;
+    return `${b}${p}`;
+  };
+
+  const resolveFileUrl = (raw) => {
+    const url =
+      raw?.fileUrl ||
+      raw?.url ||
+      raw?.file_url ||
+      raw?.path ||
+      raw?.file_path ||
+      raw?.file ||
+      raw; // allow raw string
+
+    if (!url) return "";
+    const s = typeof url === "string" ? url : String(url);
+    if (/^https?:\/\//i.test(s)) return s;
+    // Prefer API base for static uploads
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (apiBase) return joinUrl(apiBase, s);
+    // Fallback to current origin
+    if (typeof window !== "undefined") return joinUrl(window.location.origin, s);
+    return s;
+  };
 
   // ฟังก์ชันสำหรับดาวน์โหลดไฟล์
-  const handleDownloadFile = (fileUrl, fileName) => {
-    if (!fileUrl) return;
+  const handleDownloadFile = (fileInput, fileName) => {
+    const downloadUrl = resolveFileUrl(fileInput);
+    if (!downloadUrl) return;
 
-    // สร้าง URL แบบเต็มถ้าเป็น relative path
-    const downloadUrl = fileUrl.startsWith("http")
-      ? fileUrl
-      : `${window.location.origin}${fileUrl}`;
-
-    // สร้าง element a สำหรับดาวน์โหลด
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.download = fileName || "download";
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      // Keep default filename if server sets it; otherwise hint
+      if (fileName) link.download = fileName;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      // graceful fallback: open new tab
+      window.open(downloadUrl, "_blank");
+    }
   };
 
   // ====== Render Respondent By Type ======
@@ -408,9 +438,9 @@ const ComplaintIDService = ({ complaint }) => {
           <Box mb={3}>
             {files.length > 0 ? (
               files.map((file, idx) => {
-                const ext = getFileExt(file.fileName || file.name || "");
-                const fileName =
-                  file.fileName || file.name || `ไฟล์แนบ ${idx + 1}`;
+                const fileName = file?.fileName || file?.name || `ไฟล์แนบ ${idx + 1}`;
+                const fileUrl = resolveFileUrl(file);
+                const ext = getFileExt(fileName);
 
                 return (
                   <Box
@@ -432,9 +462,7 @@ const ComplaintIDService = ({ complaint }) => {
                           }
                         : {},
                     }}
-                    onClick={() =>
-                      file.fileUrl && handleDownloadFile(file.fileUrl, fileName)
-                    }
+                    onClick={() => fileUrl && handleDownloadFile(fileUrl, fileName)}
                   >
                     <Box
                       sx={{ display: "flex", alignItems: "center", flex: 1 }}
@@ -445,7 +473,7 @@ const ComplaintIDService = ({ complaint }) => {
                       </Typography>
                     </Box>
 
-                    {file.fileUrl && (
+                    {fileUrl && (
                       <Box
                         sx={{ display: "flex", alignItems: "center", ml: 2 }}
                       >
