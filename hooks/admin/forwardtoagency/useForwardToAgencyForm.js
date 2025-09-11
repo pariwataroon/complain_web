@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   alertSuccess,
@@ -9,10 +9,8 @@ import {
   showLoading,
   closeAlert,
 } from "@utils/Alerts";
-import {
-  CreateOutgoingReport,
-  UploadOutgoingReportAttachments,
-} from "@pages/api/outgoinreports/outgoinreports";
+import { CreateOutgoingReport, UploadOutgoingReportAttachments } from "@pages/api/outgoinreports/outgoinreports";
+import { getDepartments } from "@pages/api/department/department";
 import axiosInstance from "@pages/api/axiosInstance";
 
 // Extended validation schema with file validation
@@ -67,8 +65,11 @@ const validationSchema = yup.object().shape({
 
   department: yup
     .string()
-    .required("กรุณาเลือกหน่วยงาน")
-    .notOneOf([""], "กรุณาเลือกหน่วยงาน"),
+    .when('salutation_is_other', {
+      is: true,
+      then: (schema) => schema.optional().nullable(),
+      otherwise: (schema) => schema.required("กรุณาเลือกหน่วยงาน").notOneOf([""], "กรุณาเลือกหน่วยงาน"),
+    }),
 
   confidentiality: yup
     .mixed()
@@ -132,11 +133,24 @@ const mapLevel = (val, type) => {
   return levelLabelMap[type]?.[n] || String(val);
 };
 
+const uuidv4 = () =>
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+
+const isUUID = (s) => typeof s === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+// Position fallback (match other reports)
+const POSITION_FALLBACK = "7e18e4fe-d416-4580-b4d4-2a4032f67770";
+
 
 // Hook หลัก
 export const useForwardToAgencyForm = () => {
   const [fileData, setFileData] = useState(null);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const originalDepartmentIdRef = useRef(null);
+  const lastDepartmentIdRef = useRef(null);
 
   // Current time and user from the input
   const currentTime = "2025-09-03 07:30:42";
@@ -160,12 +174,14 @@ export const useForwardToAgencyForm = () => {
       salutation_is_other: false,
       position_other_text: "",
       complaint_number: "",
+  original_department_id: "",
       complaint_id: "",
       complaint_number_date: null,
       subject: "",
       document_number: "",
       document_date: null,
       signer: "",
+  position_id: "",
       department: "",
       confidentiality: "",
       urgency: "",
@@ -276,6 +292,7 @@ export const useForwardToAgencyForm = () => {
       document_number: "",
       document_date: null,
       signer: "",
+  position_id: "",
       department: "",
       confidentiality: "",
       urgency: "",
@@ -312,14 +329,61 @@ export const useForwardToAgencyForm = () => {
 
         // หมายเหตุ: ไม่บังคับอัพโหลดไฟล์ใหม่ หากไฟล์เดิมครบหรือผู้ใช้ไม่ต้องการแนบเพิ่ม
 
+        // Department fallback parity with report2
+        const specialSalutation = data.salutation_is_other === true || ["อื่นๆ","ผู้ร้อง","ผู้ร้องเรียน"].includes(String(data.position_other_text || '').trim()) || ["อื่นๆ","ผู้ร้อง","ผู้ร้องเรียน"].includes(String(data.salutation_label||'').trim());
+        // Track explicit selection
+        if (data.department && isUUID(data.department)) {
+          lastDepartmentIdRef.current = data.department;
+          if (!originalDepartmentIdRef.current) originalDepartmentIdRef.current = data.department;
+        }
+        let deptToSend = data.department && isUUID(data.department) ? data.department : null;
+        if (!deptToSend) {
+          if (specialSalutation) {
+            if (lastDepartmentIdRef.current && isUUID(lastDepartmentIdRef.current)) {
+              deptToSend = lastDepartmentIdRef.current;
+            } else if (originalDepartmentIdRef.current && isUUID(originalDepartmentIdRef.current)) {
+              deptToSend = originalDepartmentIdRef.current;
+            }
+          } else if (originalDepartmentIdRef.current && isUUID(originalDepartmentIdRef.current)) {
+            deptToSend = originalDepartmentIdRef.current;
+          }
+        }
+        const ensureRealDepartmentId = async (current) => {
+          if (current) return current;
+            try {
+              const resp = await getDepartments();
+              const raw = resp?.res_data || resp?.data || resp;
+              let list = [];
+              if (Array.isArray(raw)) list = raw; else if (Array.isArray(raw?.items)) list = raw.items;
+              const first = list.find(d => d && isUUID(d.id));
+              if (first) {
+                if (!originalDepartmentIdRef.current) originalDepartmentIdRef.current = first.id;
+                if (!lastDepartmentIdRef.current) lastDepartmentIdRef.current = first.id;
+                return first.id;
+              }
+            } catch (e) {
+              console.warn('fetch departments (forward) failed', e);
+            }
+            return current || process.env.NEXT_PUBLIC_DEFAULT_DEPARTMENT_ID || '11111111-1111-1111-1111-111111111111';
+        };
+        deptToSend = await ensureRealDepartmentId(deptToSend);
+        if (!data.original_department_id && deptToSend) {
+          setValue('original_department_id', deptToSend, { shouldDirty: false, shouldValidate: false });
+        }
+
+        // Resolve position id (prefer explicit position_id then salutation if UUID)
+        const resolvedPositionId = (() => {
+          if (isUUID(data.position_id)) return data.position_id;
+          if (isUUID(data.salutation)) return data.salutation;
+          return POSITION_FALLBACK;
+        })();
+
         const outgoingReportData = {
-          position_id: data.salutation,
-          // ส่งข้อความกรณีเลือก "อื่นๆ" (ใช้ flag หรือมีค่าจริง)
-          position_other_text: (data.salutation_is_other || data.position_other_text)
-            ? (data.position_other_text || "").trim()
-            : "",
-          reference_number: (data.complaint_number || "").trim(),   // ใช้ complaint_number เป็น reference
-          reference_date: toYMD(data.complaint_number_date),        // ใช้ complaint_number_date เป็น reference_date
+          position_id: resolvedPositionId,
+          position_other_text: data.salutation_is_other ? (data.position_other_text || '').trim() : '',
+          salutation: data.salutation_is_other ? (data.salutation || '') : resolvedPositionId,
+          reference_number: (data.complaint_number || "").trim(),  
+          reference_date: toYMD(data.complaint_number_date),       
           subject: (data.subject || "").trim(),
           complaint_number: (data.complaint_number || "").trim(),   // เลข สป.กค.
           complaint_id: data.complaint_id || null,
@@ -327,7 +391,7 @@ export const useForwardToAgencyForm = () => {
           document_number: (data.document_number || "").trim(),
           document_date: toYMD(data.document_date),
           signature_authority_user_id: data.signer,
-          department_id: data.department,
+          department_id: deptToSend,
           confidentiality_level: mapLevel(data.confidentiality, "confidentiality"),
           urgency_level: mapLevel(data.urgency, "urgency"),
           remarks: data.note || "",
@@ -336,52 +400,74 @@ export const useForwardToAgencyForm = () => {
         // Debug payload for 422 troubleshooting (visible in dev console)
         try { console.debug("OutgoingReport payload", outgoingReportData); } catch { }
 
-        showLoading("กำลังสร้างรายงาน...");
+        // Decide create or update by presence of route id
+        const routeId = router?.query?.id;
+        let reportId = routeId || null;
 
-        // Create report first
-        let createResponse;
-        try {
-          createResponse = await CreateOutgoingReport(outgoingReportData);
-        } catch (apiError) {
-          console.error("🚨 API Call Error:", apiError);
-          throw apiError;
-        }
+        if (routeId) {
+          showLoading("กำลังอัพเดตรายงาน...");
+          try {
+            // Try PUT then PATCH fallback
+            let updateResp;
+            try {
+              updateResp = await axiosInstance.put(`/outgoing-reports/${routeId}`, outgoingReportData);
+            } catch (putErr) {
+              updateResp = await axiosInstance.patch(`/outgoing-reports/${routeId}`, outgoingReportData);
+            }
+            // Basic success check
+            const ok = updateResp?.data && (updateResp.data.success === true || !updateResp.data.res_code || !String(updateResp.data.res_code).startsWith('4'));
+            if (!ok) {
+              const msg = updateResp?.data?.res_message || updateResp?.data?.message || 'ไม่สามารถอัพเดตรายงานได้';
+              closeAlert();
+              await alertError('เกิดข้อผิดพลาด', msg);
+              return { success: false, error: msg };
+            }
+          } catch (updErr) {
+            closeAlert();
+            const msg = updErr?.response?.data?.res_message || updErr?.message || 'อัพเดตไม่สำเร็จ';
+            await alertError('เกิดข้อผิดพลาด', msg);
+            return { success: false, error: msg };
+          }
+        } else {
+          showLoading("กำลังสร้างรายงาน...");
+          // Create report first
+          let createResponse;
+          try {
+            createResponse = await CreateOutgoingReport(outgoingReportData);
+          } catch (apiError) {
+            console.error("🚨 API Call Error:", apiError);
+            throw apiError;
+          }
 
-        if (!createResponse) {
-          throw new Error("ไม่ได้รับ response จาก API");
-        }
+          if (!createResponse) {
+            throw new Error("ไม่ได้รับ response จาก API");
+          }
 
-        // Check if creation was successful
-        const isSuccess =
-          createResponse.success === true ||
-          createResponse.success === "true" ||
-          createResponse.res_code === "0001" ||
-          createResponse.res_message === "CREATE_DATA_SUCCESSFULLY" ||
-          (createResponse.res_code &&
-            createResponse.res_code.toString().startsWith("2")) ||
-          createResponse.status === "success";
+            const isSuccess =
+              createResponse.success === true ||
+              createResponse.success === 'true' ||
+              createResponse.res_code === '0001' ||
+              createResponse.res_message === 'CREATE_DATA_SUCCESSFULLY' ||
+              (createResponse.res_code && String(createResponse.res_code).startsWith('2')) ||
+              createResponse.status === 'success';
 
-        if (!isSuccess) {
-          const errorSources = [
-            createResponse?.res_data?.error,
-            createResponse?.res_data?.message,
-            createResponse?.res_message,
-            createResponse?.message,
-            createResponse?.error,
-          ].filter(Boolean);
-
-          const errorMessage = errorSources[0] || "ไม่สามารถสร้างรายงานได้";
-
-          // throw new Error(errorMessage);
-          closeAlert();
-          await alertError("เกิดข้อผิดพลาด", errorMessage);
-          return { success: false, error: errorMessage };
-        }
-
-        const reportId = createResponse.res_data?.id;
-
-        if (!reportId) {
-          throw new Error("ไม่พบ ID ของรายงานที่สร้างขึ้น");
+          if (!isSuccess) {
+            const errorSources = [
+              createResponse?.res_data?.error,
+              createResponse?.res_data?.message,
+              createResponse?.res_message,
+              createResponse?.message,
+              createResponse?.error,
+            ].filter(Boolean);
+            const errorMessage = errorSources[0] || 'ไม่สามารถสร้างรายงานได้';
+            closeAlert();
+            await alertError('เกิดข้อผิดพลาด', errorMessage);
+            return { success: false, error: errorMessage };
+          }
+          reportId = createResponse.res_data?.id || createResponse?.id;
+          if (!reportId) {
+            throw new Error('ไม่พบ ID ของรายงานที่สร้างขึ้น');
+          }
         }
 
         // Upload files with multi-strategy fallback
@@ -451,48 +537,61 @@ export const useForwardToAgencyForm = () => {
 
         const successMessage = `
         <div style="text-align: center; line-height: 1.6;">
-          <p style="margin-bottom: 15px; font-size: 16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
+          <p style="margin-bottom: 15px; font-size: 16px;">${routeId ? 'อัพเดตรายงานสำเร็จ' : 'บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว'}</p>
           <p style="margin-bottom: 10px; color: #666;">รหัสรายงาน: <strong>${reportId}</strong></p>
-          <p style="margin-bottom: 10px; color: #666;">เรื่อง: <strong>${data.subject
-          }</strong></p>
+          <p style="margin-bottom: 10px; color: #666;">เรื่อง: <strong>${data.subject || '-'}</strong></p>
           ${fileData
-            ? `<p style="color: #666;">ไฟล์แนบ: <strong>${Array.isArray(fileData)
-              ? fileData.map((f) => f.name).join(", ")
+            ? `<p style=\"color: #666;\">ไฟล์แนบ: <strong>${Array.isArray(fileData)
+              ? fileData.map((f) => f.name).join(', ')
               : fileData.name
             }</strong></p>`
-            : ""
+            : ''
           }
         </div>
         `;
 
-        await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
-        router.push(`/admin/box/list`);
+        await alertSuccess(routeId ? 'อัพเดตสำเร็จ!' : 'บันทึกสำเร็จ!', successMessage, true);
 
-        reset({
-          salutation: "",
-          salutation_is_other: false,
-          position_other_text: "",
-          complaint_number: "",
-          complaint_id: "",
-          complaint_number_date: null,
-          subject: "",
-          document_number: "",
-          document_date: null,
-          signer: "",
-          department: "",
-          confidentiality: "",
-          urgency: "",
-          attachment: "",
-          note: "",
-        });
+        // Determine desired return URL (query ?returnUrl=/path or ?from=/path)
+        const returnUrl = router?.query?.returnUrl || router?.query?.from;
 
-        resetFileInput();
+        if (routeId) {
+          // After update: go to explicit returnUrl/from if provided; else navigate back; fallback to list
+            if (returnUrl && typeof returnUrl === 'string') {
+              router.push(returnUrl);
+            } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+              router.back();
+            } else {
+              router.push('/admin/box/list');
+            }
+        } else {
+          // After create: reset, then go to returnUrl if given else list
+          reset({
+            salutation: "",
+            salutation_is_other: false,
+            position_other_text: "",
+            complaint_number: "",
+            complaint_id: "",
+            complaint_number_date: null,
+            subject: "",
+            document_number: "",
+            document_date: null,
+            signer: "",
+            department: "",
+            confidentiality: "",
+            urgency: "",
+            attachment: "",
+            note: "",
+          });
+          resetFileInput();
+          if (returnUrl && typeof returnUrl === 'string') {
+            router.push(returnUrl);
+          } else {
+            router.push('/admin/box/list');
+          }
+        }
 
-        return {
-          success: true,
-          reportId: reportId,
-          data: createResponse.res_data || createResponse.data,
-        };
+        return { success: true, reportId };
       } catch (error) {
         closeAlert();
         console.error("❌ Save error:", error);
@@ -520,7 +619,7 @@ export const useForwardToAgencyForm = () => {
         return { success: false, error };
       }
     },
-    [fileData, reset, resetFileInput, router, prepareFileAsFormData]
+  [fileData, reset, resetFileInput, router, prepareFileAsFormData, setValue]
   );
 
   // ฟังก์ชันตรวจสอบว่า field ไหนที่มี error

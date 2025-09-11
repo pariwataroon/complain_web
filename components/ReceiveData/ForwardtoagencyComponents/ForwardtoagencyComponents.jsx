@@ -37,10 +37,60 @@ import {
   CircularProgress,
 } from "@mui/material";
 
+function parseComplaintNumberToThaiDate(val) {
+  if (!val || typeof val !== 'string') return null;
+  const cleaned = val.trim();
+  const m = cleaned.match(/MOF-(\d{8})(?:-[A-Za-z0-9]+)?/i);
+  if (!m) return null;
+  const raw = m[1];
+  if (raw.length !== 8) return null;
+  let year = parseInt(raw.slice(0, 4), 10);
+  const month = parseInt(raw.slice(4, 6), 10);
+  const day = parseInt(raw.slice(6, 8), 10);
+  if (!year || !month || !day) return null;
+  if (year > 2400) year -= 543;
+  return new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+}
+
+// Flexible parser for various date representations returned by APIs
+function parseFlexibleDate(dateStr, complaintNumber) {
+  if (!dateStr && !complaintNumber) return null;
+
+  // Try direct Date parse first
+  if (dateStr) {
+    const d1 = new Date(dateStr);
+    if (!isNaN(d1.getTime())) return d1;
+
+    // Try digits-only YYYYMMDD or YYYYMMDDhhmmss
+    const digits = String(dateStr).replace(/\D/g, "");
+    if (digits.length >= 8) {
+      const raw = digits.slice(0, 8);
+      let year = parseInt(raw.slice(0, 4), 10);
+      const month = parseInt(raw.slice(4, 6), 10);
+      const day = parseInt(raw.slice(6, 8), 10);
+      if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+        if (year > 2400) year -= 543; // Buddhist year fallback
+        const formatted = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const d2 = new Date(formatted);
+        if (!isNaN(d2.getTime())) return d2;
+      }
+    }
+  }
+
+  // As a last resort, try deriving date from complaint number pattern
+  if (complaintNumber) {
+    const d3 = parseComplaintNumberToThaiDate(complaintNumber);
+    if (d3) return d3;
+  }
+
+  return null;
+}
+
 const ForwardtoagencyComponents = () => {
   const router = useRouter();
   const { id } = router.query;
 
+  const [autoSetComplaintNumberDate, setAutoSetComplaintNumberDate] = useState(false);
   const [selectedSigner, setSelectedSigner] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [confidentialityOptions, setConfidentialityOptions] = useState([]);
@@ -191,30 +241,35 @@ const ForwardtoagencyComponents = () => {
         setOpenSearchDialog2(false);
         return;
       }
+
       // เซ็ตเลข สป.กค. (รองรับทั้ง complaint_number และ reference_number)
+      const chosenNumber = ref.complaint_number || ref.reference_number || "";
       setValue(
         "complaint_number",
-        ref.complaint_number || ref.reference_number || "",
+        chosenNumber,
         { shouldValidate: true, shouldDirty: true }
       );
+
       // เก็บ complaint_id เพื่อส่งไปกับ body
       setValue(
         "complaint_id",
         ref.id || ref.complaint_id || "",
         { shouldValidate: true, shouldDirty: true }
       );
-      // เติมวันที่อัตโนมัติหากมี (รองรับทั้ง complaint_number_date และ reference_date)
-      const dateStr = ref.complaint_number_date || ref.reference_date;
-      if (dateStr) {
-        const d = new Date(dateStr);
-        if (!isNaN(d.getTime())) {
-          // Store as Date object to match yup.date() and DateThaiPicker expectations
-          setValue("complaint_number_date", d, {
-            shouldValidate: true,
-            shouldDirty: true,
-          });
-        }
+
+      // เติมวันที่อัตโนมัติ: try multiple formats and fallbacks
+      const dateStr = ref.complaint_number_date || ref.reference_date || ref.date || null;
+      const parsed = parseFlexibleDate(dateStr, chosenNumber);
+      if (parsed) {
+        // Store as Date object to match yup.date() and DateThaiPicker expectations
+        setValue("complaint_number_date", parsed, {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+        // Prevent the auto-from-number heuristic from overwriting our programmatic date
+        setAutoSetComplaintNumberDate(true);
       }
+
       setOpenSearchDialog2(false);
     };
   
@@ -258,6 +313,17 @@ const ForwardtoagencyComponents = () => {
     fileInputKey, // Get the fileInputKey
   } = useForwardToAgencyForm();
 
+  useEffect(() => {
+  const isEditMode = !!router?.query?.id;
+  const cnum = watch("complaint_number");
+  const cnumDate = watch("complaint_number_date");
+  if (!isEditMode && cnum && !cnumDate && !autoSetComplaintNumberDate) {
+    const autoDate = parseComplaintNumberToThaiDate(cnum);
+    setValue("complaint_number_date", autoDate, { shouldValidate: true, shouldDirty: true });
+    setAutoSetComplaintNumberDate(true);
+  }
+}, [watch("complaint_number"), autoSetComplaintNumberDate, router?.query?.id, setValue]);
+
   // Helper: map option label to value and set field
   const setSelectByLabel = useCallback(
     (fieldName, label, options) => {
@@ -283,6 +349,7 @@ const ForwardtoagencyComponents = () => {
   const positionId = d.position_id || d.position?.id || "";
   setValue("salutation", positionId, { shouldDirty: false, shouldValidate: true });
   setValue("salutation_is_other", !!isOther, { shouldDirty: false });
+  if (positionId) setValue("position_id", positionId, { shouldDirty: false });
       if (isOther && d.position_other_text) {
         setValue("position_other_text", d.position_other_text, { shouldDirty: false, shouldValidate: true });
       }
@@ -308,7 +375,14 @@ const ForwardtoagencyComponents = () => {
 
   // Prefill department if present
   const deptId = d.department?.id || d.department_id || "";
-  setValue("department", deptId, { shouldDirty: false, shouldValidate: true });
+  // Store original department id for hook to reuse on edit flows
+  setValue("original_department_id", deptId || "", { shouldDirty: false });
+  // also mirror into refs inside hook (if exposed via hidden field, hook already reads original_department_id)
+  if (!isOther && deptId) {
+    setValue("department", deptId, { shouldDirty: false, shouldValidate: true });
+  } else {
+    setValue("department", "", { shouldDirty: false, shouldValidate: true });
+  }
 
       // Note/Remarks
   setValue("note", d.remarks || "", { shouldDirty: false });
@@ -410,9 +484,19 @@ const ForwardtoagencyComponents = () => {
   }, [optionsLoading, pendingPrefill, confidentialityOptions, urgencyOptions, setSelectByLabel]);
 
   const handleSignerSelect = (userInfo) => {
+    if (!userInfo) {
+      setSelectedSigner(null);
+      return;
+    }
     setSelectedSigner(userInfo);
-    setSelectedDepartment(null);
-    setValue("department", "");
+    // Map signer id into form signer field (react-hook-form controller manages value externally)
+    const signerId = userInfo.id || userInfo.value || userInfo.user_id || "";
+    if (signerId) setValue("signer", signerId, { shouldValidate: true, shouldDirty: true });
+    // If signer carries a position or department info we may optionally prefill (but do not clear existing department)
+    if (userInfo.position_id || userInfo.position?.id) {
+      setValue("position_id", userInfo.position_id || userInfo.position?.id, { shouldDirty: false });
+    }
+    // Do NOT auto clear department anymore; it's independent per latest parity rules.
   };
 
   const createLabel = (text, fieldName) => {
@@ -559,14 +643,27 @@ const ForwardtoagencyComponents = () => {
                   value={field.value}
                   onChange={(e) => field.onChange(e.target.value)}
                   onUserSelect={(opt) => {
-                    const isOther = (opt?.name || opt?.label) === "อื่นๆ";
+                    const label = (opt?.name || opt?.label || "").toString().trim();
+                    const isOther = ["อื่นๆ", "ผู้ร้อง", "ผู้ร้องเรียน"].includes(label);
                     setValue("salutation_is_other", isOther, {
                       shouldValidate: true,
                       shouldDirty: true,
                     });
+                    // Sync position_id with selected salutation (needed so save uses new value)
+                    const newPosId = opt?.id || opt?.value || opt?.position_id || "";
+                    if (isOther) {
+                      // Clear position_id so hook fallback logic can apply POSITION_FALLBACK
+                      setValue("position_id", "", { shouldDirty: true, shouldValidate: false });
+                    } else if (newPosId) {
+                      setValue("position_id", newPosId, { shouldDirty: true, shouldValidate: false });
+                    }
                     if (!isOther) {
                       // Clear other text and validation immediately
                       setValue("position_other_text", "", { shouldValidate: true, shouldDirty: true });
+                    } else {
+                      // When choosing ผู้ร้อง/อื่นๆ hide and clear department
+                      setSelectedDepartment(null);
+                      setValue("department", "", { shouldValidate: true, shouldDirty: true });
                     }
                   }}
                   // ส่งผ่านข้อความของ 'อื่นๆ' ให้ component ควบคุมร่วมกัน
@@ -613,28 +710,26 @@ const ForwardtoagencyComponents = () => {
               </Box>
             )}
 
-            {/*  หน่วยงาน */}
-          <Controller
-              name="department"
-              control={control}
-              render={({ field }) => (
-                <SelectFieldDepartment
-                  label={createLabel("หน่วยงาน", "department")}
-                  name="department"
-                  value={field.value}
-                  onChange={(e) => field.onChange(e.target.value)}
-                  onDepartmentSelect={handleDepartmentSelect}
-                  filterBySignerId={selectedSigner?.value}
-                  error={!!getFieldError("department")}
-                  helperText={getFieldError("department")}
-                  required={isRequired("department")}
-                  disabled={!selectedSigner}
-                  placeholder={
-                    selectedSigner ? "เลือกหน่วยงาน" : "เลือกผู้ลงนามก่อน"
-                  }
-                />
-              )}
-            />
+            {/*  หน่วยงาน: ซ่อนเมื่อเลือก 'ผู้ร้อง' หรือ 'อื่นๆ' */}
+            {!(String(watch("salutation") || "").trim() === "ผู้ร้อง" || watch("salutation_is_other")) && (
+              <Controller
+                name="department"
+                control={control}
+                render={({ field }) => (
+                  <SelectFieldDepartment
+                    label={createLabel("หน่วยงาน", "department")}
+                    name="department"
+                    value={field.value}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    onDepartmentSelect={handleDepartmentSelect}
+                    error={!!getFieldError("department")}
+                    helperText={getFieldError("department")}
+                    required={isRequired("department")}
+                    placeholder={"เลือกหน่วยงาน"}
+                  />
+                )}
+              />
+            )}
 
             {/* เลข สป.กค. */}
             <Controller
@@ -848,7 +943,7 @@ const ForwardtoagencyComponents = () => {
                   placeholder="เลือกวันที่"
                   error={!!getFieldError("complaint_number_date")}
                   helperText={getFieldError("complaint_number_date")}
-                  maxDate={new Date().toISOString()}
+                  // maxDate={new Date().toISOString()}
                 />
               )}
             />
@@ -918,7 +1013,7 @@ const ForwardtoagencyComponents = () => {
                     placeholder="เลือกวันที่"
                     error={!!getFieldError("document_date")}
                     helperText={getFieldError("document_date")}
-                    maxDate={new Date().toISOString()}
+                    // maxDate={new Date().toISOString()}
                   />
                 )}
               />

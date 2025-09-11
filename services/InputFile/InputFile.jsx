@@ -114,8 +114,8 @@ const InputFile = ({
 
     const handleDeleteExistingClick = async (att, idx) => {
         if (!allowDeleteExisting) return;
-        const confirmed = window.confirm("ต้องการลบไฟล์นี้หรือไม่?");
-        if (!confirmed) return;
+        // const confirmed = window.confirm("ต้องการลบไฟล์นี้หรือไม่?");
+        // if (!confirmed) return;
         try {
             if (typeof onDeleteExisting === "function") {
                 const res = await onDeleteExisting(att);

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   alertSuccess,
@@ -14,14 +14,14 @@ import {
   GetOutgoingReport3ById,
 } from "@pages/api/outgoinreports/outgoinreports";
 import axiosInstance from "@pages/api/axiosInstance";
+import { getDepartments } from "@pages/api/department/department";
 
-// Required fields for validation
 const requiredFields = [
   "salutation",
   "refNo",
   "docNo",
-  "docDate",      // แยกวันที่หนังสือ
-  "refDate",      // แยกวันที่ สป.กค.
+  "docDate",
+  "refDate",
   "subject",
   "department",
   "signer",
@@ -30,46 +30,49 @@ const requiredFields = [
   "attachment",
 ];
 
-// Helper: UUID format checker
+// Helper: UUID format checker (fallback kept only as last resort so backend always gets UUID)
 const POSITION_FALLBACK = "7e18e4fe-d416-4580-b4d4-2a4032f67770";
+const DEPARTMENT_FALLBACK = process.env.NEXT_PUBLIC_DEFAULT_DEPARTMENT_ID || "11111111-1111-1111-1111-111111111111";
 const isUUID = (s) =>
   typeof s === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
-// Helper: Parse refNo to Thai date object
 const parseRefNoToThaiDate = (val) => {
   if (!val || typeof val !== "string") return null;
   const cleaned = val.trim();
   const m = cleaned.match(/MOF-(\d{8})(?:-\w+)?/i);
   if (!m) return null;
   const raw = m[1];
-  if (raw.length !== 8) return null;
   let year = parseInt(raw.slice(0, 4), 10);
   const month = parseInt(raw.slice(4, 6), 10);
   const day = parseInt(raw.slice(6, 8), 10);
   if (!year || !month || !day) return null;
-  if (year > 2400) year -= 543;
+  if (year > 2400) year -= 543; // BE -> CE
   const d = new Date(year, month - 1, day);
-  if (isNaN(d.getTime())) return null;
-  return {
-    day: d.getDate(),
-    month: d.getMonth() + 1,
-    year: d.getFullYear(),
-    buddhistYear: d.getFullYear() + 543,
-  };
+  return isNaN(d.getTime()) ? null : d;
 };
 
-// Helper: Format date to ISO string or null
-const toISOorNull = (v) => {
+// Date helpers: keep plain date (YYYY-MM-DD) to avoid timezone -1 day issues
+const pad = (n) => String(n).padStart(2, '0');
+const parseApiDateToStruct = (str) => {
+  if (!str) return null;
+  const m = String(str).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const year = parseInt(m[1],10), month = parseInt(m[2],10), day = parseInt(m[3],10);
+  if (!year || !month || !day) return null;
+  return { day, month, year, buddhistYear: year + 543 };
+};
+const toAPIDateString = (v) => {
   if (!v) return null;
   try {
-    if (typeof v === "object" && v.day && v.month && v.year) {
-      return new Date(v.year, v.month - 1, v.day).toISOString();
+    if (typeof v === 'object' && v.day && v.month && v.year) {
+      return `${v.year}-${pad(v.month)}-${pad(v.day)}`;
     }
-    return new Date(v).toISOString();
-  } catch {
-    return null;
-  }
+    if (v instanceof Date) {
+      return `${v.getFullYear()}-${pad(v.getMonth()+1)}-${pad(v.getDate())}`;
+    }
+    return String(v);
+  } catch { return null; }
 };
 const nullIfEmpty = (v) =>
   v === undefined || v === null || v === "" ? null : v;
@@ -126,18 +129,24 @@ export const useRequestResultProgress = () => {
     }
   };
 
-  // Prefill from query reference (complaint number)
+  const initialRefNoRef = useRef(null);
+  const prevRefNoRef = useRef(null);
+  const originalDepartmentIdRef = useRef(null);
+  const lastDepartmentIdRef = useRef(null);
+
   useEffect(() => {
-    if (complaintNumberFromQuery && !form.refNo) {
-      const parsed = parseRefNoToThaiDate(complaintNumberFromQuery);
-      setForm((prev) => ({
-        ...prev,
-        refNo: complaintNumberFromQuery,
-        ...(parsed ? { date: parsed } : {}),
-      }));
-    }
-  }, [complaintNumberFromQuery]); // eslint-disable-line
-  // Load existing report for edit mode
+    if (!complaintNumberFromQuery) return;
+    const parsed = parseRefNoToThaiDate(complaintNumberFromQuery);
+    setForm(prev => {
+      const next = { ...prev };
+      if (!prev.refNo) next.refNo = complaintNumberFromQuery;
+      if (parsed && !prev.refDate) next.refDate = parsed;
+      return next;
+    });
+    if (!initialRefNoRef.current) initialRefNoRef.current = complaintNumberFromQuery;
+    prevRefNoRef.current = complaintNumberFromQuery;
+  }, [complaintNumberFromQuery]);
+
   useEffect(() => {
     if (!editReportId) return;
     let cancelled = false;
@@ -146,16 +155,19 @@ export const useRequestResultProgress = () => {
         const res = await GetOutgoingReport3ById(editReportId);
         const d = res?.res_data || res?.data || res;
         if (!d || cancelled) return;
-        setIsEditing(true);
+  setIsEditing(true);
         setForm(prev => ({
           ...prev,
-          salutation: d.salutation || prev.salutation,
+          salutation: d.position?.id || d.salutation || prev.salutation,
           salutation_is_other: !!d.position_other_text,
           position_other_text: d.position_other_text || "",
-          refNo: d.complaint_number || d.document_number || prev.refNo,
+          // Sync position_id with position.id to avoid fallback override
+          position_id: d.position?.id || d.position_id || prev.position_id,
+          // refNo should reflect complaint_number (เลข สป.กค.)
+          refNo: d.complaint_number || d.reference_number || prev.refNo,
           docNo: d.document_number || prev.docNo,
-          docDate: d.document_date ? new Date(d.document_date) : (d.complaint_number_date ? new Date(d.complaint_number_date) : prev.docDate),
-          refDate: d.complaint_number_date ? new Date(d.complaint_number_date) : (d.document_date ? new Date(d.document_date) : prev.refDate),
+          docDate: parseApiDateToStruct(d.document_date) || parseApiDateToStruct(d.complaint_number_date) || prev.docDate,
+          refDate: parseApiDateToStruct(d.complaint_number_date) || parseApiDateToStruct(d.document_date) || prev.refDate,
           subject: d.subject || prev.subject,
           department: d.department?.id || d.department_id || prev.department,
           signer: d.signature_authority_user?.id || d.signature_authority_user_id || prev.signer,
@@ -163,9 +175,15 @@ export const useRequestResultProgress = () => {
           urgency: d.urgency_level ?? prev.urgency,
           attachment: Array.isArray(d.attachments) && d.attachments.length ? d.attachments.map(a => a.original_name || a.file_name || a.name).filter(Boolean).join(', ') : prev.attachment,
           note: d.remarks || prev.note,
-          position_id: d.position_id || prev.position_id,
           complaint_id: d.complaint_id || prev.complaint_id,
         }));
+
+  const deptLoaded = d.department?.id || d.department_id || null;
+  originalDepartmentIdRef.current = deptLoaded;
+  lastDepartmentIdRef.current = deptLoaded;
+  const currentRef = d.complaint_number || d.document_number || form.refNo;
+  initialRefNoRef.current = currentRef;
+  prevRefNoRef.current = currentRef;
       } catch (e) {
         console.error('Load report3 (edit) failed', e);
       }
@@ -243,17 +261,6 @@ export const useRequestResultProgress = () => {
     [resetFileInput]
   );
 
-  // ---- Date Change ----
-  const handleDateChange = useCallback(
-    (date) => {
-      setForm((prev) => {
-        if (isEqual(prev.date, date)) return prev;
-        return { ...prev, date };
-      });
-    },
-    []
-  );
-
   // ---- Clear Form ----
   const handleClear = useCallback(() => {
     setForm({
@@ -312,14 +319,22 @@ export const useRequestResultProgress = () => {
       const v = value ?? e?.value ?? e;
       // Special case for refNo
       if (name === "refNo") {
-        const parsed = parseRefNoToThaiDate(v); // auto-fill only refDate
-        setForm((prev) => {
-          const next = { ...prev, refNo: v, ...(parsed ? { refDate: parsed } : {}) };
-          if (isEqual(prev.refNo, next.refNo) && isEqual(prev.refDate, next.refDate)) return prev;
-          return next;
-        });
-        if (errors.refNo) setErrors((prev) => ({ ...prev, refNo: null }));
-        if (parsed && errors.refDate) setErrors((prev) => ({ ...prev, refDate: null }));
+        const incoming = v || "";
+        const changed = incoming !== prevRefNoRef.current;
+        if (changed) {
+          const parsedDate = parseRefNoToThaiDate(incoming);
+          const parsed = parsedDate
+            ? { day: parsedDate.getDate(), month: parsedDate.getMonth() + 1, year: parsedDate.getFullYear(), buddhistYear: parsedDate.getFullYear() + 543 }
+            : null;
+          setForm((prev) => {
+            const next = { ...prev, refNo: incoming, ...(parsed ? { refDate: parsed } : {}) };
+            return next;
+          });
+          prevRefNoRef.current = incoming;
+          if (!initialRefNoRef.current) initialRefNoRef.current = incoming;
+          if (errors.refNo) setErrors((prev) => ({ ...prev, refNo: null }));
+          if (parsed && errors.refDate) setErrors((prev) => ({ ...prev, refDate: null }));
+        }
         return;
       }
       // Toggle off 'other' clears text
@@ -341,15 +356,27 @@ export const useRequestResultProgress = () => {
   const updateField = useCallback(
     (fieldName, value) => {
       if (fieldName === "refNo") {
-        const parsed = parseRefNoToThaiDate(value);
-        setForm((prev) => {
-          const next = { ...prev, refNo: value, ...(parsed ? { refDate: parsed } : {}) };
-          if (isEqual(prev.refNo, next.refNo) && isEqual(prev.refDate, next.refDate)) return prev;
-          return next;
-        });
-        if (errors.refNo) setErrors((prev) => ({ ...prev, refNo: null }));
-        if (parsed && errors.refDate) setErrors((prev) => ({ ...prev, refDate: null }));
+        const incoming = value || "";
+        if (incoming !== prevRefNoRef.current) {
+          const parsedDate = parseRefNoToThaiDate(incoming);
+          const parsed = parsedDate
+            ? { day: parsedDate.getDate(), month: parsedDate.getMonth() + 1, year: parsedDate.getFullYear(), buddhistYear: parsedDate.getFullYear() + 543 }
+            : null;
+          setForm((prev) => ({ ...prev, refNo: incoming, ...(parsed ? { refDate: parsed } : {}) }));
+          prevRefNoRef.current = incoming;
+          if (!initialRefNoRef.current) initialRefNoRef.current = incoming;
+          if (errors.refNo) setErrors((prev) => ({ ...prev, refNo: null }));
+          if (parsed && errors.refDate) setErrors((prev) => ({ ...prev, refDate: null }));
+        }
         return;
+      }
+      if (fieldName === 'department') {
+        if (value && isUUID(value)) {
+          lastDepartmentIdRef.current = value;
+          if (!originalDepartmentIdRef.current && isEditing) {
+            originalDepartmentIdRef.current = value;
+          }
+        }
       }
       setForm((prev) => {
         if (isEqual(prev[fieldName], value)) return prev;
@@ -357,20 +384,21 @@ export const useRequestResultProgress = () => {
       });
       if (errors[fieldName]) setErrors((prev) => ({ ...prev, [fieldName]: null }));
     },
-    [errors]
+    [errors, isEditing]
   );
 
   // ---- Validate ----
   const validateRequiredFields = useCallback((state = form) => {
     const fieldsConfig = [
       { field: "salutation", label: "เรียน" },
-      ...(state.salutation_is_other ? [{ field: 'position_other_text', label: 'ตำแหน่ง (อื่นๆ)' }] : []),
+      ...(state.salutation_is_other ? [{ field: 'position_other_text', label: 'ตำแหน่ง (อื่นๆ/ผู้ร้อง)' }] : []),
       { field: "refNo", label: "เลข สป.กค." },
-  { field: "docNo", label: "เลขที่หนังสือ" },
-  { field: "docDate", label: "วันที่หนังสือ" },
-  { field: "refDate", label: "วันที่ สป.กค." },
+      { field: "docNo", label: "เลขที่หนังสือ" },
+      { field: "docDate", label: "วันที่หนังสือ" },
+      { field: "refDate", label: "วันที่ สป.กค." },
       { field: "subject", label: "เรื่อง" },
-      { field: "department", label: "หน่วยงาน / ผู้ร้อง" },
+      // department required only when not custom recipient
+      ...(state.salutation_is_other ? [] : [{ field: "department", label: "หน่วยงาน / ผู้ร้อง" }]),
       { field: "signer", label: "ผู้ลงนาม" },
       { field: "confidentiality", label: "ชั้นความลับ" },
       { field: "urgency", label: "ชั้นความเร่งด่วน" },
@@ -390,14 +418,23 @@ export const useRequestResultProgress = () => {
   }, [form]);
 
   // ---- Form Valid ----
-  const isFormValid = useCallback(
-  () => requiredFields.every((f) => form[f] !== undefined && form[f] !== null && form[f] !== "") && (!form.salutation_is_other || !!form.position_other_text),
-    [form]
-  );
+  const isFormValid = useCallback(() => {
+    const baseOk = requiredFields.every(f => {
+      if (f === 'department' && form.salutation_is_other) return true; // skip department
+      const v = form[f];
+      return v !== undefined && v !== null && v !== '';
+    });
+    const otherOk = !form.salutation_is_other || !!form.position_other_text;
+    return baseOk && otherOk;
+  }, [form]);
 
   // canSave similar to Forward page: focus only on required fields and 'อื่นๆ' rule
   const canSave = useCallback(() => {
-    const baseOk = requiredFields.every((f) => form[f] !== undefined && form[f] !== null && form[f] !== "");
+    const baseOk = requiredFields.every(f => {
+      if (f === 'department' && form.salutation_is_other) return true;
+      const v = form[f];
+      return v !== undefined && v !== null && v !== '';
+    });
     const otherOk = !form.salutation_is_other || !!form.position_other_text;
     return baseOk && otherOk;
   }, [form]);
@@ -406,28 +443,79 @@ export const useRequestResultProgress = () => {
   const handleSave = useCallback(
     async (overrides = {}) => {
       const state = { ...form, ...overrides };
-      const candidatePid = state.position_id;
-      const finalPid = isUUID(candidatePid) ? candidatePid : POSITION_FALLBACK;
-      state.position_id = finalPid;
+  // Keep real value; if invalid we'll resolve just before payload
+  const candidatePid = state.position_id;
+  if (candidatePid && !isUUID(candidatePid)) state.position_id = null;
       const missing = validateRequiredFields(state);
       if (missing.length > 0) {
         const names = missing.map((m) => m.label).join(", ");
         alertError("ข้อมูลไม่ครบถ้วน", `กรุณากรอกข้อมูลในฟิลด์: ${names}`);
         return;
       }
-      if (!state.position_id) {
-        state.position_id = POSITION_FALLBACK;
-      }
+  // No forced assignment when empty
       // Build payload
-      const deptId = state.department && isUUID(state.department) ? state.department : null;
+      let deptId = state.department && isUUID(state.department) ? state.department : null;
+      // Fallback chain when department cleared due to custom recipient selection
+      if (!deptId) {
+        if (state.salutation_is_other) {
+          // Try remembered selections first
+          if (lastDepartmentIdRef.current && isUUID(lastDepartmentIdRef.current)) {
+            deptId = lastDepartmentIdRef.current;
+          } else if (originalDepartmentIdRef.current && isUUID(originalDepartmentIdRef.current)) {
+            deptId = originalDepartmentIdRef.current;
+          } else {
+            // Force fallback (backend insists on department_id)
+            deptId = DEPARTMENT_FALLBACK;
+          }
+        } else {
+          // Not custom but still empty: use original or fallback
+          if (originalDepartmentIdRef.current && isUUID(originalDepartmentIdRef.current)) {
+            deptId = originalDepartmentIdRef.current;
+          } else {
+            deptId = DEPARTMENT_FALLBACK;
+          }
+        }
+      }
+      // If still using dummy fallback (or invalid), attempt to fetch a real department id
+      const ensureRealDepartmentId = async (current) => {
+        if (current && current !== DEPARTMENT_FALLBACK) return current;
+        try {
+          const resp = await getDepartments();
+          const raw = resp?.res_data || resp?.data || resp;
+          let list = [];
+          if (Array.isArray(raw)) list = raw; else if (Array.isArray(raw?.items)) list = raw.items; else if (Array.isArray(raw?.departments)) list = raw.departments; else if (raw?.results && Array.isArray(raw.results)) list = raw.results;
+          const first = list.find(d => d && (isUUID(d.id) || isUUID(d.value)));
+          if (first) {
+            const realId = first.id || first.value;
+            if (isUUID(realId)) {
+              originalDepartmentIdRef.current = originalDepartmentIdRef.current || realId;
+              lastDepartmentIdRef.current = lastDepartmentIdRef.current || realId;
+              return realId;
+            }
+          }
+        } catch (e) {
+          console.warn('ไม่สามารถดึง departments เพื่อหา id จริง ใช้ fallback ต่อไป', e);
+        }
+        return current; // may still be fallback
+      };
+      deptId = await ensureRealDepartmentId(deptId);
+      // Resolve final position_id (must always be UUID for backend)
+      const resolvedPositionId = (() => {
+        if (isUUID(state.position_id)) return state.position_id;
+        if (isUUID(state.salutation)) return state.salutation; // some selects store UUID in salutation
+        return POSITION_FALLBACK; // last resort
+      })();
+
       const payload = {
-        position_id: state.position_id || POSITION_FALLBACK,
+        position_id: resolvedPositionId,
         position_other_text: (state.salutation_is_other || state.position_other_text) ? (state.position_other_text || "").trim() : "",
-        salutation: state.salutation || "",
+        // salutation mirrors the resolved position id when not custom; keeps user text when custom
+        salutation: state.salutation_is_other ? (state.salutation || '') : (resolvedPositionId || state.salutation || ''),
+        // complaint_number (เลข สป.กค.) maps from refNo; document_number from docNo
         complaint_number: state.refNo || "",
-  complaint_number_date: toISOorNull(state.refDate),
+  complaint_number_date: toAPIDateString(state.refDate),
         document_number: state.docNo || "",
-  document_date: toISOorNull(state.docDate),
+  document_date: toAPIDateString(state.docDate),
         subject: state.subject || "เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน",
         signature_authority_user_id: nullIfEmpty(state.signer),
         user_id: null,
@@ -436,7 +524,7 @@ export const useRequestResultProgress = () => {
         complaint_id: nullIfEmpty(state.complaint_id),
         remarks: state.note || "",
       };
-      if (deptId) payload.department_id = deptId;
+  if (deptId) payload.department_id = deptId; // ensure always set (now forced by fallback)
 
       try {
         setIsLoading(true);
@@ -630,7 +718,7 @@ export const useRequestResultProgress = () => {
     hasFormChanges,
 
     handleChange,
-    handleDateChange,
+  // handleDateChange removed
     handleFileChange,
     handleClear,
     handleSave,

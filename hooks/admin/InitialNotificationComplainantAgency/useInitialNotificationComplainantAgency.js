@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   alertSuccess,
@@ -12,6 +12,7 @@ import {
   UploadOutgoingReportAttachments,
   GetOutgoingReport2ById,
 } from "@pages/api/outgoinreports/outgoinreports";
+import { getDepartments } from "@pages/api/department/department";
 
 export const UpdateOutgoingReport2 = async (id, data) => {
   if (!id) throw new Error("Missing id for UpdateOutgoingReport2");
@@ -91,17 +92,22 @@ const toYMD = (d) => {
 const parseComplaintNumberToThaiDate = (val) => {
   if (!val || typeof val !== 'string') return null;
   const cleaned = val.trim();
-  const m = cleaned.match(/MOF-(\d{8})(?:-[A-Za-z0-9]+)?/i);
+  // Accept patterns: MOF-YYYYMMDD , plain YYYYMMDD , plain 8 digits with or without separators
+  const m = cleaned.match(/(?:MOF-)?(\d{8})/i);
   if (!m) return null;
   const raw = m[1];
-  if (raw.length !== 8) return null;
-  let year = parseInt(raw.slice(0, 4), 10);
-  const month = parseInt(raw.slice(4, 6), 10);
-  const day = parseInt(raw.slice(6, 8), 10);
+  let year = parseInt(raw.slice(0,4),10);
+  const month = parseInt(raw.slice(4,6),10);
+  const day = parseInt(raw.slice(6,8),10);
   if (!year || !month || !day) return null;
-  if (year > 2400) year -= 543;
+  if (year > 2400) year -= 543; // convert BE -> CE
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
   return { day, month, year, buddhistYear: year + 543 };
 };
+
+// Fallback + validators (aligned with report3)
+const POSITION_FALLBACK = "7e18e4fe-d416-4580-b4d4-2a4032f67770"; // last resort only
+const isUUID = (s) => typeof s === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
 export const useInitialNotificationComplainantAgency = () => {
   const router = useRouter();
@@ -112,7 +118,7 @@ export const useInitialNotificationComplainantAgency = () => {
     salutation: "",
     salutation_is_other: false,
     position_other_text: "",
-    refNo: "",
+      refNo: "", // document_number
     document_date: null,
     complaint_number: "",
     complaint_number_date: null,
@@ -127,6 +133,11 @@ export const useInitialNotificationComplainantAgency = () => {
     complaint_id: "",
     selected_complaint_number: "",
   });
+
+  // track previous complaint_number for auto date parsing
+  const prevComplaintNumberRef = useRef(null);
+    const originalDepartmentIdRef = useRef(null);
+    const lastDepartmentIdRef = useRef(null);
 
   // เก็บไฟล์จริง (รองรับหลายไฟล์)
   const [attachmentFiles, setAttachmentFiles] = useState([]);
@@ -148,6 +159,8 @@ export const useInitialNotificationComplainantAgency = () => {
         const d = res?.res_data || res?.data || res;
         if (cancelled || !d) return;
 
+        const posNameLoaded = (d.position?.name || "").trim();
+        const isCustomLoaded = ["อื่นๆ", "ผู้ร้อง", "ผู้ร้องเรียน"].includes(posNameLoaded);
         setForm((prev) => ({
           ...prev,
           complaint_number: d.complaint_number || d.reference_number || "",
@@ -155,20 +168,24 @@ export const useInitialNotificationComplainantAgency = () => {
           refNo: d.document_number || "",
           subject: d.subject || "",
           salutation: d.position?.id || "",
-          salutation_is_other: (d.position?.name || "") === "อื่นๆ",
+          salutation_is_other: isCustomLoaded,
           position_other_text: d.position_other_text || "",
           signer: d.signature_authority_user?.id || d.signature_authority_user_id || "",
           position_id: d.signature_authority_user?.position_id ||
                         d.signature_authority_user?.position?.id ||
                         d.signature_authority_user?.positionId || "",
-          department: d.department?.id || "",
+          // Clear department if custom special case
+          department: isCustomLoaded ? "" : (d.department?.id || ""),
           document_date: d.document_date ? parseIsoToThaiDate(d.document_date) : null,
-          complaint_number_date: d.complaint_number_date ? parseIsoToThaiDate(d.complaint_number_date) : null,
+            complaint_number_date: d.complaint_number_date ? parseIsoToThaiDate(d.complaint_number_date) : null,
           confidentiality: d.confidentiality_level !== undefined && d.confidentiality_level !== null ? String(d.confidentiality_level) : "",
           urgency: d.urgency_level !== undefined && d.urgency_level !== null ? String(d.urgency_level) : "",
           note: d.remarks || "",
           selected_complaint_number: "",
         }));
+        const deptLoaded = d.department?.id || "";
+        originalDepartmentIdRef.current = deptLoaded || null;
+        lastDepartmentIdRef.current = deptLoaded || null;
 
         // ใช้เฉพาะ attachments ที่ได้จาก API เท่านั้น
         setExistingAttachments(Array.isArray(d.attachments) ? d.attachments : []);
@@ -196,15 +213,26 @@ export const useInitialNotificationComplainantAgency = () => {
     });
   }, [router?.isReady, router?.query, id]);
 
+  // -------- AUTO PARSE on initial load (create mode) --------
+  useEffect(() => {
+    // If complaint_number already has value (from query or default) and date not yet parsed, parse once
+    if (!id && form.complaint_number && !form.complaint_number_date) {
+      const parsed = parseComplaintNumberToThaiDate(form.complaint_number);
+      if (parsed) {
+        setForm(prev => ({ ...prev, complaint_number_date: parsed }));
+        prevComplaintNumberRef.current = form.complaint_number;
+      }
+    }
+  }, [id, form.complaint_number, form.complaint_number_date]);
+
   // -------- Required fields --------
-  const requiredFields = [
+  const baseRequiredFields = [
     "salutation",
     "refNo",
     "document_date",
     "complaint_number",
     "complaint_number_date",
     "subject",
-    "department",
     "signer",
     "confidentiality",
     "urgency",
@@ -213,8 +241,12 @@ export const useInitialNotificationComplainantAgency = () => {
 
   // -------- helpers --------
   const isRequired = useCallback(
-    (fieldName) => requiredFields.includes(fieldName),
-    [requiredFields]
+    (fieldName) => {
+      if (fieldName === 'department') return !form.salutation_is_other; // skip if custom
+      if (fieldName === 'position_other_text') return form.salutation_is_other;
+      return baseRequiredFields.includes(fieldName);
+    },
+    [form.salutation_is_other]
   );
 
   const createLabel = useCallback(
@@ -238,12 +270,50 @@ export const useInitialNotificationComplainantAgency = () => {
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     const finalValue = typeof value === 'object' && value !== null ? value.value || '' : value;
-    setForm(prev => ({ ...prev, [name]: finalValue }));
 
-    if (name === 'salutation_is_other' && !finalValue) {
-      setForm(prev => ({ ...prev, position_other_text: "" }));
-      if (errors.position_other_text) setErrors(prev => ({ ...prev, position_other_text: null }));
+    if (name === 'complaint_number') {
+      if (finalValue !== prevComplaintNumberRef.current) {
+        const parsed = parseComplaintNumberToThaiDate(finalValue);
+        setForm(prev => ({
+          ...prev,
+          complaint_number: finalValue,
+          complaint_number_date: parsed || null,
+        }));
+        prevComplaintNumberRef.current = finalValue;
+        if (errors.complaint_number) setErrors(prev => ({ ...prev, complaint_number: null }));
+        if (errors.complaint_number_date) setErrors(prev => ({ ...prev, complaint_number_date: null }));
+        return;
+      }
     }
+
+    if (name === 'salutation_is_other') {
+      if (!finalValue) {
+        setForm(prev => ({ ...prev, position_other_text: "", salutation_is_other: false }));
+        if (errors.position_other_text) setErrors(prev => ({ ...prev, position_other_text: null }));
+      } else {
+        setForm(prev => ({ ...prev, salutation_is_other: true, department: "" }));
+      }
+      return;
+    }
+
+    if (name === 'salutation') {
+      // When selecting a salutation option we may receive an id (UUID). We need its label external (handled in component), so here only manage special keywords if user typed manually.
+      const lowered = String(finalValue || '').trim();
+      // If user somehow types special keywords directly (edge case)
+      if (["อื่นๆ", "ผู้ร้อง", "ผู้ร้องเรียน"].includes(lowered)) {
+        setForm(prev => ({ ...prev, salutation: finalValue, salutation_is_other: true, department: "" }));
+        return;
+      }
+    }
+
+      if (name === 'department') {
+        if (finalValue && isUUID(finalValue)) {
+          lastDepartmentIdRef.current = finalValue;
+          if (!originalDepartmentIdRef.current) originalDepartmentIdRef.current = finalValue;
+        }
+      }
+
+    setForm(prev => ({ ...prev, [name]: finalValue }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   }, [errors]);
 
@@ -337,23 +407,20 @@ export const useInitialNotificationComplainantAgency = () => {
 
   const validateRequiredFields = useCallback(() => {
     const fieldsConfig = [
-      { field: "salutation", label: "เรียน" },
-      ...(form.salutation_is_other ? [{ field: "position_other_text", label: "ตำแหน่ง (อื่นๆ)" }] : []),
-      { field: "refNo", label: "เลขที่หนังสือ" },
-      { field: "document_date", label: "วันที่หนังสือ" },
-      { field: "complaint_number", label: "เลข สป.กค." },
-      { field: "complaint_number_date", label: "วันที่ สป.กค." },
-      { field: "subject", label: "เรื่อง" },
-      { field: "department", label: "หน่วยงาน / ผู้ร้อง" },
-      { field: "signer", label: "ผู้ลงนาม" },
-      { field: "confidentiality", label: "ชั้นความลับ" },
-      { field: "urgency", label: "ชั้นความเร่งด่วน" },
-      { field: "attachment", label: "เอกสารแนบ" },
+      { field: 'salutation', label: 'เรียน' },
+      ...(form.salutation_is_other ? [{ field: 'position_other_text', label: 'ตำแหน่ง (อื่นๆ)' }] : []),
+      { field: 'refNo', label: 'เลขที่หนังสือ' },
+      { field: 'document_date', label: 'วันที่หนังสือ' },
+      { field: 'complaint_number', label: 'เลข สป.กค.' },
+      { field: 'complaint_number_date', label: 'วันที่ สป.กค.' },
+      { field: 'subject', label: 'เรื่อง' },
+      ...(form.salutation_is_other ? [] : [{ field: 'department', label: 'หน่วยงาน / ผู้ร้อง' }]),
+      { field: 'signer', label: 'ผู้ลงนาม' },
+      { field: 'confidentiality', label: 'ชั้นความลับ' },
+      { field: 'urgency', label: 'ชั้นความเร่งด่วน' },
+      { field: 'attachment', label: 'เอกสารแนบ' },
     ];
-
-    const newErrors = {};
-    const missing = [];
-
+    const newErrors = {}; const missing = [];
     fieldsConfig.forEach(({ field, label }) => {
       const value = form[field];
       if (!value && value !== 0) {
@@ -361,7 +428,6 @@ export const useInitialNotificationComplainantAgency = () => {
         missing.push({ field, label });
       }
     });
-
     setErrors(newErrors);
     return missing;
   }, [form]);
@@ -402,6 +468,11 @@ export const useInitialNotificationComplainantAgency = () => {
   const updateField = useCallback(
     (fieldName, value) => {
       setForm((prev) => ({ ...prev, [fieldName]: value }));
+        if (fieldName === 'department' && value && isUUID(value)) {
+          lastDepartmentIdRef.current = value;
+          if (!originalDepartmentIdRef.current) originalDepartmentIdRef.current = value;
+        }
+        setForm(prev => ({ ...prev, [fieldName]: value }));
       if (errors[fieldName]) setErrors((prev) => ({ ...prev, [fieldName]: null }));
     },
     [errors]
@@ -411,23 +482,60 @@ export const useInitialNotificationComplainantAgency = () => {
   const handleDeleteExistingAttachment = useCallback(
     async (att) => {
       const reportId = router?.query?.id || id || null;
-      // if (!reportId || !att?.id) return false;
-      // await DeleteOutgoingReport2Attachment({
-      //   outgoing_report_id: reportId,
-      //   attachment_id: att.id,
-      // });
+      if (!reportId || !att?.id) return false;
 
-      // Refetch data after delete (sync UI with API)
-      try {
-        const res = await GetOutgoingReport2ById(reportId);
-        const d = res?.res_data || res?.data || res;
-        setExistingAttachments(Array.isArray(d.attachments) ? d.attachments : []);
-        const names = Array.isArray(d.attachments) && d.attachments.length
-          ? d.attachments.map(a => a.file_name || a.original_name || a.name || '').filter(Boolean).join(', ')
+      // Optimistic update: remove from UI first
+      setExistingAttachments(prev => prev.filter(a => a.id !== att.id));
+      setForm(prev => {
+        const remaining = existingAttachments.filter(a => a.id !== att.id);
+        const names = remaining.length
+          ? remaining.map(a => a.file_name || a.original_name || a.name || '').filter(Boolean).join(', ')
           : "";
-        setForm((prev) => ({ ...prev, attachment: names }));
-      } catch (err) {}
-      return true;
+        return { ...prev, attachment: names };
+      });
+
+      try {
+        const delRes = await DeleteOutgoingReport2Attachment({
+          outgoing_report_id: reportId,
+          attachment_id: att.id,
+        });
+        if (!delRes || delRes.success === false) {
+          // Revert by refetching if backend says failure
+            const res = await GetOutgoingReport2ById(reportId);
+            const d = res?.res_data || res?.data || res;
+            setExistingAttachments(Array.isArray(d.attachments) ? d.attachments : []);
+            const names = Array.isArray(d.attachments) && d.attachments.length
+              ? d.attachments.map(a => a.file_name || a.original_name || a.name || '').filter(Boolean).join(', ')
+              : "";
+            setForm((prev) => ({ ...prev, attachment: names }));
+          await alertError?.("ลบไฟล์ไม่สำเร็จ", delRes?.res_message || "ไม่สามารถลบไฟล์ได้");
+          return false;
+        }
+        // (Optional) final sync to ensure server state (skip if not needed)
+        try {
+          const res = await GetOutgoingReport2ById(reportId);
+          const d = res?.res_data || res?.data || res;
+          setExistingAttachments(Array.isArray(d.attachments) ? d.attachments : []);
+          const names = Array.isArray(d.attachments) && d.attachments.length
+            ? d.attachments.map(a => a.file_name || a.original_name || a.name || '').filter(Boolean).join(', ')
+            : "";
+          setForm((prev) => ({ ...prev, attachment: names }));
+        } catch (_) { }
+        return true;
+      } catch (error) {
+        // Revert by refetching if exception
+        try {
+          const res = await GetOutgoingReport2ById(reportId);
+          const d = res?.res_data || res?.data || res;
+          setExistingAttachments(Array.isArray(d.attachments) ? d.attachments : []);
+          const names = Array.isArray(d.attachments) && d.attachments.length
+            ? d.attachments.map(a => a.file_name || a.original_name || a.name || '').filter(Boolean).join(', ')
+            : "";
+          setForm((prev) => ({ ...prev, attachment: names }));
+        } catch (_) { }
+        await alertError?.("ลบไฟล์ไม่สำเร็จ", "เกิดข้อผิดพลาดในการลบไฟล์");
+        return false;
+      }
     },
     [router?.query?.id, id]
   );
@@ -462,22 +570,64 @@ export const useInitialNotificationComplainantAgency = () => {
       }
     }
 
-    const payload = {
-      position_id: form.position_id || "7e18e4fe-d416-4580-b4d4-2a4032f67770",
-      complaint_number: form.complaint_number || "",
+    const resolvedPositionId = (() => {
+      if (isUUID(form.position_id)) return form.position_id;
+      if (isUUID(form.salutation)) return form.salutation;
+      return POSITION_FALLBACK;
+    })();
+
+    // Department fallback chain with validation against existing list
+    const ensureRealDepartmentId = async (candidate, { allowNullForOther = true } = {}) => {
+      try {
+        const resp = await getDepartments();
+        const raw = resp?.res_data || resp?.data || resp;
+        let list = [];
+        if (Array.isArray(raw)) list = raw; else if (Array.isArray(raw?.items)) list = raw.items;
+        const validIds = new Set(list.filter(d => d && isUUID(d.id)).map(d => d.id));
+        // Track original/last if present
+        if (candidate && validIds.has(candidate)) return candidate;
+        if (form.department && isUUID(form.department) && validIds.has(form.department)) return form.department;
+        if (lastDepartmentIdRef.current && validIds.has(lastDepartmentIdRef.current)) return lastDepartmentIdRef.current;
+        if (originalDepartmentIdRef.current && validIds.has(originalDepartmentIdRef.current)) return originalDepartmentIdRef.current;
+        const first = list.find(d => d && isUUID(d.id));
+        if (first) {
+          originalDepartmentIdRef.current = originalDepartmentIdRef.current || first.id;
+          lastDepartmentIdRef.current = lastDepartmentIdRef.current || first.id;
+          return first.id;
+        }
+      } catch (e) {
+        console.warn('fetch departments (type2 ensure) failed', e);
+      }
+      // If special salutation and we allow null, return null (avoid invalid FK)
+      if (form.salutation_is_other && allowNullForOther) return null;
+      // Fallback to env default only if it looks like UUID (avoid bogus FK)
+      const envDef = process.env.NEXT_PUBLIC_DEFAULT_DEPARTMENT_ID;
+      if (envDef && isUUID(envDef)) return envDef;
+      return null; // let backend decide if nullable
+    };
+
+    const deptId = await ensureRealDepartmentId(form.department);
+
+    const payloadBase = {
+      position_id: resolvedPositionId,
+      position_other_text: form.salutation_is_other ? (form.position_other_text || '').trim() : '',
+      salutation: form.salutation_is_other ? (form.salutation || '') : resolvedPositionId,
+      complaint_number: form.complaint_number || '',
       complaint_number_date: toYMD(form.complaint_number_date),
-      document_number: form.refNo || "",
+      document_number: form.refNo || '',
       document_date: toYMD(form.document_date),
-      subject: form.subject || "",
+      subject: form.subject || '',
       signature_authority_user_id: nullIfEmpty(form.signer),
-      department_id: nullIfEmpty(form.department),
+      // department_id conditionally (avoid sending invalid UUID)
+      ...(deptId ? { department_id: deptId } : {}),
       user_id: null,
       confidentiality_level: nullIfEmpty(form.confidentiality),
       urgency_level: nullIfEmpty(form.urgency),
       complaint_id: nullIfEmpty(form.complaint_id),
-      remarks: form.note || "",
+      remarks: form.note || '',
     };
-    console.log("OutgoingReport2 payload", payload);
+    console.log("OutgoingReport2 payload", payloadBase);
+
 
     const uploadType2Attachments = async (reportId) => {
       if (!reportId || attachmentFiles.length === 0) return true;
@@ -539,7 +689,25 @@ export const useInitialNotificationComplainantAgency = () => {
       setIsLoading(true);
       showLoading("กำลังบันทึกข้อมูล...");
 
-      const createRes = await CreateOutgoingReport2(payload);
+      let reportId = id || null;
+      let createOrUpdateRes = null; let mode = 'create';
+      if (id) {
+        mode = 'update';
+        showLoading('กำลังอัพเดตรายงาน...');
+        try {
+          createOrUpdateRes = await UpdateOutgoingReport2(id, payloadBase);
+        } catch (eUpd) {
+          closeAlert();
+          setIsLoading(false);
+          const msg = eUpd?.response?.data?.res_message || eUpd?.message || 'อัพเดตไม่สำเร็จ';
+          await alertError('เกิดข้อผิดพลาด', msg);
+          return;
+        }
+        reportId = id;
+      } else {
+        showLoading('กำลังสร้างรายงาน...');
+        createOrUpdateRes = await CreateOutgoingReport2(payloadBase);
+      }
 
       const extractReportId = (resp) => {
         if (!resp) return null;
@@ -563,9 +731,9 @@ export const useInitialNotificationComplainantAgency = () => {
         } catch (_) { }
         return null;
       };
-      const createdId = extractReportId(createRes);
+  const createdId = reportId || extractReportId(createOrUpdateRes);
 
-      if (!createdId) {
+  if (!createdId) {
         closeAlert();
         setIsLoading(false);
         await alertError("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานที่สร้างได้ กรุณาลองใหม่อีกครั้ง");
@@ -584,16 +752,18 @@ export const useInitialNotificationComplainantAgency = () => {
         attachmentFiles.length > 0
           ? attachmentFiles.map((f) => f.name).join(", ")
           : null;
-      const successHtml = `
-      <div style="text-align:center;line-height:1.7">
-        <p style="margin:6px 0 14px 0;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
-        <p style="margin:4px 0;color:#666">รหัสรายงาน: <strong>${createdId}</strong></p>
-        <p style="margin:4px 0;color:#666">เรื่อง: <strong>${form.subject || "-"}</strong></p>
-        ${fileNames ? `<p style="margin:4px 0;color:#666">ไฟล์แนบ: <strong>${fileNames}</strong></p>` : ""}
-      </div>
-    `;
-      await alertSuccess("บันทึกสำเร็จ!", successHtml, true);
-      router.push(`/admin/box/list`);
+      const successHtml = `\n      <div style="text-align:center;line-height:1.7">\n        <p style="margin:6px 0 14px 0;">${id ? 'อัพเดตรายงานสำเร็จ' : 'บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว'}</p>\n        <p style="margin:4px 0;color:#666">รหัสรายงาน: <strong>${createdId}</strong></p>\n        <p style="margin:4px 0;color:#666">เรื่อง: <strong>${form.subject || "-"}</strong></p>\n        ${fileNames ? `<p style=\"margin:4px 0;color:#666\">ไฟล์แนบ: <strong>${fileNames}</strong></p>` : ""}\n      </div>\n    `;
+      await alertSuccess(id ? 'อัพเดตสำเร็จ!' : 'บันทึกสำเร็จ!', successHtml, true);
+
+      // Smart navigation: prefer returnUrl/from query, else back, else list
+      const returnUrl = router?.query?.returnUrl || router?.query?.from;
+      if (returnUrl && typeof returnUrl === 'string') {
+        router.push(returnUrl);
+      } else if (typeof window !== 'undefined' && window.history.length > 1) {
+        router.back();
+      } else {
+        router.push('/admin/box/list');
+      }
     } catch (err) {
       console.error("Save error:", err);
       closeAlert();
@@ -606,27 +776,25 @@ export const useInitialNotificationComplainantAgency = () => {
         await alertError("เลขที่หนังสือซ้ำ", backendMsg || `เลขที่หนังสือ ${form.refNo || "-"} มีอยู่แล้ว`);
         return;
       }
+      if (data?.res_code === '4040' && /FOREIGN KEY constraint/i.test(backendMsg)) {
+        await alertError('หน่วยงานไม่ถูกต้อง', 'ไม่พบหน่วยงานที่เลือก หรือถูกลบออกจากระบบ กรุณาเลือกหน่วยงานใหม่');
+        return;
+      }
       alertError("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
     }
   }, [form, attachmentFiles, validateRequiredFields]);
 
-  const isFormValid = useCallback(
-    () =>
-      requiredFields.every((f) => {
-        const v = form[f];
-        return v !== undefined && v !== null && v !== "";
-      }) && (!form.salutation_is_other || !!form.position_other_text),
-    [form, requiredFields]
-  );
-
-  const canSave = useCallback(() => {
-    const baseOk = requiredFields.every((f) => {
+  const isFormValid = useCallback(() => {
+    const baseOk = baseRequiredFields.every(f => {
       const v = form[f];
-      return v !== undefined && v !== null && v !== "";
+      return v !== undefined && v !== null && v !== '';
     });
+    const deptOk = form.salutation_is_other ? true : !!form.department;
     const otherOk = !form.salutation_is_other || !!form.position_other_text;
-    return baseOk && otherOk;
-  }, [form, requiredFields]);
+    return baseOk && deptOk && otherOk;
+  }, [form]);
+
+  const canSave = useCallback(() => isFormValid(), [isFormValid]);
 
   const hasFormChanges = useCallback(() => {
     const initial = {
@@ -656,7 +824,7 @@ export const useInitialNotificationComplainantAgency = () => {
     errors,
     isLoading,
     id,
-    isRequired,
+  isRequired,
     createLabel,
     getFieldError,
     isFormValid,

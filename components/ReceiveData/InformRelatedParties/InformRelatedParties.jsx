@@ -9,6 +9,7 @@ import InputFile from "@services/InputFile/InputFile";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import useInformRelatedParties from "@hooks/admin/InformRelatedParties/useInformRelatedParties";
+import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsalutation";
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
@@ -310,6 +311,18 @@ const InformRelatedParties = () => {
   setExistingAttachments([]);
   };
 
+  useEffect(() => {
+    if (isEditing && form.department && !selectedDepartment) {
+      setSelectedDepartment({ id: form.department, value: form.department, label: form.department });
+    }
+  }, [isEditing, form.department, selectedDepartment]);
+
+  useEffect(() => {
+    if (isEditing && form.signer && !selectedSigner) {
+      setSelectedSigner({ id: form.signer, value: form.signer, label: form.signer });
+    }
+  }, [isEditing, form.signer, selectedSigner]);
+
   // Custom date change handlers for different date fields
   const handleMainDateChange = (thaiDate) => {
     handleDateChange(thaiDate, 'date');
@@ -368,56 +381,96 @@ const InformRelatedParties = () => {
             p: { xs: 2, sm: 3, md: 5 },
           }}
         >
-          {/* row 1: เลขที่ สป.กค. | วันที่ */}
+          {/* row 1: เรียน/ถึง | เลข สป.กค. | วันที่ (grid) */}
           <Box
             sx={{
-              display: "flex",
-              flexDirection: { xs: "column", sm: "row" },
-              gap: 2,
-              alignItems: { xs: "stretch", sm: "flex-end" },
+              display: 'grid',
+              columnGap: 2,
+              rowGap: 2,
+              alignItems: 'flex-end',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2, 1fr)',
+                md: 'repeat(3, 1fr)'
+              },
+              width: '100%'
             }}
           >
-            <Box sx={{ flex: 1 }}>
-              <InputText
-                label={createLabel("เลข สป.กค.", "refNo")}
-                inputLabel="กรอกเลข สป.กค."
-                name="refNo"
-                value={form.refNo}
+            <Box>
+              <SelectFieldsalutation
+                label={createLabel('เรียน/ถึง', 'salutation')}
+                name="salutation"
+                value={form.salutation}
                 onChange={handleChange}
-                error={!!getFieldError("refNo")}
-                helperText={getFieldError("refNo")}
+                onUserSelect={(opt) => {
+                  const label = (opt?.name || opt?.label || '').trim();
+                  const isOther = label === 'อื่นๆ';
+                  const isComplainant = label === 'ผู้ร้อง';
+                  handleChange({ target: { name: 'salutation_is_other', value: isOther } });
+                  handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
+                  if (!isOther) {
+                    handleChange({ target: { name: 'position_other_text', value: '' } });
+                  }
+                  if (isOther || isComplainant) {
+                    setSelectedDepartment(null);
+                    handleChange({ target: { name: 'department', value: '' } });
+                  }
+                }}
+                error={!!getFieldError('salutation')}
+                helperText={getFieldError('salutation')}
               />
             </Box>
-
-            <Box sx={{ 
-              alignSelf: { xs: "flex-start", sm: "flex-end" }, 
-              display: "flex", 
-              alignItems: "flex-end",
-              mt: { xs: 0, sm: 0 }
-            }}>
-              <IconButton
-                onClick={() => setOpenSearchDialog2(true)}
-                sx={{
-                  height: "40px",
-                  width: "40px",
-                  color: "blue",
-                  marginBottom: '18px'
-                }}
-              >
-                <SearchIcon />
-              </IconButton>
+      <Box>
+              <Box sx={{ display:'flex', alignItems:'flex-end', gap:1 }}>
+                <Box sx={{ flex:1 }}>
+                  <InputText
+                    label={createLabel('เลข สป.กค.', 'refNo')}
+                    inputLabel='กรอกเลข สป.กค.'
+                    name='refNo'
+                    value={form.refNo}
+                    onChange={handleChange}
+                    error={!!getFieldError('refNo')}
+                    helperText={getFieldError('refNo')}
+                  />
+                </Box>
+                <IconButton
+                  onClick={() => setOpenSearchDialog2(true)}
+                  sx={{
+                    height: 40,
+                    width: 40,
+                    color: 'blue',
+                    mt: { xs: '22px', md: '22px' },
+                    marginBottom: 2
+                  }}
+                  size='small'
+                >
+                  <SearchIcon />
+                </IconButton>
+              </Box>
             </Box>
-
-            <Box sx={{ flex: 1 }}>
+              <Box sx={{ position: 'relative' }}>
               <DateThaiPickerService
-                label={createLabel("วันที่", "date")}
+                label={createLabel('วันที่', 'date')}
                 value={form.date}
                 onChange={handleMainDateChange}
-                placeholder="เลือกวันที่"
-                error={!!getFieldError("date")}
-                helperText={getFieldError("date")}
+                placeholder='เลือกวันที่'
+                error={!!getFieldError('date')}
+                helperText={getFieldError('date')}
               />
             </Box>
+            {(form.salutation_is_other || form.salutation_is_complainant) && (
+              <Box sx={{ gridColumn: { xs: '1 / -1', sm: '1 / -1' } }}>
+                <InputText
+                  label={createLabel(form.salutation_is_complainant ? 'ระบุผู้ร้อง' : 'ระบุตำแหน่ง (อื่นๆ)', 'position_other_text')}
+                  inputLabel={form.salutation_is_complainant ? 'กรอกชื่อผู้ร้อง' : 'กรอกตำแหน่ง (อื่นๆ)'}
+                  name='position_other_text'
+                  value={form.position_other_text || ''}
+                  onChange={handleChange}
+                  error={!!getFieldError('position_other_text')}
+                  helperText={getFieldError('position_other_text') || (form.salutation_is_complainant ? 'พิมพ์ชื่อผู้ร้องที่ต้องการระบุ' : '')}
+                />
+              </Box>
+            )}
           </Box>
 
              {/* Dialog สำหรับค้นหาเลข */}
@@ -989,11 +1042,11 @@ const InformRelatedParties = () => {
               value={selectedDepartment}
               onChange={handleDepartmentSelect}
               onDepartmentSelect={handleDepartmentSelect}
-              filterBySignerId={selectedSigner?.id ?? selectedSigner?.value}
+              filterBySignerId={selectedSigner?.id || selectedSigner?.value || form.signer || undefined}
               error={!!getFieldError("department")}
               helperText={getFieldError("department")}
-              disabled={!selectedSigner}
-              placeholder={selectedSigner ? "เลือกหน่วยงาน / ผู้ร้อง" : "เลือกผู้ลงนามก่อน"}
+              disabled={form.salutation_is_other || form.salutation_is_complainant}
+              placeholder={form.salutation_is_other || form.salutation_is_complainant ? '—' : 'เลือกหน่วยงาน / ผู้ร้อง'}
             />
           </Box>
           {/* row 4: ชั้นความลับ | ชั้นความเร่งด่วน */}

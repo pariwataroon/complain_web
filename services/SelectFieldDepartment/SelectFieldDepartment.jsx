@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
     MenuItem,
     TextField,
@@ -8,7 +8,8 @@ import {
     InputAdornment,
     CircularProgress,
     Box,
-} from "@mui/material";
+    Autocomplete,
+} from "@mui/material";""
 import CloseIcon from "@mui/icons-material/Close";
 import { GetAllSignatureAuthorities } from "@pages/api/allselect/allselect";
 
@@ -25,12 +26,14 @@ const SelectFieldDepartment = ({
     onDepartmentSelect = () => { },
     filterBySignerId = null,
     showDepartmentInfo = false,
+    enableSearch = true,
     ...props
 }) => {
     const [options, setOptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [apiError, setApiError] = useState(null);
     const [selectedDepartment, setSelectedDepartment] = useState(null);
+    const [inputValue, setInputValue] = useState("");
 
     const validOptions = options.filter((opt) => {
         if (typeof opt === "object" && opt !== null) {
@@ -49,16 +52,9 @@ const SelectFieldDepartment = ({
 
     const hasValue = selectedValue && selectedValue !== "";
 
-    const handleClear = (e) => {
-        e.stopPropagation();
-
+    const handleClear = () => {
         setSelectedDepartment(null);
-        onChange({
-            target: {
-                name,
-                value: "",
-            },
-        });
+        onChange({ target: { name, value: "" } });
         onDepartmentSelect(null);
     };
 
@@ -144,23 +140,25 @@ const SelectFieldDepartment = ({
         fetchDepartments();
     }, [filterBySignerId]);
 
-    // รักษาค่าที่ Prefill: อย่าลบค่าที่มีอยู่จนกว่ารายการจะโหลดครบถ้วน
     useEffect(() => {
-        // หากยังไม่มีผู้ลงนาม หรือกำลังโหลดรายการ ให้คงค่าเดิมไว้ก่อน
-        if (!filterBySignerId || loading) return;
-
-        // เมื่อโหลดเสร็จ: ถ้าค่าปัจจุบันมี และอยู่ในรายการ ให้ sync selectedDepartment เพื่อแสดง label
+        if (loading) return;
         if (selectedValue) {
             const match = options.find(opt => String(opt.value) === String(selectedValue));
-            if (match) {
-                setSelectedDepartment(match);
-            } else {
-                // ถ้าไม่พบในรายการ (เช่น กรองโดยผู้ลงนามคนใหม่) ให้คงค่าไว้ ไม่ลบทิ้งอัตโนมัติ
-                // ผู้ใช้สามารถกดเคลียร์เองได้จากปุ่ม X
-            }
+            if (match) setSelectedDepartment(match);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filterBySignerId, options, loading]);
+    }, [options, loading, selectedValue]);
+
+    const filteredOptions = useMemo(() => {
+        if (!enableSearch || !inputValue) return validOptions;
+        const t = inputValue.toLowerCase();
+        return validOptions.filter(opt => [opt.label, opt.code, opt.shortName]
+            .some(v => v && String(v).toLowerCase().includes(t)));
+    }, [enableSearch, inputValue, validOptions]);
+
+    const currentOption = useMemo(() => {
+        if (!selectedValue) return null;
+        return validOptions.find(o => String(o.value) === String(selectedValue)) || null;
+    }, [selectedValue, validOptions]);
 
     return (
         <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
@@ -181,254 +179,72 @@ const SelectFieldDepartment = ({
                 </Typography>
             )}
 
-            <TextField
-                select
-                displayEmpty
-                name={name}
-                value={selectedValue}
-                disabled={disabled || loading || !filterBySignerId}
-                error={error || !!apiError}
-                onChange={(e) => {
-                    const selectedVal = e.target.value;
-                    const selectedDept = validOptions.find(opt => opt.value === selectedVal);
-
-
-                    setSelectedDepartment(selectedDept);
-
-                    onChange({
-                        target: {
-                            name,
-                            value: selectedVal,
-                        },
-                    });
-
-                    onDepartmentSelect(selectedDept);
+            <Autocomplete
+                disabled={disabled || loading}
+                loading={loading}
+                value={currentOption}
+                onChange={(e, newVal) => {
+                    const id = newVal?.value || "";
+                    setSelectedDepartment(newVal || null);
+                    onChange({ target: { name, value: id } });
+                    onDepartmentSelect(newVal || null);
                 }}
-                renderValue={(selected) => {
-                    const selectedOption = validOptions.find((opt) => {
-                        const optValue = typeof opt === "object" ? opt.value : opt;
-                        return optValue === selected;
-                    });
-
-                    if (!selectedOption || selected === "") {
-                        return (
-                            <span style={{ color: "#999" }}>
-                                {loading ? "กำลังโหลดข้อมูล..." :
-                                    !filterBySignerId ? "เลือกผู้ลงนามก่อน" :
-                                        (inputLabel || label)}
-                            </span>
-                        );
+                inputValue={inputValue}
+                onInputChange={(e, v, reason) => {
+                    if (reason === 'reset' && v === '' && !currentOption) {
+                        // cleared
+                        handleClear();
                     }
-
-                    return selectedOption.label || String(selectedOption);
+                    setInputValue(v);
                 }}
-                InputProps={{
-                    sx: {
-                        height: "40px",
-                        borderRadius: "10px",
-                        color: "#1120A3",
-                        fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
-                        "& fieldset": {
-                            borderColor: error || apiError ? "#d32f2f" : "#1120A3",
-                        },
-                        "&:hover fieldset": {
-                            borderColor: error || apiError ? "#d32f2f" : "#0d1a85",
-                        },
-                        "&.Mui-focused fieldset": {
-                            borderColor: error || apiError ? "#d32f2f" : "#1120A3",
-                        },
-                        "&.Mui-disabled": {
-                            backgroundColor: "#f5f5f5",
-                            opacity: 0.8,
-                        }
-                    },
-                    startAdornment: loading && (
-                        <InputAdornment position="start">
-                            <CircularProgress
-                                size={16}
-                                sx={{ color: "#1120A3", ml: 1 }}
-                            />
-                        </InputAdornment>
-                    ),
-                    endAdornment: hasValue && !loading && (
-                        <InputAdornment position="end">
-                            <IconButton
-                                onClick={handleClear}
-                                edge="end"
-                                size="small"
-                                sx={{
-                                    color: "#999",
-                                    "&:hover": {
-                                        color: "#666",
-                                        backgroundColor: "rgba(0, 0, 0, 0.04)",
-                                    },
-                                    mr: 1,
-                                }}
-                            >
-                                <CloseIcon fontSize="small" />
-                            </IconButton>
-                        </InputAdornment>
-                    ),
-                }}
-                SelectProps={{
-                    MenuProps: {
-                        PaperProps: {
-                            sx: {
-                                borderRadius: "8px",
-                                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                                border: "1px solid #e0e0e0",
-                                maxHeight: "300px",
-                                marginTop: "4px"
-                            }
-                        }
-                    }
-                }}
-                {...props}
-            >
-                {loading && (
-                    <MenuItem disabled>
-                        <Box sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                            color: "#666666",
-                            fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif"
-                        }}>
-                            <CircularProgress size={16} />
-                            กำลังโหลดรายการหน่วยงาน...
-                        </Box>
-                    </MenuItem>
-                )}
-
-                {apiError && (
-                    <MenuItem disabled>
-                        <Box sx={{
-                            color: "#d32f2f",
-                            fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
-                            textAlign: "center",
-                            width: "100%",
-                            py: 1
-                        }}>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                                {apiError}
+                options={filteredOptions}
+                getOptionLabel={(opt) => opt?.label || ""}
+                isOptionEqualToValue={(o, v) => String(o.value) === String(v.value)}
+                noOptionsText={loading ? 'กำลังโหลด...' : (apiError || 'ไม่พบหน่วยงาน')}
+                clearOnBlur={false}
+                popupIcon={null}
+                forcePopupIcon
+                fullWidth
+                renderOption={(props, option) => (
+                    <li {...props} key={option.value} style={{ padding: '8px 12px' }}>
+                        <Box sx={{ width: '100%' }}>
+                            <Typography sx={{ fontFamily: "'Sarabun','Noto Sans Thai',sans-serif", fontSize: 14 }}>
+                                {option.label}
                             </Typography>
-                            <Typography
-                                variant="caption"
-                                sx={{
-                                    color: "#1976d2",
-                                    cursor: "pointer",
-                                    textDecoration: "underline"
-                                }}
-                                onClick={handleRetry}
-                            >
-                                ลองใหม่
-                            </Typography>
-                        </Box>
-                    </MenuItem>
-                )}
-
-                {!loading && !apiError && !filterBySignerId && (
-                    <MenuItem disabled>
-                        <Box sx={{
-                            color: "#666666",
-                            fontStyle: "italic",
-                            textAlign: "center",
-                            width: "100%",
-                            py: 2,
-                            fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
-                        }}>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                                กรุณาเลือกผู้ลงนามก่อน
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: "#999999" }}>
-                                เพื่อแสดงหน่วยงานที่เกี่ยวข้อง
-                            </Typography>
-                        </Box>
-                    </MenuItem>
-                )}
-
-                {!loading && !apiError && filterBySignerId && validOptions.length === 0 && (
-                    <MenuItem disabled>
-                        <Box sx={{
-                            color: "#666666",
-                            fontStyle: "italic",
-                            textAlign: "center",
-                            width: "100%",
-                            py: 2,
-                            fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
-                        }}>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                                ไม่พบหน่วยงานสำหรับผู้ลงนามที่เลือก
-                            </Typography>
-                        </Box>
-                    </MenuItem>
-                )}
-
-                {!loading && filterBySignerId && validOptions.map((opt, idx) => {
-                    const optionValue = String(opt.value || "");
-                    const optionLabel = String(opt.label || opt.value || "");
-                    const isDisabled = opt.disabled ?? false;
-
-                    if (
-                        optionLabel === "[object Object]" ||
-                        optionValue === "[object Object]"
-                    ) {
-                        return null;
-                    }
-
-                    return (
-                        <MenuItem
-                            key={idx}
-                            value={optionValue}
-                            disabled={isDisabled}
-                            sx={{
-                                fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
-                                fontSize: "16px",
-                                padding: "10px 16px",
-                                borderBottom: idx < validOptions.length - 1 ? "1px solid #f0f0f0" : "none",
-                                "&:hover": {
-                                    backgroundColor: "#f5f7ff",
-                                },
-                                "&.Mui-selected": {
-                                    backgroundColor: "#e3f2fd",
-                                    color: "#1976d2",
-                                    fontWeight: 500,
-                                    "&:hover": {
-                                        backgroundColor: "#e3f2fd",
-                                    }
-                                }
-                            }}
-                        >
-                            <Box sx={{ width: "100%" }}>
-                                <Typography
-                                    variant="body1"
-                                    sx={{
-                                        fontWeight: 400,
-                                        fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
-                                        lineHeight: 1.4,
-                                    }}
-                                >
-                                    {optionLabel}
+                            {showDepartmentInfo && option.code && (
+                                <Typography variant="caption" sx={{ color: '#666', fontSize: '11px' }}>
+                                    รหัส: {option.code}
                                 </Typography>
-                                {showDepartmentInfo && opt.code && (
-                                    <Typography
-                                        variant="caption"
-                                        sx={{
-                                            color: "#666666",
-                                            display: "block",
-                                            fontSize: "13px",
-                                            marginTop: "2px",
-                                            fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
-                                        }}
-                                    >
-                                        รหัส: {opt.code}
-                                    </Typography>
-                                )}
-                            </Box>
-                        </MenuItem>
-                    );
-                })}
-            </TextField>
+                            )}
+                        </Box>
+                    </li>
+                )}
+                renderInput={(params) => (
+                    <TextField
+                        {...params}
+                        placeholder={loading ? 'กำลังโหลดข้อมูล...' : (inputLabel || label)}
+                        error={error || !!apiError}
+                        InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                                <>
+                                    {loading ? <CircularProgress size={16} sx={{ mr: 1 }} /> : null}
+                                    {params.InputProps.endAdornment}
+                                </>
+                            ),
+                            sx: {
+                                height: '40px',
+                                borderRadius: '10px',
+                                '& fieldset': { borderColor: error || apiError ? '#d32f2f' : '#1120A3' },
+                                '&:hover fieldset': { borderColor: error || apiError ? '#d32f2f' : '#0d1a85' },
+                                '&.Mui-focused fieldset': { borderColor: error || apiError ? '#d32f2f' : '#1120A3' }
+                            }
+                        }}
+                        size="small"
+                    />
+                )}
+                clearIcon={<CloseIcon fontSize="small" onClick={(e) => { e.stopPropagation(); handleClear(); }} />}
+            />
 
             {(helperText || apiError) && (
                 <Typography
@@ -459,12 +275,12 @@ const SelectFieldDepartment = ({
                         </Box>
                     ) : loading ? (
                         "กำลังโหลดรายการหน่วยงาน..."
-                    ) : !filterBySignerId ? (
-                        "เลือกผู้ลงนามเพื่อแสดงหน่วยงาน"
                     ) : validOptions.length === 0 ? (
-                        "ไม่พบหน่วยงานสำหรับผู้ลงนามที่เลือก"
+                        "ไม่พบบัญชีหน่วยงาน"
+                    ) : helperText ? (
+                        helperText
                     ) : (
-                        helperText || `พบหน่วยงาน ${validOptions.length} หน่วยงาน`
+                        `พบหน่วยงาน ${validOptions.length} หน่วยงาน`
                     )}
                 </Typography>
             )}

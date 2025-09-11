@@ -43,7 +43,7 @@ const RequestResultProgress = () => {
     createLabel,
     getFieldError,
     handleChange,
-    handleDateChange,
+  // handleDateChange removed in hook
   handleFileChange,
     handleClear,
     handleSave,
@@ -55,6 +55,8 @@ const RequestResultProgress = () => {
   editReportId,
   } = useRequestResultProgress();
   const router = useRouter();
+
+  // ยกเลิกการ auto sync docDate จาก refDate ตามคำขอ: คงเหลือเฉพาะ auto ของ refDate จากเลข สป.กค.
 
   // State สำหรับ dynamic data
   const [selectedSigner, setSelectedSigner] = useState(null);
@@ -113,7 +115,8 @@ const RequestResultProgress = () => {
         // Core ids / numbers
         updateField('complaint_number', d.complaint_number || d.reference_number || '');
         updateField('complaint_id', d.complaint_id || '');
-        updateField('refNo', d.document_number || '');
+  // เลข สป.กค. ต้องใช้ complaint_number (fallback reference_number) ไม่ใช่ document_number
+  updateField('refNo', d.complaint_number || d.reference_number || d.document_number || '');
         updateField('docNo', d.document_number || '');
         updateField('subject', d.subject || '');
         updateField('salutation', d.position?.id || "");
@@ -147,11 +150,13 @@ const RequestResultProgress = () => {
         setSelectedDepartment(deptObj);
         updateField("department_meta", deptObj);
 
-        // Date (priority: complaint_number_date > document_date > created_at)
-        const dateSrc = d.complaint_number_date || d.document_date || d.created_at;
-        if (dateSrc) {
-          const dt = new Date(dateSrc);
-          if (!isNaN(dt.getTime())) handleDateChange(dt);
+        // Date preload: map to picker struct
+        const refSrc = d.complaint_number_date || d.document_date || d.created_at;
+        if (refSrc) {
+          const dt = new Date(refSrc);
+          if(!isNaN(dt.getTime())){
+            updateField('refDate', { day: dt.getDate(), month: dt.getMonth()+1, year: dt.getFullYear(), buddhistYear: dt.getFullYear()+543 });
+          }
         }
 
         // Confidentiality / Urgency
@@ -247,9 +252,8 @@ const RequestResultProgress = () => {
       userInfo?.positionId ??
       null;
     updateField("position_id", signerPosId || "");
-    setSelectedDepartment(null);
-    updateField("department", "");
-    updateField("department_meta", null);
+  // Previously clearing department forced user to reselect; now we retain existing department.
+  // If future logic needs remap department by signer, add mapping here.
   };
 
   const handleDepartmentSelect = (department) => {
@@ -350,103 +354,101 @@ const RequestResultProgress = () => {
             flexDirection: "column",
             gap: 2,
             p: { xs: 2, sm: 3, md: 5 },
+            pl: { xs: 3, sm: 6, md: 14, lg: 18, xl: 24 },
+            pr: { xs: 2, sm: 3, md: 5, lg: 6 },
+            transition: 'padding .2s ease',
           }}
         >
-           {/* Row 1: เรียน | เลขที่หนังสือ* (with search) | วันที่* */}
           <Box
             sx={{
-              display: "grid",
+              display: 'grid',
               gap: 2,
+              width: '100%',
+              alignItems: 'flex-start',
               gridTemplateColumns: {
-                xs: "1fr",
-                sm: "1fr 1fr",
-                md: "1fr 1fr 1fr",
-              },
-              width: "100%",
-              alignItems: 'flex-start'
+                xs: '1fr',
+                sm: '1fr 1fr',
+                md: 'repeat(4, 1fr)'
+              }
             }}
           >
-            <SelectFieldsalutation
-              label={createLabel("เรียน", "salutation")}
-              name="salutation"
-              value={form.salutation}
-              onChange={handleChange}
-              onUserSelect={(opt) => {
-                const isOther = (opt?.name || opt?.label) === "อื่นๆ";
-                handleChange({ target: { name: 'salutation_is_other', value: isOther } });
-                if (!isOther) {
-                  handleChange({ target: { name: 'position_other_text', value: '' } });
-                }
-              }}
-              error={!!getFieldError("salutation")}
-              helperText={getFieldError("salutation")}
-            />
-            {form.salutation_is_other && (
-              <Box sx={{ minWidth: 240 }}>
-                <InputText
-                  label={createLabel("ระบุตำแหน่ง (อื่นๆ)", "position_other_text")}
-                  inputLabel="กรอกตำแหน่ง (อื่นๆ)"
-                  name="position_other_text"
-                  value={form.position_other_text || ""}
-                  onChange={handleChange}
-                  error={!!getFieldError("position_other_text")}
-                  helperText={getFieldError("position_other_text")}
+            <Box>
+              <SelectFieldsalutation
+                label={createLabel('เรียน', 'salutation')}
+                name="salutation"
+                value={form.salutation}
+                onChange={handleChange}
+                onUserSelect={(opt) => {
+                  const label = (opt?.name || opt?.label || '').trim();
+                  const isCustom = label === 'อื่นๆ' || label === 'ผู้ร้อง';
+                  handleChange({ target: { name: 'salutation_is_other', value: isCustom } });
+                  if (!isCustom) handleChange({ target: { name: 'position_other_text', value: '' } });
+                  if (isCustom) updateField('department', '');
+                  try {
+                    if (!isCustom) {
+                      const posId = opt?.id || opt?.value || '';
+                      if (posId) updateField('position_id', posId);
+                      if (posId) updateField('salutation', posId);
+                    } else {
+                      updateField('position_id', null);
+                    }
+                  } catch(e){ console.warn('salutation mapping error', e); }
+                }}
+                error={!!getFieldError('salutation')}
+                helperText={getFieldError('salutation')}
+              />
+            </Box>
+            {!form.salutation_is_other && (
+              <Box>
+                <SelectFieldDepartment
+                  label={createLabel('หน่วยงาน / ผู้ร้อง', 'department')}
+                  name="department"
+                  value={selectedDepartment}
+                  onChange={handleDepartmentSelect}
+                  onDepartmentSelect={handleDepartmentSelect}
+                  filterBySignerId={selectedSigner?.id ?? selectedSigner?.value}
+                  error={!!getFieldError('department')}
+                  helperText={getFieldError('department')}
+                  placeholder='เลือกหน่วยงาน / ผู้ร้อง'
                 />
               </Box>
             )}
-
-           {/*  หน่วยงาน / ผู้ร้อง* */}
-            <SelectFieldDepartment
-              label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}
-              name="department"
-              value={selectedDepartment}
-              onChange={handleDepartmentSelect}
-              onDepartmentSelect={handleDepartmentSelect}
-              filterBySignerId={selectedSigner?.id ?? selectedSigner?.value}
-              error={!!getFieldError("department")}
-              helperText={getFieldError("department")}
-              disabled={!selectedSigner}
-              placeholder={selectedSigner ? "เลือกหน่วยงาน / ผู้ร้อง" : "เลือกผู้ลงนามก่อน"}
-            />
-            
-            </Box>
-            <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "1fr 1fr",
-                md: "1fr 1fr 1fr",
-              },
-              width: "100%",
-              alignItems: 'flex-start'
-            }}
-          >
-            {/* เลขที่หนังสือ */}
+            <Box>
               <InputText
-                label={createLabel("เลขที่หนังสือ", "docNo")}
+                label={createLabel('เลขที่หนังสือ', 'docNo')}
                 inputLabel="กรอกเลขที่หนังสือ"
                 name="docNo"
                 value={form.docNo}
                 onChange={handleChange}
-                error={!!getFieldError("docNo")}
-                helperText={getFieldError("docNo")}  
+                error={!!getFieldError('docNo')}
+                helperText={getFieldError('docNo')}
               />
-
-            {/* วันที่หนังสือ */}
-            <DateThaiPickerService
-              label={createLabel("วันที่หนังสือ", "docDate")}
-              value={form.docDate}
-              onChange={(d)=>updateField('docDate', d)}
-              placeholder="เลือกวันที่หนังสือ"
-              error={!!getFieldError("docDate")}
-              helperText={getFieldError("docDate")}
-              sx={{ width: '100%' }}
-            />
-            {/* ช่องว่างรักษา layout */}
-            <Box sx={{ display:{xs:'none', md:'block'} }} />
             </Box>
+            <Box>
+              <DateThaiPickerService
+                label={createLabel('วันที่หนังสือ', 'docDate')}
+                value={form.docDate}
+                onChange={(d)=> updateField('docDate', d)}
+                placeholder="เลือกวันที่หนังสือ"
+                error={!!getFieldError('docDate')}
+                helperText={getFieldError('docDate')}
+                sx={{ width: '100%' }}
+              />
+            </Box>
+            {(form.salutation_is_other || form.position_other_text) && (
+              <Box sx={{ gridColumn: { xs: '1', sm: '1 / span 2', md: '1 / span 2' } }}>
+                <InputText
+                  label={createLabel('ระบุตำแหน่ง (อื่นๆ/ผู้ร้อง)', 'position_other_text')}
+                  inputLabel="กรอกตำแหน่ง (อื่นๆ/ผู้ร้อง)"
+                  name="position_other_text"
+                  value={form.position_other_text || ''}
+                  onChange={handleChange}
+                  error={!!getFieldError('position_other_text')}
+                  helperText={getFieldError('position_other_text')}
+                />
+              </Box>
+            )}
+          </Box>
 
           {/* Row 2: เรื่อง* */}
           <Box

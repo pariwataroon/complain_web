@@ -11,7 +11,7 @@ import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPicke
 import useInitialNotificationComplainantAgency from "@hooks/admin/InitialNotificationComplainantAgency/useInitialNotificationComplainantAgency";
 import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsalutation";
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
-import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
+import SelectFieldDepartmentoutside from "@services/SelectFieldDepartmentoutside/SelectFieldDepartmentoutside";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
 import { GetOutgoingReport2ById } from "@pages/api/outgoinreports/outgoinreports";
 import { GetReDocumentComplaints } from "@pages/api/complaint/complaint";
@@ -227,11 +227,17 @@ const InitialNotificationComplainantAgency = () => {
         handleChange({ target: { name: 'subject', value: d.subject || '' } });
 
         handleChange({ target: { name: 'salutation', value: d.position?.id || "" } });
-        const posName = d.position?.name || "";
-        const isOther = posName === "อื่นๆ";
+        const posName = (d.position?.name || '').trim();
+        const specialList = ['อื่นๆ','ผู้ร้อง','ผู้ร้องเรียน'];
+        const isOther = specialList.includes(posName);
         handleChange({ target: { name: 'salutation_is_other', value: isOther } });
-        if (isOther && d.position_other_text) {
-          handleChange({ target: { name: 'position_other_text', value: d.position_other_text } });
+        if (isOther) {
+          if (d.position_other_text) {
+            handleChange({ target: { name: 'position_other_text', value: d.position_other_text } });
+          }
+          // clear department in special case
+          handleChange({ target: { name: 'department', value: '' } });
+          setSelectedDepartment(null);
         }
 
         const signerObj = d.signature_authority_user || null;
@@ -245,16 +251,18 @@ const InitialNotificationComplainantAgency = () => {
           "";
         handleChange({ target: { name: 'position_id', value: posId } });
 
-        handleChange({ target: { name: 'department', value: d.department?.id || "" } });
-        const deptObj = d.department
-          ? {
-              value: d.department.id,
-              label: d.department.name,
-              code: d.department.code || "",
-              shortName: d.department.short_name || d.department.shortName || "",
-            }
-          : null;
-        setSelectedDepartment(deptObj);
+        if (!isOther) {
+          handleChange({ target: { name: 'department', value: d.department?.id || "" } });
+          const deptObj = d.department
+            ? {
+                value: d.department.id,
+                label: d.department.name,
+                code: d.department.code || "",
+                shortName: d.department.short_name || d.department.shortName || "",
+              }
+            : null;
+          setSelectedDepartment(deptObj);
+        }
 
         if (d.document_date) {
           handleDocumentDateChange(d.document_date);
@@ -327,115 +335,95 @@ const InitialNotificationComplainantAgency = () => {
             p: { xs: 2, sm: 3, md: 5 },
           }}
         >
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-            }}
-          >
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(4,1fr)' } }}>
             <SelectFieldsalutation
-              label={createLabel("เรียน/ถึง", "salutation")}
-              name="salutation"
+              label={createLabel('เรียน/ถึง', 'salutation')}
+              name='salutation'
               value={form.salutation}
               onChange={handleChange}
               onUserSelect={(opt) => {
-                const isOther = (opt?.name || opt?.label) === "อื่นๆ";
+                const label = (opt?.name || opt?.label || '').trim();
+                const specialList = ['อื่นๆ','ผู้ร้อง','ผู้ร้องเรียน'];
+                const isOther = specialList.includes(label);
                 handleChange({ target: { name: 'salutation_is_other', value: isOther } });
-                if (!isOther) {
+                if (isOther) {
+                  handleChange({ target: { name: 'department', value: '' } });
+                  setSelectedDepartment(null);
+                } else {
                   handleChange({ target: { name: 'position_other_text', value: '' } });
                 }
               }}
-              error={!!getFieldError("salutation")}
-              helperText={getFieldError("salutation")}
+              error={!!getFieldError('salutation')}
+              helperText={getFieldError('salutation')}
             />
+      {!(form.salutation_is_other) && (
+              <SelectFieldDepartmentoutside
+                label={createLabel('หน่วยงาน / ผู้ร้อง', 'department')}
+                name='department'
+                value={selectedDepartment}
+                onChange={handleDepartmentSelect}
+                onDepartmentSelect={handleDepartmentSelect}
+                // remove dependency on signer selection
+                error={!!getFieldError('department')}
+                helperText={getFieldError('department')}
+        disabled={false}
+        placeholder='เลือกหน่วยงาน / ผู้ร้อง'
+              />
+            )}
+            <InputText
+              label={createLabel('เลขที่หนังสือ', 'refNo')}
+              inputLabel='กรอกเลขที่หนังสือ'
+              name='refNo'
+              value={form.refNo}
+              onChange={handleChange}
+              error={!!getFieldError('refNo')}
+              helperText={getFieldError('refNo')}
+            />
+            <DateThaiPickerService
+              label={createLabel('วันที่หนังสือ', 'document_date')}
+              value={form.document_date}
+              onChange={handleDocumentDateChange}
+              placeholder='เลือกวันที่หนังสือ'
+              error={!!getFieldError('document_date')}
+              helperText={getFieldError('document_date')}
+            />
+            {/* Second row in the same grid (span logic) */}
             {form.salutation_is_other && (
-              <Box sx={{ minWidth: 240 }}>
+              <Box sx={{ gridColumn: { xs: 'span 1', md: 'span 2' } }}>
                 <InputText
-                  label={createLabel("ระบุตำแหน่ง (อื่นๆ)", "position_other_text")}
-                  inputLabel="กรอกตำแหน่ง (อื่นๆ)"
-                  name="position_other_text"
-                  value={form.position_other_text || ""}
+                  label={createLabel('ระบุตำแหน่ง (อื่นๆ)', 'position_other_text')}
+                  inputLabel='กรอกตำแหน่ง (อื่นๆ)'
+                  name='position_other_text'
+                  value={form.position_other_text || ''}
                   onChange={handleChange}
-                  error={!!getFieldError("position_other_text")}
-                  helperText={getFieldError("position_other_text")}
+                  error={!!getFieldError('position_other_text')}
+                  helperText={getFieldError('position_other_text')}
                 />
               </Box>
             )}
-            <SelectFieldDepartment
-              label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}
-              name="department"
-              value={selectedDepartment}
-              onChange={handleDepartmentSelect}
-              onDepartmentSelect={handleDepartmentSelect}
-              filterBySignerId={pickId(selectedSigner)}
-              error={!!getFieldError("department")}
-              helperText={getFieldError("department")}
-              disabled={!selectedSigner}
-              placeholder={selectedSigner ? "เลือกหน่วยงาน / ผู้ร้อง" : "เลือกผู้ลงนามก่อน"}
-            />
-          </Box>
-
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-            }}
-          >
-            <InputText
-              label={createLabel("เลขที่หนังสือ", "refNo")}
-              inputLabel="กรอกเลขที่หนังสือ"
-              name="refNo"
-              value={form.refNo}
-              onChange={handleChange}
-              error={!!getFieldError("refNo")}
-              helperText={getFieldError("refNo")}
-              sx={{ flex: 1 }}
-            />
-            <DateThaiPickerService
-              label={createLabel("วันที่หนังสือ", "document_date")}
-              value={form.document_date}
-              onChange={handleDocumentDateChange}
-              placeholder="เลือกวันที่หนังสือ"
-              error={!!getFieldError("document_date")}
-              helperText={getFieldError("document_date")}
-            />
-          </Box>
-
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <InputText
-                label={createLabel("เลข สป.กค.", "complaint_number")}
-                inputLabel="กรอกเลข สป.กค."
-                name="complaint_number"
-                value={form.complaint_number || ""}
+                label={createLabel('เลข สป.กค.', 'complaint_number')}
+                inputLabel='กรอกเลข สป.กค.'
+                name='complaint_number'
+                value={form.complaint_number || ''}
                 onChange={handleChange}
                 onBlur={(e) => handleChange(e)}
                 onPaste={(e) => { setTimeout(() => { handleChange({ target: { name: 'complaint_number', value: e.target.value } }); }, 0); }}
-                error={!!getFieldError("complaint_number")}
-                helperText={getFieldError("complaint_number")}
+                error={!!getFieldError('complaint_number')}
+                helperText={getFieldError('complaint_number')}
               />
-              <IconButton
-                onClick={() => setOpenSearchDialog(true)}
-                sx={{ ml: 1, color: "blue", marginTop: "10px" }}
-              >
+              <IconButton onClick={() => setOpenSearchDialog(true)} sx={{ ml: 1, color: 'blue', mt: '10px' }}>
                 <SearchIcon />
               </IconButton>
             </Box>
             <DateThaiPickerService
-              label={createLabel("วันที่ สป.กค.", "complaint_number_date")}
+              label={createLabel('วันที่ สป.กค.', 'complaint_number_date')}
               value={form.complaint_number_date}
               onChange={handleComplaintNumberDateChange}
-              placeholder="เลือกวันที่ สป.กค."
-              error={!!getFieldError("complaint_number_date")}
-              helperText={getFieldError("complaint_number_date")}
+              placeholder='เลือกวันที่ สป.กค.'
+              error={!!getFieldError('complaint_number_date')}
+              helperText={getFieldError('complaint_number_date')}
             />
           </Box>
 

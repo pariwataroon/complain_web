@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   alertSuccess,
@@ -57,6 +57,9 @@ export const useInformRelatedParties = () => {
   const initialFormState = useMemo(
     () => ({
       salutation: "", // position_id
+      salutation_is_other: false,
+      salutation_is_complainant: false,
+      position_other_text: "",
       refNo: complaintNumberFromQuery || "", // reference_number
       date: null, // reference_date (will be converted with toYMD)
       subject: "", // subject
@@ -90,14 +93,58 @@ export const useInformRelatedParties = () => {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [existingAttachments, setExistingAttachments] = useState([]);
+  // Track initial & previous refNo for edit mode date auto-update logic
+  const initialRefNoRef = useRef(null);
+  const prevRefNoRef = useRef(null);
+
+  // Capture initial refNo when editing (after data load fills form.refNo)
+  useEffect(() => {
+    if (isEditing && form.refNo && initialRefNoRef.current === null) {
+      initialRefNoRef.current = form.refNo;
+      prevRefNoRef.current = form.refNo;
+    }
+  }, [isEditing, form.refNo]);
+
+  // Auto derive date from refNo (pattern MOF-<BEYYYYMMDD>-xxxxx)
+  useEffect(() => {
+    if (!form.refNo) return;
+    const raw = form.refNo.trim();
+    if (prevRefNoRef.current === raw) return; // no actual change
+    const match = /^MOF-(\d{8})-/i.exec(raw);
+    if (!match) { prevRefNoRef.current = raw; return; }
+    const beDate = match[1];
+    const beYear = parseInt(beDate.slice(0, 4), 10);
+    if (Number.isNaN(beYear)) { prevRefNoRef.current = raw; return; }
+    const month = beDate.slice(4, 6);
+    const day = beDate.slice(6, 8);
+    const ceYear = beYear - 543;
+    if (ceYear < 1900 || ceYear > 2600) { prevRefNoRef.current = raw; return; }
+    const iso = `${ceYear.toString().padStart(4, '0')}-${month}-${day}`;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) { prevRefNoRef.current = raw; return; }
+    const dObj = new Date(iso);
+    if (Number.isNaN(dObj.getTime())) { prevRefNoRef.current = raw; return; }
+    if ((dObj.getMonth() + 1) !== parseInt(month, 10) || dObj.getDate() !== parseInt(day, 10)) { prevRefNoRef.current = raw; return; }
+
+    // Logic:
+    // - Create mode: set if date empty (or we may choose always update if pattern changes and date was auto from pattern). Keep simple: if date empty -> set.
+    // - Edit mode: set only if refNo changed from initial refNo.
+    const refChangedFromInitial = !initialRefNoRef.current || raw !== initialRefNoRef.current;
+    if (!isEditing) {
+      if (!form.date) setForm(prev => ({ ...prev, date: iso }));
+    } else if (refChangedFromInitial) {
+      setForm(prev => ({ ...prev, date: iso }));
+    }
+    prevRefNoRef.current = raw;
+  }, [form.refNo, isEditing, form.date]);
 
   // ฟิลด์ที่จำเป็นต้องกรอก
   const requiredFields = [
+  "salutation", // position_id (เรียนถึง)
     "refNo",
     "date",
     "subject",
     "signer",
-    "department",
+  "department", // conditionally satisfied by position_other_text when salutation_is_other or salutation_is_complainant
     "confidentiality",
     "urgency",
     "proposeFor",
@@ -258,11 +305,13 @@ export const useInformRelatedParties = () => {
   // ฟังก์ชันตรวจสอบข้อมูลที่จำเป็น
   const validateRequiredFields = useCallback(() => {
     const fieldsConfig = [
+  { field: "salutation", label: "เรียนถึง" },
       { field: "refNo", label: "เลขที่ สป.กค." },
       { field: "date", label: "วันที่" },
       { field: "subject", label: "เรื่อง" },
       { field: "signer", label: "ผู้ลงนาม" },
-      { field: "department", label: "หน่วยงาน / ผู้ร้อง / อื่นๆ" },
+      { field: "department", label: "หน่วยงาน / ผู้ร้อง" },
+      { field: "position_other_text", label: "ระบุตำแหน่ง/ผู้ร้อง" },
       { field: "confidentiality", label: "ชั้นความลับ" },
       { field: "urgency", label: "ชั้นความเร่งด่วน" },
       { field: "proposeFor", label: "เสนอเพื่อ" },
@@ -274,9 +323,16 @@ export const useInformRelatedParties = () => {
     const missingFields = [];
 
     fieldsConfig.forEach(({ field, label }) => {
-      if (field === 'attachment' && isEditing && existingAttachments.length > 0) return; // skip attachment requirement when editing with existing attachments
+      // Skip attachment requirement when editing if existing attachments present
+      if (field === 'attachment' && isEditing && existingAttachments.length > 0) return;
+
+      // Conditional: if salutation other/complainant, treat position_other_text as required and department optional
+      const useCustom = form.salutation_is_other || form.salutation_is_complainant;
+      if (field === 'department' && useCustom) return; // department not required
+      if (field === 'position_other_text' && !useCustom) return; // only required when using custom
+
       const value = form[field];
-      if (!value || value === "" || value === null) {
+      if (value === undefined || value === null || value === "") {
         newErrors[field] = `กรุณากรอก${label}`;
         missingFields.push({ field, label });
       }
@@ -387,8 +443,9 @@ export const useInformRelatedParties = () => {
       if (typeof val === 'string') return map[Number(val)] || val; // keep original if already label
       return map[val] || null;
     };
+    const useCustomRecipient = form.salutation_is_other || form.salutation_is_complainant;
     const body = {
-      position_id: POSITION_FALLBACK,
+  position_id: form.salutation || POSITION_FALLBACK,
       reference_number: (form.refNo || "").trim(),
       reference_date: toYMD(form.date),
       subject: (form.subject || "").trim(),
@@ -397,7 +454,7 @@ export const useInformRelatedParties = () => {
       document_number: (form.bookNo || "").trim(),
       document_date: toYMD(form.date2),
       signature_authority_user_id: form.signer,
-      department_id: form.department,
+      ...(useCustomRecipient ? {} : { department_id: form.department || null }),
       confidentiality_level: confidentialityNumberToString(form.confidentiality),
       urgency_level: urgencyNumberToString(form.urgency),
       remarks: form.note || form.details || "",
@@ -407,6 +464,7 @@ export const useInformRelatedParties = () => {
       proposal_purpose: form.proposeFor,
       consideration_result: form.decision,
       complaint_id: complaintId,
+      ...(useCustomRecipient ? { custom_recipient: (form.position_other_text || '').trim(), custom_recipient_type: form.salutation_is_complainant ? 'COMPLAINANT' : 'OTHER' } : {}),
     };
 
     console.log("📦 createRequestBody:", body);
@@ -461,6 +519,31 @@ export const useInformRelatedParties = () => {
         return;
       }
       effectiveId = createdId;
+
+      // Persist salutation locally (กรณี backend ไม่ส่ง position_id กลับมาให้ตอนโหลด)
+      try {
+        if (typeof window !== 'undefined' && form.salutation) {
+          localStorage.setItem(`report4_position_${effectiveId}`, form.salutation);
+        }
+      } catch (e) {
+        console.warn('ไม่สามารถบันทึกตำแหน่งลง localStorage', e);
+      }
+      try {
+        if (typeof window !== 'undefined') {
+          const useCustomRecipient = form.salutation_is_other || form.salutation_is_complainant;
+            const key = `report4_custom_recipient_${effectiveId}`;
+            if (useCustomRecipient && form.position_other_text) {
+              localStorage.setItem(key, JSON.stringify({
+                text: (form.position_other_text || '').trim(),
+                type: form.salutation_is_complainant ? 'COMPLAINANT' : 'OTHER'
+              }));
+            } else {
+              localStorage.removeItem(key);
+            }
+        }
+      } catch (e) {
+        console.warn('ไม่สามารถบันทึก custom_recipient ลง localStorage', e);
+      }
 
       // อัปโหลดไฟล์เฉพาะกรณีที่มีไฟล์ใหม่ (ไฟล์ existingAttachments จัดการหน้า component)
   if (uploadedFiles.length > 0) {
@@ -540,19 +623,26 @@ export const useInformRelatedParties = () => {
 
   // ฟังก์ชันตรวจสอบว่าฟอร์มพร้อมส่งหรือไม่
   const isFormValid = useCallback(() => {
+    const useCustom = form.salutation_is_other || form.salutation_is_complainant;
     return requiredFields.every((field) => {
+      if (field === 'department' && useCustom) return true; // satisfied elsewhere
+      if (field === 'attachment' && isEditing && existingAttachments.length > 0) return true;
       const value = form[field];
-      return value && value !== "" && value !== null;
-    });
-  }, [form, requiredFields]);
+      return value !== undefined && value !== null && value !== "";
+    }) && (!useCustom || (form.position_other_text && form.position_other_text.trim() !== ""));
+  }, [form, requiredFields, isEditing, existingAttachments]);
 
   // canSave focuses on required-only validation like other forms
   const canSave = useCallback(() => {
+    const useCustom = form.salutation_is_other || form.salutation_is_complainant;
+    if (useCustom && (!form.position_other_text || form.position_other_text.trim() === "")) return false;
     return requiredFields.every((f) => {
+      if (f === 'department' && useCustom) return true;
+      if (f === 'attachment' && isEditing && existingAttachments.length > 0) return true;
       const v = form[f];
       return !(v === undefined || v === null || v === "");
     });
-  }, [form, requiredFields]);
+  }, [form, requiredFields, isEditing, existingAttachments]);
 
   // โหลดข้อมูลเพื่อแก้ไขเมื่อมี report4_id ใน query (หรือ id ที่เป็น type4)
   useEffect(() => {
@@ -576,6 +666,34 @@ export const useInformRelatedParties = () => {
         handleChange("bookNo", d.document_number || "");
         handleChange("signer", d.signature_authority_user_id || d.signature_authority_user?.id || "");
         handleChange("department", d.department_id || d.department?.id || "");
+        // position_id -> salutation (เรียนถึง)
+        if (d.position_id || d.position?.id) {
+          handleChange("salutation", d.position_id || d.position?.id);
+        } else {
+          // Try alternate sources for position id (บาง API อาจคืนอยู่คนละโครงสร้าง)
+          const altPositionId = d.signature_authority_user?.position_id
+            || d.signature_authority_user?.position?.id
+            || d.signature_authority_user?.positionId
+            || d.signature_authority_user?.position?.position_id
+            || d.signature_authority?.position_id
+            || d.signature_authority?.position?.id
+            || d.positionId;
+          if (altPositionId) {
+            console.log("ℹ️ Using alternate position_id source for salutation:", altPositionId);
+            handleChange("salutation", altPositionId);
+          } else {
+            console.log("⚠️ ไม่พบ position_id ในข้อมูลที่โหลดมา จะใช้ค่า fallback เมื่อบันทึก");
+          }
+        }
+        // If backend returns custom recipient, map to flags & text
+        if (d.custom_recipient) {
+          const isComplainant = d.custom_recipient_type === 'COMPLAINANT';
+          handleChange({ target: { name: 'salutation_is_other', value: !isComplainant } });
+          handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
+          handleChange({ target: { name: 'position_other_text', value: d.custom_recipient } });
+          // Clear department since custom recipient used
+          handleChange({ target: { name: 'department', value: '' } });
+        }
       // Convert incoming string labels to numeric select value if needed
       const confidentialityStringToNumber = (val) => {
         if (val == null || val === '') return '';
@@ -600,6 +718,41 @@ export const useInformRelatedParties = () => {
           const names = atts.map(a => a.original_name || a.file_name || a.name || "").filter(Boolean).join(", ");
           if (names) handleChange("attachment", names);
         }
+        setTimeout(() => {
+          try {
+            if (typeof window !== 'undefined') {
+              const key = `report4_position_${d.id}`;
+              if (!form.salutation) {
+                const stored = localStorage.getItem(key);
+                if (stored) {
+                  console.log('⬅️ ใช้ salutation จาก localStorage:', stored);
+                  handleChange('salutation', stored);
+                }
+              }
+              if (!d.custom_recipient) {
+                const ck = `report4_custom_recipient_${d.id}`;
+                const storedCustom = localStorage.getItem(ck);
+                if (storedCustom) {
+                  try {
+                    const parsed = JSON.parse(storedCustom);
+                    if (parsed && parsed.text) {
+                      const isComplainant = parsed.type === 'COMPLAINANT';
+                      handleChange({ target: { name: 'salutation_is_other', value: !isComplainant } });
+                      handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
+                      handleChange({ target: { name: 'position_other_text', value: parsed.text } });
+                      handleChange({ target: { name: 'department', value: '' } });
+                      console.log('⬅️ ใช้ custom_recipient จาก localStorage:', parsed);
+                    }
+                  } catch (pe) {
+                    console.warn('Parse custom_recipient localStorage ล้มเหลว', pe);
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('อ่าน localStorage salutation ไม่ได้', e);
+          }
+        }, 0);
       } catch (e) {
         console.error("Load outgoing-report4 for edit failed", e);
       } finally {
