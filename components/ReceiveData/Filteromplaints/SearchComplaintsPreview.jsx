@@ -469,6 +469,8 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   })();
   // ข้อมูลจาก step3 (เรื่องร้องทุกข์)
   const complaint = step3.general || {};
+  // รองรับข้อมูลจาก assignment_form (ถ้าผ่านมาพร้อมกันใน previewData)
+  const assignmentForm = formData.assignment_form || formData.assignmentForm || {};
 
   const files = complaint.attachment || [];
 
@@ -798,63 +800,98 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
             <Grid container spacing={2} mb={3}>
               <InfoItem
                 label="เลข สป.กค."
-                value={complaint.referenceNumber1 || "-"}
+                value={
+                  assignmentForm.reference_number || complaint.referenceNumber1 || "-"
+                }
               />
               <InfoItem
                 label="วันที่ สป.กค."
-                value={formatThaiFullDate(complaint.referenceDate1)}
+                value={
+                  formatThaiFullDate(
+                    assignmentForm.reference_date || complaint.referenceDate1
+                  )
+                }
               />
               <InfoItem
                 label="เลข สป.สร."
-                value={complaint.referenceNumber2 || "-"}
+                value={
+                  assignmentForm.reference_number2 || complaint.referenceNumber2 || "-"
+                }
               />
               <InfoItem
                 label="วันที่ สป.สร."
-                value={formatThaiFullDate(complaint.referenceDate2) || "-"}
+                value={
+                  formatThaiFullDate(
+                    assignmentForm.reference_date2 || complaint.referenceDate2
+                  ) || "-"
+                }
               />
               <InfoItem
                 label="เลข สตป."
-                value={complaint.referenceNumber3 || "-"}
+                value={
+                  assignmentForm.reference_number3 || complaint.referenceNumber3 || "-"
+                }
               />
               <InfoItem
                 label="วันที่ สตป."
-                value={formatThaiFullDate(complaint.referenceDate3)}
+                value={
+                  formatThaiFullDate(
+                    assignmentForm.reference_date3 || complaint.referenceDate3
+                  )
+                }
               />
               <InfoItem
                 label="เลข สรร. (สารบัญ)"
-                value={complaint.referenceNumber4 || "-"}
+                value={
+                  assignmentForm.reference_number4 ||
+                  complaint.referenceNumber4 ||
+                  formData.complaint_number ||
+                  "-"
+                }
               />
               <InfoItem
                 label="วันที่ สรร."
-                value={formatThaiFullDate(complaint.referenceDate4)}
+                value={
+                  formatThaiFullDate(
+                    assignmentForm.reference_date4 || complaint.referenceDate4
+                  )
+                }
               />
               <InfoItem
                 label="เลขที่หนังสือ"
-                value={complaint.documentNumber || "-"}
+                value={assignmentForm.document_number || complaint.documentNumber || "-"}
               />
               <InfoItem
                 label="วันที่หนังสือ"
-                value={formatThaiFullDate(complaint.documentDate)}
+                value={formatThaiFullDate(assignmentForm.document_date || complaint.documentDate)}
               />
               <InfoItem
                 label="หน่วยงานอื่นที่ส่งเรื่องมา"
-                value={complaint.senderAgencyName || "-"}
+                value={assignmentForm.agency_sender || complaint.senderAgencyName || "-"}
               />
               <InfoItem
                 label="ชั้นความลับ"
-                value={getSecurityLevelThai(complaint.securityLevel)}
+                value={getSecurityLevelThai(
+                  assignmentForm.confidentiality_level || complaint.securityLevel
+                )}
               />
               <InfoItem
                 label="ชั้นความเร่งด่วน"
-                value={getUrgencyLevelThai(complaint.urgencyLevel)}
+                value={getUrgencyLevelThai(
+                  assignmentForm.urgency_level || complaint.urgencyLevel
+                )}
               />
               <InfoItem
                 label="ประเภทเรื่องร้องเรียน"
-                value={previewData.complaintTypeLabel || "-"}
+                value={
+                  previewData.complaintTypeLabel || assignmentForm.complaint_type_name || "-"
+                }
               />
               <InfoItem
                 label="วันและเวลาที่เกิดเหตุ"
-                value={formatThaiDateTime(additionalDetails.incidentDate || complaint.incidentDate)}
+                value={formatThaiDateTime(
+                  additionalDetails.incidentDate || complaint.incidentDate
+                )}
               />
             </Grid>
             <Grid item xs={12} mb={3}>
