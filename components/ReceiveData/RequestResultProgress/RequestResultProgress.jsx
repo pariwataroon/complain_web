@@ -13,7 +13,7 @@ import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsa
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
-import { GetOutgoingReport3ById, DeleteOutgoingReportAttachment } from "@pages/api/outgoinreports/outgoinreports";
+import { GetOutgoingReport3ById, DeleteOutgoingReport3Attachment } from "@pages/api/outgoinreports/outgoinreports";
 import { GetReDocumentComplaints } from "@pages/api/complaint/complaint";
 import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -51,6 +51,8 @@ const RequestResultProgress = () => {
     updateField,
   canSave,
   fileInputKey,
+  isEditing,
+  editReportId,
   } = useRequestResultProgress();
   const router = useRouter();
 
@@ -358,9 +360,10 @@ const RequestResultProgress = () => {
               gridTemplateColumns: {
                 xs: "1fr",
                 sm: "1fr 1fr",
-                md: "6fr 4fr 3fr",
+                md: "1fr 1fr 1fr",
               },
               width: "100%",
+              alignItems: 'flex-start'
             }}
           >
             <SelectFieldsalutation
@@ -414,9 +417,10 @@ const RequestResultProgress = () => {
               gridTemplateColumns: {
                 xs: "1fr",
                 sm: "1fr 1fr",
-                md: "6fr 4fr 3fr",
+                md: "1fr 1fr 1fr",
               },
               width: "100%",
+              alignItems: 'flex-start'
             }}
           >
             {/* เลขที่หนังสือ */}
@@ -430,28 +434,40 @@ const RequestResultProgress = () => {
                 helperText={getFieldError("docNo")}  
               />
 
-            {/* วันที่ */}
+            {/* วันที่หนังสือ */}
             <DateThaiPickerService
-              label={createLabel("วันที่", "date")}
-              value={form.date}
-              onChange={handleDateChange}
-              placeholder="เลือกวันที่"
-              error={!!getFieldError("date")}
-              helperText={getFieldError("date")}
+              label={createLabel("วันที่หนังสือ", "docDate")}
+              value={form.docDate}
+              onChange={(d)=>updateField('docDate', d)}
+              placeholder="เลือกวันที่หนังสือ"
+              error={!!getFieldError("docDate")}
+              helperText={getFieldError("docDate")}
+              sx={{ width: '100%' }}
             />
+            {/* ช่องว่างรักษา layout */}
+            <Box sx={{ display:{xs:'none', md:'block'} }} />
             </Box>
 
           {/* Row 2: เรื่อง* */}
-          <Box>
-            <InputText
-              label={createLabel("เรื่อง", "subject")}
-              inputLabel="กรอกเรื่อง"
-              name="subject"
-              value={form.subject}
-              onChange={handleChange}
-              error={!!getFieldError("subject")}
-              helperText={getFieldError("subject")}
-            />
+          <Box
+            sx={{
+              display:'grid',
+              gap:2,
+              gridTemplateColumns:{ xs:'1fr', md:'1fr 1fr 1fr' },
+              width:'100%'
+            }}
+          >
+            <Box sx={{ gridColumn:{ xs:'1', md:'1 / span 3'} }}>
+              <InputText
+                label={createLabel("เรื่อง", "subject")}
+                inputLabel="กรอกเรื่อง"
+                name="subject"
+                value={form.subject}
+                onChange={handleChange}
+                error={!!getFieldError("subject")}
+                helperText={getFieldError("subject")}
+              />
+            </Box>
           </Box>
 
            <Box
@@ -493,12 +509,13 @@ const RequestResultProgress = () => {
               </IconButton>
             </Box>
             <DateThaiPickerService
-              label={createLabel("วันที่", "date")}
-              value={form.date}
-              onChange={handleDateChange}
-              placeholder="เลือกวันที่"
-              error={!!getFieldError("date")}
-              helperText={getFieldError("date")}
+              label={createLabel("วันที่ สป.กค.", "refDate")}
+              value={form.refDate}
+              onChange={(d)=>updateField('refDate', d)}
+              placeholder="เลือกวันที่ สป.กค."
+              error={!!getFieldError("refDate")}
+              helperText={getFieldError("refDate")}
+              sx={{ width:'100%' }}
             />
           </Box>
 
@@ -810,7 +827,7 @@ const RequestResultProgress = () => {
               onDeleteExisting={async (att) => {
                 const reportId = router?.query?.id || null;
                 if (!reportId || !att?.id) return false;
-                const res = await DeleteOutgoingReportAttachment({
+                const res = await DeleteOutgoingReport3Attachment({
                   outgoing_report_id: reportId,
                   attachment_id: att.id,
                 });
@@ -877,22 +894,22 @@ const RequestResultProgress = () => {
 
           <Box sx={{ width: { xs: "100%", md: "18%" } }}>
             <ButtonService
-              label={isLoading ? "กำลังบันทึก..." : "บันทึก"}
+              label={isLoading ? "กำลังบันทึก..." : (isEditing ? "อัพเดต" : "บันทึก")}
               variant="contained"
               iconRight={<CheckOutlinedIcon />}
               onClick={() => handleSave()}
-              disabled={isLoading || !canSave() || optionsLoading}
+              disabled={isLoading || (!canSave() && !isEditing) || optionsLoading}
               sx={{
-                backgroundColor: canSave() && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
+                backgroundColor: (canSave() || isEditing) && !isLoading && !optionsLoading ? "#2196F3" : "#cccccc",
                 color: "#FFF",
                 width: "100%",
                 height: "55px",
                 fontSize: "20px",
                 fontWeight: "600",
                 "&:hover": {
-                  backgroundColor: canSave() && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
-                  transform: canSave() && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
-                  boxShadow: canSave() && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
+                  backgroundColor: (canSave() || isEditing) && !isLoading && !optionsLoading ? "#1976D2" : "#cccccc",
+                  transform: (canSave() || isEditing) && !isLoading && !optionsLoading ? "translateY(-1px)" : "none",
+                  boxShadow: (canSave() || isEditing) && !isLoading && !optionsLoading ? "0 6px 16px rgba(33, 150, 243, 0.4)" : "none",
                 },
                 "&:disabled": {
                   backgroundColor: "#cccccc",

@@ -142,33 +142,27 @@ const handleManage = (
       });
       break;
     case "REQUEST_UPDATE":
+      {
+        const complaintId2 = router.query?.id || null;
+        router.push({
+          pathname: `/admin/edit/request-result-or-progress/${id}`,
+          query: { complaint_id: complaintId2, outgoing_report3_id: id, report3_id: id, created_at: createdAt || "" },
+        });
+      }
+      break;
+    case "AGENCY_REPORT": {
+      const complaintId2 = router.query?.id || null;
       router.push({
-        pathname: `/admin/edit/request-result-or-progress/${id}`,
-        query: {
-          complaint_id: complaintId || "",
-          complaint_number: complaintNumber || "",
-          created_at: createdAt || "",
-        },
+        pathname: "/admin/edit/report/",
+        query: { complaint_id: complaintId2, outgoing_report5_id: id, report5_id: id, created_at: createdAt || "" },
       });
       break;
-    case "AGENCY_REPORT":
-      router.push({
-        pathname: `/admin/edit/report/${id}`,
-        query: {
-          complaint_id: complaintId || "",
-          complaint_number: complaintNumber || "",
-          created_at: createdAt || "",
-        },
-      });
-      break;
+    }
     case "FINAL_NOTIFY":
+      const complaintId = router.query?.id || null;
       router.push({
-        pathname: `/admin/edit/inform-related-parties/${id}`,
-        query: {
-          complaint_id: complaintId || "",
-          complaint_number: complaintNumber || "",
-          created_at: createdAt || "",
-        },
+        pathname: "/admin/edit/inform-related-parties/",
+        query: { complaint_id: complaintId, report4_id: id, created_at: createdAt || "" },
       });
       break;
     default:
@@ -548,10 +542,16 @@ const TableSection = ({
                                   meta?.complaintNumber,
                                   meta?.createdAt
                                 );
+                              } else if (section.key === "FINAL_NOTIFY") {
+                                // rowObj.id is the outgoing report4 id
+                                if (rowObj.id) {
+                                  handleManage(section.key, rowObj.id, router);
+                                } else {
+                                  console.error("Missing outgoing report4 id for FINAL_NOTIFY row");
+                                }
                               } else {
-                                console.error(
-                                  "Error: ID is missing for this row."
-                                );
+                                // other sections use rowObj.id directly
+                                if (rowObj.id) handleManage(section.key, rowObj.id, router);
                               }
                             }}
                             sx={{

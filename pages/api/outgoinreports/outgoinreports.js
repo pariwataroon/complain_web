@@ -1,5 +1,6 @@
 import axiosInstance from "@pages/api/axiosInstance";
 
+// --- New helper specific for type3 uploads (mirrors type5 pattern but simpler) ---
 const CreateOutgoingReport = async (data) => {
   try {
     const response = await axiosInstance.post(`/outgoing-reports`, data);
@@ -317,6 +318,26 @@ const UploadOutgoingReport5Attachments = async (
   }
 };
 
+// Dedicated helper for Type3 attachments (outgoing-reports3)
+const UploadOutgoingReport3Attachments = async (formData, outgoing_report_id) => {
+  if (!outgoing_report_id) {
+    console.error("❌ ไม่พบ report ID ในการอัพโหลดไฟล์แนบ (type3)");
+    return { success: false, res_message: "ไม่พบ report ID ในการอัพโหลดไฟล์แนบ" };
+  }
+  try {
+    const endpoint = `/outgoing-reports3/${outgoing_report_id}/attachments`;
+    const response = await axiosInstance.post(endpoint, formData);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error uploading attachments (type3):", {
+      status: error?.response?.status,
+      data: error?.response?.data,
+      message: error?.message,
+    });
+    return { success: false, res_message: error?.response?.data?.res_message || error?.message || 'UPLOAD_FAILED', res_code: String(error?.response?.status || '500') };
+  }
+};
+
 const DeleteOutgoingReportAttachment = async ({ outgoing_report_id, attachment_id }) => {
   if (!outgoing_report_id || !attachment_id) {
     return { success: false, res_message: "missing outgoing_report_id or attachment_id" };
@@ -399,4 +420,4 @@ const DeleteOutgoingReport5Attachment = async ({ outgoing_report_id, attachment_
 };
 
 
-export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4, CreateOutgoingReport5, getDepartmentsPrefix, GetOutgoingReportById, GetOutgoingReport2ById, GetOutgoingReport3ById, UploadOutgoingReport5Attachments, DeleteOutgoingReportAttachment, DeleteOutgoingReport4Attachment, GetOutgoingReport4ById, UpdateOutgoingReport4, GetOutgoingReport5ById, UpdateOutgoingReport5 };
+export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4, CreateOutgoingReport5, getDepartmentsPrefix, GetOutgoingReportById, GetOutgoingReport2ById, GetOutgoingReport3ById, UploadOutgoingReport5Attachments, DeleteOutgoingReportAttachment, DeleteOutgoingReport4Attachment, GetOutgoingReport4ById, UpdateOutgoingReport4, GetOutgoingReport5ById, UpdateOutgoingReport5, DeleteOutgoingReport5Attachment, UploadOutgoingReport3Attachments, UpdateOutgoingReport3, DeleteOutgoingReport3Attachment, DeleteOutgoingReport2Attachment, UpdateOutgoingReport2, UpdateOutgoingReport };

@@ -40,6 +40,9 @@ import {
 } from "@mui/material";
 import {
   CreateOutgoingReport5,
+  UpdateOutgoingReport5,
+  GetOutgoingReport5ById,
+  DeleteOutgoingReport5Attachment,
   getDepartmentsPrefix,
   UploadOutgoingReport5Attachments,
 } from "@pages/api/outgoinreports/outgoinreports";
@@ -72,7 +75,9 @@ const URGENCY_OPTIONS = [
 
 const ReceiveReportsAgencies = () => {
   const router = useRouter();
-  const { id, complaint_id, complaint_number } = router.query;
+  // Accept both the new preferred query param (outgoing_report5_id) and the legacy one (report5_id)
+  const { id, complaint_id, complaint_number, outgoing_report5_id, report5_id } = router.query;
+  const outgoingReport5Id = outgoing_report5_id || report5_id || null; // unified id used everywhere below
   const complaintId =
     (Array.isArray(id) ? id[0] : id) ||
     (Array.isArray(complaint_id) ? complaint_id[0] : complaint_id) ||
@@ -85,6 +90,8 @@ const ReceiveReportsAgencies = () => {
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
   const [departments, setDepartments] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [existingAttachments, setExistingAttachments] = useState([]);
 
   const {
     control,
@@ -124,6 +131,22 @@ const ReceiveReportsAgencies = () => {
   );
 
   const [form, setForm] = useState(initialFormState);
+
+  // --- Embed / extract fallback for fieldsที่ backend ไม่ส่งกลับ (process_step, receive_work_date) ---
+  const PROCESS_TAG = '[PROCESS_STEP]:';
+  const RECEIVE_WORK_TAG = '[RECEIVE_WORK_DATE]:';
+  const stripEmbeddedTags = (text = '') => text
+    .split(/\n/)
+    .filter(line => line.trim() && !line.startsWith(PROCESS_TAG) && !line.startsWith(RECEIVE_WORK_TAG))
+    .join('\n');
+  const extractEmbedded = (text = '') => {
+    let processStep = null, receiveWorkDate = null;
+    text.split(/\n/).forEach(line => {
+      if (line.startsWith(PROCESS_TAG)) processStep = line.replace(PROCESS_TAG,'').trim();
+      if (line.startsWith(RECEIVE_WORK_TAG)) receiveWorkDate = line.replace(RECEIVE_WORK_TAG,'').trim();
+    });
+    return { processStep, receiveWorkDate };
+  };
 
   // Parse function for investigateGk
   const parseInvestigateGk = useCallback((raw) => {
@@ -334,13 +357,14 @@ const ReceiveReportsAgencies = () => {
   const toISO = (v) => {
     if (!v) return null;
     try {
-      if (typeof v === "object" && v.day && v.month && v.year) {
-        return new Date(v.year, v.month - 1, v.day).toISOString();
+      const pad = (n) => String(n).padStart(2, '0');
+      if (typeof v === 'object' && v.day && v.month && v.year) {
+        return `${v.year}-${pad(v.month)}-${pad(v.day)}T00:00:00Z`; // สร้างเอง กัน timezone ลบวัน
       }
-      return new Date(v).toISOString();
-    } catch (e) {
-      return null;
-    }
+      const d = new Date(v);
+      if (isNaN(d.getTime())) return null;
+      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}T00:00:00Z`;
+    } catch (e) { return null; }
   };
 
   // Validation function - เปลี่ยนเป็น useCallback เพื่อให้ใช้ current form state
@@ -536,25 +560,15 @@ const ReceiveReportsAgencies = () => {
   // Save gating - ใช้ useMemo แทน useCallback เพื่อให้คำนวณใหม่เมื่อ dependencies เปลี่ยน
   const canSave = useMemo(() => {
     const f = form;
-    const required = [
-      f.referenceNo?.trim(),
-      f.date,
-      f.processStep,
-      f.confidentiality,
-      f.urgency,
-      f.departmentId,
-      f.investigateGk?.trim(),
-      f.investigateDate,
-      f.documentNo?.trim(),
-      f.documentDate,
-      f.receiveWorkDate,
-      f.submitWorkDate,
-      // f.origin?.trim(),
-      f.subject?.trim(),
-      uploadedFiles.length > 0,
+    const base = [
+      f.referenceNo?.trim(), f.date, f.processStep, f.confidentiality, f.urgency,
+      f.departmentId, f.investigateGk?.trim(), f.investigateDate, f.documentNo?.trim(),
+      f.documentDate, f.receiveWorkDate, f.submitWorkDate, f.subject?.trim()
     ];
-    return required.every(Boolean);
-  }, [form, uploadedFiles]);
+    if (!base.every(Boolean)) return false;
+    if (isEditing) return true; // แก้ไข: ไม่บังคับไฟล์
+    return uploadedFiles.length > 0; // สร้างใหม่ยังบังคับไฟล์
+  }, [form, uploadedFiles, isEditing]);
 
   const handleSave = useCallback(async () => {
     // Inline validation using current state
@@ -575,7 +589,7 @@ const ReceiveReportsAgencies = () => {
     if (!form.submitWorkDate) missingFields.push("วันที่เสนองาน ผอ.สรร.");
     // if (!form.origin?.trim()) missingFields.push("ต้นเรื่อง");
     if (!form.subject?.trim()) missingFields.push("เรื่อง");
-    if (uploadedFiles.length === 0) missingFields.push("เอกสารแนบ");
+  if (uploadedFiles.length === 0 && !(isEditing && existingAttachments.length > 0)) missingFields.push("เอกสารแนบ");
 
     if (missingFields.length > 0) {
       const message = `กรุณากรอกข้อมูลให้ครบถ้วน:\n${missingFields.map((f) => `• ${f}`).join("\n")}`;
@@ -584,6 +598,17 @@ const ReceiveReportsAgencies = () => {
     }
 
     try {
+      // สร้าง remarks ฝังค่า process_step / receive_work_date (กัน backend ไม่เก็บ)
+      const baseRemarksClean = stripEmbeddedTags(form.remarks || '');
+      const embedLines = [];
+      if (form.processStep) embedLines.push(`${PROCESS_TAG}${form.processStep}`);
+      if (form.receiveWorkDate) {
+        const dtStr = toISO(form.receiveWorkDate)?.slice(0,10);
+        if (dtStr) embedLines.push(`${RECEIVE_WORK_TAG}${dtStr}`);
+      }
+      const mergedRemarks = [baseRemarksClean, ...embedLines].filter(Boolean).join('\n');
+
+      // Base payload (create)
       const payload = {
         receive_number: form.referenceNo,
         receive_date: toISO(form.date),
@@ -592,21 +617,46 @@ const ReceiveReportsAgencies = () => {
         internal_register_number: form.documentNo,
         internal_register_date: toISO(form.documentDate),
         present_to_director_date: toISO(form.submitWorkDate),
+        receive_work_date: toISO(form.receiveWorkDate),
+  // aliases (เผื่อ backend ใช้ชื่ออื่น) – ส่งซ้ำไม่เป็นไร ถ้า backend ไม่รู้จักจะ ignore
+  receive_staff_date: toISO(form.receiveWorkDate),
+  staff_receive_date: toISO(form.receiveWorkDate),
         complaint_number: form.investigateGk,
         complaint_number_date: toISO(form.investigateDate),
         subject: form.subject,
         document_number: form.documentNo,
         document_date: toISO(form.documentDate),
+        process_step: form.processStep,
+  process_status: form.processStep,
+  processStatus: form.processStep,
+  step: form.processStep,
+  current_step: form.processStep,
         signature_authority_user_id: form.signatureAuthorityId,
         department_id: form.departmentId,
         user_id: form.userId,
         confidentiality_level: form.confidentiality,
         urgency_level: form.urgency,
         complaint_id: complaintId,
-        remarks: form.remarks,
+  remarks: mergedRemarks,
       };
-
-      const res = await CreateOutgoingReport5(payload);
+      // For update: avoid sending identifying fields that can trigger mismatch (complaint linkage) if unchanged
+      let finalPayload = payload;
+      if (isEditing) {
+        finalPayload = { ...payload };
+        delete finalPayload.complaint_id; // backend already knows via existing record; prevents mismatch 4040
+        // Preserve complaint_number only if user edited it AND not empty, else skip
+        if (!form.investigateGk) delete finalPayload.complaint_number;
+        // Remove complaint_number_date if base removed
+        if (!finalPayload.complaint_number) delete finalPayload.complaint_number_date;
+      }
+  let res;
+      if (isEditing && outgoingReport5Id) {
+        console.log('🛠 UPDATE outgoing-report5 payload', finalPayload);
+        res = await UpdateOutgoingReport5(outgoingReport5Id, finalPayload);
+      } else {
+        console.log('🛠 CREATE outgoing-report5 payload', finalPayload);
+        res = await CreateOutgoingReport5(finalPayload);
+      }
 
       // Helper to extract id
       const extractReportId = (resp) => {
@@ -658,15 +708,12 @@ const ReceiveReportsAgencies = () => {
       const reportId = extractReportId(res);
 
       if (!reportId) {
-        alertWarning(
-          "ไม่พบรหัสรายงาน",
-          "ระบบไม่สามารถดึงรหัสรายงานที่สร้างได้ กรุณาลองใหม่"
-        );
+        alertWarning("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานที่บันทึกได้");
         return;
       }
 
       // Upload attachments if any
-      if (uploadedFiles.length) {
+  if (uploadedFiles.length) {
         const allowedTypes = [
           "application/pdf",
           "application/msword",
@@ -765,7 +812,7 @@ const ReceiveReportsAgencies = () => {
 
       const successMessage = `
         <div style="text-align:center; line-height:1.6;">
-          <p style="margin-bottom:12px; font-size:16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
+          <p style="margin-bottom:12px; font-size:16px;">${isEditing ? 'อัปเดต' : 'บันทึก'}แบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
           <p style="margin-bottom:8px; color:#666;">รหัสรายงาน: <strong>${reportId}</strong></p>
           <p style="margin-bottom:8px; color:#666;">เรื่อง: <strong>${
             form.subject || "-"
@@ -777,6 +824,16 @@ const ReceiveReportsAgencies = () => {
           }
         </div>
       `;
+
+      // ถ้าเป็น update ลองดึงกลับมาดูทันทีว่าค่าถูกเซฟจริงไหม (debug)
+      if (isEditing && reportId) {
+        try {
+          const verifyRes = await GetOutgoingReport5ById(reportId);
+          console.log('🔎 VERIFY_AFTER_UPDATE outgoing-report5', verifyRes);
+        } catch (verErr) {
+          console.warn('⚠️ verify fetch failed', verErr?.response?.data || verErr);
+        }
+      }
 
       closeAlert();
       await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
@@ -804,7 +861,96 @@ const ReceiveReportsAgencies = () => {
       console.error("❌ handleSave error:", error?.response?.data || error);
       alertWarning("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
     }
-  }, [form, uploadedFiles, complaintId, router]);
+  }, [form, uploadedFiles, complaintId, router, isEditing, existingAttachments, outgoingReport5Id]);
+
+  // load existing record (prefill)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!outgoingReport5Id) return;
+      try {
+        const res = await GetOutgoingReport5ById(outgoingReport5Id);
+        const d = res?.res_data || res?.data || res;
+        if (!d || cancelled) return;
+        setIsEditing(true);
+        const parseDate = (iso) => {
+          if (!iso) return null; const dt = new Date(iso); if (isNaN(dt.getTime())) return null; return { day: dt.getDate(), month: dt.getMonth()+1, year: dt.getFullYear(), buddhistYear: dt.getFullYear()+543 };
+        };
+
+        // --- Fallback resolve for process step ---
+        const processStepRaw = (
+          d.process_step || d.processStatus || d.process_status || d.step ||
+          d.status_step || d.workflow_step || d.current_step || d.phase || d.stage
+        );
+        // Normalization (กรณี backend ส่งอังกฤษ)
+        const processStepMap = {
+          receive: 'รับเรื่อง',
+          received: 'รับเรื่อง',
+          review: 'ตรวจสอบเอกสาร',
+          verifying: 'ตรวจสอบเอกสาร',
+          forward: 'ส่งต่อหน่วยงาน',
+          forwarded: 'ส่งต่อหน่วยงาน',
+          investigate: 'ดำเนินการสอบสวน',
+          investigation: 'ดำเนินการสอบสวน',
+          report: 'รายงานผล',
+          reporting: 'รายงานผล',
+          followup: 'ติดตามผล',
+          follow_up: 'ติดตามผล',
+          close: 'ปิดเรื่อง',
+          closed: 'ปิดเรื่อง'
+        };
+        let normalizedProcessStep = processStepRaw;
+        if (processStepRaw && !PROCESS_STEP_OPTIONS.some(o => o.value === processStepRaw)) {
+          const key = String(processStepRaw).toLowerCase();
+          normalizedProcessStep = processStepMap[key] || processStepRaw;
+        }
+
+        // --- Fallback resolve for receive work date ---
+        const receiveWorkDateRaw = (
+          d.receive_work_date || d.receive_staff_date || d.staff_receive_date ||
+          d.officer_receive_date || d.receive_working_date || d.receiveWorkDate || d.receiveDateWork
+        );
+
+        const embedded = extractEmbedded(d.remarks || '');
+        const receiveWorkDateParsed = parseDate(receiveWorkDateRaw || embedded.receiveWorkDate);
+        if (typeof window !== 'undefined') {
+          console.log('[Prefill outgoing-report5] raw data keys:', Object.keys(d));
+          console.log('[Prefill outgoing-report5] resolved:', { processStepRaw, normalizedProcessStep, receiveWorkDateRaw, embedded });
+        }
+        setForm((prev) => ({
+          ...prev,
+          referenceNo: d.receive_number || d.reference_number || d.receive_no || prev.referenceNo,
+          date: parseDate(d.receive_date || d.reference_date) || prev.date,
+          processStep: normalizedProcessStep || embedded.processStep || prev.processStep,
+          confidentiality: d.confidentiality_level || d.confidentiality || prev.confidentiality,
+          urgency: d.urgency_level || d.urgency || prev.urgency,
+          departmentId: d.department_id || d.department?.id || prev.departmentId,
+          investigateGk: d.agency_reference_number || d.complaint_number || prev.investigateGk,
+          investigateDate: parseDate(d.agency_reference_date || d.complaint_number_date) || prev.investigateDate,
+          documentNo: d.internal_register_number || d.document_number || prev.documentNo,
+          documentDate: parseDate(d.internal_register_date || d.document_date) || prev.documentDate,
+          receiveWorkDate: receiveWorkDateParsed || prev.receiveWorkDate,
+          submitWorkDate: parseDate(d.present_to_director_date) || prev.submitWorkDate,
+          subject: d.subject || prev.subject,
+          remarks: stripEmbeddedTags(d.remarks || prev.remarks || ''),
+        }));
+        setExistingAttachments(Array.isArray(d.attachments) ? d.attachments : []);
+      } catch (e) {
+        console.error('Prefill outgoing-report5 failed', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [outgoingReport5Id]);
+
+  const handleDeleteExistingAttachment = useCallback(async (att) => {
+  if (!att?.id || !outgoingReport5Id) return;
+  const res = await DeleteOutgoingReport5Attachment({ outgoing_report_id: outgoingReport5Id, attachment_id: att.id });
+    if (res?.success === false) {
+      alertWarning('ลบไฟล์ไม่สำเร็จ', res?.res_message || 'ไม่สามารถลบไฟล์ได้');
+      return;
+    }
+    setExistingAttachments(prev => prev.filter(x => x.id !== att.id));
+  }, [outgoingReport5Id]);
 
 
   return (
@@ -1620,6 +1766,22 @@ const ReceiveReportsAgencies = () => {
             <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: "block" }}>
               หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB
             </Typography>
+              {isEditing && existingAttachments.length > 0 && (
+                <Box sx={{ mt: 1, p:1, border: '1px solid #e0e0e0', borderRadius: 1, background:'#fafafa' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 0.5 }}>ไฟล์ที่มีอยู่</Typography>
+                  {existingAttachments.map(att => (
+                    <Box key={att.id} sx={{ display:'flex', alignItems:'center', justifyContent:'space-between', py:0.5, borderBottom:'1px dashed #ddd', '&:last-child':{borderBottom:'none'} }}>
+                      <Typography variant="body2" sx={{ maxWidth:'70%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{att.file_name || att.name}</Typography>
+                      <Box sx={{ display:'flex', gap:1 }}>
+                        {att.file_url || att.url ? (
+                          <Button size="small" variant="outlined" onClick={()=> window.open(att.file_url || att.url, '_blank')} sx={{ fontSize:12, py:0.3 }}>เปิด</Button>
+                        ) : null}
+                        <Button size="small" color="error" variant="outlined" onClick={()=> handleDeleteExistingAttachment(att)} sx={{ fontSize:12, py:0.3 }}>ลบ</Button>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              )}
             {uploadedFiles.length > 0 && (
               <Typography variant="body2" sx={{ mt: 1, color: "green" }}>
                 ไฟล์ที่เลือก: {uploadedFiles.map(f => f.name).join(', ')}
