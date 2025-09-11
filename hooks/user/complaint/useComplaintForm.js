@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import {
   alertSuccess,
@@ -22,29 +22,40 @@ export default function useComplaintForm() {
     step4: {},
   });
 
-  const updateStepData = (stepKey, tabKey, data) => {
+  const updateStepData = useCallback((stepKey, tabKey, data) => {
     setFormData((prev) => {
-      const updated = {
+      const currentTabState = prev[stepKey]?.[tabKey] || {};
+      
+      // Execute the update function if data is a function, otherwise use data directly
+      const newData = typeof data === 'function' ? data(currentTabState) : data;
+
+      // Prevent update if the data hasn't actually changed
+      if (JSON.stringify(currentTabState) === JSON.stringify(newData)) {
+        return prev;
+      }
+
+      return {
         ...prev,
         [stepKey]: {
           ...prev[stepKey],
-          [tabKey]: data,
+          [tabKey]: newData,
         },
       };
-      return updated;
     });
-  };
+  }, []);
 
-  const getStepTabData = (stepKey, tabKey) => {
-    const result = formData[stepKey]?.[tabKey] || {};
-    return result;
-  };
+  const getStepTabData = useCallback(
+    (stepKey, tabKey) => {
+      return formData[stepKey]?.[tabKey] || {};
+    },
+    [formData]
+  );
 
-  const getFormData = () => {
+  const getFormData = useCallback(() => {
     return formData;
-  };
+  }, [formData]);
 
-  const handleSubmitForm = async () => {
+  const handleSubmitForm = useCallback(async () => {
     const { step1, step2, step3, step4 } = formData;
 
     const isConfirmed = await showConfirm(
@@ -266,7 +277,7 @@ export default function useComplaintForm() {
       alertError("เกิดข้อผิดพลาด", error?.message || "ไม่สามารถส่งเรื่องได้");
       console.error("=== Submit Form Error ===", error);
     }
-  };
+  }, [formData, router]);
 
   useEffect(() => {}, [formData]);
 

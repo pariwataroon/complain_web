@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import styles from "./TabNav.module.scss";
 import ComplaintPersonalForm from "@services/ComplaintPersonalTab2/ComplaintPersonalForm";
 import ComplaintCustomerForm from "@services/ComplaintCustomer/ComplaintCustomerForm";
@@ -23,32 +23,21 @@ const Tab2 = ({
     }
   };
 
-  const handleChange = (type) => (name, value) => {
-    const updatedTypeData = {
-      ...(tabData[type] || {}),
-      [name]: value,
-    };
-
-    const updatedData = {
-      ...tabData,
-      [type]: updatedTypeData,
-      activeType: type,
-    };
-
-    updateStepData(stepKey, "general", updatedData);
-  };
+  const handleChange = useCallback((type) => (name, value) => {
+    const prevSection = tabData[type] || {};
+    const nextSection = { ...prevSection, [name]: value };
+    if (JSON.stringify(prevSection) === JSON.stringify(nextSection)) return; // no change
+    const nextContainer = { ...tabData, [type]: nextSection, activeType: type };
+    updateStepData(stepKey, "general", nextContainer);
+  }, [tabData, stepKey, updateStepData]);
 
   useEffect(() => {
     const typeMap = ["individual", "corporate", "government"];
     const activeType = typeMap[currentTab];
 
     if (activeType && tabData.activeType !== activeType) {
-      const updatedData = {
-        ...tabData,
-        activeType: activeType,
-      };
-      updateStepData(stepKey, "general", updatedData);
-
+      const nextContainer = { ...tabData, activeType };
+      updateStepData(stepKey, "general", nextContainer);
     }
   }, [currentTab, stepKey, tabData, updateStepData]);
 

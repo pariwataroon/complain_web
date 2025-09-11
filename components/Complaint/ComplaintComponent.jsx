@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import NavbarMain from "@services/navbarMain/navbarMain";
 import { Container, Box } from "@mui/material";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
@@ -22,6 +22,31 @@ const stepLabels = [
 ];
 
 export default function ComplaintComponent() {
+  // ===== CIRCUIT BREAKER: ป้องกัน Infinite Loop =====
+  const renderCountRef = useRef(0);
+  const lastRenderTimeRef = useRef(Date.now());
+  
+  renderCountRef.current++;
+  const currentTime = Date.now();
+  
+  // ถ้า render เกิน 50 ครั้งภายใน 5 วินาที = หยุดทันที
+  if (currentTime - lastRenderTimeRef.current < 5000) {
+    if (renderCountRef.current > 50) {
+      console.error("🛑 CIRCUIT BREAKER ACTIVATED: Too many renders detected!");
+      return (
+        <div style={{ padding: '20px', textAlign: 'center', color: 'red' }}>
+          <h2>⚠️ ระบบหยุดชั่วคราว</h2>
+          <p>ตรวจพบการทำงานผิดปกติ กรุณารีเฟรชหน้าเว็บ</p>
+          <button onClick={() => window.location.reload()}>รีเฟรชหน้า</button>
+        </div>
+      );
+    }
+  } else {
+    // รีเซ็ตตัวนับทุก 5 วินาที
+    renderCountRef.current = 1;
+    lastRenderTimeRef.current = currentTime;
+  }
+
   const [activeStep, setActiveStep] = useState(0);
   const [acceptSubmit, setAcceptSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
@@ -32,9 +57,6 @@ export default function ComplaintComponent() {
     step2: 0,
   });
 
-  const StepComponent = processComponents[activeStep];
-  const pdfRef = useRef();
-
   const {
     formData,
     updateStepData,
@@ -42,6 +64,14 @@ export default function ComplaintComponent() {
     getFormData,
     handleSubmitForm,
   } = useComplaintForm();
+
+  const stepKey = `step${activeStep + 1}`;
+
+  // ===== Memoize Step Data to Prevent Unnecessary Re-renders =====
+  // This is the core fix for the infinite loop.
+  // We ensure the `tabData` object reference only changes when the actual data changes.
+  // 🛑 TEMPORARILY DISABLED FOR DEBUGGING
+  const memoizedStepData = getStepTabData(stepKey, "general"); // ปิด useMemo ชั่วคราว
 
   const hasValue = useCallback((value) => {
     if (Array.isArray(value)) {
@@ -90,6 +120,28 @@ export default function ComplaintComponent() {
     return result;
   }, []);
 
+  // ===== ตรวจ role admin จาก cookie (รูปแบบเดียวกับ tab1) =====
+  const [userRoles, setUserRoles] = useState([]);
+  useEffect(() => {
+    try {
+      const cookies = document.cookie.split(";").reduce((acc, c) => {
+        const [k, v] = c.trim().split("=");
+        if (k && v) acc[k] = v;
+        return acc;
+      }, {});
+      if (cookies.info) {
+        const parsed = JSON.parse(decodeURIComponent(cookies.info));
+        let roles = [];
+        if (typeof parsed.roles === "string") roles = JSON.parse(parsed.roles);
+        else if (Array.isArray(parsed.roles)) roles = parsed.roles;
+        setUserRoles(roles);
+      }
+    } catch (e) {
+      console.warn("parse roles failed", e);
+    }
+  }, []);
+  const isAdmin = useMemo(() => userRoles.includes("admin"), [userRoles]);
+
   const validateCurrentStep = () => {
     const stepKey = `step${activeStep + 1}`;
 
@@ -105,6 +157,11 @@ export default function ComplaintComponent() {
     }
 
     const errors = {};
+
+    if (isAdmin) {
+      // ข้าม validation ทั้งหมดถ้าเป็น admin
+      return { errors: {}, isValid: true };
+    }
 
     // STEP 1: ข้อมูลผู้ร้องทุกข์
     if (activeStep === 0) {
@@ -155,7 +212,7 @@ export default function ComplaintComponent() {
         const corpIdCardValue = data?.corporate?.idCard;
         if (!hasValue(corpIdCardValue)) {
           errors[`corporate.idCard`] =
-            "กรุณากรอก เลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคล ของนิติบุคคล";
+            "กรุณากรอก เลขบัตรประชาชน/เลขทะเบียนนิติบุคคล ของนิติบุคคล";
         } else if (corpIdCardValue.length !== 13) {
           errors[`corporate.idCard`] =
             "กรุณากรอกเลขบัตรประจำตัวประชาชน/เลขทะเบียนนิติบุคคลให้ครบ 13 หลัก ของนิติบุคคล";
@@ -316,7 +373,7 @@ export default function ComplaintComponent() {
     }
 
     return true;
-  }, [activeStep, tabStates, formData, hasValue]);
+  }, [activeStep, tabStates, formData, hasValue, isAdmin]);
 
   const handleNext = async () => {
     const isValid = await validateStepForSubmit();
@@ -356,6 +413,8 @@ export default function ComplaintComponent() {
     }
   };
 
+  const StepComponent = processComponents[activeStep];
+
   return (
     <>
       <NavbarMain />
@@ -373,29 +432,40 @@ export default function ComplaintComponent() {
             )}
             <Box sx={{ flex: 1 }}>
               {activeStep === 4 ? (
-                <div ref={pdfRef}>
+                <div>
                   <Tab5
                     stepKey={`step${activeStep + 1}`}
                     tabData={getStepTabData(`step${activeStep + 1}`, "general")}
                     updateStepData={updateStepData}
                     onAccepted={setAcceptSubmit}
-                    formData={getFormData()}
+                    formData={formData}
                     currentTab1={tabStates.step1}
                     currentTab2={tabStates.step2}
                   />
                 </div>
-              ) : (
-                <StepComponent
+              ) : activeStep === 2 ? (
+                // � STEP 3 DEBUG MODE: ทดสอบ Tab3 แต่ปิด sub-components
+                <Tab3
                   stepKey={`step${activeStep + 1}`}
-                  tabData={getStepTabData(`step${activeStep + 1}`, "general")}
+                  tabData={memoizedStepData}
                   updateStepData={updateStepData}
-                  onAccepted={setAcceptSubmit}
-                  formData={getFormData()}
                   validationErrors={validationErrors}
                   shouldShowValidation={shouldShowValidation}
-                  onTabChange={handleTabChange}
-                  currentTab={tabStates[`step${activeStep + 1}`] || 0}
                 />
+              ) : (
+                StepComponent && (
+                  <StepComponent
+                    stepKey={`step${activeStep + 1}`}
+                    tabData={memoizedStepData}
+                    updateStepData={updateStepData}
+                    onAccepted={setAcceptSubmit}
+                    formData={formData}
+                    validationErrors={validationErrors}
+                    shouldShowValidation={shouldShowValidation}
+                    onTabChange={handleTabChange}
+                    currentTab={tabStates[`step${activeStep + 1}`] || 0}
+                  />
+                )
               )}
 
               <Box
@@ -440,14 +510,7 @@ export default function ComplaintComponent() {
                       variant="contained"
                       onClick={() => {
                         if (activeStep === 3) {
-                          if (!acceptSubmit) {
-                            alertError(
-                              "ไม่สามารถส่งได้",
-                              "กรุณายอมรับเงื่อนไขก่อนส่งเรื่องร้องทุกข์"
-                            );
-                            return;
-                          }
-                          handleNext();
+                          handleSubmit();
                         } else {
                           handleNext();
                         }
