@@ -38,22 +38,25 @@ import {
 
 const InitialNotificationComplainantAgency = () => {
   const {
-    form,
-    errors,
-    isLoading,
-    createLabel,
-    getFieldError,
-    handleChange,
-    handleDocumentDateChange,
-    handleComplaintNumberDateChange,
-    handleFileUpload,
-    handleClear,
-    handleSave,
-    isFormValid,
-    isRequired,
-    fileInputKey,
-    canSave,
-  } = useInitialNotificationComplainantAgency();
+  form,
+  errors,
+  isLoading,
+  createLabel,
+  getFieldError,
+  handleChange,
+  handleDocumentDateChange,
+  handleComplaintNumberDateChange,
+  handleFileUpload,
+  handleClear,
+  handleSave,
+  isFormValid,
+  isRequired,
+  fileInputKey,
+  canSave,
+  existingAttachments,
+  handleDeleteExistingAttachment,
+} = useInitialNotificationComplainantAgency();
+
   const router = useRouter();
 
   const pickId = (o) => o?.id ?? o?.value ?? o;
@@ -84,7 +87,7 @@ const InitialNotificationComplainantAgency = () => {
   const inputRef = useRef();
 
   // Read-only list of attachments already on the server for this report
-  const [existingAttachments, setExistingAttachments] = useState([]);
+  // const [existingAttachments, setExistingAttachments] = useState([]);
 
   // Build absolute URL from file_path and normalize Windows-style paths (same as Forward component)
   const normalizeFilePath = useCallback((p) => {
@@ -749,20 +752,7 @@ const InitialNotificationComplainantAgency = () => {
               multiple={true}
               existingFiles={existingAttachments}
               getFileUrl={(att) => buildFileUrl(att.file_path)}
-              onDeleteExisting={async (att) => {
-                const reportId = router?.query?.id || null;
-                if (!reportId || !att?.id) return false;
-                const res = await DeleteOutgoingReportAttachment({
-                  outgoing_report_id: reportId,
-                  attachment_id: att.id,
-                });
-                if (res?.success === false) {
-                  alert(res?.res_message || "ลบไฟล์ไม่สำเร็จ");
-                  return false;
-                }
-                setExistingAttachments((prev) => prev.filter((x) => x.id !== att.id));
-                return true;
-              }}
+              onDeleteExisting={handleDeleteExistingAttachment}
             />
           </Box>
 

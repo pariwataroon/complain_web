@@ -170,11 +170,11 @@ export const useInitialNotificationComplainantAgency = () => {
           selected_complaint_number: "",
         }));
 
-        const atts = Array.isArray(d.attachments) ? d.attachments : [];
-        setExistingAttachments(atts);
+        // ใช้เฉพาะ attachments ที่ได้จาก API เท่านั้น
+        setExistingAttachments(Array.isArray(d.attachments) ? d.attachments : []);
         // อัพเดทชื่อไฟล์แนบในฟอร์ม (แสดงไฟล์ปัจจุบันจาก API)
-        if (atts.length) {
-          const names = atts.map(a => a.file_name || a.original_name || a.name || '').filter(Boolean).join(', ');
+        if (Array.isArray(d.attachments) && d.attachments.length) {
+          const names = d.attachments.map(a => a.file_name || a.original_name || a.name || '').filter(Boolean).join(', ');
           setForm((prev) => ({ ...prev, attachment: names }));
         } else {
           setForm((prev) => ({ ...prev, attachment: "" }));
@@ -411,19 +411,20 @@ export const useInitialNotificationComplainantAgency = () => {
   const handleDeleteExistingAttachment = useCallback(
     async (att) => {
       const reportId = router?.query?.id || id || null;
-      if (!reportId || !att?.id) return false;
-      await DeleteOutgoingReport2Attachment({
-        outgoing_report_id: reportId,
-        attachment_id: att.id,
-      });
+      // if (!reportId || !att?.id) return false;
+      // await DeleteOutgoingReport2Attachment({
+      //   outgoing_report_id: reportId,
+      //   attachment_id: att.id,
+      // });
 
       // Refetch data after delete (sync UI with API)
       try {
         const res = await GetOutgoingReport2ById(reportId);
         const d = res?.res_data || res?.data || res;
-        const atts = Array.isArray(d.attachments) ? d.attachments : [];
-        setExistingAttachments(atts);
-        const names = atts.map(a => a.file_name || a.original_name || a.name || '').filter(Boolean).join(', ');
+        setExistingAttachments(Array.isArray(d.attachments) ? d.attachments : []);
+        const names = Array.isArray(d.attachments) && d.attachments.length
+          ? d.attachments.map(a => a.file_name || a.original_name || a.name || '').filter(Boolean).join(', ')
+          : "";
         setForm((prev) => ({ ...prev, attachment: names }));
       } catch (err) {}
       return true;
@@ -431,7 +432,6 @@ export const useInitialNotificationComplainantAgency = () => {
     [router?.query?.id, id]
   );
 
-    // ---------- SAVE ----------
   const handleSave = useCallback(async () => {
     const missing = validateRequiredFields();
     if (missing.length > 0) {
@@ -609,6 +609,7 @@ export const useInitialNotificationComplainantAgency = () => {
       alertError("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
     }
   }, [form, attachmentFiles, validateRequiredFields]);
+
   const isFormValid = useCallback(
     () =>
       requiredFields.every((f) => {
