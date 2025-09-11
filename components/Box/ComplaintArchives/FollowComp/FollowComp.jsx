@@ -58,34 +58,77 @@ const handleOpenDocument = (documentName) => {
   window.open(w3schoolsPDF, "_blank");
 };
 
-const handleManage = (sectionKey, id, router) => {
+const handleManage = (
+  sectionKey,
+  id,
+  router,
+  complaintId,
+  complaintNumber,
+  createdAt
+) => {
   if (!id) {
     console.error("Error: complaintId is undefined or null");
     return;
   }
   switch (sectionKey) {
     case "RECEIVED":
-      router.push(`/admin/edit/website-complaints/${id}`);
+      router.push({
+        pathname: `/admin/edit/website-complaints/${id}`,
+        query: {
+          complaint_id: complaintId || "",
+          complaint_number: complaintNumber || "",
+          created_at: createdAt || "",
+        },
+      });
       break;
     case "FORWARDED":
-      router.push(`/admin/edit/forward-to-agency/${id}`);
+      router.push({
+        pathname: `/admin/edit/forward-to-agency/${id}`,
+        query: {
+          complaint_id: complaintId || "",
+          complaint_number: complaintNumber || "",
+          created_at: createdAt || "",
+        },
+      });
       break;
     case "INITIAL_NOTIFY":
-      router.push(
-        `/admin/edit/initial-notification-to-complainant-or-agency/${id}`
-      );
+      router.push({
+        pathname: `/admin/edit/initial-notification-to-complainant-or-agency/${id}`,
+        query: {
+          complaint_id: complaintId || "",
+          complaint_number: complaintNumber || "",
+          created_at: createdAt || "",
+        },
+      });
       break;
     case "REQUEST_UPDATE":
-      router.push(`/admin/edit/request-result-or-progress/${id}`);
+      router.push({
+        pathname: `/admin/edit/request-result-or-progress/${id}`,
+        query: {
+          complaint_id: complaintId || "",
+          complaint_number: complaintNumber || "",
+          created_at: createdAt || "",
+        },
+      });
       break;
     case "AGENCY_REPORT":
-      router.push(`/admin/edit/report/${id}`);
+      router.push({
+        pathname: `/admin/edit/report/${id}`,
+        query: {
+          complaint_id: complaintId || "",
+          complaint_number: complaintNumber || "",
+          created_at: createdAt || "",
+        },
+      });
       break;
     case "FINAL_NOTIFY":
-      const complaintId = router.query?.id || id;
       router.push({
-        pathname: "/admin/edit/inform-related-parties/",
-        query: { complaint_id: complaintId },
+        pathname: `/admin/edit/inform-related-parties/${id}`,
+        query: {
+          complaint_id: complaintId || "",
+          complaint_number: complaintNumber || "",
+          created_at: createdAt || "",
+        },
       });
       break;
     default:
@@ -318,12 +361,13 @@ const addButtonHandlers = {
         created_at: createdAt || "",
       },
     }),
-  REQUEST_UPDATE: (router, complaintId, complaintNumber) =>
+  REQUEST_UPDATE: (router, complaintId, complaintNumber, createdAt) =>
     router.push({
       pathname: "/admin/edit/request-result-or-progress/",
       query: {
         complaint_id: complaintId || "",
         complaint_number: complaintNumber || "",
+        created_at: createdAt || "",
       },
     }),
   AGENCY_REPORT: (router, complaintId, complaintNumber, createdAt) =>
@@ -335,12 +379,13 @@ const addButtonHandlers = {
        created_at: createdAt || "",
       },
    }),
-  FINAL_NOTIFY: (router, complaintId, complaintNumber) =>
+  FINAL_NOTIFY: (router, complaintId, complaintNumber, createdAt) =>
     router.push({
       pathname: "/admin/edit/inform-related-parties/",
       query: {
         complaint_id: complaintId || "",
         complaint_number: complaintNumber || "",
+        created_at: createdAt || "",
       },
     }),
 };
@@ -354,6 +399,7 @@ const TableSection = ({
   router,
   onOpenAttachments,
   handleManage,
+  meta,
 }) => (
   <Box
     sx={{
@@ -445,13 +491,16 @@ const TableSection = ({
                           <IconButton
                             size="small"
                             onClick={() => {
-                              const complaintId = router.query?.id;
-                              const targetId =
-                                section.key === "FINAL_NOTIFY"
-                                  ? complaintId
-                                  : rowObj.id;
+                              const targetId = rowObj.id;
                               if (targetId) {
-                                handleManage(section.key, targetId, router);
+                                handleManage(
+                                  section.key,
+                                  targetId,
+                                  router,
+                                  meta?.complaintId,
+                                  meta?.complaintNumber,
+                                  meta?.createdAt
+                                );
                               } else {
                                 console.error(
                                   "Error: ID is missing for this row."
@@ -922,6 +971,16 @@ const agencyReportRows = outgoingType5.map((item) => ({
     router.push("/complaint/");
   };
 
+  const complaintMeta = {
+    complaintId: id,
+    complaintNumber:
+      documentData?.detail?.complaintNumber ||
+      documentData?.relationships?.master_complaint?.complaint_number ||
+      documentData?.relationships?.all_related?.[0]?.complaint_number ||
+      "",
+    createdAt: documentData?.detail?.created_at || "",
+  };
+
   return (
     <Box>
       <BreadcrumbsService items={breadcrumbItems} />
@@ -980,7 +1039,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
       <Box sx={{ background: "#91CBFF", py: 2, width: "100%" }}>
         <Stack direction="row" alignItems="center" spacing={2} sx={{ px: 3 }}>
           <Typography variant="h6" sx={{ color: "#000" }}>
-            ขั้นตอนดำเนินการครั้งแรก
+            ขั้นตอนดำเนินการ
           </Typography>
           <img
             src="/icons/Add.png"
@@ -1067,7 +1126,14 @@ const agencyReportRows = outgoingType5.map((item) => ({
                                 size="small"
                                 onClick={() => {
                                   if (rowObj.id) {
-                                    handleManage("RECEIVED", rowObj.id, router);
+                                    handleManage(
+                                      "RECEIVED",
+                                      rowObj.id,
+                                      router,
+                                      complaintMeta.complaintId,
+                                      complaintMeta.complaintNumber,
+                                      complaintMeta.createdAt
+                                    );
                                   } else {
                                     console.error(
                                       "Error: ID is missing for this row."
@@ -1139,6 +1205,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
             router={router}
             onOpenAttachments={openAttachments}
             handleManage={handleManage}
+            meta={complaintMeta}
           />
           {/* แจ้งผู้ร้องเรียนส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น */}
           <TableSection
@@ -1160,6 +1227,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
             router={router}
             onOpenAttachments={openAttachments}
             handleManage={handleManage}
+            meta={complaintMeta}
           />
           {/* ขอทราบผลการพิจารณา / ผลความคืบหน้า */}
           <TableSection
@@ -1182,6 +1250,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
             router={router}
             onOpenAttachments={openAttachments}
             handleManage={handleManage}
+            meta={complaintMeta}
           />
           {/* หนังสือแจ้งผลพิจารณาหน่วยงาน */}
           <TableSection
@@ -1202,6 +1271,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
             router={router}
             onOpenAttachments={openAttachments}
             handleManage={handleManage}
+            meta={complaintMeta}
           />
           <Box
             sx={{
@@ -1243,6 +1313,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
             router={router}
             onOpenAttachments={openAttachments}
             handleManage={handleManage}
+            meta={complaintMeta}
           />
         </>
       )}
