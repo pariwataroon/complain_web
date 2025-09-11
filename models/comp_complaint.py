@@ -217,6 +217,7 @@ class Complaint(Base):
     outgoing_reports3 = relationship("OutgoingReport3", back_populates="complaint") # แบบรายงานขอทราบผลการพิจารณา / ผลความคืบหน้า
     outgoing_reports4 = relationship("OutgoingReport4", back_populates="complaint") # แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ
     outgoing_reports5 = relationship("OutgoingReport5", back_populates="complaint") # แบบรับเรื่องรายงานผลการพิจารณาจากหน่วยงาน
+    outgoing_reports6 = relationship("OutgoingReport6", back_populates="complaint") # แบบรายงานนำเรียนผู้ตรวจ
 
 class ComplaintAttachment(Base):
     __tablename__ = "comp_complaint_attachments"

@@ -31,6 +31,7 @@ from .outgoing_reports2 import OutgoingReport2, OutgoingReportAttachment2
 from .outgoing_reports3 import OutgoingReport3, OutgoingReportAttachment3
 from .outgoing_reports4 import OutgoingReport4, OutgoingReportAttachment4
 from .outgoing_reports5 import OutgoingReport5, OutgoingReportAttachment5
+from .outgoing_reports6 import OutgoingReport6, OutgoingReportAttachment6
 from .chat_bot import ChatBot
 from .news import News
 
@@ -46,5 +47,6 @@ __all__ = [
     'OutgoingReport', 'OutgoingReportAttachment', 'OutgoingReport2', 'OutgoingReportAttachment2',
     'OutgoingReport3', 'OutgoingReportAttachment3', 'OutgoingReport4', 'OutgoingReportAttachment4',
     'OutgoingReport5', 'OutgoingReportAttachment5',
+    'OutgoingReport6', 'OutgoingReportAttachment6',
     'ChatBot', 'News'
 ]
