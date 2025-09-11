@@ -17,6 +17,7 @@ from models.outgoing_reports import OutgoingReport
 from models.outgoing_reports2 import OutgoingReport2
 from models.outgoing_reports3 import OutgoingReport3
 from models.outgoing_reports4 import OutgoingReport4
+from models.outgoing_reports6 import OutgoingReport6
 from app.api.v1.controllers.user_controller import get_user_with_roles_and_titles
 
 # สร้าง logger
@@ -847,7 +848,7 @@ def get_complaint_summary_bkk_year(db: Session) -> Dict[str, Any]:
     utc_month_start = bkk_month_start.astimezone(timezone.utc) if bkk_month_start.tzinfo else bkk_month_start
     utc_month_end   = bkk_month_end.astimezone(timezone.utc)   if bkk_month_end.tzinfo   else bkk_month_end
 
-    # ผูก complaint_id ↔ department_id จาก outgoing_reports(1–4) แล้ว distinct กันซ้ำ
+    # ผูก complaint_id ↔ department_id จาก outgoing_reports(1–4,6) แล้ว distinct กันซ้ำ
     r1 = select(OutgoingReport.complaint_id.label("complaint_id"),
                 OutgoingReport.department_id.label("department_id"))
     r2 = select(OutgoingReport2.complaint_id.label("complaint_id"),
@@ -856,8 +857,10 @@ def get_complaint_summary_bkk_year(db: Session) -> Dict[str, Any]:
                 OutgoingReport3.department_id.label("department_id"))
     r4 = select(OutgoingReport4.complaint_id.label("complaint_id"),
                 OutgoingReport4.department_id.label("department_id"))
+    r6 = select(OutgoingReport6.complaint_id.label("complaint_id"),
+                OutgoingReport6.department_id.label("department_id"))
 
-    rep_union = union_all(r1, r2, r3, r4).subquery("rep_union")
+    rep_union = union_all(r1, r2, r3, r4, r6).subquery("rep_union")
     link_distinct = select(
         distinct(rep_union.c.complaint_id).label("complaint_id"),
         rep_union.c.department_id.label("department_id")
@@ -934,7 +937,7 @@ def _bkk_year_to_utc_range(year: int):
     return bkk_start, bkk_end, utc_start, utc_end
 
 
-# ---------- helper: department filter by any outgoing_reports(1–4) ----------
+# ---------- helper: department filter by any outgoing_reports(1–4,6) ----------
 def _filter_by_department(query, department_id):
     """
     จำกัดเรื่องร้องเรียนให้อยู่ในแผนกที่ได้รับมอบหมาย ‘ใดๆ’ ผ่านรายงานส่งออก 1–4
@@ -948,6 +951,7 @@ def _filter_by_department(query, department_id):
         exists().where(OutgoingReport2.complaint_id == Complaint.id).where(OutgoingReport2.department_id == department_id),
         exists().where(OutgoingReport3.complaint_id == Complaint.id).where(OutgoingReport3.department_id == department_id),
         exists().where(OutgoingReport4.complaint_id == Complaint.id).where(OutgoingReport4.department_id == department_id),
+        exists().where(OutgoingReport6.complaint_id == Complaint.id).where(OutgoingReport6.department_id == department_id),
     )
     return query.filter(any_report_of_dept)
 
@@ -1030,7 +1034,7 @@ def get_donut_types_grouped_by_department(
 
     bkk_start, bkk_end, utc_start, utc_end = _bkk_year_to_utc_range(year)
 
-    # ----- union รายงานส่งออกทั้งหมด → (complaint_id, department_id)
+    # ----- union รายงานส่งออกทั้งหมด → (complaint_id, department_id) (1–4,6)
     r1 = select(OutgoingReport.complaint_id.label("complaint_id"),
                 OutgoingReport.department_id.label("department_id"))
     r2 = select(OutgoingReport2.complaint_id.label("complaint_id"),
@@ -1039,8 +1043,10 @@ def get_donut_types_grouped_by_department(
                 OutgoingReport3.department_id.label("department_id"))
     r4 = select(OutgoingReport4.complaint_id.label("complaint_id"),
                 OutgoingReport4.department_id.label("department_id"))
+    r6 = select(OutgoingReport6.complaint_id.label("complaint_id"),
+                OutgoingReport6.department_id.label("department_id"))
 
-    union_q = union_all(r1, r2, r3, r4).subquery("rep_union")
+    union_q = union_all(r1, r2, r3, r4, r6).subquery("rep_union")
     # distinct กันซ้ำ (บางเรื่องมีหลายเรคอร์ดในหลายตาราง)
     link_q = select(distinct(union_q.c.complaint_id).label("complaint_id"),
                     union_q.c.department_id.label("department_id")).subquery("link_distinct")

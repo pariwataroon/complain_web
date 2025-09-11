@@ -15,6 +15,7 @@ from models.outgoing_reports2 import OutgoingReport2
 from models.outgoing_reports3 import OutgoingReport3
 from models.outgoing_reports4 import OutgoingReport4
 from models.outgoing_reports5 import OutgoingReport5
+from models.outgoing_reports6 import OutgoingReport6
 from models.user_role import UserRole
 from models.role import Role
 
@@ -855,18 +856,53 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "type_description": "แจ้งผลการให้ผู้เกี่ยวข้องทราบ",
             })
 
+        # ===== type6: รายงานนำเรียนผู้ตรวจ/หนังสือผลพิจารณาเพิ่มเติม =====
+        type6_list: List[Dict[str, Any]] = []
+        for r in db.query(OutgoingReport6).filter(
+            OutgoingReport6.complaint_id == complaint_id,
+            OutgoingReport6.is_active == True
+        ).all():
+            atts = _serialize_attachments(r)
+            type6_list.append({
+                "id": str(getattr(r, "id", "")),
+                "reference_number": getattr(r, "reference_number", None),
+                "reference_date": _iso(getattr(r, "reference_date", None)),
+                "subject": getattr(r, "subject", None),
+                "complaint_number": getattr(r, "complaint_number", None),
+                "complaint_number_date": _iso(getattr(r, "complaint_number_date", None)),
+                "document_number": getattr(r, "document_number", None),
+                "document_date": _iso(getattr(r, "document_date", None)),
+                "proposal_purpose": getattr(r, "proposal_purpose", None),
+                "consideration_result": getattr(r, "consideration_result", None),
+                "complaint_id": str(complaint_id),
+                "confidentiality_level": getattr(r, "confidentiality_level", None),
+                "urgency_level": getattr(r, "urgency_level", None),
+                "remarks": getattr(r, "remarks", None),
+                "created_at": _iso(getattr(r, "created_at", None)),
+                "department": _dept_min(getattr(r, "department", None)),
+                "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
+                "user": _user_min(getattr(r, "user", None)),
+                "attachments": atts,
+                "attachments_count": len(atts),
+                "type_description": "รายงานนำเรียนผู้ตรวจ",
+            })
+
         # คำนวณจำนวนรวมโดยไม่ต้องสร้าง all array
-        total_count = (len(outgoing_reports_data["type1"]) 
-                      + len(outgoing_reports_data["type2"])
-                      + len(outgoing_reports_data["type3"])
-                      + len(outgoing_reports_data["type4"])
-                      + len(type5_list))
+        total_count = (
+            len(outgoing_reports_data["type1"]) 
+            + len(outgoing_reports_data["type2"]) 
+            + len(outgoing_reports_data["type3"]) 
+            + len(outgoing_reports_data["type4"]) 
+            + len(type5_list) 
+            + len(type6_list)
+        )
 
         outgoing_reports = {
             **outgoing_reports_data,
             "type5": type5_list,
+            "type6": type6_list,
             "total_count": total_count,
-            "complaint_attachments": complaint_attachments
+            "complaint_attachments": complaint_attachments,
         }
 
         # ===== สรุป "ขั้นตอนการดำเนินการครั้งแรก" (initial_process_summary) =====
@@ -1121,6 +1157,17 @@ def get_document_storage_by_channel(
                                 OutgoingReport5.updated_by == user_id,
                                 OutgoingReport5.signature_authority_user_id == user_id,
                                 OutgoingReport5.user_id == user_id
+                            )
+                        )
+                    ).exists(),
+                    db.query(OutgoingReport6.id).filter(
+                        and_(
+                            OutgoingReport6.complaint_id == Complaint.id,
+                            or_(
+                                OutgoingReport6.created_by == user_id,
+                                OutgoingReport6.updated_by == user_id,
+                                OutgoingReport6.signature_authority_user_id == user_id,
+                                OutgoingReport6.user_id == user_id
                             )
                         )
                     ).exists()
