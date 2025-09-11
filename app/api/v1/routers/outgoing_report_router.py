@@ -7,13 +7,14 @@ from starlette.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from config.database import get_db
-from app.api.middleware.permission_middleware import can_read, can_create, can_delete
+from app.api.middleware.permission_middleware import can_read, can_create, can_delete, can_update
 from lib.format_data import FormatResponseModel, format_response
 
 from app.api.v1.controllers.outgoing_report_controller import (
     get_outgoing_reports,
     get_outgoing_report_by_id,
     create_outgoing_report,
+    update_outgoing_report,
     get_outgoing_report_options,
     auto_fill_from_complaint,
     DuplicateKeyError,
@@ -22,7 +23,7 @@ from app.api.v1.controllers.outgoing_report_controller import (
     get_outgoing_report_attachment_fileinfo,
     delete_outgoing_report_attachment_by_id,
 )
-from app.api.v1.schemas.outgoing_report import OutgoingReportCreate
+from app.api.v1.schemas.outgoing_report import OutgoingReportCreate, OutgoingReportUpdate
 
 router = APIRouter(
     prefix="/outgoing-reports",
@@ -120,6 +121,28 @@ async def get_outgoing_report(
     except Exception as e:
         return format_response("5000", {"error": str(e)})
 
+@router.put("/{report_id}", response_model=FormatResponseModel)
+async def update_outgoing_report_endpoint(
+    report_id: UUID,
+    report_data: OutgoingReportUpdate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("dashboard")),
+):
+    try:
+        data = update_outgoing_report(
+            db=db,
+            report_id=report_id,
+            report_data=report_data,
+            current_user_id=UUID(current_user),
+        )
+        return format_response("0002", data)
+    except DuplicateKeyError as e:
+        return format_response("4090", {"error": str(e)})
+    except HTTPException as e:
+        return format_response("4040", {"error": e.detail})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
 @router.post("/{outgoing_report_id}/attachments", response_model=FormatResponseModel)
 async def upload_outgoing_report_attachments(
     outgoing_report_id: UUID,
@@ -128,7 +151,7 @@ async def upload_outgoing_report_attachments(
     current_user: str = Depends(can_create("dashboard")),
 ):
     try:
-        data = add_attachments_to_outgoing_report(
+        data = await add_attachments_to_outgoing_report(
             db=db,
             outgoing_report_id=outgoing_report_id,
             files=files,
