@@ -93,6 +93,28 @@ const SearchComplaints = () => {
   const [loadingChannels, setLoadingChannels] = useState(false); // เพิ่ม loading state สำหรับ channels
   const [selectedComplaintTypeId, setSelectedComplaintTypeId] = useState("");
 
+  // ---------------- Helper: extract confirm_assigned_date (officerReceivedDate) with fallbacks ----------------
+  const extractOfficerReceivedDate = useCallback((complaintObj, assignmentObj) => {
+    const candidates = [
+      assignmentObj?.confirm_assigned_date,
+      assignmentObj?.confirmAssignedDate,
+      complaintObj?.confirm_assigned_date,
+      complaintObj?.confirmAssignedDate,
+      complaintObj?.assignment_form?.confirm_assigned_date,
+      complaintObj?.assignment_form?.confirmAssignedDate,
+      // old fallback (assigned_date) if confirm not found
+      assignmentObj?.assigned_date,
+      complaintObj?.assigned_date,
+      complaintObj?.assignment_form?.assigned_date,
+    ].filter(Boolean);
+
+    for (const ts of candidates) {
+      const d = new Date(ts);
+      if (!isNaN(d)) return d; // first valid date
+    }
+    return ""; // no valid date
+  }, []);
+
   // เพิ่ม refs เพื่อควบคุมการยิง API
   const fetchSubTypesTimeoutRef = useRef(null);
   const currentFetchPromiseRef = useRef(null);
@@ -196,9 +218,11 @@ useEffect(() => {
         securityLevel: assignment.confidentiality_level || "normal",
         urgencyLevel: assignment.urgency_level || "low",
       });
+      const officerDate = extractOfficerReceivedDate(merged, assignment);
+      const directorDate = assignment.director_submission_date || merged?.director_submission_date || merged?.assignment_form?.director_submission_date;
       step4Methods.reset({
-        officerReceivedDate: assignment.assigned_date ? new Date(assignment.assigned_date) : "",
-        directorSubmittedDate: assignment.director_submission_date ? new Date(assignment.director_submission_date) : "",
+        officerReceivedDate: officerDate,
+        directorSubmittedDate: directorDate ? new Date(directorDate) : "",
         incidentDateTime: merged?.step3?.general?.incidentDate ? new Date(merged.step3.general.incidentDate) : "",
       });
     } catch (err) {
@@ -623,13 +647,11 @@ useEffect(() => {
       urgencyLevel: assignmentForm.urgency_level || "low",
     });
 
+    const officerDate2 = extractOfficerReceivedDate(defaultData, assignmentForm);
+    const directorDate2 = assignmentForm.director_submission_date || defaultData?.director_submission_date;
     step4Methods.reset({
-      officerReceivedDate: assignmentForm.assigned_date
-        ? new Date(assignmentForm.assigned_date)
-        : "",
-      directorSubmittedDate: assignmentForm.director_submission_date
-        ? new Date(assignmentForm.director_submission_date)
-        : "",
+      officerReceivedDate: officerDate2,
+      directorSubmittedDate: directorDate2 ? new Date(directorDate2) : "",
       incidentDateTime: step3General.incidentDate
         ? new Date(step3General.incidentDate)
         : "",
@@ -1966,12 +1988,12 @@ const handleSubmit = async () => {
                               label="วันและเวลาที่เกิดเหตุ"
                               control={step4Methods.control}
                               value={
-                                defaultData?.step4?.general?.incidentDateTime ||
-                                "2023-11-01T14:37:00"
+                                defaultData?.step3?.general?.incidentDate ||
+                                ""
                               }
                               onChange={() => {}}
                               time={true}
-                              dis={true}
+                              // dis={true}
                             />
                           </div>
                         </div>
