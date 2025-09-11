@@ -20,7 +20,7 @@ const useFilteromplaintsPreview = () => {
       const currentDateTime = new Date().toISOString();
       const currentUser = userInfo
         ? `${userInfo.first_name || ""} ${userInfo.last_name || ""}`.trim() ||
-          "ผู้ใช้ไม่ระบุชื่อ"
+        "ผู้ใช้ไม่ระบุชื่อ"
         : "ผู้ใช้ไม่ระบุชื่อ";
 
       // เตรียมข้อมูลตาม API Body format และ Database Schema
@@ -55,8 +55,9 @@ const useFilteromplaintsPreview = () => {
       if (step3Data.referenceDate3) {
         preparedData.reference_date3 = step3Data.referenceDate3;
       }
+      // เลข สรร. (สารบัญ) ต้องส่งที่ reference_number4 (ไม่ใช่ complaint_number)
       if (step3Data.referenceNumber4) {
-        preparedData.complaint_number = step3Data.referenceNumber4;
+        preparedData.reference_number4 = step3Data.referenceNumber4;
       }
       if (step3Data.referenceDate4) {
         preparedData.reference_date4 = step3Data.referenceDate4;
@@ -82,6 +83,8 @@ const useFilteromplaintsPreview = () => {
 
       // ความลับและความเร่งด่วน (map ค่าให้ตรงกับ enum)
       if (step3Data.securityLevel) {
+        // UI ควรส่งค่าที่ตรง enum แล้ว: normal, confidential, secret, top_secret
+        // เผื่อค่าอื่น/พิมพ์ผิด → fallback เป็น normal
         const confidentialityMap = {
           normal: "normal",
           confidential: "confidential",
@@ -93,13 +96,18 @@ const useFilteromplaintsPreview = () => {
       }
 
       if (step3Data.urgencyLevel) {
+        // UI ใช้ค่าเดียวกับ enum ฝั่ง API แล้ว: low, medium, high, urgent, critical
+        // เผื่อกรณีเก่าที่ยังเป็น normal/very_urgent → map ให้ตรงด้วย
         const urgencyMap = {
-          normal: "low",
-          urgent: "medium",
-          very_urgent: "high",
+          low: "low",
+          medium: "medium",
+          high: "high",
+          urgent: "urgent",
+          critical: "critical",
+          normal: "low", // backward compat
+          very_urgent: "high", // backward compat
         };
-        preparedData.urgency_level =
-          urgencyMap[step3Data.urgencyLevel] || "low";
+        preparedData.urgency_level = urgencyMap[step3Data.urgencyLevel] || "low";
       }
 
       // ประเภทการร้องเรียน - จาก complaintFilingType
@@ -190,12 +198,15 @@ const useFilteromplaintsPreview = () => {
       preparedData.assigned_date = currentDateTime;
       preparedData.assignment_reason = "";
 
+      // Debug ช่วยตรวจสอบ payload ก่อนส่ง
+      // console.log("Prepared assignment payload:", preparedData);
+
       // ตรวจสอบข้อมูลจำเป็น
       if (!preparedData.assigned_officer_id) {
         throw new Error("กรุณาเลือกเจ้าหน้าที่ผู้รับผิดชอบ");
       }
 
-    
+
 
       // เรียก API
       const response = await UpdateAssignmentCompleteByAdmin(
@@ -203,7 +214,7 @@ const useFilteromplaintsPreview = () => {
         preparedData
       );
 
-     
+
 
       // ตรวจสอบผลลัพธ์
       if (response?.res_code === "0000") {

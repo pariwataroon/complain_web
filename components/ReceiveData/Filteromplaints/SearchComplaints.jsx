@@ -415,8 +415,8 @@ const SearchComplaints = () => {
           assignmentForm.reference_number3 || step3Data.referenceNumber3 || "",
         referenceDate3:
           assignmentForm.reference_date3 || step3Data.referenceDate3 || "",
+        // เลข สรร. (สารบัญ) ต้องมาจาก reference_number4 เท่านั้น ไม่ใช้ complaint_number
         referenceNumber4:
-          assignmentForm.complaint_number ||
           assignmentForm.reference_number4 ||
           step3Data.referenceNumber4 ||
           "",
@@ -433,7 +433,7 @@ const SearchComplaints = () => {
           step3Data.securityLevel ||
           "normal",
         urgencyLevel:
-          assignmentForm.urgency_level || step3Data.urgencyLevel || "normal",
+          assignmentForm.urgency_level || step3Data.urgencyLevel || "low",
 
         // ใช้ id แทน label
         complaintType: complaintTypeId,

@@ -845,7 +845,6 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
                 value={
                   assignmentForm.reference_number4 ||
                   complaint.referenceNumber4 ||
-                  formData.complaint_number ||
                   "-"
                 }
               />
