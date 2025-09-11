@@ -366,6 +366,18 @@ const SearchComplaints = () => {
     fetchDepartments();
   }, []);
 
+  useEffect(() => {
+    const subtypeId = defaultData?.step3?.general?.complaint_subtype_id;
+    if (subtypeId && subComplaintTypes.length > 0) {
+      // บังคับ cast เป็น string ให้ตรงกับ <option value="...">
+      step3Methods.setValue("complaintSubType", String(subtypeId));
+    }
+  }, [
+    defaultData?.step3?.general?.complaint_subtype_id,
+    subComplaintTypes,
+    step3Methods,
+  ]);
+
   const fetchComplaints = async (id) => {
     setLoading(true);
     setError(null);
