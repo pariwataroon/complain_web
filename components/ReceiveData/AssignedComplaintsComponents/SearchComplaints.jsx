@@ -773,8 +773,8 @@ const SearchComplaints = () => {
               }
             />
             <InfoItem
-              label="วันที่"
-              value={formatThaiDate(complaint.created_at)}
+              label="วันที่เริ่มรับผิดชอบเจ้าหน้าที่"
+              value={formatThaiDate(complaint.assignment_form.assigned_date || "-")}
             />
           </Grid>
         </Paper>
