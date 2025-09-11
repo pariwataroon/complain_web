@@ -6,8 +6,8 @@ from datetime import datetime
 
 from config.database import get_db
 from models.user import User
-from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import can_read, can_create, can_update
+from lib.format_data import format_response, FormatResponseModel
 from app.api.v1.controllers.complaint_assignment_controller import (
     update_complaint_assignment_data,
     get_assignment_form_data,
@@ -27,7 +27,7 @@ import lib.format_data as format_data
 
 router = APIRouter(prefix="/complaints-assignment", tags=["complaint_assignment"])
 
-@router.get("/{complaint_id}/assignment-form")
+@router.get("/{complaint_id}/assignment-form", response_model=FormatResponseModel)
 async def get_assignment_form(
     complaint_id: UUID,
     current_user: str = Depends(can_read("dashboard")),
@@ -38,12 +38,12 @@ async def get_assignment_form(
         result = get_assignment_form_data(db, complaint_id)
         
         if "error" in result:
-            return format_data.format_response("4004", {
+            return format_response("4004", {
                 "error": result["error"], 
                 "message": "COMPLAINT_NOT_FOUND"
             })
         
-        return format_data.format_response("0000", result)
+        return format_response("0000", result)
         
     except Exception as e:
         return format_data.format_response("5000", {
@@ -51,80 +51,7 @@ async def get_assignment_form(
             "message": "INTERNAL_SERVER_ERROR"
         })
 
-@router.put("/{complaint_id}/assignment")
-async def update_assignment(
-    complaint_id: UUID,
-    assignment_data: Dict[str, Any],
-    current_user: str = Depends(can_update("dashboard")),
-    db: Session = Depends(get_db)
-):
-    """อัพเดทการมอบหมายงาน"""
-    try:
-        # ✅ แก้ไข: แปลง string เป็น UUID
-        try:
-            updated_by_uuid = UUID(current_user)
-        except ValueError:
-            return format_data.format_response("4000", {
-                "error": "Invalid user ID format", 
-                "message": "INVALID_USER_ID"
-            })
-        
-        result = update_complaint_assignment_data(
-            db=db,
-            complaint_id=complaint_id,
-            assignment_data=assignment_data,
-            updated_by=updated_by_uuid  # ← ใช้ UUID แทน
-        )
-        
-        if result.get("success"):
-            return format_data.format_response("0000", {
-                "data": result,
-                "message": "UPDATE_SUCCESS"
-            })
-        else:
-            return format_data.format_response("4000", {
-                "error": result.get("message"),
-                "message": "UPDATE_FAILED"
-            })
-        
-    except Exception as e:
-        return format_data.format_response("5000", {
-            "error": str(e),
-            "message": "INTERNAL_SERVER_ERROR"
-        })
-
-# @router.post("/{complaint_id}/link-related")
-# async def link_related_complaint(
-#     complaint_id: UUID,
-#     link_data: Dict[str, Any],
-#     current_user: str = Depends(can_create("dashboard")),
-#     db: Session = Depends(get_db)
-# ):
-#     """เชื่อมโยงเรื่องร้องเรียนที่เกี่ยวข้อง"""
-#     try:
-#         result = link_related_complaint(
-#             db=db,
-#             main_complaint_id=complaint_id,
-#             related_complaint_number=link_data.get("related_complaint_number"),
-#             updated_by=UUID(current_user)  # ← แปลงเป็น UUID
-#         )
-        
-#         if result.get("success"):
-#             return format_data.format_response("0000", {
-#                 "data": result,
-#                 "message": "LINK_SUCCESS"
-#             })
-#         else:
-#             return format_data.format_response("4000", {
-#                 "error": result.get("message"),
-#                 "message": "LINK_FAILED"
-#             })
-        
-#     except Exception as e:
-#         return format_data.format_response("5000", {
-#             "error": str(e),
-#             "message": "INTERNAL_SERVER_ERROR"
-#         })
+# (Removed broken duplicate update endpoint block above)
 
 @router.put("/{complaint_id}/complainant")
 async def update_complainant(
@@ -297,70 +224,43 @@ async def get_assignment_history(
             "message": "INTERNAL_SERVER_ERROR"
         })
 
-@router.post("/bulk-assignment")
-async def bulk_assignment(
-    bulk_data: Dict[str, Any],
-    current_user: str = Depends(can_create("dashboard")),
+@router.put("/{complaint_id}/assignment", response_model=FormatResponseModel)
+async def update_assignment(
+    complaint_id: UUID,
+    assignment_data: Dict[str, Any],
+    current_user: str = Depends(can_update("dashboard")),
     db: Session = Depends(get_db)
 ):
-    """มอบหมายงานแบบ bulk"""
+    """อัพเดทการมอบหมายงาน"""
     try:
-        complaint_ids = bulk_data.get("complaint_ids", [])
-        assignment_data = bulk_data.get("assignment_data", {})
-        
-        if not complaint_ids:
-            return format_data.format_response("4000", {
-                "error": "กรุณาเลือกเรื่องร้องเรียน",
-                "message": "NO_COMPLAINTS_SELECTED"
+        # ✅ แปลง string เป็น UUID
+        try:
+            updated_by_uuid = UUID(current_user)
+        except ValueError:
+            return format_response("4000", {
+                "error": "Invalid user ID format",
+                "message": "INVALID_USER_ID"
             })
-        
-        success_count = 0
-        error_count = 0
-        errors = []
-        
-        for complaint_id_str in complaint_ids:
-            try:
-                result = update_complaint_assignment_data(
-                    db=db,
-                    complaint_id=UUID(complaint_id_str),
-                    assignment_data=assignment_data,
-                    updated_by=UUID(current_user)  # ← แปลงเป็น UUID
-                )
-                
-                if result.get("success"):
-                    success_count += 1
-                else:
-                    error_count += 1
-                    errors.append({
-                        "complaint_id": complaint_id_str,
-                        "error": result.get("message", "Unknown error")
-                    })
-                
-            except Exception as e:
-                error_count += 1
-                errors.append({
-                    "complaint_id": complaint_id_str,
-                    "error": str(e)
-                })
-        
-        return format_data.format_response("0000", {
-            "data": {
-                "summary": {
-                    "total": len(complaint_ids),
-                    "success": success_count,
-                    "error": error_count
-                },
-                "errors": errors if errors else None
-            },
-            "message": "BULK_ASSIGNMENT_COMPLETED"
-        })
-        
+
+        result = update_complaint_assignment_data(
+            db=db,
+            complaint_id=complaint_id,
+            assignment_data=assignment_data,
+            updated_by=updated_by_uuid,
+        )
+
+        if result.get("success"):
+            return format_response("0002", result)
+        else:
+            code = result.get("code", "4000")
+            return format_response(code, {"error": result.get("message", "UPDATE_FAILED")})
+
     except Exception as e:
-        return format_data.format_response("5000", {
+        return format_response("5000", {
             "error": str(e),
             "message": "INTERNAL_SERVER_ERROR"
         })
-    
+
 @router.get("/by-page-type")
 async def get_complaints_by_page_type(
     page_type: str = Query("website", description="ประเภทหน้า: 'website' หรือ 'card'"),
