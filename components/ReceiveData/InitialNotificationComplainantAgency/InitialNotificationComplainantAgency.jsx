@@ -38,21 +38,25 @@ import {
 
 const InitialNotificationComplainantAgency = () => {
   const {
-    form,
-    errors,
-    isLoading,
-    createLabel,
-    getFieldError,
-    handleChange,
-    handleDateChange,
-    handleFileUpload,
-    handleClear,
-    handleSave,
-    isFormValid,
+  form,
+  errors,
+  isLoading,
+  createLabel,
+  getFieldError,
+  handleChange,
+  handleDocumentDateChange,
+  handleComplaintNumberDateChange,
+  handleFileUpload,
+  handleClear,
+  handleSave,
+  isFormValid,
   isRequired,
   fileInputKey,
   canSave,
-  } = useInitialNotificationComplainantAgency();
+  existingAttachments,
+  handleDeleteExistingAttachment,
+} = useInitialNotificationComplainantAgency();
+
   const router = useRouter();
 
   const pickId = (o) => o?.id ?? o?.value ?? o;
@@ -62,9 +66,19 @@ const InitialNotificationComplainantAgency = () => {
   // State สำหรับ dynamic data
   const [selectedSigner, setSelectedSigner] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
-  const [confidentialityOptions, setConfidentialityOptions] = useState([]);
-  const [urgencyOptions, setUrgencyOptions] = useState([]);
-  const [optionsLoading, setOptionsLoading] = useState(true);
+  const [confidentialityOptions, setConfidentialityOptions] = useState([
+    { value: "1", label: "ปกติ" },
+    { value: "2", label: "ลับ" },
+    { value: "3", label: "ลับมาก" },
+    { value: "4", label: "ลับที่สุด" },
+  ]);
+  const [urgencyOptions, setUrgencyOptions] = useState([
+    { value: "1", label: "ปกติ" },
+    { value: "2", label: "เร่งด่วน" },
+    { value: "3", label: "เร่งด่วนมาก" },
+    { value: "4", label: "เร่งด่วนที่สุด" },
+  ]);
+  const [optionsLoading, setOptionsLoading] = useState(false);
 
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -73,7 +87,7 @@ const InitialNotificationComplainantAgency = () => {
   const inputRef = useRef();
 
   // Read-only list of attachments already on the server for this report
-  const [existingAttachments, setExistingAttachments] = useState([]);
+  // const [existingAttachments, setExistingAttachments] = useState([]);
 
   // Build absolute URL from file_path and normalize Windows-style paths (same as Forward component)
   const normalizeFilePath = useCallback((p) => {
@@ -95,85 +109,75 @@ const InitialNotificationComplainantAgency = () => {
     return `${base}${normalized}`;
   }, [normalizeFilePath]);
 
-    // --- เปลี่ยน useEffect เปิด Dialog ให้ยิง API ---
-    useEffect(() => {
-      if (openSearchDialog) {
-        setSearchText(""); // reset input
-        handleSearch(""); // โหลดรายการทั้งหมดทันทีที่เปิด (keyword ว่าง)
-        inputRef.current?.focus();
-      }
-    }, [openSearchDialog]);
-  
-    const handleSearch = async (keyword) => {
-      setSearchLoading(true);
-      try {
-        const response = await GetReDocumentComplaints({
-          skip: 0,
-          limit: 100,
-          search: keyword || "",
-        });
-  
-        console.log("API response", response);
-  
-        const items = Array.isArray(response?.res_data?.items)
-          ? response.res_data.items
-          : [];
-  
-  
-        const results = items.map((item) => ({
-          ...item,
-          label: item.complaint_number || "",
-          value: item.complaint_number || "",
-        }));
-  
-        setSearchResults(results);
-      } catch (err) {
-        setSearchResults([]);
-        console.error("handleSearch error", err);
-      } finally {
-        setSearchLoading(false);
-      }
-    };
-  
-    const handleSelectReference = (ref) => {
-      handleChange({
-        target: { name: "refNo", value: ref.document_number }
-      });
-      handleChange({
-        target: { name: "complaint_id", value: ref.id }
-      });
-      if (ref?.complaint_number) {
-        handleChange({
-          target: { name: "complaint_number", value: ref.complaint_number }
-        });
-      }
-      setOpenSearchDialog(false);
-    };
-  
-    const onClear = () => {
-      setSearchText("");
-      handleSearch("");
-      inputRef.current?.focus();
-    };
-  
   useEffect(() => {
     if (openSearchDialog) {
-      setSearchText("");
-      handleSearch("");
+      setSearchText(""); // reset input
+      handleSearch(""); // โหลดรายการทั้งหมดทันทีที่เปิด (keyword ว่าง)
       inputRef.current?.focus();
     }
   }, [openSearchDialog]);
 
+  const handleSearch = async (keyword) => {
+    setSearchLoading(true);
+    try {
+      const response = await GetReDocumentComplaints({
+        skip: 0,
+        limit: 100,
+        search: keyword || "",
+      });
+
+      const items = Array.isArray(response?.res_data?.items)
+        ? response.res_data.items
+        : [];
+
+      const results = items.map((item) => ({
+        ...item,
+        label: item.complaint_number || "",
+        value: item.complaint_number || "",
+      }));
+
+      setSearchResults(results);
+    } catch (err) {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleSelectReference = (ref) => {
+    handleChange({
+      target: { name: "refNo", value: ref.document_number }
+    });
+    handleChange({
+      target: { name: "complaint_id", value: ref.id }
+    });
+    if (ref?.complaint_number) {
+      handleChange({
+        target: { name: "complaint_number", value: ref.complaint_number }
+      });
+    }
+    if (ref?.complaint_number_date) {
+      handleComplaintNumberDateChange(ref.complaint_number_date);
+    }
+    if (ref?.document_date) {
+      handleDocumentDateChange(ref.document_date);
+    }
+    setOpenSearchDialog(false);
+  };
+
+  const onClear = () => {
+    setSearchText("");
+    handleSearch("");
+    inputRef.current?.focus();
+  };
+
   // ฟังก์ชันจัดการเมื่อมีการเลือกผู้ลงนาม (ฉบับปรับปรุงตามต้นแบบที่ดีที่สุด)
   const handleSignerSelect = (userInfo) => {
-    // เซ็ต state สำหรับผู้ลงนาม (object ทั้งตัว)
     setSelectedSigner(userInfo);
 
-    // เซ็ตค่า id ผู้ลงนามเข้า form (ใช้ทั้ง userInfo.id และ fallback)
     const signerId = userInfo?.id ?? userInfo?.value ?? "";
     handleChange({ target: { name: "signer", value: signerId } });
 
-    // ดึง position_id หลายคีย์ (รองรับทุกกรณี)
     const posId =
       userInfo?.position_id ??
       userInfo?.position?.id ??
@@ -182,13 +186,11 @@ const InitialNotificationComplainantAgency = () => {
 
     handleChange({ target: { name: "position_id", value: posId } });
 
-    // ทุกครั้งที่เปลี่ยนผู้ลงนาม ให้ล้างหน่วยงานที่เลือกไว้
     setSelectedDepartment(null);
     handleChange({ target: { name: "department", value: "" } });
   };
 
   const handleDepartmentSelect = (department) => {
-    // Support both event-like and option-object inputs
     if (department && department.target && Object.prototype.hasOwnProperty.call(department.target, "value")) {
       const v = department.target.value;
       handleChange({ target: { name: "department", value: v } });
@@ -200,141 +202,86 @@ const InitialNotificationComplainantAgency = () => {
     handleChange({ target: { name: "department", value: depId } });
   };
 
-  // ฟังก์ชันดึงข้อมูล options
-  const fetchOptions = async () => {
-    try {
-      setOptionsLoading(true);
-
-      const confidentialityData = await GetOutgoingReportOptions("confidentiality_levels");
-
-      const urgencyData = await GetOutgoingReportOptions("urgency_levels");
-
-      const normalizeOptions = (data) =>
-        data.map((opt, idx) => ({
-          value: idx + 1,
-          label: opt.label || opt.value || `ตัวเลือก ${idx + 1}`,
-        }));
-
-      setConfidentialityOptions(normalizeOptions(confidentialityData));
-      setUrgencyOptions(normalizeOptions(urgencyData));
-
-    } catch (error) {
-      setConfidentialityOptions([
-        { value: 1, label: "ปกติ" },
-        { value: 2, label: "ลับ" },
-        { value: 3, label: "ลับมาก" },
-        { value: 4, label: "ลับที่สุด" },
-      ]);
-
-      setUrgencyOptions([
-        { value: 1, label: "ปกติ" },
-        { value: 2, label: "เร่งด่วน" },
-        { value: 3, label: "เร่งด่วนมาก" },
-        { value: 4, label: "เร่งด่วนที่สุด" },
-      ]);
-    } finally {
-      setOptionsLoading(false);
-    }
-  };
-
-  // โหลดข้อมูล options เมื่อ component mount
-  useEffect(() => {
-    fetchOptions();
-  }, []);
-
   // ฟังก์ชันล้างข้อมูลที่อัพเดทแล้ว
   const handleClearExtended = () => {
-    
     handleClear();
     setSelectedSigner(null);
     setSelectedDepartment(null);
   };
 
-  /// Prefill when editing existing type2 report via /[id]
-useEffect(() => {
-  const editId = router?.query?.id;
-  if (!editId) return;
-  let cancelled = false;
-  (async () => {
-    try {
-      const res = await GetOutgoingReport2ById(editId);
-      const d = res?.res_data || res?.data || res;
-      if (cancelled || !d) return;
+  // Prefill when editing existing type2 report via /[id]
+  useEffect(() => {
+    const editId = router?.query?.id;
+    if (!editId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await GetOutgoingReport2ById(editId);
+        const d = res?.res_data || res?.data || res;
+        if (cancelled || !d) return;
 
-      // Core ids / numbers
-      handleChange({ target: { name: 'complaint_number', value: d.complaint_number || d.reference_number || '' } });
-      handleChange({ target: { name: 'complaint_id', value: d.complaint_id || '' } });
-      handleChange({ target: { name: 'refNo', value: d.document_number || '' } });
+        handleChange({ target: { name: 'complaint_number', value: d.complaint_number || d.reference_number || '' } });
+        handleChange({ target: { name: 'complaint_id', value: d.complaint_id || '' } });
+        handleChange({ target: { name: 'refNo', value: d.document_number || '' } });
 
-      // Subject
-      handleChange({ target: { name: 'subject', value: d.subject || '' } });
+        handleChange({ target: { name: 'subject', value: d.subject || '' } });
 
-      // เรียน/ถึง (ชื่อ position)
-      handleChange({ target: { name: 'salutation', value: d.position?.id || "" } });
-      // ตั้งค่าสถานะ 'อื่นๆ' เมื่อ position.name เป็น 'อื่นๆ' และเติมข้อความประกอบ
-      const posName = d.position?.name || "";
-      const isOther = posName === "อื่นๆ";
-      handleChange({ target: { name: 'salutation_is_other', value: isOther } });
-      if (isOther && d.position_other_text) {
-        handleChange({ target: { name: 'position_other_text', value: d.position_other_text } });
-      }
+        handleChange({ target: { name: 'salutation', value: d.position?.id || "" } });
+        const posName = d.position?.name || "";
+        const isOther = posName === "อื่นๆ";
+        handleChange({ target: { name: 'salutation_is_other', value: isOther } });
+        if (isOther && d.position_other_text) {
+          handleChange({ target: { name: 'position_other_text', value: d.position_other_text } });
+        }
 
-      // ผู้ลงนาม (id และ object)
-      // --- แก้ตรงนี้: Set ทั้ง selectedSigner และฟอร์ม ---
-      const signerObj = d.signature_authority_user || null;
-      const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || '';
-      setSelectedSigner(signerObj);
-      handleChange({ target: { name: 'signer', value: signerId } });
-      // Position id (ถ้ามี)
-      const posId =
-        signerObj?.position_id ||
-        signerObj?.position?.id ||
-        signerObj?.positionId ||
-        "";
-      handleChange({ target: { name: 'position_id', value: posId } });
+        const signerObj = d.signature_authority_user || null;
+        const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || '';
+        setSelectedSigner(signerObj);
+        handleChange({ target: { name: 'signer', value: signerId } });
+        const posId =
+          signerObj?.position_id ||
+          signerObj?.position?.id ||
+          signerObj?.positionId ||
+          "";
+        handleChange({ target: { name: 'position_id', value: posId } });
 
-      // หน่วยงาน (id + object for SelectFieldDepartment)
-      handleChange({ target: { name: 'department', value: d.department?.id || "" } });
-      const deptObj = d.department
-        ? {
-            value: d.department.id,
-            label: d.department.name,
-            code: d.department.code || "",
-            shortName: d.department.short_name || d.department.shortName || "",
-          }
-        : null;
-      setSelectedDepartment(deptObj);
+        handleChange({ target: { name: 'department', value: d.department?.id || "" } });
+        const deptObj = d.department
+          ? {
+              value: d.department.id,
+              label: d.department.name,
+              code: d.department.code || "",
+              shortName: d.department.short_name || d.department.shortName || "",
+            }
+          : null;
+        setSelectedDepartment(deptObj);
 
-      // Date (priority: complaint_number_date > document_date > created_at)
-      const dateSrc = d.complaint_number_date || d.document_date || d.created_at;
-      if (dateSrc) {
-        const dt = new Date(dateSrc);
-        if (!isNaN(dt.getTime())) handleDateChange(dt);
-      }
+        if (d.document_date) {
+          handleDocumentDateChange(d.document_date);
+        }
 
-      // Confidentiality / Urgency
-      if (d.confidentiality_level !== undefined && d.confidentiality_level !== null)
-        handleChange({ target: { name: 'confidentiality', value: d.confidentiality_level } });
-      if (d.urgency_level !== undefined && d.urgency_level !== null)
-        handleChange({ target: { name: 'urgency', value: d.urgency_level } });
+        if (d.complaint_number_date) {
+          handleComplaintNumberDateChange(d.complaint_number_date);
+        }
 
-      // หมายเหตุ
-      if (d.remarks) handleChange({ target: { name: 'note', value: d.remarks } });
+        if (d.confidentiality_level !== undefined && d.confidentiality_level !== null)
+          handleChange({ target: { name: 'confidentiality', value: String(d.confidentiality_level) } });
+        if (d.urgency_level !== undefined && d.urgency_level !== null)
+          handleChange({ target: { name: 'urgency', value: String(d.urgency_level) } });
 
-      // Attachments
-      const atts = Array.isArray(d.attachments) ? d.attachments : [];
-      setExistingAttachments(atts);
-      if (atts.length) {
-        const names = atts.map(a => a.original_name || a.file_name || a.name || '').filter(Boolean).join(', ');
-        if (names) handleChange({ target: { name: 'attachment', value: names } });
-      }
-    } catch (err) {
-      console.error('Failed to prefill type2 report by id', err);
-    }
-  })();
-  return () => { cancelled = true; };
-}, [router?.query?.id]);
-  const [tabSelected, setTabSelected] = useState("department");
+        if (d.remarks) handleChange({ target: { name: 'note', value: d.remarks } });
+
+        const atts = Array.isArray(d.attachments) ? d.attachments : [];
+        setExistingAttachments(atts);
+        if (atts.length) {
+          const names = atts.map(a => a.original_name || a.file_name || a.name || '').filter(Boolean).join(', ');
+          if (names) handleChange({ target: { name: 'attachment', value: names } });
+        }
+      } catch (err) {}
+    })();
+    return () => { cancelled = true; };
+  }, [router?.query?.id]);
+
   return (
     <Box
       px={{ xs: 2, sm: 3, md: 5, lg: 8 }}
@@ -358,7 +305,6 @@ useEffect(() => {
       />
 
       <Box sx={{ border: "2px solid #2499FF", borderTopRightRadius: 15 }}>
-        {/* Top gradient bar */}
         <Box
           sx={{
             background: "linear-gradient(to right, #1223a5, #2499ff)",
@@ -367,7 +313,6 @@ useEffect(() => {
           }}
         />
 
-        {/* Centered form title */}
         <Box sx={{ textAlign: "center", py: 2 }}>
           <Typography variant="h5" fontWeight="bold" color="#1120A3">
             แบบรายงานแจ้งผู้ร้องเรียน / ส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น
@@ -382,7 +327,6 @@ useEffect(() => {
             p: { xs: 2, sm: 3, md: 5 },
           }}
         >
-         {/* Row 1: เรียน | เลขที่หนังสือ | วันที่ */}
           <Box
             sx={{
               display: "grid",
@@ -418,7 +362,6 @@ useEffect(() => {
                 />
               </Box>
             )}
-            {/* --- Row 4: หน่วยงาน / ผู้ร้อง  --- */}
             <SelectFieldDepartment
               label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}
               name="department"
@@ -431,17 +374,15 @@ useEffect(() => {
               disabled={!selectedSigner}
               placeholder={selectedSigner ? "เลือกหน่วยงาน / ผู้ร้อง" : "เลือกผู้ลงนามก่อน"}
             />
-            
           </Box>
 
           <Box
-          sx={{
+            sx={{
               display: "grid",
               gap: 2,
               gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
-        >
-          {/* เลขที่หนังสือ */}
+          >
             <InputText
               label={createLabel("เลขที่หนังสือ", "refNo")}
               inputLabel="กรอกเลขที่หนังสือ"
@@ -452,17 +393,16 @@ useEffect(() => {
               helperText={getFieldError("refNo")}
               sx={{ flex: 1 }}
             />
-            {/* วันที่ (ใช้ร่วมทั้งเอกสารและเลข สป.กค.) */}
             <DateThaiPickerService
-              label={createLabel("วันที่", "date")}
-              value={form.date}
-              onChange={handleDateChange}
-              placeholder="เลือกวันที่"
-              error={!!getFieldError("date")}
-              helperText={getFieldError("date")}
+              label={createLabel("วันที่หนังสือ", "document_date")}
+              value={form.document_date}
+              onChange={handleDocumentDateChange}
+              placeholder="เลือกวันที่หนังสือ"
+              error={!!getFieldError("document_date")}
+              helperText={getFieldError("document_date")}
             />
-            </Box>
-          {/* Row 1.1: เลข สป.กค. | วันที่ (จัดแนวยาว 2 ช่อง) */}
+          </Box>
+
           <Box
             sx={{
               display: "grid",
@@ -490,259 +430,253 @@ useEffect(() => {
               </IconButton>
             </Box>
             <DateThaiPickerService
-              label={createLabel("วันที่", "date")}
-              value={form.date}
-              onChange={handleDateChange}
-              placeholder="เลือกวันที่"
-              error={!!getFieldError("date")}
-              helperText={getFieldError("date")}
+              label={createLabel("วันที่ สป.กค.", "complaint_number_date")}
+              value={form.complaint_number_date}
+              onChange={handleComplaintNumberDateChange}
+              placeholder="เลือกวันที่ สป.กค."
+              error={!!getFieldError("complaint_number_date")}
+              helperText={getFieldError("complaint_number_date")}
             />
           </Box>
 
-           {/* Dialog สำหรับค้นหาเลข */}
-            <Dialog
-              open={openSearchDialog}
-              onClose={() => setOpenSearchDialog(false)}
-              maxWidth="sm"
-              fullWidth
-              PaperProps={{
-                style: {
-                  borderRadius: 12,
-                  background: "#f7fafd",
-                  height: 500,
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-                },
+          <Dialog
+            open={openSearchDialog}
+            onClose={() => setOpenSearchDialog(false)}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              style: {
+                borderRadius: 12,
+                background: "#f7fafd",
+                height: 500,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+              },
+            }}
+          >
+            <DialogTitle
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
               }}
             >
-              <DialogTitle
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
+              <SearchIcon color="primary" />
+              ค้นหาเลขที่อ้างอิง
+            </DialogTitle>
+
+            <DialogContent>
+              <TextField
+                inputRef={inputRef}
+                fullWidth
+                size="small"
+                placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
+                value={searchText}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSearchText(val);
+                  handleSearch(val);
                 }}
-              >
-                <SearchIcon color="primary" />
-                ค้นหาเลขที่อ้างอิง
-              </DialogTitle>
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchText ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={onClear}
+                        aria-label="clear search"
+                        edge="end"
+                      >
+                        <ClearIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                  style: {
+                    background: "#fff",
+                    borderRadius: 8,
+                  },
+                }}
+                sx={{ mb: 2 }}
+              />
 
-              <DialogContent>
-                {/* ช่องค้นหา */}
-                <TextField
-                  inputRef={inputRef}
-                  fullWidth
-                  size="small"
-                  placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
-                  value={searchText}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSearchText(val);
-                    handleSearch(val);
+              {searchLoading ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: 24,
                   }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon color="action" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: searchText ? (
-                      <InputAdornment position="end">
-                        <IconButton
-                          size="small"
-                          onClick={onClear}
-                          aria-label="clear search"
-                          edge="end"
+                >
+                  <CircularProgress color="primary" />
+                  <div
+                    style={{
+                      marginTop: 8,
+                      color: "#888",
+                    }}
+                  >
+                    กำลังค้นหา...
+                  </div>
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: 32,
+                    color: "#bdbdbd",
+                  }}
+                >
+                  <DescriptionIcon
+                    sx={{ fontSize: 48, mb: 2 }}
+                    color="disabled"
+                  />
+                  <div>ไม่พบรายการเลขที่อ้างอิง</div>
+                </div>
+              ) : (
+                <>
+                  <List
+                    sx={{
+                      maxHeight: 320,
+                      overflow: "auto",
+                      "&::-webkit-scrollbar": {
+                        width: "8px",
+                        background: "#f0f4fa",
+                        borderRadius: "8px",
+                      },
+                      "&::-webkit-scrollbar-thumb": {
+                        background: "#90caf9",
+                        borderRadius: "8px",
+                      },
+                      "&::-webkit-scrollbar-thumb:hover":
+                        {
+                          background: "#64b5f6",
+                        },
+                    }}
+                  >
+                    {searchResults.map((item) => {
+                      const isMaster = !!item.is_master;
+                      return (
+                        <ListItem
+                          key={item.id}
+                          disablePadding
                         >
-                          <ClearIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ) : null,
-                    style: {
-                      background: "#fff",
-                      borderRadius: 8,
-                    },
-                  }}
-                  sx={{ mb: 2 }}
-                />
-
-                {/* สถานะโหลด / ไม่พบ / รายการ */}
-                {searchLoading ? (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: 24,
-                    }}
-                  >
-                    <CircularProgress color="primary" />
-                    <div
-                      style={{
-                        marginTop: 8,
-                        color: "#888",
-                      }}
-                    >
-                      กำลังค้นหา...
-                    </div>
-                  </div>
-                ) : searchResults.length === 0 ? (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: 32,
-                      color: "#bdbdbd",
-                    }}
-                  >
-                    <DescriptionIcon
-                      sx={{ fontSize: 48, mb: 2 }}
-                      color="disabled"
-                    />
-                    <div>ไม่พบรายการเลขที่อ้างอิง</div>
-                  </div>
-                ) : (
-                  <>
-                    <List
-                      sx={{
-                        maxHeight: 320,
-                        overflow: "auto",
-                        "&::-webkit-scrollbar": {
-                          width: "8px",
-                          background: "#f0f4fa",
-                          borderRadius: "8px",
-                        },
-                        "&::-webkit-scrollbar-thumb": {
-                          background: "#90caf9",
-                          borderRadius: "8px",
-                        },
-                        "&::-webkit-scrollbar-thumb:hover":
-                          {
-                            background: "#64b5f6",
-                          },
-                      }}
-                    >
-                      {searchResults.map((item) => {
-                        const isMaster = !!item.is_master; // fallback ถ้า undefined
-                        return (
-                          <ListItem
-                            key={item.id}
-                            disablePadding
+                          <ListItemButton
+                            onClick={() =>
+                              handleSelectReference(item)
+                            }
+                            sx={{
+                              py: 1.5,
+                              px: 2,
+                              borderRadius: 2,
+                              mb: 0.5,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1.5,
+                              "&:hover": {
+                                background: "#e3f2fd",
+                              },
+                            }}
                           >
-                            <ListItemButton
-                              onClick={() =>
-                                handleSelectReference(item)
-                              }
-                              sx={{
-                                py: 1.5,
-                                px: 2,
-                                borderRadius: 2,
-                                mb: 0.5,
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 1.5,
-                                "&:hover": {
-                                  background: "#e3f2fd",
-                                },
+                            <span
+                              style={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: "50%",
+                                backgroundColor: isMaster
+                                  ? "#2ecc71"
+                                  : "#bdbdbd",
+                                border: "2px solid #fff",
+                                boxShadow:
+                                  "0 0 0 1px rgba(0,0,0,0.15)",
+                                flexShrink: 0,
                               }}
+                              title={
+                                isMaster
+                                  ? "Master"
+                                  : "Non-master"
+                              }
+                            />
+                            <DescriptionIcon
+                              color="info"
+                              sx={{ mr: 0.5 }}
+                            />
+                            <span
+                              style={{ fontWeight: 500 }}
                             >
-                              {/* จุดสถานะ is_master */}
-                              <span
-                                style={{
-                                  width: 12,
-                                  height: 12,
-                                  borderRadius: "50%",
-                                  backgroundColor: isMaster
-                                    ? "#2ecc71"
-                                    : "#bdbdbd",
-                                  border: "2px solid #fff",
-                                  boxShadow:
-                                    "0 0 0 1px rgba(0,0,0,0.15)",
-                                  flexShrink: 0,
-                                }}
-                                title={
-                                  isMaster
-                                    ? "Master"
-                                    : "Non-master"
-                                }
-                              />
-                              <DescriptionIcon
-                                color="info"
-                                sx={{ mr: 0.5 }}
-                              />
-                              <span
-                                style={{ fontWeight: 500 }}
-                              >
-                                {item.complaint_number}
-                                {item.subject}
-                              </span>
-                            </ListItemButton>
-                          </ListItem>
-                        );
-                      })}
-                    </List>
+                              {item.complaint_number}
+                              {item.subject}
+                            </span>
+                          </ListItemButton>
+                        </ListItem>
+                      );
+                    })}
+                  </List>
 
-                    {/* Legend (ถ้าไม่ต้องการสามารถลบส่วนนี้ออกได้) */}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 16,
+                      marginTop: 8,
+                      fontSize: 12,
+                      color: "#555",
+                      padding: "0 4px",
+                    }}
+                  >
                     <div
                       style={{
                         display: "flex",
-                        gap: 16,
-                        marginTop: 8,
-                        fontSize: 12,
-                        color: "#555",
-                        padding: "0 4px",
+                        alignItems: "center",
+                        gap: 6,
                       }}
                     >
-                      <div
+                      <span
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
+                          width: 10,
+                          height: 10,
+                          borderRadius: "50%",
+                          background: "#2ecc71",
+                          boxShadow:
+                            "0 0 0 1px rgba(0,0,0,0.15)",
                         }}
-                      >
-                        <span
-                          style={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: "50%",
-                            background: "#2ecc71",
-                            boxShadow:
-                              "0 0 0 1px rgba(0,0,0,0.15)",
-                          }}
-                        />
-                        Master
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: "50%",
-                            background: "#bdbdbd",
-                            boxShadow:
-                              "0 0 0 1px rgba(0,0,0,0.15)",
-                          }}
-                        />
-                        Non-master
-                      </div>
+                      />
+                      Master
                     </div>
-                  </>
-                )}
-              </DialogContent>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: "50%",
+                          background: "#bdbdbd",
+                          boxShadow:
+                            "0 0 0 1px rgba(0,0,0,0.15)",
+                        }}
+                      />
+                      Non-master
+                    </div>
+                  </div>
+                </>
+              )}
+            </DialogContent>
 
-              <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button
-                  onClick={() => setOpenSearchDialog(false)}
-                  variant="outlined"
-                  color="inherit"
-                >
-                  ปิด
-                </Button>
-              </DialogActions>
-            </Dialog>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button
+                onClick={() => setOpenSearchDialog(false)}
+                variant="outlined"
+                color="inherit"
+              >
+                ปิด
+              </Button>
+            </DialogActions>
+          </Dialog>
 
-          {/* Row 2: เรื่อง* */}
           <Box>
             <InputText
               label={createLabel("เรื่อง", "subject")}
@@ -755,8 +689,6 @@ useEffect(() => {
             />
           </Box>
 
-          
-          {/* Row 3: ผู้ลงนาม* */}
           <Box>
             <SelectFieldSignatureAuthority
               label={createLabel("ผู้ลงนาม", "signer")}
@@ -772,7 +704,6 @@ useEffect(() => {
             />
           </Box>
 
-          {/* Row 5: ชั้นความลับ*, ชั้นความเร่งด่วน* */}
           <Box
             sx={{
               display: "grid",
@@ -790,6 +721,7 @@ useEffect(() => {
               helperText={getFieldError("confidentiality")}
               disabled={optionsLoading}
               placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความลับ"}
+              // ! ไม่ส่ง displayEmpty, renderValue ที่ไม่ใช่ prop ของ SelectField
             />
 
             <SelectField
@@ -802,10 +734,10 @@ useEffect(() => {
               helperText={getFieldError("urgency")}
               disabled={optionsLoading}
               placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความเร่งด่วน"}
+              // ! ไม่ส่ง displayEmpty, renderValue ที่ไม่ใช่ prop ของ SelectField
             />
           </Box>
 
-          {/* Row 6: เอกสารแนบ* */}
           <Box sx={{ position: "relative" }}>
             <InputFile
               key={fileInputKey}
@@ -817,27 +749,13 @@ useEffect(() => {
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxFiles={3}
               maxSizeMB={10}
-              multiple
+              multiple={true}
               existingFiles={existingAttachments}
               getFileUrl={(att) => buildFileUrl(att.file_path)}
-              onDeleteExisting={async (att) => {
-                const reportId = router?.query?.id || null;
-                if (!reportId || !att?.id) return false;
-                const res = await DeleteOutgoingReportAttachment({
-                  outgoing_report_id: reportId,
-                  attachment_id: att.id,
-                });
-                if (res?.success === false) {
-                  alert(res?.res_message || "ลบไฟล์ไม่สำเร็จ");
-                  return false;
-                }
-                setExistingAttachments((prev) => prev.filter((x) => x.id !== att.id));
-                return true;
-              }}
+              onDeleteExisting={handleDeleteExistingAttachment}
             />
           </Box>
 
-          {/* Row 7: หมายเหตุ */}
           <Box>
             <InputText
               label="หมายเหตุ"
@@ -852,7 +770,6 @@ useEffect(() => {
           </Box>
         </Box>
 
-        {/* Action buttons */}
         <Box
           sx={{
             display: "flex",
