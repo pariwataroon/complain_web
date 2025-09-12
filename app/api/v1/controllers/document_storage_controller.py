@@ -747,7 +747,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
                 # เพิ่มฟิลด์ตำแหน่ง (รุ่น 1)
                 "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,
-                "position_name": (getattr(getattr(r, "position", None), "name", None) if hasattr(r, "position", None) else None),
+                "position_name": (getattr(getattr(r, "position", None), "name", None) if hasattr(r, "position") else None),
                 "position_other_text": getattr(r, "position_other_text", None) if hasattr(r, "position_other_text") else None,
                 "attachments": atts,
                 "attachments_count": len(atts),
@@ -775,7 +775,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
                 # เพิ่มฟิลด์ตำแหน่ง (รุ่น 2)
                 "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,
-                "position_name": (getattr(getattr(r, "position", None), "name", None) if hasattr(r, "position", None) else None),
+                "position_name": (getattr(getattr(r, "position", None), "name", None) if hasattr(r, "position") else None),
                 "position_other_text": getattr(r, "position_other_text", None) if hasattr(r, "position_other_text") else None,
                 "attachments": atts,
                 "attachments_count": len(atts),
@@ -802,7 +802,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
                 # เพิ่มฟิลด์ตำแหน่ง (รุ่น 3)
                 "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,
-                "position_name": (getattr(getattr(r, "position", None), "name", None) if hasattr(r, "position", None) else None),
+                "position_name": (getattr(getattr(r, "position", None), "name", None) if hasattr(r, "position") else None),
                 "position_other_text": getattr(r, "position_other_text", None) if hasattr(r, "position_other_text") else None,
                 "attachments": atts,
                 "attachments_count": len(atts),
@@ -833,7 +833,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
                 # เพิ่มฟิลด์ตำแหน่ง (รุ่น 4 - ปัจจุบันโมเดลยังไม่มี จะเป็น None)
                 "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,
-                "position_name": (getattr(getattr(r, "position", None), "name", None) if hasattr(r, "position", None) else None),
+                "position_name": (getattr(getattr(r, "position", None), "name", None) if hasattr(r, "position") else None),
                 "position_other_text": getattr(r, "position_other_text", None) if hasattr(r, "position_other_text") else None,
                 "attachments": atts,
                 "attachments_count": len(atts),
@@ -869,7 +869,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "user": _user_min(getattr(r, "user", None)),
                 # เพิ่มฟิลด์ตำแหน่ง (รุ่น 5 - ปัจจุบันโมเดลยังไม่มี จะเป็น None)
                 "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,
-                "position_name": (getattr(getattr(r, "position", None), "name", None) if hasattr(r, "position", None) else None),
+                "position_name": (getattr(getattr(r, "position", None), "name", None) if hasattr(r, "position") else None),
                 "position_other_text": getattr(r, "position_other_text", None) if hasattr(r, "position_other_text") else None,
                 "attachments": atts,
                 "attachments_count": len(atts),
@@ -904,7 +904,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "user": _user_min(getattr(r, "user", None)),
                 # เพิ่มฟิลด์ตำแหน่ง (รุ่น 6 - ปัจจุบันโมเดลยังไม่มี จะเป็น None)
                 "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,
-                "position_name": (getattr(getattr(r, "position", None), "name", None) if hasattr(r, "position", None) else None),
+                "position_name": (getattr(getattr(r, "position", None), "name", None) if hasattr(r, "position") else None),
                 "position_other_text": getattr(r, "position_other_text", None) if hasattr(r, "position_other_text") else None,
                 "attachments": atts,
                 "attachments_count": len(atts),
