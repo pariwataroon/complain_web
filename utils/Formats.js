@@ -9,6 +9,16 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(buddhistEra);
 
+// Normalize ISO-like strings to a format Day.js can parse reliably.
+// - Trims fractional seconds to max 3 digits (e.g., ".007000" -> ".007").
+// - Returns null for empty/invalid inputs.
+function normalizeIsoPrecision(input) {
+  if (input === null || input === undefined) return null;
+  const s = String(input).trim();
+  if (!s) return null;
+  return s.replace(/(\.\d{3})\d+$/, "$1");
+}
+
 export function formatCitizenId(value) {
   const onlyNums = value.replace(/\D/g, "").slice(0, 13);
   const parts = [
@@ -64,13 +74,37 @@ export const handlePhoneChange = (e, setPhoneDisplay, setValue) => {
 };
 
 export function formatThaiDate(date = new Date()) {
-  const d = dayjs(date);
+  if (arguments.length === 1 && (date === "" || date === null || date === undefined)) {
+    return "-";
+  }
+  const src = normalizeIsoPrecision(date);
+  const d = src === null && arguments.length === 0 ? dayjs() : dayjs(src ?? date);
+  if (!d.isValid()) return "-";
   return `${d.format("D MMM")} ${d.year() + 543}`;
 }
 
 export function formatThaiDateTime(date = new Date()) {
-  const d = dayjs(date).tz("Asia/Bangkok");
-  return `${d.format("D MMM")} ${d.year() + 543} เวลา ${d.format("HH:mm")} น.`;
+  // If a value was explicitly passed and is empty/falsy, return a dash.
+  if (arguments.length === 1 && (date === "" || date === null || date === undefined)) {
+    return "-";
+  }
+
+  const src = normalizeIsoPrecision(date);
+
+  // If caller invoked without args, keep default 'now'.
+  const firstTry = src === null && arguments.length === 0 ? dayjs().tz("Asia/Bangkok") : dayjs(src ?? date).tz("Asia/Bangkok");
+
+  if (firstTry.isValid()) {
+    return `${firstTry.format("D MMM")} ${firstTry.year() + 543} เวลา ${firstTry.format("HH:mm")} น.`;
+  }
+
+  // Fallback: try parsing as UTC then convert to Bangkok
+  const secondTry = dayjs.utc(src ?? date).tz("Asia/Bangkok");
+  if (secondTry.isValid()) {
+    return `${secondTry.format("D MMM")} ${secondTry.year() + 543} เวลา ${secondTry.format("HH:mm")} น.`;
+  }
+
+  return "-";
 }
 
 export function formatElapsedThaiTime(createdAt) {

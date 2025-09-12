@@ -30,7 +30,7 @@ const InfoItem = ({ label, value }) => (
   <Grid item xs={12} sm={6}>
     <Typography fontSize={16}>
       <Box component="span" fontWeight="bold">
-        {label}:
+        {label}  :
       </Box>
       {typeof value === "object" ? value?.label || "-" : value || "-"}
     </Typography>
@@ -603,7 +603,11 @@ const SearchComplaints = () => {
             />
             <InfoItem
               label="เลข สรร. (สารบัญ)"
-              value={complaint.complaint_number || "-"}
+              value={
+                complaint.assignment_form?.reference_number4 ||
+                complaint.complaint_number ||
+                "-"
+              }
             />
             <InfoItem
               label="วันที่ สรร."
@@ -761,12 +765,16 @@ const SearchComplaints = () => {
               }
             />
             <InfoItem
-              label="วันที่"
-              value={formatThaiDate(complaint.created_at)}
+              label="เจ้าหน้าที่ผู้รับผิดชอบ"
+              value={
+                complaint.assignment_form?.assigned_to ||
+                complaint.assigned_to ||
+                "-"
+              }
             />
             <InfoItem
-              label="วันที่"
-              value={formatThaiDate(complaint.created_at)}
+              label="วันที่เริ่มรับผิดชอบเจ้าหน้าที่"
+              value={formatThaiDate(complaint.assignment_form.assigned_date || "-")}
             />
           </Grid>
         </Paper>

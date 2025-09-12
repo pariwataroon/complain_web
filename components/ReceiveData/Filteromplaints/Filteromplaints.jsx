@@ -125,16 +125,20 @@ const Filteromplaints = () => {
 
       respondentName: item.respondent_name || "-",
       docNo: item.reference_number
-        ? `${item.reference_number} (${formatDate(item.reference_date)})`
+        // ? `${item.reference_number} (${formatDate(item.reference_date)})`
+        ? `${item.reference_number}`
         : "-",
       docNo2: item.reference_number2
-        ? `${item.reference_number2} (${formatDate(item.reference_date2)})`
+        // ? `${item.reference_number2} (${formatDate(item.reference_date2)})`
+        ? `${item.reference_number2}`
         : "-",
       docNo3: item.reference_number3
-        ? `${item.reference_number3} (${formatDate(item.reference_date3)})`
+        // ? `${item.reference_number3} (${formatDate(item.reference_date3)})`
+        ? `${item.reference_number3}`
         : "-",
       docNo4: item.reference_number4
-        ? `${item.reference_number4} (${formatDate(item.reference_date4)})`
+        // ? `${item.reference_number4} (${formatDate(item.reference_date4)})`
+        ? `${item.reference_number4}`
         : "-",
       complaint_number: item.complaint_number,
       status: item.status,

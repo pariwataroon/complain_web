@@ -58,13 +58,23 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
     router.back();
   };
   const pdfRef = useRef();
+
+  // แก้กรณีวันที่รูปแบบมี microseconds 6 หลัก (เช่น 2025-09-11T09:23:42.007000)
+  // ให้ตัดให้เหลือ 3 หลัก เพื่อให้ dayjs อ่านได้ และใช้ฟังก์ชันรูปแบบวันที่ที่ตั้งค่าโซนเวลาเป็น Asia/Bangkok
+  const normalizeIso = (value) => {
+    if (!value) return "";
+    return String(value).replace(/(\.\d{3})\d+$/, "$1");
+  };
   
-  // ใช้ข้อมูลที่ map มาแล้วจาก data
-  const complainant = data?.complainant || {};
-  const delegate = data?.delegate || {};
-  const respondent = data?.respondent || {};
-  const complaint = data?.complaint || {};
-  const files = data?.files || [];
+  // ใช้ข้อมูลที่ map มาแล้วจาก data (+ fallback จาก payload ตรง ๆ)
+  const complainant = data?.complainant || data?.step1?.general?.general || {};
+  const delegate = data?.delegate || data?.step1?.general?.delegate || {};
+  const respondent =
+    data?.respondent || data?.step2?.general?.[data?.step2?.general?.activeType || "individual"] || {};
+  const complaint = data?.complaint || data?.step3?.general || {};
+  // รวมไฟล์แนบจากหลายรูปแบบเข้าเป็นโครงสร้างเดียว
+  const rawFiles =
+    data?.files || complaint?.attachment || data?.step3?.general?.attachment || [];
 
   // ข้อมูลเดิมสำหรับ backward compatibility (ถ้ามี)
   const {
@@ -115,7 +125,24 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
     }
   };
 
-    const getFileExt = (filename) => filename.slice(filename.lastIndexOf(".")).toLowerCase();
+    const getFileExt = (filename = "") => {
+      if (!filename) return "";
+      const q = filename.split("?")[0];
+      const dot = q.lastIndexOf(".");
+      return dot >= 0 ? q.slice(dot).toLowerCase() : "";
+    };
+
+    // แปลงไฟล์แนบให้มีฟิลด์มาตรฐาน { name, url, type, size }
+    const normalizeFiles = (arr = []) =>
+      (Array.isArray(arr) ? arr : []).map((f, i) => {
+        const name = f.name || f.fileName || `ไฟล์แนบ ${i + 1}`;
+        const url = f.url || f.fileUrl || f.path || "";
+        const type = f.type || f.fileType || getFileExt(f.fileName || f.name || f.url);
+        const size = f.size || f.fileSize || undefined;
+        return { name, url, type, size };
+      });
+
+    const files = normalizeFiles(rawFiles);
 
     // const router = useRouter();
 
@@ -149,12 +176,17 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
               <InfoItem label="วันที่ร้องทุกข์" value={formatThaiDate()} />
               <InfoItem
                 label="ประเภทเรื่องร้องทุกข์"
-                value={complaint.complaintType}
+                value={
+                  complaint.complaintType ||
+                  data?.assignment_form?.complaint_type_name ||
+                  data?.assignment_form?.complaint_type ||
+                  "-"
+                }
               />
               <InfoItem label="เรื่อง" value={complaint.subject} />
               <InfoItem
                 label="ช่องทางเรื่องร้องเรียน"
-                value={complaint.channel}
+                value={complaint.channel || data?.assignment_form?.complaint_channel_name}
               />
             </Grid>
           </Grid>
@@ -344,25 +376,35 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
           <Box mb={3}>
             {files.length > 0 ? (
               files.map((file, index) => {
-                const ext = getFileExt(file.name || "");
+                const ext = getFileExt(file.name || file.url);
+                const href = file.url || "";
                 return (
-                  <Box
+                  <a
                     key={index}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      border: "1px solid #ccc",
-                      borderRadius: "8px",
-                      px: 2,
-                      py: 1,
-                      mb: 1,
-                    }}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ textDecoration: "none" }}
                   >
-                    {getFileIcon(ext)}
-                    <Typography fontSize={14} color="text.secondary">
-                      {file.name || `ไฟล์แนบ ${index + 1}`}
-                    </Typography>
-                  </Box>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        border: "1px solid #ccc",
+                        borderRadius: "8px",
+                        px: 2,
+                        py: 1,
+                        mb: 1,
+                        transition: "background 0.2s",
+                        '&:hover': { background: "#f8f9fa" },
+                      }}
+                    >
+                      {getFileIcon(ext)}
+                      <Typography fontSize={14} color="text.secondary">
+                        {file.name}
+                      </Typography>
+                    </Box>
+                  </a>
                 );
               })
             ) : (
@@ -380,10 +422,33 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
           <Divider />
 
                 <Grid container spacing={2} mb={3}>
-                    <InfoItem label="ลงชื่อผู้ร้องทุกข์" value={complainant.name} />
-                    <InfoItem label="ลงชื่อผู้รับมอบอำนาจ" value={delegate.name} />
-                    <InfoItem label="วันที่" value={formatThaiDate()} />
-                    <InfoItem label="วันที่" value={formatThaiDate()} />
+                  <InfoItem label="ลงชื่อผู้ร้องทุกข์" value={complainant.name} />
+                  <InfoItem label="ลงชื่อผู้รับมอบอำนาจ" value={delegate.name} />
+                  <InfoItem label="วันที่ผู้ร้องลงนาม" value={formatThaiDate(normalizeIso(data?.created_at || data?.updated_at || new Date().toISOString()))} />
+                  <InfoItem label="วันที่ผู้รับมอบลงนาม" value={formatThaiDate(normalizeIso(data?.created_at || data?.updated_at || new Date().toISOString()))} />
+                </Grid>
+
+                {/* เพิ่มข้อมูลเจ้าหน้าที่ผู้รับผิดชอบ และวันที่รับงาน */}
+                <Grid container spacing={2} mb={3}>
+                  <InfoItem
+                    label="เจ้าหน้าที่ผู้รับผิดชอบ"
+                    value={
+                      data?.assignment_form?.assigned_to ||
+                      data?.assigned_to ||
+                      "-"
+                    }
+                  />
+                  <InfoItem
+                    label="วันที่รับงาน"
+                    value={
+                      formatThaiDateTime(
+                        normalizeIso(
+                          data?.assignment_form?.assigned_date ||
+                            data?.assigned_date || ""
+                        )
+                      )
+                    }
+                  />
                 </Grid>
             </Paper>
             </div>

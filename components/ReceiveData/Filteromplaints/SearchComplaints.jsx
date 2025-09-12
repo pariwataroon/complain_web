@@ -313,6 +313,34 @@ const SearchComplaints = () => {
     fetchStaffUsers();
   }, []);
 
+  // Prefill responsible officer from last saved value (assigned_officer_id)
+  useEffect(() => {
+    const assignedId = defaultData?.assignment_form?.assigned_officer_id;
+    if (!assignedId) return;
+
+    const value = String(assignedId);
+    // Find officer details for name mapping
+    const selectedOfficer = (staffUsers || []).find(
+      (u) => String(u.value) === value
+    );
+
+    // Set select value
+    step4Methods.setValue("responsibleOfficer", value, {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: false,
+    });
+
+    // Also set helper fields if used elsewhere
+    if (selectedOfficer) {
+      step4Methods.setValue("responsibleOfficerId", selectedOfficer.value);
+      step4Methods.setValue(
+        "responsibleOfficerName",
+        selectedOfficer.label || selectedOfficer.fullName || ""
+      );
+    }
+  }, [defaultData?.assignment_form?.assigned_officer_id, staffUsers]);
+
   // Fetch complaint data when ID changes
   useEffect(() => {
     if (id && complaintTypes.length > 0) {
@@ -337,6 +365,18 @@ const SearchComplaints = () => {
     };
     fetchDepartments();
   }, []);
+
+  useEffect(() => {
+    const subtypeId = defaultData?.step3?.general?.complaint_subtype_id;
+    if (subtypeId && subComplaintTypes.length > 0) {
+      // บังคับ cast เป็น string ให้ตรงกับ <option value="...">
+      step3Methods.setValue("complaintSubType", String(subtypeId));
+    }
+  }, [
+    defaultData?.step3?.general?.complaint_subtype_id,
+    subComplaintTypes,
+    step3Methods,
+  ]);
 
   const fetchComplaints = async (id) => {
     setLoading(true);
@@ -416,12 +456,11 @@ const SearchComplaints = () => {
         referenceDate3:
           assignmentForm.reference_date3 || step3Data.referenceDate3 || "",
         referenceNumber4:
-          assignmentForm.complaint_number ||
           assignmentForm.reference_number4 ||
-          step3Data.referenceNumber4 ||
+          step3Data.referenceNumber4 || assignmentForm.complaint_number ||
           "",
         referenceDate4:
-          assignmentForm.reference_date4 || step3Data.referenceDate4 || "",
+          assignmentForm.reference_date4 || step3Data.referenceDate4 || assignmentForm.created_at || "",
         documentNumber:
           assignmentForm.document_number || step3Data.documentNumber || "",
         documentDate:
@@ -433,7 +472,7 @@ const SearchComplaints = () => {
           step3Data.securityLevel ||
           "normal",
         urgencyLevel:
-          assignmentForm.urgency_level || step3Data.urgencyLevel || "normal",
+          assignmentForm.urgency_level || step3Data.urgencyLevel || "low",
 
         // ใช้ id แทน label
         complaintType: complaintTypeId,
@@ -444,8 +483,12 @@ const SearchComplaints = () => {
           ...(complaintTypes.find((t) => t.value === complaintTypeId) || {}),
         },
 
+        // ประเภทเรื่องย่อย: ใช้ complaint_subtype_id (ใหม่) ถ้าไม่มี fallback ไปค่าเดิมที่เคยใช้ผิดคือ complaint_type
         complaintSubType:
-          assignmentForm.complaint_type || step3Data.complaintSubType || "",
+          assignmentForm.complaint_subtype_id ||
+          assignmentForm.complaint_type ||
+          step3Data.complaintSubType ||
+          "",
         additionalReference1:
           assignmentForm.additional_reference_number1 ||
           step3Data.additionalReference1 ||
@@ -505,8 +548,12 @@ const SearchComplaints = () => {
           } else {
             setSubComplaintTypes([]);
           }
-          // ถ้าไม่มีค่าเดิมของ complaintSubType ให้ reset เป็นค่าว่าง
-          if (!(assignmentForm.complaint_type || step3Data.complaintSubType)) {
+          // ถ้าไม่มีค่าเดิมของ complaintSubType (ตรวจทั้ง complaint_subtype_id และ complaint_type เพื่อ backward compat) ให้ reset เป็นค่าว่าง
+          if (!(
+            assignmentForm.complaint_subtype_id ||
+            assignmentForm.complaint_type ||
+            step3Data.complaintSubType
+          )) {
             step3Methods.setValue("complaintSubType", "");
           }
         } catch (e) {
@@ -1374,6 +1421,7 @@ const SearchComplaints = () => {
                           })}
                           className={hasFieldError("referenceNumber4") ? styles.errorField : ""}
                           placeholder="กรุณากรอกเลข สรร. (สารบัญ)"
+                          disabled
                         />
                         {hasFieldError("referenceNumber4") && (
                           <span className={styles.errorText}>{getFieldError("referenceNumber4")}</span>
@@ -1392,6 +1440,7 @@ const SearchComplaints = () => {
                             helperText={getFieldError("referenceDate4")}
                             onChange={() => handleFieldChange("referenceDate4")}
                             required
+                            disabled
                           />
                         </div>
                       </div>
@@ -1775,7 +1824,7 @@ const SearchComplaints = () => {
                               name="officerReceivedDate"
                               control={step4Methods.control}
                               defaultValue={
-                                defaultData?.step4?.general?.officerReceivedDate
+                                defaultData?.assignment_form?.confirm_assigned_date
                               }
                               time={true}
                             />
@@ -1788,8 +1837,7 @@ const SearchComplaints = () => {
                               name="directorSubmittedDate"
                               control={step4Methods.control}
                               defaultValue={
-                                defaultData?.step4?.general
-                                  ?.directorSubmittedDate
+                                defaultData?.assignment_form?.director_submission_date
                               }
                               time={true}
                             />
@@ -1806,9 +1854,9 @@ const SearchComplaints = () => {
                               name="incidentDate"
                               control={step4Methods.control}
                               defaultValue={
-                                defaultData?.step4?.general?.incidentDate
+                                defaultData?.step3?.general?.incidentDate
                                   ? new Date(
-                                      defaultData.step4.general.incidentDate
+                                      defaultData.step3.general.incidentDate
                                     )
                                   : undefined
                               }
@@ -1994,6 +2042,11 @@ const SearchComplaints = () => {
                             rows={4}
                             {...step4Methods.register("screeningRemarks")}
                             placeholder="ให้หน่วยงานทำการชี้แจงผลกระทบความล่าช้าและเสนอแนวทางแก้ไข..."
+                            defaultValue={
+                              defaultData?.assignment_form?.assigned_remark
+                                ? defaultData?.assignment_form?.assigned_remark
+                                : ""
+                            }
                             className={styles.textarea}
                           />
                         </div>
