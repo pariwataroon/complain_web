@@ -71,13 +71,20 @@ const useSearchComplaintsPreview = () => {
           return confidentialityMap[step3Data.securityLevel] || "normal";
         })(),
 
+        // urgency_level: Use value from form directly (low|medium|high|urgent|critical)
+        // Previous mapping caused all non-mapped values to fall back to 'low'
         urgency_level: (() => {
-          const urgencyMap = {
+          const allowed = ["low", "medium", "high", "urgent", "critical"]; // backend accepted values
+          if (allowed.includes(step3Data.urgencyLevel)) return step3Data.urgencyLevel;
+          // handle legacy values accidentally stored
+          const legacyMap = {
             normal: "low",
-            urgent: "medium",
-            very_urgent: "high",
+            very_urgent: "urgent",
+            emergency: "critical",
           };
-          return urgencyMap[step3Data.urgencyLevel] || "low";
+          if (legacyMap[step3Data.urgencyLevel]) return legacyMap[step3Data.urgencyLevel];
+          // fallback to existing assignment_form urgency_level if present
+          return formData?.assignment_form?.urgency_level || "low";
         })(),
 
         // เลขที่อ้างอิงจากระบบต่างๆ
@@ -165,6 +172,9 @@ const useSearchComplaintsPreview = () => {
         "Prepared Data for API (Complete):",
         JSON.stringify(preparedData, null, 2)
       );
+
+      console.log("[DEBUG] Selected form urgencyLevel:", step3Data.urgencyLevel);
+      console.log("[DEBUG] Payload urgency_level:", preparedData.urgency_level);
 
       // เรียก API
       const response = await UpdateAssignmentCompleteByAdmin(

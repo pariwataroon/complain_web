@@ -14,6 +14,7 @@ import {
   formatThaiDateTime,
   formatPhoneNumber_null,
   formatCitizenId_null,
+  formatThaiFullDate,
 } from "@utils/Formats";
 import CheckIcon from "@mui/icons-material/Check";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -226,23 +227,40 @@ const SearchComplaintsPreview = ({
   };
 
   const normalizeAssignmentData = (resData) => {
-  return {
-    ...resData,
-    step1: resData.step1 || {},
-    step2: resData.step2 || {},
-    step3: resData.step3 || {},
-    step4: resData.step4 || {},
-    complaint: {
-      ...resData.assignment_form, // ✅ merge assignment_form
-      ...resData.step3?.general,  // merge subject, complaint_type ฯลฯ
-      urgencyLevel: resData.assignment_form?.urgency_level 
-              || resData.step3?.general?.urgency_level 
-              || resData.step4?.general?.urgency_level 
-              || "low",
+    const assignment = resData.assignment_form || {};
 
-    },
+    // สร้างสำเนา step4.general ให้มี officerReceivedDate (ใช้ confirm_assigned_date ถ้ามี)
+    const step4General = {
+      ...(resData.step4?.general || {}),
+      officerReceivedDate:
+        resData.step4?.general?.officerReceivedDate ||
+        assignment.confirm_assigned_date ||
+        resData.confirm_assigned_date ||
+        null,
+      directorSubmittedDate:
+        resData.step4?.general?.directorSubmittedDate ||
+        assignment.director_submission_date ||
+        resData.director_submission_date ||
+        null,
+    };
+
+    return {
+      ...resData,
+      step1: resData.step1 || {},
+      step2: resData.step2 || {},
+      step3: resData.step3 || {},
+      step4: { general: step4General },
+      complaint: {
+        ...assignment, // merge assignment_form (channel / references / levels)
+        ...resData.step3?.general, // subject / description / types
+        urgencyLevel:
+          assignment.urgency_level ||
+          resData.step3?.general?.urgency_level ||
+          step4General.urgency_level ||
+          "low",
+      },
+    };
   };
-};
 
 const handleSubmit = async () => {
   if (!id) {
@@ -261,8 +279,9 @@ const handleSubmit = async () => {
   setSubmitting(true);
 
   try {
-    const step3Data = formData.step3?.general || {};
-    const step4Data = formData.step4?.general || {};
+  const step3Data = formData.step3?.general || {};
+  const step4Data = formData.step4?.general || {};
+  const assignmentOriginal = formData.assignment_form || {};
 
     // --- ตรวจสอบ UUID ---
     let complaintTypeId =
@@ -291,41 +310,50 @@ const handleSubmit = async () => {
     // --- เตรียมข้อมูล mappedFormData ---
     const mappedFormData = {
       ...formData,
-      // ✅ STEP1: ผู้ร้องทุกข์ + ผู้มอบอำนาจ
-  step1: {
-    general: {
-      general: formData?.step1?.general?.general || {},   // ผู้ร้องทุกข์
-      delegate: formData?.step1?.general?.delegate || {}, // ผู้มอบอำนาจ
-    },
-  },
-
-  // ✅ STEP2: ผู้ถูกร้องเรียน
-  step2: {
-    general: {
-      individual: formData?.step2?.general?.individual || {},
-    },
-  },
-      
+      step1: {
+        general: {
+          general: formData?.step1?.general?.general || {},
+          delegate: formData?.step1?.general?.delegate || {},
+        },
+      },
+      step2: {
+        general: {
+          individual: formData?.step2?.general?.individual || {},
+        },
+      },
       step3: {
         general: {
           ...step3Data,
           complaintTypeID: complaintTypeId,
-          complaintSubType: complaintSubTypeId, // ใช้ UUID
-          complaintChannel: complaintChannelId, // ใช้ UUID
+          complaintSubType: complaintSubTypeId,
+          complaintChannel: complaintChannelId,
         },
       },
       step4: {
         general: {
-          // map ให้ตรงกับ API (snake_case)
-          assigned_date: step4Data.officerReceivedDate || null,
-          director_submission_date: step4Data.directorSubmittedDate || null,
+          confirm_assigned_date:
+            step4Data.officerReceivedDate || assignmentOriginal.confirm_assigned_date || null,
+          director_submission_date:
+            step4Data.directorSubmittedDate || assignmentOriginal.director_submission_date || null,
           incident_date: step4Data.incidentDateTime || null,
         },
       },
       assignment_form: {
-    ...formData.assignment_form,
-    urgency_level: step3Data.urgencyLevel || "low", 
-  },
+        ...assignmentOriginal,
+        complaint_type_id: complaintTypeId,
+        complaint_subtype_id: complaintSubTypeId,
+        complaint_channel_id: complaintChannelId,
+        urgency_level: step3Data.urgencyLevel || assignmentOriginal.urgency_level || "low",
+        confidentiality_level: step3Data.confidentialityLevel || assignmentOriginal.confidentiality_level || "normal",
+        // preserve original assigned_date (system timestamp)
+        assigned_date:
+          assignmentOriginal.assigned_date || formData.assigned_date || null,
+        // put confirm_assigned_date from UI
+        confirm_assigned_date:
+          step4Data.officerReceivedDate || assignmentOriginal.confirm_assigned_date || null,
+        director_submission_date:
+          step4Data.directorSubmittedDate || assignmentOriginal.director_submission_date || null,
+      },
     };
 
     // ✅ Helper: แปลงวันที่เป็น YYYY-MM-DD HH:mm:ss
@@ -342,19 +370,26 @@ const handleSubmit = async () => {
       return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     };
 
-
     // --- STEP3: บันทึกข้อมูลร้องเรียน ---
     await handleUpdateAssignment(id, mappedFormData, userInfo);
 
     // --- STEP4: บันทึกวันรับเรื่อง/วันเสนองาน ---
     await UpdateAssignmentCompleteByAdmin(id, {
-    assigned_date: formatDateForAPI(step4Data.officerReceivedDate),
-    director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate),
-    incident_date: formatDateForAPI(step4Data.incidentDateTime),
-  });
-
-
-
+      new_complaint: step3Data.complaint_filing_type === "new" ||
+        step3Data.isNewComplaint === true ||
+        !step3Data.complaint_filing_type, // default เป็น new
+      add_more_complaint_to_ref: step3Data.complaint_filing_type === "additional" ||
+        step3Data.isAdditionalComplaint === true,
+      group_work: step3Data.complaint_filing_type === "committee" ||
+        step3Data.isCommitteeComplaint === true,
+      confirm_assigned_date: formatDateForAPI(step4Data.officerReceivedDate),
+      director_submission_date: formatDateForAPI(
+        step4Data.directorSubmittedDate
+      ),
+      incident_date: formatDateForAPI(step4Data.incidentDateTime),
+      assigned_date:
+        assignmentOriginal.assigned_date || formData.assigned_date || null,
+    });
 
     alertSuccess("บันทึกสำเร็จ", "ข้อมูลได้รับการบันทึกแล้ว");
 
@@ -811,7 +846,7 @@ const handleSubmit = async () => {
               />
               <InfoItem
                 label="วันที่ สป.กค."
-                value={formatDate(complaint.referenceDate1)}
+                value={formatThaiFullDate(complaint.referenceDate1)}
               />
               <InfoItem
                 label="เลข สป.สร."
@@ -819,7 +854,7 @@ const handleSubmit = async () => {
               />
               <InfoItem
                 label="วันที่ สป.สร."
-                value={formatDate(complaint.referenceDate2)}
+                value={formatThaiFullDate(complaint.referenceDate2)}
               />
               <InfoItem
                 label="เลข สตป."
@@ -827,7 +862,7 @@ const handleSubmit = async () => {
               />
               <InfoItem
                 label="วันที่ สตป."
-                value={formatDate(complaint.referenceDate3)}
+                value={formatThaiFullDate(complaint.referenceDate3)}
               />
               <InfoItem
                 label="เลข สรร. (สารบัญ)"
@@ -835,7 +870,7 @@ const handleSubmit = async () => {
               />
               <InfoItem
                 label="วันที่ สรร."
-                value={formatDate(complaint.referenceDate4)}
+                value={formatThaiFullDate(complaint.referenceDate4)}
               />
               <InfoItem
                 label="เลขที่หนังสือ"
@@ -843,7 +878,7 @@ const handleSubmit = async () => {
               />
               <InfoItem
                 label="วันที่หนังสือ"
-                value={formatDate(complaint.documentDate)}
+                value={formatThaiFullDate(complaint.documentDate)}
               />
               <InfoItem
                 label="หน่วยงานอื่นที่ส่งเรื่องมา"
@@ -889,8 +924,10 @@ const handleSubmit = async () => {
               <InfoItem
                 label="วันที่รับเรื่องของเจ้าพนักงาน"
                 value={
-                  additionalDetails.officerReceivedDate
-                    ? safeFormatThaiDateTime(additionalDetails.officerReceivedDate)
+                  formData?.assignment_form?.confirm_assigned_date
+                    ? safeFormatThaiDateTime(
+                        formData.assignment_form.confirm_assigned_date
+                      )
                     : "-"
                 }
               />

@@ -217,6 +217,12 @@ useEffect(() => {
         senderAgency: assignment.agency_sender || "",
         securityLevel: assignment.confidentiality_level || "normal",
         urgencyLevel: assignment.urgency_level || "low",
+        confirmAssignedDate: assignment.confirm_assigned_date || "",
+        // ===== Complaint Filing Type flags (align with Filter complaints implementation) =====
+        complaint_filing_type: assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type || "new",
+        isNewComplaint: (assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type || "new") === "new",
+        isAdditionalComplaint: (assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type) === "additional",
+        isCommitteeComplaint: (assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type) === "committee" || (assignment.complaint_filing_type === "anonymous"),
       });
       const officerDate = extractOfficerReceivedDate(merged, assignment);
       const directorDate = assignment.director_submission_date || merged?.director_submission_date || merged?.assignment_form?.director_submission_date;
@@ -250,14 +256,10 @@ useEffect(() => {
         search: keyword || "",
       });
 
-      console.log("API response", response);
-
       // ใช้ complaint_number เป็น label และ value หลัก
       const items = Array.isArray(response?.res_data?.items)
         ? response.res_data.items
         : [];
-
-      console.log("items for result", items);
 
       const results = items.map((item) => ({
         ...item,
@@ -891,7 +893,9 @@ const handleSubmit = async () => {
     step3Data.complaintTypeId ||
     step3Data.complaint_type_id ||
     selectedComplaintType?.id ||
-    "-";
+    defaultData?.assignment_form?.complaint_type_id ||
+    defaultData?.step3?.general?.complaint_type_id ||
+    "-"; // ใช้ "-" เป็น sentinel ถ้าไม่มีจริง ๆ
   const complaintTypeName =
     step3Data.complaintTypeName ||
     step3Data.complaintType ||
@@ -934,6 +938,32 @@ const handleSubmit = async () => {
     step3Data.complaint_channel_data ||
     selectedComplaintChannel ||
     null;
+
+  // ===== Complaint Filing Type Mapping =====
+  // Prefer explicit complaint_filing_type field; otherwise infer from boolean flags
+  let complaintFilingType = step3Data.complaint_filing_type;
+  if (!complaintFilingType) {
+    if (step3Data.isNewComplaint) complaintFilingType = "new";
+    else if (step3Data.isAdditionalComplaint) complaintFilingType = "additional";
+    else if (step3Data.isCommitteeComplaint) complaintFilingType = "committee"; // alias for group work
+    else complaintFilingType = "new";
+  }
+
+  const newComplaintFlags = {
+    complaintFilingType,
+    new_complaint: complaintFilingType === "new",
+    add_more_complaint_to_ref: complaintFilingType === "additional",
+    group_work: complaintFilingType === "committee",
+  };
+
+  // ===== Sender Agency Name (lookup from outsideDepartments list if possible) =====
+  let senderAgencyName = "";
+  const selectedSender = outsideDepartments.find(
+    (d) => String(d.value) === String(step3Data.senderAgency)
+  );
+  if (selectedSender) {
+    senderAgencyName = selectedSender.label || selectedSender.name || "";
+  }
 
   // === Mapper วันที่ ===
   const submitData = {
@@ -991,13 +1021,22 @@ const handleSubmit = async () => {
         additional_reference_date2: formatDateForAPI(
           step3Data.additionalReferenceDate2
         ),
+        // Filing type & flags
+        ...newComplaintFlags,
+        senderAgencyName,
       },
     },
     step4: {
       general: {
         ...step4Data,
         // officerReceivedDate -> confirm_assigned_date (ไม่แทน assigned_date)
-        confirm_assigned_date: formatDateForAPI(step4Data.officerReceivedDate),
+        // ใช้ค่าใน form (ผู้ใช้แก้) ถ้าไม่มีให้ fallback จาก assignment_form เดิม
+        confirm_assigned_date: formatDateForAPI(
+          step4Data.officerReceivedDate ||
+          defaultData?.assignment_form?.confirm_assigned_date ||
+          defaultData?.confirm_assigned_date ||
+          null
+        ),
         // เก็บ assigned_date ดั้งเดิมไว้ในข้อมูล (ไม่แก้ หาก backend ต้องใช้เทียบ diff)
         assigned_date:
           defaultData?.assignment_form?.assigned_date ||
@@ -1009,41 +1048,71 @@ const handleSubmit = async () => {
         incident_date: formatDateForAPI(step4Data.incidentDateTime),
       },
     },
-    assignment_form: {
-      ...defaultData?.assignment_form,
-      reference_date: formatDateForAPI(step3Data.referenceDate1),
-      reference_date2: formatDateForAPI(step3Data.referenceDate2),
-      reference_date3: formatDateForAPI(step3Data.referenceDate3),
-      reference_date4: formatDateForAPI(step3Data.referenceDate4),
-      document_date: formatDateForAPI(step3Data.documentDate),
-      additional_reference_date1: formatDateForAPI(
-        step3Data.additionalReferenceDate1
-      ),
-      additional_reference_date2: formatDateForAPI(
-        step3Data.additionalReferenceDate2
-      ),
-      // อย่าเขียนทับ assigned_date เดิม; ส่งค่าเดิมกลับไป
-      assigned_date:
-        defaultData?.assignment_form?.assigned_date ||
-        defaultData?.assigned_date ||
-        null,
-      // ส่ง confirm_assigned_date ที่ผู้ใช้แก้
-      confirm_assigned_date: formatDateForAPI(step4Data.officerReceivedDate),
-      director_submission_date: formatDateForAPI(
-        step4Data.directorSubmittedDate
-      ),
-    },
-  };
+    assignment_form: (() => {
+      // Final fallback complaint_type_id selection
+      const finalComplaintTypeId = complaintTypeId !== "-" && complaintTypeId
+        ? complaintTypeId
+        : (defaultData?.assignment_form?.complaint_type_id || defaultData?.step3?.general?.complaint_type_id || null);
 
-  // === Debug log หลัง mapping ===
-  console.log("🚀 submitData.step1.general:", submitData.step1.general);
-  console.log("🚀 submitData.step2.general:", submitData.step2.general);
-  console.log("🚀 submitData.step3.general:", submitData.step3.general);
-  console.log("🚀 submitData.step4.general:", submitData.step4.general);
-  console.log("🚀 submitData.assignment_form:", submitData.assignment_form);
+      const payload = {
+        complaint_type_id: finalComplaintTypeId,
+        complaint_subtype_id: (complaintSubTypeId && complaintSubTypeId !== "-") ? complaintSubTypeId : "",
+        complaint_channel_id: (complaintChannelId && complaintChannelId !== "-") ? complaintChannelId : null,
+        // Dates
+        confirm_assigned_date: (step4Data.officerReceivedDate || defaultData?.assignment_form?.confirm_assigned_date)
+          ? formatDateForAPI(step4Data.officerReceivedDate || defaultData?.assignment_form?.confirm_assigned_date)
+          : null,
+        director_submission_date: step4Data.directorSubmittedDate ? formatDateForAPI(step4Data.directorSubmittedDate) : null,
+        incident_date: step4Data.incidentDateTime ? formatDateForAPI(step4Data.incidentDateTime) : (defaultData?.assignment_form?.incident_date || null),
+        assigned_date: defaultData?.assignment_form?.assigned_date || defaultData?.assigned_date || null,
+        // Core text fields
+        subject: step3Data.subject || defaultData?.assignment_form?.subject || "",
+        confidentiality_level: step3Data.securityLevel || defaultData?.assignment_form?.confidentiality_level || "normal",
+        urgency_level: step3Data.urgencyLevel || defaultData?.assignment_form?.urgency_level || "low",
+        // Agency (backend sample shows assigned_agency, keep both if needed)
+        assigned_agency: step3Data.senderAgency || defaultData?.assignment_form?.assigned_agency || "",
+        agency_sender: step3Data.senderAgency || defaultData?.assignment_form?.agency_sender || "",
+        // References (normalized 1..4)
+        reference_number1: step3Data.referenceNumber1 || defaultData?.assignment_form?.reference_number1 || "",
+        reference_date1: step3Data.referenceDate1 ? formatDateForAPI(step3Data.referenceDate1) : (defaultData?.assignment_form?.reference_date1 || null),
+        reference_number2: step3Data.referenceNumber2 || defaultData?.assignment_form?.reference_number2 || "",
+        reference_date2: step3Data.referenceDate2 ? formatDateForAPI(step3Data.referenceDate2) : (defaultData?.assignment_form?.reference_date2 || null),
+        reference_number3: step3Data.referenceNumber3 || defaultData?.assignment_form?.reference_number3 || "",
+        reference_date3: step3Data.referenceDate3 ? formatDateForAPI(step3Data.referenceDate3) : (defaultData?.assignment_form?.reference_date3 || null),
+        reference_number4: step3Data.referenceNumber4 || defaultData?.assignment_form?.reference_number4 || "",
+        reference_date4: step3Data.referenceDate4 ? formatDateForAPI(step3Data.referenceDate4) : (defaultData?.assignment_form?.reference_date4 || null),
+        // Document
+        document_number: step3Data.documentNumber || defaultData?.assignment_form?.document_number || "",
+        document_date: step3Data.documentDate ? formatDateForAPI(step3Data.documentDate) : (defaultData?.assignment_form?.document_date || null),
+        // Additional references
+        additional_reference_number1: step3Data.additionalReference1 || defaultData?.assignment_form?.additional_reference_number1 || "",
+        additional_reference_date1: step3Data.additionalReferenceDate1 ? formatDateForAPI(step3Data.additionalReferenceDate1) : (defaultData?.assignment_form?.additional_reference_date1 || null),
+        additional_reference_number2: step3Data.additionalReference2 || defaultData?.assignment_form?.additional_reference_number2 || "",
+        additional_reference_date2: step3Data.additionalReferenceDate2 ? formatDateForAPI(step3Data.additionalReferenceDate2) : (defaultData?.assignment_form?.additional_reference_date2 || null),
+        // Filing type flags
+        complaint_filing_type: complaintFilingType,
+        new_complaint: complaintFilingType === "new",
+        add_more_complaint_to_ref: complaintFilingType === "additional",
+        group_work: complaintFilingType === "committee",
+      };
+
+      // Remove any undefined keys (defensive)
+      Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+      return payload;
+    })(),
+  };
 
   // ✅ ยิง API เพื่อบันทึกจริง
   try {
+    // ถ้า backend ต้องการอย่างน้อย 1 ประเภทการร้องเรียน ให้ตรวจตรงนี้ก่อน
+    if (complaintTypeId === "-" || !complaintTypeId) {
+      alertWarning(
+        "ข้อมูลไม่ครบถ้วน",
+        "กรุณาเลือกประเภทเรื่องร้องเรียน (ระบบต้องมีค่า complaint_type_id)",
+        true
+      );
+      return;
+    }
     const res = await UpdateAssignmentCompleteByAdmin(
       defaultData.id,
       submitData.assignment_form
@@ -1068,10 +1137,16 @@ const handleSubmit = async () => {
         { shallow: true }
       );
     } else {
-      alertError(
-        "ข้อผิดพลาด",
-        res?.res_desc || "ไม่สามารถบันทึกข้อมูลได้"
-      );
+      // แปลง error เฉพาะเคสที่ backend ส่ง error: "กรุณาเลือกประเภทการร้องเรียนอย่างน้อย 1 ประเภท"
+      const backendErr = res?.res_data?.error || res?.res_desc || res?.res_message;
+      if (backendErr && backendErr.includes("ประเภทการร้องเรียน")) {
+        alertWarning("ข้อมูลไม่ครบถ้วน", backendErr, true);
+      } else {
+        alertError(
+          "ข้อผิดพลาด",
+          backendErr || "ไม่สามารถบันทึกข้อมูลได้"
+        );
+      }
     }
   } catch (err) {
     console.error("❌ Error UpdateAssignmentCompleteByAdmin:", err);
