@@ -745,6 +745,9 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "created_at": _iso(getattr(r, "created_at", None)),
                 "department": _dept_min(getattr(r, "department", None)),
                 "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
+                # เพิ่มฟิลด์ตำแหน่ง (รุ่น 1)
+                "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,
+                "position_other_text": getattr(r, "position_other_text", None) if hasattr(r, "position_other_text") else None,
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "รายงานส่งหน่วยงานที่เกี่ยวข้อง",
@@ -769,6 +772,9 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "department": _dept_min(getattr(r, "department", None)),
                 "recipient_user": _user_min(getattr(r, "to_user", None) or getattr(r, "user", None)),
                 "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
+                # เพิ่มฟิลด์ตำแหน่ง (รุ่น 2)
+                "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,
+                "position_other_text": getattr(r, "position_other_text", None) if hasattr(r, "position_other_text") else None,
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "แจ้งผู้ร้องเรียน/ส่วนราชการที่ส่งเรื่องมาให้ทราบ",
@@ -792,6 +798,9 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "created_at": _iso(getattr(r, "created_at", None)),
                 "department": _dept_min(getattr(r, "department", None)),
                 "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
+                # เพิ่มฟิลด์ตำแหน่ง (รุ่น 3)
+                "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,
+                "position_other_text": getattr(r, "position_other_text", None) if hasattr(r, "position_other_text") else None,
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "รายงานผลจากหน่วยงาน/ความคืบหน้า",
@@ -819,6 +828,9 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "created_at": _iso(getattr(r, "created_at", None)),
                 "department": _dept_min(getattr(r, "department", None)),
                 "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
+                # เพิ่มฟิลด์ตำแหน่ง (รุ่น 4 - ปัจจุบันโมเดลยังไม่มี จะเป็น None)
+                "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,
+                "position_other_text": getattr(r, "position_other_text", None) if hasattr(r, "position_other_text") else None,
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "หนังสือแจ้งผลการพิจารณางาน",
@@ -851,6 +863,9 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "department": _dept_min(getattr(r, "department", None)),
                 "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
                 "user": _user_min(getattr(r, "user", None)),
+                # เพิ่มฟิลด์ตำแหน่ง (รุ่น 5 - ปัจจุบันโมเดลยังไม่มี จะเป็น None)
+                "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,
+                "position_other_text": getattr(r, "position_other_text", None) if hasattr(r, "position_other_text") else None,
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "แจ้งผลการให้ผู้เกี่ยวข้องทราบ",
@@ -882,6 +897,9 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "department": _dept_min(getattr(r, "department", None)),
                 "signature_authority_user": _user_min(getattr(r, "signature_authority_user", None)),
                 "user": _user_min(getattr(r, "user", None)),
+                # เพิ่มฟิลด์ตำแหน่ง (รุ่น 6 - ปัจจุบันโมเดลยังไม่มี จะเป็น None)
+                "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,
+                "position_other_text": getattr(r, "position_other_text", None) if hasattr(r, "position_other_text") else None,
                 "attachments": atts,
                 "attachments_count": len(atts),
                 "type_description": "รายงานนำเรียนผู้ตรวจ",
