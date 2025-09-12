@@ -20,13 +20,20 @@ import {
   ListItemIcon,
   ListItemText,
   Link as MuiLink,
+  Button,
 } from "@mui/material";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import FolderIcon from "@mui/icons-material/Folder";
 import { getDocumentStorageByComplaintId } from "@pages/api/document/document";
+import { GetPositionByID } from "@pages/api/positions/positions"; // ใช้สำหรับ map position_id -> position_name เมื่อ backend ไม่ส่งชื่อมา
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ImageIcon from "@mui/icons-material/Image";
+import AudioFileIcon from "@mui/icons-material/AudioFile";
+import MovieIcon from "@mui/icons-material/Movie";
+import TableChartIcon from "@mui/icons-material/TableChart";
+import ArticleIcon from "@mui/icons-material/Article";
+import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 import CloseIcon from "@mui/icons-material/Close";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
@@ -43,43 +50,43 @@ const STATUS = {
   FINAL_NOTIFY: 6,
 };
 
-// Section color themes to improve visual separation
+// Section color themes to improve visual separation - Pastel colors
 const SECTION_STYLES = {
   RECEIVED: {
-    boxBg: "#E3F2FD", // light blue
-    headerBg: "#1565C0",
-    headerColor: "#ffffff",
-    border: "#90CAF9",
+    boxBg: "#F0F8FF", // very light blue
+    headerBg: "#87CEEB", // sky blue
+    headerColor: "#2F4F4F", // dark slate gray
+    border: "#B0E0E6", // powder blue
   },
   FORWARDED: {
-    boxBg: "#E0F7FA", // light cyan
-    headerBg: "#00838F",
-    headerColor: "#ffffff",
-    border: "#80DEEA",
+    boxBg: "#F0FFFF", // azure
+    headerBg: "#98D8C8", // mint cream
+    headerColor: "#2F4F4F", // dark slate gray
+    border: "#AFEEEE", // pale turquoise
   },
   INITIAL_NOTIFY: {
-    boxBg: "#FFF8E1", // light amber
-    headerBg: "#FF8F00",
-    headerColor: "#1A1A1A",
-    border: "#FFE082",
+    boxBg: "#FFFEF7", // cream
+    headerBg: "#F0E68C", // khaki
+    headerColor: "#556B2F", // dark olive green
+    border: "#F5DEB3", // wheat
   },
   REQUEST_UPDATE: {
-    boxBg: "#FFF3E0", // light orange
-    headerBg: "#EF6C00",
-    headerColor: "#1A1A1A",
-    border: "#FFCC80",
+    boxBg: "#FFF8F0", // seashell
+    headerBg: "#DEB887", // burlywood
+    headerColor: "#8B4513", // saddle brown
+    border: "#FFEFD5", // papaya whip
   },
   AGENCY_REPORT: {
-    boxBg: "#F3E5F5", // light purple
-    headerBg: "#6A1B9A",
-    headerColor: "#ffffff",
-    border: "#CE93D8",
+    boxBg: "#F8F0FF", // ghost white
+    headerBg: "#DDA0DD", // plum
+    headerColor: "#4B0082", // indigo
+    border: "#E6E6FA", // lavender
   },
   FINAL_NOTIFY: {
-    boxBg: "#E8F5E9", // light green
-    headerBg: "#2E7D32",
-    headerColor: "#ffffff",
-    border: "#A5D6A7",
+    boxBg: "#F0FFF0", // honeydew
+    headerBg: "#98FB98", // pale green
+    headerColor: "#228B22", // forest green
+    border: "#C1FFC1", // dark sea green
   },
 };
 
@@ -218,20 +225,32 @@ const sectionConfigs = [
       "เอกสารแนบ",
       "การจัดการ",
     ],
-    rowMapper: (row, idx) => ({
-      ลำดับ: idx + 1,
-      "หน่วยงาน(ครั้งที่ส่ง)": row.agency || "-",
-      เรื่อง: row.issue || row.subject || "-",
-      เลขที่หนังสือ: row.document_number || "-",
-      ลงวันที่: row.document_date || "-",
-      ผู้ลงนาม:
-        row.signer ||
-        (row.signature_authority_user && row.signature_authority_user.name) ||
-        "-",
-      เอกสารแนบ: row.attachment_name || "-",
-      การจัดการ: row.id,
-      id: row.id,
-    }),
+    rowMapper: (row, idx) => {
+      const posName = row.position?.name || row.position_name || "";
+      const other = row.position_other_text || "";
+      let positionDisplay = [posName, other].filter(Boolean).join(other ? " " : "") || "-";
+      
+      if (posName === "ผู้ร้อง" || posName === "ผู้ร้องเรียน") {
+        positionDisplay = positionDisplay.replace(/^ผู้ร้อง(เรียน)?/, "(ผู้ร้อง)");
+      } else if (posName === "อื่นๆ") {
+        positionDisplay = positionDisplay.replace(/^อื่นๆ/, "(อื่นๆ)");
+      }
+      
+      return {
+        ลำดับ: idx + 1,
+        "หน่วยงาน(ครั้งที่ส่ง)": positionDisplay,
+        เรื่อง: row.issue || row.subject || "-",
+        เลขที่หนังสือ: row.document_number || "-",
+        ลงวันที่: row.document_date || "-",
+        ผู้ลงนาม:
+          row.signer ||
+          (row.signature_authority_user && row.signature_authority_user.name) ||
+          "-",
+        เอกสารแนบ: row.attachment_name || "-",
+        การจัดการ: row.id,
+        id: row.id,
+      };
+    },
     filter: (row) =>
       row.status === "sent_to_agency" || row.status === "forwarded",
   },
@@ -249,29 +268,37 @@ const sectionConfigs = [
       "เอกสารแนบ",
       "การจัดการ",
     ],
-    rowMapper: (row, idx) => ({
-      ลำดับ: idx + 1,
-      "หน่วยงานหรือผู้ร้อง(ครั้งที่ส่ง)":
-        row.agency || row.department?.name || "-",
-      เลขที่หนังสือ: row.document_number || row.reference_number || "-",
-      ลงวันที่:
-        row.receiveDate ||
-        row.complaint_number_date ||
-        row.reference_date ||
-        "-",
-      เรื่อง: row.issue || row.subject || "-",
-      ผู้ลงนาม:
-        row.signer ||
-        (row.signature_authority_user && row.signature_authority_user.name) ||
-        "-",
-      เอกสารแนบ:
-        row.attachment_name ||
-        (row.attachments && row.attachments.length > 0
-          ? row.attachments.map((a) => a.file_name || a.name).join(", ")
-          : "-"),
-      การจัดการ: row.id,
-      id: row.id,
-    }),
+    rowMapper: (row, idx) => {
+      const posName = row.position?.name || row.position_name || "";
+      const other = row.position_other_text || "";
+      let positionDisplay = [posName, other].filter(Boolean).join(other ? " " : "") || "-";
+      
+      if (posName === "ผู้ร้อง" || posName === "ผู้ร้องเรียน") {
+        positionDisplay = positionDisplay.replace(/^ผู้ร้อง(เรียน)?/, "(ผู้ร้อง)");
+      } else if (posName === "อื่นๆ") {
+        positionDisplay = positionDisplay.replace(/^อื่นๆ/, "(อื่นๆ)");
+      }
+      return {
+        ลำดับ: idx + 1,
+        "หน่วยงานหรือผู้ร้อง(ครั้งที่ส่ง)": positionDisplay,
+        เลขที่หนังสือ: row.document_number || row.reference_number || "-",
+        ลงวันที่: row.document_date 
+          ? new Date(row.document_date).toLocaleDateString("th-TH")
+          : "-",
+        เรื่อง: row.issue || row.subject || "-",
+        ผู้ลงนาม:
+          row.signer ||
+          (row.signature_authority_user && row.signature_authority_user.name) ||
+          "-",
+        เอกสารแนบ:
+          row.attachment_name ||
+          (row.attachments && row.attachments.length > 0
+            ? row.attachments.map((a) => a.file_name || a.name).join(", ")
+            : "-"),
+        การจัดการ: row.id,
+        id: row.id,
+      };
+    },
     filter: (row) => row.status === "initial_notify",
   },
   {
@@ -288,24 +315,35 @@ const sectionConfigs = [
       "เอกสารแนบ",
       "การจัดการ",
     ],
-    rowMapper: (row, idx) => ({
-      ลำดับ: idx + 1,
-      "ส่งหน่วยงาน(ครั้งที่ส่ง)": row.agency || "-",
-      เรื่อง: row.issue || row.subject || "-",
-      เลขที่หนังสือ: row.document_number || row.document_number || "-",
-      ลงวันที่: row.document_date || row.document_date || "-",
-      ผู้ลงนาม:
-        row.signer ||
-        (row.signature_authority_user && row.signature_authority_user.name) ||
-        "-",
-      เอกสารแนบ:
-        row.attachment_name ||
-        (row.attachments && row.attachments.length > 0
-          ? row.attachments.map((a) => a.file_name || a.name).join(", ")
-          : "-"),
-      การจัดการ: row.id,
-      id: row.id,
-    }),
+    rowMapper: (row, idx) => {
+      const posName = row.position?.name || row.position_name || "";
+      const other = row.position_other_text || "";
+      let positionDisplay = [posName, other].filter(Boolean).join(other ? " " : "") || "-";
+      
+      if (posName === "ผู้ร้อง" || posName === "ผู้ร้องเรียน") {
+        positionDisplay = positionDisplay.replace(/^ผู้ร้อง(เรียน)?/, "(ผู้ร้อง)");
+      } else if (posName === "อื่นๆ") {
+        positionDisplay = positionDisplay.replace(/^อื่นๆ/, "(อื่นๆ)");
+      }
+      return {
+        ลำดับ: idx + 1,
+        "ส่งหน่วยงาน(ครั้งที่ส่ง)": positionDisplay,
+        เรื่อง: row.issue || row.subject || "-",
+        เลขที่หนังสือ: row.document_number || row.document_number || "-",
+        ลงวันที่: row.document_date || row.document_date || "-",
+        ผู้ลงนาม:
+          row.signer ||
+          (row.signature_authority_user && row.signature_authority_user.name) ||
+          "-",
+        เอกสารแนบ:
+          row.attachment_name ||
+          (row.attachments && row.attachments.length > 0
+            ? row.attachments.map((a) => a.file_name || a.name).join(", ")
+            : "-"),
+        การจัดการ: row.id,
+        id: row.id,
+      };
+    },
     filter: (row) => row.status === "request_update",
   },
   {
@@ -326,7 +364,9 @@ const sectionConfigs = [
     rowMapper: (row, idx) => ({
       ลำดับ: idx + 1,
       เลขที่หนังสือ: row.document_number || row.reference_number || "-",
-      ลงวันที่: row.receiveDate || row.reference_date || "-",
+      ลงวันที่: row.document_date 
+          ? new Date(row.document_date).toLocaleDateString("th-TH")
+          : "-",
       เรื่อง: row.issue || row.subject || "-",
       วันรับงาน: row.reference_date || "-",
       วันที่เสนองาน: row.created_at || "-",
@@ -355,14 +395,25 @@ const sectionConfigs = [
       "เอกสารแนบ",
       "การจัดการ",
     ],
-    rowMapper: (row, idx) => ({
+    rowMapper: (row, idx) => {
+      const posName = row.position?.name || row.position_name || "";
+      const other = row.position_other_text || "";
+      let positionDisplay = [posName, other].filter(Boolean).join(other ? " " : "") || "-";
+      
+      if (posName === "ผู้ร้อง" || posName === "ผู้ร้องเรียน") {
+        positionDisplay = positionDisplay.replace(/^ผู้ร้อง(เรียน)?/, "(ผู้ร้อง)");
+      } else if (posName === "อื่นๆ") {
+        positionDisplay = positionDisplay.replace(/^อื่นๆ/, "(อื่นๆ)");
+      }
+      return {
       ลำดับ: idx + 1,
       // "เลขคำร้อง (complaint_id)": row.complaint_id || row.complaint?.id || "-",
-      "ถึงหน่วยงาน / ผู้ร้อง / อื่นๆ (ครั้งที่แจ้งผล)":
-        row.agency || row.department?.name || "-",
+      "ถึงหน่วยงาน / ผู้ร้อง / อื่นๆ (ครั้งที่แจ้งผล)":positionDisplay,
       เลขที่หนังสือ: row.document_number || row.reference_number || "-",
       เรื่อง: row.issue || row.subject || "-",
-      ลงวันที่: row.receiveDate || row.reference_date || "-",
+      ลงวันที่: row.document_date 
+          ? new Date(row.document_date).toLocaleDateString("th-TH")
+          : "-",
       เอกสารแนบ:
         row.attachment_name ||
         (row.attachments && row.attachments.length > 0
@@ -370,7 +421,8 @@ const sectionConfigs = [
           : "-"),
       การจัดการ: row.id,
       id: row.id,
-    }),
+      }
+    },
     filter: (row) => row.status === "final_notify",
   },
 ];
@@ -484,7 +536,11 @@ const TableSection = ({
               <TableCell
                 key={h}
                 align="center"
-                sx={{ background: "#fff", fontWeight: "bold" }}
+                sx={{ 
+                  background: "#FAFAFA", // very light gray instead of white
+                  fontWeight: "bold",
+                  color: "#555555" // softer text color
+                }}
               >
                 {h}
               </TableCell>
@@ -494,7 +550,7 @@ const TableSection = ({
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={headers.length} align="center">
+              <TableCell colSpan={headers.length} align="center" sx={{ background: "#FEFEFE" }}>
                 ไม่พบข้อมูล
               </TableCell>
             </TableRow>
@@ -502,7 +558,20 @@ const TableSection = ({
             rows.map((row, idx) => {
               const rowObj = rowMapper(row, idx);
               return (
-                <TableRow key={rowObj.id || idx}>
+                <TableRow 
+                  key={rowObj.id || idx}
+                  sx={{
+                    '&:nth-of-type(odd)': {
+                      backgroundColor: '#FBFBFB', // very light alternate row
+                    },
+                    '&:nth-of-type(even)': {
+                      backgroundColor: '#FFFFFF', // white for even rows
+                    },
+                    '&:hover': {
+                      backgroundColor: '#F0F0F0', // subtle hover effect
+                    }
+                  }}
+                >
                   {headers.map((h) => {
         if (h === "เอกสารแนบ") {
                       return (
@@ -651,8 +720,8 @@ const StatusHistorySection = ({ statusHistory }) => (
   >
     <Box
       sx={{
-        background: "#1223A5",
-        color: "#ffffff",
+        background: "#B8C5D6", // softer blue-gray
+        color: "#2F4F4F", // dark slate gray
         py: 1.2,
         display: "flex",
         alignItems: "center",
@@ -668,19 +737,39 @@ const StatusHistorySection = ({ statusHistory }) => (
       <Table sx={{ width: "100%" }}>
         <TableHead>
           <TableRow>
-            <TableCell align="center" sx={{ background: "#fff", fontWeight: "bold" }}>
+            <TableCell align="center" sx={{ 
+              background: "#FAFAFA", 
+              fontWeight: "bold",
+              color: "#555555"
+            }}>
               ลำดับ
             </TableCell>
-            <TableCell align="center" sx={{ background: "#fff", fontWeight: "bold" }}>
+            <TableCell align="center" sx={{ 
+              background: "#FAFAFA", 
+              fontWeight: "bold",
+              color: "#555555"
+            }}>
               วันที่เปลี่ยนแปลง
             </TableCell>
-            <TableCell align="center" sx={{ background: "#fff", fontWeight: "bold" }}>
+            <TableCell align="center" sx={{ 
+              background: "#FAFAFA", 
+              fontWeight: "bold",
+              color: "#555555"
+            }}>
               ผู้เปลี่ยนแปลง
             </TableCell>
-            <TableCell align="center" sx={{ background: "#fff", fontWeight: "bold" }}>
+            <TableCell align="center" sx={{ 
+              background: "#FAFAFA", 
+              fontWeight: "bold",
+              color: "#555555"
+            }}>
               หมายเหตุ
             </TableCell>
-            <TableCell align="center" sx={{ background: "#fff", fontWeight: "bold" }}>
+            <TableCell align="center" sx={{ 
+              background: "#FAFAFA", 
+              fontWeight: "bold",
+              color: "#555555"
+            }}>
               สถานะ
             </TableCell>
           </TableRow>
@@ -688,13 +777,26 @@ const StatusHistorySection = ({ statusHistory }) => (
         <TableBody>
           {statusHistory.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} align="center">
+              <TableCell colSpan={5} align="center" sx={{ background: "#FEFEFE" }}>
                 ไม่พบประวัติการเปลี่ยนสถานะ
               </TableCell>
             </TableRow>
           ) : (
             statusHistory.map((item, idx) => (
-              <TableRow key={idx}>
+              <TableRow 
+                key={idx}
+                sx={{
+                  '&:nth-of-type(odd)': {
+                    backgroundColor: '#FBFBFB',
+                  },
+                  '&:nth-of-type(even)': {
+                    backgroundColor: '#FFFFFF',
+                  },
+                  '&:hover': {
+                    backgroundColor: '#F0F0F0',
+                  }
+                }}
+              >
                 <TableCell align="center">{idx + 1}</TableCell>
                 <TableCell align="center">
                   {new Date(item.changed_at).toLocaleString("th-TH", {
@@ -733,14 +835,21 @@ const FollowComp = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewSrc, setPreviewSrc] = useState("");
   const [previewName, setPreviewName] = useState("");
-  const [previewType, setPreviewType] = useState("image"); // 'image' | 'pdf'
+  const [previewType, setPreviewType] = useState("image"); // 'image' | 'pdf' | 'gdoc' | 'text' | 'audio' | 'video'
   const [previewZoom, setPreviewZoom] = useState(1);
+  const [pdfLoadError, setPdfLoadError] = useState(false);
 
   const getFileExt = (filename = "") => filename.split(".").pop()?.toLowerCase() || "";
   const getFileIcon = (ext) => {
-    if (ext === "pdf") return <PictureAsPdfIcon sx={{ color: "#d32f2f" }} />;
-    if (["jpg", "jpeg", "png", "gif", "bmp", "webp"].includes(ext)) return <ImageIcon sx={{ color: "#1976d2" }} />;
-    return <DescriptionIcon sx={{ color: "#757575" }} />;
+    const e = String(ext).toLowerCase();
+    if (e === "pdf") return <PictureAsPdfIcon sx={{ color: "#d32f2f" }} />;
+    if (["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"].includes(e)) return <ImageIcon sx={{ color: "#1976d2" }} />;
+    if (["mp3", "wav", "ogg", "m4a", "aac"].includes(e)) return <AudioFileIcon sx={{ color: "#6a1b9a" }} />;
+    if (["mp4", "webm", "ogv", "mov", "mkv"].includes(e)) return <MovieIcon sx={{ color: "#ef6c00" }} />;
+    if (["xls", "xlsx", "csv"].includes(e)) return <TableChartIcon sx={{ color: "#2e7d32" }} />;
+    if (["doc", "docx", "ppt", "pptx"].includes(e)) return <ArticleIcon sx={{ color: "#0288d1" }} />;
+    if (["txt", "json", "md", "log"].includes(e)) return <DescriptionIcon sx={{ color: "#455a64" }} />;
+    return <InsertDriveFileIcon sx={{ color: "#757575" }} />;
   };
   const getDownloadUrl = (file = {}) => {
     const raw =
@@ -784,20 +893,154 @@ const FollowComp = () => {
     return `${apiNoVer}${normalized}`;
   };
 
+  // ฟังก์ชันดาวน์โหลดไฟล์ที่ปรับปรุงแล้ว
+  const downloadFile = async (url, filename) => {
+    if (!url) {
+      console.error("No URL provided for download");
+      return;
+    }
+
+    try {
+      console.log("Downloading file:", { url, filename });
+      
+      // ลองวิธีต่างๆ ตามลำดับ
+      
+      // วิธีที่ 1: ใช้ fetch + blob (สำหรับไฟล์ที่มี CORS header)
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          const blob = await response.blob();
+          const blobUrl = window.URL.createObjectURL(blob);
+          
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = filename || 'download';
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          
+          // ทำความสะอาด blob URL
+          setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+          
+          console.log("Download successful via fetch");
+          return;
+        }
+      } catch (fetchError) {
+        console.warn("Fetch download failed:", fetchError);
+      }
+      
+      // วิธีที่ 2: ใช้ a element download attribute
+      try {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || 'download';
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        console.log("Download triggered via anchor element");
+        return;
+      } catch (anchorError) {
+        console.warn("Anchor download failed:", anchorError);
+      }
+      
+      // วิธีที่ 3: เปิดในแท็บใหม่ (fallback)
+      window.open(url, '_blank', 'noopener,noreferrer');
+      console.log("Opened in new tab as fallback");
+      
+    } catch (error) {
+      console.error("Download failed:", error);
+      // แสดงข้อความแจ้งเตือนให้ผู้ใช้
+      alert("ไม่สามารถดาวน์โหลดไฟล์ได้ กรุณาคลิกขวาเลือก 'Save as' หรือลองใหม่อีกครั้ง");
+    }
+  };
+
+  // ประเภทที่เปิดดูภายใน modal ได้ (inline)
+  const INLINE_IMAGE = ["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"]; // svg treat as image
+  const INLINE_TEXT = ["txt", "json", "md", "log", "csv"]; // csv simple text preview
+  const INLINE_AUDIO = ["mp3", "wav", "ogg", "m4a", "aac"]; 
+  const INLINE_VIDEO = ["mp4", "webm", "ogv", "mov", "mkv"]; 
+  const OFFICE_DOC = ["doc", "docx", "ppt", "pptx", "xls", "xlsx"]; // ใช้ Google Docs viewer
+
   const canPreview = (ext = "") => {
     const e = String(ext).toLowerCase();
-    if (["pdf"].includes(e)) return true;
-    if (["jpg", "jpeg", "png", "gif", "bmp", "webp"].includes(e)) return true;
+    if (e === "pdf") return true;
+    if (INLINE_IMAGE.includes(e)) return true;
+    if (INLINE_TEXT.includes(e)) return true;
+    if (INLINE_AUDIO.includes(e)) return true;
+    if (INLINE_VIDEO.includes(e)) return true;
+    if (OFFICE_DOC.includes(e)) return true; // ผ่าน Google Docs
     return false;
   };
 
-  const openPreview = (href, name, ext) => {
+  const openPreview = async (href, name, ext) => {
     if (!href) return;
-    setPreviewSrc(href);
-    setPreviewName(name || "ไฟล์แนบ");
     const e = (ext || "").toLowerCase();
-    setPreviewType(e === "pdf" ? "pdf" : "image");
+    setPreviewName(name || "ไฟล์แนบ");
     setPreviewZoom(1);
+    setPdfLoadError(false);
+
+    console.log("Opening preview:", { href, name, ext, type: e }); // Debug log
+
+    // Text files: fetch content (limit size for safety)
+    if (["txt", "json", "md", "log", "csv"].includes(e)) {
+      try {
+        const res = await fetch(href);
+        const text = await res.text();
+        // limit to first 200kb
+        const limited = text.length > 200000 ? text.slice(0, 200000) + "\n... (ตัดบางส่วน)" : text;
+        setPreviewSrc(limited);
+        setPreviewType("text");
+      } catch (err) {
+        console.error("Preview text fetch error", err);
+        setPreviewSrc("ไม่สามารถโหลดไฟล์ข้อความได้: " + err.message);
+        setPreviewType("text");
+      }
+      setPreviewOpen(true);
+      return;
+    }
+
+    if (["mp3", "wav", "ogg", "m4a", "aac"].includes(e)) {
+      setPreviewSrc(href);
+      setPreviewType("audio");
+      setPreviewOpen(true);
+      return;
+    }
+    if (["mp4", "webm", "ogv", "mov", "mkv"].includes(e)) {
+      setPreviewSrc(href);
+      setPreviewType("video");
+      setPreviewOpen(true);
+      return;
+    }
+    if (["doc", "docx", "ppt", "pptx", "xls", "xlsx"].includes(e)) {
+      // ใช้ Google Docs viewer (ต้องเป็นไฟล์ที่เข้าถึงสาธารณะได้)
+      const encoded = encodeURIComponent(href);
+      const gdoc = `https://docs.google.com/gview?embedded=1&url=${encoded}`;
+      setPreviewSrc(gdoc);
+      setPreviewType("gdoc");
+      setPreviewOpen(true);
+      return;
+    }
+    if (e === "pdf") {
+      // ลองหลายวิธีสำหรับ PDF
+      // 1. ใช้ PDF.js viewer ของ Mozilla (ถ้ามี)
+      // 2. ใช้ Google Docs viewer
+      // 3. เปิดในแท็บใหม่
+      
+      // ลอง PDF.js viewer ก่อน (มาพร้อม browser ส่วนใหญ่)
+      const pdfJsUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(href)}`;
+      setPreviewSrc(pdfJsUrl);
+      setPreviewType("pdfjs");
+      setPreviewOpen(true);
+      return;
+    }
+    // default image
+    setPreviewSrc(href);
+    setPreviewType("image");
     setPreviewOpen(true);
   };
 
@@ -920,7 +1163,12 @@ const FollowComp = () => {
   const forwardedFilteredRows = [
     ...items.filter(forwardedSection.filter),
     ...forwardedExtra,
-  ];
+  ].sort((a, b) => {
+    // เรียงตามวันที่หนังสือล่าสุดก่อน (descending)
+    const dateA = new Date(a.document_date || 0);
+    const dateB = new Date(b.document_date || 0);
+    return dateB - dateA;
+  });
 
   // INITIAL_NOTIFY (type2)
   const initialNotifySection = sectionConfigs[2];
@@ -947,7 +1195,12 @@ const FollowComp = () => {
   const initialItems = Array.isArray(documentData?.items)
     ? documentData.items.filter(initialNotifySection.filter)
     : [];
-  const initialNotifyRows = [...initialItems, ...initialNotifyExtra];
+  const initialNotifyRows = [...initialItems, ...initialNotifyExtra].sort((a, b) => {
+    // เรียงตามวันที่ล่าสุดก่อน (descending)
+    const dateA = new Date(a.document_date || a.complaint_number_date || 0);
+    const dateB = new Date(b.document_date || b.complaint_number_date || 0);
+    return dateB - dateA;
+  });
 
   // REQUEST_UPDATE (type3)
   const requestUpdateSection = sectionConfigs[3];
@@ -972,7 +1225,12 @@ const FollowComp = () => {
   const requestUpdateItems = Array.isArray(documentData?.items)
     ? documentData.items.filter(requestUpdateSection.filter)
     : [];
-  const requestUpdateRows = [...requestUpdateItems, ...requestUpdateExtra];
+  const requestUpdateRows = [...requestUpdateItems, ...requestUpdateExtra].sort((a, b) => {
+    // เรียงตามวันที่ล่าสุดก่อน (descending)
+    const dateA = new Date(a.document_date || 0);
+    const dateB = new Date(b.document_date || 0);
+    return dateB - dateA;
+  });
   
 // AGENCY_REPORT (เปลี่ยนมาใช้ outgoing5)
 const agencyReportSection = sectionConfigs[4];
@@ -1001,7 +1259,12 @@ const agencyReportRows = outgoingType5.map((item) => ({
   const agencyReportItems = Array.isArray(documentData?.items)
     ? documentData.items.filter(agencyReportSection.filter)
     : [];
-  // const agencyReportRows = [...agencyReportItems, ...agencyReportExtra];
+  const agencyReportRowsSorted = [...agencyReportItems, ...agencyReportRows].sort((a, b) => {
+    // เรียงตามวันที่หนังสือล่าสุดก่อน (descending)
+    const dateA = new Date(a.document_date || a.reference_date || 0);
+    const dateB = new Date(b.document_date || b.reference_date || 0);
+    return dateB - dateA;
+  });
 
   // FINAL_NOTIFY (เปลี่ยนมาใช้ outgoing4)
   const finalSection = sectionConfigs.find((s) => s.key === "FINAL_NOTIFY");
@@ -1032,7 +1295,74 @@ const agencyReportRows = outgoingType5.map((item) => ({
         .map((it) => ({ ...it, complaint_id: it.complaint_id || id }))
     : [];
 
-  const finalNotifyRows = [...finalNotifyItems, ...finalNotifyExtra];
+  const finalNotifyRows = [...finalNotifyItems, ...finalNotifyExtra].sort((a, b) => {
+    // เรียงตามวันที่ล่าสุดก่อน (descending)
+    const dateA = new Date(a.receive_date || a.document_date || a.reference_date || 0);
+    const dateB = new Date(b.receive_date || b.document_date || b.reference_date || 0);
+    return dateB - dateA;
+  });
+
+  // ================= Position Name Mapping (เฉพาะ FINAL_NOTIFY) =================
+  const [positionMap, setPositionMap] = useState({}); // { position_id: name }
+  const [positionLoading, setPositionLoading] = useState(false);
+
+  useEffect(() => {
+    // รวบรวม position_id ที่ยังไม่มีชื่อ (backend ส่ง position_name เป็น null)
+    if (!finalNotifyRows || finalNotifyRows.length === 0) return;
+    const missing = new Set();
+    finalNotifyRows.forEach((r) => {
+      const pid = r.position_id || r.positionId || r.position?.id;
+      const hasName = r.position?.name || r.position_name || positionMap[pid];
+      if (pid && !hasName) {
+        missing.add(pid);
+      }
+    });
+    if (missing.size === 0) return; // ไม่มีอะไรต้องโหลด
+
+    let cancelled = false;
+    const fetchPositions = async () => {
+      setPositionLoading(true);
+      try {
+        const entries = await Promise.all(
+          Array.from(missing).map(async (pid) => {
+            try {
+              const data = await GetPositionByID(pid);
+              const name = data?.res_data?.name || data?.data?.name || data?.name || null;
+              return [pid, name];
+            } catch (err) {
+              console.warn("GetPositionByID failed", pid, err);
+              return [pid, null];
+            }
+          })
+        );
+        if (!cancelled) {
+          setPositionMap((prev) => {
+            const next = { ...prev };
+            entries.forEach(([pid, name]) => {
+              if (name) next[pid] = name;
+            });
+            return next;
+          });
+        }
+      } finally {
+        if (!cancelled) setPositionLoading(false);
+      }
+    };
+    fetchPositions();
+    return () => {
+      cancelled = true;
+    };
+  }, [finalNotifyRows]);
+
+  // เติมชื่อที่ map ได้เข้าไป (ไม่ mutate ของเดิม)
+  const enrichedFinalNotifyRows = finalNotifyRows.map((r) => {
+    const pid = r.position_id || r.positionId || r.position?.id;
+    if (pid && !r.position_name && !(r.position && r.position.name) && positionMap[pid]) {
+      return { ...r, position_name: positionMap[pid] };
+    }
+    return r;
+  });
+  // ============================================================================
 
   const handleImageClick = () => {
     router.push("/complaint/");
@@ -1154,8 +1484,8 @@ const agencyReportRows = outgoingType5.map((item) => ({
           mb: 2,
         }}
       >
-        <Box sx={{ background: "#EAF5FF", py: 1.5 }}>
-          <Typography mx={3} sx={{ fontWeight: "bold", color: "#1120A3" }}>
+        <Box sx={{ background: "#F0F8FF", py: 1.5 }}> {/* softer blue background */}
+          <Typography mx={3} sx={{ fontWeight: "bold", color: "#2F4F4F" }}> {/* softer text color */}
             {receivedSection.title}
           </Typography>
         </Box>
@@ -1167,7 +1497,11 @@ const agencyReportRows = outgoingType5.map((item) => ({
                   <TableCell
                     key={h}
                     align="center"
-                    sx={{ background: "#fff", fontWeight: "bold" }}
+                    sx={{ 
+                      background: "#FAFAFA", 
+                      fontWeight: "bold",
+                      color: "#555555"
+                    }}
                   >
                     {h}
                   </TableCell>
@@ -1177,7 +1511,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
             <TableBody>
               {receivedRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={receivedHeaders.length} align="center">
+                  <TableCell colSpan={receivedHeaders.length} align="center" sx={{ background: "#FEFEFE" }}>
                     ไม่พบข้อมูล
                   </TableCell>
                 </TableRow>
@@ -1185,7 +1519,20 @@ const agencyReportRows = outgoingType5.map((item) => ({
                 receivedRows.map((row, idx) => {
                   const rowObj = receivedRowMapper(row, idx);
                   return (
-                    <TableRow key={rowObj.id || idx}>
+                    <TableRow 
+                      key={rowObj.id || idx}
+                      sx={{
+                        '&:nth-of-type(odd)': {
+                          backgroundColor: '#FBFBFB',
+                        },
+                        '&:nth-of-type(even)': {
+                          backgroundColor: '#FFFFFF',
+                        },
+                        '&:hover': {
+                          backgroundColor: '#F0F0F0',
+                        }
+                      }}
+                    >
                       {receivedHeaders.map((h) => {
       if (h === "เอกสารแนบ") {
                           return (
@@ -1346,7 +1693,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
           <TableSection
             section={agencyReportSection}
             headers={agencyReportHeaders}
-            rows={agencyReportRows}
+            rows={agencyReportRowsSorted}
             rowMapper={agencyReportRowMapper}
            onAdd={() =>
             addButtonHandlers.AGENCY_REPORT(
@@ -1367,7 +1714,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
           <TableSection
             section={finalSection}
             headers={finalHeaders}
-            rows={finalNotifyRows}
+            rows={enrichedFinalNotifyRows}
             rowMapper={finalRowMapper}
             onAdd={() =>
               addButtonHandlers.FINAL_NOTIFY(
@@ -1386,6 +1733,12 @@ const agencyReportRows = outgoingType5.map((item) => ({
             handleManage={handleManage}
             meta={complaintMeta}
           />
+          {/* แสดงสถานะโหลดตำแหน่ง (optional UX สามารถถอดออกได้) */}
+          {positionLoading && (
+            <Typography variant="caption" sx={{ ml: 2, color: "#666" }}>
+              กำลังโหลดข้อมูลตำแหน่งเพิ่มเติม...
+            </Typography>
+          )}
 
           {/* Section: ประวัติการเปลี่ยนสถานะ */}
           {documentData?.detail?.status_history?.length > 0 && (
@@ -1432,14 +1785,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
                           <IconButton size="small" onClick={() => window.open(href, '_blank', 'noreferrer')}>
                             <OpenInNewIcon fontSize="small" />
                           </IconButton>
-                          <IconButton size="small" onClick={() => {
-                            const a = document.createElement('a');
-                            a.href = href;
-                            a.download = name || 'download';
-                            document.body.appendChild(a);
-                            a.click();
-                            a.remove();
-                          }}>
+                          <IconButton size="small" onClick={() => downloadFile(href, name)}>
                             <DownloadIcon fontSize="small" />
                           </IconButton>
                         </>
@@ -1473,14 +1819,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
                 </IconButton>
               </>
             )}
-            <IconButton color="inherit" onClick={() => {
-              const a = document.createElement('a');
-              a.href = previewSrc;
-              a.download = previewName || 'download';
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-            }}>
+            <IconButton color="inherit" onClick={() => downloadFile(previewSrc, previewName)}>
               <DownloadIcon sx={{ color: '#fff' }} />
             </IconButton>
             <IconButton color="inherit" onClick={() => window.open(previewSrc, '_blank', 'noreferrer') }>
@@ -1490,23 +1829,198 @@ const agencyReportRows = outgoingType5.map((item) => ({
 
           {/* Content area */}
           <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
-            {previewType === 'pdf' ? (
-              <Box sx={{ width: '100%', height: '100%', bgcolor: '#1e1e1e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Box sx={{ width: '100%', height: '100%', bgcolor: '#1e1e1e' }}>
+            {previewType === 'pdfjs' && (
+              <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
+                <iframe 
+                  title={previewName} 
+                  src={previewSrc} 
+                  style={{ border: 'none', width: '100%', height: '100%' }}
+                  onError={() => {
+                    console.error("PDF.js viewer failed, trying Google Docs viewer");
+                    const encoded = encodeURIComponent(previewSrc.split('file=')[1] || '');
+                    setPreviewSrc(`https://docs.google.com/gview?embedded=1&url=${encoded}`);
+                    setPreviewType("gdoc");
+                  }}
+                />
+                <Box sx={{ 
+                  position: 'absolute', 
+                  bottom: 16, 
+                  right: 16,
+                  bgcolor: 'rgba(0,0,0,0.7)',
+                  color: '#fff',
+                  p: 1,
+                  borderRadius: 1,
+                  fontSize: '0.8rem'
+                }}>
+                  PDF.js Viewer
+                </Box>
+              </Box>
+            )}
+            {previewType === 'pdf' && (
+              <Box sx={{ width: '100%', height: '100%', bgcolor: '#1e1e1e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Box sx={{ width: '100%', height: '100%', bgcolor: '#1e1e1e', position: 'relative' }}>
                   <iframe
                     title={previewName}
                     src={previewSrc + (previewSrc.includes('#') ? '' : '#toolbar=0')}
                     style={{ border: 'none', width: '100%', height: '100%' }}
+                    onLoad={(e) => {
+                      // Check if iframe loaded successfully
+                      try {
+                        const iframe = e.target;
+                        setTimeout(() => {
+                          try {
+                            const doc = iframe.contentDocument || iframe.contentWindow.document;
+                            if (!doc || doc.body.innerHTML.includes('error') || doc.body.innerHTML.trim() === '') {
+                              setPdfLoadError(true);
+                            }
+                          } catch (err) {
+                            console.log("PDF iframe access error (may be CORS):", err);
+                            // This is normal for cross-origin iframes
+                          }
+                        }, 2000);
+                      } catch (err) {
+                        console.error("PDF load check error:", err);
+                        setPdfLoadError(true);
+                      }
+                    }}
+                    onError={() => setPdfLoadError(true)}
                   />
+                  {pdfLoadError && (
+                    <Box sx={{ 
+                      position: 'absolute', 
+                      top: '50%', 
+                      left: '50%', 
+                      transform: 'translate(-50%, -50%)',
+                      textAlign: 'center',
+                      color: '#fff',
+                      bgcolor: 'rgba(0,0,0,0.8)',
+                      p: 3,
+                      borderRadius: 1,
+                      '& button': { mt: 1, mr: 1, bgcolor: '#1976d2', color: '#fff', '&:hover': { bgcolor: '#1565c0' } }
+                    }}>
+                      <Typography variant="h6" gutterBottom>ไม่สามารถแสดง PDF ได้</Typography>
+                      <Typography variant="body2" sx={{ mb: 2 }}>ลองเปิดด้วยวิธีอื่นหรือดาวน์โหลดไฟล์</Typography>
+                      <Button variant="contained" onClick={() => downloadFile(previewSrc, previewName)}>
+                        ดาวน์โหลดไฟล์
+                      </Button>
+                      <Button variant="contained" onClick={() => window.open(previewSrc, '_blank')}>
+                        เปิดในแท็บใหม่
+                      </Button>
+                      <Button variant="contained" onClick={() => {
+                        const encoded = encodeURIComponent(previewSrc);
+                        window.open(`https://docs.google.com/gview?url=${encoded}`, '_blank');
+                      }}>
+                        เปิดใน Google Docs
+                      </Button>
+                      <Button variant="contained" onClick={() => {
+                        const pdfJsUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(previewSrc)}`;
+                        window.open(pdfJsUrl, '_blank');
+                      }}>
+                        เปิดใน PDF.js
+                      </Button>
+                    </Box>
+                  )}
                 </Box>
               </Box>
-            ) : (
+            )}
+            {previewType === 'gdoc' && (
+              <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
+                <iframe 
+                  title={previewName} 
+                  src={previewSrc} 
+                  style={{ border: 'none', width: '100%', height: '100%' }}
+                  onError={() => {
+                    console.error("Google Docs viewer failed for:", previewSrc);
+                  }}
+                />
+                <Box sx={{ 
+                  position: 'absolute', 
+                  bottom: 16, 
+                  right: 16,
+                  bgcolor: 'rgba(0,0,0,0.7)',
+                  color: '#fff',
+                  p: 1,
+                  borderRadius: 1,
+                  fontSize: '0.8rem'
+                }}>
+                  Google Docs Viewer
+                </Box>
+              </Box>
+            )}
+            {previewType === 'image' && (
               <Box sx={{ bgcolor: '#1e1e1e', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
                 <Box sx={{ bgcolor: '#ffffff', boxShadow: 3, p: 2 }}>
                   <Box sx={{ transform: `scale(${previewZoom})`, transformOrigin: 'top left' }}>
-                    <img src={previewSrc} alt={previewName} style={{ display: 'block', maxWidth: '100%', height: 'auto' }} />
+                    <img 
+                      src={previewSrc} 
+                      alt={previewName} 
+                      style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling.style.display = 'block';
+                      }}
+                    />
+                    <Box sx={{ display: 'none', textAlign: 'center', p: 4, color: '#666' }}>
+                      <Typography>ไม่สามารถโหลดรูปภาพได้</Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>URL: {previewSrc}</Typography>
+                      <Button variant="outlined" onClick={() => downloadFile(previewSrc, previewName)} sx={{ mt: 1, mr: 1 }}>
+                        ดาวน์โหลดไฟล์
+                      </Button>
+                      <Button variant="outlined" onClick={() => window.open(previewSrc, '_blank')} sx={{ mt: 1 }}>
+                        เปิดในแท็บใหม่
+                      </Button>
+                    </Box>
                   </Box>
                 </Box>
+              </Box>
+            )}
+            {previewType === 'text' && (
+              <Box sx={{ width: '100%', height: '100%', bgcolor: '#121212', color: '#e0e0e0', p: 2, fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflow: 'auto', fontSize: '14px', lineHeight: 1.5 }}>
+                {previewSrc}
+              </Box>
+            )}
+            {previewType === 'audio' && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <audio controls src={previewSrc} style={{ width: '100%', maxWidth: '500px' }} onError={() => {
+                  console.error("Audio load error:", previewSrc);
+                }} />
+                <Typography color="#fff">{previewName}</Typography>
+                <Typography variant="body2" color="#aaa">URL: {previewSrc}</Typography>
+                <Button variant="outlined" onClick={() => downloadFile(previewSrc, previewName)} sx={{ color: '#fff', borderColor: '#fff', '&:hover': { borderColor: '#aaa' } }}>
+                  ดาวน์โหลดไฟล์เสียง
+                </Button>
+              </Box>
+            )}
+            {previewType === 'video' && (
+              <Box sx={{ width: '100%', maxWidth: 960 }}>
+                <video 
+                  controls 
+                  src={previewSrc} 
+                  style={{ width: '100%', maxHeight: '80vh' }}
+                  onError={() => {
+                    console.error("Video load error:", previewSrc);
+                  }}
+                />
+                <Typography color="#fff" align="center" mt={1}>{previewName}</Typography>
+                <Typography variant="body2" color="#aaa" align="center">URL: {previewSrc}</Typography>
+                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                  <Button variant="outlined" onClick={() => downloadFile(previewSrc, previewName)} sx={{ color: '#fff', borderColor: '#fff', '&:hover': { borderColor: '#aaa' } }}>
+                    ดาวน์โหลดไฟล์วิดีโอ
+                  </Button>
+                </Box>
+              </Box>
+            )}
+            {!['pdf','pdfjs','gdoc','image','text','audio','video'].includes(previewType) && (
+              <Box sx={{ textAlign: 'center', color: '#fff' }}>
+                <Typography variant="h6" gutterBottom>ไม่สามารถพรีวิวไฟล์นี้ได้</Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>ประเภท: {previewType}</Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>URL: {previewSrc}</Typography>
+                <Button variant="contained" onClick={() => downloadFile(previewSrc, previewName)} sx={{ mr: 1 }}>
+                  ดาวน์โหลดไฟล์
+                </Button>
+                <Button variant="contained" onClick={() => window.open(previewSrc, '_blank')}>
+                  เปิดในแท็บใหม่
+                </Button>
               </Box>
             )}
           </Box>

@@ -242,7 +242,7 @@ const ForwardtoagencyComponents = () => {
         return;
       }
 
-      // เซ็ตเลข สป.กค. (รองรับทั้ง complaint_number และ reference_number)
+      // เซ็ตเลข สรร. (รองรับทั้ง complaint_number และ reference_number)
       const chosenNumber = ref.complaint_number || ref.reference_number || "";
       setValue(
         "complaint_number",
@@ -619,7 +619,7 @@ const ForwardtoagencyComponents = () => {
             ข้อมูลเรื่องร้องทุกข์
           </Typography>
 
-          {/* Row 1: เรียน | เลข สป.กค. | วันที่ */}
+          {/* Row 1: เรียน | เลข สรร. | วันที่ */}
           <Box
             sx={{
               display: "flex",
@@ -731,14 +731,14 @@ const ForwardtoagencyComponents = () => {
               />
             )}
 
-            {/* เลข สป.กค. */}
+            {/* เลข สรร. */}
             <Controller
               name="complaint_number"
               control={control}
               render={({ field }) => (
                 <InputText
-                  label={createLabel("เลข สป.กค.", "complaint_number")}
-                  inputLabel="กรอกเลข สป.กค."
+                  label={createLabel("เลข สรร.", "complaint_number")}
+                  inputLabel="กรอกเลข สรร."
                   name="complaint_number"
                   value={field.value}
                   onChange={field.onChange}
@@ -749,7 +749,7 @@ const ForwardtoagencyComponents = () => {
               )}
             />
 
-            {/* ปุ่มค้นหาเลข สป.กค. */}
+            {/* ปุ่มค้นหาเลข สรร. */}
             <Box sx={{ display: "flex", alignItems: "center" }}>
               <IconButton
                 onClick={() => setOpenSearchDialog2(true)}
@@ -764,7 +764,7 @@ const ForwardtoagencyComponents = () => {
               </IconButton>
             </Box>
 
-            {/* Dialog สำหรับค้นหาเลข สป.กค. */}
+            {/* Dialog สำหรับค้นหาเลข สรร. */}
             <Dialog
               open={openSearchDialog2}
               onClose={() => setOpenSearchDialog2(false)}
@@ -931,16 +931,16 @@ const ForwardtoagencyComponents = () => {
               </DialogActions>
             </Dialog>
 
-            {/* วันที่ของเลข สป.กค. */}
+            {/* วันที่ของเลข สรร. */}
             <Controller
               name="complaint_number_date"
               control={control}
               render={({ field }) => (
                 <DateThaiPickerService
-                  label={createLabel("วันที่", "complaint_number_date")}
+                  label={createLabel("วันที่ เลข สรร.", "complaint_number_date")}
                   value={field.value}
                   onChange={handleDateChange("complaint_number_date")}
-                  placeholder="เลือกวันที่"
+                  placeholder="เลือกวันที่ เลข สรร."
                   error={!!getFieldError("complaint_number_date")}
                   helperText={getFieldError("complaint_number_date")}
                   // maxDate={new Date().toISOString()}
@@ -1007,10 +1007,10 @@ const ForwardtoagencyComponents = () => {
                 control={control}
                 render={({ field }) => (
                   <DateThaiPickerService
-                    label={createLabel("วันที่", "document_date")}
+                    label={createLabel("วันที่เลขหนังสือ", "document_date")}
                     value={field.value}
                     onChange={handleDateChange("document_date")}
-                    placeholder="เลือกวันที่"
+                    placeholder="เลือกวันที่เลขหนังสือ"
                     error={!!getFieldError("document_date")}
                     helperText={getFieldError("document_date")}
                     // maxDate={new Date().toISOString()}

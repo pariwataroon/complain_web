@@ -12,7 +12,10 @@ import {
   UploadOutgoingReportAttachments,
   GetOutgoingReport2ById,
 } from "@pages/api/outgoinreports/outgoinreports";
-import { getDepartments } from "@pages/api/department/department";
+// import { getDepartments } from "@pages/api/department/department";
+import { GetAllOutsideDepartments } from "@pages/api/outsideDepartments/outsideDepartments";
+// ใช้เฉพาะหน่วยงานภายนอกตามความต้องการของผู้ใช้ (ไม่ดึง departments ภายใน)
+// NOTE: หาก backend ยังใช้ FK ไปตาราง departments ภายใน จะยัง error ถ้า id ภายนอกไม่มี mapping
 
 export const UpdateOutgoingReport2 = async (id, data) => {
   if (!id) throw new Error("Missing id for UpdateOutgoingReport2");
@@ -138,6 +141,7 @@ export const useInitialNotificationComplainantAgency = () => {
   const prevComplaintNumberRef = useRef(null);
     const originalDepartmentIdRef = useRef(null);
     const lastDepartmentIdRef = useRef(null);
+  // ยกเลิก cache ภายใน เพราะใช้เฉพาะ externalDepartments
 
   // เก็บไฟล์จริง (รองรับหลายไฟล์)
   const [attachmentFiles, setAttachmentFiles] = useState([]);
@@ -148,6 +152,28 @@ export const useInitialNotificationComplainantAgency = () => {
 
   // ไฟล์แนบที่มีอยู่ในเซิร์ฟเวอร์ (สำหรับ mode edit)
   const [existingAttachments, setExistingAttachments] = useState([]);
+
+  // State สำหรับหน่วยงานภายนอก
+  const [externalDepartments, setExternalDepartments] = useState([]);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
+
+  // Restore external department if backend returns null (ใช้ localStorage เก็บ outside_department_id)
+  useEffect(() => {
+    if (!externalDepartments.length) return; // ต้องมี list ก่อน
+    if (form.department) return; // มีค่าแล้วไม่ต้อง restore
+    try {
+      const storeKey = `outgoing_report2_outside_dept_${id || 'new'}`;
+      const raw = localStorage.getItem(storeKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed?.outsideDepartmentId && isUUID(parsed.outsideDepartmentId)) {
+        const exists = externalDepartments.some(d => d.id === parsed.outsideDepartmentId);
+        if (exists) {
+          setForm(prev => ({ ...prev, department: parsed.outsideDepartmentId }));
+        }
+      }
+    } catch (_) {}
+  }, [externalDepartments, form.department, id]);
 
   // -------- EDIT mode: โหลดข้อมูลจาก API และ sync attachments --------
   useEffect(() => {
@@ -225,6 +251,68 @@ export const useInitialNotificationComplainantAgency = () => {
     }
   }, [id, form.complaint_number, form.complaint_number_date]);
 
+  // -------- โหลดข้อมูลหน่วยงานภายนอก --------
+  useEffect(() => {
+    let cancelled = false;
+    const loadExternalDepartments = async () => {
+      try {
+        setIsLoadingDepartments(true);
+        const response = await GetAllOutsideDepartments({
+          skip: 0,
+          limit: 1000, // โหลดทั้งหมด
+          search: "", // ไม่ใส่เงื่อนไขการค้นหา
+        });
+        
+        if (cancelled) return;
+        
+        // ตรวจสอบ structure ของ response
+        let items = [];
+        if (response?.res_data) {
+          if (Array.isArray(response.res_data)) {
+            items = response.res_data;
+          } else if (response.res_data.data && Array.isArray(response.res_data.data)) {
+            items = response.res_data.data;
+          } else if (response.res_data.items && Array.isArray(response.res_data.items)) {
+            items = response.res_data.items;
+          }
+        } else if (Array.isArray(response?.data)) {
+          items = response.data;
+        } else if (Array.isArray(response)) {
+          items = response;
+        }
+        
+        const formattedDepartments = items.map(dept => ({
+          id: dept.id,
+          value: dept.id,
+          label: dept.name || dept.department_name || dept.title || "",
+          code: dept.code || dept.department_code || "",
+          shortName: dept.short_name || dept.shortName || "",
+          name: dept.name || dept.department_name || dept.title || "",
+          ...dept
+        }));
+        
+        console.log('Loaded external departments:', formattedDepartments);
+        
+        setExternalDepartments(formattedDepartments);
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Error loading external departments:", error);
+          setExternalDepartments([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingDepartments(false);
+        }
+      }
+    };
+
+    loadExternalDepartments();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, []); // โหลดครั้งเดียวตอน mount
+
   // -------- Required fields --------
   const baseRequiredFields = [
     "salutation",
@@ -242,11 +330,12 @@ export const useInitialNotificationComplainantAgency = () => {
   // -------- helpers --------
   const isRequired = useCallback(
     (fieldName) => {
-      if (fieldName === 'department') return !form.salutation_is_other; // skip if custom
+      // department ไม่บังคับแล้วทั้งโหมดสร้างและแก้ไข
+      if (fieldName === 'department') return false;
       if (fieldName === 'position_other_text') return form.salutation_is_other;
       return baseRequiredFields.includes(fieldName);
     },
-    [form.salutation_is_other]
+    [form.salutation_is_other, id]
   );
 
   const createLabel = useCallback(
@@ -414,7 +503,7 @@ export const useInitialNotificationComplainantAgency = () => {
       { field: 'complaint_number', label: 'เลข สป.กค.' },
       { field: 'complaint_number_date', label: 'วันที่ สป.กค.' },
       { field: 'subject', label: 'เรื่อง' },
-      ...(form.salutation_is_other ? [] : [{ field: 'department', label: 'หน่วยงาน / ผู้ร้อง' }]),
+      // department ถูกทำให้ optional เสมอ (ไม่ต้องใส่เพื่อบันทึก)
       { field: 'signer', label: 'ผู้ลงนาม' },
       { field: 'confidentiality', label: 'ชั้นความลับ' },
       { field: 'urgency', label: 'ชั้นความเร่งด่วน' },
@@ -430,7 +519,7 @@ export const useInitialNotificationComplainantAgency = () => {
     });
     setErrors(newErrors);
     return missing;
-  }, [form]);
+  }, [form, id]);
 
   const nullIfEmpty = (v) => (v === undefined || v === null || v === "" ? null : v);
 
@@ -576,37 +665,54 @@ export const useInitialNotificationComplainantAgency = () => {
       return POSITION_FALLBACK;
     })();
 
-    // Department fallback chain with validation against existing list
+    // ใช้เฉพาะ externalDepartments: เพิ่ม debug และผ่อนปรน (ถ้า list ยังว่างจะปล่อย candidate ตรง ๆ)
     const ensureRealDepartmentId = async (candidate, { allowNullForOther = true } = {}) => {
-      try {
-        const resp = await getDepartments();
-        const raw = resp?.res_data || resp?.data || resp;
-        let list = [];
-        if (Array.isArray(raw)) list = raw; else if (Array.isArray(raw?.items)) list = raw.items;
-        const validIds = new Set(list.filter(d => d && isUUID(d.id)).map(d => d.id));
-        // Track original/last if present
-        if (candidate && validIds.has(candidate)) return candidate;
-        if (form.department && isUUID(form.department) && validIds.has(form.department)) return form.department;
-        if (lastDepartmentIdRef.current && validIds.has(lastDepartmentIdRef.current)) return lastDepartmentIdRef.current;
-        if (originalDepartmentIdRef.current && validIds.has(originalDepartmentIdRef.current)) return originalDepartmentIdRef.current;
-        const first = list.find(d => d && isUUID(d.id));
-        if (first) {
-          originalDepartmentIdRef.current = originalDepartmentIdRef.current || first.id;
-          lastDepartmentIdRef.current = lastDepartmentIdRef.current || first.id;
-          return first.id;
-        }
-      } catch (e) {
-        console.warn('fetch departments (type2 ensure) failed', e);
+      const isSpecial = form.salutation_is_other === true;
+      if (!candidate || !isUUID(candidate)) {
+        console.log('[DeptDebug] Reject: candidate ไม่ใช่ UUID หรือว่าง =>', candidate);
+        if (isSpecial && allowNullForOther) return null;
+        return null;
       }
-      // If special salutation and we allow null, return null (avoid invalid FK)
-      if (form.salutation_is_other && allowNullForOther) return null;
-      // Fallback to env default only if it looks like UUID (avoid bogus FK)
-      const envDef = process.env.NEXT_PUBLIC_DEFAULT_DEPARTMENT_ID;
-      if (envDef && isUUID(envDef)) return envDef;
-      return null; // let backend decide if nullable
+      if (externalDepartments.length === 0) {
+        console.log('[DeptDebug] externalDepartments ยังไม่โหลด/ว่าง -> อนุญาต candidate ชั่วคราว =>', candidate);
+        return candidate;
+      }
+      const existsExternal = externalDepartments.some(d => d && d.id === candidate);
+      if (existsExternal) {
+        console.log('[DeptDebug] Candidate พบใน external =>', candidate);
+        return candidate;
+      }
+      if (candidate !== form.department && isUUID(form.department)) {
+        const existsForm = externalDepartments.some(d => d && d.id === form.department);
+        if (existsForm) {
+          console.log('[DeptDebug] ใช้ form.department แทน =>', form.department);
+          return form.department;
+        }
+      }
+      if (isSpecial && allowNullForOther) {
+        console.log('[DeptDebug] Salutation พิเศษ -> อนุญาต null');
+        return null;
+      }
+      console.log('[DeptDebug] ไม่พบ department ใน external -> ส่ง null');
+      return null;
     };
 
     const deptId = await ensureRealDepartmentId(form.department);
+    console.log('[DeptDebug] Final deptId =', deptId, 'form.department =', form.department, 'external count =', externalDepartments.length);
+
+    // Persist external department separately (workaround) แม้ backend จะยังไม่รองรับ
+    let outsideDepartmentId = null;
+    let outsideDepartmentName = null;
+    if (isUUID(form.department)) {
+      outsideDepartmentId = form.department;
+      const match = externalDepartments.find(d => d.id === form.department);
+      outsideDepartmentName = match?.label || match?.name || null;
+      try {
+        // เก็บลง localStorage ให้หน้า detail / edit เอามาโชว์ได้ถ้า backend คืน null
+        const storeKey = `outgoing_report2_outside_dept_${id || 'new'}`;
+        localStorage.setItem(storeKey, JSON.stringify({ outsideDepartmentId, outsideDepartmentName }));
+      } catch (_) {}
+    }
 
     const payloadBase = {
       position_id: resolvedPositionId,
@@ -618,8 +724,11 @@ export const useInitialNotificationComplainantAgency = () => {
       document_date: toYMD(form.document_date),
       subject: form.subject || '',
       signature_authority_user_id: nullIfEmpty(form.signer),
-      // department_id conditionally (avoid sending invalid UUID)
-      ...(deptId ? { department_id: deptId } : {}),
+  // department_id (ยังคงส่งเฉพาะถ้าผ่าน ensureRealDepartmentId)
+  ...(deptId ? { department_id: deptId } : {}),
+  // แนบข้อมูลหน่วยงานภายนอกชั่วคราว (ถ้า backend รองรับจะเก็บได้ ถ้าไม่รองรับก็ไม่เสียหาย)
+  ...(outsideDepartmentId ? { outside_department_id: outsideDepartmentId } : {}),
+  ...(outsideDepartmentName ? { outside_department_name: outsideDepartmentName } : {}),
       user_id: null,
       confidentiality_level: nullIfEmpty(form.confidentiality),
       urgency_level: nullIfEmpty(form.urgency),
@@ -740,6 +849,18 @@ export const useInitialNotificationComplainantAgency = () => {
         return;
       }
 
+      try {
+        if (!id && createdId) {
+          const newKey = 'outgoing_report2_outside_dept_new';
+          const finalKey = `outgoing_report2_outside_dept_${createdId}`;
+          const rawOutside = localStorage.getItem(newKey);
+          if (rawOutside && !localStorage.getItem(finalKey)) {
+            localStorage.setItem(finalKey, rawOutside);
+            localStorage.removeItem(newKey);
+          }
+        }
+      } catch (_) { console.log('[DeptDebug] migrate outside dept key failed'); }
+
       if (attachmentFiles.length > 0) {
         showLoading("กำลังอัพโหลดไฟล์แนบ...");
         await uploadType2Attachments(createdId);
@@ -782,17 +903,18 @@ export const useInitialNotificationComplainantAgency = () => {
       }
       alertError("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
     }
-  }, [form, attachmentFiles, validateRequiredFields]);
+  }, [form, attachmentFiles, validateRequiredFields, externalDepartments]);
 
   const isFormValid = useCallback(() => {
     const baseOk = baseRequiredFields.every(f => {
       const v = form[f];
       return v !== undefined && v !== null && v !== '';
     });
-    const deptOk = form.salutation_is_other ? true : !!form.department;
+    // department ไม่บังคับแล้ว
+    const deptOk = true;
     const otherOk = !form.salutation_is_other || !!form.position_other_text;
     return baseOk && deptOk && otherOk;
-  }, [form]);
+  }, [form, id]);
 
   const canSave = useCallback(() => isFormValid(), [isFormValid]);
 
@@ -846,6 +968,9 @@ export const useInitialNotificationComplainantAgency = () => {
     existingAttachments,
     setExistingAttachments,
     handleDeleteExistingAttachment,
+    // ข้อมูลหน่วยงานภายนอก
+    externalDepartments,
+    isLoadingDepartments,
   };
 };
 

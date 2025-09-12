@@ -488,8 +488,8 @@ const RequestResultProgress = () => {
             {/* เลขที่หนังสือ + icon */}
             <Box sx={{ display: "flex", alignItems: "center" }}>
               <InputText
-                label={createLabel("เลข สป.กค.", "refNo")}
-                inputLabel="กรอกเลข สป.กค."
+                label={createLabel("เลข สรร.", "refNo")}
+                inputLabel="กรอกเลข สรร."
                 name="refNo"
                 value={form.refNo}
                 onChange={handleChange}
@@ -511,10 +511,10 @@ const RequestResultProgress = () => {
               </IconButton>
             </Box>
             <DateThaiPickerService
-              label={createLabel("วันที่ สป.กค.", "refDate")}
+              label={createLabel("วันที่ สรร.", "refDate")}
               value={form.refDate}
               onChange={(d)=>updateField('refDate', d)}
-              placeholder="เลือกวันที่ สป.กค."
+              placeholder="เลือกวันที่ สรร."
               error={!!getFieldError("refDate")}
               helperText={getFieldError("refDate")}
               sx={{ width:'100%' }}

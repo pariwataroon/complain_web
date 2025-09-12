@@ -262,6 +262,18 @@ const InitialNotificationComplainantAgency = () => {
               }
             : null;
           setSelectedDepartment(deptObj);
+        } else {
+          // แม้ในกรณี isOther ก็ยังโหลดข้อมูลหน่วยงานมาเก็บไว้
+          if (d.department?.id) {
+            handleChange({ target: { name: 'department', value: d.department.id } });
+            const deptObj = {
+              value: d.department.id,
+              label: d.department.name,
+              code: d.department.code || "",
+              shortName: d.department.short_name || d.department.shortName || "",
+            };
+            setSelectedDepartment(deptObj);
+          }
         }
 
         if (d.document_date) {
@@ -356,18 +368,18 @@ const InitialNotificationComplainantAgency = () => {
               error={!!getFieldError('salutation')}
               helperText={getFieldError('salutation')}
             />
-      {!(form.salutation_is_other) && (
+            {(!(form.salutation_is_other) || router?.query?.id) && (
               <SelectFieldDepartmentoutside
                 label={createLabel('หน่วยงาน / ผู้ร้อง', 'department')}
                 name='department'
-                value={selectedDepartment}
+                // ใช้ค่า id ตรงจาก form เพื่อให้โหมดแก้ไข prefill ได้ (component จะ map id -> option เอง)
+                value={form.department}
                 onChange={handleDepartmentSelect}
                 onDepartmentSelect={handleDepartmentSelect}
-                // remove dependency on signer selection
                 error={!!getFieldError('department')}
                 helperText={getFieldError('department')}
-        disabled={false}
-        placeholder='เลือกหน่วยงาน / ผู้ร้อง'
+                disabled={false}
+                placeholder='เลือกหน่วยงาน / ผู้ร้อง'
               />
             )}
             <InputText
@@ -403,8 +415,8 @@ const InitialNotificationComplainantAgency = () => {
             )}
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <InputText
-                label={createLabel('เลข สป.กค.', 'complaint_number')}
-                inputLabel='กรอกเลข สป.กค.'
+                label={createLabel('เลข สรร.', 'complaint_number')}
+                inputLabel='กรอกเลข สรร.'
                 name='complaint_number'
                 value={form.complaint_number || ''}
                 onChange={handleChange}
@@ -418,10 +430,10 @@ const InitialNotificationComplainantAgency = () => {
               </IconButton>
             </Box>
             <DateThaiPickerService
-              label={createLabel('วันที่ สป.กค.', 'complaint_number_date')}
+              label={createLabel('วันที่ สรร.', 'complaint_number_date')}
               value={form.complaint_number_date}
               onChange={handleComplaintNumberDateChange}
-              placeholder='เลือกวันที่ สป.กค.'
+              placeholder='เลือกวันที่ สรร.'
               error={!!getFieldError('complaint_number_date')}
               helperText={getFieldError('complaint_number_date')}
             />

@@ -14,7 +14,8 @@ import {
 } from "@pages/api/outgoinreports/outgoinreports";
 import axiosInstance from "@pages/api/axiosInstance";
 
-const POSITION_FALLBACK = "7e18e4fe-d416-4580-b4d4-2a4032f67770";
+// NOTE: Removed POSITION_FALLBACK mock. We now always attempt to send the actual
+// selected position (salutation) id. If none is selected validation will block save.
 
 const isUUID = (s) =>
   typeof s === "string" &&
@@ -56,9 +57,10 @@ export const useInformRelatedParties = () => {
   // Initial form state
   const initialFormState = useMemo(
     () => ({
-      salutation: "", // position_id
+      salutation: "", 
       salutation_is_other: false,
       salutation_is_complainant: false,
+      salutation_name: "", // human-readable position/salutation name for payload position_name
       position_other_text: "",
       refNo: complaintNumberFromQuery || "", // reference_number
       date: null, // reference_date (will be converted with toYMD)
@@ -138,13 +140,15 @@ export const useInformRelatedParties = () => {
   }, [form.refNo, isEditing, form.date]);
 
   // ฟิลด์ที่จำเป็นต้องกรอก
+  // NOTE: Removed 'department' from hard required fields per user request.
+  // If salutation is normal (not other/complainant) and department omitted, we still allow save.
   const requiredFields = [
-  "salutation", // position_id (เรียนถึง)
+    "salutation", // position_id (เรียนถึง)
     "refNo",
     "date",
     "subject",
     "signer",
-  "department", // conditionally satisfied by position_other_text when salutation_is_other or salutation_is_complainant
+    // "department", // removed: no longer strictly required
     "confidentiality",
     "urgency",
     "proposeFor",
@@ -191,7 +195,6 @@ export const useInformRelatedParties = () => {
 
       // Handle different input formats
       if (typeof nameOrEvent === 'string') {
-        // Direct call: handleChange("refNo", "value")
         name = nameOrEvent;
         finalValue = typeof value === "object" && value !== null && value.value !== undefined ? value.value : value;
       } else if (nameOrEvent && nameOrEvent.target) {
@@ -206,13 +209,30 @@ export const useInformRelatedParties = () => {
 
       console.log("🔥 handleChange:", name, "=", finalValue);
 
-      setForm((prev) => ({
-        ...prev,
-        [name]: finalValue,
-        // Sync details and note fields
-        ...(name === 'details' && { note: finalValue }),
-        ...(name === 'note' && { details: finalValue }),
-      }));
+      setForm((prev) => {
+        const next = {
+          ...prev,
+          [name]: finalValue,
+          ...(name === 'details' && { note: finalValue }),
+          ...(name === 'note' && { details: finalValue }),
+        };
+        // Auto capture human label for salutation if option object supplied
+        if (name === 'salutation') {
+          let labelCandidate = '';
+            if (value && typeof value === 'object') {
+              labelCandidate = value.label || value.name || value.title || '';
+            }
+          // If coming via event but we stored original object in options.originalOption
+          if (!labelCandidate && options && options.originalOption) {
+            const opt = options.originalOption;
+            labelCandidate = opt.label || opt.name || opt.title || '';
+          }
+          if (labelCandidate && !next.salutation_name) {
+            next.salutation_name = labelCandidate;
+          }
+        }
+        return next;
+      });
 
       // ล้าง error ของฟิลด์ที่กำลังแก้ไข
       if (errors[name]) {
@@ -305,12 +325,12 @@ export const useInformRelatedParties = () => {
   // ฟังก์ชันตรวจสอบข้อมูลที่จำเป็น
   const validateRequiredFields = useCallback(() => {
     const fieldsConfig = [
-  { field: "salutation", label: "เรียนถึง" },
+      { field: "salutation", label: "เรียนถึง" },
       { field: "refNo", label: "เลขที่ สป.กค." },
       { field: "date", label: "วันที่" },
       { field: "subject", label: "เรื่อง" },
       { field: "signer", label: "ผู้ลงนาม" },
-      { field: "department", label: "หน่วยงาน / ผู้ร้อง" },
+      // department removed from required validation
       { field: "position_other_text", label: "ระบุตำแหน่ง/ผู้ร้อง" },
       { field: "confidentiality", label: "ชั้นความลับ" },
       { field: "urgency", label: "ชั้นความเร่งด่วน" },
@@ -328,7 +348,7 @@ export const useInformRelatedParties = () => {
 
       // Conditional: if salutation other/complainant, treat position_other_text as required and department optional
       const useCustom = form.salutation_is_other || form.salutation_is_complainant;
-      if (field === 'department' && useCustom) return; // department not required
+  if (field === 'department') return; // department never required now
       if (field === 'position_other_text' && !useCustom) return; // only required when using custom
 
       const value = form[field];
@@ -444,8 +464,40 @@ export const useInformRelatedParties = () => {
       return map[val] || null;
     };
     const useCustomRecipient = form.salutation_is_other || form.salutation_is_complainant;
+    // Extract real position id (salutation) regardless of object/string shape
+    const extractPositionId = (val) => {
+      if (!val) return null;
+      if (typeof val === 'string') return val.trim();
+      if (typeof val === 'object') {
+        return (
+          val.id ||
+          val.value ||
+          val.position_id ||
+          val.positionId ||
+          (val.position && (val.position.id || val.position.position_id)) ||
+          null
+        );
+      }
+      return null;
+    };
+    let positionId = extractPositionId(form.salutation);
+    if (positionId && typeof positionId === 'string') positionId = positionId.trim();
+    // Do NOT fall back to a mock UUID anymore; let validation ensure presence.
+    const otherText = useCustomRecipient ? (form.position_other_text || '').trim() : null;
+    // Derive a non-null position_name (backend returns position_name=null now; user wants value)
+    let positionName = form.salutation_name || "";
+    if (useCustomRecipient && otherText) {
+      positionName = otherText; // prefer user-entered custom text
+    }
+    if (!positionName) {
+      // fallback: use otherText (if any) else id (so it's never null)
+      positionName = otherText || positionId || "";
+    }
     const body = {
-  position_id: form.salutation || POSITION_FALLBACK,
+      position_id: positionId || null,
+      position_name: positionName, // ensure not null (empty string if truly nothing)
+      position_label: positionName, // compatibility synonyms
+      position_title: positionName,
       reference_number: (form.refNo || "").trim(),
       reference_date: toYMD(form.date),
       subject: (form.subject || "").trim(),
@@ -454,7 +506,6 @@ export const useInformRelatedParties = () => {
       document_number: (form.bookNo || "").trim(),
       document_date: toYMD(form.date2),
       signature_authority_user_id: form.signer,
-      ...(useCustomRecipient ? {} : { department_id: form.department || null }),
       confidentiality_level: confidentialityNumberToString(form.confidentiality),
       urgency_level: urgencyNumberToString(form.urgency),
       remarks: form.note || form.details || "",
@@ -464,8 +515,22 @@ export const useInformRelatedParties = () => {
       proposal_purpose: form.proposeFor,
       consideration_result: form.decision,
       complaint_id: complaintId,
-      ...(useCustomRecipient ? { custom_recipient: (form.position_other_text || '').trim(), custom_recipient_type: form.salutation_is_complainant ? 'COMPLAINANT' : 'OTHER' } : {}),
+      // Provide richer position object for backend consumption
+      position: positionId ? {
+        id: positionId,
+        name: positionName || undefined,
+        label: positionName || undefined,
+        title: positionName || undefined,
+        other_text: otherText || null,
+      } : undefined,
+      // BACKWARD COMPAT: Some backend endpoints still read root-level position_other_text
+      ...(otherText ? { position_other_text: otherText } : {}),
+      ...(useCustomRecipient ? { custom_recipient: otherText || '', custom_recipient_type: form.salutation_is_complainant ? 'COMPLAINANT' : 'OTHER' } : {}),
     };
+    // Include department_id only if NOT custom recipient and user actually selected a department (non-empty)
+    if (!useCustomRecipient && form.department) {
+      body.department_id = form.department; // don't send null when empty to avoid backend forcing selection
+    }
 
     console.log("📦 createRequestBody:", body);
     return body;
@@ -474,6 +539,8 @@ export const useInformRelatedParties = () => {
   // ฟังก์ชันบันทึกข้อมูล - รองรับทั้ง create และ update
   const handleSave = useCallback(async () => {
     console.log("💾 handleSave: Starting save process");
+    // Recompute custom recipient flag locally for this scope
+    const useCustomRecipient = form.salutation_is_other || form.salutation_is_complainant;
 
     const missingFields = validateRequiredFields();
 
@@ -524,22 +591,24 @@ export const useInformRelatedParties = () => {
       try {
         if (typeof window !== 'undefined' && form.salutation) {
           localStorage.setItem(`report4_position_${effectiveId}`, form.salutation);
+          if (form.salutation_name) {
+            localStorage.setItem(`report4_position_name_${effectiveId}`, form.salutation_name);
+          }
         }
       } catch (e) {
         console.warn('ไม่สามารถบันทึกตำแหน่งลง localStorage', e);
       }
       try {
         if (typeof window !== 'undefined') {
-          const useCustomRecipient = form.salutation_is_other || form.salutation_is_complainant;
-            const key = `report4_custom_recipient_${effectiveId}`;
-            if (useCustomRecipient && form.position_other_text) {
-              localStorage.setItem(key, JSON.stringify({
-                text: (form.position_other_text || '').trim(),
-                type: form.salutation_is_complainant ? 'COMPLAINANT' : 'OTHER'
-              }));
-            } else {
-              localStorage.removeItem(key);
-            }
+          const key = `report4_custom_recipient_${effectiveId}`;
+          if (useCustomRecipient && form.position_other_text) {
+            localStorage.setItem(key, JSON.stringify({
+              text: (form.position_other_text || '').trim(),
+              type: form.salutation_is_complainant ? 'COMPLAINANT' : 'OTHER'
+            }));
+          } else {
+            localStorage.removeItem(key);
+          }
         }
       } catch (e) {
         console.warn('ไม่สามารถบันทึก custom_recipient ลง localStorage', e);
@@ -625,7 +694,6 @@ export const useInformRelatedParties = () => {
   const isFormValid = useCallback(() => {
     const useCustom = form.salutation_is_other || form.salutation_is_complainant;
     return requiredFields.every((field) => {
-      if (field === 'department' && useCustom) return true; // satisfied elsewhere
       if (field === 'attachment' && isEditing && existingAttachments.length > 0) return true;
       const value = form[field];
       return value !== undefined && value !== null && value !== "";
@@ -637,7 +705,6 @@ export const useInformRelatedParties = () => {
     const useCustom = form.salutation_is_other || form.salutation_is_complainant;
     if (useCustom && (!form.position_other_text || form.position_other_text.trim() === "")) return false;
     return requiredFields.every((f) => {
-      if (f === 'department' && useCustom) return true;
       if (f === 'attachment' && isEditing && existingAttachments.length > 0) return true;
       const v = form[f];
       return !(v === undefined || v === null || v === "");
@@ -669,6 +736,8 @@ export const useInformRelatedParties = () => {
         // position_id -> salutation (เรียนถึง)
         if (d.position_id || d.position?.id) {
           handleChange("salutation", d.position_id || d.position?.id);
+          const incomingName = d.position_name || d.position?.name || d.position?.position_name || d.position?.title || "";
+          if (incomingName) handleChange({ target: { name: 'salutation_name', value: incomingName } });
         } else {
           // Try alternate sources for position id (บาง API อาจคืนอยู่คนละโครงสร้าง)
           const altPositionId = d.signature_authority_user?.position_id
@@ -681,18 +750,23 @@ export const useInformRelatedParties = () => {
           if (altPositionId) {
             console.log("ℹ️ Using alternate position_id source for salutation:", altPositionId);
             handleChange("salutation", altPositionId);
+            const altName = d.signature_authority_user?.position_name || d.signature_authority_user?.position?.name || d.signature_authority?.position_name || d.signature_authority?.position?.name;
+            if (altName) handleChange({ target: { name: 'salutation_name', value: altName } });
           } else {
             console.log("⚠️ ไม่พบ position_id ในข้อมูลที่โหลดมา จะใช้ค่า fallback เมื่อบันทึก");
           }
         }
-        // If backend returns custom recipient, map to flags & text
-        if (d.custom_recipient) {
-          const isComplainant = d.custom_recipient_type === 'COMPLAINANT';
+        // If backend returns custom recipient (legacy) or position.other_text, map to flags & text
+        if (d.custom_recipient || (d.position && d.position.other_text)) {
+          const rawText = d.custom_recipient || d.position?.other_text || '';
+          const isComplainant = (d.custom_recipient_type === 'COMPLAINANT');
+          // Heuristic: if backend omitted custom_recipient_type but other_text present and user selected complainant previously, fallback remains false.
           handleChange({ target: { name: 'salutation_is_other', value: !isComplainant } });
           handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
-          handleChange({ target: { name: 'position_other_text', value: d.custom_recipient } });
-          // Clear department since custom recipient used
-          handleChange({ target: { name: 'department', value: '' } });
+          handleChange({ target: { name: 'position_other_text', value: rawText } });
+          // When custom recipient exists treat its text as salutation_name for easier display
+          if (rawText) handleChange({ target: { name: 'salutation_name', value: rawText } });
+          handleChange({ target: { name: 'department', value: '' } }); // clear department in custom flow
         }
       // Convert incoming string labels to numeric select value if needed
       const confidentialityStringToNumber = (val) => {
@@ -727,6 +801,13 @@ export const useInformRelatedParties = () => {
                 if (stored) {
                   console.log('⬅️ ใช้ salutation จาก localStorage:', stored);
                   handleChange('salutation', stored);
+                  // If we don't have a name yet and position object in response had name, already set above. Otherwise leave for user selection logic.
+                }
+              }
+              if (!form.salutation_name) {
+                const storedName = localStorage.getItem(`report4_position_name_${d.id}`);
+                if (storedName) {
+                  handleChange({ target: { name: 'salutation_name', value: storedName } });
                 }
               }
               if (!d.custom_recipient) {

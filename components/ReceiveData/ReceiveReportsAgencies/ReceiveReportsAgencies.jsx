@@ -1159,11 +1159,11 @@ const ReceiveReportsAgencies = () => {
                 <InputText
                   label={
                     <span>
-                      เลขสป.กค.
+                      เลขสรร.
                       <span style={{ color: "red", marginLeft: 4 }}>*</span>
                     </span>
                   }
-                  inputLabel="กรอกเลขสป.กค."
+                  inputLabel="กรอกเลขสรร."
                   name="investigateGk"
                   value={form.investigateGk}
                   onChange={handleChange}
@@ -1184,8 +1184,8 @@ const ReceiveReportsAgencies = () => {
                 <IconButton
                   onClick={() => setOpenSearchDialog2(true)}
                   onMouseDown={(e) => e.preventDefault()}
-                  aria-label="กรอกเลขสป.กค."
-                  title="กรอกเลขสป.กค."
+                  aria-label="กรอกเลขสรร."
+                  title="กรอกเลขสรร."
                   sx={{ width: 40, height: 40, color: "blue", p: 0 }}
                 >
                   <SearchIcon />
@@ -1197,7 +1197,7 @@ const ReceiveReportsAgencies = () => {
               <DateThaiPickerService
                 label={
                   <span>
-                    วันที่<span style={{ color: "red", marginLeft: 4 }}>*</span>
+                    วันที่ เลขสรร.<span style={{ color: "red", marginLeft: 4 }}>*</span>
                   </span>
                 }
                 value={form.investigateDate}

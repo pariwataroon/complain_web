@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useCallback, useState, useRef } from "react";
+import { useCallback, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
   alertSuccess,
@@ -13,8 +13,8 @@ import { CreateOutgoingReport, UploadOutgoingReportAttachments } from "@pages/ap
 import { getDepartments } from "@pages/api/department/department";
 import axiosInstance from "@pages/api/axiosInstance";
 
-// Extended validation schema with file validation
-const validationSchema = yup.object().shape({
+// สร้าง validation schema (department ถูกทำให้ optional เสมอ ทั้งโหมดสร้างและแก้ไข)
+const createValidationSchema = () => yup.object().shape({
   salutation_is_other: yup.boolean().default(false),
   salutation: yup
     .string()
@@ -63,13 +63,8 @@ const validationSchema = yup.object().shape({
     .required("กรุณาเลือกผู้ลงนาม")
     .notOneOf([""], "กรุณาเลือกผู้ลงนาม"),
 
-  department: yup
-    .string()
-    .when('salutation_is_other', {
-      is: true,
-      then: (schema) => schema.optional().nullable(),
-      otherwise: (schema) => schema.required("กรุณาเลือกหน่วยงาน").notOneOf([""], "กรุณาเลือกหน่วยงาน"),
-    }),
+  // department ไม่บังคับแล้ว (ระบบจะเลือก fallback อัตโนมัติระหว่างบันทึก)
+  department: yup.string().optional().nullable(),
 
   confidentiality: yup
     .mixed()
@@ -156,6 +151,12 @@ export const useForwardToAgencyForm = () => {
   const currentTime = "2025-09-03 07:30:42";
   const currentUser = "vampirebeam";
   const router = useRouter();
+
+  // ตรวจสอบว่าอยู่ในโหมดแก้ไขหรือไม่
+  const isEditMode = Boolean(router?.query?.id);
+  
+  // ใช้ schema (department optional เสมอ)
+  const validationSchema = useMemo(() => createValidationSchema(), []);
 
   const {
     control,
@@ -632,7 +633,15 @@ export const useForwardToAgencyForm = () => {
 
   // ฟังก์ชันตรวจสอบว่า field ไหนที่ required
   const isRequired = useCallback((fieldName) => {
-    const requiredFields = [
+    if (fieldName === "department") return false; // ไม่บังคับแล้ว
+    
+    if (fieldName === "position_other_text") {
+      // position_other_text บังคับเฉพาะเมื่อเลือก "อื่นๆ"
+      const currentData = watch();
+      return currentData.salutation_is_other === true;
+    }
+    
+    const baseRequiredFields = [
       "salutation",
       "complaint_number",
       "complaint_number_date",
@@ -640,17 +649,18 @@ export const useForwardToAgencyForm = () => {
       "document_number",
       "document_date",
       "signer",
-      "department",
       "confidentiality",
       "urgency",
     ];
-    return requiredFields.includes(fieldName);
-  }, []);
+    return baseRequiredFields.includes(fieldName);
+  }, [watch, isEditMode]);
 
   // ฟังก์ชันสำหรับดึงข้อมูลปัจจุบันของฟอร์ม
   const getCurrentFormData = useCallback(() => {
     const currentData = watch();
-    const requiredFields = [
+    
+    // คำนวณ required fields ตามสถานะปัจจุบัน
+    const baseRequiredFields = [
       "salutation",
       "complaint_number",
       "complaint_number_date",
@@ -658,11 +668,19 @@ export const useForwardToAgencyForm = () => {
       "document_number",
       "document_date",
       "signer",
-      "department",
       "confidentiality",
       "urgency",
-      "attachment",
     ];
+    
+    const dynamicRequiredFields = [...baseRequiredFields];
+    
+    // department ไม่ถูกบังคับแล้ว ไม่ต้องเพิ่ม
+    
+    // เพิ่ม position_other_text ถ้าเลือก "อื่นๆ"
+    const isOther = currentData.salutation_is_other === true;
+    if (isOther) {
+      dynamicRequiredFields.push("position_other_text");
+    }
 
     return {
       ...currentData,
@@ -686,12 +704,12 @@ export const useForwardToAgencyForm = () => {
         completedFields: Object.values(currentData).filter(
           (value) => value !== "" && value !== null && value !== undefined
         ).length,
-        totalRequiredFields: requiredFields.length,
+        totalRequiredFields: dynamicRequiredFields.length,
         completionPercentage: Math.round(
           (Object.values(currentData).filter(
             (value) => value !== "" && value !== null && value !== undefined
           ).length /
-            requiredFields.length) *
+            dynamicRequiredFields.length) *
           100
         ),
       },
@@ -701,7 +719,7 @@ export const useForwardToAgencyForm = () => {
         version: "1.0.0",
       },
     };
-  }, [watch, isValid, isDirty, errors, fileData, currentTime, currentUser]);
+  }, [watch, isValid, isDirty, errors, fileData, currentTime, currentUser, isEditMode]);
 
   // ฟังก์ชันสำหรับ validation แบบ manual
   const validateField = useCallback((fieldName, value) => {
@@ -717,19 +735,33 @@ export const useForwardToAgencyForm = () => {
     return null;
   }, []);
 
-  const requiredFields = [
-    "salutation",
-    // position_other_text: required เฉพาะเมื่อเลือก 'อื่นๆ' จึงไม่ใส่ในชุดบังคับหลัก
-    "complaint_number",
-    "complaint_number_date",
-    "subject",
-    "document_number",
-    "document_date",
-    "signer",
-    "department",
-    "confidentiality",
-    "urgency",
-  ];
+  // สร้าง dynamic required fields list สำหรับ reference
+  const getRequiredFields = useCallback(() => {
+    const currentData = watch();
+    const baseRequiredFields = [
+      "salutation",
+      "complaint_number",
+      "complaint_number_date",
+      "subject",
+      "document_number",
+      "document_date",
+      "signer",
+      "confidentiality",
+      "urgency",
+    ];
+    
+    const dynamicRequiredFields = [...baseRequiredFields];
+    
+    // department ไม่ถูกบังคับแล้ว ไม่ต้องเพิ่ม
+    
+    // เพิ่ม position_other_text ถ้าเลือก "อื่นๆ"
+    const isOther = currentData.salutation_is_other === true;
+    if (isOther) {
+      dynamicRequiredFields.push("position_other_text");
+    }
+    
+    return dynamicRequiredFields;
+  }, [watch, isEditMode]);
 
   return {
     control,
@@ -748,7 +780,7 @@ export const useForwardToAgencyForm = () => {
     isRequired,
     getCurrentFormData,
     validateField,
-    requiredFields,
+    getRequiredFields,
     fileData,
     fileInputKey,
     resetFileInput,

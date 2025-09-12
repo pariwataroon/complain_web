@@ -221,9 +221,7 @@ const InformRelatedParties = () => {
     const positionId = userInfo?.position_id ?? userInfo?.position?.id ?? userInfo?.positionId ?? "";
     handleChange({ target: { name: "signer", value: signerId } });
     if (positionId) handleChange({ target: { name: "salutation", value: positionId } });
-    // Clear department on signer change
-    setSelectedDepartment(null);
-    handleChange({ target: { name: "department", value: "" } });
+    // Do NOT clear department anymore; user can pre-select department without signer.
   };
 
   const handleDepartmentSelect = (department) => {
@@ -408,6 +406,13 @@ const InformRelatedParties = () => {
                   const isComplainant = label === 'ผู้ร้อง';
                   handleChange({ target: { name: 'salutation_is_other', value: isOther } });
                   handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
+                  // Persist readable name (for position_name payload)
+                  if (label) handleChange({ target: { name: 'salutation_name', value: label } });
+                  // Also ensure base salutation field has the id/value while capturing label through options
+                  if (opt) {
+                    const idVal = opt.id || opt.value || opt.position_id || '';
+                    if (idVal) handleChange('salutation', { value: idVal }, { originalOption: opt });
+                  }
                   if (!isOther) {
                     handleChange({ target: { name: 'position_other_text', value: '' } });
                   }
@@ -424,8 +429,8 @@ const InformRelatedParties = () => {
               <Box sx={{ display:'flex', alignItems:'flex-end', gap:1 }}>
                 <Box sx={{ flex:1 }}>
                   <InputText
-                    label={createLabel('เลข สป.กค.', 'refNo')}
-                    inputLabel='กรอกเลข สป.กค.'
+                    label={createLabel('เลข สรร.', 'refNo')}
+                    inputLabel='กรอกเลข สรร.'
                     name='refNo'
                     value={form.refNo}
                     onChange={handleChange}
@@ -450,7 +455,7 @@ const InformRelatedParties = () => {
             </Box>
               <Box sx={{ position: 'relative' }}>
               <DateThaiPickerService
-                label={createLabel('วันที่', 'date')}
+                label={createLabel('วันที่ เลขสรร.', 'date')}
                 value={form.date}
                 onChange={handleMainDateChange}
                 placeholder='เลือกวันที่'
@@ -1042,7 +1047,8 @@ const InformRelatedParties = () => {
               value={selectedDepartment}
               onChange={handleDepartmentSelect}
               onDepartmentSelect={handleDepartmentSelect}
-              filterBySignerId={selectedSigner?.id || selectedSigner?.value || form.signer || undefined}
+              // Remove filter by signer so department can be chosen freely
+              // filterBySignerId removed per requirement
               error={!!getFieldError("department")}
               helperText={getFieldError("department")}
               disabled={form.salutation_is_other || form.salutation_is_complainant}

@@ -16,6 +16,8 @@ import {
 import axiosInstance from "@pages/api/axiosInstance";
 import { getDepartments } from "@pages/api/department/department";
 
+// หมายเหตุ: ยกเลิกการบังคับให้เลือกหน่วยงาน (department) ตามคำขอผู้ใช้
+// ถ้าผู้ใช้ไม่ได้เลือก จะไม่บล็อคการบันทึกอีกต่อไป
 const requiredFields = [
   "salutation",
   "refNo",
@@ -23,7 +25,7 @@ const requiredFields = [
   "docDate",
   "refDate",
   "subject",
-  "department",
+  // "department",  // removed from required list
   "signer",
   "confidentiality",
   "urgency",
@@ -397,8 +399,7 @@ export const useRequestResultProgress = () => {
       { field: "docDate", label: "วันที่หนังสือ" },
       { field: "refDate", label: "วันที่ สป.กค." },
       { field: "subject", label: "เรื่อง" },
-      // department required only when not custom recipient
-      ...(state.salutation_is_other ? [] : [{ field: "department", label: "หน่วยงาน / ผู้ร้อง" }]),
+  // department no longer required regardless of salutation_is_other
       { field: "signer", label: "ผู้ลงนาม" },
       { field: "confidentiality", label: "ชั้นความลับ" },
       { field: "urgency", label: "ชั้นความเร่งด่วน" },
