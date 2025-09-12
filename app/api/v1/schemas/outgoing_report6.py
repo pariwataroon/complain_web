@@ -21,6 +21,8 @@ class OutgoingReport6Attachment(OutgoingReport6AttachmentBase):
         from_attributes = True
 
 class OutgoingReport6Base(BaseModel):
+    position_id: Optional[UUID] = Field(None, description="ตำแหน่ง (nullable)")
+    position_other_text: Optional[str] = Field(None, description="ตำแหน่งอื่น (กรณีเลือกอื่นๆ)")
     reference_number: str = Field(..., description="เลขอ้างอิง")
     reference_date: datetime = Field(..., description="วันที่เอกสาร")
     subject: str = Field(..., description="เรื่อง")
@@ -40,6 +42,8 @@ class OutgoingReport6Base(BaseModel):
     complaint_id: Optional[UUID] = Field(None, description="ID ของข้อร้องเรียนที่เกี่ยวข้อง")
 
 class OutgoingReport6Create(BaseModel):
+    position_id: Optional[UUID] = None
+    position_other_text: Optional[str] = None
     reference_number: str = Field(..., max_length=50)
     reference_date: datetime
     subject: str = Field(..., max_length=500)
@@ -62,6 +66,8 @@ class OutgoingReport6Create(BaseModel):
         json_encoders = {datetime: lambda v: v.isoformat() if v else None}
 
 class OutgoingReport6Update(BaseModel):
+    position_id: Optional[UUID] = None
+    position_other_text: Optional[str] = None
     reference_number: Optional[str] = None
     reference_date: Optional[datetime] = None
     subject: Optional[str] = None

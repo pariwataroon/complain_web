@@ -10,6 +10,7 @@ from models.outgoing_reports6 import OutgoingReport6, OutgoingReportAttachment6
 from models.comp_complaint import Complaint
 from models.user import User
 from models.departments import Department
+from models.position import Position
 from app.api.v1.schemas.outgoing_report6 import OutgoingReport6Create, OutgoingReport6Update
 from lib.file_upload import save_upload_file, delete_upload_file, get_storage_config
 from lib.logger import get_logger
@@ -55,6 +56,14 @@ def create_outgoing_report6(
                 raise HTTPException(status_code=404, detail="ไม่พบผู้มีอำนาจลงนามที่ระบุ")
         if report_data.complaint_id:
             _ = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
+        # Validate position if provided
+        if getattr(report_data, "position_id", None):
+            pos = db.query(Position).filter(Position.id == report_data.position_id, Position.is_active == True).first()
+            if not pos:
+                raise HTTPException(status_code=400, detail="ไม่พบตำแหน่งที่เลือก")
+            pos_name = getattr(pos, "name", "") or ""
+            if pos_name in {"other", "others", "อื่นๆ", "อื่น ๆ"} and not getattr(report_data, "position_other_text", None):
+                raise HTTPException(status_code=400, detail="กรุณาระบุตำแหน่ง (อื่นๆ) เพิ่มเติม")
         rec = OutgoingReport6(
             reference_number=report_data.reference_number,
             reference_date=report_data.reference_date,
@@ -73,6 +82,8 @@ def create_outgoing_report6(
             proposal_purpose=report_data.proposal_purpose,
             consideration_result=report_data.consideration_result,
             complaint_id=report_data.complaint_id,
+            position_id=getattr(report_data, "position_id", None),
+            position_other_text=getattr(report_data, "position_other_text", None),
             created_by=current_user_id
         )
         db.add(rec)
@@ -127,6 +138,10 @@ def get_outgoing_report6_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
         "subject": rec.subject,
         "complaint_number": rec.complaint_number,
         "complaint_number_date": _iso(rec.complaint_number_date),
+        "position": {
+            "id": _safe_str(getattr(rec, "position_id", None)),
+            "other_text": getattr(rec, "position_other_text", None)
+        },
         "department": {"id": _safe_str(rec.department_id), "name": rec.department.name if rec.department else "N/A"},
         "signature_authority_user": {"id": _safe_str(rec.signature_authority_user_id), "name": (f"{rec.signature_authority_user.first_name} {rec.signature_authority_user.last_name}" if rec.signature_authority_user else "N/A")},
         "user": {"id": _safe_str(rec.user_id), "name": (f"{rec.user.first_name} {rec.user.last_name}" if rec.user else "N/A")},
@@ -187,6 +202,10 @@ def get_outgoing_reports6(
             "document_number": r.document_number,
             "document_date": _iso(r.document_date),
             "complaint_number": r.complaint_number,
+            "position": {
+                "id": _safe_str(getattr(r, "position_id", None)),
+                "other_text": getattr(r, "position_other_text", None)
+            },
             "department_name": r.department.name if r.department else "N/A",
             "signature_user_name": (f"{r.signature_authority_user.first_name} {r.signature_authority_user.last_name}" if r.signature_authority_user else None),
             "urgency_level": r.urgency_level,
@@ -243,6 +262,15 @@ def update_outgoing_report6(
                 raise HTTPException(status_code=400, detail="หมายเลขข้อร้องเรียนไม่ตรงกับข้อร้องเรียนที่เลือก")
         for field, value in report_data.model_dump(exclude_unset=True).items():
             setattr(rec, field, value)
+        # position validation on update if changed
+        if "position_id" in report_data.model_dump(exclude_unset=True):
+            if getattr(report_data, "position_id", None):
+                pos = db.query(Position).filter(Position.id == report_data.position_id, Position.is_active == True).first()
+                if not pos:
+                    raise HTTPException(status_code=400, detail="ไม่พบตำแหน่งที่เลือก")
+                pos_name = getattr(pos, "name", "") or ""
+                if pos_name in {"other", "others", "อื่นๆ", "อื่น ๆ"} and not getattr(report_data, "position_other_text", None):
+                    raise HTTPException(status_code=400, detail="กรุณาระบุตำแหน่ง (อื่นๆ) เพิ่มเติม")
         rec.updated_by = current_user_id
         db.commit()
         db.refresh(rec)

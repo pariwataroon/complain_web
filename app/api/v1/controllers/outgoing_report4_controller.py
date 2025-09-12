@@ -149,6 +149,17 @@ def create_outgoing_report4(
             if not complaint:
                 raise HTTPException(status_code=400, detail="ไม่พบข้อร้องเรียนที่ระบุ")
 
+        # ตรวจสอบ position (optional) กรณีต้องมีข้อความอื่นๆ
+        position_obj = None
+        if getattr(report_data, "position_id", None):
+            from models.position import Position
+            position_obj = db.query(Position).filter(Position.id == report_data.position_id, Position.is_active == True).first()
+            if not position_obj:
+                raise HTTPException(status_code=400, detail="ไม่พบตำแหน่งที่เลือก")
+            pos_name = getattr(position_obj, "name", "") or ""
+            if pos_name in {"อื่นๆ", "อื่น ๆ", "other", "others"} and not getattr(report_data, "position_other_text", None):
+                raise HTTPException(status_code=400, detail="กรุณาระบุตำแหน่ง (อื่นๆ) เพิ่มเติม")
+
         db_report = OutgoingReport4(
             reference_number=report_data.reference_number,
             reference_date=report_data.reference_date,
@@ -168,6 +179,8 @@ def create_outgoing_report4(
             consideration_result=report_data.consideration_result,
             complaint_id=report_data.complaint_id,
             created_by=current_user_id,
+            position_id=getattr(report_data, "position_id", None),
+            position_other_text=getattr(report_data, "position_other_text", None),
         )
 
         db.add(db_report)
@@ -228,6 +241,10 @@ def get_outgoing_report4_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
 
         return {
             "id": _safe_str(report.id),
+            "position": {
+                "id": _safe_str(report.position_id) if hasattr(report, "position_id") else None,
+                "other_text": getattr(report, "position_other_text", None)
+            },
             "reference_number": report.reference_number,
             "reference_date": _iso(report.reference_date),
             "subject": report.subject,
@@ -317,6 +334,10 @@ def get_outgoing_reports4(
         for r in reports:
             items.append({
                 "id": _safe_str(r.id),
+                "position": {
+                    "id": _safe_str(r.position_id) if hasattr(r, "position_id") else None,
+                    "other_text": getattr(r, "position_other_text", None)
+                },
                 "reference_number": r.reference_number,
                 "reference_date": _iso(r.reference_date),
                 "subject": r.subject,
@@ -644,6 +665,16 @@ def update_outgoing_report4(
 
         for field, value in report_data.model_dump(exclude_unset=True).items():
             setattr(rec, field, value)
+        # ตรวจสอบตำแหน่งถ้ามีการอัปเดต
+        if "position_id" in report_data.model_dump(exclude_unset=True):
+            if getattr(report_data, "position_id", None):
+                from models.position import Position
+                pos = db.query(Position).filter(Position.id == report_data.position_id, Position.is_active == True).first()
+                if not pos:
+                    raise HTTPException(status_code=400, detail="ไม่พบตำแหน่งที่เลือก")
+                pos_name = getattr(pos, "name", "") or ""
+                if pos_name in {"อื่นๆ", "อื่น ๆ", "other", "others"} and not getattr(report_data, "position_other_text", None):
+                    raise HTTPException(status_code=400, detail="กรุณาระบุตำแหน่ง (อื่นๆ) เพิ่มเติม")
         rec.updated_by = current_user_id
 
         db.commit()

@@ -266,6 +266,10 @@ def get_outgoing_report5_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
         "subject": rec.subject,
         "complaint_number": rec.complaint_number,
         "complaint_number_date": _iso(rec.complaint_number_date),
+        "position": {
+            "id": _safe_str(getattr(rec, "position_id", None)),
+            "other_text": getattr(rec, "position_other_text", None)
+        },
 
         "department": {
             "id": _safe_str(rec.department_id),
@@ -355,6 +359,10 @@ def get_outgoing_reports5(
             "document_number": r.document_number,
             "document_date": _iso(r.document_date),
             "complaint_number": r.complaint_number,
+            "position": {
+                "id": _safe_str(getattr(r, "position_id", None)),
+                "other_text": getattr(r, "position_other_text", None)
+            },
             "department_name": r.department.name if r.department else "N/A",
             "signature_user_name": (
                 f"{r.signature_authority_user.first_name} {r.signature_authority_user.last_name}"
@@ -435,6 +443,16 @@ def update_outgoing_report5(
         # อัปเดตเฉพาะฟิลด์ที่ส่งมา
         for field, value in report_data.model_dump(exclude_unset=True).items():
             setattr(rec, field, value)
+        # ตรวจสอบตำแหน่งหากมีการเปลี่ยน
+        if "position_id" in report_data.model_dump(exclude_unset=True):
+            if getattr(report_data, "position_id", None):
+                from models.position import Position
+                pos = db.query(Position).filter(Position.id == report_data.position_id, Position.is_active == True).first()
+                if not pos:
+                    raise HTTPException(status_code=400, detail="ไม่พบตำแหน่งที่เลือก")
+                pos_name = getattr(pos, "name", "") or ""
+                if pos_name in {"other", "others", "อื่นๆ", "อื่น ๆ"} and not getattr(report_data, "position_other_text", None):
+                    raise HTTPException(status_code=400, detail="กรุณาระบุตำแหน่ง (อื่นๆ) เพิ่มเติม")
         rec.updated_by = current_user_id
 
         db.commit()

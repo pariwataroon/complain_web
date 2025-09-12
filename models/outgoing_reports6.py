@@ -10,6 +10,9 @@ class OutgoingReport6(Base):
     __tablename__ = "outgoing_reports6"  # แบบรายงานนำเรียนผู้ตรวจ
 
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4, index=True)
+    # เพิ่มฟิลด์ตำแหน่ง (ตามรุ่น 1-3)
+    position_id = Column(UNIQUEIDENTIFIER, ForeignKey("positions.id"), nullable=True)
+    position_other_text = Column(NVARCHAR(255), nullable=True)
     reference_number = Column(NVARCHAR(50), nullable=False)
     reference_date = Column(DateTime, nullable=False)
     subject = Column(NVARCHAR(500), nullable=False)

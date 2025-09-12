@@ -15,6 +15,9 @@ class OutgoingReport5(Base):
     __tablename__ = "outgoing_reports5"
 
     id = Column(UNIQUEIDENTIFIER(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # เพิ่มฟิลด์ตำแหน่ง (สอดคล้องรุ่น 1-3)
+    position_id = Column(UNIQUEIDENTIFIER, ForeignKey("positions.id"), nullable=True)
+    position_other_text = Column(NVARCHAR(255), nullable=True)
 
     # คีย์/วันรับเรื่องจากหน่วยงาน
     receive_number = Column(NVARCHAR(100), nullable=False, comment="เลขรับเรื่องผลการพิจารณา (ภายใน กค.)")

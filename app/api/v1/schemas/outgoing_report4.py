@@ -23,6 +23,8 @@ class OutgoingReport4Attachment(OutgoingReport4AttachmentBase):
 
 class OutgoingReport4Base(BaseModel):
     # ตาม model ไม่มี position_id, complaint_number, complaint_number_date
+    position_id: Optional[UUID] = Field(None, description="ตำแหน่ง (nullable)")
+    position_other_text: Optional[str] = Field(None, description="กรณีเลือกตำแหน่งอื่นๆ ให้ระบุ")
     reference_number: str = Field(..., description="เลขอ้างอิง")
     reference_date: datetime = Field(..., description="วันที่เอกสาร")
     subject: str = Field(..., description="เรื่อง")
@@ -42,6 +44,8 @@ class OutgoingReport4Base(BaseModel):
     complaint_id: Optional[UUID] = Field(None, description="ID ของข้อร้องเรียนที่เกี่ยวข้อง")
 
 class OutgoingReport4Create(BaseModel):
+    position_id: Optional[UUID] = None
+    position_other_text: Optional[str] = None
     reference_number: str = Field(..., max_length=50)
     reference_date: datetime
     subject: str = Field(..., max_length=500)
@@ -67,6 +71,8 @@ class OutgoingReport4Create(BaseModel):
         }
 
 class OutgoingReport4Update(BaseModel):
+    position_id: Optional[UUID] = None
+    position_other_text: Optional[str] = None
     reference_number: Optional[str] = None
     reference_date: Optional[datetime] = None
     subject: Optional[str] = None

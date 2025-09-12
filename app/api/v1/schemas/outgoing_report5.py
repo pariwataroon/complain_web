@@ -21,6 +21,8 @@ class OutgoingReport5Attachment(BaseModel):
 
 # ---------- Base ----------
 class OutgoingReport5Base(BaseModel):
+    position_id: Optional[UUID] = Field(None, description="ตำแหน่ง (nullable)")
+    position_other_text: Optional[str] = Field(None, description="ตำแหน่งอื่น (กรณีเลือกอื่นๆ)")
     receive_number: str = Field(..., description="เลขรับเรื่องผลการพิจารณา (ภายใน)")
     receive_date: datetime = Field(..., description="วันที่รับเรื่องผลการพิจารณา")
     subject: str = Field(..., description="เรื่อง")
@@ -56,6 +58,8 @@ class OutgoingReport5Create(OutgoingReport5Base):
 
 class OutgoingReport5Update(BaseModel):
     # ทั้งหมด optional สำหรับ patch
+    position_id: Optional[UUID] = None
+    position_other_text: Optional[str] = None
     receive_number: Optional[str] = None
     receive_date: Optional[datetime] = None
     subject: Optional[str] = None
@@ -91,6 +95,8 @@ class OutgoingReport5(BaseModel):
     subject: str
     complaint_number: str
     complaint_number_date: datetime
+    position_id: Optional[UUID] = None
+    position_other_text: Optional[str] = None
     department_id: UUID
     signature_authority_user_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
