@@ -244,13 +244,21 @@ def update_complaint_assignment_data(
             except ValueError:
                 return {"success": False, "message": "รูปแบบวันที่มอบหมายไม่ถูกต้อง"}
 
-        # ✅ กรณีส่งมาเป็น officer_received_date ให้ใช้เป็น confirm_assigned_date (ทำงานแยก ไม่ผูกกับ elif เพื่อไม่ให้ถูกข้าม)
-        if "officer_received_date" in assignment_data and assignment_data["officer_received_date"]:
+        # ✅ กรณีส่งมาเป็น officer_received_date หรือ confirm_assigned_date ให้ใช้เป็น confirm_assigned_date (ทำงานแยก ไม่ผูกกับ elif เพื่อไม่ให้ถูกข้าม)
+        if (
+            ("officer_received_date" in assignment_data and assignment_data["officer_received_date"]) or
+            ("confirm_assigned_date" in assignment_data and assignment_data["confirm_assigned_date"])
+        ):
             try:
+                # เลือกค่าที่ส่งมา (ให้ priority กับ confirm_assigned_date ถ้าส่งมาทั้งคู่)
+                source_field = "confirm_assigned_date" if assignment_data.get("confirm_assigned_date") else "officer_received_date"
+                incoming_value = assignment_data.get("confirm_assigned_date") or assignment_data.get("officer_received_date")
                 old_date = complaint.confirm_assigned_date
-                complaint.confirm_assigned_date = datetime.fromisoformat(str(assignment_data["officer_received_date"]).replace('Z', '+00:00'))
+                complaint.confirm_assigned_date = datetime.fromisoformat(str(incoming_value).replace('Z', '+00:00'))
                 if old_date != complaint.confirm_assigned_date:
-                    changes.append(f"วันที่รับโดยเจ้าหน้าที่ (officer_received_date): {old_date.strftime('%Y-%m-%d') if old_date else 'ไม่ระบุ'} → {complaint.confirm_assigned_date.strftime('%Y-%m-%d')}")
+                    changes.append(
+                        f"วันที่รับโดยเจ้าหน้าที่ ({source_field}): {old_date.strftime('%Y-%m-%d') if old_date else 'ไม่ระบุ'} → {complaint.confirm_assigned_date.strftime('%Y-%m-%d')}"
+                    )
             except ValueError:
                 return {"success": False, "message": "รูปแบบวันที่รับโดยเจ้าหน้าที่ไม่ถูกต้อง"}
 
@@ -701,7 +709,8 @@ def update_complaint_assignment_data(
             },
             "notification_sent": assigned_officer is not None,
             "changes": changes,
-            "updated_at": complaint.updated_at.isoformat()
+            "updated_at": complaint.updated_at.isoformat(),
+            "confirm_assigned_date": complaint.confirm_assigned_date.isoformat() if complaint.confirm_assigned_date else None
         }
         
     except Exception as e:
