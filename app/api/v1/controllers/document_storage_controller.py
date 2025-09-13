@@ -26,39 +26,26 @@ logger = logging.getLogger(__name__)
 # helpers (ปลอดภัย/กัน field หาย)
 # -----------------------
 def _resolve_agency_name(db: Session, complaint: Complaint) -> str:
-    """Return human-friendly agency name.
-    Priority:
-      1. If agency_sender looks like UUID and matches Department.id -> Department.name
-      2. If agency_sender exact/ilike/contains match OutsideDepartment.name -> that name
-      3. If agency_sender non-empty plain text -> use as-is
-      4. Fallback: first outgoing report department name (type1)
+    """กฎใหม่: agency = ชื่อ OutsideDepartment ที่ agency_sender อ้างอิงด้วย UUID เท่านั้น
+
+    พฤติกรรม:
+    - ถ้า agency_sender ว่าง หรือ ไม่ใช่ UUID -> คืน '' (ไม่ระบุ)
+    - ถ้าเป็น UUID และพบ OutsideDepartment ตรง id -> คืนชื่อ
+    - ถ้าเป็น UUID แต่ไม่พบ หรือ inactive -> คืน ''
+    - ไม่ fallback หา Department / ไม่ match ชื่อ fuzz / ไม่ใช้ outgoing report อีกต่อไป
     """
     try:
         raw = (getattr(complaint, "agency_sender", None) or '').strip()
         if not raw:
-            # fallback to outgoing type1
-            first = db.query(OutgoingReport).filter(OutgoingReport.complaint_id == complaint.id, OutgoingReport.is_active == True).first()
-            return getattr(getattr(first, 'department', None), 'name', '') if first else ''
-        # UUID -> Department
+            return ''
         try:
-            uuid_val = UUID(raw)
-            dept = db.query(Department).filter(Department.id == uuid_val).first()
-            if dept and getattr(dept, 'name', None):
-                return dept.name
+            possible_uuid = UUID(raw)
         except Exception:
-            pass
-        # OutsideDepartment matching
-        try:
-            od = db.query(OutsideDepartment).filter(OutsideDepartment.is_active == True, OutsideDepartment.name == raw).first()
-            if not od:
-                od = db.query(OutsideDepartment).filter(OutsideDepartment.is_active == True, OutsideDepartment.name.ilike(raw)).first()
-            if not od:
-                od = db.query(OutsideDepartment).filter(OutsideDepartment.is_active == True, OutsideDepartment.name.ilike(f"%{raw}%")).first()
-            if od:
-                return od.name
-        except Exception:
-            pass
-        return raw
+            return ''  # ไม่ใช่ UUID => ไม่สนใจ
+        od = db.query(OutsideDepartment).filter(OutsideDepartment.id == possible_uuid, OutsideDepartment.is_active == True).first()
+        if od and getattr(od, 'name', None):
+            return od.name
+        return ''
     except Exception as e:
         logger.debug(f"_resolve_agency_name failed: {e}")
         return ''
@@ -1524,6 +1511,7 @@ def get_document_storage_by_channel(
             "legend": {
                 "receiveDate": "วันที่ยื่นเรื่องร้องเรียน (ISO UTC)",
                 "receiveDateDisplay": "วันที่ยื่นเรื่องร้องเรียน (แสดงผลตามโซนเวลา Asia/Bangkok)",
+                "agency": "ชื่อหน่วยงานภายนอก (outside_departments.name) ถ้า agency_sender เป็น UUID ของ outside_departments.id เท่านั้น; อื่นๆ จะเป็นค่าว่าง",
                 "is_assigned": "สถานะการมอบหมาย: true=มีการมอบหมายแล้ว, false=ยังไม่ได้มอบหมาย",
                 "confirmationStatus": {
                     "ยืนยันรับงานแล้ว": "เจ้าหน้าที่ยืนยันรับงานแล้ว",
