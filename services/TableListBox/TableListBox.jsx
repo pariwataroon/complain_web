@@ -358,12 +358,12 @@ const TableListBox = ({
       case "claimantName":
         return (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <PersonIcon sx={{ fontSize: 18, color: "#1976d2", opacity: 0.7 }} />
+            <PersonIcon sx={{ fontSize: 18, color: item.isMaster ? "#1565c0" : "#94ccf9ff" }} />
             <Typography
               sx={{
                 fontSize: "14px",
                 fontWeight: 500,
-                color: "#1565c0",
+                color: item.isMaster ? "#1565c0" : "#94ccf9ff",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
               }}
@@ -398,7 +398,7 @@ const TableListBox = ({
         return (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <DescriptionIcon
-              sx={{ fontSize: 18, color: "#1976d2", opacity: 0.7 }}
+              sx={{ fontSize: 18, color: item.isMaster ? "#1565c0" : "#94ccf9ff" }}
             />
             <Typography
               sx={{
@@ -407,6 +407,7 @@ const TableListBox = ({
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 maxWidth: "200px",
+                color: item.isMaster ? "#1565c0" : "#94ccf9ff",
               }}
               title={value}
             >

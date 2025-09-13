@@ -99,6 +99,16 @@ const transformComplaintData = (apiItems) => {
       item.master_complaint?.complaint_number
     );
 
+    // Determine master flag:
+    // 1. If the API gives item.is_master explicitly, use that exact boolean.
+    // 2. Only if it's undefined (not present) then fall back to master_complaint.is_master.
+    // (Previous logic used OR which caused every child (with a master_complaint) to appear as master.)
+    const isMaster =
+      item.is_master !== undefined
+        ? item.is_master
+        : !!item.master_complaint?.is_master;
+    // console.debug("Row", id, "is_master(raw)=", item.is_master, "=> isMaster=", isMaster);
+
     return {
       id,
       receiveDate,
@@ -113,6 +123,7 @@ const transformComplaintData = (apiItems) => {
       statusColor: getStatusColor(statusEn), // เพิ่มสีสำหรับแสดงผล
       note: displayOrDash(item.note),
       complaintNumber,
+      isMaster,
     };
   });
 };
