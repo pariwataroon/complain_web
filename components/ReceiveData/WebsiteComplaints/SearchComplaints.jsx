@@ -85,13 +85,14 @@ const SearchComplaints = () => {
     mode: "onChange",
   });
 
-  const [complaintTypes, setComplaintTypes] = useState([]);
-  const [subComplaintTypes, setSubComplaintTypes] = useState([]);
-  const [complaintChannels, setComplaintChannels] = useState([]); // เพิ่ม state สำหรับ channels
+  // === Master data state (normalized to { value, label }) ===
+  const [complaintTypes, setComplaintTypes] = useState([]); // [{value,label, raw:original}]
+  const [subComplaintTypes, setSubComplaintTypes] = useState([]); // [{value,label, raw}]
+  const [complaintChannels, setComplaintChannels] = useState([]); // [{value,label, raw}]
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [loadingSubTypes, setLoadingSubTypes] = useState(false);
   const [loadingChannels, setLoadingChannels] = useState(false); // เพิ่ม loading state สำหรับ channels
-  const [selectedComplaintTypeId, setSelectedComplaintTypeId] = useState("");
+  const [selectedComplaintType, setSelectedComplaintType] = useState(""); // complaintType id currently selected
 
   // ---------------- Helper: extract confirm_assigned_date (officerReceivedDate) with fallbacks ----------------
   const extractOfficerReceivedDate = useCallback((complaintObj, assignmentObj) => {
@@ -144,9 +145,8 @@ useEffect(() => {
   async function fetchAll() {
     if (!id) return;
     setLoading(true);
-
     try {
-      // ดึง complaint + assignment พร้อมกัน
+      // Parallel fetch complaint core + assignment meta
       const [complaintRes, assignmentRes] = await Promise.all([
         GetComplaintByID(id),
         GetAssignmentCompleteByAdmin(id),
@@ -154,82 +154,146 @@ useEffect(() => {
       const complaint = complaintRes?.res_data || {};
       const assignment = assignmentRes?.res_data?.complaint || {};
 
-      // ดึง dropdown ทุกตัว
-      const [
-        complaintTypesResponse,
-        channelsResponse,
-        outsideDepartmentsResponse,
-      ] = await Promise.all([
+      // Fetch master data (types, channels, outside departments)
+      const [typesRes, channelsRes, outsideRes] = await Promise.all([
         GetAllSelectComplaintTypes(),
         GetAllComplaintChannels(),
         GetAllOutsideDepartments(),
       ]);
-      setComplaintTypes(complaintTypesResponse?.res_data || []);
-      setComplaintChannels(channelsResponse?.res_data?.items?.map(i => ({id: i.id, name: i.name})) || []);
-      setOutsideDepartments(outsideDepartmentsResponse || []);
 
-      // Map ข้อมูล assignment เข้า defaultData
+      // Normalize complaint types to {value,label}
+      const normTypes = Array.isArray(typesRes?.res_data)
+        ? typesRes.res_data.map((t) => ({
+            value: t.id,
+            label: t.name,
+            raw: t,
+          }))
+        : [];
+      setComplaintTypes(normTypes);
+
+      // Normalize channels
+      const normChannels = Array.isArray(channelsRes?.res_data?.items)
+        ? channelsRes.res_data.items.map((c) => ({
+            value: c.id,
+            label: c.name,
+            raw: c,
+          }))
+        : [];
+      setComplaintChannels(normChannels);
+
+      setOutsideDepartments(outsideRes || []);
+
       const merged = { ...complaint, assignment_form: assignment };
       setDefaultData(merged);
 
-      // Map ประเภทหลัก
-      let complaintTypeId =
-        assignment.complaint_type_id || complaint?.step3?.general?.complaint_type_id || "";
-      setSelectedComplaintTypeId(complaintTypeId);
+      // Derive complaintType id (prefer assignment_form field)
+      const complaintTypeId =
+        assignment.complaint_type_id ||
+        merged?.step3?.general?.complaint_type_id ||
+        merged?.step3?.general?.complaintType ||
+        "";
+      setSelectedComplaintType(String(complaintTypeId || ""));
 
-      // โหลด subComplaintTypes
+      // Prefetch sub complaint types if we have an id
+      let subTypes = [];
       if (complaintTypeId) {
-        const subTypesRes = await getSubComplaintTypeById(complaintTypeId);
-        setSubComplaintTypes(subTypesRes?.res_data?.items?.map(i => ({
-          id: i.id,
-          name: i.name
-        })) || []);
-      } else {
-        setSubComplaintTypes([]);
+        try {
+          const subRes = await getSubComplaintTypeById(complaintTypeId);
+            if (
+              subRes?.res_code === "0000" &&
+              Array.isArray(subRes?.res_data?.items)
+            ) {
+              subTypes = subRes.res_data.items.map((s) => ({
+                value: s.id,
+                label: s.name,
+                raw: s,
+              }));
+            }
+        } catch {
+          subTypes = [];
+        }
       }
+      setSubComplaintTypes(subTypes);
 
-      // reset ฟอร์มทั้งหมด
+      // Reset forms with normalized field names (use complaintType instead of complaintTypeId)
       generalMethods.reset(merged?.step1?.general?.general || {});
       delegateMethods.reset(merged?.step1?.general?.delegate || {});
       step2Methods.reset(merged?.step2?.general?.individual || {});
       step3Methods.reset({
         ...merged?.step3?.general,
-        complaintTypeId: complaintTypeId,
-        complaintSubType: assignment.complaint_subtype_id || merged?.step3?.general?.complaint_subtype_id || "",
-        complaintChannel: assignment.complaint_channel_id || merged?.step3?.general?.complaint_channel_id || "",
+        complaintType: complaintTypeId ? String(complaintTypeId) : "",
+        complaintSubType:
+          assignment.complaint_subtype_id ||
+          merged?.step3?.general?.complaint_subtype_id ||
+          "",
+        complaintChannel:
+          assignment.complaint_channel_id ||
+          merged?.step3?.general?.complaint_channel_id ||
+          "",
         subject: assignment.subject || merged?.step3?.general?.subject || "",
         description: merged?.step3?.general?.description || "",
-        incidentDate: merged?.step3?.general?.incidentDate ? new Date(merged.step3.general.incidentDate) : "",
-        referenceNumber1: assignment.reference_number || "",
-        referenceDate1: assignment.reference_date ? new Date(assignment.reference_date) : "",
+        incidentDate: merged?.step3?.general?.incidentDate
+          ? new Date(merged.step3.general.incidentDate)
+          : "",
+        referenceNumber1: assignment.reference_number || assignment.reference_number1 || "",
+        referenceDate1: assignment.reference_date
+          ? new Date(assignment.reference_date)
+          : "",
         referenceNumber2: assignment.reference_number2 || "",
-        referenceDate2: assignment.reference_date2 ? new Date(assignment.reference_date2) : "",
+        referenceDate2: assignment.reference_date2
+          ? new Date(assignment.reference_date2)
+          : "",
         referenceNumber3: assignment.reference_number3 || "",
-        referenceDate3: assignment.reference_date3 ? new Date(assignment.reference_date3) : "",
-        referenceNumber4: assignment.reference_number4 || "",
-        referenceDate4: assignment.reference_date4 ? new Date(assignment.reference_date4) : "",
+        referenceDate3: assignment.reference_date3
+          ? new Date(assignment.reference_date3)
+          : "",
+        referenceNumber4: assignment.reference_number4 || merged?.complaint_number || "",
+        referenceDate4: assignment.reference_date4
+          ? new Date(assignment.reference_date4)
+          : "",
         documentNumber: assignment.document_number || "",
-        documentDate: assignment.document_date ? new Date(assignment.document_date) : "",
+        documentDate: assignment.document_date
+          ? new Date(assignment.document_date)
+          : "",
         additionalReference1: assignment.additional_reference_number1 || "",
-        additionalReferenceDate1: assignment.additional_reference_date1 ? new Date(assignment.additional_reference_date1) : "",
+        additionalReferenceDate1: assignment.additional_reference_date1
+          ? new Date(assignment.additional_reference_date1)
+          : "",
         additionalReference2: assignment.additional_reference_number2 || "",
-        additionalReferenceDate2: assignment.additional_reference_date2 ? new Date(assignment.additional_reference_date2) : "",
+        additionalReferenceDate2: assignment.additional_reference_date2
+          ? new Date(assignment.additional_reference_date2)
+          : "",
         senderAgency: assignment.agency_sender || "",
         securityLevel: assignment.confidentiality_level || "normal",
         urgencyLevel: assignment.urgency_level || "low",
-        confirmAssignedDate: assignment.confirm_assigned_date || "",
-        // ===== Complaint Filing Type flags (align with Filter complaints implementation) =====
-        complaint_filing_type: assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type || "new",
-        isNewComplaint: (assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type || "new") === "new",
-        isAdditionalComplaint: (assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type) === "additional",
-        isCommitteeComplaint: (assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type) === "committee" || (assignment.complaint_filing_type === "anonymous"),
+        complaint_filing_type:
+          assignment.complaint_filing_type ||
+          merged?.step3?.general?.complaint_filing_type ||
+          "new",
+        isNewComplaint:
+          (assignment.complaint_filing_type ||
+            merged?.step3?.general?.complaint_filing_type ||
+            "new") === "new",
+        isAdditionalComplaint:
+          (assignment.complaint_filing_type ||
+            merged?.step3?.general?.complaint_filing_type) === "additional",
+        isCommitteeComplaint:
+          (assignment.complaint_filing_type ||
+            merged?.step3?.general?.complaint_filing_type) === "committee" ||
+          assignment.complaint_filing_type === "anonymous",
       });
+
       const officerDate = extractOfficerReceivedDate(merged, assignment);
-      const directorDate = assignment.director_submission_date || merged?.director_submission_date || merged?.assignment_form?.director_submission_date;
+      const directorDate =
+        assignment.director_submission_date ||
+        merged?.director_submission_date ||
+        merged?.assignment_form?.director_submission_date;
       step4Methods.reset({
         officerReceivedDate: officerDate,
         directorSubmittedDate: directorDate ? new Date(directorDate) : "",
-        incidentDateTime: merged?.step3?.general?.incidentDate ? new Date(merged.step3.general.incidentDate) : "",
+        incidentDateTime: merged?.step3?.general?.incidentDate
+          ? new Date(merged.step3.general.incidentDate)
+          : "",
       });
     } catch (err) {
       setError("โหลดข้อมูลไม่สำเร็จ");
@@ -544,14 +608,12 @@ useEffect(() => {
 
   const handleComplaintTypeSelectChange = (event) => {
     const value = event.target.value;
-
-    step3Methods.setValue("complaintSubType", ""); // ล้าง sub type
-    setSelectedComplaintTypeId(value);
-
-    // ล้าง sub types เก่า
+    // Mirror to both keys for backward compatibility
+    step3Methods.setValue("complaintType", value, { shouldDirty: true });
+    step3Methods.setValue("complaintTypeId", value, { shouldDirty: true });
+    step3Methods.setValue("complaintSubType", "");
+    setSelectedComplaintType(value);
     clearSubTypes();
-
-    // ถ้ามี ID ที่ถูกต้อง ให้โหลด sub types ใหม่
     if (isValidId(value)) {
       fetchSubTypesTimeoutRef.current = setTimeout(() => {
         fetchSubComplaintTypes(value);
@@ -595,7 +657,7 @@ useEffect(() => {
 
     step3Methods.reset({
       // ประเภท
-      complaintTypeId:
+      complaintType:
         step3General.complaint_type_id || assignmentForm.complaint_type_id || "",
       complaintSubType:
         step3General.complaint_subtype_id || assignmentForm.complaint_subtype_id || "",
@@ -662,7 +724,7 @@ useEffect(() => {
     // โหลด subtypes
     if (assignmentForm.complaint_type_id) {
       fetchSubComplaintTypes(assignmentForm.complaint_type_id);
-      setSelectedComplaintTypeId(assignmentForm.complaint_type_id);
+      setSelectedComplaintType(assignmentForm.complaint_type_id);
     }
   }
 }, [defaultData, complaintTypes, complaintChannels]);
@@ -840,6 +902,11 @@ const handleSubmit = async () => {
   ];
 
   // ✅ Validate เฉพาะ Step3 (ข้อมูลเรื่องร้องทุกข์)
+  // Backwards compatibility: if complaintType used, map to complaintTypeId for validation list
+  const formVals = step3Methods.getValues();
+  if (formVals.complaintType && !formVals.complaintTypeId) {
+    step3Methods.setValue("complaintTypeId", formVals.complaintType, { shouldDirty: false, shouldValidate: false });
+  }
   const isValid = await step3Methods.trigger(fieldsToValidate);
   if (!isValid) {
     const errors = step3Methods.formState.errors;
@@ -867,12 +934,11 @@ const handleSubmit = async () => {
   console.log("👉 directorSubmittedDate:", step4Data.directorSubmittedDate);
 
   // === Mapping ประเภท ===
-  const selectedComplaintType =
+  const selectedComplaintTypeObj =
     complaintTypes.find(
-      (type) =>
-        type.id === step3Data.complaintTypeId ||
-        type.name === step3Data.complaintType ||
-        type.name === step3Data.complaintTypeName
+      (t) =>
+        String(t.value) === String(step3Data.complaintType) ||
+        String(t.value) === String(step3Data.complaintTypeId)
     ) || null;
 
   const selectedSubComplaintType =
@@ -890,22 +956,19 @@ const handleSubmit = async () => {
     ) || null;
 
   const complaintTypeId =
+    step3Data.complaintType ||
     step3Data.complaintTypeId ||
     step3Data.complaint_type_id ||
-    selectedComplaintType?.id ||
+    selectedComplaintTypeObj?.value ||
     defaultData?.assignment_form?.complaint_type_id ||
     defaultData?.step3?.general?.complaint_type_id ||
-    "-"; // ใช้ "-" เป็น sentinel ถ้าไม่มีจริง ๆ
-  const complaintTypeName =
-    step3Data.complaintTypeName ||
-    step3Data.complaintType ||
-    selectedComplaintType?.name ||
     "-";
-  const complaintTypeData =
-    step3Data.complaintTypeData ||
-    step3Data.complaint_type_data ||
-    selectedComplaintType ||
-    null;
+  const complaintTypeName =
+    selectedComplaintTypeObj?.label ||
+    step3Data.complaintTypeName ||
+    step3Data.complaintTypeLabel ||
+    "-";
+  const complaintTypeData = selectedComplaintTypeObj || null;
 
   const complaintSubTypeId =
     step3Data.complaintSubType ||
@@ -1050,9 +1113,12 @@ const handleSubmit = async () => {
     },
     assignment_form: (() => {
       // Final fallback complaint_type_id selection
-      const finalComplaintTypeId = complaintTypeId !== "-" && complaintTypeId
-        ? complaintTypeId
-        : (defaultData?.assignment_form?.complaint_type_id || defaultData?.step3?.general?.complaint_type_id || null);
+      const finalComplaintTypeId =
+        complaintTypeId !== "-" && complaintTypeId
+          ? complaintTypeId
+          : defaultData?.assignment_form?.complaint_type_id ||
+            defaultData?.step3?.general?.complaint_type_id ||
+            null;
 
       const payload = {
         complaint_type_id: finalComplaintTypeId,
@@ -1412,8 +1478,8 @@ const handleSubmit = async () => {
                         >
                           <option value="">เลือกประเภทเรื่องร้องเรียน</option>
                           {complaintTypes.map((type) => (
-                            <option key={type.id} value={type.id}>
-                              {type.name}
+                            <option key={type.value ?? type.id} value={type.value ?? type.id}>
+                              {type.label ?? type.name}
                             </option>
                           ))}
                         </select>
@@ -1428,12 +1494,12 @@ const handleSubmit = async () => {
                           {...step3Methods.register("complaintSubType")}
                           style={getErrorStyle("complaintSubType")}
                           disabled={
-                            !isValidId(selectedComplaintTypeId) ||
+                            !isValidId(selectedComplaintType) ||
                             loadingSubTypes
                           }
                         >
                           <option value="">
-                            {!isValidId(selectedComplaintTypeId)
+                            {!isValidId(selectedComplaintType)
                               ? "กรุณาเลือกประเภทเรื่องร้องเรียนก่อน"
                               : loadingSubTypes
                               ? "กำลังโหลด..."
@@ -1442,8 +1508,8 @@ const handleSubmit = async () => {
                               : "เลือกประเภทเรื่องย่อย"}
                           </option>
                           {subComplaintTypes.map((subType) => (
-                            <option key={subType.id} value={subType.id}>
-                              {subType.name}
+                            <option key={subType.value ?? subType.id} value={subType.value ?? subType.id}>
+                              {subType.label ?? subType.name}
                             </option>
                           ))}
                         </select>
@@ -1466,8 +1532,8 @@ const handleSubmit = async () => {
                         >
                           <option value="">เลือกช่องทางเรื่องร้องเรียน</option>
                           {complaintChannels.map((channel) => (
-                            <option key={channel.id} value={channel.id}>
-                              {channel.name}
+                            <option key={channel.value ?? channel.id} value={channel.value ?? channel.id}>
+                              {channel.label ?? channel.name}
                             </option>
                           ))}
                         </select>
