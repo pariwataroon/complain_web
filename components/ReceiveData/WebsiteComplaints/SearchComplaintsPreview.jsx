@@ -356,18 +356,32 @@ const handleSubmit = async () => {
       },
     };
 
-    // ✅ Helper: แปลงวันที่เป็น YYYY-MM-DD HH:mm:ss
-    const formatDateForAPI = (date) => {
-      if (!date) return null;
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return null;
+    // === Date Helpers (normalize เพื่อกันวันลดลง) ===
+    const parseDateFlexible = (val) => {
+      if (!val) return null;
+      if (val instanceof Date) return val;
+      if (typeof val === "string") {
+        const trimmed = val.trim();
+        const m = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2}))?$/);
+        if (m) {
+          const [, Y, Mo, D, H = "00", Mi = "00", S = "00"] = m;
+          return new Date(Number(Y), Number(Mo) - 1, Number(D), Number(H), Number(Mi), Number(S));
+        }
+        return new Date(trimmed.replace(/ /, "T"));
+      }
+      return null;
+    };
+    const formatDateForAPI = (value) => {
+      if (!value) return null;
+      const d = parseDateFlexible(value);
+      if (!d || isNaN(d.getTime())) return null;
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, "0");
       const day = String(d.getDate()).padStart(2, "0");
-      const hours = String(d.getHours()).padStart(2, "0");
-      const minutes = String(d.getMinutes()).padStart(2, "0");
-      const seconds = String(d.getSeconds()).padStart(2, "0");
-      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      const ss = String(d.getSeconds()).padStart(2, "0");
+      return `${year}-${month}-${day} ${hh}:${mm}:${ss}`;
     };
 
     // --- STEP3: บันทึกข้อมูลร้องเรียน ---
@@ -375,20 +389,13 @@ const handleSubmit = async () => {
 
     // --- STEP4: บันทึกวันรับเรื่อง/วันเสนองาน ---
     await UpdateAssignmentCompleteByAdmin(id, {
-      new_complaint: step3Data.complaint_filing_type === "new" ||
-        step3Data.isNewComplaint === true ||
-        !step3Data.complaint_filing_type, // default เป็น new
-      add_more_complaint_to_ref: step3Data.complaint_filing_type === "additional" ||
-        step3Data.isAdditionalComplaint === true,
-      group_work: step3Data.complaint_filing_type === "committee" ||
-        step3Data.isCommitteeComplaint === true,
-      confirm_assigned_date: formatDateForAPI(step4Data.officerReceivedDate),
-      director_submission_date: formatDateForAPI(
-        step4Data.directorSubmittedDate
-      ),
-      incident_date: formatDateForAPI(step4Data.incidentDateTime),
-      assigned_date:
-        assignmentOriginal.assigned_date || formData.assigned_date || null,
+      new_complaint: step3Data.complaint_filing_type === "new" || step3Data.isNewComplaint === true || !step3Data.complaint_filing_type,
+      add_more_complaint_to_ref: step3Data.complaint_filing_type === "additional" || step3Data.isAdditionalComplaint === true,
+      group_work: step3Data.complaint_filing_type === "committee" || step3Data.isCommitteeComplaint === true,
+      confirm_assigned_date: formatDateForAPI(step4Data.officerReceivedDate || assignmentOriginal.confirm_assigned_date),
+      director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate || assignmentOriginal.director_submission_date),
+      incident_date: formatDateForAPI(step4Data.incidentDateTime || assignmentOriginal.incident_date),
+      assigned_date: assignmentOriginal.assigned_date || formData.assigned_date || null,
     });
 
     alertSuccess("บันทึกสำเร็จ", "ข้อมูลได้รับการบันทึกแล้ว");

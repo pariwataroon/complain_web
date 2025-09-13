@@ -873,17 +873,36 @@ useEffect(() => {
     );
   };
 
-  const formatDateForAPI = (date) => {
-  if (!date) return null;
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  const seconds = String(d.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`; 
-};
+  // --- Date helpers (แก้ปัญหาวันลดลง 1 วันเมื่อไม่เลือก date picker) ---
+  const parseDateFlexible = (val) => {
+    if (!val) return null;
+    if (val instanceof Date) return val;
+    if (typeof val === "string") {
+      const trimmed = val.trim();
+      // รูปแบบไม่มี timezone
+      const m = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2}))?$/);
+      if (m) {
+        const [, Y, Mo, D, H = "00", Mi = "00", S = "00"] = m;
+        return new Date(Number(Y), Number(Mo) - 1, Number(D), Number(H), Number(Mi), Number(S));
+      }
+      // แปลงช่องว่างเป็น T เพื่อให้ Date native parse ได้ (กรณีมี Z)
+      return new Date(trimmed.replace(/ /, "T"));
+    }
+    return null;
+  };
+
+  const formatDateForAPI = (value) => {
+    if (!value) return null;
+    const d = parseDateFlexible(value);
+    if (!d || isNaN(d.getTime())) return null;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    const ss = String(d.getSeconds()).padStart(2, "0");
+    return `${year}-${month}-${day} ${hh}:${mm}:${ss}`;
+  };
 
 
 const handleSubmit = async () => {
@@ -1065,25 +1084,21 @@ const handleSubmit = async () => {
         complaintChannelData,
 
         reference_number: step3Data.referenceNumber1,
-        reference_date: formatDateForAPI(step3Data.referenceDate1),
+  reference_date: formatDateForAPI(step3Data.referenceDate1 || defaultData?.assignment_form?.reference_date1),
         reference_number2: step3Data.referenceNumber2,
-        reference_date2: formatDateForAPI(step3Data.referenceDate2),
+  reference_date2: formatDateForAPI(step3Data.referenceDate2 || defaultData?.assignment_form?.reference_date2),
         reference_number3: step3Data.referenceNumber3,
-        reference_date3: formatDateForAPI(step3Data.referenceDate3),
+  reference_date3: formatDateForAPI(step3Data.referenceDate3 || defaultData?.assignment_form?.reference_date3),
         reference_number4: step3Data.referenceNumber4,
-        reference_date4: formatDateForAPI(step3Data.referenceDate4),
+  reference_date4: formatDateForAPI(step3Data.referenceDate4 || defaultData?.assignment_form?.reference_date4),
 
         document_number: step3Data.documentNumber,
-        document_date: formatDateForAPI(step3Data.documentDate),
+  document_date: formatDateForAPI(step3Data.documentDate || defaultData?.assignment_form?.document_date),
 
         additional_reference_number1: step3Data.additionalReference1,
-        additional_reference_date1: formatDateForAPI(
-          step3Data.additionalReferenceDate1
-        ),
+        additional_reference_date1: formatDateForAPI(step3Data.additionalReferenceDate1 || defaultData?.assignment_form?.additional_reference_date1),
         additional_reference_number2: step3Data.additionalReference2,
-        additional_reference_date2: formatDateForAPI(
-          step3Data.additionalReferenceDate2
-        ),
+        additional_reference_date2: formatDateForAPI(step3Data.additionalReferenceDate2 || defaultData?.assignment_form?.additional_reference_date2),
         // Filing type & flags
         ...newComplaintFlags,
         senderAgencyName,
@@ -1106,9 +1121,9 @@ const handleSubmit = async () => {
           defaultData?.assigned_date ||
           null,
         director_submission_date: formatDateForAPI(
-          step4Data.directorSubmittedDate
+          step4Data.directorSubmittedDate || defaultData?.assignment_form?.director_submission_date
         ),
-        incident_date: formatDateForAPI(step4Data.incidentDateTime),
+        incident_date: formatDateForAPI(step4Data.incidentDateTime || defaultData?.assignment_form?.incident_date),
       },
     },
     assignment_form: (() => {
@@ -1125,11 +1140,9 @@ const handleSubmit = async () => {
         complaint_subtype_id: (complaintSubTypeId && complaintSubTypeId !== "-") ? complaintSubTypeId : "",
         complaint_channel_id: (complaintChannelId && complaintChannelId !== "-") ? complaintChannelId : null,
         // Dates
-        confirm_assigned_date: (step4Data.officerReceivedDate || defaultData?.assignment_form?.confirm_assigned_date)
-          ? formatDateForAPI(step4Data.officerReceivedDate || defaultData?.assignment_form?.confirm_assigned_date)
-          : null,
-        director_submission_date: step4Data.directorSubmittedDate ? formatDateForAPI(step4Data.directorSubmittedDate) : null,
-        incident_date: step4Data.incidentDateTime ? formatDateForAPI(step4Data.incidentDateTime) : (defaultData?.assignment_form?.incident_date || null),
+        confirm_assigned_date: formatDateForAPI(step4Data.officerReceivedDate || defaultData?.assignment_form?.confirm_assigned_date || defaultData?.confirm_assigned_date),
+        director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate || defaultData?.assignment_form?.director_submission_date),
+        incident_date: formatDateForAPI(step4Data.incidentDateTime || defaultData?.assignment_form?.incident_date),
         assigned_date: defaultData?.assignment_form?.assigned_date || defaultData?.assigned_date || null,
         // Core text fields
         subject: step3Data.subject || defaultData?.assignment_form?.subject || "",
@@ -1140,21 +1153,21 @@ const handleSubmit = async () => {
         agency_sender: step3Data.senderAgency || defaultData?.assignment_form?.agency_sender || "",
         // References (normalized 1..4)
         reference_number1: step3Data.referenceNumber1 || defaultData?.assignment_form?.reference_number1 || "",
-        reference_date1: step3Data.referenceDate1 ? formatDateForAPI(step3Data.referenceDate1) : (defaultData?.assignment_form?.reference_date1 || null),
+        reference_date1: formatDateForAPI(step3Data.referenceDate1 || defaultData?.assignment_form?.reference_date1),
         reference_number2: step3Data.referenceNumber2 || defaultData?.assignment_form?.reference_number2 || "",
-        reference_date2: step3Data.referenceDate2 ? formatDateForAPI(step3Data.referenceDate2) : (defaultData?.assignment_form?.reference_date2 || null),
+        reference_date2: formatDateForAPI(step3Data.referenceDate2 || defaultData?.assignment_form?.reference_date2),
         reference_number3: step3Data.referenceNumber3 || defaultData?.assignment_form?.reference_number3 || "",
-        reference_date3: step3Data.referenceDate3 ? formatDateForAPI(step3Data.referenceDate3) : (defaultData?.assignment_form?.reference_date3 || null),
+        reference_date3: formatDateForAPI(step3Data.referenceDate3 || defaultData?.assignment_form?.reference_date3),
         reference_number4: step3Data.referenceNumber4 || defaultData?.assignment_form?.reference_number4 || "",
-        reference_date4: step3Data.referenceDate4 ? formatDateForAPI(step3Data.referenceDate4) : (defaultData?.assignment_form?.reference_date4 || null),
+        reference_date4: formatDateForAPI(step3Data.referenceDate4 || defaultData?.assignment_form?.reference_date4),
         // Document
         document_number: step3Data.documentNumber || defaultData?.assignment_form?.document_number || "",
-        document_date: step3Data.documentDate ? formatDateForAPI(step3Data.documentDate) : (defaultData?.assignment_form?.document_date || null),
+        document_date: formatDateForAPI(step3Data.documentDate || defaultData?.assignment_form?.document_date),
         // Additional references
         additional_reference_number1: step3Data.additionalReference1 || defaultData?.assignment_form?.additional_reference_number1 || "",
-        additional_reference_date1: step3Data.additionalReferenceDate1 ? formatDateForAPI(step3Data.additionalReferenceDate1) : (defaultData?.assignment_form?.additional_reference_date1 || null),
+        additional_reference_date1: formatDateForAPI(step3Data.additionalReferenceDate1 || defaultData?.assignment_form?.additional_reference_date1),
         additional_reference_number2: step3Data.additionalReference2 || defaultData?.assignment_form?.additional_reference_number2 || "",
-        additional_reference_date2: step3Data.additionalReferenceDate2 ? formatDateForAPI(step3Data.additionalReferenceDate2) : (defaultData?.assignment_form?.additional_reference_date2 || null),
+        additional_reference_date2: formatDateForAPI(step3Data.additionalReferenceDate2 || defaultData?.assignment_form?.additional_reference_date2),
         // Filing type flags
         complaint_filing_type: complaintFilingType,
         new_complaint: complaintFilingType === "new",
