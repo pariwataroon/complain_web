@@ -196,7 +196,7 @@ const sectionConfigs = [
     ],
     rowMapper: (row, idx) => ({
       ลำดับ: idx + 1,
-      หน่วยงาน: row.outgoing_departments?.[0]?.name || "-",
+      หน่วยงาน: row.agency || "-",
       "เลข สรร.": row.complaint_number || "-",
       "เลขที่อ้างอิง(เลขสรร.สารบัญ)": row.parent_complaint_number || "-",
       เรื่อง: row.subject || "-",
@@ -1159,7 +1159,12 @@ const FollowComp = () => {
   const receivedSection = sectionConfigs[0];
   const receivedHeaders = receivedSection.headers;
   const receivedRowMapper = receivedSection.rowMapper;
-  const receivedRows = allRelated;
+  // Inject agency fallback (use detail.agency if individual related item lacks its own)
+  const detailAgency = documentData?.detail?.agency || "";
+  const receivedRows = allRelated.map((r) => ({
+    ...r,
+    agency: r.agency || detailAgency || "-",
+  }));
 
   // outgoing_reports types
   const outgoing_reports = documentData?.outgoing_reports || {};
