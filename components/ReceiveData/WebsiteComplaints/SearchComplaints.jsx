@@ -1640,6 +1640,7 @@ const handleSubmit = async () => {
                             required: "กรุณากรอกเลข สรร. (สารบัญ)",
                           })}
                           style={getErrorStyle("referenceNumber4")}
+                          disabled
                         />
                         {getErrorMessage("referenceNumber4")}
                       </div>
@@ -1651,6 +1652,7 @@ const handleSubmit = async () => {
                           name="referenceDate4"
                           control={step3Methods.control}
                           placeholder="กรุณาเลือกวันที่"
+                          disabled
                         />
                       </div>
                     </div>
