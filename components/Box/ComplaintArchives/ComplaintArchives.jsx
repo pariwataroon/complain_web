@@ -76,8 +76,8 @@ const transformComplaintData = (apiItems) => {
         ? formatThaiDateFlexible(item.receiveDate)
         : formatThaiDateFlexible(item.created_at);
 
-    const agency =
-      item.complainant?.government?.agencyName?.name ?? item.agency ?? "-";
+    // Agency: ใช้เฉพาะค่า item.agency ตามคำขอ (ถ้าว่างให้เป็น "-")
+    const agency = displayOrDash(item.agency);
 
     const claimantName =
       item.complainant?.government?.fullName ??
@@ -150,9 +150,8 @@ const extractFilterOptionsFromItems = (items) => {
     if (item.issueType) issueTypes.push(item.issueType);
     if (item.subIssueType) subIssueTypes.push(item.subIssueType);
 
-    // หน่วยงาน (จากผู้ร้องภาครัฐ)
-    const agencyName =
-      item.complainant?.government?.agencyName?.name ?? item.agency;
+    // หน่วยงาน: ใช้เฉพาะ item.agency (ไม่ fallback อย่างอื่น)
+    const agencyName = item.agency;
     if (agencyName) agencies.push(agencyName);
 
     // เจ้าหน้าที่รับผิดชอบ
