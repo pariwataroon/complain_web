@@ -23,7 +23,10 @@ router = APIRouter(
 
 @router.get("", response_model=FormatResponseModel)
 async def get_document_storage(
-    page_type: str = Query("website", description="ประเภทหน้า: 'website' หรือ 'card'"),
+    page_type: Optional[str] = Query(
+        None,
+        description="ประเภทหน้า: 'website', 'card', หรือเว้นว่าง/ระบุ 'all' เพื่อดึงทุกช่องทาง"
+    ),
     skip: int = Query(0, description="จำนวนที่ข้าม"),
     limit: int = Query(100, description="จำนวนต่อหน้า"),
     status: Optional[str] = Query(None, description="สถานะ"),
@@ -38,7 +41,12 @@ async def get_document_storage(
     current_user: str = Depends(can_read("complaints_list"))
 ):
     """ดึงข้อมูลคลังเอกสารแบ่งตามช่องทาง (แบบสรุป - สำหรับ listing)
-    
+
+    การตั้งค่า page_type:
+    - website: เฉพาะเรื่องที่มาจากช่องทางเว็บไซต์
+    - card: เฉพาะเรื่องที่มาจากช่องทางบัตรสนเท่ห์
+    - all หรือไม่ระบุ: รวมทุกช่องทาง (default พฤติกรรมใหม่) 
+
     หมายเหตุ: endpoint นี้ให้ข้อมูลสรุปเท่านั้น ไม่รวม all_related เพื่อ performance
     สำหรับรายละเอียดเต็มของแต่ละเรื่อง ให้ใช้ GET /document-storage/{complaint_id}
     """
@@ -67,7 +75,10 @@ async def get_document_storage(
 
 @router.get("/me", response_model=FormatResponseModel)
 async def get_my_document_storage(
-    page_type: str = Query("website", description="ประเภทหน้า: 'website' หรือ 'card'"),
+    page_type: Optional[str] = Query(
+        None,
+        description="ประเภทหน้า: 'website', 'card', หรือเว้นว่าง/ระบุ 'all' เพื่อดึงทุกช่องทาง"
+    ),
     skip: int = Query(0, description="จำนวนที่ข้าม"),
     limit: int = Query(100, description="จำนวนต่อหน้า"),
     status: Optional[str] = Query(None, description="สถานะ"),
@@ -81,7 +92,10 @@ async def get_my_document_storage(
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
-    """เหมือน GET /document-storage แต่จำกัดเฉพาะเรื่องที่เกี่ยวข้องกับผู้ใช้ปัจจุบัน"""
+    """เหมือน GET /document-storage แต่จำกัดเฉพาะเรื่องที่เกี่ยวข้องกับผู้ใช้ปัจจุบัน
+
+    ถ้าไม่ระบุ page_type หรือระบุ 'all' จะได้ทุกช่องทางของผู้ใช้คนนั้น
+    """
     try:
         user_id = UUID(current_user)
         result = get_document_storage_by_channel(

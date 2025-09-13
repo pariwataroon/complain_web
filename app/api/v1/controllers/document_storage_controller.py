@@ -1052,7 +1052,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
 
 def get_document_storage_by_channel(
     db: Session,
-    page_type: str = "website",  # "website" หรือ "card"
+    page_type: Optional[str] = "website",  # "website" | "card" | None/all(ทุกช่องทาง)
     skip: int = 0,
     limit: int = 100,
     status: Optional[str] = None,
@@ -1067,8 +1067,9 @@ def get_document_storage_by_channel(
 ) -> Dict:
     """ดึงข้อมูลคลังเอกสารแบ่งตามช่องทาง (สำหรับ listing - ข้อมูลสรุป)"""
     try:
-        # กำหนด channel ตาม page_type
-        if page_type == "website":
+        # กำหนด channel ตาม page_type (รองรับ None/"all" = ทุกช่องทาง)
+        normalized_page_type = (page_type or "all").lower()
+        if normalized_page_type == "website":
             # ช่องทางเว็บไซต์ - ใช้ channel ที่มี "เว็บไซต์" ในชื่อ
             target_channels = db.query(ComplaintChannel).filter(
                 ComplaintChannel.is_active == True,
@@ -1077,7 +1078,7 @@ def get_document_storage_by_channel(
                     ComplaintChannel.description.contains("ร้องเรียนผ่านเว็บไซต์")
                 )
             ).all()
-        elif page_type == "card":
+        elif normalized_page_type == "card":
             # ช่องทางบัตรสนเท่ห์
             target_channels = db.query(ComplaintChannel).filter(
                 ComplaintChannel.is_active == True,
@@ -1494,7 +1495,7 @@ def get_document_storage_by_channel(
                     "description": channel.description
                 } for channel in target_channels
             ],
-            "page_type": page_type,
+            "page_type": "all" if normalized_page_type not in ("website", "card") else normalized_page_type,
             "legend": {
                 "receiveDate": "วันที่ยื่นเรื่องร้องเรียน (วันที่สร้างเรื่อง)",
                 "is_assigned": "สถานะการมอบหมาย: true=มีการมอบหมายแล้ว, false=ยังไม่ได้มอบหมาย",
