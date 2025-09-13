@@ -378,7 +378,7 @@ const TableListBox = ({
         return (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <BusinessIcon
-              sx={{ fontSize: 18, color: "#1976d2", opacity: 0.7 }}
+              sx={{ fontSize: 18, color: item.isMaster ? "#1565c0" : "#94ccf9ff" }}
             />
             <Typography
               sx={{
@@ -386,6 +386,7 @@ const TableListBox = ({
                 fontWeight: 400,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
+                color: item.isMaster ? "#1565c0" : "#94ccf9ff",
               }}
               title={value}
             >
