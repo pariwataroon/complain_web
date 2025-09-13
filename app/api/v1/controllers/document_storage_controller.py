@@ -972,6 +972,8 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
         detail = {
             "receiveDate": _fmt_bkk(complaint.created_at),
             "agency": agency_name,
+            # แหล่งที่มาที่ผู้ใช้กรอก (เก็บตรง ๆ ไม่แก้ไข) หากต้องการแยกจาก agency ที่ derive
+            "agency_sender": getattr(complaint, "agency_sender", None),
             "complaintNumber": getattr(complaint, "complaint_number", None),
             "claimantName": complainant_data.get("name", "") or f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip(),
             "issue": complaint.subject or "",
