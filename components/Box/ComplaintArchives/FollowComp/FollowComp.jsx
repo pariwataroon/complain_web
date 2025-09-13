@@ -1129,6 +1129,23 @@ const FollowComp = () => {
 
   const allRelated = documentData?.relationships?.all_related || [];
 
+  // Navigate to the complaint whose complaint_number matches the clicked
+  // complaint_number or parent_complaint_number. We first try to resolve the
+  // internal id from allRelated (so API keeps using numeric/UUID ids). If we
+  // can't find it, fall back to pushing the raw number as id (in case the API
+  // accepts that form).
+  const navigateToComplaint = (targetComplaintNumber) => {
+    if (!targetComplaintNumber || targetComplaintNumber === '-') return;
+    const target = allRelated.find(
+      (r) => r?.complaint_number === targetComplaintNumber
+    );
+    const targetId = target?.id || targetComplaintNumber;
+    // Avoid pushing duplicate navigation
+    if (targetId && targetId !== router.query.id) {
+      router.push({ pathname: router.pathname, query: { id: targetId } });
+    }
+  };
+
   // ให้เลือกเลข สรร. ที่น่าเชื่อถือที่สุด: จาก master ก่อน, รองลงมา all_related แถวแรก, สุดท้ายจาก detail
   const baseComplaintNumber =
     allRelated.find((it) => it?.is_master)?.complaint_number ||
@@ -1421,7 +1438,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
             documentData?.detail?.responsibleOfficer ||
             "ไม่ระบุ"}
         </Typography>
-        <IconButton
+        {/* <IconButton
           size="small"
           onClick={() => handleOpenDocument("เอกสารเจ้าหน้าที่")}
           sx={{
@@ -1433,7 +1450,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
           }}
         >
           <FolderIcon />
-        </IconButton>
+        </IconButton> */}
       </Box>
 
       <Box
@@ -1606,6 +1623,40 @@ const agencyReportRows = outgoingType5.map((item) => ({
                             </TableCell>
                           );
                         } else {
+                          // Make complaint number columns clickable
+                          if (
+                            h === "เลข สรร." ||
+                            h === "เลขที่อ้างอิง(เลขสรร.สารบัญ)"
+                          ) {
+                            const displayValue = rowObj[h] ?? "-";
+                            return (
+                              <TableCell
+                                key={h}
+                                align="center"
+                                sx={{
+                                  cursor:
+                                    displayValue && displayValue !== "-"
+                                      ? "pointer"
+                                      : "default",
+                                  color:
+                                    displayValue && displayValue !== "-"
+                                      ? "#1976d2"
+                                      : "inherit",
+                                  textDecoration:
+                                    displayValue && displayValue !== "-"
+                                      ? "underline"
+                                      : "none",
+                                }}
+                                onClick={() =>
+                                  displayValue && displayValue !== "-"
+                                    ? navigateToComplaint(displayValue)
+                                    : null
+                                }
+                              >
+                                {displayValue}
+                              </TableCell>
+                            );
+                          }
                           return (
                             <TableCell key={h} align="center">
                               {rowObj[h] ?? "-"}

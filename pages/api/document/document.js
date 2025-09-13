@@ -8,7 +8,7 @@ export const getDocumentStorageForWebsite = async ({
   try {
     const { data } = await axiosInstance.get("/document-storage", {
       params: {
-        page_type: "website", // กำหนด page_type เป็น "website"
+        // page_type: "website", // กำหนด page_type เป็น "website"
         skip,
         limit,
       },
