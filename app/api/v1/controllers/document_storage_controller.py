@@ -10,6 +10,7 @@ from models.comp_complaint import Complaint, ComplaintAttachment
 from models.comp_complaint_types import ComplaintChannel, ComplaintType, ComplaintSubType
 from models.user import User
 from models.departments import Department
+from models.outside_departments import OutsideDepartment
 from models.outgoing_reports import OutgoingReport
 from models.outgoing_reports2 import OutgoingReport2
 from models.outgoing_reports3 import OutgoingReport3
@@ -953,9 +954,35 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             "latest_status": latest_status,
         }
 
-        # ===== ชื่อหน่วยงานหัวการ์ด (ฉลาดขึ้น + null-safe) =====
-        agency_name = getattr(complaint, "agency_sender", None) or ""
-        if not agency_name:
+        # ===== ชื่อหน่วยงานหัวการ์ด (mapping กับ OutsideDepartment) =====
+        agency_sender_raw = getattr(complaint, "agency_sender", None) or ""
+        agency_name = agency_sender_raw
+        outside_department_obj = None
+        if agency_sender_raw:
+            try:
+                # exact match
+                outside_department_obj = db.query(OutsideDepartment).filter(
+                    OutsideDepartment.is_active == True,
+                    OutsideDepartment.name == agency_sender_raw
+                ).first()
+                # case-insensitive exact
+                if not outside_department_obj:
+                    outside_department_obj = db.query(OutsideDepartment).filter(
+                        OutsideDepartment.is_active == True,
+                        OutsideDepartment.name.ilike(agency_sender_raw)
+                    ).first()
+                # contains
+                if not outside_department_obj:
+                    outside_department_obj = db.query(OutsideDepartment).filter(
+                        OutsideDepartment.is_active == True,
+                        OutsideDepartment.name.ilike(f"%{agency_sender_raw}%")
+                    ).first()
+                if outside_department_obj:
+                    agency_name = outside_department_obj.name
+            except Exception as _e:
+                logger.debug(f"OutsideDepartment lookup failed for agency_sender='{agency_sender_raw}': {_e}")
+        else:
+            # fallback เดิมจาก outgoing report
             try:
                 first_t1 = outgoing_reports_data["type1"][0] if outgoing_reports_data["type1"] else None
                 if first_t1 and first_t1.get("department", {}).get("name"):
@@ -972,8 +999,6 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
         detail = {
             "receiveDate": _fmt_bkk(complaint.created_at),
             "agency": agency_name,
-            # แหล่งที่มาที่ผู้ใช้กรอก (เก็บตรง ๆ ไม่แก้ไข) หากต้องการแยกจาก agency ที่ derive
-            "agency_sender": getattr(complaint, "agency_sender", None),
             "complaintNumber": getattr(complaint, "complaint_number", None),
             "claimantName": complainant_data.get("name", "") or f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip(),
             "issue": complaint.subject or "",
@@ -1399,18 +1424,40 @@ def get_document_storage_by_channel(
                 complaint_subtype_obj = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
                 complaint_subtype_name = complaint_subtype_obj.name if complaint_subtype_obj else ""
             
-            # ดึงข้อมูลหน่วยงานจาก outgoing_reports
-            agency_name = ""
-            try:
-                outgoing_report = db.query(OutgoingReport).filter(
-                    OutgoingReport.complaint_id == complaint.id,
-                    OutgoingReport.is_active == True
-                ).first()
-                
-                if outgoing_report and outgoing_report.department:
-                    agency_name = outgoing_report.department.name
-            except Exception as e:
-                logger.warning(f"Error getting agency name from outgoing_reports: {str(e)}")
+            # ดึงข้อมูลหน่วยงาน (mapping กับ OutsideDepartment ผ่าน agency_sender)
+            agency_sender_raw = getattr(complaint, "agency_sender", None) or ""
+            agency_name = agency_sender_raw
+            if agency_sender_raw:
+                try:
+                    od_obj = db.query(OutsideDepartment).filter(
+                        OutsideDepartment.is_active == True,
+                        OutsideDepartment.name == agency_sender_raw
+                    ).first()
+                    if not od_obj:
+                        od_obj = db.query(OutsideDepartment).filter(
+                            OutsideDepartment.is_active == True,
+                            OutsideDepartment.name.ilike(agency_sender_raw)
+                        ).first()
+                    if not od_obj:
+                        od_obj = db.query(OutsideDepartment).filter(
+                            OutsideDepartment.is_active == True,
+                            OutsideDepartment.name.ilike(f"%{agency_sender_raw}%")
+                        ).first()
+                    if od_obj:
+                        agency_name = od_obj.name
+                except Exception as _e:
+                    logger.debug(f"OutsideDepartment summary lookup failed for '{agency_sender_raw}': {_e}")
+            if not agency_name:
+                # fallback: ใช้ department จากรายงาน type1 แรก (ของเดิม)
+                try:
+                    outgoing_report = db.query(OutgoingReport).filter(
+                        OutgoingReport.complaint_id == complaint.id,
+                        OutgoingReport.is_active == True
+                    ).first()
+                    if outgoing_report and outgoing_report.department:
+                        agency_name = outgoing_report.department.name
+                except Exception as e:
+                    logger.warning(f"Error getting agency name fallback from outgoing_reports: {str(e)}")
             
             # ✅ ตรวจสอบสถานะการมอบหมาย
             is_assigned = bool(complaint.assigned_officer_id or complaint.assigned_to)
