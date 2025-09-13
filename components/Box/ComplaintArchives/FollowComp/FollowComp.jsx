@@ -235,10 +235,18 @@ const sectionConfigs = [
       } else if (posName === "อื่นๆ") {
         positionDisplay = positionDisplay.replace(/^อื่นๆ/, "(อื่นๆ)");
       }
-      
+      // If position indicates it's an individual or 'other' (ผู้ร้อง / ผู้ร้องเรียน / อื่นๆ / หน่วยงานอื่นๆ)
+      // prefer position_other_text; otherwise prefer department.name. Keep safe fallbacks.
+      const isSpecialPosition = ["ผู้ร้อง", "ผู้ร้องเรียน", "อื่นๆ", "หน่วยงานอื่นๆ"].includes(posName);
+      // FORWARDED context: use the selected posName (in parentheses) as prefix for special positions
+      const prefix = isSpecialPosition ? `(${posName}) ` : "";
+      const departmentDisplay = isSpecialPosition
+        ? (prefix + (other || row.department?.name || row.department_name || row.outgoing_departments?.[0]?.name || "-"))
+        : (row.department?.name || row.department_name || row.outgoing_departments?.[0]?.name || positionDisplay || "-");
+
       return {
         ลำดับ: idx + 1,
-        "หน่วยงาน(ครั้งที่ส่ง)": positionDisplay,
+        "หน่วยงาน(ครั้งที่ส่ง)": departmentDisplay,
         เรื่อง: row.issue || row.subject || "-",
         เลขที่หนังสือ: row.document_number || "-",
         ลงวันที่: row.document_date || "-",
@@ -257,7 +265,7 @@ const sectionConfigs = [
   {
     key: "INITIAL_NOTIFY",
     status: STATUS.INITIAL_NOTIFY,
-    title: "แจ้งผู้ร้องเรียนส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น",
+    title: "แจ้งผู้ร้อง/หน่วยงานที่ส่งเรื่องมากระทรวงการคลังทราบเบื้องต้น",
     headers: [
       "ลำดับ",
       "หน่วยงานหรือผู้ร้อง(ครั้งที่ส่ง)",
@@ -272,7 +280,7 @@ const sectionConfigs = [
       const posName = row.position?.name || row.position_name || "";
       const other = row.position_other_text || "";
       let positionDisplay = [posName, other].filter(Boolean).join(other ? " " : "") || "-";
-      
+
       if (posName === "ผู้ร้อง" || posName === "ผู้ร้องเรียน") {
         positionDisplay = positionDisplay.replace(/^ผู้ร้อง(เรียน)?/, "(ผู้ร้อง)");
       } else if (posName === "อื่นๆ") {
@@ -349,7 +357,7 @@ const sectionConfigs = [
   {
     key: "AGENCY_REPORT",
     status: STATUS.AGENCY_REPORT,
-    title: "หนังสือแจ้งผลพิจารณาหน่วยงาน",
+    title: "หนังสือแจ้งผลพิจารณาจากหน่วยงาน",
     headers: [
       "ลำดับ",
       "เลขที่หนังสือ",
@@ -384,11 +392,11 @@ const sectionConfigs = [
   {
     key: "FINAL_NOTIFY",
     status: STATUS.FINAL_NOTIFY,
-    title: "แจ้งผลการให้ผู้เกี่ยวข้องทราบ",
+    title: "รายงานผู้ตรวจฯ / ผู้ร้อง /หน่วยงานอื่น (ครั้งที่แจ้งผล)",
     headers: [
       "ลำดับ",
       // "เลขคำร้อง (complaint_id)",
-      "ถึงหน่วยงาน / ผู้ร้อง / อื่นๆ (ครั้งที่แจ้งผล)",
+      "ผู้ตรวจฯ / ผู้ร้อง / หน่วยงานอื่น",
       "เลขที่หนังสือ",
       "เรื่อง",
       "ลงวันที่",
@@ -399,7 +407,7 @@ const sectionConfigs = [
       const posName = row.position?.name || row.position_name || "";
       const other = row.position_other_text || "";
       let positionDisplay = [posName, other].filter(Boolean).join(other ? " " : "") || "-";
-      
+
       if (posName === "ผู้ร้อง" || posName === "ผู้ร้องเรียน") {
         positionDisplay = positionDisplay.replace(/^ผู้ร้อง(เรียน)?/, "(ผู้ร้อง)");
       } else if (posName === "อื่นๆ") {
@@ -408,7 +416,7 @@ const sectionConfigs = [
       return {
       ลำดับ: idx + 1,
       // "เลขคำร้อง (complaint_id)": row.complaint_id || row.complaint?.id || "-",
-      "ถึงหน่วยงาน / ผู้ร้อง / อื่นๆ (ครั้งที่แจ้งผล)":positionDisplay,
+      "ผู้ตรวจฯ / ผู้ร้อง / หน่วยงานอื่น":positionDisplay,
       เลขที่หนังสือ: row.document_number || row.reference_number || "-",
       เรื่อง: row.issue || row.subject || "-",
       ลงวันที่: row.document_date 
@@ -1078,7 +1086,7 @@ const FollowComp = () => {
         }
         case "AGENCY_REPORT": {
           files = rowRaw?.attachments || findById(out?.type5, rowDisplay?.id)?.attachments || [];
-          title = `เอกสารแนบ - หนังสือแจ้งผลพิจารณาหน่วยงาน`;
+          title = `เอกสารแนบ - หนังสือแจ้งผลพิจารณาจากหน่วยงาน`;
           break;
         }
         case "FINAL_NOTIFY": {
