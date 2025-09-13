@@ -24,6 +24,7 @@ const SelectFieldDepartment = ({
     filterBySignerId = null, // kept for API compatibility (ignored)
     showDepartmentInfo = false,
     enableSearch = true,
+    allowCreate = false,
     ...props
 }) => {
     const [options, setOptions] = useState([]);
@@ -91,9 +92,34 @@ const SelectFieldDepartment = ({
         if (loading) return;
         if (selectedValue) {
             const match = options.find(opt => String(opt.value) === String(selectedValue));
-            if (match) setSelectedDepartment(match);
+            if (match) {
+                setSelectedDepartment(match);
+                setInputValue(match.label || String(selectedValue));
+            } else {
+                // If selectedValue is a plain string (created by user), restore it
+                // so the Autocomplete shows the created name on mount/edit.
+                const created = { value: selectedValue, label: String(selectedValue) };
+                setSelectedDepartment(created);
+                setInputValue(String(selectedValue));
+            }
         }
     }, [options, loading, selectedValue]);
+
+    // Also react to direct `value` prop changes: if parent passes an object
+    // with a label or a plain string, ensure the inputValue displays the
+    // human-readable label instead of a raw id.
+    useEffect(() => {
+        if (loading) return;
+        if (value === null || value === undefined) return;
+        try {
+            if (typeof value === 'object' && value !== null) {
+                if (value.label) setInputValue(String(value.label));
+                else if (value.value) setInputValue(String(value.value));
+            } else {
+                setInputValue(String(value));
+            }
+        } catch (_) {}
+    }, [value, loading]);
 
     const filteredOptions = useMemo(() => {
         if (!enableSearch || !inputValue) return validOptions;
@@ -129,24 +155,53 @@ const SelectFieldDepartment = ({
             <Autocomplete
                 disabled={disabled || loading}
                 loading={loading}
-                value={currentOption}
+                freeSolo={allowCreate}
+                value={selectedDepartment || currentOption}
                 onChange={(e, newVal) => {
+                    // If freeSolo and user entered a string, newVal will be a string
+                    if (typeof newVal === 'string') {
+                        const nameValue = String(newVal || '').trim();
+                        if (!nameValue) {
+                            // treat as clear
+                            setSelectedDepartment(null);
+                            onChange({ target: { name, value: "" } });
+                            onDepartmentSelect(null);
+                            return;
+                        }
+                        const created = { value: nameValue, label: nameValue };
+                        setSelectedDepartment(created);
+                        onChange({ target: { name, value: nameValue } });
+                        onDepartmentSelect(created);
+                        return;
+                    }
+                    if (newVal === null) {
+                        // cleared via clear icon
+                        setSelectedDepartment(null);
+                        setInputValue("");
+                        onChange({ target: { name, value: "" } });
+                        onDepartmentSelect(null);
+                        return;
+                    }
                     const id = newVal?.value || "";
                     setSelectedDepartment(newVal || null);
+                    setInputValue(newVal?.label || id);
                     onChange({ target: { name, value: id } });
                     onDepartmentSelect(newVal || null);
                 }}
                 inputValue={inputValue}
                 onInputChange={(e, v, reason) => {
-                    if (reason === 'reset' && v === '' && !currentOption) {
+                    // handle manual clear or reset
+                    if ((reason === 'reset' || reason === 'clear') && v === '' && !currentOption) {
                         // cleared
                         handleClear();
+                        setInputValue('');
+                        return;
                     }
                     setInputValue(v);
                 }}
                 options={filteredOptions}
-                getOptionLabel={(opt) => opt?.label || ""}
-                isOptionEqualToValue={(o, v) => String(o.value) === String(v.value)}
+                getOptionLabel={(opt) => (typeof opt === 'string' ? opt : (opt?.label || ""))}
+                isOptionEqualToValue={(o, v) => String(o.value) === String(v?.value)}
                 noOptionsText={loading ? 'กำลังโหลด...' : (apiError || 'ไม่พบหน่วยงานภายนอก')}
                 clearOnBlur={false}
                 popupIcon={null}
@@ -190,7 +245,7 @@ const SelectFieldDepartment = ({
                         size="small"
                     />
                 )}
-                clearIcon={<CloseIcon fontSize="small" onClick={(e) => { e.stopPropagation(); handleClear(); }} />}
+                clearIcon={<CloseIcon fontSize="small" />}
             />
 
             {(helperText || apiError) && (

@@ -55,6 +55,8 @@ const InitialNotificationComplainantAgency = () => {
   canSave,
   existingAttachments,
   handleDeleteExistingAttachment,
+  externalDepartments,
+  isLoadingDepartments,
 } = useInitialNotificationComplainantAgency();
 
   const router = useRouter();
@@ -368,20 +370,47 @@ const InitialNotificationComplainantAgency = () => {
               error={!!getFieldError('salutation')}
               helperText={getFieldError('salutation')}
             />
-            {(!(form.salutation_is_other) || router?.query?.id) && (
-              <SelectFieldDepartmentoutside
-                label={createLabel('หน่วยงาน / ผู้ร้อง', 'department')}
-                name='department'
-                // ใช้ค่า id ตรงจาก form เพื่อให้โหมดแก้ไข prefill ได้ (component จะ map id -> option เอง)
-                value={form.department}
-                onChange={handleDepartmentSelect}
-                onDepartmentSelect={handleDepartmentSelect}
-                error={!!getFieldError('department')}
-                helperText={getFieldError('department')}
-                disabled={false}
-                placeholder='เลือกหน่วยงาน / ผู้ร้อง'
-              />
-            )}
+            {/* Always render department selector so prefill/created names can appear */}
+            {(() => {
+              // Derive a value object for the selector so it can display label/name.
+              // If form.department matches an external id, pass that option object.
+              // If it's a plain string (created name), pass a synthetic option.
+              let deptValue = null;
+              try {
+                // Prefer the component's selectedDepartment (set during prefill)
+                // so we can show the label even if externalDepartments hasn't loaded yet.
+                if (selectedDepartment) {
+                  deptValue = selectedDepartment;
+                } else {
+                  const fd = form.department;
+                  if (fd) {
+                    const found = externalDepartments && externalDepartments.find(d => String(d.id) === String(fd));
+                    if (found) {
+                      deptValue = found;
+                    } else {
+                      // treat as plain name
+                      deptValue = { value: String(fd), label: String(fd) };
+                    }
+                  }
+                }
+              } catch (_) { deptValue = null; }
+
+              return (
+                <SelectFieldDepartmentoutside
+                  label={createLabel('หน่วยงาน / ผู้ร้อง', 'department')}
+                  name='department'
+                  value={deptValue}
+                  onChange={handleDepartmentSelect}
+                  onDepartmentSelect={handleDepartmentSelect}
+                  error={!!getFieldError('department')}
+                  helperText={getFieldError('department')}
+                  disabled={false}
+                  placeholder='เลือกหน่วยงาน / ผู้ร้อง'
+                  allowCreate={true}
+                />
+              );
+            })()}
+            
             <InputText
               label={createLabel('เลขที่หนังสือ', 'refNo')}
               inputLabel='กรอกเลขที่หนังสือ'

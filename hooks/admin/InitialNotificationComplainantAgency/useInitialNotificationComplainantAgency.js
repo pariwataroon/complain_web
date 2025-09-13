@@ -159,21 +159,35 @@ export const useInitialNotificationComplainantAgency = () => {
 
   // Restore external department if backend returns null (ใช้ localStorage เก็บ outside_department_id)
   useEffect(() => {
-    if (!externalDepartments.length) return; // ต้องมี list ก่อน
+    // Try to restore outside department info saved in localStorage. We allow
+    // either an id (UUID) that must exist in externalDepartments, or a plain
+    // name saved as outsideDepartmentName for cases where the user created a
+    // department on-the-fly and backend didn't return an id.
     if (form.department) return; // มีค่าแล้วไม่ต้อง restore
     try {
       const storeKey = `outgoing_report2_outside_dept_${id || 'new'}`;
       const raw = localStorage.getItem(storeKey);
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (parsed?.outsideDepartmentId && isUUID(parsed.outsideDepartmentId)) {
-        const exists = externalDepartments.some(d => d.id === parsed.outsideDepartmentId);
+      const savedId = parsed?.outsideDepartmentId || null;
+      const savedName = parsed?.outsideDepartmentName || null;
+
+      if (savedId && isUUID(savedId)) {
+        const exists = externalDepartments.some(d => d.id === savedId);
         if (exists) {
-          setForm(prev => ({ ...prev, department: parsed.outsideDepartmentId }));
+          setForm(prev => ({ ...prev, department: savedId }));
+          return;
         }
+      }
+
+      // If we have a saved name (and no usable id), restore it to form.department
+      // so the UI can show the created name even if it isn't in the external list.
+      if (savedName) {
+        setForm(prev => ({ ...prev, department: savedName }));
       }
     } catch (_) {}
   }, [externalDepartments, form.department, id]);
+
 
   // -------- EDIT mode: โหลดข้อมูลจาก API และ sync attachments --------
   useEffect(() => {
@@ -200,8 +214,11 @@ export const useInitialNotificationComplainantAgency = () => {
           position_id: d.signature_authority_user?.position_id ||
                         d.signature_authority_user?.position?.id ||
                         d.signature_authority_user?.positionId || "",
-          // Clear department if custom special case
-          department: isCustomLoaded ? "" : (d.department?.id || ""),
+          // Preserve department returned from API even when position is "อื่นๆ" or similar.
+          // Previously we cleared department for special salutation values which
+          // caused the department to disappear in edit mode. Keep the API value
+          // so the UI can show the department when editing.
+          department: d.department?.id || "",
           document_date: d.document_date ? parseIsoToThaiDate(d.document_date) : null,
             complaint_number_date: d.complaint_number_date ? parseIsoToThaiDate(d.complaint_number_date) : null,
           confidentiality: d.confidentiality_level !== undefined && d.confidentiality_level !== null ? String(d.confidentiality_level) : "",
@@ -380,7 +397,9 @@ export const useInitialNotificationComplainantAgency = () => {
         setForm(prev => ({ ...prev, position_other_text: "", salutation_is_other: false }));
         if (errors.position_other_text) setErrors(prev => ({ ...prev, position_other_text: null }));
       } else {
-        setForm(prev => ({ ...prev, salutation_is_other: true, department: "" }));
+        // Mark as other but do not clear department here. Clearing is handled
+        // by the UI component when the user explicitly chooses 'อื่นๆ'.
+        setForm(prev => ({ ...prev, salutation_is_other: true }));
       }
       return;
     }
@@ -390,7 +409,8 @@ export const useInitialNotificationComplainantAgency = () => {
       const lowered = String(finalValue || '').trim();
       // If user somehow types special keywords directly (edge case)
       if (["อื่นๆ", "ผู้ร้อง", "ผู้ร้องเรียน"].includes(lowered)) {
-        setForm(prev => ({ ...prev, salutation: finalValue, salutation_is_other: true, department: "" }));
+        // mark as other but don't clear department here; UI selection handles clearing
+        setForm(prev => ({ ...prev, salutation: finalValue, salutation_is_other: true }));
         return;
       }
     }
@@ -701,18 +721,32 @@ export const useInitialNotificationComplainantAgency = () => {
     console.log('[DeptDebug] Final deptId =', deptId, 'form.department =', form.department, 'external count =', externalDepartments.length);
 
     // Persist external department separately (workaround) แม้ backend จะยังไม่รองรับ
+    // Support both UUID ids and newly-created non-UUID names: if the selected
+    // department doesn't look like a UUID we still persist the name so the
+    // edit/detail page can show it even if backend returns null for department.
     let outsideDepartmentId = null;
     let outsideDepartmentName = null;
-    if (isUUID(form.department)) {
-      outsideDepartmentId = form.department;
-      const match = externalDepartments.find(d => d.id === form.department);
-      outsideDepartmentName = match?.label || match?.name || null;
-      try {
-        // เก็บลง localStorage ให้หน้า detail / edit เอามาโชว์ได้ถ้า backend คืน null
-        const storeKey = `outgoing_report2_outside_dept_${id || 'new'}`;
-        localStorage.setItem(storeKey, JSON.stringify({ outsideDepartmentId, outsideDepartmentName }));
-      } catch (_) {}
-    }
+    try {
+      const storeKey = `outgoing_report2_outside_dept_${id || 'new'}`;
+    if (form.department) {
+        if (isUUID(form.department)) {
+          outsideDepartmentId = form.department;
+          const match = externalDepartments.find(d => d.id === form.department);
+          outsideDepartmentName = match?.label || match?.name || null;
+      try { localStorage.setItem(storeKey, JSON.stringify({ outsideDepartmentId, outsideDepartmentName }));
+      console.debug('[DeptDebug] saved outside dept id/name ->', storeKey, outsideDepartmentId, outsideDepartmentName);
+      } catch(_){}
+        } else {
+          // Treat non-UUID value as a name (e.g. created on-the-fly). Persist
+          // the name so we can restore it in edit/detail even if backend
+          // doesn't store an id.
+          outsideDepartmentName = String(form.department || '').trim() || null;
+          try { localStorage.setItem(storeKey, JSON.stringify({ outsideDepartmentId: null, outsideDepartmentName }));
+          console.debug('[DeptDebug] saved outside dept name (non-UUID) ->', storeKey, outsideDepartmentName);
+          } catch(_){}
+        }
+      }
+    } catch (_) {}
 
     const payloadBase = {
       position_id: resolvedPositionId,
@@ -855,8 +889,11 @@ export const useInitialNotificationComplainantAgency = () => {
           const finalKey = `outgoing_report2_outside_dept_${createdId}`;
           const rawOutside = localStorage.getItem(newKey);
           if (rawOutside && !localStorage.getItem(finalKey)) {
-            localStorage.setItem(finalKey, rawOutside);
-            localStorage.removeItem(newKey);
+            try {
+              localStorage.setItem(finalKey, rawOutside);
+              localStorage.removeItem(newKey);
+              console.debug('[DeptDebug] migrated outside dept key:', newKey, '->', finalKey, rawOutside);
+            } catch(_){}
           }
         }
       } catch (_) { console.log('[DeptDebug] migrate outside dept key failed'); }
