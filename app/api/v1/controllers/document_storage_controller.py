@@ -1037,6 +1037,34 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
         }
 
         # ===== relationships =====
+        # เพิ่ม agency ให้กับแต่ละรายการใน all_related (ระบุหน่วยงานที่ส่งเรื่องมา)
+        original_all_related = related_info.get("all_related", []) or []
+        enriched_all_related = []
+        for item in original_all_related:
+            try:
+                # ถ้ามี agency อยู่แล้วและไม่ว่าง ให้ใช้เดิม
+                if item.get("agency"):
+                    enriched_all_related.append(item)
+                    continue
+                rel_id = item.get("id")
+                rel_comp = None
+                if rel_id:
+                    try:
+                        rel_uuid = UUID(str(rel_id))
+                        rel_comp = db.query(Complaint).filter(Complaint.id == rel_uuid).first()
+                    except Exception:
+                        rel_comp = None
+                agency_rel = _resolve_agency_name(db, rel_comp) if rel_comp else ""
+                new_item = dict(item)
+                new_item["agency"] = agency_rel
+                enriched_all_related.append(new_item)
+            except Exception:
+                # fallback หากผิดพลาด ให้ใส่ค่าเดิม
+                enriched_all_related.append(item)
+
+        # ใช้ enriched list แทนของเดิม
+        related_all_with_agency = enriched_all_related
+
         def _parse_dt(s):
             try:
                 return datetime.fromisoformat((s or "").replace('T', ' ').replace('Z', ''))
@@ -1049,14 +1077,14 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             "master_complaint": related_info.get("master_complaint"),
             "child_complaints": related_info.get("child_complaints", []),
             "sibling_complaints": related_info.get("sibling_complaints", []),
-            "all_related": sorted(related_info.get("all_related", []), key=lambda x: _parse_dt(x.get("created_at")), reverse=True),
-            "total_related_count": len(related_info.get("all_related", [])),
+            "all_related": sorted(related_all_with_agency, key=lambda x: _parse_dt(x.get("created_at")), reverse=True),
+            "total_related_count": len(related_all_with_agency),
             "relationship_summary": {
                 "is_master": complaint.parent_complaint_id is None,
                 "has_parent": related_info.get("parent_complaint") is not None,
                 "children_count": len(related_info.get("child_complaints", [])),
                 "siblings_count": len(related_info.get("sibling_complaints", [])),
-                "total_in_group": len(related_info.get("all_related", []))
+                "total_in_group": len(related_all_with_agency)
             }
         }
 
