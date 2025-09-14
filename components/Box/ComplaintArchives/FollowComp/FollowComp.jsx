@@ -392,7 +392,7 @@ const sectionConfigs = [
   {
     key: "FINAL_NOTIFY",
     status: STATUS.FINAL_NOTIFY,
-    title: "รายงานผู้ตรวจฯ / ผู้ร้อง /หน่วยงานอื่น (ครั้งที่แจ้งผล)",
+    title: "แจ้งผลการพิจารณาให้ผู้เกี่ยวข้องทราบ",
     headers: [
       "ลำดับ",
       // "เลขคำร้อง (complaint_id)",
