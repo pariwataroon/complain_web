@@ -72,43 +72,52 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
   const respondent =
     data?.respondent || data?.step2?.general?.[data?.step2?.general?.activeType || "individual"] || {};
   const complaint = data?.complaint || data?.step3?.general || {};
+  const assignmentForm = data?.assignment_form || {};
 
-  const resolvedComplaintTypeId = (
-    complaint.complaintTypeId ||
-    data?.assignment_form?.complaint_type_id ||
-    data?.assignment_form?.complaint_type ||
-    ""
-  );
   const resolvedComplaintTypeName = (
+    assignmentForm.complaint_type_name ||
     complaint.complaintTypeName ||
     complaint.complaintType ||
-    data?.assignment_form?.complaint_type_name ||
-    data?.assignment_form?.complaint_type ||
-    ""
+    assignmentForm.complaint_type ||
+    ''
   );
-  const resolvedComplaintTypeDisplay = resolvedComplaintTypeName || resolvedComplaintTypeId || "";
+  const resolvedComplaintTypeId = (
+    assignmentForm.complaint_type_id ||
+    complaint.complaintTypeId ||
+    assignmentForm.complaint_type ||
+    ''
+  );
+  const resolvedComplaintTypeDisplay = resolvedComplaintTypeName || resolvedComplaintTypeId || '-';
 
-  const resolvedComplaintSubtypeId = (
-    complaint.complaintSubtypeId ||
-    data?.assignment_form?.complaint_subtype_id ||
-    data?.assignment_form?.complaint_subtype ||
-    ""
-  );
   const resolvedComplaintSubtypeName = (
+    assignmentForm.complaint_subtype_name ||
     complaint.complaintSubtypeName ||
     complaint.complaintSubtype ||
-    complaint.complaint_subtype ||
     complaint.complaint_subtype_name ||
     complaint.complaint_subtype_data?.name ||
-    data?.assignment_form?.complaint_subtype_name ||
-    data?.assignment_form?.complaint_subtype ||
-    ""
+    assignmentForm.complaint_subtype ||
+    ''
   );
-  const resolvedComplaintSubtypeDisplay = resolvedComplaintSubtypeName || resolvedComplaintSubtypeId || "";
+  const resolvedComplaintSubtypeId = (
+    assignmentForm.complaint_subtype_id ||
+    complaint.complaintSubtypeId ||
+    assignmentForm.complaint_subtype ||
+    ''
+  );
+  const resolvedComplaintSubtypeDisplay = resolvedComplaintSubtypeName || resolvedComplaintSubtypeId || '-';
+
+  const resolvedAssignedTo = assignmentForm.assigned_to || data?.assigned_to || '-';
+  const resolvedAssignedDate = assignmentForm.assigned_date || data?.assigned_date || '';
 
   if (typeof window !== 'undefined') {
-    console.debug('Resolved complaint type:', { id: resolvedComplaintTypeId, name: resolvedComplaintTypeName });
-    console.debug('Resolved complaint subtype:', { id: resolvedComplaintSubtypeId, name: resolvedComplaintSubtypeName });
+    console.debug('Resolved fields:', {
+      complaintTypeName: resolvedComplaintTypeName,
+      complaintTypeId: resolvedComplaintTypeId,
+      complaintSubtypeName: resolvedComplaintSubtypeName,
+      complaintSubtypeId: resolvedComplaintSubtypeId,
+      assigned_to: resolvedAssignedTo,
+      assigned_date: resolvedAssignedDate,
+    });
   }
   // รวมไฟล์แนบจากหลายรูปแบบเข้าเป็นโครงสร้างเดียว
   const rawFiles =
@@ -163,24 +172,38 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
     }
   };
 
-    const getFileExt = (filename = "") => {
-      if (!filename) return "";
-      const q = filename.split("?")[0];
-      const dot = q.lastIndexOf(".");
-      return dot >= 0 ? q.slice(dot).toLowerCase() : "";
-    };
+  const getFileExt = (filename = "") => {
+    if (!filename) return "";
+    const q = filename.split("?")[0];
+    const dot = q.lastIndexOf(".");
+    return dot >= 0 ? q.slice(dot).toLowerCase() : "";
+  };
 
-    // แปลงไฟล์แนบให้มีฟิลด์มาตรฐาน { name, url, type, size }
-    const normalizeFiles = (arr = []) =>
-      (Array.isArray(arr) ? arr : []).map((f, i) => {
-        const name = f.name || f.fileName || `ไฟล์แนบ ${i + 1}`;
-        const url = f.url || f.fileUrl || f.path || "";
-        const type = f.type || f.fileType || getFileExt(f.fileName || f.name || f.url);
-        const size = f.size || f.fileSize || undefined;
-        return { name, url, type, size };
-      });
+  const fixAttachmentUrl = (url = "") => {
+    if (!url) return "";
+    // if already absolute with http(s) leave it
+    if (/^https?:\/\//i.test(url)) return url;
+    // ensure leading slash
+    let u = url.startsWith('/') ? url : '/' + url;
+    // if missing /api prefix for uploads, add it
+    if (/^\/uploads\//.test(u)) {
+      u = '/api' + u; // now /api/uploads/...
+    }
+    return u;
+  };
 
-    const files = normalizeFiles(rawFiles);
+  // แปลงไฟล์แนบให้มีฟิลด์มาตรฐาน { name, url, type, size }
+  const normalizeFiles = (arr = []) =>
+    (Array.isArray(arr) ? arr : []).map((f, i) => {
+      const rawName = f.name || f.fileName || f.filename || `ไฟล์แนบ ${i + 1}`;
+      const rawUrl = f.url || f.fileUrl || f.path || "";
+      const fixedUrl = fixAttachmentUrl(rawUrl);
+      const type = f.type || f.fileType || getFileExt(f.fileName || f.name || f.url);
+      const size = f.size || f.fileSize || undefined;
+      return { name: rawName, url: fixedUrl, type, size };
+    });
+
+  const files = normalizeFiles(rawFiles);
 
     // const router = useRouter();
 
@@ -214,12 +237,11 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
               <InfoItem label="วันที่ร้องทุกข์" value={formatThaiDate()} />
               <InfoItem
                 label="ประเภทเรื่องร้องทุกข์"
-                value={resolvedComplaintTypeDisplay || "-"
-                }
+                value={resolvedComplaintTypeDisplay}
               />
               <InfoItem
                 label="ประเภทย่อยเรื่องร้องเรียน"
-                value={resolvedComplaintSubtypeDisplay || "-"}
+                value={resolvedComplaintSubtypeDisplay}
               />
               <InfoItem label="เรื่อง" value={complaint.subject} />
               <InfoItem
@@ -466,25 +488,15 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
                   <InfoItem label="วันที่ผู้รับมอบลงนาม" value={formatThaiDate(normalizeIso(data?.created_at || data?.updated_at || new Date().toISOString()))} />
                 </Grid>
 
-                {/* เพิ่มข้อมูลเจ้าหน้าที่ผู้รับผิดชอบ และวันที่รับงาน */}
                 <Grid container spacing={2} mb={3}>
                   <InfoItem
                     label="เจ้าหน้าที่ผู้รับผิดชอบ"
-                    value={
-                      data?.assignment_form?.assigned_to ||
-                      data?.assigned_to ||
-                      "-"
-                    }
+                    value={resolvedAssignedTo}
                   />
                   <InfoItem
                     label="วันที่รับงาน"
                     value={
-                      formatThaiDateTime(
-                        normalizeIso(
-                          data?.assignment_form?.assigned_date ||
-                            data?.assigned_date || ""
-                        )
-                      )
+                      resolvedAssignedDate ? formatThaiDateTime(normalizeIso(resolvedAssignedDate)) : '-'
                     }
                   />
                 </Grid>

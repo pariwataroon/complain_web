@@ -213,6 +213,7 @@ function mapComplaintData(raw) {
           url: f.fileUrl || f.url || "",
         }))
       : [],
+    assignment_form: raw.assignment_form ? { ...raw.assignment_form } : undefined,
   };
 
   console.log("=== MAPPED DATA RESULT ===");
