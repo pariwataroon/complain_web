@@ -22,9 +22,11 @@ const breadcrumbItems = [
 ];
 
 const ALL_CHANNELS = [
-  { key: "website", name: "เว็บไซต์" },
-  { key: "admin", name: "แอดมิน" },
-  { key: "opm1111", name: "เว็บไซต์ opm1111" },
+  { key: "website", name: "เว็บไซต์ (https://complain.mof.go.th)" },
+  { key: "opm1111", name: "ร้องเรียนผ่านระบบ OPM 1111 (สำนักงานปลัดสำนักนายกรัฐมนตรี)" },
+  { key: "central_service", name: "ศูนย์บริการร่วมกระทรวงการคลัง" },
+  { key: "letter", name: "ร้องเรียนผ่านจดหมาย" },
+  { key: "email", name: "ร้องเรียนผ่านอีเมล" },
 ];
 
 const Filteromplaints = () => {
