@@ -25,6 +25,7 @@ from app.api.v1.controllers.outgoing_report3_controller import (
     get_outgoing_report3_attachment_fileinfo,
     delete_outgoing_report3_attachment_by_id,
     update_outgoing_report3,
+    delete_outgoing_report3,
     DuplicateKeyError,
     get_my_outgoing_reports3_list,
 )
@@ -68,6 +69,21 @@ async def get_outgoing_reports3_list(
             date_to=date_to,
         )
         return format_response("0000", data)
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
+# ---------- DELETE (soft) ----------
+@router.delete("/{report_id}", response_model=FormatResponseModel)
+async def delete_outgoing_report3_endpoint(
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_delete("setting_access")),
+):
+    try:
+        res = delete_outgoing_report3(db, report_id, UUID(current_user))
+        return format_response("0003", res)
+    except HTTPException as e:
+        return format_response("4040", {"error": e.detail})
     except Exception as e:
         return format_response("5000", {"error": str(e)})
 

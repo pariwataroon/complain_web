@@ -24,6 +24,7 @@ from app.api.v1.controllers.outgoing_report2_controller import (
     get_outgoing_report2_attachment_fileinfo,
     delete_outgoing_report2_attachment_by_id,
     update_outgoing_report2,
+    delete_outgoing_report2,
     DuplicateKeyError,
 )
 from app.api.v1.schemas.outgoing_report2 import (
@@ -251,5 +252,21 @@ async def update_outgoing_report2_endpoint(
         return format_response("4090", {"error": str(e)})
     except HTTPException as e:
         return format_response("4040", {"error": e.detail})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
+# ---------- DELETE (soft) ----------
+@router.delete("/{report_id}", response_model=FormatResponseModel)
+async def delete_outgoing_report2_endpoint(
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_delete("setting_access")),
+):
+    try:
+        res = delete_outgoing_report2(db, report_id, UUID(current_user))
+        return format_response("0003", res)
+    except HTTPException as e:
+        code = "4040" if e.status_code == 404 else "5000"
+        return format_response(code, {"error": e.detail})
     except Exception as e:
         return format_response("5000", {"error": str(e)})

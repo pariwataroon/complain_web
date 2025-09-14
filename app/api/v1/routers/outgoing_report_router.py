@@ -22,6 +22,7 @@ from app.api.v1.controllers.outgoing_report_controller import (
     list_attachments_of_outgoing_report,
     get_outgoing_report_attachment_fileinfo,
     delete_outgoing_report_attachment_by_id,
+    delete_outgoing_report,
 )
 from app.api.v1.schemas.outgoing_report import OutgoingReportCreate, OutgoingReportUpdate
 
@@ -58,6 +59,20 @@ async def get_outgoing_reports_list(
             date_to=date_to
         )
         return format_response("0000", data)
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
+@router.delete("/{report_id}", response_model=FormatResponseModel)
+async def delete_outgoing_report_endpoint(
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_delete("setting_access"))
+):
+    try:
+        data = delete_outgoing_report(db, report_id, UUID(current_user))
+        return format_response("0003", data)
+    except HTTPException as e:
+        return format_response("4040", {"error": e.detail})
     except Exception as e:
         return format_response("5000", {"error": str(e)})
 

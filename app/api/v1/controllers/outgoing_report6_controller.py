@@ -7,7 +7,7 @@ from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session, joinedload, with_loader_criteria
 from sqlalchemy import or_
 from models.outgoing_reports6 import OutgoingReport6, OutgoingReportAttachment6
-from models.comp_complaint import Complaint
+from models.comp_complaint import Complaint, ComplaintStatus
 from models.user import User
 from models.departments import Department
 from models.position import Position
@@ -18,6 +18,20 @@ logger = get_logger("outgoing_report6_controller")
 
 class DuplicateKeyError(Exception):
     pass
+
+# status/history helper (mirrors other controllers)
+def _update_status_and_log(db: Session, complaint: Optional[Complaint], target_status: ComplaintStatus, notes: str, user_id: Optional[UUID] = None) -> None:
+    if not complaint:
+        return
+    try:
+        from app.api.v1.controllers.complaint_controller import update_complaint_status, create_status_history
+        current = getattr(complaint, "status", None)
+        if current != target_status:
+            update_complaint_status(db, complaint.id, target_status, notes, user_id)
+        else:
+            create_status_history(db, complaint.id, target_status, notes, user_id)
+    except Exception as e:
+        logger.warning(f"Could not update complaint status/log history (OR6): {e}")
 
 def _safe_str(v): return str(v) if v is not None else None
 def _iso(dt: Optional[datetime]): return dt.isoformat() if dt else None
@@ -284,6 +298,50 @@ def update_outgoing_report6(
     except Exception as e:
         db.rollback()
         logger.error(f"Update OutgoingReport6 error: {e}")
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
+
+def delete_outgoing_report6(db: Session, report_id: UUID, current_user_id: UUID) -> Dict[str, Any]:
+    """ลบรายงานรุ่น 6 (soft delete)"""
+    try:
+        report = db.query(OutgoingReport6).filter(
+            OutgoingReport6.id == report_id,
+            OutgoingReport6.is_active == True
+        ).first()
+        if not report:
+            raise HTTPException(status_code=404, detail="ไม่พบรายการที่ระบุ")
+
+        report.is_active = False
+        if hasattr(report, "updated_by"):
+            report.updated_by = current_user_id
+
+        for att in getattr(report, "attachments", []) or []:
+            if hasattr(att, "is_active"):
+                att.is_active = False
+
+        db.commit()
+
+        # ✅ ประวัติ
+        try:
+            complaint = None
+            if getattr(report, "complaint_id", None):
+                complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+            if complaint:
+                note = (
+                    f"ยกเลิกรายงานรุ่น 6 (soft delete) | เลขที่เอกสาร: {report.document_number or '-'} | เรื่อง: {report.subject or '-'}"
+                )
+                cur = getattr(complaint, "status", ComplaintStatus.REVIEWED) or ComplaintStatus.REVIEWED
+                _update_status_and_log(db, complaint, cur, note, current_user_id)
+        except Exception as e:
+            logger.warning(f"OR6 delete history failed: {e}")
+
+        return {"id": str(report_id), "message": "ลบรายงานรุ่น 6 เรียบร้อยแล้ว"}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Delete OutgoingReport6 error: {e}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
 def auto_fill_from_complaint6(db: Session, complaint_id: UUID) -> Dict[str, Any]:

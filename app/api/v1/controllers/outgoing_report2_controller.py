@@ -462,6 +462,56 @@ def update_outgoing_report2(
         logger.error(f"Error updating outgoing report2: {str(e)}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
+# ------------------------- Delete (soft) -------------------------
+def delete_outgoing_report2(db: Session, report_id: UUID, current_user_id: UUID) -> Dict[str, Any]:
+    """ลบรายงานส่งออกประเภท 2 (soft delete)"""
+    try:
+        report = db.query(OutgoingReport2).filter(
+            OutgoingReport2.id == report_id,
+            OutgoingReport2.is_active == True
+        ).first()
+        if not report:
+            raise HTTPException(status_code=404, detail="ไม่พบรายงานที่ระบุ")
+
+        report.is_active = False
+        if hasattr(report, "updated_by"):
+            report.updated_by = current_user_id
+
+        # ปิดการแสดงไฟล์แนบ
+        try:
+            for att in getattr(report, "attachments", []) or []:
+                if hasattr(att, "is_active"):
+                    att.is_active = False
+        except Exception:
+            pass
+
+        db.commit()
+
+        # ✅ บันทึกประวัติสถานะของ complaint เช่นเดียวกับรุ่น 1
+        try:
+            complaint = None
+            if getattr(report, "complaint_id", None):
+                complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+            if complaint:
+                note = (
+                    f"ยกเลิกรายงานรุ่น 2 (soft delete) | เอกสารเลขที่: {report.document_number or '-'} | เรื่อง: {report.subject or '-'}"
+                )
+                cur = getattr(complaint, "status", ComplaintStatus.IN_PROCESS) or ComplaintStatus.IN_PROCESS
+                _update_status_and_log(db, complaint, cur, note, current_user_id)
+        except Exception as e:
+            logger.warning(f"OR2 delete history failed: {e}")
+
+        return {"id": str(report_id), "message": "ลบรายงานส่งออก 2 เรียบร้อยแล้ว"}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting outgoing report2: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
+    # (Truncated duplicate update logic removed above during repair)
+
 
 # ------------------------- Attachments (รุ่น 2) -------------------------
 def _report_dir(report_id: UUID) -> str:

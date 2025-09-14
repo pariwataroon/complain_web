@@ -26,6 +26,7 @@ from app.api.v1.controllers.outgoing_report5_controller import (
     get_outgoing_report5_attachment_fileinfo,
     delete_outgoing_report5_attachment_by_id,
     update_outgoing_report5,
+    delete_outgoing_report5,
     DuplicateKeyError,
 )
 from app.api.v1.schemas.outgoing_report5 import OutgoingReport5Create, OutgoingReport5Update
@@ -63,6 +64,20 @@ async def get_outgoing_reports5_list(
             date_to=date_to,
         )
         return format_response("0000", data)
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
+@router.delete("/{report_id}", response_model=FormatResponseModel)
+async def delete_outgoing_report5_endpoint(
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_delete("setting_access")),
+):
+    try:
+        res = delete_outgoing_report5(db, report_id, UUID(current_user))
+        return format_response("0003", res)
+    except HTTPException as e:
+        return format_response("4040", {"error": e.detail})
     except Exception as e:
         return format_response("5000", {"error": str(e)})
 

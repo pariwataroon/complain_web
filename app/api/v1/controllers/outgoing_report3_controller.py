@@ -734,3 +734,50 @@ def update_outgoing_report3(
         db.rollback()
         logger.error(f"Error updating outgoing report3: {str(e)}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
+
+
+# ------------------------- Delete (soft) -------------------------
+def delete_outgoing_report3(db: Session, report_id: UUID, current_user_id: UUID) -> Dict[str, Any]:
+    """ลบรายงานขอทราบผล/ความคืบหน้า (soft delete)"""
+    try:
+        report = db.query(OutgoingReport3).filter(
+            OutgoingReport3.id == report_id,
+            OutgoingReport3.is_active == True
+        ).first()
+        if not report:
+            raise HTTPException(status_code=404, detail="ไม่พบรายงานที่ระบุ")
+
+        report.is_active = False
+        if hasattr(report, "updated_by"):
+            report.updated_by = current_user_id
+
+        # ปิดการแสดงไฟล์แนบทั้งหมด
+        for att in getattr(report, "attachments", []) or []:
+            if hasattr(att, "is_active"):
+                att.is_active = False
+
+        db.commit()
+
+        # ✅ ประวัติสถานะ complaint
+        try:
+            complaint = None
+            if getattr(report, "complaint_id", None):
+                complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+            if complaint:
+                note = (
+                    f"ยกเลิกรายงานรุ่น 3 (soft delete) | เอกสารเลขที่: {report.document_number or '-'} | เรื่อง: {report.subject or '-'}"
+                )
+                cur = getattr(complaint, "status", ComplaintStatus.TRACKING) or ComplaintStatus.TRACKING
+                _update_status_and_log(db, complaint, cur, note, current_user_id)
+        except Exception as e:
+            logger.warning(f"OR3 delete history failed: {e}")
+
+        return {"id": str(report_id), "message": "ลบรายงานรุ่น 3 เรียบร้อยแล้ว"}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting outgoing report3: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")

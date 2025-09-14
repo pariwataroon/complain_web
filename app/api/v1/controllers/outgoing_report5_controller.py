@@ -470,6 +470,51 @@ def update_outgoing_report5(
         logger.error(f"Update OutgoingReport5 error: {e}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
 
+# ========= DELETE =========
+def delete_outgoing_report5(db: Session, report_id: UUID, current_user_id: UUID) -> Dict[str, Any]:
+    """ลบรายงานรุ่น 5 (soft delete)"""
+    try:
+        report = db.query(OutgoingReport5).filter(
+            OutgoingReport5.id == report_id,
+            OutgoingReport5.is_active == True
+        ).first()
+        if not report:
+            raise HTTPException(status_code=404, detail="ไม่พบรายการที่ระบุ")
+
+        report.is_active = False
+        if hasattr(report, "updated_by"):
+            report.updated_by = current_user_id
+
+        for att in getattr(report, "attachments", []) or []:
+            if hasattr(att, "is_active"):
+                att.is_active = False
+
+        db.commit()
+
+        # ✅ ประวัติ
+        try:
+            complaint = None
+            if getattr(report, "complaint_id", None):
+                complaint = db.query(Complaint).filter(Complaint.id == report.complaint_id).first()
+            if complaint:
+                note = (
+                    f"ยกเลิกรายงานรุ่น 5 (soft delete) | เลขที่เอกสาร: {report.document_number or '-'} | เรื่อง: {report.subject or '-'}"
+                )
+                cur = getattr(complaint, "status", ComplaintStatus.REVIEWED) or ComplaintStatus.REVIEWED
+                _update_status_and_log(db, complaint, cur, note, current_user_id)
+        except Exception as e:
+            logger.warning(f"OR5 delete history failed: {e}")
+
+        return {"id": str(report_id), "message": "ลบรายงานรุ่น 5 เรียบร้อยแล้ว"}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Delete OutgoingReport5 error: {e}")
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
+
 
 # ========= AUTO-FILL =========
 def auto_fill_from_complaint5(db: Session, complaint_id: UUID) -> Dict[str, Any]:
