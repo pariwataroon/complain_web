@@ -1194,10 +1194,30 @@ const FollowComp = () => {
   const receivedRowMapper = receivedSection.rowMapper;
   // Inject agency fallback (use detail.agency if individual related item lacks its own)
   const detailAgency = documentData?.detail?.agency || "";
-  const receivedRows = allRelated.map((r) => ({
+  const receivedRows = allRelated.map((r, idx) => ({
     ...r,
-    agency: r.agency || detailAgency || "-",
+    // Derive agency string: prefer explicit string else nested object name
+    agency: typeof r.agency === 'string' && r.agency
+      ? r.agency
+      : r.agency?.name || r.agency?.agency_name || detailAgency || '-',
+    subject: r.subject || r.issue || '-',
+    complaint_type: r.complaint_type || r.complaint_type_data || undefined,
   }));
+
+  // Override RECEIVED section rowMapper to use normalized shape (receivedRows)
+  sectionConfigs[0].rowMapper = (row, idx) => ({
+    ลำดับ: idx + 1,
+    หน่วยงาน: row.agency || '-',
+    'เลข สรร.': row.complaint_number || '-',
+    'เลขที่อ้างอิง(เลขสรร.สารบัญ)': row.parent_complaint_number || '-',
+    เรื่อง: row.subject || '-',
+    ประเภทเรื่อง: row.complaint_type?.name || row.complaint_type?.complaint_type_name || '-',
+    เอกสารหลัก: row.is_master ? '✅' : '-',
+    เอกสารปัจจุบัน: row.is_current ? '✅' : '-',
+    เอกสารแนบ: row.attachments && row.attachments.length > 0 ? row.attachments.map(a => a.file_name || a.name).join(', ') : '-',
+    การจัดการ: row.id,
+    id: row.id,
+  });
 
   // outgoing_reports types
   const outgoing_reports = documentData?.outgoing_reports || {};
