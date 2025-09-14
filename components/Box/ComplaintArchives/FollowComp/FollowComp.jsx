@@ -1192,14 +1192,12 @@ const FollowComp = () => {
   const receivedSection = sectionConfigs[0];
   const receivedHeaders = receivedSection.headers;
   const receivedRowMapper = receivedSection.rowMapper;
-  // Inject agency fallback (use detail.agency if individual related item lacks its own)
-  const detailAgency = documentData?.detail?.agency || "";
   const receivedRows = allRelated.map((r, idx) => ({
     ...r,
     // Derive agency string: prefer explicit string else nested object name
     agency: typeof r.agency === 'string' && r.agency
       ? r.agency
-      : r.agency?.name || r.agency?.agency_name || detailAgency || '-',
+      : r.agency?.name || r.agency?.agency_name || '-',
     subject: r.subject || r.issue || '-',
     complaint_type: r.complaint_type || r.complaint_type_data || undefined,
   }));
