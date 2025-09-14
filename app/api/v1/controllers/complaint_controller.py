@@ -1411,7 +1411,7 @@ def get_complaints_enhanced(
                 "complaint_subtype_id": str(complaint.complaint_subtype_id) if complaint.complaint_subtype_id else None,
                 "complaint_type_id": str(complaint.complaint_type_id) if complaint.complaint_type_id else None,
                 "complaint_type_name": complaint.complaint_type or "",
-                "is_master": True,  # default value
+                "is_master": (complaint.parent_complaint_id is None),
                 "is_assigned": is_assigned,  # เพิ่มฟิลด์สำหรับตรวจสอบสถานะการมอบหมาย
                 
                 # เพิ่ม phone และ description สำหรับ enhanced version
@@ -1469,7 +1469,7 @@ def get_complaints_enhanced(
                     "complaint_subtype_id": None,
                     "complaint_type_id": None,
                     "complaint_type_name": "",
-                    "is_master": True
+                    "is_master": (complaint.parent_complaint_id is None)
                 })
                 result.append(basic_dict)
             except Exception as e2:
