@@ -24,6 +24,7 @@ import {
   GetAllSelectComplaintTypes,
   UsersSearchByRole,
   getSubComplaintTypeById,
+  GetAllComplaintChannels,
 } from "@pages/api/allselect/allselect";
 import { ControlledDateThaiPickerService } from "@services/DateThaiPickerService/DateThaiPickerService";
 import { getDepartments } from "@pages/api/department/department";
@@ -113,6 +114,8 @@ const SearchComplaints = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [showValidation, setShowValidation] = useState(false);
   const [complaintTypes, setComplaintTypes] = useState([]);
+  const [complaintChannels, setComplaintChannels] = useState([]); // ช่องทางเรื่องร้องเรียน
+  const [complaintChannelsLoading, setComplaintChannelsLoading] = useState(false);
   const [positions, setPositions] = useState([]);
 
   const [staffUsers, setStaffUsers] = useState([]);
@@ -269,6 +272,37 @@ const SearchComplaints = () => {
     fetchComplaintTypes();
   }, []);
 
+  // Fetch complaint channels (active only) - pattern แบบย่อ
+  useEffect(() => {
+    let mounted = true;
+    const fetchChannels = async () => {
+      try {
+        setComplaintChannelsLoading(true);
+        const res = await GetAllComplaintChannels();
+        if (!mounted) return;
+        if (res?.res_code === "0000") {
+          const items = Array.isArray(res?.res_data?.items)
+            ? res.res_data.items
+            : Array.isArray(res?.res_data)
+            ? res.res_data // fallback กรณี backend เก่ายังส่ง array ตรงๆ
+            : [];
+          setComplaintChannels(
+            items
+              .filter((c) => c?.is_active !== false)
+              .map((c) => ({ id: c.id, name: c.name }))
+          );
+        } else setComplaintChannels([]);
+      } catch (e) {
+        if (mounted) setComplaintChannels([]);
+        console.error("[complaintChannels] fetch error", e);
+      } finally {
+        if (mounted) setComplaintChannelsLoading(false);
+      }
+    };
+    fetchChannels();
+    return () => { mounted = false; };
+  }, []);
+
   // Append missing complaint_type_id (inactive) if not present so dropdown can show selected value
   useEffect(() => {
     const neededId = defaultData?.assignment_form?.complaint_type_id;
@@ -285,6 +319,55 @@ const SearchComplaints = () => {
       ];
     });
   }, [defaultData?.assignment_form?.complaint_type_id]);
+
+  // Append missing complaint_channel_id (inactive) if not present so dropdown can show selected value
+  useEffect(() => {
+    const channelId =
+      defaultData?.assignment_form?.complaint_channel_id ||
+      defaultData?.step3?.general?.complaint_channel_id;
+    if (!channelId) return;
+    setComplaintChannels((prev) => {
+      if (prev.some((ch) => ch.id === channelId)) return prev;
+      const channelName =
+        defaultData?.assignment_form?.complaint_channel_name ||
+        defaultData?.step3?.general?.complaint_channel_name ||
+        defaultData?.step3?.general?.complaintChannel ||
+        "ไม่ทราบช่องทาง";
+      return [
+        ...prev, // ไม่เติม suffix แล้ว เพราะ backend ให้ครบอยู่แล้ว
+        { id: channelId, name: channelName },
+      ];
+    });
+  }, [
+    defaultData?.assignment_form?.complaint_channel_id,
+    defaultData?.step3?.general?.complaint_channel_id,
+  ]);
+
+  // Prefill complaintChannel select value
+  useEffect(() => {
+    if (!defaultData) return;
+    const currentVal = step3Methods.getValues("complaintChannel");
+    if (currentVal) return; // already set by user or earlier effect
+    const prefillId =
+      defaultData?.assignment_form?.complaint_channel_id ||
+      defaultData?.step3?.general?.complaint_channel_id;
+    if (!prefillId) return;
+    if (!complaintChannels.some((c) => c.id === prefillId)) {
+      const channelName =
+        defaultData?.assignment_form?.complaint_channel_name ||
+        defaultData?.step3?.general?.complaint_channel_name ||
+        defaultData?.step3?.general?.complaintChannel ||
+        "ไม่ทราบช่องทาง";
+      setComplaintChannels((prev) => [
+        ...prev,
+        { id: prefillId, name: channelName },
+      ]);
+    }
+    step3Methods.setValue("complaintChannel", prefillId, {
+      shouldDirty: false,
+      shouldValidate: true,
+    });
+  }, [defaultData, complaintChannels, step3Methods]);
 
   // Fetch staff users
   useEffect(() => {
@@ -519,7 +602,8 @@ const SearchComplaints = () => {
           step3Data.additionalReferenceDate2 ||
           "",
         subject: assignmentForm.subject || step3Data.subject || "",
-        complaintChannel: "เว็บไซต์ศูนย์เรื่องร้องทุกข์",
+  // complaint channel: จะพยายาม map ภายหลังหากมี assignment_form (TODO future). ตอนนี้ให้ค่าว่างเพื่อให้เลือกได้
+  complaintChannel: step3Data.complaintChannel || assignmentForm.complaint_channel_id || "",
       };
 
       if (assignmentForm.complaint_filing_type) {
@@ -1292,12 +1376,21 @@ const SearchComplaints = () => {
                       </div>
                       <div className={styles.fieldGroup}>
                         <label>ช่องทางเรื่องร้องเรียน</label>
-                        <input
-                          type="text"
-                          defaultValue="เว็บไซต์ศูนย์เรื่องร้องทุกข์"
+                        <select
                           {...step3Methods.register("complaintChannel")}
-                          disabled
-                        />
+                          disabled={complaintChannelsLoading}
+                        >
+                          <option value="">
+                            {complaintChannelsLoading
+                              ? "กำลังโหลด..."
+                              : "เลือกช่องทาง (ถ้ามี)"}
+                          </option>
+                          {complaintChannels.map((ch) => (
+                            <option key={ch.id} value={ch.id}>
+                              {ch.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
