@@ -72,6 +72,44 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
   const respondent =
     data?.respondent || data?.step2?.general?.[data?.step2?.general?.activeType || "individual"] || {};
   const complaint = data?.complaint || data?.step3?.general || {};
+
+  const resolvedComplaintTypeId = (
+    complaint.complaintTypeId ||
+    data?.assignment_form?.complaint_type_id ||
+    data?.assignment_form?.complaint_type ||
+    ""
+  );
+  const resolvedComplaintTypeName = (
+    complaint.complaintTypeName ||
+    complaint.complaintType ||
+    data?.assignment_form?.complaint_type_name ||
+    data?.assignment_form?.complaint_type ||
+    ""
+  );
+  const resolvedComplaintTypeDisplay = resolvedComplaintTypeName || resolvedComplaintTypeId || "";
+
+  const resolvedComplaintSubtypeId = (
+    complaint.complaintSubtypeId ||
+    data?.assignment_form?.complaint_subtype_id ||
+    data?.assignment_form?.complaint_subtype ||
+    ""
+  );
+  const resolvedComplaintSubtypeName = (
+    complaint.complaintSubtypeName ||
+    complaint.complaintSubtype ||
+    complaint.complaint_subtype ||
+    complaint.complaint_subtype_name ||
+    complaint.complaint_subtype_data?.name ||
+    data?.assignment_form?.complaint_subtype_name ||
+    data?.assignment_form?.complaint_subtype ||
+    ""
+  );
+  const resolvedComplaintSubtypeDisplay = resolvedComplaintSubtypeName || resolvedComplaintSubtypeId || "";
+
+  if (typeof window !== 'undefined') {
+    console.debug('Resolved complaint type:', { id: resolvedComplaintTypeId, name: resolvedComplaintTypeName });
+    console.debug('Resolved complaint subtype:', { id: resolvedComplaintSubtypeId, name: resolvedComplaintSubtypeName });
+  }
   // รวมไฟล์แนบจากหลายรูปแบบเข้าเป็นโครงสร้างเดียว
   const rawFiles =
     data?.files || complaint?.attachment || data?.step3?.general?.attachment || [];
@@ -176,12 +214,12 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
               <InfoItem label="วันที่ร้องทุกข์" value={formatThaiDate()} />
               <InfoItem
                 label="ประเภทเรื่องร้องทุกข์"
-                value={
-                  complaint.complaintType ||
-                  data?.assignment_form?.complaint_type_name ||
-                  data?.assignment_form?.complaint_type ||
-                  "-"
+                value={resolvedComplaintTypeDisplay || "-"
                 }
+              />
+              <InfoItem
+                label="ประเภทย่อยเรื่องร้องเรียน"
+                value={resolvedComplaintSubtypeDisplay || "-"}
               />
               <InfoItem label="เรื่อง" value={complaint.subject} />
               <InfoItem

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import ComplaintSummaryService from "@services/ComplaintSummaryService/ComplaintSummaryService";
 import { GetComplaintByID } from "@pages/api/complaint/complaint";
@@ -196,7 +196,12 @@ function mapComplaintData(raw) {
     },
     complaint: {
       id: raw.id || raw.assignment_form?.id || "",
-      complaintType: raw.step3?.general?.complaintType || raw.assignment_form?.complaint_type || "",
+      complaintType: raw.step3?.general?.complaintType || raw.assignment_form?.complaint_type_name || raw.assignment_form?.complaint_type || "",
+      complaintTypeId: raw.step3?.general?.complaintTypeId || raw.assignment_form?.complaint_type_id || raw.assignment_form?.complaint_type || "",
+      complaintTypeName: raw.step3?.general?.complaintTypeName || raw.assignment_form?.complaint_type_name || "",
+      complaintSubtype: raw.step3?.general?.complaintSubtype || raw.step3?.general?.complaint_subtype || raw.step3?.general?.complaint_subtype_name || raw.step3?.general?.complaint_subtype_data?.name || raw.assignment_form?.complaint_subtype_name || raw.assignment_form?.complaint_subtype || "",
+      complaintSubtypeId: raw.step3?.general?.complaintSubtypeId || raw.assignment_form?.complaint_subtype_id || raw.assignment_form?.complaint_subtype || "",
+      complaintSubtypeName: raw.step3?.general?.complaint_subtype_name || raw.step3?.general?.complaint_subtype_data?.name || raw.assignment_form?.complaint_subtype_name || "",
       subject: raw.step3?.general?.subject || raw.assignment_form?.subject || "",
       channel: raw.step3?.general?.complaintChannelName || raw.assignment_form?.complaint_channel_name || "",
       incidentDate: raw.step3?.general?.incidentDate || raw.step4?.general?.incident_date || "",
@@ -225,6 +230,11 @@ const ComplaintDetail = () => {
   const { id } = router.query;  // ดึง id จาก URL query
   const [data, setData] = useState(mockupData);  // ค่าเริ่มต้น
   const [loading, setLoading] = useState(false);
+  const lastFetchRef = useRef(0);
+  const initialRouteRef = useRef(true);
+  const lastFocusRef = useRef(0);
+  const MIN_FETCH_INTERVAL = 5000; // 5s throttle
+  const FOCUS_REFETCH_INTERVAL = 30000; // 30s between focus refetch
 
   // Debug state changes
   useEffect(() => {
@@ -240,39 +250,24 @@ const ComplaintDetail = () => {
     router.push(`/admin/edit/website-complaints/${id}`);  // ส่งไปหน้าแก้ไข
   };
 
-  const fetchData = async () => {
-    if (!id) {
-      console.log("No ID provided, skipping fetch");
-      return;
+  const fetchData = async ({ force = false, reason = '' } = {}) => {
+    if (!id) return;
+    const now = Date.now();
+    if (!force) {
+      if (loading) return; // prevent overlap
+      if (now - lastFetchRef.current < MIN_FETCH_INTERVAL) return; // throttle
     }
-    
-    console.log("=== FETCHING COMPLAINT DATA ===");
-    console.log("Complaint ID:", id);
-    console.log("Current timestamp:", new Date().toISOString());
-    
+    lastFetchRef.current = now;
+    console.log(`=== FETCHING COMPLAINT DATA (${force ? 'force' : 'throttled'}) reason:${reason} ===`);
     setLoading(true);
     try {
-      // เพิ่ม timestamp เพื่อป้องกัน cache
-      const res = await GetComplaintByID(id + '?t=' + Date.now()); 
-      console.log("API Response:", res);
-      console.log("API Response Data:", res?.res_data);
-      
+      const res = await GetComplaintByID(id); // remove cache-busting param here
       if (!res?.res_data) {
         console.error("No res_data in response!");
         return;
       }
-      
-      const mappedData = mapComplaintData(res?.res_data);
-      console.log("Final mapped data being set to state:", mappedData);
-      
+      const mappedData = mapComplaintData(res.res_data);
       setData(mappedData);
-      
-      // Force re-render โดยการ set state ใหม่
-      setTimeout(() => {
-        console.log("Force checking state after 100ms:", mappedData);
-        setData(prev => ({ ...mappedData }));
-      }, 100);
-      
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -280,51 +275,55 @@ const ComplaintDetail = () => {
     }
   };
 
-  // Refetch ข้อมูลเมื่อ id เปลี่ยน
+  // initial/id change
   useEffect(() => {
-    fetchData();
+    fetchData({ force: true, reason: 'id-change-initial' });
   }, [id]);
 
-  // Refetch ข้อมูลเมื่อกลับมาจากหน้าอื่น (router focus)
+  // route/focus/edit flag listeners
   useEffect(() => {
     const handleRouteChange = () => {
-      // เมื่อ route เปลี่ยนกลับมาหน้านี้ ให้ refetch ข้อมูล
+      if (initialRouteRef.current) {
+        initialRouteRef.current = false; // skip first route completion
+        return;
+      }
       if (router.asPath.includes(`/admin/search-complaints/${id}`) && id) {
-        console.log("Route changed back to complaint detail, refetching data...");
-        fetchData();
+        fetchData({ force: true, reason: 'route-return' });
       }
     };
 
     const handleFocus = () => {
-      // เมื่อ window กลับมา focus (เช่น กลับจาก tab อื่น)
-      if (id) {
-        console.log("Window focused, refetching data...");
-        fetchData();
+      const now = Date.now();
+      if (now - lastFocusRef.current > FOCUS_REFETCH_INTERVAL) {
+        lastFocusRef.current = now;
+        fetchData({ force: false, reason: 'window-focus' });
       }
     };
 
-    // ตรวจสอบ localStorage เพื่อดูว่ามีการแก้ไขหรือไม่
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        handleFocus();
+      }
+    };
+
     const checkForUpdates = () => {
       if (wasComplaintRecentlyEdited(id)) {
-        console.log("Complaint was recently edited, refetching data...");
-        fetchData();
-        clearComplaintEditFlag(id); // ลบ flag หลังจาก refetch
+        console.log('Detected recent edit flag; refetching');
+        fetchData({ force: true, reason: 'edit-flag' });
+        clearComplaintEditFlag(id);
       }
     };
 
-    const interval = setInterval(checkForUpdates, 1000); // ตรวจสอบทุกวินาที
+    const interval = setInterval(checkForUpdates, 8000); // slower polling
 
     router.events.on('routeChangeComplete', handleRouteChange);
     window.addEventListener('focus', handleFocus);
-    window.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        checkForUpdates();
-      }
-    });
+    window.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       router.events.off('routeChangeComplete', handleRouteChange);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('visibilitychange', handleVisibility);
       clearInterval(interval);
     };
   }, [router, id]);
@@ -351,7 +350,7 @@ const ComplaintDetail = () => {
   return <ComplaintSummaryService 
     data={data} 
     handleSubmit={handleSubmit} 
-    onRefresh={fetchData}
+    onRefresh={() => fetchData({ force: true, reason: 'manual-refresh' })}
   />;
 };
 
