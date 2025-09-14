@@ -93,6 +93,8 @@ const SearchComplaints = () => {
   const [loadingSubTypes, setLoadingSubTypes] = useState(false);
   const [loadingChannels, setLoadingChannels] = useState(false); // เพิ่ม loading state สำหรับ channels
   const [selectedComplaintType, setSelectedComplaintType] = useState(""); // complaintType id currently selected
+  // เก็บค่า complaint type เดิม (ตอนโหลดครั้งแรก) เพื่อเช็คว่าผู้ใช้เปลี่ยนหรือไม่
+  const initialComplaintTypeIdRef = useRef(null);
 
   // ---------------- Helper: extract confirm_assigned_date (officerReceivedDate) with fallbacks ----------------
   const extractOfficerReceivedDate = useCallback((complaintObj, assignmentObj) => {
@@ -725,6 +727,10 @@ useEffect(() => {
     if (assignmentForm.complaint_type_id) {
       fetchSubComplaintTypes(assignmentForm.complaint_type_id);
       setSelectedComplaintType(assignmentForm.complaint_type_id);
+      // บันทึกค่า initial แค่ครั้งแรกเท่านั้น (ไม่ override เมื่อ user เปลี่ยน)
+      if (initialComplaintTypeIdRef.current === null) {
+        initialComplaintTypeIdRef.current = assignmentForm.complaint_type_id;
+      }
     }
   }
 }, [defaultData, complaintTypes, complaintChannels]);
@@ -734,6 +740,19 @@ useEffect(() => {
 useEffect(() => {
   if (!subComplaintTypes.length) return;
 
+  // ถ้าผู้ใช้เปลี่ยนประเภทเรื่องร้องเรียน (selected != initial) ให้คง placeholder = "" เสมอ
+  const initialTypeId = initialComplaintTypeIdRef.current;
+  if (
+    selectedComplaintType &&
+    initialTypeId &&
+    String(selectedComplaintType) !== String(initialTypeId)
+  ) {
+    // เคลียร์ค่า (หาก fetch ใหม่แล้ว) เพื่อให้ dropdown แสดง "เลือกประเภทเรื่องย่อย"
+    step3Methods.setValue("complaintSubType", "", { shouldDirty: true });
+    return;
+  }
+
+  // กรณีโหลดครั้งแรก (หรือยังไม่เปลี่ยน main type) -> restore ค่าเดิมถ้ามี
   const subTypeId =
     defaultData?.step3?.general?.complaint_subtype_id ||
     defaultData?.assignment_form?.complaint_subtype_id;
@@ -742,14 +761,17 @@ useEffect(() => {
     defaultData?.assignment_form?.complaint_subtype_name;
 
   if (subTypeId) {
-    step3Methods.setValue("complaintSubType", subTypeId);
+    step3Methods.setValue("complaintSubType", subTypeId, { shouldDirty: false });
   } else if (subTypeName) {
     const matched = subComplaintTypes.find((s) => s.name === subTypeName);
     if (matched) {
-      step3Methods.setValue("complaintSubType", matched.id);
+      step3Methods.setValue("complaintSubType", matched.id, { shouldDirty: false });
     }
+  } else {
+    // ไม่มีค่าเดิม -> คง placeholder
+    step3Methods.setValue("complaintSubType", "", { shouldDirty: false });
   }
-}, [subComplaintTypes, defaultData]);
+}, [subComplaintTypes, defaultData, selectedComplaintType, step3Methods]);
 
 
   const fetchComplaints = async (id) => {
