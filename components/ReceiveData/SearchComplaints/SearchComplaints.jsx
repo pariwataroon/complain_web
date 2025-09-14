@@ -136,6 +136,24 @@ const SearchComplaints = () => {
 
           const isAssigned = getIsAssigned(item);
 
+          // ตรวจสอบสถานะ is_master
+          const isMasterCandidates = [
+            item?.is_master,
+            item?.isMaster,
+            item?.body?.is_master,
+            item?.body?.isMaster,
+            item?.step4?.general?.is_master,
+            item?.step3?.general?.is_master,
+          ];
+          let isMaster = false;
+          for (const c of isMasterCandidates) {
+            if (c === true || c === false) { isMaster = c; break; }
+            if (c === 1 || c === "1") { isMaster = true; break; }
+            if (c === 0 || c === "0") { isMaster = false; break; }
+          }
+
+          const textColor = isMaster ? "#1565c0" : "#94ccf9ff";
+
           const docGovRaw = item?.reference_number4 ?? "-";
           const subjectRaw = item?.subject ?? "-";
 
@@ -168,6 +186,7 @@ const SearchComplaints = () => {
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
+                  color: textColor,
                 }}
               >
                 {subjectRaw}
@@ -177,7 +196,12 @@ const SearchComplaints = () => {
 
           return {
             id: item?.id ?? "-",
-            name: item?.complainant_name ?? "-",
+            name: (
+              <span style={{ color: textColor }}>
+                {item?.complainant_name ?? "-"}
+              </span>
+            ),
+            nameRaw: item?.complainant_name ?? "-",
             citizenId: item?.citizen_id ?? "-",
             subject: subjectWithDot,
             subjectRaw,
@@ -189,6 +213,7 @@ const SearchComplaints = () => {
             agency: item?.incident_location ?? "-",
             status: status ?? "-",
             is_assigned: isAssigned,
+            is_master: isMaster,
           };
         });
 
@@ -217,7 +242,7 @@ const SearchComplaints = () => {
     const { claimantName, citizenId, subject, docGov, agency, docKk, docSr, docStp } = filters;
 
     const result = allComplaints.filter((item) => {
-      if (claimantName && !safeIncludes(item.name, claimantName)) return false;
+      if (claimantName && !safeIncludes(item.nameRaw, claimantName)) return false;
       if (citizenId && !safeIncludes(item.citizenId, citizenId)) return false;
       if (subject && !safeIncludes(item.subjectRaw, subject)) return false;
       if (docGov && !safeIncludes(item.docGovRaw, docGov)) return false;
