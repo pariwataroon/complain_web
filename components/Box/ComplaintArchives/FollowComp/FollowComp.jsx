@@ -39,6 +39,8 @@ import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import DownloadIcon from "@mui/icons-material/Download";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import axiosInstance from "@pages/api/axiosInstance";
 
 // 1. Define English-status constants
 const STATUS = {
@@ -484,6 +486,15 @@ const addButtonHandlers = {
     }),
 };
 
+// Mapping section key -> delete endpoint path
+const DELETE_ENDPOINT_BY_SECTION = {
+  FORWARDED: (id) => `/outgoing-reports/${id}`,
+  INITIAL_NOTIFY: (id) => `/outgoing-reports2/${id}`,
+  REQUEST_UPDATE: (id) => `/outgoing-reports3/${id}`,
+  FINAL_NOTIFY: (id) => `/outgoing-reports4/${id}`,
+  AGENCY_REPORT: (id) => `/outgoing-reports5/${id}`,
+};
+
 const TableSection = ({
   section,
   headers,
@@ -494,6 +505,8 @@ const TableSection = ({
   onOpenAttachments,
   handleManage,
   meta,
+  onDelete,
+  deletingMap = {},
 }) => (
   <Box
     sx={{
@@ -649,6 +662,24 @@ const TableSection = ({
                               }}
                             />
                           </IconButton>
+                          {DELETE_ENDPOINT_BY_SECTION[section.key] && (
+                            <IconButton
+                              size="small"
+                              onClick={() => onDelete && onDelete(section.key, rowObj.id)}
+                              sx={{
+                                color: "#d32f2f",
+                                ml: 0.5,
+                                "&:hover": { backgroundColor: "rgba(211,47,47,0.08)" },
+                              }}
+                              disabled={!!deletingMap[rowObj.id]}
+                            >
+                              {deletingMap[rowObj.id] ? (
+                                <CircularProgress size={22} sx={{ color: "#d32f2f" }} />
+                              ) : (
+                                <DeleteOutlineIcon sx={{ fontSize: 28 }} />
+                              )}
+                            </IconButton>
+                          )}
                         </TableCell>
                       );
                     } else {
@@ -846,6 +877,8 @@ const FollowComp = () => {
   const [previewType, setPreviewType] = useState("image"); // 'image' | 'pdf' | 'gdoc' | 'text' | 'audio' | 'video'
   const [previewZoom, setPreviewZoom] = useState(1);
   const [pdfLoadError, setPdfLoadError] = useState(false);
+  const [deleting, setDeleting] = useState({}); // {id: true}
+  const [confirmDelete, setConfirmDelete] = useState(null); // { sectionKey, id }
 
   const getFileExt = (filename = "") => filename.split(".").pop()?.toLowerCase() || "";
   const getFileIcon = (ext) => {
@@ -1408,6 +1441,38 @@ const agencyReportRows = outgoingType5.map((item) => ({
     createdAt: documentData?.detail?.created_at || "",
   };
 
+  // เรียกเมื่อกดปุ่มลบ (ยังไม่ลบจริง แค่เปิด dialog)
+  const handleRequestDelete = (sectionKey, delId) => {
+    if (!sectionKey || !delId) return;
+    setConfirmDelete({ sectionKey, id: delId });
+  };
+
+  // ลบจริงเมื่อกดยืนยันใน dialog
+  const executeDelete = async () => {
+    if (!confirmDelete) return;
+    const { sectionKey, id: delId } = confirmDelete;
+    const build = DELETE_ENDPOINT_BY_SECTION[sectionKey];
+    if (!build) return;
+    setDeleting((p) => ({ ...p, [delId]: true }));
+    try {
+      const endpoint = build(delId);
+      await axiosInstance.delete(endpoint);
+      await fetchDocumentData(complaintMeta.complaintId);
+      setConfirmDelete(null);
+    } catch (e) {
+      console.error("Delete failed", e?.response?.data || e.message);
+      alert(e?.response?.data?.res_message || "ลบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setDeleting((p) => {
+        const cp = { ...p };
+        delete cp[delId];
+        return cp;
+      });
+    }
+  };
+
+  const getSectionTitle = (key) => sectionConfigs.find((s) => s.key === key)?.title || key;
+
   return (
     <Box>
       <BreadcrumbsService items={breadcrumbItems} />
@@ -1707,6 +1772,8 @@ const agencyReportRows = outgoingType5.map((item) => ({
             onOpenAttachments={openAttachments}
             handleManage={handleManage}
             meta={complaintMeta}
+            onDelete={(sectionKey, rowId) => handleRequestDelete(sectionKey, rowId)}
+            deletingMap={deleting}
           />
           {/* แจ้งผู้ร้องเรียนส่วนราชการที่ส่งเรื่องมากระทรวงทราบเบื้องต้น */}
           <TableSection
@@ -1729,6 +1796,8 @@ const agencyReportRows = outgoingType5.map((item) => ({
             onOpenAttachments={openAttachments}
             handleManage={handleManage}
             meta={complaintMeta}
+            onDelete={(sectionKey, rowId) => handleRequestDelete(sectionKey, rowId)}
+            deletingMap={deleting}
           />
           {/* ขอทราบผลการพิจารณา / ผลความคืบหน้า */}
           <TableSection
@@ -1752,6 +1821,8 @@ const agencyReportRows = outgoingType5.map((item) => ({
             onOpenAttachments={openAttachments}
             handleManage={handleManage}
             meta={complaintMeta}
+            onDelete={(sectionKey, rowId) => handleRequestDelete(sectionKey, rowId)}
+            deletingMap={deleting}
           />
           {/* หนังสือแจ้งผลพิจารณาหน่วยงาน */}
           <TableSection
@@ -1773,6 +1844,8 @@ const agencyReportRows = outgoingType5.map((item) => ({
             onOpenAttachments={openAttachments}
             handleManage={handleManage}
             meta={complaintMeta}
+            onDelete={(sectionKey, rowId) => handleRequestDelete(sectionKey, rowId)}
+            deletingMap={deleting}
           />
           {/* แจ้งผลการให้ผู้เกี่ยวข้องทราบ */}
           <TableSection
@@ -1796,6 +1869,8 @@ const agencyReportRows = outgoingType5.map((item) => ({
             onOpenAttachments={openAttachments}
             handleManage={handleManage}
             meta={complaintMeta}
+            onDelete={(sectionKey, rowId) => handleRequestDelete(sectionKey, rowId)}
+            deletingMap={deleting}
           />
           {/* แสดงสถานะโหลดตำแหน่ง (optional UX สามารถถอดออกได้) */}
           {positionLoading && (
@@ -2089,6 +2164,46 @@ const agencyReportRows = outgoingType5.map((item) => ({
             )}
           </Box>
         </Box>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={!!confirmDelete}
+        onClose={() => !Object.keys(deleting).some(k => deleting[k]) && setConfirmDelete(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 0, fontWeight: 'bold' }}>ยืนยันการลบ</DialogTitle>
+        <DialogContent dividers>
+          <Typography sx={{ mb: 1 }}>
+            คุณต้องการลบข้อมูลนี้หรือไม่?
+          </Typography>
+          {confirmDelete && (
+            <Typography variant="body2" color="text.secondary">
+              ประเภท: {getSectionTitle(confirmDelete.sectionKey)}<br />
+              ID: {confirmDelete.id}
+            </Typography>
+          )}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3 }}>
+            <Button
+              variant="outlined"
+              color="inherit"
+              onClick={() => setConfirmDelete(null)}
+              disabled={confirmDelete && deleting[confirmDelete.id]}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={executeDelete}
+              disabled={!(confirmDelete && !deleting[confirmDelete.id])}
+              startIcon={confirmDelete && deleting[confirmDelete.id] ? <CircularProgress size={18} color="inherit" /> : null}
+            >
+              {confirmDelete && deleting[confirmDelete.id] ? 'กำลังลบ...' : 'ลบ'}
+            </Button>
+          </Box>
+        </DialogContent>
       </Dialog>
     </Box>
   );
