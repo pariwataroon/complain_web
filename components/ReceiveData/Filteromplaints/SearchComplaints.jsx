@@ -269,6 +269,23 @@ const SearchComplaints = () => {
     fetchComplaintTypes();
   }, []);
 
+  // Append missing complaint_type_id (inactive) if not present so dropdown can show selected value
+  useEffect(() => {
+    const neededId = defaultData?.assignment_form?.complaint_type_id;
+    if (!neededId) return;
+    setComplaintTypes((prev) => {
+      if (prev.some((t) => String(t.value) === String(neededId))) return prev;
+      const label =
+        defaultData?.assignment_form?.complaint_type_name ||
+        defaultData?.step3?.general?.complaint_type_data?.name ||
+        "(ไม่พบชื่อ)";
+      return [
+        ...prev,
+        { value: neededId, label: label + " (นอกชุดปัจจุบัน)" },
+      ];
+    });
+  }, [defaultData?.assignment_form?.complaint_type_id]);
+
   // Fetch staff users
   useEffect(() => {
     const fetchStaffUsers = async () => {
@@ -417,18 +434,14 @@ const SearchComplaints = () => {
       // === เพิ่ม logic ตรงนี้เพื่อหา complaintTypeId จาก label ===
       let complaintTypeId = "";
 
-      if (step3Data.complaintType && complaintTypes.length > 0) {
-        // ถ้า complaintType เป็น label ให้หา id
+      // Priority: assignment_form id -> map legacy label -> blank
+      if (assignmentForm.complaint_type_id) {
+        complaintTypeId = assignmentForm.complaint_type_id;
+      } else if (step3Data.complaintType && complaintTypes.length > 0) {
         const foundType = complaintTypes.find(
           (t) => t.label === step3Data.complaintType
         );
         complaintTypeId = foundType?.value || "";
-      } else if (assignmentForm.complaint_type_id) {
-        complaintTypeId = assignmentForm.complaint_type_id;
-      } else {
-        // console.log(
-        //   "No complaintType available in step3Data or assignmentForm"
-        // );
       }
 
       // === END เพิ่ม logic ===

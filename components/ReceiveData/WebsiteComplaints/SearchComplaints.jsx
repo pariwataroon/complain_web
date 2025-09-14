@@ -224,6 +224,7 @@ useEffect(() => {
       step3Methods.reset({
         ...merged?.step3?.general,
         complaintType: complaintTypeId ? String(complaintTypeId) : "",
+        complaintTypeId: complaintTypeId ? String(complaintTypeId) : "",
         complaintSubType:
           assignment.complaint_subtype_id ||
           merged?.step3?.general?.complaint_subtype_id ||
@@ -661,6 +662,8 @@ useEffect(() => {
       // ประเภท
       complaintType:
         step3General.complaint_type_id || assignmentForm.complaint_type_id || "",
+      complaintTypeId:
+        step3General.complaint_type_id || assignmentForm.complaint_type_id || "",
       complaintSubType:
         step3General.complaint_subtype_id || assignmentForm.complaint_subtype_id || "",
       subject: step3General.subject || assignmentForm.subject || "",
@@ -734,6 +737,20 @@ useEffect(() => {
     }
   }
 }, [defaultData, complaintTypes, complaintChannels]);
+
+// Fallback sync: if complaintTypeId still empty but complaintType has value, synchronize
+useEffect(() => {
+  const ct = step3Methods.getValues("complaintType");
+  const ctid = step3Methods.getValues("complaintTypeId");
+  if (ct && !ctid) {
+    step3Methods.setValue("complaintTypeId", ct, { shouldDirty: false });
+    // also update selectedComplaintType to drive sub-type load
+    if (!selectedComplaintType) {
+      setSelectedComplaintType(ct);
+    }
+    console.debug("[fallback-sync] complaintTypeId populated from complaintType", ct);
+  }
+}, [defaultData, complaintTypes]);
 
 
 // effect ที่สอง: set ค่า complaintSubType หลัง subComplaintTypes โหลด
@@ -852,7 +869,19 @@ useEffect(() => {
   generalMethods.reset(defaultData?.step1?.general?.general || {});
   delegateMethods.reset(defaultData?.step1?.general?.delegate || {});
   step2Methods.reset(defaultData?.step2?.general?.individual || {});
-  step3Methods.reset(defaultData?.step3?.general || {});
+  const step3General = defaultData?.step3?.general || {};
+  const assignmentForm = defaultData?.assignment_form || {};
+  const typeId =
+    step3General.complaint_type_id || assignmentForm.complaint_type_id || "";
+  step3Methods.reset({
+    ...step3General,
+    complaintType: typeId ? String(typeId) : "",
+    complaintTypeId: typeId ? String(typeId) : "",
+    complaintSubType:
+      step3General.complaint_subtype_id || assignmentForm.complaint_subtype_id || "",
+    complaintChannel:
+      step3General.complaint_channel_id || assignmentForm.complaint_channel_id || "",
+  });
   step4Methods.reset(defaultData?.step4?.general || {});
 };
 
