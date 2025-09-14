@@ -251,8 +251,11 @@ useEffect(() => {
           ? new Date(assignment.reference_date3)
           : "",
         referenceNumber4: assignment.reference_number4 || merged?.complaint_number || "",
-        referenceDate4: assignment.reference_date4
-          ? new Date(assignment.reference_date4)
+        // referenceDate4: assignment.reference_date4
+        //   ? new Date(assignment.reference_date4)
+        //   : "",
+        referenceDate4: assignment.created_at
+          ? new Date(assignment.created_at)
           : "",
         documentNumber: assignment.document_number || "",
         documentDate: assignment.document_date
