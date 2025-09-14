@@ -2172,35 +2172,104 @@ const agencyReportRows = outgoingType5.map((item) => ({
         onClose={() => !Object.keys(deleting).some(k => deleting[k]) && setConfirmDelete(null)}
         maxWidth="xs"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            background: 'linear-gradient(135deg,#fafbfd,#f4f8fb)',
+            boxShadow: '0 8px 28px rgba(0,0,0,0.18)',
+            overflow: 'hidden'
+          }
+        }}
       >
-        <DialogTitle sx={{ pb: 0, fontWeight: 'bold' }}>ยืนยันการลบ</DialogTitle>
-        <DialogContent dividers>
-          <Typography sx={{ mb: 1 }}>
-            คุณต้องการลบข้อมูลนี้หรือไม่?
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.2,
+            fontWeight: 'bold',
+            fontSize: 18,
+            pb: 1,
+            color: '#b71c1c'
+          }}
+        >
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'rgba(244, 67, 54, 0.1)',
+              color: '#d32f2f'
+            }}
+          >
+            <DeleteOutlineIcon />
+          </Box>
+          ยืนยันการลบ
+        </DialogTitle>
+        <DialogContent
+          dividers
+          sx={{
+            pt: 2,
+            pb: 2.5,
+            borderColor: '#e3e8ee',
+            background: 'transparent'
+          }}
+        >
+          <Typography sx={{ mb: 1.5, fontSize: 15, color: '#37474f' }}>
+            คุณต้องการลบข้อมูลนี้หรือไม่? การลบจะไม่สามารถย้อนกลับได้
           </Typography>
           {confirmDelete && (
-            <Typography variant="body2" color="text.secondary">
-              ประเภท: {getSectionTitle(confirmDelete.sectionKey)}<br />
-              ID: {confirmDelete.id}
-            </Typography>
+            <Box
+              sx={{
+                p: 1.2,
+                borderRadius: 2,
+                background: '#fff',
+                border: '1px solid #f5c2c7',
+                mb: 2,
+                fontSize: 13.5,
+                color: '#5d4037'
+              }}
+            >
+              <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
+                <b>ประเภท:</b> {getSectionTitle(confirmDelete.sectionKey)}<br />
+                <b>ID:</b> {confirmDelete.id}
+              </Typography>
+            </Box>
           )}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mt: 1 }}>
             <Button
               variant="outlined"
-              color="inherit"
               onClick={() => setConfirmDelete(null)}
               disabled={confirmDelete && deleting[confirmDelete.id]}
+              sx={{
+                textTransform: 'none',
+                borderRadius: 2,
+                px: 2.5,
+                borderColor: '#90a4ae',
+                color: '#455a64',
+                '&:hover': { borderColor: '#607d8b', background: 'rgba(96,125,139,0.06)' }
+              }}
             >
               ยกเลิก
             </Button>
             <Button
               variant="contained"
-              color="error"
               onClick={executeDelete}
               disabled={!(confirmDelete && !deleting[confirmDelete.id])}
-              startIcon={confirmDelete && deleting[confirmDelete.id] ? <CircularProgress size={18} color="inherit" /> : null}
+              startIcon={confirmDelete && deleting[confirmDelete.id] ? <CircularProgress size={18} color="inherit" /> : <DeleteOutlineIcon />}
+              sx={{
+                textTransform: 'none',
+                borderRadius: 2,
+                px: 2.5,
+                fontWeight: 600,
+                bgcolor: '#d32f2f',
+                boxShadow: '0 2px 6px rgba(211,47,47,0.4)',
+                '&:hover': { bgcolor: '#c62828' }
+              }}
             >
-              {confirmDelete && deleting[confirmDelete.id] ? 'กำลังลบ...' : 'ลบ'}
+              {confirmDelete && deleting[confirmDelete.id] ? 'กำลังลบ...' : 'ลบข้อมูล'}
             </Button>
           </Box>
         </DialogContent>
