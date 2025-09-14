@@ -357,7 +357,7 @@ const sectionConfigs = [
   {
     key: "AGENCY_REPORT",
     status: STATUS.AGENCY_REPORT,
-    title: "หนังสือแจ้งผลพิจารณาจากหน่วยงาน",
+    title: "หนังสือแจ้งผลการพิจารณาจากหน่วยงาน",
     headers: [
       "ลำดับ",
       "เลขที่หนังสือ",
@@ -1086,7 +1086,7 @@ const FollowComp = () => {
         }
         case "AGENCY_REPORT": {
           files = rowRaw?.attachments || findById(out?.type5, rowDisplay?.id)?.attachments || [];
-          title = `เอกสารแนบ - หนังสือแจ้งผลพิจารณาจากหน่วยงาน`;
+          title = `เอกสารแนบ - หนังสือแจ้งผลการพิจารณาจากหน่วยงาน`;
           break;
         }
         case "FINAL_NOTIFY": {
