@@ -15,6 +15,18 @@ import {
 } from "@pages/api/outgoinreports/outgoinreports";
 import axiosInstance from "@pages/api/axiosInstance";
 import { getDepartments } from "@pages/api/department/department";
+const levelLabelMap = {
+  1: "ปกติ",
+  2: "ลับ",
+  3: "ลับมาก",
+  4: "ลับที่สุด",
+};
+const levelUrgencyMap = {
+  1: "ปกติ",
+  2: "เร่งด่วน",
+  3: "เร่งด่วนมาก",
+  4: "เร่งด่วนที่สุด",
+};
 
 // หมายเหตุ: ยกเลิกการบังคับให้เลือกหน่วยงาน (department) ตามคำขอผู้ใช้
 // ถ้าผู้ใช้ไม่ได้เลือก จะไม่บล็อคการบันทึกอีกต่อไป
@@ -104,8 +116,8 @@ export const useRequestResultProgress = () => {
     subject: "",
     department: "",
     signer: "",
-    confidentiality: "",
-    urgency: "",
+    confidentiality: "ปกติ",
+    urgency: "ปกติ",
     attachment: "",
     note: "",
     position_id: "",
@@ -173,8 +185,8 @@ export const useRequestResultProgress = () => {
           subject: d.subject || prev.subject,
           department: d.department?.id || d.department_id || prev.department,
           signer: d.signature_authority_user?.id || d.signature_authority_user_id || prev.signer,
-          confidentiality: d.confidentiality_level ?? prev.confidentiality,
-          urgency: d.urgency_level ?? prev.urgency,
+          confidentiality: levelLabelMap[d.confidentiality_level] ?? d.confidentiality_level ?? prev.confidentiality,
+          urgency: levelUrgencyMap[d.urgency_level] ?? d.urgency_level ?? prev.urgency,
           attachment: Array.isArray(d.attachments) && d.attachments.length ? d.attachments.map(a => a.original_name || a.file_name || a.name).filter(Boolean).join(', ') : prev.attachment,
           note: d.remarks || prev.note,
           complaint_id: d.complaint_id || prev.complaint_id,
@@ -276,8 +288,8 @@ export const useRequestResultProgress = () => {
       subject: "",
       department: "",
       signer: "",
-      confidentiality: "",
-      urgency: "",
+      confidentiality: "ปกติ",
+      urgency: "ปกติ",
       attachment: "",
       note: "",
       position_id: "",

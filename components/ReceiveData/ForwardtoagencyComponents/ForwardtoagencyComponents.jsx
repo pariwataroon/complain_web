@@ -536,8 +536,8 @@ const ForwardtoagencyComponents = () => {
 
       const normalizeOptions = (data) =>
         data.map((opt, idx) => ({
-          value: idx + 1,
-          label: opt.label || opt.value || `ตัวเลือก ${idx + 1}`,
+          value: opt.label || opt.value || "", // ใช้ label เป็น value string
+          label: opt.label || opt.value || "",
         }));
 
       setConfidentialityOptions(normalizeOptions(confidentialityData));
@@ -546,17 +546,17 @@ const ForwardtoagencyComponents = () => {
     } catch (error) {
 
       setConfidentialityOptions([
-        { value: 1, label: "ปกติ" },
-        { value: 2, label: "ลับ" },
-        { value: 3, label: "ลับมาก" },
-        { value: 4, label: "ลับที่สุด" },
+        { value: "ปกติ", label: "ปกติ" },
+        { value: "ลับ", label: "ลับ" },
+        { value: "ลับมาก", label: "ลับมาก" },
+        { value: "ลับที่สุด", label: "ลับที่สุด" },
       ]);
 
       setUrgencyOptions([
-        { value: 1, label: "ปกติ" },
-        { value: 2, label: "เร่งด่วน" },
-        { value: 3, label: "เร่งด่วนมาก" },
-        { value: 4, label: "เร่งด่วนที่สุด" },
+        { value: "ปกติ", label: "ปกติ" },
+        { value: "เร่งด่วน", label: "เร่งด่วน" },
+        { value: "เร่งด่วนมาก", label: "เร่งด่วนมาก" },
+        { value: "เร่งด่วนที่สุด", label: "เร่งด่วนที่สุด" },
       ]);
     } finally {
       setOptionsLoading(false);

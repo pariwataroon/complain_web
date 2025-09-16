@@ -35,6 +35,18 @@ import {
   CircularProgress,
 } from "@mui/material";
 
+const levelLabelMap = {
+  1: "ปกติ",
+  2: "ลับ",
+  3: "ลับมาก",
+  4: "ลับที่สุด",
+};
+const levelUrgencyMap = {
+  1: "ปกติ",
+  2: "เร่งด่วน",
+  3: "เร่งด่วนมาก",
+  4: "เร่งด่วนที่สุด",
+};
 const RequestResultProgress = () => {
   const {
     form,
@@ -161,10 +173,15 @@ const RequestResultProgress = () => {
 
         // Confidentiality / Urgency
         if (d.confidentiality_level !== undefined && d.confidentiality_level !== null)
-          updateField('confidentiality', d.confidentiality_level);
+          updateField(
+            'confidentiality',
+            levelLabelMap[d.confidentiality_level] ?? d.confidentiality_level ?? "ปกติ"
+          );
         if (d.urgency_level !== undefined && d.urgency_level !== null)
-          updateField('urgency', d.urgency_level);
-
+          updateField(
+            'urgency',
+            levelUrgencyMap[d.urgency_level] ?? d.urgency_level ?? "ปกติ"
+          );
         // หมายเหตุ
         if (d.remarks) updateField('note', d.remarks);
 
@@ -233,10 +250,10 @@ const RequestResultProgress = () => {
   };
 
   const normalizeOptions = (labelsInOrder) =>
-    labelsInOrder.map((label, idx) => ({
-      value: idx + 1,
-      label,
-    }));
+  labelsInOrder.map((label) => ({
+    value: label,   // ให้ value เป็น string ตรงกับ label
+    label,
+  }));
 
   const handleSignerSelect = (userInfo) => {
     const nextId = userInfo?.id ?? userInfo?.value ?? "";

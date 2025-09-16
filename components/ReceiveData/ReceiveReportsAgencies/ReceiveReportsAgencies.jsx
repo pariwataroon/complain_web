@@ -6,7 +6,7 @@ import React, {
   useEffect,
 } from "react";
 import { useRouter } from "next/router";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
@@ -73,11 +73,17 @@ const URGENCY_OPTIONS = [
   { value: "เร่งด่วนที่สุด", label: "เร่งด่วนที่สุด" },
 ];
 
+function generateReceiveNumber() {
+  return "AUTO-" + Date.now();
+}
+function generateReceiveDate() {
+  return new Date().toISOString();
+}
+
 const ReceiveReportsAgencies = () => {
   const router = useRouter();
-  // Accept both the new preferred query param (outgoing_report5_id) and the legacy one (report5_id)
   const { id, complaint_id, complaint_number, outgoing_report5_id, report5_id } = router.query;
-  const outgoingReport5Id = outgoing_report5_id || report5_id || null; // unified id used everywhere below
+  const outgoingReport5Id = outgoing_report5_id || report5_id || null;
   const complaintId =
     (Array.isArray(id) ? id[0] : id) ||
     (Array.isArray(complaint_id) ? complaint_id[0] : complaint_id) ||
@@ -92,29 +98,24 @@ const ReceiveReportsAgencies = () => {
   const [departments, setDepartments] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [existingAttachments, setExistingAttachments] = useState([]);
+  const [existingData, setExistingData] = useState(null);
 
-  const {
-    control,
-    setValue,
-    formState: { errors },
-  } = useForm({
+  const { setValue } = useForm({
     defaultValues: {
       attachment: null,
       documentNo: "",
     },
   });
 
-  // เก็บไฟล์จริงที่เลือก
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
-  // Initial form state
   const initialFormState = useMemo(
     () => ({
       referenceNo: "",
       date: null,
       processStep: "",
-      confidentiality: "",
-      urgency: "",
+      confidentiality: "ปกติ",
+      urgency: "ปกติ",
       departmentId: "",
       agency: "",
       investigateGk: "",
@@ -123,7 +124,6 @@ const ReceiveReportsAgencies = () => {
       documentDate: null,
       receiveWorkDate: null,
       submitWorkDate: null,
-      // origin: "",
       subject: "",
       remarks: "",
     }),
@@ -148,7 +148,6 @@ const ReceiveReportsAgencies = () => {
     return { processStep, receiveWorkDate };
   };
 
-  // Parse function for investigateGk
   const parseInvestigateGk = useCallback((raw) => {
     if (!raw || typeof raw !== "string") return null;
     const match = raw.match(/MOF-(\d{8})-\d+/i);
@@ -168,14 +167,11 @@ const ReceiveReportsAgencies = () => {
     };
   }, []);
 
-  // Fetch departments
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
         const res = await getDepartmentsPrefix();
-        console.log("📌 getDepartmentsPrefix res:", res);
         const data = res?.res_data || res;
-
         if (Array.isArray(data)) {
           const mapped = data.map((dep) => ({
             value: dep.id,
@@ -186,35 +182,22 @@ const ReceiveReportsAgencies = () => {
           setDepartments([]);
         }
       } catch (err) {
-        console.error("Error fetching departments:", err);
         setDepartments([]);
       }
     };
     fetchDepartments();
   }, []);
 
-  // FIXED: Initialize form with complaint_number - add proper dependency and comparison
   useEffect(() => {
     if (complaint_number) {
       const parsed = parseInvestigateGk(complaint_number);
-      console.log("[init complaint_number] ", { complaint_number, parsed });
-
-      setForm((prev) => {
-        // Check if values are actually different
-        if (
-          prev.investigateGk === complaint_number &&
-          JSON.stringify(prev.investigateDate) === JSON.stringify(parsed)
-        ) {
-          return prev; // No change needed
-        }
-        return {
-          ...prev,
-          investigateGk: complaint_number,
-          investigateDate: parsed || prev.investigateDate,
-        };
-      });
+      setForm((prev) => ({
+        ...prev,
+        investigateGk: complaint_number,
+        investigateDate: parsed || prev.investigateDate,
+      }));
     }
-  }, [complaint_number]); // Removed parseInvestigateGk dependency
+  }, [complaint_number, parseInvestigateGk]);
 
   const handleSearch = useCallback(async (keyword) => {
     setSearchLoading(true);
@@ -224,21 +207,17 @@ const ReceiveReportsAgencies = () => {
         limit: 100,
         search: keyword || "",
       });
-
       const items = Array.isArray(response?.res_data?.items)
         ? response.res_data.items
         : [];
-
       const results = items.map((item) => ({
         ...item,
         label: item.document_number || "",
         value: item.document_number || "",
       }));
-
       setSearchResults(results);
     } catch (err) {
       setSearchResults([]);
-      console.error("handleSearch error", err);
     } finally {
       setSearchLoading(false);
     }
@@ -247,14 +226,14 @@ const ReceiveReportsAgencies = () => {
   const handleSelectReference = useCallback(
     (ref) => {
       const num = ref?.document_number || "";
-      setForm((prev) => {
-        if (prev.documentNo === num) return prev;
-        return { ...prev, documentNo: num };
-      });
+      setForm((prev) => ({
+        ...prev,
+        documentNo: num,
+      }));
       setValue("documentNo", num, { shouldValidate: false, shouldDirty: true });
       setOpenSearchDialog(false);
     },
-    []
+    [setValue]
   );
 
   const onClear = useCallback(() => {
@@ -279,21 +258,17 @@ const ReceiveReportsAgencies = () => {
         limit: 100,
         search: keyword || "",
       });
-
       const items = Array.isArray(response?.res_data?.items)
         ? response.res_data.items
         : [];
-
       const results = items.map((item) => ({
         ...item,
         label: item.complaint_number || "",
         value: item.complaint_number || "",
       }));
-
       setSearchResults(results);
     } catch (err) {
       setSearchResults([]);
-      console.error("handleSearch2 error", err);
     } finally {
       setSearchLoading(false);
     }
@@ -320,38 +295,25 @@ const ReceiveReportsAgencies = () => {
     else if (files && typeof files === "object" && "length" in files)
       processedFiles = Array.from(files);
     else if (files?.file) processedFiles = [files.file];
-
-    console.log("🔧 handleFileUpload:", { processedFiles: processedFiles.length, files: processedFiles.map(f => f.name) });
-
-    // เก็บเฉพาะ files ไม่ sync กับ form state เพื่อหลีกเลี่ยง loop
     setUploadedFiles(processedFiles);
   }, []);
 
-  // FIXED: handleSelectReference2 with proper comparison
   const handleSelectReference2 = useCallback(
     (ref) => {
       const num = ref?.complaint_number || "";
       const obj = parseInvestigateGk(num);
-      console.log("[handleSelectReference2] selected ->", { num, obj });
-
-      setForm((prev) => {
-        // Check if values are actually different
-        if (
-          prev.investigateGk === num &&
-          JSON.stringify(prev.investigateDate) === JSON.stringify(obj)
-        ) {
-          return prev;
-        }
-        return { ...prev, investigateGk: num, investigateDate: obj };
-      });
-
+      setForm((prev) => ({
+        ...prev,
+        investigateGk: num,
+        investigateDate: obj,
+      }));
       setValue("investigateGk", num, {
         shouldValidate: false,
         shouldDirty: true,
       });
       setOpenSearchDialog2(false);
     },
-    []
+    [parseInvestigateGk, setValue]
   );
 
   const toISO = (v) => {
@@ -359,7 +321,7 @@ const ReceiveReportsAgencies = () => {
     try {
       const pad = (n) => String(n).padStart(2, '0');
       if (typeof v === 'object' && v.day && v.month && v.year) {
-        return `${v.year}-${pad(v.month)}-${pad(v.day)}T00:00:00Z`; // สร้างเอง กัน timezone ลบวัน
+        return `${v.year}-${pad(v.month)}-${pad(v.day)}T00:00:00Z`;
       }
       const d = new Date(v);
       if (isNaN(d.getTime())) return null;
@@ -367,174 +329,65 @@ const ReceiveReportsAgencies = () => {
     } catch (e) { return null; }
   };
 
-  // Validation function - เปลี่ยนเป็น useCallback เพื่อให้ใช้ current form state
-  const validateForm = useCallback(() => {
-    console.log("🔍 Validating form:", {
-      form,
-      uploadedFiles: uploadedFiles.length,
-      fileNames: uploadedFiles.map(f => f.name)
-    });
-
-    const missingFields = [];
-    
-    // Check each field with logging
-    if (!form.referenceNo?.trim()) {
-      console.log("❌ Missing referenceNo:", form.referenceNo);
-      missingFields.push("เลขที่อ้างอิง(เลข สรร.สารบัญ)");
-    }
-    if (!form.date) {
-      console.log("❌ Missing date:", form.date);
-      missingFields.push("วันที่");
-    }
-    if (!form.processStep) {
-      console.log("❌ Missing processStep:", form.processStep);
-      missingFields.push("ขั้นตอนการดำเนินการ");
-    }
-    if (!form.confidentiality) {
-      console.log("❌ Missing confidentiality:", form.confidentiality);
-      missingFields.push("ชั้นความลับ");
-    }
-    if (!form.urgency) {
-      console.log("❌ Missing urgency:", form.urgency);
-      missingFields.push("ชั้นความเร่งด่วน");
-    }
-    if (!form.departmentId) {
-      console.log("❌ Missing departmentId:", form.departmentId);
-      missingFields.push("หน่วยงาน");
-    }
-    if (!form.investigateGk?.trim()) {
-      console.log("❌ Missing investigateGk:", form.investigateGk);
-      missingFields.push("เลขสป.กค.");
-    }
-    if (!form.investigateDate) {
-      console.log("❌ Missing investigateDate:", form.investigateDate);
-      missingFields.push("วันที่ (เลขสป.กค.)");
-    }
-    if (!form.documentNo?.trim()) {
-      console.log("❌ Missing documentNo:", form.documentNo);
-      missingFields.push("เลขที่หนังสือ");
-    }
-    if (!form.documentDate) {
-      console.log("❌ Missing documentDate:", form.documentDate);
-      missingFields.push("วันที่ (เลขที่หนังสือ)");
-    }
-    if (!form.receiveWorkDate) {
-      console.log("❌ Missing receiveWorkDate:", form.receiveWorkDate);
-      missingFields.push("วันที่รับงานของเจ้าหน้าที่");
-    }
-    if (!form.submitWorkDate) {
-      console.log("❌ Missing submitWorkDate:", form.submitWorkDate);
-      missingFields.push("วันที่เสนองาน ผอ.สรร.");
-    }
-    // if (!form.origin?.trim()) {
-    //   console.log("❌ Missing origin:", form.origin);
-    //   missingFields.push("ต้นเรื่อง");
-    // }
-    if (!form.subject?.trim()) {
-      console.log("❌ Missing subject:", form.subject);
-      missingFields.push("เรื่อง");
-    }
-    if (uploadedFiles.length === 0) {
-      console.log("❌ Missing files:", uploadedFiles.length);
-      missingFields.push("เอกสารแนบ");
-    }
-
-    console.log("🔍 Missing fields:", missingFields);
-
-    if (missingFields.length > 0) {
-      const message = `กรุณากรอกข้อมูลให้ครบถ้วน:\n${missingFields
-        .map((f) => `• ${f}`)
-        .join("\n")}`;
-      alertWarning("ข้อมูลไม่ครบถ้วน", message);
-    }
-    return missingFields.length === 0;
-  }, [form, uploadedFiles]);
-
-  // FIXED: handleInvestigateBlur with proper comparison
   const handleInvestigateBlur = useCallback(
     (e) => {
       const val = e?.target?.value || "";
       const obj = parseInvestigateGk(val);
       if (obj) {
-        console.log("[investigateGk blur] parsed ->", { val, obj });
-        setForm((prev) => {
-          if (
-            prev.investigateGk === val &&
-            JSON.stringify(prev.investigateDate) === JSON.stringify(obj)
-          ) {
-            return prev;
-          }
-          return { ...prev, investigateGk: val, investigateDate: obj };
-        });
+        setForm((prev) => ({
+          ...prev,
+          investigateGk: val,
+          investigateDate: obj,
+        }));
       }
     },
-    []
+    [parseInvestigateGk]
   );
 
-  // FIXED: handleInvestigatePaste with proper comparison
   const handleInvestigatePaste = useCallback(
     (e) => {
       const pasted = e?.clipboardData?.getData("Text") || "";
       const obj = parseInvestigateGk(pasted);
       if (obj) {
-        console.log("[investigateGk paste] parsed ->", { pasted, obj });
-        setForm((prev) => {
-          if (
-            prev.investigateGk === pasted &&
-            JSON.stringify(prev.investigateDate) === JSON.stringify(obj)
-          ) {
-            return prev;
-          }
-          return { ...prev, investigateGk: pasted, investigateDate: obj };
-        });
+        setForm((prev) => ({
+          ...prev,
+          investigateGk: pasted,
+          investigateDate: obj,
+        }));
       }
-    },
-    []
-  );
-
-  // FIXED: handleChange with proper comparison
-  const handleChange = useCallback(
-    (e) => {
-      const { name, value } = e?.target ?? {};
-      if (!name) return;
-
-      console.log("🔧 handleChange:", { name, value });
-
-      if (name === "investigateGk") {
-        const obj = parseInvestigateGk(value);
-        if (obj) {
-          console.debug("[investigateGk change] parsed ->", { value, obj });
-          setForm((prev) => {
-            if (
-              prev.investigateGk === value &&
-              JSON.stringify(prev.investigateDate) === JSON.stringify(obj)
-            ) {
-              return prev;
-            }
-            return { ...prev, investigateGk: value, investigateDate: obj };
-          });
-          return;
-        }
-      }
-
-      setForm((prev) => {
-        if (prev[name] === value) return prev;
-        return { ...prev, [name]: value };
-      });
     },
     [parseInvestigateGk]
   );
 
-  // handleDateChange
+  const handleChange = useCallback(
+    (e) => {
+      const { name, value } = e?.target ?? {};
+      if (!name) return;
+      if (name === "investigateGk") {
+        const obj = parseInvestigateGk(value);
+        if (obj) {
+          setForm((prev) => ({
+            ...prev,
+            investigateGk: value,
+            investigateDate: obj,
+          }));
+          return;
+        }
+      }
+      setForm((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    },
+    [parseInvestigateGk]
+  );
+
   const handleDateChange = useCallback(
     (fieldName) => (thaiDate) => {
-      console.log("🔧 handleDateChange:", { fieldName, thaiDate });
-      setForm((prev) => {
-        if (JSON.stringify(prev[fieldName]) === JSON.stringify(thaiDate)) {
-          return prev;
-        }
-        return { ...prev, [fieldName]: thaiDate };
-      });
+      setForm((prev) => ({
+        ...prev,
+        [fieldName]: thaiDate,
+      }));
     },
     []
   );
@@ -542,41 +395,111 @@ const ReceiveReportsAgencies = () => {
   const handleClear = useCallback(() => {
     setForm(initialFormState);
     setUploadedFiles([]);
-  }, []);
+  }, [initialFormState]);
 
-  // Normalize SelectField onChange payloads
   const makeSelectHandler = useCallback(
     (fieldName) => (evOrVal) => {
       const value = evOrVal?.target?.value ?? evOrVal?.value ?? evOrVal ?? "";
-      console.log("🔧 makeSelectHandler:", { fieldName, value, evOrVal });
-      setForm((prev) => {
-        if (prev[fieldName] === value) return prev;
-        return { ...prev, [fieldName]: value };
-      });
+      setForm((prev) => ({
+        ...prev,
+        [fieldName]: value,
+      }));
     },
     []
   );
 
-  // Save gating - ใช้ useMemo แทน useCallback เพื่อให้คำนวณใหม่เมื่อ dependencies เปลี่ยน
   const canSave = useMemo(() => {
     const f = form;
     const base = [
-      f.referenceNo?.trim(), f.date, f.processStep, f.confidentiality, f.urgency,
+      f.processStep, f.confidentiality, f.urgency,
       f.departmentId, f.investigateGk?.trim(), f.investigateDate, f.documentNo?.trim(),
       f.documentDate, f.receiveWorkDate, f.submitWorkDate, f.subject?.trim()
     ];
     if (!base.every(Boolean)) return false;
-    if (isEditing) return true; // แก้ไข: ไม่บังคับไฟล์
-    return uploadedFiles.length > 0; // สร้างใหม่ยังบังคับไฟล์
+    if (isEditing) return true;
+    return uploadedFiles.length > 0;
   }, [form, uploadedFiles, isEditing]);
 
+  // Prefill (edit mode)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!outgoingReport5Id) return;
+      try {
+        const res = await GetOutgoingReport5ById(outgoingReport5Id);
+        const d = res?.res_data || res?.data || res;
+        if (!d || cancelled) return;
+        setIsEditing(true);
+        setExistingData(d);
+        const parseDate = (iso) => {
+          if (!iso) return null; const dt = new Date(iso); if (isNaN(dt.getTime())) return null; return { day: dt.getDate(), month: dt.getMonth()+1, year: dt.getFullYear(), buddhistYear: dt.getFullYear()+543 };
+        };
+        const processStepRaw = (
+          d.process_step || d.processStatus || d.process_status || d.step ||
+          d.status_step || d.workflow_step || d.current_step || d.phase || d.stage
+        );
+        const processStepMap = {
+          receive: 'รับเรื่อง',
+          received: 'รับเรื่อง',
+          review: 'ตรวจสอบเอกสาร',
+          verifying: 'ตรวจสอบเอกสาร',
+          forward: 'ส่งต่อหน่วยงาน',
+          forwarded: 'ส่งต่อหน่วยงาน',
+          investigate: 'ดำเนินการสอบสวน',
+          investigation: 'ดำเนินการสอบสวน',
+          report: 'รายงานผล',
+          reporting: 'รายงานผล',
+          followup: 'ติดตามผล',
+          follow_up: 'ติดตามผล',
+          close: 'ปิดเรื่อง',
+          closed: 'ปิดเรื่อง'
+        };
+        let normalizedProcessStep = processStepRaw;
+        if (processStepRaw && !PROCESS_STEP_OPTIONS.some(o => o.value === processStepRaw)) {
+          const key = String(processStepRaw).toLowerCase();
+          normalizedProcessStep = processStepMap[key] || processStepRaw;
+        }
+        const receiveWorkDateRaw = (
+          d.receive_work_date || d.receive_staff_date || d.staff_receive_date ||
+          d.officer_receive_date || d.receive_working_date || d.receiveWorkDate || d.receiveDateWork
+        );
+        const embedded = extractEmbedded(d.remarks || '');
+        const receiveWorkDateParsed = parseDate(receiveWorkDateRaw || embedded.receiveWorkDate);
+        setForm((prev) => ({
+          ...prev,
+          referenceNo: d.receive_number || d.reference_number || d.receive_no || prev.referenceNo,
+          date: parseDate(d.receive_date || d.reference_date) || prev.date,
+          processStep: normalizedProcessStep || embedded.processStep || prev.processStep,
+          confidentiality: d.confidentiality_level || d.confidentiality || prev.confidentiality,
+          urgency: d.urgency_level || d.urgency || prev.urgency,
+          departmentId: d.department_id || d.department?.id || prev.departmentId,
+          investigateGk: d.agency_reference_number || d.complaint_number || prev.investigateGk,
+          investigateDate: parseDate(d.agency_reference_date || d.complaint_number_date) || prev.investigateDate,
+          documentNo: d.internal_register_number || d.document_number || prev.documentNo,
+          documentDate: parseDate(d.internal_register_date || d.document_date) || prev.documentDate,
+          receiveWorkDate: receiveWorkDateParsed || prev.receiveWorkDate,
+          submitWorkDate: parseDate(d.present_to_director_date) || prev.submitWorkDate,
+          subject: d.subject || prev.subject,
+          remarks: stripEmbeddedTags(d.remarks || prev.remarks || ''),
+        }));
+        setExistingAttachments(Array.isArray(d.attachments) ? d.attachments : []);
+      } catch (e) {}
+    })();
+    return () => { cancelled = true; };
+  }, [outgoingReport5Id]);
+
+  const handleDeleteExistingAttachment = useCallback(async (att) => {
+    if (!att?.id || !outgoingReport5Id) return;
+    const res = await DeleteOutgoingReport5Attachment({ outgoing_report_id: outgoingReport5Id, attachment_id: att.id });
+    if (res?.success === false) {
+      alertWarning('ลบไฟล์ไม่สำเร็จ', res?.res_message || 'ไม่สามารถลบไฟล์ได้');
+      return;
+    }
+    setExistingAttachments(prev => prev.filter(x => x.id !== att.id));
+  }, [outgoingReport5Id]);
+
   const handleSave = useCallback(async () => {
-    // Inline validation using current state
-    console.log("🔍 Current state in handleSave:", { form, uploadedFiles: uploadedFiles.length });
-    
     const missingFields = [];
-    if (!form.referenceNo?.trim()) missingFields.push("เลขที่อ้างอิง(เลข สรร.สารบัญ)");
-    if (!form.date) missingFields.push("วันที่");
     if (!form.processStep) missingFields.push("ขั้นตอนการดำเนินการ");
     if (!form.confidentiality) missingFields.push("ชั้นความลับ");
     if (!form.urgency) missingFields.push("ชั้นความเร่งด่วน");
@@ -587,18 +510,14 @@ const ReceiveReportsAgencies = () => {
     if (!form.documentDate) missingFields.push("วันที่ (เลขที่หนังสือ)");
     if (!form.receiveWorkDate) missingFields.push("วันที่รับงานของเจ้าหน้าที่");
     if (!form.submitWorkDate) missingFields.push("วันที่เสนองาน ผอ.สรร.");
-    // if (!form.origin?.trim()) missingFields.push("ต้นเรื่อง");
     if (!form.subject?.trim()) missingFields.push("เรื่อง");
-  if (uploadedFiles.length === 0 && !(isEditing && existingAttachments.length > 0)) missingFields.push("เอกสารแนบ");
-
+    if (uploadedFiles.length === 0 && !(isEditing && existingAttachments.length > 0)) missingFields.push("เอกสารแนบ");
     if (missingFields.length > 0) {
       const message = `กรุณากรอกข้อมูลให้ครบถ้วน:\n${missingFields.map((f) => `• ${f}`).join("\n")}`;
       alertWarning("ข้อมูลไม่ครบถ้วน", message);
       return;
     }
-
     try {
-      // สร้าง remarks ฝังค่า process_step / receive_work_date (กัน backend ไม่เก็บ)
       const baseRemarksClean = stripEmbeddedTags(form.remarks || '');
       const embedLines = [];
       if (form.processStep) embedLines.push(`${PROCESS_TAG}${form.processStep}`);
@@ -608,57 +527,65 @@ const ReceiveReportsAgencies = () => {
       }
       const mergedRemarks = [baseRemarksClean, ...embedLines].filter(Boolean).join('\n');
 
-      // Base payload (create)
+      // ==== Auto-generate required fields ====
+      const receiveNumber = form.referenceNo?.trim()
+        || existingData?.receive_number
+        || generateReceiveNumber();
+      const receiveDate = form.date
+        ? toISO(form.date)
+        : existingData?.receive_date
+          ? existingData.receive_date
+          : generateReceiveDate();
+
       const payload = {
-        receive_number: form.referenceNo,
-        receive_date: toISO(form.date),
+        receive_number: receiveNumber,
+        receive_date: receiveDate,
         agency_reference_number: form.investigateGk,
         agency_reference_date: toISO(form.investigateDate),
         internal_register_number: form.documentNo,
         internal_register_date: toISO(form.documentDate),
         present_to_director_date: toISO(form.submitWorkDate),
         receive_work_date: toISO(form.receiveWorkDate),
-  // aliases (เผื่อ backend ใช้ชื่ออื่น) – ส่งซ้ำไม่เป็นไร ถ้า backend ไม่รู้จักจะ ignore
-  receive_staff_date: toISO(form.receiveWorkDate),
-  staff_receive_date: toISO(form.receiveWorkDate),
+        receive_staff_date: toISO(form.receiveWorkDate),
+        staff_receive_date: toISO(form.receiveWorkDate),
         complaint_number: form.investigateGk,
         complaint_number_date: toISO(form.investigateDate),
         subject: form.subject,
         document_number: form.documentNo,
         document_date: toISO(form.documentDate),
         process_step: form.processStep,
-  process_status: form.processStep,
-  processStatus: form.processStep,
-  step: form.processStep,
-  current_step: form.processStep,
+        process_status: form.processStep,
+        processStatus: form.processStep,
+        step: form.processStep,
+        current_step: form.processStep,
         signature_authority_user_id: form.signatureAuthorityId,
         department_id: form.departmentId,
         user_id: form.userId,
         confidentiality_level: form.confidentiality,
         urgency_level: form.urgency,
         complaint_id: complaintId,
-  remarks: mergedRemarks,
+        remarks: mergedRemarks,
       };
-      // For update: avoid sending identifying fields that can trigger mismatch (complaint linkage) if unchanged
+
+      Object.keys(payload).forEach(k => {
+        if (payload[k] === undefined || payload[k] === null) delete payload[k];
+      });
+
       let finalPayload = payload;
       if (isEditing) {
         finalPayload = { ...payload };
-        delete finalPayload.complaint_id; // backend already knows via existing record; prevents mismatch 4040
-        // Preserve complaint_number only if user edited it AND not empty, else skip
+        delete finalPayload.complaint_id;
         if (!form.investigateGk) delete finalPayload.complaint_number;
-        // Remove complaint_number_date if base removed
         if (!finalPayload.complaint_number) delete finalPayload.complaint_number_date;
       }
-  let res;
+
+      let res;
       if (isEditing && outgoingReport5Id) {
-        console.log('🛠 UPDATE outgoing-report5 payload', finalPayload);
         res = await UpdateOutgoingReport5(outgoingReport5Id, finalPayload);
       } else {
-        console.log('🛠 CREATE outgoing-report5 payload', finalPayload);
         res = await CreateOutgoingReport5(finalPayload);
       }
 
-      // Helper to extract id
       const extractReportId = (resp) => {
         if (!resp) return null;
         const candidates = [
@@ -712,8 +639,7 @@ const ReceiveReportsAgencies = () => {
         return;
       }
 
-      // Upload attachments if any
-  if (uploadedFiles.length) {
+      if (uploadedFiles.length) {
         const allowedTypes = [
           "application/pdf",
           "application/msword",
@@ -738,26 +664,13 @@ const ReceiveReportsAgencies = () => {
         }
 
         const fd = new FormData();
-        console.log("📁 Total files to upload:", uploadedFiles.length);
-
-        uploadedFiles.forEach((f, index) => {
-          console.log(`📎 Adding file ${index + 1}:`, {
-            name: f.name,
-            size: f.size,
-            type: f.type,
-            lastModified: f.lastModified,
-          });
+        uploadedFiles.forEach((f) => {
           fd.append("files", f, f.name);
         });
-
-        console.log("📋 FormData entries count:", [...fd.entries()].length);
-        console.log("📤 Starting file upload for reportId:", reportId);
 
         let uploadSucceeded = false;
         try {
           const upRes = await UploadOutgoingReport5Attachments(fd, reportId);
-          console.log("📤 Upload response:", upRes);
-
           uploadSucceeded = !!(
             upRes &&
             (upRes.success === true ||
@@ -771,30 +684,19 @@ const ReceiveReportsAgencies = () => {
               upRes?.res_code === "404" ||
               /NOT_FOUND/i.test(upRes?.res_message || ""))
           ) {
-            console.log("🔄 Trying fallback endpoint...");
             try {
               const altRes = await axiosInstance.post(
                 `/outgoing-reports5/${reportId}/attachments`,
                 fd
               );
-              console.log("🔄 Fallback response:", altRes?.data);
               uploadSucceeded = !!altRes?.data;
-            } catch (altErr) {
-              console.error(
-                "❌ Fallback upload (type5) failed",
-                altErr?.response?.data || altErr
-              );
-            }
+            } catch (altErr) {}
           }
 
           if (!uploadSucceeded && upRes?.res_message) {
             alertWarning("ไม่สามารถอัพโหลดไฟล์ได้", upRes.res_message);
           }
         } catch (err) {
-          console.error(
-            "❌ Upload attachments failed",
-            err?.response?.data || err
-          );
           alertWarning(
             "ไม่สามารถอัพโหลดไฟล์ได้",
             err?.response?.data?.res_message ||
@@ -802,37 +704,21 @@ const ReceiveReportsAgencies = () => {
               "เกิดข้อผิดพลาดในการอัพโหลดไฟล์"
           );
         }
-
-        if (uploadSucceeded) {
-          console.log("✅ File upload successful!");
-        } else {
-          console.warn("⚠️ แนบไฟล์ไม่สำเร็จหรือบางไฟล์แนบไม่สำเร็จ");
-        }
       }
 
       const successMessage = `
         <div style="text-align:center; line-height:1.6;">
           <p style="margin-bottom:12px; font-size:16px;">${isEditing ? 'อัปเดต' : 'บันทึก'}แบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
           <p style="margin-bottom:8px; color:#666;">รหัสรายงาน: <strong>${reportId}</strong></p>
-          <p style="margin-bottom:8px; color:#666;">เรื่อง: <strong>${
-            form.subject || "-"
-          }</strong></p>
-          ${
-            uploadedFiles.length > 0
-              ? `<p style="margin-bottom:0; color:#666;">ไฟล์แนบ: <strong>${uploadedFiles.map(f => f.name).join(', ')}</strong></p>`
-              : ""
-          }
+          <p style="margin-bottom:8px; color:#666;">เรื่อง: <strong>${form.subject || "-"}</strong></p>
+          ${uploadedFiles.length > 0
+            ? `<p style="margin-bottom:0; color:#666;">ไฟล์แนบ: <strong>${uploadedFiles.map(f => f.name).join(', ')}</strong></p>`
+            : ""}
         </div>
       `;
 
-      // ถ้าเป็น update ลองดึงกลับมาดูทันทีว่าค่าถูกเซฟจริงไหม (debug)
       if (isEditing && reportId) {
-        try {
-          const verifyRes = await GetOutgoingReport5ById(reportId);
-          console.log('🔎 VERIFY_AFTER_UPDATE outgoing-report5', verifyRes);
-        } catch (verErr) {
-          console.warn('⚠️ verify fetch failed', verErr?.response?.data || verErr);
-        }
+        try { await GetOutgoingReport5ById(reportId); } catch (verErr) {}
       }
 
       closeAlert();
@@ -857,14 +743,12 @@ const ReceiveReportsAgencies = () => {
         );
         return;
       }
-
-      console.error("❌ handleSave error:", error?.response?.data || error);
       alertWarning("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
     }
-  }, [form, uploadedFiles, complaintId, router, isEditing, existingAttachments, outgoingReport5Id]);
+  }, [form, uploadedFiles, complaintId, router, isEditing, existingAttachments, outgoingReport5Id, existingData]);
 
   // load existing record (prefill)
-  useEffect(() => {
+ useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!outgoingReport5Id) return;
@@ -873,16 +757,14 @@ const ReceiveReportsAgencies = () => {
         const d = res?.res_data || res?.data || res;
         if (!d || cancelled) return;
         setIsEditing(true);
+        setExistingData(d);
         const parseDate = (iso) => {
           if (!iso) return null; const dt = new Date(iso); if (isNaN(dt.getTime())) return null; return { day: dt.getDate(), month: dt.getMonth()+1, year: dt.getFullYear(), buddhistYear: dt.getFullYear()+543 };
         };
-
-        // --- Fallback resolve for process step ---
         const processStepRaw = (
           d.process_step || d.processStatus || d.process_status || d.step ||
           d.status_step || d.workflow_step || d.current_step || d.phase || d.stage
         );
-        // Normalization (กรณี backend ส่งอังกฤษ)
         const processStepMap = {
           receive: 'รับเรื่อง',
           received: 'รับเรื่อง',
@@ -904,19 +786,12 @@ const ReceiveReportsAgencies = () => {
           const key = String(processStepRaw).toLowerCase();
           normalizedProcessStep = processStepMap[key] || processStepRaw;
         }
-
-        // --- Fallback resolve for receive work date ---
         const receiveWorkDateRaw = (
           d.receive_work_date || d.receive_staff_date || d.staff_receive_date ||
           d.officer_receive_date || d.receive_working_date || d.receiveWorkDate || d.receiveDateWork
         );
-
         const embedded = extractEmbedded(d.remarks || '');
         const receiveWorkDateParsed = parseDate(receiveWorkDateRaw || embedded.receiveWorkDate);
-        if (typeof window !== 'undefined') {
-          console.log('[Prefill outgoing-report5] raw data keys:', Object.keys(d));
-          console.log('[Prefill outgoing-report5] resolved:', { processStepRaw, normalizedProcessStep, receiveWorkDateRaw, embedded });
-        }
         setForm((prev) => ({
           ...prev,
           referenceNo: d.receive_number || d.reference_number || d.receive_no || prev.referenceNo,
@@ -935,21 +810,9 @@ const ReceiveReportsAgencies = () => {
           remarks: stripEmbeddedTags(d.remarks || prev.remarks || ''),
         }));
         setExistingAttachments(Array.isArray(d.attachments) ? d.attachments : []);
-      } catch (e) {
-        console.error('Prefill outgoing-report5 failed', e);
-      }
+      } catch (e) {}
     })();
     return () => { cancelled = true; };
-  }, [outgoingReport5Id]);
-
-  const handleDeleteExistingAttachment = useCallback(async (att) => {
-  if (!att?.id || !outgoingReport5Id) return;
-  const res = await DeleteOutgoingReport5Attachment({ outgoing_report_id: outgoingReport5Id, attachment_id: att.id });
-    if (res?.success === false) {
-      alertWarning('ลบไฟล์ไม่สำเร็จ', res?.res_message || 'ไม่สามารถลบไฟล์ได้');
-      return;
-    }
-    setExistingAttachments(prev => prev.filter(x => x.id !== att.id));
   }, [outgoingReport5Id]);
 
 
@@ -1029,7 +892,7 @@ const ReceiveReportsAgencies = () => {
               width: "100%",
             }}
           >
-            <InputText
+            {/* <InputText
               label={
                 <span>
                   เลขที่อ้างอิง(เลข สรร.สารบัญ)
@@ -1060,7 +923,7 @@ const ReceiveReportsAgencies = () => {
                 onChange={handleDateChange("date")}
                 placeholder="เลือกวันที่"
               />
-            </Box>
+            </Box> */}
             <Box
               sx={{
                 position: "relative",

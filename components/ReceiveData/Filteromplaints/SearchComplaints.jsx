@@ -12,6 +12,7 @@ import {
   InputAdornment,
   TextField,
   CircularProgress,
+  Autocomplete,
 } from "@mui/material";
 import {
   GetComplaintByID,
@@ -37,6 +38,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ClearIcon from "@mui/icons-material/Clear";
 import IconButton from "@mui/material/IconButton";
+import CloseIcon from "@mui/icons-material/Close";
 
 const breadcrumbItems = [
   {
@@ -105,6 +107,7 @@ const SearchComplaints = () => {
     return null;
   }, [router.query.id, router.query.data]);
 
+  const [inputValue, setInputValue] = useState("");
   // State variables
   const [defaultData, setDefaultData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -2083,55 +2086,118 @@ const SearchComplaints = () => {
                             เจ้าหน้าที่ผู้รับผิดชอบ
                             <span className={styles.required}>*</span>
                           </label>
-                          <select
-                            {...step4Methods.register("responsibleOfficer", {
-                              onChange: (e) => {
-                                const selectedOfficer = staffUsers.find(
-                                  (user) => user.value === e.target.value
-                                );
-                                if (selectedOfficer) {
-                                  step4Methods.setValue(
-                                    "responsibleOfficerId",
-                                    selectedOfficer.value
-                                  );
-                                  step4Methods.setValue(
-                                    "responsibleOfficerName",
-                                    selectedOfficer.label
-                                  );
-                                } else {
-                                  step4Methods.setValue(
-                                    "responsibleOfficerId",
-                                    ""
-                                  );
-                                  step4Methods.setValue(
-                                    "responsibleOfficerName",
-                                    ""
-                                  );
+                          <Autocomplete
+                              options={Object.values(groupedStaffUsers).flat()}
+                              getOptionLabel={option =>
+                                typeof option === "string" ? option : option.label || option.value || ""
+                              }
+                              value={
+                                (() => {
+                                  const val = step4Methods.getValues("responsibleOfficer");
+                                  if (!val) return null;
+                                  return staffUsers.find(u => String(u.value) === String(val)) || null;
+                                })()
+                              }
+                              inputValue={inputValue}
+                              onInputChange={(event, newInputValue, reason) => {
+                                setInputValue(newInputValue);
+                                if (reason === "clear") {
+                                  step4Methods.setValue("responsibleOfficer", "");
+                                  step4Methods.setValue("responsibleOfficerId", "");
+                                  step4Methods.setValue("responsibleOfficerName", "");
+                                  handleFieldChange("responsibleOfficer");
                                 }
+                              }}
+                              onChange={(event, newValue) => {
+                                let actualValue = "";
+                                let selectedObj = null;
+                                if (newValue && typeof newValue === "object") {
+                                  actualValue = newValue.value || "";
+                                  selectedObj = newValue;
+                                } else {
+                                  actualValue = "";
+                                  selectedObj = null;
+                                }
+                                step4Methods.setValue("responsibleOfficer", actualValue);
+                                step4Methods.setValue("responsibleOfficerId", selectedObj ? selectedObj.value : "");
+                                step4Methods.setValue("responsibleOfficerName", selectedObj ? selectedObj.label : "");
                                 handleFieldChange("responsibleOfficer");
-                              },
-                            })}
-                            className={
-                              hasFieldError("responsibleOfficer")
-                                ? styles.errorField
-                                : ""
-                            }
-                          >
-                            <option value="">
-                              เลือกเจ้าหน้าที่ผู้รับผิดชอบ
-                            </option>
-                            {Object.entries(groupedStaffUsers).map(
-                              ([groupName, users]) => (
-                                <optgroup key={groupName} label={groupName}>
-                                  {users.map((user) => (
-                                    <option key={user.value} value={user.value}>
-                                      {user.label}
-                                    </option>
-                                  ))}
-                                </optgroup>
-                              )
-                            )}
-                          </select>
+                                setInputValue(selectedObj ? selectedObj.label : "");
+                              }}
+                              isOptionEqualToValue={(option, v) => String(option.value) === String(v?.value || v)}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  name="responsibleOfficer"
+                                  error={hasFieldError("responsibleOfficer")}
+                                  helperText={getFieldError("responsibleOfficer")}
+                                  variant="outlined"
+                                  autoComplete="off"
+                                  placeholder="เลือกเจ้าหน้าที่ผู้รับผิดชอบ"
+                                  sx={{
+                                    fontFamily: "'Sarabun', 'Noto Sans Thai', Arial, sans-serif",
+                                    fontSize: "16px",
+                                    color: "#1120A3",
+                                    background: "#fff",
+                                    borderRadius: "12px",
+                                    // --- ไม่มีขอบทุกส่วน ---
+                                    border: "none !important",
+                                    "& .MuiOutlinedInput-root": {
+                                      borderRadius: "12px",
+                                      background: "#fff",
+                                      boxShadow: "none",
+                                      height: "44px",
+                                      paddingRight: "36px", // เพิ่มพื้นที่ขวาให้กากบาทอยู่ในกรอบ input
+                                      border: "none !important",
+                                    },
+                                    "& .MuiOutlinedInput-notchedOutline": {
+                                      border: "none !important",
+                                    },
+                                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                                      border: "none !important",
+                                    },
+                                    "&:hover .MuiOutlinedInput-notchedOutline": {
+                                      border: "none !important",
+                                    },
+                                    "& .MuiFormHelperText-root": {
+                                      marginLeft: 0,
+                                    },
+                                  }}
+                                  InputProps={{
+                                    ...params.InputProps,
+                                    endAdornment: (
+                                      <>
+                                        {(step4Methods.getValues("responsibleOfficer") || inputValue) && (
+                                          <InputAdornment position="end">
+                                            <IconButton
+                                              onClick={() => {
+                                                step4Methods.setValue("responsibleOfficer", "");
+                                                step4Methods.setValue("responsibleOfficerId", "");
+                                                step4Methods.setValue("responsibleOfficerName", "");
+                                                setInputValue("");
+                                                handleFieldChange("responsibleOfficer");
+                                              }}
+                                              edge="end"
+                                              size="small"
+                                              sx={{
+                                                color: "#999",
+                                                "&:hover": {
+                                                  color: "#1976d2",
+                                                  backgroundColor: "rgba(25, 118, 210, 0.08)",
+                                                },
+                                              }}
+                                            >
+                                              <CloseIcon fontSize="small" />
+                                            </IconButton>
+                                          </InputAdornment>
+                                        )}
+                                      </>
+                                    ),
+                                  }}
+                                />
+                              )}
+                              disableClearable
+                            />
                           {hasFieldError("responsibleOfficer") && (
                             <span className={styles.errorText}>
                               {getFieldError("responsibleOfficer")}
