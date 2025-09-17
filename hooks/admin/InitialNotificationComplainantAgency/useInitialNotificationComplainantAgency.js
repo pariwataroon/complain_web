@@ -649,6 +649,32 @@ export const useInitialNotificationComplainantAgency = () => {
     [router?.query?.id, id]
   );
 
+  const ensureRealDepartmentId = async (candidate, { allowNullForOther = true } = {}) => {
+    const isSpecial = form.salutation_is_other === true;
+    if (!candidate || !isUUID(candidate)) {
+      if (isSpecial && allowNullForOther) {
+        console.log('[DeptDebug] Special case, allowing null for department:', candidate);
+        return null;
+      }
+      console.log('[DeptDebug] Invalid department candidate:', candidate);
+      return null;
+    }
+
+    if (externalDepartments.length === 0) {
+      console.log('[DeptDebug] External departments not loaded, allowing candidate directly:', candidate);
+      return candidate;
+    }
+
+    const existsExternal = externalDepartments.some(d => d && d.id === candidate);
+    if (existsExternal) {
+      console.log('[DeptDebug] Department exists in external list:', candidate);
+      return candidate;
+    }
+
+    console.log('[DeptDebug] Department not found in external list, returning null:', candidate);
+    return null;
+  };
+
   const handleSave = useCallback(async () => {
     const missing = validateRequiredFields();
     if (missing.length > 0) {
@@ -657,96 +683,18 @@ export const useInitialNotificationComplainantAgency = () => {
       return;
     }
 
-    // ตรวจไฟล์ก่อนอัปโหลด
-    if (attachmentFiles.length) {
-      const maxSize = 10 * 1024 * 1024;
-      const allowed = [
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "image/jpeg",
-        "image/png",
-      ];
-      const oversize = attachmentFiles.find(f => f.size > maxSize);
-      if (oversize) {
-        alertError("ไฟล์ใหญ่เกินไป", `ไฟล์ ${oversize.name} เกิน 10MB`);
-        return;
-      }
-      const badType = attachmentFiles.find(f => !allowed.includes(f.type));
-      if (badType) {
-        alertError("ประเภทไฟล์ไม่รองรับ", `ไฟล์ ${badType.name} ไม่ใช่ประเภทที่รองรับ`);
-        return;
-      }
-    }
-
     const resolvedPositionId = (() => {
       if (isUUID(form.position_id)) return form.position_id;
       if (isUUID(form.salutation)) return form.salutation;
       return POSITION_FALLBACK;
     })();
 
-    // ใช้เฉพาะ externalDepartments: เพิ่ม debug และผ่อนปรน (ถ้า list ยังว่างจะปล่อย candidate ตรง ๆ)
-    const ensureRealDepartmentId = async (candidate, { allowNullForOther = true } = {}) => {
-      const isSpecial = form.salutation_is_other === true;
-      if (!candidate || !isUUID(candidate)) {
-        console.log('[DeptDebug] Reject: candidate ไม่ใช่ UUID หรือว่าง =>', candidate);
-        if (isSpecial && allowNullForOther) return null;
-        return null;
-      }
-      if (externalDepartments.length === 0) {
-        console.log('[DeptDebug] externalDepartments ยังไม่โหลด/ว่าง -> อนุญาต candidate ชั่วคราว =>', candidate);
-        return candidate;
-      }
-      const existsExternal = externalDepartments.some(d => d && d.id === candidate);
-      if (existsExternal) {
-        console.log('[DeptDebug] Candidate พบใน external =>', candidate);
-        return candidate;
-      }
-      if (candidate !== form.department && isUUID(form.department)) {
-        const existsForm = externalDepartments.some(d => d && d.id === form.department);
-        if (existsForm) {
-          console.log('[DeptDebug] ใช้ form.department แทน =>', form.department);
-          return form.department;
-        }
-      }
-      if (isSpecial && allowNullForOther) {
-        console.log('[DeptDebug] Salutation พิเศษ -> อนุญาต null');
-        return null;
-      }
-      console.log('[DeptDebug] ไม่พบ department ใน external -> ส่ง null');
-      return null;
-    };
-
     const deptId = await ensureRealDepartmentId(form.department);
     console.log('[DeptDebug] Final deptId =', deptId, 'form.department =', form.department, 'external count =', externalDepartments.length);
 
-    // Persist external department separately (workaround) แม้ backend จะยังไม่รองรับ
-    // Support both UUID ids and newly-created non-UUID names: if the selected
-    // department doesn't look like a UUID we still persist the name so the
-    // edit/detail page can show it even if backend returns null for department.
-    let outsideDepartmentId = null;
-    let outsideDepartmentName = null;
-    try {
-      const storeKey = `outgoing_report2_outside_dept_${id || 'new'}`;
-    if (form.department) {
-        if (isUUID(form.department)) {
-          outsideDepartmentId = form.department;
-          const match = externalDepartments.find(d => d.id === form.department);
-          outsideDepartmentName = match?.label || match?.name || null;
-      try { localStorage.setItem(storeKey, JSON.stringify({ outsideDepartmentId, outsideDepartmentName }));
-      console.debug('[DeptDebug] saved outside dept id/name ->', storeKey, outsideDepartmentId, outsideDepartmentName);
-      } catch(_){}
-        } else {
-          // Treat non-UUID value as a name (e.g. created on-the-fly). Persist
-          // the name so we can restore it in edit/detail even if backend
-          // doesn't store an id.
-          outsideDepartmentName = String(form.department || '').trim() || null;
-          try { localStorage.setItem(storeKey, JSON.stringify({ outsideDepartmentId: null, outsideDepartmentName }));
-          console.debug('[DeptDebug] saved outside dept name (non-UUID) ->', storeKey, outsideDepartmentName);
-          } catch(_){}
-        }
-      }
-    } catch (_) {}
+    // Define outsideDepartmentId and outsideDepartmentName explicitly
+    const outsideDepartmentId = deptId && isUUID(deptId) ? deptId : null;
+    const outsideDepartmentName = deptId && !isUUID(deptId) ? form.department : null;
 
     const payloadBase = {
       position_id: resolvedPositionId,

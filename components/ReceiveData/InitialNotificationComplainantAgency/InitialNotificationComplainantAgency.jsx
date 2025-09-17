@@ -80,6 +80,17 @@ const InitialNotificationComplainantAgency = () => {
     { value: "3", label: "เร่งด่วนมาก" },
     { value: "4", label: "เร่งด่วนที่สุด" },
   ]);
+
+  // Set default values for confidentiality and urgency to '1' (ปกติ)
+  useEffect(() => {
+    if (!form.confidentiality) {
+      handleChange({ target: { name: 'confidentiality', value: '1' } });
+    }
+    if (!form.urgency) {
+      handleChange({ target: { name: 'urgency', value: '1' } });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [optionsLoading, setOptionsLoading] = useState(false);
 
   const [openSearchDialog, setOpenSearchDialog] = useState(false);

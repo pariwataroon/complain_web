@@ -291,6 +291,16 @@ const TableListBox = ({
       sx: getFilterFieldStyles(),
     };
 
+    // เพิ่ม onKeyDown สำหรับช่องที่เป็น text เพื่อรองรับ Enter key
+    if (f.type === "text" || !f.type) {
+      commonProps.onKeyDown = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleSearchClick(); // เรียก function search
+        }
+      };
+    }
+
     if (f.name === "agency") {
       return <SelectField {...commonProps} options={departmentOptions} />;
     }
