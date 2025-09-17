@@ -58,6 +58,40 @@ def _user_min(u: Optional[User]) -> Optional[Dict[str, Any]]:
         "email": getattr(u, "email", None),
     }
 
+def _user_min_with_prefix(u: Optional[User]) -> Optional[Dict[str, Any]]:
+    """Like _user_min but include Thai name prefix from Title.short_name or prefix_other.
+
+    Priority:
+    1) u.title.short_name (if exists)
+    2) u.prefix_other
+    Fallback: no prefix
+    """
+    if not u:
+        return None
+    try:
+        prefix = ""
+        # title relationship may lazy-load; guard with getattr
+        title_obj = getattr(u, "title", None)
+        short_name = getattr(title_obj, "short_name", None) if title_obj is not None else None
+        if short_name:
+            prefix = short_name
+        else:
+            other = getattr(u, "prefix_other", None)
+            if other:
+                prefix = other
+
+        first_name = getattr(u, 'first_name', '') or ''
+        last_name = getattr(u, 'last_name', '') or ''
+        name = f"{prefix} {first_name} {last_name}".strip()
+        return {
+            "id": str(getattr(u, "id", None)) if getattr(u, "id", None) else None,
+            "name": name if name else None,
+            "email": getattr(u, "email", None),
+        }
+    except Exception:
+        # Fallback to original behavior if anything goes wrong
+        return _user_min(u)
+
 def _dept_min(d) -> Optional[Dict[str, Any]]:
     if not d:
         return None
@@ -982,7 +1016,8 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
         agency_name = _resolve_agency_name(db, complaint)
 
         # ===== detail =====
-        responsible_officer_display = (_user_min(assigned_officer) or {}).get("name") if assigned_officer else (complaint.assigned_to or "")
+        # Include Thai prefix in assigned officer display
+        responsible_officer_display = (_user_min_with_prefix(assigned_officer) or {}).get("name") if assigned_officer else (complaint.assigned_to or "")
         
         # ✅ ตรวจสอบสถานะการมอบหมาย
         is_assigned = bool(assigned_officer or complaint.assigned_to)
@@ -1008,7 +1043,8 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             "confidentiality_level": getattr(complaint, "confidentiality_level", None),
             "is_master": complaint.parent_complaint_id is None,
             "is_assigned": is_assigned,  # ✅ เพิ่ม field ใหม่
-            "assigned_officer": _user_min(assigned_officer),
+            # assigned_officer now includes prefix in name
+            "assigned_officer": _user_min_with_prefix(assigned_officer),
             "creator": _user_min(creator),
             "channel": ({
                 "id": str(getattr(channel_info, "id", "")),
