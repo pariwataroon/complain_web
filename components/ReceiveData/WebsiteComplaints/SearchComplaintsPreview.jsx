@@ -40,8 +40,10 @@ const SearchComplaintsPreview = ({
   id: propId = null,
   data: propData = null,
   onBack = null,
+  fromExternal = false,
 }) => {
   const router = useRouter();
+  const isFromExternal = fromExternal || router.query.fromExternal === "1" || router.query.from === "box"; // รองรับหลายแบบ
   const [id, setId] = useState(propId || null);
 
   const [formData, setFormData] = useState(null);
@@ -403,7 +405,14 @@ const handleSubmit = async () => {
     // ✅ ใช้ key ให้ตรงกัน
     sessionStorage.removeItem("complaintsPreviewData");
 
-    router.push("/admin/edit/website-complaints/");
+
+    if (isFromExternal) {
+      // มาจากคอนโทลข้างนอก → redirect ไป box/list
+      router.push("/admin/box/list");
+    } else {
+      // ปกติ (เช่น กลับไปหน้าแก้ไข หรือ preview ตามเดิม)
+      router.push("/admin/edit/website-complaints/");
+    }
   } catch (error) {
     console.error("Error submitting form:", error);
     alertError(

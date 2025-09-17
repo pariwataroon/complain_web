@@ -60,7 +60,7 @@ const breadcrumbItems = [
 
 const SearchComplaints = () => {
   const router = useRouter();
-  const { id, preview } = router.query;
+  const { id, preview, fromBox, fromExternal } = router.query;
 
   const hasRedirected = useRef(false);
   const [defaultData, setDefaultData] = useState(null);
@@ -95,6 +95,13 @@ const SearchComplaints = () => {
   const [selectedComplaintType, setSelectedComplaintType] = useState(""); // complaintType id currently selected
   // เก็บค่า complaint type เดิม (ตอนโหลดครั้งแรก) เพื่อเช็คว่าผู้ใช้เปลี่ยนหรือไม่
   const initialComplaintTypeIdRef = useRef(null);
+
+  const isFromExternal =
+    fromBox === "1" ||
+    fromBox === "true" ||
+    fromExternal === "1" ||
+    fromExternal === "true" ||
+    fromExternal === "box";
 
   // ---------------- Helper: extract confirm_assigned_date (officerReceivedDate) with fallbacks ----------------
   const extractOfficerReceivedDate = useCallback((complaintObj, assignmentObj) => {
@@ -188,29 +195,36 @@ useEffect(() => {
       const merged = { ...complaint, assignment_form: assignment };
       setDefaultData(merged);
 
-      // Derive complaintType id (prefer assignment_form field)
-      const complaintTypeId =
+      // === แก้จุดนี้: Map ชื่อ complaintType เป็น id ===
+      let complaintTypeId =
         assignment.complaint_type_id ||
         merged?.step3?.general?.complaint_type_id ||
         merged?.step3?.general?.complaintType ||
         "";
+
+      // ถ้าไม่ใช่ UUID ให้ map จาก name → id
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(complaintTypeId) && typeof complaintTypeId === "string") {
+        const found = normTypes.find((t) => t.label === complaintTypeId);
+        complaintTypeId = found ? found.value : "";
+      }
       setSelectedComplaintType(String(complaintTypeId || ""));
 
-      // Prefetch sub complaint types if we have an id
+      // Prefetch sub complaint types if we have an id (UUID เท่านั้น)
       let subTypes = [];
-      if (complaintTypeId) {
+      if (complaintTypeId && uuidRegex.test(complaintTypeId)) {
         try {
           const subRes = await getSubComplaintTypeById(complaintTypeId);
-            if (
-              subRes?.res_code === "0000" &&
-              Array.isArray(subRes?.res_data?.items)
-            ) {
-              subTypes = subRes.res_data.items.map((s) => ({
-                value: s.id,
-                label: s.name,
-                raw: s,
-              }));
-            }
+          if (
+            subRes?.res_code === "0000" &&
+            Array.isArray(subRes?.res_data?.items)
+          ) {
+            subTypes = subRes.res_data.items.map((s) => ({
+              value: s.id,
+              label: s.name,
+              raw: s,
+            }));
+          }
         } catch {
           subTypes = [];
         }
@@ -1343,13 +1357,16 @@ const handleSubmit = async () => {
       router.replace(
         {
           pathname: `/admin/edit/website-complaints/${defaultData?.id}`,
-          query: { preview: "" },
+          query: {
+            preview: "",
+            ...(isFromExternal ? { fromBox: "1" } : {}),
+          },
         },
         undefined,
         { shallow: true }
       );
     }
-  }, [showPreview, previewData, defaultData?.id, preview, router]);
+  }, [showPreview, previewData, defaultData?.id, preview, router, isFromExternal]);
 
   useEffect(() => {
     return () => {
@@ -1364,6 +1381,7 @@ const handleSubmit = async () => {
         id={id}
         data={previewData} // อาจเป็น null ได้
         onBack={handleBackFromPreview}
+        fromExternal={isFromExternal}
       />
     );
   }

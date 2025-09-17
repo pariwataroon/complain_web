@@ -676,7 +676,7 @@ export const useInformRelatedParties = () => {
     // -- เพิ่มการเก็บ tab ของแต่ละ id ลง localStorage ตรงนี้ --
     try {
       if (typeof window !== 'undefined' && form.reportType) {
-        localStorage.setItem(`report4_tab_${effectiveId}`, form.reportType);
+        // localStorage.setItem(`report4_tab_${effectiveId}`, form.reportType);
       }
     } catch (e) {
       console.warn('ไม่สามารถบันทึก tab ลง localStorage', e);
@@ -932,51 +932,51 @@ export const useInformRelatedParties = () => {
         if (names) handleChange("attachment", names);
       }
       // ====== เพิ่มส่วนนี้ ======
-      setTimeout(() => {
-        try {
-          if (typeof window !== 'undefined') {
-            const savedTab = localStorage.getItem(`report4_tab_${d.id}`);
-            if (savedTab && ["inspector", "complainant", "other"].includes(savedTab)) {
-              handleChange("reportType", savedTab);
-              console.log('⬅️ ใช้ reportType จาก localStorage:', savedTab);
-            }
-            // ...salutation หรือ custom_recipient localStorage (ของเดิม)...
-            const key = `report4_position_${d.id}`;
-            if (!form.salutation) {
-              const stored = localStorage.getItem(key);
-              if (stored) {
-                handleChange('salutation', stored);
-              }
-            }
-            if (!form.salutation_name) {
-              const storedName = localStorage.getItem(`report4_position_name_${d.id}`);
-              if (storedName) {
-                handleChange({ target: { name: 'salutation_name', value: storedName } });
-              }
-            }
-            if (!d.custom_recipient) {
-              const ck = `report4_custom_recipient_${d.id}`;
-              const storedCustom = localStorage.getItem(ck);
-              if (storedCustom) {
-                try {
-                  const parsed = JSON.parse(storedCustom);
-                  if (parsed && parsed.text) {
-                    const isComplainant = parsed.type === 'COMPLAINANT';
-                    handleChange({ target: { name: 'salutation_is_other', value: !isComplainant } });
-                    handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
-                    handleChange({ target: { name: 'position_other_text', value: parsed.text } });
-                    handleChange({ target: { name: 'department', value: '' } });
-                  }
-                } catch (pe) {
-                  console.warn('Parse custom_recipient localStorage ล้มเหลว', pe);
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('อ่าน localStorage salutation/tab ไม่ได้', e);
-        }
-      }, 0);
+      // setTimeout(() => {
+      //   try {
+      //     if (typeof window !== 'undefined') {
+      //       const savedTab = localStorage.getItem(`report4_tab_${d.id}`);
+      //       if (savedTab && ["inspector", "complainant", "other"].includes(savedTab)) {
+      //         handleChange("reportType", savedTab);
+      //         console.log('⬅️ ใช้ reportType จาก localStorage:', savedTab);
+      //       }
+      //       // ...salutation หรือ custom_recipient localStorage (ของเดิม)...
+      //       const key = `report4_position_${d.id}`;
+      //       if (!form.salutation) {
+      //         const stored = localStorage.getItem(key);
+      //         if (stored) {
+      //           handleChange('salutation', stored);
+      //         }
+      //       }
+      //       if (!form.salutation_name) {
+      //         const storedName = localStorage.getItem(`report4_position_name_${d.id}`);
+      //         if (storedName) {
+      //           handleChange({ target: { name: 'salutation_name', value: storedName } });
+      //         }
+      //       }
+      //       if (!d.custom_recipient) {
+      //         const ck = `report4_custom_recipient_${d.id}`;
+      //         const storedCustom = localStorage.getItem(ck);
+      //         if (storedCustom) {
+      //           try {
+      //             const parsed = JSON.parse(storedCustom);
+      //             if (parsed && parsed.text) {
+      //               const isComplainant = parsed.type === 'COMPLAINANT';
+      //               handleChange({ target: { name: 'salutation_is_other', value: !isComplainant } });
+      //               handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
+      //               handleChange({ target: { name: 'position_other_text', value: parsed.text } });
+      //               handleChange({ target: { name: 'department', value: '' } });
+      //             }
+      //           } catch (pe) {
+      //             console.warn('Parse custom_recipient localStorage ล้มเหลว', pe);
+      //           }
+      //         }
+      //       }
+      //     }
+      //   } catch (e) {
+      //     console.warn('อ่าน localStorage salutation/tab ไม่ได้', e);
+      //   }
+      // }, 0);
       // ====== จบส่วนที่เพิ่ม ======
     } catch (e) {
       console.error("Load outgoing-report4 for edit failed", e);

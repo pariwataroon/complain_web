@@ -127,6 +127,7 @@ const handleManage = (
           complaint_id: complaintId || "",
           complaint_number: complaintNumber || "",
           created_at: createdAt || "",
+          fromBox: "1",
         },
       });
       break;
@@ -375,7 +376,7 @@ const sectionConfigs = [
       "เรื่อง",
       "วันรับงาน",
       "วันที่เสนองาน",
-      "หน่วยงาน",
+      // "หน่วยงาน",
       "เอกสารแนบ",
       "การจัดการ",
     ],
