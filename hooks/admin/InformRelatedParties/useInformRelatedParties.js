@@ -13,6 +13,7 @@ import {
   UpdateOutgoingReport4,
 } from "@pages/api/outgoinreports/outgoinreports";
 import axiosInstance from "@pages/api/axiosInstance";
+import { GetAllOutsideDepartments } from "@pages/api/outsideDepartments/outsideDepartments";
 
 // NOTE: Removed POSITION_FALLBACK mock. We now always attempt to send the actual
 // selected position (salutation) id. If none is selected validation will block save.
@@ -42,7 +43,7 @@ const toYMD = (thaiDate) => {
 
 export const useInformRelatedParties = () => {
   const router = useRouter();
-  const { id, complaint_id, complaint_number, report4_id } = router.query;
+  const { id, complaint_id, complaint_number, report4_id, report_type } = router.query;
   // complaint id separate from report4 editing id
   const complaintId =
     (Array.isArray(complaint_id) ? complaint_id[0] : complaint_id) ||
@@ -54,6 +55,21 @@ export const useInformRelatedParties = () => {
     ? complaint_number[0]
     : complaint_number || "";
 
+  // If a report_type is explicitly provided via query (e.g., from archive), normalize and set it early
+  useEffect(() => {
+    if (!report_type) return;
+    const s = String(Array.isArray(report_type) ? report_type[0] : report_type).toLowerCase();
+    let norm = s;
+    if (!["inspector","complainant","other"].includes(norm)) {
+      if (["consumer","complaint","user"].includes(norm)) norm = "complainant";
+      else if (["external","outside","agency"].includes(norm)) norm = "other";
+    }
+    if (["inspector","complainant","other"].includes(norm)) {
+      setForm(prev => ({ ...prev, reportType: norm }));
+    }
+  // we intentionally run once on mount or when report_type changes
+  }, [report_type]);
+
   // Initial form state
   const initialFormState = useMemo(
     () => ({
@@ -62,6 +78,15 @@ export const useInformRelatedParties = () => {
       salutation_is_complainant: false,
       salutation_name: "", // human-readable position/salutation name for payload position_name
       position_other_text: "",
+      // Tab/report type: inspector | complainant | other
+      reportType: "inspector",
+      // For tab "other": free-text department name
+      // otherDepartmentName: "",
+    // For tab "other": outside department selection id
+    otherDepartmentId: "",
+  // Optional: who created the result and delivery method
+  createdByDepartment: "",
+  deliveryMethod: "",
       refNo: complaintNumberFromQuery || "", // reference_number
       date: null, // reference_date (will be converted with toYMD)
       subject: "", // subject
@@ -69,8 +94,8 @@ export const useInformRelatedParties = () => {
       date2: null, // complaint_number_date และ document_date (ใช้ค่าเดียวกัน)
       signer: "", // signature_authority_user_id
       department: "", // department_id
-      confidentiality: null, // confidentiality_level
-      urgency: null, // urgency_level
+      confidentiality: 1, // confidentiality_level
+      urgency: 1, // urgency_level
       proposeFor: "",
       decision: "",
       attachment: "",
@@ -95,6 +120,9 @@ export const useInformRelatedParties = () => {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [existingAttachments, setExistingAttachments] = useState([]);
+  // Outside departments options
+  const [outsideDepartmentsOptions, setOutsideDepartmentsOptions] = useState([]);
+  const [outsideDepartmentsLoading, setOutsideDepartmentsLoading] = useState(false);
   // Track initial & previous refNo for edit mode date auto-update logic
   const initialRefNoRef = useRef(null);
   const prevRefNoRef = useRef(null);
@@ -139,20 +167,35 @@ export const useInformRelatedParties = () => {
     prevRefNoRef.current = raw;
   }, [form.refNo, isEditing, form.date]);
 
+  // Lazy fetch: load outside departments when dropdown opens
+  const fetchOutsideDepartments = useCallback(async () => {
+    try {
+      setOutsideDepartmentsLoading(true);
+      const res = await GetAllOutsideDepartments({ skip: 0, limit: 500 });
+      const items = res?.res_data?.items || res?.data || res || [];
+      const opts = Array.isArray(items)
+        ? items.map((d) => ({ value: d.id || d.value || d.department_id || d.code || "", label: d.name || d.label || d.department_name || d.title || "" }))
+        : [];
+      setOutsideDepartmentsOptions(opts.filter(o => o.value && o.label));
+    } catch (e) {
+      console.warn("โหลดรายชื่อหน่วยงานภายนอกไม่สำเร็จ", e);
+      setOutsideDepartmentsOptions([]);
+    } finally {
+      setOutsideDepartmentsLoading(false);
+    }
+  }, []);
+
   // ฟิลด์ที่จำเป็นต้องกรอก
   // NOTE: Removed 'department' from hard required fields per user request.
   // If salutation is normal (not other/complainant) and department omitted, we still allow save.
-  const requiredFields = [
+  const requiredFieldsBase = [
     "salutation", // position_id (เรียนถึง)
     "refNo",
     "date",
     "subject",
     "signer",
-    // "department", // removed: no longer strictly required
     "confidentiality",
     "urgency",
-    "proposeFor",
-    "decision",
     // attachment: allow empty if editing and there are existing attachments already
     "attachment",
   ];
@@ -160,9 +203,18 @@ export const useInformRelatedParties = () => {
   // ฟังก์ชันตรวจสอบว่าฟิลด์จำเป็นหรือไม่
   const isRequired = useCallback(
     (fieldName) => {
-      return requiredFields.includes(fieldName);
+      const requiredFields = form.reportType === 'inspector'
+        ? [...requiredFieldsBase, 'proposeFor', 'decision']
+        : [...requiredFieldsBase];
+      if (requiredFields.includes(fieldName)) return true;
+      if (fieldName === 'position_other_text') {
+        return !!(form.salutation_is_other || form.salutation_is_complainant);
+      }
+      // For tab 'other', require department (select) or free-text name (one of two)
+      if (form.reportType === 'other' && ( fieldName === 'otherDepartmentId')) return true;
+      return false;
     },
-    [requiredFields]
+    [form.reportType, form.salutation_is_other, form.salutation_is_complainant]
   );
 
   // ฟังก์ชันสร้าง label พร้อม * สีแดง
@@ -334,8 +386,6 @@ export const useInformRelatedParties = () => {
       { field: "position_other_text", label: "ระบุตำแหน่ง/ผู้ร้อง" },
       { field: "confidentiality", label: "ชั้นความลับ" },
       { field: "urgency", label: "ชั้นความเร่งด่วน" },
-      { field: "proposeFor", label: "เสนอเพื่อ" },
-      { field: "decision", label: "ผลการพิจารณา" },
       { field: "attachment", label: "เอกสารแนบ" },
     ];
 
@@ -357,6 +407,29 @@ export const useInformRelatedParties = () => {
         missingFields.push({ field, label });
       }
     });
+
+    // Tab-specific required fields (inspector only)
+    if (form.reportType === 'inspector') {
+      [
+        { field: 'proposeFor', label: 'เสนอเพื่อ' },
+        { field: 'decision', label: 'ผลการพิจารณา' },
+      ].forEach(({ field, label }) => {
+        const v = form[field];
+        if (v === undefined || v === null || v === "") {
+          newErrors[field] = `กรุณากรอก${label}`;
+          missingFields.push({ field, label });
+        }
+      });
+    }
+
+    // Extra rule: require otherDepartmentName when reportType = 'other'
+    if (form.reportType === 'other') {
+    if (!form.otherDepartmentId || String(form.otherDepartmentId).trim() === '') {
+      const msg = 'กรุณาเลือกหน่วยงาน';
+      newErrors.otherDepartmentId = msg;
+      missingFields.push({ field: 'otherDepartmentId', label: 'หน่วยงาน' });
+    }
+  }
 
     console.log("🔍 validateRequiredFields:", { missingFields, newErrors });
     setErrors(newErrors);
@@ -498,6 +571,8 @@ export const useInformRelatedParties = () => {
       position_name: positionName, // ensure not null (empty string if truly nothing)
       position_label: positionName, // compatibility synonyms
       position_title: positionName,
+      // report type from tab
+      report_type: form.reportType || 'inspector',
       reference_number: (form.refNo || "").trim(),
       reference_date: toYMD(form.date),
       subject: (form.subject || "").trim(),
@@ -515,6 +590,8 @@ export const useInformRelatedParties = () => {
       proposal_purpose: form.proposeFor,
       consideration_result: form.decision,
       complaint_id: complaintId,
+  created_by_department_id: form.createdByDepartment || undefined,
+  delivery_method: form.deliveryMethod || undefined,
       // Provide richer position object for backend consumption
       position: positionId ? {
         id: positionId,
@@ -531,6 +608,15 @@ export const useInformRelatedParties = () => {
     if (!useCustomRecipient && form.department) {
       body.department_id = form.department; // don't send null when empty to avoid backend forcing selection
     }
+    // If user chose other tab, include department info (prefer id; allow name fallback)
+    if (form.reportType === 'other') {
+      if (form.otherDepartmentId) {
+        body.other_department_id = form.otherDepartmentId;
+      }
+      if (form.otherDepartmentName) {
+        body.other_department_name = form.otherDepartmentName.trim();
+      }
+    }
 
     console.log("📦 createRequestBody:", body);
     return body;
@@ -538,124 +624,139 @@ export const useInformRelatedParties = () => {
 
   // ฟังก์ชันบันทึกข้อมูล - รองรับทั้ง create และ update
   const handleSave = useCallback(async () => {
-    console.log("💾 handleSave: Starting save process");
-    // Recompute custom recipient flag locally for this scope
-    const useCustomRecipient = form.salutation_is_other || form.salutation_is_complainant;
+  console.log("💾 handleSave: Starting save process");
+  // Recompute custom recipient flag locally for this scope
+  const useCustomRecipient = form.salutation_is_other || form.salutation_is_complainant;
 
-    const missingFields = validateRequiredFields();
+  const missingFields = validateRequiredFields();
 
-    if (missingFields.length > 0) {
-      const missingFieldNames = missingFields
-        .map(({ label }) => label)
-        .join(", ");
+  if (missingFields.length > 0) {
+    const missingFieldNames = missingFields
+      .map(({ label }) => label)
+      .join(", ");
 
-      console.log("❌ Missing fields:", missingFieldNames);
+    console.log("❌ Missing fields:", missingFieldNames);
 
-      alertError(
-        "ข้อมูลไม่ครบถ้วน",
-        `กรุณากรอกข้อมูลในฟิลด์: ${missingFieldNames}`
-      );
-      return;
+    alertError(
+      "ข้อมูลไม่ครบถ้วน",
+      `กรุณากรอกข้อมูลในฟิลด์: ${missingFieldNames}`
+    );
+    return;
+  }
+
+  try {
+    setIsLoading(true);
+    showLoading("กำลังบันทึกข้อมูล...");
+
+    const requestBody = createRequestBody();
+    console.log("🚀 Sending request with body:", requestBody, "editing:", isEditing, "target:", loadedReportId || report4Id);
+
+    let effectiveId = loadedReportId || report4Id;
+    let response;
+    if (isEditing && effectiveId) {
+      // UPDATE flow
+      console.log("✏️ Updating existing outgoing report4", effectiveId);
+      response = await UpdateOutgoingReport4(effectiveId, requestBody);
+    } else {
+      // CREATE flow
+      response = await CreateOutgoingReport4(requestBody);
     }
+    console.log("✅ Main data saved/updated:", response);
 
-    try {
-      setIsLoading(true);
-      showLoading("กำลังบันทึกข้อมูล...");
-
-      const requestBody = createRequestBody();
-      console.log("🚀 Sending request with body:", requestBody, "editing:", isEditing, "target:", loadedReportId || report4Id);
-
-      let effectiveId = loadedReportId || report4Id;
-      let response;
-      if (isEditing && effectiveId) {
-        // UPDATE flow
-        console.log("✏️ Updating existing outgoing report4", effectiveId);
-        response = await UpdateOutgoingReport4(effectiveId, requestBody);
-      } else {
-        // CREATE flow
-        response = await CreateOutgoingReport4(requestBody);
-      }
-      console.log("✅ Main data saved/updated:", response);
-
-      // ดึงรหัสรายงานให้แน่นอน (create หรือ update return)
-      const createdId = response?.id || response?.res_data?.id || effectiveId || null;
-      if (!createdId) {
-        closeAlert();
-        setIsLoading(false);
-        await alertError("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานได้ กรุณาลองใหม่อีกครั้ง");
-        return;
-      }
-      effectiveId = createdId;
-
-      // Persist salutation locally (กรณี backend ไม่ส่ง position_id กลับมาให้ตอนโหลด)
-      try {
-        if (typeof window !== 'undefined' && form.salutation) {
-          localStorage.setItem(`report4_position_${effectiveId}`, form.salutation);
-          if (form.salutation_name) {
-            localStorage.setItem(`report4_position_name_${effectiveId}`, form.salutation_name);
-          }
-        }
-      } catch (e) {
-        console.warn('ไม่สามารถบันทึกตำแหน่งลง localStorage', e);
-      }
-      try {
-        if (typeof window !== 'undefined') {
-          const key = `report4_custom_recipient_${effectiveId}`;
-          if (useCustomRecipient && form.position_other_text) {
-            localStorage.setItem(key, JSON.stringify({
-              text: (form.position_other_text || '').trim(),
-              type: form.salutation_is_complainant ? 'COMPLAINANT' : 'OTHER'
-            }));
-          } else {
-            localStorage.removeItem(key);
-          }
-        }
-      } catch (e) {
-        console.warn('ไม่สามารถบันทึก custom_recipient ลง localStorage', e);
-      }
-
-      // อัปโหลดไฟล์เฉพาะกรณีที่มีไฟล์ใหม่ (ไฟล์ existingAttachments จัดการหน้า component)
-  if (uploadedFiles.length > 0) {
-        console.log("📤 Starting file upload for report ID:", effectiveId);
-        showLoading("กำลังอัปโหลดไฟล์...");
-        await uploadFiles(effectiveId);
-        console.log("✅ Files uploaded successfully");
-      }
-
-      closeAlert();
-      const reportId = effectiveId;
-
-      const successMessage = `
-          <div style="text-align: center; line-height: 1.6;">
-            <p style="margin-bottom: 15px; font-size: 16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
-            <p style="margin-bottom: 10px; color: #666;">รหัสรายงาน: <strong>${reportId}</strong></p>
-            <p style="margin-bottom: 10px; color: #666;">เรื่อง: <strong>${form.subject}</strong></p>
-            ${uploadedFiles.length > 0
-          ? `<p style="color: #666;">ไฟล์แนบ: <strong>${uploadedFiles.map(f => f.name).join(", ")}</strong></p>`
-          : ""
-        }
-          </div>
-        `;
-
-  await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
-  router.push(`/admin/box/list`);
-
-      // Reset form after successful save
-      handleClear();
-
-    } catch (error) {
+    // ดึงรหัสรายงานให้แน่นอน (create หรือ update return)
+    const createdId = response?.id || response?.res_data?.id || effectiveId || null;
+    if (!createdId) {
       closeAlert();
       setIsLoading(false);
-
-      console.error("❌ Save error:", error);
-
-      alertError(
-        "เกิดข้อผิดพลาด",
-        error?.message || "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง"
-      );
+      await alertError("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานได้ กรุณาลองใหม่อีกครั้ง");
+      return;
     }
-  }, [form, validateRequiredFields, createRequestBody, uploadFiles, uploadedFiles, handleClear, isEditing, loadedReportId, report4Id]);
+    effectiveId = createdId;
 
+    // -- เพิ่มการเก็บ tab ของแต่ละ id ลง localStorage ตรงนี้ --
+    try {
+      if (typeof window !== 'undefined' && form.reportType) {
+        localStorage.setItem(`report4_tab_${effectiveId}`, form.reportType);
+      }
+    } catch (e) {
+      console.warn('ไม่สามารถบันทึก tab ลง localStorage', e);
+    }
+    // --------------------------------------------------------
+
+    // Persist salutation locally (กรณี backend ไม่ส่ง position_id กลับมาให้ตอนโหลด)
+    try {
+      if (typeof window !== 'undefined' && form.salutation) {
+        localStorage.setItem(`report4_position_${effectiveId}`, form.salutation);
+        if (form.salutation_name) {
+          localStorage.setItem(`report4_position_name_${effectiveId}`, form.salutation_name);
+        }
+      }
+    } catch (e) {
+      console.warn('ไม่สามารถบันทึกตำแหน่งลง localStorage', e);
+    }
+    try {
+      if (typeof window !== 'undefined') {
+        const key = `report4_custom_recipient_${effectiveId}`;
+        if (useCustomRecipient && form.position_other_text) {
+          localStorage.setItem(key, JSON.stringify({
+            text: (form.position_other_text || '').trim(),
+            type: form.salutation_is_complainant ? 'COMPLAINANT' : 'OTHER'
+          }));
+        } else {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (e) {
+      console.warn('ไม่สามารถบันทึก custom_recipient ลง localStorage', e);
+    }
+
+    // อัปโหลดไฟล์เฉพาะกรณีที่มีไฟล์ใหม่ (ไฟล์ existingAttachments จัดการหน้า component)
+    if (uploadedFiles.length > 0) {
+      console.log("📤 Starting file upload for report ID:", effectiveId);
+      showLoading("กำลังอัปโหลดไฟล์...");
+      await uploadFiles(effectiveId);
+      console.log("✅ Files uploaded successfully");
+    }
+
+    closeAlert();
+    const reportId = effectiveId;
+
+    const successMessage = `
+        <div style="text-align: center; line-height: 1.6;">
+          <p style="margin-bottom: 15px; font-size: 16px;">บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
+          <p style="margin-bottom: 10px; color: #666;">รหัสรายงาน: <strong>${reportId}</strong></p>
+          <p style="margin-bottom: 10px; color: #666;">เรื่อง: <strong>${form.subject}</strong></p>
+          ${uploadedFiles.length > 0
+        ? `<p style="color: #666;">ไฟล์แนบ: <strong>${uploadedFiles.map(f => f.name).join(", ")}</strong></p>`
+        : ""
+      }
+        </div>
+      `;
+
+    await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
+
+    // เมื่อแก้ไข ให้กลับไปหน้าเดิม (FollowComp)
+    if (isEditing && complaintId) {
+      router.push(`/admin/box/list`);
+    } else {
+      router.push(`/admin/box/list`);
+    }
+
+    // Reset form after successful save
+    handleClear();
+
+  } catch (error) {
+    closeAlert();
+    setIsLoading(false);
+
+    console.error("❌ Save error:", error);
+
+    alertError(
+      "เกิดข้อผิดพลาด",
+      error?.message || "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง"
+    );
+  }
+}, [form, validateRequiredFields, createRequestBody, uploadFiles, uploadedFiles, handleClear, isEditing, loadedReportId, report4Id]);
   // ฟังก์ชันสำหรับรีเซ็ตข้อมูลเฉพาะฟิลด์
   const resetField = useCallback((fieldName) => {
     console.log("🔄 resetField:", fieldName);
@@ -693,81 +794,116 @@ export const useInformRelatedParties = () => {
   // ฟังก์ชันตรวจสอบว่าฟอร์มพร้อมส่งหรือไม่
   const isFormValid = useCallback(() => {
     const useCustom = form.salutation_is_other || form.salutation_is_complainant;
-    return requiredFields.every((field) => {
+    const requiredFields = form.reportType === 'inspector'
+      ? [...requiredFieldsBase, 'proposeFor', 'decision']
+      : [...requiredFieldsBase];
+    const baseValid = requiredFields.every((field) => {
       if (field === 'attachment' && isEditing && existingAttachments.length > 0) return true;
       const value = form[field];
       return value !== undefined && value !== null && value !== "";
-    }) && (!useCustom || (form.position_other_text && form.position_other_text.trim() !== ""));
-  }, [form, requiredFields, isEditing, existingAttachments]);
+    });
+    const customOk = (!useCustom || (form.position_other_text && form.position_other_text.trim() !== ""));
+    const otherDeptOk = (form.reportType !== 'other') || (form.otherDepartmentName && form.otherDepartmentName.trim() !== '');
+    return baseValid && customOk && otherDeptOk;
+  }, [form, requiredFieldsBase, isEditing, existingAttachments]);
 
   // canSave focuses on required-only validation like other forms
   const canSave = useCallback(() => {
     const useCustom = form.salutation_is_other || form.salutation_is_complainant;
     if (useCustom && (!form.position_other_text || form.position_other_text.trim() === "")) return false;
-    return requiredFields.every((f) => {
+    const requiredFields = form.reportType === 'inspector'
+      ? [...requiredFieldsBase, 'proposeFor', 'decision']
+      : [...requiredFieldsBase];
+    const base = requiredFields.every((f) => {
       if (f === 'attachment' && isEditing && existingAttachments.length > 0) return true;
       const v = form[f];
       return !(v === undefined || v === null || v === "");
     });
-  }, [form, requiredFields, isEditing, existingAttachments]);
+    // if (form.reportType === 'other' && (!form.otherDepartmentName || form.otherDepartmentName.trim() === '')) return false;
+    return base;
+  }, [form, requiredFieldsBase, isEditing, existingAttachments]);
 
   // โหลดข้อมูลเพื่อแก้ไขเมื่อมี report4_id ใน query (หรือ id ที่เป็น type4)
   useEffect(() => {
-    const targetId = report4Id; // ใช้ query report4_id ชัดเจน
-    if (!targetId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        setIsLoading(true);
-        const res = await GetOutgoingReport4ById(targetId);
-        const d = res?.res_data || res?.data || res;
-        if (!d || cancelled) return;
-        setIsEditing(true);
-        setLoadedReportId(d.id);
-        // map fields
-        handleChange("refNo", d.reference_number || d.complaint_number || d.document_number || "");
-  if (d.reference_date) handleDateChange(toYMD(d.reference_date), "date");
-        if (d.document_date) handleDateChange(d.document_date, "date2");
-        else if (d.complaint_number_date) handleDateChange(d.complaint_number_date, "date2");
-        handleChange("subject", d.subject || "");
-        handleChange("bookNo", d.document_number || "");
-        handleChange("signer", d.signature_authority_user_id || d.signature_authority_user?.id || "");
-        handleChange("department", d.department_id || d.department?.id || "");
-        // position_id -> salutation (เรียนถึง)
-        if (d.position_id || d.position?.id) {
-          handleChange("salutation", d.position_id || d.position?.id);
-          const incomingName = d.position_name || d.position?.name || d.position?.position_name || d.position?.title || "";
-          if (incomingName) handleChange({ target: { name: 'salutation_name', value: incomingName } });
+  const targetId = report4Id; // ใช้ query report4_id ชัดเจน
+  if (!targetId) return;
+  let cancelled = false;
+  (async () => {
+    try {
+      setIsLoading(true);
+      const res = await GetOutgoingReport4ById(targetId);
+      const d = res?.res_data || res?.data || res;
+      if (!d || cancelled) return;
+      setIsEditing(true);
+      setLoadedReportId(d.id);
+
+      // map report type & other department name/id (normalize + infer)
+      const normalizeReportType = (t) => {
+        if (!t) return '';
+        const s = String(t).toLowerCase();
+        if (["inspector", "complainant", "other"].includes(s)) return s;
+        if (["consumer", "complaint", "user"].includes(s)) return "complainant";
+        if (["external", "outside", "agency"].includes(s)) return "other";
+        return '';
+      };
+      let inferredType = normalizeReportType(
+        d.report_type || d.reportType || d.type || d.recipient_type || d.recipientType || d.category || d.kind || d.target_type || d.targetType
+      );
+      if (!inferredType) {
+        const posName = d.position?.name || d.position_name || '';
+        const isComplainant = ["ผู้ร้อง", "ผู้ร้องเรียน"].includes(posName) || d.salutation_is_complainant || d.is_complainant;
+        const isOther = ["อื่นๆ", "หน่วยงานอื่นๆ"].includes(posName) || d.salutation_is_other || d.is_other || !!d.other_department_id || (Array.isArray(d.outgoing_departments) && d.outgoing_departments.length > 0);
+        if (isComplainant) inferredType = 'complainant';
+        else if (isOther) inferredType = 'other';
+        else inferredType = 'inspector';
+      }
+      handleChange("reportType", inferredType || "inspector");
+      if (d.other_department_id) handleChange("otherDepartmentId", d.other_department_id);
+      // if (d.other_department_name) handleChange("otherDepartmentName", d.other_department_name);
+      // map fields
+      handleChange("refNo", d.reference_number || d.complaint_number || d.document_number || "");
+      if (d.reference_date) handleDateChange(toYMD(d.reference_date), "date");
+      if (d.document_date) handleDateChange(d.document_date, "date2");
+      else if (d.complaint_number_date) handleDateChange(d.complaint_number_date, "date2");
+      handleChange("subject", d.subject || "");
+      handleChange("bookNo", d.document_number || "");
+      handleChange("signer", d.signature_authority_user_id || d.signature_authority_user?.id || "");
+      handleChange("department", d.department_id || d.department?.id || "");
+      handleChange("createdByDepartment", d.created_by_department_id || d.created_by_department?.id || "");
+      if (d.delivery_method) handleChange("deliveryMethod", d.delivery_method);
+      // position_id -> salutation (เรียนถึง)
+      if (d.position_id || d.position?.id) {
+        handleChange("salutation", d.position_id || d.position?.id);
+        const incomingName = d.position_name || d.position?.name || d.position?.position_name || d.position?.title || "";
+        if (incomingName) handleChange({ target: { name: 'salutation_name', value: incomingName } });
+      } else {
+        // Try alternate sources for position id (บาง API อาจคืนอยู่คนละโครงสร้าง)
+        const altPositionId = d.signature_authority_user?.position_id
+          || d.signature_authority_user?.position?.id
+          || d.signature_authority_user?.positionId
+          || d.signature_authority_user?.position?.position_id
+          || d.signature_authority?.position_id
+          || d.signature_authority?.position?.id
+          || d.positionId;
+        if (altPositionId) {
+          console.log("ℹ️ Using alternate position_id source for salutation:", altPositionId);
+          handleChange("salutation", altPositionId);
+          const altName = d.signature_authority_user?.position_name || d.signature_authority_user?.position?.name || d.signature_authority?.position_name || d.signature_authority?.position?.name;
+          if (altName) handleChange({ target: { name: 'salutation_name', value: altName } });
         } else {
-          // Try alternate sources for position id (บาง API อาจคืนอยู่คนละโครงสร้าง)
-          const altPositionId = d.signature_authority_user?.position_id
-            || d.signature_authority_user?.position?.id
-            || d.signature_authority_user?.positionId
-            || d.signature_authority_user?.position?.position_id
-            || d.signature_authority?.position_id
-            || d.signature_authority?.position?.id
-            || d.positionId;
-          if (altPositionId) {
-            console.log("ℹ️ Using alternate position_id source for salutation:", altPositionId);
-            handleChange("salutation", altPositionId);
-            const altName = d.signature_authority_user?.position_name || d.signature_authority_user?.position?.name || d.signature_authority?.position_name || d.signature_authority?.position?.name;
-            if (altName) handleChange({ target: { name: 'salutation_name', value: altName } });
-          } else {
-            console.log("⚠️ ไม่พบ position_id ในข้อมูลที่โหลดมา จะใช้ค่า fallback เมื่อบันทึก");
-          }
+          console.log("⚠️ ไม่พบ position_id ในข้อมูลที่โหลดมา จะใช้ค่า fallback เมื่อบันทึก");
         }
-        // If backend returns custom recipient (legacy) or position.other_text, map to flags & text
-        if (d.custom_recipient || (d.position && d.position.other_text)) {
-          const rawText = d.custom_recipient || d.position?.other_text || '';
-          const isComplainant = (d.custom_recipient_type === 'COMPLAINANT');
-          // Heuristic: if backend omitted custom_recipient_type but other_text present and user selected complainant previously, fallback remains false.
-          handleChange({ target: { name: 'salutation_is_other', value: !isComplainant } });
-          handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
-          handleChange({ target: { name: 'position_other_text', value: rawText } });
-          // When custom recipient exists treat its text as salutation_name for easier display
-          if (rawText) handleChange({ target: { name: 'salutation_name', value: rawText } });
-          handleChange({ target: { name: 'department', value: '' } }); // clear department in custom flow
-        }
+      }
+      // If backend returns custom recipient (legacy) or position.other_text, map to flags & text
+      if (d.custom_recipient || (d.position && d.position.other_text)) {
+        const rawText = d.custom_recipient || d.position?.other_text || '';
+        const isComplainant = (d.custom_recipient_type === 'COMPLAINANT');
+        handleChange({ target: { name: 'salutation_is_other', value: !isComplainant } });
+        handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
+        handleChange({ target: { name: 'position_other_text', value: rawText } });
+        if (rawText) handleChange({ target: { name: 'salutation_name', value: rawText } });
+        handleChange({ target: { name: 'department', value: '' } }); // clear department in custom flow
+      }
       // Convert incoming string labels to numeric select value if needed
       const confidentialityStringToNumber = (val) => {
         if (val == null || val === '') return '';
@@ -782,68 +918,76 @@ export const useInformRelatedParties = () => {
         return map[val] || '';
       };
       if (d.confidentiality_level != null) handleChange("confidentiality", confidentialityStringToNumber(d.confidentiality_level));
+      else handleChange("confidentiality", 1); // default = 1
+
       if (d.urgency_level != null) handleChange("urgency", urgencyStringToNumber(d.urgency_level));
-        handleChange("proposeFor", d.propose_for || d.proposal_purpose || "");
-        handleChange("decision", d.decision || d.consideration_result || "");
-        if (d.remarks) handleChange("note", d.remarks);
-        const atts = Array.isArray(d.attachments) ? d.attachments : [];
-        setExistingAttachments(atts);
-        if (atts.length) {
-          const names = atts.map(a => a.original_name || a.file_name || a.name || "").filter(Boolean).join(", ");
-          if (names) handleChange("attachment", names);
-        }
-        setTimeout(() => {
-          try {
-            if (typeof window !== 'undefined') {
-              const key = `report4_position_${d.id}`;
-              if (!form.salutation) {
-                const stored = localStorage.getItem(key);
-                if (stored) {
-                  console.log('⬅️ ใช้ salutation จาก localStorage:', stored);
-                  handleChange('salutation', stored);
-                  // If we don't have a name yet and position object in response had name, already set above. Otherwise leave for user selection logic.
-                }
+      else handleChange("urgency", 1); // default = 1
+      handleChange("proposeFor", d.propose_for || d.proposal_purpose || "");
+      handleChange("decision", d.decision || d.consideration_result || "");
+      if (d.remarks) handleChange("note", d.remarks);
+      const atts = Array.isArray(d.attachments) ? d.attachments : [];
+      setExistingAttachments(atts);
+      if (atts.length) {
+        const names = atts.map(a => a.original_name || a.file_name || a.name || "").filter(Boolean).join(", ");
+        if (names) handleChange("attachment", names);
+      }
+      // ====== เพิ่มส่วนนี้ ======
+      setTimeout(() => {
+        try {
+          if (typeof window !== 'undefined') {
+            const savedTab = localStorage.getItem(`report4_tab_${d.id}`);
+            if (savedTab && ["inspector", "complainant", "other"].includes(savedTab)) {
+              handleChange("reportType", savedTab);
+              console.log('⬅️ ใช้ reportType จาก localStorage:', savedTab);
+            }
+            // ...salutation หรือ custom_recipient localStorage (ของเดิม)...
+            const key = `report4_position_${d.id}`;
+            if (!form.salutation) {
+              const stored = localStorage.getItem(key);
+              if (stored) {
+                handleChange('salutation', stored);
               }
-              if (!form.salutation_name) {
-                const storedName = localStorage.getItem(`report4_position_name_${d.id}`);
-                if (storedName) {
-                  handleChange({ target: { name: 'salutation_name', value: storedName } });
-                }
+            }
+            if (!form.salutation_name) {
+              const storedName = localStorage.getItem(`report4_position_name_${d.id}`);
+              if (storedName) {
+                handleChange({ target: { name: 'salutation_name', value: storedName } });
               }
-              if (!d.custom_recipient) {
-                const ck = `report4_custom_recipient_${d.id}`;
-                const storedCustom = localStorage.getItem(ck);
-                if (storedCustom) {
-                  try {
-                    const parsed = JSON.parse(storedCustom);
-                    if (parsed && parsed.text) {
-                      const isComplainant = parsed.type === 'COMPLAINANT';
-                      handleChange({ target: { name: 'salutation_is_other', value: !isComplainant } });
-                      handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
-                      handleChange({ target: { name: 'position_other_text', value: parsed.text } });
-                      handleChange({ target: { name: 'department', value: '' } });
-                      console.log('⬅️ ใช้ custom_recipient จาก localStorage:', parsed);
-                    }
-                  } catch (pe) {
-                    console.warn('Parse custom_recipient localStorage ล้มเหลว', pe);
+            }
+            if (!d.custom_recipient) {
+              const ck = `report4_custom_recipient_${d.id}`;
+              const storedCustom = localStorage.getItem(ck);
+              if (storedCustom) {
+                try {
+                  const parsed = JSON.parse(storedCustom);
+                  if (parsed && parsed.text) {
+                    const isComplainant = parsed.type === 'COMPLAINANT';
+                    handleChange({ target: { name: 'salutation_is_other', value: !isComplainant } });
+                    handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
+                    handleChange({ target: { name: 'position_other_text', value: parsed.text } });
+                    handleChange({ target: { name: 'department', value: '' } });
                   }
+                } catch (pe) {
+                  console.warn('Parse custom_recipient localStorage ล้มเหลว', pe);
                 }
               }
             }
-          } catch (e) {
-            console.warn('อ่าน localStorage salutation ไม่ได้', e);
           }
-        }, 0);
-      } catch (e) {
-        console.error("Load outgoing-report4 for edit failed", e);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [report4Id]);
+        } catch (e) {
+          console.warn('อ่าน localStorage salutation/tab ไม่ได้', e);
+        }
+      }, 0);
+      // ====== จบส่วนที่เพิ่ม ======
+    } catch (e) {
+      console.error("Load outgoing-report4 for edit failed", e);
+    } finally {
+      if (!cancelled) setIsLoading(false);
+    }
+  })();
+  return () => { cancelled = true; };
+}, [report4Id]);
 
-  return {
+return {
     // State
     form,
     errors,
@@ -854,6 +998,9 @@ export const useInformRelatedParties = () => {
     uploadedFiles, // เพิ่มไฟล์ที่อัปโหลด
   existingAttachments,
     fileInputKey,
+    outsideDepartmentsOptions,
+    outsideDepartmentsLoading,
+  fetchOutsideDepartments,
 
     // Validation helpers
     isRequired,

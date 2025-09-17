@@ -12,6 +12,7 @@ import useInformRelatedParties from "@hooks/admin/InformRelatedParties/useInform
 import SelectFieldsalutation from "@services/SelectFieldsalutation/SelectFieldsalutation";
 import SelectFieldSignatureAuthority from "@services/SelectFieldSignatureAuthority/SelectFieldSignatureAuthority";
 import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
+import SelectFieldDepartmentOutside from "@services/SelectFieldDepartmentoutside/SelectFieldDepartmentoutside";
 import { GetOutgoingReportOptions } from "@pages/api/allselect/allselect";
 import { DeleteOutgoingReportAttachment, DeleteOutgoingReport4Attachment, GetOutgoingReportById } from "@pages/api/outgoinreports/outgoinreports";
 import { GetReferenceComplaints, GetReDocumentComplaints } from "@pages/api/complaint/complaint";
@@ -33,6 +34,8 @@ import {
   TextField,
   InputAdornment,
   CircularProgress,
+  Tabs,
+  Tab,
 } from "@mui/material";
 
 const InformRelatedParties = () => {
@@ -64,6 +67,13 @@ const InformRelatedParties = () => {
   const [proposeForOptions, setProposeForOptions] = useState([]);
   const [decisionOptions, setDecisionOptions] = useState([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
+  const [deliveryMethodOptions, setDeliveryMethodOptions] = useState([
+    { value: 'ระบบสารบรรณ', label: 'ระบบสารบรรณ' },
+    { value: 'ไปรษณีย์', label: 'ไปรษณีย์' },
+    { value: 'อีเมล', label: 'อีเมล' },
+    { value: 'โทรสาร', label: 'โทรสาร' },
+    { value: 'อื่นๆ', label: 'อื่นๆ' },
+  ]);
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
   const [openSearchDialog2, setOpenSearchDialog2] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -247,17 +257,17 @@ const InformRelatedParties = () => {
       setUrgencyOptions(normalizeOptions(urgencyData));
 
       setProposeForOptions([
-        { value: "ทราบ", label: "ทราบ" },
-        { value: "พิจารณา", label: "พิจารณา" },
-        { value: "อนุมัติ", label: "อนุมัติ" },
-        { value: "ดำเนินการ", label: "ดำเนินการ" },
+        { value: "ทราบ", label: "เพื่อทราบ" },
+        { value: "อนุมัติ", label: "เพื่อทราบไว้ชั้นหนึ่ง" },
+        { value: "พิจารณา", label: "เพื่อพิจารณา" },
+        // { value: "ดำเนินการ", label: "ดำเนินการ" },
       ]);
 
       setDecisionOptions([
-        { value: "รับทราบ", label: "รับทราบ" },
-        { value: "อนุมัติ", label: "อนุมัติ" },
-        { value: "ไม่อนุมัติ", label: "ไม่อนุมัติ" },
-        { value: "เพิ่มเติม", label: "ต้องการข้อมูลเพิ่มเติม" },
+        { value: "รับทราบ", label: "ทราบ" },
+        { value: "อนุมัติ", label: "ทราบไว้ชั้นหนึ่ง" },
+        { value: "ไม่อนุมัติ", label: "ยุติเรื่องได้" },
+        { value: "เพิ่มเติม", label: "เห็นชอบ" },
       ]);
 
     } catch (error) {
@@ -329,7 +339,27 @@ const InformRelatedParties = () => {
   const handleDate2Change = (thaiDate) => {
     handleDateChange(thaiDate, 'date2');
   };
-  const [tabSelected, setTabSelected] = useState("department");
+  // Tab: inspector | complainant | other
+  const [tabSelected, setTabSelected] = useState(form?.reportType || "inspector");
+
+  const handleTabChange = (e, val) => {
+    setTabSelected(val);
+    // Persist the selection into form so it can be sent to API
+    handleChange("reportType", val);
+    if (val === 'other') {
+      // Clear internal department select when switching to 'other'
+      setSelectedDepartment(null);
+      handleChange({ target: { name: 'department', value: '' } });
+    }
+  };
+
+  // Keep tabSelected in sync with loaded form.reportType (especially on edit load)
+  useEffect(() => {
+    if (form?.reportType && tabSelected !== form.reportType) {
+      setTabSelected(form.reportType);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form?.reportType]);
 
   // Remove legacy prefill (replacement handled inside hook).
 
@@ -367,9 +397,26 @@ const InformRelatedParties = () => {
         {/* subtitle */}
         <Box sx={{ textAlign: "center", py: 2 }}>
           <Typography variant="h5" fontWeight="bold" color="#1120A3">
-            {isEditing ? "แก้ไขรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ" : "แบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ"}
+            {tabSelected === 'inspector' && (isEditing ? 'แก้ไขรายงานผู้ตรวจฯ' : 'รายงานผู้ตรวจฯ')}
+            {tabSelected === 'complainant' && (isEditing ? 'แก้ไขแจ้งผลผู้ร้อง' : 'แจ้งผลผู้ร้อง')}
+            {tabSelected === 'other' && (isEditing ? 'แก้ไขแจ้งหน่วยงานอื่น' : 'แจ้งหน่วยงานอื่น')}
           </Typography>
         </Box>
+        {/* tabs header */}
+        <Box sx={{ px: { xs: 2, sm: 3, md: 5 }, pt: 1 }}>
+          <Tabs
+            value={tabSelected}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            aria-label="report type tabs"
+          >
+            <Tab value="inspector" label="รายงานผู้ตรวจฯ" />
+            <Tab value="complainant" label="แจ้งผลผู้ร้อง" />
+            <Tab value="other" label="แจ้งหน่วยงานอื่น" />
+          </Tabs>
+        </Box>
+
         <Box
           component="form"
           sx={{
@@ -379,7 +426,7 @@ const InformRelatedParties = () => {
             p: { xs: 2, sm: 3, md: 5 },
           }}
         >
-          {/* row 1: เรียน/ถึง | เลข สป.กค. | วันที่ (grid) */}
+          {/* row: เลข สรร. | วันที่ เลขสรร. */}
           <Box
             sx={{
               display: 'grid',
@@ -389,42 +436,11 @@ const InformRelatedParties = () => {
               gridTemplateColumns: {
                 xs: '1fr',
                 sm: 'repeat(2, 1fr)',
-                md: 'repeat(3, 1fr)'
+                md: 'repeat(2, 1fr)'
               },
               width: '100%'
             }}
           >
-            <Box>
-              <SelectFieldsalutation
-                label={createLabel('เรียน/ถึง', 'salutation')}
-                name="salutation"
-                value={form.salutation}
-                onChange={handleChange}
-                onUserSelect={(opt) => {
-                  const label = (opt?.name || opt?.label || '').trim();
-                  const isOther = label === 'อื่นๆ';
-                  const isComplainant = label === 'ผู้ร้อง';
-                  handleChange({ target: { name: 'salutation_is_other', value: isOther } });
-                  handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
-                  // Persist readable name (for position_name payload)
-                  if (label) handleChange({ target: { name: 'salutation_name', value: label } });
-                  // Also ensure base salutation field has the id/value while capturing label through options
-                  if (opt) {
-                    const idVal = opt.id || opt.value || opt.position_id || '';
-                    if (idVal) handleChange('salutation', { value: idVal }, { originalOption: opt });
-                  }
-                  if (!isOther) {
-                    handleChange({ target: { name: 'position_other_text', value: '' } });
-                  }
-                  if (isOther || isComplainant) {
-                    setSelectedDepartment(null);
-                    handleChange({ target: { name: 'department', value: '' } });
-                  }
-                }}
-                error={!!getFieldError('salutation')}
-                helperText={getFieldError('salutation')}
-              />
-            </Box>
       <Box>
               <Box sx={{ display:'flex', alignItems:'flex-end', gap:1 }}>
                 <Box sx={{ flex:1 }}>
@@ -463,20 +479,43 @@ const InformRelatedParties = () => {
                 helperText={getFieldError('date')}
               />
             </Box>
-            {(form.salutation_is_other || form.salutation_is_complainant) && (
-              <Box sx={{ gridColumn: { xs: '1 / -1', sm: '1 / -1' } }}>
-                <InputText
-                  label={createLabel(form.salutation_is_complainant ? 'ระบุผู้ร้อง' : 'ระบุตำแหน่ง (อื่นๆ)', 'position_other_text')}
-                  inputLabel={form.salutation_is_complainant ? 'กรอกชื่อผู้ร้อง' : 'กรอกตำแหน่ง (อื่นๆ)'}
-                  name='position_other_text'
-                  value={form.position_other_text || ''}
-                  onChange={handleChange}
-                  error={!!getFieldError('position_other_text')}
-                  helperText={getFieldError('position_other_text') || (form.salutation_is_complainant ? 'พิมพ์ชื่อผู้ร้องที่ต้องการระบุ' : '')}
-                />
-              </Box>
-            )}
           </Box>
+
+          {/* ชั้นความลับ | ชั้นความเร่งด่วน */}
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            }}
+          >
+            <SelectField
+              label={createLabel("ชั้นความลับ", "confidentiality")}
+              name="confidentiality"
+              value={form.confidentiality}
+              onChange={handleChange}
+              options={confidentialityOptions}
+              error={!!getFieldError("confidentiality")}
+              helperText={getFieldError("confidentiality")}
+              disabled={optionsLoading}
+              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความลับ"}
+            />
+
+            <SelectField
+              label={createLabel("ชั้นความเร่งด่วน", "urgency")}
+              name="urgency"
+              value={form.urgency}
+              onChange={handleChange}
+              options={urgencyOptions}
+              error={!!getFieldError("urgency")}
+              helperText={getFieldError("urgency")}
+              disabled={optionsLoading}
+              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความเร่งด่วน"}
+            />
+          </Box>
+
+          {/* ซ่อนฟิลด์เพิ่มเติมที่ไม่อยู่ในสcope ภาพ 1-2-3 */}
+          {/* intentionally hidden: createdByDepartment, deliveryMethod */}
 
              {/* Dialog สำหรับค้นหาเลข */}
             <Dialog
@@ -720,7 +759,7 @@ const InformRelatedParties = () => {
             </Dialog>
 
           {/* row 2: เรื่อง */}
-          <Box>
+          {/* <Box>
             <InputText
               label={createLabel("เรื่อง", "subject")}
               inputLabel="กรอกเรื่อง"
@@ -730,7 +769,7 @@ const InformRelatedParties = () => {
               error={!!getFieldError("subject")}
               helperText={getFieldError("subject")}
             />
-          </Box>
+          </Box> */}
 
           {/* row 2.5: เพิ่มฟิลด์สำหรับ bookNo และ date2 */}
          <Box
@@ -1021,14 +1060,95 @@ const InformRelatedParties = () => {
         </DialogActions>
       </Dialog>
 
-          {/* row 3: ผู้ลงนาม | หน่วยงาน/ผู้ร้อง */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-            }}
-          >
+          {/* เรื่อง */}
+          <Box>
+            <InputText
+              label={createLabel("เรื่อง", "subject")}
+              inputLabel="กรอกเรื่อง"
+              name="subject"
+              value={form.subject}
+              onChange={handleChange}
+              error={!!getFieldError("subject")}
+              helperText={getFieldError("subject")}
+            />
+          </Box>
+
+          {/* เรียน/ถึง (ย้ายมาตามลำดับที่ต้องการ) */}
+          <Box>
+            <SelectFieldsalutation
+              label={createLabel('เรียน/ถึง', 'salutation')}
+              name="salutation"
+              value={form.salutation}
+              onChange={handleChange}
+              onUserSelect={(opt) => {
+                const label = (opt?.name || opt?.label || '').trim();
+                const isOther = label === 'อื่นๆ';
+                const isComplainant = label === 'ผู้ร้อง';
+                handleChange({ target: { name: 'salutation_is_other', value: isOther } });
+                handleChange({ target: { name: 'salutation_is_complainant', value: isComplainant } });
+                if (label) handleChange({ target: { name: 'salutation_name', value: label } });
+                if (opt) {
+                  const idVal = opt.id || opt.value || opt.position_id || '';
+                  if (idVal) handleChange('salutation', { value: idVal }, { originalOption: opt });
+                }
+                if (!isOther) {
+                  handleChange({ target: { name: 'position_other_text', value: '' } });
+                }
+                if (isOther || isComplainant) {
+                  setSelectedDepartment(null);
+                  handleChange({ target: { name: 'department', value: '' } });
+                }
+              }}
+              error={!!getFieldError('salutation')}
+              helperText={getFieldError('salutation')}
+            />
+          </Box>
+
+          {(form.salutation_is_other || form.salutation_is_complainant) && (
+            <Box>
+              <InputText
+                label={createLabel(form.salutation_is_complainant ? 'ระบุผู้ร้อง' : 'ระบุตำแหน่ง (อื่นๆ)', 'position_other_text')}
+                inputLabel={form.salutation_is_complainant ? 'กรอกชื่อผู้ร้อง' : 'กรอกตำแหน่ง (อื่นๆ)'}
+                name='position_other_text'
+                value={form.position_other_text || ''}
+                onChange={handleChange}
+                error={!!getFieldError('position_other_text')}
+                helperText={getFieldError('position_other_text') || (form.salutation_is_complainant ? 'พิมพ์ชื่อผู้ร้องที่ต้องการระบุ' : '')}
+              />
+            </Box>
+          )}
+
+          {tabSelected === "other" && (
+            <>
+              <Box>
+                <SelectFieldDepartmentOutside
+                  label="หน่วยงาน (เลือกจากรายการ)"
+                  inputLabel="เลือกหน่วยงานภายนอก"
+                  name="otherDepartmentId"
+                  value={form.otherDepartmentId}
+                  onChange={handleChange}
+                  error={!!getFieldError('otherDepartmentId')}
+                  helperText={getFieldError('otherDepartmentId')}
+                  required={true}
+                  allowCreate={false}
+                />
+              </Box>
+              {/* <Box>
+                <InputText
+                  label={createLabel('หน่วยงาน (กรอกเองได้ ถ้าไม่มีในรายการ)', 'otherDepartmentName')}
+                  inputLabel='กรอกหน่วยงาน (หน่วยงานอื่นที่เกี่ยวข้อง)'
+                  name='otherDepartmentName'
+                  value={form.otherDepartmentName || ''}
+                  onChange={handleChange}
+                  error={!!getFieldError('otherDepartmentName')}
+                  helperText={getFieldError('otherDepartmentName')}
+                />
+              </Box> */}
+            </>
+          )}
+
+          {/* ผู้ลงนาม */}
+          <Box>
             <SelectFieldSignatureAuthority
               label={createLabel("ผู้ลงนาม", "signer")}
               name="signer"
@@ -1040,146 +1160,88 @@ const InformRelatedParties = () => {
               placeholder="เลือกผู้ลงนาม"
               showUserInfo={false}
             />
-
-            <SelectFieldDepartment
-              label={createLabel("หน่วยงาน / ผู้ร้อง", "department")}
-              name="department"
-              value={selectedDepartment}
-              onChange={handleDepartmentSelect}
-              onDepartmentSelect={handleDepartmentSelect}
-              // Remove filter by signer so department can be chosen freely
-              // filterBySignerId removed per requirement
-              error={!!getFieldError("department")}
-              helperText={getFieldError("department")}
-              disabled={form.salutation_is_other || form.salutation_is_complainant}
-              placeholder={form.salutation_is_other || form.salutation_is_complainant ? '—' : 'เลือกหน่วยงาน / ผู้ร้อง'}
-            />
           </Box>
-          {/* row 4: ชั้นความลับ | ชั้นความเร่งด่วน */}
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-            }}
-          >
-            <SelectField
-              label={createLabel("ชั้นความลับ", "confidentiality")}
-              name="confidentiality"
-              value={form.confidentiality}
-              onChange={handleChange}
-              options={confidentialityOptions}
-              error={!!getFieldError("confidentiality")}
-              helperText={getFieldError("confidentiality")}
-              disabled={optionsLoading}
-              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความลับ"}
-            />
+          {/* ความลับ/เร่งด่วน ย้ายขึ้นด้านบนแล้ว */}
 
-            <SelectField
-              label={createLabel("ชั้นความเร่งด่วน", "urgency")}
-              name="urgency"
-              value={form.urgency}
-              onChange={handleChange}
-              options={urgencyOptions}
-              error={!!getFieldError("urgency")}
-              helperText={getFieldError("urgency")}
-              disabled={optionsLoading}
-              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกชั้นความเร่งด่วน"}
-            />
-          </Box>
-
-          {/* row 5: เสนอเพื่อ | ผลการพิจารณา */}
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-            }}
-          >
-            <SelectField
-              label={createLabel("เสนอเพื่อ", "proposeFor")}
-              name="proposeFor"
-              value={form.proposeFor}
-              onChange={handleChange}
-              options={proposeForOptions}
-              error={!!getFieldError("proposeFor")}
-              helperText={getFieldError("proposeFor")}
-              disabled={optionsLoading}
-              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกวัตถุประสงค์"}
-            />
-
-            <SelectField
-              label={createLabel("ผลการพิจารณา", "decision")}
-              name="decision"
-              value={form.decision}
-              onChange={handleChange}
-              options={decisionOptions}
-              error={!!getFieldError("decision")}
-              helperText={getFieldError("decision")}
-              disabled={optionsLoading}
-              placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกผลการพิจารณา"}
-            />
-          </Box>
-
-          {/* row 6: เอกสารแนบ - เปลี่ยนเป็น InputFile */}
-          <Box sx={{ position: "relative" }}>
-            <InputFile
-              key={fileInputKey}
-              label={createLabel("เอกสารแนบ", "attachment")}
-              name="attachment"
-              onChange={handleFileUpload}
-              error={!!getFieldError("attachment")}
-              helperText={getFieldError("attachment") || "หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"}
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              maxFiles={3}
-              maxSizeMB={10}
-              multiple
-              existingFiles={existingAttachments}
-              getFileUrl={(att) => buildFileUrl(att.file_path)}
-              onDeleteExisting={async (att) => {
-                const reportId = report4Id || router?.query?.report4_id || router?.query?.id || null;
-                if (!reportId || !att?.id) return false;
-                // Try type4 specific endpoint first
-                let res = await DeleteOutgoingReport4Attachment({
-                  outgoing_report_id: reportId,
-                  attachment_id: att.id,
-                });
-                if (res?.success === false) {
-                  // fallback generic
-                  res = await DeleteOutgoingReportAttachment({
-                    outgoing_report_id: reportId,
-                    attachment_id: att.id,
-                  });
-                }
-                if (res?.success === false) {
-                  alert(res?.res_message || "ลบไฟล์ไม่สำเร็จ");
-                  return false;
-                }
-                setExistingAttachments((prev) => {
-                  const updated = prev.filter((x) => x.id !== att.id);
-                  return updated;
-                });
-                // Update attachment field (names) after deletion
-                const remainingNames = (existingAttachments.filter(x => x.id !== att.id).map(a => a.original_name || a.file_name || a.name || "").filter(Boolean)).join(", ");
-                handleChange("attachment", remainingNames);
-                return true;
+          {/* เสนอเพื่อ | ผลการพิจารณา (เฉพาะรายงานผู้ตรวจฯ) */}
+          {tabSelected === 'inspector' && (
+            <Box
+              sx={{
+                display: "grid",
+                gap: 2,
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
               }}
-            />
-          </Box>
+            >
+              <SelectField
+                label={createLabel("เสนอเพื่อ", "proposeFor")}
+                name="proposeFor"
+                value={form.proposeFor}
+                onChange={handleChange}
+                options={proposeForOptions}
+                error={!!getFieldError("proposeFor")}
+                helperText={getFieldError("proposeFor")}
+                disabled={optionsLoading}
+                placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกวัตถุประสงค์"}
+              />
 
-          {/* row 7: รายละเอียด */}
-          <Box>
-            <InputText
-              label="รายละเอียด"
-              inputLabel="กรอกรายละเอียด (ถ้ามี)"
-              name="details"
-              value={form.details}
-              onChange={handleChange}
-              multiline
-              rows={4}
-              helperText="ระบุข้อมูลเพิ่มเติมที่ต้องการแจ้ง"
-            />
-          </Box>
+              <SelectField
+                label={createLabel("ผลการพิจารณา", "decision")}
+                name="decision"
+                value={form.decision}
+                onChange={handleChange}
+                options={decisionOptions}
+                error={!!getFieldError("decision")}
+                helperText={getFieldError("decision")}
+                disabled={optionsLoading}
+                placeholder={optionsLoading ? "กำลังโหลด..." : "เลือกผลการพิจารณา"}
+              />
+            </Box>
+          )}
+
+          {/* รายละเอียดอยู่เหนือเอกสารแนบ ทุกแท็บให้เหมือนกัน */}
+          <>
+            <Box>
+              <InputText
+                label="รายละเอียด"
+                inputLabel="กรอกรายละเอียด (ถ้ามี)"
+                name="details"
+                value={form.details}
+                onChange={handleChange}
+                multiline
+                rows={4}
+                helperText="ระบุข้อมูลเพิ่มเติมที่ต้องการแจ้ง"
+              />
+            </Box>
+            <Box sx={{ position: "relative" }}>
+              <InputFile
+                key={fileInputKey}
+                label={createLabel("เอกสารแนบ", "attachment")}
+                name="attachment"
+                onChange={handleFileUpload}
+                error={!!getFieldError("attachment")}
+                helperText={getFieldError("attachment") || "หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"}
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                maxFiles={3}
+                maxSizeMB={10}
+                multiple
+                existingFiles={existingAttachments}
+                getFileUrl={(att) => buildFileUrl(att.file_path)}
+                onDeleteExisting={async (att) => {
+                  const reportId = report4Id || router?.query?.report4_id || router?.query?.id || null;
+                  if (!reportId || !att?.id) return false;
+                  let res = await DeleteOutgoingReport4Attachment({ outgoing_report_id: reportId, attachment_id: att.id });
+                  if (res?.success === false) {
+                    res = await DeleteOutgoingReportAttachment({ outgoing_report_id: reportId, attachment_id: att.id });
+                  }
+                  if (res?.success === false) { alert(res?.res_message || "ลบไฟล์ไม่สำเร็จ"); return false; }
+                  setExistingAttachments((prev) => prev.filter((x) => x.id !== att.id));
+                  const remainingNames = (existingAttachments.filter(x => x.id !== att.id).map(a => a.original_name || a.file_name || a.name || "").filter(Boolean)).join(", ");
+                  handleChange("attachment", remainingNames);
+                  return true;
+                }}
+              />
+            </Box>
+          </>
         </Box>
 
         {/* action buttons */}

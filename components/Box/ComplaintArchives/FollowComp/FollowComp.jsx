@@ -335,9 +335,16 @@ const sectionConfigs = [
       } else if (posName === "อื่นๆ") {
         positionDisplay = positionDisplay.replace(/^อื่นๆ/, "(อื่นๆ)");
       }
+      const isSpecialPosition = ["ผู้ร้อง", "ผู้ร้องเรียน", "อื่นๆ", "หน่วยงานอื่นๆ"].includes(posName);
+      // FORWARDED context: use the selected posName (in parentheses) as prefix for special positions
+      const prefix = isSpecialPosition ? `(${posName}) ` : "";
+      const departmentDisplay = isSpecialPosition
+        ? (prefix + (other || row.department?.name || row.department_name || row.outgoing_departments?.[0]?.name || "-"))
+        : (row.department?.name || row.department_name || row.outgoing_departments?.[0]?.name || positionDisplay || "-");
+
       return {
         ลำดับ: idx + 1,
-        "ส่งหน่วยงาน(ครั้งที่ส่ง)": positionDisplay,
+        "ส่งหน่วยงาน(ครั้งที่ส่ง)": departmentDisplay,
         เรื่อง: row.issue || row.subject || "-",
         เลขที่หนังสือ: row.document_number || row.document_number || "-",
         ลงวันที่: row.document_date || row.document_date || "-",
@@ -362,6 +369,7 @@ const sectionConfigs = [
     title: "หนังสือแจ้งผลการพิจารณาจากหน่วยงาน",
     headers: [
       "ลำดับ",
+      "หน่วยงาน",
       "เลขที่หนังสือ",
       "ลงวันที่",
       "เรื่อง",
