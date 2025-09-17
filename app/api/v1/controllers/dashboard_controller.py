@@ -1809,14 +1809,18 @@ def get_department_ranking_by_date(
     bottom_sorted = sorted(rows, key=lambda r: (int(r.cnt or 0), r.dept_name or ""))
 
     # 4.1) นับจำนวนเรื่องต่อจังหวัด (ภายในช่วงเวลา) โดยดูจาก incident_province_id
+    # นับเฉพาะรายการที่มี province.id จริง (incident_province_id ไม่เป็น NULL และต้องแมปกับ Province ได้)
     prov_rows = (
         db.query(
             Complaint.incident_province_id.label("province_id"),
             Province.name_th.label("province_name"),
             func.count(Complaint.id).label("cnt"),
         )
-        .outerjoin(Province, Province.id == Complaint.incident_province_id)
-        .filter(Complaint.created_at.between(utc_from, utc_to))
+        .join(Province, Province.id == Complaint.incident_province_id)  # inner join เพื่อตัด NULL/ไม่พบจังหวัดทิ้ง
+        .filter(
+            Complaint.created_at.between(utc_from, utc_to),
+            Complaint.incident_province_id.isnot(None)
+        )
         .group_by(Complaint.incident_province_id, Province.name_th)
         .all()
     )
