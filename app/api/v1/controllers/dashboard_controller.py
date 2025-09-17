@@ -18,6 +18,7 @@ from models.outgoing_reports2 import OutgoingReport2
 from models.outgoing_reports3 import OutgoingReport3
 from models.outgoing_reports4 import OutgoingReport4
 from models.outgoing_reports6 import OutgoingReport6
+from models.comp_provinces import Province
 from app.api.v1.controllers.user_controller import get_user_with_roles_and_titles
 
 # สร้าง logger
@@ -1761,10 +1762,11 @@ def get_department_ranking_by_date(
     limit_bottom: int = 5
 ) -> Dict[str, Any]:
     """
-    จัดอันดับหน่วยงานที่ 'มีเรื่องมากที่สุด' และ 'น้อยที่สุด'
-    - อิงเรื่องที่ถูก 'มอบหมาย' ผ่าน outgoing_reports(1–4)
+    จัดอันดับหน่วยงานที่ 'มีเรื่องร้องทุกข์มากที่สุด' และ 'จังหวัดที่มีเรื่องร้องทุกข์มากที่สุด'
+    - Top Departments: อิงเรื่องที่ถูก 'มอบหมาย' ผ่าน outgoing_reports(1–4)
+    - Top Provinces: อิงจากจังหวัดเหตุการณ์ของเรื่องร้องทุกข์ (Complaint.incident_province_id)
     - รับช่วงวันที่ (เวลาไทย) -> แปลงเป็น UTC ก่อนคิวรี
-    - กันการซ้ำด้วย distinct(complaint_id, department_id)
+    - กันการซ้ำฝั่งหน่วยงานด้วย distinct(complaint_id, department_id)
     """
     # 1) ทำช่วงวันที่ (BKK -> UTC)
     bkk_from = _parse_bkk_date(date_from, end_of_day=False)
@@ -1801,11 +1803,25 @@ def get_department_ranking_by_date(
         .all()
     )
 
-    # 4) รวมยอดทั้งหมด + จำนวนหน่วยงานที่มีเรื่อง
-    total_complaints = sum(int(r.cnt or 0) for r in rows)
-    # เรียงมากสุด ↓ / น้อยสุด ↑
+    # 4) รวมยอดทั้งหมด + เรียงมากสุด/น้อยสุดสำหรับหน่วยงาน
+    total_complaints_departments = sum(int(r.cnt or 0) for r in rows)
     top_sorted = sorted(rows, key=lambda r: (int(r.cnt or 0), r.dept_name or ""), reverse=True)
     bottom_sorted = sorted(rows, key=lambda r: (int(r.cnt or 0), r.dept_name or ""))
+
+    # 4.1) นับจำนวนเรื่องต่อจังหวัด (ภายในช่วงเวลา) โดยดูจาก incident_province_id
+    prov_rows = (
+        db.query(
+            Complaint.incident_province_id.label("province_id"),
+            Province.name_th.label("province_name"),
+            func.count(Complaint.id).label("cnt"),
+        )
+        .outerjoin(Province, Province.id == Complaint.incident_province_id)
+        .filter(Complaint.created_at.between(utc_from, utc_to))
+        .group_by(Complaint.incident_province_id, Province.name_th)
+        .all()
+    )
+    total_complaints_provinces = sum(int(r.cnt or 0) for r in prov_rows)
+    top_prov_sorted = sorted(prov_rows, key=lambda r: (int(r.cnt or 0), r.province_name or ""), reverse=True)
 
     # 5) ทำ payload
     def _pack(lst, take, desc=True):
@@ -1818,6 +1834,16 @@ def get_department_ranking_by_date(
             })
         return out
 
+    def _pack_prov(lst, take):
+        out: List[Dict[str, Any]] = []
+        for idx, r in enumerate(lst[:max(0, take)], start=1):
+            out.append({
+                "rank": idx,
+                "province": {"id": int(r.province_id) if r.province_id is not None else None, "name": r.province_name or "ไม่ระบุ"},
+                "count": int(r.cnt or 0),
+            })
+        return out
+
     payload = {
         "filters": {
             "date_from_bangkok": bkk_from.isoformat(),
@@ -1825,13 +1851,20 @@ def get_department_ranking_by_date(
             "date_from_utc": utc_from.isoformat(),
             "date_to_utc": utc_to.isoformat(),
             "limit_top": int(limit_top),
-            "limit_bottom": int(limit_bottom)
+            "limit_bottom": int(limit_bottom),
+            # explicit mapping for clarity/backward-compat
+            "limit_top_departments": int(limit_top),
+            "limit_bottom_departments": int(limit_bottom),
+            "limit_top_provinces": int(limit_top),
         },
         "totals": {
-            "total_complaints": int(total_complaints),
-            "departments_with_complaints": len(rows)
+            "total_complaints_by_departments": int(total_complaints_departments),
+            "departments_with_complaints": len(rows),
+            "total_complaints_by_provinces": int(total_complaints_provinces),
+            "provinces_with_complaints": len(prov_rows),
         },
         "top_departments": _pack(top_sorted, limit_top, desc=True),
-        "bottom_departments": _pack(bottom_sorted, limit_bottom, desc=False)
+        "bottom_departments": _pack(bottom_sorted, limit_bottom, desc=False),
+        "top_provinces": _pack_prov(top_prov_sorted, limit_top),
     }
     return payload

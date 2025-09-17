@@ -179,9 +179,14 @@ async def get_department_ranking_endpoint(
     current_user: str = Depends(can_read("dashboard")),
 ):
     """
-    จัดอันดับหน่วยงานที่มีเรื่อง 'มากที่สุด' และ 'น้อยที่สุด' ตามช่วงวันที่
-    - ผูก complaint ↔ department ผ่าน outgoing_reports(1–4) แบบเดียวกับโดนัท
-    - วันที่ใช้เวลาไทย แล้วแปลงเป็น UTC ก่อนคิวรี
+    จัดอันดับตามช่วงวันที่:
+    - top_departments: หน่วยงานที่มีเรื่องร้องทุกข์มากที่สุด (ผูก complaint ↔ department ผ่าน outgoing_reports 1–4)
+    - bottom_departments: หน่วยงานที่มีเรื่องน้อยที่สุด (คงไว้เพื่อรองรับหน้าบ้านเดิม)
+    - top_provinces: จังหวัดที่มีเรื่องร้องทุกข์มากที่สุด (จาก Complaint.incident_province_id)
+    หมายเหตุพารามิเตอร์:
+    - limit_top: จำนวนอันดับสำหรับ top_departments และ top_provinces
+    - limit_bottom: จำนวนอันดับสำหรับ bottom_departments
+    เวลาที่ส่งเข้ามาเป็นเวลาไทย และจะแปลงเป็น UTC ก่อนคิวรี
     """
     try:
         data = get_department_ranking_by_date(
