@@ -140,6 +140,13 @@ const SearchComplaints = () => {
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
 
+  const formatDateTimeForForm = (dateValue) => {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return "";
+    return date;
+  };
+
   // --- เปลี่ยน useEffect เปิด Dialog ให้ยิง API ---
   useEffect(() => {
     if (openSearchDialog) {
@@ -308,13 +315,16 @@ useEffect(() => {
         assignment.director_submission_date ||
         merged?.director_submission_date ||
         merged?.assignment_form?.director_submission_date;
-      step4Methods.reset({
-        officerReceivedDate: officerDate,
-        directorSubmittedDate: directorDate ? new Date(directorDate) : "",
-        incidentDateTime: merged?.step3?.general?.incidentDate
-          ? new Date(merged.step3.general.incidentDate)
-          : "",
-      });
+        step4Methods.reset({
+          officerReceivedDate: extractOfficerReceivedDate(merged, assignment),
+          directorSubmittedDate: assignment.director_submission_date ? formatDateTimeForForm(assignment.director_submission_date) : "",
+          // แก้เป็น incidentDate
+          incidentDateTime: assignment.incidentDate 
+            ? formatDateTimeForForm(assignment.incidentDate)
+            : merged?.step3?.general?.incidentDate 
+            ? formatDateTimeForForm(merged.step3.general.incidentDate)
+            : "",
+        });
     } catch (err) {
       setError("โหลดข้อมูลไม่สำเร็จ");
       setComplaintTypes([]);
@@ -737,9 +747,12 @@ useEffect(() => {
     const directorDate2 = assignmentForm.director_submission_date || defaultData?.director_submission_date;
     step4Methods.reset({
       officerReceivedDate: officerDate2,
-      directorSubmittedDate: directorDate2 ? new Date(directorDate2) : "",
-      incidentDateTime: step3General.incidentDate
-        ? new Date(step3General.incidentDate)
+      directorSubmittedDate: directorDate2 ? formatDateTimeForForm(directorDate2) : "",
+      // แก้เป็น incidentDate
+      incidentDateTime: assignmentForm.incidentDate
+        ? formatDateTimeForForm(assignmentForm.incidentDate)
+        : step3General.incidentDate
+        ? formatDateTimeForForm(step3General.incidentDate)
         : "",
     });
 
@@ -1241,6 +1254,10 @@ const handleSubmit = async () => {
         new_complaint: complaintFilingType === "new",
         add_more_complaint_to_ref: complaintFilingType === "additional",
         group_work: complaintFilingType === "committee",
+        incidentDate: formatDateForAPI(
+          step4Data.incidentDateTime || 
+          defaultData?.assignment_form?.incidentDate ||
+          defaultData?.step3?.general?.incidentDate),
       };
 
       // Remove any undefined keys (defensive)
@@ -2224,16 +2241,11 @@ const handleSubmit = async () => {
                       <div className={styles.fieldRow}>
                         <div className={styles.fieldGroup}>
                           <div className={styles.datePickerWrapper}>
-                            <DateThaiPickerService
+                           <ControlledDateThaiPickerService
                               label="วันและเวลาที่เกิดเหตุ"
+                              name="incidentDateTime"
                               control={step4Methods.control}
-                              value={
-                                defaultData?.step3?.general?.incidentDate ||
-                                ""
-                              }
-                              onChange={() => {}}
                               time={true}
-                              // dis={true}
                             />
                           </div>
                         </div>

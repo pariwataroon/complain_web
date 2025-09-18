@@ -231,7 +231,6 @@ const SearchComplaintsPreview = ({
   const normalizeAssignmentData = (resData) => {
     const assignment = resData.assignment_form || {};
 
-    // สร้างสำเนา step4.general ให้มี officerReceivedDate (ใช้ confirm_assigned_date ถ้ามี)
     const step4General = {
       ...(resData.step4?.general || {}),
       officerReceivedDate:
@@ -243,6 +242,11 @@ const SearchComplaintsPreview = ({
         resData.step4?.general?.directorSubmittedDate ||
         assignment.director_submission_date ||
         resData.director_submission_date ||
+        null,
+      incidentDateTime:
+        resData.step4?.general?.incidentDateTime ||
+        assignment.incidentDate ||
+        resData.step3?.general?.incidentDate ||
         null,
     };
 
@@ -396,7 +400,7 @@ const handleSubmit = async () => {
       group_work: step3Data.complaint_filing_type === "committee" || step3Data.isCommitteeComplaint === true,
       confirm_assigned_date: formatDateForAPI(step4Data.officerReceivedDate || assignmentOriginal.confirm_assigned_date),
       director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate || assignmentOriginal.director_submission_date),
-      incident_date: formatDateForAPI(step4Data.incidentDateTime || assignmentOriginal.incident_date),
+      incidentDate: formatDateForAPI(step4Data.incidentDateTime || assignmentOriginal.incidentDate),
       assigned_date: assignmentOriginal.assigned_date || formData.assigned_date || null,
     });
 
@@ -916,11 +920,16 @@ const handleSubmit = async () => {
                 label="ประเภทเรื่องร้องเรียน"
                 value={complaint.complaintType || "-"}
               />
-              <InfoItem
+             <InfoItem
                 label="วันและเวลาที่เกิดเหตุ"
                 value={
-                  additionalDetails.incidentDateTime
+                  // ใช้ incidentDate แทน incident_date
+                  formData?.assignment_form?.incidentDate
+                    ? safeFormatThaiDateTime(formData.assignment_form.incidentDate)
+                    : additionalDetails.incidentDateTime
                     ? safeFormatThaiDateTime(additionalDetails.incidentDateTime)
+                    : complaint.incidentDate
+                    ? safeFormatThaiDateTime(complaint.incidentDate)
                     : "-"
                 }
               />
