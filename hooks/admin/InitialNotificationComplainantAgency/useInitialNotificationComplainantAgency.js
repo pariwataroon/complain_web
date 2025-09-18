@@ -347,8 +347,7 @@ export const useInitialNotificationComplainantAgency = () => {
   // -------- helpers --------
   const isRequired = useCallback(
     (fieldName) => {
-      // department ไม่บังคับแล้วทั้งโหมดสร้างและแก้ไข
-      if (fieldName === 'department') return false;
+      if (fieldName === 'department') return !form.salutation_is_other;
       if (fieldName === 'position_other_text') return form.salutation_is_other;
       return baseRequiredFields.includes(fieldName);
     },
@@ -518,18 +517,21 @@ export const useInitialNotificationComplainantAgency = () => {
     const fieldsConfig = [
       { field: 'salutation', label: 'เรียน' },
       ...(form.salutation_is_other ? [{ field: 'position_other_text', label: 'ตำแหน่ง (อื่นๆ)' }] : []),
+      ...(!form.salutation_is_other ? [{ field: 'department', label: 'หน่วยงาน' }] : []),
       { field: 'refNo', label: 'เลขที่หนังสือ' },
       { field: 'document_date', label: 'วันที่หนังสือ' },
       { field: 'complaint_number', label: 'เลข สป.กค.' },
       { field: 'complaint_number_date', label: 'วันที่ สป.กค.' },
       { field: 'subject', label: 'เรื่อง' },
-      // department ถูกทำให้ optional เสมอ (ไม่ต้องใส่เพื่อบันทึก)
       { field: 'signer', label: 'ผู้ลงนาม' },
       { field: 'confidentiality', label: 'ชั้นความลับ' },
       { field: 'urgency', label: 'ชั้นความเร่งด่วน' },
       { field: 'attachment', label: 'เอกสารแนบ' },
     ];
-    const newErrors = {}; const missing = [];
+    
+    const newErrors = {}; 
+    const missing = [];
+    
     fieldsConfig.forEach(({ field, label }) => {
       const value = form[field];
       if (!value && value !== 0) {
@@ -537,9 +539,10 @@ export const useInitialNotificationComplainantAgency = () => {
         missing.push({ field, label });
       }
     });
+    
     setErrors(newErrors);
     return missing;
-  }, [form, id]);
+  }, [form]);
 
   const nullIfEmpty = (v) => (v === undefined || v === null || v === "" ? null : v);
 
@@ -689,8 +692,8 @@ export const useInitialNotificationComplainantAgency = () => {
       return POSITION_FALLBACK;
     })();
 
-    const deptId = await ensureRealDepartmentId(form.department);
-    console.log('[DeptDebug] Final deptId =', deptId, 'form.department =', form.department, 'external count =', externalDepartments.length);
+    const deptId = form.salutation_is_other ? null : await ensureRealDepartmentId(form.department);
+    console.log('[DeptDebug] Final deptId =', deptId, 'form.department =', form.department, 'salutation_is_other =', form.salutation_is_other);
 
     // Define outsideDepartmentId and outsideDepartmentName explicitly
     const outsideDepartmentId = deptId && isUUID(deptId) ? deptId : null;
@@ -706,17 +709,16 @@ export const useInitialNotificationComplainantAgency = () => {
       document_date: toYMD(form.document_date),
       subject: form.subject || '',
       signature_authority_user_id: nullIfEmpty(form.signer),
-  // department_id (ยังคงส่งเฉพาะถ้าผ่าน ensureRealDepartmentId)
-  ...(deptId ? { department_id: deptId } : {}),
-  // แนบข้อมูลหน่วยงานภายนอกชั่วคราว (ถ้า backend รองรับจะเก็บได้ ถ้าไม่รองรับก็ไม่เสียหาย)
-  ...(outsideDepartmentId ? { outside_department_id: outsideDepartmentId } : {}),
-  ...(outsideDepartmentName ? { outside_department_name: outsideDepartmentName } : {}),
+      ...(deptId && !form.salutation_is_other ? { department_id: deptId } : {}),
+      ...(outsideDepartmentId && !form.salutation_is_other ? { outside_department_id: outsideDepartmentId } : {}),
+      ...(outsideDepartmentName && !form.salutation_is_other ? { outside_department_name: outsideDepartmentName } : {}),
       user_id: null,
       confidentiality_level: nullIfEmpty(form.confidentiality),
       urgency_level: nullIfEmpty(form.urgency),
       complaint_id: nullIfEmpty(form.complaint_id),
       remarks: form.note || '',
     };
+    
     console.log("OutgoingReport2 payload", payloadBase);
 
 
@@ -891,15 +893,23 @@ export const useInitialNotificationComplainantAgency = () => {
   }, [form, attachmentFiles, validateRequiredFields, externalDepartments]);
 
   const isFormValid = useCallback(() => {
-    const baseOk = baseRequiredFields.every(f => {
+    const requiredFields = [
+      'salutation', 'refNo', 'document_date', 'complaint_number', 
+      'complaint_number_date', 'subject', 'signer', 'confidentiality', 
+      'urgency', 'attachment'
+    ];
+    
+    const baseOk = requiredFields.every(f => {
       const v = form[f];
       return v !== undefined && v !== null && v !== '';
     });
-    // department ไม่บังคับแล้ว
-    const deptOk = true;
+    
+    const deptOk = form.salutation_is_other || (form.department !== undefined && form.department !== null && form.department !== '');
+    
     const otherOk = !form.salutation_is_other || !!form.position_other_text;
+    
     return baseOk && deptOk && otherOk;
-  }, [form, id]);
+  }, [form]);
 
   const canSave = useCallback(() => isFormValid(), [isFormValid]);
 

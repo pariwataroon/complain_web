@@ -486,6 +486,7 @@ const GetDepartmentRanking = async (
         filters: {},
         totals: {},
         departments: [],
+        provinces: [],
       };
     }
 
@@ -506,6 +507,13 @@ const GetDepartmentRanking = async (
 
     uniqueDepartments.sort((a, b) => b.count - a.count);
 
+    const provinces = (data.top_provinces || []).map((prov) => ({
+      rank: prov.rank,
+      provinceId: prov.province.id,
+      provinceName: prov.province.name,
+      complaintCount: prov.count,
+    }));
+
     return {
       filters: data.filters,
       totals: data.totals,
@@ -515,6 +523,7 @@ const GetDepartmentRanking = async (
         departmentName: dept.department.name,
         complaintCount: dept.count,
       })),
+      provinces: provinces,
     };
 
   } catch (error) {

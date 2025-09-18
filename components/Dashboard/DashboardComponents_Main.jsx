@@ -48,65 +48,59 @@ const DashboardComponents_Main = () => {
   const data = [selectedYear] || [];
   const [departmentRanking, setDepartmentRanking] = useState({
     topDepartments: [],
-    bottomDepartments: [],
+    topProvinces: []
   });
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState(startOfYear(getCurrentADYear()));
   const [endDate, setEndDate] = useState(endOfYear(getCurrentADYear()));
   const pdfRef = useRef();
   // Function to handle department ranking data
-  const handleGetDepartmentRanking = async () => {
-    if (!startDate || !endDate) return;
+ const handleGetDepartmentRanking = async () => {
+  if (!startDate || !endDate) return;
 
-    setLoading(true);
-    try {
-      const dateFrom = formatDateForAPI(startDate);
-      const dateTo = formatDateForAPI(endDate);
+  setLoading(true);
+  try {
+    const dateFrom = formatDateForAPI(startDate);
+    const dateTo = formatDateForAPI(endDate);
 
-      const response = await GetDepartmentRanking(
-        dateFrom,
-        dateTo,
-        5, // limit_top
-        5 // limit_bottom
+    const response = await GetDepartmentRanking(
+      dateFrom,
+      dateTo,
+      5, // limit_top
+      5 // limit_bottom
+    );
+
+    if (response?.filters && response?.departments) {
+      // แยกข้อมูลเป็น top departments
+      const sortedDepartments = [...response.departments].sort(
+        (a, b) => b.complaintCount - a.complaintCount
       );
 
-      if (response?.filters && response?.departments) {
-        // แยกข้อมูลเป็น top และ bottom departments
-        const sortedDepartments = [...response.departments].sort(
-          (a, b) => b.complaintCount - a.complaintCount
-        );
+      const topDepts = sortedDepartments.slice(0, 5).map((dept) => ({
+        name: dept.departmentName,
+        count: dept.complaintCount,
+      }));
 
-        // เอา 5 อันดับแรก สำหรับ top
-        const topDepts = sortedDepartments.slice(0, 5).map((dept) => ({
-          name: dept.departmentName,
-          count: dept.complaintCount,
-        }));
+      const topProvinces = (response.provinces || []).map((prov) => ({
+        name: prov.provinceName,
+        count: prov.complaintCount,
+      }));
 
-        // เอา 5 อันดับสุดท้าย สำหรับ bottom (เรียงจากน้อยไปมาก)
-        const bottomDepts = sortedDepartments
-          .slice(-5)
-          .reverse()
-          .map((dept) => ({
-            name: dept.departmentName,
-            count: dept.complaintCount,
-          }));
-
-        setDepartmentRanking({
-          topDepartments: topDepts,
-          bottomDepartments: bottomDepts,
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching department ranking:", error);
-      // ใช้ข้อมูล fallback ในกรณีที่ API error
       setDepartmentRanking({
-        topDepartments: [{ name: "ไม่สามารถโหลดข้อมูลได้", count: 0 }],
-        bottomDepartments: [{ name: "ไม่สามารถโหลดข้อมูลได้", count: 0 }],
+        topDepartments: topDepts,
+        topProvinces: topProvinces, 
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching department ranking:", error);
+    setDepartmentRanking({
+      topDepartments: [{ name: "ไม่สามารถโหลดข้อมูลได้", count: 0 }],
+      topProvinces: [{ name: "ไม่สามารถโหลดข้อมูลได้", count: 0 }], // เปลี่ยน
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     handleGetDepartmentRanking();
@@ -126,10 +120,7 @@ const DashboardComponents_Main = () => {
     : null;
 
   const topDepartmentChunks = chunkArray(departmentRanking.topDepartments, 5);
-  const bottomDepartmentChunks = chunkArray(
-    departmentRanking.bottomDepartments,
-    5
-  );
+  const topProvinceChunks = chunkArray(departmentRanking.topProvinces, 5);
 
   const handleExportPDF = () => {
     const today = new Date().toLocaleDateString("th-TH");
@@ -445,13 +436,13 @@ const DashboardComponents_Main = () => {
                   }}
                 >
                   <TopStatsSwiper
-                    title="สถิติหน่วยงานที่มีเรื่องต่ำมากที่สุด"
+                    title="สถิติจังหวัดที่มีเรื่องสูงมากที่สุด"
                     bgColor="#FFECB3"
                     headerColor="#F44336"
                     startDate={startDate}
                     endDate={endDate}
-                    variant="low"
-                    data={bottomDepartmentChunks}
+                    variant="province"
+                    data={topProvinceChunks}
                     loading={loading}
                     style={{ height: "100%", width: "100%" }}
                   />
