@@ -169,7 +169,7 @@ export const useForwardToAgencyForm = () => {
   } = useForm({
     resolver: yupResolver(validationSchema),
     mode: "onChange",
-    shouldUnregister: true,
+    // shouldUnregister: true,
     defaultValues: {
       salutation: "",
       salutation_is_other: false,
@@ -784,6 +784,7 @@ export const useForwardToAgencyForm = () => {
     fileData,
     fileInputKey,
     resetFileInput,
+    reset,
   };
 };
 
