@@ -133,7 +133,7 @@ const RequestResultProgress = () => {
         updateField('subject', d.subject || '');
         updateField('salutation', d.position?.id || "");
         const posName = d.position?.name || d.position_name || "";
-        const isOther = posName === "อื่นๆ";
+        const isOther = posName === "อื่นๆ" || posName === "ผู้ร้อง";
         updateField('salutation_is_other', !!isOther);
         if (isOther) updateField('position_other_text', d.position_other_text || "");
         // ผู้ลงนาม: setSelectedSigner และ updateField("signer", id)
@@ -149,18 +149,18 @@ const RequestResultProgress = () => {
           "";
         updateField("position_id", posId);
 
-        // หน่วยงาน (id และ object)
-        updateField("department", d.department?.id || "");
-        const deptObj = d.department
-          ? {
-              value: d.department.id,
-              label: d.department.name,
-              code: d.department.code || "",
-              shortName: d.department.shortName || "",
-            }
-          : null;
-        setSelectedDepartment(deptObj);
-        updateField("department_meta", deptObj);
+        // หน่วยงาน (id และ object) - เก็บข้อมูลไว้แม้จะเป็นกรณีพิเศษ
+        if (d.department?.id) {
+          updateField("department", d.department.id);
+          const deptObj = {
+            value: d.department.id,
+            label: d.department.name,
+            code: d.department.code || "",
+            shortName: d.department.shortName || "",
+          };
+          setSelectedDepartment(deptObj);
+          updateField("department_meta", deptObj);
+        }
 
         // Date preload: map to picker struct
         const refSrc = d.complaint_number_date || d.document_date || d.created_at;
@@ -400,7 +400,7 @@ const RequestResultProgress = () => {
                   const isCustom = label === 'อื่นๆ' || label === 'ผู้ร้อง';
                   handleChange({ target: { name: 'salutation_is_other', value: isCustom } });
                   if (!isCustom) handleChange({ target: { name: 'position_other_text', value: '' } });
-                  if (isCustom) updateField('department', '');
+                  // ไม่ล้างค่า department เมื่อเปลี่ยนเป็น "อื่นๆ"
                   try {
                     if (!isCustom) {
                       const posId = opt?.id || opt?.value || '';
@@ -415,6 +415,7 @@ const RequestResultProgress = () => {
                 helperText={getFieldError('salutation')}
               />
             </Box>
+            {/* ซ่อนฟิลด์หน่วยงานเมื่อเป็นกรณีพิเศษ */}
             {!form.salutation_is_other && (
               <Box>
                 <SelectFieldDepartment
