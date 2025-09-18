@@ -406,7 +406,7 @@ const DashboardComponents_Main = () => {
                   }}
                 >
                   <TopStatsSwiper
-                    title="สถิติหน่วยงานที่มีเรื่องสูงมากที่สุด"
+                    title="สถิติหน่วยงานที่มีเรื่องร้องเรียนมากที่สุด"
                     bgColor="#64B5F6"
                     headerColor="#1976D2"
                     startDate={startDate}
@@ -436,7 +436,7 @@ const DashboardComponents_Main = () => {
                   }}
                 >
                   <TopStatsSwiper
-                    title="สถิติจังหวัดที่มีเรื่องสูงมากที่สุด"
+                    title="สถิติจังหวัดที่มีเรื่องร้องเรียนมากที่สุด"
                     bgColor="#FFECB3"
                     headerColor="#F44336"
                     startDate={startDate}
