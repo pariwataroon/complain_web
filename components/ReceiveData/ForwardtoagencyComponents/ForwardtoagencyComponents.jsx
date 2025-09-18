@@ -311,6 +311,7 @@ const ForwardtoagencyComponents = () => {
     isRequired,
     getCurrentFormData,
     fileInputKey, // Get the fileInputKey
+    reset,
   } = useForwardToAgencyForm();
 
   useEffect(() => {
@@ -338,70 +339,93 @@ const ForwardtoagencyComponents = () => {
     [setValue]
   );
 
-  // Helper: fill form from outgoing report data
-  const fillFormFromReport = useCallback(
-    async (d) => {
-      if (!d) return;
-      // Core fields
-  // กรณี 'อื่นๆ' ให้ตั้งค่า flag และเติมข้อความประกอบ
-      const posName = d.position?.name || "";
-  const isOther = posName === "อื่นๆ" || !!d.position_other_text;
-  const positionId = d.position_id || d.position?.id || "";
-  setValue("salutation", positionId, { shouldDirty: false, shouldValidate: true });
-  setValue("salutation_is_other", !!isOther, { shouldDirty: false });
-  if (positionId) setValue("position_id", positionId, { shouldDirty: false });
-      if (isOther && d.position_other_text) {
-        setValue("position_other_text", d.position_other_text, { shouldDirty: false, shouldValidate: true });
-      }
+// Helper: fill form from outgoing report data
+const fillFormFromReport = useCallback(
+  async (d) => {
+    if (!d) return;
 
-      setValue(
-        "complaint_number",
-        d.complaint_number || d.reference_number || "",
-        { shouldDirty: false, shouldValidate: true }
-      );
-      setValue("complaint_id", d.complaint_id || d.related_complaint?.id || "", { shouldDirty: false });
+    // 1. Reset form before prefill to clear dirty/validation states
+    await reset();
 
-      const cnumDate = d.complaint_number_date || d.reference_date;
-  if (cnumDate) setValue("complaint_number_date", new Date(cnumDate), { shouldDirty: false, shouldValidate: true });
+    // 2. Prepare data about position
+    const posName = d.position?.name || "";
+    // "อื่นๆ", "ผู้ร้อง", "ผู้ร้องเรียน" ต้องถือเป็น isOther ทั้งหมด
+    const isOther = posName === "อื่นๆ" || posName === "ผู้ร้อง" || posName === "ผู้ร้องเรียน" || !!d.position_other_text;
+    const positionId = d.position_id || d.position?.id || "";
 
-  setValue("subject", d.subject || d.related_complaint?.subject || "", { shouldDirty: false, shouldValidate: true });
+    // 3. Set values for salutation and flag, make sure salutation_is_other is boolean
+    setValue("salutation", positionId, { shouldDirty: true, shouldValidate: true });
+    setValue("salutation_is_other", !!isOther, { shouldDirty: true, shouldValidate: true });
 
-  setValue("document_number", d.document_number || "", { shouldDirty: false, shouldValidate: true });
-  if (d.document_date) setValue("document_date", new Date(d.document_date), { shouldDirty: false, shouldValidate: true });
-
-  const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || "";
-  setValue("signer", signerId, { shouldDirty: false, shouldValidate: true });
-  if (signerId) setSelectedSigner({ value: signerId });
-
-  // Prefill department if present
-  const deptId = d.department?.id || d.department_id || "";
-  // Store original department id for hook to reuse on edit flows
-  setValue("original_department_id", deptId || "", { shouldDirty: false });
-  // also mirror into refs inside hook (if exposed via hidden field, hook already reads original_department_id)
-  if (!isOther && deptId) {
-    setValue("department", deptId, { shouldDirty: false, shouldValidate: true });
-  } else {
-    setValue("department", "", { shouldDirty: false, shouldValidate: true });
-  }
-
-      // Note/Remarks
-  setValue("note", d.remarks || "", { shouldDirty: false });
-
-      // Store labels temporarily to map after options load
-      setPendingPrefill({
-        confidentialityLabel: d.confidentiality_level || "",
-        urgencyLabel: d.urgency_level || "",
+    // 4. For "อื่นๆ" หรือ "ผู้ร้อง"/"ผู้ร้องเรียน", force dirty/touch/validate
+    if (isOther) {
+      setValue("position_other_text", d.position_other_text || "", {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true,
       });
+      // Force validate only this field after set
+      await trigger("position_other_text");
+    } else {
+      setValue("position_other_text", "", {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true,
+      });
+    }
 
-  // Attachments (read-only display)
-  const atts = Array.isArray(d.attachments) ? d.attachments : [];
-  setExistingAttachments(atts);
-      // Validate the form after initial prefill of required fields
-      try { await trigger(); } catch {}
-    },
-    [setValue, trigger]
-  );
+    // 5. Position id (if any)
+    if (positionId) setValue("position_id", positionId, { shouldDirty: true });
 
+    // 6. Complaint number and date
+    setValue("complaint_number", d.complaint_number || d.reference_number || "", { shouldDirty: true, shouldValidate: true });
+    setValue("complaint_id", d.complaint_id || d.related_complaint?.id || "", { shouldDirty: true });
+
+    const cnumDate = d.complaint_number_date || d.reference_date;
+    if (cnumDate) setValue("complaint_number_date", new Date(cnumDate), { shouldDirty: true, shouldValidate: true });
+
+    // 7. Subject
+    setValue("subject", d.subject || d.related_complaint?.subject || "", { shouldDirty: true, shouldValidate: true });
+
+    // 8. Document number and date
+    setValue("document_number", d.document_number || "", { shouldDirty: true, shouldValidate: true });
+    if (d.document_date) setValue("document_date", new Date(d.document_date), { shouldDirty: true, shouldValidate: true });
+
+    // 9. Signer
+    const signerId = d.signature_authority_user?.id || d.signature_authority_user_id || "";
+    setValue("signer", signerId, { shouldDirty: true, shouldValidate: true });
+    if (signerId) setSelectedSigner({ value: signerId });
+
+    // 10. Department
+    const deptId = d.department?.id || d.department_id || "";
+    setValue("original_department_id", deptId || "", { shouldDirty: true });
+    if (!isOther && deptId) {
+      setValue("department", deptId, { shouldDirty: true, shouldValidate: true });
+    } else {
+      setValue("department", "", { shouldDirty: true, shouldValidate: true });
+    }
+
+    // 11. Note
+    setValue("note", d.remarks || "", { shouldDirty: true });
+
+    // 12. Pending prefill for confidentiality/urgency (to be applied later)
+    setPendingPrefill({
+      confidentialityLabel: d.confidentiality_level || "",
+      urgencyLabel: d.urgency_level || "",
+    });
+
+    // 13. Attachments
+    const atts = Array.isArray(d.attachments) ? d.attachments : [];
+    setExistingAttachments(atts);
+
+    // 14. Validate the entire form after all values are set
+    try {
+      await trigger();
+    } catch {}
+
+  },
+  [reset, setValue, trigger, setSelectedSigner, setPendingPrefill, setExistingAttachments]
+);
   // Prefill from query params when navigating from FollowComp
   useEffect(() => {
     if (!router || !router.query) return;
