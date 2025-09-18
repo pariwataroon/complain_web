@@ -204,15 +204,8 @@ const InitialNotificationComplainantAgency = () => {
   };
 
   const handleDepartmentSelect = (department) => {
-    if (department && department.target && Object.prototype.hasOwnProperty.call(department.target, "value")) {
-      const v = department.target.value;
-      handleChange({ target: { name: "department", value: v } });
-      return;
-    }
-
     setSelectedDepartment(department);
-    const depId = department?.id ?? department?.value ?? "";
-    handleChange({ target: { name: "department", value: depId } });
+    handleChange({ target: { name: "department", value: department?.id || "" } });
   };
 
   // ฟังก์ชันล้างข้อมูลที่อัพเดทแล้ว
@@ -275,18 +268,6 @@ const InitialNotificationComplainantAgency = () => {
               }
             : null;
           setSelectedDepartment(deptObj);
-        } else {
-          // แม้ในกรณี isOther ก็ยังโหลดข้อมูลหน่วยงานมาเก็บไว้
-          if (d.department?.id) {
-            handleChange({ target: { name: 'department', value: d.department.id } });
-            const deptObj = {
-              value: d.department.id,
-              label: d.department.name,
-              code: d.department.code || "",
-              shortName: d.department.short_name || d.department.shortName || "",
-            };
-            setSelectedDepartment(deptObj);
-          }
         }
 
         if (d.document_date) {
@@ -381,46 +362,41 @@ const InitialNotificationComplainantAgency = () => {
               error={!!getFieldError('salutation')}
               helperText={getFieldError('salutation')}
             />
-            {/* Always render department selector so prefill/created names can appear */}
-            {(() => {
-              // Derive a value object for the selector so it can display label/name.
-              // If form.department matches an external id, pass that option object.
-              // If it's a plain string (created name), pass a synthetic option.
+          {/* แสดงฟิลด์หน่วยงานเฉพาะเมื่อไม่ใช่กรณีพิเศษ */}
+            {!form.salutation_is_other && (() => {
               let deptValue = null;
               try {
-                // Prefer the component's selectedDepartment (set during prefill)
-                // so we can show the label even if externalDepartments hasn't loaded yet.
-                if (selectedDepartment) {
+                // ใช้เฉพาะ selectedDepartment ที่ถูก clear แล้วในกรณีพิเศษ
+                if (selectedDepartment && !form.salutation_is_other) {
                   deptValue = selectedDepartment;
                 } else {
                   const fd = form.department;
-                  if (fd) {
+                  if (fd && !form.salutation_is_other) {
                     const found = externalDepartments && externalDepartments.find(d => String(d.id) === String(fd));
                     if (found) {
                       deptValue = found;
                     } else {
-                      // treat as plain name
                       deptValue = { value: String(fd), label: String(fd) };
                     }
                   }
                 }
               } catch (_) { deptValue = null; }
 
-              return (
-                <SelectFieldDepartmentoutside
-                  label={createLabel('หน่วยงาน / ผู้ร้อง', 'department')}
-                  name='department'
-                  value={deptValue}
-                  onChange={handleDepartmentSelect}
-                  onDepartmentSelect={handleDepartmentSelect}
-                  error={!!getFieldError('department')}
-                  helperText={getFieldError('department')}
-                  disabled={false}
-                  placeholder='เลือกหน่วยงาน / ผู้ร้อง'
-                  allowCreate={true}
-                />
-              );
-            })()}
+                return (
+                  <SelectFieldDepartmentoutside
+                    label={createLabel('หน่วยงาน / ผู้ร้อง', 'department')}
+                    name='department'
+                    value={deptValue}
+                    onChange={handleDepartmentSelect}
+                    onDepartmentSelect={handleDepartmentSelect}
+                    error={!!getFieldError('department')}
+                    helperText={getFieldError('department')}
+                    disabled={false}
+                    placeholder='เลือกหน่วยงาน / ผู้ร้อง'
+                    allowCreate={true}
+                  />
+                );
+              })()}
             
             <InputText
               label={createLabel('เลขที่หนังสือ', 'refNo')}
