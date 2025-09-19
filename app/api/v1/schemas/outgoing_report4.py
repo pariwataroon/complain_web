@@ -31,7 +31,8 @@ class OutgoingReport4Base(BaseModel):
     complaint_number: str = Field(..., description="หมายเลขข้อร้องเรียน")
     complaint_number_date: datetime = Field(..., description="วันที่ของข้อร้องเรียน")
     signature_authority_user_id: UUID = Field(..., description="ผู้มีอำนาจลงนาม")
-    department_id: Optional[UUID] = Field(None, description="หน่วยงาน")  # ตาม model nullable=True
+    department_id: Optional[UUID] = Field(None, description="(deprecated) หน่วยงานภายในเดิม")  # จะเลิกใช้
+    outside_department_id: Optional[UUID] = Field(None, description="หน่วยงานภายนอก (ใหม่)")
     user_id: Optional[UUID] = Field(None, description="ผู้ใช้ที่เกี่ยวข้อง")  # ตาม model
     other_department: Optional[str] = Field(None, description="หน่วยงานอื่นๆ")  # ตาม model
     confidentiality_level: str = Field(..., description="ระดับความลับ")
@@ -52,7 +53,8 @@ class OutgoingReport4Create(BaseModel):
     complaint_number: str = Field(..., max_length=50, description="หมายเลขข้อร้องเรียน")
     complaint_number_date: datetime = Field(..., description="วันที่ของข้อร้องเรียน")
     signature_authority_user_id: UUID
-    department_id: Optional[UUID] = None  # ตาม model
+    department_id: Optional[UUID] = None  # deprecated
+    outside_department_id: Optional[UUID] = None
     user_id: Optional[UUID] = None  # ตาม model
     other_department: Optional[str] = None  # ตาม model
     confidentiality_level: str = Field(..., max_length=50)
@@ -77,7 +79,8 @@ class OutgoingReport4Update(BaseModel):
     reference_date: Optional[datetime] = None
     subject: Optional[str] = None
     signature_authority_user_id: Optional[UUID] = None
-    department_id: Optional[UUID] = None
+    department_id: Optional[UUID] = None  # deprecated
+    outside_department_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
     other_department: Optional[str] = None
     confidentiality_level: Optional[str] = None
@@ -112,7 +115,8 @@ class OutgoingReport4(OutgoingReport4Base):
 class OutgoingReport4Options(BaseModel):
     """ตัวเลือกสำหรับ dropdown ต่างๆ"""
     signature_authorities: List[dict] = Field(default=[], description="รายการผู้มีอำนาจลงนาม")
-    departments: List[dict] = Field(default=[], description="รายการหน่วยงาน")
+    departments: List[dict] = Field(default=[], description="(deprecated) รายการหน่วยงานภายใน")
+    outside_departments: List[dict] = Field(default=[], description="รายการหน่วยงานภายนอก")
     users: List[dict] = Field(default=[], description="รายการผู้ใช้")  # ตาม model
     confidentiality_levels: List[str] = Field(default=["ปกติ", "ลับ", "ลับมาก", "ลับที่สุด"], description="ระดับความลับ")
     urgency_levels: List[str] = Field(default=["ปกติ", "เร่งด่วน", "เร่งด่วนมาก", "เร่งด่วนที่สุด"], description="ระดับความเร่งด่วน")

@@ -813,10 +813,11 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "type_description": "รายงานส่งหน่วยงานที่เกี่ยวข้อง",
             })
 
-        # type2
+        # type2 (now uses outside_department relationship directly; legacy department fallback removed)
         for r in db.query(OutgoingReport2).filter(OutgoingReport2.complaint_id == complaint_id,
                                                   OutgoingReport2.is_active == True).all():
             atts = _serialize_attachments(r)
+            outside_dept_payload = _dept_min(getattr(r, "outside_department", None)) if getattr(r, "outside_department", None) else None
             outgoing_reports_data["type2"].append({
                 "id": str(getattr(r, "id", "")),
                 "complaint_number": getattr(r, "complaint_number", None),
@@ -829,7 +830,9 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "urgency_level": getattr(r, "urgency_level", None),
                 "remarks": getattr(r, "remarks", None),
                 "created_at": _iso(getattr(r, "created_at", None)),
-                "department": _dept_min(getattr(r, "department", None)),
+                # FE requirement: department should point to outside_departments
+                "department": outside_dept_payload,
+                "outside_department": outside_dept_payload,  # duplicate field for clarity during transition
                 "recipient_user": _user_min(getattr(r, "to_user", None) or getattr(r, "user", None)),
                 "signature_authority_user": _user_min_with_prefix(getattr(r, "signature_authority_user", None)),
                 # เพิ่มฟิลด์ตำแหน่ง (รุ่น 2)
@@ -868,10 +871,11 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "type_description": "รายงานผลจากหน่วยงาน/ความคืบหน้า",
             })
 
-        # type4
+        # type4 (now uses outside_department relationship directly; legacy department fallback removed)
         for r in db.query(OutgoingReport4).filter(OutgoingReport4.complaint_id == complaint_id,
                                                   OutgoingReport4.is_active == True).all():
             atts = _serialize_attachments(r)
+            outside_dept_payload4 = _dept_min(getattr(r, "outside_department", None)) if getattr(r, "outside_department", None) else None
             outgoing_reports_data["type4"].append({
                 "id": str(getattr(r, "id", "")),
                 "reference_number": getattr(r, "reference_number", None),
@@ -888,7 +892,9 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "urgency_level": getattr(r, "urgency_level", None),
                 "remarks": getattr(r, "remarks", None),
                 "created_at": _iso(getattr(r, "created_at", None)),
-                "department": _dept_min(getattr(r, "department", None)),
+                # FE requirement: department should point to outside_departments
+                "department": outside_dept_payload4,
+                "outside_department": outside_dept_payload4,  # duplicate for clarity during transition
                 "signature_authority_user": _user_min_with_prefix(getattr(r, "signature_authority_user", None)),
                 # เพิ่มฟิลด์ตำแหน่ง (รุ่น 4 - ปัจจุบันโมเดลยังไม่มี จะเป็น None)
                 "position_id": str(getattr(r, "position_id")) if hasattr(r, "position_id") and getattr(r, "position_id", None) else None,

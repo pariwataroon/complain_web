@@ -13,7 +13,8 @@ from models.outgoing_reports4 import OutgoingReport4, OutgoingReportAttachment4
 from lib.file_upload import get_storage_config, get_now_tz
 from models.comp_complaint import Complaint, ComplaintStatus
 from models.user import User
-from models.departments import Department
+from models.departments import Department  # legacy internal (kept for backward compatibility)
+from models.outside_departments import OutsideDepartment
 from app.api.v1.schemas.outgoing_report4 import OutgoingReport4Create, OutgoingReport4Update
 from lib.logger import get_logger
 
@@ -160,6 +161,18 @@ def create_outgoing_report4(
             if pos_name in {"อื่นๆ", "อื่น ๆ", "other", "others"} and not getattr(report_data, "position_other_text", None):
                 raise HTTPException(status_code=400, detail="กรุณาระบุตำแหน่ง (อื่นๆ) เพิ่มเติม")
 
+        # Validate outside vs legacy ids
+        if report_data.department_id and report_data.outside_department_id and report_data.department_id != report_data.outside_department_id:
+            raise HTTPException(status_code=400, detail="department_id และ outside_department_id ไม่ตรงกัน")
+
+        if report_data.outside_department_id:
+            od = db.query(OutsideDepartment).filter(OutsideDepartment.id == report_data.outside_department_id, OutsideDepartment.is_active == True).first()
+            if not od:
+                raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานภายนอกที่ระบุ")
+
+        effective_outside_id = report_data.outside_department_id or report_data.department_id
+        legacy_department_id = report_data.department_id or report_data.outside_department_id
+
         db_report = OutgoingReport4(
             reference_number=report_data.reference_number,
             reference_date=report_data.reference_date,
@@ -167,7 +180,8 @@ def create_outgoing_report4(
             complaint_number=report_data.complaint_number,
             complaint_number_date=report_data.complaint_number_date,
             signature_authority_user_id=report_data.signature_authority_user_id,
-            department_id=report_data.department_id,
+            department_id=legacy_department_id,  # deprecated mirrored
+            outside_department_id=effective_outside_id,
             user_id=report_data.user_id,
             other_department=report_data.other_department,
             confidentiality_level=report_data.confidentiality_level,
@@ -225,7 +239,8 @@ def get_outgoing_report4_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
     try:
         report = db.query(OutgoingReport4).options(
             joinedload(OutgoingReport4.signature_authority_user),
-            joinedload(OutgoingReport4.department),
+            joinedload(OutgoingReport4.department),  # legacy
+            joinedload(OutgoingReport4.outside_department),
             joinedload(OutgoingReport4.user),
             joinedload(OutgoingReport4.creator),
             joinedload(OutgoingReport4.complaint),
@@ -238,6 +253,19 @@ def get_outgoing_report4_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
 
         if not report:
             raise HTTPException(status_code=404, detail="ไม่พบรายงานที่ระบุ")
+
+        if getattr(report, 'outside_department', None):
+            outside_department_payload = {
+                'id': _safe_str(getattr(report.outside_department, 'id', None)),
+                'name': getattr(report.outside_department, 'name', None)
+            }
+        elif getattr(report, 'department', None):
+            outside_department_payload = {
+                'id': _safe_str(getattr(report.department, 'id', None)),
+                'name': getattr(report.department, 'name', None)
+            }
+        else:
+            outside_department_payload = None
 
         return {
             "id": _safe_str(report.id),
@@ -257,10 +285,8 @@ def get_outgoing_report4_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
                 "name": f"{report.signature_authority_user.first_name} {report.signature_authority_user.last_name}"
                 if report.signature_authority_user else "N/A",
             },
-            "department": {
-                "id": _safe_str(report.department_id) if report.department_id else None,
-                "name": report.department.name if report.department else "N/A",
-            },
+            "department": outside_department_payload,  # backward compatible key
+            "outside_department": outside_department_payload,
             "user": {
                 "id": _safe_str(report.user_id) if report.user_id else None,
                 "name": f"{report.user.first_name} {report.user.last_name}" if report.user else "N/A",
@@ -290,7 +316,8 @@ def get_outgoing_reports4(
     skip: int = 0,
     limit: int = 100,
     search: Optional[str] = None,
-    department_id: Optional[UUID] = None,
+    department_id: Optional[UUID] = None,  # legacy
+    outside_department_id: Optional[UUID] = None,
     signature_authority_user_id: Optional[UUID] = None,
     urgency_level: Optional[str] = None,
     date_from: Optional[datetime] = None,
@@ -300,7 +327,8 @@ def get_outgoing_reports4(
     try:
         query = db.query(OutgoingReport4).options(
             joinedload(OutgoingReport4.signature_authority_user),
-            joinedload(OutgoingReport4.department),
+            joinedload(OutgoingReport4.department),  # legacy
+            joinedload(OutgoingReport4.outside_department),
             joinedload(OutgoingReport4.user),
             joinedload(OutgoingReport4.complaint),
             joinedload(OutgoingReport4.attachments),
@@ -316,7 +344,9 @@ def get_outgoing_reports4(
                 OutgoingReport4.other_department.ilike(like),
             ))
 
-        if department_id:
+        if outside_department_id:
+            query = query.filter(OutgoingReport4.outside_department_id == outside_department_id)
+        elif department_id:
             query = query.filter(OutgoingReport4.department_id == department_id)
         if signature_authority_user_id:
             query = query.filter(OutgoingReport4.signature_authority_user_id == signature_authority_user_id)
@@ -332,6 +362,13 @@ def get_outgoing_reports4(
 
         items = []
         for r in reports:
+            dept_name = None
+            if getattr(r, 'outside_department', None):
+                dept_name = getattr(r.outside_department, 'name', None)
+            elif getattr(r, 'department', None):
+                dept_name = getattr(r.department, 'name', None)
+            else:
+                dept_name = r.other_department
             items.append({
                 "id": _safe_str(r.id),
                 "position": {
@@ -345,7 +382,7 @@ def get_outgoing_reports4(
                 "complaint_number_date": _iso(r.complaint_number_date),
                 "document_number": r.document_number,
                 "document_date": _iso(r.document_date),
-                "department_name": r.department.name if r.department else (r.other_department or "N/A"),
+                "department_name": dept_name or "N/A",
                 "signature_user_name": (
                     f"{r.signature_authority_user.first_name} {r.signature_authority_user.last_name}"
                     if r.signature_authority_user else "N/A"
@@ -373,11 +410,14 @@ def get_outgoing_reports4(
 def get_outgoing_report4_options(db: Session) -> Dict[str, Any]:
     """ดึงตัวเลือกสำหรับ dropdown"""
     try:
-        departments = db.query(Department).filter(Department.is_active == True).order_by(Department.name).all()
+        # NOTE: Front-end now sends IDs from outside_departments for OutgoingReport4 as well.
+        # Provide list under both outside_departments and departments keys during transition.
+        outside_departments = db.query(OutsideDepartment).filter(OutsideDepartment.is_active == True).order_by(OutsideDepartment.name).all()
         users = db.query(User).filter(User.is_active == True).order_by(User.first_name).all()
 
         return {
-            "departments": [{"id": _safe_str(dept.id), "name": dept.name} for dept in departments],
+            "outside_departments": [{"id": _safe_str(dept.id), "name": dept.name} for dept in outside_departments],
+            "departments": [{"id": _safe_str(dept.id), "name": dept.name} for dept in outside_departments],  # transitional alias
             "signature_authorities": [{"id": _safe_str(u.id), "name": f"{u.first_name} {u.last_name}"} for u in users],
             "users": [{"id": _safe_str(u.id), "name": f"{u.first_name} {u.last_name}"} for u in users],
             "confidentiality_levels": ["ปกติ", "ลับ", "ลับมาก", "ลับที่สุด"],

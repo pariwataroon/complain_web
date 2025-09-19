@@ -27,7 +27,8 @@ class OutgoingReport2Base(BaseModel):
     complaint_number: str = Field(..., description="หมายเลขข้อร้องเรียน")
     complaint_number_date: datetime = Field(..., description="วันที่ของข้อร้องเรียน")
     subject: str = Field(..., description="เรื่อง")
-    department_id: Optional[UUID] = Field(None, description="หน่วยงาน")
+    department_id: Optional[UUID] = Field(None, description="(deprecated) หน่วยงานภายในเดิม ใช้ outside_department_id แทน")
+    outside_department_id: Optional[UUID] = Field(None, description="หน่วยงานภายนอก (ใหม่)")
     user_id: Optional[UUID] = Field(None, description="ผู้ใช้ที่เกี่ยวข้อง")
     signature_authority_user_id: UUID = Field(..., description="ผู้มีอำนาจลงนาม")
     confidentiality_level: str = Field(..., description="ระดับความลับ")
@@ -43,7 +44,8 @@ class OutgoingReport2Create(BaseModel):
     complaint_number: str = Field(..., max_length=50)
     complaint_number_date: datetime
     subject: str = Field(..., max_length=500)
-    department_id: Optional[UUID] = None
+    department_id: Optional[UUID] = None  # deprecated
+    outside_department_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
     signature_authority_user_id: UUID
     confidentiality_level: str = Field(..., max_length=50)
@@ -65,7 +67,8 @@ class OutgoingReport2Update(BaseModel):
     complaint_number: Optional[str] = None
     complaint_number_date: Optional[datetime] = None
     subject: Optional[str] = None
-    department_id: Optional[UUID] = None
+    department_id: Optional[UUID] = None  # deprecated
+    outside_department_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
     signature_authority_user_id: Optional[UUID] = None
     confidentiality_level: Optional[str] = None
@@ -100,7 +103,8 @@ class OutgoingReport2Options(BaseModel):
     """ตัวเลือกสำหรับ dropdown ต่างๆ"""
     positions: List[dict] = Field(default=[], description="รายการตำแหน่ง")
     signature_authorities: List[dict] = Field(default=[], description="รายการผู้มีอำนาจลงนาม")
-    departments: List[dict] = Field(default=[], description="รายการหน่วยงาน")
+    departments: List[dict] = Field(default=[], description="(deprecated) รายการหน่วยงานภายใน")
+    outside_departments: List[dict] = Field(default=[], description="รายการหน่วยงานภายนอก")
     users: List[dict] = Field(default=[], description="รายการผู้ใช้")
     confidentiality_levels: List[str] = Field(default=["ปกติ", "ลับ", "ลับมาก", "ลับที่สุด"], description="ระดับความลับ")
     urgency_levels: List[str] = Field(default=["ปกติ", "เร่งด่วน", "เร่งด่วนมาก", "เร่งด่วนที่สุด"], description="ระดับความเร่งด่วน")

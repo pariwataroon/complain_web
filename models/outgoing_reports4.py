@@ -20,7 +20,10 @@ class OutgoingReport4(Base):
     complaint_number = Column(NVARCHAR(50), nullable=False)
     complaint_number_date = Column(DateTime, nullable=False)
     signature_authority_user_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), nullable=False)
+    # legacy internal department (deprecated) – will be removed after transition
     department_id = Column(UNIQUEIDENTIFIER, ForeignKey("departments.id"), nullable=True)
+    # new outside department reference
+    outside_department_id = Column(UNIQUEIDENTIFIER, ForeignKey("outside_departments.id"), nullable=True)
     user_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), nullable=True)
     other_department = Column(NVARCHAR(500), nullable=True)
     confidentiality_level = Column(NVARCHAR(50), nullable=False)
@@ -39,7 +42,8 @@ class OutgoingReport4(Base):
     is_active = Column(Boolean, default=True)
 
     signature_authority_user = relationship("User", foreign_keys=[signature_authority_user_id])
-    department = relationship("Department", foreign_keys=[department_id])
+    department = relationship("Department", foreign_keys=[department_id])  # deprecated usage
+    outside_department = relationship("OutsideDepartment", foreign_keys=[outside_department_id])
     user = relationship("User", foreign_keys=[user_id])
     complaint = relationship("Complaint", back_populates="outgoing_reports4", foreign_keys=[complaint_id])
     creator = relationship("User", foreign_keys=[created_by])
