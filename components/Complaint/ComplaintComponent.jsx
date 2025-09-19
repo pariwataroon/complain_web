@@ -10,31 +10,28 @@ import Tab2 from "./Tabs/tab2";
 import Tab3 from "./Tabs/tab3";
 import Tab4 from "./Tabs/tab4";
 import Tab5 from "./Tabs/tab5";
+import Tab31 from "./Tabs/tab3-1";
 import useComplaintForm from "@hooks/user/complaint/useComplaintForm";
 import { alertError } from "@utils/Alerts";
 import { validateEmail } from "@utils/emailValidation";
 
 const processComponents = [Tab1, Tab2, Tab3, Tab4, Tab5];
-const stepLabels = [
-  "ข้อมูลผู้ร้องทุกข์",
-  "ข้อมูลผู้ถูกร้องทุกข์",
-  "รายละเอียดเรื่องร้องทุกข์",
-];
+const stepLabels = ["ข้อมูลผู้ร้องทุกข์", "ข้อมูลผู้ถูกร้องทุกข์", "รายละเอียดเรื่องร้องทุกข์"];
+
+// map index -> type ของ step2 (ใช้กรณี fallback)
+const STEP2_TYPE_MAP = ["individual", "corporate", "government"];
 
 export default function ComplaintComponent() {
-  // ===== CIRCUIT BREAKER: ป้องกัน Infinite Loop =====
+  // ============ CIRCUIT BREAKER ============ //
   const renderCountRef = useRef(0);
   const lastRenderTimeRef = useRef(Date.now());
-  
   renderCountRef.current++;
   const currentTime = Date.now();
-  
-  // ถ้า render เกิน 50 ครั้งภายใน 5 วินาที = หยุดทันที
   if (currentTime - lastRenderTimeRef.current < 5000) {
     if (renderCountRef.current > 50) {
       console.error("🛑 CIRCUIT BREAKER ACTIVATED: Too many renders detected!");
       return (
-        <div style={{ padding: '20px', textAlign: 'center', color: 'red' }}>
+        <div style={{ padding: "20px", textAlign: "center", color: "red" }}>
           <h2>⚠️ ระบบหยุดชั่วคราว</h2>
           <p>ตรวจพบการทำงานผิดปกติ กรุณารีเฟรชหน้าเว็บ</p>
           <button onClick={() => window.location.reload()}>รีเฟรชหน้า</button>
@@ -42,7 +39,6 @@ export default function ComplaintComponent() {
       );
     }
   } else {
-    // รีเซ็ตตัวนับทุก 5 วินาที
     renderCountRef.current = 1;
     lastRenderTimeRef.current = currentTime;
   }
@@ -52,33 +48,21 @@ export default function ComplaintComponent() {
   const [validationErrors, setValidationErrors] = useState({});
   const [shouldShowValidation, setShouldShowValidation] = useState(false);
 
-  const [tabStates, setTabStates] = useState({
-    step1: 0,
-    step2: 0,
-  });
+  const [tabStates, setTabStates] = useState({ step1: 0, step2: 0 });
+  const [subPage, setSubPage] = useState(null); // "tab3-1" เมื่อเข้าหน้าย่อย
+  const [skippedStep3Via31, setSkippedStep3Via31] = useState(false);
 
-  const {
-    formData,
-    updateStepData,
-    getStepTabData,
-    getFormData,
-    handleSubmitForm,
-  } = useComplaintForm();
+  const { formData, updateStepData, getStepTabData, getFormData, handleSubmitForm } =
+    useComplaintForm();
 
   const stepKey = `step${activeStep + 1}`;
 
-  // ===== Memoize Step Data to Prevent Unnecessary Re-renders =====
-  // This is the core fix for the infinite loop.
-  // We ensure the `tabData` object reference only changes when the actual data changes.
-  // 🛑 TEMPORARILY DISABLED FOR DEBUGGING
-  const memoizedStepData = getStepTabData(stepKey, "general"); // ปิด useMemo ชั่วคราว
+  // ปิด useMemo ชั่วคราวตามเดิม
+  const memoizedStepData = getStepTabData(stepKey, "general");
 
   const hasValue = useCallback((value) => {
     if (Array.isArray(value)) {
-      if (value.length === 0) {
-        return false;
-      }
-
+      if (value.length === 0) return false;
       const validFiles = value.filter((file) => {
         const isFile = file instanceof File;
         const isValidObject =
@@ -86,41 +70,20 @@ export default function ComplaintComponent() {
           typeof file === "object" &&
           (file.name || file.size) &&
           Object.keys(file).length > 1;
-
         return isFile || isValidObject;
       });
-
-      const result = validFiles.length > 0;
-
-      return result;
+      return validFiles.length > 0;
     }
-
-    // **เพิ่ม: Single File object check**
-    if (value instanceof File) {
-      return true;
+    if (value instanceof File) return true;
+    if (typeof value === "string") return value.trim() !== "";
+    if (typeof value === "object" && value) {
+      if (value.name || value.size) return Object.keys(value).length > 1;
+      return Object.keys(value).length > 0;
     }
-
-    if (typeof value === "string") {
-      const result = value.trim() !== "";
-      return result;
-    }
-
-    if (typeof value === "object") {
-      // **ตรวจสอบ File-like object**
-      if (value.name || value.size) {
-        const result = Object.keys(value).length > 1;
-        return result;
-      }
-
-      const result = Object.keys(value).length > 0;
-      return result;
-    }
-
-    const result = !!value;
-    return result;
+    return !!value;
   }, []);
 
-  // ===== ตรวจ role admin จาก cookie (รูปแบบเดียวกับ tab1) =====
+  // ===== ตรวจ role admin จาก cookie =====
   const [userRoles, setUserRoles] = useState([]);
   useEffect(() => {
     try {
@@ -142,6 +105,18 @@ export default function ComplaintComponent() {
   }, []);
   const isAdmin = useMemo(() => userRoles.includes("admin"), [userRoles]);
 
+  // ✅ คำนวณประเภทที่เลือกใน Step 2 อย่าง robust
+  const step2ActiveType = useMemo(() => {
+    const fromData =
+      formData?.step2?.activeType ||
+      formData?.step2?.general?.activeType ||
+      formData?.step2?.type ||
+      null;
+    if (fromData) return String(fromData).toLowerCase();
+    const idx = tabStates.step2 ?? 0;
+    return STEP2_TYPE_MAP[idx] || "individual";
+  }, [formData?.step2, tabStates.step2]);
+
   const validateCurrentStep = () => {
     const stepKey = `step${activeStep + 1}`;
 
@@ -152,50 +127,26 @@ export default function ComplaintComponent() {
       const stepData = getStepTabData(stepKey, "general");
       data = {
         ...stepData,
-        ...formData?.[stepKey]?.general
+        ...formData?.[stepKey]?.general,
       };
     }
 
     const errors = {};
+    if (isAdmin) return { errors: {}, isValid: true };
 
-    if (isAdmin) {
-      // ข้าม validation ทั้งหมดถ้าเป็น admin
-      return { errors: {}, isValid: true };
-    }
-
-    // STEP 1: ข้อมูลผู้ร้องทุกข์
     if (activeStep === 0) {
       const currentTab = tabStates.step1 || 0;
-
       if (currentTab === 0) {
-        // const idCardValue = data?.general?.idCard;
-        // if (!hasValue(idCardValue)) {
-        //   errors[`general.idCard`] = "กรุณากรอก เลขบัตรประชาชน ของผู้ร้องทุกข์";
-        // } else if (idCardValue.length !== 13) {
-        //   errors[`general.idCard`] =
-        //     "กรุณากรอกเลขบัตรประจำตัวประชาชนให้ครบ 13 หลัก ของผู้ร้องทุกข์";
-        // } else if (!/^\d{13}$/.test(idCardValue)) {
-        //   errors[`general.idCard`] =
-        //     "เลขบัตรประจำตัวประชาชนต้องเป็นตัวเลขเท่านั้น ของผู้ร้องทุกข์";
-        // }
-
         const generalFields = [
-          // { key: "name", label: "ชื่อ - นามสกุล" },
-          // { key: "address", label: "ที่อยู่" },
-          // { key: "phone", label: "หมายเลขโทรศัพท์" },
           { key: "province", label: "จังหวัด" },
           { key: "districts", label: "อำเภอ/เขต" },
           { key: "subdistricts", label: "ตำบล/แขวง" },
           { key: "zipcode", label: "รหัสไปรษณีย์" },
-          // { key: "email", label: "อีเมล" },
         ];
-
         generalFields.forEach((field) => {
           const value = data?.general?.[field.key];
           if (!hasValue(value)) {
-            errors[
-              `general.${field.key}`
-            ] = `กรุณากรอก ${field.label} ของผู้ร้องทุกข์`;
+            errors[`general.${field.key}`] = `กรุณากรอก ${field.label} ของผู้ร้องทุกข์`;
           }
         });
 
@@ -231,13 +182,10 @@ export default function ComplaintComponent() {
           { key: "zipcode", label: "รหัสไปรษณีย์" },
           { key: "email", label: "อีเมล" },
         ];
-
         corpFields.forEach((field) => {
           const value = data?.corporate?.[field.key];
           if (!hasValue(value)) {
-            errors[
-              `corporate.${field.key}`
-            ] = `กรุณากรอก ${field.label} ของนิติบุคคล`;
+            errors[`corporate.${field.key}`] = `กรุณากรอก ${field.label} ของนิติบุคคล`;
           }
         });
 
@@ -253,104 +201,12 @@ export default function ComplaintComponent() {
       }
     }
 
-    // STEP 2: ข้อมูลผู้ถูกร้องทุกข์
-    // if (activeStep === 1) {
-    //   const currentTab = tabStates.step2;
-    //   const typeMap = ["individual", "corporate", "government"];
-    //   const activeType = typeMap[currentTab];
-
-    //   if (!activeType) {
-    //     errors.activeType = "กรุณาเลือกประเภทผู้ถูกร้องทุกข์";
-    //   } else {
-    //     const current = data[activeType] || {};
-
-    //     const requiredFieldsMap = {
-    //       individual: [
-    //         { key: "idCard", label: "เลขบัตรประชาชน" },
-    //         { key: "name", label: "ชื่อ - นามสกุล" },
-    //         { key: "address", label: "ที่อยู่" },
-    //         { key: "phone", label: "หมายเลขโทรศัพท์" },
-    //         { key: "province", label: "จังหวัด" },
-    //         { key: "districts", label: "อำเภอ/เขต" },
-    //         { key: "subdistricts", label: "ตำบล/แขวง" },
-    //         { key: "zipcode", label: "รหัสไปรษณีย์" },
-    //         { key: "email", label: "อีเมล" },
-    //       ],
-    //       corporate: [
-    //         { key: "idCard", label: "เลขทะเบียนนิติบุคคล" },
-    //         { key: "companyName", label: "ชื่อบริษัท" },
-    //         { key: "signatoryName", label: "ชื่อผู้มีอำนาจลงนาม" },
-    //         { key: "address", label: "ที่อยู่บริษัท" },
-    //         { key: "phone", label: "หมายเลขโทรศัพท์" },
-    //         { key: "province", label: "จังหวัด" },
-    //         { key: "districts", label: "อำเภอ/เขต" },
-    //         { key: "subdistricts", label: "ตำบล/แขวง" },
-    //         { key: "zipcode", label: "รหัสไปรษณีย์" },
-    //         { key: "email", label: "อีเมล" },
-    //       ],
-    //       government: [
-    //         { key: "idCard", label: "เลขบัตรประชาชน" },
-    //         { key: "agencyName", label: "หน่วยงาน" },
-    //         { key: "fullName", label: "ชื่อ - นามสกุล" },
-    //         { key: "address", label: "ที่อยู่ที่สามารถติดต่อได้" },
-    //         { key: "phone", label: "หมายเลขโทรศัพท์" },
-    //         { key: "province", label: "จังหวัด" },
-    //         { key: "districts", label: "อำเภอ/เขต" },
-    //         { key: "subdistricts", label: "ตำบล/แขวง" },
-    //         { key: "zipcode", label: "รหัสไปรษณีย์" },
-    //         { key: "email", label: "อีเมล" },
-    //       ],
-    //     };
-
-    //     const requiredFields = requiredFieldsMap[activeType] || [];
-
-    //     requiredFields.forEach(field => {
-    //       const value = current[field.key];
-
-    //       if (field.key === 'idCard') {
-    //         if (!hasValue(value)) {
-    //           errors[`${activeType}.${field.key}`] = `กรุณากรอก ${field.label}`;
-    //         } else if (typeof value === 'string' && value.length !== 13) {
-    //           errors[`${activeType}.${field.key}`] = `กรุณากรอก${field.label}ให้ครบ 13 หลัก`;
-    //         } else if (typeof value === 'string' && !/^\d{13}$/.test(value)) {
-    //           errors[`${activeType}.${field.key}`] = `${field.label}ต้องเป็นตัวเลขเท่านั้น`;
-    //         }
-    //       } else {
-    //         if (!hasValue(value)) {
-    //           errors[`${activeType}.${field.key}`] = `กรุณากรอก ${field.label}`;
-    //         }
-    //       }
-    //     });
-
-    //     const emailValue = current.email;
-    //     if (emailValue) {
-    //       const emailErrors = validateEmail(emailValue);
-    //       if (emailErrors.length > 0) {
-    //         errors[`${activeType}.email`] = emailErrors[0];
-    //       }
-    //     } else {
-    //       errors[`${activeType}.email`] = "กรุณากรอกอีเมล";
-    //     }
-    //   }
-    // }
-
-    // STEP 3: รายละเอียดเรื่องร้องทุกข์
     if (activeStep === 2) {
-      if (!hasValue(data.subject)) {
-        errors.subject = "กรุณากรอกชื่อเรื่อง";
-      }
-
-      if (!hasValue(data.description)) {
-        errors.description = "กรุณากรอกรายละเอียดเหตุการณ์";
-      }
-
-      if (!hasValue(data.incidentDate)) {
-        errors.incidentDate = "กรุณาเลือกวันและเวลาที่เกิดเหตุ";
-      }
-
-      if (!hasValue(data.complaintType)) {
+      if (!hasValue(data.subject)) errors.subject = "กรุณากรอกชื่อเรื่อง";
+      if (!hasValue(data.description)) errors.description = "กรุณากรอกรายละเอียดเหตุการณ์";
+      if (!hasValue(data.incidentDate)) errors.incidentDate = "กรุณาเลือกวันและเวลาที่เกิดเหตุ";
+      if (!hasValue(data.complaintType))
         errors.complaintType = "กรุณาเลือกประเภทเรื่องราวร้องทุกข์";
-      }
     }
 
     return { errors, isValid: Object.keys(errors).length === 0 };
@@ -358,27 +214,38 @@ export default function ComplaintComponent() {
 
   const validateStepForSubmit = useCallback(async () => {
     setShouldShowValidation(true);
-
-    await new Promise(resolve => setTimeout(resolve, 100));
-
+    await new Promise((resolve) => setTimeout(resolve, 100));
     const { errors, isValid } = validateCurrentStep();
     setValidationErrors(errors);
-
     if (!isValid) {
       const firstError = Object.values(errors)[0];
-      if (firstError) {
-        await alertError("ข้อมูลไม่ครบ", firstError);
-      }
+      if (firstError) await alertError("ข้อมูลไม่ครบ", firstError);
       return false;
     }
-
     return true;
   }, [activeStep, tabStates, formData, hasValue, isAdmin]);
 
-  const handleNext = async () => {
+  // ✅ เปลี่ยนเงื่อนไขไป Tab3-1 เมื่อ Step2 = government
+    const handleNext = async () => {
+    // เข้า Tab3-1 เมื่อ Step2 = government
+    if (activeStep === 1 && step2ActiveType === "government" && subPage === null) {
+      setSubPage("tab3-1");
+      return;
+    }
+
+    // ออกจาก Tab3-1 -> ข้าม Tab3 ไป Tab4 เลย
+    if (activeStep === 1 && subPage === "tab3-1") {
+      setSubPage(null);
+      setSkippedStep3Via31(true);
+      setActiveStep((prev) => Math.min(prev + 2, processComponents.length - 1)); // <-- จุดนี้
+      setShouldShowValidation(false);
+      setValidationErrors({});
+      return;
+    }
+
+    // ปกติ
     const isValid = await validateStepForSubmit();
     if (!isValid) return;
-
     setActiveStep((prev) => Math.min(prev + 1, processComponents.length - 1));
     setShouldShowValidation(false);
     setValidationErrors({});
@@ -403,10 +270,7 @@ export default function ComplaintComponent() {
   };
 
   const handleTabChange = (stepKey, tabIndex) => {
-    setTabStates((prev) => ({
-      ...prev,
-      [stepKey]: tabIndex,
-    }));
+    setTabStates((prev) => ({ ...prev, [stepKey]: tabIndex }));
     if (shouldShowValidation) {
       setShouldShowValidation(false);
       setValidationErrors({});
@@ -430,6 +294,7 @@ export default function ComplaintComponent() {
                 />
               </Box>
             )}
+
             <Box sx={{ flex: 1 }}>
               {activeStep === 4 ? (
                 <div>
@@ -444,13 +309,22 @@ export default function ComplaintComponent() {
                   />
                 </div>
               ) : activeStep === 2 ? (
-                // � STEP 3 DEBUG MODE: ทดสอบ Tab3 แต่ปิด sub-components
+                // STEP 3
                 <Tab3
                   stepKey={`step${activeStep + 1}`}
                   tabData={memoizedStepData}
                   updateStepData={updateStepData}
                   validationErrors={validationErrors}
                   shouldShowValidation={shouldShowValidation}
+                />
+              ) : activeStep === 1 && subPage === "tab3-1" ? (
+                // ✅ หน้าย่อย Tab3-1 แทน Tab3 เมื่อเลือก government
+                <Tab31
+                  stepKey={`step${activeStep + 1}`}
+                  tabData={memoizedStepData}
+                  updateStepData={updateStepData}
+                  formData={formData}
+                  onBack={() => setSubPage(null)}
                 />
               ) : (
                 StepComponent && (
@@ -468,14 +342,7 @@ export default function ComplaintComponent() {
                 )
               )}
 
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  mt: 4,
-                  gap: 2,
-                }}
-              >
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 4, gap: 2 }}>
                 {activeStep === 4 ? (
                   <>
                     <ButtonService
@@ -501,7 +368,18 @@ export default function ComplaintComponent() {
                         label="ย้อนกลับ"
                         color="ย้อนกลับ"
                         variant="contained"
-                        onClick={handleBack}
+                        onClick={() => {
+                          if (activeStep === 1 && subPage === "tab3-1") {
+                            setSubPage(null);
+                            return;
+                          }
+                          if (activeStep === 3 && skippedStep3Via31) {
+                            setActiveStep(1);
+                            setSubPage("tab3-1");
+                            return;
+                          }
+                          handleBack();
+                        }}
                       />
                     )}
                     <ButtonService
@@ -512,7 +390,7 @@ export default function ComplaintComponent() {
                         if (activeStep === 3) {
                           handleSubmit();
                         } else {
-                          handleNext();
+                          handleNext(); 
                         }
                       }}
                       disabled={activeStep === 3 && !acceptSubmit}

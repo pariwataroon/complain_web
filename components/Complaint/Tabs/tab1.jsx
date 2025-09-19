@@ -4,7 +4,7 @@ import ComplaintPersonalForm from "@services/ComplaintPersonal/ComplaintPersonal
 import ComplaintMinistryMainForm from "@services/ComplaintMinistryMain/ComplaintMinistryMainForm";
 import { getAuthMe } from "@pages/api/role/role";
 
-const tabs = ["บุคคลทั่วไป", "นิติบุคคล", "หน่วยงานของรัฐ"];
+const tabs = ["บุคคลทั่วไป", "นิติบุคคล", "หนังสือร้องเรียนถึง กค."];
 const underlineColors = ["#0B1F8F", "#3FA9F5", "#EDC458"];
 
 const Tab1 = ({
@@ -214,7 +214,7 @@ const Tab1 = ({
           <ComplaintMinistryMainForm
             data={tabData.government || {}}
             onChange={handleUpdate("government")}
-            title="ข้อมูลผู้ร้องทุกข์ (หน่วยงานของรัฐ)"
+            title="ข้อมูลผู้ร้องทุกข์ (หนังสือร้องเรียนถึง กค.)"
             validationErrors={isAdmin ? {} : filteredErrors}
             shouldShowValidation={isAdmin ? false : shouldShowValidation}
             fieldPrefix="government"

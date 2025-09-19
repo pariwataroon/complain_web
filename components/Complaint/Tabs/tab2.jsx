@@ -1,10 +1,12 @@
+// Tab2.jsx
 import React, { useEffect, useCallback } from "react";
 import styles from "./TabNav.module.scss";
 import ComplaintPersonalForm from "@services/ComplaintPersonalTab2/ComplaintPersonalForm";
 import ComplaintCustomerForm from "@services/ComplaintCustomer/ComplaintCustomerForm";
 import ComplaintMinistryForm from "@services/ComplaintMinistry/ComplaintMinistryForm";
+import ButtonService from "@services/ButtonService/ButtonService";
 
-const tabs = ["บุคคลทั่วไป", "นิติบุคคล", "หน่วยงานของรัฐ"];
+const tabs = ["บุคคลทั่วไป", "นิติบุคคล", "หนังสือร้องเรียนถึง กค."];
 const underlineColors = ["#0B1F8F", "#3FA9F5", "#EDC458"];
 
 const Tab2 = ({
@@ -14,36 +16,37 @@ const Tab2 = ({
   validationErrors = {},
   shouldShowValidation = false,
   onTabChange,
-  currentTab = 0 
+  currentTab = 0,
+  onNextGovernment, // ⬅️ เพิ่ม callback
 }) => {
-
   const handleTabChange = (newTab) => {
-    if (onTabChange) {
-      onTabChange('step2', newTab);
-    }
+    onTabChange?.("step2", newTab);
   };
 
-  const handleChange = useCallback((type) => (name, value) => {
-    const prevSection = tabData[type] || {};
-    const nextSection = { ...prevSection, [name]: value };
-    if (JSON.stringify(prevSection) === JSON.stringify(nextSection)) return; // no change
-    const nextContainer = { ...tabData, [type]: nextSection, activeType: type };
-    updateStepData(stepKey, "general", nextContainer);
-  }, [tabData, stepKey, updateStepData]);
+  const handleChange = useCallback(
+    (type) => (name, value) => {
+      const prevSection = tabData[type] || {};
+      const nextSection = { ...prevSection, [name]: value };
+      if (JSON.stringify(prevSection) === JSON.stringify(nextSection)) return;
+      const nextContainer = { ...tabData, [type]: nextSection, activeType: type };
+      updateStepData(stepKey, "general", nextContainer);
+    },
+    [tabData, stepKey, updateStepData]
+  );
 
   useEffect(() => {
     const typeMap = ["individual", "corporate", "government"];
     const activeType = typeMap[currentTab];
-
     if (activeType && tabData.activeType !== activeType) {
-      const nextContainer = { ...tabData, activeType };
-      updateStepData(stepKey, "general", nextContainer);
+      updateStepData(stepKey, "general", { ...tabData, activeType });
     }
   }, [currentTab, stepKey, tabData, updateStepData]);
 
-  const getCurrentType = () => {
-    const typeMap = ["individual", "corporate", "government"];
-    return typeMap[currentTab];
+  const handleNextFromGovernment = () => {
+    // เก็บสถานะว่าอยู่ government ก่อน
+    updateStepData(stepKey, "general", { ...tabData, activeType: "government" });
+    // ให้ parent เปลี่ยนหน้าเป็น tab3-1
+    onNextGovernment?.();
   };
 
   return (
@@ -58,13 +61,9 @@ const Tab2 = ({
             {label}
           </div>
         ))}
-        <div
-          className={styles.underlineBar}
-          style={{ backgroundColor: underlineColors[currentTab] }}
-        />
+        <div className={styles.underlineBar} style={{ backgroundColor: underlineColors[currentTab] }} />
       </div>
 
-      {/* บุคคลทั่วไป */}
       {currentTab === 0 && (
         <div className={styles.formContainer}>
           <ComplaintPersonalForm
@@ -79,7 +78,6 @@ const Tab2 = ({
         </div>
       )}
 
-      {/* นิติบุคคล */}
       {currentTab === 1 && (
         <div className={styles.formContainer}>
           <ComplaintCustomerForm
@@ -94,19 +92,36 @@ const Tab2 = ({
         </div>
       )}
 
-      {/* หน่วยงานของรัฐ */}
       {currentTab === 2 && (
-        <div className={styles.formContainer}>
-          <ComplaintMinistryForm
-            data={tabData.government || {}}
-            onChange={handleChange("government")}
-            title="ข้อมูลหน่วยงานของรัฐที่ถูกร้องทุกข์"
-            validationErrors={validationErrors}
-            shouldShowValidation={shouldShowValidation}
-            fieldPrefix="government"
-            formType="mandatory"
-          />
-        </div>
+        <>
+          <div className={styles.formContainer}>
+            <ComplaintMinistryForm
+              data={tabData.government || {}}
+              onChange={handleChange("government")}
+              title="ข้อมูลหน่วยงานของรัฐที่ถูกร้องทุกข์"
+              validationErrors={validationErrors}
+              shouldShowValidation={shouldShowValidation}
+              fieldPrefix="government"
+              formType="mandatory"
+            />
+          </div>
+
+          {/* ปุ่มอยู่ตำแหน่งเดียวกับปุ่มสีส้มเดิม
+          <div className={styles.actionButtons}>
+            <ButtonService
+              label="ย้อนกลับ"
+              color="ล้าง"
+              variant="outlined"
+              onClick={() => onTabChange?.("step2", 1)}
+            />
+            <ButtonService
+              label="ถัดไป"
+              color="ยืนยัน"
+              variant="contained"
+              onClick={handleNextFromGovernment}
+            />
+          </div> */}
+        </>
       )}
     </div>
   );
