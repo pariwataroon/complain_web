@@ -13,7 +13,7 @@ import { CheckCircle, HelpOutline, HourglassEmpty } from "@mui/icons-material";
 
 import NavbarMain from "@services/navbarMain/navbarMain";
 import ComplaintIDService from "@services/ComplaintIDService/ComplaintIDService";
-import { GetComplaintMeByID } from "@pages/api/complaint/complaint";
+import { GetComplaintMeByID, GetComplaintOutgoingTracking } from "@pages/api/complaint/complaint";
 import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 import { formatThaiDate } from "@utils/Formats";
 import { exportElementToPDF } from "@utils/exportPDF";
@@ -28,48 +28,23 @@ const STEP_DEFS = [
   { key: "resolved", label: "การดำเนินการเสร็จสิ้น" },
 ];
 
-// Map various backend status strings to the above step keys
+// Map backend status strings to the above step keys
 const STATUS_ALIAS = {
-  submitted: ["submitted", "SUBMITTED", "received", "RECEIVED"],
-  sent: ["sent", "SENT", "sent_to_agency", "forwarded", "FORWARDED"],
-  in_progress: [
-    "in_progress",
-    "IN_PROGRESS",
-    "processing",
-    "PROCESSING",
-    "pending",
-    "PENDING",
-  ],
-  reviewed: [
-    "reviewed",
-    "REVIEWED",
-    "request_update",
-    "REQUEST_UPDATE",
-    "initial_notify",
-    "INITIAL_NOTIFY",
-    "agency_report",
-    "AGENCY_REPORT",
-  ],
-  resolved: [
-    "resolved",
-    "RESOLVED",
-    "final_notify",
-    "FINAL_NOTIFY",
-    "closed",
-    "CLOSED",
-    "done",
-    "DONE",
-  ],
+  submitted: ["submitted"],
+  sent: ["sent_to_agency"],
+  in_progress: ["in_process", "in_review", "sent_to_external"],
+  reviewed: ["tracking", "reviewed"],
+  resolved: ["completed", "cancelled"],
 };
+
+const RESOLVED_STATUSES = ["completed", "cancelled"];
 
 const normalizeStatus = (status) => {
   if (!status) return "submitted";
   const s = String(status);
-  // quick exact match first
   for (const key of Object.keys(STATUS_ALIAS)) {
     if (STATUS_ALIAS[key].includes(s)) return key;
   }
-  // case-insensitive fallback
   const low = s.toLowerCase();
   for (const key of Object.keys(STATUS_ALIAS)) {
     if (STATUS_ALIAS[key].map((v) => v.toLowerCase()).includes(low)) return key;
@@ -77,16 +52,34 @@ const normalizeStatus = (status) => {
   return "submitted";
 };
 
+const getHighestStepIndex = (mergedHistory) => {
+  let maxIdx = 0;
+  mergedHistory.forEach((h) => {
+    const key = normalizeStatus(h.status);
+    const idx = STEP_DEFS.findIndex((s) => s.key === key);
+    if (idx > maxIdx) maxIdx = idx;
+  });
+  return maxIdx;
+};
+
+const isResolved = (mergedHistory, complaint) => {
+  const lastEntry = mergedHistory.filter(h => h.status).slice(-1)[0];
+  const lastStatus = lastEntry?.status || complaint.status;
+  // ต้อง normalize ด้วย
+  const lastKey = normalizeStatus(lastStatus);
+  return lastKey === "resolved";
+};
+
 export default function FollowupDetailPage() {
   const router = useRouter();
   const { id } = router.query;
 
   const [complaint, setComplaint] = useState(null);
+  const [outgoingTracking, setOutgoingTracking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
   const fetchedRef = useRef(false);
-  const pdfRef = useRef();
 
   useEffect(() => {
     if (!router.isReady || !id || fetchedRef.current) return;
@@ -95,10 +88,17 @@ export default function FollowupDetailPage() {
     (async () => {
       try {
         showLoading("กำลังโหลดข้อมูลเรื่องร้องทุกข์...");
-        const res = await GetComplaintMeByID(id);
-        const data = res?.data ?? res;
+        const [resComplaint, resTracking] = await Promise.all([
+          GetComplaintMeByID(id),
+          GetComplaintOutgoingTracking(id),
+        ]);
+        const data = resComplaint?.data ?? resComplaint;
         const comp = data.res_data ?? data;
         setComplaint(comp);
+
+        setOutgoingTracking(
+          resTracking?.data?.res_data ?? resTracking?.res_data ?? resTracking
+        );
       } catch (err) {
         console.error(err);
         setErrorMsg("ไม่สามารถโหลดข้อมูลได้");
@@ -110,38 +110,66 @@ export default function FollowupDetailPage() {
     })();
   }, [router.isReady, id]);
 
+  //--- รวมสถานะจากทั้ง complaint และ outgoing-tracking
   const { steps, activeStep } = useMemo(() => {
     if (!complaint) return { steps: [], activeStep: 0 };
 
     const history = complaint.status_history ?? [];
-    const lastStatus = complaint.status;
-    const lastKey = normalizeStatus(lastStatus);
+    let otHistory = outgoingTracking?.history ?? [];
 
-    const built = STEP_DEFS.map((def) => {
-      const logs = history.filter((h) => normalizeStatus(h.status) === def.key);
+    const mergedHistory = [
+      ...history,
+      ...otHistory.map((h) => ({
+        ...h,
+        status: h.status || h.type || "reviewed",
+        changed_at: h.at,
+      })),
+    ];
+
+    const resolved = isResolved(mergedHistory, complaint);
+    const highestStepIdx = getHighestStepIndex(mergedHistory);
+
+    const built = STEP_DEFS.map((def, idx) => {
+      const logs = mergedHistory.filter((h) => normalizeStatus(h.status) === def.key);
+
+      let icon;
+      if (resolved) {
+        icon = <CheckCircle sx={{ fontSize: 60, color: "#2499FF" }} />;
+      } else if (idx < highestStepIdx) {
+        icon = <CheckCircle sx={{ fontSize: 60, color: "#2499FF" }} />;
+      } else if (idx === highestStepIdx) {
+        icon = <HourglassEmpty sx={{ fontSize: 60, color: "#EDC458" }} />;
+      } else {
+        icon = <HelpOutline sx={{ fontSize: 60, color: "#C4C4C4" }} />;
+      }
+
+      // เพิ่มข้อมูลปลายทาง/เจ้าหน้าที่ใน step "ส่งหน่วยงาน"
+      let extraInfo = "";
+      if (def.key === "sent" && logs.length > 0) {
+        const log = logs[0];
+        if (log.status === "sent_to_agency") {
+          extraInfo = `เจ้าหน้าที่รับเรื่อง: ${log.assigned_to || complaint.assigned_to || "-"}`;
+        }
+      }
 
       const description = logs.map((log) => {
-        const dateTH = formatThaiDate(log.changed_at || log.changedAt || log.date);
-        const note = log.notes || log.note || log.message || "-";
+        const dateTH = formatThaiDate(log.changed_at || log.changedAt || log.date || log.at);
+        const note =
+          log.notes ||
+          log.note ||
+          log.message ||
+          log.subject ||
+          log.decision_subject ||
+          "-";
         return `${note} (${dateTH})`;
       });
 
-      const isDone = logs.length > 0 && def.key !== lastKey;
-      const isActive = def.key === lastKey;
-
-      let icon;
-      if (isDone)
-        icon = <CheckCircle sx={{ fontSize: 60, color: "#2499FF" }} />;
-      else if (isActive)
-        icon = <HourglassEmpty sx={{ fontSize: 60, color: "#EDC458" }} />;
-      else icon = <HelpOutline sx={{ fontSize: 60, color: "#C4C4C4" }} />;
-
-      return { label: def.label, icon, description };
+      return { label: def.label, icon, description, extraInfo };
     });
 
-    const idx = Math.max(0, STEP_DEFS.findIndex((s) => s.key === lastKey));
-    return { steps: built, activeStep: idx };
-  }, [complaint]);
+    // activeStep: ให้ stepper ชี้ปัจจุบันที่สูงสุด (หรือสุดท้ายถ้า resolved)
+    return { steps: built, activeStep: resolved ? STEP_DEFS.length : highestStepIdx };
+  }, [complaint, outgoingTracking]);
 
   if (loading) {
     return (
@@ -189,7 +217,7 @@ export default function FollowupDetailPage() {
           <Box className={styles.headerBarLightBlue}>
             <Box display="flex" justifyContent="space-between" width="100%">
               <Typography sx={{ color: "#1120A3" }}>
-                เรื่อง: {complaint.step3?.general?.subject || "-"}
+                เรื่อง: {complaint.step3?.general?.subject || complaint.subject || "-"}
               </Typography>
               <Typography sx={{ color: "#1120A3" }}>
                 วันที่รับเรื่อง : {formatThaiDate(complaint.created_at)}
@@ -231,13 +259,16 @@ export default function FollowupDetailPage() {
                   <Typography className={styles.stepLabel}>
                     {step.label}
                   </Typography>
-                  {step.description.length > 0 && (
+                  {step.extraInfo && (
+                    <Typography sx={{ color: "#2499FF", fontWeight: 600 }}>{step.extraInfo}</Typography>
+                  )}
+                  {/* {step.description.length > 0 && (
                     <ul className={styles.stepDescription}>
                       {step.description.map((line, i) => (
                         <li key={i}>{line}</li>
                       ))}
                     </ul>
-                  )}
+                  )} */}
                 </StepLabel>
               </Step>
             ))}

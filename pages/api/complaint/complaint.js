@@ -318,6 +318,19 @@ const GetDepartments = async () => {
     throw error;
   }
 };
+const GetComplaintOutgoingTracking = async (complaint_id) => {
+  try {
+    const response = await axiosInstance.get(
+      `/complaints/${complaint_id}/outgoing-tracking`
+    );
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error fetching outgoing tracking:", error);
+    throw error;
+  }
+}
 
 export {
   CreateComplaint,
@@ -341,5 +354,6 @@ export {
   GetReferenceComplaints,
   GetReDocumentComplaints,
   GetDepartments,
-  GetAssignmentCompleteByAdmin
+  GetAssignmentCompleteByAdmin,
+  GetComplaintOutgoingTracking,
 };
