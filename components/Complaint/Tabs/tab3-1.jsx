@@ -1,5 +1,4 @@
-// components/Complaint/Tabs/tab3-1.jsx
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback, forwardRef, useImperativeHandle } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import styles from "./TabNav.module.scss";
 
@@ -13,38 +12,41 @@ import SearchIcon from "@mui/icons-material/Search";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ClearIcon from "@mui/icons-material/Clear";
 
-export default function Tab31({
-  defaultData = null,
-  options = {},
-  fetchSubComplaintTypes,
-  onReset,
-  onSubmit,
-  searchFn,
-}) {
+import {    
+  GetAllSelectComplaintTypes,
+  getSubComplaintTypeById,
+  GetAllComplaintChannels,
+  GetAllOutsideDepartments,
+} from "@pages/api/allselect/allselect";
+import { GetComplaintsWithSearch } from "@pages/api/complaint/complaint";
+import { alertSuccess, alertError, alertWarning } from "@utils/Alerts";
+
+const Tab31 = ({
+  stepKey,
+  tabData = {},
+  updateStepData,
+  formData,
+  onBack,
+  onNext, 
+}, ref) => {
+
   const step3Methods = useForm({ mode: "onChange" });
   const step4Methods = useForm({ mode: "onChange" });
 
-  // map options
-  const complaintTypes = useMemo(() => {
-    const src = options.complaintTypes || [];
-    return src.map((t) => ({ value: t.value ?? t.id, label: t.label ?? t.name }));
-  }, [options.complaintTypes]);
-  const complaintChannels = useMemo(() => {
-    const src = options.complaintChannels || [];
-    return src.map((c) => ({ value: c.value ?? c.id, label: c.label ?? c.name }));
-  }, [options.complaintChannels]);
-  const outsideDepartments = useMemo(
-    () => (options.outsideDepartments || []).map((d) => ({
-      value: d.value ?? d.id, label: d.label ?? d.name,
-    })),
-    [options.outsideDepartments]
-  );
-
-  const [selectedComplaintType, setSelectedComplaintType] = useState("");
+  // State สำหรับ master data
+  const [complaintTypes, setComplaintTypes] = useState([]);
+  const [complaintChannels, setComplaintChannels] = useState([]);
+  const [outsideDepartments, setOutsideDepartments] = useState([]);
   const [subComplaintTypes, setSubComplaintTypes] = useState([]);
+
+  // Loading states
+  const [loadingOptions, setLoadingOptions] = useState(false);
   const [loadingSubTypes, setLoadingSubTypes] = useState(false);
-  const [loadingChannels] = useState(false);
-  const [loadingOutsideDepartments] = useState(false);
+  const [loadingChannels, setLoadingChannels] = useState(false);
+  const [loadingOutsideDepartments, setLoadingOutsideDepartments] = useState(false);
+
+  // Selected state
+  const [selectedComplaintType, setSelectedComplaintType] = useState("");
 
   // search dialog
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
@@ -53,97 +55,408 @@ export default function Tab31({
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef(null);
 
+  const fetchSubTypesTimeoutRef = useRef(null);
+  const currentFetchPromiseRef = useRef(null);
+  const lastFetchedIdRef = useRef("");
+  const initialComplaintTypeIdRef = useRef(null);
+
   const errMsg = (name) => {
     const e = step3Methods.formState.errors[name];
     return e ? <div className={styles.errorText}>{e.message}</div> : null;
   };
   const errStyle = (name) => (step3Methods.formState.errors[name] ? { borderColor: "#ef4444" } : {});
 
-  useEffect(() => {
-    const step3 = defaultData?.step3?.general || {};
-    const step4 = defaultData?.step4?.general || {};
-
-    const ctId = String(step3.complaint_type_id || step3.complaintTypeId || step3.complaintType || "");
-    setSelectedComplaintType(ctId);
-
-    step3Methods.reset({
-      complaintType: ctId,
-      complaintTypeId: ctId,
-      complaintSubType: step3.complaint_subtype_id || step3.complaintSubType || "",
-      complaintChannel: step3.complaint_channel_id || step3.complaintChannel || "",
-      subject: step3.subject || "",
-      referenceNumber1: step3.reference_number || step3.referenceNumber1 || "",
-      referenceDate1: step3.reference_date1 || step3.referenceDate1 || "",
-      referenceNumber2: step3.reference_number2 || "",
-      referenceDate2: step3.reference_date2 || "",
-      referenceNumber3: step3.reference_number3 || "",
-      referenceDate3: step3.reference_date3 || "",
-      referenceNumber4: step3.reference_number4 || defaultData?.complaint_number || "",
-      referenceDate4: step3.reference_date4 || "",
-      documentNumber: step3.document_number || "",
-      documentDate: step3.document_date || "",
-      senderAgency: step3.senderAgency || "",
-      securityLevel: step3.securityLevel || "normal",
-      urgencyLevel: step3.urgencyLevel || "low",
-      additionalReference1: step3.additional_reference_number1 || "",
-      additionalReferenceDate1: step3.additional_reference_date1 || "",
-      additionalReference2: step3.additional_reference_number2 || "",
-      additionalReferenceDate2: step3.additional_reference_date2 || "",
-      description: step3.description || "",
-      complaint_filing_type: step3.complaint_filing_type || "new",
-    });
-
-    step4Methods.reset({
-      officerReceivedDate: step4.officerReceivedDate || "",
-      directorSubmittedDate: step4.directorSubmittedDate || "",
-      incidentDateTime: step4.incidentDateTime || step3.incidentDate || "",
-    });
-
-    if (ctId) loadSubTypes(ctId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultData]);
-
-  const loadSubTypes = useCallback(async (parentId) => {
-    if (!parentId || !fetchSubComplaintTypes) {
-      setSubComplaintTypes([]); return;
-    }
-    try {
-      setLoadingSubTypes(true);
-      const res = await fetchSubComplaintTypes(parentId);
-      const items = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : [];
-      setSubComplaintTypes(items.map((s) => ({ value: s.id ?? s.value, label: s.name ?? s.label })));
-    } finally { setLoadingSubTypes(false); }
-  }, [fetchSubComplaintTypes]);
-
-  const onTypeChange = (e) => {
-    const v = e.target.value;
-    step3Methods.setValue("complaintType", v);
-    step3Methods.setValue("complaintTypeId", v);
-    step3Methods.setValue("complaintSubType", "");
-    setSelectedComplaintType(v);
-    loadSubTypes(v);
+  const isValidId = (id) => {
+    return (
+      id &&
+      id !== "" &&
+      id !== null &&
+      id !== undefined &&
+      typeof id === "string" &&
+      id.trim() !== ""
+    );
   };
 
+  const clearSubTypes = () => {
+    if (fetchSubTypesTimeoutRef.current) {
+      clearTimeout(fetchSubTypesTimeoutRef.current);
+      fetchSubTypesTimeoutRef.current = null;
+    }
+    if (currentFetchPromiseRef.current) {
+      currentFetchPromiseRef.current = null;
+    }
+    setSubComplaintTypes([]);
+    setLoadingSubTypes(false);
+    lastFetchedIdRef.current = "";
+  };
+
+  // Load initial master data
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      setLoadingOptions(true);
+      setLoadingChannels(true);
+      setLoadingOutsideDepartments(true);
+
+      try {
+        const [complaintTypesResponse, channelsResponse, outsideResponse] = await Promise.all([
+          GetAllSelectComplaintTypes(),
+          GetAllComplaintChannels(),
+          GetAllOutsideDepartments(),
+        ]);
+
+        if (complaintTypesResponse?.res_code === "0000" && complaintTypesResponse?.res_data) {
+          const normTypes = Array.isArray(complaintTypesResponse.res_data)
+            ? complaintTypesResponse.res_data.map((t) => ({
+                value: t.id,
+                label: t.name,
+                raw: t,
+              }))
+            : [];
+          setComplaintTypes(normTypes);
+        } else {
+          setComplaintTypes([]);
+        }
+
+        if (channelsResponse?.res_code === "0000" && channelsResponse?.res_data) {
+          const channelsData = channelsResponse.res_data;
+          if (channelsData.items && Array.isArray(channelsData.items)) {
+            const normChannels = channelsData.items.map((c) => ({
+              value: c.id,
+              label: c.name,
+              raw: c,
+            }));
+            setComplaintChannels(normChannels);
+          } else {
+            setComplaintChannels([]);
+          }
+        } else {
+          setComplaintChannels([]);
+        }
+
+        if (Array.isArray(outsideResponse)) {
+          const normOutside = outsideResponse.map((d) => ({
+            value: d.value ?? d.id,
+            label: d.label ?? d.name,
+            raw: d,
+          }));
+          setOutsideDepartments(normOutside);
+        } else {
+          setOutsideDepartments([]);
+        }
+
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+        setComplaintTypes([]);
+        setComplaintChannels([]);
+        setOutsideDepartments([]);
+      } finally {
+        setLoadingOptions(false);
+        setLoadingChannels(false);
+        setLoadingOutsideDepartments(false);
+      }
+    };
+
+    fetchInitialData();
+  }, []);
+
+  // Fetch sub complaint types
+  const fetchSubComplaintTypesInternal = useCallback(async (complaintTypeId) => {
+    if (!isValidId(complaintTypeId)) {
+      clearSubTypes();
+      return;
+    }
+
+    clearSubTypes();
+    setLoadingSubTypes(true);
+    lastFetchedIdRef.current = complaintTypeId;
+
+    const fetchPromise = (async () => {
+      try {
+        const response = await getSubComplaintTypeById(complaintTypeId);
+
+        if (response?.res_code === "0000" && response?.res_data) {
+          const responseData = response.res_data;
+          if (Array.isArray(responseData.items)) {
+            const filteredSubTypes = responseData.items.map((item) => ({
+              value: item.id,
+              label: item.name,
+              raw: item,
+            }));
+            setSubComplaintTypes(filteredSubTypes);
+          } else {
+            setSubComplaintTypes([]);
+          }
+        } else {
+          setSubComplaintTypes([]);
+        }
+      } catch (error) {
+        setSubComplaintTypes([]);
+        if (error?.response?.status === 404) {
+          console.log("404 - No sub types found for this complaint type");
+        } else if (error?.response?.status === 400) {
+          console.log("400 - Bad request, possibly invalid parent_type_id");
+        } else {
+          console.error("Error fetching sub complaint types:", error);
+        }
+      } finally {
+        if (currentFetchPromiseRef.current === fetchPromise) {
+          setLoadingSubTypes(false);
+          currentFetchPromiseRef.current = null;
+        }
+      }
+    })();
+
+    currentFetchPromiseRef.current = fetchPromise;
+  }, []);
+
+  // Handle complaint type change
+  const onTypeChange = (e) => {
+    const value = e.target.value;
+    step3Methods.setValue("complaintType", value);
+    step3Methods.setValue("complaintTypeId", value);
+    step3Methods.setValue("complaintSubType", "");
+    setSelectedComplaintType(value);
+    clearSubTypes();
+    
+    if (isValidId(value)) {
+      fetchSubTypesTimeoutRef.current = setTimeout(() => {
+        fetchSubComplaintTypesInternal(value);
+      }, 300);
+    }
+  };
+
+  // Search functionality
   const runSearch = async (kw) => {
-    if (!searchFn) return setSearchResults([]);
     setSearchLoading(true);
     try {
-      const list = await searchFn(kw || "");
-      setSearchResults(Array.isArray(list) ? list : []);
-    } finally { setSearchLoading(false); }
+      const response = await GetComplaintsWithSearch({
+        skip: 0,
+        limit: 100,
+        search: kw || "",
+      });
+
+      const items = Array.isArray(response?.res_data?.items)
+        ? response.res_data.items
+        : [];
+
+      const results = items.map((item) => ({
+        ...item,
+        label: item.complaint_number || "",
+        value: item.complaint_number || "",
+      }));
+
+      setSearchResults(results);
+    } catch (err) {
+      setSearchResults([]);
+      console.error("Search error:", err);
+    } finally {
+      setSearchLoading(false);
+    }
   };
-  const clearSearch = () => { setSearchText(""); runSearch(""); inputRef.current?.focus(); };
+
+  const clearSearch = () => { 
+    setSearchText(""); 
+    runSearch(""); 
+    inputRef.current?.focus(); 
+  };
+
   const pickRef = (item) => {
     step3Methods.setValue("additionalReference1", item.complaint_number || "");
     setOpenSearchDialog(false);
   };
 
+  // Auto-extract date from reference number 4
+  const buddhistYYYYMMDDToDate = (yyyymmddStr) => {
+    if (!/^\d{8}$/.test(yyyymmddStr)) return null;
+    const yearThai = parseInt(yyyymmddStr.slice(0, 4), 10);
+    const month = parseInt(yyyymmddStr.slice(4, 6), 10);
+    const day = parseInt(yyyymmddStr.slice(6, 8), 10);
+
+    if (yearThai < 2400 || yearThai > 2800) return null;
+    if (month < 1 || month > 12) return null;
+    if (day < 1 || day > 31) return null;
+
+    const yearAD = yearThai - 543;
+    return new Date(yearAD, month - 1, day, 0, 0, 0);
+  };
+
+  const extractYYYYMMDDFromRef = (refNo) => {
+    if (!refNo) return null;
+    const m = refNo.match(/(\d{8})/);
+    return m ? m[1] : null;
+  };
+
+  const refNo4 = step3Methods.watch("referenceNumber4");
+
+  useEffect(() => {
+    if (!refNo4) return;
+
+    const yyyymmddThai = extractYYYYMMDDFromRef(refNo4);
+    if (!yyyymmddThai) return;
+
+    const parsedDate = buddhistYYYYMMDDToDate(yyyymmddThai);
+    if (!parsedDate) return;
+
+    const current = step3Methods.getValues("referenceDate4");
+    const sameDay =
+      current instanceof Date &&
+      current.getFullYear() === parsedDate.getFullYear() &&
+      current.getMonth() === parsedDate.getMonth() &&
+      current.getDate() === parsedDate.getDate();
+
+    if (!sameDay) {
+      step3Methods.setValue("referenceDate4", parsedDate, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [refNo4, step3Methods]);
+
+  // Load data from tabData
+  useEffect(() => {
+    if (!tabData || Object.keys(tabData).length === 0) return;
+
+    let complaintTypeId = String(tabData.complaintTypeId || tabData.complaintType || "");
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(complaintTypeId) && typeof complaintTypeId === "string" && complaintTypes.length > 0) {
+      const found = complaintTypes.find((t) => t.label === complaintTypeId);
+      complaintTypeId = found ? found.value : "";
+    }
+
+    setSelectedComplaintType(complaintTypeId);
+
+    step3Methods.reset({
+      complaintType: complaintTypeId,
+      complaintTypeId: complaintTypeId,
+      complaintSubType: tabData.complaintSubType || "",
+      complaintChannel: tabData.complaintChannel || "",
+      subject: tabData.subject || "",
+      referenceNumber1: tabData.referenceNumber1 || "",
+      referenceDate1: tabData.referenceDate1 || "",
+      referenceNumber2: tabData.referenceNumber2 || "",
+      referenceDate2: tabData.referenceDate2 || "",
+      referenceNumber3: tabData.referenceNumber3 || "",
+      referenceDate3: tabData.referenceDate3 || "",
+      referenceNumber4: tabData.referenceNumber4 || "",
+      referenceDate4: tabData.referenceDate4 || "",
+      documentNumber: tabData.documentNumber || "",
+      documentDate: tabData.documentDate || "",
+      senderAgency: tabData.senderAgency || "",
+      securityLevel: tabData.securityLevel || "normal",
+      urgencyLevel: tabData.urgencyLevel || "low",
+      additionalReference1: tabData.additionalReference1 || "",
+      additionalReferenceDate1: tabData.additionalReferenceDate1 || "",
+      additionalReference2: tabData.additionalReference2 || "",
+      additionalReferenceDate2: tabData.additionalReferenceDate2 || "",
+      description: tabData.description || "",
+      complaint_filing_type: tabData.complaint_filing_type || "new",
+    });
+
+    const formatDateTimeForForm = (dateValue) => {
+      if (!dateValue) return "";
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) return "";
+      return date;
+    };
+
+    step4Methods.reset({
+      officerReceivedDate: formatDateTimeForForm(tabData.officerReceivedDate || ""),
+      directorSubmittedDate: formatDateTimeForForm(tabData.directorSubmittedDate || ""),
+      incidentDateTime: formatDateTimeForForm(tabData.incidentDateTime || ""),
+    });
+
+    if (complaintTypeId && uuidRegex.test(complaintTypeId)) {
+      fetchSubComplaintTypesInternal(complaintTypeId);
+      if (initialComplaintTypeIdRef.current === null) {
+        initialComplaintTypeIdRef.current = complaintTypeId;
+      }
+    }
+  }, [tabData, complaintTypes, step3Methods, step4Methods, fetchSubComplaintTypesInternal]);
+
+  // Open search dialog effect
+  useEffect(() => {
+    if (openSearchDialog) {
+      setSearchText("");
+      runSearch("");
+      inputRef.current?.focus();
+    }
+  }, [openSearchDialog]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      clearSubTypes();
+    };
+  }, []);
+
+  // Filing type handlers
   const filingType = step3Methods.watch("complaint_filing_type") || "new";
   const setFilingType = (t) => step3Methods.setValue("complaint_filing_type", t);
 
-  const handleReset = () => onReset?.();
-  const handleSubmit = () =>
-    onSubmit?.({ step3: step3Methods.getValues(), step4: step4Methods.getValues() });
+  const handleReset = () => {
+    clearSubTypes();
+    step3Methods.reset();
+    step4Methods.reset();
+  };
+
+  // บันทึกข้อมูลไปยัง hook แล้วไปขั้นตอนต่อไป
+  const validateAndSave = async () => {
+    const must = [
+      "complaintTypeId",
+      "complaintChannel",
+      "subject",
+      "referenceNumber1","referenceDate1", // สป.กค.
+      "referenceNumber3","referenceDate3", // สตป.
+      "referenceNumber4","referenceDate4"  // สรร.
+    ];
+
+    // เผื่อบางที่ผูกกับ complaintType แทน complaintTypeId
+    const v = step3Methods.getValues();
+    if (v.complaintType && !v.complaintTypeId) {
+      step3Methods.setValue("complaintTypeId", v.complaintType, { shouldDirty:false });
+    }
+
+    const isValid = await step3Methods.trigger(must);
+        if (!isValid) {
+            const errs = Object.values(step3Methods.formState.errors || {}).map(e => `• ${e.message || "ข้อมูลไม่ถูกต้อง"}`);
+            await alertWarning("ข้อมูลไม่ครบถ้วน", `กรุณาแก้ไขข้อมูลดังต่อไปนี้:<br/><br/>${errs.join("<br/>")}`, true);
+        return false;
+    }
+
+    const s3 = step3Methods.getValues();
+    const s4 = step4Methods.getValues();
+
+    // รวมข้อมูลทั้งหมดจาก Tab3-1
+    const combinedData = {
+      ...s3,
+      ...s4,
+      // เพิ่มข้อมูลจาก step4Methods ด้วย
+      officerReceivedDate: s4.officerReceivedDate,
+      directorSubmittedDate: s4.directorSubmittedDate,
+      incidentDateTime: s4.incidentDateTime,
+    };
+
+    // บันทึกข้อมูลไปยัง hook สำหรับ step31
+    updateStepData("step31", "general", combinedData);
+    
+    return true;
+    };
+    useImperativeHandle(ref, () => ({
+    validateAndSave,
+    // เผื่ออยากอ่านข้อมูลสด ๆ (ไม่บังคับใช้)
+    getCurrentValues: () => ({
+        step3: step3Methods.getValues(),
+        step4: step4Methods.getValues(),
+    }),
+    }));
+
+    const handleSave = async () => {
+    const ok = await validateAndSave();
+    if (!ok) return;
+    await alertSuccess("บันทึกข้อมูล", "ข้อมูลได้รับการบันทึกแล้ว จะถูกส่งพร้อมกับเรื่องร้องทุกข์");
+    onNext?.();
+};
 
   return (
     <div className={styles.formWrapper}>
@@ -162,12 +475,18 @@ export default function Tab31({
                 <select
                   className={styles.inputControl}
                   {...step3Methods.register("complaintTypeId", {
-                    required: "กรุณาเลือกประเภทเรื่องร้องเรียน", onChange: onTypeChange,
+                    required: "กรุณาเลือกประเภทเรื่องร้องเรียน", 
+                    onChange: onTypeChange,
                   })}
                   style={errStyle("complaintTypeId")}
+                  disabled={loadingOptions}
                 >
-                  <option value="">เลือกประเภทเรื่องร้องเรียน</option>
-                  {complaintTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  <option value="">
+                    {loadingOptions ? "กำลังโหลด..." : "เลือกประเภทเรื่องร้องเรียน"}
+                  </option>
+                  {complaintTypes.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
                 </select>
                 {errMsg("complaintTypeId")}
               </div>
@@ -183,10 +502,12 @@ export default function Tab31({
                   <option value="">
                     {!selectedComplaintType ? "กรุณาเลือกประเภทเรื่องร้องเรียนก่อน"
                       : loadingSubTypes ? "กำลังโหลด..."
-                      : subComplaintTypes.length === 0 ? "กรุณาเลือกประเภทเรื่องร้องเรียนก่อน"
+                      : subComplaintTypes.length === 0 ? "ไม่มีประเภทย่อย"
                       : "เลือกประเภทเรื่องย่อย"}
                   </option>
-                  {subComplaintTypes.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  {subComplaintTypes.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
                 </select>
                 {errMsg("complaintSubType")}
               </div>
@@ -195,12 +516,18 @@ export default function Tab31({
                 <label className={styles.label}>ช่องทางเรื่องร้องเรียน <span className={styles.required}>*</span></label>
                 <select
                   className={styles.inputControl}
-                  {...step3Methods.register("complaintChannel", { required: "กรุณาเลือกช่องทางเรื่องร้องเรียน" })}
+                  {...step3Methods.register("complaintChannel", { 
+                    required: "กรุณาเลือกช่องทางเรื่องร้องเรียน" 
+                  })}
                   disabled={loadingChannels}
                   style={errStyle("complaintChannel")}
                 >
-                  <option value="">เลือกช่องทางเรื่องร้องเรียน</option>
-                  {complaintChannels.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  <option value="">
+                    {loadingChannels ? "กำลังโหลด..." : "เลือกช่องทางเรื่องร้องเรียน"}
+                  </option>
+                  {complaintChannels.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
                 </select>
                 {errMsg("complaintChannel")}
               </div>
@@ -265,7 +592,35 @@ export default function Tab31({
               <div className={styles.fieldGroupDate}>
                 <label className={styles.label}>วันที่ <span className={styles.required}>*</span></label>
                 <div className={styles.datePickerWrapper}>
-                  <ControlledDateThaiPickerService name="referenceDate3" control={step3Methods.control} placeholder="กรุณาเลือกวันที่" />
+                  <ControlledDateThaiPickerService 
+                    name="referenceDate3" 
+                    control={step3Methods.control} 
+                    placeholder="กรุณาเลือกวันที่"
+                    rules={{ required: "กรุณาเลือกวันที่" }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Row 4.5: referenceNumber4 - เลข สรร. สารบัญ */}
+            <div className={styles.fieldRowDate}>
+              <div className={styles.fieldGroup}>
+                <label className={styles.label}>เลข สรร. สารบัญ <span className={styles.required}>*</span></label>
+                <input className={styles.inputControl} type="text"
+                  {...step3Methods.register("referenceNumber4", { required: "กรุณากรอกเลข สรร. สารบัญ" })}
+                  style={errStyle("referenceNumber4")}
+                />
+                {errMsg("referenceNumber4")}
+              </div>
+              <div className={styles.fieldGroupDate}>
+                <label className={styles.label}>วันที่ <span className={styles.required}>*</span></label>
+                <div className={styles.datePickerWrapper}>
+                  <ControlledDateThaiPickerService 
+                    name="referenceDate4" 
+                    control={step3Methods.control} 
+                    placeholder="กรุณาเลือกวันที่"
+                    rules={{ required: "กรุณาเลือกวันที่" }}
+                  />
                 </div>
               </div>
             </div>
@@ -285,8 +640,12 @@ export default function Tab31({
               <div className={styles.fieldGroup}>
                 <label className={styles.label}>หน่วยงานอื่นที่ส่งเรื่องมาที่ กค.</label>
                 <select className={styles.inputControl} {...step3Methods.register("senderAgency")} disabled={loadingOutsideDepartments}>
-                  <option value="">{loadingOutsideDepartments ? "กำลังโหลดหน่วยงาน..." : "เลือกหน่วยงาน"}</option>
-                  {outsideDepartments.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+                  <option value="">
+                    {loadingOutsideDepartments ? "กำลังโหลดหน่วยงาน..." : "เลือกหน่วยงาน"}
+                  </option>
+                  {outsideDepartments.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -341,48 +700,95 @@ export default function Tab31({
                             <SearchIcon />
                           </span>
                         </div>
-                        {/* Dialog ค้นหา */}
-                        <Dialog open={openSearchDialog} onClose={() => setOpenSearchDialog(false)} maxWidth="sm" fullWidth
-                          PaperProps={{ style:{ borderRadius:12, background:"#f7fafd", height:500 } }}>
-                          <DialogTitle sx={{ display:"flex", alignItems:"center", gap:1 }}>
+                        
+                        {/* Search Dialog */}
+                        <Dialog 
+                          open={openSearchDialog} 
+                          onClose={() => setOpenSearchDialog(false)} 
+                          maxWidth="sm" 
+                          fullWidth
+                          PaperProps={{ 
+                            style: { borderRadius: 12, background: "#f7fafd", height: 500 } 
+                          }}
+                        >
+                          <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                             <SearchIcon color="primary" /> ค้นหาเลขที่อ้างอิง
                           </DialogTitle>
                           <DialogContent>
                             <TextField
-                              inputRef={inputRef} fullWidth size="small"
+                              inputRef={inputRef} 
+                              fullWidth 
+                              size="small"
                               placeholder="พิมพ์คำค้นหาเลขที่อ้างอิง หรือชื่อเรื่อง..."
                               value={searchText}
-                              onChange={(e)=>{ const v=e.target.value; setSearchText(v); runSearch(v); }}
+                              onChange={(e) => { const v = e.target.value; setSearchText(v); runSearch(v); }}
                               InputProps={{
-                                startAdornment:(<InputAdornment position="start"><SearchIcon color="action" /></InputAdornment>),
+                                startAdornment: (<InputAdornment position="start"><SearchIcon color="action" /></InputAdornment>),
                                 endAdornment: searchText ? (
                                   <InputAdornment position="end">
                                     <IconButton size="small" onClick={clearSearch}><ClearIcon /></IconButton>
                                   </InputAdornment>
                                 ) : null,
-                                style:{ background:"#fff", borderRadius:8 },
+                                style: { background: "#fff", borderRadius: 8 },
                               }}
-                              sx={{ mb:2 }}
+                              sx={{ mb: 2 }}
                             />
                             {searchLoading ? (
-                              <div className={styles.dialogLoading}><CircularProgress color="primary" /><div>กำลังค้นหา...</div></div>
+                              <div className={styles.dialogLoading}>
+                                <CircularProgress color="primary" />
+                                <div>กำลังค้นหา...</div>
+                              </div>
                             ) : searchResults.length === 0 ? (
-                              <div className={styles.dialogEmpty}><DescriptionIcon sx={{ fontSize:48, mb:1 }} color="disabled" />ไม่พบรายการเลขที่อ้างอิง</div>
+                              <div className={styles.dialogEmpty}>
+                                <DescriptionIcon sx={{ fontSize: 48, mb: 1 }} color="disabled" />
+                                ไม่พบรายการเลขที่อ้างอิง
+                              </div>
                             ) : (
-                              <List sx={{ maxHeight:320, overflow:"auto" }}>
-                                {searchResults.map((item)=>(
-                                  <ListItem key={item.id} disablePadding>
-                                    <ListItemButton onClick={()=>pickRef(item)}>
-                                      <DescriptionIcon color="info" sx={{ mr:1 }} />
-                                      <span style={{ fontWeight:500 }}>{item.complaint_type} - {item.complaint_number}</span>
-                                    </ListItemButton>
-                                  </ListItem>
-                                ))}
+                              <List sx={{ maxHeight: 320, overflow: "auto" }}>
+                                {searchResults.map((item) => {
+                                  const isMaster = !!item.is_master;
+                                  return (
+                                    <ListItem key={item.id} disablePadding>
+                                      <ListItemButton 
+                                        onClick={() => pickRef(item)}
+                                        sx={{
+                                          py: 1.5,
+                                          px: 2,
+                                          borderRadius: 2,
+                                          mb: 0.5,
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 1.5,
+                                          "&:hover": { background: "#e3f2fd" },
+                                        }}
+                                      >
+                                        <span
+                                          style={{
+                                            width: 12,
+                                            height: 12,
+                                            borderRadius: "50%",
+                                            backgroundColor: isMaster ? "#2ecc71" : "#bdbdbd",
+                                            border: "2px solid #fff",
+                                            boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
+                                            flexShrink: 0,
+                                          }}
+                                          title={isMaster ? "Master" : "Non-master"}
+                                        />
+                                        <DescriptionIcon color="info" sx={{ mr: 0.5 }} />
+                                        <span style={{ fontWeight: 500 }}>
+                                          {item.complaint_type} - {item.complaint_number}
+                                        </span>
+                                      </ListItemButton>
+                                    </ListItem>
+                                  );
+                                })}
                               </List>
                             )}
                           </DialogContent>
-                          <DialogActions sx={{ px:3, pb:2 }}>
-                            <Button onClick={()=>setOpenSearchDialog(false)} variant="outlined" color="inherit">ปิด</Button>
+                          <DialogActions sx={{ px: 3, pb: 2 }}>
+                            <Button onClick={() => setOpenSearchDialog(false)} variant="outlined" color="inherit">
+                              ปิด
+                            </Button>
                           </DialogActions>
                         </Dialog>
                       </div>
@@ -421,8 +827,8 @@ export default function Tab31({
                   </div>
                 </div>
 
-              </div>{/* sectionContent */}
-            </div>{/* formSection */}
+              </div>
+            </div>
           </div>
         </div>
       </FormProvider>
@@ -431,7 +837,7 @@ export default function Tab31({
       <FormProvider {...step4Methods}>
         <div className={styles.formSection}>
           <div className={styles.sectionHeader}>
-            <h3 className={styles.sectionTitle}>ข้อมูลเรื่องร้องทุกข์ <span className={styles.required}>*</span></h3>
+            <h3 className={styles.sectionTitle}>ข้อมูลเรื่องร้องทุกข์เพิ่มเติม</h3>
           </div>
 
           <div className={styles.sectionContent}>
@@ -469,51 +875,35 @@ export default function Tab31({
             <div className={styles.fieldGroup}>
               <label className={styles.label}>รายละเอียดเพิ่มเติม</label>
               <textarea
-                rows={8} disabled
-                className={`${styles.inputControl} ${styles.textAreaControl} ${styles.disabledTextarea}`}
+                rows={8}
+                className={`${styles.inputControl} ${styles.textAreaControl}`}
                 {...step3Methods.register("description")}
+                placeholder="กรอกรายละเอียดเพิ่มเติม..."
               />
-            </div>
-
-            <div className={styles.attachmentSection}>
-              <h4>เอกสารประกอบการร้องเรียน</h4>
-              <div className={styles.attachmentList}>
-                {defaultData?.step3?.general?.attachment?.length > 0 ? (
-                  defaultData.step3.general.attachment.map((file, i) => {
-                    const sizeMB = (file.fileSize / (1024 * 1024)).toFixed(2);
-                    const formatDate = (iso) => {
-                      const d = new Date(iso);
-                      const dd = String(d.getDate()).padStart(2, "0");
-                      const mm = String(d.getMonth() + 1).padStart(2, "0");
-                      const yy = String(d.getFullYear() + 543).slice(-2);
-                      return `${dd}/${mm}/${yy}`;
-                    };
-                    const base = process.env.NEXT_PUBLIC_UPLOADS_BASE_URL?.replace(/\/$/, "") || "";
-                    const url = file.fileUrl?.startsWith("http") ? file.fileUrl : `${base}/${(file.fileUrl || "").replace(/^\//, "")}`;
-                    return (
-                      <div key={file.id || i} className={styles.attachmentItem}>
-                        <span className={styles.pdfIcon}>📄</span>
-                        <a href={url} target="_blank" rel="noopener noreferrer">
-                          {file.fileName} {sizeMB} MB ({formatDate(file.created_at)})
-                        </a>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className={styles.attachmentItem}><span className={styles.pdfIcon}>📄</span>ไม่มีเอกสารประกอบ</div>
-                )}
-              </div>
-              <p className={styles.attachmentNote}>หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ หมายศาล</p>
             </div>
           </div>
         </div>
       </FormProvider>
 
-      {/* ปุ่ม (เปิดใช้ถ้าต้องการ)
-      <div className={styles.actionButtons}>
-        <ButtonService label="ล้าง" color="ล้าง" variant="outlined" onClick={handleReset} />
-        <ButtonService label="บันทึก" color="ยืนยัน" variant="contained" onClick={handleSubmit} />
+      {/* ปุ่ม */}
+      {/* <div className={styles.actionButtons}>
+        <button 
+          type="button" 
+          className={`${styles.button} ${styles.buttonOutline}`}
+          onClick={handleReset}
+        >
+          ล้าง
+        </button>
+        <button 
+          type="button" 
+          className={`${styles.button} ${styles.buttonPrimary}`}
+          onClick={handleSave}
+        >
+          บันทึกและดำเนินการต่อ
+        </button>
       </div> */}
     </div>
   );
 }
+
+export default forwardRef(Tab31);

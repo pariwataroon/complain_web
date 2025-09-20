@@ -18,12 +18,11 @@ const GetAllComplaints = async ({
 
 const GetMeAllComplaints = async ({
   skip = 0,
-  limit = 10,
-  status = "SUBMITTED",
+  limit = 10
 }) => {
   try {
     const response = await axiosInstance.get("/complaints/me", {
-      params: { skip, limit, status },
+      params: { skip, limit }
     });
     return response?.data;
   } catch (error) {

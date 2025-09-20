@@ -11,6 +11,7 @@ import {
   Addcomplaints,
   UploadAttachments,
   GetComplaintTaskStatus,
+  UpdateAssignmentCompleteByAdmin,
 } from "@pages/api/complaint/complaint";
 
 export default function useComplaintForm() {
@@ -20,16 +21,15 @@ export default function useComplaintForm() {
     step2: {},
     step3: {},
     step4: {},
+    step31: {},
   });
 
   const updateStepData = useCallback((stepKey, tabKey, data) => {
     setFormData((prev) => {
       const currentTabState = prev[stepKey]?.[tabKey] || {};
       
-      // Execute the update function if data is a function, otherwise use data directly
       const newData = typeof data === 'function' ? data(currentTabState) : data;
 
-      // Prevent update if the data hasn't actually changed
       if (JSON.stringify(currentTabState) === JSON.stringify(newData)) {
         return prev;
       }
@@ -55,8 +55,92 @@ export default function useComplaintForm() {
     return formData;
   }, [formData]);
 
+  // ฟังก์ชันสำหรับจัดการข้อมูล Tab3-1
+  const handleTab31Submit = useCallback(async (complaint_id, tab31Data) => {
+    try {
+      console.log('=== handleTab31Submit CALLED ===');
+      console.log('complaint_id:', complaint_id);
+      console.log('tab31Data:', tab31Data);
+      
+      showLoading("กำลังอัพเดทข้อมูลเพิ่มเติม...");
+
+      const formatDateForAPI = (value) => {
+        if (!value) return null;
+        const d = value instanceof Date ? value : new Date(value);
+        if (isNaN(d.getTime())) return null;
+        const Y = d.getFullYear();
+        const M = String(d.getMonth() + 1).padStart(2, "0");
+        const D = String(d.getDate()).padStart(2, "0");
+        const h = String(d.getHours()).padStart(2, "0");
+        const m = String(d.getMinutes()).padStart(2, "0");
+        const s = String(d.getSeconds()).padStart(2, "0");
+        return `${Y}-${M}-${D} ${h}:${m}:${s}`;
+      };
+
+      const payload = {
+        complaint_type_id: tab31Data.complaintTypeId || null,
+        complaint_subtype_id: tab31Data.complaintSubType || "",
+        complaint_channel_id: tab31Data.complaintChannel || null,
+        subject: tab31Data.subject || "",
+        confidentiality_level: tab31Data.securityLevel || "normal",
+        urgency_level: tab31Data.urgencyLevel || "low",
+        agency_sender: tab31Data.senderAgency || "",
+        reference_number1: tab31Data.referenceNumber1 || "",
+        reference_date1: formatDateForAPI(tab31Data.referenceDate1),
+        reference_number2: tab31Data.referenceNumber2 || "",
+        reference_date2: formatDateForAPI(tab31Data.referenceDate2),
+        reference_number3: tab31Data.referenceNumber3 || "",
+        reference_date3: formatDateForAPI(tab31Data.referenceDate3),
+        reference_number4: tab31Data.referenceNumber4 || "",
+        reference_date4: formatDateForAPI(tab31Data.referenceDate4),
+        document_number: tab31Data.documentNumber || "",
+        document_date: formatDateForAPI(tab31Data.documentDate),
+        additional_reference_number1: tab31Data.additionalReference1 || "",
+        additional_reference_date1: formatDateForAPI(tab31Data.additionalReferenceDate1),
+        additional_reference_number2: tab31Data.additionalReference2 || "",
+        additional_reference_date2: formatDateForAPI(tab31Data.additionalReferenceDate2),
+        complaint_filing_type: tab31Data.complaint_filing_type || "new",
+        new_complaint: (tab31Data.complaint_filing_type || "new") === "new",
+        add_more_complaint_to_ref: (tab31Data.complaint_filing_type || "new") === "additional",
+        group_work: (tab31Data.complaint_filing_type || "new") === "committee",
+        confirm_assigned_date: formatDateForAPI(tab31Data.officerReceivedDate),
+        director_submission_date: formatDateForAPI(tab31Data.directorSubmittedDate),
+        incidentDate: formatDateForAPI(tab31Data.incidentDateTime),
+      };
+
+      // ลบค่า undefined ออก
+      Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+
+      console.log('=== PAYLOAD FOR UpdateAssignmentCompleteByAdmin ===');
+      console.log('payload:', payload);
+
+      const res = await UpdateAssignmentCompleteByAdmin(complaint_id, payload);
+      
+      console.log('=== UpdateAssignmentCompleteByAdmin RESPONSE ===');
+      console.log('res:', res);
+      
+      if (!["0000", "0002"].includes(res?.res_code)) {
+        const backendErr = res?.res_data?.error || res?.res_desc || res?.res_message || "ไม่สามารถอัพเดทข้อมูลได้";
+        console.error('UpdateAssignmentCompleteByAdmin failed:', backendErr);
+        throw new Error(backendErr);
+      }
+
+      console.log("Tab3-1 data updated successfully");
+      
+    } catch (error) {
+      console.error("Tab3-1 update error:", error);
+      throw error; // ส่งต่อ error เพื่อให้ handleSubmitForm จัดการ
+    }
+  }, []);
+
   const handleSubmitForm = useCallback(async () => {
-    const { step1, step2, step3, step4 } = formData;
+    const { step1, step2, step3, step4, step31 } = formData;
+
+    console.log('=== ALL FORM DATA ===');
+    console.log('formData:', formData);
+    console.log('step31:', step31);
+    console.log('step31?.general:', step31?.general);
+    console.log('step31.general keys:', Object.keys(step31?.general || {}));
 
     const isConfirmed = await showConfirm(
       "แจ้งเรื่องร้องทุกข์",
@@ -152,11 +236,9 @@ export default function useComplaintForm() {
         },
       };
 
-
+      // STEP 1: สร้างเรื่องร้องทุกข์
       const res = await Addcomplaints(restructuredBody);
       const { res_code, res_message, res_data } = res;
-
-      
 
       if (res_code === "0001") {
         const task_id = res_data?.task_id;
@@ -165,11 +247,10 @@ export default function useComplaintForm() {
           throw new Error("ไม่ได้รับ task_id จาก API");
         }
 
-
-        // **แก้ไข: ใช้ Promise-based polling แทน loop**
+        // STEP 2: รอให้ task เสร็จและได้ complaint_id
         const waitForTaskCompletion = async (taskId, maxWaitTime = 30000) => {
           const startTime = Date.now();
-          const pollInterval = 2000; // เช็คทุก 2 วินาที
+          const pollInterval = 2000;
 
           return new Promise(async (resolve, reject) => {
             const poll = async () => {
@@ -181,90 +262,76 @@ export default function useComplaintForm() {
                   return;
                 }
 
-               
-
                 const taskStatusRes = await GetComplaintTaskStatus(taskId);
 
                 if (taskStatusRes?.res_code === "0000") {
                   const statusData = taskStatusRes.res_data;
 
-                 
-
-                  if (
-                    statusData?.status === "completed" &&
-                    statusData?.complaint_id
-                  ) {
+                  if (statusData?.status === "completed" && statusData?.complaint_id) {
                     resolve(statusData.complaint_id);
                     return;
                   } else if (statusData?.status === "failed") {
-                    reject(
-                      new Error(
-                        `Task failed: ${statusData.message || "Unknown error"}`
-                      )
-                    );
+                    reject(new Error(`Task failed: ${statusData.message || "Unknown error"}`));
                     return;
                   }
-                  // ถ้ายัง queued หรือ processing ให้รอต่อ
                 }
 
-                // รอแล้วเช็คใหม่
                 setTimeout(poll, pollInterval);
               } catch (error) {
-                console.error("=== Task polling error ===", error);
-                // รอแล้วลองใหม่
+                console.error("Task polling error", error);
                 setTimeout(poll, pollInterval);
               }
             };
 
-            // เริ่ม polling
             poll();
           });
         };
 
-        // **รอให้ task เสร็จ**
         const complaint_id = await waitForTaskCompletion(task_id);
+        
+        console.log('=== COMPLAINT ID RECEIVED ===');
+        console.log('complaint_id:', complaint_id);
+        
+        // STEP 3: อัพเดทข้อมูล Tab3-1 (ถ้ามี)
+        console.log('=== CHECKING STEP31 CONDITION ===');
+        console.log('step31?.general:', step31?.general);
+        console.log('Object.keys(step31?.general || {}).length:', Object.keys(step31?.general || {}).length);
+        
+        if (step31?.general && Object.keys(step31.general).length > 0) {
+          console.log('=== CALLING handleTab31Submit ===');
+          await handleTab31Submit(complaint_id, step31.general);
+        } else {
+          console.log('=== SKIP Tab3-1 UPDATE: no data saved ===');
+        }
 
-
-        // **STEP 3: อัปโหลดไฟล์**
+        // STEP 4: อัปโหลดไฟล์ (ถ้ามี)
         if (originalAttachments.length > 0) {
           try {
-            
+            showLoading("กำลังอัปโหลดไฟล์...");
 
             const formDataUpload = new FormData();
             let validFileCount = 0;
 
             originalAttachments.forEach((file, index) => {
-              if (
-                file instanceof File ||
-                (file && typeof file === "object" && file.name)
-              ) {
+              if (file instanceof File || (file && typeof file === "object" && file.name)) {
                 formDataUpload.append("file", file);
                 validFileCount++;
-              } else {
-                console.warn(`=== File ${index + 1} skipped ===`, file);
               }
             });
 
             if (validFileCount > 0) {
-              // **เปลี่ยน loading message**
-              showLoading("กำลังอัปโหลดไฟล์...");
-
-              const uploadResult = await UploadAttachments(
-                complaint_id,
-                formDataUpload
-              );
+              await UploadAttachments(complaint_id, formDataUpload);
             }
           } catch (uploadError) {
-            console.error("=== File upload failed ===", uploadError);
-            // ไม่ให้ upload error หยุดกระบวนการ
+            console.error("File upload failed", uploadError);
           }
         }
 
         closeAlert();
         await alertSuccess("ส่งเรื่องสำเร็จ", "ระบบได้รับข้อมูลของคุณแล้ว");
 
-        // **นำไปหน้า followup**
         router.push(`/followup/${complaint_id}`);
+        
       } else if (res_code === "5000" && res_data?.error) {
         closeAlert();
         alertError("ข้อมูลไม่ครบ", res_data.error);
@@ -275,9 +342,9 @@ export default function useComplaintForm() {
     } catch (error) {
       closeAlert();
       alertError("เกิดข้อผิดพลาด", error?.message || "ไม่สามารถส่งเรื่องได้");
-      console.error("=== Submit Form Error ===", error);
+      console.error("Submit Form Error", error);
     }
-  }, [formData, router]);
+  }, [formData, router, handleTab31Submit]);
 
   useEffect(() => {}, [formData]);
 
@@ -287,5 +354,6 @@ export default function useComplaintForm() {
     getStepTabData,
     getFormData,
     handleSubmitForm,
+    handleTab31Submit, // เผยแพร่ฟังก์ชันนี้ด้วยเผื่อต้องใช้แยก
   };
 }

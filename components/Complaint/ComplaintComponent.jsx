@@ -18,11 +18,10 @@ import { validateEmail } from "@utils/emailValidation";
 const processComponents = [Tab1, Tab2, Tab3, Tab4, Tab5];
 const stepLabels = ["ข้อมูลผู้ร้องทุกข์", "ข้อมูลผู้ถูกร้องทุกข์", "รายละเอียดเรื่องร้องทุกข์"];
 
-// map index -> type ของ step2 (ใช้กรณี fallback)
 const STEP2_TYPE_MAP = ["individual", "corporate", "government"];
 
 export default function ComplaintComponent() {
-  // ============ CIRCUIT BREAKER ============ //
+  // Circuit breaker
   const renderCountRef = useRef(0);
   const lastRenderTimeRef = useRef(Date.now());
   renderCountRef.current++;
@@ -49,16 +48,20 @@ export default function ComplaintComponent() {
   const [shouldShowValidation, setShouldShowValidation] = useState(false);
 
   const [tabStates, setTabStates] = useState({ step1: 0, step2: 0 });
-  const [subPage, setSubPage] = useState(null); // "tab3-1" เมื่อเข้าหน้าย่อย
+  const [subPage, setSubPage] = useState(null);
   const [skippedStep3Via31, setSkippedStep3Via31] = useState(false);
+  const tab31Ref = useRef(null);
 
   const { formData, updateStepData, getStepTabData, getFormData, handleSubmitForm } =
     useComplaintForm();
 
   const stepKey = `step${activeStep + 1}`;
-
-  // ปิด useMemo ชั่วคราวตามเดิม
   const memoizedStepData = getStepTabData(stepKey, "general");
+
+  const stepperActive = useMemo(() => {
+    if (activeStep === 1 && subPage === "tab3-1") return 2; 
+    return activeStep;
+  }, [activeStep, subPage]);
 
   const hasValue = useCallback((value) => {
     if (Array.isArray(value)) {
@@ -83,7 +86,7 @@ export default function ComplaintComponent() {
     return !!value;
   }, []);
 
-  // ===== ตรวจ role admin จาก cookie =====
+  // ตรวจ role admin จาก cookie
   const [userRoles, setUserRoles] = useState([]);
   useEffect(() => {
     try {
@@ -105,7 +108,6 @@ export default function ComplaintComponent() {
   }, []);
   const isAdmin = useMemo(() => userRoles.includes("admin"), [userRoles]);
 
-  // ✅ คำนวณประเภทที่เลือกใน Step 2 อย่าง robust
   const step2ActiveType = useMemo(() => {
     const fromData =
       formData?.step2?.activeType ||
@@ -154,10 +156,8 @@ export default function ComplaintComponent() {
         if (emailValue) {
           const emailErrors = validateEmail(emailValue);
           if (emailErrors.length > 0) {
-            // errors[`general.email`] = emailErrors[0];
+            errors[`general.email`] = emailErrors[0];
           }
-        } else {
-          // errors[`general.email`] = "กรุณากรอกอีเมล ของผู้ร้องทุกข์";
         }
       } else if (currentTab === 1) {
         const corpIdCardValue = data?.corporate?.idCard;
@@ -225,8 +225,8 @@ export default function ComplaintComponent() {
     return true;
   }, [activeStep, tabStates, formData, hasValue, isAdmin]);
 
-  // ✅ เปลี่ยนเงื่อนไขไป Tab3-1 เมื่อ Step2 = government
-    const handleNext = async () => {
+  // เปลี่ยนเงื่อนไขไป Tab3-1 เมื่อ Step2 = government
+  const handleNext = async () => {
     // เข้า Tab3-1 เมื่อ Step2 = government
     if (activeStep === 1 && step2ActiveType === "government" && subPage === null) {
       setSubPage("tab3-1");
@@ -235,9 +235,12 @@ export default function ComplaintComponent() {
 
     // ออกจาก Tab3-1 -> ข้าม Tab3 ไป Tab4 เลย
     if (activeStep === 1 && subPage === "tab3-1") {
+       if (tab31Ref.current) {        const ok = await tab31Ref.current.validateAndSave();
+       if (!ok) return; // ถ้าไม่ผ่าน validation ก็หยุดอยู่หน้านี้
+      }
       setSubPage(null);
       setSkippedStep3Via31(true);
-      setActiveStep((prev) => Math.min(prev + 2, processComponents.length - 1)); // <-- จุดนี้
+      setActiveStep((prev) => Math.min(prev + 2, processComponents.length - 1));
       setShouldShowValidation(false);
       setValidationErrors({});
       return;
@@ -289,7 +292,7 @@ export default function ComplaintComponent() {
               <Box sx={{ width: 200 }}>
                 <StepperComponent
                   steps={stepLabels}
-                  activeStep={activeStep}
+                  activeStep={stepperActive}
                   setActiveStep={handleStepClick}
                 />
               </Box>
@@ -309,7 +312,6 @@ export default function ComplaintComponent() {
                   />
                 </div>
               ) : activeStep === 2 ? (
-                // STEP 3
                 <Tab3
                   stepKey={`step${activeStep + 1}`}
                   tabData={memoizedStepData}
@@ -318,12 +320,13 @@ export default function ComplaintComponent() {
                   shouldShowValidation={shouldShowValidation}
                 />
               ) : activeStep === 1 && subPage === "tab3-1" ? (
-                // ✅ หน้าย่อย Tab3-1 แทน Tab3 เมื่อเลือก government
                 <Tab31
-                  stepKey={`step${activeStep + 1}`}
-                  tabData={memoizedStepData}
+                  ref={tab31Ref}
+                  stepKey="step31"
+                  tabData={getStepTabData("step31", "general")}
                   updateStepData={updateStepData}
                   formData={formData}
+                  onNext={handleNext} // ส่งฟังก์ชัน handleNext ให้ Tab31
                   onBack={() => setSubPage(null)}
                 />
               ) : (
