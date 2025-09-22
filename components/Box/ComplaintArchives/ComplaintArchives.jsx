@@ -69,6 +69,20 @@ const displayOrDash = (v) =>
 /* ---------- แปลงข้อมูลจาก API -> แถวของตาราง ---------- */
 const transformComplaintData = (apiItems) => {
   return apiItems.map((item) => {
+    const clean = (s) =>
+      typeof s === "string" ? s.trim().replace(/\s+/g, " ") : s;
+
+    const outagencyRaw =
+     item.outagency ||
+     item.external_agency ||
+     item.outside_agency ||
+     item.externalDepartment?.name ||
+     item.outsideDepartment?.name ||
+     item.outside_department_name ||
+     "-";
+
+    const outagency = clean(outagencyRaw);
+
     const id = item.id || item.complaint_id;
 
     const receiveDate =
@@ -77,7 +91,7 @@ const transformComplaintData = (apiItems) => {
         : formatThaiDateFlexible(item.created_at);
 
     // Agency: ใช้เฉพาะค่า item.agency ตามคำขอ (ถ้าว่างให้เป็น "-")
-    const agency = displayOrDash(item.agency);
+    const agency = clean(displayOrDash(item.agency));
 
     const claimantName =
       item.complainant?.government?.fullName ??
@@ -113,6 +127,7 @@ const transformComplaintData = (apiItems) => {
       id,
       receiveDate,
       agency,
+      outagency,
       claimantName,
       issue,
       issueType,
@@ -184,12 +199,18 @@ const ComplaintArchives = () => {
     agencyOptions: [],
     responsibleOfficerOptions: [],
     statusOptions: [],
+    outagencyOptions: [],
   });
 
   const router = useRouter();
 
   /* ---------- ค้นหา/กรอง ---------- */
   const handleSearch = (filters) => {
+    const norm = (s) =>
+     String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+    const getVal = (v) =>
+     typeof v === "string" ? v : v?.value ?? v?.label ?? "";
+
     const result = allComplaints.filter((item) => {
       let ok = true;
 
@@ -211,9 +232,19 @@ const ComplaintArchives = () => {
         ok = ok && item.subIssueType === filters.subIssueType;
       }
 
-      if (filters.agency && filters.agency !== "") {
-        ok = ok && item.agency === filters.agency;
-      }
+      if (getVal(filters.agency)) {
+       const q = norm(getVal(filters.agency));
+       ok =
+         ok &&
+         (norm(item.agency).includes(q) || norm(item.outagency).includes(q));
+     }
+
+     if (getVal(filters.outagency)) {
+       const q = norm(getVal(filters.outagency));
+       ok =
+         ok &&
+         (norm(item.outagency).includes(q) || norm(item.agency).includes(q));
+     }
 
       if (filters.responsibleOfficer && filters.responsibleOfficer !== "") {
         ok = ok && item.responsibleOfficer === filters.responsibleOfficer;
@@ -351,6 +382,12 @@ const ComplaintArchives = () => {
             label: "หน่วยงาน",
             type: "select",
             options: filterOptions.agencyOptions,
+          },
+          {
+            name: "outagency",
+            label: "หน่วยงานภายนอก",
+            type: "select",
+            options: filterOptions.outagencyOptions,
           },
           {
             name: "responsibleOfficer",

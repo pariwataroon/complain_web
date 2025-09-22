@@ -119,10 +119,10 @@ const TableList = ({
     "ชื่อผู้ร้อง",
     // "บัตรประชาชน",
     "ชื่อเรื่อง",
-    "เลขที่สป.กค.",
-    "เลขที่สป.สร.",
-    "เลขที่สตป.",
-    "เลขที่ส่วนรับราชการ",
+    "เลข สป.กค.",
+    "เลข สป.สร.",
+    "เลข สตป.",
+    "เลข สรร.",
   ];
 
   // แปลงข้อมูลเป็น array of array (AOA)
@@ -388,8 +388,8 @@ const TableList = ({
                 onKeyPress={handleKeyPress}
               />
               <InputText
-                label="เลขที่ส่วนรับราชการ"
-                inputLabel="กรอกเลขที่ส่วนรับราชการ"
+                label="เลข สรร."
+                inputLabel="กรอกเลข สรร."
                 value={filters.docGov}
                 onChange={handleChange("docGov")}
                 onKeyPress={handleKeyPress}
@@ -504,16 +504,16 @@ const TableList = ({
                 ชื่อเรื่อง
               </TableCell>
               <TableCell sx={{ width: 180, fontWeight: "bold" }}>
-                เลขที่สป.กค.
+                เลข สป.กค.
               </TableCell>
               <TableCell sx={{ width: 180, fontWeight: "bold" }}>
-                เลขที่สป.สร.
+                เลข สป.สร.
               </TableCell>
               <TableCell sx={{ width: 180, fontWeight: "bold" }}>
-                เลขที่สตป.
+                เลข สตป.
               </TableCell>
               <TableCell sx={{ width: 180, fontWeight: "bold" }}>
-                เลขที่ส่วนรับราชการ
+                เลข สรร.
               </TableCell>
             </TableRow>
           </TableHead>

@@ -555,18 +555,20 @@ export const useForwardToAgencyForm = () => {
 
         // Determine desired return URL (query ?returnUrl=/path or ?from=/path)
         const returnUrl = router?.query?.returnUrl || router?.query?.from;
+        const complaintId = router?.query?.complaint_id || router?.query?.id || id;
 
         if (routeId) {
-          // After update: go to explicit returnUrl/from if provided; else navigate back; fallback to list
-            if (returnUrl && typeof returnUrl === 'string') {
-              router.push(returnUrl);
-            } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
-              router.back();
-            } else {
-              router.push('/admin/box/list');
-            }
+          if (complaintId) {
+            // ใช้ path ที่ตรงกับโครงสร้างไฟล์ที่แท้จริง
+            router.push(`/admin/box/list/${complaintId}`);
+          } else if (returnUrl && typeof returnUrl === 'string') {
+            router.push(returnUrl);
+          } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+            router.back();
+          } else {
+            router.push('/admin/box/list');
+          }
         } else {
-          // After create: reset, then go to returnUrl if given else list
           reset({
             salutation: "",
             salutation_is_other: false,
@@ -585,7 +587,10 @@ export const useForwardToAgencyForm = () => {
             note: "",
           });
           resetFileInput();
-          if (returnUrl && typeof returnUrl === 'string') {
+          
+          if (complaintId) {
+            router.push(`/admin/box/list/${complaintId}`);
+          } else if (returnUrl && typeof returnUrl === 'string') {
             router.push(returnUrl);
           } else {
             router.push('/admin/box/list');

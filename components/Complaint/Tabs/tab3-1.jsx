@@ -884,24 +884,6 @@ const Tab31 = ({
           </div>
         </div>
       </FormProvider>
-
-      {/* ปุ่ม */}
-      {/* <div className={styles.actionButtons}>
-        <button 
-          type="button" 
-          className={`${styles.button} ${styles.buttonOutline}`}
-          onClick={handleReset}
-        >
-          ล้าง
-        </button>
-        <button 
-          type="button" 
-          className={`${styles.button} ${styles.buttonPrimary}`}
-          onClick={handleSave}
-        >
-          บันทึกและดำเนินการต่อ
-        </button>
-      </div> */}
     </div>
   );
 }

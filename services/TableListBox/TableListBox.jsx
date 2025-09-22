@@ -29,6 +29,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportExcel } from "@utils/exportExcel";
 import { getDepartmentsPrefix } from "@pages/api/department/department";
+import { GetAllOutsideDepartments } from "@pages/api/outsideDepartments/outsideDepartments";
 
 const TableListBox = ({
   data = [],
@@ -52,6 +53,9 @@ const TableListBox = ({
   // State สำหรับ options หน่วยงาน
   const [departmentOptions, setDepartmentOptions] = useState([]);
 
+  // State สำหรับ options หน่วยงานภายนอก
+  const [outsidedepartmentOptions, setOutsideDepartmentOptions] = useState([]);
+
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
@@ -73,14 +77,58 @@ const TableListBox = ({
     fetchDepartments();
   }, []);
 
+  useEffect(() => {
+    const fetchOutsideDepartments = async () => {
+    try {
+      const res = await GetAllOutsideDepartments();
+      // รองรับหลายโครงสร้าง response
+      const list = res?.res_data?.items || res?.res_data || res || [];
+      const mapped = (Array.isArray(list) ? list : []).map((d) => {
+        const name =
+            d?.name ||
+            d?.department_name ||
+            d?.title ||
+            d?.shortName ||
+            d?.code ||
+            "";
+          return name ? { value: name, label: name } : null;
+        }).filter(Boolean);
+        setOutsideDepartmentOptions(mapped);
+      } catch (err) {
+        console.error("Error fetching outside departments:", err);
+        setOutsideDepartmentOptions([]);
+      }
+    };
+    fetchOutsideDepartments();
+  }, []);
+
   // Filters
   const initialFilters = filterFields.reduce((acc, f) => {
     acc[f.name] = "";
     return acc;
   }, {});
   const [filters, setFilters] = useState(initialFilters);
-  const handleChange = (field) => (e) =>
-    setFilters({ ...filters, [field]: e?.target ? e.target.value : e });
+  
+  // แก้ไข handleChange ให้รองรับ SelectField
+  const handleChange = (field) => (e) => {
+    let value;
+    
+    if (e?.target) {
+      // กรณี input text ธรรมดา
+      value = e.target.value;
+    } else if (typeof e === 'string') {
+      // กรณี SelectField ที่ return value โดยตรง
+      value = e;
+    } else if (e?.value) {
+      // กรณี SelectField ที่ return object {value, label}
+      value = e.value;
+    } else {
+      // กรณีอื่นๆ
+      value = e || "";
+    }
+    
+    setFilters({ ...filters, [field]: value });
+  };
 
   // Pagination
   const [page, setPage] = useState(0);
@@ -301,8 +349,23 @@ const TableListBox = ({
       };
     }
 
+    // แก้ไขการจัดการ agency และ outagency
     if (f.name === "agency") {
-      return <SelectField {...commonProps} options={departmentOptions} />;
+      return (
+        <SelectField
+          {...commonProps}
+          options={departmentOptions}
+        />
+      );
+    }
+
+    if (f.name === "outagency") {
+        return (
+          <SelectField
+            {...commonProps}
+            options={outsidedepartmentOptions}
+          />
+        );
     }
 
     return f.type === "select" ? (

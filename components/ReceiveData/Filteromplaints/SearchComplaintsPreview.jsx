@@ -608,10 +608,17 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
             {/* ข้อมูลหัวเรื่อง */}
             <Grid container spacing={2} mb={3}>
               <Grid item xs={12}>
-                <InfoItem
-                  label="วันที่ร้องทุกข์"
-                  value={formatThaiDate(created_at || updated_at)}
-                />
+                <Box display="flex" gap={2} flexWrap="wrap">
+                  <Box flex={1} minWidth={280}>
+                    <InfoItem label="วันที่ร้องทุกข์" value={formatThaiDate()} />
+                  </Box>
+                  <Box flex={1} minWidth={280}>
+                    <InfoItem
+                      label="ช่องทางเรื่องร้องเรียน"
+                      value={complaint.channel || data?.assignment_form?.complaint_channel_name}
+                    />
+                  </Box>
+                </Box>
                 <InfoItem
                   label="ประเภทเรื่องร้องทุกข์"
                   value={previewData.complaintTypeLabel || "-"}
@@ -621,10 +628,9 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
                   value={previewData.complaintSubTypeLabel || "-"}
                 />
                 <InfoItem label="เรื่อง" value={complaint.subject || "-"} />
-                <InfoItem
-                  label="ช่องทางเรื่องร้องเรียน"
-                  value={previewData.step3.general.complaintChannel || "-"}
-                />
+                <Typography fontSize={16} fontWeight="bold">
+                  เรียนปลัดกระทรวงการคลัง
+                </Typography>
               </Grid>
             </Grid>
 

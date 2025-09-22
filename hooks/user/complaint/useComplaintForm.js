@@ -64,17 +64,36 @@ export default function useComplaintForm() {
       
       showLoading("กำลังอัพเดทข้อมูลเพิ่มเติม...");
 
+     const normalizeDate = (value) => {
+       if (!value) return null;
+       if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
+       if (typeof value === "string") {
+         // ISO/สากล
+         const d1 = new Date(value);
+         if (!isNaN(d1.getTime())) return d1;
+         const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+         if (m) {
+            let [, DD, MM, YYYY, hh = "00", mm = "00"] = m;
+            let y = parseInt(YYYY, 10);
+            if (y > 2400) y -= 543;
+            const d2 = new Date(y, parseInt(MM,10)-1, parseInt(DD,10), parseInt(hh,10), parseInt(mm,10), 0);
+            return isNaN(d2.getTime()) ? null : d2;
+          }
+        }
+        return null;
+      };
+
       const formatDateForAPI = (value) => {
-        if (!value) return null;
-        const d = value instanceof Date ? value : new Date(value);
-        if (isNaN(d.getTime())) return null;
+        const d = normalizeDate(value);
+        if (!d) return null;
+        const pad = (n) => String(n).padStart(2, "0");
         const Y = d.getFullYear();
-        const M = String(d.getMonth() + 1).padStart(2, "0");
-        const D = String(d.getDate()).padStart(2, "0");
-        const h = String(d.getHours()).padStart(2, "0");
-        const m = String(d.getMinutes()).padStart(2, "0");
-        const s = String(d.getSeconds()).padStart(2, "0");
-        return `${Y}-${M}-${D} ${h}:${m}:${s}`;
+        const M = pad(d.getMonth(),  1);
+        const D = pad(d.getDate());
+        const h = pad(d.getHours());
+        const m = pad(d.getMinutes());
+        const s = pad(d.getSeconds());
+        return `${Y}-${M}-${D}T${h}:${m}:${s}`;
       };
 
       const payload = {
@@ -104,8 +123,11 @@ export default function useComplaintForm() {
         add_more_complaint_to_ref: (tab31Data.complaint_filing_type || "new") === "additional",
         group_work: (tab31Data.complaint_filing_type || "new") === "committee",
         confirm_assigned_date: formatDateForAPI(tab31Data.officerReceivedDate),
-        director_submission_date: formatDateForAPI(tab31Data.directorSubmittedDate),
-        incidentDate: formatDateForAPI(tab31Data.incidentDateTime),
+       director_submission_date: formatDateForAPI(tab31Data.directorSubmittedDate),
+       incident_datetime: formatDateForAPI(tab31Data.incidentDateTime),
+       incidentDate: formatDateForAPI(tab31Data.incidentDateTime),
+       assigned_remark: tab31Data.description || "",
+       description: tab31Data.description || "",
       };
 
       // ลบค่า undefined ออก
