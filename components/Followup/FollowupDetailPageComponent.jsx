@@ -259,9 +259,10 @@ export default function FollowupDetailPage() {
                   <Typography className={styles.stepLabel}>
                     {step.label}
                   </Typography>
-                  {step.extraInfo && (
+                  {/* {step.extraInfo && (
                     <Typography sx={{ color: "#2499FF", fontWeight: 600 }}>{step.extraInfo}</Typography>
-                  )}
+                  )} */}
+                  
                   {/* {step.description.length > 0 && (
                     <ul className={styles.stepDescription}>
                       {step.description.map((line, i) => (

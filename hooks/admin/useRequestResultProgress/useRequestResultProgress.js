@@ -110,9 +110,9 @@ export const useRequestResultProgress = () => {
     salutation_is_other: false,
     position_other_text: "",
     refNo: complaintNumberFromQuery || "",
-  docNo: "",
-  docDate: null,
-  refDate: null,
+    docNo: "",
+    docDate: null,
+    refDate: null,
     subject: "",
     department: "",
     signer: "",
@@ -169,7 +169,7 @@ export const useRequestResultProgress = () => {
         const res = await GetOutgoingReport3ById(editReportId);
         const d = res?.res_data || res?.data || res;
         if (!d || cancelled) return;
-  setIsEditing(true);
+        setIsEditing(true);
         setForm(prev => ({
           ...prev,
           salutation: d.position?.id || d.salutation || prev.salutation,
@@ -192,12 +192,12 @@ export const useRequestResultProgress = () => {
           complaint_id: d.complaint_id || prev.complaint_id,
         }));
 
-  const deptLoaded = d.department?.id || d.department_id || null;
-  originalDepartmentIdRef.current = deptLoaded;
-  lastDepartmentIdRef.current = deptLoaded;
-  const currentRef = d.complaint_number || d.document_number || form.refNo;
-  initialRefNoRef.current = currentRef;
-  prevRefNoRef.current = currentRef;
+        const deptLoaded = d.department?.id || d.department_id || null;
+        originalDepartmentIdRef.current = deptLoaded;
+        lastDepartmentIdRef.current = deptLoaded;
+        const currentRef = d.complaint_number || d.document_number || form.refNo;
+        initialRefNoRef.current = currentRef;
+        prevRefNoRef.current = currentRef;
       } catch (e) {
         console.error('Load report3 (edit) failed', e);
       }
@@ -283,8 +283,8 @@ export const useRequestResultProgress = () => {
       position_other_text: "",
       refNo: "",
       docNo: "",
-  docDate: null,
-  refDate: null,
+      docDate: null,
+      refDate: null,
       subject: "",
       department: "",
       signer: "",
@@ -411,7 +411,7 @@ export const useRequestResultProgress = () => {
       { field: "docDate", label: "วันที่หนังสือ" },
       { field: "refDate", label: "วันที่ สป.กค." },
       { field: "subject", label: "เรื่อง" },
-  // department no longer required regardless of salutation_is_other
+      // department no longer required regardless of salutation_is_other
       { field: "signer", label: "ผู้ลงนาม" },
       { field: "confidentiality", label: "ชั้นความลับ" },
       { field: "urgency", label: "ชั้นความเร่งด่วน" },
@@ -456,16 +456,16 @@ export const useRequestResultProgress = () => {
   const handleSave = useCallback(
     async (overrides = {}) => {
       const state = { ...form, ...overrides };
-  // Keep real value; if invalid we'll resolve just before payload
-  const candidatePid = state.position_id;
-  if (candidatePid && !isUUID(candidatePid)) state.position_id = null;
+      // Keep real value; if invalid we'll resolve just before payload
+      const candidatePid = state.position_id;
+      if (candidatePid && !isUUID(candidatePid)) state.position_id = null;
       const missing = validateRequiredFields(state);
       if (missing.length > 0) {
         const names = missing.map((m) => m.label).join(", ");
         alertError("ข้อมูลไม่ครบถ้วน", `กรุณากรอกข้อมูลในฟิลด์: ${names}`);
         return;
       }
-  // No forced assignment when empty
+      // No forced assignment when empty
       // Build payload
       let deptId = state.department && isUUID(state.department) ? state.department : null;
       // Fallback chain when department cleared due to custom recipient selection
@@ -526,9 +526,9 @@ export const useRequestResultProgress = () => {
         salutation: state.salutation_is_other ? (state.salutation || '') : (resolvedPositionId || state.salutation || ''),
         // complaint_number (เลข สป.กค.) maps from refNo; document_number from docNo
         complaint_number: state.refNo || "",
-  complaint_number_date: toAPIDateString(state.refDate),
+        complaint_number_date: toAPIDateString(state.refDate),
         document_number: state.docNo || "",
-  document_date: toAPIDateString(state.docDate),
+        document_date: toAPIDateString(state.docDate),
         subject: state.subject || "เรื่อง ขอทราบผลการพิจารณาเรื่องร้องเรียน",
         signature_authority_user_id: nullIfEmpty(state.signer),
         user_id: null,
@@ -537,7 +537,7 @@ export const useRequestResultProgress = () => {
         complaint_id: nullIfEmpty(state.complaint_id),
         remarks: state.note || "",
       };
-  if (deptId) payload.department_id = deptId; // ensure always set (now forced by fallback)
+      if (deptId) payload.department_id = deptId; // ensure always set (now forced by fallback)
 
       try {
         setIsLoading(true);
@@ -562,7 +562,7 @@ export const useRequestResultProgress = () => {
           return alertError("เลขหนังสือซ้ำ", createRes?.res_data?.error || "เลขหนังสือซ้ำ");
         }
 
-  const createdId = editReportId || createRes?.res_data?.id || createRes?.data?.id || createRes?.id || null;
+        const createdId = editReportId || createRes?.res_data?.id || createRes?.data?.id || createRes?.id || null;
 
         // 2) Upload attachments
         if (createdId && attachmentFiles.length > 0) {
@@ -642,7 +642,21 @@ export const useRequestResultProgress = () => {
             ${fileNames ? `<p style=\"margin:4px 0;color:#666\">ไฟล์แนบ: <strong>${fileNames}</strong></p>` : ''}
           </div>`;
         await alertSuccess(editReportId ? "อัพเดตสำเร็จ!" : "บันทึกสำเร็จ!", successHtml, true);
-        router.push(`/admin/box/list`);
+
+        // ----------- REDIRECT LOGIC (like previous file) -------------
+        // Prefer query ?returnUrl or ?from, else complaint_id, else back, else default list
+        const returnUrl = router?.query?.returnUrl || router?.query?.from;
+        const cid = router?.query?.complaint_id || router?.query?.id || complaintId;
+
+        if (cid) {
+          router.push(`/admin/box/list/${cid}`);
+        } else if (returnUrl && typeof returnUrl === 'string') {
+          router.push(returnUrl);
+        } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+          router.back();
+        } else {
+          router.push('/admin/box/list');
+        }
         handleClear();
       } catch (err) {
         console.error("Save error:", err);
@@ -690,7 +704,7 @@ export const useRequestResultProgress = () => {
         );
       }
     },
-  [form, attachmentFiles, validateRequiredFields, handleClear, router, editReportId]
+    [form, attachmentFiles, validateRequiredFields, handleClear, router, editReportId, complaintId]
   );
 
   // ---- Form Change ----
@@ -731,15 +745,15 @@ export const useRequestResultProgress = () => {
     hasFormChanges,
 
     handleChange,
-  // handleDateChange removed
+    // handleDateChange removed
     handleFileChange,
     handleClear,
     handleSave,
     updateField,
     validateRequiredFields,
-  resetFileInput,
-  isEditing: !!editReportId,
-  editReportId,
+    resetFileInput,
+    isEditing: !!editReportId,
+    editReportId,
   };
 };
 

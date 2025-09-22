@@ -1,4 +1,4 @@
-import React, {useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
     Box,
@@ -10,7 +10,6 @@ import {
     Container,
     TablePagination,
     Typography,
-    useMediaQuery,
     Chip,
 } from "@mui/material";
 
@@ -22,155 +21,222 @@ import { formatThaiDateTime } from "@utils/Formats";
 import { exportExcel } from "@utils/exportExcel";
 import { exportElementToPDF } from "@utils/exportPDF";
 
+// กลุ่มสถานะที่รองรับทุกสถานะ backend จริง รวมถึง 'completed' และ 'cancelled'
+const STATUS_GROUPS = [
+  {
+    statusKey: "submitted",
+    label: "รับเรื่อง",
+    statuses: ["รับเรื่อง", "submitted"],
+  },
+  {
+    statusKey: "sent_to_external",
+    label: "ส่งหน่วยงานภายนอก",
+    statuses: ["ส่งหน่วยงานภายนอก", "sent_to_external"],
+  },
+  {
+    statusKey: "in_process",
+    label: "กำลังดำเนินการ",
+    statuses: ["กำลังดำเนินการ", "in_process"],
+  },
+  {
+    statusKey: "tracking",
+    label: "ติดตามผล",
+    statuses: ["ติดตามผล", "tracking"],
+  },
+  {
+    statusKey: "assigned",
+    label: "มอบหมายเจ้าหน้าที่",
+    statuses: ["มอบหมายเจ้าหน้าที่", "assigned"],
+  },
+  {
+    statusKey: "decision",
+    label: "แจ้งผลการพิจารณา",
+    statuses: ["แจ้งผลการพิจารณา", "decision"],
+  },
+  {
+    statusKey: "considering",
+    label: "อยู่ระหว่างพิจารณา",
+    statuses: ["อยู่ระหว่างพิจารณา", "considering"],
+  },
+  {
+    statusKey: "closed",
+    label: "ปิดเรื่อง",
+    statuses: ["ปิดเรื่อง", "completed", "cancelled"],
+  }
+];
+
+// สีของแต่ละสถานะ
+const statusColors = {
+  submitted: "#FFA726",
+  sent_to_external: "#AB47BC",
+  in_process: "#26C6DA",
+  tracking: "#FF7043",
+  assigned: "#42A5F5",
+  decision: "#388E3C",
+  considering: "#FFCA28",
+  closed: "#757575",
+  completed: "#66BB6A",
+  cancelled: "#EF5350",
+};
+
+const statusTextColors = {
+  submitted: "#fff",
+  sent_to_external: "#fff",
+  in_process: "#fff",
+  tracking: "#fff",
+  assigned: "#fff",
+  decision: "#fff",
+  considering: "#fff",
+  closed: "#fff",
+  completed: "#fff",
+  cancelled: "#fff",
+};
+
+// filter dropdown
+const STATUS_LABELS = STATUS_GROUPS.map(g => g.label);
+
+// ฟิลด์ที่ใช้ในการค้นหา (เพิ่ม "id")
+const SEARCH_FIELDS = [
+  "id", "complaint_number", "subject", "complaint_type", "department", "complainant_name"
+];
+
+// ฟังก์ชัน robust สำหรับหา group จาก status จริง (trim)
+function getStatusGroup(status) {
+  const s = (status || "").trim();
+  for (const group of STATUS_GROUPS) {
+    if (group.statuses.some(x => x.trim() === s)) return group;
+  }
+  for (const group of STATUS_GROUPS) {
+    if (group.label.trim() === s) return group;
+  }
+  return null;
+}
+
+function getStatusStyle(status) {
+  const group = getStatusGroup(status);
+  let statusKey = group ? group.statusKey : null;
+  // กรณี closed ให้แยกสีตาม completed/cancelled หรือใช้ closed
+  if (group && group.statusKey === "closed") {
+    if (status.trim() === "completed") statusKey = "completed";
+    else if (status.trim() === "cancelled") statusKey = "cancelled";
+    else statusKey = "closed";
+  }
+  const color = statusKey ? statusColors[statusKey] : "#bdbdbd";
+  const textColor = statusKey ? statusTextColors[statusKey] : "#fff";
+  const label = group ? group.label : (status || "").trim();
+  return { color, textColor, label };
+}
+
 const TableAll = ({
     data = [],
     search = "",
-    onSearchChange = () => { },
+    onSearchChange = () => {},
     statusFilter = "",
-    onStatusChange = () => { },
+    onStatusChange = () => {},
     title = "",
     navigateTo = "",
+    page = 0,
+    rowsPerPage = 10,
+    totalCount = 0,
+    onPageChange = () => {},
+    onRowsPerPageChange = () => {},
 }) => {
     const router = useRouter();
-    const [page, setPage] = React.useState(0);
-    const [rowsPerPage, setRowsPerPage] = React.useState(10);
-
-    // ระบบค้นหาและกรองข้อมูล
-    const filteredData = React.useMemo(() => {
-        let filtered = [...data];
-
-        // กรองตามการค้นหา
-        if (search && search.trim() !== "") {
-            const searchTerm = search.toLowerCase().trim();
-            filtered = filtered.filter((item) => {
-                return (
-                    // ค้นหาในเรื่อง
-                    (item.subject && item.subject.toLowerCase().includes(searchTerm)) ||
-                    // ค้นหาในประเภทเรื่อง
-                    (item.complaint_type && item.complaint_type.toLowerCase().includes(searchTerm)) ||
-                    // ค้นหาในหน่วยงาน
-                    (item.department && item.department.toLowerCase().includes(searchTerm)) ||
-                    // ค้นหาใน ID
-                    (item.id && item.id.toString().includes(searchTerm)) ||
-                    // ค้นหาในรหัสเรื่อง (ถ้ามี)
-                    (item.case_code && item.case_code.toLowerCase().includes(searchTerm)) ||
-                    // ค้นหาในผู้แจ้ง (ถ้ามี)
-                    (item.reporter_name && item.reporter_name.toLowerCase().includes(searchTerm)) ||
-                    // ค้นหาในรายละเอียด (ถ้ามี)
-                    (item.description && item.description.toLowerCase().includes(searchTerm))
-                );
-            });
-        }
-
-        // กรองตามสถานะ
-        if (statusFilter && statusFilter !== "") {
-            filtered = filtered.filter((item) => item.status === statusFilter);
-        }
-
-        return filtered;
-    }, [data, search, statusFilter]);
-
-      const isExtraSmall = useMediaQuery("(max-width:640px)");
-
-    const handlePageChange = (_, newPage) => {
-        setPage(newPage);
-    };
-
-    const handleRowsPerPageChange = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-    };
-
-    React.useEffect(() => {
-        setPage(0);
-    }, [search, statusFilter]);
-
-    // แก้ไข statusMap ให้ตรงกับข้อมูลจริง
-    const statusMap = {
-        "รับเรื่อง": { label: "รับเรื่อง", color: "#4caf50", bgColor: "#e8f5e8" },
-        "อยู่ระหว่างดำเนินการ": { label: "อยู่ระหว่างดำเนินการ", color: "#f57c00", bgColor: "#fff3e0" },
-        "ติดตามผลการพิจารณา": { label: "ติดตามผลการพิจารณา", color: "#1976d2", bgColor: "#e3f2fd" },
-        "ส่งหน่วยงาน": { label: "ส่งหน่วยงาน", color: "#9c27b0", bgColor: "#f3e5f5" },
-        "เสร็จสิ้น": { label: "เสร็จสิ้น", color: "#2e7d32", bgColor: "#e8f5e8" },
-        "ไม่รับดำเนินการ": { label: "ไม่รับดำเนินการ", color: "#d32f2f", bgColor: "#ffebee" },
-
-        // เพิ่ม mapping แบบเก่าเผื่อมีข้อมูลแบบ key
-        submitted: { label: "รับเรื่อง", color: "#4caf50", bgColor: "#e8f5e8" },
-        in_progress: { label: "อยู่ระหว่างดำเนินการ", color: "#f57c00", bgColor: "#fff3e0" },
-        reviewed: { label: "ติดตามผลการพิจารณา", color: "#1976d2", bgColor: "#e3f2fd" },
-        sent: { label: "ส่งหน่วยงาน", color: "#9c27b0", bgColor: "#f3e5f5" },
-        resolved: { label: "เสร็จสิ้น", color: "#2e7d32", bgColor: "#e8f5e8" },
-        rejected: { label: "ไม่รับดำเนินการ", color: "#d32f2f", bgColor: "#ffebee" },
-    };
 
     const handleRowClick = (item) => {
         if (navigateTo) {
-            console.log(`🔗 Navigating to: ${navigateTo}/${item.id}`, {
-                user: "vampirebeam",
-                timestamp: "2025-06-16 13:36:32",
-                itemId: item.id
-            });
             router.push(`${navigateTo}/${item.id}`);
         }
     };
-    // Ref สำหรับ export PDF
-      const tableRef = useRef(null);
-    
+
+    const tableRef = useRef(null);
+
     const handleExportPDF = () => {
-  const today = new Date().toLocaleDateString("th-TH");
-  const filename = `ติดตามผลการดำเนินการ_${today}.pdf`;
-  exportElementToPDF(tableRef, filename);
-};
+        const today = new Date().toLocaleDateString("th-TH");
+        const filename = `ติดตามผลการดำเนินการ_${today}.pdf`;
+        exportElementToPDF(tableRef, filename);
+    };
 
-    
     const handleExportExcel = () => {
-  if (!filteredData || filteredData.length === 0) return;
+        if (!data || data.length === 0) return;
 
-  const today = new Date().toLocaleDateString("th-TH", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+        const today = new Date().toLocaleDateString("th-TH", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+        });
 
-  // สร้างหัวตาราง
-  const exportColumns = [
-    "ลำดับ",
-    "วันที่ยื่นเรื่อง",
-    "เรื่อง",
-    "ประเภทเรื่อง",
-    "หน่วยงาน",
-    "วันที่ส่งหน่วยงาน",
-    "สถานะการดำเนินการ",
-  ];
+        const exportColumns = [
+            "ลำดับ",
+            "วันที่ยื่นเรื่อง",
+            "เลขที่ร้องเรียน",
+            "เรื่อง",
+            "ประเภทเรื่อง",
+            "หน่วยงาน",
+            "ชื่อผู้ร้องเรียน",
+            "สถานะการดำเนินการ",
+        ];
 
-  // สร้างข้อมูลแถว
-  const exportData = filteredData.map((item, index) => [
-    (index + 1).toString(),
-    formatThaiDateTime(item.created_at),
-    item.subject || "-",
-    item.complaint_type || "-",
-    item.department || "-",
-    item.sentDate ? formatThaiDateTime(item.sentDate) : "ยังไม่ได้ส่ง",
-    statusMap[item.status]?.label || item.status || "-",
-  ]);
+        const exportData = data.map((item, index) => [
+            (index + 1).toString(),
+            formatThaiDateTime(item.created_at),
+            item.complaint_number || "-",
+            item.subject || "-",
+            item.complaint_type || "-",
+            item.department || "-",
+            item.complainant_name || "-",
+            getStatusStyle(item.status).label || "-",
+        ]);
 
-  // รวมทั้งหมด: [empty row], title, headers, rows
-  const finalExportData = [
-    Array(exportColumns.length).fill(""), // แถวเว้นว่าง
-    [`ติดตามผลการดำเนินการ_${today}`],
-    exportColumns,
-    ...exportData,
-  ];
+        const finalExportData = [
+            Array(exportColumns.length).fill(""),
+            [`ติดตามผลการดำเนินการ_${today}`],
+            exportColumns,
+            ...exportData,
+        ];
 
-  exportExcel(finalExportData, {
-    filename: `ติดตามผลการดำเนินการ_${today}.xlsx`,
-    sheetName: "Report",
-    title: `ติดตามผลการดำเนินการ`,
-    exportDate: `วันที่ส่งออก: ${today}`,
-  });
+        exportExcel(finalExportData, {
+            filename: `ติดตามผลการดำเนินการ_${today}.xlsx`,
+            sheetName: "Report",
+            title: `ติดตามผลการดำเนินการ`,
+            exportDate: `วันที่ส่งออก: ${today}`,
+        });
+    };
 
-};
+    // ฟิลเตอร์ข้อมูลแบบเรียลไทม์
+    const filteredData = useMemo(() => {
+      let filtered = data;
 
+      // กรองด้วยสถานะ (ให้ตรงกับ label ที่โชว์) และ trim ทั้งสองฝั่ง
+      if (statusFilter) {
+        filtered = filtered.filter(
+          item => getStatusStyle(item.status).label.trim() === statusFilter.trim()
+        );
+      }
+
+      // กรองด้วย search (ทุกฟิลด์ที่กำหนด + label สถานะ + statusKey)
+      if (search && search.trim() !== "") {
+        const searchText = search.trim().toLowerCase();
+        filtered = filtered.filter(item => {
+          const fieldMatch = SEARCH_FIELDS.some(field =>
+            (item[field] || "").toString().toLowerCase().includes(searchText)
+          );
+          const statusLabel = getStatusStyle(item.status).label || "";
+          const statusLabelMatch = statusLabel.toLowerCase().includes(searchText);
+          const group = getStatusGroup(item.status);
+          let statusKey = group ? group.statusKey : "";
+          // เพิ่มสำหรับ closed
+          if (group && group.statusKey === "closed") {
+            if ((item.status || "").trim() === "completed") statusKey = "completed";
+            else if ((item.status || "").trim() === "cancelled") statusKey = "cancelled";
+          }
+          const statusKeyMatch = statusKey.toString().toLowerCase().includes(searchText);
+          return fieldMatch || statusLabelMatch || statusKeyMatch;
+        });
+      }
+
+      return filtered;
+    }, [data, search, statusFilter]);
 
     return (
         <Container maxWidth="lg">
@@ -179,7 +245,6 @@ const TableAll = ({
                     {title}
                 </Typography>
             </Box>
-
             <Box
                 display="flex"
                 justifyContent="space-between"
@@ -195,10 +260,7 @@ const TableAll = ({
                             label="ค้นหาเรื่องร้องเรียนร้องทุกข์"
                             placeholder="ค้นหาด้วยเรื่อง, ประเภท, หน่วยงาน, รหัสเรื่อง หรือผู้แจ้ง..."
                             value={search}
-                            onChange={(e) => {
-                                const value = e.target.value;
-                                onSearchChange(value);
-                            }}
+                            onChange={(e) => onSearchChange(e.target.value)}
                             InputProps={{
                                 endAdornment: search && (
                                     <Box
@@ -215,7 +277,6 @@ const TableAll = ({
                             }}
                         />
                     </Box>
-
                     <Box sx={{ minWidth: { xs: "100%", sm: "200px" } }}>
                         <SelectField
                             label="สถานะการดำเนินการ"
@@ -224,42 +285,28 @@ const TableAll = ({
                                 const value = e && e.target && e.target.value !== undefined
                                     ? e.target.value
                                     : e || "";
-
-                                console.log("📊 Status filter changed:", {
-                                    user: "vampirebeam",
-                                    timestamp: "2025-06-16 13:36:32",
-                                    newStatus: value,
-                                    previousStatus: statusFilter
-                                });
-
-                                onStatusChange(value);
+                                onStatusChange(value.trim());
                             }}
                             options={[
                                 { value: "", label: "— ทุกสถานะ —" },
-                                { value: "รับเรื่อง", label: "รับเรื่อง" },
-                                { value: "อยู่ระหว่างดำเนินการ", label: "อยู่ระหว่างดำเนินการ" },
-                                { value: "ติดตามผลการพิจารณา", label: "ติดตามผลการพิจารณา" },
-                                { value: "ส่งหน่วยงาน", label: "ส่งหน่วยงาน" },
-                                { value: "เสร็จสิ้น", label: "เสร็จสิ้น" },
-                                { value: "ไม่รับดำเนินการ", label: "ไม่รับดำเนินการ" },
+                                ...STATUS_LABELS.map(label => ({
+                                    value: label, label: label
+                                })),
                             ]}
                         />
                     </Box>
                 </Box>
-
                 <Box display="flex" gap={1} flexDirection={{ xs: "row", md: "row" }}>
                     <ExportButton
                         label="Export PDF"
                         onClick={handleExportPDF}
                     />
-
                     <ExportButton
                         label="Export Excel"
                         onClick={handleExportExcel}
                     />
                 </Box>
             </Box>
-
             <Box className={styles.tableWrapper} >
                 <Table ref={tableRef}>
                     <TableHead>
@@ -271,6 +318,9 @@ const TableAll = ({
                                 วันที่ยื่นเรื่อง
                             </TableCell>
                             <TableCell sx={{ fontWeight: 700, bgcolor: '#f8f9fa' }}>
+                                เลขที่ร้องเรียน
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700, bgcolor: '#f8f9fa' }}>
                                 เรื่อง
                             </TableCell>
                             <TableCell sx={{ fontWeight: 700, bgcolor: '#f8f9fa' }}>
@@ -280,19 +330,18 @@ const TableAll = ({
                                 หน่วยงาน
                             </TableCell>
                             <TableCell sx={{ fontWeight: 700, bgcolor: '#f8f9fa' }}>
-                                วันที่ส่งหน่วยงาน
+                                ชื่อผู้ร้องเรียน
                             </TableCell>
                             <TableCell sx={{ fontWeight: 700, bgcolor: '#f8f9fa' }}>
                                 สถานะการดำเนินการ
                             </TableCell>
                         </TableRow>
                     </TableHead>
-
                     <TableBody>
                         {filteredData.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={7}
+                                    colSpan={8}
                                     align="center"
                                     sx={{
                                         color: "#6c757d",
@@ -322,9 +371,9 @@ const TableAll = ({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredData
-                                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                                .map((item, index) => (
+                            filteredData.map((item, index) => {
+                                const { color, textColor, label } = getStatusStyle(item.status);
+                                return (
                                     <TableRow
                                         key={item.id}
                                         onClick={() => handleRowClick(item)}
@@ -340,44 +389,34 @@ const TableAll = ({
                                             }
                                         }}
                                     >
-                                        <TableCell
-                                            align="center"
-                                            sx={{ fontWeight: 600, color: "#1120A3" }}
-                                        >
+                                        <TableCell align="center" sx={{ fontWeight: 600, color: "#1120A3" }}>
                                             {page * rowsPerPage + index + 1}
                                         </TableCell>
                                         <TableCell sx={{ fontSize: '14px' }}>
                                             {formatThaiDateTime(item.created_at)}
                                         </TableCell>
-                                        <TableCell
-                                            className={styles.ellipsisCell}
-                                            sx={{ maxWidth: '300px' }}
-                                        >
-                                            {item.subject}
-                                        </TableCell>
-                                        <TableCell
-                                            className={styles.ellipsisCell}
-                                            sx={{ maxWidth: '200px' }}
-                                        >
-                                            {item.complaint_type}
-                                        </TableCell>
-                                        <TableCell sx={{ maxWidth: '200px' }}>
-                                            {item.department}
-                                        </TableCell>
                                         <TableCell sx={{ fontSize: '14px' }}>
-                                            {item.sentDate ? formatThaiDateTime(item.sentDate) : (
-                                                <span style={{ color: '#6c757d', fontStyle: 'italic' }}>
-                                                    ยังไม่ได้ส่ง
-                                                </span>
-                                            )}
+                                            {item.complaint_number || "-"}
+                                        </TableCell>
+                                        <TableCell className={styles.ellipsisCell} sx={{ maxWidth: '200px' }}>
+                                            {item.subject || "-"}
+                                        </TableCell>
+                                        <TableCell className={styles.ellipsisCell} sx={{ maxWidth: '150px' }}>
+                                            {item.complaint_type || "-"}
+                                        </TableCell>
+                                        <TableCell className={styles.ellipsisCell} sx={{ maxWidth: '150px' }}>
+                                            {item.department || "-"}
+                                        </TableCell>
+                                        <TableCell sx={{ maxWidth: '150px' }}>
+                                            {item.complainant_name || "-"}
                                         </TableCell>
                                         <TableCell>
                                             <Chip
-                                                label={statusMap[item.status]?.label || item.status}
+                                                label={label}
                                                 size="small"
                                                 sx={{
-                                                    backgroundColor: statusMap[item.status]?.bgColor || '#f5f5f5',
-                                                    color: statusMap[item.status]?.color || '#495057',
+                                                    backgroundColor: color,
+                                                    color: textColor,
                                                     fontWeight: 600,
                                                     fontSize: '12px',
                                                     borderRadius: '16px',
@@ -388,19 +427,21 @@ const TableAll = ({
                                             />
                                         </TableCell>
                                     </TableRow>
-                                ))
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>
-
                 <TablePagination
                     component="div"
                     rowsPerPageOptions={[5, 10, 25, 50]}
-                    count={filteredData.length}
+                    count={totalCount}
                     rowsPerPage={rowsPerPage}
                     page={page}
-                    onPageChange={handlePageChange}
-                    onRowsPerPageChange={handleRowsPerPageChange}
+                    onPageChange={(e, newPage) => onPageChange(newPage)}
+                    onRowsPerPageChange={(e) =>
+                        onRowsPerPageChange(parseInt(e.target.value, 10))
+                    }
                     labelRowsPerPage="แสดงต่อหน้า:"
                     labelDisplayedRows={({ from, to, count }) =>
                         `${from}-${to} จาก ${count !== -1 ? count : `มากกว่า ${to}`} รายการ`

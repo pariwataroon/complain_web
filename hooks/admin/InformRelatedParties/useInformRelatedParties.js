@@ -623,7 +623,7 @@ export const useInformRelatedParties = () => {
   }, [form, complaintId]);
 
   // ฟังก์ชันบันทึกข้อมูล - รองรับทั้ง create และ update
-  const handleSave = useCallback(async () => {
+const handleSave = useCallback(async () => {
   console.log("💾 handleSave: Starting save process");
   // Recompute custom recipient flag locally for this scope
   const useCustomRecipient = form.salutation_is_other || form.salutation_is_complainant;
@@ -735,11 +735,21 @@ export const useInformRelatedParties = () => {
 
     await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
 
-    // เมื่อแก้ไข ให้กลับไปหน้าเดิม (FollowComp)
-    if (isEditing && complaintId) {
-      router.push(`/admin/box/list`);
+    // ----- REDIRECT LOGIC (เหมือนกับไฟล์ก่อนหน้า) -----
+    // ถ้ามี ?returnUrl หรือ ?from → ไป path นั้น
+    // ถ้ามี complaintId → ไป /admin/box/list/complaintId
+    // มิเช่นนั้น → ไป /admin/box/list
+    const returnUrl = router?.query?.returnUrl || router?.query?.from;
+    const cid = router?.query?.complaint_id || router?.query?.id || complaintId;
+
+    if (cid) {
+      router.push(`/admin/box/list/${cid}`);
+    } else if (returnUrl && typeof returnUrl === 'string') {
+      router.push(returnUrl);
+    } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+      router.back();
     } else {
-      router.push(`/admin/box/list`);
+      router.push('/admin/box/list');
     }
 
     // Reset form after successful save
@@ -756,8 +766,7 @@ export const useInformRelatedParties = () => {
       error?.message || "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง"
     );
   }
-}, [form, validateRequiredFields, createRequestBody, uploadFiles, uploadedFiles, handleClear, isEditing, loadedReportId, report4Id]);
-  // ฟังก์ชันสำหรับรีเซ็ตข้อมูลเฉพาะฟิลด์
+}, [form, validateRequiredFields, createRequestBody, uploadFiles, uploadedFiles, handleClear, isEditing, loadedReportId, report4Id, router, complaintId]);  // ฟังก์ชันสำหรับรีเซ็ตข้อมูลเฉพาะฟิลด์
   const resetField = useCallback((fieldName) => {
     console.log("🔄 resetField:", fieldName);
     setForm((prev) => ({ ...prev, [fieldName]: "" }));

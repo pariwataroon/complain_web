@@ -498,255 +498,271 @@ const ReceiveReportsAgencies = () => {
     setExistingAttachments(prev => prev.filter(x => x.id !== att.id));
   }, [outgoingReport5Id]);
 
-  const handleSave = useCallback(async () => {
-    const missingFields = [];
-    if (!form.processStep) missingFields.push("ขั้นตอนการดำเนินการ");
-    if (!form.confidentiality) missingFields.push("ชั้นความลับ");
-    if (!form.urgency) missingFields.push("ชั้นความเร่งด่วน");
-    if (!form.departmentId) missingFields.push("หน่วยงาน");
-    if (!form.investigateGk?.trim()) missingFields.push("เลขสป.กค.");
-    if (!form.investigateDate) missingFields.push("วันที่ (เลขสป.กค.)");
-    if (!form.documentNo?.trim()) missingFields.push("เลขที่หนังสือ");
-    if (!form.documentDate) missingFields.push("วันที่ (เลขที่หนังสือ)");
-    if (!form.receiveWorkDate) missingFields.push("วันที่รับงานของเจ้าหน้าที่");
-    if (!form.submitWorkDate) missingFields.push("วันที่เสนองาน ผอ.สรร.");
-    if (!form.subject?.trim()) missingFields.push("เรื่อง");
-    if (uploadedFiles.length === 0 && !(isEditing && existingAttachments.length > 0)) missingFields.push("เอกสารแนบ");
-    if (missingFields.length > 0) {
-      const message = `กรุณากรอกข้อมูลให้ครบถ้วน:\n${missingFields.map((f) => `• ${f}`).join("\n")}`;
-      alertWarning("ข้อมูลไม่ครบถ้วน", message);
+const handleSave = useCallback(async () => {
+  const missingFields = [];
+  if (!form.processStep) missingFields.push("ขั้นตอนการดำเนินการ");
+  if (!form.confidentiality) missingFields.push("ชั้นความลับ");
+  if (!form.urgency) missingFields.push("ชั้นความเร่งด่วน");
+  if (!form.departmentId) missingFields.push("หน่วยงาน");
+  if (!form.investigateGk?.trim()) missingFields.push("เลขสป.กค.");
+  if (!form.investigateDate) missingFields.push("วันที่ (เลขสป.กค.)");
+  if (!form.documentNo?.trim()) missingFields.push("เลขที่หนังสือ");
+  if (!form.documentDate) missingFields.push("วันที่ (เลขที่หนังสือ)");
+  if (!form.receiveWorkDate) missingFields.push("วันที่รับงานของเจ้าหน้าที่");
+  if (!form.submitWorkDate) missingFields.push("วันที่เสนองาน ผอ.สรร.");
+  if (!form.subject?.trim()) missingFields.push("เรื่อง");
+  if (uploadedFiles.length === 0 && !(isEditing && existingAttachments.length > 0)) missingFields.push("เอกสารแนบ");
+  if (missingFields.length > 0) {
+    const message = `กรุณากรอกข้อมูลให้ครบถ้วน:\n${missingFields.map((f) => `• ${f}`).join("\n")}`;
+    alertWarning("ข้อมูลไม่ครบถ้วน", message);
+    return;
+  }
+  try {
+    const baseRemarksClean = stripEmbeddedTags(form.remarks || '');
+    const embedLines = [];
+    if (form.processStep) embedLines.push(`${PROCESS_TAG}${form.processStep}`);
+    if (form.receiveWorkDate) {
+      const dtStr = toISO(form.receiveWorkDate)?.slice(0,10);
+      if (dtStr) embedLines.push(`${RECEIVE_WORK_TAG}${dtStr}`);
+    }
+    const mergedRemarks = [baseRemarksClean, ...embedLines].filter(Boolean).join('\n');
+
+    // ==== Auto-generate required fields ====
+    const receiveNumber = form.referenceNo?.trim()
+      || existingData?.receive_number
+      || generateReceiveNumber();
+    const receiveDate = form.date
+      ? toISO(form.date)
+      : existingData?.receive_date
+        ? existingData.receive_date
+        : generateReceiveDate();
+
+    const payload = {
+      receive_number: receiveNumber,
+      receive_date: receiveDate,
+      agency_reference_number: form.investigateGk,
+      agency_reference_date: toISO(form.investigateDate),
+      internal_register_number: form.documentNo,
+      internal_register_date: toISO(form.documentDate),
+      present_to_director_date: toISO(form.submitWorkDate),
+      receive_work_date: toISO(form.receiveWorkDate),
+      receive_staff_date: toISO(form.receiveWorkDate),
+      staff_receive_date: toISO(form.receiveWorkDate),
+      complaint_number: form.investigateGk,
+      complaint_number_date: toISO(form.investigateDate),
+      subject: form.subject,
+      document_number: form.documentNo,
+      document_date: toISO(form.documentDate),
+      process_step: form.processStep,
+      process_status: form.processStep,
+      processStatus: form.processStep,
+      step: form.processStep,
+      current_step: form.processStep,
+      signature_authority_user_id: form.signatureAuthorityId,
+      department_id: form.departmentId,
+      user_id: form.userId,
+      confidentiality_level: form.confidentiality,
+      urgency_level: form.urgency,
+      complaint_id: complaintId,
+      remarks: mergedRemarks,
+    };
+
+    Object.keys(payload).forEach(k => {
+      if (payload[k] === undefined || payload[k] === null) delete payload[k];
+    });
+
+    let finalPayload = payload;
+    if (isEditing) {
+      finalPayload = { ...payload };
+      delete finalPayload.complaint_id;
+      if (!form.investigateGk) delete finalPayload.complaint_number;
+      if (!finalPayload.complaint_number) delete finalPayload.complaint_number_date;
+    }
+
+    let res;
+    if (isEditing && outgoingReport5Id) {
+      res = await UpdateOutgoingReport5(outgoingReport5Id, finalPayload);
+    } else {
+      res = await CreateOutgoingReport5(finalPayload);
+    }
+
+    const extractReportId = (resp) => {
+      if (!resp) return null;
+      const candidates = [
+        resp?.res_data?.id,
+        resp?.res_data?.report_id,
+        resp?.res_data?.outgoing_report_id,
+        resp?.data?.id,
+        resp?.id,
+      ].filter(Boolean);
+      if (candidates.length) return candidates[0];
+      try {
+        const stack = [resp];
+        while (stack.length) {
+          const cur = stack.pop();
+          if (cur && typeof cur === "object") {
+            if (Object.prototype.hasOwnProperty.call(cur, "id") && cur.id)
+              return cur.id;
+            Object.values(cur).forEach((v) => {
+              if (v && typeof v === "object") stack.push(v);
+            });
+          }
+        }
+      } catch (_) {}
+      return null;
+    };
+
+    const resCode = res?.res_code ?? res?.data?.res_code ?? res?.status;
+    const resMsg =
+      res?.res_data?.error ??
+      res?.data?.res_data?.error ??
+      res?.res_message ??
+      "";
+
+    if (
+      resCode === "4090" ||
+      resCode === 409 ||
+      /CONFLICT/i.test(res?.res_message || "") ||
+      /มีอยู่แล้ว|duplicate|exists|ซ้ำ/i.test(resMsg)
+    ) {
+      alertWarning(
+        "เลขอ้างอิงซ้ำ",
+        resMsg || `เลขรับเรื่อง ${form.referenceNo} มีอยู่แล้ว`
+      );
       return;
     }
-    try {
-      const baseRemarksClean = stripEmbeddedTags(form.remarks || '');
-      const embedLines = [];
-      if (form.processStep) embedLines.push(`${PROCESS_TAG}${form.processStep}`);
-      if (form.receiveWorkDate) {
-        const dtStr = toISO(form.receiveWorkDate)?.slice(0,10);
-        if (dtStr) embedLines.push(`${RECEIVE_WORK_TAG}${dtStr}`);
+
+    const reportId = extractReportId(res);
+
+    if (!reportId) {
+      alertWarning("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานที่บันทึกได้");
+      return;
+    }
+
+    if (uploadedFiles.length) {
+      const allowedTypes = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "image/jpeg",
+        "image/png",
+      ];
+      const oversize = uploadedFiles.find((f) => f.size > 10 * 1024 * 1024);
+      if (oversize) {
+        alertWarning("ไฟล์ใหญ่เกินไป", `ไฟล์ ${oversize.name} เกิน 10MB`);
+        return;
       }
-      const mergedRemarks = [baseRemarksClean, ...embedLines].filter(Boolean).join('\n');
+      const invalid = uploadedFiles.find(
+        (f) => !allowedTypes.includes(f.type)
+      );
+      if (invalid) {
+        alertWarning(
+          "ประเภทไฟล์ไม่ถูกต้อง",
+          `ไฟล์ ${invalid.name} ไม่รองรับ`
+        );
+        return;
+      }
 
-      // ==== Auto-generate required fields ====
-      const receiveNumber = form.referenceNo?.trim()
-        || existingData?.receive_number
-        || generateReceiveNumber();
-      const receiveDate = form.date
-        ? toISO(form.date)
-        : existingData?.receive_date
-          ? existingData.receive_date
-          : generateReceiveDate();
-
-      const payload = {
-        receive_number: receiveNumber,
-        receive_date: receiveDate,
-        agency_reference_number: form.investigateGk,
-        agency_reference_date: toISO(form.investigateDate),
-        internal_register_number: form.documentNo,
-        internal_register_date: toISO(form.documentDate),
-        present_to_director_date: toISO(form.submitWorkDate),
-        receive_work_date: toISO(form.receiveWorkDate),
-        receive_staff_date: toISO(form.receiveWorkDate),
-        staff_receive_date: toISO(form.receiveWorkDate),
-        complaint_number: form.investigateGk,
-        complaint_number_date: toISO(form.investigateDate),
-        subject: form.subject,
-        document_number: form.documentNo,
-        document_date: toISO(form.documentDate),
-        process_step: form.processStep,
-        process_status: form.processStep,
-        processStatus: form.processStep,
-        step: form.processStep,
-        current_step: form.processStep,
-        signature_authority_user_id: form.signatureAuthorityId,
-        department_id: form.departmentId,
-        user_id: form.userId,
-        confidentiality_level: form.confidentiality,
-        urgency_level: form.urgency,
-        complaint_id: complaintId,
-        remarks: mergedRemarks,
-      };
-
-      Object.keys(payload).forEach(k => {
-        if (payload[k] === undefined || payload[k] === null) delete payload[k];
+      const fd = new FormData();
+      uploadedFiles.forEach((f) => {
+        fd.append("files", f, f.name);
       });
 
-      let finalPayload = payload;
-      if (isEditing) {
-        finalPayload = { ...payload };
-        delete finalPayload.complaint_id;
-        if (!form.investigateGk) delete finalPayload.complaint_number;
-        if (!finalPayload.complaint_number) delete finalPayload.complaint_number_date;
-      }
+      let uploadSucceeded = false;
+      try {
+        const upRes = await UploadOutgoingReport5Attachments(fd, reportId);
+        uploadSucceeded = !!(
+          upRes &&
+          (upRes.success === true ||
+            upRes.res_code === "0001" ||
+            upRes.success !== false)
+        );
 
-      let res;
-      if (isEditing && outgoingReport5Id) {
-        res = await UpdateOutgoingReport5(outgoingReport5Id, finalPayload);
-      } else {
-        res = await CreateOutgoingReport5(finalPayload);
-      }
+        if (
+          !uploadSucceeded &&
+          (upRes?.res_code === "4040" ||
+            upRes?.res_code === "404" ||
+            /NOT_FOUND/i.test(upRes?.res_message || ""))
+        ) {
+          try {
+            const altRes = await axiosInstance.post(
+              `/outgoing-reports5/${reportId}/attachments`,
+              fd
+            );
+            uploadSucceeded = !!altRes?.data;
+          } catch (altErr) {}
+        }
 
-      const extractReportId = (resp) => {
-        if (!resp) return null;
-        const candidates = [
-          resp?.res_data?.id,
-          resp?.res_data?.report_id,
-          resp?.res_data?.outgoing_report_id,
-          resp?.data?.id,
-          resp?.id,
-        ].filter(Boolean);
-        if (candidates.length) return candidates[0];
-        try {
-          const stack = [resp];
-          while (stack.length) {
-            const cur = stack.pop();
-            if (cur && typeof cur === "object") {
-              if (Object.prototype.hasOwnProperty.call(cur, "id") && cur.id)
-                return cur.id;
-              Object.values(cur).forEach((v) => {
-                if (v && typeof v === "object") stack.push(v);
-              });
-            }
-          }
-        } catch (_) {}
-        return null;
-      };
-
-      const resCode = res?.res_code ?? res?.data?.res_code ?? res?.status;
-      const resMsg =
-        res?.res_data?.error ??
-        res?.data?.res_data?.error ??
-        res?.res_message ??
-        "";
-
-      if (
-        resCode === "4090" ||
-        resCode === 409 ||
-        /CONFLICT/i.test(res?.res_message || "") ||
-        /มีอยู่แล้ว|duplicate|exists|ซ้ำ/i.test(resMsg)
-      ) {
+        if (!uploadSucceeded && upRes?.res_message) {
+          alertWarning("ไม่สามารถอัพโหลดไฟล์ได้", upRes.res_message);
+        }
+      } catch (err) {
         alertWarning(
-          "เลขอ้างอิงซ้ำ",
-          resMsg || `เลขรับเรื่อง ${form.referenceNo} มีอยู่แล้ว`
+          "ไม่สามารถอัพโหลดไฟล์ได้",
+          err?.response?.data?.res_message ||
+            err?.message ||
+            "เกิดข้อผิดพลาดในการอัพโหลดไฟล์"
         );
-        return;
       }
-
-      const reportId = extractReportId(res);
-
-      if (!reportId) {
-        alertWarning("ไม่พบรหัสรายงาน", "ระบบไม่สามารถดึงรหัสรายงานที่บันทึกได้");
-        return;
-      }
-
-      if (uploadedFiles.length) {
-        const allowedTypes = [
-          "application/pdf",
-          "application/msword",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          "image/jpeg",
-          "image/png",
-        ];
-        const oversize = uploadedFiles.find((f) => f.size > 10 * 1024 * 1024);
-        if (oversize) {
-          alertWarning("ไฟล์ใหญ่เกินไป", `ไฟล์ ${oversize.name} เกิน 10MB`);
-          return;
-        }
-        const invalid = uploadedFiles.find(
-          (f) => !allowedTypes.includes(f.type)
-        );
-        if (invalid) {
-          alertWarning(
-            "ประเภทไฟล์ไม่ถูกต้อง",
-            `ไฟล์ ${invalid.name} ไม่รองรับ`
-          );
-          return;
-        }
-
-        const fd = new FormData();
-        uploadedFiles.forEach((f) => {
-          fd.append("files", f, f.name);
-        });
-
-        let uploadSucceeded = false;
-        try {
-          const upRes = await UploadOutgoingReport5Attachments(fd, reportId);
-          uploadSucceeded = !!(
-            upRes &&
-            (upRes.success === true ||
-              upRes.res_code === "0001" ||
-              upRes.success !== false)
-          );
-
-          if (
-            !uploadSucceeded &&
-            (upRes?.res_code === "4040" ||
-              upRes?.res_code === "404" ||
-              /NOT_FOUND/i.test(upRes?.res_message || ""))
-          ) {
-            try {
-              const altRes = await axiosInstance.post(
-                `/outgoing-reports5/${reportId}/attachments`,
-                fd
-              );
-              uploadSucceeded = !!altRes?.data;
-            } catch (altErr) {}
-          }
-
-          if (!uploadSucceeded && upRes?.res_message) {
-            alertWarning("ไม่สามารถอัพโหลดไฟล์ได้", upRes.res_message);
-          }
-        } catch (err) {
-          alertWarning(
-            "ไม่สามารถอัพโหลดไฟล์ได้",
-            err?.response?.data?.res_message ||
-              err?.message ||
-              "เกิดข้อผิดพลาดในการอัพโหลดไฟล์"
-          );
-        }
-      }
-
-      const successMessage = `
-        <div style="text-align:center; line-height:1.6;">
-          <p style="margin-bottom:12px; font-size:16px;">${isEditing ? 'อัปเดต' : 'บันทึก'}แบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
-          <p style="margin-bottom:8px; color:#666;">รหัสรายงาน: <strong>${reportId}</strong></p>
-          <p style="margin-bottom:8px; color:#666;">เรื่อง: <strong>${form.subject || "-"}</strong></p>
-          ${uploadedFiles.length > 0
-            ? `<p style="margin-bottom:0; color:#666;">ไฟล์แนบ: <strong>${uploadedFiles.map(f => f.name).join(', ')}</strong></p>`
-            : ""}
-        </div>
-      `;
-
-      if (isEditing && reportId) {
-        try { await GetOutgoingReport5ById(reportId); } catch (verErr) {}
-      }
-
-      closeAlert();
-      await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
-      router.push(`/admin/box/list`);
-    } catch (error) {
-      const code = error?.response?.data?.res_code || error?.response?.status;
-      const serverMsg =
-        error?.response?.data?.res_data?.error ||
-        error?.response?.data?.res_message ||
-        error?.message ||
-        "";
-
-      if (
-        code === "4090" ||
-        code === 409 ||
-        /มีอยู่แล้ว|duplicate|exists|ซ้ำ/i.test(serverMsg)
-      ) {
-        alertWarning(
-          "เลขอ้างอิงซ้ำ",
-          serverMsg || `เลขรับเรื่อง ${form.referenceNo} มีอยู่แล้ว`
-        );
-        return;
-      }
-      alertWarning("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
     }
-  }, [form, uploadedFiles, complaintId, router, isEditing, existingAttachments, outgoingReport5Id, existingData]);
 
+    const successMessage = `
+      <div style="text-align:center; line-height:1.6;">
+        <p style="margin-bottom:12px; font-size:16px;">${isEditing ? 'อัปเดต' : 'บันทึก'}แบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว</p>
+        <p style="margin-bottom:8px; color:#666;">รหัสรายงาน: <strong>${reportId}</strong></p>
+        <p style="margin-bottom:8px; color:#666;">เรื่อง: <strong>${form.subject || "-"}</strong></p>
+        ${uploadedFiles.length > 0
+          ? `<p style="margin-bottom:0; color:#666;">ไฟล์แนบ: <strong>${uploadedFiles.map(f => f.name).join(', ')}</strong></p>`
+          : ""}
+      </div>
+    `;
+
+    if (isEditing && reportId) {
+      try { await GetOutgoingReport5ById(reportId); } catch (verErr) {}
+    }
+
+    closeAlert();
+    await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
+
+    // ----- REDIRECT LOGIC -----
+    // ถ้ามี ?returnUrl หรือ ?from → ไป path นั้น
+    // ถ้ามี complaintId → ไป /admin/box/list/complaintId
+    // มิเช่นนั้น → ไป /admin/box/list
+    const returnUrl = router?.query?.returnUrl || router?.query?.from;
+    const cid = router?.query?.complaint_id || router?.query?.id || complaintId;
+
+    if (cid) {
+      router.push(`/admin/box/list/${cid}`);
+    } else if (returnUrl && typeof returnUrl === 'string') {
+      router.push(returnUrl);
+    } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/admin/box/list');
+    }
+    handleClear();
+  } catch (error) {
+    const code = error?.response?.data?.res_code || error?.response?.status;
+    const serverMsg =
+      error?.response?.data?.res_data?.error ||
+      error?.response?.data?.res_message ||
+      error?.message ||
+      "";
+
+    if (
+      code === "4090" ||
+      code === 409 ||
+      /มีอยู่แล้ว|duplicate|exists|ซ้ำ/i.test(serverMsg)
+    ) {
+      alertWarning(
+        "เลขอ้างอิงซ้ำ",
+        serverMsg || `เลขรับเรื่อง ${form.referenceNo} มีอยู่แล้ว`
+      );
+      return;
+    }
+    alertWarning("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
+  }
+}, [form, uploadedFiles, complaintId, router, isEditing, existingAttachments, outgoingReport5Id, existingData, handleClear]);
   // load existing record (prefill)
  useEffect(() => {
     let cancelled = false;

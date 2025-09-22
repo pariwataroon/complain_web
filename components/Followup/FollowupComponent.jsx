@@ -5,14 +5,25 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs.jsx";
 import TableAll from "@services/table/TableAll";
 import { GetMeAllComplaints } from "@pages/api/complaint/complaint";
 
+// Map label สถานะ (ไทย) → code (เช่น in_process)
+const STATUS_MAP = {
+  "รับเรื่อง": "submitted",
+  "ส่งหน่วยงานภายนอก": "sent_to_external",
+  "กำลังดำเนินการ": "in_process",
+  "ติดตามผล": "tracking",
+  "มอบหมายเจ้าหน้าที่": "assigned",
+  "แจ้งผลการพิจารณา": "decision",
+  "อยู่ระหว่างพิจารณา": "considering",
+  "ปิดเรื่อง": ["completed", "cancelled"],
+};
+
 export default function FollowupComponent() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [allComplaints, setAllComplaints] = useState([]);
-  const [filteredComplaints, setFilteredComplaints] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);
-  const [limit, setLimit] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const breadcrumbItems = [
     {
@@ -26,43 +37,64 @@ export default function FollowupComponent() {
       ),
     },
   ];
+const fetchComplaints = async ({
+  searchParam = search,
+  statusParam = statusFilter,
+} = {}) => {
+  try {
+    let statusCode = statusParam && STATUS_MAP[statusParam]
+      ? STATUS_MAP[statusParam]
+      : statusParam;
+    let allResults = [];
 
-  const fetchComplaints = async () => {
-    const skip = page * limit;
-    try {
-      const res = await GetMeAllComplaints({ skip, limit });
-      setAllComplaints(res?.res_data?.items || []);
-      setFilteredComplaints(res?.res_data?.items || []);
-      setTotalCount(res?.res_data?.pagination?.total || 0);
-    } catch (error) {
-      console.error("Load complaints failed", error);
+    // โหลดทีละ status หรือทั้งหมด
+    if (Array.isArray(statusCode)) {
+      for (const s of statusCode) {
+        const res = await GetMeAllComplaints({
+          skip: 0,
+          limit: 10000, // โหลดทั้งหมด
+          search: searchParam,
+          status: s,
+        });
+        allResults = allResults.concat(res?.res_data?.items || []);
+      }
+    } else {
+      const res = await GetMeAllComplaints({
+        skip: 0,
+        limit: 10000, // โหลดทั้งหมด
+        search: searchParam,
+        // status: statusCode,
+      });
+      allResults = res?.res_data?.items || [];
     }
-  };
 
-  useEffect(() => {
-    let filtered = allComplaints;
+    // remove duplicates
+    const unique = allResults.filter(
+      (v, i, a) => a.findIndex(t => t.id === v.id) === i
+    );
 
-    if (search) {
-      filtered = filtered.filter((item) =>
-        item.subject?.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-
-    const statusValue =
-      typeof statusFilter === "string"
-        ? statusFilter
-        : statusFilter?.value ?? "";
-
-    if (statusValue) {
-      filtered = filtered.filter((item) => item.status === statusValue);
-    }
-
-    setFilteredComplaints(filtered);
-  }, [search, statusFilter, allComplaints]);
+    setAllComplaints(unique);
+    setTotalCount(unique.length);
+    setPage(0);
+  } catch (error) {
+    setAllComplaints([]);
+    setTotalCount(0);
+    console.error("Load complaints failed", error);
+  }
+};
 
   useEffect(() => {
     fetchComplaints();
-  }, [page, limit]);
+    // eslint-disable-next-line
+  }, [page, rowsPerPage, search, statusFilter]);
+
+  const handleRowsPerPageChange = (newRowsPerPage) => {
+    setRowsPerPage(newRowsPerPage);
+    setPage(0);
+  };
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+  };
 
   return (
     <>
@@ -74,12 +106,17 @@ export default function FollowupComponent() {
 
         <TableAll
           title="ติดตามผลการดำเนินการ"
-          data={filteredComplaints}
+          data={allComplaints}
           search={search}
           onSearchChange={setSearch}
           statusFilter={statusFilter}
           onStatusChange={setStatusFilter}
           navigateTo="/followup"
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={totalCount}
+          onPageChange={handlePageChange}
+          onRowsPerPageChange={handleRowsPerPageChange}
         />
       </Box>
     </>

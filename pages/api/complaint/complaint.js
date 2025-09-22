@@ -16,13 +16,15 @@ const GetAllComplaints = async ({
   }
 };
 
-const GetMeAllComplaints = async ({
+ const GetMeAllComplaints = async ({
   skip = 0,
-  limit = 10
+  limit = 10,
+  search = "",
+  status = ""
 }) => {
   try {
     const response = await axiosInstance.get("/complaints/me", {
-      params: { skip, limit }
+      params: { skip, limit, search, status },
     });
     return response?.data;
   } catch (error) {
