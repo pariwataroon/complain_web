@@ -468,7 +468,63 @@ const Tab31 = ({
           </div>
 
           <div className={styles.sectionContent}>
-            {/* Row 1: ประเภท/ประเภทย่อย/ช่องทาง */}
+
+            {/* Row 3: สป.กค./วันที่ + สป.สร./วันที่ */}
+            <div className={styles.fieldRowDate}>
+              <div className={styles.fieldGroup}>
+                <label className={styles.label}>เลข สป.กค. <span className={styles.required}>*</span></label>
+                <input className={styles.inputControl} type="text"
+                  {...step3Methods.register("referenceNumber1", { required: "กรุณากรอกเลข สป.กค." })}
+                  style={errStyle("referenceNumber1")}
+                />
+                {errMsg("referenceNumber1")}
+              </div>
+              <div className={styles.fieldGroupDate}>
+                <label className={styles.label}>วันที่ <span className={styles.required}>*</span></label>
+                <div className={`${styles.datePickerWrapper} ${styles.datePickerUX}`}>
+                  <ControlledDateThaiPickerService
+                    name="referenceDate1" control={step3Methods.control}
+                    placeholder="กรุณาเลือกวันที่" rules={{ required: "กรุณาเลือกวันที่" }}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.fieldGroup}>
+                <label className={styles.label}>เลข สป.สร.</label>
+                <input className={styles.inputControl} type="text" {...step3Methods.register("referenceNumber2")} />
+              </div>
+              <div className={styles.fieldGroupDate}>
+                <label className={styles.label}>วันที่</label>
+                <div className={`${styles.datePickerWrapper} ${styles.datePickerUX}`}>
+                  <ControlledDateThaiPickerService name="referenceDate2" control={step3Methods.control} placeholder="กรุณาเลือกวันที่" />
+                </div>
+              </div>
+            </div>
+
+            {/* Row 4: สตป./วันที่ */}
+            <div className={styles.fieldRowDate}>
+              <div className={styles.fieldGroup}>
+                <label className={styles.label}>เลข สตป. <span className={styles.required}>*</span></label>
+                <input className={styles.inputControl} type="text"
+                  {...step3Methods.register("referenceNumber3", { required: "กรุณากรอกเลข สตป." })}
+                  style={errStyle("referenceNumber3")}
+                />
+                {errMsg("referenceNumber3")}
+              </div>
+              <div className={styles.fieldGroupDate}>
+                <label className={styles.label}>วันที่ <span className={styles.required}>*</span></label>
+                <div className={`${styles.datePickerWrapper} ${styles.datePickerUX}`}>
+                  <ControlledDateThaiPickerService 
+                    name="referenceDate3" 
+                    control={step3Methods.control} 
+                    placeholder="กรุณาเลือกวันที่"
+                    rules={{ required: "กรุณาเลือกวันที่" }}
+                  />
+                </div>
+              </div>
+            </div>
+
+             {/* Row 1: ประเภท/ประเภทย่อย/ช่องทาง */}
             <div className={styles.fieldRow}>
               <div className={styles.fieldGroup}>
                 <label className={styles.label}>ประเภทเรื่องร้องเรียน <span className={styles.required}>*</span></label>
@@ -533,124 +589,7 @@ const Tab31 = ({
               </div>
             </div>
 
-            {/* Row 2: เรื่อง */}
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldGroupFull}>
-                <label className={styles.label}>เรื่อง <span className={styles.required}>*</span></label>
-                <input
-                  className={styles.inputControl}
-                  type="text"
-                  {...step3Methods.register("subject", { required: "กรุณากรอกเรื่อง" })}
-                  style={errStyle("subject")}
-                />
-                {errMsg("subject")}
-              </div>
-            </div>
-
-            {/* Row 3: สป.กค./วันที่ + สป.สร./วันที่ */}
-            <div className={styles.fieldRowDate}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label}>เลข สป.กค. <span className={styles.required}>*</span></label>
-                <input className={styles.inputControl} type="text"
-                  {...step3Methods.register("referenceNumber1", { required: "กรุณากรอกเลข สป.กค." })}
-                  style={errStyle("referenceNumber1")}
-                />
-                {errMsg("referenceNumber1")}
-              </div>
-              <div className={styles.fieldGroupDate}>
-                <label className={styles.label}>วันที่ <span className={styles.required}>*</span></label>
-                <div className={styles.datePickerWrapper}>
-                  <ControlledDateThaiPickerService
-                    name="referenceDate1" control={step3Methods.control}
-                    placeholder="กรุณาเลือกวันที่" rules={{ required: "กรุณาเลือกวันที่" }}
-                  />
-                </div>
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label className={styles.label}>เลข สป.สร.</label>
-                <input className={styles.inputControl} type="text" {...step3Methods.register("referenceNumber2")} />
-              </div>
-              <div className={styles.fieldGroupDate}>
-                <label className={styles.label}>วันที่</label>
-                <div className={styles.datePickerWrapper}>
-                  <ControlledDateThaiPickerService name="referenceDate2" control={step3Methods.control} placeholder="กรุณาเลือกวันที่" />
-                </div>
-              </div>
-            </div>
-
-            {/* Row 4: สตป./วันที่ */}
-            <div className={styles.fieldRowDate}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label}>เลข สตป. <span className={styles.required}>*</span></label>
-                <input className={styles.inputControl} type="text"
-                  {...step3Methods.register("referenceNumber3", { required: "กรุณากรอกเลข สตป." })}
-                  style={errStyle("referenceNumber3")}
-                />
-                {errMsg("referenceNumber3")}
-              </div>
-              <div className={styles.fieldGroupDate}>
-                <label className={styles.label}>วันที่ <span className={styles.required}>*</span></label>
-                <div className={styles.datePickerWrapper}>
-                  <ControlledDateThaiPickerService 
-                    name="referenceDate3" 
-                    control={step3Methods.control} 
-                    placeholder="กรุณาเลือกวันที่"
-                    rules={{ required: "กรุณาเลือกวันที่" }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Row 4.5: referenceNumber4 - เลข สรร. สารบัญ */}
-            <div className={styles.fieldRowDate}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label}>เลข สรร. สารบัญ <span className={styles.required}>*</span></label>
-                <input className={styles.inputControl} type="text"
-                  {...step3Methods.register("referenceNumber4", { required: "กรุณากรอกเลข สรร. สารบัญ" })}
-                  style={errStyle("referenceNumber4")}
-                />
-                {errMsg("referenceNumber4")}
-              </div>
-              <div className={styles.fieldGroupDate}>
-                <label className={styles.label}>วันที่ <span className={styles.required}>*</span></label>
-                <div className={styles.datePickerWrapper}>
-                  <ControlledDateThaiPickerService 
-                    name="referenceDate4" 
-                    control={step3Methods.control} 
-                    placeholder="กรุณาเลือกวันที่"
-                    rules={{ required: "กรุณาเลือกวันที่" }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Row 5: เลขที่หนังสือ/วันที่ + หน่วยงานอื่น */}
-            <div className={styles.fieldRowDate}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label}>เลขที่หนังสือ</label>
-                <input className={styles.inputControl} type="text" {...step3Methods.register("documentNumber")} />
-              </div>
-              <div className={styles.fieldGroupDate}>
-                <label className={styles.label}>วันที่</label>
-                <div className={styles.datePickerWrapper}>
-                  <ControlledDateThaiPickerService name="documentDate" control={step3Methods.control} placeholder="กรุณาเลือกวันที่" />
-                </div>
-              </div>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label}>หน่วยงานอื่นที่ส่งเรื่องมาที่ กค.</label>
-                <select className={styles.inputControl} {...step3Methods.register("senderAgency")} disabled={loadingOutsideDepartments}>
-                  <option value="">
-                    {loadingOutsideDepartments ? "กำลังโหลดหน่วยงาน..." : "เลือกหน่วยงาน"}
-                  </option>
-                  {outsideDepartments.map((d) => (
-                    <option key={d.value} value={d.value}>{d.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Row 6: ชั้นความลับ/เร่งด่วน */}
+             {/* Row 6: ชั้นความลับ/เร่งด่วน */}
             <div className={styles.fieldRow}>
               <div className={styles.fieldGroup}>
                 <label className={styles.label}>ชั้นความลับ</label>
@@ -670,6 +609,45 @@ const Tab31 = ({
                   <option value="urgent">ด่วนมาก</option>
                   <option value="critical">ด่วนที่สุด</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Row 5: เลขที่หนังสือ/วันที่ + หน่วยงานอื่น */}
+            <div className={styles.fieldRowDate}>
+              <div className={styles.fieldGroup}>
+                <label className={styles.label}>เลขที่หนังสือ</label>
+                <input className={styles.inputControl} type="text" {...step3Methods.register("documentNumber")} />
+              </div>
+              <div className={styles.fieldGroupDate}>
+                <label className={styles.label}>วันที่</label>
+                  <div className={`${styles.datePickerWrapper} ${styles.datePickerUX}`}>
+                  <ControlledDateThaiPickerService name="documentDate" control={step3Methods.control} placeholder="กรุณาเลือกวันที่" />
+                </div>
+              </div>
+              <div className={styles.fieldGroup}>
+                <label className={styles.label}>หน่วยงานอื่นที่ส่งเรื่องมาที่ กค.</label>
+                <select className={styles.inputControl} {...step3Methods.register("senderAgency")} disabled={loadingOutsideDepartments}>
+                  <option value="">
+                    {loadingOutsideDepartments ? "กำลังโหลดหน่วยงาน..." : "เลือกหน่วยงาน"}
+                  </option>
+                  {outsideDepartments.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+             {/* Row 2: เรื่อง */}
+            <div className={styles.fieldRow}>
+              <div className={styles.fieldGroupFull}>
+                <label className={styles.label}>เรื่อง <span className={styles.required}>*</span></label>
+                <input
+                  className={styles.inputControl}
+                  type="text"
+                  {...step3Methods.register("subject", { required: "กรุณากรอกเรื่อง" })}
+                  style={errStyle("subject")}
+                />
+                {errMsg("subject")}
               </div>
             </div>
 
@@ -795,7 +773,7 @@ const Tab31 = ({
 
                       <div className={styles.fieldWithLabelDate}>
                         <label className={styles.label}>วันที่</label>
-                        <div className={styles.datePickerWrapper}>
+                            <div className={`${styles.datePickerWrapper} ${styles.datePickerUX}`}>
                           <ControlledDateThaiPickerService name="additionalReferenceDate1" control={step3Methods.control} />
                         </div>
                       </div>
@@ -819,7 +797,7 @@ const Tab31 = ({
                       </div>
                       <div className={styles.fieldWithLabelDate}>
                         <label className={styles.label}>วันที่</label>
-                        <div className={styles.datePickerWrapper}>
+                            <div className={`${styles.datePickerWrapper} ${styles.datePickerUX}`}>
                           <ControlledDateThaiPickerService name="additionalReferenceDate2" control={step3Methods.control} />
                         </div>
                       </div>
@@ -844,7 +822,7 @@ const Tab31 = ({
             {/* ใช้ fieldRowTwo = 2 คอลัมน์ */}
             <div className={styles.fieldRowTwo}>
               <div className={styles.fieldGroupDate}>
-                <div className={styles.datePickerWrapper}>
+                <div className={`${styles.datePickerWrapper} ${styles.datePickerUX}`}>
                   <ControlledDateThaiPickerService
                     label="วันที่รับเรื่องของเจ้าพนักงาน"
                     name="officerReceivedDate" control={step4Methods.control} time
@@ -852,7 +830,7 @@ const Tab31 = ({
                 </div>
               </div>
               <div className={styles.fieldGroupDate}>
-                <div className={styles.datePickerWrapper}>
+                <div className={`${styles.datePickerWrapper} ${styles.datePickerUX}`}>
                   <ControlledDateThaiPickerService
                     label="วันที่เสนองาน ผอ.สรร."
                     name="directorSubmittedDate" control={step4Methods.control} placeholder="กรุณาเลือกวันที่" time
@@ -863,7 +841,7 @@ const Tab31 = ({
 
             <div className={styles.fieldRow}>
               <div className={styles.fieldGroup}>
-                <div className={styles.datePickerWrapper}>
+                <div className={`${styles.datePickerWrapper} ${styles.datePickerUX}`}>
                   <ControlledDateThaiPickerService
                     label="วันและเวลาที่เกิดเหตุ"
                     name="incidentDateTime" control={step4Methods.control} time
@@ -876,7 +854,7 @@ const Tab31 = ({
               <label className={styles.label}>รายละเอียดเพิ่มเติม</label>
               <textarea
                 rows={8}
-                className={`${styles.inputControl} ${styles.textAreaControl}`}
+                className={`${styles.inputControl} ${styles.textAreaControl} ${styles.textareaUX}`}
                 {...step3Methods.register("description")}
                 placeholder="กรอกรายละเอียดเพิ่มเติม..."
               />

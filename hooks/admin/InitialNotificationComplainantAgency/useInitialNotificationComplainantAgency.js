@@ -347,7 +347,7 @@ export const useInitialNotificationComplainantAgency = () => {
   // -------- helpers --------
   const isRequired = useCallback(
     (fieldName) => {
-      if (fieldName === 'department') return !form.salutation_is_other;
+      if (fieldName === 'department') return false;
       if (fieldName === 'position_other_text') return form.salutation_is_other;
       return baseRequiredFields.includes(fieldName);
     },
@@ -517,7 +517,7 @@ export const useInitialNotificationComplainantAgency = () => {
     const fieldsConfig = [
       { field: 'salutation', label: 'เรียน' },
       ...(form.salutation_is_other ? [{ field: 'position_other_text', label: 'ตำแหน่ง (อื่นๆ)' }] : []),
-      ...(!form.salutation_is_other ? [{ field: 'department', label: 'หน่วยงาน' }] : []),
+      // ...(!form.salutation_is_other ? [{ field: 'department', label: 'หน่วยงาน' }] : []),
       { field: 'refNo', label: 'เลขที่หนังสือ' },
       { field: 'document_date', label: 'วันที่หนังสือ' },
       { field: 'complaint_number', label: 'เลข สป.กค.' },
@@ -908,7 +908,7 @@ export const useInitialNotificationComplainantAgency = () => {
     
     const otherOk = !form.salutation_is_other || !!form.position_other_text;
     
-    return baseOk && deptOk && otherOk;
+    return baseOk && otherOk;
   }, [form]);
 
   const canSave = useCallback(() => isFormValid(), [isFormValid]);

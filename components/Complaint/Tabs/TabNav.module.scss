@@ -1,14 +1,15 @@
+
 // :root {
 //   --control-h: 40px;      /* ความสูงมาตรฐานของ input/select/datepicker */
 //   --radius: 10px;         /* มุมโค้ง */
 // }
 
-.container { background:#eaf5ff; padding:16px; border-radius:8px; }
+.container { background:#eaf5ff; padding:16px; border-radius:var(--radius); }
 
 /* ===== Card & Section ===== */
-.formWrapper { background:#eaf5ff; padding:16px; }
+.formWrapper { background:#eaf5ff; padding:16px; border-radius:var(--radius); }
 .formSection{
-  background:#fff; border:1px solid #e6eef7; border-radius:12px;
+  background:#fff; border:1px solid #e6eef7; border-radius:var(--radius);
   padding:16px 16px 8px; margin-bottom:16px;
   box-shadow:0 1px 2px rgba(16,24,40,.04);
 }
@@ -48,22 +49,31 @@
 
 /* ===== Controls ===== */
 .inputControl,
-.fieldGroup input,.fieldGroup select,
-.fieldGroupFull input,.fieldGroupFull select,
+.fieldGroup input,
+.fieldGroup select,
+.fieldGroupFull input,
+.fieldGroupFull select,
 .checkboxRowWithFields input[type="text"],
-.textAreaControl{
-  appearance:none;
-  border:1px solid #d0d5dd; border-radius:var(--radius);
-  padding:10px 12px; height:var(--control-h); line-height:1.2;
-  font-size:14px; outline:none; background:#fff; min-width:0; box-sizing:border-box;
-  width:100%;
-  transition:border-color .15s ease, box-shadow .15s ease;
+.textAreaControl {
+  appearance: none;
+  border: 1px solid #2196f3;
+  border-radius: 10px !important;
+  padding: 10px 12px;
+  height: var(--control-h);
+  line-height: 1.2;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+  min-width: 0;
+  box-sizing: border-box;
+  width: 100%;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
 .inputControl:focus,
 .fieldGroup input:focus,.fieldGroup select:focus,
 .fieldGroupFull input:focus,.fieldGroupFull select:focus,
 .textAreaControl:focus{
-  border-color:#3fa9f5; box-shadow:0 0 0 3px rgba(63,169,245,.15);
+  border-color:#1976d2; box-shadow:0 0 0 3px rgba(33,150,243,.15);
 }
 
 /* ===== MUI DatePicker ให้สูง/หน้าตาเท่า input ปกติ ===== */
@@ -134,3 +144,49 @@
 
 /* ===== Dialog states ===== */
 .dialogLoading,.dialogEmpty{ text-align:center; padding:24px; color:#667085; }
+
+.formControlUX {
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  height: 40px;
+  padding: 8px 12px;
+  font-size: 14px;
+  transition: border-color .2s, box-shadow .2s;
+  background: #fff;
+}
+
+.formControlUX:focus {
+  border-color: #3fa9f5;
+  box-shadow: 0 0 0 3px rgba(63,169,245,.15);
+  outline: none;
+}
+
+.textareaUX {
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 14px;
+  resize: vertical;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.textareaUX:focus {
+  border-color: #3fa9f5;
+  box-shadow: 0 0 0 3px rgba(63,169,245,.15);
+  outline: none;
+}
+
+.datePickerUX :global(.MuiOutlinedInput-root) {
+  height: 40px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.datePickerUX :global(.MuiOutlinedInput-notchedOutline) {
+  border-color: #d0d5dd;
+}
+
+.datePickerUX :global(.Mui-focused .MuiOutlinedInput-notchedOutline) {
+  border-color: #3fa9f5 !important;
+  box-shadow: 0 0 0 3px rgba(63,169,245,.15);
+}
