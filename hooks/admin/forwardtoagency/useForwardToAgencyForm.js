@@ -324,309 +324,289 @@ export const useForwardToAgencyForm = () => {
   }, []);
 
   const handleSave = useCallback(
-    async (data) => {
-      try {
-        showLoading("กำลังบันทึกข้อมูล...");
+  async (data) => {
+    try {
+      showLoading("กำลังบันทึกข้อมูล...");
 
-        // หมายเหตุ: ไม่บังคับอัพโหลดไฟล์ใหม่ หากไฟล์เดิมครบหรือผู้ใช้ไม่ต้องการแนบเพิ่ม
-
-        // Department fallback parity with report2
-        const specialSalutation = data.salutation_is_other === true || ["อื่นๆ","ผู้ร้อง","ผู้ร้องเรียน"].includes(String(data.position_other_text || '').trim()) || ["อื่นๆ","ผู้ร้อง","ผู้ร้องเรียน"].includes(String(data.salutation_label||'').trim());
-        // Track explicit selection
-        if (data.department && isUUID(data.department)) {
-          lastDepartmentIdRef.current = data.department;
-          if (!originalDepartmentIdRef.current) originalDepartmentIdRef.current = data.department;
-        }
-        let deptToSend = data.department && isUUID(data.department) ? data.department : null;
-        if (!deptToSend) {
-          if (specialSalutation) {
-            if (lastDepartmentIdRef.current && isUUID(lastDepartmentIdRef.current)) {
-              deptToSend = lastDepartmentIdRef.current;
-            } else if (originalDepartmentIdRef.current && isUUID(originalDepartmentIdRef.current)) {
-              deptToSend = originalDepartmentIdRef.current;
-            }
+      // (payload preparing logic unchanged)
+      const specialSalutation = data.salutation_is_other === true || ["อื่นๆ", "ผู้ร้อง", "ผู้ร้องเรียน"].includes(String(data.position_other_text || '').trim()) || ["อื่นๆ", "ผู้ร้อง", "ผู้ร้องเรียน"].includes(String(data.salutation_label || '').trim());
+      if (data.department && isUUID(data.department)) {
+        lastDepartmentIdRef.current = data.department;
+        if (!originalDepartmentIdRef.current) originalDepartmentIdRef.current = data.department;
+      }
+      let deptToSend = data.department && isUUID(data.department) ? data.department : null;
+      if (!deptToSend) {
+        if (specialSalutation) {
+          if (lastDepartmentIdRef.current && isUUID(lastDepartmentIdRef.current)) {
+            deptToSend = lastDepartmentIdRef.current;
           } else if (originalDepartmentIdRef.current && isUUID(originalDepartmentIdRef.current)) {
             deptToSend = originalDepartmentIdRef.current;
           }
+        } else if (originalDepartmentIdRef.current && isUUID(originalDepartmentIdRef.current)) {
+          deptToSend = originalDepartmentIdRef.current;
         }
-        const ensureRealDepartmentId = async (current) => {
-          if (current) return current;
-            try {
-              const resp = await getDepartments();
-              const raw = resp?.res_data || resp?.data || resp;
-              let list = [];
-              if (Array.isArray(raw)) list = raw; else if (Array.isArray(raw?.items)) list = raw.items;
-              const first = list.find(d => d && isUUID(d.id));
-              if (first) {
-                if (!originalDepartmentIdRef.current) originalDepartmentIdRef.current = first.id;
-                if (!lastDepartmentIdRef.current) lastDepartmentIdRef.current = first.id;
-                return first.id;
-              }
-            } catch (e) {
-              console.warn('fetch departments (forward) failed', e);
-            }
-            return current || process.env.NEXT_PUBLIC_DEFAULT_DEPARTMENT_ID || '11111111-1111-1111-1111-111111111111';
-        };
-        deptToSend = await ensureRealDepartmentId(deptToSend);
-        if (!data.original_department_id && deptToSend) {
-          setValue('original_department_id', deptToSend, { shouldDirty: false, shouldValidate: false });
+      }
+      const ensureRealDepartmentId = async (current) => {
+        if (current) return current;
+        try {
+          const resp = await getDepartments();
+          const raw = resp?.res_data || resp?.data || resp;
+          let list = [];
+          if (Array.isArray(raw)) list = raw; else if (Array.isArray(raw?.items)) list = raw.items;
+          const first = list.find(d => d && isUUID(d.id));
+          if (first) {
+            if (!originalDepartmentIdRef.current) originalDepartmentIdRef.current = first.id;
+            if (!lastDepartmentIdRef.current) lastDepartmentIdRef.current = first.id;
+            return first.id;
+          }
+        } catch (e) {
+          console.warn('fetch departments (forward) failed', e);
         }
+        return current || process.env.NEXT_PUBLIC_DEFAULT_DEPARTMENT_ID || '11111111-1111-1111-1111-111111111111';
+      };
+      deptToSend = await ensureRealDepartmentId(deptToSend);
+      if (!data.original_department_id && deptToSend) {
+        setValue('original_department_id', deptToSend, { shouldDirty: false, shouldValidate: false });
+      }
+      const resolvedPositionId = (() => {
+        if (isUUID(data.position_id)) return data.position_id;
+        if (isUUID(data.salutation)) return data.salutation;
+        return POSITION_FALLBACK;
+      })();
 
-        // Resolve position id (prefer explicit position_id then salutation if UUID)
-        const resolvedPositionId = (() => {
-          if (isUUID(data.position_id)) return data.position_id;
-          if (isUUID(data.salutation)) return data.salutation;
-          return POSITION_FALLBACK;
-        })();
+      const outgoingReportData = {
+        position_id: resolvedPositionId,
+        position_other_text: data.salutation_is_other ? (data.position_other_text || '').trim() : '',
+        salutation: data.salutation_is_other ? (data.salutation || '') : resolvedPositionId,
+        reference_number: (data.complaint_number || "").trim(),
+        reference_date: toYMD(data.complaint_number_date),
+        subject: (data.subject || "").trim(),
+        complaint_number: (data.complaint_number || "").trim(),
+        complaint_id: data.complaint_id || null,
+        complaint_number_date: toYMD(data.complaint_number_date),
+        document_number: (data.document_number || "").trim(),
+        document_date: toYMD(data.document_date),
+        signature_authority_user_id: data.signer,
+        department_id: deptToSend,
+        confidentiality_level: mapLevel(data.confidentiality, "confidentiality"),
+        urgency_level: mapLevel(data.urgency, "urgency"),
+        remarks: data.note || "",
+      };
 
-        const outgoingReportData = {
-          position_id: resolvedPositionId,
-          position_other_text: data.salutation_is_other ? (data.position_other_text || '').trim() : '',
-          salutation: data.salutation_is_other ? (data.salutation || '') : resolvedPositionId,
-          reference_number: (data.complaint_number || "").trim(),  
-          reference_date: toYMD(data.complaint_number_date),       
-          subject: (data.subject || "").trim(),
-          complaint_number: (data.complaint_number || "").trim(),   // เลข สป.กค.
-          complaint_id: data.complaint_id || null,
-          complaint_number_date: toYMD(data.complaint_number_date),
-          document_number: (data.document_number || "").trim(),
-          document_date: toYMD(data.document_date),
-          signature_authority_user_id: data.signer,
-          department_id: deptToSend,
-          confidentiality_level: mapLevel(data.confidentiality, "confidentiality"),
-          urgency_level: mapLevel(data.urgency, "urgency"),
-          remarks: data.note || "",
-        };
+      const routeId = router?.query?.id;
+      let reportId = routeId || null;
 
-        // Debug payload for 422 troubleshooting (visible in dev console)
-        try { console.debug("OutgoingReport payload", outgoingReportData); } catch { }
-
-        // Decide create or update by presence of route id
-        const routeId = router?.query?.id;
-        let reportId = routeId || null;
-
-        if (routeId) {
-          showLoading("กำลังอัพเดตรายงาน...");
+      if (routeId) {
+        // UPDATE
+        showLoading("กำลังอัพเดตรายงาน...");
+        try {
+          let updateResp;
           try {
-            // Try PUT then PATCH fallback
-            let updateResp;
-            try {
-              updateResp = await axiosInstance.put(`/outgoing-reports/${routeId}`, outgoingReportData);
-            } catch (putErr) {
-              updateResp = await axiosInstance.patch(`/outgoing-reports/${routeId}`, outgoingReportData);
-            }
-            // Basic success check
-            const ok = updateResp?.data && (updateResp.data.success === true || !updateResp.data.res_code || !String(updateResp.data.res_code).startsWith('4'));
-            if (!ok) {
-              const msg = updateResp?.data?.res_message || updateResp?.data?.message || 'ไม่สามารถอัพเดตรายงานได้';
-              closeAlert();
-              await alertError('เกิดข้อผิดพลาด', msg);
-              return { success: false, error: msg };
-            }
-          } catch (updErr) {
+            updateResp = await axiosInstance.put(`/outgoing-reports/${routeId}`, outgoingReportData);
+          } catch (putErr) {
+            updateResp = await axiosInstance.patch(`/outgoing-reports/${routeId}`, outgoingReportData);
+          }
+          const ok = updateResp?.data && (updateResp.data.success === true || !updateResp.data.res_code || !String(updateResp.data.res_code).startsWith('4'));
+          if (!ok) {
+            const msg = updateResp?.data?.res_message || updateResp?.data?.message || 'ไม่สามารถอัพเดตรายงานได้';
             closeAlert();
-            const msg = updErr?.response?.data?.res_message || updErr?.message || 'อัพเดตไม่สำเร็จ';
             await alertError('เกิดข้อผิดพลาด', msg);
             return { success: false, error: msg };
           }
-        } else {
-          showLoading("กำลังสร้างรายงาน...");
-          // Create report first
-          let createResponse;
-          try {
-            createResponse = await CreateOutgoingReport(outgoingReportData);
-          } catch (apiError) {
-            console.error("🚨 API Call Error:", apiError);
-            throw apiError;
-          }
-
-          if (!createResponse) {
-            throw new Error("ไม่ได้รับ response จาก API");
-          }
-
-            const isSuccess =
-              createResponse.success === true ||
-              createResponse.success === 'true' ||
-              createResponse.res_code === '0001' ||
-              createResponse.res_message === 'CREATE_DATA_SUCCESSFULLY' ||
-              (createResponse.res_code && String(createResponse.res_code).startsWith('2')) ||
-              createResponse.status === 'success';
-
-          if (!isSuccess) {
-            const errorSources = [
-              createResponse?.res_data?.error,
-              createResponse?.res_data?.message,
-              createResponse?.res_message,
-              createResponse?.message,
-              createResponse?.error,
-            ].filter(Boolean);
-            const errorMessage = errorSources[0] || 'ไม่สามารถสร้างรายงานได้';
-            closeAlert();
-            await alertError('เกิดข้อผิดพลาด', errorMessage);
-            return { success: false, error: errorMessage };
-          }
-          reportId = createResponse.res_data?.id || createResponse?.id;
-          if (!reportId) {
-            throw new Error('ไม่พบ ID ของรายงานที่สร้างขึ้น');
-          }
+        } catch (updErr) {
+          closeAlert();
+          const msg = updErr?.response?.data?.res_message || updErr?.message || 'อัพเดตไม่สำเร็จ';
+          await alertError('เกิดข้อผิดพลาด', msg);
+          return { success: false, error: msg };
         }
-
-        // Upload files with multi-strategy fallback
-        if (fileData) {
-          showLoading("กำลังอัพโหลดไฟล์แนบ...");
-
-          const buildFormData = (useSingleKey = false) => {
-            const formData = new FormData();
-            if (Array.isArray(fileData)) {
-              fileData.forEach((f) => formData.append(useSingleKey ? 'file' : 'files', f, f.name));
-            } else {
-              formData.append(useSingleKey ? 'file' : 'files', fileData, fileData.name);
-            }
-            return formData;
-          };
-
-          let uploadOk = false;
-          let lastErrorMsg = '';
-
-          // Attempt 1: /outgoing-reports/{id}/attachments (generic endpoint)
-          try {
-            const up1 = await UploadOutgoingReportAttachments(buildFormData(false), reportId);
-            uploadOk = !!(up1 && (up1.success === true || up1.res_code === '0001'));
-            if (!uploadOk) {
-              lastErrorMsg = up1?.res_data?.error || up1?.res_message || up1?.message || '';
-            }
-          } catch (err1) {
-            const data = err1?.response?.data;
-            lastErrorMsg = data?.res_data?.error || data?.res_message || err1.message || '';
-            console.error('Upload attempt #1 (generic) failed', data || err1);
-          }
-
-          // Attempt 2: /outgoing-reports/{id}/attachments with single file key
-          if (!uploadOk && Array.isArray(fileData) && fileData.length === 1) {
-            try {
-              const up2 = await UploadOutgoingReportAttachments(buildFormData(true), reportId);
-              uploadOk = !!(up2 && (up2.success === true || up2.res_code === '0001'));
-              if (!uploadOk) {
-                lastErrorMsg = up2?.res_data?.error || up2?.res_message || up2?.message || lastErrorMsg;
-              }
-            } catch (err2) {
-              const data = err2?.response?.data;
-              lastErrorMsg = data?.res_data?.error || data?.res_message || err2.message || lastErrorMsg;
-              console.error('Upload attempt #2 (single key) failed', data || err2);
-            }
-          }
-
-          // Attempt 3: direct API call to /outgoing-reports/{id}/attachments
-          if (!uploadOk) {
-            try {
-              const up3 = await axiosInstance.post(`/outgoing-reports/${reportId}/attachments`, buildFormData(false));
-              uploadOk = !!up3?.data;
-            } catch (err3) {
-              const data = err3?.response?.data;
-              lastErrorMsg = data?.res_data?.error || data?.res_message || err3.message || lastErrorMsg;
-              console.error('Upload attempt #3 (direct API) failed', data || err3);
-            }
-          }
-
-          if (!uploadOk) {
-            console.warn('⚠️ บันทึกรายงานสำเร็จแต่แนบไฟล์ไม่สำเร็จ', lastErrorMsg);
-            // Don't throw error, just warn user
-          }
+      } else {
+        // CREATE
+        showLoading("กำลังสร้างรายงาน...");
+        let createResponse;
+        try {
+          createResponse = await CreateOutgoingReport(outgoingReportData);
+        } catch (apiError) {
+          console.error("🚨 API Call Error:", apiError);
+          throw apiError;
         }
+        if (!createResponse) throw new Error("ไม่ได้รับ response จาก API");
+        const isSuccess =
+          createResponse.success === true ||
+          createResponse.success === 'true' ||
+          createResponse.res_code === '0001' ||
+          createResponse.res_message === 'CREATE_DATA_SUCCESSFULLY' ||
+          (createResponse.res_code && String(createResponse.res_code).startsWith('2')) ||
+          createResponse.status === 'success';
+        if (!isSuccess) {
+          const errorSources = [
+            createResponse?.res_data?.error,
+            createResponse?.res_data?.message,
+            createResponse?.res_message,
+            createResponse?.message,
+            createResponse?.error,
+          ].filter(Boolean);
+          const errorMessage = errorSources[0] || 'ไม่สามารถสร้างรายงานได้';
+          closeAlert();
+          await alertError('เกิดข้อผิดพลาด', errorMessage);
+          return { success: false, error: errorMessage };
+        }
+        reportId = createResponse.res_data?.id || createResponse?.id;
+        if (!reportId) throw new Error('ไม่พบ ID ของรายงานที่สร้างขึ้น');
+      }
 
-        closeAlert();
-
-        const successMessage = `
-        <div style="text-align: center; line-height: 1.6;">
-          <p style="margin-bottom: 15px; font-size: 16px;">${routeId ? 'อัพเดตรายงานสำเร็จ' : 'บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว'}</p>
-          <p style="margin-bottom: 10px; color: #666;">รหัสรายงาน: <strong>${reportId}</strong></p>
-          <p style="margin-bottom: 10px; color: #666;">เรื่อง: <strong>${data.subject || '-'}</strong></p>
-          ${fileData
-            ? `<p style=\"color: #666;\">ไฟล์แนบ: <strong>${Array.isArray(fileData)
-              ? fileData.map((f) => f.name).join(', ')
-              : fileData.name
-            }</strong></p>`
-            : ''
-          }
-        </div>
-        `;
-
-        await alertSuccess(routeId ? 'อัพเดตสำเร็จ!' : 'บันทึกสำเร็จ!', successMessage, true);
-
-        // Determine desired return URL (query ?returnUrl=/path or ?from=/path)
-        const returnUrl = router?.query?.returnUrl || router?.query?.from;
-        const complaintId = router?.query?.complaint_id || router?.query?.id || id;
-
-        if (routeId) {
-          if (complaintId) {
-            // ใช้ path ที่ตรงกับโครงสร้างไฟล์ที่แท้จริง
-            router.push(`/admin/box/list/${complaintId}`);
-          } else if (returnUrl && typeof returnUrl === 'string') {
-            router.push(returnUrl);
-          } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
-            router.back();
+      // Upload files if any
+      if (fileData) {
+        showLoading("กำลังอัพโหลดไฟล์แนบ...");
+        const buildFormData = (useSingleKey = false) => {
+          const formData = new FormData();
+          if (Array.isArray(fileData)) {
+            fileData.forEach((f) => formData.append(useSingleKey ? 'file' : 'files', f, f.name));
           } else {
-            router.push('/admin/box/list');
+            formData.append(useSingleKey ? 'file' : 'files', fileData, fileData.name);
           }
-        } else {
+          return formData;
+        };
+        let uploadOk = false;
+        let lastErrorMsg = '';
+        try {
+          const up1 = await UploadOutgoingReportAttachments(buildFormData(false), reportId);
+          uploadOk = !!(up1 && (up1.success === true || up1.res_code === '0001'));
+          if (!uploadOk) {
+            lastErrorMsg = up1?.res_data?.error || up1?.res_message || up1?.message || '';
+          }
+        } catch (err1) {
+          const data = err1?.response?.data;
+          lastErrorMsg = data?.res_data?.error || data?.res_message || err1.message || '';
+        }
+        if (!uploadOk && Array.isArray(fileData) && fileData.length === 1) {
+          try {
+            const up2 = await UploadOutgoingReportAttachments(buildFormData(true), reportId);
+            uploadOk = !!(up2 && (up2.success === true || up2.res_code === '0001'));
+            if (!uploadOk) {
+              lastErrorMsg = up2?.res_data?.error || up2?.res_message || up2?.message || lastErrorMsg;
+            }
+          } catch (err2) {
+            const data = err2?.response?.data;
+            lastErrorMsg = data?.res_data?.error || data?.res_message || err2.message || lastErrorMsg;
+          }
+        }
+        if (!uploadOk) {
+          try {
+            const up3 = await axiosInstance.post(`/outgoing-reports/${reportId}/attachments`, buildFormData(false));
+            uploadOk = !!up3?.data;
+          } catch (err3) {
+            const data = err3?.response?.data;
+            lastErrorMsg = data?.res_data?.error || data?.res_message || err3.message || lastErrorMsg;
+          }
+        }
+        if (!uploadOk) {
+          // Warn only
+        }
+      }
+
+      closeAlert();
+
+      const successMessage = `
+      <div style="text-align: center; line-height: 1.6;">
+        <p style="margin-bottom: 15px; font-size: 16px;">${routeId ? 'อัพเดตรายงานสำเร็จ' : 'บันทึกแบบรายงานส่งหน่วยงานที่เกี่ยวข้องเรียบร้อยแล้ว'}</p>
+        <p style="margin-bottom: 10px; color: #666;">รหัสรายงาน: <strong>${reportId}</strong></p>
+        <p style="margin-bottom: 10px; color: #666;">เรื่อง: <strong>${data.subject || '-'}</strong></p>
+        ${fileData
+          ? `<p style="color: #666;">ไฟล์แนบ: <strong>${Array.isArray(fileData)
+            ? fileData.map((f) => f.name).join(', ')
+            : fileData.name
+          }</strong></p>`
+          : ''
+        }
+      </div>
+      `;
+      await alertSuccess(routeId ? 'อัพเดตสำเร็จ!' : 'บันทึกสำเร็จ!', successMessage, true);
+
+      // --------- RESET/REFRESH LOGIC ----------
+      if (routeId) {
+        // กรณีแก้ไข: โหลดข้อมูลล่าสุดมารีเฟรชฟอร์ม (แต่ไม่ redirect)
+        try {
+          const res = await axiosInstance.get(`/outgoing-reports/${reportId}`);
+          const d = res?.data?.res_data || res?.data || res;
+          if (!d) return;
           reset({
-            salutation: "",
-            salutation_is_other: false,
-            position_other_text: "",
-            complaint_number: "",
-            complaint_id: "",
-            complaint_number_date: null,
-            subject: "",
-            document_number: "",
-            document_date: null,
-            signer: "",
-            department: "",
-            confidentiality: "ปกติ",
-            urgency: "ปกติ",
-            attachment: "",
-            note: "",
+            salutation: d.salutation || "",
+            salutation_is_other: !!d.salutation_is_other,
+            position_other_text: d.position_other_text || "",
+            complaint_number: d.complaint_number || "",
+            complaint_id: d.complaint_id || "",
+            complaint_number_date: d.complaint_number_date ? new Date(d.complaint_number_date) : null,
+            subject: d.subject || "",
+            document_number: d.document_number || "",
+            document_date: d.document_date ? new Date(d.document_date) : null,
+            signer: d.signer || "",
+            department: d.department_id || "",
+            confidentiality: d.confidentiality_level || "ปกติ",
+            urgency: d.urgency_level || "ปกติ",
+            attachment: d.attachment || "",
+            note: d.remarks || "",
           });
           resetFileInput();
-          
-          if (complaintId) {
-            router.push(`/admin/box/list/${complaintId}`);
-          } else if (returnUrl && typeof returnUrl === 'string') {
-            router.push(returnUrl);
-          } else {
-            router.push('/admin/box/list');
-          }
+        } catch (err) {
+          // silent fail
         }
-
-        return { success: true, reportId };
-      } catch (error) {
-        closeAlert();
-        console.error("❌ Save error:", error);
-
-        let errorMessage = "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง";
-
-        if (error.response?.data) {
-          const responseData = error.response.data;
-
-          if (responseData.res_code === "4090") {
-            errorMessage =
-              responseData.res_data?.error || "เลข สป.กค. มีอยู่แล้ว";
-          } else {
-            errorMessage =
-              responseData.res_data?.error ||
-              responseData.res_message ||
-              responseData.message ||
-              errorMessage;
-          }
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-
-        await alertError("เกิดข้อผิดพลาด", errorMessage);
-        return { success: false, error };
+      } else {
+        // กรณีเพิ่มใหม่: ล้างค่าใหม่
+        reset({
+          salutation: "",
+          salutation_is_other: false,
+          position_other_text: "",
+          complaint_number: "",
+          complaint_id: "",
+          complaint_number_date: null,
+          subject: "",
+          document_number: "",
+          document_date: null,
+          signer: "",
+          department: "",
+          confidentiality: "ปกติ",
+          urgency: "ปกติ",
+          attachment: "",
+          note: "",
+        });
+        resetFileInput();
       }
-    },
+      // --------- END RESET/REFRESH LOGIC ----------
+
+      // --------- REFRESH PAGE ----------
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
+      // --------- END REFRESH PAGE ----------
+
+      return { success: true, reportId };
+    } catch (error) {
+      closeAlert();
+      console.error("❌ Save error:", error);
+
+      let errorMessage = "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง";
+      if (error.response?.data) {
+        const responseData = error.response.data;
+        if (responseData.res_code === "4090") {
+          errorMessage =
+            responseData.res_data?.error || "เลข สป.กค. มีอยู่แล้ว";
+        } else {
+          errorMessage =
+            responseData.res_data?.error ||
+            responseData.res_message ||
+            responseData.message ||
+            errorMessage;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      await alertError("เกิดข้อผิดพลาด", errorMessage);
+      return { success: false, error };
+    }
+  },
   [fileData, reset, resetFileInput, router, prepareFileAsFormData, setValue]
-  );
+);
 
   // ฟังก์ชันตรวจสอบว่า field ไหนที่มี error
   const getFieldError = useCallback(

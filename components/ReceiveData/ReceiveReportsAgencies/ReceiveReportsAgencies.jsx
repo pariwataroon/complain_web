@@ -498,6 +498,8 @@ const ReceiveReportsAgencies = () => {
     setExistingAttachments(prev => prev.filter(x => x.id !== att.id));
   }, [outgoingReport5Id]);
 
+// ...โค้ดข้างบน unchanged...
+
 const handleSave = useCallback(async () => {
   const missingFields = [];
   if (!form.processStep) missingFields.push("ขั้นตอนการดำเนินการ");
@@ -724,22 +726,11 @@ const handleSave = useCallback(async () => {
     closeAlert();
     await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
 
-    // ----- REDIRECT LOGIC -----
-    // ถ้ามี ?returnUrl หรือ ?from → ไป path นั้น
-    // ถ้ามี complaintId → ไป /admin/box/list/complaintId
-    // มิเช่นนั้น → ไป /admin/box/list
-    const returnUrl = router?.query?.returnUrl || router?.query?.from;
-    const cid = router?.query?.complaint_id || router?.query?.id || complaintId;
-
-    if (cid) {
-      router.push(`/admin/box/list/${cid}`);
-    } else if (returnUrl && typeof returnUrl === 'string') {
-      router.push(returnUrl);
-    } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push('/admin/box/list');
+    // --------- REFRESH PAGE (อยู่หน้าเดิมและ reload) ---------
+    if (typeof window !== "undefined") {
+      window.location.reload();
     }
+    // --------- END REFRESH PAGE ----------
     handleClear();
   } catch (error) {
     const code = error?.response?.data?.res_code || error?.response?.status;
