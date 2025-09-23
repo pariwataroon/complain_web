@@ -32,6 +32,8 @@ from app.api.v1.routers.outgoing_report4_router import router as outgoing_report
 from app.api.v1.routers.outgoing_report5_router import router as outgoing_report5_router_v1
 from app.api.v1.routers.outgoing_report6_router import router as outgoing_report6_router_v1
 from app.api.v1.routers.consolidated_report_router import router as consolidated_report_router_v1
+from app.api.v1.routers.new_additional_complaints_report_router import router as new_additional_complaints_report_router_v1
+from app.api.v1.routers.pending_tasks_report_router import router as pending_tasks_report_router_v1
 from app.api.v1.routers.chat_bot_router import router as chat_bot_router_v1
 from app.api.v1.routers.news_router import router as news_router_v1
 # from app.api.v1.routers.file_management_router import router as file_management_router_v1
@@ -77,6 +79,8 @@ v1_router.include_router(outgoing_report4_router_v1)
 v1_router.include_router(outgoing_report5_router_v1)
 v1_router.include_router(outgoing_report6_router_v1)
 v1_router.include_router(consolidated_report_router_v1)
+v1_router.include_router(new_additional_complaints_report_router_v1)
+v1_router.include_router(pending_tasks_report_router_v1)
 v1_router.include_router(chat_bot_router_v1)
 v1_router.include_router(news_router_v1)
 # v1_router.include_router(file_management_router_v1)
