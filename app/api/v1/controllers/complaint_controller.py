@@ -264,6 +264,65 @@ def update_complaint_details(db: Session, complaint_id: UUID, update_data: Dict[
         db.rollback()
         raise
 
+def update_complaint_generic(
+    db: Session,
+    complaint_id: UUID,
+    update_data: Dict[str, Any],
+    user_id: Optional[UUID],
+    is_admin: bool = False
+) -> Complaint:
+    """อัพเดท complaint แบบ flexible พร้อมตรวจสิทธิ์ field-level
+
+    is_admin = True  -> สามารถแก้ไข field ส่วนใหญ่ (ยกเว้น status ใช้ endpoint เฉพาะ)
+    is_admin = False -> จำกัดให้อัพเดทเฉพาะข้อมูลพื้นฐานของผู้ร้องเอง
+    """
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not complaint:
+        raise ValueError("Complaint not found")
+
+    # ถ้าไม่ใช่ admin ต้องเป็นเจ้าของเรื่อง
+    if not is_admin:
+        if not complaint.created_by or str(complaint.created_by) != str(user_id):
+            raise PermissionError("You are not allowed to update this complaint")
+
+    # กำหนด field ที่แก้ไขได้
+    admin_allowed = {
+        "subject", "description", "complaint_type", "complaint_type_id", "complaint_subtype_id",
+        "complaint_channel_id", "incident_date",
+        "incident_province_id", "incident_province", "incident_district_id", "incident_district",
+        "incident_subdistrict_id", "incident_subdistrict", "urgency_level", "confidentiality_level",
+        "severity_level", "assigned_to", "assigned_officer_id", "assigned_remark", "progress_percentage",
+        "processing_notes", "reference_number", "reference_date", "reference_number2", "reference_date2",
+        "reference_number3", "reference_date3", "reference_number4", "reference_date4",
+        "additional_reference_number1", "additional_reference_date1", "additional_reference_number2",
+        "additional_reference_date2", "document_number", "document_date", "director_submission_date",
+        "complaint_filing_type", "parent_complaint_id", "related_complaints"
+    }
+    self_allowed = {"subject", "description", "incident_date", "complainant_data", "respondent_data"}
+
+    allowed_fields = admin_allowed if is_admin else self_allowed
+
+    import json as _json
+    changes = {}
+    for field, value in update_data.items():
+        if field not in allowed_fields:
+            continue
+        # แปลง json field
+        if field in ["complainant_data", "respondent_data"] and value is not None:
+            setattr(complaint, field, _json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value)
+        else:
+            setattr(complaint, field, value)
+        changes[field] = value
+
+    if not changes:
+        raise ValueError("No valid fields to update")
+
+    complaint.updated_at = datetime.now()
+    create_status_history(db, complaint.id, complaint.status, f"Updated fields: {', '.join(changes.keys())}", user_id)
+    db.commit()
+    db.refresh(complaint)
+    return complaint
+
 # ✅ เติมฟังก์ชันที่ขาดหายไป
 def get_respondent_data_by_type(step2_general: Dict, data_type: str) -> Dict:
     """ดึงข้อมูลผู้ถูกร้องตามประเภทที่ระบุ"""

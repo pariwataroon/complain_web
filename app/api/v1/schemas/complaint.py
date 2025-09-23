@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID
 from models.comp_complaint import ComplaintStatus
 from .pagination import PaginatedResponse
+from models.comp_complaint import ConfidentialityLevel, UrgencyLevel, SeverityLevel, ComplaintFilingType
 
 class ComplaintCreate(BaseModel):
     # Direct fields instead of nested structure
@@ -155,5 +156,63 @@ class SatisfactionUpdate(BaseModel):
     rating: int
     comment: Optional[str] = None
     
+    class Config:
+        from_attributes = True
+
+
+class ComplaintUpdateAdmin(BaseModel):
+    """ฟอร์มอัพเดทสำหรับผู้ดูแล (แก้ไขได้เกือบทุกฟิลด์ที่ไม่ใช่ status)"""
+    subject: Optional[str] = None
+    description: Optional[str] = None
+    complaint_type: Optional[str] = None
+    complaint_type_id: Optional[UUID] = None
+    complaint_subtype_id: Optional[UUID] = None
+    complaint_channel_id: Optional[UUID] = None
+    incident_date: Optional[datetime] = None
+    incident_province_id: Optional[int] = None
+    incident_province: Optional[str] = None
+    incident_district_id: Optional[int] = None
+    incident_district: Optional[str] = None
+    incident_subdistrict_id: Optional[str] = None
+    incident_subdistrict: Optional[str] = None
+    urgency_level: Optional[UrgencyLevel] = None
+    confidentiality_level: Optional[ConfidentialityLevel] = None
+    severity_level: Optional[SeverityLevel] = None
+    assigned_to: Optional[str] = None
+    assigned_officer_id: Optional[UUID] = None
+    assigned_remark: Optional[str] = None
+    progress_percentage: Optional[int] = None
+    processing_notes: Optional[str] = None
+    reference_number: Optional[str] = None
+    reference_date: Optional[datetime] = None
+    reference_number2: Optional[str] = None
+    reference_date2: Optional[datetime] = None
+    reference_number3: Optional[str] = None
+    reference_date3: Optional[datetime] = None
+    reference_number4: Optional[str] = None
+    reference_date4: Optional[datetime] = None
+    additional_reference_number1: Optional[str] = None
+    additional_reference_date1: Optional[datetime] = None
+    additional_reference_number2: Optional[str] = None
+    additional_reference_date2: Optional[datetime] = None
+    document_number: Optional[str] = None
+    document_date: Optional[datetime] = None
+    director_submission_date: Optional[datetime] = None
+    complaint_filing_type: Optional[ComplaintFilingType] = None
+    parent_complaint_id: Optional[UUID] = None
+    related_complaints: Optional[List[str]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ComplaintUpdateSelf(BaseModel):
+    """ฟอร์มอัพเดทสำหรับผู้ร้อง (แก้ไขเฉพาะข้อมูลพื้นฐานตนเอง)"""
+    subject: Optional[str] = None
+    description: Optional[str] = None
+    incident_date: Optional[datetime] = None
+    complainant_data: Optional[Dict[str, Any]] = None
+    respondent_data: Optional[Dict[str, Any]] = None
+
     class Config:
         from_attributes = True

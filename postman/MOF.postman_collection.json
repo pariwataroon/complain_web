@@ -12040,11 +12040,51 @@
 							"path": ["api", "v1", "news", "{{news_id}}", "displayable"]
 						},
 						"description": "ตรวจสอบว่าข่าวสามารถแสดงได้ในเวลาปัจจุบันหรือไม่ - ใช้ API Key สำหรับ authentication"
+								},
+								"response": []
+							}
+						],
+						"description": "API สำหรับจัดการระบบข่าวสาร - การสร้าง, แก้ไข, ลบ, ค้นหา, จัดการ gallery รูปภาพ, ลิงก์เพิ่มเติม, การนับผู้ชม, และการกำหนดช่วงเวลาแสดงข่าว\n\n**คุณสมบัติหลัก:**\n- CRUD operations สำหรับข่าว\n- Gallery management (เพิ่ม/ลบ/อัปเดตรูปภาพ)\n- Additional links management\n- View counting with caching system\n- Display scheduling (กำหนดช่วงเวลาแสดง)\n- Search functionality\n- แยก admin endpoints และ public endpoints\n- ระบบ cache สำหรับ view count เพื่อประสิทธิภาพ\n\n**การยืนยันตัวตน:**\n- Admin endpoints: ใช้ Bearer Token + สิทธิ์ homepage_news\n- Public endpoints: ใช้ X-API-Key header"
+						},
+		{
+			"name": "COMPLAINTS & REPORTS",
+			"item": [
+				{
+					"name": "complaints/{complaint_id} - Admin Update Complaint",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\n  \"subject\": \"อัพเดทหัวข้อ (admin)\",\n  \"description\": \"รายละเอียดแก้ไขโดยผู้ดูแล\",\n  \"urgency_level\": \"HIGH\",\n  \"confidentiality_level\": \"SECRET\",\n  \"progress_percentage\": 45,\n  \"reference_number\": \"นร 0101/1234\",\n  \"reference_date\": \"2025-09-01T10:00:00\"\n}"},
+						"url": {"raw": "{{API}}{{PREFIX}}/complaints/{{complaint_id}}", "host": ["{{API}}{{PREFIX}}"], "path": ["complaints", "{{complaint_id}}"]},
+						"description": "อัพเดทเรื่องร้องเรียน (admin/officer) ใช้สิทธิ์ setting_access:update | แก้ไขได้หลายฟิลด์ (ยกเว้น status)"
 					},
+					"response": []
+				},
+				{
+					"name": "complaints/me/{complaint_id} - Self Update Complaint",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {"mode": "raw", "raw": "{\n  \"subject\": \"แก้ไขหัวข้อโดยผู้ร้อง\",\n  \"description\": \"รายละเอียดที่แก้ไขเอง\",\n  \"incident_date\": \"2025-09-10T09:30:00\",\n  \"complainant_data\": { \"fullName\": \"นายทดสอบ ใจดี\", \"phone\": \"0812345678\" }\n}"},
+						"url": {"raw": "{{API}}{{PREFIX}}/complaints/me/{{complaint_id}}", "host": ["{{API}}{{PREFIX}}"], "path": ["complaints", "me", "{{complaint_id}}"]},
+						"description": "ผู้ร้องอัพเดทเรื่องของตนเอง จำกัดเฉพาะ subject, description, incident_date, complainant_data, respondent_data"
+					},
+					"response": []
+				},
+				{
+					"name": "reports/new-additional-complaints",
+					"request": {"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]}, "method": "GET", "header": [], "url": {"raw": "{{API}}{{PREFIX}}/reports/new-additional-complaints?skip=0&limit=20&date_from=&date_to=&department_id=&officer_id=&search=", "host": ["{{API}}{{PREFIX}}"], "path": ["reports", "new-additional-complaints"], "query": [{"key": "skip", "value": "0"}, {"key": "limit", "value": "20"}, {"key": "date_from", "value": ""}, {"key": "date_to", "value": ""}, {"key": "department_id", "value": ""}, {"key": "officer_id", "value": ""}, {"key": "search", "value": ""}]}, "description": "รายงาน: เรื่องเข้าใหม่และเพิ่มเติม (NEW / ADDITIONAL)"},
+					"response": []
+				},
+				{
+					"name": "reports/pending-tasks",
+					"request": {"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]}, "method": "GET", "header": [], "url": {"raw": "{{API}}{{PREFIX}}/reports/pending-tasks?skip=0&limit=20&date_from=&date_to=&department_id=&officer_id=&status=&search=", "host": ["{{API}}{{PREFIX}}"], "path": ["reports", "pending-tasks"], "query": [{"key": "skip", "value": "0"}, {"key": "limit", "value": "20"}, {"key": "date_from", "value": ""}, {"key": "date_to", "value": ""}, {"key": "department_id", "value": ""}, {"key": "officer_id", "value": ""}, {"key": "status", "value": ""}, {"key": "search", "value": ""}]}, "description": "รายงาน: งานค้าง (pending/in-progress) + days_in_progress"},
 					"response": []
 				}
 			],
-			"description": "API สำหรับจัดการระบบข่าวสาร - การสร้าง, แก้ไข, ลบ, ค้นหา, จัดการ gallery รูปภาพ, ลิงก์เพิ่มเติม, การนับผู้ชม, และการกำหนดช่วงเวลาแสดงข่าว\n\n**คุณสมบัติหลัก:**\n- CRUD operations สำหรับข่าว\n- Gallery management (เพิ่ม/ลบ/อัปเดตรูปภาพ)\n- Additional links management\n- View counting with caching system\n- Display scheduling (กำหนดช่วงเวลาแสดง)\n- Search functionality\n- แยก admin endpoints และ public endpoints\n- ระบบ cache สำหรับ view count เพื่อประสิทธิภาพ\n\n**การยืนยันตัวตน:**\n- Admin endpoints: ใช้ Bearer Token + สิทธิ์ homepage_news\n- Public endpoints: ใช้ X-API-Key header"
+			"description": "กลุ่ม endpoint สำหรับอัพเดทข้อร้องเรียน (admin/self) และรายงานใหม่"
 		}
 	],
 	"event": [

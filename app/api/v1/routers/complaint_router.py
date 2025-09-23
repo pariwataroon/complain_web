@@ -18,10 +18,11 @@ from app.api.v1.controllers.complaint_controller import (
     add_related_complaint, 
     get_my_complaint_by_id, 
     get_complaint_by_id_with_assignment,
-    get_complaints_grouped_by_channel
+    get_complaints_grouped_by_channel,
+    update_complaint_generic,
 )
 from app.api.v1.controllers.outgoing_report_controller import get_outgoing_tracking, get_user_related_complaints_with_tracking
-from app.api.v1.schemas.complaint import StatusUpdateRequest
+from app.api.v1.schemas.complaint import StatusUpdateRequest, ComplaintUpdateAdmin, ComplaintUpdateSelf
 from models.comp_complaint import Complaint, ComplaintStatus, SeverityLevel, SatisfactionRating
 from config.database import get_db
 from lib.format_data import FormatResponseModel, format_response
@@ -30,6 +31,62 @@ router = APIRouter(
     prefix="/complaints",
     tags=["complaints"],
 )
+
+@router.put("/{complaint_id}", response_model=FormatResponseModel)
+async def admin_update_complaint(
+    complaint_id: UUID,
+    payload: ComplaintUpdateAdmin,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(can_update("setting_access"))
+):
+    """Admin (เจ้าหน้าที่) update complaint fields (ยกเว้น status)"""
+    try:
+        updated = update_complaint_generic(
+            db=db,
+            complaint_id=complaint_id,
+            update_data=payload.dict(exclude_unset=True),
+            user_id=UUID(current_user) if current_user else None,
+            is_admin=True,
+        )
+        return format_response("0002", {
+            "id": str(updated.id),
+            "updated_at": updated.updated_at,
+            "message": "COMPLAINT_UPDATED"
+        })
+    except ValueError as e:
+        return format_response("4000", {"error": str(e)})
+    except PermissionError as e:
+        return format_response("4003", {"error": str(e)})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
+@router.put("/me/{complaint_id}", response_model=FormatResponseModel)
+async def self_update_complaint(
+    complaint_id: UUID,
+    payload: ComplaintUpdateSelf,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """Owner (ผู้ร้อง) update limited complaint fields"""
+    try:
+        updated = update_complaint_generic(
+            db=db,
+            complaint_id=complaint_id,
+            update_data=payload.dict(exclude_unset=True),
+            user_id=UUID(current_user) if current_user else None,
+            is_admin=False,
+        )
+        return format_response("0002", {
+            "id": str(updated.id),
+            "updated_at": updated.updated_at,
+            "message": "COMPLAINT_UPDATED_SELF"
+        })
+    except ValueError as e:
+        return format_response("4000", {"error": str(e)})
+    except PermissionError as e:
+        return format_response("4003", {"error": str(e)})
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
 
 @router.post("", response_model=FormatResponseModel)
 async def create_new_complaint(
