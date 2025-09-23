@@ -1318,6 +1318,8 @@ def _get_yearly_summary(db: Session, year: Optional[int], now_bkk: datetime, tz_
     
     # กราฟรายเดือนของปีปัจจุบัน
     monthly_chart = _get_monthly_chart_data(db, current_year_g, tz_bkk)
+    # เพิ่ม breakdown รายเดือนตามหน่วยงาน
+    monthly_department_chart = _get_monthly_department_breakdown(db, current_year_g, tz_bkk)
     
     return {
         "period_type": "yearly",
@@ -1342,7 +1344,8 @@ def _get_yearly_summary(db: Session, year: Optional[int], now_bkk: datetime, tz_
             }
         },
         "chart_data": {
-            "monthly_breakdown": monthly_chart
+            "monthly_breakdown": monthly_chart,
+            "monthly_breakdown_department": monthly_department_chart
         }
     }
 
@@ -1671,6 +1674,85 @@ def _get_daily_chart_data(db: Session, year: int, month: int, tz_bkk) -> List[Di
         })
     
     return chart_data
+
+def _get_monthly_department_breakdown(db: Session, year: int, tz_bkk) -> List[Dict[str, Any]]:
+    """สรุปจำนวนเรื่องร้องเรียนรายเดือน แยกตามหน่วยงาน (department)
+    รูปแบบผลลัพธ์:
+    [
+      {
+        "month": 1,
+        "month_name": "มกราคม",
+        "departments": [
+            {"department_id": "...", "department_name": "...", "count": 5},
+            ... (เรียงจากมากไปน้อย)
+        ],
+        "total": 123
+      }, ...
+    ]
+    หลักการ:
+      - ผูก complaint ↔ department ผ่าน outgoing_reports(1–4) (เหมือน ranking)
+      - distinct(complaint_id, department_id) กันซ้ำ (เรื่องเดียวไปหลายครั้ง)
+      - ใช้ช่วงเวลาแต่ละเดือนในปีที่ระบุ (เวลาไทย -> UTC) เช่นเดียวกับฟังก์ชันอื่น
+    """
+    # เตรียม union mapping ของ outgoing_reports 1–4
+    r1 = select(OutgoingReport.complaint_id.label("complaint_id"), OutgoingReport.department_id.label("department_id"))
+    r2 = select(OutgoingReport2.complaint_id.label("complaint_id"), OutgoingReport2.department_id.label("department_id"))
+    r3 = select(OutgoingReport3.complaint_id.label("complaint_id"), OutgoingReport3.department_id.label("department_id"))
+    r4 = select(OutgoingReport4.complaint_id.label("complaint_id"), OutgoingReport4.department_id.label("department_id"))
+    union_q = union_all(r1, r2, r3, r4).subquery("rep_union_yearly_dept")
+    link_q = select(
+        distinct(union_q.c.complaint_id).label("complaint_id"),
+        union_q.c.department_id.label("department_id")
+    ).subquery("link_distinct_yearly_dept")
+
+    results: List[Dict[str, Any]] = []
+    month_names = ["", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
+
+    for month in range(1, 13):
+        # คำนวณกรอบเวลาของเดือน (ตาม BKK)
+        bkk_start = datetime(year, month, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year, month, 1, 0, 0, 0)
+        if month == 12:
+            next_month_start = datetime(year + 1, 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year + 1, 1, 1, 0, 0, 0)
+        else:
+            next_month_start = datetime(year, month + 1, 1, 0, 0, 0, tzinfo=tz_bkk) if tz_bkk else datetime(year, month + 1, 1, 0, 0, 0)
+        bkk_end = next_month_start - timedelta(microseconds=1)
+        utc_start = bkk_start.astimezone(timezone.utc) if bkk_start.tzinfo else bkk_start
+        utc_end = bkk_end.astimezone(timezone.utc) if bkk_end.tzinfo else bkk_end
+
+        # คิวรีนับจำนวนเรื่องต่อ department สำหรับเดือนนี้
+        rows = (
+            db.query(
+                link_q.c.department_id.label("dept_id"),
+                Department.name.label("dept_name"),
+                func.count(distinct(Complaint.id)).label("cnt")
+            )
+            .join(Complaint, Complaint.id == link_q.c.complaint_id)
+            .outerjoin(Department, Department.id == link_q.c.department_id)
+            .filter(Complaint.created_at.between(utc_start, utc_end))
+            .group_by(link_q.c.department_id, Department.name)
+            .all()
+        )
+
+        # เรียงมากไปน้อย
+        sorted_rows = sorted(rows, key=lambda r: (int(r.cnt or 0), r.dept_name or ""), reverse=True)
+        departments_list = [
+            {
+                "department_id": str(r.dept_id) if r.dept_id else None,
+                "department_name": r.dept_name or "ไม่ระบุ",
+                "count": int(r.cnt or 0)
+            }
+            for r in sorted_rows
+        ]
+        total_month = sum(d["count"] for d in departments_list)
+
+        results.append({
+            "month": month,
+            "month_name": month_names[month],
+            "total": total_month,
+            "departments": departments_list
+        })
+
+    return results
 
 def _get_quarterly_chart_data(db: Session, year: int, quarter: int, tz_bkk) -> List[Dict[str, Any]]:
     """สร้างข้อมูลกราฟรายเดือนของไตรมาส"""
