@@ -618,14 +618,18 @@ def _load_raw_map_json(path: Optional[str] = None) -> Dict[str, Any]:
 def _invert_thai_to_hckey(mapping: Dict[str, str]) -> Dict[str, str]:
     """
     กลับ mapping เป็น: ชื่อจังหวัดไทย -> hc-key
-    ถ้าซ้ำ ให้บังคับกรุงเทพฯ เป็น th-bk (มาตรฐาน Highcharts Thailand)
+    เดิมมีการ 'บังคับ' ให้กรุงเทพมหานคร = th-bk เสมอ ซึ่งทำให้เกิดปัญหา
+    หากไฟล์ seed ใช้ code อื่น (เช่น th-bm สำหรับ กรุงเทพมหานคร และ th-bk สำหรับ บึงกาฬ)
+    ส่งผลให้จำนวนเคสของกรุงเทพฯ ไปลงที่รหัสจังหวัดของบึงกาฬ
+
+    แก้ไข: เคารพ mapping จากไฟล์ seed ตามจริง ไม่บังคับ override อีกต่อไป
+    หากต้องการ normalize ภายหลัง ควรทำใน layer แสดงผล (frontend) หรือเพิ่ม config
     """
     rev = {}
     for hckey, thname in (mapping or {}).items():
         if thname:
             rev.setdefault(thname.strip(), hckey)
-    if "กรุงเทพมหานคร" in rev:
-        rev["กรุงเทพมหานคร"] = "th-bk"
+    # ไม่ override ใดๆ เพื่อหลีกเลี่ยงการสลับจังหวัด
     return rev
 
 def _zero_fill_series(all_keys: List[str], counts: Dict[str, int]) -> List[Dict[str, Any]]:
