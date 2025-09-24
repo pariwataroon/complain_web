@@ -418,7 +418,9 @@ const SearchComplaints = () => {
 
   // Prefill responsible officer from last saved value (assigned_officer_id)
   useEffect(() => {
-    const assignedId = defaultData?.assignment_form?.assigned_officer_id;
+    const assignedId =
+      defaultData?.assignment_form?.assigned_to ??
+      defaultData?.assignment_form?.assigned_officer_id;
     if (!assignedId) return;
 
     const value = String(assignedId);
@@ -516,6 +518,17 @@ const SearchComplaints = () => {
       const step3Data = data?.step3?.general || {};
       const assignmentForm = data?.assignment_form || {};
       const step4Data = data?.step4?.general || {};
+      const step4DataMerged = {
+        ...step4Data,
+        officerReceivedDate:
+          step4Data.officerReceivedDate ||
+          assignmentForm.confirm_assigned_date ||
+          null,
+        directorSubmittedDate:
+          step4Data.directorSubmittedDate ||
+          assignmentForm.director_submission_date ||
+          null,
+      };
 
       // === เพิ่ม logic ตรงนี้เพื่อหา complaintTypeId จาก label ===
       let complaintTypeId = "";
@@ -621,13 +634,15 @@ const SearchComplaints = () => {
       }
 
       defaultStep3Ref.current = step3DataWithDefaults;
-      defaultStep4Ref.current = step4Data;
+      // defaultStep4Ref.current = step4Data;
+      defaultStep4Ref.current = step4DataMerged;
 
       generalMethods.reset(cData);
       delegateMethods.reset(dData);
       step2Methods.reset(rData);
       step3Methods.reset(step3DataWithDefaults);
-      step4Methods.reset(step4Data);
+      // step4Methods.reset(step4Data);
+      step4Methods.reset(step4DataMerged);
 
       // === โหลดประเภทเรื่องย่อยหลัง reset (ถ้ามี complaintTypeId) ===
       if (complaintTypeId) {
@@ -1932,9 +1947,9 @@ const SearchComplaints = () => {
                               label="วันที่รับงานของเจ้าหน้าที่"
                               name="officerReceivedDate"
                               control={step4Methods.control}
-                              defaultValue={
-                                defaultData?.assignment_form?.confirm_assigned_date
-                              }
+                              // defaultValue={
+                              //   defaultData?.assignment_form?.confirm_assigned_date
+                              // }
                               time={true}
                             />
                           </div>
@@ -1945,9 +1960,9 @@ const SearchComplaints = () => {
                               label="วันที่เสนองาน ผอ.สรร."
                               name="directorSubmittedDate"
                               control={step4Methods.control}
-                              defaultValue={
-                                defaultData?.assignment_form?.director_submission_date
-                              }
+                              // defaultValue={
+                              //   defaultData?.assignment_form?.director_submission_date
+                              // }
                               time={true}
                             />
                           </div>

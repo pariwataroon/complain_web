@@ -260,6 +260,25 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
     // ดึง complaintTypeId จาก props (root level)
     const complaintTypeId = baseData.complaintTypeId || "";
 
+    const toISO = (v) => {
+      if (!v) return null;
+      try {
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? null : d.toISOString();
+      } catch {
+        return null;
+      }
+    };  
+
+    const confirmAssignedDate =
+      step4General.officerReceivedDate ??
+      baseData.assignment_form?.confirm_assigned_date ??
+      null;
+    const directorSubmissionDate =
+      step4General.directorSubmittedDate ??
+      baseData.assignment_form?.director_submission_date ??
+      null;
+
     return {
       ...baseData,
       complaintTypeId, // แนบไว้ที่ root ส่งไป backend
@@ -270,6 +289,15 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
           responsibleOfficer: responsibleOfficerValue,
           responsibleOfficerId: responsibleOfficerValue,
         },
+      },
+       assignment_form: {
+        ...(baseData.assignment_form || {}),
+        confirm_assigned_date: toISO(confirmAssignedDate),
+        director_submission_date: toISO(directorSubmissionDate),
+        assigned_officer_id:
+          responsibleOfficerValue ||
+          baseData.assignment_form?.assigned_officer_id ||
+          "",
       },
     };
   }
@@ -576,6 +604,16 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
     }
     return ro || "-";
   })();
+
+  const officerReceived =
+    additionalDetails.officerReceivedDate ||
+    assignmentForm.confirm_assigned_date ||
+    null;
+    
+  const directorSubmitted =
+    additionalDetails.directorSubmittedDate ||
+    assignmentForm.director_submission_date ||
+    null;
 
   return (
     <>
@@ -908,14 +946,14 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
 
             {/* วันที่รับเรื่องและเสนองาน */}
             <Grid container spacing={2} mb={3}>
-              <InfoItem
-                label="วันที่รับเรื่องของเจ้าพนักงาน"
-                value={formatThaiFullDateTime(additionalDetails.officerReceivedDate || "-")}
-              />
-              <InfoItem
-                label="วันที่เสนองาน ผอ.สรร."
-                value={formatThaiFullDateTime(additionalDetails.directorSubmittedDate || "-")}
-              />
+             <InfoItem
+               label="วันที่รับเรื่องของเจ้าพนักงาน"
+               value={formatThaiFullDateTime(officerReceived) || "-"}
+             />
+             <InfoItem
+               label="วันที่เสนองาน ผอ.สรร."
+               value={formatThaiFullDateTime(directorSubmitted) || "-"}
+             />
             </Grid>
 
             {/* ไฟล์แนบ */}

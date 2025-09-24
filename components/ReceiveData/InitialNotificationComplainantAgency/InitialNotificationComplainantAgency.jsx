@@ -57,6 +57,9 @@ const InitialNotificationComplainantAgency = () => {
   handleDeleteExistingAttachment,
   externalDepartments,
   isLoadingDepartments,
+  handleDepartmentSelect,
+  selectedDepartment, 
+  setSelectedDepartment,
 } = useInitialNotificationComplainantAgency();
 
   const router = useRouter();
@@ -67,7 +70,7 @@ const InitialNotificationComplainantAgency = () => {
 
   // State สำหรับ dynamic data
   const [selectedSigner, setSelectedSigner] = useState(null);
-  const [selectedDepartment, setSelectedDepartment] = useState(null);
+  // const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [confidentialityOptions, setConfidentialityOptions] = useState([
     { value: "1", label: "ปกติ" },
     { value: "2", label: "ลับ" },
@@ -199,14 +202,33 @@ const InitialNotificationComplainantAgency = () => {
 
     handleChange({ target: { name: "position_id", value: posId } });
 
-    setSelectedDepartment(null);
-    handleChange({ target: { name: "department", value: "" } });
+    if (form.salutation_is_other) {
+      setSelectedDepartment(null);
+      handleChange({ target: { name: "outside_department_id", value: "" } });
+    }
   };
 
-  const handleDepartmentSelect = (department) => {
-    setSelectedDepartment(department);
-    handleChange({ target: { name: "department", value: department?.id || "" } });
-  };
+  // const handleDepartmentSelect = (arg1, arg2) => {
+  //   // รองรับทั้ง (event, newValue) และ (option)
+  //   let option = (arg2 !== undefined) ? arg2 : arg1;
+  //   // ถ้ามาเป็น event ให้ลอง map จาก value กลับเป็น option
+  //   if (option && option.target) {
+  //     const raw = option.target.value ?? "";
+  //     option =
+  //       externalDepartments.find(
+  //         d => String(d.id) === String(raw) ||
+  //               String(d.value) === String(raw) ||
+  //               d.label === raw || d.name === raw
+  //       ) || (raw ? { id: raw, value: raw, label: raw } : null);
+  //   }
+  //   const deptId = option?.id || option?.value || "";
+  //   setSelectedDepartment(option || null);
+  //   handleChange({ target: { name: "outside_department_id", value: deptId } });
+  //   // if (deptId) {
+  //   //   // ล้างข้อความ error ทันที
+  //   //   setErrors(prev => ({ ...prev, outside_department_id: null }));
+  //   // }
+  // };
 
   // ฟังก์ชันล้างข้อมูลที่อัพเดทแล้ว
   const handleClearExtended = () => {
@@ -242,7 +264,7 @@ const InitialNotificationComplainantAgency = () => {
             handleChange({ target: { name: 'position_other_text', value: d.position_other_text } });
           }
           // clear department in special case
-          handleChange({ target: { name: 'department', value: '' } });
+          handleChange({ target: { name: 'outside_department_id', value: '' } });
           setSelectedDepartment(null);
         }
 
@@ -258,15 +280,15 @@ const InitialNotificationComplainantAgency = () => {
         handleChange({ target: { name: 'position_id', value: posId } });
 
         if (!isOther) {
-          handleChange({ target: { name: 'department', value: d.department?.id || "" } });
-          const deptObj = d.department
+          const deptObj = d.outside_department || d.department
             ? {
-                value: d.department.id,
-                label: d.department.name,
-                code: d.department.code || "",
-                shortName: d.department.short_name || d.department.shortName || "",
+                value: (d.outside_department?.id || d.department?.id),
+                label: (d.outside_department?.name || d.department?.name),
+                code: (d.outside_department?.code || d.department?.code || ""),
+                shortName: (d.outside_department?.short_name || d.department?.short_name || d.outside_department?.shortName || d.department?.shortName || ""),
               }
             : null;
+          handleChange({ target: { name: 'outside_department_id', value: deptObj?.value || "" } });
           setSelectedDepartment(deptObj);
         }
 
@@ -353,7 +375,7 @@ const InitialNotificationComplainantAgency = () => {
                 const isOther = specialList.includes(label);
                 handleChange({ target: { name: 'salutation_is_other', value: isOther } });
                 if (isOther) {
-                  handleChange({ target: { name: 'department', value: '' } });
+                  handleChange({ target: { name: 'outside_department_id', value: '' } });
                   setSelectedDepartment(null);
                 } else {
                   handleChange({ target: { name: 'position_other_text', value: '' } });
@@ -364,36 +386,25 @@ const InitialNotificationComplainantAgency = () => {
             />
           {/* แสดงฟิลด์หน่วยงานเฉพาะเมื่อไม่ใช่กรณีพิเศษ */}
             {!form.salutation_is_other && (() => {
-              let deptValue = null;
-              try {
-                // ใช้เฉพาะ selectedDepartment ที่ถูก clear แล้วในกรณีพิเศษ
-                if (selectedDepartment && !form.salutation_is_other) {
-                  deptValue = selectedDepartment;
-                } else {
-                  const fd = form.department;
-                  if (fd && !form.salutation_is_other) {
-                    const found = externalDepartments && externalDepartments.find(d => String(d.id) === String(fd));
-                    if (found) {
-                      deptValue = found;
-                    } else {
-                      deptValue = { value: String(fd), label: String(fd) };
-                    }
-                  }
-                }
-              } catch (_) { deptValue = null; }
+               const deptValue = (() => {
+                if (selectedDepartment) return selectedDepartment;
+                const id = form.outside_department_id;
+                if (!id) return null;
+                const found = externalDepartments?.find(d => String(d.id) === String(id));
+                return found || { value: String(id), label: String(id) };
+              })();
 
                 return (
                   <SelectFieldDepartmentoutside
-                    label={createLabel('หน่วยงาน / ผู้ร้อง', 'department')}
-                    name='department'
+                    label={createLabel('หน่วยงาน / ผู้ร้อง', 'outside_department_id')}
+                    name='outside_department_id'
                     value={deptValue}
                     onChange={handleDepartmentSelect}
-                    onDepartmentSelect={handleDepartmentSelect}
-                    error={!!getFieldError('department')}
-                    helperText={getFieldError('department')}
+                    error={!!getFieldError('outside_department_id')}
+                    helperText={getFieldError('outside_department_id')}
                     disabled={false}
                     placeholder='เลือกหน่วยงาน / ผู้ร้อง'
-                    allowCreate={true}
+                    allowCreate={false}
                   />
                 );
               })()}

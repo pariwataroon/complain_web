@@ -264,6 +264,7 @@ const SearchComplaintsPreview = ({
           resData.step3?.general?.urgency_level ||
           step4General.urgency_level ||
           "low",
+        channel: channelName,
       },
     };
   };
@@ -666,7 +667,7 @@ const handleSubmit = async () => {
                   <Box flex={1} minWidth={280}>
                     <InfoItem
                       label="ช่องทางเรื่องร้องเรียน"
-                      value={complaint.channel || data?.assignment_form?.complaint_channel_name}
+                      value={complaint.channel || "-"}
                     />
                   </Box>
                 </Box>

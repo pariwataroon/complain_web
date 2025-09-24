@@ -524,103 +524,118 @@ export const useInformRelatedParties = () => {
 
   // ฟังก์ชันสร้าง request body ตาม format ที่กำหนด - แก้ไข position_id
   const createRequestBody = useCallback(() => {
-    // Map numbers (select values) to API expected string labels
+    // map ตัวเลข -> label ที่หลังบ้านรออยู่ (เหมือนเดิม)
     const confidentialityNumberToString = (val) => {
       const map = { 1: 'ปกติ', 2: 'ลับ', 3: 'ลับมาก', 4: 'ลับที่สุด' };
-      if (typeof val === 'string') return map[Number(val)] || val; // already string label or numeric string
+      if (typeof val === 'string') return map[Number(val)] || val;
       return map[val] || null;
     };
     const urgencyNumberToString = (val) => {
-      // Sample body from user shows 'ด่วน', 'ด่วนมาก', 'ด่วนที่สุด'
       const map = { 1: 'ปกติ', 2: 'ด่วน', 3: 'ด่วนมาก', 4: 'ด่วนที่สุด' };
-      if (typeof val === 'string') return map[Number(val)] || val; // keep original if already label
+      if (typeof val === 'string') return map[Number(val)] || val;
       return map[val] || null;
     };
+
     const useCustomRecipient = form.salutation_is_other || form.salutation_is_complainant;
-    // Extract real position id (salutation) regardless of object/string shape
+
     const extractPositionId = (val) => {
       if (!val) return null;
       if (typeof val === 'string') return val.trim();
       if (typeof val === 'object') {
         return (
-          val.id ||
-          val.value ||
-          val.position_id ||
-          val.positionId ||
-          (val.position && (val.position.id || val.position.position_id)) ||
-          null
+          val.id || val.value || val.position_id || val.positionId ||
+          (val.position && (val.position.id || val.position.position_id)) || null
         );
       }
       return null;
     };
-    let positionId = extractPositionId(form.salutation);
-    if (positionId && typeof positionId === 'string') positionId = positionId.trim();
-    // Do NOT fall back to a mock UUID anymore; let validation ensure presence.
-    const otherText = useCustomRecipient ? (form.position_other_text || '').trim() : null;
-    // Derive a non-null position_name (backend returns position_name=null now; user wants value)
+
+    const positionId = extractPositionId(form.salutation) || null;
+    const otherText  = useCustomRecipient ? (form.position_other_text || '').trim() : null;
+
+    // ชื่อที่แสดง (กันไม่ให้เป็น null)
     let positionName = form.salutation_name || "";
-    if (useCustomRecipient && otherText) {
-      positionName = otherText; // prefer user-entered custom text
-    }
-    if (!positionName) {
-      // fallback: use otherText (if any) else id (so it's never null)
-      positionName = otherText || positionId || "";
-    }
+    if (useCustomRecipient && otherText) positionName = otherText;
+    if (!positionName) positionName = otherText || positionId || "";
+
+    // *** ดึง outside_department_id จากฟอร์ม (tab = 'other') ***
+    const resolveOutsideId = () => {
+      if (form.reportType !== 'other') return null;
+      const v = form.otherDepartmentId;
+      if (!v) return null;
+      if (typeof v === 'string') return v;
+      if (typeof v === 'object') return v.id || v.value || null;
+      return null;
+    };
+    const outsideId = resolveOutsideId();
+
     const body = {
-      position_id: positionId || null,
-      position_name: positionName, // ensure not null (empty string if truly nothing)
-      position_label: positionName, // compatibility synonyms
+      // recipient / position
+      position_id: positionId,
+      position_name: positionName,
+      position_label: positionName,
       position_title: positionName,
-      // report type from tab
+      ...(otherText ? { position_other_text: otherText } : {}),
+      ...(useCustomRecipient
+        ? { custom_recipient: otherText || '', custom_recipient_type: form.salutation_is_complainant ? 'COMPLAINANT' : 'OTHER' }
+        : {}),
+
+      // type
       report_type: form.reportType || 'inspector',
-      reference_number: (form.refNo || "").trim(),
+
+      // หนังสือ/อ้างอิง
+      reference_number: (form.refNo || '').trim(),
       reference_date: toYMD(form.date),
-      subject: (form.subject || "").trim(),
-      complaint_number: (form.refNo || "").trim(),
+      subject: (form.subject || '').trim(),
+
+      // หมายเลข/วันที่ของเรื่อง (ใช้ bookNo/date2)
+      complaint_number: (form.refNo || '').trim(),
       complaint_number_date: toYMD(form.date2),
-      document_number: (form.bookNo || "").trim(),
+      document_number: (form.bookNo || '').trim(),
       document_date: toYMD(form.date2),
+
+      // อื่น ๆ
       signature_authority_user_id: form.signer,
       confidentiality_level: confidentialityNumberToString(form.confidentiality),
       urgency_level: urgencyNumberToString(form.urgency),
       remarks: form.note || form.details || "",
       propose_for: form.proposeFor,
       decision: form.decision,
-      attachment: form.attachment,
       proposal_purpose: form.proposeFor,
       consideration_result: form.decision,
-      complaint_id: complaintId,
-  created_by_department_id: form.createdByDepartment || undefined,
-  delivery_method: form.deliveryMethod || undefined,
-      // Provide richer position object for backend consumption
-      position: positionId ? {
+      attachment: form.attachment,
+
+      complaint_id: (router?.query?.complaint_id || router?.query?.id || null) ?? null,
+      created_by_department_id: form.createdByDepartment || undefined,
+      delivery_method: form.deliveryMethod || undefined,
+
+      // แนบ object position ให้หลังบ้าน (ถ้าต้องการ)
+      ...(positionId ? { position: {
         id: positionId,
         name: positionName || undefined,
         label: positionName || undefined,
         title: positionName || undefined,
         other_text: otherText || null,
-      } : undefined,
-      // BACKWARD COMPAT: Some backend endpoints still read root-level position_other_text
-      ...(otherText ? { position_other_text: otherText } : {}),
-      ...(useCustomRecipient ? { custom_recipient: otherText || '', custom_recipient_type: form.salutation_is_complainant ? 'COMPLAINANT' : 'OTHER' } : {}),
+      }} : {}),
     };
-    // Include department_id only if NOT custom recipient and user actually selected a department (non-empty)
-    if (!useCustomRecipient && form.department) {
-      body.department_id = form.department; // don't send null when empty to avoid backend forcing selection
-    }
-    // If user chose other tab, include department info (prefer id; allow name fallback)
-    if (form.reportType === 'other') {
-      if (form.otherDepartmentId) {
-        body.other_department_id = form.otherDepartmentId;
-      }
-      if (form.otherDepartmentName) {
-        body.other_department_name = form.otherDepartmentName.trim();
-      }
+
+    // 🚫 ไม่ส่ง department_id ไม่ว่ากรณีใด ๆ
+    delete body.department_id;
+
+    // ✅ สำหรับแท็บ "แจ้งหน่วยงานอื่น" ส่งเฉพาะ outside_department_id
+    if (outsideId) {
+      body.outside_department_id = outsideId;
+    } else {
+      delete body.outside_department_id;
     }
 
-    console.log("📦 createRequestBody:", body);
+    // เผื่อ key เก่าหลงมาจากที่อื่น ตัดทิ้งให้หมด
+    delete body.other_department_id;
+    delete body.otherDepartmentId;
+
+    console.log("📦 createRequestBody (final):", body);
     return body;
-  }, [form, complaintId]);
+  }, [form, router?.query]);
 
   // ฟังก์ชันบันทึกข้อมูล - รองรับทั้ง create และ update
 const handleSave = useCallback(async () => {
@@ -649,6 +664,15 @@ const handleSave = useCallback(async () => {
     showLoading("กำลังบันทึกข้อมูล...");
 
     const requestBody = createRequestBody();
+    // กันเหนียว ตัดทุกอย่างที่เกี่ยวกับ department_id ออก
+    delete requestBody.department_id;
+    delete requestBody.department;
+    delete requestBody.other_department_id;
+    delete requestBody.otherDepartmentId;
+    // บังคับส่ง outside เฉพาะเมื่อเป็นแท็บ 'other'
+    if (form.reportType !== 'other') {
+      delete requestBody.outside_department_id;
+    }
     console.log("🚀 Sending request with body:", requestBody, "editing:", isEditing, "target:", loadedReportId || report4Id);
 
     let effectiveId = loadedReportId || report4Id;
@@ -867,9 +891,12 @@ const handleSave = useCallback(async () => {
         else inferredType = 'inspector';
       }
       handleChange("reportType", inferredType || "inspector");
-      if (d.other_department_id) handleChange("otherDepartmentId", d.other_department_id);
-      // if (d.other_department_name) handleChange("otherDepartmentName", d.other_department_name);
-      // map fields
+        if (d.outside_department_id || d.outside_department?.id) {
+          handleChange("otherDepartmentId", d.outside_department_id || d.outside_department?.id);
+        } else if (d.other_department_id) {
+          // เผื่อหลังบ้านเคยคืนชื่อ key นี้มา
+          handleChange("otherDepartmentId", d.other_department_id);
+        }
       handleChange("refNo", d.reference_number || d.complaint_number || d.document_number || "");
       if (d.reference_date) handleDateChange(toYMD(d.reference_date), "date");
       if (d.document_date) handleDateChange(d.document_date, "date2");
