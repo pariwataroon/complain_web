@@ -453,10 +453,12 @@ export const useRequestResultProgress = () => {
   }, [form]);
 
   // ---- SAVE ----
+    // ---- SAVE ----
   const handleSave = useCallback(
     async (overrides = {}) => {
       const state = { ...form, ...overrides };
-      // Keep real value; if invalid we'll resolve just before payload
+
+      // Validate required fields
       const candidatePid = state.position_id;
       if (candidatePid && !isUUID(candidatePid)) state.position_id = null;
       const missing = validateRequiredFields(state);
@@ -465,23 +467,19 @@ export const useRequestResultProgress = () => {
         alertError("ข้อมูลไม่ครบถ้วน", `กรุณากรอกข้อมูลในฟิลด์: ${names}`);
         return;
       }
-      // No forced assignment when empty
-      // Build payload
+
+      // Department fallback logic
       let deptId = state.department && isUUID(state.department) ? state.department : null;
-      // Fallback chain when department cleared due to custom recipient selection
       if (!deptId) {
         if (state.salutation_is_other) {
-          // Try remembered selections first
           if (lastDepartmentIdRef.current && isUUID(lastDepartmentIdRef.current)) {
             deptId = lastDepartmentIdRef.current;
           } else if (originalDepartmentIdRef.current && isUUID(originalDepartmentIdRef.current)) {
             deptId = originalDepartmentIdRef.current;
           } else {
-            // Force fallback (backend insists on department_id)
             deptId = DEPARTMENT_FALLBACK;
           }
         } else {
-          // Not custom but still empty: use original or fallback
           if (originalDepartmentIdRef.current && isUUID(originalDepartmentIdRef.current)) {
             deptId = originalDepartmentIdRef.current;
           } else {
@@ -489,14 +487,16 @@ export const useRequestResultProgress = () => {
           }
         }
       }
-      // If still using dummy fallback (or invalid), attempt to fetch a real department id
       const ensureRealDepartmentId = async (current) => {
         if (current && current !== DEPARTMENT_FALLBACK) return current;
         try {
           const resp = await getDepartments();
           const raw = resp?.res_data || resp?.data || resp;
           let list = [];
-          if (Array.isArray(raw)) list = raw; else if (Array.isArray(raw?.items)) list = raw.items; else if (Array.isArray(raw?.departments)) list = raw.departments; else if (raw?.results && Array.isArray(raw.results)) list = raw.results;
+          if (Array.isArray(raw)) list = raw;
+          else if (Array.isArray(raw?.items)) list = raw.items;
+          else if (Array.isArray(raw?.departments)) list = raw.departments;
+          else if (raw?.results && Array.isArray(raw.results)) list = raw.results;
           const first = list.find(d => d && (isUUID(d.id) || isUUID(d.value)));
           if (first) {
             const realId = first.id || first.value;
@@ -509,22 +509,22 @@ export const useRequestResultProgress = () => {
         } catch (e) {
           console.warn('ไม่สามารถดึง departments เพื่อหา id จริง ใช้ fallback ต่อไป', e);
         }
-        return current; // may still be fallback
+        return current;
       };
       deptId = await ensureRealDepartmentId(deptId);
-      // Resolve final position_id (must always be UUID for backend)
+
+      // Resolve position_id
       const resolvedPositionId = (() => {
         if (isUUID(state.position_id)) return state.position_id;
-        if (isUUID(state.salutation)) return state.salutation; // some selects store UUID in salutation
-        return POSITION_FALLBACK; // last resort
+        if (isUUID(state.salutation)) return state.salutation;
+        return POSITION_FALLBACK;
       })();
 
+      // Build payload
       const payload = {
         position_id: resolvedPositionId,
         position_other_text: (state.salutation_is_other || state.position_other_text) ? (state.position_other_text || "").trim() : "",
-        // salutation mirrors the resolved position id when not custom; keeps user text when custom
         salutation: state.salutation_is_other ? (state.salutation || '') : (resolvedPositionId || state.salutation || ''),
-        // complaint_number (เลข สป.กค.) maps from refNo; document_number from docNo
         complaint_number: state.refNo || "",
         complaint_number_date: toAPIDateString(state.refDate),
         document_number: state.docNo || "",
@@ -537,7 +537,7 @@ export const useRequestResultProgress = () => {
         complaint_id: nullIfEmpty(state.complaint_id),
         remarks: state.note || "",
       };
-      if (deptId) payload.department_id = deptId; // ensure always set (now forced by fallback)
+      if (deptId) payload.department_id = deptId;
 
       try {
         setIsLoading(true);
@@ -564,11 +564,10 @@ export const useRequestResultProgress = () => {
 
         const createdId = editReportId || createRes?.res_data?.id || createRes?.data?.id || createRes?.id || null;
 
-        // 2) Upload attachments
+        // Upload attachments
         if (createdId && attachmentFiles.length > 0) {
           let uploadOk = false;
           let lastErrorMsg = "";
-          // Use UploadOutgoingReportAttachments (generic for all report types)
           const buildFormData = (useSingleKey = false) => {
             const formData = new FormData();
             if (attachmentFiles.length > 1) {
@@ -580,7 +579,6 @@ export const useRequestResultProgress = () => {
             }
             return formData;
           };
-          // Attempt 1: multi-files
           try {
             const up1 = await UploadOutgoingReport3Attachments(buildFormData(false), createdId);
             uploadOk = !!(up1 && (up1.success === true || up1.res_code === "0001"));
@@ -592,7 +590,6 @@ export const useRequestResultProgress = () => {
             lastErrorMsg = data?.res_data?.error || data?.res_message || err1.message || "";
             console.error("Upload attempt #1 (multi-files) failed", data || err1);
           }
-          // Attempt 2: single file key
           if (!uploadOk && attachmentFiles.length === 1) {
             try {
               const up2 = await UploadOutgoingReport3Attachments(buildFormData(true), createdId);
@@ -606,7 +603,6 @@ export const useRequestResultProgress = () => {
               console.error("Upload attempt #2 (single key) failed", data || err2);
             }
           }
-          // Attempt 3: direct API call if all above fail
           if (!uploadOk) {
             try {
               const up3 = await axiosInstance.post(
@@ -623,7 +619,6 @@ export const useRequestResultProgress = () => {
           if (!uploadOk) {
             console.warn("⚠️ บันทึกรายงานสำเร็จแต่แนบไฟล์ไม่สำเร็จ", lastErrorMsg);
             await alertError("แนบไฟล์ไม่สำเร็จ", lastErrorMsg || "ระบบไม่สามารถแนบไฟล์ได้ กรุณาลองใหม่");
-            // ไม่ throw error, แจ้งเตือนเฉยๆ
           }
         }
 
@@ -643,21 +638,11 @@ export const useRequestResultProgress = () => {
           </div>`;
         await alertSuccess(editReportId ? "อัพเดตสำเร็จ!" : "บันทึกสำเร็จ!", successHtml, true);
 
-        // ----------- REDIRECT LOGIC (like previous file) -------------
-        // Prefer query ?returnUrl or ?from, else complaint_id, else back, else default list
-        const returnUrl = router?.query?.returnUrl || router?.query?.from;
-        const cid = router?.query?.complaint_id || router?.query?.id || complaintId;
-
-        if (cid) {
-          router.push(`/admin/box/list/${cid}`);
-        } else if (returnUrl && typeof returnUrl === 'string') {
-          router.push(returnUrl);
-        } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
-          router.back();
-        } else {
-          router.push('/admin/box/list');
+        // ----------- REFRESH PAGE -------------
+        if (typeof window !== "undefined") {
+          window.location.reload();
         }
-        handleClear();
+        // ----------- END REFRESH PAGE -------------
       } catch (err) {
         console.error("Save error:", err);
         if (err?.response) {

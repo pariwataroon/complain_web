@@ -70,7 +70,7 @@ const TopRightChart = () => {
   });
   const [quarterlyForm, setQuarterlyForm] = useState({
     year: String(getCurrentThaiYear()),
-    quarter: null, // เพิ่ม quarter state
+    quarter: null,
   });
   const [yearlyForm, setYearlyForm] = useState({
     year: String(getCurrentThaiYear()),
@@ -79,15 +79,20 @@ const TopRightChart = () => {
     fromYear: String(getCurrentThaiYear() - 1), 
     toYear: String(getCurrentThaiYear()), 
   });
+  // เพิ่ม state สำหรับดูหน่วยงาน
+  const [departmentViewForm, setDepartmentViewForm] = useState({
+    month: getCurrentThaiMonthLabel(),
+    year: String(getCurrentThaiYear()),
+  });
 
   const [chartData, setChartData] = useState([]);
 
   const toInt = (v) =>
     v == null ? null : parseInt(String(v).replace(/[^\d]/g, ""), 10);
-    const toTH = (y) => {
-      const n = toInt(y);
-      if (!n) return "";
-      return n >= 2400 ? n : n + 543; 
+  const toTH = (y) => {
+    const n = toInt(y);
+    if (!n) return "";
+    return n >= 2400 ? n : n + 543; 
   };
 
   // Fetch years data from API
@@ -98,28 +103,19 @@ const TopRightChart = () => {
       const currentTH = String(getCurrentThaiYear());
 
       if (result?.success && Array.isArray(result?.yearOptions)) {
-        // setYearOptions(result.yearOptions);
-
-        // const latest = result.yearOptions[result.yearOptions.length - 1];
-        // const displayYear = result.yearOptions.some(
-        //   (y) => String(y.value) === currentTH
-        // )
-        //   ? currentTH
-        //   : String(latest?.value ?? currentTH);
-
         const thOptions = result.yearOptions.map((y) => {
-        const rawVal = y?.value ?? y;
-        return {
-          value: String(toTH(rawVal)),
-          label: String(toTH(y?.label ?? rawVal)),
-        };
-      });
-      setYearOptions(thOptions);
+          const rawVal = y?.value ?? y;
+          return {
+            value: String(toTH(rawVal)),
+            label: String(toTH(y?.label ?? rawVal)),
+          };
+        });
+        setYearOptions(thOptions);
 
-      const latest = thOptions[thOptions.length - 1];
-      const displayYear = thOptions.some((y) => String(y.value) === currentTH)
-        ? currentTH
-        : String(latest?.value ?? currentTH);
+        const latest = thOptions[thOptions.length - 1];
+        const displayYear = thOptions.some((y) => String(y.value) === currentTH)
+          ? currentTH
+          : String(latest?.value ?? currentTH);
 
         setMonthlyForm((prev) => ({
           ...prev,
@@ -136,10 +132,14 @@ const TopRightChart = () => {
           toYear: displayYear,
           fromYear: prev.fromYear || String(Number(displayYear) - 1)
         }));
+        setDepartmentViewForm((prev) => ({
+          ...prev,
+          year: displayYear,
+          month: prev.month || getCurrentThaiMonthLabel(),
+        }));
 
         setCurrentPeriod(`${getCurrentThaiMonthLabel()} ${displayYear}`);
       } else {
-        // Fallback years
         const y = getCurrentThaiYear();
         const fallback = [
           { value: String(y - 3), label: String(y - 3) },
@@ -163,6 +163,11 @@ const TopRightChart = () => {
           fromYear: String(y - 1),
           toYear: String(y)
         });
+        setDepartmentViewForm((prev) => ({
+          ...prev,
+          year: String(y),
+          month: prev.month || getCurrentThaiMonthLabel(),
+        }));
         setCurrentPeriod(`${getCurrentThaiMonthLabel()} ${y}`);
       }
     } catch (err) {
@@ -185,6 +190,11 @@ const TopRightChart = () => {
         fromYear: String(y - 1),
         toYear: String(y)
       });
+      setDepartmentViewForm((prev) => ({
+        ...prev,
+        year: String(y),
+        month: prev.month || getCurrentThaiMonthLabel(),
+      }));
       setCurrentPeriod(`${getCurrentThaiMonthLabel()} ${y}`);
     } finally {
       setYearsLoading(false);
@@ -193,44 +203,78 @@ const TopRightChart = () => {
 
   // Improved fetchApiData function
   const fetchApiData = async (filterParams = null) => {
-    setLoading(true);
-    setError(null);
+  setLoading(true);
+  setError(null);
 
-    try {
-      console.log('Fetching API data with params:', filterParams);
-      
-      const result = await GetComplaintSummary(filterParams);
-      
-      console.log('API Response:', result);
-      
-      if (result.success) {
-        setApiData(result);
+  try {
+    console.log('Fetching API data with params:', filterParams);
+    
+    // ถ้าเป็นโหมด department_view ให้ส่ง mode เป็น yearly แทน
+    let apiParams = filterParams;
+    if (filterParams?.mode === 'department_view') {
+      apiParams = {
+        mode: 'yearly',
+        year: filterParams.year
+      };
+      console.log('Converted to yearly mode, API params:', apiParams);
+    }
+    
+    const result = await GetComplaintSummary(apiParams);
+    
+    console.log('API Response:', result);
+    
+    if (result.success || result.res_code === "0000") {
+      setApiData(result);
 
-        // Process chart data based on the response
-        if (result.departmentData && result.departmentData.length > 0) {
-          const processedData = result.departmentData.map((dept, index) => ({
-            name: dept.name,
-            count: dept.count || Math.round((dept.percent / 100) * result.latestMonthTotal),
-            color: getChartColor(index),
-            id: dept.id,
-            percent: dept.percent || 0,
-          }));
+      // ตรวจสอบว่าเป็นโหมดดูหน่วยงานหรือไม่
+      if (filterParams?.mode === 'department_view') {
+        console.log('=== Department View Mode ===');
+        console.log('Selected month:', filterParams.month);
+        console.log('Month index:', TH_MONTHS.indexOf(filterParams.month));
+        
+        // แก้ไข: ใช้ result.chartData แทน
+        const chartData = result.chartData;
+        console.log('Has chartData:', !!chartData);
+        console.log('Has monthly_breakdown_department:', !!chartData?.monthly_breakdown_department);
+        
+        // แสดงข้อมูลหน่วยงาน
+        if (chartData?.monthly_breakdown_department) {
+          const monthIndex = TH_MONTHS.indexOf(filterParams.month);
+          const monthData = chartData.monthly_breakdown_department[monthIndex];
           
-          console.log('Processed Chart Data:', processedData);
-          setChartData(processedData);
+          console.log('Month data:', monthData);
+          console.log('Departments count:', monthData?.departments?.length);
           
-        } else if (result.dashboardCards && result.dashboardCards.length > 0) {
-          const summaryData = result.dashboardCards.map((card, index) => ({
-            name: card.title.replace("เรื่องราวร้องทุกข์", "").trim(),
-            count: card.count,
-            color: getChartColor(index),
-            id: card.id,
-            percent: 0,
-          }));
-          
-          console.log('Dashboard Chart Data:', summaryData);
-          setChartData(summaryData);
+          if (monthData && monthData.departments && monthData.departments.length > 0) {
+            // จำกัดแสดงแค่ 10 หน่วยงานแรกที่มีเรื่องร้องเรียนมากที่สุด
+            const topDepartments = monthData.departments
+              .sort((a, b) => b.count - a.count) // เรียงจากมากไปน้อย
+              .slice(0, 5); // เอาแค่ 10 อันดับแรก
+            
+            const processedData = topDepartments.map((dept, index) => ({
+              name: dept.department_name,
+              count: dept.count,
+              color: getChartColor(index),
+              id: dept.department_id || `dept-${index}`,
+              percent: monthData.total > 0 ? ((dept.count / monthData.total) * 100).toFixed(1) : 0,
+            }));
+            
+            console.log(`Department Chart Data (top 10 of ${monthData.departments.length}):`, processedData);
+            setChartData(processedData);
+          } else {
+            console.log('No departments data for this month');
+            setChartData([
+              {
+                name: "ไม่มีข้อมูลในเดือนนี้",
+                count: 0,
+                color: "#e0e0e0",
+                id: "no-data",
+                percent: 0,
+              },
+            ]);
+          }
         } else {
+          console.log('No monthly_breakdown_department in response');
           setChartData([
             {
               name: "ไม่มีข้อมูล",
@@ -241,8 +285,30 @@ const TopRightChart = () => {
             },
           ]);
         }
+      } else if (result.departmentData && result.departmentData.length > 0) {
+        const processedData = result.departmentData.map((dept, index) => ({
+          name: dept.name,
+          count: dept.count || Math.round((dept.percent / 100) * result.latestMonthTotal),
+          color: getChartColor(index),
+          id: dept.id,
+          percent: dept.percent || 0,
+        }));
+        
+        console.log('Processed Chart Data:', processedData);
+        setChartData(processedData);
+        
+      } else if (result.dashboardCards && result.dashboardCards.length > 0) {
+        const summaryData = result.dashboardCards.map((card, index) => ({
+          name: card.title.replace("เรื่องราวร้องทุกข์", "").trim(),
+          count: card.count,
+          color: getChartColor(index),
+          id: card.id,
+          percent: 0,
+        }));
+        
+        console.log('Dashboard Chart Data:', summaryData);
+        setChartData(summaryData);
       } else {
-        setError("ไม่สามารถดึงข้อมูลได้");
         setChartData([
           {
             name: "ไม่มีข้อมูล",
@@ -253,22 +319,34 @@ const TopRightChart = () => {
           },
         ]);
       }
-    } catch (err) {
-      console.error("Error fetching API data:", err);
-      setError("เกิดข้อผิดพลาดในการดึงข้อมูล");
+    } else {
+      setError("ไม่สามารถดึงข้อมูลได้");
       setChartData([
         {
-          name: "เกิดข้อผิดพลาด",
+          name: "ไม่มีข้อมูล",
           count: 0,
-          color: "#f44336",
-          id: "error",
+          color: "#e0e0e0",
+          id: "no-data",
           percent: 0,
         },
       ]);
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    console.error("Error fetching API data:", err);
+    setError("เกิดข้อผิดพลาดในการดึงข้อมูล");
+    setChartData([
+      {
+        name: "เกิดข้อผิดพลาด",
+        count: 0,
+        color: "#f44336",
+        id: "error",
+        percent: 0,
+      },
+    ]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Generate chart colors
   const getChartColor = (index) => {
@@ -306,6 +384,7 @@ const TopRightChart = () => {
     { text: "รายไตรมาส", id: "quarterly" },
     { text: "รายปี", id: "yearly" },
     { text: "เปรียบเทียบระหว่างปี", id: "department" },
+    { text: "ดูตามหน่วยงาน", id: "department_view" }, // เพิ่มเมนูใหม่
   ];
 
   // Options for SelectField - months remain static
@@ -341,14 +420,11 @@ const TopRightChart = () => {
     setOpenModal(null);
   };
 
-  // FIXED: Handle form changes with proper API calls
+  // Handle form changes
   const handleMonthlyChange = (field) => (e) => {
     const newValue = e.target.value;
     const newForm = { ...monthlyForm, [field]: newValue };
     setMonthlyForm(newForm);
-    
-    // Don't auto-submit on intermediate changes
-    // User will need to close modal or make final selection
   };
 
   const handleMonthlySubmit = async () => {
@@ -425,7 +501,28 @@ const TopRightChart = () => {
     handleCloseModal();
   };
 
-  // Render Modal Content with improved submit handling
+  // เพิ่ม handler สำหรับดูหน่วยงาน
+  const handleDepartmentViewChange = (field) => (e) => {
+    const newValue = e.target.value;
+    const newForm = { ...departmentViewForm, [field]: newValue };
+    setDepartmentViewForm(newForm);
+  };
+
+  const handleDepartmentViewSubmit = async () => {
+  const newPeriod = `หน่วยงาน ${departmentViewForm.month} ${departmentViewForm.year}`;
+  setCurrentPeriod(newPeriod);
+  setCurrentMode("department_view");
+  
+  await fetchApiData({
+    mode: "department_view",
+    month: departmentViewForm.month,
+    year: departmentViewForm.year
+  });
+  
+  handleCloseModal();
+};
+
+  // Render Modal Content
   const renderModalContent = () => {
     switch (openModal) {
       case "monthly":
@@ -509,7 +606,6 @@ const TopRightChart = () => {
                 </Box>
               </Box>
 
-              {/* Add submit button */}
               <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
                 <Button
                   variant="contained"
@@ -697,7 +793,6 @@ const TopRightChart = () => {
               </Box>
             </Box>
 
-            {/* Add submit button */}
             <Box sx={{ display: "flex", justifyContent: "center" }}>
               <Button
                 variant="contained"
@@ -776,7 +871,7 @@ const TopRightChart = () => {
                     />
                   )}
                 </Box>
-              </Box>
+                </Box>
 
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Typography sx={{ fontSize: "14px", minWidth: "80px" }}>
@@ -802,11 +897,108 @@ const TopRightChart = () => {
                 </Box>
               </Box>
 
-              {/* Add submit button */}
               <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
                 <Button
                   variant="contained"
                   onClick={handleDepartmentSubmit}
+                  disabled={loading}
+                  sx={{ 
+                    minWidth: 120,
+                    fontSize: "14px"
+                  }}
+                >
+                  {loading ? <CircularProgress size={20} /> : "แสดงข้อมูล"}
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        );
+
+      case "department_view":
+        return (
+          <Paper
+            sx={{
+              position: "relative",
+              width: { xs: "360px", md: "420px" },
+              borderRadius: 3,
+              overflow: "hidden",
+              boxShadow: 24,
+              p: 3,
+            }}
+          >
+            <IconButton
+              onClick={handleCloseModal}
+              sx={{
+                position: "absolute",
+                top: 16,
+                right: 16,
+                color: "#666",
+              }}
+              size="small"
+            >
+              <CloseIcon />
+            </IconButton>
+
+            <Typography
+              variant="h6"
+              sx={{
+                textAlign: "center",
+                fontWeight: "bold",
+                fontSize: "16px",
+                color: "#333",
+                mb: 3,
+                mt: 1,
+              }}
+            >
+              สถิติเรื่องร้องทุกข์แยกตามหน่วยงาน
+            </Typography>
+
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Typography sx={{ fontSize: "14px", minWidth: "60px" }}>
+                  เดือน :
+                </Typography>
+                <Box sx={{ minWidth: 200 }}>
+                  <SelectField
+                    options={monthOptions}
+                    value={departmentViewForm.month}
+                    onChange={handleDepartmentViewChange("month")}
+                    name="departmentMonth"
+                    size="small"
+                    clearable={false}
+                  />
+                </Box>
+              </Box>
+
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Typography sx={{ fontSize: "14px", minWidth: "60px" }}>
+                  ปีงบประมาณ :
+                </Typography>
+                <Box sx={{ minWidth: 200 }}>
+                  {yearsLoading ? (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography sx={{ fontSize: "12px" }}>
+                        กำลังโหลด...
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <SelectField
+                      options={yearOptions}
+                      value={departmentViewForm.year}
+                      onChange={handleDepartmentViewChange("year")}
+                      name="departmentYear"
+                      size="small"
+                      clearable={false}
+                    />
+                  )}
+                </Box>
+              </Box>
+
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={handleDepartmentViewSubmit}
                   disabled={loading}
                   sx={{ 
                     minWidth: 120,
@@ -825,7 +1017,7 @@ const TopRightChart = () => {
     }
   };
 
-  // Chart effect (unchanged)
+  // Chart effect
   useEffect(() => {
     if (!chartRef.current || loading) return;
 
@@ -855,8 +1047,8 @@ const TopRightChart = () => {
             data: chartData.map((item) => item.count),
             backgroundColor: chartData.map((item) => item.color),
             borderRadius: 3,
-            barThickness: responsiveConfig.barThickness,
-            maxBarThickness: responsiveConfig.barThickness + 2,
+            barThickness: currentMode === "department_view" ? 20 : (isSmallMobile ? 12 : isMobile ? 15 : 30),
+        maxBarThickness: currentMode === "department_view" ? 25 : (responsiveConfig.barThickness + 2),
           },
         ],
       },
@@ -881,7 +1073,13 @@ const TopRightChart = () => {
                 return fullName;
               },
               label: function (context) {
-                return `${context.dataset.label}: ${context.parsed.y} เรื่อง`;
+                const dataIndex = context.dataIndex;
+                const item = chartData[dataIndex];
+                let label = `${context.dataset.label}: ${context.parsed.y} เรื่อง`;
+                if (currentMode === "department_view" && item.percent > 0) {
+                  label += ` (${item.percent}%)`;
+                }
+                return label;
               },
             },
           },
@@ -938,7 +1136,7 @@ const TopRightChart = () => {
         chartInstanceRef.current.destroy();
       }
     };
-  }, [chartData, isMobile, isSmallMobile, loading]);
+  }, [chartData, isMobile, isSmallMobile, loading, currentMode]);
 
   const open = Boolean(anchorEl);
 
@@ -1011,7 +1209,9 @@ const TopRightChart = () => {
               mb: 0.2,
             }}
           >
-            สถิติเรื่องราวร้องทุกข์
+            {currentMode === "department_view" 
+              ? "สถิติเรื่องร้องทุกข์แยกตามหน่วยงาน"
+              : "สถิติเรื่องราวร้องทุกข์"}
           </Typography>
           <Typography
             variant="subtitle2"
@@ -1137,7 +1337,6 @@ const TopRightChart = () => {
           </Box>
         )}
 
-        {/* Retry button when error */}
         {error && (
           <Box sx={{ textAlign: "center", mt: 1 }}>
             <Button

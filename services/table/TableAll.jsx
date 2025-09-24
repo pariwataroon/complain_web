@@ -238,6 +238,13 @@ const TableAll = ({
       return filtered;
     }, [data, search, statusFilter]);
 
+    // --- แก้ไขตรงนี้: Slice ข้อมูลเฉพาะหน้าปัจจุบัน ---
+    const pagedFilteredData = useMemo(() => {
+      const start = page * rowsPerPage;
+      const end = start + rowsPerPage;
+      return filteredData.slice(start, end);
+    }, [filteredData, page, rowsPerPage]);
+
     return (
         <Container maxWidth="lg">
             <Box className={styles.headerBar}>
@@ -288,7 +295,7 @@ const TableAll = ({
                                 onStatusChange(value.trim());
                             }}
                             options={[
-                                { value: "", label: "— ทุกสถานะ —" },
+                                { value: "", },
                                 ...STATUS_LABELS.map(label => ({
                                     value: label, label: label
                                 })),
@@ -338,7 +345,7 @@ const TableAll = ({
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {filteredData.length === 0 ? (
+                        {pagedFilteredData.length === 0 ? (
                             <TableRow>
                                 <TableCell
                                     colSpan={8}
@@ -371,7 +378,7 @@ const TableAll = ({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredData.map((item, index) => {
+                            pagedFilteredData.map((item, index) => {
                                 const { color, textColor, label } = getStatusStyle(item.status);
                                 return (
                                     <TableRow
@@ -435,7 +442,7 @@ const TableAll = ({
                 <TablePagination
                     component="div"
                     rowsPerPageOptions={[5, 10, 25, 50]}
-                    count={totalCount}
+                    count={filteredData.length}
                     rowsPerPage={rowsPerPage}
                     page={page}
                     onPageChange={(e, newPage) => onPageChange(newPage)}
