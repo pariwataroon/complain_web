@@ -160,18 +160,23 @@ def create_outgoing_report2(
                 )
 
         # Validate outside / department ids (transition phase)
-        if report_data.department_id and report_data.outside_department_id and report_data.department_id != report_data.outside_department_id:
-            raise HTTPException(status_code=400, detail="department_id และ outside_department_id ไม่ตรงกัน")
+        # เดิม: มีการ mirror outside_department_id -> department_id ซึ่งทำให้ FK ผิด (department_id ชี้ไปตาราง departments)
+        # ปรับใหม่: อนุญาตให้ส่งได้อย่างใดอย่างหนึ่งเท่านั้น (หรือไม่ส่งเลยทั้งคู่) เพื่อหลีกเลี่ยง FK violation
+        if report_data.department_id and report_data.outside_department_id:
+            raise HTTPException(status_code=400, detail="กรุณาส่ง department_id หรือ outside_department_id อย่างใดอย่างหนึ่ง ไม่ใช่ทั้งคู่")
 
         # ensure outside_department exists if provided
         if report_data.outside_department_id:
-            od = db.query(OutsideDepartment).filter(OutsideDepartment.id == report_data.outside_department_id, OutsideDepartment.is_active == True).first()
+            od = db.query(OutsideDepartment).filter(
+                OutsideDepartment.id == report_data.outside_department_id,
+                OutsideDepartment.is_active == True
+            ).first()
             if not od:
                 raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานภายนอกที่ระบุ")
 
-        # Authoritative field moving forward = outside_department_id
-        effective_outside_id = report_data.outside_department_id or report_data.department_id  # fallback to legacy for old clients
-        legacy_department_id = report_data.department_id or report_data.outside_department_id  # mirror for backward compatibility
+        # ไม่ mirror อีกต่อไป: เก็บตามจริงเฉพาะ column ที่เกี่ยวข้อง
+        effective_outside_id = report_data.outside_department_id  # ใช้เฉพาะ outside
+        legacy_department_id = report_data.department_id  # ใช้เฉพาะ legacy
 
         db_report = OutgoingReport2(
             position_id=report_data.position_id,
@@ -180,7 +185,7 @@ def create_outgoing_report2(
             complaint_number_date=report_data.complaint_number_date,
             subject=report_data.subject,
             signature_authority_user_id=report_data.signature_authority_user_id,
-            department_id=legacy_department_id,  # deprecated column (mirrored)
+            department_id=legacy_department_id,  # จะเป็นค่าเดิมเท่านั้น (ไม่อัปเดตอัตโนมัติจาก outside)
             outside_department_id=effective_outside_id,
             user_id=report_data.user_id,
             confidentiality_level=report_data.confidentiality_level,
@@ -487,8 +492,27 @@ def update_outgoing_report2(
             if complaint.complaint_number != report_data.complaint_number:
                 raise HTTPException(status_code=400, detail="หมายเลขข้อร้องเรียนไม่ตรงกับข้อร้องเรียนที่เลือก")
 
+        incoming = report_data.model_dump(exclude_unset=True)
+
+        # ตรวจไม่ให้ส่ง department_id + outside_department_id พร้อมกัน (ป้องกันสับสน / ผิด FK)
+        if (
+            incoming.get("department_id")
+            and incoming.get("outside_department_id")
+            and incoming.get("department_id") != incoming.get("outside_department_id")
+        ):
+            raise HTTPException(status_code=400, detail="กรุณาอัปเดต department_id หรือ outside_department_id อย่างใดอย่างหนึ่ง ไม่ใช่ทั้งคู่")
+
+        # validate outside_department_id ถ้ามี
+        if incoming.get("outside_department_id"):
+            od = db.query(OutsideDepartment).filter(
+                OutsideDepartment.id == incoming["outside_department_id"],
+                OutsideDepartment.is_active == True,
+            ).first()
+            if not od:
+                raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานภายนอกที่ระบุ")
+
         # อัปเดตเฉพาะที่ส่งมา
-        for field, value in report_data.model_dump(exclude_unset=True).items():
+        for field, value in incoming.items():
             setattr(rec, field, value)
         rec.updated_by = current_user_id
 

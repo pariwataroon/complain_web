@@ -161,17 +161,20 @@ def create_outgoing_report4(
             if pos_name in {"อื่นๆ", "อื่น ๆ", "other", "others"} and not getattr(report_data, "position_other_text", None):
                 raise HTTPException(status_code=400, detail="กรุณาระบุตำแหน่ง (อื่นๆ) เพิ่มเติม")
 
-        # Validate outside vs legacy ids
-        if report_data.department_id and report_data.outside_department_id and report_data.department_id != report_data.outside_department_id:
-            raise HTTPException(status_code=400, detail="department_id และ outside_department_id ไม่ตรงกัน")
+        # Validate outside vs legacy ids (no mirroring – ต้องเลือกอย่างใดอย่างหนึ่ง)
+        if report_data.department_id and report_data.outside_department_id:
+            raise HTTPException(status_code=400, detail="กรุณาส่ง department_id หรือ outside_department_id อย่างใดอย่างหนึ่ง ไม่ใช่ทั้งคู่")
 
         if report_data.outside_department_id:
-            od = db.query(OutsideDepartment).filter(OutsideDepartment.id == report_data.outside_department_id, OutsideDepartment.is_active == True).first()
+            od = db.query(OutsideDepartment).filter(
+                OutsideDepartment.id == report_data.outside_department_id,
+                OutsideDepartment.is_active == True
+            ).first()
             if not od:
                 raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานภายนอกที่ระบุ")
 
-        effective_outside_id = report_data.outside_department_id or report_data.department_id
-        legacy_department_id = report_data.department_id or report_data.outside_department_id
+        effective_outside_id = report_data.outside_department_id
+        legacy_department_id = report_data.department_id
 
         db_report = OutgoingReport4(
             reference_number=report_data.reference_number,
@@ -180,7 +183,7 @@ def create_outgoing_report4(
             complaint_number=report_data.complaint_number,
             complaint_number_date=report_data.complaint_number_date,
             signature_authority_user_id=report_data.signature_authority_user_id,
-            department_id=legacy_department_id,  # deprecated mirrored
+            department_id=legacy_department_id,  # ไม่ mirror
             outside_department_id=effective_outside_id,
             user_id=report_data.user_id,
             other_department=report_data.other_department,
@@ -703,7 +706,26 @@ def update_outgoing_report4(
             if not complaint:
                 raise HTTPException(status_code=400, detail="ไม่พบข้อร้องเรียนที่ระบุ")
 
-        for field, value in report_data.model_dump(exclude_unset=True).items():
+        incoming = report_data.model_dump(exclude_unset=True)
+
+        # ไม่ให้ส่ง department_id + outside_department_id พร้อมกัน (และถ้าต่างกันให้ error)
+        if (
+            incoming.get("department_id")
+            and incoming.get("outside_department_id")
+            and incoming.get("department_id") != incoming.get("outside_department_id")
+        ):
+            raise HTTPException(status_code=400, detail="กรุณาอัปเดต department_id หรือ outside_department_id อย่างใดอย่างหนึ่ง ไม่ใช่ทั้งคู่")
+
+        # validate outside_department_id ถ้ามี
+        if incoming.get("outside_department_id"):
+            od = db.query(OutsideDepartment).filter(
+                OutsideDepartment.id == incoming["outside_department_id"],
+                OutsideDepartment.is_active == True,
+            ).first()
+            if not od:
+                raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานภายนอกที่ระบุ")
+
+        for field, value in incoming.items():
             setattr(rec, field, value)
         # ตรวจสอบตำแหน่งถ้ามีการอัปเดต
         if "position_id" in report_data.model_dump(exclude_unset=True):
