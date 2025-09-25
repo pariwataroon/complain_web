@@ -6,11 +6,14 @@ from models.outside_departments import OutsideDepartment
 from models.signature_authorities import SignatureAuthority
 from models.user import User
 
+from datetime import datetime, timezone
+
 def get_inspector_report(
     db: Session,
     skip: int = 0,
     limit: int = 100,
     search: Optional[str] = None,
+    year: Optional[int] = None,
 ) -> Dict:
     # Join OutgoingReport4, SignatureAuthority, OutsideDepartment, User
     query = db.query(
@@ -30,7 +33,16 @@ def get_inspector_report(
         OutsideDepartment, OutgoingReport4.outside_department_id == OutsideDepartment.id
     ).join(
         User, OutgoingReport4.signature_authority_user_id == User.id
-    ).group_by(
+    )
+
+    # filter by year (UTC+00:00)
+    if year is None:
+        year = datetime.now(timezone.utc).year
+    start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
+    end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    query = query.filter(OutgoingReport4.created_at >= start_date, OutgoingReport4.created_at < end_date)
+
+    query = query.group_by(
         OutgoingReport4.outside_department_id,
         OutsideDepartment.name,
         OutgoingReport4.signature_authority_user_id,

@@ -16,6 +16,7 @@ def list_inspector_reports(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     search: Optional[str] = Query(None, description="ค้นหา (ชื่อผู้ตรวจ, หน่วยงาน, เรื่อง)",),
+    year: Optional[int] = Query(None, description="ปี ค.ศ. สำหรับค้นหา (default: ปีปัจจุบัน)",),
     db: Session = Depends(get_db),
     current_user: dict = Depends(can_read("dashboard")),
 ):
@@ -25,6 +26,7 @@ def list_inspector_reports(
             skip=skip,
             limit=limit,
             search=search,
+            year=year,
         )
         return format_response("0000", result)
     except HTTPException:
