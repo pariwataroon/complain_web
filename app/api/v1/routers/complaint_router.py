@@ -20,6 +20,8 @@ from app.api.v1.controllers.complaint_controller import (
     get_complaint_by_id_with_assignment,
     get_complaints_grouped_by_channel,
     update_complaint_generic,
+    create_complaint_list_item,
+    update_complaint_from_structured
 )
 from app.api.v1.controllers.outgoing_report_controller import get_outgoing_tracking, get_user_related_complaints_with_tracking
 from app.api.v1.schemas.complaint import StatusUpdateRequest, ComplaintUpdateAdmin, ComplaintUpdateSelf
@@ -35,30 +37,27 @@ router = APIRouter(
 @router.put("/{complaint_id}", response_model=FormatResponseModel)
 async def admin_update_complaint(
     complaint_id: UUID,
-    payload: ComplaintUpdateAdmin,
+    payload: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
     current_user: str = Depends(can_update("setting_access"))
 ):
-    """Admin (เจ้าหน้าที่) update complaint fields (ยกเว้น status)"""
+    """Admin (เจ้าหน้าที่) update complaint from POST-like payload (step1-4)"""
     try:
-        updated = update_complaint_generic(
+        updated = update_complaint_from_structured(
             db=db,
             complaint_id=complaint_id,
-            update_data=payload.dict(exclude_unset=True),
+            payload=payload,
             user_id=UUID(current_user) if current_user else None,
-            is_admin=True,
+            is_admin=True
         )
-        # ดึงข้อมูลล่าสุดจาก DB
-        from app.api.v1.controllers.complaint_controller import create_complaint_list_item
         latest = db.query(Complaint).filter(Complaint.id == complaint_id).first()
         latest_data = create_complaint_list_item(latest, db=db) if latest else None
-        # จัดเรียงข้อมูล response ตาม payload
-        response_data = {k: latest_data[k] for k in payload.dict(exclude_unset=True).keys() if latest_data and k in latest_data}
-        # เพิ่ม id, updated_at, message
-        response_data["id"] = str(updated.id)
-        response_data["updated_at"] = updated.updated_at
-        response_data["message"] = "COMPLAINT_UPDATED"
-        return format_response("0002", response_data)
+        return format_response("0002", {
+            "id": str(updated.id),
+            "updated_at": updated.updated_at,
+            "data": latest_data,
+            "message": "COMPLAINT_UPDATED"
+        })
     except ValueError as e:
         return format_response("4000", {"error": str(e)})
     except PermissionError as e:
@@ -69,30 +68,27 @@ async def admin_update_complaint(
 @router.put("/me/{complaint_id}", response_model=FormatResponseModel)
 async def self_update_complaint(
     complaint_id: UUID,
-    payload: ComplaintUpdateSelf,
+    payload: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
     current_user: str = Depends(verify_token)
 ):
-    """Owner (ผู้ร้อง) update limited complaint fields"""
+    """Owner (ผู้ร้อง) update complaint from POST-like payload (step1-4)"""
     try:
-        updated = update_complaint_generic(
+        updated = update_complaint_from_structured(
             db=db,
             complaint_id=complaint_id,
-            update_data=payload.dict(exclude_unset=True),
+            payload=payload,
             user_id=UUID(current_user) if current_user else None,
-            is_admin=False,
+            is_admin=False
         )
-        # ดึงข้อมูลล่าสุดจาก DB
-        from app.api.v1.controllers.complaint_controller import create_complaint_list_item
         latest = db.query(Complaint).filter(Complaint.id == complaint_id).first()
         latest_data = create_complaint_list_item(latest, db=db) if latest else None
-        # จัดเรียงข้อมูล response ตาม payload
-        response_data = {k: latest_data[k] for k in payload.dict(exclude_unset=True).keys() if latest_data and k in latest_data}
-        # เพิ่ม id, updated_at, message
-        response_data["id"] = str(updated.id)
-        response_data["updated_at"] = updated.updated_at
-        response_data["message"] = "COMPLAINT_UPDATED_SELF"
-        return format_response("0002", response_data)
+        return format_response("0002", {
+            "id": str(updated.id),
+            "updated_at": updated.updated_at,
+            "data": latest_data,
+            "message": "COMPLAINT_UPDATED_SELF"
+        })
     except ValueError as e:
         return format_response("4000", {"error": str(e)})
     except PermissionError as e:

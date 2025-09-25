@@ -323,6 +323,118 @@ def update_complaint_generic(
     db.refresh(complaint)
     return complaint
 
+def update_complaint_from_structured(
+    db: Session,
+    complaint_id: UUID,
+    payload: Dict[str, Any],
+    user_id: Optional[UUID] = None,
+    is_admin: bool = False
+) -> Complaint:
+    """
+    อัพเดต Complaint โดยรับ payload โครงเดียวกับ POST (step1/step2/step3/step4)
+    ทำ extraction เดียวกับ create_complaint แล้ว map กลับเข้า fields ของตาราง
+    """
+    import json as _json
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not complaint:
+        raise ValueError(f"Complaint with ID {complaint_id} not found")
+
+    # สิทธิ์: ถ้าไม่ใช่ admin ต้องเป็นเจ้าของเรื่องเท่านั้น
+    if not is_admin:
+        if not complaint.created_by or str(complaint.created_by) != str(user_id):
+            raise PermissionError("You are not allowed to update this complaint")
+
+    # เก็บต้นฉบับ (สำหรับแสดงผล/ตรวจย้อนหลัง) ให้เหมือนตอน POST
+    original_data = save_original_complaint(payload)
+
+    # root complaint type (รองรับกรณีส่งมานอก step3.general)
+    root_complaint_type = payload.get("complaintType", "")
+
+    # สกัดข้อมูลเหมือนตอน POST
+    extracted = extract_complaint_data(payload, root_complaint_type)
+
+    # สกัด location แบบเดียวกับ create
+    location_data = extract_location_data(payload, db=db)
+
+    # ====== ทำการอัพเดต field ต่าง ๆ ======
+    # (1) เรื่อง/คำอธิบาย/ประเภท/วันที่เกิดเหตุ
+    complaint.subject = extracted.get("subject", complaint.subject)
+    complaint.description = extracted.get("description", complaint.description)
+    if extracted.get("complaint_type"):
+        complaint.complaint_type = extracted["complaint_type"]
+    complaint.incident_date = extracted.get("incident_date", complaint.incident_date)
+
+    # (2) ผู้ร้อง/ผู้ถูกร้อง/ผู้รับมอบฯ (เก็บเป็น JSON string)
+    if extracted.get("complainant_data") is not None:
+        complaint.complainant_data = _json.dumps(extracted["complainant_data"], ensure_ascii=False)
+    if extracted.get("respondent_data") is not None:
+        complaint.respondent_data = _json.dumps(extracted["respondent_data"], ensure_ascii=False)
+
+    # NOTE: มีฟิลด์ delegate_data ใน model หรือไม่?
+    # ถ้าโมเดลมีคอลัมน์ delegate_data ให้เก็บด้วย (ปลอดภัยด้วย hasattr)
+    if hasattr(complaint, "delegate_data"):
+        delegate_payload = extracted.get("delegate_data")
+        complaint.delegate_data = (
+            _json.dumps(delegate_payload, ensure_ascii=False)
+            if delegate_payload is not None else None
+        )
+
+    # (3) full payload เก็บลง full_complaint_data เพื่อให้ PUT เหมือน POST
+    if hasattr(complaint, "full_complaint_data"):
+        complaint.full_complaint_data = _json.dumps(original_data, ensure_ascii=False)
+
+    # (4) terms/accept (ถ้าอยู่ใน step4.general.accepted)
+    accepted = payload.get("step4", {}).get("general", {}).get("accepted")
+    if accepted is not None and hasattr(complaint, "terms_accepted"):
+        complaint.terms_accepted = bool(accepted)
+
+    # (5) Location mapping (ถ้ามี ก็อัพเดต)
+    if location_data:
+        if "province_id" in location_data and hasattr(complaint, "incident_province_id"):
+            complaint.incident_province_id = location_data.get("province_id")
+        if "province_name" in location_data and hasattr(complaint, "incident_province"):
+            complaint.incident_province = location_data.get("province_name")
+
+        if "district_id" in location_data and hasattr(complaint, "incident_district_id"):
+            complaint.incident_district_id = location_data.get("district_id")
+        if "district_name" in location_data and hasattr(complaint, "incident_district"):
+            complaint.incident_district = location_data.get("district_name")
+
+        if "subdistrict_id" in location_data and hasattr(complaint, "incident_subdistrict_id"):
+            complaint.incident_subdistrict_id = location_data.get("subdistrict_id")
+        if "subdistrict_name" in location_data and hasattr(complaint, "incident_subdistrict"):
+            complaint.incident_subdistrict = location_data.get("subdistrict_name")
+
+    # (6) ช่องทางร้องเรียน (ถ้าส่งมาใน payload ระดับ root แบบ POST)
+    complaint_channel_id = None
+    if "complaint_channel_id" in payload:
+        try:
+            ch_str = payload.get("complaint_channel_id")
+            if ch_str and ch_str not in ("None", "null"):
+                complaint_channel_id = UUID(ch_str)
+        except Exception:
+            complaint_channel_id = None
+    # ยอมรับเฉพาะ admin ปรับช่องทางได้ (กัน user เปลี่ยนย้อนหลัง)
+    if is_admin and complaint_channel_id and hasattr(complaint, "complaint_channel_id"):
+        if validate_complaint_channel(db, complaint_channel_id):
+            complaint.complaint_channel_id = complaint_channel_id
+
+    # timestamp อัพเดต
+    complaint.updated_at = datetime.now()
+
+    # สร้างประวัติการแก้ไข (message ชัดเจนว่า PUT โครง POST)
+    create_status_history(
+        db,
+        complaint.id,
+        complaint.status,
+        "อัพเดตด้วย payload โครงแบบ POST (step1-4)",
+        user_id
+    )
+
+    db.commit()
+    db.refresh(complaint)
+    return complaint
+
 # ✅ เติมฟังก์ชันที่ขาดหายไป
 def get_respondent_data_by_type(step2_general: Dict, data_type: str) -> Dict:
     """ดึงข้อมูลผู้ถูกร้องตามประเภทที่ระบุ"""
