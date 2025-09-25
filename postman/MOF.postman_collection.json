@@ -11,6 +11,71 @@
 			"item": [
 				{
 					"name": "Get Staff Workload",
+		{
+			"name": "INSPECTOR REPORTS",
+			"item": [
+				{
+					"name": "Get Inspector Report Aggregation",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/reports/inspector?year=2025&department_id=&inspector_id=&status=",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["reports", "inspector"],
+							"query": [
+								{"key": "year", "value": "2025", "description": "ปี (UTC+00:00)"},
+								{"key": "department_id", "value": "", "description": "หน่วยงาน (UUID)"},
+								{"key": "inspector_id", "value": "", "description": "ผู้ตรวจ (UUID)"},
+								{"key": "status", "value": "", "description": "สถานะ (Optional)"}
+							]
+						},
+						"description": "รายงานสรุปงานผู้ตรวจ/หน่วยงาน/สถานะ (aggregation) ตามปี UTC+00:00"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Inspector Pending Consideration Report",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{API}}{{PREFIX}}/reports/inspector-pending?year=2025&department_id=&inspector_id=",
+							"host": ["{{API}}{{PREFIX}}"],
+							"path": ["reports", "inspector-pending"],
+							"query": [
+								{"key": "year", "value": "2025", "description": "ปี (UTC+00:00)"},
+								{"key": "department_id", "value": "", "description": "หน่วยงาน (UUID)"},
+								{"key": "inspector_id", "value": "", "description": "ผู้ตรวจ (UUID)"}
+							]
+						},
+						"description": "รายงานเรื่องค้างการพิจารณา (pending consideration) ตามปี UTC+00:00"
+					},
+					"response": []
+				}
+			],
+			"description": "API สำหรับรายงานสรุปงานผู้ตรวจและเรื่องค้างการพิจารณา (aggregation by inspector/department/year)"
+		},
 					"request": {
 						"auth": {
 							"type": "bearer",

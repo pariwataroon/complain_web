@@ -37,6 +37,8 @@ from app.api.v1.routers.pending_tasks_report_router import router as pending_tas
 from app.api.v1.routers.chat_bot_router import router as chat_bot_router_v1
 from app.api.v1.routers.news_router import router as news_router_v1
 # from app.api.v1.routers.file_management_router import router as file_management_router_v1
+from app.api.v1.routers.inspector_report_router import router as inspector_report_router_v1
+from app.api.v1.routers.inspector_pending_report_router import router as inspector_pending_report_router_v1
 from config.dotenv import PREFIX
 
 # สร้างตัวแปรสำหรับ prefixes แต่ละเวอร์ชัน
@@ -84,6 +86,8 @@ v1_router.include_router(pending_tasks_report_router_v1)
 v1_router.include_router(chat_bot_router_v1)
 v1_router.include_router(news_router_v1)
 # v1_router.include_router(file_management_router_v1)
+v1_router.include_router(inspector_report_router_v1)
+v1_router.include_router(inspector_pending_report_router_v1)
 
 # เมื่อมี router เวอร์ชัน 2 ในอนาคต จะเพิ่มได้ง่ายๆ
 # from router.v2.user import router as user_router_v2
