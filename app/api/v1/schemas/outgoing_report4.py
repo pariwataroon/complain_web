@@ -25,6 +25,7 @@ class OutgoingReport4Base(BaseModel):
     # ตาม model ไม่มี position_id, complaint_number, complaint_number_date
     position_id: Optional[UUID] = Field(None, description="ตำแหน่ง (nullable)")
     position_other_text: Optional[str] = Field(None, description="กรณีเลือกตำแหน่งอื่นๆ ให้ระบุ")
+    report_type: Optional[str] = Field(None, description="ประเภท tab ของ front-end")
     reference_number: str = Field(..., description="เลขอ้างอิง")
     reference_date: datetime = Field(..., description="วันที่เอกสาร")
     subject: str = Field(..., description="เรื่อง")
@@ -47,6 +48,7 @@ class OutgoingReport4Base(BaseModel):
 class OutgoingReport4Create(BaseModel):
     position_id: Optional[UUID] = None
     position_other_text: Optional[str] = None
+    report_type: Optional[str] = None
     reference_number: str = Field(..., max_length=50)
     reference_date: datetime
     subject: str = Field(..., max_length=500)
@@ -75,6 +77,7 @@ class OutgoingReport4Create(BaseModel):
 class OutgoingReport4Update(BaseModel):
     position_id: Optional[UUID] = None
     position_other_text: Optional[str] = None
+    report_type: Optional[str] = None
     reference_number: Optional[str] = None
     reference_date: Optional[datetime] = None
     subject: Optional[str] = None
@@ -99,16 +102,13 @@ class OutgoingReport4(OutgoingReport4Base):
     created_at: datetime
     updated_at: datetime
     is_active: bool
-    
     # ข้อมูลเพิ่มเติมจาก relationships
     signature_authority_user_name: Optional[str] = Field(None, description="ชื่อผู้มีอำนาจลงนาม")
     department_name: Optional[str] = Field(None, description="ชื่อหน่วยงาน")
     user_name: Optional[str] = Field(None, description="ชื่อผู้ใช้ที่เกี่ยวข้อง")  # ตาม model
     creator_name: Optional[str] = Field(None, description="ชื่อผู้สร้าง")
-    
     # ไฟล์แนบ
     attachments: List[OutgoingReport4Attachment] = Field(default=[], description="ไฟล์แนบ")
-    
     class Config:
         from_attributes = True
 

@@ -14,6 +14,9 @@ class OutgoingReport4(Base):
     position_id = Column(UNIQUEIDENTIFIER, ForeignKey("positions.id"), nullable=True)
     position_other_text = Column(NVARCHAR(255), nullable=True)
 
+    # เพิ่มตัวแปรเก็บ tab ของ front-end
+    report_type = Column(NVARCHAR(50), nullable=True, comment="ประเภท tab ของ front-end")
+
     reference_number = Column(NVARCHAR(50), nullable=False)
     reference_date = Column(DateTime, nullable=False)
     subject = Column(NVARCHAR(500), nullable=False)
