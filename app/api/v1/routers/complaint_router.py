@@ -48,11 +48,17 @@ async def admin_update_complaint(
             user_id=UUID(current_user) if current_user else None,
             is_admin=True,
         )
-        return format_response("0002", {
-            "id": str(updated.id),
-            "updated_at": updated.updated_at,
-            "message": "COMPLAINT_UPDATED"
-        })
+        # ดึงข้อมูลล่าสุดจาก DB
+        from app.api.v1.controllers.complaint_controller import create_complaint_list_item
+        latest = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+        latest_data = create_complaint_list_item(latest, db=db) if latest else None
+        # จัดเรียงข้อมูล response ตาม payload
+        response_data = {k: latest_data[k] for k in payload.dict(exclude_unset=True).keys() if latest_data and k in latest_data}
+        # เพิ่ม id, updated_at, message
+        response_data["id"] = str(updated.id)
+        response_data["updated_at"] = updated.updated_at
+        response_data["message"] = "COMPLAINT_UPDATED"
+        return format_response("0002", response_data)
     except ValueError as e:
         return format_response("4000", {"error": str(e)})
     except PermissionError as e:
@@ -76,11 +82,17 @@ async def self_update_complaint(
             user_id=UUID(current_user) if current_user else None,
             is_admin=False,
         )
-        return format_response("0002", {
-            "id": str(updated.id),
-            "updated_at": updated.updated_at,
-            "message": "COMPLAINT_UPDATED_SELF"
-        })
+        # ดึงข้อมูลล่าสุดจาก DB
+        from app.api.v1.controllers.complaint_controller import create_complaint_list_item
+        latest = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+        latest_data = create_complaint_list_item(latest, db=db) if latest else None
+        # จัดเรียงข้อมูล response ตาม payload
+        response_data = {k: latest_data[k] for k in payload.dict(exclude_unset=True).keys() if latest_data and k in latest_data}
+        # เพิ่ม id, updated_at, message
+        response_data["id"] = str(updated.id)
+        response_data["updated_at"] = updated.updated_at
+        response_data["message"] = "COMPLAINT_UPDATED_SELF"
+        return format_response("0002", response_data)
     except ValueError as e:
         return format_response("4000", {"error": str(e)})
     except PermissionError as e:
