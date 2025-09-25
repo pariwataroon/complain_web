@@ -12,6 +12,7 @@ import {
   Container,
   IconButton,
   Typography,
+  CircularProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
@@ -21,6 +22,8 @@ import ExportButton from "@services/ExportButton/ExportButton";
 import styles from "./TableNewAddCompResults.module.scss";
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
+import { UpdateAssignedRemark } from "@pages/api/complaint/complaint";
+
 const TableNewAddCompResults = ({
   data,
   title,
@@ -51,6 +54,9 @@ const TableNewAddCompResults = ({
     () => tableData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
     [tableData, page, rowsPerPage]
   );
+
+  // state สำหรับ loading เฉพาะ cell ที่กำลังอัพเดทหมายเหตุ
+  const [loadingRow, setLoadingRow] = useState(null);
 
   const handleFilterChange = (field) => (e) => {
     const value = e.target ? e.target.value : e;
@@ -87,20 +93,29 @@ const TableNewAddCompResults = ({
     },
   ];
 
-  const handleNoteSelectChange = (itemId, selectedValue) => {
+  // handleNoteSelectChange ให้ส่ง new_complaint: true ไปด้วย และ assigned_remark เป็น string
+  const handleNoteSelectChange = async (itemId, selectedValue) => {
     if (selectedValue === "__add") {
       onAddNote?.(itemId);
       return;
     }
 
-    if (onNoteChange) {
-      onNoteChange(itemId, selectedValue);
-    } else {
+    setLoadingRow(itemId);
+    try {
+      // ส่ง assigned_remark เป็น string, new_complaint เป็น true
+      await UpdateAssignedRemark(itemId, selectedValue);
+
       setTableData((prev) =>
         prev.map((r) => (r.id === itemId ? { ...r, note: selectedValue } : r))
       );
+
+      if (onNoteChange) onNoteChange(itemId, selectedValue);
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดในการบันทึกหมายเหตุ กรุณาลองใหม่");
     }
+    setLoadingRow(null);
   };
+
   const handleExportExcel = () => {
     const exportData = tableData.map((item) => ({
       "ชื่อ - สกุล (ผู้ร้อง)": item.claimantName || "-",
@@ -127,7 +142,7 @@ const TableNewAddCompResults = ({
         boxShadow: "0 6px 18px rgba(0,0,0,.06)",
         px: { xs: 1, md: 0 },
         pl: { xs: "60px", md: "80px" },
-  }}
+      }}
     >
       <Box className={styles.headerBar} />
       <Box className={styles.headerBar2}>
@@ -307,30 +322,43 @@ const TableNewAddCompResults = ({
                             onClick={(e) => {
                               e.stopPropagation();
                             }}
-                            style={{ width: "100%" }}
+                            style={{ width: "100%", position: "relative" }}
                           >
-                            <SelectField
-                              options={col.options}
-                              value={value}
-                              onChange={(valueOrEvent) => {
-                                let selectedValue;
+                            {loadingRow === item.id ? (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  height: 40,
+                                }}
+                              >
+                                <CircularProgress size={22} color="primary" />
+                              </Box>
+                            ) : (
+                              <SelectField
+                                options={col.options}
+                                value={value}
+                                onChange={(valueOrEvent) => {
+                                  let selectedValue;
 
-                                if (valueOrEvent && valueOrEvent.target) {
-                                  selectedValue = valueOrEvent.target.value;
-                                  if (
-                                    typeof valueOrEvent.stopPropagation ===
-                                    "function"
-                                  ) {
-                                    valueOrEvent.stopPropagation();
+                                  if (valueOrEvent && valueOrEvent.target) {
+                                    selectedValue = valueOrEvent.target.value;
+                                    if (
+                                      typeof valueOrEvent.stopPropagation ===
+                                      "function"
+                                    ) {
+                                      valueOrEvent.stopPropagation();
+                                    }
+                                  } else {
+                                    selectedValue = valueOrEvent;
                                   }
-                                } else {
-                                  selectedValue = valueOrEvent;
-                                }
 
-                                handleNoteSelectChange(item.id, selectedValue);
-                              }}
-                              name={`${col.name}_${item.id}`}
-                            />
+                                  handleNoteSelectChange(item.id, selectedValue);
+                                }}
+                                name={`${col.name}_${item.id}`}
+                              />
+                            )}
                           </div>
                         ) : (
                           value

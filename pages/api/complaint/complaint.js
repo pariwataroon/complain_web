@@ -333,6 +333,31 @@ const GetComplaintOutgoingTracking = async (complaint_id) => {
   }
 }
 
+const UpdateAssignedRemark = async (complaint_id, assigned_remark) => {
+  try {
+    const response = await axiosInstance.put(
+      `/complaints-assignment/${complaint_id}/assignment`,
+      { assigned_remark,
+        new_complaint: true,
+       }
+    );
+
+    // Normalize return to include HTTP status and a generic success flag
+    if (response) {
+      const data = response.data ?? {};
+      const httpStatus = response.status;
+      const success =
+        (typeof data.res_code === "string" && data.res_code === "0000") ||
+        (httpStatus >= 200 && httpStatus < 300);
+      return { ...data, httpStatus, success };
+    }
+    return null;
+  } catch (error) {
+    console.error("Error updating assigned remark:", error);
+    throw error;
+  }
+};
+
 export {
   CreateComplaint,
   Addcomplaints,
@@ -357,4 +382,5 @@ export {
   GetDepartments,
   GetAssignmentCompleteByAdmin,
   GetComplaintOutgoingTracking,
+  UpdateAssignedRemark,
 };

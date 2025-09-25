@@ -200,12 +200,6 @@ const PendingWorkfollowupComponents = () => {
     return options;
   }, [mockComplaints]); // Dependency on mockComplaints
 
-  // เปลี่ยนหน้า summary
-  const handleSummaryByIssueType = () => {
-    router.push(
-      "/admin/document/new-additional-complaints-summary/summaryresults"
-    );
-  };
 
   // ฟังก์ชันแปลง DateThaiPickerService object เป็น Date object
   function convertThaiDateToJs(input) {
@@ -359,8 +353,6 @@ const PendingWorkfollowupComponents = () => {
       <TableWorkFollow
         data={filteredComplaints}
         onSearch={handleSearch}
-        actionButtonLabel="สรุปผลตามประเภทเรื่อง"
-        onActionClick={handleSummaryByIssueType}
         filterFields={[
           {
             name: "receiveDateFrom",

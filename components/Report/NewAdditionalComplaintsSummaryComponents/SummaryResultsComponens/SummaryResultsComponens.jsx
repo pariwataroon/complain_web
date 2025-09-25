@@ -10,6 +10,8 @@ import {
   Typography,
   Paper,
 } from "@mui/material";
+import { getNewAdditionalComplaintsReport } from "@pages/api/complaintreports/reports";
+import { UpdateAssignedRemark } from "@pages/api/complaint/complaint";
 
 // สำหรับกรองเดือน (คำย่อในวันที่)
 const THAI_MONTH_ABBREV = {
@@ -27,7 +29,6 @@ const THAI_MONTH_ABBREV = {
   12: "ธ.ค.",
 };
 
-// ตัวเลือกเดือน (สำหรับ SelectField)
 const MONTH_OPTIONS = [
   { value: "1", label: "มกราคม" },
   { value: "2", label: "กุมภาพันธ์" },
@@ -43,7 +44,6 @@ const MONTH_OPTIONS = [
   { value: "12", label: "ธันวาคม" },
 ];
 
-// ตัวเลือกปีงบประมาณ
 const FISCAL_YEAR_OPTIONS = [
   { value: "2566", label: "2566" },
   { value: "2567", label: "2567" },
@@ -52,65 +52,148 @@ const FISCAL_YEAR_OPTIONS = [
   { value: "2570", label: "2570" },
 ];
 
-// ─── mock data (20 รายการ หลากหลาย) พร้อม receiveDate ─────────────────────────────────────────────────
-const mockComplaints = [
-  {
-    id: 1,
-    claimantName: "นางสาวดลภัทร มีความสุข",
-    issue: "ขอความช่วยเหลือเกี่ยวกับปัญหาหนี้สินในระบบ",
-    subIssueType: "หนี้ในระบบ",
-    note: "ส่งเรื่องให้ธนาคารกรุงไทยพิจารณาเรียบร้อยแล้ว",
-    receiveDate: "15 ม.ค. 2568",
-  },
-  // ... [other mock data remains the same]
-];
-
-// ← สร้าง NOTE_OPTIONS จาก mockComplaints
-const INITIAL_NOTE_OPTIONS = Array.from(
-  new Set(mockComplaints.map((complaint) => complaint.note))
-).map((note) => ({ value: note, label: note }));
-
-// สร้างตัวเลือกประเภทเรื่องหลัก/ย่อย จาก mockComplaints
-const ISSUE_TYPE_OPTIONS = Array.from(
-  new Set(mockComplaints.map((c) => c.issue))
-).map((type) => ({ value: type, label: type }));
-
-const SUB_ISSUE_TYPE_OPTIONS = Array.from(
-  new Set(mockComplaints.map((c) => c.subIssueType))
-).map((sub) => ({ value: sub, label: sub }));
+// Helper: แปลงวันที่ ISO เป็น "15 ม.ค. 2568"
+function formatApiDateThai(dateString) {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  if (isNaN(date)) return "-";
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear() + 543;
+  return `${day} ${THAI_MONTH_ABBREV[month]} ${year}`;
+}
 
 const Summaryresults = () => {
-  const [allComplaints, setAllComplaints] = useState(mockComplaints);
-  const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
-  const [hasChanges, setHasChanges] = useState(false); // เพิ่ม state เพื่อติดตามการเปลี่ยนแปลง
-
-  // ← ใช้ INITIAL_NOTE_OPTIONS ที่สร้างจาก mockComplaints
-  const [noteOptions, setNoteOptions] = useState([
-    ...INITIAL_NOTE_OPTIONS,
-    { value: "__add", label: "เพิ่มหมายเหตุ..." },
-  ]);
-
-  // state สำหรับ Modal เพิ่ม/แก้ไขหมายเหตุ
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [noteOptions, setNoteOptions] = useState([]);
+  const [issueOptions, setIssueOptions] = useState([]);
+  const [subIssueOptions, setSubIssueOptions] = useState([]);
   const [currentNoteRow, setCurrentNoteRow] = useState(null);
   const [newNoteText, setNewNoteText] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [noteChangesMade, setNoteChangesMade] = useState(false);
 
+  // สรุปค่า filter ล่าสุดที่เลือกไว้ (เพื่อแสดงบนหัว summary)
+  const [summaryMonth, setSummaryMonth] = useState("");
+  const [summaryFiscalYear, setSummaryFiscalYear] = useState("");
+  const [summaryIssueType, setSummaryIssueType] = useState("");
+
   const router = useRouter();
+
+  // ดึงข้อมูลจาก API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await getNewAdditionalComplaintsReport({
+          skip: 0,
+          limit: 200,
+          date_from: "",
+          date_to: "",
+          department_id: "",
+          officer_id: "",
+          search: ""
+        });
+
+        if (
+          response &&
+          response.res_code === "0000" &&
+          response.res_data &&
+          Array.isArray(response.res_data.items)
+        ) {
+          // แปลงข้อมูลให้อยู่ในโครงสร้างที่ตารางใช้
+          const transformed = response.res_data.items.map((item) => ({
+            id: item.id,
+            claimantName: item.complainant_name || "-",
+            issue: item.complaint_type || "-",
+            subIssueType: item.filing_type || "-", // ใช้ filing_type แทน subIssueType ถ้าไม่มี
+            note: item.remark || "",
+            receiveDate: formatApiDateThai(item.received_date),
+          }));
+
+          setAllComplaints(transformed);
+          setFilteredComplaints(transformed);
+
+          // NOTE_OPTIONS
+          const notes = Array.from(
+            new Set(transformed.map((c) => c.note).filter(Boolean))
+          ).map((note) => ({ value: note, label: note }));
+          setNoteOptions([
+            ...notes,
+            { value: "__add", label: "เพิ่มหมายเหตุ..." },
+          ]);
+          // ISSUE_TYPE_OPTIONS
+          const issues = Array.from(
+            new Set(transformed.map((c) => c.issue).filter(Boolean))
+          ).map((type) => ({ value: type, label: type }));
+          setIssueOptions(issues);
+          // SUB_ISSUE_TYPE_OPTIONS
+          const subIssues = Array.from(
+            new Set(transformed.map((c) => c.subIssueType).filter(Boolean))
+          ).map((type) => ({ value: type, label: type }));
+          setSubIssueOptions(subIssues);
+
+        } else {
+          setAllComplaints([]);
+          setFilteredComplaints([]);
+          setNoteOptions([{ value: "__add", label: "เพิ่มหมายเหตุ..." }]);
+          setIssueOptions([]);
+          setSubIssueOptions([]);
+        }
+      } catch (e) {
+        setAllComplaints([]);
+        setFilteredComplaints([]);
+        setNoteOptions([{ value: "__add", label: "เพิ่มหมายเหตุ..." }]);
+        setIssueOptions([]);
+        setSubIssueOptions([]);
+      }
+    };
+    fetchData();
+    // ตรวจสอบว่ามีข้อมูลที่อัปเดตใน localStorage หรือไม่
+    const updatedData = localStorage.getItem("updatedComplaints");
+    if (updatedData) {
+      try {
+        const parsedData = JSON.parse(updatedData);
+        setAllComplaints((prev) =>
+          prev.map((complaint) => {
+            const updatedComplaint = parsedData.find(
+              (item) => item.id === complaint.id
+            );
+            return updatedComplaint
+              ? { ...complaint, note: updatedComplaint.note }
+              : complaint;
+          })
+        );
+        setFilteredComplaints((prev) =>
+          prev.map((complaint) => {
+            const updatedComplaint = parsedData.find(
+              (item) => item.id === complaint.id
+            );
+            return updatedComplaint
+              ? { ...complaint, note: updatedComplaint.note }
+              : complaint;
+          })
+        );
+        localStorage.removeItem("updatedComplaints");
+      } catch (e) {
+        console.error("เกิดข้อผิดพลาดในการอ่านข้อมูลที่อัปเดต:", e);
+      }
+    }
+  }, []);
 
   // บันทึกการเปลี่ยนแปลงทั้งหมดและย้อนกลับไปหน้าหลัก
   const handleSaveAllChanges = () => {
-    // บันทึกข้อมูลที่เปลี่ยนแปลงลงใน localStorage
     localStorage.setItem(
       "updatedComplaints",
       JSON.stringify(filteredComplaints)
     );
     setHasChanges(false);
-    // กลับไปยังหน้าหลัก
-    router.push("/admin/document/new-additional-complaints-summary");
+    setNoteChangesMade(false);
+    window.location.reload();
+    // router.push("/admin/document/new-additional-complaints-summary");
   };
 
-  // ไปหน้าสรุปตามประเภทเรื่อง
   const handleSummaryByIssueType = () => {
     router.push(
       "/admin/document/new-additional-complaints-summary/summaryresults"
@@ -123,7 +206,6 @@ const Summaryresults = () => {
     setModalOpen(true);
   };
 
-  // อัพเดทค่าหมายเหตุ
   const handleNoteChange = (rowId, value) => {
     setFilteredComplaints((prev) =>
       prev.map((row) => (row.id === rowId ? { ...row, note: value } : row))
@@ -131,50 +213,50 @@ const Summaryresults = () => {
     setAllComplaints((prev) =>
       prev.map((row) => (row.id === rowId ? { ...row, note: value } : row))
     );
-    setHasChanges(true); // ระบุว่ามีการเปลี่ยนแปลง
+    setHasChanges(true);
     setNoteChangesMade(true);
   };
 
-  // บันทึกจาก Modal และเพิ่ม option ใหม่
-  const handleSaveNote = () => {
-    if (newNoteText.trim()) {
+  // ให้บันทึกลง API ด้วย
+  const handleSaveNote = async () => {
+    if (newNoteText.trim() && currentNoteRow) {
       const trimmedNote = newNoteText.trim();
+      try {
+        // call API
+        await UpdateAssignedRemark(currentNoteRow, trimmedNote);
 
-      // อัปเดตข้อมูลในตาราง
-      setFilteredComplaints((prev) =>
-        prev.map((row) =>
-          row.id === currentNoteRow ? { ...row, note: trimmedNote } : row
-        )
-      );
-
-      // อัปเดตข้อมูลในตารางหลักด้วย
-      setAllComplaints((prev) =>
-        prev.map((row) =>
-          row.id === currentNoteRow ? { ...row, note: trimmedNote } : row
-        )
-      );
-
-      // เพิ่มหมายเหตุใหม่เข้าไปใน noteOptions ถ้ายังไม่มี
-      setNoteOptions((prev) => {
-        const exists = prev.some((option) => option.value === trimmedNote);
-        if (!exists) {
-          const newOption = { value: trimmedNote, label: trimmedNote };
-          const withoutAdd = prev.filter((opt) => opt.value !== "__add");
-          return [
-            ...withoutAdd,
-            newOption,
-            { value: "__add", label: "เพิ่มหมายเหตุ..." },
-          ];
-        }
-        return prev;
-      });
-
-      setHasChanges(true); // ระบุว่ามีการเปลี่ยนแปลง
-      setNoteChangesMade(true);
+        setFilteredComplaints((prev) =>
+          prev.map((row) =>
+            row.id === currentNoteRow ? { ...row, note: trimmedNote } : row
+          )
+        );
+        setAllComplaints((prev) =>
+          prev.map((row) =>
+            row.id === currentNoteRow ? { ...row, note: trimmedNote } : row
+          )
+        );
+        setNoteOptions((prev) => {
+          const exists = prev.some((option) => option.value === trimmedNote);
+          if (!exists) {
+            const newOption = { value: trimmedNote, label: trimmedNote };
+            const withoutAdd = prev.filter((opt) => opt.value !== "__add");
+            return [
+              ...withoutAdd,
+              newOption,
+              { value: "__add", label: "เพิ่มหมายเหตุ..." },
+            ];
+          }
+          return prev;
+        });
+        setHasChanges(true);
+        setNoteChangesMade(true);
+      } catch (e) {
+        alert("เกิดข้อผิดพลาดในการบันทึกหมายเหตุ กรุณาลองใหม่");
+      }
+      setModalOpen(false);
+      setCurrentNoteRow(null);
+      setNewNoteText("");
     }
-    setModalOpen(false);
-    setCurrentNoteRow(null);
-    setNewNoteText("");
   };
 
   const handleModalClose = () => {
@@ -183,7 +265,7 @@ const Summaryresults = () => {
     setNewNoteText("");
   };
 
-  // ← แก้ไขฟังก์ชัน handleSearch ให้ค้นหาจากเดือนและปีงบประมาณได้
+  // ฟังก์ชันค้นหาและอัปเดต summary filter
   const handleSearch = ({
     issueType,
     subIssueType,
@@ -193,38 +275,53 @@ const Summaryresults = () => {
   }) => {
     let result = allComplaints;
 
-    // กรองตามประเภทเรื่องหลัก
     if (issueType) {
       result = result.filter((item) => item.issue === issueType);
     }
-
-    // กรองตามประเภทเรื่องย่อย
     if (subIssueType) {
       result = result.filter((item) => item.subIssueType === subIssueType);
     }
-
-    // ← กรองตามเดือน (ค้นหาจากคำย่อเดือนใน receiveDate)
     if (month) {
       const monthAbbrev = THAI_MONTH_ABBREV[parseInt(month)];
       result = result.filter(
         (item) => item.receiveDate && item.receiveDate.includes(monthAbbrev)
       );
     }
-
-    // ← กรองตามปีงบประมาณ (ค้นหาจากปี พ.ศ. ใน receiveDate)
     if (fiscalYear) {
       result = result.filter(
         (item) => item.receiveDate && item.receiveDate.includes(fiscalYear)
       );
     }
-
-    // กรองตามหมายเหตุ
     if (note) {
       result = result.filter((item) => item.note === note);
     }
-
     setFilteredComplaints(result);
+
+    // อัปเดตค่า summary เฉพาะที่เลือก
+    setSummaryMonth(month || "");
+    setSummaryFiscalYear(fiscalYear || "");
+    setSummaryIssueType(issueType || "");
   };
+
+  // สร้างข้อความ summaryDate และ summaryCategory ตาม filter ที่เลือก
+  const summaryDate = (() => {
+    if (summaryMonth && summaryFiscalYear) {
+      const monthObj = MONTH_OPTIONS.find((m) => m.value === summaryMonth);
+      return `${monthObj ? monthObj.label : ""} พ.ศ.${summaryFiscalYear}`;
+    }
+    if (summaryMonth) {
+      const monthObj = MONTH_OPTIONS.find((m) => m.value === summaryMonth);
+      return `${monthObj ? monthObj.label : ""}`;
+    }
+    if (summaryFiscalYear) {
+      return `พ.ศ.${summaryFiscalYear}`;
+    }
+    return "";
+  })();
+
+  const summaryCategory = summaryIssueType
+    ? summaryIssueType
+    : "";
 
   return (
     <>
@@ -249,7 +346,6 @@ const Summaryresults = () => {
         ]}
       />
 
-      {/* แสดงปุ่มบันทึกเมื่อมีการเปลี่ยนแปลงหมายเหตุ */}
       {noteChangesMade && (
         <Paper
           elevation={2}
@@ -280,50 +376,45 @@ const Summaryresults = () => {
       )}
 
       <Box sx={{ width: "100%", overflowX: "auto" }}>
-      <TableNewAddCompResults
-        data={filteredComplaints}
-        title="สรุปผลตามประเภทเรื่อง"
-        onSearch={handleSearch}
-        summaryTitle="รายละเอียดสรุปผลการดำเนินงานเรื่องร้องเรียน"
-        summaryDate="8 มิถุนายน พ.ศ.2568"
-        summaryCategory="ประเภทหนี้สิน / การกู้ยืม / การปรับโครงสร้างหนี้"
-        onActionClick={handleSummaryByIssueType}
-        NOTE_OPTIONS={noteOptions}
-        onAddNote={handleAddNote}
-        onNoteChange={handleNoteChange}
-        filterFields={[
-          {
-            name: "issueType",
-            label: "ประเภทเรื่องหลัก",
-            type: "select",
-            options: ISSUE_TYPE_OPTIONS,
-          },
-          {
-            name: "subIssueType",
-            label: "ประเภทเรื่องย่อย",
-            type: "select",
-            options: SUB_ISSUE_TYPE_OPTIONS,
-          },
-          {
-            name: "month",
-            label: "เดือน",
-            type: "select",
-            options: MONTH_OPTIONS,
-          },
-          {
-            name: "fiscalYear",
-            label: "ปีงบประมาณ",
-            type: "select",
-            options: FISCAL_YEAR_OPTIONS,
-          },
-          {
-            name: "note",
-            label: "หมายเหตุ",
-            type: "select",
-            options: noteOptions.filter((opt) => opt.value !== "__add"),
-          },
-        ]}
-      />
+        <TableNewAddCompResults
+          data={filteredComplaints}
+          title="สรุปผลตามประเภทเรื่อง"
+          onSearch={handleSearch}
+          summaryTitle="รายละเอียดสรุปผลการดำเนินงานเรื่องร้องเรียน"
+          summaryDate={summaryDate}
+          summaryCategory={summaryCategory}
+          onActionClick={handleSummaryByIssueType}
+          NOTE_OPTIONS={noteOptions}
+          onAddNote={handleAddNote}
+          onNoteChange={handleNoteChange}
+          filterFields={[
+            {
+              name: "issueType",
+              label: "ประเภทเรื่องหลัก",
+              type: "select",
+              options: issueOptions,
+            },
+            {
+              name: "subIssueType",
+              label: "ประเภทเรื่องย่อย",
+              type: "select",
+              options: subIssueOptions,
+            },
+            {
+              name: "month",
+              label: "เดือน",
+              type: "select",
+              options: MONTH_OPTIONS,
+            },
+            {
+              name: "fiscalYear",
+              label: "ปีงบประมาณ",
+              type: "select",
+              options: FISCAL_YEAR_OPTIONS,
+            },
+
+          ]}
+        />
       </Box>
 
       {/* Modal สำหรับเพิ่ม/แก้ไขหมายเหตุ */}
@@ -365,6 +456,12 @@ const Summaryresults = () => {
               "& .MuiInputLabel-root.Mui-focused": {
                 color: "#1120A3",
               },
+            }}
+            onKeyDown={async (e) => {
+              if (e.key === "Enter" && !e.shiftKey && newNoteText.trim()) {
+                e.preventDefault();
+                await handleSaveNote();
+              }
             }}
           />
           <Box mt={2} textAlign="right">

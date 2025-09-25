@@ -26,10 +26,31 @@ import styles from "./TableWorkFollow.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
+import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
 
+// --- Thai Date formatter helper ---
+function formatThaiDate(date) {
+  if (!date) return "-";
+  let d = date;
+  if (typeof date === "string" && !/^\d+$/.test(date)) {
+    // try parse with Date (skip year-only string)
+    const parsed = new Date(date);
+    if (!isNaN(parsed)) d = parsed;
+    else return date; // fallback
+  }
+  if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}/.test(d)) {
+    // string in yyyy-mm-dd
+    d = new Date(d);
+  }
+  if (!(d instanceof Date) || isNaN(d)) return "-";
+  const day = d.getDate();
+  const month = d.toLocaleString("th-TH", { month: "long" });
+  const year = d.getFullYear() + 543;
+  return `${day} ${month} ${year}`;
+}
 const TableWorkFollow = ({
   data = [],
   filterFields = [],
@@ -131,7 +152,7 @@ const TableWorkFollow = ({
         <>
           {item.receiptNumber}
           <br />
-          <small>({item.receiptDate})</small>
+          {/* <small>({item.receiptDate})</small> */}
         </>
       ),
     },
@@ -143,7 +164,7 @@ const TableWorkFollow = ({
         <>
           {item.referenceNumber}
           <br />
-          <small>({item.proposeDate})</small>
+          {/* <small>({item.proposeDate})</small> */}
         </>
       ),
     },
@@ -240,6 +261,24 @@ const TableWorkFollow = ({
       },
     };
   };
+    // ---- ดึงค่า filter มาแสดงในหัวตาราง ----
+  // ฟิลด์ filter อาจชื่อไม่ตรง ให้หา key ที่ชื่อคล้าย
+  const fieldKey = (name) => filterFields.find(f => f.name.includes(name))?.name || "";
+  const receiveDateFromVal = filters[fieldKey("receiveDateFrom")];
+  const receiveDateToVal = filters[fieldKey("receiveDateTo")];
+  const issueTypeVal = filters[fieldKey("issueType")];
+
+  // format
+  const fromText = receiveDateFromVal
+    ? formatThaiDate(receiveDateFromVal)
+    : "-";
+  const toText = receiveDateToVal
+    ? formatThaiDate(receiveDateToVal)
+    : "-";
+  const typeText = issueTypeVal
+    ? issueTypeVal
+    : "ทั้งหมด";
+
 
   return (
     <Container
@@ -548,9 +587,9 @@ const TableWorkFollow = ({
       >
         รายงานการติดตามงานค้าง
         <br />
-        ตั้งแต่วันที่ 1 ตุลาคม 2567 ถึงวันที่ 25 พฤศจิกายน 2567
+        ตั้งแต่วันที่ {fromText} ถึงวันที่ {toText}
         <br />
-        ประเภท เรื่องร้องเรียนเพิ่มเติม
+        ประเภท {typeText}
       </Box>
 
       {/* Table with grouped collapsible rows */}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableNewAddComp from "@services/TableNewAddComp/TableNewAddComp";
+import { getNewAdditionalComplaintsReport } from "@pages/api/complaintreports/reports";
 
 // สำหรับกรองเดือน (คำย่อในวันที่)
 const THAI_MONTH_ABBREV = {
@@ -44,49 +45,97 @@ const FISCAL_YEAR_OPTIONS = [
   { value: "2570", label: "2570" },
 ];
 
-// ─── mock data (20 รายการ) ─────────────────────────────────────────────────
-const originalMockComplaints = [
-  {
-    id: 1,
-    receiveDate: "30 ม.ค. 2568",
-    receiptNumber: "97/68",
-    claimantName: "นางสาวภัทร มีความสุข",
-    responsibleOfficer: "นางสาววิชนิดา มณี",
-    agency: "กรมธนารักษ์",
-    issueType: "พฤติกรรมเจ้าหน้าที่",
-    note: "ส่งเรื่องให้หน่วยงานพิจารณาให้ความช่วยเหลือแล้ว",
-  },
-  // ... [other mock data remains the same]
-];
+// Helper: แปลงวันที่ ISO เป็นรูปแบบ "30 ม.ค. 2568"
+function formatApiDateThai(dateString) {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  if (isNaN(date)) return "-";
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear() + 543;
+  return `${day} ${THAI_MONTH_ABBREV[month]} ${year}`;
+}
 
 const NewAdditionalComplaintsSummaryComponents = () => {
-  // เริ่มต้นโดยใช้ข้อมูลจาก localStorage หรือใช้ค่าเริ่มต้นถ้าไม่มี
-  const [allComplaints, setAllComplaints] = useState(originalMockComplaints);
-  const [filteredComplaints, setFilteredComplaints] = useState(
-    originalMockComplaints
-  );
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // ดึงข้อมูลจาก API
+  const fetchData = async (filterParams = {}) => {
+    setLoading(true);
+    try {
+      const response = await getNewAdditionalComplaintsReport({
+        skip: 0,
+        limit: 100,
+        date_from: "",
+        date_to: "",
+        department_id: "",
+        officer_id: "",
+        search: ""
+      });
+
+      if (
+        response &&
+        response.res_code === "0000" &&
+        response.res_data &&
+        Array.isArray(response.res_data.items)
+      ) {
+        // แปลงข้อมูลให้อยู่ในโครงสร้างที่ TableNewAddComp ใช้
+        const transformed = response.res_data.items.map((item) => ({
+          id: item.id,
+          receiveDate: formatApiDateThai(item.received_date),
+          receiptNumber: item.complaint_number || "-",
+          claimantName: item.complainant_name || "-",
+          responsibleOfficer: item.assigned_officer_name || "-",
+          agency: item.department_name || "-",
+          issueType: item.complaint_type || "-",
+          note: item.remark || "",
+          filingType: item.filing_type || "-",
+        }));
+        setAllComplaints(transformed);
+        setFilteredComplaints(transformed);
+      } else {
+        setAllComplaints([]);
+        setFilteredComplaints([]);
+      }
+    } catch (e) {
+      setAllComplaints([]);
+      setFilteredComplaints([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
+    fetchData();
     // ตรวจสอบว่ามีข้อมูลที่อัปเดตใน localStorage หรือไม่
     const updatedData = localStorage.getItem("updatedComplaints");
     if (updatedData) {
       try {
         const parsedData = JSON.parse(updatedData);
         // อัปเดตข้อมูลเฉพาะหมายเหตุ (note) จากข้อมูลที่อัพเดทแล้ว
-        const updatedComplaints = allComplaints.map((complaint) => {
-          const updatedComplaint = parsedData.find(
-            (item) => item.id === complaint.id
-          );
-          return updatedComplaint
-            ? { ...complaint, note: updatedComplaint.note }
-            : complaint;
-        });
-
-        setAllComplaints(updatedComplaints);
-        setFilteredComplaints(updatedComplaints);
-
-        // ลบข้อมูลใน localStorage หลังจากใช้งานเสร็จ
+        setAllComplaints((prev) =>
+          prev.map((complaint) => {
+            const updatedComplaint = parsedData.find(
+              (item) => item.id === complaint.id
+            );
+            return updatedComplaint
+              ? { ...complaint, note: updatedComplaint.note }
+              : complaint;
+          })
+        );
+        setFilteredComplaints((prev) =>
+          prev.map((complaint) => {
+            const updatedComplaint = parsedData.find(
+              (item) => item.id === complaint.id
+            );
+            return updatedComplaint
+              ? { ...complaint, note: updatedComplaint.note }
+              : complaint;
+          })
+        );
         localStorage.removeItem("updatedComplaints");
       } catch (e) {
         console.error("เกิดข้อผิดพลาดในการอ่านข้อมูลที่อัปเดต:", e);
@@ -101,7 +150,7 @@ const NewAdditionalComplaintsSummaryComponents = () => {
     );
   };
 
-  // กรองข้อมูลตามเดือนและปีงบประมาณ
+  // ฟังก์ชันกรองข้อมูลตามเดือนและปีงบประมาณ
   const handleSearch = ({ receiveDateFrom, receiveDateTo }) => {
     let result = allComplaints;
 
@@ -138,7 +187,7 @@ const NewAdditionalComplaintsSummaryComponents = () => {
       />
 
       <TableNewAddComp
-        data={filteredComplaints}
+        data={loading ? [] : filteredComplaints}
         title="รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่มทั้งหมด"
         onSearch={handleSearch}
         actionButtonLabel="แก้ไขหมายเหตุ"
@@ -157,6 +206,7 @@ const NewAdditionalComplaintsSummaryComponents = () => {
             options: FISCAL_YEAR_OPTIONS,
           },
         ]}
+        loading={loading}
       />
     </>
   );
