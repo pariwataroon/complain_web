@@ -103,14 +103,14 @@ const SearchComplaints = () => {
     fromExternal === "true" ||
     fromExternal === "box";
 
-  // ---------------- Helper: extract confirm_assigned_date (officerReceivedDate) with fallbacks ----------------
+  // ---------------- Helper: extract registration_date (officerReceivedDate) with fallbacks ----------------
   const extractOfficerReceivedDate = useCallback((complaintObj, assignmentObj) => {
     const candidates = [
-      assignmentObj?.confirm_assigned_date,
+      assignmentObj?.registration_date,
       assignmentObj?.confirmAssignedDate,
-      complaintObj?.confirm_assigned_date,
+      complaintObj?.registration_date,
       complaintObj?.confirmAssignedDate,
-      complaintObj?.assignment_form?.confirm_assigned_date,
+      complaintObj?.assignment_form?.registration_date,
       complaintObj?.assignment_form?.confirmAssignedDate,
       // old fallback (assigned_date) if confirm not found
       assignmentObj?.assigned_date,
@@ -1188,12 +1188,12 @@ const handleSubmit = async () => {
     step4: {
       general: {
         ...step4Data,
-        // officerReceivedDate -> confirm_assigned_date (ไม่แทน assigned_date)
+        // officerReceivedDate -> registration_date (ไม่แทน assigned_date)
         // ใช้ค่าใน form (ผู้ใช้แก้) ถ้าไม่มีให้ fallback จาก assignment_form เดิม
-        confirm_assigned_date: formatDateForAPI(
+        registration_date: formatDateForAPI(
           step4Data.officerReceivedDate ||
-          defaultData?.assignment_form?.confirm_assigned_date ||
-          defaultData?.confirm_assigned_date ||
+          defaultData?.assignment_form?.registration_date ||
+          defaultData?.registration_date ||
           null
         ),
         // เก็บ assigned_date ดั้งเดิมไว้ในข้อมูล (ไม่แก้ หาก backend ต้องใช้เทียบ diff)
@@ -1221,7 +1221,7 @@ const handleSubmit = async () => {
         complaint_subtype_id: (complaintSubTypeId && complaintSubTypeId !== "-") ? complaintSubTypeId : "",
         complaint_channel_id: (complaintChannelId && complaintChannelId !== "-") ? complaintChannelId : null,
         // Dates
-        confirm_assigned_date: formatDateForAPI(step4Data.officerReceivedDate || defaultData?.assignment_form?.confirm_assigned_date || defaultData?.confirm_assigned_date),
+        registration_date: formatDateForAPI(step4Data.officerReceivedDate || defaultData?.assignment_form?.registration_date || defaultData?.registration_date),
         director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate || defaultData?.assignment_form?.director_submission_date),
         incident_date: formatDateForAPI(step4Data.incidentDateTime || defaultData?.assignment_form?.incident_date),
         assigned_date: defaultData?.assignment_form?.assigned_date || defaultData?.assigned_date || null,
