@@ -272,7 +272,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
 
     const confirmAssignedDate =
       step4General.officerReceivedDate ??
-      baseData.assignment_form?.confirm_assigned_date ??
+      baseData.assignment_form?.registration_date ??
       null;
     const directorSubmissionDate =
       step4General.directorSubmittedDate ??
@@ -292,7 +292,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
       },
        assignment_form: {
         ...(baseData.assignment_form || {}),
-        confirm_assigned_date: toISO(confirmAssignedDate),
+        registration_date: toISO(confirmAssignedDate),
         director_submission_date: toISO(directorSubmissionDate),
         assigned_officer_id:
           responsibleOfficerValue ||
@@ -607,7 +607,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
 
   const officerReceived =
     additionalDetails.officerReceivedDate ||
-    assignmentForm.confirm_assigned_date ||
+    assignmentForm.registration_date ||
     null;
     
   const directorSubmitted =

@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { Box, Paper, Typography, Grid, CircularProgress } from "@mui/material";
 import ButtonService from "@services/ButtonService/ButtonService";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
@@ -14,6 +14,11 @@ import {
 } from "@utils/Formats";
 import { exportElementToPDF } from "@utils/exportPDF";
 import UploadOutlinedIcon from "@mui/icons-material/UploadOutlined";
+import {
+  getSubComplaintTypeById,
+  GetAllOutsideDepartments,
+} from "@pages/api/allselect/allselect";
+import { useState, useEffect } from "react";
 
 const ComplaintIDService = ({ complaint }) => {
   if (!complaint)
@@ -62,7 +67,267 @@ const ComplaintIDService = ({ complaint }) => {
 
   // ====== STEP3: Complaint Detail ======
   const step3 = complaint.step3?.general ?? {};
+  const tab31 = complaint.step31?.general ?? {};
   const files = step3.attachment ?? [];
+
+  const [maps, setMaps] = useState({ subtype: {}, agency: {} });
+
+  const isUuid = (s) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s || ""));
+
+  useEffect(() => {
+  const subtypeId = complaint?.complaint_subtype_id ?? tab31?.complaintSubType;
+  const agencyId  = complaint?.agency_sender ?? tab31?.senderAgency;
+
+  const needSubtype = isUuid(subtypeId) && !maps.subtype[subtypeId];
+  const needAgency  = isUuid(agencyId)  && !maps.agency[agencyId];
+
+  if (!needSubtype && !needAgency) return;
+
+  (async () => {
+    try {
+      if (needSubtype) {
+        const parentTypeId =
+          complaint?.complaint_type_id ?? tab31?.complaintTypeId ?? step3?.complaintType;
+        if (isUuid(parentTypeId)) {
+          const res = await getSubComplaintTypeById(parentTypeId);
+          const items = res?.res_data?.items || [];
+          const map = items.reduce((acc, it) => {
+            const id = it?.id ?? it?.value;
+            const label = it?.name ?? it?.label;
+            if (id && label) acc[id] = label;
+            return acc;
+          }, {});
+          setMaps((m) => ({ ...m, subtype: { ...m.subtype, ...map } }));
+        }
+      }
+
+      if (needAgency) {
+        const res = await GetAllOutsideDepartments();
+        const arr = Array.isArray(res) ? res : (res?.res_data?.items || []);
+        const map = arr.reduce((acc, it) => {
+          const id = it?.value ?? it?.id;
+          const label = it?.label ?? it?.name;
+          if (id && label) acc[id] = label;
+          return acc;
+        }, {});
+        setMaps((m) => ({ ...m, agency: { ...m.agency, ...map } }));
+      }
+    } catch (e) {
+      console.error("lookup fetch failed", e);
+    }
+  })();
+}, [
+  complaint?.complaint_subtype_id,
+  complaint?.agency_sender,
+  tab31?.complaintSubType,
+  tab31?.senderAgency,
+  complaint?.complaint_type_id,
+  step3?.complaintType,
+  maps.subtype,
+  maps.agency,
+]);
+
+  const pick = (...vals) =>
+    vals.find((v) => v !== undefined && v !== null && String(v).trim?.() !== "");
+  const fmtDate = (v) => (v ? formatThaiDate(v) : "-");
+  const fmtDateTime = (v) => (v ? formatThaiDateTime(v) : "-");
+
+  const secMap = { normal: "ปกติ", confidential: "ลับ", secret: "ลับมาก", top_secret: "ลับที่สุด" };
+  const urgMap = { low: "ปกติ", medium: "เร่งด่วน", high: "ด่วน", urgent: "ด่วนมาก", critical: "ด่วนที่สุด" };
+
+  // ใช้ Tab3-1 ถ้ามีข้อมูลใน step31 หรือเป็นผู้ถูกร้องประเภท government หรือมีฟิลด์ top-level ของแบบ Admin
+  const usedTab31 = useMemo(() => {
+    const hasStep31 = tab31 && Object.keys(tab31).length > 0;
+    const isGov = complaint?.step2?.general?.activeType === "government";
+    const hasAdminFields =
+      !!(complaint?.director_submission_date ||
+        complaint?.registration_date ||
+        complaint?.reference_number1 ||
+        complaint?.reference_number2 ||
+        complaint?.reference_number3 ||
+        complaint?.document_number ||
+        complaint?.complaint_type_id ||
+        complaint?.complaint_subtype_id ||
+        complaint?.complaint_channel_id ||
+        complaint?.agency_sender ||
+        complaint?.confidentiality_level ||
+        complaint?.urgency_level);
+
+    console.log('=== USEDTAB31 DEBUG ===');
+    console.log('hasStep31:', hasStep31);
+    console.log('isGov:', isGov);
+    console.log('hasAdminFields:', hasAdminFields);
+    console.log('final usedTab31:', hasStep31 || isGov || hasAdminFields);
+        
+    return hasStep31 || isGov || hasAdminFields;
+  }, [tab31, complaint]);
+
+  // Helper function สำหรับ lookup label จาก options
+const getLabelFromOptions = (value, optionArray) => {
+  if (!value || !optionArray) return "-";
+  const found = optionArray.find(item => item.value === value);
+  return found ? found.label : value;
+};
+
+// เติม map จาก options ถ้ามี (บางระบบส่ง subtypes/agency มาด้วย)
+useEffect(() => {
+  const next = { subtype: {}, agency: {} };
+
+  // รวม subtypes จาก complaint_types.children/subtypes ถ้ามี
+  const types = complaint?.options?.complaint_types || [];
+  types.forEach((t) => {
+    const subs = Array.isArray(t?.subtypes) ? t.subtypes
+               : Array.isArray(t?.children) ? t.children
+               : [];
+    subs.forEach((s) => {
+      const id = s?.value ?? s?.id;
+      const label = s?.label ?? s?.name;
+      if (id && label) next.subtype[id] = label;
+    });
+  });
+
+  // ตัวเลือกชื่อคีย์ที่เป็นไปได้สำหรับหน่วยงาน
+  const agencyArrays = [
+    complaint?.options?.agencies,
+    complaint?.options?.outside_departments,
+    complaint?.options?.departments,
+    complaint?.options?.sender_agencies,
+    complaint?.options?.outside_agencies,
+  ].filter(Array.isArray);
+
+  agencyArrays.forEach((arr) =>
+    arr.forEach((a) => {
+      const id = a?.value ?? a?.id;
+      const label = a?.label ?? a?.name;
+      if (id && label) next.agency[id] = label;
+    })
+  );
+
+  // merge ทับ (กัน state เดิมหาย)
+  setMaps((m) => ({
+    subtype: { ...m.subtype, ...next.subtype },
+    agency: { ...m.agency, ...next.agency },
+  }));
+}, [complaint?.options]);
+
+const tryGetLabel = (value, ...candidates) => {
+  if (!value) return "-";
+  for (const arr of candidates) {
+    if (Array.isArray(arr)) {
+      const found = arr.find((x) => (x?.value ?? x?.id) === value);
+      if (found) return found.label ?? found.name ?? value;
+    }
+  }
+  if (!/^[0-9a-f-]{36}$/i.test(String(value))) return String(value);
+  return String(value);
+};
+
+const flattenSubtypesFromTypes = (types) => {
+  if (!Array.isArray(types)) return [];
+  return types.flatMap((t) => Array.isArray(t?.subtypes) ? t.subtypes
+    : Array.isArray(t?.children) ? t.children
+    : []);
+};
+
+const pickAgencyOptionArrays = (options) => {
+  const cands = [
+    options?.agencies,
+    options?.outside_departments,
+    options?.departments,
+    options?.sender_agencies,
+    options?.outside_agencies,
+  ];
+  return cands.filter(Array.isArray);
+};
+
+// รวมค่าไว้ใช้ตอน render (ให้ priority กับข้อมูลจาก API response)
+const merged = {
+ complaintTypeId: tryGetLabel(
+   pick(complaint?.complaint_type_id, tab31?.complaintTypeId, step3?.complaintType),
+   complaint?.options?.complaint_types || []
+ ),
+ complaintSubTypeId: tryGetLabel(
+   pick(complaint?.complaint_subtype_id, tab31?.complaintSubType),
+   complaint?.options?.complaint_subtypes || [],
+   flattenSubtypesFromTypes(complaint?.options?.complaint_types)
+ ),
+ complaintChannel: tryGetLabel(
+   pick(complaint?.complaint_channel_id, tab31?.complaintChannel),
+   complaint?.options?.complaint_channels || []
+ ),
+
+  // เรื่อง/รายละเอียด - ให้ priority กับข้อมูลจาก API
+  subject: pick(complaint?.subject, step3?.subject, tab31?.subject),
+  description: pick(complaint?.description, step3?.description, tab31?.description),
+
+  // วันเวลาเกิดเหตุ - ใช้ field จาก API response เป็นหลัก
+  incidentDateTime: pick(
+    complaint?.incident_datetime,
+    complaint?.incident_date,
+    step3?.incidentDate,
+    tab31?.incidentDateTime
+  ),
+
+  // เอกสาร / อ้างอิง 1-4 - ใช้ข้อมูลจาก API response
+  ref1: pick(complaint?.reference_number1, complaint?.reference_number, tab31?.referenceNumber1),
+  ref1Date: pick(complaint?.reference_date1, complaint?.reference_date, tab31?.referenceDate1),
+  ref2: pick(complaint?.reference_number2, tab31?.referenceNumber2),
+  ref2Date: pick(complaint?.reference_date2, tab31?.referenceDate2),
+  ref3: pick(complaint?.reference_number3, tab31?.referenceNumber3),
+  ref3Date: pick(complaint?.reference_date3, tab31?.referenceDate3),
+  ref4: pick(complaint?.reference_number4, tab31?.referenceNumber4),
+  ref4Date: pick(complaint?.reference_date4, tab31?.referenceDate4),
+  
+  docNo: pick(complaint?.document_number, tab31?.documentNumber),
+  docDate: pick(complaint?.document_date, tab31?.documentDate),
+
+  // ระดับความลับ/เร่งด่วน - ใช้ข้อมูลจาก API response
+  securityLevel: pick(complaint?.confidentiality_level, tab31?.securityLevel),
+  urgencyLevel: pick(complaint?.urgency_level, tab31?.urgencyLevel),
+
+  // หน่วยงานที่ส่ง - lookup จาก options
+  senderAgency: tryGetLabel(
+    pick(complaint?.agency_sender, tab31?.senderAgency),
+    ...pickAgencyOptionArrays(complaint?.options || {})
+  ),
+
+  // ประเภทการรับเรื่อง
+  filingType: pick(complaint?.complaint_filing_type, tab31?.complaint_filing_type),
+
+  // อ้างอิงเพิ่มเติม - ใช้ structure จาก API response
+  addRef1: pick(
+    complaint?.additional_reference_number1,
+    complaint?.additional_references?.additional_reference_number1,
+    tab31?.additionalReference1
+  ),
+  addRef1Date: pick(
+    complaint?.additional_reference_date1,
+    complaint?.additional_references?.additional_reference_date1,
+    tab31?.additionalReferenceDate1
+  ),
+  addRef2: pick(
+    complaint?.additional_reference_number2,
+    complaint?.additional_references?.additional_reference_number2,
+    tab31?.additionalReference2
+  ),
+  addRef2Date: pick(
+    complaint?.additional_reference_date2,
+    complaint?.additional_references?.additional_reference_date2,
+    tab31?.additionalReferenceDate2
+  ),
+
+  officerReceivedDate: pick(
+    complaint?.registration_date,
+    complaint?.officer_received_date,
+    tab31?.officerReceivedDate
+  ),
+  directorSubmittedDate: pick(
+    complaint?.director_submission_date,
+    complaint?.director_submitted_date,
+    tab31?.directorSubmittedDate
+  ),
+};
 
   const label = (obj) =>
     typeof obj === "object" ? obj?.label || "-" : obj || "-";
@@ -411,7 +676,7 @@ const ComplaintIDService = ({ complaint }) => {
             />
             <InfoItem
               labelText="ประเภทเรื่องร้องทุกข์"
-              value={step3.complaintType || "-"}
+              value={usedTab31 ? merged.complaintTypeId : label(step3.complaintType)}
             />
             <InfoItem labelText="เรื่อง" value={step3.subject || "-"} />
             <InfoItem
@@ -445,9 +710,91 @@ const ComplaintIDService = ({ complaint }) => {
           {/* รายละเอียดเรื่องร้องทุกข์ */}
           <Section title="รายละเอียดเรื่องร้องทุกข์">
             <Grid container spacing={2} mb={3}>
-              <Grid item xs={12}>
-                <Typography>{step3.description || "-"}</Typography>
-              </Grid>
+              {usedTab31 ? (
+                // กรณี Tab31 - แสดงข้อมูลแบบละเอียด
+                <>
+                  <InfoItem labelText="ช่องทางร้องทุกข์" value={merged.complaintChannel || "-"} />
+                  <InfoItem labelText="ประเภทเรื่องร้องทุกข์" value={merged.complaintTypeId || "-"} />
+                  
+                  <InfoItem labelText="ชื่อเรื่อง" value={merged.subject || step3.subject || "-"} />
+                  {/* <InfoItem labelText="วันและเวลาที่เกิดเหตุ" value={fmtDateTime(merged.incidentDateTime)} /> */}
+                 <InfoItem
+                    labelText="ประเภทเรื่องย่อย"
+                    value={
+                      maps.subtype[complaint?.complaint_subtype_id ?? tab31?.complaintSubType] ||
+                      merged.complaintSubTypeId || "-"
+                    }
+                  />
+                  
+                  <Grid item xs={12}>
+                    <Typography fontSize={16}>
+                      <Box component="span" fontWeight="bold">รายละเอียดเหตุการณ์:</Box>
+                    </Typography>
+                    <Typography sx={{ mt: 1 }}>{merged.description || step3.description || "-"}</Typography>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Typography fontSize={16} fontWeight="bold" sx={{ mt: 3, mb: 1 }}>
+                      เอกสารประกอบการร้องเรียน
+                    </Typography>
+                  </Grid>
+
+                  <InfoItem labelText="เลข สป.กค." value={merged.ref1 || "-"} />
+                  <InfoItem labelText="วันที่ (สป.กค.)" value={fmtDate(merged.ref1Date)} />
+                  <InfoItem labelText="เลข สป.สร." value={merged.ref2 || "-"} />
+                  <InfoItem labelText="วันที่ (สป.สร.)" value={fmtDate(merged.ref2Date)} />
+                  <InfoItem labelText="เลข สตป." value={merged.ref3 || "-"} />
+                  <InfoItem labelText="วันที่ (สตป.)" value={fmtDate(merged.ref3Date)} />
+                  {/* <InfoItem labelText="เลข สรร." value={merged.ref4 || "-"} />
+                  <InfoItem labelText="วันที่ (สรร.)" value={fmtDate(merged.ref4Date)} /> */}
+
+                  <InfoItem labelText="เลขที่หนังสือ" value={merged.docNo || "-"} />
+                  <InfoItem labelText="วันที่หนังสือ" value={fmtDate(merged.docDate)} />
+
+                  <InfoItem labelText="ชั้นความลับ" value={secMap[merged.securityLevel] || merged.securityLevel || "-"} />
+                  <InfoItem labelText="ชั้นความเร่งด่วน" value={urgMap[merged.urgencyLevel] || merged.urgencyLevel || "-"} />
+                  <InfoItem
+                    labelText="หน่วยงานอื่นที่ส่ง"
+                    value={
+                      maps.agency[complaint?.agency_sender ?? tab31?.senderAgency] ||
+                      merged.senderAgency || "-"
+                    }
+                  />
+
+                  <InfoItem
+                    labelText="ประเภทการรับเรื่อง"
+                    value={
+                      merged.filingType === "additional"
+                        ? "เรื่องร้องเรียนเพิ่มเติม"
+                        : merged.filingType === "committee"
+                        ? "รับเรื่องจากคณะทำงานนักตรวจสอบ"
+                        : merged.filingType || "เรื่องร้องเรียนใหม่"
+                    }
+                  />
+
+                  <InfoItem labelText="เลขอ้างอิงเพิ่มเติม 1" value={merged.addRef1 || "-"} />
+                  <InfoItem labelText="วันที่อ้างอิงเพิ่มเติม 1" value={fmtDate(merged.addRef1Date)} />
+                  <InfoItem labelText="เลขอ้างอิงเพิ่มเติม 2" value={merged.addRef2 || "-"} />
+                  <InfoItem labelText="วันที่อ้างอิงเพิ่มเติม 2" value={fmtDate(merged.addRef2Date)} />
+
+                  <InfoItem labelText="วันที่รับงานของเจ้าหน้าที่" value={fmtDateTime(merged.officerReceivedDate)} />
+                  <InfoItem labelText="วันที่เสนองาน ผอ.สรร." value={fmtDateTime(merged.directorSubmittedDate)} />
+                </>
+              ) : (
+                // กรณี Tab3 - แสดงข้อมูลพื้นฐาน
+                <>
+                  <InfoItem labelText="ช่องทางร้องทุกข์" value={label(step3.complaintChannel)} />
+                  <InfoItem labelText="ประเภทเรื่องร้องทุกข์" value={label(step3.complaintType)} />
+                  <InfoItem labelText="วันและเวลาที่เกิดเหตุ" value={step3?.incidentDate ? formatThaiDateTime(step3.incidentDate) : "-"} />
+                  
+                  <Grid item xs={12}>
+                    <Typography fontSize={16}>
+                      <Box component="span" fontWeight="bold">รายละเอียดเหตุการณ์:</Box>
+                    </Typography>
+                    <Typography sx={{ mt: 1 }}>{step3.description || "-"}</Typography>
+                  </Grid>
+                </>
+              )}
             </Grid>
           </Section>
 

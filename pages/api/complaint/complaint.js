@@ -105,6 +105,21 @@ const CreateComplaint = async (opmChannel, data) => {
   }
 };
 
+const UpdateComplaint = async (complaint_id, data) => {
+  try {
+    const response = await axiosInstance.post(
+      `/complaints/${complaint_id}`,
+      data
+    );
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error adding complaint:", error);
+    throw error;
+  }
+};
+
 const UploadAttachments = async (complaint_id, formDataUpload) => {
   try {
     const response = await axiosInstance.post(
@@ -382,5 +397,6 @@ export {
   GetDepartments,
   GetAssignmentCompleteByAdmin,
   GetComplaintOutgoingTracking,
+  UpdateComplaint,
   UpdateAssignedRemark,
 };

@@ -522,7 +522,7 @@ const SearchComplaints = () => {
         ...step4Data,
         officerReceivedDate:
           step4Data.officerReceivedDate ||
-          assignmentForm.confirm_assigned_date ||
+          assignmentForm.registration_date ||
           null,
         directorSubmittedDate:
           step4Data.directorSubmittedDate ||
@@ -1948,7 +1948,7 @@ const SearchComplaints = () => {
                               name="officerReceivedDate"
                               control={step4Methods.control}
                               // defaultValue={
-                              //   defaultData?.assignment_form?.confirm_assigned_date
+                              //   defaultData?.assignment_form?.registration_date
                               // }
                               time={true}
                             />

@@ -58,22 +58,34 @@ export default function useComplaintForm() {
   // ฟังก์ชันสำหรับ normalize และ format วันที่
   const normalizeDate = (value) => {
     if (!value) return null;
+    // dayjs/moment-like
+    if (value && typeof value === "object" && typeof value.toDate === "function") {
+      const d = value.toDate();
+      return isNaN(d?.getTime?.()) ? null : d;
+    }
+    if (value && typeof value === "object" && value.$d instanceof Date) {
+      const d = value.$d;
+      return isNaN(d?.getTime?.()) ? null : d;
+    }
     if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
+    if (typeof value === "number") {
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? null : d;
+    }
     if (typeof value === "string") {
-      // ISO/สากล
       const d1 = new Date(value);
       if (!isNaN(d1.getTime())) return d1;
-      // DD/MM/YYYY format
       const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
       if (m) {
         let [, DD, MM, YYYY, hh = "00", mm = "00"] = m;
         let y = parseInt(YYYY, 10);
-        if (y > 2400) y -= 543;
+        if (y > 2400) y -= 543; // พ.ศ. → ค.ศ.
         const d2 = new Date(y, parseInt(MM,10)-1, parseInt(DD,10), parseInt(hh,10), parseInt(mm,10), 0);
         return isNaN(d2.getTime()) ? null : d2;
       }
     }
-    return null;
+    const fallback = new Date(value);
+    return isNaN(fallback.getTime()) ? null : fallback;
   };
 
   const formatDateForAPI = (value) => {
@@ -109,14 +121,6 @@ export default function useComplaintForm() {
       const formattedDirectorDate = formatDateForAPI(tab31Data.directorSubmittedDate);
       const formattedIncidentDate = formatDateForAPI(tab31Data.incidentDateTime);
       
-      // Debug: ตรวจสอบวันที่หลัง format
-      console.log('Formatted dates:');
-      console.log('confirm_assigned_date:', formattedOfficerDate);
-      console.log('director_submission_date:', formattedDirectorDate);
-      console.log('incident_datetime:', formattedIncidentDate);
-
-      // สร้าง payload สำหรับ UpdateAssignmentCompleteByAdmin
-      // API นี้ใช้สำหรับอัพเดทข้อมูล assignment form โดยเฉพาะ
       const payload = {
         // ข้อมูลประเภทและช่องทาง
         complaint_type_id: tab31Data.complaintTypeId || null,
@@ -159,24 +163,14 @@ export default function useComplaintForm() {
         additional_reference_number2: tab31Data.additionalReference2 || "",
         additional_reference_date2: formatDateForAPI(tab31Data.additionalReferenceDate2),
         
-        // วันที่สำคัญ 3 field ที่ต้องบันทึก - ใช้ค่าที่ format แล้ว
-        confirm_assigned_date: formattedOfficerDate,
+        registration_date: formattedOfficerDate,
         director_submission_date: formattedDirectorDate,
-        incidentDate: formattedIncidentDate,
-        
-        // ลองเพิ่ม field อื่นที่อาจจะเป็นชื่อที่ backend ต้องการ
-        // เผื่อ backend ใช้ชื่อ field ต่างกัน
-        incidentDate: formattedIncidentDate,
-        incident_date: formattedIncidentDate,
-        officer_received_date: formattedOfficerDate,
-        director_submitted_date: formattedDirectorDate,
+        incident_datetime: formattedIncidentDate,
       };
 
       // ลบค่า undefined และ null สำหรับวันที่ที่ไม่ได้กรอก
-      Object.keys(payload).forEach(k => {
-        if (payload[k] === undefined || (k.includes('date') && payload[k] === null)) {
-          delete payload[k];
-        }
+      Object.keys(payload).forEach((k) => {
+        if (payload[k] === undefined || payload[k] === null) delete payload[k];
       });
 
       console.log('=== PAYLOAD FOR UpdateAssignmentCompleteByAdmin ===');
@@ -260,15 +254,12 @@ export default function useComplaintForm() {
       }
       
       // เตรียมข้อมูลวันที่เพิ่มเติมสำหรับเก็บไว้ใน step3 (ลองส่งไปด้วยเผื่อ backend รับ)
-      if (step31.general.officerReceivedDate) {
-        additionalDateFields.confirm_assigned_date = formatDateForAPI(step31.general.officerReceivedDate);
-      }
-      if (step31.general.directorSubmittedDate) {
-        additionalDateFields.director_submission_date = formatDateForAPI(step31.general.directorSubmittedDate);
-      }
-      if (step31.general.incidentDateTime) {
-        additionalDateFields.incidentDate = formatDateForAPI(step31.general.incidentDateTime); // i ใหญ่
-      }
+      const offD = formatDateForAPI(step31.general.officerReceivedDate);
+      const dirD = formatDateForAPI(step31.general.directorSubmittedDate);
+      const incD = formatDateForAPI(step31.general.incidentDateTime);
+      if (offD) additionalDateFields.registration_date = offD;
+      if (dirD) additionalDateFields.director_submission_date = dirD;
+      if (incD) additionalDateFields.incidentDate = incD; // ชื่อเดิมคุณใช้ i ใหญ่
       step3Data = {
         ...step3Data,
         ...additionalDateFields
@@ -276,7 +267,7 @@ export default function useComplaintForm() {
       
       console.log('=== DATES IN STEP3 DATA ===');
       console.log('incidentDate:', step3Data.incidentDate);
-      console.log('confirm_assigned_date:', additionalDateFields.confirm_assigned_date);
+      console.log('registration_date:', additionalDateFields.registration_date);
       console.log('director_submission_date:', additionalDateFields.director_submission_date);
       
     } else {
