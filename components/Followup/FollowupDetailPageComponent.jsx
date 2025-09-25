@@ -18,6 +18,7 @@ import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 import { formatThaiDate } from "@utils/Formats";
 import { exportElementToPDF } from "@utils/exportPDF";
 import styles from "./FollowupDetailPage.module.scss";
+import { GetComplaintById, GetAssignmentCompleteByAdmin } from "@pages/api/complaint/complaint";
 
 // Canonical steps for display
 const STEP_DEFS = [
@@ -88,19 +89,40 @@ export default function FollowupDetailPage() {
     (async () => {
       try {
         showLoading("กำลังโหลดข้อมูลเรื่องร้องทุกข์...");
+        
+        // เรียก GetAssignmentCompleteByAdmin แทน GetComplaintMeByID
         const [resComplaint, resTracking] = await Promise.all([
-          GetComplaintMeByID(id),
+          GetAssignmentCompleteByAdmin(id), // เปลี่ยนจาก GetComplaintMeByID
           GetComplaintOutgoingTracking(id),
         ]);
-        const data = resComplaint?.data ?? resComplaint;
-        const comp = data.res_data ?? data;
-        setComplaint(comp);
+        // ตรวจสอบ response structure
+        if (resComplaint?.res_code === "0000" && resComplaint?.res_data?.complaint) {
+          // Merge complaint data กับ options สำหรับการ lookup
+          const complaintData = {
+            ...resComplaint.res_data.complaint,
+            options: resComplaint.res_data.options, // เพิ่ม options เพื่อใช้ใน lookup
+            // เพิ่ม fallback สำหรับ field ที่อาจจะหาย
+            subject: resComplaint.res_data.complaint.subject || "",
+            description: resComplaint.res_data.complaint.description || "",
+          };
 
-        setOutgoingTracking(
-          resTracking?.data?.res_data ?? resTracking?.res_data ?? resTracking
-        );
+          console.log('=== MERGED COMPLAINT DATA ===');
+          console.log('complaintData:', complaintData);
+
+          setComplaint(complaintData);
+        } else {
+          console.error('Invalid API response structure:', resComplaint);
+          setErrorMsg("ไม่สามารถโหลดข้อมูลได้ - รูปแบบข้อมูลไม่ถูกต้อง");
+        }
+
+        // Tracking data ยังใช้เดิม
+        const trackingData = resTracking?.data?.res_data ?? resTracking?.res_data ?? resTracking;
+        console.log('=== TRACKING DATA ===');
+        console.log('trackingData:', trackingData);
+        setOutgoingTracking(trackingData);
+
       } catch (err) {
-        console.error(err);
+        console.error('Fetch Error:', err);
         setErrorMsg("ไม่สามารถโหลดข้อมูลได้");
         alertError("เกิดข้อผิดพลาด", "ไม่สามารถโหลดข้อมูลได้");
       } finally {
@@ -217,7 +239,12 @@ export default function FollowupDetailPage() {
           <Box className={styles.headerBarLightBlue}>
             <Box display="flex" justifyContent="space-between" width="100%">
               <Typography sx={{ color: "#1120A3" }}>
-                เรื่อง: {complaint.step3?.general?.subject || complaint.subject || "-"}
+                เรื่อง: {
+                  complaint.subject || 
+                  complaint.step3?.general?.subject || 
+                  complaint.step3?.subject ||
+                  "-"
+                }
               </Typography>
               <Typography sx={{ color: "#1120A3" }}>
                 วันที่รับเรื่อง : {formatThaiDate(complaint.created_at)}
