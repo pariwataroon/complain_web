@@ -1,95 +1,216 @@
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListCollapsReport from "@services/TableListCollapsReport/TableListCollapsReport";
 import { GetAllReportsInspector } from "@pages/api/report/report";
+import { getSignatureAuthorities } from "@pages/api/department/department";
 
-// ─── Component ─────────────────────────────────────────────────────────────
+/* ───────────────────────── helpers ───────────────────────── */
+const norm = (s) => (s || "").toString().trim().replace(/\s+/g, " ").toLowerCase();
+
+const flattenToInspectors = (resData) => {
+  const map = new Map();
+  const groups = resData?.groups ?? [];
+  // groups
+  for (const g of groups) {
+    const users = g?.users ?? [];
+    const deps = g?.departments ?? [];
+    for (const u of users) {
+      if (!map.has(u.user_id)) {
+        map.set(u.user_id, {
+          id: u.user_id,
+          name: u.user_name,
+          email: u.user_email,
+          departments: [],
+        });
+      }
+      const entry = map.get(u.user_id);
+      const had = new Set(entry.departments.map((d) => d.id));
+      for (const d of deps) {
+        if (!had.has(d.department_id)) {
+          entry.departments.push({ id: d.department_id, name: d.department_name });
+          had.add(d.department_id);
+        }
+      }
+    }
+  }
+  // individuals (ถ้ามี)
+  const individuals = resData?.individuals ?? [];
+  for (const u of individuals) {
+    if (!map.has(u.user_id)) {
+      map.set(u.user_id, {
+        id: u.user_id,
+        name: u.user_name,
+        email: u.user_email,
+        departments: [], // ไม่มีรายการหน่วยงานแนบมากับ individuals
+      });
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
+};
+
+// รวมสิทธิ์ผู้ตรวจ + ตัวเลขรายงาน เป็น rows สำหรับ TableListCollapsReport
+const buildRows = (inspectors, reportItems, selectedInspectorId = "") => {
+  const byUser = new Map();
+  for (const it of reportItems || []) {
+    const uid = it.signature_authority_user_id;
+    const deptKey = norm(it.outside_department_name || it.department_name);
+    if (!deptKey) continue;
+    if (!byUser.has(uid)) byUser.set(uid, new Map());
+    const m = byUser.get(uid);
+    const total = Number(it.total_sent || 0);
+    const inProgress = Number(it.total_in_progress || 0);
+    const closed = Number(it.total_closed || 0);
+    if (!m.has(deptKey)) {
+      m.set(deptKey, {
+        name: it.outside_department_name || it.department_name || "",
+        total,
+        inProgress,
+        closed,
+      });
+    } else {
+      const agg = m.get(deptKey);
+      agg.total += total;
+      agg.inProgress += inProgress;
+      agg.closed += closed;
+    }
+  }
+
+  // รองรับผู้ตรวจที่มีเฉพาะในรายงาน
+  const inspectorMap = new Map(inspectors.map((i) => [i.id, i]));
+  for (const uid of byUser.keys()) {
+    if (!inspectorMap.has(uid)) {
+      const repOne = (reportItems || []).find((x) => x.signature_authority_user_id === uid);
+      inspectorMap.set(uid, {
+        id: uid,
+        name: repOne?.signature_authority_user_name || "(ไม่พบในสิทธิ์)",
+        email: "",
+        departments: [],
+      });
+    }
+  }
+
+  const baseList = selectedInspectorId
+    ? [inspectorMap.get(selectedInspectorId)].filter(Boolean)
+    : Array.from(inspectorMap.values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
+
+  return baseList.map((ins) => {
+    const reportMap = byUser.get(ins.id) || new Map();
+
+    const departmentsData = (ins.departments || []).map((d) => {
+      const key = norm(d.name);
+      const r = reportMap.get(key);
+      return {
+        department: d.name,
+        totalDept: r ? r.total : 0,
+        inProgressCnt: r ? r.inProgress : 0,
+        closedCnt: r ? r.closed : 0,
+      };
+    });
+
+    for (const [k, r] of reportMap.entries()) {
+      const exists = departmentsData.find((x) => norm(x.department) === k);
+      if (!exists) {
+        departmentsData.push({
+          department: r.name || "(ไม่พบในสิทธิ์ผู้ตรวจ)",
+          totalDept: r.total,
+          inProgressCnt: r.inProgress,
+          closedCnt: r.closed,
+        });
+      }
+    }
+
+    return { id: ins.id, claimantName: ins.name, departmentsData };
+  });
+};
+
+const formatDateThai = (isoDate) => {
+  if (!isoDate) return "";
+  const d = new Date(isoDate);
+  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}/${d.getFullYear() + 543}`;
+};
+
+// รวม options แล้วเติม “ทั้งหมด”
+const withAllOption = (opts) => {
+  const uniq = Array.from(new Map(opts.map((o) => [o.value, o])).values()).sort((a, b) =>
+    a.label.localeCompare(b.label, "th")
+  );
+  return [{ value: "", label: "ทั้งหมด" }, ...uniq];
+};
+
+/* ───────────────────────── component ───────────────────────── */
 const AnnualInspectorComplaintsSummaryComponents = () => {
-  const [filteredComplaints, setFilteredComplaints] = useState([]);
-  const [claimantOptions, setClaimantOptions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [dateRange, setDateRange] = useState(""); // สำหรับแสดงช่วงวันที่
+
+  const [inspectors, setInspectors] = useState([]);
+  const [claimantOptions, setClaimantOptions] = useState([]);
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [dateRange, setDateRange] = useState("");
   const [searchFilters, setSearchFilters] = useState({
+    claimantName: "",
     receiveDateFrom: "",
     receiveDateTo: "",
   });
-  const router = useRouter();
 
-  // Helper: แปลงข้อมูล API ให้ตรงกับโครงสร้าง TableListCollapsReport
-  const transformApiData = (apiItems = []) => {
-    const groupByInspector = {};
-    apiItems.forEach(item => {
-      const inspectorId = item.signature_authority_user_id;
-      if (!groupByInspector[inspectorId]) {
-        groupByInspector[inspectorId] = {
-          id: inspectorId,
-          claimantName: `${item.signature_authority_user_name}`,
-          departmentsData: [],
-        };
-      }
-      groupByInspector[inspectorId].departmentsData.push({
-        department: item.outside_department_name || "ไม่ระบุหน่วยงาน",
-        totalDept: item.total_sent,
-        inProgressCnt: item.total_in_progress,
-        closedCnt: item.total_closed,
-        receiveDate: "-", // API ไม่มีวันที่ต่อแถว
-      });
-    });
-    return Object.values(groupByInspector);
-  };
-
-  // โหลดข้อมูลเริ่มต้น
   useEffect(() => {
-    fetchData({});
+    loadInitial();
   }, []);
 
-  // ฟังก์ชันโหลดข้อมูล
-  const fetchData = async (filters = {}) => {
+  const yearFrom = (filters = {}) =>
+    filters.receiveDateFrom
+      ? new Date(filters.receiveDateFrom).getFullYear().toString()
+      : new Date().getFullYear().toString();
+
+  const loadInitial = async (filters = {}) => {
     setLoading(true);
     try {
-      // เลือกปีจาก receiveDateFrom ถ้ามี หากไม่มีใช้ปีปัจจุบัน
-      let year = "2025";
-      if (filters.receiveDateFrom) {
-        year = new Date(filters.receiveDateFrom).getFullYear().toString();
-      }
+      const year = yearFrom(filters);
 
-      // Call API
-      const res = await GetAllReportsInspector(year, "", "", "");
-      const apiItems = res?.res_data?.items || [];
-      const transformed = transformApiData(apiItems);
-      setFilteredComplaints(transformed);
+      const [sig, rep] = await Promise.all([
+        getSignatureAuthorities(),
+        GetAllReportsInspector(year, "", "", ""),
+      ]);
 
-      // สร้าง options สำหรับ select รายชื่อผู้ตรวจ
-      setClaimantOptions(
-        [...new Map(apiItems.map(i => [
-          i.signature_authority_user_id,
-          { value: i.signature_authority_user_id, label: i.signature_authority_user_name }
-        ])).values()]
+      // รายชื่อผู้ตรวจ “ทุกคน”
+      const inspectorList = flattenToInspectors(sig?.res_data ?? sig);
+      setInspectors(inspectorList);
+
+      const reportItems = rep?.res_data?.items || [];
+
+      // ตัวเลือกดรอปดาวน์ = (ผู้ตรวจจากสิทธิ์) ∪ (ผู้ตรวจที่เจอในรายงาน) + “ทั้งหมด”
+      const fromSig = inspectorList.map((x) => ({ value: x.id, label: x.name }));
+      const fromReport = Array.from(
+        new Map(
+          reportItems.map((i) => [
+            i.signature_authority_user_id,
+            { value: i.signature_authority_user_id, label: i.signature_authority_user_name },
+          ])
+        ).values()
       );
+      setClaimantOptions(withAllOption([...fromSig, ...fromReport]));
+
+      // rows สำหรับตาราง
+      setFilteredComplaints(buildRows(inspectorList, reportItems, filters.claimantName || ""));
     } catch (e) {
+      console.error("loadInitial error:", e);
+      setInspectors([]);
+      setClaimantOptions(withAllOption([]));
       setFilteredComplaints([]);
-      setClaimantOptions([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  // Helper: แปลงวันที่เป็นรูปแบบไทย (พ.ศ.)
-  const formatDateThai = (isoDate) => {
-    if (!isoDate) return "";
-    const d = new Date(isoDate);
-    return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}/${(d.getFullYear() + 543)}`;
-  };
-
-  // handle การค้นหา
   const handleSearch = async (filters) => {
     setSearchFilters(filters);
-    // update dateRange label
+
     let range = "";
     if (filters.receiveDateFrom && filters.receiveDateTo) {
-      range = `ตั้งแต่วันที่ ${formatDateThai(filters.receiveDateFrom)} ถึงวันที่ ${formatDateThai(filters.receiveDateTo)}`;
+      range = `ตั้งแต่วันที่ ${formatDateThai(filters.receiveDateFrom)} ถึงวันที่ ${formatDateThai(
+        filters.receiveDateTo
+      )}`;
     } else if (filters.receiveDateFrom) {
       range = `ตั้งแต่วันที่ ${formatDateThai(filters.receiveDateFrom)}`;
     } else if (filters.receiveDateTo) {
@@ -97,17 +218,32 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
     }
     setDateRange(range);
 
-    // ค้นหาใหม่ (filter API)
-    // ถ้าต้องกรอง inspector_id, department_id, status สามารถ map filter ได้ที่นี่
-    await fetchData(filters);
-  };
+    setLoading(true);
+    try {
+      const year = yearFrom(filters);
+      const rep = await GetAllReportsInspector(year, "", "", "");
+      const reportItems = rep?.res_data?.items || [];
 
-  // Set default dateRange ถ้าไม่มี filter
-  useEffect(() => {
-    if (!searchFilters.receiveDateFrom && !searchFilters.receiveDateTo) {
-      // setDateRange("ประจำปีงบประมาณ พ.ศ.2568");
+      // อัปเดตตัวเลือก (กันกรณีมีผู้ตรวจใหม่โผล่มาจากข้อมูลรายงาน)
+      const extraOptions = Array.from(
+        new Map(
+          reportItems.map((i) => [
+            i.signature_authority_user_id,
+            { value: i.signature_authority_user_id, label: i.signature_authority_user_name },
+          ])
+        ).values()
+      );
+      setClaimantOptions((prev) => withAllOption([...(prev || []), ...extraOptions]));
+
+      // อัปเดตตาราง
+      setFilteredComplaints(buildRows(inspectors, reportItems, filters.claimantName || ""));
+    } catch (e) {
+      console.error("search error:", e);
+      setFilteredComplaints([]);
+    } finally {
+      setLoading(false);
     }
-  }, [searchFilters]);
+  };
 
   return (
     <>
@@ -123,9 +259,7 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
               />
             ),
           },
-          {
-            label: "รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ",
-          },
+          { label: "รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ" },
         ]}
       />
 
@@ -141,18 +275,11 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
             name: "claimantName",
             label: "รายชื่อผู้ตรวจ",
             type: "select",
+            // ดรอปดาวน์มี “ทั้งหมด” อยู่บนสุด + รายชื่อทุกคนครบถ้วน
             options: claimantOptions,
           },
-          {
-            name: "receiveDateFrom",
-            label: "ตั้งแต่วันที่",
-            type: "date",
-          },
-          {
-            name: "receiveDateTo",
-            label: "ถึงวันที่",
-            type: "date",
-          },
+          { name: "receiveDateFrom", label: "ตั้งแต่วันที่", type: "date" },
+          { name: "receiveDateTo", label: "ถึงวันที่", type: "date" },
         ]}
       />
     </>
