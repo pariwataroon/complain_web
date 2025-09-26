@@ -87,7 +87,36 @@ const TableListTab = ({
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // ---- แก้ไขส่วนนี้ ----
+  // ฟังก์ชันแปลงวันที่เป็นปีไทย
+  const getThaiYear = (dateObj) => {
+    if (!(dateObj instanceof Date) || isNaN(dateObj)) return "";
+    return dateObj.getFullYear() + 543;
+  };
+  // ฟังก์ชันแปลงวันที่เป็นช่วง label (ถ้าเลือกช่วง)
+  const getPendingBetweenLabel = () => {
+    // กรณีเลือกทั้ง 2 วัน
+    if (filters.receiveDateFrom && filters.receiveDateTo) {
+      const fromD = new Date(filters.receiveDateFrom);
+      const toD = new Date(filters.receiveDateTo);
+      return `เรื่องค้างพิจารณาระหว่าง ปีงบประมาณ พ.ศ. ${getThaiYear(fromD)} - ${getThaiYear(toD)}`;
+    }
+    // กรณีเลือกวันเดียว
+    if (filters.receiveDateFrom) {
+      const fromD = new Date(filters.receiveDateFrom);
+      return `เรื่องค้างพิจารณาประจำปีงบประมาณ พ.ศ. ${getThaiYear(fromD)}`;
+    }
+    if (filters.receiveDateTo) {
+      const toD = new Date(filters.receiveDateTo);
+      return `เรื่องค้างพิจารณาถึง ปีงบประมาณ พ.ศ. ${getThaiYear(toD)}`;
+    }
+    // default
+    return "เรื่องค้างพิจารณาระหว่าง ปีงบประมาณ";
+  };
+  // ---- end ----
+
   // define columns for each tab
+  const currentYear = new Date().getFullYear() + 543;
   const columnsByTab = [
     // Tab 0: ผลการดำเนินเรื่องร้องทุกข์
     [
@@ -113,12 +142,12 @@ const TableListTab = ({
       },
       {
         field: "pendingBetween",
-        headerName: "เรื่องค้างพิจารณาระหว่าง ปีงบประมาณ พ.ศ. 2558 - 2567",
+        headerName: getPendingBetweenLabel(), // ← ใช้ label ตามวันที่เลือก
         align: "center",
       },
       {
         field: "inProcessFY2568",
-        headerName: "อยู่ระหว่างดำเนินการ ปีงบประมาณ พ.ศ. 2568",
+        headerName: `อยู่ระหว่างดำเนินการ ปีงบประมาณ พ.ศ. ${currentYear}`, // ← ใช้ปีปัจจุบัน
         align: "center",
       },
       { field: "total", headerName: "รวม", align: "center" },
@@ -137,35 +166,25 @@ const TableListTab = ({
 
   // ← ปรับปรุง filter handlers ให้รองรับ date และ debug ดีขึ้น
   const handleChangeFilter = (name) => (value) => {
-    console.log(`🔧 Filter changed: ${name} =`, value);
-
     let newValue;
-    // ถ้าเป็น event object (จาก InputText/SelectField/TextField)
     if (value && value.target) {
       newValue = value.target.value;
     } else {
-      // ถ้าเป็นค่าโดยตรง (จาก DateThaiPickerService)
       newValue = value;
     }
-
-    console.log(`🔧 Setting filter ${name} to:`, newValue);
     setFilters((prev) => {
       const updated = { ...prev, [name]: newValue };
-      console.log("🔧 Updated filters:", updated);
       return updated;
     });
   };
 
   const handleSearchClick = () => {
-    console.log("🔍 Search button clicked with filters:", filters);
     setPage(0);
     onSearch(filters);
   };
 
   const handleClearClick = () => {
-    console.log("🧹 Clear button clicked");
     const clearedFilters = { ...initialFilters };
-    console.log("🧹 Cleared filters:", clearedFilters);
     setFilters(clearedFilters);
     setPage(0);
     onSearch(clearedFilters);
@@ -191,12 +210,9 @@ const TableListTab = ({
 
   // ← ปรับปรุงฟังก์ชัน renderFilterField ให้มี fallback และ debug
   const renderFilterField = (field) => {
-    console.log(`🎨 Rendering field: ${field.name} (${field.type})`);
-
     switch (field.type) {
       case "date":
         if (DateThaiPickerService) {
-          console.log(`📅 Using DateThaiPickerService for ${field.name}`);
           return (
             <DateThaiPickerService
               label={field.label}
@@ -208,8 +224,6 @@ const TableListTab = ({
             />
           );
         }
-        // ← Fallback เป็น TextField
-        console.log(`📅 Using TextField fallback for ${field.name}`);
         return (
           <TextField
             fullWidth
@@ -225,7 +239,6 @@ const TableListTab = ({
 
       case "select":
         if (SelectField) {
-          console.log(`📋 Using SelectField for ${field.name}`);
           return (
             <SelectField
               fullWidth
@@ -237,8 +250,6 @@ const TableListTab = ({
             />
           );
         }
-        // ← Fallback เป็น TextField
-        console.log(`📋 Using TextField fallback for ${field.name}`);
         return (
           <TextField
             fullWidth
@@ -250,9 +261,8 @@ const TableListTab = ({
           />
         );
 
-      default: // "text" หรือไม่ระบุ type
+      default:
         if (InputText) {
-          console.log(`📝 Using InputText for ${field.name}`);
           return (
             <InputText
               fullWidth
@@ -263,8 +273,6 @@ const TableListTab = ({
             />
           );
         }
-        // ← Fallback เป็น TextField
-        console.log(`📝 Using TextField fallback for ${field.name}`);
         return (
           <TextField
             fullWidth
@@ -276,67 +284,55 @@ const TableListTab = ({
           />
         );
     }
-  }; 
-const handleExportExcel = () => {
-  const today = new Date().toLocaleDateString("th-TH");
+  };
 
-  const filename = `ผลการดำเนินการและเรื่องค้างพิจารณา_${today}.xlsx`;
+  const handleExportExcel = () => {
+    const today = new Date().toLocaleDateString("th-TH");
+    const columns = columnsByTab[tabIndex];
+    const data = tabIndex === 0 ? summaryData : pendingData;
 
-  const columns = columnsByTab[tabIndex];
-  const data = tabIndex === 0 ? summaryData : pendingData;
+    // ✅ สร้างชื่อหัวตาราง (headerName) ให้เป็น string ทั้งหมด
+    const exportColumns = columns.map((col, idx) => {
+      return col.headerName?.toString() || col.field?.toString() || `คอลัมน์ ${idx + 1}`;
+    });
 
-  // ✅ สร้างชื่อหัวตาราง (headerName) ให้เป็น string ทั้งหมด
-  const exportColumns = columns.map((col, idx) => {
-    return col.headerName?.toString() || col.field?.toString() || `คอลัมน์ ${idx + 1}`;
-  });
+    // ✅ แปลงข้อมูลแต่ละแถวเป็น array of string
+    const exportData = data.map((row) =>
+      columns.map((col) => {
+        const value = row?.[col.field];
+        return value !== undefined && value !== null ? value.toString() : "-";
+      })
+    );
 
-  // ✅ แปลงข้อมูลแต่ละแถวเป็น array of string
-  const exportData = data.map((row) =>
-    columns.map((col) => {
-      const value = row?.[col.field];
-      return value !== undefined && value !== null ? value.toString() : "-";
-    })
-  );
+    const totalRow = columns.map((col, idx) => {
+      if (idx === 0) return "รวม";
+      const val = totals?.[col.field];
+      return val !== undefined && val !== null ? val.toString() : "-";
+    });
 
-  const totalRow = columns.map((col, idx) => {
-    if (idx === 0) return "รวม";
-    const val = totals?.[col.field];
-    return val !== undefined && val !== null ? val.toString() : "-";
-  });
+    const finalExportData = [
+      Array(columns.length).fill(""),
+      Array(columns.length).fill(""),
+      exportColumns,
+      ...exportData,
+      totalRow,
+    ];
 
-  const finalExportData = [
-  Array(columns.length).fill(""),      // แถวว่าง
-  Array(columns.length).fill(""),      // แถวว่าง
-  exportColumns,
-  ...exportData,
-  totalRow,
-];
+    exportExcel(finalExportData, {
+      filename: `ผลการดำเนินการและเรื่องค้างพิจารณา_${today}.xlsx`,
+      sheetName: "Sheet1",
+      title:
+        tabIndex === 0
+          ? "ผลการดำเนินการและเรื่องค้างพิจารณา"
+          : "เรื่องค้างพิจารณาตามปีงบประมาณ",
+      exportDate: `วันที่ส่งออก: ${today}`,
+    });
+  };
 
-  // ✅ ส่งออกผ่าน util
-  exportExcel(finalExportData, {
-    filename,
-    sheetName: "Sheet1",
-    title:
-      tabIndex === 0
-        ? "ผลการดำเนินการและเรื่องค้างพิจารณา"
-        : "เรื่องค้างพิจารณาตามปีงบประมาณ",
-    exportDate: `วันที่ส่งออก: ${today}`,
-  });
-
-  console.log("📤 ส่งออกสำเร็จ", {
-    filename,
-    exportColumns,
-    totalRow,
-    rowCount: exportData.length,
-  });
-};
-
-  // ← Fallback สำหรับ ExportButton
   const renderExportButton = (label, onClick) => {
     if (ExportButton) {
       return <ExportButton label={label} onClick={onClick} />;
     }
-    // ← Fallback เป็น button ธรรมดา
     return (
       <button
         onClick={onClick}
@@ -450,12 +446,10 @@ const handleExportExcel = () => {
           gap={1}
           flexWrap="wrap"
           sx={{
-            // สำหรับ mobile: แสดงเป็น column
             flexDirection: isMobile ? "column" : "row",
             alignItems: isMobile ? "stretch" : "flex-end",
           }}
         >
-          {/* Filter fields container */}
           <Box
             display="flex"
             gap={1}

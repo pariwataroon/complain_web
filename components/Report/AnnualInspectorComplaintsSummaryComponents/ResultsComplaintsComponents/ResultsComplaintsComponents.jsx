@@ -1,140 +1,95 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListTab from "@services/TableListTab/TableListTab";
-
-// mock data for summary (tab 0) - เพิ่ม receiveDate
-const mockSummary = [
-  {
-    id: 1,
-    claimantName: "นายปิยกร อภิบาลศรี",
-    totalDept: 8,
-    inProgressCnt: 6,
-    closedCnt: 2,
-    receiveDate: "15 ม.ค. 2568",
-  },
-  {
-    id: 2,
-    claimantName: "นายเกียรติเดช วงศ์น้อย",
-    totalDept: 9,
-    inProgressCnt: 6,
-    closedCnt: 3,
-    receiveDate: "23 ก.พ. 2568",
-  },
-  {
-    id: 3,
-    claimantName: "นายจุฑาพงศ์ จิตติสักกุล",
-    totalDept: 10,
-    inProgressCnt: 4,
-    closedCnt: 6,
-    receiveDate: "8 มี.ค. 2568",
-  },
-  {
-    id: 4,
-    claimantName: "นางสาวจุฑิมา ศรีปราชญ์",
-    totalDept: 23,
-    inProgressCnt: 3,
-    closedCnt: 20,
-    receiveDate: "12 เม.ย. 2567",
-  },
-  {
-    id: 5,
-    claimantName: "นายอรรถพล ธรรถพงศ์",
-    totalDept: 9,
-    inProgressCnt: 8,
-    closedCnt: 1,
-    receiveDate: "27 พ.ค. 2567",
-  },
-  {
-    id: 6,
-    claimantName: "นางสาวทิพย์เพ็ญ จักรพันธ์",
-    totalDept: 19,
-    inProgressCnt: 4,
-    closedCnt: 15,
-    receiveDate: "3 มิ.ย. 2567",
-  },
-];
-
-// mock data for pending (tab 1) - เพิ่ม receiveDate
-const mockPending = [
-  {
-    id: 1,
-    claimantName: "นายปิยกร อภิบาลศรี",
-    pendingBetween: 36,
-    inProcessFY2568: 6,
-    total: 42,
-    receiveDate: "15 ม.ค. 2568",
-  },
-  {
-    id: 2,
-    claimantName: "นายเกียรติเดช วงศ์น้อย",
-    pendingBetween: 28,
-    inProcessFY2568: 6,
-    total: 34,
-    receiveDate: "23 ก.พ. 2568",
-  },
-  {
-    id: 3,
-    claimantName: "นายจุฑาพงศ์ จิตติสักกุล",
-    pendingBetween: 21,
-    inProcessFY2568: 4,
-    total: 25,
-    receiveDate: "8 มี.ค. 2568",
-  },
-  {
-    id: 4,
-    claimantName: "นางสาวจุฑิมา ศรีปราชญ์",
-    pendingBetween: 33,
-    inProcessFY2568: 3,
-    total: 36,
-    receiveDate: "12 เม.ย. 2567",
-  },
-  {
-    id: 5,
-    claimantName: "นายอรรถพล ธรรถพงศ์",
-    pendingBetween: 32,
-    inProcessFY2568: 8,
-    total: 40,
-    receiveDate: "27 พ.ค. 2567",
-  },
-  {
-    id: 6,
-    claimantName: "นางสาวทิพย์เพ็ญ จักรพันธ์",
-    pendingBetween: 6,
-    inProcessFY2568: 4,
-    total: 10,
-    receiveDate: "3 มิ.ย. 2567",
-  },
-];
+import {
+  GetAllReportsInspectorPending,
+  GetAllReportsInspector,
+} from "@pages/api/report/report"; // เพิ่ม GetAllReportsInspector
 
 const ResultsComplaintsComponents = () => {
-  const [allSummaryData] = useState(mockSummary);
-  const [allPendingData] = useState(mockPending);
-  const [filteredSummary, setFilteredSummary] = useState(mockSummary);
-  const [filteredPending, setFilteredPending] = useState(mockPending);
+  const [allSummaryData, setAllSummaryData] = useState([]);
+  const [filteredSummary, setFilteredSummary] = useState([]);
+  const [allPendingData, setAllPendingData] = useState([]);
+  const [filteredPending, setFilteredPending] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [maxDate, setMaxDate] = useState(null);
   const router = useRouter();
-  
-  const convertThaiDateToDate = (input) => {
-    if (!input) return null;
 
-    // กรณี input เป็น Date object อยู่แล้ว
-    if (input instanceof Date && !isNaN(input)) {
-      return input;
-    }
-
-    // กรณี input เป็น ISO string เช่น '2024-12-31T17:00:00.000Z'
-    const parsed = new Date(input);
-    if (!isNaN(parsed)) return parsed;
-
-    // Fallback (ถ้า input เป็นรูปแบบ "2568-01-15")
-    const [year, month, day] = input.split("-").map(Number);
-    return new Date(year - 543, month - 1, day);
+  // Helper: แปลงข้อมูล API summary
+  function transformSummaryAPI(items = []) {
+    // ปรับตามโครงสร้าง API ของ GetAllReportsInspector
+    // ตัวอย่าง: total_sent, total_closed, total_in_progress
+    return items.map((item, idx) => ({
+      id: idx + 1,
+      claimantName: item.signature_authority_user_name,
+      totalDept: item.total_sent,
+      inProgressCnt: item.total_in_progress,
+      closedCnt: item.total_closed,
+      receiveDate: "-", // ถ้า API summary มีวันที่ ให้ map ได้เลย
+    }));
   }
 
+  // Helper: แปลงข้อมูล API pending
+  function transformPendingAPI(items = []) {
+    return items.map((item, idx) => ({
+      id: idx + 1,
+      claimantName: item.signature_authority_user_name,
+      pendingBetween: item.pending_count,
+      inProcessFY2568: item.inprogress_count,
+      total: (item.pending_count || 0) + (item.inprogress_count || 0),
+      receiveDate: "-", // ถ้ามีวันให้ใส่, ตอนนี้ไม่มีใน API
+    }));
+  }
 
+  // Hydration-safe date state
+  useEffect(() => {
+    setMaxDate(new Date());
+    fetchSummaryData();
+    fetchPendingData();
+    // eslint-disable-next-line
+  }, []);
+
+  const fetchSummaryData = async (filters = {}) => {
+    setLoading(true);
+    try {
+      const res = await GetAllReportsInspector("2025", "", "", "");
+      const items = res?.res_data?.items ?? [];
+      const transformed = transformSummaryAPI(items);
+      setAllSummaryData(transformed);
+      setFilteredSummary(transformed);
+    } catch (e) {
+      setAllSummaryData([]);
+      setFilteredSummary([]);
+    }
+    setLoading(false);
+  };
+
+  const fetchPendingData = async (filters = {}) => {
+    setLoading(true);
+    try {
+      const res = await GetAllReportsInspectorPending("2025", "", "");
+      const items = res?.res_data?.items ?? [];
+      const transformed = transformPendingAPI(items);
+      setAllPendingData(transformed);
+      setFilteredPending(transformed);
+    } catch (e) {
+      setAllPendingData([]);
+      setFilteredPending([]);
+    }
+    setLoading(false);
+  };
+
+  const convertThaiDateToDate = (input) => {
+    if (!input) return null;
+    if (input instanceof Date && !isNaN(input)) return input;
+    const parsed = new Date(input);
+    if (!isNaN(parsed)) return parsed;
+    const [year, month, day] = input.split("-").map(Number);
+    return new Date(year - 543, month - 1, day);
+  };
   const convertStringToDate = (thaiDateStr) => {
     if (!thaiDateStr) return null;
-
     const months = {
       "ม.ค.": 0,
       "ก.พ.": 1,
@@ -149,98 +104,51 @@ const ResultsComplaintsComponents = () => {
       "พ.ย.": 10,
       "ธ.ค.": 11,
     };
-
     const [day, monthThai, yearThai] = thaiDateStr.split(" ");
     const month = months[monthThai];
     const year = parseInt(yearThai, 10) - 543;
     const d = parseInt(day, 10);
-
     return new Date(year, month, d);
-  }
+  };
 
-
-  // ← แก้ไขฟังก์ชัน handleSearch ให้ทำงานถูกต้อง
+  // ฟิลเตอร์ข้อมูลสองตาราง
   const handleSearch = (filters) => {
-    console.log("🔍 Search filters received:", filters);
-
     let filteredSummaryResult = [...allSummaryData];
     let filteredPendingResult = [...allPendingData];
 
-    // กรองตามวันที่เริ่มต้น
+    // ฟิลเตอร์วันที่ (ถ้ามี receiveDate จริง)
     if (filters.receiveDateFrom) {
-      console.log("📅 From date filter:", filters.receiveDateFrom);
       const fromDate = convertThaiDateToDate(filters.receiveDateFrom);
-      console.log("📅 Converted from date:", fromDate);
-
       if (fromDate) {
-        // เซ็ตเวลาเป็นเริ่มวัน (00:00:00)
         fromDate.setHours(0, 0, 0, 0);
-        console.log("📅 From date with time set:", fromDate);
-
         filteredSummaryResult = filteredSummaryResult.filter((item) => {
           const itemDate = convertStringToDate(item.receiveDate);
-          const isMatch = itemDate && itemDate >= fromDate;
-          console.log(
-            `📊 Summary - ${item.claimantName}: ${
-              item.receiveDate
-            } -> ${itemDate?.toLocaleDateString()} >= ${fromDate.toLocaleDateString()} = ${isMatch}`
-          );
-          return isMatch;
+          return itemDate && itemDate >= fromDate;
         });
-
         filteredPendingResult = filteredPendingResult.filter((item) => {
           const itemDate = convertStringToDate(item.receiveDate);
-          const isMatch = itemDate && itemDate >= fromDate;
-          console.log(
-            `📋 Pending - ${item.claimantName}: ${
-              item.receiveDate
-            } -> ${itemDate?.toLocaleDateString()} >= ${fromDate.toLocaleDateString()} = ${isMatch}`
-          );
-          return isMatch;
+          return itemDate && itemDate >= fromDate;
         });
       }
     }
-
-    // กรองตามวันที่สิ้นสุด
     if (filters.receiveDateTo) {
-      console.log("📅 To date filter:", filters.receiveDateTo);
       const toDate = convertThaiDateToDate(filters.receiveDateTo);
-      console.log("📅 Converted to date:", toDate);
-
       if (toDate) {
-        // เซ็ตเวลาเป็นสิ้นวัน (23:59:59)
         toDate.setHours(23, 59, 59, 999);
-        console.log("📅 To date with time set:", toDate);
-
         filteredSummaryResult = filteredSummaryResult.filter((item) => {
           const itemDate = convertStringToDate(item.receiveDate);
-          const isMatch = itemDate && itemDate <= toDate;
-          console.log(
-            `📊 Summary - ${item.claimantName}: ${
-              item.receiveDate
-            } -> ${itemDate?.toLocaleDateString()} <= ${toDate.toLocaleDateString()} = ${isMatch}`
-          );
-          return isMatch;
+          return itemDate && itemDate <= toDate;
         });
-
         filteredPendingResult = filteredPendingResult.filter((item) => {
           const itemDate = convertStringToDate(item.receiveDate);
-          const isMatch = itemDate && itemDate <= toDate;
-          console.log(
-            `📋 Pending - ${item.claimantName}: ${
-              item.receiveDate
-            } -> ${itemDate?.toLocaleDateString()} <= ${toDate.toLocaleDateString()} = ${isMatch}`
-          );
-          return isMatch;
+          return itemDate && itemDate <= toDate;
         });
       }
     }
 
-    // กรองตามชื่อ (ถ้ามี)
+    // ฟิลเตอร์ตามชื่อ (ถ้ามี)
     if (filters.searchName && filters.searchName.trim()) {
       const searchTerm = filters.searchName.trim().toLowerCase();
-      console.log("🔍 Name search term:", searchTerm);
-
       filteredSummaryResult = filteredSummaryResult.filter((item) =>
         item.claimantName.toLowerCase().includes(searchTerm)
       );
@@ -248,23 +156,6 @@ const ResultsComplaintsComponents = () => {
         item.claimantName.toLowerCase().includes(searchTerm)
       );
     }
-
-    console.log("📊 Final filter results:", {
-      original: {
-        summary: allSummaryData.length,
-        pending: allPendingData.length,
-      },
-      filtered: {
-        summary: filteredSummaryResult.length,
-        pending: filteredPendingResult.length,
-      },
-      summaryItems: filteredSummaryResult.map(
-        (item) => `${item.claimantName} (${item.receiveDate})`
-      ),
-      pendingItems: filteredPendingResult.map(
-        (item) => `${item.claimantName} (${item.receiveDate})`
-      ),
-    });
 
     setFilteredSummary(filteredSummaryResult);
     setFilteredPending(filteredPendingResult);
@@ -296,6 +187,7 @@ const ResultsComplaintsComponents = () => {
       <TableListTab
         summaryData={filteredSummary}
         pendingData={filteredPending}
+        loading={loading}
         onSearch={handleSearch}
         filterFields={[
           {
@@ -303,17 +195,16 @@ const ResultsComplaintsComponents = () => {
             label: "ตั้งแต่วันที่",
             type: "date",
             placeholder: "เลือกวันที่เริ่มต้น",
-            maxDate: new Date(),
+            maxDate: maxDate,
           },
           {
             name: "receiveDateTo",
             label: "ถึงวันที่",
             type: "date",
             placeholder: "เลือกวันที่สิ้นสุด",
-            maxDate: new Date(),
+            maxDate: maxDate,
           },
         ]}
-        // navigateTo="/admin/document/annual-inspector-complaints-summary/resultscomplaints"
       />
     </>
   );
