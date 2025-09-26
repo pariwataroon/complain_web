@@ -1,216 +1,113 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListCollapsReport from "@services/TableListCollapsReport/TableListCollapsReport";
-
-// ─── mock data ───────────────────────────────────────────────────────
-const mockComplaints = [
-  {
-    id: 1,
-    claimantName: "หัวหน้าผู้ตรวจราชการกระทรวงการคลัง : นายปิยกร อภิบาลศรี",
-    departmentsData: [
-      {
-        department:
-          "กรมสรรพากร (ตรวจสอบการยื่นภาษีเงินได้, ร้องเรียนเจ้าหน้าที่, ขอคืนภาษี)",
-        totalDept: 3,
-        inProgressCnt: 2,
-        closedCnt: 1,
-        receiveDate: "2567-10-15",
-      },
-      {
-        department:
-          "สำนักงานสลากกินแบ่งรัฐบาล (ขอเปิดตัวสลากฯ, ต้านนโยบายสลากดิจิทัล, ขอคืนขายสลากฯ)",
-        totalDept: 0,
-        inProgressCnt: 0,
-        closedCnt: 0,
-        receiveDate: "2567-11-15"
-      },
-      {
-        department: "ธนาคารอิสลามแห่งประเทศไทย",
-        totalDept: 0,
-        inProgressCnt: 0,
-        closedCnt: 0,
-        receiveDate: "2567-12-15",
-      },
-      {
-        department:
-          "บริษัท บริหารสินทรัพย์ ธนาคารอิสลามแห่งประเทศไทย จำกัด (บสอ.) (ปัญหาหนี้สิน)",
-        totalDept: 0,
-        inProgressCnt: 0,
-        closedCnt: 0,
-        receiveDate: "2568-1-15",
-      },
-
-      // ─── here is the multi-level node ────────────────────────────────────────
-      {
-        department:
-          "ธนาคารแห่งประเทศไทย (ธปท.) (ปัญหาหนี้สินกับ บสย., มาตรการเยียวยา Covid-19)",
-        totalDept: 3,
-        inProgressCnt: 3,
-        closedCnt: 0,
-        receiveDate: "2568-1-18",
-
-        // add a `children` array for the next level
-        children: [
-          {
-            department:
-              "บริษัท บริหารสินทรัพย์กรุงเทพพาณิชย์ จำกัด (บสก.) (ปัญหาหนี้สิน)",
-            totalDept: 1,
-            inProgressCnt: 1,
-            closedCnt: 0,
-          },
-          {
-            department:
-              "บริษัท บริหารสินทรัพย์สุขุมวิท จำกัด (บสส.) (ปัญหาหนี้สิน)",
-            totalDept: 1,
-            inProgressCnt: 0,
-            closedCnt: 1,
-          },
-          {
-            department:
-              "บริษัท บริหารสินทรัพย์ การ์เด้น เอกรัฐ จำกัด (ปัญหาหนี้สิน)",
-            totalDept: 0,
-            inProgressCnt: 0,
-            closedCnt: 0,
-          },
-          {
-            department: "บริษัท บริหารสินทรัพย์ เจเค จำกัด (ปัญหาหนี้สิน)",
-            totalDept: 0,
-            inProgressCnt: 0,
-            closedCnt: 0,
-          },
-        ],
-      },
-
-      // ─── the rest of this level ─────────────────────────────────────────────
-      {
-        department:
-          "บริษัท บริหารสินทรัพย์ ธนาคารอิสลามแห่งประเทศไทย จำกัด (บสอ.) (ปัญหาหนี้สิน)",
-        totalDept: 0,
-        inProgressCnt: 0,
-        closedCnt: 0,
-        receiveDate: "2568-2-5",
-      },
-      /* …etc… */
-    ],
-  },
-
-  // You can repeat the same pattern for id:2–6:
-  {
-    id: 2,
-    claimantName: "ผู้ตรวจราชการกระทรวงการคลัง : นายจุมพล…",
-    departmentsData: [
-      /* … */
-      {
-        department: "หน่วยงาน A",
-        totalDept: 2,
-        inProgressCnt: 1,
-        closedCnt: 1,
-        receiveDate: "2568-2-15",
-        children: [
-          /* next level… */
-        ],
-      },
-      /* … */
-    ],
-  },
-
-  // etc.
-];
-
-// ─── filter options ─────────────────────────────────────────────────────────
-const claimantOptions = [
-  ...mockComplaints.map((c) => ({
-    value: c.claimantName,
-    label: c.claimantName,
-  })),
-];
+import { GetAllReportsInspector } from "@pages/api/report/report";
 
 // ─── Component ─────────────────────────────────────────────────────────────
 const AnnualInspectorComplaintsSummaryComponents = () => {
-  const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [claimantOptions, setClaimantOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [dateRange, setDateRange] = useState(""); // สำหรับแสดงช่วงวันที่
+  const [searchFilters, setSearchFilters] = useState({
+    receiveDateFrom: "",
+    receiveDateTo: "",
+  });
   const router = useRouter();
 
-  const convertADToBuddhist = (dateInput) => {
-    if (!dateInput) return null;
-    const date = new Date(dateInput);
-    const year = date.getFullYear() + 543;
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`; // พ.ศ.
-  };
-
-  const normalizeBuddhistDate = (dateStr) => {
-    if (!dateStr) return null;
-    const [y, m, d] = dateStr.split("-");
-    return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-  };
-
-  const handleSearch = (filters) => {
-    const {
-      claimantName,
-      department,
-      responsibleOfficer,
-      receiveDateFrom,
-      receiveDateTo,
-    } = filters;
-
-    const fromDate = receiveDateFrom
-      ? convertADToBuddhist(receiveDateFrom)
-      : null;
-    const toDate = receiveDateTo
-      ? convertADToBuddhist(receiveDateTo)
-      : null;
-
-    const matchesDateRange = (dateStr) => {
-      if (!dateStr) return false;
-      const normalized = normalizeBuddhistDate(dateStr);
-      if (!normalized) return false;
-      if (fromDate && normalized < fromDate) return false;
-      if (toDate && normalized > toDate) return false;
-      return true;
-    };
-
-    const result = mockComplaints
-      .map((item) => {
-        // กรองรายชื่อผู้ตรวจ (parent level)
-        if (claimantName && !item.claimantName.includes(claimantName)) return null;
-
-        // กรองเจ้าหน้าที่รับผิดชอบ (ถ้ามี)
-        if (responsibleOfficer && item.responsibleOfficer !== responsibleOfficer) return null;
-
-        // คัดกรองเฉพาะ departmentsData ที่ตรงกับช่วงวันที่
-        const filteredDepartments = item.departmentsData
-          .map((dept) => {
-            const matchedChildren = dept.children?.filter((child) =>
-              matchesDateRange(child.receiveDate)
-            );
-
-            const matchedThisLevel = matchesDateRange(dept.receiveDate);
-
-            if (matchedThisLevel || (matchedChildren && matchedChildren.length > 0)) {
-              return {
-                ...dept,
-                children: matchedChildren?.length > 0 ? matchedChildren : undefined,
-              };
-            }
-
-            return null;
-          })
-          .filter(Boolean); // ลบ null ออก
-
-        if (filteredDepartments.length === 0) return null;
-
-        return {
-          ...item,
-          departmentsData: filteredDepartments,
+  // Helper: แปลงข้อมูล API ให้ตรงกับโครงสร้าง TableListCollapsReport
+  const transformApiData = (apiItems = []) => {
+    const groupByInspector = {};
+    apiItems.forEach(item => {
+      const inspectorId = item.signature_authority_user_id;
+      if (!groupByInspector[inspectorId]) {
+        groupByInspector[inspectorId] = {
+          id: inspectorId,
+          claimantName: `${item.signature_authority_user_name}`,
+          departmentsData: [],
         };
-      })
-      .filter(Boolean); // ลบ null item ที่ไม่เข้าเงื่อนไข
-
-    console.log("Filtered result:", result);
-    setFilteredComplaints(result);
+      }
+      groupByInspector[inspectorId].departmentsData.push({
+        department: item.outside_department_name || "ไม่ระบุหน่วยงาน",
+        totalDept: item.total_sent,
+        inProgressCnt: item.total_in_progress,
+        closedCnt: item.total_closed,
+        receiveDate: "-", // API ไม่มีวันที่ต่อแถว
+      });
+    });
+    return Object.values(groupByInspector);
   };
+
+  // โหลดข้อมูลเริ่มต้น
+  useEffect(() => {
+    fetchData({});
+  }, []);
+
+  // ฟังก์ชันโหลดข้อมูล
+  const fetchData = async (filters = {}) => {
+    setLoading(true);
+    try {
+      // เลือกปีจาก receiveDateFrom ถ้ามี หากไม่มีใช้ปีปัจจุบัน
+      let year = "2025";
+      if (filters.receiveDateFrom) {
+        year = new Date(filters.receiveDateFrom).getFullYear().toString();
+      }
+
+      // Call API
+      const res = await GetAllReportsInspector(year, "", "", "");
+      const apiItems = res?.res_data?.items || [];
+      const transformed = transformApiData(apiItems);
+      setFilteredComplaints(transformed);
+
+      // สร้าง options สำหรับ select รายชื่อผู้ตรวจ
+      setClaimantOptions(
+        [...new Map(apiItems.map(i => [
+          i.signature_authority_user_id,
+          { value: i.signature_authority_user_id, label: i.signature_authority_user_name }
+        ])).values()]
+      );
+    } catch (e) {
+      setFilteredComplaints([]);
+      setClaimantOptions([]);
+    }
+    setLoading(false);
+  };
+
+  // Helper: แปลงวันที่เป็นรูปแบบไทย (พ.ศ.)
+  const formatDateThai = (isoDate) => {
+    if (!isoDate) return "";
+    const d = new Date(isoDate);
+    return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}/${(d.getFullYear() + 543)}`;
+  };
+
+  // handle การค้นหา
+  const handleSearch = async (filters) => {
+    setSearchFilters(filters);
+    // update dateRange label
+    let range = "";
+    if (filters.receiveDateFrom && filters.receiveDateTo) {
+      range = `ตั้งแต่วันที่ ${formatDateThai(filters.receiveDateFrom)} ถึงวันที่ ${formatDateThai(filters.receiveDateTo)}`;
+    } else if (filters.receiveDateFrom) {
+      range = `ตั้งแต่วันที่ ${formatDateThai(filters.receiveDateFrom)}`;
+    } else if (filters.receiveDateTo) {
+      range = `ถึงวันที่ ${formatDateThai(filters.receiveDateTo)}`;
+    }
+    setDateRange(range);
+
+    // ค้นหาใหม่ (filter API)
+    // ถ้าต้องกรอง inspector_id, department_id, status สามารถ map filter ได้ที่นี่
+    await fetchData(filters);
+  };
+
+  // Set default dateRange ถ้าไม่มี filter
+  useEffect(() => {
+    if (!searchFilters.receiveDateFrom && !searchFilters.receiveDateTo) {
+      // setDateRange("ประจำปีงบประมาณ พ.ศ.2568");
+    }
+  }, [searchFilters]);
 
   return (
     <>
@@ -236,8 +133,9 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
         data={filteredComplaints}
         title="รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ"
         reportTitle="รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ"
-        dateRange="ประจำปีงบประมาณ พ.ศ.2568"
+        dateRange={dateRange}
         onSearch={handleSearch}
+        loading={loading}
         filterFields={[
           {
             name: "claimantName",

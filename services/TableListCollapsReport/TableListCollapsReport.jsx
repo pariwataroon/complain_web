@@ -890,6 +890,7 @@ const TableListCollapsReport = ({
                             zIndex: 1,
                           }}
                         >
+                          {item.departmentsData?.length > 0 ? (
                           <IconButton
                             size="small"
                             onClick={(e) => {
@@ -904,7 +905,8 @@ const TableListCollapsReport = ({
                               <ExpandMoreIcon />
                             )}
                           </IconButton>
-                          {val}
+                        ) : null}
+                        {val}
                         </TableCell>
                       ) : (
                         <TableCell
@@ -937,29 +939,27 @@ const TableListCollapsReport = ({
                             }}
                           >
                             <TableCell
-                              align="left"
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                pl: 4,
-                                fontSize: { xs: 12, sm: 14 },
-                                position: "relative",
-                                zIndex: 1,
-                              }}
-                            >
+                            align="left"
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              pl: 4,
+                              fontSize: { xs: 12, sm: 14 },
+                              position: "relative",
+                              zIndex: 1,
+                            }}
+                          >
+                            {Array.isArray(d.children) && d.children.length > 0 ? (
                               <IconButton
                                 size="small"
                                 onClick={() => handleChildToggle(item.id, idx)}
                                 sx={{ mr: 1 }}
                               >
-                                {openChild[key] ? (
-                                  <ExpandLessIcon />
-                                ) : (
-                                  <ExpandMoreIcon />
-                                )}
+                                {openChild[key] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                               </IconButton>
-                              {d.department}
-                            </TableCell>
+                            ) : null}
+                            {d.department}
+                          </TableCell>
                             <TableCell
                               align="center"
                               sx={{
