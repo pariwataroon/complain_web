@@ -1088,12 +1088,8 @@ def get_user_related_complaints_with_tracking(
 def get_outgoing_tracking(
     db: Session,
     complaint_id: UUID,
-    report_type: Optional[str] = None  # "outgoing_report" | "outgoing_report3" | "status_history"
+    report_type: Optional[str] = None
 ) -> Dict[str, Any]:
-    """
-    ติดตามสถานะหลังส่งหนังสือออก (OutgoingReport → OutgoingReport3)
-    รวม timeline + derived next status
-    """
     def _iso(dt):
         return dt.isoformat() if dt else None
 
@@ -1129,6 +1125,7 @@ def get_outgoing_tracking(
         "sent_to_external": "ส่งหน่วยงานที่เกี่ยวข้องแล้ว",
     }
 
+    # ดึง complaint + status_history (align กับ document-storage)
     complaint = (
         db.query(Complaint)
         .options(joinedload(Complaint.status_history))
@@ -1138,7 +1135,8 @@ def get_outgoing_tracking(
     if not complaint:
         return {"error": "COMPLAINT_NOT_FOUND"}
 
-    outgoing_list: List[OutgoingReport] = (
+    # ===== 1) รวม outgoing reports ทั้งแบบเดิม (OutgoingReport) และรุ่น 4 (OutgoingReport4) =====
+    outgoing_list: List[Any] = (
         db.query(OutgoingReport)
         .options(joinedload(OutgoingReport.department))
         .filter(OutgoingReport.is_active == True, OutgoingReport.complaint_id == complaint_id)
@@ -1146,7 +1144,41 @@ def get_outgoing_tracking(
         .all()
     )
 
-    decision_list = []
+    # พยายามเพิ่ม OR4 ถ้ามีโมเดล
+    OR4Model = None
+    try:
+        from models.outgoing_reports4 import OutgoingReport4 as OR4Model  # type: ignore
+    except Exception:
+        OR4Model = None
+
+    if OR4Model:
+        try:
+            outgoing_list4 = (
+                db.query(OR4Model)
+                .options(
+                    joinedload(getattr(OR4Model, "department", None)),
+                    joinedload(getattr(OR4Model, "outside_department", None)),
+                )
+                .filter(getattr(OR4Model, "is_active") == True, getattr(OR4Model, "complaint_id") == complaint_id)
+                .order_by(getattr(OR4Model, "created_at").asc())
+                .all()
+            )
+        except Exception:
+            outgoing_list4 = (
+                db.query(OR4Model)
+                .filter(getattr(OR4Model, "is_active") == True, getattr(OR4Model, "complaint_id") == complaint_id)
+                .order_by(getattr(OR4Model, "created_at").asc())
+                .all()
+            )
+        outgoing_list = list(outgoing_list) + list(outgoing_list4)
+
+    # sort รวมทั้งหมดตามเวลาให้เก่าสุด -> ล่าสุด
+    def _created_at(o):
+        return getattr(o, "created_at", None) or getattr(o, "reference_date", None) or datetime.min
+    outgoing_list.sort(key=_created_at)
+
+    # ===== 2) รวม OR3 (decision) ถ้ามีโมเดล =====
+    decision_list: List[Any] = []
     OR3Model = None
     try:
         from models.outgoing_reports3 import OutgoingReport3 as OR3Model  # type: ignore
@@ -1170,41 +1202,57 @@ def get_outgoing_tracking(
                 .all()
             )
 
+    # ===== 3) สร้าง timeline (history) =====
     timeline: List[Dict[str, Any]] = []
 
-    # ✅ แก้ mapping ให้สอดคล้องกับ document-storage/status_history
+    # 3.1 map status_history ให้ตรง document-storage
     try:
         for h in (complaint.status_history or []):
             st = _enum_str(getattr(h, "status", None))
-            # ใช้ changed_at / changed_by / remark (fallback notes)
             timeline.append({
                 "type": "status_history",
-                "at": _iso(getattr(h, "changed_at", None)),    # ✅ was created_at
+                "at": _iso(getattr(h, "changed_at", None)),  # align doc-storage
                 "status": st,
                 "status_label": status_th_map.get(st, st),
-                "note": getattr(h, "remark", None) or getattr(h, "notes", None),  # ✅ was note (ไม่มี)
-                "by": _safe_str(getattr(h, "changed_by", None))  # ✅ was updated_by
+                "note": getattr(h, "remark", None) or getattr(h, "notes", None),
+                "by": _safe_str(getattr(h, "changed_by", None)),
             })
     except Exception:
         pass
 
-    # OutgoingReport ทั้งหมด (รวม type4) — เก็บ consideration_result ไว้ใช้ rule ยุติ
+    # util: หา department_id/name รองรับทั้ง legacy และ outside_department (OR4)
+    def _dept_id_and_name(o) -> Tuple[Optional[str], Optional[str]]:
+        # id: ให้ outside_department_id มาก่อน, ถ้าไม่มีค่อยใช้ department_id
+        dep_id = _safe_str(getattr(o, "outside_department_id", None) or getattr(o, "department_id", None))
+        # name: ชื่อหน่วยงานจาก outside_department > department > other_department(text)
+        name = None
+        if getattr(o, "outside_department", None):
+            name = getattr(o.outside_department, "name", None)
+        elif getattr(o, "department", None):
+            name = getattr(o.department, "name", None)
+        else:
+            name = getattr(o, "other_department", None)
+        return dep_id, name
+
+    # 3.2 map outgoing_report (รวม OR เดิมและ OR4) + เติม consideration_result ให้ FE ใช้เช็ค "ยุติ"
     for r in outgoing_list:
+        dep_id, dep_name = _dept_id_and_name(r)
         timeline.append({
             "type": "outgoing_report",
             "at": _iso(getattr(r, "created_at", None)),
             "reference_number": getattr(r, "reference_number", None),
             "reference_date": _iso(getattr(r, "reference_date", None)),
             "subject": getattr(r, "subject", None),
-            "department_id": _safe_str(getattr(r, "department_id", None)),
-            "department_name": _dept_name(r),
+            "department_id": dep_id,
+            "department_name": dep_name,
             "confidentiality": _enum_str(getattr(r, "confidentiality_level", None)),
             "urgency": _enum_str(getattr(r, "urgency_level", None)),
             "by": _safe_str(getattr(r, "created_by", None)),
             "id": _safe_str(getattr(r, "id", None)),
-            "consideration_result": getattr(r, "consideration_result", None)  # ✅ สำคัญต่อ rule “ยุติ”
+            "consideration_result": getattr(r, "consideration_result", None),  # <<< จุดสำคัญ
         })
 
+    # 3.3 map outgoing_report3 (decision)
     latest_decision: Optional[Dict[str, Any]] = None
     for d in decision_list:
         result_raw = (
@@ -1222,25 +1270,27 @@ def get_outgoing_tracking(
             "id": _safe_str(getattr(d, "id", None)),
         }
         timeline.append(item)
-        latest_decision = item  # เก็บอันล่าสุด (เรียง asc ข้างบน)
+        latest_decision = item
 
+    # ===== 4) latest + derived =====
     latest_sent = None
     if outgoing_list:
         r = outgoing_list[-1]
+        dep_id, dep_name = _dept_id_and_name(r)
         latest_sent = {
             "id": _safe_str(getattr(r, "id", None)),
             "reference_number": getattr(r, "reference_number", None),
             "reference_date": _iso(getattr(r, "reference_date", None)),
             "subject": getattr(r, "subject", None),
-            "department_id": _safe_str(getattr(r, "department_id", None)),
-            "department_name": _dept_name(r),
+            "department_id": dep_id,
+            "department_name": dep_name,
             "created_at": _iso(getattr(r, "created_at", None)),
         }
 
     current_status = _enum_str(getattr(complaint, "status", None))
     suggested_next = None
 
-    # ✅ กติกาเพิ่มเติม: ถ้ามี OR4 (หรือ OR อื่น ๆ ที่มี field นี้) แล้ว consideration_result มีคำว่า "ยุติ" ⇒ ปิดงาน
+    # ปิดงานถ้า OR/OR4 มี consideration_result ที่มีคำว่า "ยุติ"
     closed_via_or4 = False
     for r in outgoing_list:
         txt = (getattr(r, "consideration_result", "") or "").lower()
@@ -1261,15 +1311,16 @@ def get_outgoing_tracking(
             suggested_next = "reviewed"
         latest_decision["result_label"] = decision_th_map.get(suggested_next, suggested_next)
     elif latest_sent:
-        # ส่งหน่วยงานภายนอกแล้ว ⇒ รอผลพิจารณา
         suggested_next = "in_review"
 
+    # รองรับตัวกรองรายชนิดเดิม
     if report_type in {"outgoing_report", "outgoing_report3", "status_history"}:
         timeline = [t for t in timeline if t.get("type") == report_type]
 
+    # คงลำดับเวลาเก่าสุด→ล่าสุด
     def _ts(x: Dict[str, Any]):
         return x.get("at") or x.get("reference_date") or x.get("created_at") or ""
-    timeline.sort(key=_ts)  # คงลำดับเดิม (เก่าสุด → ล่าสุด); ถ้าอยากสลับ ให้ใส่ reverse=True
+    timeline.sort(key=_ts)
 
     return {
         "complaint": {
@@ -1282,7 +1333,7 @@ def get_outgoing_tracking(
             "updated_at": _iso(getattr(complaint, "updated_at", None)),
         },
         "counts": {
-            "outgoing_reports": len(outgoing_list),
+            "outgoing_reports": len(outgoing_list),   # นับรวม OR และ OR4
             "decisions": len(decision_list) if OR3Model else 0,
         },
         "latest": {
