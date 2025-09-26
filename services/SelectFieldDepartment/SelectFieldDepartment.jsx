@@ -9,7 +9,7 @@ import {
     CircularProgress,
     Box,
     Autocomplete,
-} from "@mui/material";""
+} from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { GetAllSignatureAuthorities } from "@pages/api/allselect/allselect";
 

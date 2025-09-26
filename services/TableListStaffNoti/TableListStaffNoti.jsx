@@ -75,13 +75,13 @@ const TableListStaffNoti = ({
     navigateTo && router.push(`${navigateTo}/${item.id}`);
 
   const columns = [
-    { name: "claimantName", label: "ชื่อ - สกุล (ผู้ร้อง)", width: 200 },
-    { name: "issue", label: "ชื่อเรื่อง", width: 200 },
     {
       name: "responsibleOfficer",
       label: "เจ้าหน้าที่ผู้รับผิดชอบ",
       width: 200,
     },
+    { name: "claimantName", label: "ชื่อ - สกุล (ผู้ร้อง)", width: 200 },
+    { name: "issue", label: "ชื่อเรื่อง", width: 200 },
     { name: "receiptNumber", label: "เลข สรร.", width: 150 },
     {
       name: "officerReceiveDate",

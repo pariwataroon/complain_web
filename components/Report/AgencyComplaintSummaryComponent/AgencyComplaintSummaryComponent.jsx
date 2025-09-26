@@ -358,45 +358,21 @@ const AgencyComplaintSummary = () => {
 
   const handleSearch = (filters) => {
     const {
-      receiveDateFrom,
-      receiveDateTo,
-      agency: fAgency,
-      claimantName: fName,
-      issueType: fIssueType,
-      subIssueType: fSubIssueType,
-      responsibleOfficer: fOfficer,
-      status: fStatus,
+      claimantName,        // ชื่อผู้ร้อง
+      receiptNumber,       // เลขรับ สรร.
+      agency,              // หน่วยงาน/ชื่อ-สกุล (ผู้ร้อง)
+      responsibleOfficer,  // เจ้าหน้าที่ผู้รับผิดชอบ
+      status,              // สถานะเรื่อง
     } = filters;
 
+    const norm = (v) => (v ?? "").toString().trim();
+
     const result = allComplaints.filter((item) => {
-      // แปลงวันที่รับเรื่องจาก string เป็น Date object
-      const itemReceiveDate = parseThaiDate(item.receiveDate);
-
-      // ตรวจสอบช่วงวันที่
-      if (receiveDateFrom) {
-        const fromDate =
-          receiveDateFrom instanceof Date
-            ? receiveDateFrom
-            : new Date(receiveDateFrom);
-        if (itemReceiveDate && itemReceiveDate < fromDate) return false;
-      }
-
-      if (receiveDateTo) {
-        const toDate =
-          receiveDateTo instanceof Date
-            ? receiveDateTo
-            : new Date(receiveDateTo);
-        if (itemReceiveDate && itemReceiveDate > toDate) return false;
-      }
-
-      // ตรวจสอบเงื่อนไขอื่น ๆ
-      if (fAgency && item.agency !== fAgency) return false;
-      if (fName && !item.claimantName.includes(fName)) return false;
-      if (fIssueType && item.issueType !== fIssueType) return false;
-      if (fSubIssueType && item.subIssueType !== fSubIssueType) return false;
-      if (fOfficer && item.responsibleOfficer !== fOfficer) return false;
-      if (fStatus && item.status !== fStatus) return false;
-
+      if (claimantName && !item.claimantName.includes(norm(claimantName))) return false;
+      if (receiptNumber && !item.receiptNumber.includes(norm(receiptNumber))) return false;
+      if (agency && item.agency !== agency) return false;
+      if (responsibleOfficer && item.responsibleOfficer !== responsibleOfficer) return false;
+      if (status && item.status !== status) return false;
       return true;
     });
 
@@ -426,36 +402,6 @@ const AgencyComplaintSummary = () => {
         title="รายงานสรุปเรื่องร้องเรียนของหน่วยงาน"
         navigateTo="/admin/edit/website-complaints"
         onSearch={handleSearch}
-        filterFields={[
-          {
-            name: "receiveDateFrom",
-            label: "ตั้งแต่วันที่",
-            type: "date",
-          },
-          {
-            name: "receiveDateTo",
-            label: "ถึงวันที่",
-            type: "date",
-          },
-          {
-            name: "agency",
-            label: "หน่วยงานในสังกัด",
-            type: "select",
-            options: agencyOptions,
-          },
-          {
-            name: "responsibleOfficer",
-            label: "เจ้าหน้าที่ผู้รับผิดชอบ",
-            type: "select",
-            options: responsibleOfficerOptions,
-          },
-          {
-            name: "status",
-            label: "สถานะเรื่อง",
-            type: "select",
-            options: statusOptions,
-          },
-        ]}
       />
     </>
   );

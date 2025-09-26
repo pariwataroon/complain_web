@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useRef } from "react";
+// services/TableListAgency/TableListAgency.jsx
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -12,6 +13,7 @@ import {
   IconButton,
   useMediaQuery,
   useTheme,
+  Stack,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
@@ -20,42 +22,116 @@ import styles from "./TableListAgency.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
-
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
+
+// ⬇️ API ที่มีอยู่ในโปรเจกต์เดิม (ใช้ดึง options)
+// - ถ้าในโปรเจกต์คุณ path ต่างกัน ปรับ import ให้ตรงได้เลย
+import {
+  GetDepartments,
+  GetMyRelatedComplaints,
+} from "@pages/api/complaint/complaint";
 
 const TableListAgency = ({
   data = [],
   title = "",
   navigateTo = "",
   onSearch = () => {},
-  filterFields = [],
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
   const excelRef = useRef();
   const theme = useTheme();
-  const isXs = useMediaQuery(theme.breakpoints.down("sm")); // < 600px
-  const isSm = useMediaQuery(theme.breakpoints.down("md")); // < 900px
+  const isXs = useMediaQuery(theme.breakpoints.down("sm"));
+  const isSm = useMediaQuery(theme.breakpoints.down("md"));
   const isBelow1200 = useMediaQuery("(max-width:1200px)");
-  const isBelow1300 = useMediaQuery("(max-width:1300px)");
 
-  const initialFilters = filterFields.reduce((acc, f) => {
-    acc[f.name] = "";
-    return acc;
-  }, {});
-  const [filters, setFilters] = useState(initialFilters);
+  // -------------------- ฟิลเตอร์ 5 ช่อง --------------------
+  const [filters, setFilters] = useState({
+    claimantName: "",
+    receiptNumber: "",
+    agency: "",
+    responsibleOfficer: "",
+    status: "",
+  });
 
   const handleChange = (field) => (e) => {
-    let value;
-    if (e?.target) {
-      value = e.target.value;
-    } else {
-      value = e;
-    }
-    setFilters({ ...filters, [field]: value });
+    const value = e?.target ? e.target.value : e;
+    setFilters((s) => ({ ...s, [field]: value }));
   };
 
+  // options ดรอปดาวน์
+  const [agencyOptions, setAgencyOptions] = useState([]);
+  const [officerOptions, setOfficerOptions] = useState([]);
+  const [statusOptions, setStatusOptions] = useState([
+    { value: "ทราบ", label: "ทราบ" },
+    { value: "ทราบไว้ชั้นหนึ่ง", label: "ทราบไว้ชั้นหนึ่ง" },
+    { value: "ยุติเรื่องได้", label: "ยุติเรื่องได้" },
+    { value: "เห็นชอบ", label: "เห็นชอบ" },
+    { value: "อยุ่ระหว่างดำเนินการ", label: "อยุ่ระหว่างดำเนินการ" },
+  ]);
+
+  // โหลด options จาก API (มี fallback จาก data)
+  useEffect(() => {
+    (async () => {
+      try {
+        const depRes = await GetDepartments().catch(() => null);
+        let deps = [];
+        if (depRes?.res_data?.length) {
+          deps = depRes.res_data
+            .map((d) => ({
+              value: String(d.name),
+              label: d.name,
+            }))
+            .filter((x) => x.label);
+        } else {
+          // fallback จากข้อมูลบนตาราง
+          const uniq = [
+            ...new Set(data.map((d) => d.agency).filter(Boolean)),
+          ].sort();
+          deps = uniq.map((x) => ({ value: x, label: x }));
+        }
+        setAgencyOptions(deps);
+      } catch (e) {
+        setAgencyOptions([]);
+        console.error("Load departments failed:", e);
+      }
+    })();
+  }, [data]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // ดึงรายชื่อจาก API เรื่องร้องเรียนของฉัน แล้วรวบรวมชื่อผู้รับผิดชอบ
+        const res = await GetMyRelatedComplaints({ skip: 0, limit: 200 }).catch(
+          () => null
+        );
+        let names = [];
+        if (res?.res_data?.items?.length) {
+          names = [
+            ...new Set(
+              res.res_data.items
+                .map((it) => it?.complaint?.assigned_to)
+                .filter((x) => x && x !== "-")
+            ),
+          ].sort();
+        } else {
+          // fallback จากข้อมูลบนตาราง
+          names = [
+            ...new Set(
+              data.map((d) => d.responsibleOfficer).filter((x) => x && x !== "-")
+            ),
+          ].sort();
+        }
+        setOfficerOptions(names.map((n) => ({ value: n, label: n })));
+      } catch (e) {
+        console.error("Load officers failed:", e);
+        setOfficerOptions([]);
+      }
+    })();
+  }, [data]);
+
+  // -------------------- ตาราง --------------------
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const pagedData = useMemo(
@@ -73,9 +149,16 @@ const TableListAgency = ({
     onSearch(filters);
   };
   const handleClearSearch = () => {
-    setFilters(initialFilters);
+    const cleared = {
+      claimantName: "",
+      receiptNumber: "",
+      agency: "",
+      responsibleOfficer: "",
+      status: "",
+    };
+    setFilters(cleared);
     setPage(0);
-    onSearch(initialFilters);
+    onSearch(cleared);
   };
 
   const handleRowClick = (item) =>
@@ -100,31 +183,29 @@ const TableListAgency = ({
 
   // --- Excel Export Handler ---
   const handleExportExcel = () => {
-  const today = new Date().toLocaleDateString("th-TH", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const filename = `รายงานสรุปเรื่องร้องเรียนของหน่วยงาน_${today}.xlsx`;
-  const exportLabel = `วันที่ export: ${today}`;
-
-  // เตรียมข้อมูลแปลงเป็น array of object สำหรับ exportExcel
-  const rows = data.map((item, idx) => {
-    const rowObj = {
-      ลำดับ: idx + 1,
-    };
-    columns.forEach((col) => {
-      rowObj[col.label] = item[col.name] ?? "-";
+    const today = new Date().toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
-    return rowObj;
-  });
+    const filename = `รายงานสรุปเรื่องร้องเรียนของหน่วยงาน_${today}.xlsx`;
+    const exportLabel = `วันที่ export: ${today}`;
 
-  exportExcel(excelRef, filename, "Sheet1", title, exportLabel);
-};
+    // เตรียมข้อมูล (คงเดิม)
+    const rows = data.map((item, idx) => {
+      const rowObj = { ลำดับ: idx + 1 };
+      columns.forEach((col) => {
+        rowObj[col.label] = item[col.name] ?? "-";
+      });
+      return rowObj;
+    });
+
+    exportExcel(excelRef, filename, "Sheet1", title, exportLabel);
+  };
 
   return (
     <>
-      {/* ← เพิ่ม Global CSS สำหรับ DatePicker popup ที่ document level */}
+      {/* Global CSS ของ DatePicker (คงเดิม) */}
       <style jsx global>{`
         .popupOverlay {
           position: fixed !important;
@@ -170,22 +251,8 @@ const TableListAgency = ({
           overflow: "hidden",
         }}
       >
-        {/* Header */}
-        <Box
-          className={styles.headerBar}
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-          sx={{
-            fontSize: { xs: 14, sm: 16, md: 18 },
-            height: { xs: 35, sm: 40, md: 50 },
-            px: { xs: 1.5, sm: 2, md: 3 },
-          }}
-        ></Box>
-
-        {/* Title and Export Buttons */}
+        {/* Title + Export */}
         {isSm ? (
-          // Mobile & Tablet Layout
           <>
             <Box
               mt={2}
@@ -193,15 +260,9 @@ const TableListAgency = ({
               display="flex"
               alignItems="center"
               justifyContent="center"
-              sx={{
-                fontSize: { xs: 16, sm: 18 },
-                height: { xs: 40, sm: 50 },
-                px: { xs: 2, sm: 3 },
-              }}
+              sx={{ fontSize: { xs: 16, sm: 18 }, height: { xs: 40, sm: 50 }, px: { xs: 2, sm: 3 } }}
             >
-              <Box sx={{ fontWeight: "bold", textAlign: "center" }}>
-                {title}
-              </Box>
+              <Box sx={{ fontWeight: "bold", textAlign: "center" }}>{title}</Box>
             </Box>
             <Box
               sx={{
@@ -220,71 +281,105 @@ const TableListAgency = ({
               >
                 <ExportButton
                   label="Export PDF"
-                  onClick={() =>
-                    exportElementToPDF(
-                      pdfRef,
-                      "รายงานสรุปเรื่องร้องเรียนของหน่วยงาน.pdf"
-                    )
-                  }
+                  onClick={() => exportElementToPDF(pdfRef, "รายงานสรุปเรื่องร้องเรียนของหน่วยงาน.pdf")}
                   size={isXs ? "small" : "medium"}
-                  sx={{
-                    minWidth: { xs: "200px", sm: "140px" },
-                    width: { xs: "100%", sm: "auto" },
-                    maxWidth: { xs: "250px", sm: "none" },
-                  }}
+                  sx={{ minWidth: { xs: "200px", sm: "140px" }, width: { xs: "100%", sm: "auto" } }}
                 />
-                <ExportButton
-                  label="Export Excel"
-                  onClick={handleExportExcel}
-                  size={isXs ? "small" : "medium"}
-                  sx={{
-                    minWidth: { xs: "200px", sm: "140px" },
-                    width: { xs: "100%", sm: "auto" },
-                    maxWidth: { xs: "250px", sm: "none" },
-                  }}
-                />
+                <ExportButton label="Export Excel" onClick={handleExportExcel} size={isXs ? "small" : "medium"} />
               </Box>
             </Box>
           </>
         ) : (
-          // Desktop Layout - Title and Export in same row
-          <Box
-            mt={2}
-            className={styles.headerBar2}
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{
-              fontSize: 18,
-              height: 50,
-              px: 3,
-            }}
-          >
+          <Box mt={2} className={styles.headerBar2} display="flex" alignItems="center" justifyContent="space-between" sx={{ fontSize: 18, height: 50, px: 3 }}>
             <Box sx={{ fontWeight: "bold" }}>{title}</Box>
             <Box display="flex" alignItems="center" gap={1}>
-              <ExportButton
-                label="Export PDF"
-                onClick={() =>
-                  exportElementToPDF(
-                    pdfRef,
-                    "รายงานสรุปเรื่องร้องเรียนของหน่วยงาน.pdf"
-                  )
-                }
-                size="medium"
-              />
-              <ExportButton
-                label="Export Excel"
-                size="medium"
-                onClick={handleExportExcel}
-              />
+              <ExportButton label="Export PDF" onClick={() => exportElementToPDF(pdfRef, "รายงานสรุปเรื่องร้องเรียนของหน่วยงาน.pdf")} size="medium" />
+              <ExportButton label="Export Excel" onClick={handleExportExcel} size="medium" />
             </Box>
           </Box>
         )}
 
-        {/* Filters + Search (unchanged) */}
-        {/* ... (เหมือนเดิม) ... */}
+        {/* ⬇️ แถบฟิลเตอร์ 5 ช่อง */}
+        <Box
+          sx={{
+            px: { xs: 2, sm: 3 },
+            pt: 2,
+            pb: 1.5,
+            borderTop: "1px solid #eef0fb",
+            borderBottom: "1px solid #eef0fb",
+            background: "linear-gradient(90deg, #f7f8ff 0%, #ffffff 100%)",
+          }}
+        >
+          <Box
+            display="grid"
+            gap={{ xs: 1.2, sm: 1.5 }}
+            sx={{
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(3, 1fr)",
+                lg: "repeat(5, 1fr)",
+              },
+            }}
+          >
+            <InputText
+              label="ชื่อผู้ร้อง"
+              placeholder=""
+              value={filters.claimantName}
+              onChange={handleChange("claimantName")}
+              size="small"
+            />
+            <InputText
+              label="เลขรับ สรร."
+              placeholder=""
+              value={filters.receiptNumber}
+              onChange={handleChange("receiptNumber")}
+              size="small"
+            />
+            <SelectField
+              label="หน่วยงาน/ชื่อ-สกุล (ผู้ร้อง)"
+              value={filters.agency}
+              onChange={handleChange("agency")}
+              options={agencyOptions}
+              size="small"
+            />
+            {/* <SelectField
+              label="เจ้าหน้าที่ผู้รับผิดชอบ"
+              value={filters.responsibleOfficer}
+              onChange={handleChange("responsibleOfficer")}
+              options={officerOptions}
+              size="small"
+            /> */}
+            <SelectField
+              label="สถานะเรื่อง"
+              value={filters.status}
+              onChange={handleChange("status")}
+              options={statusOptions}
+              size="small"
+            />
+          </Box>
 
-        {/* Data Table */}
+          <Stack direction="row" spacing={1} mt={1.5} justifyContent="flex-end">
+            <IconButton
+              aria-label="ค้นหา"
+              onClick={handleSearchClick}
+              sx={{ backgroundColor: "#1120A3", color: "#fff", "&:hover": { backgroundColor: "#0d1991" } }}
+              size="small"
+            >
+              <SearchIcon />
+            </IconButton>
+            <IconButton
+              aria-label="ล้างค่า"
+              onClick={handleClearSearch}
+              sx={{ backgroundColor: "#e9ecff", color: "#1120A3", "&:hover": { backgroundColor: "#dfe5ff" } }}
+              size="small"
+            >
+              <SearchOffIcon />
+            </IconButton>
+          </Stack>
+        </Box>
+
+        {/* ตารางข้อมูล */}
         <div ref={pdfRef}>
           <Box
             className={styles.tableWrapper}
@@ -295,47 +390,19 @@ const TableListAgency = ({
               pb: 1,
               position: "relative",
               zIndex: 0,
-              "&::-webkit-scrollbar": {
-                height: "8px",
-              },
-              "&::-webkit-scrollbar-track": {
-                backgroundColor: "#f1f1f1",
-                borderRadius: "4px",
-              },
-              "&::-webkit-scrollbar-thumb": {
-                backgroundColor: "#888",
-                borderRadius: "4px",
-                "&:hover": {
-                  backgroundColor: "#555",
-                },
-              },
+              "&::-webkit-scrollbar": { height: "8px" },
+              "&::-webkit-scrollbar-track": { backgroundColor: "#f1f1f1", borderRadius: "4px" },
+              "&::-webkit-scrollbar-thumb": { backgroundColor: "#888", borderRadius: "4px", "&:hover": { backgroundColor: "#555" } },
             }}
           >
-            <Table
-              ref={excelRef}
-              sx={{ minWidth: isBelow1200 ? 1400 : "100%" }}
-            >
+            <Table ref={excelRef} sx={{ minWidth: isBelow1200 ? 1400 : "100%" }}>
               <TableHead>
                 <TableRow>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      width: { xs: 60, sm: 80 },
-                      fontSize: { xs: 12, sm: 14 },
-                    }}
-                  >
+                  <TableCell align="center" sx={{ width: { xs: 60, sm: 80 }, fontSize: { xs: 12, sm: 14 } }}>
                     ลำดับ
                   </TableCell>
                   {columns.map((col) => (
-                    <TableCell
-                      key={col.name}
-                      sx={{
-                        width: col.width,
-                        fontSize: { xs: 12, sm: 14 },
-                        fontWeight: 600,
-                        color: "#1120a3",
-                      }}
-                    >
+                    <TableCell key={col.name} sx={{ width: col.width, fontSize: { xs: 12, sm: 14 }, fontWeight: 600, color: "#1120a3" }}>
                       {col.label}
                     </TableCell>
                   ))}
@@ -346,20 +413,9 @@ const TableListAgency = ({
                   <TableRow
                     key={item.id}
                     onClick={() => handleRowClick(item)}
-                    sx={{
-                      cursor: "pointer",
-                      "&:hover": { backgroundColor: "#f5f7ff" },
-                    }}
+                    sx={{ cursor: "pointer", "&:hover": { backgroundColor: "#f5f7ff" } }}
                   >
-                    <TableCell
-                      align="center"
-                      sx={{
-                        width: { xs: 60, sm: 80 },
-                        fontWeight: 600,
-                        color: "#1120A3",
-                        fontSize: { xs: 12, sm: 14 },
-                      }}
-                    >
+                    <TableCell align="center" sx={{ width: { xs: 60, sm: 80 }, fontWeight: 600, color: "#1120A3", fontSize: { xs: 12, sm: 14 } }}>
                       {page * rowsPerPage + idx + 1}
                     </TableCell>
                     {columns.map((col) => (
@@ -392,16 +448,9 @@ const TableListAgency = ({
               onRowsPerPageChange={handleRowsPerPageChange}
               sx={{
                 borderTop: "1px solid #eee",
-                "& .MuiTablePagination-toolbar": {
-                  fontSize: { xs: 12, sm: 14 },
-                  minHeight: { xs: 48, sm: 52 },
-                },
-                "& .MuiTablePagination-selectLabel": {
-                  fontSize: { xs: 12, sm: 14 },
-                },
-                "& .MuiTablePagination-displayedRows": {
-                  fontSize: { xs: 12, sm: 14 },
-                },
+                "& .MuiTablePagination-toolbar": { fontSize: { xs: 12, sm: 14 }, minHeight: { xs: 48, sm: 52 } },
+                "& .MuiTablePagination-selectLabel": { fontSize: { xs: 12, sm: 14 } },
+                "& .MuiTablePagination-displayedRows": { fontSize: { xs: 12, sm: 14 } },
               }}
             />
           </Box>
