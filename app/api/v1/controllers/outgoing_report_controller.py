@@ -837,7 +837,7 @@ def get_user_related_complaints_with_tracking(
     status_th_map = {
         "submitted": "ส่งคำร้อง",
         "sent_to_agency": "มอบหมายเจ้าหน้าที่",
-        "sent_to_external": "ส่งหน่วยงานภายนอก",
+        "sent_to_external": "ส่งหน่วยงานที่เกี่ยวข้อง",
         "in_process": "อยู่ระหว่างดำเนินการ",
         "in_review": "อยู่ระหว่างพิจารณา",
         "tracking": "ติดตามผลการพิจารณา",
@@ -849,7 +849,7 @@ def get_user_related_complaints_with_tracking(
         "completed": "เสร็จสิ้น",
         "tracking": "ติดตามต่อ",
         "reviewed": "มีผลพิจารณา",
-        "sent_to_external": "ส่งหน่วยงานภายนอกแล้ว",
+        "sent_to_external": "ส่งหน่วยงานที่เกี่ยวข้องแล้ว",
     }
 
     q = db.query(Complaint).options(joinedload(Complaint.status_history)).filter(
@@ -1033,7 +1033,7 @@ def get_user_related_complaints_with_tracking(
                 suggested_next = "reviewed"
             latest_decision["result_label"] = decision_th_map.get(suggested_next, suggested_next)
         elif latest_sent:
-            # ถ้ามี OutgoingReport แสดงว่าส่งหน่วยงานภายนอกแล้ว
+            # ถ้ามี OutgoingReport แสดงว่าส่งหน่วยงานที่เกี่ยวข้องแล้ว
             # แต่ใช้ in_review เพื่อไม่ให้สับสนกับการมอบหมายเจ้าหน้าที่
             suggested_next = "in_review"  # รอการตอบกลับจากหน่วยงานภายนอก
 
@@ -1114,7 +1114,7 @@ def get_outgoing_tracking(
     status_th_map = {
         "submitted": "ส่งคำร้อง",
         "sent_to_agency": "มอบหมายเจ้าหน้าที่",
-        "sent_to_external": "ส่งหน่วยงานภายนอก",
+        "sent_to_external": "ส่งหน่วยงานที่เกี่ยวข้อง",
         "in_process": "อยู่ระหว่างดำเนินการ",
         "in_review": "อยู่ระหว่างการพิจารณา",
         "tracking": "ติดตามผลการพิจารณา",
@@ -1126,7 +1126,7 @@ def get_outgoing_tracking(
         "completed": "เสร็จสิ้น",
         "tracking": "ติดตามต่อ",
         "reviewed": "มีผลพิจารณา",
-        "sent_to_external": "ส่งหน่วยงานภายนอกแล้ว",
+        "sent_to_external": "ส่งหน่วยงานที่เกี่ยวข้องแล้ว",
     }
 
     complaint = (
@@ -1252,7 +1252,7 @@ def get_outgoing_tracking(
             suggested_next = "reviewed"
         latest_decision["result_label"] = decision_th_map.get(suggested_next, suggested_next)
     elif latest_sent:
-        # ถ้ามี OutgoingReport แสดงว่าส่งหน่วยงานภายนอกแล้ว
+        # ถ้ามี OutgoingReport แสดงว่าส่งหน่วยงานที่เกี่ยวข้องแล้ว
         # แต่ใช้ in_review เพื่อไม่ให้สับสนกับการมอบหมายเจ้าหน้าที่
         suggested_next = "in_review"  # รอการตอบกลับจากหน่วยงานภายนอก
 

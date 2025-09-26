@@ -2017,7 +2017,7 @@ def get_filter_options(db: Session) -> Dict:
         available_statuses = [
             {"value": "SUBMITTED", "label": "รับเรื่อง"},
             {"value": "SENT_TO_AGENCY", "label": "มอบหมายเจ้าหน้าที่"},
-            {"value": "SENT_TO_EXTERNAL", "label": "ส่งหน่วยงานภายนอก"},
+            {"value": "SENT_TO_EXTERNAL", "label": "ส่งหน่วยงานที่เกี่ยวข้อง"},
             {"value": "IN_PROCESS", "label": "กำลังดำเนินการ"},
             {"value": "IN_REVIEW", "label": "อยู่ระหว่างพิจารณา"},
             {"value": "TRACKING", "label": "ติดตามผล"},
@@ -2288,7 +2288,7 @@ def get_thai_status(status) -> str:
     status_mapping = {
         "SUBMITTED": "รับเรื่อง",
         "SENT_TO_AGENCY": "มอบหมายเจ้าหน้าที่",
-        "SENT_TO_EXTERNAL": "ส่งหน่วยงานภายนอก",
+        "SENT_TO_EXTERNAL": "ส่งหน่วยงานที่เกี่ยวข้อง",
         "IN_PROCESS": "กำลังดำเนินการ",
         "IN_REVIEW": "อยู่ระหว่างพิจารณา",
         "TRACKING": "ติดตามผล",
