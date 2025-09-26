@@ -3,7 +3,7 @@ import axiosInstance from "@pages/api/axiosInstance";
 // ฟังก์ชันสำหรับดึงข้อมูล document-storage สำหรับ page_type = "website"
 export const getDocumentStorageForWebsite = async ({
   skip = 0,
-  limit = 100,
+  limit = 10000,
 } = {}) => {
   try {
     const { data } = await axiosInstance.get("/document-storage", {

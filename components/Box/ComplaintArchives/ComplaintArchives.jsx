@@ -109,6 +109,8 @@ const transformComplaintData = (apiItems) => {
     const statusEn = item.status || "-";
     const statusTh = getThaiStatus(statusEn);
 
+    const complaintNumberSorn = displayOrDash(item.master_complaint?.complaint_number);
+
     const complaintNumber = displayOrDash(
       item.master_complaint?.complaint_number
     );
@@ -139,6 +141,7 @@ const transformComplaintData = (apiItems) => {
       note: displayOrDash(item.note),
       complaintNumber,
       isMaster,
+      complaintNumberSorn,
     };
   });
 };
@@ -232,6 +235,11 @@ const ComplaintArchives = () => {
         ok = ok && item.subIssueType === filters.subIssueType;
       }
 
+      if (filters.complaintNumberSorn && filters.complaintNumberSorn.trim() !== "") {
+        const q = filters.complaintNumberSorn.toLowerCase();
+        ok = ok && (item.complaintNumberSorn || "").toLowerCase().includes(q);
+      }
+
       if (getVal(filters.agency)) {
        const q = norm(getVal(filters.agency));
        ok =
@@ -280,7 +288,7 @@ const ComplaintArchives = () => {
     const fetchDocumentStorage = async () => {
       try {
         setLoading(true);
-        const res = await getDocumentStorageForWebsite({ skip: 0, limit: 100 });
+        const res = await getDocumentStorageForWebsite({ skip: 0, limit: 10000 });
         const items = res?.res_data?.items ?? [];
 
         // 1) แปลงข้อมูลเพื่อแสดงผล
@@ -400,6 +408,11 @@ const ComplaintArchives = () => {
             label: "สถานะเรื่อง",
             type: "select",
             options: filterOptions.statusOptions,
+          },
+          {
+            name: "complaintNumberSorn",
+            label: "เลข สรร.",
+            type: "text",
           },
         ]}
       />

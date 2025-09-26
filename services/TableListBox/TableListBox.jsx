@@ -179,13 +179,13 @@ const TableListBox = ({
     {
       name: "claimantName",
       label: "ชื่อสกุลผู้ร้อง",
-      width: 200,
+      width: 180,
       align: "left",
     },
     {
       name: "issue",
       label: "เรื่อง",
-      width: 250,
+      width: 200,
       align: "left",
     },
     {
@@ -209,7 +209,13 @@ const TableListBox = ({
     {
       name: "status",
       label: "สถานะเรื่อง",
-      width: 220, // เพิ่มจาก 160 เป็น 220
+      width: 170, // เพิ่มจาก 160 เป็น 220
+      align: "center",
+    },
+    {
+      name: "complaintNumberSorn", // เพิ่มคอลัมน์ เลข สรร.
+      label: "เลข สรร.",
+      width: 180,
       align: "center",
     },
     {
