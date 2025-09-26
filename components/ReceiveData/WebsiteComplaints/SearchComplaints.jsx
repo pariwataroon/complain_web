@@ -4,7 +4,8 @@ import {
   GetComplaintByID,
   GetComplaintsWithSearch,
   GetAssignmentCompleteByAdmin,
-  UpdateAssignmentCompleteByAdmin
+  UpdateAssignmentCompleteByAdmin,
+  UpdateComplaint
 } from "@pages/api/complaint/complaint";
 import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/ComplaintPersonalFormAPI";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
@@ -985,8 +986,94 @@ useEffect(() => {
     return `${year}-${month}-${day} ${hh}:${mm}:${ss}`;
   };
 
+  const packPerson = (p = {}) => ({
+    idCard: p.idCard || "",
+    name: p.name || "",
+    address: p.address || "",
+    phone: p.phone || "",
+    province: p.province ?? null,
+    districts: p.districts ?? null,
+    subdistricts: p.subdistricts ?? null,
+    zipcode: p.zipcode ?? null,
+    email: p.email || "",
+  });
+
+  const hasAnyValue = (obj) =>
+    obj && typeof obj === "object" && Object.values(obj).some(v => v !== "" && v !== null && v !== undefined);
+
+  /**
+   * delegateType: 'delegate' | 'signer'  (ไฟล์นี้คุณยังไม่มี toggle ก็ส่ง 'delegate' ไป)
+   * respondentType: 'individual' | 'corporate' | 'government' (ไฟล์นี้ใช้ฟอร์มบุคคลเดียว -> 'individual')
+   */
+  const buildStep12Payload = ({
+    generalData,
+    delegateData,
+    delegateType = "delegate",
+    step2Data,
+    respondentType = "individual",
+  }) => {
+    const step1 = {
+      general: {
+        general: packPerson(generalData || {}),
+        ...(hasAnyValue(delegateData)
+          ? { [delegateType]: packPerson(delegateData) }
+          : {}),
+      },
+    };
+
+    const step2 = {
+      general: {
+        activeType: respondentType,
+        [respondentType]: packPerson(step2Data || {}),
+      },
+    };
+
+    return { step1, step2 };
+  };
+
+  const updateStep12 = async () => {
+    if (!defaultData?.id) {
+      alertError("ข้อผิดพลาด", "ไม่พบ ID ของเรื่องร้องเรียน");
+      return false;
+    }
+
+    // ดึงค่าจากฟอร์ม 3 ชุดแรก
+    const generalData  = generalMethods.getValues();   // ผู้ร้องทุกข์
+    const delegateData = delegateMethods.getValues();  // ผู้รับมอบอำนาจ
+    const step2Data    = step2Methods.getValues();     // ผู้ถูกร้องเรียน
+
+    // หน้านี้ยังไม่มีตัวสลับประเภท -> ยึด 'delegate' และ 'individual' ไปก่อน
+    const payload = buildStep12Payload({
+      generalData,
+      delegateData,
+      delegateType: "delegate",
+      step2Data,
+      respondentType: "individual",
+    });
+
+    try {
+      const res = await UpdateComplaint(defaultData.id, payload);
+      const ok =
+        ["0000", "0002"].includes(String(res?.res_code)) ||
+        res?.success === true ||
+        res?.status === "ok" ||
+        /SUCCESS|UPDATED|OK/i.test(String(res?.res_message || ""));
+
+      if (!ok) {
+        throw new Error(res?.res_message || res?.message || "อัปเดต Step 1–2 ไม่สำเร็จ");
+      }
+      return true;
+    } catch (err) {
+      console.error("UpdateComplaint (step1–2) error:", err);
+      alertError("ข้อผิดพลาด", err?.message || "ไม่สามารถอัปเดตข้อมูลผู้ร้อง/ผู้มอบอำนาจ/ผู้ถูกร้องได้");
+      return false;
+    }
+  };
 
 const handleSubmit = async () => {
+  const ok12 = await updateStep12();
+  if (!ok12) return; 
+  
   const fieldsToValidate = [
     "complaintTypeId",
     "complaintChannel",

@@ -90,6 +90,51 @@ const getRespondentTypeAndData = (step2) => {
   return { type: "unknown", data: {} };
 };
 
+const packPerson = (p = {}) => ({
+  idCard: p.idCard || "",
+  name: p.name || "",
+  address: p.address || "",
+  phone: p.phone || "",
+  province: p.province ?? null,   
+  districts: p.districts ?? null,    
+  subdistricts: p.subdistricts ?? null, 
+  zipcode: p.zipcode ?? null,       
+  email: p.email || "",
+});
+
+const buildStep12Payload = ({
+  generalData,        
+  delegateData,        
+  delegateType,        
+  step2Data,          
+  respondentType,      
+}) => {
+  const step1 = {
+    general: {
+      general: packPerson(generalData || {}),
+      // ส่งเฉพาะเมื่อมีข้อมูลผู้รับมอบอำนาจ
+      ...(delegateData && Object.keys(delegateData).length
+        ? (delegateType === "signer"
+            ? { signer: packPerson(delegateData) }
+            : { delegate: packPerson(delegateData) })
+        : {}),
+    },
+  };
+
+  const step2General = { activeType: respondentType || "individual" };
+  if (respondentType === "corporate") {
+    step2General.corporate = packPerson(step2Data || {});
+  } else if (respondentType === "government") {
+    step2General.government = packPerson(step2Data || {});
+  } else {
+    step2General.individual = packPerson(step2Data || {});
+  }
+
+  const step2 = { general: step2General };
+
+  return { step1, step2 };
+};
+
 const SearchComplaints = () => {
   const router = useRouter();
 
@@ -148,6 +193,8 @@ const SearchComplaints = () => {
   const [respondentData, setRespondentData] = useState({});
   const [groupedStaffUsers, setGroupedStaffUsers] = useState({});
   const [previewData, setPreviewData] = useState(null);
+
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (router.query.preview === "true" || router.query.preview === "") {
@@ -881,230 +928,182 @@ const SearchComplaints = () => {
 
   // ฟังก์ชันใหม่สำหรับการอัปเดตข้อมูล step 1 และ step 2 พร้อมไป preview
   const handleUpdateSteps = async () => {
-    try {
-      if (!defaultData?.id) {
-        alertError("ข้อผิดพลาด", "ไม่พบ ID ของเรื่องร้องเรียน");
-        return;
-      }
-
-      const generalData = generalMethods.getValues();
-      const delegateData = delegateMethods.getValues();
-      const step2Data = step2Methods.getValues();
-      const step3Data = step3Methods.getValues();
-      const step4Data = step4Methods.getValues();
-
-      // หา senderAgencyName ตาม id ที่เลือก (อิงชุดเดียวกับ dropdown คือ positions)
-      let senderAgencyName = "";
-      const selectedAgencyId = step3Data.senderAgency;
-      if (selectedAgencyId !== undefined && selectedAgencyId !== null && selectedAgencyId !== "") {
-        // ค้นหาใน positions ก่อน (ข้อมูลจาก GetAllOutsideDepartments ที่ใช้ใน select)
-        const foundPos = positions.find(
-          (pos) => String(pos.id) === String(selectedAgencyId)
-        );
-        if (foundPos) {
-          senderAgencyName = foundPos.name || foundPos.label || "";
-        } else {
-          // เผื่อกรณีมีข้อมูลจาก getDepartments เดิม ให้ลองค้นหา fallback
-          const foundDept = departments.find(
-            (dept) => String(dept.id) === String(selectedAgencyId)
-          );
-          senderAgencyName =
-            (foundDept && (foundDept.name || foundDept.department_name || foundDept.label)) || "";
-        }
-      }
-
-      const selectedOfficer = staffUsers.find(
-        (user) => user.value === step4Data.responsibleOfficer
-      );
-
-      const responsibleOfficerData = selectedOfficer
-        ? {
-            id: selectedOfficer.value,
-            name: selectedOfficer.label,
-            fullName: selectedOfficer.fullName || "",
-            email: selectedOfficer.email || "",
-            roles: selectedOfficer.roles || [],
-          }
-        : {
-            id: step4Data.responsibleOfficer || "",
-            name: "",
-            fullName: "",
-            email: "",
-            roles: [],
-          };
-
-      const enhancedStep4Data = {
-        ...step4Data,
-        responsibleOfficer: responsibleOfficerData,
-        responsibleOfficerId: step4Data.responsibleOfficer,
-      };
-
-      const complaintFilingData = {
-        new_complaint: complaintFilingType === "new",
-        add_more_complaint_to_ref: complaintFilingType === "additional",
-        group_work: complaintFilingType === "committee",
-        additional_reference_number1: step3Data.additionalReference1 || "",
-        additional_reference_date1: step3Data.additionalReferenceDate1 || "",
-        additional_reference_number2: step3Data.additionalReference2 || "",
-        additional_reference_date2: step3Data.additionalReferenceDate2 || "",
-      };
-
-      // เตรียมข้อมูลในรูปแบบเดียวกับ handleSubmit
-      const updatePayload = {
-        step1: {
-          general: {
-            general: generalData,
-            delegate: defaultDelegateRef.current && Object.keys(delegateData).length > 0 ? delegateData : null,
-          },
-        },
-        step2: {
-          general: {
-            individual: step2Data,
-          },
-        },
-        step3: {
-          general: {
-            ...step3Data,
-            senderAgencyName,
-            complaintType: step3Data.complaintType,
-            complaintFilingType: complaintFilingType,
-            ...complaintFilingData,
-          },
-        },
-        step4: {
-          general: enhancedStep4Data,
-        },
-      };
-
-      console.log("UpdateAssignmentCompleteByAdmin payload:", updatePayload);
-
-      // ใช้ UpdateAssignmentCompleteByAdmin แทนเพราะรองรับข้อมูลครบถ้วน
-      const result = await UpdateAssignmentCompleteByAdmin(defaultData.id, updatePayload);
-
-      if (result && result.success) {
-        alertSuccess("อัปเดตสำเร็จ", "ข้อมูลผู้ร้องทุกข์ และผู้ถูกร้องเรียน ได้รับการอัปเดตแล้ว");
-
-        // ส่งไป preview หลังจากอัปเดตสำเร็จ
-        setTimeout(() => {
-          handleSubmit();
-        }, 1500);
-      } else {
-        throw new Error("การอัปเดตไม่สำเร็จ");
-      }
-
-    } catch (error) {
-      console.error("Error updating complaint data:", error);
-      alertError("ข้อผิดพลาด", "ไม่สามารถอัปเดตข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
-    }
-  };
-
-  const handleSubmit = () => {
-    const isValid = validateForm();
-    if (!isValid) {
-      alertError(
-        "ข้อมูลไม่ครบถ้วน",
-        "กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (ฟิลด์ที่มีเครื่องหมาย *)"
-      );
+  try {
+    if (!defaultData?.id) {
+      alertError("ข้อผิดพลาด", "ไม่พบ ID ของเรื่องร้องเรียน");
       return;
     }
 
-    const generalData = generalMethods.getValues();
-    const delegateData = delegateMethods.getValues();
-    const step2Data = step2Methods.getValues();
-    const step3Data = step3Methods.getValues();
-    const step4Data = step4Methods.getValues();
-    // console.log({ step4Data });
+    // ดึงค่าจากฟอร์ม
+    const generalData   = generalMethods.getValues();   // ผู้ร้องทุกข์
+    const delegateData  = delegateMethods.getValues();  // ผู้รับมอบอำนาจ/ผู้มีอำนาจลงนาม
+    const step2Data     = step2Methods.getValues();     // ผู้ถูกร้องเรียน
 
-    // หา senderAgencyName ตาม id ที่เลือก (อิงชุดเดียวกับ dropdown คือ positions)
-    let senderAgencyName = "";
-    const selectedAgencyId = step3Data.senderAgency;
-    if (selectedAgencyId !== undefined && selectedAgencyId !== null && selectedAgencyId !== "") {
-      // ค้นหาใน positions ก่อน (ข้อมูลจาก GetAllOutsideDepartments ที่ใช้ใน select)
-      const foundPos = positions.find(
-        (pos) => String(pos.id) === String(selectedAgencyId)
-      );
-      if (foundPos) {
-        senderAgencyName = foundPos.name || foundPos.label || "";
-      } else {
-        // เผื่อกรณีมีข้อมูลจาก getDepartments เดิม ให้ลองค้นหา fallback
-        const foundDept = departments.find(
-          (dept) => String(dept.id) === String(selectedAgencyId)
-        );
-        senderAgencyName =
-          (foundDept && (foundDept.name || foundDept.department_name || foundDept.label)) || "";
-      }
+    // ใช้ state ที่คุณมีอยู่แล้ว
+    const payload = buildStep12Payload({
+      generalData,
+      delegateData,
+      delegateType,      // 'delegate' | 'signer'
+      step2Data,
+      respondentType,    // 'individual' | 'corporate' | 'government'
+    });
+
+    // เรียก API
+    const res = await UpdateComplaint(defaultData.id, payload);
+
+    // ตรวจผลลัพธ์ตามรูปแบบหลังบ้านของคุณ
+    const ok =
+      ["0000", "0002"].includes(String(res?.res_code)) ||       
+      res?.success === true ||                                  
+      res?.status === "ok" ||                                   
+      res?.message === "COMPLAINT_UPDATED" ||                   
+      /SUCCESS|UPDATED|OK/i.test(String(res?.res_message || "")); 
+
+    if (!ok) {
+      throw new Error(res?.res_message || res?.message || "อัปเดตไม่สำเร็จ");
     }
 
-    const selectedOfficer = staffUsers.find(
-      (user) => user.value === step4Data.responsibleOfficer
-    );
+    alertSuccess("อัปเดตสำเร็จ", "บันทึกข้อมูลผู้ร้องทุกข์/ผู้รับมอบอำนาจ/ผู้ถูกร้องเรียนแล้ว");
 
-    const responsibleOfficerData = selectedOfficer
-      ? {
-          id: selectedOfficer.value,
-          name: selectedOfficer.label,
-          fullName: selectedOfficer.fullName || "",
-          email: selectedOfficer.email || "",
-          roles: selectedOfficer.roles || [],
+  } catch (error) {
+    console.error("Update step 1-2 error:", error);
+    alertError("ข้อผิดพลาด", error?.message || "ไม่สามารถอัปเดตข้อมูลได้");
+  }
+  };
+
+  const handleSubmit = async () => {
+    // 1) validate เหมือนเดิม
+    const isValid = validateForm();
+    if (!isValid) {
+      alertError("ข้อมูลไม่ครบถ้วน","กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (ฟิลด์ที่มีเครื่องหมาย *)");
+      return;
+    }
+
+    if (!defaultData?.id) {
+      alertError("ข้อผิดพลาด","ไม่พบ ID ของเรื่องร้องเรียน");
+      return;
+    }
+
+    setSaving(true);
+      try {
+        const generalData  = generalMethods.getValues();  
+        const delegateData = delegateMethods.getValues(); 
+        const step2Data    = step2Methods.getValues();   
+
+        // 3) สร้าง payload เฉพาะ Step1 & Step2 แล้วเรียก UpdateComplaint ก่อน
+        const payload12 = buildStep12Payload({
+          generalData,
+          delegateData,
+          delegateType,     // state เดิมของคุณ
+          step2Data,
+          respondentType,   // state เดิมของคุณ
+        });
+
+        const res = await UpdateComplaint(defaultData.id, payload12);
+
+        const ok =
+          ["0000","0002"].includes(String(res?.res_code)) ||
+          res?.success === true ||
+          res?.status === "ok" ||
+          res?.message === "COMPLAINT_UPDATED" ||
+          /SUCCESS|UPDATED|OK/i.test(String(res?.res_message || ""));
+
+        if (!ok) {
+          throw new Error(res?.res_message || res?.message || "อัปเดต Step 1-2 ไม่สำเร็จ");
         }
-      : {
-          id: step4Data.responsibleOfficer || "",
-          name: "",
-          fullName: "",
-          email: "",
-          roles: [],
+
+        // 4) จากนั้นค่อยประกอบข้อมูลสำหรับ preview (เหมือนเดิม)
+        const step3Data = step3Methods.getValues();
+        const step4Data = step4Methods.getValues();
+
+        // หา senderAgencyName จาก positions (เหมือนโค้ดเดิม)
+        let senderAgencyName = "";
+        const selectedAgencyId = step3Data.senderAgency;
+        if (selectedAgencyId !== undefined && selectedAgencyId !== null && selectedAgencyId !== "") {
+          const foundPos = positions.find((pos) => String(pos.id) === String(selectedAgencyId));
+          if (foundPos) {
+            senderAgencyName = foundPos.name || foundPos.label || "";
+          } else {
+            const foundDept = departments.find((dept) => String(dept.id) === String(selectedAgencyId));
+            senderAgencyName = (foundDept && (foundDept.name || foundDept.department_name || foundDept.label)) || "";
+          }
+        }
+
+        const selectedOfficer = staffUsers.find(
+          (user) => user.value === step4Data.responsibleOfficer
+        );
+
+        const responsibleOfficerData = selectedOfficer
+          ? {
+              id: selectedOfficer.value,
+              name: selectedOfficer.label,
+              fullName: selectedOfficer.fullName || "",
+              email: selectedOfficer.email || "",
+              roles: selectedOfficer.roles || [],
+            }
+          : {
+              id: step4Data.responsibleOfficer || "",
+              name: "",
+              fullName: "",
+              email: "",
+              roles: [],
+            };
+
+        const enhancedStep4Data = {
+          ...step4Data,
+          responsibleOfficer: responsibleOfficerData,
+          responsibleOfficerId: step4Data.responsibleOfficer,
         };
 
-    const enhancedStep4Data = {
-      ...step4Data,
-      responsibleOfficer: responsibleOfficerData,
-      responsibleOfficerId: step4Data.responsibleOfficer,
-    };
+        const complaintFilingData = {
+          new_complaint: complaintFilingType === "new",
+          add_more_complaint_to_ref: complaintFilingType === "additional",
+          group_work: complaintFilingType === "committee",
+          additional_reference_number1: step3Data.additionalReference1 || "",
+          additional_reference_date1: step3Data.additionalReferenceDate1 || "",
+          additional_reference_number2: step3Data.additionalReference2 || "",
+          additional_reference_date2: step3Data.additionalReferenceDate2 || "",
+        };
 
-    const complaintFilingData = {
-      new_complaint: complaintFilingType === "new",
-      add_more_complaint_to_ref: complaintFilingType === "additional",
-      group_work: complaintFilingType === "committee",
-      additional_reference_number1: step3Data.additionalReference1 || "",
-      additional_reference_date1: step3Data.additionalReferenceDate1 || "",
-      additional_reference_number2: step3Data.additionalReference2 || "",
-      additional_reference_date2: step3Data.additionalReferenceDate2 || "",
-    };
+        const submitData = {
+          id: defaultData?.id,
+          step1: {
+            general: {
+              general: generalData,
+              delegate: defaultDelegateRef.current ? delegateData : null,
+            },
+          },
+          step2: {
+            general: {
+              individual: step2Data,
+            },
+          },
+          step3: {
+            general: {
+              ...step3Data,
+              senderAgencyName,
+              complaintType: step3Data.complaintType,
+              complaintFilingType: complaintFilingType,
+              ...complaintFilingData,
+            },
+          },
+          step4: { general: enhancedStep4Data },
+        };
 
-    const submitData = {
-      id: defaultData?.id,
-      step1: {
-        general: {
-          general: generalData,
-          delegate: defaultDelegateRef.current ? delegateData : null,
-        },
-      },
-      step2: {
-        general: {
-          individual: step2Data,
-        },
-      },
-      step3: {
-        general: {
-          ...step3Data,
-          senderAgencyName, // <= เพิ่มตรงนี้!
-          complaintType: step3Data.complaintType,
-          complaintFilingType: complaintFilingType,
-          ...complaintFilingData,
-        },
-      },
-      step4: {
-        general: enhancedStep4Data,
-      },
-    };
+        router.push(
+          `/admin/edit/search/Filteromplaints/${defaultData?.id}?preview`,
+          undefined,
+          { shallow: true }
+        );
+        setPreviewData(submitData);
 
-    router.push(
-      `/admin/edit/search/Filteromplaints/${defaultData?.id}?preview`,
-      undefined,
-      { shallow: true }
-    );
-    setPreviewData(submitData);
-  };
+      } catch (err) {
+        console.error("Save & Preview error:", err);
+        alertError("ข้อผิดพลาด", err?.message || "ไม่สามารถอัปเดตข้อมูลได้");
+      } finally {
+        setSaving(false);
+      }
+    };
 
   // เปลี่ยนชื่อฟังก์ชันเพื่อแยกจาก dropdown
   const handleComplaintFilingTypeChange = (type) => {
@@ -2372,12 +2371,12 @@ const SearchComplaints = () => {
                   variant="outlined"
                   onClick={handleReset}
                 />
-                <ButtonService
+                {/* <ButtonService
                   label="อัปเดต Step 1,2"
                   color="primary"
                   variant="outlined"
                   onClick={handleUpdateSteps}
-                />
+                /> */}
                 <ButtonService
                   label="บันทึก"
                   color="ยืนยัน"

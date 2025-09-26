@@ -105,18 +105,17 @@ const CreateComplaint = async (opmChannel, data) => {
   }
 };
 
-const UpdateComplaint = async (complaint_id, data) => {
+const UpdateComplaint = async (complaintId, payload) => {
   try {
-    const response = await axiosInstance.put(
-      `/complaints/${complaint_id}`,
-      data
-    );
-    if (response && response.data) {
-      return response.data;
+    const { data } = await axiosInstance.put(`/complaints/${complaintId}`, payload);
+    return data;
+  } catch (err) {
+    if (err?.response?.status === 405 || err?.response?.status === 404) {
+      const { data } = await axiosInstance.patch(`/complaints/${complaintId}`, payload);
+      return data;
     }
-  } catch (error) {
-    console.error("Error adding complaint:", error);
-    throw error;
+    console.error("UpdateComplaint failed:", err?.response?.data || err);
+    throw err;
   }
 };
 

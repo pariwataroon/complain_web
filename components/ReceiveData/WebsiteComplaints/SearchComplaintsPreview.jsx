@@ -235,8 +235,8 @@ const SearchComplaintsPreview = ({
       ...(resData.step4?.general || {}),
       officerReceivedDate:
         resData.step4?.general?.officerReceivedDate ||
-        assignment.confirm_assigned_date ||
-        resData.confirm_assigned_date ||
+        assignment.registration_date ||
+        resData.registration_date ||
         null,
       directorSubmittedDate:
         resData.step4?.general?.directorSubmittedDate ||
@@ -264,7 +264,11 @@ const SearchComplaintsPreview = ({
           resData.step3?.general?.urgency_level ||
           step4General.urgency_level ||
           "low",
-        channel: channelName,
+        channel:
+          resData.step3?.general?.complaintChannelName
+          || resData.step3?.general?.complaint_channel
+          || assignment.complaint_channel_name
+          || "-",
       },
     };
   };
@@ -338,8 +342,10 @@ const handleSubmit = async () => {
       },
       step4: {
         general: {
-          confirm_assigned_date:
-            step4Data.officerReceivedDate || assignmentOriginal.confirm_assigned_date || null,
+          // confirm_assigned_date:
+          //   step4Data.officerReceivedDate || assignmentOriginal.confirm_assigned_date || null,
+          registration_date:
+            step4Data.officerReceivedDate || assignmentOriginal.registration_date || null,
           director_submission_date:
             step4Data.directorSubmittedDate || assignmentOriginal.director_submission_date || null,
           incident_date: step4Data.incidentDateTime || null,
@@ -356,8 +362,8 @@ const handleSubmit = async () => {
         assigned_date:
           assignmentOriginal.assigned_date || formData.assigned_date || null,
         // put confirm_assigned_date from UI
-        confirm_assigned_date:
-          step4Data.officerReceivedDate || assignmentOriginal.confirm_assigned_date || null,
+        registration_date:
+          step4Data.officerReceivedDate || assignmentOriginal.registration_date || null,
         director_submission_date:
           step4Data.directorSubmittedDate || assignmentOriginal.director_submission_date || null,
       },
@@ -399,7 +405,7 @@ const handleSubmit = async () => {
       new_complaint: step3Data.complaint_filing_type === "new" || step3Data.isNewComplaint === true || !step3Data.complaint_filing_type,
       add_more_complaint_to_ref: step3Data.complaint_filing_type === "additional" || step3Data.isAdditionalComplaint === true,
       group_work: step3Data.complaint_filing_type === "committee" || step3Data.isCommitteeComplaint === true,
-      confirm_assigned_date: formatDateForAPI(step4Data.officerReceivedDate || assignmentOriginal.confirm_assigned_date),
+      registration_date:      formatDateForAPI(step4Data.officerReceivedDate || assignmentOriginal.registration_date),
       director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate || assignmentOriginal.director_submission_date),
       incidentDate: formatDateForAPI(step4Data.incidentDateTime || assignmentOriginal.incidentDate),
       assigned_date: assignmentOriginal.assigned_date || formData.assigned_date || null,
@@ -956,10 +962,8 @@ const handleSubmit = async () => {
               <InfoItem
                 label="วันที่รับเรื่องของเจ้าพนักงาน"
                 value={
-                  formData?.assignment_form?.confirm_assigned_date
-                    ? safeFormatThaiDateTime(
-                        formData.assignment_form.confirm_assigned_date
-                      )
+                  formData?.assignment_form?.registration_date
+                    ? safeFormatThaiDateTime(formData.assignment_form.registration_date)
                     : "-"
                 }
               />
