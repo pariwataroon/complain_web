@@ -1187,19 +1187,20 @@ def get_outgoing_tracking(
         pass
 
     for r in outgoing_list:
-        timeline.append({
-            "type": "outgoing_report",
-            "at": _iso(getattr(r, "created_at", None)),
-            "reference_number": getattr(r, "reference_number", None),
-            "reference_date": _iso(getattr(r, "reference_date", None)),
-            "subject": getattr(r, "subject", None),
-            "department_id": _safe_str(getattr(r, "department_id", None)),
-            "department_name": _dept_name(r),
-            "confidentiality": _enum_str(getattr(r, "confidentiality_level", None)),
-            "urgency": _enum_str(getattr(r, "urgency_level", None)),
-            "by": _safe_str(getattr(r, "created_by", None)),
-            "id": _safe_str(getattr(r, "id", None))
-        })
+            timeline.append({
+                "type": "outgoing_report",
+                "at": _iso(getattr(r, "created_at", None)),
+                "reference_number": getattr(r, "reference_number", None),
+                "reference_date": _iso(getattr(r, "reference_date", None)),
+                "subject": getattr(r, "subject", None),
+                "department_id": _safe_str(getattr(r, "department_id", None)),
+                "department_name": _dept_name(r),
+                "confidentiality": _enum_str(getattr(r, "confidentiality_level", None)),
+                "urgency": _enum_str(getattr(r, "urgency_level", None)),
+                "by": _safe_str(getattr(r, "created_by", None)),
+                "id": _safe_str(getattr(r, "id", None)),
+                "consideration_result": getattr(r, "consideration_result", None)
+            })
 
     latest_decision: Optional[Dict[str, Any]] = None
     for d in decision_list:
