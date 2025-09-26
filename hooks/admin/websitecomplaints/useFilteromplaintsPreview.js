@@ -181,11 +181,11 @@ const useFilteromplaintsPreview = () => {
 
       // วันที่รับเรื่องและเสนองาน
       if (additionalDetails.officerReceivedDate) {
-        preparedData.officer_received_date =
+        preparedData.registration_date =
           additionalDetails.officerReceivedDate;
       }
       if (additionalDetails.directorSubmittedDate) {
-        preparedData.director_submitted_date =
+        preparedData.director_submission_date =
           additionalDetails.directorSubmittedDate;
       }
       if (additionalDetails.incidentDate) {
@@ -198,7 +198,11 @@ const useFilteromplaintsPreview = () => {
       }
 
       // ข้อมูลการประมวลผล - ใช้ assigned_officer_id จาก responsibleOfficer
-      preparedData.registration_date = currentDateTime || "";
+      // Note: registration_date และ director_submission_date จะถูกตั้งค่าข้างบนแล้วถ้ามีข้อมูล
+      // ถ้าไม่มี registration_date จากฟอร์ม ให้ใช้เวลาปัจจุบัน
+      if (!preparedData.registration_date) {
+        preparedData.registration_date = currentDateTime || "";
+      }
       preparedData.assigned_officer_id = assignedOfficerId;
       preparedData.assigned_remark = additionalDetails.screeningRemarks || "";
       preparedData.assigned_date = currentDateTime;
