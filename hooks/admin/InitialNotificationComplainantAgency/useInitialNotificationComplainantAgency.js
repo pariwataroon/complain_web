@@ -879,7 +879,11 @@ const handleSave = useCallback(async () => {
 
     // Smart navigation
     const returnUrl = router?.query?.returnUrl || router?.query?.from;
-    if (returnUrl && typeof returnUrl === 'string') {
+    const cid = router?.query?.complaint_id || router?.query?.id || form.complaint_id;
+
+    if (cid) {
+      router.push(`/admin/box/list/${cid}`);
+    } else if (returnUrl && typeof returnUrl === 'string') {
       router.push(returnUrl);
     } else if (typeof window !== 'undefined' && window.history.length > 1) {
       router.back();

@@ -726,11 +726,20 @@ const handleSave = useCallback(async () => {
     closeAlert();
     await alertSuccess("บันทึกสำเร็จ!", successMessage, true);
 
-    // --------- REFRESH PAGE (อยู่หน้าเดิมและ reload) ---------
-    if (typeof window !== "undefined") {
-      window.location.reload();
+    // --------- REDIRECT LOGIC AFTER SUBMIT ----------
+    const returnUrl = router?.query?.returnUrl || router?.query?.from;
+    const cid = router?.query?.complaint_id || router?.query?.id || data.complaint_id;
+
+    if (cid) {
+      router.push(`/admin/box/list/${cid}`);
+    } else if (returnUrl && typeof returnUrl === 'string') {
+      router.push(returnUrl);
+    } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/admin/box/list');
     }
-    // --------- END REFRESH PAGE ----------
+    // --------- END REDIRECT LOGIC ----------
     handleClear();
   } catch (error) {
     const code = error?.response?.data?.res_code || error?.response?.status;

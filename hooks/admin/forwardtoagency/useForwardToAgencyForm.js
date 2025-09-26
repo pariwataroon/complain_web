@@ -573,10 +573,21 @@ export const useForwardToAgencyForm = () => {
       }
       // --------- END RESET/REFRESH LOGIC ----------
 
-      // --------- REFRESH PAGE ----------
-      if (typeof window !== "undefined") {
-        window.location.reload();
+      // --------- REDIRECT LOGIC AFTER SUBMIT ----------
+      const returnUrl = router?.query?.returnUrl || router?.query?.from;
+      const cid = router?.query?.complaint_id || router?.query?.id || data.complaint_id;
+
+      if (cid) {
+        router.push(`/admin/box/list/${cid}`);
+      } else if (returnUrl && typeof returnUrl === 'string') {
+        router.push(returnUrl);
+      } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+        router.back();
+      } else {
+        router.push('/admin/box/list');
       }
+      // --------- END REDIRECT LOGIC ----------
+
       // --------- END REFRESH PAGE ----------
 
       return { success: true, reportId };
