@@ -35,6 +35,7 @@ import {
   UsersSearchByRole,
 } from "@pages/api/allselect/allselect";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import RefreshIcon from "@mui/icons-material/Refresh";
 
 const DATA_SESSION_KEY = "complaintsPreviewData";
 
@@ -237,6 +238,34 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
       setLoading(false);
     }
   }, [previewData]);
+
+  // ฟังก์ชันรีเฟรชข้อมูลจาก backend หลังจากอัปเดต
+  const refreshComplaintData = async (complaintId) => {
+    try {
+      const res = await GetComplaintByID(complaintId);
+      if (res?.res_data) {
+        setFormData(res.res_data);
+        // อัปเดต sessionStorage ด้วย
+        try {
+          sessionStorage.setItem(DATA_SESSION_KEY, JSON.stringify(res.res_data));
+        } catch {}
+      }
+
+      // รีเฟรชข้อมูล staff users ด้วย
+      try {
+        const users = await UsersSearchByRole();
+        const filteredUsers = users.filter(user => {
+          const roleDescription = user.roles?.[0]?.role_description;
+          return roleDescription !== "กลุ่มที่ 1 : ประชาชน";
+        });
+        setStaffUsers(filteredUsers);
+      } catch (err) {
+        console.error("Error refreshing staff users:", err);
+      }
+    } catch (error) {
+      console.error("Error refreshing complaint data:", error);
+    }
+  };
 
   function prepareFormDataForAssignment(formData, dataFromProps) {
     // ใช้ dataFromProps เป็นหลัก
@@ -505,6 +534,13 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   // ข้อมูลจาก step4 (รายละเอียดเพิ่มเติม)
   const additionalDetails = step4.general || {};
 
+  console.log("Debug formData structure:", {
+    formData: formData,
+    assignmentForm: assignmentForm,
+    step4: step4,
+    additionalDetails: additionalDetails
+  });
+
   const InfoItem = ({ label, value }) => (
     <Grid item xs={12} sm={6}>
       <Typography fontSize={16}>
@@ -559,19 +595,83 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
 
   // Resolve responsible officer's display name consistently
   const responsibleOfficerName = (() => {
+    // ลองหาข้อมูลเจ้าหน้าที่จากหลายแหล่ง
     const ro = additionalDetails?.responsibleOfficer;
-    if (!ro) return "-";
-    // Try to resolve by id first for consistency
-    const id =
-      (typeof ro === "object" && (ro.id || ro.value)) ||
-      (typeof ro === "string" && ro) ||
-      "";
-    if (id) {
-      const found = staffUsers.find((u) => u.value === id || u.id === id);
+    const assignedOfficerId = assignmentForm?.assigned_officer_id || formData?.assigned_officer_id;
+    const assignedToName = assignmentForm?.assigned_to || formData?.assigned_to;
+
+    // เพิ่มตัวเลือกจาก root level
+    const rootAssignedTo = formData?.assigned_to;
+    const rootAssignedDate = formData?.assigned_date;
+
+    console.log("Debug responsibleOfficerName:", {
+      ro,
+      assignedOfficerId,
+      assignedToName,
+      rootAssignedTo,
+      rootAssignedDate,
+      staffUsersCount: staffUsers.length,
+      assignmentForm,
+      additionalDetails
+    });
+
+    // 1. ลองใช้ชื่อจาก assigned_to ก่อน (เป็นข้อมูลที่ชัดเจนที่สุด)
+    if (assignedToName && typeof assignedToName === "string" && assignedToName !== "") {
+      return assignedToName;
+    }
+
+    // 1.1 ลองใช้จาก root level
+    if (rootAssignedTo && typeof rootAssignedTo === "string" && rootAssignedTo !== "") {
+      return rootAssignedTo;
+    }
+
+    // 2. ถ้ามีข้อมูลจาก additionalDetails
+    if (ro) {
+      const id =
+        (typeof ro === "object" && (ro.id || ro.value)) ||
+        (typeof ro === "string" && ro) ||
+        "";
+      if (id) {
+        const found = staffUsers.find((u) => String(u.value) === String(id) || String(u.id) === String(id));
+        if (found) {
+          if (found.label) return found.label;
+          const composed = formatFullNameFromParts(
+            {
+              title_id: found.title_id,
+              prefix_other: found.prefix_other,
+              first_name: found.first_name || found.fullName?.split(" ")[0],
+              last_name: found.last_name || found.fullName?.split(" ")[1],
+            },
+            titleOptions
+          );
+          return composed || found.fullName || found.name || id;
+        }
+      }
+      if (typeof ro === "object") {
+        return (
+          ro.label ||
+          formatFullNameFromParts(
+            {
+              title_id: ro.title_id,
+              prefix_other: ro.prefix_other,
+              first_name: ro.first_name,
+              last_name: ro.last_name,
+            },
+            titleOptions
+          ) ||
+          ro.fullName ||
+          ro.name ||
+          "-"
+        );
+      }
+      if (typeof ro === "string") return ro;
+    }
+
+    // 3. หาจาก assigned_officer_id
+    if (assignedOfficerId) {
+      const found = staffUsers.find((u) => String(u.value) === String(assignedOfficerId) || String(u.id) === String(assignedOfficerId));
       if (found) {
-        // ถ้า API ส่ง full_name_with_title อยู่แล้วใน label ให้ใช้เลย
         if (found.label) return found.label;
-        // มิฉะนั้นพยายามประกอบจากส่วนประกอบถ้ามี
         const composed = formatFullNameFromParts(
           {
             title_id: found.title_id,
@@ -581,28 +681,23 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
           },
           titleOptions
         );
-        return composed || found.fullName || found.name || id;
+        return composed || found.fullName || found.name || assignedOfficerId;
       }
     }
-    // Fallback to fields inside object or the raw string
-    if (typeof ro === "object") {
-      return (
-        ro.label ||
-        formatFullNameFromParts(
-          {
-            title_id: ro.title_id,
-            prefix_other: ro.prefix_other,
-            first_name: ro.first_name,
-            last_name: ro.last_name,
-          },
-          titleOptions
-        ) ||
-        ro.fullName ||
-        ro.name ||
-        "-"
-      );
+
+    // 4. fallback สุดท้าย - ลองหาจาก assigned_officer_id ว่าเป็น UUID หรือไม่
+    if (assignedOfficerId && assignedOfficerId.length > 10) {
+      return `เจ้าหน้าที่ ID: ${assignedOfficerId.substring(0, 8)}...`;
     }
-    return ro || "-";
+
+    // 5. แสดง debug info ถ้าไม่พบ
+    console.warn("ไม่พบข้อมูลเจ้าหน้าที่ผู้รับผิดชอบ", {
+      assignedToName,
+      rootAssignedTo,
+      assignedOfficerId
+    });
+
+    return "ไม่ระบุเจ้าหน้าที่";
   })();
 
   const officerReceived =
@@ -1003,6 +1098,34 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
               หมายเหตุ : เอกสารฉบับนี้ไม่สามารถนำไปใช้อ้างอิงเอกสารอื่น
             </Typography>
 
+            {/* ข้อมูลเจ้าหน้าที่ผู้รับผิดชอบ */}
+            <Box mb={3}>
+              <Typography variant="subtitle1" fontWeight="bold" fontSize={18} gutterBottom>
+                ข้อมูลการประมวลผล
+              </Typography>
+              <Grid container spacing={2}>
+                <InfoItem
+                  label="เจ้าหน้าที่ผู้รับผิดชอบ"
+                  value={responsibleOfficerName}
+                />
+                <InfoItem
+                  label="สถานะ"
+                  value={assignmentForm?.status === "reviewed" ? "แจ้งผลการพิจารณา" :
+                         assignmentForm?.status === "in_process" ? "กำลังดำเนินการ" :
+                         assignmentForm?.status === "submitted" ? "รับเรื่อง" :
+                         assignmentForm?.status || "ไม่ระบุสถานะ"}
+                />
+                {assignmentForm?.assigned_remark && (
+                  <Grid item xs={12}>
+                    <InfoItem
+                      label="หมายเหตุการมอบหมาย"
+                      value={assignmentForm.assigned_remark}
+                    />
+                  </Grid>
+                )}
+              </Grid>
+            </Box>
+
             <Box
               component="hr"
               sx={{
@@ -1083,6 +1206,26 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
           }}
           iconLeft={<ArrowBackIcon />}
           disabled={submitting || isSubmitting}
+        />
+        <ButtonService
+          label="รีเฟรชข้อมูล"
+          color="info"
+          variant="outlined"
+          onClick={async () => {
+            if (id) {
+              setLoading(true);
+              try {
+                await refreshComplaintData(id);
+                alertSuccess("รีเฟรชสำเร็จ", "ข้อมูลได้รับการอัปเดตแล้ว");
+              } catch (error) {
+                alertError("ข้อผิดพลาด", "ไม่สามารถรีเฟรชข้อมูลได้");
+              } finally {
+                setLoading(false);
+              }
+            }
+          }}
+          iconLeft={<RefreshIcon />}
+          disabled={submitting || isSubmitting || !id || loading}
         />
         <ButtonService
           label={submitting || isSubmitting ? "กำลังบันทึก..." : "บันทึก"}

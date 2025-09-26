@@ -17,6 +17,8 @@ import {
 import {
   GetComplaintByID,
   GetComplaintsWithSearch,
+  UpdateComplaint,
+  UpdateAssignmentCompleteByAdmin,
 } from "@pages/api/complaint/complaint";
 import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/ComplaintPersonalFormAPI";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
@@ -160,7 +162,7 @@ const SearchComplaints = () => {
     useState(false);
 
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
-  const [searchResults, setSearchResults] = useState([]); // สมมติรายการเลขที่ได้จาก API หรือ mock
+  const [searchResults, setSearchResults] = useState([]); 
   const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
@@ -875,6 +877,125 @@ const SearchComplaints = () => {
     setValidationErrors({});
     setShowValidation(false);
     setComplaintFilingType("new");
+  };
+
+  // ฟังก์ชันใหม่สำหรับการอัปเดตข้อมูล step 1 และ step 2 พร้อมไป preview
+  const handleUpdateSteps = async () => {
+    try {
+      if (!defaultData?.id) {
+        alertError("ข้อผิดพลาด", "ไม่พบ ID ของเรื่องร้องเรียน");
+        return;
+      }
+
+      const generalData = generalMethods.getValues();
+      const delegateData = delegateMethods.getValues();
+      const step2Data = step2Methods.getValues();
+      const step3Data = step3Methods.getValues();
+      const step4Data = step4Methods.getValues();
+
+      // หา senderAgencyName ตาม id ที่เลือก (อิงชุดเดียวกับ dropdown คือ positions)
+      let senderAgencyName = "";
+      const selectedAgencyId = step3Data.senderAgency;
+      if (selectedAgencyId !== undefined && selectedAgencyId !== null && selectedAgencyId !== "") {
+        // ค้นหาใน positions ก่อน (ข้อมูลจาก GetAllOutsideDepartments ที่ใช้ใน select)
+        const foundPos = positions.find(
+          (pos) => String(pos.id) === String(selectedAgencyId)
+        );
+        if (foundPos) {
+          senderAgencyName = foundPos.name || foundPos.label || "";
+        } else {
+          // เผื่อกรณีมีข้อมูลจาก getDepartments เดิม ให้ลองค้นหา fallback
+          const foundDept = departments.find(
+            (dept) => String(dept.id) === String(selectedAgencyId)
+          );
+          senderAgencyName =
+            (foundDept && (foundDept.name || foundDept.department_name || foundDept.label)) || "";
+        }
+      }
+
+      const selectedOfficer = staffUsers.find(
+        (user) => user.value === step4Data.responsibleOfficer
+      );
+
+      const responsibleOfficerData = selectedOfficer
+        ? {
+            id: selectedOfficer.value,
+            name: selectedOfficer.label,
+            fullName: selectedOfficer.fullName || "",
+            email: selectedOfficer.email || "",
+            roles: selectedOfficer.roles || [],
+          }
+        : {
+            id: step4Data.responsibleOfficer || "",
+            name: "",
+            fullName: "",
+            email: "",
+            roles: [],
+          };
+
+      const enhancedStep4Data = {
+        ...step4Data,
+        responsibleOfficer: responsibleOfficerData,
+        responsibleOfficerId: step4Data.responsibleOfficer,
+      };
+
+      const complaintFilingData = {
+        new_complaint: complaintFilingType === "new",
+        add_more_complaint_to_ref: complaintFilingType === "additional",
+        group_work: complaintFilingType === "committee",
+        additional_reference_number1: step3Data.additionalReference1 || "",
+        additional_reference_date1: step3Data.additionalReferenceDate1 || "",
+        additional_reference_number2: step3Data.additionalReference2 || "",
+        additional_reference_date2: step3Data.additionalReferenceDate2 || "",
+      };
+
+      // เตรียมข้อมูลในรูปแบบเดียวกับ handleSubmit
+      const updatePayload = {
+        step1: {
+          general: {
+            general: generalData,
+            delegate: defaultDelegateRef.current && Object.keys(delegateData).length > 0 ? delegateData : null,
+          },
+        },
+        step2: {
+          general: {
+            individual: step2Data,
+          },
+        },
+        step3: {
+          general: {
+            ...step3Data,
+            senderAgencyName,
+            complaintType: step3Data.complaintType,
+            complaintFilingType: complaintFilingType,
+            ...complaintFilingData,
+          },
+        },
+        step4: {
+          general: enhancedStep4Data,
+        },
+      };
+
+      console.log("UpdateAssignmentCompleteByAdmin payload:", updatePayload);
+
+      // ใช้ UpdateAssignmentCompleteByAdmin แทนเพราะรองรับข้อมูลครบถ้วน
+      const result = await UpdateAssignmentCompleteByAdmin(defaultData.id, updatePayload);
+
+      if (result && result.success) {
+        alertSuccess("อัปเดตสำเร็จ", "ข้อมูลผู้ร้องทุกข์ และผู้ถูกร้องเรียน ได้รับการอัปเดตแล้ว");
+
+        // ส่งไป preview หลังจากอัปเดตสำเร็จ
+        setTimeout(() => {
+          handleSubmit();
+        }, 1500);
+      } else {
+        throw new Error("การอัปเดตไม่สำเร็จ");
+      }
+
+    } catch (error) {
+      console.error("Error updating complaint data:", error);
+      alertError("ข้อผิดพลาด", "ไม่สามารถอัปเดตข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
+    }
   };
 
   const handleSubmit = () => {
@@ -2250,6 +2371,12 @@ const SearchComplaints = () => {
                   color="ล้าง"
                   variant="outlined"
                   onClick={handleReset}
+                />
+                <ButtonService
+                  label="อัปเดต Step 1,2"
+                  color="primary"
+                  variant="outlined"
+                  onClick={handleUpdateSteps}
                 />
                 <ButtonService
                   label="บันทึก"

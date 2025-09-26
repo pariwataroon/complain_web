@@ -107,7 +107,7 @@ const CreateComplaint = async (opmChannel, data) => {
 
 const UpdateComplaint = async (complaint_id, data) => {
   try {
-    const response = await axiosInstance.post(
+    const response = await axiosInstance.put(
       `/complaints/${complaint_id}`,
       data
     );
