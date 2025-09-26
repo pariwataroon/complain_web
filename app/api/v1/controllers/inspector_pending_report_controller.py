@@ -20,14 +20,14 @@ def get_inspector_pending_report(
     เรื่องค้างการพิจารณา
 
     นับ:
-      - pending_count: ค้างพิจารณาระหว่างปีก่อนหน้า → ปีนี้
-      - inprogress_count: กำลังดำเนินการในปีนี้
+      - pending_count: ค้างพิจารณาระหว่างปีก่อนหน้า → ปีนี้ (ยังไม่ยุติ)
+      - inprogress_count: กำลังดำเนินการในปีนี้ (ยังไม่ยุติ)
 
     เงื่อนไขสำคัญ:
       - ใช้ช่วงปี (UTC naive) จาก COALESCE(reference_date, document_date, created_at)
       - ยังไม่ยุติ = consideration_result IS NULL หรือ ไม่ ILIKE '%ยุติ%'
       - ครอบคลุมงานผู้ตรวจด้วย or_(report_type == 'inspector', signature_authority_user_id IS NOT NULL)
-      - รวม keys (od_id, user_id) จากสองช่วงเวลา เพื่อไม่ทำหายแม้ department/user จะ NULL
+      - รวม keys (od_id, user_id) แล้วทำ NULL-safe join เพื่อให้กรณี od_id = NULL ไม่นับตก
       - MSSQL ต้องมี order_by ก่อน offset/limit
     """
     if year is None:
@@ -96,7 +96,7 @@ def get_inspector_pending_report(
         .subquery()
     )
 
-    # รวม keys (od_id, user_id) จากทั้งสองช่วง (อาจมีค่า NULL ได้)
+    # รวม keys (od_id, user_id) จากทั้งสองช่วงเวลา
     keys_subq = (
         select(pending_subq.c.od_id, pending_subq.c.user_id)
         .union_all(select(inprogress_subq.c.od_id, inprogress_subq.c.user_id))
@@ -108,6 +108,10 @@ def get_inspector_pending_report(
         .subquery()
     )
 
+    # ฟังก์ชันช่วยทำ NULL-safe equality: (a = b) OR (a IS NULL AND b IS NULL)
+    def null_safe_eq(a, b):
+        return or_(a == b, and_(a.is_(None), b.is_(None)))
+
     q = (
         db.query(
             keys_distinct.c.od_id.label("outside_department_id"),
@@ -118,20 +122,22 @@ def get_inspector_pending_report(
             func.coalesce(pending_subq.c.pending_count, 0).label("pending_count"),
             func.coalesce(inprogress_subq.c.inprogress_count, 0).label("inprogress_count"),
         )
+        # NULL-safe join กลับไปหาจำนวน
         .outerjoin(
             pending_subq,
             and_(
-                pending_subq.c.od_id == keys_distinct.c.od_id,
-                pending_subq.c.user_id == keys_distinct.c.user_id,
+                null_safe_eq(pending_subq.c.od_id, keys_distinct.c.od_id),
+                null_safe_eq(pending_subq.c.user_id, keys_distinct.c.user_id),
             ),
         )
         .outerjoin(
             inprogress_subq,
             and_(
-                inprogress_subq.c.od_id == keys_distinct.c.od_id,
-                inprogress_subq.c.user_id == keys_distinct.c.user_id,
+                null_safe_eq(inprogress_subq.c.od_id, keys_distinct.c.od_id),
+                null_safe_eq(inprogress_subq.c.user_id, keys_distinct.c.user_id),
             ),
         )
+        # lookup ชื่อหน่วยงาน/ผู้ตรวจ (ไม่บังคับต้องมี)
         .outerjoin(OutsideDepartment, keys_distinct.c.od_id == OutsideDepartment.id)
         .outerjoin(User, keys_distinct.c.user_id == User.id)
         .order_by(
