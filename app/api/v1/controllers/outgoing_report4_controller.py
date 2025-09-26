@@ -80,69 +80,33 @@ def create_outgoing_report4(
     current_user_id: UUID,
     files: Optional[List[UploadFile]] = None
 ) -> Dict[str, Any]:
-    """สร้างรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบใหม่"""
+    """สร้างรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบใหม่ (OR4)
+       - reference_number: ซ้ำได้
+       - document_number: ห้ามซ้ำ (ถ้าซ้ำให้ใช้ PUT แก้ของเดิม)
+    """
     try:
         logger.info(f"Creating OutgoingReport4: {report_data.reference_number}")
-        
-        # อัปเดตแทนถ้า document_number + complaint_number ซ้ำ (upsert)
-        existing_doc = db.query(OutgoingReport4).filter(
-            OutgoingReport4.document_number == report_data.document_number,
-            OutgoingReport4.is_active == True
-        ).first()
-        if existing_doc:
-            if (existing_doc.complaint_number or "") == (report_data.complaint_number or ""):
-                # อัปเดตข้อมูลเดิม
-                existing_doc.reference_number = report_data.reference_number
-                existing_doc.reference_date = report_data.reference_date
-                existing_doc.subject = report_data.subject
-                existing_doc.complaint_number = report_data.complaint_number
-                existing_doc.complaint_number_date = report_data.complaint_number_date
-                existing_doc.signature_authority_user_id = report_data.signature_authority_user_id
-                existing_doc.department_id = report_data.department_id
-                existing_doc.user_id = report_data.user_id
-                existing_doc.other_department = report_data.other_department
-                existing_doc.confidentiality_level = report_data.confidentiality_level
-                existing_doc.urgency_level = report_data.urgency_level
-                existing_doc.document_number = report_data.document_number
-                existing_doc.document_date = report_data.document_date
-                existing_doc.remarks = report_data.remarks
-                existing_doc.proposal_purpose = report_data.proposal_purpose
-                existing_doc.consideration_result = report_data.consideration_result
-                existing_doc.complaint_id = report_data.complaint_id
-                existing_doc.updated_by = current_user_id
 
-                db.flush()
+        # ❗ บังคับเอกลักษณ์ document_number (ทั่วระบบที่ยัง active)
+        dup_doc = (
+            db.query(OutgoingReport4)
+            .filter(
+                OutgoingReport4.is_active == True,
+                OutgoingReport4.document_number == report_data.document_number,
+            )
+            .first()
+        )
+        if dup_doc:
+            # แจ้งชัดเจนว่าชน document_number และแนะนำให้ใช้ PUT พร้อมอ้าง id เรคอร์ดเดิม
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"document_number '{report_data.document_number}' ถูกใช้แล้ว "
+                    f"กรุณาใช้วิธี PUT เพื่อแก้ไขรายงานเดิม (id={dup_doc.id})"
+                ),
+            )
 
-                # แนบไฟล์เพิ่มถ้ามี
-                if files:
-                    _save_files_for_report(db, existing_doc.id, files)
-
-                db.commit()
-
-                # ประวัติ: อัปเดตแบบรายงาน 4
-                if report_data.complaint_id:
-                    try:
-                        complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
-                        note = (
-                            f"อัปเดตแบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ | อ้างอิง: {existing_doc.reference_number or '-'} | "
-                            f"เรื่อง: {existing_doc.subject or '-'}"
-                        )
-                        cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
-                        _update_status_and_log(db, complaint, cur, note, current_user_id)
-                    except Exception as e:
-                        logger.warning(f"OR4 upsert history failed: {e}")
-
-                return get_outgoing_report4_by_id(db, existing_doc.id)
-            else:
-                raise DuplicateKeyError(f"เลขที่เอกสาร {report_data.document_number} มีอยู่แล้ว")
-
-        # กัน reference_number ซ้ำ (กรณีไม่ได้เข้าเงื่อนไข upsert)
-        existing = db.query(OutgoingReport4).filter(
-            OutgoingReport4.reference_number == report_data.reference_number,
-            OutgoingReport4.is_active == True
-        ).first()
-        if existing:
-            raise DuplicateKeyError(f"เลขอ้างอิง {report_data.reference_number} มีอยู่แล้ว")
+        # ✅ reference_number ซ้ำได้ → ไม่ต้องเช็ก/บล็อก
 
         # complaint_id ไม่บังคับ แต่ถ้าส่งมาก็ตรวจว่ามีจริง
         if report_data.complaint_id:
@@ -209,7 +173,7 @@ def create_outgoing_report4(
 
         db.commit()
 
-        # ✅ OR4: แจ้งผลการให้ผู้เกี่ยวข้องทราบ → ปกติยังคง In review/Reviewed → แค่บันทึกประวัติ
+        # บันทึกประวัติ (OR4)
         if report_data.complaint_id:
             try:
                 complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
@@ -225,9 +189,6 @@ def create_outgoing_report4(
         db.refresh(db_report)
         return get_outgoing_report4_by_id(db, db_report.id)
 
-    except DuplicateKeyError as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         db.rollback()
         raise
@@ -681,7 +642,9 @@ def update_outgoing_report4(
     report_data: OutgoingReport4Update,
     current_user_id: UUID,
 ) -> Dict[str, Any]:
-    """อัปเดตรายงาน (รุ่น 4) ตาม ID"""
+    """อัปเดตรายงาน (รุ่น 4) ตาม ID
+       - เปลี่ยน document_number ได้ แต่ต้องไม่ชนกับเรคอร์ด active อื่น
+    """
     try:
         rec = db.query(OutgoingReport4).filter(
             OutgoingReport4.id == report_id,
@@ -691,22 +654,27 @@ def update_outgoing_report4(
             raise HTTPException(status_code=404, detail="ไม่พบรายงานที่ระบุ")
 
         # กันเลขเอกสารซ้ำ ถ้ามีการเปลี่ยน
-        if report_data.document_number is not None and report_data.document_number != rec.document_number:
+        incoming = report_data.model_dump(exclude_unset=True)
+        if "document_number" in incoming and incoming["document_number"] != rec.document_number:
             dup = db.query(OutgoingReport4).filter(
-                OutgoingReport4.document_number == report_data.document_number,
-                OutgoingReport4.id != report_id,
                 OutgoingReport4.is_active == True,
+                OutgoingReport4.document_number == incoming["document_number"],
+                OutgoingReport4.id != report_id,
             ).first()
             if dup:
-                raise DuplicateKeyError(f"เลขเอกสาร {report_data.document_number} มีอยู่แล้ว")
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"document_number '{incoming['document_number']}' ถูกใช้แล้ว "
+                        f"ไม่สามารถแก้ไขให้ซ้ำกับเอกสารอื่นได้ (ชน id={dup.id})"
+                    ),
+                )
 
         # ถ้าส่ง complaint_id มา ตรวจว่ามีจริง
         if report_data.complaint_id is not None:
             complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
             if not complaint:
                 raise HTTPException(status_code=400, detail="ไม่พบข้อร้องเรียนที่ระบุ")
-
-        incoming = report_data.model_dump(exclude_unset=True)
 
         # ไม่ให้ส่ง department_id + outside_department_id พร้อมกัน (และถ้าต่างกันให้ error)
         if (
@@ -727,8 +695,9 @@ def update_outgoing_report4(
 
         for field, value in incoming.items():
             setattr(rec, field, value)
+
         # ตรวจสอบตำแหน่งถ้ามีการอัปเดต
-        if "position_id" in report_data.model_dump(exclude_unset=True):
+        if "position_id" in incoming:
             if getattr(report_data, "position_id", None):
                 from models.position import Position
                 pos = db.query(Position).filter(Position.id == report_data.position_id, Position.is_active == True).first()
@@ -737,15 +706,13 @@ def update_outgoing_report4(
                 pos_name = getattr(pos, "name", "") or ""
                 if pos_name in {"อื่นๆ", "อื่น ๆ", "other", "others"} and not getattr(report_data, "position_other_text", None):
                     raise HTTPException(status_code=400, detail="กรุณาระบุตำแหน่ง (อื่นๆ) เพิ่มเติม")
+
         rec.updated_by = current_user_id
 
         db.commit()
         db.refresh(rec)
         return get_outgoing_report4_by_id(db, rec.id)
 
-    except DuplicateKeyError as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         db.rollback()
         raise
