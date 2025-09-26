@@ -23,7 +23,7 @@ export const getDocumentStorageForWebsite = async ({
 // ฟังก์ชันสำหรับดึงข้อมูล document-storage สำหรับ page_type = "card"
 export const getDocumentStorageForCard = async ({
   skip = 0,
-  limit = 100,
+  limit = 10000,
 } = {}) => {
   try {
     const { data } = await axiosInstance.get("/document-storage", {

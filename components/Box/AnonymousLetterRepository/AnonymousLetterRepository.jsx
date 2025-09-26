@@ -2,24 +2,39 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListBox from "@services/TableListBox/TableListBox";
+import Inventory2Icon from "@mui/icons-material/Inventory2";
 import { getDocumentStorageForCard } from "@pages/api/document/document";
 
 /* ---------- สถานะ: Mapping 2 ทาง + helper ---------- */
 const statusMapEnToTh = {
-  submitted: "รับเรื่อง",
-  sent_to_agency: "ส่งหน่วยงาน",
-  in_process: "กำลังดำเนินการ",
-  in_review: "อยู่ระหว่างพิจารณา",
-  tracking: "ติดตามผล",
+  submitted: "ส่งคำร้อง",
+  sent_to_agency: "มอบหมายเจ้าหน้าที่",
+  sent_to_external: "ส่งหน่วยงานภายนอก",
+  in_process: "อยู่ระหว่างดำเนินการ",
+  in_review: "อยู่ระหว่างการพิจารณา",
+  tracking: "ติดตามผลการพิจารณา",
   reviewed: "แจ้งผลการพิจารณา",
   completed: "เสร็จสิ้น",
   cancelled: "ยกเลิก",
 };
+const statusColors = {
+  submitted: "#FFA726", // ส้ม
+  sent_to_agency: "#42A5F5", // ฟ้า
+  sent_to_external: "#AB47BC", // ม่วง
+  in_process: "#26C6DA", // ฟ้าอ่อน
+  in_review: "#FFCA28", // เหลือง
+  tracking: "#FF7043", // ส้มแดง
+  reviewed: "#66BB6A", // เขียวอ่อน
+  completed: "#4CAF50", // เขียว
+  cancelled: "#EF5350", // แดง
+};
+
 const statusMapThToEn = Object.fromEntries(
   Object.entries(statusMapEnToTh).map(([en, th]) => [th, en])
 );
 const getThaiStatus = (en) => statusMapEnToTh[en] ?? (en || "-");
 const getEnglishStatus = (th) => statusMapThToEn[th] ?? (th || "-");
+const getStatusColor = (en) => statusColors[en] ?? "#9E9E9E";
 
 /* ---------- วันเวลา: รองรับทั้ง ISO และ "16 Aug 2025" ---------- */
 const formatThaiDateFlexible = (dateStr) => {
@@ -33,11 +48,26 @@ const formatThaiDateFlexible = (dateStr) => {
   return `${day} ${month} ${year}`;
 };
 
-const displayOrDash = (v) => (v === undefined || v === null || v === "" ? "-" : v);
+const displayOrDash = (v) =>
+  v === undefined || v === null || v === "" ? "-" : v;
 
 /* ---------- แปลงข้อมูลจาก API -> แถวของตาราง ---------- */
 const transformComplaintData = (apiItems) => {
   return apiItems.map((item) => {
+    const clean = (s) =>
+      typeof s === "string" ? s.trim().replace(/\s+/g, " ") : s;
+
+        const outagencyRaw =
+     item.outagency ||
+     item.external_agency ||
+     item.outside_agency ||
+     item.externalDepartment?.name ||
+     item.outsideDepartment?.name ||
+     item.outside_department_name ||
+     "-";
+
+    const outagency = clean(outagencyRaw);
+
     const id = item.id || item.complaint_id;
 
     const receiveDate =
@@ -45,10 +75,7 @@ const transformComplaintData = (apiItems) => {
         ? formatThaiDateFlexible(item.receiveDate)
         : formatThaiDateFlexible(item.created_at);
 
-    const agency =
-      item.complainant?.government?.agencyName?.name ??
-      item.agency ??
-      "-";
+    const agency = clean(displayOrDash(item.agency));
 
     const claimantName =
       item.complainant?.government?.fullName ??
@@ -61,28 +88,39 @@ const transformComplaintData = (apiItems) => {
     const subIssueType = displayOrDash(item.subIssueType);
 
     const responsibleOfficer =
-      item.responsibleOfficer ??
-      item.assigned_officer?.name ??
-      "ไม่ได้มอบหมาย";
+      item.responsibleOfficer ?? item.assigned_officer?.name ?? "ไม่ได้มอบหมาย";
 
     const statusEn = item.status || "-";
     const statusTh = getThaiStatus(statusEn);
 
-    const complaintNumber = displayOrDash(item.master_complaint?.complaint_number);
+    const complaintNumberSorn = displayOrDash(item.master_complaint?.complaint_number);
+
+    const complaintNumber = displayOrDash(
+      item.master_complaint?.complaint_number
+    );
+
+    const isMaster =
+      item.is_master !== undefined
+        ? item.is_master
+        : !!item.master_complaint?.is_master;
 
     return {
       id,
       receiveDate,
       agency,
+      outagency,
       claimantName,
       issue,
       issueType,
       subIssueType,
       responsibleOfficer,
-      status: statusTh,   // สำหรับแสดง
-      statusEn: statusEn, // สำหรับ URL
+      status: statusTh, // แสดงไทย
+      statusEn: statusEn, // เก็บอังกฤษใช้ใน URL
+      statusColor: getStatusColor(statusEn), // เพิ่มสีสำหรับแสดงผล
       note: displayOrDash(item.note),
       complaintNumber,
+      isMaster,
+      complaintNumberSorn,
     };
   });
 };
@@ -108,30 +146,25 @@ const extractFilterOptionsFromItems = (items) => {
     if (item.issueType) issueTypes.push(item.issueType);
     if (item.subIssueType) subIssueTypes.push(item.subIssueType);
 
-    const agencyName = item.complainant?.government?.agencyName?.name ?? item.agency;
+    // หน่วยงาน: ใช้เฉพาะ item.agency (ไม่ fallback อย่างอื่น)
+    const agencyName = item.agency;
     if (agencyName) agencies.push(agencyName);
 
+    // เจ้าหน้าที่รับผิดชอบ
     const officer = item.responsibleOfficer ?? item.assigned_officer?.name;
     if (officer) officers.push(officer);
 
+    // สถานะ (ไทย)
     const statusTh = getThaiStatus(item.status);
     if (statusTh && statusTh !== "-") statusesTh.push(statusTh);
   });
-
-  // รวมสถานะที่ระบบรองรับทั้งหมดด้วย (กันกรณีหน้าแรกยังไม่ปรากฏทุกสถานะ)
-  const allStatusTh = Array.from(
-    new Set([
-      ...Object.values(statusMapEnToTh),
-      ...statusesTh,
-    ])
-  );
 
   return {
     issueTypeOptions: toOptions(issueTypes),
     subIssueTypeOptions: toOptions(subIssueTypes),
     agencyOptions: toOptions(agencies),
     responsibleOfficerOptions: toOptions(officers),
-    statusOptions: allStatusTh.map((v) => ({ value: v, label: v })),
+    statusOptions: toOptions(statusesTh),
   };
 };
 
@@ -142,21 +175,26 @@ const AnonymousLetterRepository = () => {
 
   // ตัวเลือกฟิลเตอร์ที่สกัดมาจาก API
   const [filterOptions, setFilterOptions] = useState({
-    issueTypeOptions: [],
-    subIssueTypeOptions: [],
-    agencyOptions: [],
-    responsibleOfficerOptions: [],
-    statusOptions: [],
-  });
+      issueTypeOptions: [],
+      subIssueTypeOptions: [],
+      agencyOptions: [],
+      responsibleOfficerOptions: [],
+      statusOptions: [],
+      outagencyOptions: [],
+    });
 
   const router = useRouter();
 
   /* ---------- ค้นหา/กรอง ---------- */
   const handleSearch = (filters) => {
+    const norm = (s) =>
+     String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+    const getVal = (v) =>
+     typeof v === "string" ? v : v?.value ?? v?.label ?? "";
+
     const result = allComplaints.filter((item) => {
       let ok = true;
 
-      // text fields → includes
       if (filters.claimantName && filters.claimantName.trim() !== "") {
         const q = filters.claimantName.toLowerCase();
         ok = ok && (item.claimantName || "").toLowerCase().includes(q);
@@ -167,26 +205,44 @@ const AnonymousLetterRepository = () => {
         ok = ok && (item.issue || "").toLowerCase().includes(q);
       }
 
-      if (filters.complaintNumber && filters.complaintNumber.trim() !== "") {
-        const q = filters.complaintNumber.toLowerCase();
-        ok = ok && (item.complaintNumber || "").toLowerCase().includes(q);
-      }
-
-      // select fields → exact match
       if (filters.issueType && filters.issueType !== "") {
         ok = ok && item.issueType === filters.issueType;
       }
+
       if (filters.subIssueType && filters.subIssueType !== "") {
         ok = ok && item.subIssueType === filters.subIssueType;
       }
-      if (filters.agency && filters.agency !== "") {
-        ok = ok && item.agency === filters.agency;
+
+      if (filters.complaintNumberSorn && filters.complaintNumberSorn.trim() !== "") {
+        const q = filters.complaintNumberSorn.toLowerCase();
+        ok = ok && (item.complaintNumberSorn || "").toLowerCase().includes(q);
       }
+
+      if (getVal(filters.agency)) {
+       const q = norm(getVal(filters.agency));
+       ok =
+         ok &&
+         (norm(item.agency).includes(q) || norm(item.outagency).includes(q));
+     }
+
+     if (getVal(filters.outagency)) {
+       const q = norm(getVal(filters.outagency));
+       ok =
+         ok &&
+         (norm(item.outagency).includes(q) || norm(item.agency).includes(q));
+     }
+
       if (filters.responsibleOfficer && filters.responsibleOfficer !== "") {
         ok = ok && item.responsibleOfficer === filters.responsibleOfficer;
       }
+
       if (filters.status && filters.status !== "") {
-        ok = ok && item.status === filters.status; // status แสดงเป็นไทยในตาราง
+        ok = ok && item.status === filters.status; // เทียบภาษาไทยในตาราง
+      }
+
+      if (filters.complaintNumber && filters.complaintNumber.trim() !== "") {
+        const q = filters.complaintNumber.toLowerCase();
+        ok = ok && (item.complaintNumber || "").toLowerCase().includes(q);
       }
 
       return ok;
@@ -211,7 +267,7 @@ const AnonymousLetterRepository = () => {
     const fetchDocumentStorage = async () => {
       try {
         setLoading(true);
-        const res = await getDocumentStorageForCard({ skip: 0, limit: 100 });
+        const res = await getDocumentStorageForCard({ skip: 0, limit: 10000 });
         const items = res?.res_data?.items ?? [];
 
         // แปลงข้อมูลแสดงผล
@@ -221,15 +277,31 @@ const AnonymousLetterRepository = () => {
 
         // สกัดฟิลเตอร์จาก API
         const opts = extractFilterOptionsFromItems(items);
-        setFilterOptions(opts);
+        const allStatusTh = Array.from(
+          new Set([
+            ...Object.values(statusMapEnToTh),
+            ...opts.statusOptions.map((o) => o.value),
+          ])
+        ).map((v) => ({ value: v, label: v }));
+
+        setFilterOptions({
+          issueTypeOptions: opts.issueTypeOptions,
+          subIssueTypeOptions: opts.subIssueTypeOptions,
+          agencyOptions: opts.agencyOptions,
+          responsibleOfficerOptions: opts.responsibleOfficerOptions,
+          statusOptions: allStatusTh,
+        });
       } catch (err) {
         console.error("Error fetching document storage:", err);
         setAllComplaints([]);
         setFilteredComplaints([]);
-        // อย่างน้อยแสดงตัวเลือกสถานะจาก mapping
+        // ถ้า error ให้ยังแสดงตัวเลือกสถานะจาก mapping ไว้ก่อน
         setFilterOptions((prev) => ({
           ...prev,
-          statusOptions: Object.values(statusMapEnToTh).map((v) => ({ value: v, label: v })),
+          statusOptions: Object.values(statusMapEnToTh).map((th) => ({
+            value: th,
+            label: th,
+          })),
         }));
       } finally {
         setLoading(false);
@@ -261,13 +333,7 @@ const AnonymousLetterRepository = () => {
         items={[
           {
             label: "ติดตามผลการดำเนินการ",
-            icon: (
-              <img
-                src="/icons/Cube.png"
-                alt="cube"
-                style={{ width: 24, height: 24, marginBottom: -8 }}
-              />
-            ),
+            icon: <Inventory2Icon sx={{ width: 24, height: 24, mb: -1 }} />,
           },
           { label: "คลังบัตรสนเท่ห์" },
         ]}
@@ -283,11 +349,47 @@ const AnonymousLetterRepository = () => {
         filterFields={[
           { name: "claimantName", label: "ชื่อผู้ร้อง", type: "text" },
           { name: "issue", label: "เรื่อง", type: "text" },
-          { name: "issueType", label: "ประเภทเรื่อง", type: "select", options: filterOptions.issueTypeOptions },
-          { name: "subIssueType", label: "ประเภทเรื่องย่อย", type: "select", options: filterOptions.subIssueTypeOptions },
-          { name: "agency", label: "หน่วยงาน", type: "select", options: filterOptions.agencyOptions }, // แก้จาก accusedName -> agency
-          { name: "responsibleOfficer", label: "เจ้าหน้าที่รับผิดชอบ", type: "select", options: filterOptions.responsibleOfficerOptions },
-          { name: "status", label: "สถานะเรื่อง", type: "select", options: filterOptions.statusOptions },
+          {
+            name: "issueType",
+            label: "ประเภทเรื่อง",
+            type: "select",
+            options: filterOptions.issueTypeOptions,
+          },
+          {
+            name: "subIssueType",
+            label: "ประเภทเรื่องย่อย",
+            type: "select",
+            options: filterOptions.subIssueTypeOptions,
+          },
+          {
+            name: "agency",
+            label: "หน่วยงาน",
+            type: "select",
+            options: filterOptions.agencyOptions,
+          },
+          {
+            name: "outagency",
+            label: "หน่วยงานภายนอก",
+            type: "select",
+            options: filterOptions.outagencyOptions,
+          },
+          {
+            name: "responsibleOfficer",
+            label: "เจ้าหน้าที่รับผิดชอบ",
+            type: "select",
+            options: filterOptions.responsibleOfficerOptions,
+          },
+          {
+            name: "status",
+            label: "สถานะเรื่อง",
+            type: "select",
+            options: filterOptions.statusOptions,
+          },
+          {
+            name: "complaintNumberSorn",
+            label: "เลข สรร.",
+            type: "text",
+          },
         ]}
       />
     </>
