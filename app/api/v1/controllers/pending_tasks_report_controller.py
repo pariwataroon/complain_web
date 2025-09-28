@@ -4,8 +4,9 @@ from typing import Optional, Dict
 from datetime import datetime, timezone
 
 from models.comp_complaint import Complaint, ComplaintStatus
+from models.outgoing_reports4 import OutgoingReport4
+from models.outside_departments import OutsideDepartment
 from models.user import User
-
 
 PENDING_STATUSES = {
     ComplaintStatus.SUBMITTED,
@@ -36,6 +37,7 @@ def get_pending_tasks_report(
     รายงานการติดตามงานค้าง (MSSQL-safe)
     - เลี่ยง NULLS LAST ด้วย CASE
     - เลี่ยง FETCH FIRST/ NEXT ด้วย ROW_NUMBER() paginate
+    - เพิ่ม outside_department_name จาก OR4 ล่าสุด (ถ้ามี)
     """
     # base query & filters
     base_q = db.query(Complaint).outerjoin(User, Complaint.assigned_officer_id == User.id)
@@ -46,7 +48,6 @@ def get_pending_tasks_report(
         try:
             base_q = base_q.filter(Complaint.status == CS(status))
         except Exception:
-            # ถ้าสตริงไม่ตรง enum ให้คืนผลลัพธ์ว่าง
             base_q = base_q.filter(False)
 
     if search:
@@ -73,6 +74,19 @@ def get_pending_tasks_report(
 
     total = base_q.count()
 
+    # ---------- scalar subquery: ชื่อหน่วยงานภายนอกจาก OR4 ล่าสุด ----------
+    latest_outside_name = (
+        db.query(OutsideDepartment.name)
+        .join(OutgoingReport4, OutgoingReport4.outside_department_id == OutsideDepartment.id)
+        .filter(
+            OutgoingReport4.is_active == True,
+            OutgoingReport4.complaint_id == Complaint.id
+        )
+        .order_by(OutgoingReport4.created_at.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
+
     # --- Window + paginate with ROW_NUMBER() ---
     ordered_subq = (
         db.query(
@@ -86,7 +100,8 @@ def get_pending_tasks_report(
             Complaint.subject.label("subject"),
             Complaint.assigned_date.label("assigned_date"),
             Complaint.director_submission_date.label("director_submission_date"),
-            Complaint.assigned_to.label("department_name"),
+            Complaint.assigned_to.label("department_name"),            # ภายใน (ช่องข้อความอิสระ)
+            latest_outside_name.label("outside_department_name"),      # ภายนอกจาก OR4 ล่าสุด
             Complaint.document_number.label("document_number"),
             Complaint.status.label("status"),
             Complaint.created_at.label("created_at"),
@@ -104,7 +119,7 @@ def get_pending_tasks_report(
         .filter(Complaint.status.in_(PENDING_STATUSES))
     )
 
-    # ต้องใส่ฟิลเตอร์ซ้ำให้กับ subquery (เพราะเรา build ใหม่แทน base_q)
+    # ต้องใส่ฟิลเตอร์ซ้ำให้กับ subquery
     if status:
         from models.comp_complaint import ComplaintStatus as CS
         try:
@@ -143,7 +158,7 @@ def get_pending_tasks_report(
         .all()
     )
 
-    # map officer name (ดึงเพิ่มครั้งเดียวแบบ bulk)
+    # map officer name (bulk)
     officer_ids = [r.assigned_officer_id for r in page_rows if r.assigned_officer_id]
     officers = {}
     if officer_ids:
@@ -161,7 +176,10 @@ def get_pending_tasks_report(
             "subject": r.subject,
             "assigned_date": r.assigned_date,
             "director_submission_date": r.director_submission_date,
-            "department_name": r.department_name,
+            "department_name": r.department_name,                 # ค่าดั้งเดิม (ภายใน)
+            "outside_department_name": r.outside_department_name, # ค่าใหม่ (หน่วยงานภายนอกจาก OR4)
+            # ถ้าอยากให้แสดงรวมเป็นตัวเดียว ให้ใช้บรรทัดด้านล่างแทน:
+            # "department_name": r.department_name or r.outside_department_name,
             "document_number": r.document_number,
             "status": r.status.value if hasattr(r.status, "value") else r.status,
             "days_in_progress": (now.date() - (start_date.date() if start_date else now.date())).days,
