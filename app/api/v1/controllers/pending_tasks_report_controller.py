@@ -61,7 +61,7 @@ def get_pending_tasks_report(
         .filter(
             OutgoingReport.complaint_id == Complaint.id,
             OutgoingReport.is_active == True,
-            OutgoingReport.department_id.isnot(None),
+            # OutgoingReport.department_id.isnot(None),
         )
     )
     or2_q = (
@@ -70,7 +70,7 @@ def get_pending_tasks_report(
         .filter(
             OutgoingReport2.complaint_id == Complaint.id,
             OutgoingReport2.is_active == True,
-            OutgoingReport2.department_id.isnot(None),
+            # OutgoingReport2.department_id.isnot(None),
         )
     )
     or4_q = (
@@ -79,7 +79,7 @@ def get_pending_tasks_report(
         .filter(
             OutgoingReport4.complaint_id == Complaint.id,
             OutgoingReport4.is_active == True,
-            OutgoingReport4.department_id.isnot(None),
+            # OutgoingReport4.department_id.isnot(None),
         )
     )
     internal_union = or1_q.union_all(or2_q, or4_q).subquery()
@@ -98,7 +98,7 @@ def get_pending_tasks_report(
         .filter(
             OutgoingReport2.complaint_id == Complaint.id,
             OutgoingReport2.is_active == True,
-            OutgoingReport2.outside_department_id.isnot(None),
+            # OutgoingReport2.outside_department_id.isnot(None),
         )
     )
     out4_q = (
@@ -107,7 +107,7 @@ def get_pending_tasks_report(
         .filter(
             OutgoingReport4.complaint_id == Complaint.id,
             OutgoingReport4.is_active == True,
-            OutgoingReport4.outside_department_id.isnot(None),
+            # OutgoingReport4.outside_department_id.isnot(None),
         )
     )
     outside_union = out2_q.union_all(out4_q).subquery()
