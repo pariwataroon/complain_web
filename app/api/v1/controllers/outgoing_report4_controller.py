@@ -47,6 +47,24 @@ def _attachment_dict(att: OutgoingReportAttachment4) -> Dict[str, Any]:
         "created_at": _iso(getattr(att, "created_at", None)),
     }
 
+def _map_consideration_to_status(s: str) -> ComplaintStatus:
+    if not s:
+        return ComplaintStatus.REVIEWED
+
+    t = str(s).strip()
+    if t in {"ทราบ", "ทราบไว้ชั้นหนึ่ง"}:
+        return ComplaintStatus.REVIEWED
+    if t in {"ยุติเรื่องได้"}:
+        return ComplaintStatus.COMPLETED
+    if t in {"เห็นชอบ"}:
+        return ComplaintStatus.COMPLETED
+        # return getattr(ComplaintStatus, "APPROVED", ComplaintStatus.REVIEWED)
+    if t in {"อยู่ระหว่างดำเนินการ"}:
+        return ComplaintStatus.REVIEWED
+        # return getattr(ComplaintStatus, "IN_PROGRESS", getattr(ComplaintStatus, "TRACKING", ComplaintStatus.REVIEWED))
+
+    # fallback
+    return ComplaintStatus.REVIEWED
 
 # ------------------------- Complaint status/history helpers -------------------------
 def _update_status_and_log(
@@ -97,7 +115,6 @@ def create_outgoing_report4(
             .first()
         )
         if dup_doc:
-            # แจ้งชัดเจนว่าชน document_number และแนะนำให้ใช้ PUT พร้อมอ้าง id เรคอร์ดเดิม
             raise HTTPException(
                 status_code=400,
                 detail=(
@@ -106,26 +123,27 @@ def create_outgoing_report4(
                 ),
             )
 
-        # ✅ reference_number ซ้ำได้ → ไม่ต้องเช็ก/บล็อก
-
         # complaint_id ไม่บังคับ แต่ถ้าส่งมาก็ตรวจว่ามีจริง
+        complaint = None
         if report_data.complaint_id:
             complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
             if not complaint:
                 raise HTTPException(status_code=400, detail="ไม่พบข้อร้องเรียนที่ระบุ")
 
-        # ตรวจสอบ position (optional) กรณีต้องมีข้อความอื่นๆ
-        position_obj = None
+        # ตรวจสอบ position (optional)
         if getattr(report_data, "position_id", None):
             from models.position import Position
-            position_obj = db.query(Position).filter(Position.id == report_data.position_id, Position.is_active == True).first()
+            position_obj = db.query(Position).filter(
+                Position.id == report_data.position_id,
+                Position.is_active == True
+            ).first()
             if not position_obj:
                 raise HTTPException(status_code=400, detail="ไม่พบตำแหน่งที่เลือก")
             pos_name = getattr(position_obj, "name", "") or ""
             if pos_name in {"อื่นๆ", "อื่น ๆ", "other", "others"} and not getattr(report_data, "position_other_text", None):
                 raise HTTPException(status_code=400, detail="กรุณาระบุตำแหน่ง (อื่นๆ) เพิ่มเติม")
 
-        # Validate outside vs legacy ids (no mirroring – ต้องเลือกอย่างใดอย่างหนึ่ง)
+        # Validate outside vs legacy ids (ต้องเลือกอย่างใดอย่างหนึ่ง)
         if report_data.department_id and report_data.outside_department_id:
             raise HTTPException(status_code=400, detail="กรุณาส่ง department_id หรือ outside_department_id อย่างใดอย่างหนึ่ง ไม่ใช่ทั้งคู่")
 
@@ -173,16 +191,15 @@ def create_outgoing_report4(
 
         db.commit()
 
-        # บันทึกประวัติ (OR4)
-        if report_data.complaint_id:
+        # 🔁 บันทึกประวัติ + อัปเดตสถานะตาม consideration_result
+        if complaint:
             try:
-                complaint = db.query(Complaint).filter(Complaint.id == report_data.complaint_id).first()
                 note = (
                     f"สร้างแบบรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบ | อ้างอิง: {db_report.reference_number or '-'} | "
-                    f"เรื่อง: {db_report.subject or '-'}"
+                    f"เรื่อง: {db_report.subject or '-'} | ผลพิจารณา: {report_data.consideration_result or '-'}"
                 )
-                cur = getattr(complaint, "status", ComplaintStatus.REVIEWED)
-                _update_status_and_log(db, complaint, cur, note, current_user_id)
+                target = _map_consideration_to_status(report_data.consideration_result)
+                _update_status_and_log(db, complaint, target, note, current_user_id)
             except Exception as e:
                 logger.warning(f"OR4 post-create status/history failed: {e}")
 
@@ -196,7 +213,6 @@ def create_outgoing_report4(
         db.rollback()
         logger.error(f"Error creating outgoing report4: {str(e)}")
         raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {str(e)}")
-
 
 def get_outgoing_report4_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
     """ดึงรายงานตาม ID (รวมไฟล์แนบ)"""
@@ -693,6 +709,7 @@ def update_outgoing_report4(
             if not od:
                 raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานภายนอกที่ระบุ")
 
+        # อัปเดตฟิลด์
         for field, value in incoming.items():
             setattr(rec, field, value)
 
@@ -708,9 +725,23 @@ def update_outgoing_report4(
                     raise HTTPException(status_code=400, detail="กรุณาระบุตำแหน่ง (อื่นๆ) เพิ่มเติม")
 
         rec.updated_by = current_user_id
-
         db.commit()
         db.refresh(rec)
+
+        # 🔁 บันทึกประวัติ + อัปเดตสถานะตาม consideration_result (เวอร์ชันหลังแก้)
+        try:
+            if rec.complaint_id:
+                complaint = db.query(Complaint).filter(Complaint.id == rec.complaint_id).first()
+                if complaint:
+                    note = (
+                        f"แก้ไขรายงานรุ่น 4 | เอกสารเลขที่: {rec.document_number or '-'} | "
+                        f"เรื่อง: {rec.subject or '-'} | ผลพิจารณา: {rec.consideration_result or '-'}"
+                    )
+                    target = _map_consideration_to_status(rec.consideration_result)
+                    _update_status_and_log(db, complaint, target, note, current_user_id)
+        except Exception as e:
+            logger.warning(f"OR4 post-update status/history failed: {e}")
+
         return get_outgoing_report4_by_id(db, rec.id)
 
     except HTTPException:
