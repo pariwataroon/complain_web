@@ -53,17 +53,15 @@ def _map_consideration_to_status(s: str) -> ComplaintStatus:
 
     t = str(s).strip()
     if t in {"ทราบ", "ทราบไว้ชั้นหนึ่ง"}:
-        return ComplaintStatus.REVIEWED
-    if t in {"ยุติเรื่องได้"}:
-        return ComplaintStatus.COMPLETED
+        return ComplaintStatus.REVIEWED            # รับทราบ/บันทึก
+    if t in {"ยุติเรื่อง", "ยุติเรื่องได้"}:
+        return ComplaintStatus.COMPLETED           # ✅ สำเร็จ = ยุติ เท่านั้น
     if t in {"เห็นชอบ"}:
-        return ComplaintStatus.COMPLETED
-        # return getattr(ComplaintStatus, "APPROVED", ComplaintStatus.REVIEWED)
+        # เห็นชอบ ≠ ปิดงาน ยังต้องติดตามผล
+        return getattr(ComplaintStatus, "IN_PROCESS", ComplaintStatus.REVIEWED)
     if t in {"อยู่ระหว่างดำเนินการ"}:
-        return ComplaintStatus.REVIEWED
-        # return getattr(ComplaintStatus, "IN_PROGRESS", getattr(ComplaintStatus, "TRACKING", ComplaintStatus.REVIEWED))
-
-    # fallback
+        return getattr(ComplaintStatus, "IN_PROCESS",
+                       getattr(ComplaintStatus, "TRACKING", ComplaintStatus.REVIEWED))
     return ComplaintStatus.REVIEWED
 
 # ------------------------- Complaint status/history helpers -------------------------
