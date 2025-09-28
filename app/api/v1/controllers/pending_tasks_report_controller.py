@@ -1,5 +1,5 @@
 from sqlalchemy.orm import aliased, Session
-from sqlalchemy import or_, and_, func, case
+from sqlalchemy import func, case, or_
 from typing import Optional, Dict
 from datetime import datetime, timezone
 
@@ -73,16 +73,16 @@ def get_pending_tasks_report(
 
     total = base_q.count()
 
-    # --- MSSQL-safe ordering (emulate NULLS LAST) ---
-    assigned_nulls_last = case((Complaint.assigned_date.is_(None), 1), else_=0).asc()
-
     # --- Window + paginate with ROW_NUMBER() ---
     ordered_subq = (
         db.query(
             Complaint.id.label("id"),
             Complaint.reference_number4.label("receive_reference_number"),
-            (Complaint.reference_number.coalesce(Complaint.reference_number2)
-                                      .coalesce(Complaint.reference_number3)).label("reference_number"),
+            func.coalesce(
+                Complaint.reference_number,
+                Complaint.reference_number2,
+                Complaint.reference_number3,
+            ).label("reference_number"),
             Complaint.subject.label("subject"),
             Complaint.assigned_date.label("assigned_date"),
             Complaint.director_submission_date.label("director_submission_date"),
@@ -92,7 +92,11 @@ def get_pending_tasks_report(
             Complaint.created_at.label("created_at"),
             Complaint.assigned_officer_id.label("assigned_officer_id"),
             func.row_number().over(
-                order_by=(assigned_nulls_last, Complaint.assigned_date.desc(), Complaint.created_at.desc())
+                order_by=(
+                    case((Complaint.assigned_date.is_(None), 1), else_=0).asc(),
+                    Complaint.assigned_date.desc(),
+                    Complaint.created_at.desc(),
+                )
             ).label("rn"),
         )
         .select_from(Complaint)
