@@ -266,7 +266,7 @@ const InformRelatedParties = () => {
       setDecisionOptions([
         { value: "รับทราบ", label: "ทราบ" },
         { value: "อนุมัติ", label: "ทราบไว้ชั้นหนึ่ง" },
-        { value: "ไม่อนุมัติ", label: "ยุติเรื่องได้" },
+        { value: "ยุติเรื่อง", label: "ยุติเรื่องได้" },
         { value: "เพิ่มเติม", label: "เห็นชอบ" },
         { value: "ดำเนินการ", label: "อยู่ระหว่างดำเนินการ" },
       ]);
