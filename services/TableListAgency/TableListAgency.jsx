@@ -168,7 +168,8 @@ const TableListAgency = ({
     { name: "claimantName", label: "ชื่อผู้ร้อง", width: 180 },
     { name: "receiptNumber", label: "เลขรับ สรร.", width: 150 },
     { name: "receiveDate", label: "ลงวันที่", width: 150 },
-    { name: "agency", label: "หน่วยงาน/ชื่อ-สกุล (ผู้ร้อง)", width: 220 },
+    // { name: "agency", label: "หน่วยงาน/ชื่อ-สกุล (ผู้ร้อง)", width: 220 },
+    { name: "agency", label: "หน่วยงาน", width: 220 },
     { name: "issue", label: "ชื่อเรื่อง", width: 200 },
     { name: "issueType", label: "ประเภทเรื่อง", width: 180 },
     { name: "note", label: "หนังสือส่งหน่วยงาน/ติดตามผล", width: 200 },
@@ -337,7 +338,8 @@ const TableListAgency = ({
               size="small"
             />
             <SelectField
-              label="หน่วยงาน/ชื่อ-สกุล (ผู้ร้อง)"
+              // label="หน่วยงาน/ชื่อ-สกุล (ผู้ร้อง)"
+              label="หน่วยงาน"
               value={filters.agency}
               onChange={handleChange("agency")}
               options={agencyOptions}
