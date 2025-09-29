@@ -13,44 +13,61 @@ import { CheckCircle, HelpOutline, HourglassEmpty } from "@mui/icons-material";
 
 import NavbarMain from "@services/navbarMain/navbarMain";
 import ComplaintIDService from "@services/ComplaintIDService/ComplaintIDService";
-import { GetComplaintMeByID, GetComplaintOutgoingTracking } from "@pages/api/complaint/complaint";
+import { GetComplaintOutgoingTracking, GetAssignmentCompleteByAdmin } from "@pages/api/complaint/complaint";
 import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 import { formatThaiDate } from "@utils/Formats";
-import { exportElementToPDF } from "@utils/exportPDF";
 import styles from "./FollowupDetailPage.module.scss";
-import { GetComplaintById, GetAssignmentCompleteByAdmin } from "@pages/api/complaint/complaint";
 
-// Canonical steps for display
+// ====== ขั้นตอนที่แสดงบน UI ======
 const STEP_DEFS = [
-  { key: "submitted", label: "รับเรื่องร้องเรียน" },
-  { key: "sent", label: "ส่งหน่วยงาน" },
+  { key: "submitted",   label: "รับเรื่องร้องเรียน" },
+  { key: "sent",        label: "ส่งหน่วยงาน" },
   { key: "in_progress", label: "อยู่ระหว่างดำเนินการ" },
-  { key: "reviewed", label: "ติดตามผลการพิจารณาจากหน่วยงาน" },
-  { key: "resolved", label: "การดำเนินการเสร็จสิ้น" },
+  { key: "reviewed",    label: "ติดตามผลการพิจารณาจากหน่วยงาน" },
+  { key: "resolved",    label: "การดำเนินการเสร็จสิ้น" },
 ];
 
-// Map backend status strings to the above step keys
+// ====== mapping คำสถานะจากหลังบ้าน -> คีย์มาตรฐาน ======
 const STATUS_ALIAS = {
-  submitted: ["submitted"],
-  sent: ["sent_to_agency"],
-  in_progress: ["in_process", "in_review", "sent_to_external"],
-  reviewed: ["tracking", "reviewed"],
-  resolved: ["completed", "cancelled"],
+  submitted:   ["submitted", "new", "received"],
+  sent:        ["sent", "sent_to_agency", "sent_to_external", "forwarded"],
+  in_progress: ["in_process", "in_progress", "in_review"],
+  reviewed:    [
+    "tracking", "reviewed", "awaiting_result",
+    "awaiting_consideration", "report_requested",
+    "outgoing_report", "outgoing_report1", "outgoing_report2", "outgoing_report3"
+  ],
+  resolved:    ["completed", "cancelled", "closed", "resolved", "done"],
 };
 
-const RESOLVED_STATUSES = ["completed", "cancelled"];
+// คำที่ถือว่า “ปิดเรื่องจากผลพิจารณา”
+const CLOSED_WORDS = ["ยุติเรื่อง", "ยุติเรื่องได้", "ปิดเรื่อง", "ปิดงาน"];
 
 const normalizeStatus = (status) => {
-  if (!status) return "submitted";
-  const s = String(status);
-  for (const key of Object.keys(STATUS_ALIAS)) {
-    if (STATUS_ALIAS[key].includes(s)) return key;
-  }
+  const s = String(status || "").trim();
+  if (!s) return "submitted";
   const low = s.toLowerCase();
   for (const key of Object.keys(STATUS_ALIAS)) {
-    if (STATUS_ALIAS[key].map((v) => v.toLowerCase()).includes(low)) return key;
+    const vals = STATUS_ALIAS[key].map(v => String(v).trim().toLowerCase());
+    if (vals.includes(low)) return key;
   }
   return "submitted";
+};
+
+const getWhen = (h) => h?.changed_at || h?.changedAt || h?.date || h?.at || "";
+
+const sortByTime = (a, b) => new Date(getWhen(a)).getTime() - new Date(getWhen(b)).getTime();
+
+const liftClosure = (h) => {
+  const isOutgoing = h?.type === "outgoing_report" || h?.status === "outgoing_report";
+  const resTxt = String(h?.ext?.consideration_result || "").trim();
+    const closedByExt =
+      h?.ext?.is_closed_by_consideration === true ||
+      CLOSED_WORDS.includes(resTxt);
+  if (isOutgoing && closedByExt) {
+    return { ...h, status: "completed", __closedByConsideration: true };
+  }
+  return h;
 };
 
 const getHighestStepIndex = (mergedHistory) => {
@@ -63,17 +80,26 @@ const getHighestStepIndex = (mergedHistory) => {
   return maxIdx;
 };
 
+const hasClosureByOutgoing = (mergedHistory) =>
+  mergedHistory.some(
+    (h) =>
+      (h?.type === "outgoing_report" || h?.status === "outgoing_report" || h?.status === "completed") &&
+      (h?.ext?.is_closed_by_consideration === true ||
+        CLOSED_WORDS.includes(h?.ext?.consideration_result) ||
+        h?.__closedByConsideration === true)
+  );
+
 const isResolved = (mergedHistory, complaint) => {
-  const lastEntry = mergedHistory.filter(h => h.status).slice(-1)[0];
-  const lastStatus = lastEntry?.status || complaint.status;
-  // ต้อง normalize ด้วย
+  if (hasClosureByOutgoing(mergedHistory)) return true;
+  const lastEntry = mergedHistory.filter((h) => h.status).slice(-1)[0];
+  const lastStatus = lastEntry?.status || complaint?.status;
   const lastKey = normalizeStatus(lastStatus);
   return lastKey === "resolved";
 };
 
 export default function FollowupDetailPage() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id } = router.query || {};
 
   const [complaint, setComplaint] = useState(null);
   const [outgoingTracking, setOutgoingTracking] = useState(null);
@@ -89,40 +115,34 @@ export default function FollowupDetailPage() {
     (async () => {
       try {
         showLoading("กำลังโหลดข้อมูลเรื่องร้องทุกข์...");
-        
-        // เรียก GetAssignmentCompleteByAdmin แทน GetComplaintMeByID
+
         const [resComplaint, resTracking] = await Promise.all([
-          GetAssignmentCompleteByAdmin(id), // เปลี่ยนจาก GetComplaintMeByID
+          GetAssignmentCompleteByAdmin(id),
           GetComplaintOutgoingTracking(id),
         ]);
-        // ตรวจสอบ response structure
+
         if (resComplaint?.res_code === "0000" && resComplaint?.res_data?.complaint) {
-          // Merge complaint data กับ options สำหรับการ lookup
           const complaintData = {
             ...resComplaint.res_data.complaint,
-            options: resComplaint.res_data.options, // เพิ่ม options เพื่อใช้ใน lookup
-            // เพิ่ม fallback สำหรับ field ที่อาจจะหาย
+            options: resComplaint.res_data.options,
             subject: resComplaint.res_data.complaint.subject || "",
             description: resComplaint.res_data.complaint.description || "",
+            status_history:
+              resComplaint?.res_data?.history ??
+              resComplaint?.res_data?.complaint?.status_history ??
+              [],
           };
-
-          console.log('=== MERGED COMPLAINT DATA ===');
-          console.log('complaintData:', complaintData);
-
           setComplaint(complaintData);
         } else {
-          console.error('Invalid API response structure:', resComplaint);
+          console.error("Invalid API response structure:", resComplaint);
           setErrorMsg("ไม่สามารถโหลดข้อมูลได้ - รูปแบบข้อมูลไม่ถูกต้อง");
         }
 
-        // Tracking data ยังใช้เดิม
-        const trackingData = resTracking?.data?.res_data ?? resTracking?.res_data ?? resTracking;
-        console.log('=== TRACKING DATA ===');
-        console.log('trackingData:', trackingData);
+        const trackingData =
+          resTracking?.data?.res_data ?? resTracking?.res_data ?? resTracking;
         setOutgoingTracking(trackingData);
-
       } catch (err) {
-        console.error('Fetch Error:', err);
+        console.error("Fetch Error:", err);
         setErrorMsg("ไม่สามารถโหลดข้อมูลได้");
         alertError("เกิดข้อผิดพลาด", "ไม่สามารถโหลดข้อมูลได้");
       } finally {
@@ -132,27 +152,42 @@ export default function FollowupDetailPage() {
     })();
   }, [router.isReady, id]);
 
-  //--- รวมสถานะจากทั้ง complaint และ outgoing-tracking
+  // --- รวมสถานะจาก complaint + outgoing-tracking แล้วสรุปเป็น stepper ---
   const { steps, activeStep } = useMemo(() => {
     if (!complaint) return { steps: [], activeStep: 0 };
 
-    const history = complaint.status_history ?? [];
-    let otHistory = outgoingTracking?.history ?? [];
+    const history = Array.isArray(complaint.status_history)
+      ? complaint.status_history
+      : [];
+    const otHistoryRaw = outgoingTracking?.history ?? [];
 
-    const mergedHistory = [
-      ...history,
-      ...otHistory.map((h) => ({
+    // mapping ให้มีฟิลด์มาตรฐาน แล้ว “ยกเคสยุติเรื่อง”
+    const otHistoryMapped = otHistoryRaw.map((h) => {
+      // ถ้าเป็น outgoing_report แต่ไม่มี status ให้จัดเข้ากลุ่ม reviewed
+      const baseStatus =
+        h.status
+          ? h.status
+          : (h.type === "outgoing_report" ? "outgoing_report" : h.type || "reviewed");
+      return {
         ...h,
-        status: h.status || h.type || "reviewed",
-        changed_at: h.at,
-      })),
-    ];
+        status: baseStatus,
+        // กัน null time: รองรับ created_at / createdAt ด้วย
+        changed_at: h.changed_at || h.at || h.date || h.created_at || h.createdAt || null,
+      };
+    });
+
+    // รวม  ยกเคสยุติเรื่อง + sort
+    const mergedHistory = [...history, ...otHistoryMapped]
+      .map(liftClosure)
+      .sort(sortByTime);
 
     const resolved = isResolved(mergedHistory, complaint);
     const highestStepIdx = getHighestStepIndex(mergedHistory);
 
     const built = STEP_DEFS.map((def, idx) => {
-      const logs = mergedHistory.filter((h) => normalizeStatus(h.status) === def.key);
+      const logs = mergedHistory.filter(
+        (h) => normalizeStatus(h.status) === def.key
+      );
 
       let icon;
       if (resolved) {
@@ -165,7 +200,7 @@ export default function FollowupDetailPage() {
         icon = <HelpOutline sx={{ fontSize: 60, color: "#C4C4C4" }} />;
       }
 
-      // เพิ่มข้อมูลปลายทาง/เจ้าหน้าที่ใน step "ส่งหน่วยงาน"
+      // ข้อมูลปลายทาง/เจ้าหน้าที่ใน step "ส่งหน่วยงาน" (เผื่อเปิดใช้)
       let extraInfo = "";
       if (def.key === "sent" && logs.length > 0) {
         const log = logs[0];
@@ -175,7 +210,7 @@ export default function FollowupDetailPage() {
       }
 
       const description = logs.map((log) => {
-        const dateTH = formatThaiDate(log.changed_at || log.changedAt || log.date || log.at);
+        const dateTH = formatThaiDate(getWhen(log));
         const note =
           log.notes ||
           log.note ||
@@ -189,18 +224,12 @@ export default function FollowupDetailPage() {
       return { label: def.label, icon, description, extraInfo };
     });
 
-    // activeStep: ให้ stepper ชี้ปัจจุบันที่สูงสุด (หรือสุดท้ายถ้า resolved)
     return { steps: built, activeStep: resolved ? STEP_DEFS.length : highestStepIdx };
   }, [complaint, outgoingTracking]);
 
   if (loading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="50vh"
-      >
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
         <CircularProgress />
       </Box>
     );
@@ -208,12 +237,7 @@ export default function FollowupDetailPage() {
 
   if (errorMsg) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="50vh"
-      >
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
         <Typography color="error">{errorMsg}</Typography>
       </Box>
     );
@@ -239,12 +263,7 @@ export default function FollowupDetailPage() {
           <Box className={styles.headerBarLightBlue}>
             <Box display="flex" justifyContent="space-between" width="100%">
               <Typography sx={{ color: "#1120A3" }}>
-                เรื่อง: {
-                  complaint.subject || 
-                  complaint.step3?.general?.subject || 
-                  complaint.step3?.subject ||
-                  "-"
-                }
+                เรื่อง: {complaint.subject || complaint.step3?.general?.subject || complaint.step3?.subject || "-"}
               </Typography>
               <Typography sx={{ color: "#1120A3" }}>
                 วันที่รับเรื่อง : {formatThaiDate(complaint.created_at)}
@@ -283,14 +302,15 @@ export default function FollowupDetailPage() {
                     textAlign: "center",
                   }}
                 >
-                  <Typography className={styles.stepLabel}>
-                    {step.label}
-                  </Typography>
+                  <Typography className={styles.stepLabel}>{step.label}</Typography>
+
+                  {/* เปิดใช้ได้ถ้าต้องการรายละเอียดใต้ step */}
                   {/* {step.extraInfo && (
-                    <Typography sx={{ color: "#2499FF", fontWeight: 600 }}>{step.extraInfo}</Typography>
-                  )} */}
-                  
-                  {/* {step.description.length > 0 && (
+                    <Typography sx={{ color: "#2499FF", fontWeight: 600 }}>
+                      {step.extraInfo}
+                    </Typography>
+                  )}
+                  {step.description.length > 0 && (
                     <ul className={styles.stepDescription}>
                       {step.description.map((line, i) => (
                         <li key={i}>{line}</li>

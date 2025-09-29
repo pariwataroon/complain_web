@@ -2067,9 +2067,15 @@ const SearchComplaints = () => {
                               label="วันที่รับงานของเจ้าหน้าที่"
                               name="officerReceivedDate"
                               control={step4Methods.control}
-                              // defaultValue={
-                              //   defaultData?.assignment_form?.registration_date
-                              // }
+                              defaultValue={
+                                defaultData?.assignment_form?.registration_date ||
+                                defaultData?.step4?.general?.officerReceivedDate
+                                  ? new Date(
+                                      defaultData?.assignment_form?.registration_date ||
+                                      defaultData?.step4?.general?.officerReceivedDate
+                                    )
+                                  : undefined
+                              }
                               time={true}
                             />
                           </div>
@@ -2080,9 +2086,15 @@ const SearchComplaints = () => {
                               label="วันที่เสนองาน ผอ.สรร."
                               name="directorSubmittedDate"
                               control={step4Methods.control}
-                              // defaultValue={
-                              //   defaultData?.assignment_form?.director_submission_date
-                              // }
+                              defaultValue={
+                                defaultData?.assignment_form?.director_submission_date ||
+                                defaultData?.step4?.general?.directorSubmittedDate
+                                  ? new Date(
+                                      defaultData?.assignment_form?.director_submission_date ||
+                                      defaultData?.step4?.general?.directorSubmittedDate
+                                    )
+                                  : undefined
+                              }
                               time={true}
                             />
                           </div>
@@ -2105,7 +2117,6 @@ const SearchComplaints = () => {
                                   : undefined
                               }
                               time={true}
-                              disabled={true}
                             />
                           </div>
                         </div>

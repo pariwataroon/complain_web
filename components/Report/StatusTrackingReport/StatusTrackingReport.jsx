@@ -5,22 +5,56 @@ import TableListCollaps from "@services/TableListCollaps/TableListCollaps";
 import { GetMyRelatedComplaints, GetDepartments } from "@pages/api/complaint/complaint";
 import { GetAllSignatureAuthorities } from "@pages/api/allselect/allselect";
 
-/* ======================= ตัวเลือกฟิลเตอร์ (static แค่บางอัน) ======================= */
-const statusOptions = [
-  { value: "รอดำเนินการ", label: "รอดำเนินการ" },
-  { value: "กำลังดำเนินการ", label: "กำลังดำเนินการ" },
-  { value: "เสร็จสิ้น", label: "เสร็จสิ้น" },
+/* ============= คำที่ถือว่า “ปิดเรื่องจากผลพิจารณา (outgoing)” ============= */
+const CLOSED_WORDS = ["ยุติเรื่อง", "ยุติเรื่องได้", "ปิดเรื่อง", "ปิดงาน"];
+
+/* ============= label สถานะเหมือนหน้าติดตามผลการดำเนินการ ============= */
+const STATUS_LABELS = [
+  "รับเรื่อง",
+  "ส่งหน่วยงานที่เกี่ยวข้อง",
+  "กำลังดำเนินการ",
+  "ติดตามผล",
+  "มอบหมายเจ้าหน้าที่",
+  "แจ้งผลการพิจารณา",
+  "อยู่ระหว่างพิจารณา",
+  "ยุติเรื่องแล้ว",
 ];
 
-/* ======================= Utils ======================= */
-const mapStatusToUI = (code = "") => {
-  const c = String(code).toLowerCase();
-  if (["completed"].includes(c)) return "เสร็จสิ้น";
-  if (["submitted"].includes(c)) return "รอดำเนินการ";
-  if (["sent_to_agency", "in_process", "in_review", "tracking", "reviewed", "cancelled"].includes(c)) return "กำลังดำเนินการ";
-  return "รอดำเนินการ";
+const statusFilterOptions = STATUS_LABELS.map((l) => ({ value: l, label: l }));
+
+/* code -> label ไทย (ให้ตรงกับหน้า followup) */
+const toThaiLabel = (code = "") => {
+  const s = String(code || "").toLowerCase();
+  switch (s) {
+    case "submitted": return "รับเรื่อง";
+    case "sent_to_external":
+    case "sent_to_agency":
+    case "forwarded": return "ส่งหน่วยงานที่เกี่ยวข้อง";
+    case "in_process":
+    case "in_progress": return "กำลังดำเนินการ";
+    case "tracking": return "ติดตามผล";
+    case "assigned": return "มอบหมายเจ้าหน้าที่";
+    case "reviewed": return "แจ้งผลการพิจารณา";
+    case "in_review": return "อยู่ระหว่างพิจารณา";
+    case "completed":
+    case "cancelled":
+    case "closed":
+    case "resolved":
+    case "done": return "ยุติเรื่องแล้ว";
+    default: return code || "-";
+  }
 };
 
+/* ถ้า history มี outgoing ที่สรุป “ยุติ/ปิดเรื่อง” ให้ถือว่าปิดเรื่อง */
+const closedByOutgoing = (history = []) =>
+  history.some(
+    (h) =>
+      (h?.type === "outgoing_report" || h?.status === "outgoing_report") &&
+      (h?.ext?.is_closed_by_consideration === true ||
+        CLOSED_WORDS.includes(String(h?.ext?.consideration_result || "")))
+  );
+
+/* ======================= Utils อื่น ๆ ======================= */
 const diffDaysFrom = (startISO) => {
   try { return Math.max(0, Math.ceil((new Date() - new Date(startISO)) / 86400000)); } catch { return 0; }
 };
@@ -70,7 +104,7 @@ const buildHistoryRows = (item) => {
     } else if (h.type === "outgoing_report") {
       department = h.department_name || latest?.sent?.department_name || "-";
       referenceNumber = h.reference_number || refNoFallback;
-      statusLabel = "ทำหนังสือส่งหน่วยงาน";
+      statusLabel = "เอกสารถึงหน่วยงาน";
     }
 
     return { department, receiptNumber: c.complaint_number ?? "-", referenceNumber, workingDays: stepDays, status: statusLabel };
@@ -84,22 +118,19 @@ const StatusTrackingReport = () => {
   const [filteredComplaints, setFilteredComplaints] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 👉 ตัวเลือกหน่วยงาน (จะมาจากผู้มีอำนาจลงนาม ไม่ใช้ mock)
   const [departmentOptions, setDepartmentOptions] = useState([]);
   const [responsibleOfficerOptions, setResponsibleOfficerOptions] = useState([]);
 
-  // โหลด “หน่วยงาน” จากผู้มีอำนาจลงนาม (แทน mock)
+  // โหลด “หน่วยงาน” จากผู้มีอำนาจลงนาม
   useEffect(() => {
     (async () => {
       try {
         const sigs = await GetAllSignatureAuthorities();
-        // แบนราบเป็น list หน่วยงาน แล้ว dedupe ตามชื่อ
         const bag = new Map();
         (sigs || []).forEach((auth) => {
           (auth?.departments || []).forEach((d) => {
             const label = d?.name?.trim();
             if (!label) return;
-            // เก็บ value เป็น id ถ้ามี ไม่งั้นใช้ชื่อ
             const value = String(d.id ?? label);
             if (!bag.has(label)) bag.set(label, { value, label });
           });
@@ -108,12 +139,12 @@ const StatusTrackingReport = () => {
         setDepartmentOptions(opts);
       } catch (e) {
         console.error("Load signature authorities failed:", e);
-        setDepartmentOptions([]); // ถ้าล้มเหลว ปล่อยว่าง (หรือจะ fallback เป็น GetDepartments ก็ได้)
+        setDepartmentOptions([]);
       }
     })();
   }, []);
 
-  // โหลดข้อมูลเรื่องร้องเรียน
+  // โหลดข้อมูลเรื่องร้องเรียน แล้ว map สถานะเป็น label แบบเดียวกับหน้า followup
   useEffect(() => {
     const fetchMyRelated = async () => {
       try {
@@ -124,16 +155,24 @@ const StatusTrackingReport = () => {
         const mapped = items.map((it, idx) => {
           const c = it?.complaint ?? {};
           const latest = it?.latest ?? {};
-          let deptName = "-";
+          const history = Array.isArray(it?.history) ? it.history : [];
 
+          // หน่วยงาน
+          let deptName = "-";
           if (c.assigned_to) deptName = c.assigned_to;
           else if (latest?.sent?.department_name) deptName = latest.sent.department_name;
-          else if (Array.isArray(it?.history)) {
-            const sentHistory = it.history.find(
+          else {
+            const sentHistory = history.find(
               (h) => h.type === "status_history" && String(h.status).toLowerCase() === "sent_to_agency"
             );
             if (sentHistory?.department_name) deptName = sentHistory.department_name;
           }
+
+          // สถานะ: ถ้า outgoing ปิด → ถือว่า completed, ไม่งั้นใช้ raw status แล้วแปลง label
+          const raw = String(c.status || "").toLowerCase();
+          const isClosed = closedByOutgoing(history);
+          const finalCode = isClosed ? "completed" : raw;
+          const statusLabel = toThaiLabel(finalCode);
 
           return {
             id: c.id ?? `temp_${idx + 1}`,
@@ -143,7 +182,7 @@ const StatusTrackingReport = () => {
             receiptNumber: c.complaint_number ?? "-",
             referenceNumber: getReferenceNumber(it),
             workingDays: diffDaysFrom(c.created_at),
-            status: mapStatusToUI(c.status),
+            status: statusLabel,           // แสดง label เหมือนหน้า followup
             departmentsData: buildHistoryRows(it),
             rawData: it,
           };
@@ -152,7 +191,6 @@ const StatusTrackingReport = () => {
         setAllComplaints(mapped);
         setFilteredComplaints(mapped);
 
-        // รายชื่อเจ้าหน้าที่จากข้อมูลจริง
         const uniqueOfficers = [
           ...new Set(mapped.map((i) => i.responsibleOfficer).filter((x) => x && x !== "-")),
         ].sort();
@@ -167,17 +205,14 @@ const StatusTrackingReport = () => {
     fetchMyRelated();
   }, []);
 
-  // โหลดหน่วยงานจาก API เดิมเป็น “สำรอง” (เผื่ออยากรวมเพิ่ม)
+  // โหลดหน่วยงาน (สำรอง)
   useEffect(() => {
     (async () => {
       try {
         const res = await GetDepartments();
         const list = res?.res_data ?? [];
         if (!list.length) return;
-        const extra = list
-          .map((d) => ({ value: String(d.name), label: d.name }))
-          .filter((x) => x.label);
-        // รวมกับที่มาจากผู้ลงนาม แล้ว dedupe ตาม label
+        const extra = list.map((d) => ({ value: String(d.name), label: d.name })).filter((x) => x.label);
         setDepartmentOptions((prev) => {
           const bag = new Map(prev.map((p) => [p.label, p]));
           extra.forEach((e) => { if (!bag.has(e.label)) bag.set(e.label, e); });
@@ -192,11 +227,11 @@ const StatusTrackingReport = () => {
   const handleSearch = (filters) => {
     const {
       claimantName: fName,
-      department: fDept,              // ← มาจาก select ของ TableListCollaps
+      department: fDept,
       responsibleOfficer: fOfficer,
       receiptNumber: fReceipt,
       referenceNumber: fReference,
-      status: fStatus,
+      status: fStatus, // ใช้ STATUS_LABELS
     } = filters;
 
     const norm = (v) => (v ?? "").toString().toLowerCase().trim();
@@ -213,7 +248,10 @@ const StatusTrackingReport = () => {
       if (fOfficer && norm(item.responsibleOfficer).includes(norm(fOfficer))) ok = true;
       if (fReceipt && norm(item.receiptNumber).includes(norm(fReceipt))) ok = true;
       if (fReference && norm(item.referenceNumber).includes(norm(fReference))) ok = true;
+
+      // กรองสถานะด้วย "label" ที่โชว์จริง (เหมือนหน้า followup)
       if (fStatus && norm(item.status) === norm(fStatus)) ok = true;
+
       return ok;
     });
 
@@ -245,21 +283,11 @@ const StatusTrackingReport = () => {
         loading={loading}
         filterFields={[
           { name: "claimantName", label: "ชื่อเรื่อง", type: "text" },
-          {
-            name: "department",
-            label: "หน่วยงาน",
-            type: "select",
-            options: departmentOptions,       // ✅ ตอนนี้มาจากผู้มีอำนาจลงนามจริง
-          },
-          {
-            name: "responsibleOfficer",
-            label: "เจ้าหน้าที่ผู้รับผิดชอบ",
-            type: "select",
-            options: responsibleOfficerOptions,
-          },
+          { name: "department", label: "หน่วยงาน", type: "select", options: departmentOptions },
+          { name: "responsibleOfficer", label: "เจ้าหน้าที่ผู้รับผิดชอบ", type: "select", options: responsibleOfficerOptions },
           { name: "receiptNumber", label: "เลข สรร.", type: "text" },
           { name: "referenceNumber", label: "เลขที่อ้างอิง", type: "text" },
-          { name: "status", label: "สถานะเรื่อง", type: "select", options: statusOptions },
+          { name: "status", label: "สถานะเรื่อง", type: "select", options: statusFilterOptions },
         ]}
       />
     </>
