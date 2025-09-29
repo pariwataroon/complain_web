@@ -14,14 +14,24 @@ const flattenToInspectors = (resData) => {
   for (const g of groups) {
     const users = g?.users ?? [];
     const deps = g?.departments ?? [];
+    const position = g?.group_description || ""; // ตำแหน่ง
+    const groupName = g?.group_name || ""; // ชื่อกลุ่ม
+
     for (const u of users) {
       if (!map.has(u.user_id)) {
         map.set(u.user_id, {
           id: u.user_id,
           name: u.user_name,
           email: u.user_email,
+          position: position,
+          groupName: groupName,
           departments: [],
         });
+      } else {
+        // ถ้ามี user อยู่แล้ว อัปเดตตำแหน่งและชื่อกลุ่ม (เอาอันล่าสุด)
+        const entry = map.get(u.user_id);
+        if (position) entry.position = position;
+        if (groupName) entry.groupName = groupName;
       }
       const entry = map.get(u.user_id);
       const had = new Set(entry.departments.map((d) => d.id));
@@ -41,6 +51,8 @@ const flattenToInspectors = (resData) => {
         id: u.user_id,
         name: u.user_name,
         email: u.user_email,
+        position: "", // ไม่มีตำแหน่งสำหรับ individuals
+        groupName: "",
         departments: [], // ไม่มีรายการหน่วยงานแนบมากับ individuals
       });
     }
@@ -85,6 +97,8 @@ const buildRows = (inspectors, reportItems, selectedInspectorId = "") => {
         id: uid,
         name: repOne?.signature_authority_user_name || "(ไม่พบในสิทธิ์)",
         email: "",
+        position: "", // ไม่มีข้อมูลตำแหน่งจากรายงาน
+        groupName: "",
         departments: [],
       });
     }
@@ -120,7 +134,12 @@ const buildRows = (inspectors, reportItems, selectedInspectorId = "") => {
       }
     }
 
-    return { id: ins.id, claimantName: ins.name, departmentsData };
+    // สร้างชื่อแสดงผลในรูปแบบ "ตำแหน่ง(ชื่อ)"
+    const displayName = ins.position
+      ? `${ins.position}(${ins.name})`
+      : ins.name;
+
+    return { id: ins.id, claimantName: displayName, departmentsData };
   });
 };
 
@@ -179,8 +198,11 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
 
       const reportItems = rep?.res_data?.items || [];
 
-      // ตัวเลือกดรอปดาวน์ = (ผู้ตรวจจากสิทธิ์) ∪ (ผู้ตรวจที่เจอในรายงาน) + “ทั้งหมด”
-      const fromSig = inspectorList.map((x) => ({ value: x.id, label: x.name }));
+      // ตัวเลือกดรอปดาวน์ = (ผู้ตรวจจากสิทธิ์) ∪ (ผู้ตรวจที่เจอในรายงาน) + "ทั้งหมด"
+      const fromSig = inspectorList.map((x) => ({
+        value: x.id,
+        label: x.position ? `${x.position}(${x.name})` : x.name
+      }));
       const fromReport = Array.from(
         new Map(
           reportItems.map((i) => [
