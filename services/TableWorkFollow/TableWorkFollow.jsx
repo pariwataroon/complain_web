@@ -198,7 +198,7 @@ const TableWorkFollow = ({
     { label: "เรื่อง", width: 300, field: "complaint" },
     { label: "วันที่รับงาน", width: 140, field: "receiveDate" },
     { label: "วันที่เสนอ ผอ.สรร.", width: 160, field: "proposeDate" },
-    { label: "หน่วยงานในสังกัด", width: 200, field: "agency" },
+    { label: "หน่วยงาน", width: 200, field: "agency" },
     { label: "เลขที่หนังสือจากส่วนราชการ", width: 160, field: "letterNumber" },
     { label: "สถานะเรื่อง", width: 140, field: "status" },
     { label: "ดำเนินการมาแล้ว (วัน)", width: 180, field: "elapsedDays" },
@@ -209,11 +209,8 @@ const TableWorkFollow = ({
     // },
   ];
 
-  // เพิ่มคอลัมน์หมายเหตุและจัดการ ถ้ามีข้อมูลที่สามารถแก้ไขได้
-  const hasEditableNotes = data.some(item => item.canEditNote);
-  const columns = hasEditableNotes
-    ? [...baseColumns, { label: "หมายเหตุ", width: 200, field: "remark" }]
-    : baseColumns;
+  // เพิ่มคอลัมน์หมายเหตุให้ทุกแถว
+  const columns = [...baseColumns, { label: "หมายเหตุ", width: 200, field: "remark" }];
 
   // Prepare export data: flat array with all fields for export
   const exportData = useMemo(() => {
@@ -311,7 +308,9 @@ const TableWorkFollow = ({
 
   // เมื่อคลิกแถวเนื้อหาย่อย (collapse) ให้เปลี่ยนหน้า (push) ไป admin/box/list/{id}
   const handleSubRowClick = (id) => {
-    router.push(`/admin/box/list/${id}/`);
+    // ตรวจสอบและเอา prefix ออก (เช่น new_) ก่อน push
+    const cleanId = id.replace(/^new_/, '');
+    router.push(`/admin/box/list/${cleanId}/`);
   };
 
   return (
@@ -794,8 +793,8 @@ const TableWorkFollow = ({
                                       {page * rowsPerPage + idx + 1}
                                     </TableCell>
                                     {columns.slice(1).map((col, i) => {
-                                      // ถ้าเป็นคอลัมน์หมายเหตุและสามารถแก้ไขได้
-                                      if (col.field === "remark" && item.canEditNote) {
+                                      // ถ้าเป็นคอลัมน์หมายเหตุ (แก้ไขได้ทุกแถว)
+                                      if (col.field === "remark") {
                                         return (
                                           <TableCell
                                             key={i}

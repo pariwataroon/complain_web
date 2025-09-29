@@ -347,13 +347,20 @@ const GetComplaintOutgoingTracking = async (complaint_id) => {
   }
 }
 
-const UpdateAssignedRemark = async (complaint_id, assigned_remark) => {
+const UpdateAssignedRemark = async (complaint_id, assigned_remark, options = {}) => {
   try {
+    // ค่าเริ่มต้นสำหรับ payload
+    const defaultPayload = {
+      assigned_remark,
+      new_complaint: true,
+    };
+
+    // รวม options เพิ่มเติมถ้ามี
+    const payload = { ...defaultPayload, ...options };
+
     const response = await axiosInstance.put(
       `/complaints-assignment/${complaint_id}/assignment`,
-      { assigned_remark,
-        new_complaint: true,
-       }
+      payload
     );
 
     // Normalize return to include HTTP status and a generic success flag
@@ -361,13 +368,34 @@ const UpdateAssignedRemark = async (complaint_id, assigned_remark) => {
       const data = response.data ?? {};
       const httpStatus = response.status;
       const success =
-        (typeof data.res_code === "string" && data.res_code === "0000") ||
+        (typeof data.res_code === "string" && (data.res_code === "0000" || data.res_code === "0002")) ||
         (httpStatus >= 200 && httpStatus < 300);
       return { ...data, httpStatus, success };
     }
     return null;
   } catch (error) {
     console.error("Error updating assigned remark:", error);
+
+    // ลองใช้ PATCH method ถ้า PUT ไม่สำเร็จ
+    try {
+      const fallbackPayload = { assigned_remark };
+      const patchResponse = await axiosInstance.patch(
+        `/complaints-assignment/${complaint_id}/assignment`,
+        fallbackPayload
+      );
+
+      if (patchResponse) {
+        const data = patchResponse.data ?? {};
+        const httpStatus = patchResponse.status;
+        const success =
+          (typeof data.res_code === "string" && (data.res_code === "0000" || data.res_code === "0002")) ||
+          (httpStatus >= 200 && httpStatus < 300);
+        return { ...data, httpStatus, success };
+      }
+    } catch (patchError) {
+      console.error("PATCH fallback also failed:", patchError);
+    }
+
     throw error;
   }
 };

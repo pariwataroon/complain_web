@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableWorkFollow from "@services/TableWorkFollow/TableWorkFollow";
-import SelectFieldDepartment from "@services/SelectFieldDepartment/SelectFieldDepartment";
-import { getPendingTasksReport, getNewAdditionalComplaintsReport } from "@pages/api/complaintreports/reports";
+import SelectFieldDepartmentoutside from "@services/SelectFieldDepartmentoutside/SelectFieldDepartmentoutside";
+import { getPendingTasksReport } from "@pages/api/complaintreports/reports";
 import { UpdateAssignedRemark } from "@pages/api/complaint/complaint";
 import {
   Box,
@@ -32,46 +32,29 @@ const FILING_TYPE_LABELS = {
 const PendingWorkfollowupComponents = () => {
   const [allComplaints, setAllComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
-  const [allNewAdditionalComplaints, setAllNewAdditionalComplaints] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   // สำหรับจัดการหมายเหตุ
-  const [editingNote, setEditingNote] = useState(null);
-  const [noteValue, setNoteValue] = useState("");
+  const [currentNoteRow, setCurrentNoteRow] = useState(null);
+  const [newNoteText, setNewNoteText] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [noteChangesMade, setNoteChangesMade] = useState(false);
   // สำหรับจัดการหน่วยงาน
   const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [selectedDepartmentLabel, setSelectedDepartmentLabel] = useState("");
 
-  // โหลดข้อมูล API ทั้งสอง API
+  // โหลดข้อมูล API
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         // ดึงข้อมูลการติดตามงานค้าง
-        const pendingResponse = await getPendingTasksReport();
-        const pendingData = pendingResponse || [];
+        const response = await getPendingTasksReport();
+        const complaintsData = response || [];
 
-        // ดึงข้อมูลเรื่องเข้าใหม่และร้องเพิ่ม
-        const newAddResponse = await getNewAdditionalComplaintsReport({
-          skip: 0,
-          limit: 1000,
-        });
-
-        let newAddData = [];
-        if (
-          newAddResponse &&
-          newAddResponse.res_code === "0000" &&
-          newAddResponse.res_data &&
-          Array.isArray(newAddResponse.res_data.items)
-        ) {
-          newAddData = newAddResponse.res_data.items;
-        }
-
-        setAllComplaints(pendingData);
-        setAllNewAdditionalComplaints(newAddData);
+        setAllComplaints(complaintsData);
 
         // ตรวจสอบว่ามีข้อมูลที่อัปเดตใน localStorage หรือไม่
         const updatedData = localStorage.getItem("updatedComplaints");
@@ -79,7 +62,7 @@ const PendingWorkfollowupComponents = () => {
           try {
             const parsedData = JSON.parse(updatedData);
             // อัปเดตข้อมูลเฉพาะหมายเหตุ (remark) จากข้อมูลที่อัพเดทแล้ว
-            const updatedNewAddData = newAddData.map((complaint) => {
+            const updatedComplaintsData = complaintsData.map((complaint) => {
               const updatedComplaint = parsedData.find(
                 (item) => item.id === complaint.id
               );
@@ -87,20 +70,34 @@ const PendingWorkfollowupComponents = () => {
                 ? { ...complaint, remark: updatedComplaint.note }
                 : complaint;
             });
-            setAllNewAdditionalComplaints(updatedNewAddData);
+            setAllComplaints(updatedComplaintsData);
             localStorage.removeItem("updatedComplaints");
           } catch (e) {
             console.error("เกิดข้อผิดพลาดในการอ่านข้อมูลที่อัปเดต:", e);
           }
         }
 
-        // รวมข้อมูลทั้งสองแหล่งในรูปแบบตาราง
-        const combinedData = [...pendingData, ...transformNewAddData(newAddData)];
-        setFilteredComplaints(combinedData);
+        // แปลงข้อมูลให้ตรงกับรูปแบบตาราง
+        const transformedData = transformComplaintsData(complaintsData);
+        setFilteredComplaints(transformedData);
+
+        // Debug: แสดงรายชื่อหน่วยงานที่มีในข้อมูล
+        const uniqueDepartments = [...new Set(
+          complaintsData.map(item => item.outside_department_name).filter(Boolean)
+        )];
+        console.log('Outside Departments in Data:', uniqueDepartments);
+
+        // Debug: แสดงข้อมูลตัวอย่าง agency field
+        if (complaintsData.length > 0) {
+          console.log('Sample data agency mapping:', {
+            outside_department_name: complaintsData[0].outside_department_name,
+            department_name: complaintsData[0].department_name,
+            agency: complaintsData[0].outside_department_name || complaintsData[0].department_name || "-"
+          });
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
         setAllComplaints([]);
-        setAllNewAdditionalComplaints([]);
         setFilteredComplaints([]);
       } finally {
         setLoading(false);
@@ -110,36 +107,32 @@ const PendingWorkfollowupComponents = () => {
     // eslint-disable-next-line
   }, []);
 
-  // ฟังก์ชันแปลงข้อมูลจาก NewAdditionalComplaints ให้ตรงกับรูปแบบของ PendingTasks
-  const transformNewAddData = (newAddData) => {
-    return newAddData.map((item) => ({
-      id: `new_${item.id}`,
+  // ฟังก์ชันแปลงข้อมูลจาก PendingTasks API ให้ตรงกับรูปแบบตาราง
+  const transformComplaintsData = (complaintsData) => {
+    return complaintsData.map((item) => ({
+      id: item.id,
       assigned_officer_name: item.assigned_officer_name || "-",
-      receive_reference_number: item.complaint_number || "-",
-      assigned_date: item.received_date,
-      reference_number: item.complaint_number || "-",
-      director_submission_date: item.received_date,
-      subject: item.complaint_type || "-",
-      outside_department_name: item.department_name || "-",
+      receive_reference_number: item.receive_reference_number || "-",
+      assigned_date: item.assigned_date,
+      reference_number: item.reference_number || "-",
+      director_submission_date: item.director_submission_date,
+      subject: item.subject || "-",
+      outside_department_name: item.outside_department_name || "-",
       department_name: item.department_name || "-",
-      document_number: item.complaint_number || "-",
-      // แปลง filing_type เป็นสถานะ (ภาษาไทย) ถ้ามี, ถ้าไม่มี fallback เป็น status หรือ "-"
-      status: item.filing_type
-        ? FILING_TYPE_LABELS[item.filing_type] || item.filing_type
-        : (item.status || "-"),
-      days_in_progress: 0,
-      source: "new_additional",
+      document_number: item.document_number || "-",
+      status: STATUS_LABELS[item.status] || item.status || "-",
+      days_in_progress: item.days_in_progress || 0,
+      source: "pending_tasks",
       complainant_name: item.complainant_name || "-",
       filing_type: item.filing_type || "-",
-      remark: item.remark || ""
+      remark: item.assigned_remark || item.remark || ""
     }));
   };
 
-  // ตัวเลือกเจ้าหน้าที่ (จากข้อมูลทั้งสอง)
+  // ตัวเลือกเจ้าหน้าที่
   const OFFICER_OPTIONS = useMemo(() => {
-    const allData = [...allComplaints, ...allNewAdditionalComplaints];
     const uniqueOfficers = [
-      ...new Set(allData.map((item) => item.assigned_officer_name).filter(Boolean)),
+      ...new Set(allComplaints.map((item) => item.assigned_officer_name).filter(Boolean)),
     ];
     return uniqueOfficers
       .filter((officer) => officer && officer.trim() !== "" && officer !== "-")
@@ -148,17 +141,87 @@ const PendingWorkfollowupComponents = () => {
         value: officer,
         label: officer,
       }));
-  }, [allComplaints, allNewAdditionalComplaints]);
+  }, [allComplaints]);
+
+  // ฟังก์ชัน helper สำหรับการค้นหาหน่วยงาน
+  const matchDepartment = (item, searchTerm) => {
+    if (!searchTerm || searchTerm === "") return true;
+
+    const outsideDeptName = (item.outside_department_name || "").toLowerCase().trim();
+    const deptName = (item.department_name || "").toLowerCase().trim();
+    const searchTermLower = searchTerm.toLowerCase().trim();
+
+    // ลบช่องว่างและเครื่องหมายพิเศษออกเพื่อการค้นหาที่ยืดหยุ่น
+    const normalizeText = (text) => text.replace(/\s+/g, '').replace(/[^\u0E00-\u0E7Fa-zA-Z0-9]/g, '');
+    const normalizedOutsideDept = normalizeText(outsideDeptName);
+    const normalizedDept = normalizeText(deptName);
+    const normalizedSearch = normalizeText(searchTermLower);
+
+    // เพิ่มการค้นหาแบบ keywords
+    const searchKeywords = searchTermLower.split(/\s+/).filter(word => word.length > 0);
+    const outsideKeywords = outsideDeptName.split(/\s+/).filter(word => word.length > 0);
+    const deptKeywords = deptName.split(/\s+/).filter(word => word.length > 0);
+
+    // ตรวจสอบว่าทุก keyword ใน search มีอยู่ในชื่อหน่วยงาน
+    const matchesAllKeywords = (targetKeywords) => {
+      return searchKeywords.every(searchKeyword =>
+        targetKeywords.some(targetKeyword => targetKeyword.includes(searchKeyword))
+      );
+    };
+
+    const isMatch = outsideDeptName.includes(searchTermLower) ||
+           deptName.includes(searchTermLower) ||
+           normalizedOutsideDept.includes(normalizedSearch) ||
+           normalizedDept.includes(normalizedSearch) ||
+           outsideDeptName === searchTerm ||
+           deptName === searchTerm ||
+           matchesAllKeywords(outsideKeywords) ||
+           matchesAllKeywords(deptKeywords);
+
+    // Debug logging เพื่อตรวจสอบการค้นหา
+    if (searchTermLower.includes('ศูนย์') || searchTermLower.includes('ปฏิบัติการ')) {
+      console.log('Debug Department Match:', {
+        searchTerm,
+        outsideDeptName,
+        deptName,
+        isMatch,
+        item
+      });
+    }
+
+    return isMatch;
+  };
 
   // ฟังก์ชันจัดการการเลือกหน่วยงาน
   const handleDepartmentChange = (departmentData) => {
     const value = departmentData?.value || "";
+    const label = departmentData?.label || "";
     setSelectedDepartment(value);
+    setSelectedDepartmentLabel(label);
+
+    console.log('Department Change:', {
+      departmentData,
+      value,
+      label: label
+    });
 
     // ถ้าค่าว่าง ให้ clear ข้อมูลและรีเซ็ตการกรอง
     if (!value || value === "") {
-      const combinedData = [...allComplaints, ...transformNewAddData(allNewAdditionalComplaints)];
-      setFilteredComplaints(combinedData);
+      const transformedData = transformComplaintsData(allComplaints);
+      setFilteredComplaints(transformedData);
+      console.log('Reset filter - showing all data:', transformedData.length, 'items');
+    } else {
+      // กรองข้อมูลทันทีเมื่อเลือกหน่วยงาน
+      const transformedData = transformComplaintsData(allComplaints);
+      const filteredData = transformedData.filter((item) => matchDepartment(item, label));
+      setFilteredComplaints(filteredData);
+      console.log('Filtered data by department:', {
+        searchValue: value,
+        departmentLabel: label,
+        totalData: transformedData.length,
+        filteredResult: filteredData.length,
+        sampleAgencies: transformedData.slice(0, 3).map(item => item.agency)
+      });
     }
   };
 
@@ -166,7 +229,6 @@ const PendingWorkfollowupComponents = () => {
   const DATA_TYPE_OPTIONS = [
     { value: "new_complaint", label: "เรื่องร้องเรียนใหม่" },
     { value: "additional_complaint", label: "เรื่องร้องเรียนเพิ่มเติม" },
-    { value: "department_report", label: "หน่วยงานรายงานผล" },
     { value: "department_decision", label: "ผลการพิจารณาจากหน่วยงาน" },
   ];
 
@@ -179,9 +241,9 @@ const PendingWorkfollowupComponents = () => {
 
   // ฟิลเตอร์ข้อมูลจาก filterData
   const handleSearch = (filterData) => {
-    // รวมข้อมูลทั้งสองแหล่ง
-    const combinedData = [...allComplaints, ...transformNewAddData(allNewAdditionalComplaints)];
-    let result = [...combinedData];
+    // แปลงข้อมูลและใช้เป็นฐานการกรอง
+    const transformedData = transformComplaintsData(allComplaints);
+    let result = [...transformedData];
 
     // filter วันที่ (assigned_date หรือ received_date)
     if (filterData.receiveDateFrom) {
@@ -210,39 +272,30 @@ const PendingWorkfollowupComponents = () => {
       result = result.filter((item) => item.assigned_officer_name === filterData.officer);
     }
 
-    // filter หน่วยงาน
-    if (selectedDepartment && selectedDepartment !== "") {
-      result = result.filter((item) =>
-        (item.outside_department_name === selectedDepartment) ||
-        (item.department_name === selectedDepartment)
-      );
+    // filter หน่วยงาน (ใช้ฟังก์ชัน helper)
+    if (selectedDepartmentLabel && selectedDepartmentLabel !== "") {
+      result = result.filter((item) => matchDepartment(item, selectedDepartmentLabel));
     }
 
     // filter ประเภทเรื่อง
     if (filterData.dataType && filterData.dataType !== "") {
       if (filterData.dataType === "new_complaint") {
-        // เรื่องร้องเรียนใหม่ - จากข้อมูล NewAdditional ที่มี filing_type เป็น "new" หรือ "ใหม่"
+        // เรื่องร้องเรียนใหม่
         result = result.filter((item) =>
-          item.source === "new_additional" &&
-          (item.filing_type === "ใหม่" || item.filing_type === "new")
+          item.status === "submitted" || item.status === "ส่งคำร้อง" ||
+          item.status === "sent_to_agency" || item.status === "มอบหมายเจ้าหน้าที่"
         );
       } else if (filterData.dataType === "additional_complaint") {
-        // เรื่องร้องเรียนเพิ่มเติม - จากข้อมูล NewAdditional ที่มี filing_type เป็น "เพิ่มเติม" หรือ "additional"
+        // เรื่องร้องเรียนเพิ่มเติม
         result = result.filter((item) =>
-          item.source === "new_additional" &&
-          (item.filing_type === "เพิ่มเติม" || item.filing_type === "additional")
-        );
-      } else if (filterData.dataType === "department_report") {
-        // หน่วยงานรายงานผล - จากข้อมูล PendingTasks ที่มี status เกี่ยวกับการรายงาน
-        result = result.filter((item) =>
-          item.source !== "new_additional" &&
-          (item.status === "tracking" || item.status === "รอติดตาม")
+          item.status === "additional" || item.status === "เรื่องร้องเรียนเพิ่มเติม"
         );
       } else if (filterData.dataType === "department_decision") {
-        // ผลการพิจารณาจากหน่วยงาน - จากข้อมูล PendingTasks ที่มี status เกี่ยวกับการพิจารณา
+        // ผลการพิจารณาจากหน่วยงาน
         result = result.filter((item) =>
-          item.source !== "new_additional" &&
-          (item.status === "in_review" || item.status === "อยู่ระหว่างดำเนินการ")
+          item.status === "in_review" || item.status === "อยู่ระหว่างการพิจารณา" ||
+          item.status === "tracking" || item.status === "ติดตามผลการพิจารณา" ||
+          item.status === "reviewed" || item.status === "แจ้งผลการพิจารณา"
         );
       }
     }
@@ -270,35 +323,42 @@ const PendingWorkfollowupComponents = () => {
 
   // ฟังก์ชันสำหรับการแก้ไขหมายเหตุ
   const handleEditNote = (itemId, currentNote = "") => {
-    setEditingNote(itemId);
-    setNoteValue(currentNote);
+    setCurrentNoteRow(itemId);
+    setNewNoteText(currentNote);
     setModalOpen(true);
   };
 
-  // ฟังก์ชันสำหรับบันทึกหมายเหตุ
+  // ฟังก์ชันสำหรับบันทึกหมายเหตุ (ปรับปรุงใหม่)
   const handleSaveNote = async () => {
-    if (editingNote && noteValue.trim()) {
-      const trimmedNote = noteValue.trim();
-      const originalId = editingNote.replace('new_', '');
-
+    if (newNoteText.trim() && currentNoteRow) {
+      const trimmedNote = newNoteText.trim();
       try {
         // เรียก API เพื่อบันทึกลงฐานข้อมูล
-        await UpdateAssignedRemark(originalId, trimmedNote);
+        const result = await UpdateAssignedRemark(currentNoteRow, trimmedNote);
+
+        console.log('API Response:', result); // เพื่อ debug
+
+        // ใช้หมายเหตุจาก API response ถ้ามี ไม่งั้นใช้ค่าที่ส่งไป
+        const updatedRemark = result?.res_data?.assigned_remark || trimmedNote;
 
         // อัปเดตหมายเหตุในข้อมูลท้องถิ่น
-        const updatedNewAddData = allNewAdditionalComplaints.map(item => {
-          if (item.id == originalId) {
-            return { ...item, remark: trimmedNote };
+        const updatedComplaints = allComplaints.map(item => {
+          if (item.id === currentNoteRow) {
+            return {
+              ...item,
+              remark: updatedRemark,
+              assigned_remark: updatedRemark
+            };
           }
           return item;
         });
 
-        setAllNewAdditionalComplaints(updatedNewAddData);
+        setAllComplaints(updatedComplaints);
 
         // อัปเดตในตาราง
         const updatedFiltered = filteredComplaints.map(item => {
-          if (item.id === editingNote) {
-            return { ...item, remark: trimmedNote };
+          if (item.id === currentNoteRow) {
+            return { ...item, remark: updatedRemark };
           }
           return item;
         });
@@ -306,22 +366,70 @@ const PendingWorkfollowupComponents = () => {
         setFilteredComplaints(updatedFiltered);
         setNoteChangesMade(true);
 
-        // รีเซ็ตการแก้ไข
-        setEditingNote(null);
-        setNoteValue("");
-        setModalOpen(false);
+        // แสดงข้อความสำเร็จพร้อมข้อมูลจาก API
+        let successMessage = "บันทึกหมายเหตุเรียบร้อยแล้ว";
+
+        if (result?.res_data?.message) {
+          successMessage = result.res_data.message;
+        }
+
+        // เพิ่มข้อมูลการเปลี่ยนแปลงถ้ามี
+        if (result?.res_data?.changes && Array.isArray(result.res_data.changes)) {
+          const changes = result.res_data.changes.join('\n');
+          successMessage += `\n\nการเปลี่ยนแปลง:\n${changes}`;
+        }
+
+        alert(successMessage);
+
+        // รีเฟรชข้อมูลจาก API เพื่อให้แน่ใจว่าข้อมูลล่าสุด
+        setTimeout(async () => {
+          try {
+            const response = await getPendingTasksReport();
+            const complaintsData = response || [];
+
+            // แปลงข้อมูล pendingData ให้มี remark จาก assigned_remark
+            const transformedPendingData = complaintsData.map(item => ({
+              ...item,
+              remark: item.assigned_remark || item.remark || ""
+            }));
+
+            setAllComplaints(transformedPendingData);
+
+            // อัปเดตตาราง
+            const transformedData = transformComplaintsData(transformedPendingData);
+            setFilteredComplaints(transformedData);
+          } catch (refreshError) {
+            console.error('Error refreshing data:', refreshError);
+          }
+        }, 1000); // รอ 1 วินาทีเพื่อให้ server อัปเดตข้อมูลเสร็จ
+
       } catch (error) {
         console.error('Error saving note:', error);
-        alert("เกิดข้อผิดพลาดในการบันทึกหมายเหตุ กรุณาลองใหม่");
+
+        // แสดงข้อความ error ที่ชัดเจนขึ้น
+        let errorMessage = "เกิดข้อผิดพลาดในการบันทึกหมายเหตุ";
+
+        if (error.response?.data?.res_message) {
+          errorMessage = `เกิดข้อผิดพลาด: ${error.response.data.res_message}`;
+        } else if (error.message) {
+          errorMessage = `เกิดข้อผิดพลาด: ${error.message}`;
+        }
+
+        alert(errorMessage);
       }
+
+      // รีเซ็ตการแก้ไข
+      setModalOpen(false);
+      setCurrentNoteRow(null);
+      setNewNoteText("");
     }
   };
 
   // ฟังก์ชันยกเลิกการแก้ไข
   const handleCancelEdit = () => {
-    setEditingNote(null);
-    setNoteValue("");
     setModalOpen(false);
+    setCurrentNoteRow(null);
+    setNewNoteText("");
   };
 
   // บันทึกการเปลี่ยนแปลงทั้งหมด
@@ -335,8 +443,8 @@ const PendingWorkfollowupComponents = () => {
     setSelectedDepartment("");
     // Force re-render of department field
     setTimeout(() => {
-      const combinedData = [...allComplaints, ...transformNewAddData(allNewAdditionalComplaints)];
-      setFilteredComplaints(combinedData);
+      const transformedData = transformComplaintsData(allComplaints);
+      setFilteredComplaints(transformedData);
     }, 0);
   };
 
@@ -378,11 +486,11 @@ const PendingWorkfollowupComponents = () => {
       remark: item.remark || "",
       isSelected: selectedItems.includes(item.id),
       // สำหรับการแก้ไขหมายเหตุ
-      isEditingNote: editingNote === item.id,
-      noteValue: editingNote === item.id ? noteValue : (item.remark || ""),
-      canEditNote: item.source === "new_additional", // แก้ไขได้เฉพาะข้อมูลจาก NewAdditional API
+      isEditingNote: currentNoteRow === item.id,
+      noteValue: currentNoteRow === item.id ? newNoteText : (item.remark || ""),
+      canEditNote: true, // สามารถแก้ไขหมายเหตุได้ทุกแถว
     }));
-  }, [filteredComplaints, selectedItems, editingNote, noteValue]);
+  }, [filteredComplaints, selectedItems, currentNoteRow, newNoteText]);
 
   return (
     <>
@@ -443,10 +551,10 @@ const PendingWorkfollowupComponents = () => {
         onEditNote={handleEditNote}
         onSaveNote={handleSaveNote}
         onCancelEdit={handleCancelEdit}
-        editingNote={editingNote}
-        noteValue={noteValue}
-        setNoteValue={setNoteValue}
-        actionButtonLabel="สรุปตามประเภทเรื่อง"
+        editingNote={currentNoteRow}
+        noteValue={newNoteText}
+        setNoteValue={setNewNoteText}
+        // actionButtonLabel="สรุปตามประเภทเรื่อง"
         onActionClick={handleSummaryByIssueType}
         onClearSearch={handleClearSearch}
         filterFields={[
@@ -481,7 +589,7 @@ const PendingWorkfollowupComponents = () => {
             label: "หน่วยงาน",
             type: "department",
             component: (
-              <SelectFieldDepartment
+              <SelectFieldDepartmentoutside
                 key={`department-${selectedDepartment || 'empty'}`} // บังคับ re-render เมื่อค่าเปลี่ยน
                 label="หน่วยงาน"
                 value={selectedDepartment}
@@ -514,15 +622,15 @@ const PendingWorkfollowupComponents = () => {
           }}
         >
           <Typography variant="h6" mb={2} color="#1120A3">
-            แก้ไขหมายเหตุ
+            เพิ่ม/แก้ไขหมายเหตุ
           </Typography>
           <TextField
             fullWidth
             multiline
             rows={4}
-            label="หมายเหตุ"
-            value={noteValue}
-            onChange={(e) => setNoteValue(e.target.value)}
+            label="หมายเหตุใหม่"
+            value={newNoteText}
+            onChange={(e) => setNewNoteText(e.target.value)}
             placeholder="กรุณาใส่หมายเหตุที่ต้องการ..."
             sx={{
               "& .MuiOutlinedInput-root": {
@@ -538,7 +646,7 @@ const PendingWorkfollowupComponents = () => {
               },
             }}
             onKeyDown={async (e) => {
-              if (e.key === "Enter" && !e.shiftKey && noteValue.trim()) {
+              if (e.key === "Enter" && !e.shiftKey && newNoteText.trim()) {
                 e.preventDefault();
                 await handleSaveNote();
               }
@@ -560,7 +668,7 @@ const PendingWorkfollowupComponents = () => {
             <Button
               variant="contained"
               onClick={handleSaveNote}
-              disabled={!noteValue.trim()}
+              disabled={!newNoteText.trim()}
               sx={{
                 bgcolor: "#1120A3",
                 "&:hover": { bgcolor: "#0b1580" },

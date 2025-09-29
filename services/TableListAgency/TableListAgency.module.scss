@@ -50,10 +50,24 @@
   background-color: white;
   border-radius: 0 0 16px 16px;
   box-shadow: none;
-  overflow: hidden;
+
+  // Always allow horizontal scroll if too wide
+  overflow-x: auto;
+  width: 100%;
+
+  // Remove vertical scroll to avoid double scrollbars
+  overflow-y: visible;
+
+  // Make sure inner table fits container by default, but can overflow-x
+  table {
+    min-width: 900px;
+    width: max-content;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
 
   @media (max-width: 1200px) {
-    overflow-x: auto;
+    // (already covered by always-on overflow-x)
   }
 }
 

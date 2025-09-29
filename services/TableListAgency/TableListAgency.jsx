@@ -1,4 +1,3 @@
-// services/TableListAgency/TableListAgency.jsx
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
@@ -17,26 +16,25 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
-import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import styles from "./TableListAgency.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
-
-// ⬇️ API ที่มีอยู่ในโปรเจกต์เดิม (ใช้ดึง options)
-// - ถ้าในโปรเจกต์คุณ path ต่างกัน ปรับ import ให้ตรงได้เลย
 import {
   GetDepartments,
   GetMyRelatedComplaints,
 } from "@pages/api/complaint/complaint";
+
+const HEADER_COLOR = "#1120A3";
 
 const TableListAgency = ({
   data = [],
   title = "",
   navigateTo = "",
   onSearch = () => {},
+  statusOptions = [],
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
@@ -44,7 +42,6 @@ const TableListAgency = ({
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
   const isSm = useMediaQuery(theme.breakpoints.down("md"));
-  const isBelow1200 = useMediaQuery("(max-width:1200px)");
 
   // -------------------- ฟิลเตอร์ 5 ช่อง --------------------
   const [filters, setFilters] = useState({
@@ -63,15 +60,7 @@ const TableListAgency = ({
   // options ดรอปดาวน์
   const [agencyOptions, setAgencyOptions] = useState([]);
   const [officerOptions, setOfficerOptions] = useState([]);
-  const [statusOptions, setStatusOptions] = useState([
-    { value: "ทราบ", label: "ทราบ" },
-    { value: "ทราบไว้ชั้นหนึ่ง", label: "ทราบไว้ชั้นหนึ่ง" },
-    { value: "ยุติเรื่องได้", label: "ยุติเรื่องได้" },
-    { value: "เห็นชอบ", label: "เห็นชอบ" },
-    { value: "อยุ่ระหว่างดำเนินการ", label: "อยุ่ระหว่างดำเนินการ" },
-  ]);
 
-  // โหลด options จาก API (มี fallback จาก data)
   useEffect(() => {
     (async () => {
       try {
@@ -85,7 +74,6 @@ const TableListAgency = ({
             }))
             .filter((x) => x.label);
         } else {
-          // fallback จากข้อมูลบนตาราง
           const uniq = [
             ...new Set(data.map((d) => d.agency).filter(Boolean)),
           ].sort();
@@ -102,7 +90,6 @@ const TableListAgency = ({
   useEffect(() => {
     (async () => {
       try {
-        // ดึงรายชื่อจาก API เรื่องร้องเรียนของฉัน แล้วรวบรวมชื่อผู้รับผิดชอบ
         const res = await GetMyRelatedComplaints({ skip: 0, limit: 200 }).catch(
           () => null
         );
@@ -116,7 +103,6 @@ const TableListAgency = ({
             ),
           ].sort();
         } else {
-          // fallback จากข้อมูลบนตาราง
           names = [
             ...new Set(
               data.map((d) => d.responsibleOfficer).filter((x) => x && x !== "-")
@@ -165,21 +151,16 @@ const TableListAgency = ({
     navigateTo && router.push(`${navigateTo}/${item.id}`);
 
   const columns = [
-    { name: "claimantName", label: "ชื่อผู้ร้อง", width: 180 },
-    { name: "receiptNumber", label: "เลขรับ สรร.", width: 150 },
-    { name: "receiveDate", label: "ลงวันที่", width: 150 },
-    // { name: "agency", label: "หน่วยงาน/ชื่อ-สกุล (ผู้ร้อง)", width: 220 },
-    { name: "agency", label: "หน่วยงาน", width: 220 },
-    { name: "issue", label: "ชื่อเรื่อง", width: 200 },
-    { name: "issueType", label: "ประเภทเรื่อง", width: 180 },
-    { name: "note", label: "หนังสือส่งหน่วยงาน/ติดตามผล", width: 200 },
-    {
-      name: "responsibleOfficer",
-      label: "เจ้าหน้าที่ผู้รับผิดชอบ",
-      width: 200,
-    },
-    { name: "status", label: "สถานะเรื่อง", width: 160 },
-    { name: "workingDays", label: "ดำเนินการภายใน (วัน)", width: 160 },
+    { name: "claimantName", label: "ชื่อผู้ร้อง", width: 140 },
+    { name: "receiptNumber", label: "เลขรับ สรร.", width: 120 },
+    { name: "receiveDate", label: "ลงวันที่", width: 120 },
+    { name: "agency", label: "หน่วยงาน", width: 150 },
+    { name: "issue", label: "ชื่อเรื่อง", width: 180 },
+    { name: "issueType", label: "ประเภทเรื่อง", width: 120 },
+    { name: "note", label: "หนังสือส่งหน่วยงาน/ติดตามผล", width: 180 },
+    { name: "responsibleOfficer", label: "เจ้าหน้าที่ผู้รับผิดชอบ", width: 150 },
+    { name: "status", label: "สถานะเรื่อง", width: 140 },
+    { name: "workingDays", label: "ดำเนินการภายใน (วัน)", width: 100 },
   ];
 
   // --- Excel Export Handler ---
@@ -192,7 +173,6 @@ const TableListAgency = ({
     const filename = `รายงานสรุปเรื่องร้องเรียนของหน่วยงาน_${today}.xlsx`;
     const exportLabel = `วันที่ export: ${today}`;
 
-    // เตรียมข้อมูล (คงเดิม)
     const rows = data.map((item, idx) => {
       const rowObj = { ลำดับ: idx + 1 };
       columns.forEach((col) => {
@@ -206,41 +186,6 @@ const TableListAgency = ({
 
   return (
     <>
-      {/* Global CSS ของ DatePicker (คงเดิม) */}
-      <style jsx global>{`
-        .popupOverlay {
-          position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          bottom: 0 !important;
-          z-index: 9999 !important;
-          pointer-events: none !important;
-          display: flex !important;
-          align-items: flex-start !important;
-          justify-content: center !important;
-          padding-top: 100px !important;
-        }
-        .popupCalendar {
-          position: relative !important;
-          background-color: #fff !important;
-          border: 1px solid #e0e0e0 !important;
-          border-radius: 8px !important;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
-          width: 320px !important;
-          max-width: 90vw !important;
-          overflow: hidden !important;
-          z-index: 10000 !important;
-          pointer-events: auto !important;
-        }
-        @media (max-width: 600px) {
-          .popupCalendar {
-            width: 300px !important;
-            max-width: 95vw !important;
-          }
-        }
-      `}</style>
-
       <Container
         maxWidth={false}
         disableGutters
@@ -261,9 +206,14 @@ const TableListAgency = ({
               display="flex"
               alignItems="center"
               justifyContent="center"
-              sx={{ fontSize: { xs: 16, sm: 18 }, height: { xs: 40, sm: 50 }, px: { xs: 2, sm: 3 } }}
+              sx={{
+                fontSize: { xs: 16, sm: 18 },
+                height: { xs: 40, sm: 50 },
+                px: { xs: 2, sm: 3 },
+                color: HEADER_COLOR,
+              }}
             >
-              <Box sx={{ fontWeight: "bold", textAlign: "center" }}>{title}</Box>
+              <Box sx={{ fontWeight: "bold", textAlign: "center", color: HEADER_COLOR }}>{title}</Box>
             </Box>
             <Box
               sx={{
@@ -291,8 +241,15 @@ const TableListAgency = ({
             </Box>
           </>
         ) : (
-          <Box mt={2} className={styles.headerBar2} display="flex" alignItems="center" justifyContent="space-between" sx={{ fontSize: 18, height: 50, px: 3 }}>
-            <Box sx={{ fontWeight: "bold" }}>{title}</Box>
+          <Box
+            mt={2}
+            className={styles.headerBar2}
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ fontSize: 18, height: 50, px: 3, color: HEADER_COLOR }}
+          >
+            <Box sx={{ fontWeight: "bold", color: HEADER_COLOR }}>{title}</Box>
             <Box display="flex" alignItems="center" gap={1}>
               <ExportButton label="Export PDF" onClick={() => exportElementToPDF(pdfRef, "รายงานสรุปเรื่องร้องเรียนของหน่วยงาน.pdf")} size="medium" />
               <ExportButton label="Export Excel" onClick={handleExportExcel} size="medium" />
@@ -338,20 +295,12 @@ const TableListAgency = ({
               size="small"
             />
             <SelectField
-              // label="หน่วยงาน/ชื่อ-สกุล (ผู้ร้อง)"
               label="หน่วยงาน"
               value={filters.agency}
               onChange={handleChange("agency")}
               options={agencyOptions}
               size="small"
             />
-            {/* <SelectField
-              label="เจ้าหน้าที่ผู้รับผิดชอบ"
-              value={filters.responsibleOfficer}
-              onChange={handleChange("responsibleOfficer")}
-              options={officerOptions}
-              size="small"
-            /> */}
             <SelectField
               label="สถานะเรื่อง"
               value={filters.status}
@@ -387,24 +336,41 @@ const TableListAgency = ({
             className={styles.tableWrapper}
             id="table-results"
             sx={{
-              overflowX: isBelow1200 ? "auto" : "visible",
-              px: { xs: 1, sm: 2 },
+              overflowX: "auto",
+              width: "100%",
+              minHeight: "220px",
+              px: 1,
               pb: 1,
-              position: "relative",
-              zIndex: 0,
-              "&::-webkit-scrollbar": { height: "8px" },
-              "&::-webkit-scrollbar-track": { backgroundColor: "#f1f1f1", borderRadius: "4px" },
-              "&::-webkit-scrollbar-thumb": { backgroundColor: "#888", borderRadius: "4px", "&:hover": { backgroundColor: "#555" } },
             }}
           >
-            <Table ref={excelRef} sx={{ minWidth: isBelow1200 ? 1400 : "100%" }}>
+            <Table ref={excelRef} sx={{ minWidth: 1200, width: "max-content" }}>
               <TableHead>
                 <TableRow>
-                  <TableCell align="center" sx={{ width: { xs: 60, sm: 80 }, fontSize: { xs: 12, sm: 14 } }}>
+                  <TableCell
+                    align="center"
+                    sx={{
+                      width: { xs: 60, sm: 80 },
+                      fontSize: { xs: 12, sm: 14 },
+                      background: "#f5f7ff",
+                      color: HEADER_COLOR,
+                      fontWeight: 700,
+                      borderBottom: "2px solid #e0e0e0",
+                    }}
+                  >
                     ลำดับ
                   </TableCell>
                   {columns.map((col) => (
-                    <TableCell key={col.name} sx={{ width: col.width, fontSize: { xs: 12, sm: 14 }, fontWeight: 600, color: "#1120a3" }}>
+                    <TableCell
+                      key={col.name}
+                      sx={{
+                        width: col.width,
+                        fontSize: { xs: 12, sm: 14 },
+                        fontWeight: 700,
+                        color: HEADER_COLOR,
+                        background: "#f5f7ff",
+                        borderBottom: "2px solid #e0e0e0",
+                      }}
+                    >
                       {col.label}
                     </TableCell>
                   ))}
@@ -417,7 +383,15 @@ const TableListAgency = ({
                     onClick={() => handleRowClick(item)}
                     sx={{ cursor: "pointer", "&:hover": { backgroundColor: "#f5f7ff" } }}
                   >
-                    <TableCell align="center" sx={{ width: { xs: 60, sm: 80 }, fontWeight: 600, color: "#1120A3", fontSize: { xs: 12, sm: 14 } }}>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        width: { xs: 60, sm: 80 },
+                        fontWeight: 600,
+                        color: HEADER_COLOR,
+                        fontSize: { xs: 12, sm: 14 },
+                      }}
+                    >
                       {page * rowsPerPage + idx + 1}
                     </TableCell>
                     {columns.map((col) => (
@@ -426,7 +400,7 @@ const TableListAgency = ({
                         sx={{
                           width: col.width,
                           fontSize: { xs: 12, sm: 14 },
-                          maxWidth: { xs: 120, sm: col.width },
+                          maxWidth: col.width,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
