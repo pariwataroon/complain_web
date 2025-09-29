@@ -32,7 +32,8 @@ const Opm1111Components = () => {
           showLoading("กำลังโหลดข้อมูล...");
 
           await new Promise(resolve => setTimeout(resolve, 500));
-          await fetchTimelineHeader(rowsPerPage, timelineType);
+          // เปลี่ยนจาก rowsPerPage เป็นค่าคงที่ที่ใหญ่พอ เช่น 1000
+          await fetchTimelineHeader(1000, timelineType);
 
           closeAlert();
           setIsDataLoaded(true);
@@ -61,8 +62,7 @@ const Opm1111Components = () => {
     try {
       const timelineData = await GetTimelineHeader(take, timeline_type);
       const parsedData = Array.isArray(timelineData) ? timelineData : timelineData;
-      // console.log({ parsedData });
-      
+
       const mappedComplaints = parsedData.map((item) => ({
         case_id: item.case_id,
         case_code: item.case_code,
@@ -108,13 +108,15 @@ const Opm1111Components = () => {
     }
   };
 
+  // แก้ไข useEffect สำหรับ dependency - ลบ rowsPerPage ออก
   useEffect(() => {
     if (isDataLoaded && result && result !== "Error occurred while fetching token.") {
       showLoading("กำลังโหลดข้อมูล...");
 
       const fetchData = async () => {
         try {
-          await fetchTimelineHeader(rowsPerPage, timelineType);
+          // ใช้ 1000 แทนที่จะใช้ rowsPerPage เพื่อให้ได้ข้อมูลครบ
+          await fetchTimelineHeader(1000, timelineType);
         } finally {
           closeAlert();
         }
@@ -122,7 +124,7 @@ const Opm1111Components = () => {
 
       fetchData();
     }
-  }, [rowsPerPage, timelineType, isDataLoaded, result]); // เพิ่ม timelineType เป็น dependency
+  }, [timelineType, isDataLoaded, result]); // ลบ rowsPerPage ออกจาก dependency
 
   const handleSearch = (searchQuery) => {
     const filtered = complaints.filter((complaint) =>
@@ -139,7 +141,8 @@ const Opm1111Components = () => {
     setIsDataLoaded(false);
     showLoading("กำลังรีเฟรชข้อมูลและตรวจสอบสถานะ reopen...");
     try {
-      await fetchTimelineHeader(rowsPerPage, timelineType);
+      // ใช้ 1000 แทนที่จะใช้ rowsPerPage
+      await fetchTimelineHeader(1000, timelineType);
       alertSuccess("รีเฟรชข้อมูลเรียบร้อย", "ข้อมูลได้รับการอัปเดตล่าสุดแล้ว รวมถึงการตรวจสอบสถานะ reopen");
     } catch (error) {
       alertError("เกิดข้อผิดพลาด", "ไม่สามารถรีเฟรชข้อมูลได้");
@@ -152,6 +155,12 @@ const Opm1111Components = () => {
   // ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลง timeline type
   const handleTimelineTypeChange = (newTimelineType) => {
     setTimelineType(newTimelineType);
+  };
+
+  // แก้ไข onRowsPerPageChange - ไม่ต้องเรียก API ใหม่
+  const handleRowsPerPageChange = (newRowsPerPage) => {
+    setRowsPerPage(newRowsPerPage);
+    // ไม่ต้องเรียก fetchTimelineHeader ใหม่ เพราะ pagination จะจัดการเองใน TableListOPM
   };
 
   if (!isDataLoaded) {
@@ -241,9 +250,9 @@ const Opm1111Components = () => {
         navigateTo="/admin/edit/opm1111"
         onSearch={handleSearch}
         handleNavigateTo={handleNavigateTo}
-        onRowsPerPageChange={(newRowsPerPage) => setRowsPerPage(newRowsPerPage)}
-        onTimelineTypeChange={handleTimelineTypeChange} // เพิ่ม prop สำหรับ timeline type
-        currentTimelineType={timelineType} // ส่งค่า current timeline type
+        onRowsPerPageChange={handleRowsPerPageChange} // ใช้ function ใหม่
+        onTimelineTypeChange={handleTimelineTypeChange}
+        currentTimelineType={timelineType}
         showReopenIndicator={true}
       />
     </>

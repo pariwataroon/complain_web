@@ -21,11 +21,6 @@ import {
   CardContent,
   Divider,
   Chip,
-  Badge,
-  Tooltip,
-  Alert,
-  AlertTitle,
-  Snackbar,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
@@ -33,18 +28,13 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
-import RestartAltIcon from "@mui/icons-material/RestartAlt";
-import WarningIcon from "@mui/icons-material/Warning";
-import NotificationImportantIcon from "@mui/icons-material/NotificationImportant";
-import BusinessIcon from "@mui/icons-material/Business";
-import { green, grey, orange, blue } from "@mui/material/colors";
+import { green, grey } from "@mui/material/colors";
 
 import styles from "./TableListOPM.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonSent from "@services/ButtonSent/ButtonSent";
-import { GetOperatingsSelect } from "@pages/api/opm/opm";
 import { formatThaiShortDateTime } from "@utils/Formats";
 
 const statusReadOptions = [
@@ -75,78 +65,6 @@ const columns = [
   { name: "isRead", label: "สถานะการคลัง", width: 80, priority: 2 },
 ];
 
-// ฟังก์ชันตรวจสอบการมีข้อมูลจากสำนักงานปลัดสำนักนายกรัฐมนตรี
-const checkPMOfficeSubmission = (operatingsDetails) => {
-  if (!operatingsDetails || operatingsDetails.length === 0) {
-    return {
-      hasPMOfficeSubmission: false,
-      submissionCount: 0,
-      lastSubmissionDate: null,
-      submissions: [],
-    };
-  }
-
-  // คำสำคัญสำหรับตรวจสอบหน่วยงาน
-  const PM_OFFICE_KEYWORDS = [
-    "สำนักงานปลัดสำนักนายกรัฐมนตรี",
-    "สปน",
-    "สำนักนายกรัฐมนตรี",
-    "ปลัดสำนักนายกรัฐมนตรี",
-    "Prime Minister Office",
-    "PMO",
-  ];
-
-  const submissions = [];
-
-  operatingsDetails.forEach((operation) => {
-    const {
-      org_text,
-      detail,
-      operating_type_text,
-      operating_date,
-      officer_text,
-      created_by_text,
-    } = operation;
-
-    // ตรวจสอบใน org_text, detail, operating_type_text, officer_text, created_by_text
-    const textToCheck = [
-      org_text,
-      detail,
-      operating_type_text,
-      officer_text,
-      created_by_text,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    const isPMOfficeSubmission = PM_OFFICE_KEYWORDS.some((keyword) =>
-      textToCheck.includes(keyword.toLowerCase())
-    );
-
-    if (isPMOfficeSubmission) {
-      submissions.push({
-        date: operating_date,
-        org: org_text,
-        detail: detail,
-        type: operating_type_text,
-        officer: officer_text || created_by_text,
-        operation: operation,
-      });
-    }
-  });
-
-  // เรียงตามวันที่
-  submissions.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  return {
-    hasPMOfficeSubmission: submissions.length > 0,
-    submissionCount: submissions.length,
-    lastSubmissionDate: submissions.length > 0 ? submissions[0].date : null,
-    submissions: submissions,
-  };
-};
-
 const getVisibleColumns = (columns) => {
   if (typeof window !== "undefined") {
     const theme = useTheme();
@@ -167,10 +85,9 @@ const TableListOPM = ({
   title = "",
   navigateTo = "",
   filterFields = [],
-  onRowsPerPageChange = () => {},
-  onTimelineTypeChange = () => {}, // เพิ่ม prop สำหรับ timeline type change
+  onRowsPerPageChange = () => { },
+  onTimelineTypeChange = () => { }, // เพิ่ม prop สำหรับ timeline type change
   currentTimelineType = "I", // เพิ่ม prop สำหรับ current timeline type
-  showPMOfficeIndicator = true,
 }) => {
   const router = useRouter();
   const theme = useTheme();
@@ -199,179 +116,57 @@ const TableListOPM = ({
   const [filters, setFilters] = useState(initialFilters);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [filteredData, setFilteredData] = useState(data || []);
+  const [sortedData, setSortedData] = useState([]); // เก็บข้อมูลที่จัดเรียงแล้ว
   const [loading, setLoading] = useState(true);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [pmOfficeStatusMap, setPMOfficeStatusMap] = useState(new Map());
-  const [isCheckingPMOffice, setIsCheckingPMOffice] = useState(false);
-  const [pmOfficeNotification, setPMOfficeNotification] = useState(null);
-  const [showPMOfficeAlert, setShowPMOfficeAlert] = useState(false);
-  const [hasShownPMOfficeAlert, setHasShownPMOfficeAlert] = useState(false);
 
-  // ตรวจสอบการมีข้อมูลจาก PM Office สำหรับข้อมูลที่โหลดมา
-  useEffect(() => {
-    const checkPMOfficeForAllCases = async () => {
-      if (!showPMOfficeIndicator || !data.length) return;
-
-      setIsCheckingPMOffice(true);
-      const pmOfficeMap = new Map();
-      let pmOfficeCases = [];
-
-      try {
-        // ตรวจสอบ PM Office submissions สำหรับแต่ละเคส
-        const promises = data.map(async (item) => {
-          try {
-            const operatingsDetails = await GetOperatingsSelect(item.case_id);
-            const pmOfficeStatus = checkPMOfficeSubmission(operatingsDetails);
-            pmOfficeMap.set(item.case_id, pmOfficeStatus);
-
-            if (pmOfficeStatus.hasPMOfficeSubmission) {
-              pmOfficeCases.push({
-                ...item,
-                ...pmOfficeStatus,
-              });
-            }
-
-            return { case_id: item.case_id, ...pmOfficeStatus };
-          } catch (error) {
-            console.error(
-              `Error checking PM Office submission for case ${item.case_id}:`,
-              error
-            );
-            pmOfficeMap.set(item.case_id, {
-              hasPMOfficeSubmission: false,
-              submissionCount: 0,
-              submissions: [],
-            });
-            return null;
-          }
-        });
-
-        await Promise.all(promises);
-        setPMOfficeStatusMap(pmOfficeMap);
-
-        // แสดง notification ถ้ามีเคสที่มีข้อมูลจาก PM Office (เฉพาะครั้งแรก)
-        if (pmOfficeCases.length > 0 && !hasShownPMOfficeAlert) {
-          const totalSubmissions = pmOfficeCases.reduce(
-            (sum, c) => sum + c.submissionCount,
-            0
-          );
-          setPMOfficeNotification({
-            count: pmOfficeCases.length,
-            totalSubmissions,
-            cases: pmOfficeCases,
-          });
-          setShowPMOfficeAlert(true);
-          setHasShownPMOfficeAlert(true);
-        }
-      } catch (error) {
-        console.error("Error checking PM Office submissions:", error);
-      } finally {
-        setIsCheckingPMOffice(false);
-      }
-    };
-
-    checkPMOfficeForAllCases();
-  }, [data, showPMOfficeIndicator]);
-
+  // จัดเรียงข้อมูลเมื่อ data เปลี่ยน
   useEffect(() => {
     const timer = setTimeout(() => {
-      // เพิ่ม PM Office status เข้าไปในข้อมูล
-      const dataWithPMOfficeStatus = (data || []).map((item) => {
-        const pmOfficeStatus = pmOfficeStatusMap.get(item.case_id) || {
-          hasPMOfficeSubmission: false,
-          submissionCount: 0,
-        };
-        return {
-          ...item,
-          ...pmOfficeStatus,
-          statusPriority: calculateStatusPriority(
-            item.status_text,
-            pmOfficeStatus
-          ),
-        };
-      });
+      const sorted = (data || []).sort((a, b) => {
+        const priorityA = calculateStatusPriority(a.status_text);
+        const priorityB = calculateStatusPriority(b.status_text);
 
-      // เรียงลำดับให้เคสที่มีข้อมูลจาก PM Office ขึ้นด้านบน
-      const sortedData = dataWithPMOfficeStatus.sort((a, b) => {
-        if (b.statusPriority !== a.statusPriority) {
-          return b.statusPriority - a.statusPriority;
+        if (priorityB !== priorityA) {
+          return priorityB - priorityA;
         }
+
         // ถ้า priority เท่ากัน เรียงตามวันที่
-        const dateA = new Date(a.lastSubmissionDate || a.ShowDateTime);
-        const dateB = new Date(b.lastSubmissionDate || b.ShowDateTime);
+        const dateA = new Date(a.ShowDateTime);
+        const dateB = new Date(b.ShowDateTime);
         return dateB - dateA;
       });
 
-      setFilteredData(sortedData);
+      setSortedData(sorted);
       setLoading(false);
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [data, pmOfficeStatusMap]);
+  }, [data]);
 
-  const calculateStatusPriority = (statusText, pmOfficeStatus) => {
-    let priority = 0;
-
+  const calculateStatusPriority = (statusText) => {
     switch (statusText) {
       case "อยู่ระหว่างดำเนินการ":
-        priority = 10;
-        break;
+        return 10;
       case "รับเรื่อง":
       case "รับทราบไว้ชั้นต้น":
-        priority = 8;
-        break;
+        return 8;
       case "รอผลการพิจารณาของหน่วยงานอื่น":
-        priority = 6;
-        break;
+        return 6;
       case "เสร็จสิ้น":
-        priority = 4;
-        break;
+        return 4;
       case "ยุติเรื่อง":
       case "ไม่อยู่ในอำนาจหน้าที่":
-        priority = 2;
-        break;
+        return 2;
       default:
-        priority = 1;
+        return 1;
     }
-
-    // เพิ่ม priority สำหรับเคสที่มีข้อมูลจาก PM Office
-    if (pmOfficeStatus.hasPMOfficeSubmission) {
-      priority += 30;
-      priority += pmOfficeStatus.submissionCount;
-    }
-
-    return priority;
   };
 
-  const pagedData = useMemo(
-    () =>
-      filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [filteredData, page, rowsPerPage]
-  );
-
-  const handleChangeFilter = (field) => (event) => {
-    const value = event?.target?.value || "";
-    setFilters((prevFilters) => ({ ...prevFilters, [field]: value }));
-  };
-
-  // ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลง timeline type
-  const handleTimelineTypeChange = (event) => {
-    const value = event?.target?.value || "I";
-    onTimelineTypeChange(value);
-  };
-
-  const handlePageChange = (_, newPage) => setPage(newPage);
-  const handleRowsPerPageChange = (event) => {
-    const newRowsPerPage = parseInt(event.target.value, 10) || 10;
-    setRowsPerPage(newRowsPerPage);
-    setPage(0);
-    onRowsPerPageChange(newRowsPerPage);
-  };
-
-  const handleSearchClick = () => {
-    const newFilteredData = filteredData.filter((item) => {
+  // กรองข้อมูลโดยใช้ useMemo
+  const filteredData = useMemo(() => {
+    return sortedData.filter((item) => {
       return Object.keys(filters).every((key) => {
         if (!filters[key]) return true;
         if (key === "isRead") {
@@ -384,15 +179,60 @@ const TableListOPM = ({
         return itemValue.includes(filterValue);
       });
     });
+  }, [sortedData, filters]);
 
-    setFilteredData(newFilteredData);
+  // คำนวณข้อมูลสำหรับหน้าปัจจุบัน
+  const pagedData = useMemo(() => {
+    const startIndex = page * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const result = filteredData.slice(startIndex, endIndex);
+
+    // Debug log
+    console.log('Pagination Debug:', {
+      totalData: filteredData.length,
+      page,
+      rowsPerPage,
+      startIndex,
+      endIndex,
+      resultLength: result.length
+    });
+
+    return result;
+  }, [filteredData, page, rowsPerPage]);
+
+  const handleChangeFilter = (field) => (event) => {
+    const value = event?.target?.value || "";
+    setFilters((prevFilters) => ({ ...prevFilters, [field]: value }));
+    setPage(0); // รีเซ็ต page เมื่อ filter เปลี่ยน
+  };
+
+  // ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลง timeline type
+  const handleTimelineTypeChange = (event) => {
+    const value = event?.target?.value || "I";
+    onTimelineTypeChange(value);
+  };
+
+  const handlePageChange = (_, newPage) => {
+    console.log('Page change:', { currentPage: page, newPage, totalPages: Math.ceil(filteredData.length / rowsPerPage) });
+    setPage(newPage);
+  };
+
+  const handleRowsPerPageChange = (event) => {
+    const newRowsPerPage = parseInt(event.target.value, 10) || 10;
+    console.log('Rows per page change:', { oldRowsPerPage: rowsPerPage, newRowsPerPage });
+    setRowsPerPage(newRowsPerPage);
     setPage(0);
+    onRowsPerPageChange(newRowsPerPage);
+  };
+
+  const handleSearchClick = () => {
+    // ไม่ต้องทำอะไรเพิ่มเติม เพราะ filter จะทำงานอัตโนมัติผ่าน useMemo
+    setPage(0); // รีเซ็ต page เมื่อค้นหา
     if (isMobile) setFilterDrawerOpen(false);
   };
 
   const handleClearSearch = () => {
     setFilters(initialFilters);
-    setFilteredData(data || []);
     setPage(0);
     if (isMobile) setFilterDrawerOpen(false);
   };
@@ -412,10 +252,6 @@ const TableListOPM = ({
         query: { ...data },
       });
     }
-  };
-
-  const handleClosePMOfficeAlert = () => {
-    setShowPMOfficeAlert(false);
   };
 
   const FilterContent = () => (
@@ -504,167 +340,84 @@ const TableListOPM = ({
     </Box>
   );
 
-  // ฟังก์ชันสำหรับ render cell ที่มี PM Office indicator
-  const renderCaseCodeCell = (item) => {
-    const pmOfficeStatus = pmOfficeStatusMap.get(item.case_id);
-
-    return (
-      <Box display="flex" alignItems="center" gap={0.5}>
-        <Typography>{item.case_code}</Typography>
-        {pmOfficeStatus?.hasPMOfficeSubmission && (
-          <Tooltip
-            title={`มีข้อมูลจากสำนักงานปลัดสำนักนายกรัฐมนตรี ${pmOfficeStatus.submissionCount} รายการ`}
-          >
-            <Badge
-              badgeContent={pmOfficeStatus.submissionCount}
-              color="primary"
-              max={99}
-            >
-              <BusinessIcon
-                sx={{
-                  color: blue[600],
-                  fontSize: 16,
-                  animation: "pulse 2s infinite",
-                }}
-              />
-            </Badge>
-          </Tooltip>
-        )}
-      </Box>
-    );
-  };
-
-  const renderCustomerNameCell = (item) => {
-    const pmOfficeStatus = pmOfficeStatusMap.get(item.case_id);
-
-    if (!pmOfficeStatus?.hasPMOfficeSubmission) {
-      return item.customer_name;
-    }
-
-    return (
-      <Box display="flex" alignItems="center" gap={0.5}>
-        <NotificationImportantIcon
-          sx={{
-            color: blue[600],
-            fontSize: 16,
-            animation: "blink 1.5s infinite",
-          }}
-        />
-        <Typography sx={{ fontWeight: 500 }}>{item.customer_name}</Typography>
-      </Box>
-    );
-  };
-
   // Mobile card view
   const MobileCardView = () => (
     <Stack spacing={2} sx={{ p: 2 }}>
-      {pagedData.map((item, idx) => {
-        const pmOfficeStatus = pmOfficeStatusMap.get(item.case_id);
-        return (
-          <Card
-            key={item.case_id}
-            onClick={() => handleRowClick(item, router.query)}
-            sx={{
-              cursor: "pointer",
-              "&:hover": { backgroundColor: "#f5f7ff" },
-              border: "1px solid #e0e0e0",
-              backgroundColor: pmOfficeStatus?.hasPMOfficeSubmission
-                ? "rgba(33, 150, 243, 0.05)"
-                : "transparent",
-              borderLeft: pmOfficeStatus?.hasPMOfficeSubmission
-                ? "4px solid #2196f3"
-                : "none",
-            }}
-          >
-            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-              <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                mb={1}
-              >
-                <Typography variant="body2" color="primary" fontWeight="bold">
-                  #{page * rowsPerPage + idx + 1}
-                </Typography>
-                <Box display="flex" alignItems="center" gap={1}>
-                  {pmOfficeStatus?.hasPMOfficeSubmission && (
-                    <Chip
-                      icon={<BusinessIcon />}
-                      label="สปน."
-                      color="primary"
-                      size="small"
-                      variant="outlined"
-                    />
-                  )}
-                  <IconButton size="small">
-                    <MoreVertIcon />
-                  </IconButton>
-                </Box>
-              </Box>
+      {pagedData.map((item, idx) => (
+        <Card
+          key={item.case_id}
+          onClick={() => handleRowClick(item, router.query)}
+          sx={{
+            cursor: "pointer",
+            "&:hover": { backgroundColor: "#f5f7ff" },
+            border: "1px solid #e0e0e0",
+          }}
+        >
+          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={1}
+            >
+              <Typography variant="body2" color="primary" fontWeight="bold">
+                #{page * rowsPerPage + idx + 1}
+              </Typography>
+              <IconButton size="small">
+                <MoreVertIcon />
+              </IconButton>
+            </Box>
 
-              {visibleColumns.map((col) => (
-                <Box key={col.name} mb={1}>
+            {visibleColumns.map((col) => (
+              <Box key={col.name} mb={1}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  {col.label}
+                </Typography>
+                <Typography variant="body2" fontWeight="medium">
+                  {col.name === "ShowDateTime"
+                    ? formatThaiShortDateTime(item.ShowDateTime) || "-"
+                    : renderCellValue(col, item)}
+                </Typography>
+              </Box>
+            ))}
+
+            {!isMobile &&
+              columns.filter((col) => col.priority > 2).length > 0 && (
+                <Box mt={2} pt={1} borderTop="1px solid #e0e0e0">
                   <Typography
                     variant="caption"
                     color="text.secondary"
-                    display="block"
+                    gutterBottom
                   >
-                    {col.label}
+                    ข้อมูลเพิ่มเติม
                   </Typography>
-                  <Typography variant="body2" fontWeight="medium">
-                    {col.name === "case_code"
-                      ? renderCaseCodeCell(item)
-                      : col.name === "customer_name"
-                      ? renderCustomerNameCell(item)
-                      : col.name === "ShowDateTime"
-                      ? formatThaiShortDateTime(item.ShowDateTime) || "-"
-                      : renderCellValue(col, item)}
-                  </Typography>
+                  {columns
+                    .filter((col) => col.priority > 2)
+                    .map((col) => (
+                      <Typography
+                        key={col.name}
+                        variant="caption"
+                        display="block"
+                      >
+                        {col.label}:{" "}
+                        {col.name === "ShowDateTime"
+                          ? formatThaiShortDateTime(item[col.name]) || "-"
+                          : item[col.name] ?? "-"}
+                      </Typography>
+                    ))}
                 </Box>
-              ))}
-
-              {!isMobile &&
-                columns.filter((col) => col.priority > 2).length > 0 && (
-                  <Box mt={2} pt={1} borderTop="1px solid #e0e0e0">
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      gutterBottom
-                    >
-                      ข้อมูลเพิ่มเติม
-                    </Typography>
-                    {columns
-                      .filter((col) => col.priority > 2)
-                      .map((col) => (
-                        <Typography
-                          key={col.name}
-                          variant="caption"
-                          display="block"
-                        >
-                          {col.label}:{" "}
-                          {col.name === "ShowDateTime"
-                            ? formatThaiShortDateTime(item[col.name]) || "-"
-                            : item[col.name] ?? "-"}
-                        </Typography>
-                      ))}
-                  </Box>
-                )}
-            </CardContent>
-          </Card>
-        );
-      })}
+              )}
+          </CardContent>
+        </Card>
+      ))}
     </Stack>
   );
 
   const renderCellValue = (col, item) => {
-    if (col.name === "case_code") {
-      return renderCaseCodeCell(item);
-    }
-
-    if (col.name === "customer_name") {
-      return renderCustomerNameCell(item);
-    }
-
     if (col.name === "ShowDateTime") {
       return formatThaiShortDateTime(item.ShowDateTime) || "-";
     }
@@ -694,10 +447,6 @@ const TableListOPM = ({
     return item[col.name] ?? "-";
   };
 
-  const pmOfficeCasesCount = Array.from(pmOfficeStatusMap.values()).filter(
-    (status) => status.hasPMOfficeSubmission
-  ).length;
-
   return (
     <Container
       maxWidth={false}
@@ -709,58 +458,6 @@ const TableListOPM = ({
         mx: isMobile ? 1 : 0,
       }}
     >
-      <style jsx>{`
-        @keyframes pulse {
-          0% {
-            transform: scale(1);
-          }
-          50% {
-            transform: scale(1.05);
-          }
-          100% {
-            transform: scale(1);
-          }
-        }
-
-        @keyframes blink {
-          0%,
-          50% {
-            opacity: 1;
-          }
-          51%,
-          100% {
-            opacity: 0.3;
-          }
-        }
-      `}</style>
-
-      {/* PM Office Alert */}
-      <Snackbar
-        open={showPMOfficeAlert}
-        autoHideDuration={10000}
-        onClose={handleClosePMOfficeAlert}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleClosePMOfficeAlert}
-          severity="info"
-          sx={{ width: "100%" }}
-        >
-          <AlertTitle>
-            <BusinessIcon sx={{ mr: 1 }} />
-            แจ้งเตือน: มีเคสที่ได้รับข้อมูลจากสำนักงานปลัดสำนักนายกรัฐมนตรี
-          </AlertTitle>
-          {pmOfficeNotification && (
-            <>
-              มี <strong>{pmOfficeNotification.count} เคส</strong>{" "}
-              ที่มีข้อมูลจากสำนักงานปลัดสำนักนายกรัฐมนตรี
-              <br />
-              กรุณาตรวจสอบเคสที่มีเครื่องหมาย 🏢 ในตาราง
-            </>
-          )}
-        </Alert>
-      </Snackbar>
-
       {/* Header Bar */}
       <Box
         className={styles.headerBar}
@@ -773,28 +470,18 @@ const TableListOPM = ({
           p: isMobile ? 1 : 2,
         }}
       >
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box display="flex" alignItems="center" gap={2}>
           <Typography variant={isMobile ? "h6" : "h5"} component="div">
             {title}
           </Typography>
-          {showPMOfficeIndicator && pmOfficeCasesCount > 0 && (
-            <Badge badgeContent={pmOfficeCasesCount} color="primary">
-              <Chip
-                icon={<BusinessIcon />}
-                label={`${pmOfficeCasesCount} เคสจาก สปน.`}
-                color="primary"
-                size="small"
-                variant="outlined"
-              />
-            </Badge>
-          )}
-          {isCheckingPMOffice && (
-            <Box display="flex" alignItems="center" gap={1}>
-              <CircularProgress size={16} />
-              <Typography variant="caption" color="text.secondary">
-                กำลังตรวจสอบข้อมูล สปน....
-              </Typography>
-            </Box>
+          {/* แสดงจำนวนข้อมูลที่กรองแล้ว */}
+          {filteredData.length !== sortedData.length && (
+            <Chip
+              label={`${filteredData.length}/${sortedData.length} รายการ`}
+              size="small"
+              color="primary"
+              variant="outlined"
+            />
           )}
         </Box>
       </Box>
@@ -974,14 +661,10 @@ const TableListOPM = ({
         id="table-results"
         sx={{ overflowX: "auto", px: isMobile ? 0 : 2, pb: 1 }}
       >
-        {loading || isCheckingPMOffice ? (
+        {loading ? (
           <Box display="flex" justifyContent="center" py={4}>
             <CircularProgress />
-            <Typography sx={{ ml: 2 }}>
-              {isCheckingPMOffice
-                ? "กำลังตรวจสอบข้อมูลจาก สปน...."
-                : "กำลังโหลดข้อมูล..."}
-            </Typography>
+            <Typography sx={{ ml: 2 }}>กำลังโหลดข้อมูล...</Typography>
           </Box>
         ) : filteredData.length === 0 ? (
           <Typography align="center" sx={{ py: 4 }}>
@@ -1010,55 +693,46 @@ const TableListOPM = ({
               </TableRow>
             </TableHead>
             <TableBody>
-              {pagedData.map((item, idx) => {
-                const pmOfficeStatus = pmOfficeStatusMap.get(item.case_id);
-                return (
-                  <TableRow
-                    key={item.case_id}
-                    onClick={() => handleRowClick(item, router.query)}
+              {pagedData.map((item, idx) => (
+                <TableRow
+                  key={item.case_id}
+                  onClick={() => handleRowClick(item, router.query)}
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": { backgroundColor: "#f5f7ff" },
+                  }}
+                >
+                  <TableCell
+                    align="center"
                     sx={{
-                      cursor: "pointer",
-                      "&:hover": { backgroundColor: "#f5f7ff" },
-                      backgroundColor: pmOfficeStatus?.hasPMOfficeSubmission
-                        ? "rgba(33, 150, 243, 0.05)"
-                        : "transparent",
-                      borderLeft: pmOfficeStatus?.hasPMOfficeSubmission
-                        ? "4px solid #2196f3"
-                        : "none",
+                      width: 80,
+                      fontWeight: 600,
+                      color: "#1120A3",
+                      fontSize: isTablet ? "0.875rem" : "1rem",
                     }}
                   >
+                    {page * rowsPerPage + idx + 1}
+                  </TableCell>
+                  {visibleColumns.map((col) => (
                     <TableCell
-                      align="center"
+                      key={col.name}
                       sx={{
-                        width: 80,
-                        fontWeight: 600,
-                        color: "#1120A3",
+                        width: isTablet ? col.width * 0.8 : col.width,
                         fontSize: isTablet ? "0.875rem" : "1rem",
                       }}
                     >
-                      {page * rowsPerPage + idx + 1}
+                      {renderCellValue(col, item)}
                     </TableCell>
-                    {visibleColumns.map((col) => (
-                      <TableCell
-                        key={col.name}
-                        sx={{
-                          width: isTablet ? col.width * 0.8 : col.width,
-                          fontSize: isTablet ? "0.875rem" : "1rem",
-                        }}
-                      >
-                        {renderCellValue(col, item)}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                );
-              })}
+                  ))}
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         )}
 
         <TablePagination
           component="div"
-          rowsPerPageOptions={[5, 10, 25]}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           count={filteredData.length}
           rowsPerPage={rowsPerPage}
           page={page}
