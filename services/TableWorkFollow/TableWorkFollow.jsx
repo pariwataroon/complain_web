@@ -14,12 +14,17 @@ import {
   Collapse,
   useMediaQuery,
   useTheme,
+  TextField,
+  Tooltip,
 } from "@mui/material";
 import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Search as SearchIcon,
   SearchOff as SearchOffIcon,
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
 } from "@mui/icons-material";
 
 import styles from "./TableWorkFollow.module.scss";
@@ -36,13 +41,11 @@ function formatThaiDate(date) {
   if (!date) return "-";
   let d = date;
   if (typeof date === "string" && !/^\d+$/.test(date)) {
-    // try parse with Date (skip year-only string)
     const parsed = new Date(date);
     if (!isNaN(parsed)) d = parsed;
-    else return date; // fallback
+    else return date;
   }
   if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}/.test(d)) {
-    // string in yyyy-mm-dd
     d = new Date(d);
   }
   if (!(d instanceof Date) || isNaN(d)) return "-";
@@ -51,11 +54,46 @@ function formatThaiDate(date) {
   const year = d.getFullYear() + 543;
   return `${day} ${month} ${year}`;
 }
+
+// สถานะแปลภาษาไทย (ครอบคลุมทุกค่า)
+const STATUS_TRANSLATION = {
+  submitted: "ส่งคำร้อง",
+  sent_to_agency: "มอบหมายเจ้าหน้าที่",
+  sent_to_external: "ส่งหน่วยงานภายนอก",
+  in_process: "อยู่ระหว่างดำเนินการ",
+  in_review: "อยู่ระหว่างการพิจารณา",
+  tracking: "ติดตามผลการพิจารณา",
+  reviewed: "แจ้งผลการพิจารณา",
+  completed: "เสร็จสิ้น",
+  cancelled: "ยกเลิก",
+  new: "เรื่องร้องเรียนใหม่",
+  additional: "เรื่องร้องเรียนเพิ่มเติม",
+  ใหม่: "เรื่องร้องเรียนใหม่",
+  เพิ่มเติม: "เรื่องร้องเรียนเพิ่มเติม",
+};
+
 const TableWorkFollow = ({
   data = [],
   filterFields = [],
   onSearch = () => {},
   navigateTo = "",
+  // ฟีเจอร์ checkbox
+  showCheckboxes = false,
+  selectedItems = [],
+  onSelectItem = () => {},
+  onSelectAll = () => {},
+  // ฟีเจอร์แก้ไขหมายเหตุ
+  onEditNote = () => {},
+  onSaveNote = () => {},
+  onCancelEdit = () => {},
+  editingNote = null,
+  noteValue = "",
+  setNoteValue = () => {},
+  // ปุ่มเพิ่มเติม
+  actionButtonLabel = "",
+  onActionClick = () => {},
+  // ฟังก์ชันล้างการค้นหา
+  onClearSearch = () => {},
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
@@ -139,10 +177,12 @@ const TableWorkFollow = ({
     setFilters(initialFilters);
     setPage(0);
     onSearch(initialFilters);
+    // เรียกฟังก์ชันล้างจาก parent component
+    onClearSearch();
   };
 
   // Columns for display & export (add field mapping for export)
-  const columns = [
+  const baseColumns = [
     { label: "ลำดับ", width: 80, field: "no" },
     {
       label: "เลขรับ สรร.",
@@ -152,19 +192,6 @@ const TableWorkFollow = ({
         <>
           {item.receiptNumber}
           <br />
-          {/* <small>({item.receiptDate})</small> */}
-        </>
-      ),
-    },
-    {
-      label: "เลขที่อ้างอิง",
-      width: 120,
-      field: "referenceNumber",
-      render: (item) => (
-        <>
-          {item.referenceNumber}
-          <br />
-          {/* <small>({item.proposeDate})</small> */}
         </>
       ),
     },
@@ -175,12 +202,18 @@ const TableWorkFollow = ({
     { label: "เลขที่หนังสือจากส่วนราชการ", width: 160, field: "letterNumber" },
     { label: "สถานะเรื่อง", width: 140, field: "status" },
     { label: "ดำเนินการมาแล้ว (วัน)", width: 180, field: "elapsedDays" },
-    {
-      label: "เจ้าหน้าที่ผู้รับผิดชอบ",
-      width: 200,
-      field: "responsibleOfficer",
-    },
+    // {
+    //   label: "เจ้าหน้าที่ผู้รับผิดชอบ",
+    //   width: 200,
+    //   field: "responsibleOfficer",
+    // },
   ];
+
+  // เพิ่มคอลัมน์หมายเหตุและจัดการ ถ้ามีข้อมูลที่สามารถแก้ไขได้
+  const hasEditableNotes = data.some(item => item.canEditNote);
+  const columns = hasEditableNotes
+    ? [...baseColumns, { label: "หมายเหตุ", width: 200, field: "remark" }]
+    : baseColumns;
 
   // Prepare export data: flat array with all fields for export
   const exportData = useMemo(() => {
@@ -205,7 +238,6 @@ const TableWorkFollow = ({
     });
     const filename = `รายงานการติดตามงานค้าง_${today}.xlsx`;
     const exportLabel = `วันที่ export: ${today}`;
-    // use Thai header as keys for xlsx
     const jsonExport = exportData.map((row) =>
       Object.fromEntries(
         columns.map((col) => [col.label, row[col.field] ?? ""])
@@ -219,7 +251,6 @@ const TableWorkFollow = ({
     });
   };
 
-  // Date picker props
   const getDatePickerProps = () => {
     if (!isMounted || typeof window === "undefined") {
       return {
@@ -261,8 +292,7 @@ const TableWorkFollow = ({
       },
     };
   };
-    // ---- ดึงค่า filter มาแสดงในหัวตาราง ----
-  // ฟิลด์ filter อาจชื่อไม่ตรง ให้หา key ที่ชื่อคล้าย
+  // ---- ดึงค่า filter มาแสดงในหัวตาราง ----
   const fieldKey = (name) => filterFields.find(f => f.name.includes(name))?.name || "";
   const receiveDateFromVal = filters[fieldKey("receiveDateFrom")];
   const receiveDateToVal = filters[fieldKey("receiveDateTo")];
@@ -279,6 +309,10 @@ const TableWorkFollow = ({
     ? issueTypeVal
     : "ทั้งหมด";
 
+  // เมื่อคลิกแถวเนื้อหาย่อย (collapse) ให้เปลี่ยนหน้า (push) ไป admin/box/list/{id}
+  const handleSubRowClick = (id) => {
+    router.push(`/admin/box/list/${id}/`);
+  };
 
   return (
     <Container
@@ -333,7 +367,9 @@ const TableWorkFollow = ({
                   key={f.name}
                   sx={{ position: "relative", zIndex: 1000 + index }}
                 >
-                  {f.type === "select" ? (
+                  {f.type === "department" ? (
+                    f.component
+                  ) : f.type === "select" ? (
                     <SelectField
                       fullWidth
                       label={f.label}
@@ -413,6 +449,14 @@ const TableWorkFollow = ({
             >
               {isXs ? (
                 <>
+                  {actionButtonLabel && (
+                    <ButtonService
+                      label={actionButtonLabel}
+                      onClick={onActionClick}
+                      size="small"
+                      sx={{ width: "100%", maxWidth: "300px", mb: 1 }}
+                    />
+                  )}
                   <ExportButton
                     label="Export PDF"
                     onClick={() =>
@@ -435,6 +479,14 @@ const TableWorkFollow = ({
                   width="100%"
                   justifyContent="center"
                 >
+                  {actionButtonLabel && (
+                    <ButtonService
+                      label={actionButtonLabel}
+                      onClick={onActionClick}
+                      size="medium"
+                      sx={{ flex: 1, maxWidth: "150px", mr: 1 }}
+                    />
+                  )}
                   <ExportButton
                     label="Export PDF"
                     onClick={() =>
@@ -484,7 +536,9 @@ const TableWorkFollow = ({
                     zIndex: 1000 + index,
                   }}
                 >
-                  {f.type === "select" ? (
+                  {f.type === "department" ? (
+                    f.component
+                  ) : f.type === "select" ? (
                     <SelectField
                       fullWidth
                       label={f.label}
@@ -555,6 +609,14 @@ const TableWorkFollow = ({
               gap={1}
               sx={{ flexShrink: 0, ml: 2, position: "relative", zIndex: 500 }}
             >
+              {actionButtonLabel && (
+                <ButtonService
+                  label={actionButtonLabel}
+                  onClick={onActionClick}
+                  size="medium"
+                  sx={{ mr: 1 }}
+                />
+              )}
               <ExportButton
                 label="Export PDF"
                 onClick={() =>
@@ -712,16 +774,10 @@ const TableWorkFollow = ({
                                     key={item.id}
                                     sx={{
                                       "&:hover": { backgroundColor: "#f5f7ff" },
-                                      cursor: navigateTo
-                                        ? "pointer"
-                                        : "default",
+                                      cursor: "pointer",
                                       position: "relative",
                                       zIndex: 1,
                                     }}
-                                    onClick={() =>
-                                      navigateTo &&
-                                      router.push(`${navigateTo}/${item.id}`)
-                                    }
                                   >
                                     <TableCell
                                       align="center"
@@ -733,24 +789,64 @@ const TableWorkFollow = ({
                                         position: "relative",
                                         zIndex: 1,
                                       }}
+                                      onClick={() => handleSubRowClick(item.id)}
                                     >
                                       {page * rowsPerPage + idx + 1}
                                     </TableCell>
-                                    {columns.slice(1).map((col, i) => (
-                                      <TableCell
-                                        key={i}
-                                        sx={{
-                                          width: col.width,
-                                          fontSize: { xs: 12, sm: 14 },
-                                          position: "relative",
-                                          zIndex: 1,
-                                        }}
-                                      >
-                                        {col.render
-                                          ? col.render(item)
-                                          : item[col.field] || "-"}
-                                      </TableCell>
-                                    ))}
+                                    {columns.slice(1).map((col, i) => {
+                                      // ถ้าเป็นคอลัมน์หมายเหตุและสามารถแก้ไขได้
+                                      if (col.field === "remark" && item.canEditNote) {
+                                        return (
+                                          <TableCell
+                                            key={i}
+                                            sx={{
+                                              width: col.width,
+                                              fontSize: { xs: 12, sm: 14 },
+                                              position: "relative",
+                                              zIndex: 1,
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            <Box display="flex" alignItems="center" gap={1}>
+                                              <Box flexGrow={1} sx={{ wordBreak: "break-word" }}>
+                                                {item.remark || "-"}
+                                              </Box>
+                                              <Tooltip title="แก้ไขหมายเหตุ">
+                                                <IconButton
+                                                  size="small"
+                                                  onClick={() => onEditNote(item.id, item.remark)}
+                                                  sx={{ color: "#1120A3" }}
+                                                >
+                                                  <EditIcon fontSize="small" />
+                                                </IconButton>
+                                              </Tooltip>
+                                            </Box>
+                                          </TableCell>
+                                        );
+                                      }
+
+                                      // คอลัมน์ปกติ
+                                      return (
+                                        <TableCell
+                                          key={i}
+                                          sx={{
+                                            width: col.width,
+                                            fontSize: { xs: 12, sm: 14 },
+                                            position: "relative",
+                                            zIndex: 1,
+                                          }}
+                                          onClick={() => handleSubRowClick(item.id)}
+                                        >
+                                          {col.field === "status"
+                                            ? STATUS_TRANSLATION[item.status] ||
+                                              item.status ||
+                                              "-"
+                                            : col.render
+                                              ? col.render(item)
+                                              : item[col.field] || "-"}
+                                        </TableCell>
+                                      );
+                                    })}
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -794,6 +890,18 @@ TableWorkFollow.propTypes = {
   filterFields: PropTypes.array,
   onSearch: PropTypes.func,
   navigateTo: PropTypes.string,
+  // ฟีเจอร์แก้ไขหมายเหตุ
+  onEditNote: PropTypes.func,
+  onSaveNote: PropTypes.func,
+  onCancelEdit: PropTypes.func,
+  editingNote: PropTypes.string,
+  noteValue: PropTypes.string,
+  setNoteValue: PropTypes.func,
+  // ปุ่มเพิ่มเติม
+  actionButtonLabel: PropTypes.string,
+  onActionClick: PropTypes.func,
+  // ฟังก์ชันล้างการค้นหา
+  onClearSearch: PropTypes.func,
 };
 
 export default TableWorkFollow;

@@ -63,17 +63,14 @@ const NewAdditionalComplaintsSummaryComponents = () => {
   const router = useRouter();
 
   // ดึงข้อมูลจาก API
-  const fetchData = async (filterParams = {}) => {
+  const fetchData = async () => {
     setLoading(true);
     try {
+      // หากอยากส่ง filter จริงๆ ให้ส่งใน params ได้เลย
       const response = await getNewAdditionalComplaintsReport({
         skip: 0,
         limit: 100,
-        date_from: "",
-        date_to: "",
-        department_id: "",
-        officer_id: "",
-        search: ""
+        // สามารถใส่ filter เพิ่มได้ เช่น date_from, date_to, department_id, officer_id, search
       });
 
       if (
@@ -141,6 +138,7 @@ const NewAdditionalComplaintsSummaryComponents = () => {
         console.error("เกิดข้อผิดพลาดในการอ่านข้อมูลที่อัปเดต:", e);
       }
     }
+    // eslint-disable-next-line
   }, []);
 
   // เปลี่ยนหน้า summary

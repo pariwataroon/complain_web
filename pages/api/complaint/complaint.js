@@ -280,7 +280,7 @@ const GetComplaintsByPageTypeCard = async ({
   }
 };
 
-const GetMyRelatedComplaints = async ({ skip = 0, limit = 100 } = {}) => {
+const GetMyRelatedComplaints = async ({ skip = 0, limit = 10000 } = {}) => {
   try {
     const response = await axiosInstance.get("/complaints/my-related", {
       params: { skip, limit },

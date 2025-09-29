@@ -1,62 +1,43 @@
 import axiosInstance from "@pages/api/axiosInstance";
 
-const getPendingTasksReport = async ({
-  skip = 0,
-  limit = 20,
-  date_from = "",
-  date_to = "",
-  department_id = "",
-  officer_id = "",
-  status = "",
-  search = "",
-} = {}) => {
+// Utility: filter out empty, undefined, or null values from params
+function filterParams(params) {
+  const filtered = {};
+  Object.entries(params).forEach(([key, value]) => {
+    if (
+      value !== "" &&
+      value !== undefined &&
+      value !== null &&
+      !(typeof value === "string" && value.trim() === "")
+    ) {
+      filtered[key] = value;
+    }
+  });
+  return filtered;
+}
+
+const getPendingTasksReport = async (params = {}) => {
   try {
     const response = await axiosInstance.get(
       `/reports/pending-tasks`,
-      {
-        params: {
-          skip,
-          limit,
-          date_from,
-          date_to,
-          department_id,
-          officer_id,
-          status,
-          search,
-        },
-      }
+      { params: filterParams(params) }
     );
-    return response?.data;
+    // คืนเฉพาะ array items
+    // (ถ้า API เปลี่ยนโครงสร้างให้ return response.data.res_data.items)
+    return response?.data?.res_data?.items || [];
   } catch (error) {
     console.error("Error fetching reports/pending-tasks:", error);
     throw error;
   }
 };
 
-const getNewAdditionalComplaintsReport = async ({
-  skip = 0,
-  limit = 20,
-  date_from = "",
-  date_to = "",
-  department_id = "",
-  officer_id = "",
-  search = "",
-} = {}) => {
+const getNewAdditionalComplaintsReport = async (params = {}) => {
   try {
     const response = await axiosInstance.get(
       `/reports/new-additional-complaints`,
-      {
-        params: {
-          skip,
-          limit,
-          date_from,
-          date_to,
-          department_id,
-          officer_id,
-          search,
-        },
-      }
+      { params: filterParams(params) }
     );
+    // คืน res_code, res_data, etc. (เพื่อใช้ใน component ตรวจสอบ res_code)
     return response?.data;
   } catch (error) {
     console.error("Error fetching reports/new-additional-complaints:", error);
