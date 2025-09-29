@@ -136,6 +136,7 @@ def get_inspector_report(
             User.first_name,
             User.last_name,
             sa_group_pick_subq.c.group_order_index,
+            sa_group_pick_subq.c.group_name,
         )
         .order_by(
             # nulls last: ถ้าไม่มีค่า order ให้ไปท้ายสุด
