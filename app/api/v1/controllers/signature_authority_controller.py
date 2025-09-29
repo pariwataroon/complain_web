@@ -58,6 +58,7 @@ def get_signature_authorities(db: Session, skip: int = 0, limit: int = 100):
                         "group_id": group_id,
                         "group_name": authority.group.name if authority.group else "Unknown Group",
                         "group_description": authority.group.description if authority.group else "",
+                        "order_index": getattr(authority.group, "order_index", 0) if authority.group else 0,
                         "is_active": authority.group.is_active if authority.group else False,
                         "created_at": authority.group.created_at if authority.group else authority.created_at,
                         "updated_at": authority.group.updated_at if authority.group else authority.updated_at,
@@ -133,10 +134,10 @@ def get_signature_authorities(db: Session, skip: int = 0, limit: int = 100):
             group_data["total_members"] = len(group_data["users"])
             group_data["total_departments"] = len(group_data["departments"])
         
-        # เรียงกลุ่มตาม created_at เพื่อให้สอดคล้องกับการเรียงลำดับใน query
+        # เรียงกลุ่มตาม order_index ก่อน ถ้าเท่ากันค่อยตาม created_at
         sorted_groups = sorted(
             grouped_authorities.values(), 
-            key=lambda x: x["created_at"]
+            key=lambda x: (x.get("order_index", 0), x["created_at"])
         )
         
         # นำ skip/limit มาใช้ที่ระดับกลุ่ม เพื่อไม่ให้ข้อมูลผู้ใช้/หน่วยงานของกลุ่มถูกตัดทอน
@@ -670,7 +671,7 @@ def get_signature_authority_groups(db: Session, skip: int = 0, limit: int = 100)
     try:
         groups = db.query(GroupSignatureAuthority)\
             .filter(GroupSignatureAuthority.is_active == True)\
-            .order_by(GroupSignatureAuthority.created_at.desc())\
+            .order_by(GroupSignatureAuthority.order_index.asc(), GroupSignatureAuthority.created_at.desc())\
             .offset(skip).limit(limit).all()
         
         result = []
@@ -693,6 +694,7 @@ def get_signature_authority_groups(db: Session, skip: int = 0, limit: int = 100)
                 "id": str(group.id),
                 "name": group.name,
                 "description": group.description,
+                "order_index": getattr(group, "order_index", 0),
                 "is_active": group.is_active,
                 "total_members": total_members,
                 "total_departments": total_departments,
@@ -719,6 +721,7 @@ def create_signature_authority_group(db: Session, group_data: dict):
         db_group = GroupSignatureAuthority(
             name=group_data["group_name"],
             description=group_data.get("description", ""),
+            order_index=group_data.get("order_index", 0),
             is_active=True
         )
         
@@ -838,6 +841,7 @@ def create_signature_authority_group(db: Session, group_data: dict):
             "id": str(db_group.id),
             "group_name": db_group.name,
             "description": db_group.description,
+            "order_index": getattr(db_group, "order_index", 0),
             "assignments": created_assignments,
             "created_at": db_group.created_at,
             "updated_at": db_group.updated_at
@@ -948,6 +952,7 @@ def get_signature_authority_group_by_id(db: Session, group_id: UUID):
             "group_name": group.name,
             "description": group.description,
             "is_active": group.is_active,
+            "order_index": getattr(group, "order_index", 0),
             "assignments": formatted_assignments,
             "users": list(users_data.values()),
             "departments": list(departments_data.values()),
@@ -991,6 +996,13 @@ def update_signature_authority_group(db: Session, group_id: UUID, group_data: di
         # อัปเดตคำอธิบาย
         if "description" in group_data:
             db_group.description = group_data["description"]
+
+        # อัปเดตลำดับการแสดงผล
+        if "order_index" in group_data and group_data["order_index"] is not None:
+            try:
+                db_group.order_index = int(group_data["order_index"])
+            except Exception:
+                raise HTTPException(status_code=400, detail="order_index must be an integer")
         
         db_group.updated_at = func.now()
         
@@ -1236,6 +1248,7 @@ def update_signature_authority_group(db: Session, group_id: UUID, group_data: di
             "id": str(db_group.id),
             "group_name": db_group.name,
             "description": db_group.description,
+            "order_index": getattr(db_group, "order_index", 0),
             "assignments": updated_assignments,
             "total_assignments": len(updated_assignments),
             "created_at": db_group.created_at,

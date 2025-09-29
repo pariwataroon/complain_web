@@ -13,6 +13,8 @@ class GroupSignatureAuthority(Base):
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
     name = Column(NVARCHAR(200), nullable=False)
     description = Column(NVARCHAR(500), nullable=True)
+    # ลำดับการแสดงผลของกลุ่มผู้มีสิทธิ์เซ็น
+    order_index = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

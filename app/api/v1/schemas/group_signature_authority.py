@@ -7,6 +7,7 @@ from typing import Optional, List
 class GroupSignatureAuthorityBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=500)
+    order_index: Optional[int] = Field(0, ge=0, description="ลำดับการแสดงผลของกลุ่ม")
 
 
 class GroupSignatureAuthorityCreate(GroupSignatureAuthorityBase):
@@ -16,6 +17,7 @@ class GroupSignatureAuthorityCreate(GroupSignatureAuthorityBase):
 class GroupSignatureAuthorityUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=500)
+    order_index: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
 
 
