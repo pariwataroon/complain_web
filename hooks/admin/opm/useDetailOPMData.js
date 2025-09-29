@@ -19,13 +19,16 @@ const useDetailOPMData = ({
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
-    if (router.isReady) {
-      const queryData = router.query;
-      if (queryData) {
-        setCurrentItemData(queryData);
-      }
+    if (router.isReady && router.query) {
+      const queryData = { ...router.query };
+      setCurrentItemData(prevData => {
+        if (JSON.stringify(prevData) !== JSON.stringify(queryData)) {
+          return queryData;
+        }
+        return prevData;
+      });
     }
-  }, [router.isReady]);
+  }, [router.isReady, router.query.case_id]);
 
   const getFieldValue = (fieldName) => {
     if (currentItemData && currentItemData[fieldName]) {
@@ -445,8 +448,7 @@ const useDetailOPMData = ({
     caseDetails,
     currentItemData,
     attachmentsDetails,
-    operatingsDetails,
-    params,
+    params?.case_id,
   ]);
 
   useEffect(() => {
@@ -487,7 +489,9 @@ const useDetailOPMData = ({
       setIsCreating(true);
       const data = await GetAllComplaintChannels();
       const opmChannel = data.res_data?.items?.find(
-        (item) => item.name === "opm1111"
+        (item) =>
+          item.name ===
+          "ร้องเรียนผ่านระบบ OPM 1111 (สำนักงานปลัดสำนักนายกรัฐมนตรี)"
       );
       if (opmChannel) {
         setOpmChannelId(opmChannel.id);
@@ -555,14 +559,13 @@ const useDetailOPMData = ({
     opmChannelId,
     autoCreateAttempted,
     isCreating,
-    compiledData,
   ]);
 
   useEffect(() => {
     if (isDataReady && !opmChannelId) {
       getOpmChannelId();
     }
-  }, [isDataReady, opmChannelId, compiledData]);
+  }, [isDataReady, opmChannelId]);
 
   return {
     compiledData,

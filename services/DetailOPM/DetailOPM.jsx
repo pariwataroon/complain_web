@@ -49,7 +49,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
     const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
-    console.log({ operatingsDetails });
+    // console.log({ operatingsDetails });
     
     const [reportModalOpen, setReportModalOpen] = useState(false);
 
@@ -84,23 +84,20 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
         alert(`${title}\n\n${message}`);
     };
 
-    
-    
-    
     useEffect(() => {
         if (isDataReady) {
             const mainInfo = getSectionData('main_information');
             const accountData = getAccountData();
-            
+
             const customerData = getCustomerData();
             // console.log({ caseDetails });
             // console.log({ accountData });
             // console.log({ customerData });
-            
+
             if (opmChannelId && !autoCreateAttempted && !isCreating) {
             }
         }
-    }, [isDataReady, compiledData, opmChannelId, autoCreateAttempted, isCreating]);
+    }, [isDataReady, opmChannelId, autoCreateAttempted, isCreating]);
 
     useEffect(() => {
         if (isDataReady && !opmChannelId && !isCreating) {

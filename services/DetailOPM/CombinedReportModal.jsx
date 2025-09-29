@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
     Modal,
     Box,
@@ -11,8 +11,7 @@ import {
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import { alertError, alertSuccess, showLoading, closeAlert } from "@utils/Alerts";
-import InputFile from "@services/InputFile/InputFile";
-
+import InputFile from "@services/InputFileOPM/InputFile";
 import { SetOrgSummaryResult, AddOperating, OperatingAttachment } from "@pages/api/opm/opm";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import styles from "./CombinedReportModal.module.scss";
@@ -21,24 +20,25 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [attachments, setAttachments] = useState([]);
     const [fileErrors, setFileErrors] = useState({});
+    const [organizationOptions, setOrganizationOptions] = useState([]);
 
-    const { handleSubmit, control, reset, watch, formState: { errors } } = useForm();
+    const { handleSubmit, control, reset, watch } = useForm();
 
     const dateOpened = watch("date_opened");
     const dateClosed = watch("date_closed");
-    // console.log({ operatingsDetails });
-    
-    const citizenStatusOptions = useMemo(() => [
+
+    // Static options - ไม่ใช้ useMemo เพื่อป้องกัน re-render
+    const citizenStatusOptions = [
         { value: 0, label: "อยู่ระหว่างดำเนินการ" },
         { value: 1, label: "ยุติเรื่อง" },
         { value: 2, label: "รับทราบไว้ชั้นต้น" },
         { value: 3, label: "ไม่อยู่ในอำนาจหน้าที่" },
-    ], []);
+    ];
 
-    const opmTypeOptions = useMemo(() => [
+    const opmTypeOptions = [
         { value: 14, label: "รายงานผลปฏิบัติงาน" },
         { value: 15, label: "รายงานผลการพิจารณาเรื่อง" },
-    ], []);
+    ];
 
     const getCaseId = useCallback(() => {
         if (itemData?.case_id) return itemData.case_id;
@@ -51,14 +51,11 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
         return caseDetails?.find(detail => detail.field === "created_by")?.value || "system";
     }, [itemData, caseDetails]);
 
+    // แก้ไข handleModalClose - ไม่เรียก reset ใน callback
     const handleModalClose = useCallback(() => {
-        if (!isSubmitting) {
-            onClose();
-            reset();
-            setAttachments([]);
-            setFileErrors({});
-        }
-    }, [isSubmitting, onClose, reset]);
+        if (isSubmitting) return;
+        onClose?.();
+    }, [isSubmitting, onClose]);
 
     const formatThaiDateToMySQL = useCallback((isoString) => {
         if (!isoString) return null;
@@ -84,7 +81,6 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
     // File handling functions
     const handleFileChange = useCallback((files) => {
         setAttachments(files);
-        // Clear file errors when files change
         setFileErrors({});
     }, []);
 
@@ -94,9 +90,7 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
 
     const validateFiles = useCallback(() => {
         const errors = {};
-
-        // Validate file types and sizes
-        attachments.forEach((file, index) => {
+        attachments.forEach((file) => {
             const allowedTypes = ['application/pdf', 'application/msword',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 'image/jpeg', 'image/jpg', 'image/png'];
@@ -104,27 +98,22 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
             if (!allowedTypes.includes(file.type)) {
                 errors.attachment = "ประเภทไฟล์ไม่ถูกต้อง";
             }
-
-            if (file.size > 10 * 1024 * 1024) { // 10MB
+            if (file.size > 10 * 1024 * 1024) {
                 errors.attachment = "ไฟล์มีขนาดใหญ่เกิน 10MB";
             }
         });
-
         setFileErrors(errors);
         return Object.keys(errors).length === 0;
     }, [attachments]);
 
     const validateForm = useCallback((data) => {
         const errors = [];
-
         if (!data.status_id && data.status_id !== 0) {
             errors.push("• กรุณาเลือกสถานะการดำเนินการ");
         }
-
         if (!data.org_id) {
             errors.push("• กรุณาเลือกหน่วยงานที่จะส่งรายงาน");
         }
-
         if (!data.type_id && data.type_id !== 0) {
             errors.push("• กรุณาเลือกประเภทเรื่องการตอบกลับ");
         }
@@ -144,17 +133,15 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
         if (!data.opm_details || data.opm_details.trim() === "") {
             errors.push("• กรุณากรอกรายละเอียดการปฏิบัติงาน");
         }
-
         return errors;
     }, []);
 
-    // Convert files to base64 for API
     const convertFilesToBase64 = useCallback(async (files) => {
         const convertFile = (file) => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => {
-                    const base64 = reader.result.split(',')[1]; // Remove data:... prefix
+                    const base64 = reader.result.split(',')[1];
                     resolve({
                         fileName: file.name,
                         fileType: file.type,
@@ -176,41 +163,54 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
         }
     }, []);
 
-    const organizationOptions = useMemo(() => {
-        if (!operatingsDetails || operatingsDetails.length === 0) {
-            return [];
+    // แก้ไข useEffect สำหรับ organizationOptions - ใช้ timeout เพื่อป้องกัน infinite loop
+    useEffect(() => {
+        if (!open || !operatingsDetails?.length) {
+            setOrganizationOptions([]);
+            return;
         }
 
-        const uniqueOfficers = [];
-        const officerMap = new Map();
+        const timeoutId = setTimeout(() => {
+            const uniqueOfficers = [];
+            const officerMap = new Map();
 
-        operatingsDetails.forEach(operation => {
-            
-            if (operation.org_id === "301") {
-                const officerId = operation.created_by_org;
-                const officerText = operation.created_by_text;
-                const createdBy = operation.created_by;
-
-                if (officerId && officerText && !officerMap.has(officerId)) {
-                    officerMap.set(officerId, true);
-                    uniqueOfficers.push({
-                        value: officerId,
-                        label: officerText,
-                        created_by: createdBy
-                    });
+            operatingsDetails.forEach(operation => {
+                if (operation.org_id === "301") {
+                    const officerId = operation.created_by_org;
+                    const officerText = operation.created_by_text;
+                    const createdBy = operation.created_by;
+                    if (officerId && officerText && !officerMap.has(officerId)) {
+                        officerMap.set(officerId, true);
+                        uniqueOfficers.push({ value: officerId, label: officerText, created_by: createdBy });
+                    }
                 }
-            }
-        });
+            });
 
-        return uniqueOfficers.sort((a, b) => a.label.localeCompare(b.label, 'th'));
-    }, [operatingsDetails]);
+            uniqueOfficers.sort((a, b) => a.label.localeCompare(b.label, 'th'));
+            setOrganizationOptions(uniqueOfficers);
+        }, 0); // ใช้ setTimeout เพื่อแยก out of render cycle
+
+        return () => clearTimeout(timeoutId);
+    }, [open]); // dependency เป็น open เท่านั้น
 
     const getSelectedOfficerCreatedBy = useCallback((selectedOrgId) => {
+        if (!selectedOrgId) return getCreatedBy();
         const selectedOfficer = organizationOptions.find(officer => officer.value === selectedOrgId);
         return selectedOfficer?.created_by || getCreatedBy();
     }, [organizationOptions, getCreatedBy]);
-    
-    // Combined submit function that calls both APIs
+
+    // แก้ไข form reset - แยก reset ออกจาก modal close
+    useEffect(() => {
+        if (open) {
+            // Reset form เมื่อเปิด modal
+            setTimeout(() => {
+                reset();
+                setAttachments([]);
+                setFileErrors({});
+            }, 100);
+        }
+    }, [open, reset]);
+
     const handleFormSubmit = async (data) => {
         if (isSubmitting) return;
 
@@ -225,7 +225,6 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
                 return;
             }
 
-            // Validate all form data
             const validationErrors = validateForm(data);
             if (validationErrors.length > 0) {
                 await alertError(
@@ -236,7 +235,6 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
                 return;
             }
 
-            // Validate files
             if (!validateFiles()) {
                 return;
             }
@@ -258,27 +256,15 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
                 send_to: "OPM"
             };
 
-            console.log("OPM Data to be sent:", opmData);
-
-            // Step 1: Call SetOrgSummaryResult and AddOperating
             const [citizenResponse, opmResponse] = await Promise.all([
                 SetOrgSummaryResult(opmData),
                 AddOperating(opmData)
             ]);
 
-            console.log("Citizen API Response:", citizenResponse);
-            console.log("OPM API Response:", opmResponse);
-
-            // Step 2: Get operating_id from AddOperating response
             let operatingId = null;
-
             if (opmResponse.success && opmResponse.operating_id) {
                 operatingId = opmResponse.operating_id;
-                console.log("Operating ID extracted:", operatingId);
             } else {
-                console.warn("Could not extract operating_id from AddOperating response:", opmResponse);
-
-                // Fallback: try manual extraction from raw response
                 try {
                     const xmlString = opmResponse.raw_response?.data || opmResponse.data;
                     if (xmlString) {
@@ -289,7 +275,6 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
                                 const resultMatch = rawResult.match(/Result:([A-F0-9]+)/i);
                                 if (resultMatch && resultMatch[1]) {
                                     operatingId = resultMatch[1];
-                                    console.log("Operating ID from fallback extraction:", operatingId);
                                 }
                             }
                         }
@@ -299,14 +284,10 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
                 }
             }
 
-            // Step 3: Upload attachments if available and operating_id exists
             if (attachments.length > 0 && operatingId) {
                 showLoading("กำลังอัปโหลดไฟล์แนบ...");
-
-                // Convert attachments to base64
                 const convertedAttachments = await convertFilesToBase64(attachments);
 
-                // Upload each file
                 const attachmentPromises = convertedAttachments.map(async (file) => {
                     const attachmentData = {
                         case_id: caseIdValue,
@@ -325,9 +306,7 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
                     };
 
                     try {
-                        const attachmentResponse = await OperatingAttachment(attachmentData);
-                        // console.log(`Attachment uploaded: ${file.fileName}`, attachmentResponse);
-                        return attachmentResponse;
+                        return await OperatingAttachment(attachmentData);
                     } catch (error) {
                         console.error(`Error uploading ${file.fileName}:`, error);
                         throw error;
@@ -335,14 +314,12 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
                 });
 
                 try {
-                    const attachmentResponses = await Promise.all(attachmentPromises);
-                    // console.log("All attachments uploaded successfully:", attachmentResponses);
+                    await Promise.all(attachmentPromises);
                 } catch (attachmentError) {
                     console.error("Error uploading attachments:", attachmentError);
                     await alertError("คำเตือน", "ส่งรายงานสำเร็จแล้ว แต่ไม่สามารถอัปโหลดไฟล์แนบบางไฟล์ได้");
                 }
             } else if (attachments.length > 0 && !operatingId) {
-                console.warn("Cannot upload attachments: operating_id not found");
                 await alertError("คำเตือน", "ส่งรายงานสำเร็จแล้ว แต่ไม่สามารถอัปโหลดไฟล์แนบได้ เนื่องจากไม่พบ operating_id");
             }
 
@@ -357,15 +334,16 @@ const CombinedReportModal = ({ open, onClose, params, caseDetails, itemData, ope
         } catch (error) {
             closeAlert();
             console.error("Form submission error:", error);
-
             const errorMessage = error?.response?.data?.message || error?.message ||
                 "ไม่สามารถส่งรายงานได้ กรุณาลองใหม่อีกครั้ง";
-
             await alertError("เกิดข้อผิดพลาด", errorMessage);
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    // ถ้า Modal ไม่เปิด ไม่ render เลย
+    if (!open) return null;
 
     return (
         <Modal
