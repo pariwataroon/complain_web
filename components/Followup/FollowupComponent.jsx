@@ -135,7 +135,7 @@ export default function FollowupComponent() {
         // ดึงข้อมูลทั้งหมดแล้วให้ TableAll กรองเอง เพื่อป้องกัน logic ชนกัน
         const res = await GetMeAllComplaints({
           skip: 0,
-          limit: 1000000,
+          limit: 10000,
           search: debouncedSearch,
         });
         items = res?.res_data?.items || [];

@@ -267,7 +267,7 @@ const AnonymousLetterRepository = () => {
     const fetchDocumentStorage = async () => {
       try {
         setLoading(true);
-        const res = await getDocumentStorageForCard({ skip: 0, limit: 1000000 });
+        const res = await getDocumentStorageForCard({ skip: 0, limit: 10000 });
         const items = res?.res_data?.items ?? [];
 
         // แปลงข้อมูลแสดงผล

@@ -288,7 +288,7 @@ const ComplaintArchives = () => {
     const fetchDocumentStorage = async () => {
       try {
         setLoading(true);
-        const res = await getDocumentStorageForWebsite({ skip: 0, limit: 1000000 });
+        const res = await getDocumentStorageForWebsite({ skip: 0, limit: 10000 });
         const items = res?.res_data?.items ?? [];
 
         // 1) แปลงข้อมูลเพื่อแสดงผล
