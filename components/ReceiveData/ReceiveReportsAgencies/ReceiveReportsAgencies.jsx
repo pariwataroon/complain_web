@@ -204,7 +204,7 @@ const ReceiveReportsAgencies = () => {
     try {
       const response = await GetReDocumentComplaints({
         skip: 0,
-        limit: 100,
+        limit: 10000,
         search: keyword || "",
       });
       const items = Array.isArray(response?.res_data?.items)
@@ -255,7 +255,7 @@ const ReceiveReportsAgencies = () => {
     try {
       const response = await GetReferenceComplaints({
         skip: 0,
-        limit: 100,
+        limit: 10000,
         search: keyword || "",
       });
       const items = Array.isArray(response?.res_data?.items)

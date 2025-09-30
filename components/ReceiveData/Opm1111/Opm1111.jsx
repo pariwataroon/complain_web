@@ -82,7 +82,7 @@ const Opm1111Components = () => {
         const subjectStr = caseCodes.join(',');
         const complaintsSubjectRes = await GetComplaintsSubjectOPM({
           skip: 0,
-          limit: 100,
+          limit: 10000,
           subject: subjectStr,
         });
 

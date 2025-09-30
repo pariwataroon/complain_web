@@ -16,7 +16,7 @@ const GetAllSelect = async () => {
 
 const GetAllSelectComplaintTypes = async ({
   skip = 0,
-  limit = 100,
+  limit = 10000,
   active_only = "true",
 } = {}) => {
   try {
@@ -37,7 +37,7 @@ const getSubComplaintTypeById = async (complaint_type_id) => {
     const response = await axiosInstance.get(`/complaint-metadata/subtypes`, {
       params: {
         skip: 0,
-        limit: 100,
+        limit: 10000,
         active_only: true,
         parent_type_id: complaint_type_id,
       },
@@ -59,7 +59,7 @@ const GetAllComplaintChannels = async () => {
     const response = await axiosInstance.get(`/complaint-metadata/channels`, {
       params: {
         skip: 0,
-        limit: 100,
+        limit: 10000,
         active_only: true,
       },
     });
@@ -447,7 +447,7 @@ const GetAllSelectYears = async () => {
 
 const GetAllOutsideDepartments = async ({
   skip = 0,
-  limit = 100,
+  limit = 10000,
   active_only = true,
 } = {}) => {
   try {

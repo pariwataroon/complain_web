@@ -1,7 +1,7 @@
 import axiosInstance from "@pages/api/axiosInstance";
 const getStaffWorkload = async ({
   skip = 0,
-  limit = 100,
+  limit = 10000,
   date_from = "2025-01-01",
   date_to = "2025-12-31",
   year = 2025,

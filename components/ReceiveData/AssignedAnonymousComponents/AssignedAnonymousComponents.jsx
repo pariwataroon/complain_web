@@ -118,7 +118,7 @@ const AssignedAnonymousComponents = () => {
         const response = await GetComplaintsByPageTypeCard({
           pageType: "card",
           skip: 0,
-          limit: 100,
+          limit: 10000,
         });
 
         if (response?.res_code === "0000" && Array.isArray(response?.res_data?.items)) {

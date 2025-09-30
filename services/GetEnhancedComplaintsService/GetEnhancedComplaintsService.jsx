@@ -14,7 +14,7 @@ function GetEnhancedComplaintsService({ onComplaintSelect }) {
     const fetchComplaints = async () => {
         setLoading(true);
         try {
-            const response = await GetEnhancedComplaints({ skip: 0, limit: 100 });
+            const response = await GetEnhancedComplaints({ skip: 0, limit: 10000 });
             if (response?.res_code === "0000" && response?.res_data?.items) {
                 setComplaintsData(response.res_data.items);
             }

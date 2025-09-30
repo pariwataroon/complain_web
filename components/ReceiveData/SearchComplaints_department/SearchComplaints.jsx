@@ -188,7 +188,7 @@ const SearchComplaints = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await GetEnhancedComplaints({ skip: 0, limit: 100 });
+        const res = await GetEnhancedComplaints({ skip: 0, limit: 10000 });
         const items = res?.res_data?.items || [];
 
         const mapped = items.map((item) => ({

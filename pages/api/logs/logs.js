@@ -1,6 +1,6 @@
 import axiosInstance from "@pages/api/axiosInstance";
 
-const GetAllLogs = async ({ skip = 0, limit = 10, filters = {} }) => {
+const GetAllLogs = async ({ skip = 0, limit = 10000, filters = {} }) => {
   try {
     const params = { skip, limit };
 

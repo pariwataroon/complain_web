@@ -267,7 +267,7 @@ const mergeLocalParts = (current, part, value) => {
     try {
       const response = await GetComplaintsWithSearch({
         skip: 0,
-        limit: 100,
+        limit: 10000,
         search: kw || "",
       });
 

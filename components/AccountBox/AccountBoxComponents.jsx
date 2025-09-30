@@ -201,7 +201,7 @@ const AccountBoxComponents = () => {
       setLoading(true);
       const year = thaiYearToGregorian(thaiYearStr);
       const { date_from, date_to } = buildDateRangeOfYear(year);
-      const data = await getStaffWorkload({ skip: 0, limit: 100, date_from, date_to, year });
+      const data = await getStaffWorkload({ skip: 0, limit: 10000, date_from, date_to, year });
 
       const apiSummary = data?.summary ?? {};
       const sc = apiSummary?.status_counts ?? {};

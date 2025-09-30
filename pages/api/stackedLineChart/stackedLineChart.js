@@ -3,7 +3,7 @@ import axiosInstance from "@pages/api/axiosInstance";
 const GetComplaintsbyPageTypeAssignmentForm = async ({
   page_type = "website",
   skip = 0,
-  limit = 100,
+  limit = 10000,
 }) => {
   try {
     const response = await axiosInstance.get(

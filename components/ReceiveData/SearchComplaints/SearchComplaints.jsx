@@ -122,7 +122,7 @@ const SearchComplaints = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const res = await GetEnhancedComplaints({ skip: 0, limit: 100 });
+        const res = await GetEnhancedComplaints({ skip: 0, limit: 1000000 });
         // ป้องกัน res_data หรือ items เป็น undefined/null
         const items = Array.isArray(res?.res_data?.items) ? res.res_data.items : [];
 

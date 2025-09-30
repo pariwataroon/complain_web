@@ -272,7 +272,7 @@ export const useInitialNotificationComplainantAgency = () => {
         setIsLoadingDepartments(true);
         const response = await GetAllOutsideDepartments({
           skip: 0,
-          limit: 1000,
+          limit: 100000,
           search: "",
         });
         

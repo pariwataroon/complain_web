@@ -1,7 +1,7 @@
 import axiosInstance from "@pages/api/axiosInstance";
 
 // ฟังก์ชันดึงข้อมูลข่าวสารทั้งหมด
-const getAllNews = async (skip = 0, limit = 100, search = "", isPublished = null) => {
+const getAllNews = async (skip = 0, limit = 10000, search = "", isPublished = null) => {
   try {
     // ปรับปรุงเงื่อนไขในการส่งค่า is_published
     const response = await axiosInstance.get('/news', {
@@ -45,7 +45,7 @@ const getNewsById = async (newsId) => {
 
 
 // ฟังก์ชันดึงข่าวสารที่เผยแพร่แล้ว
-const getPublishedNews = async (skip = 0, limit = 100, search = "") => {
+const getPublishedNews = async (skip = 0, limit = 10000, search = "") => {
   try {
     const response = await axiosInstance.get('/news/public', {
       params: { skip, limit, search },
@@ -64,7 +64,7 @@ const getPublishedNews = async (skip = 0, limit = 100, search = "") => {
 };
 
 // ฟังก์ชันดึงข่าวสารที่สามารถแสดงผลได้
-const getDisplayableNews = async (skip = 0, limit = 100, search = "") => {
+const getDisplayableNews = async (skip = 0, limit = 10000, search = "") => {
   try {
     const response = await axiosInstance.get('/news/public/displayable', {
       params: { skip, limit, search },

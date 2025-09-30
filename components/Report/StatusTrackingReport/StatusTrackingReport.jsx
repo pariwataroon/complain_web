@@ -149,7 +149,7 @@ const StatusTrackingReport = () => {
     const fetchMyRelated = async () => {
       try {
         setLoading(true);
-        const res = await GetMyRelatedComplaints({ skip: 0, limit: 100 });
+        const res = await GetMyRelatedComplaints({ skip: 0, limit: 10000 });
         const items = res?.res_data?.items ?? [];
 
         const mapped = items.map((it, idx) => {

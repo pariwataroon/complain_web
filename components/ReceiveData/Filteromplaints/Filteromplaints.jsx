@@ -164,7 +164,7 @@ const Filteromplaints = () => {
 
       try {
         const response = await GetComplaintsGroupedbyChannel({
-          limit: 100,
+          limit: 10000,
           skip: 0,
         });
 

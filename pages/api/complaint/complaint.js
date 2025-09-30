@@ -2,7 +2,7 @@ import axiosInstance from "@pages/api/axiosInstance";
 
 const GetAllComplaints = async ({
   skip = 0,
-  limit = 10,
+  limit = 10000,
   status = "SUBMITTED",
 }) => {
   try {
@@ -18,7 +18,7 @@ const GetAllComplaints = async ({
 
  const GetMeAllComplaints = async ({
   skip = 0,
-  limit = 10,
+  limit = 10000,
   search = "",
   status = ""
 }) => {
@@ -35,7 +35,7 @@ const GetAllComplaints = async ({
 
 const GetComplaintsGroupedbyChannel = async ({
   skip = 0,
-  limit = 10,
+  limit = 10000,
 }) => {
   try {
     const response = await axiosInstance.get("/complaints/group-by-channel", {
@@ -203,7 +203,7 @@ const ConfirmAssignment = async (complaint_id, remark = "ยืนยันร�
   }
 };
 
-const GetEnhancedComplaints = async ({ skip = 0, limit = 100, search = "" }) => {
+const GetEnhancedComplaints = async ({ skip = 0, limit = 10000, search = "" }) => {
   try {
     const response = await axiosInstance.get("/complaints/enhanced", {
       params: { skip, limit, search },
@@ -217,7 +217,7 @@ const GetEnhancedComplaints = async ({ skip = 0, limit = 100, search = "" }) => 
 
 const GetComplaintsWithSearch = async ({
   skip = 0,
-  limit = 10,
+  limit = 10000,
   search = "",
 }) => {
   try {
@@ -246,7 +246,7 @@ const GetComplaintsSubjectOPM = async ({ skip = 0, limit = 10, case_code }) => {
 const GetComplaintsByPageType = async ({
   pageType = "website",
   skip = 0,
-  limit = 10,
+  limit = 10000,
 }) => {
   try {
     const response = await axiosInstance.get(
@@ -264,7 +264,7 @@ const GetComplaintsByPageType = async ({
 const GetComplaintsByPageTypeCard = async ({
   pageType = "card",  // Set the default to "card"
   skip = 0,
-  limit = 10,
+  limit = 10000,
 }) => {
   try {
     const response = await axiosInstance.get(
@@ -294,7 +294,7 @@ const GetMyRelatedComplaints = async ({ skip = 0, limit = 10000 } = {}) => {
 
 const GetReferenceComplaints = async ({
   skip = 0,
-  limit = 100,
+  limit = 10000,
 }) => {
   try {
     const response = await axiosInstance.get("/complaints/enhanced", {
@@ -309,7 +309,7 @@ const GetReferenceComplaints = async ({
 
 const GetReDocumentComplaints = async ({
   skip = 0,
-  limit = 100,
+  limit = 10000,
 }) => {
   try {
     const response = await axiosInstance.get("/complaints/enhanced?document_number=not_null", {

@@ -138,7 +138,7 @@ const InitialNotificationComplainantAgency = () => {
     try {
       const response = await GetReDocumentComplaints({
         skip: 0,
-        limit: 100,
+        limit: 10000,
         search: keyword || "",
       });
 
