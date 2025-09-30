@@ -35,7 +35,7 @@ import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
-
+import * as XLSX from "xlsx";
 // --- Thai Date formatter helper ---
 function formatThaiDate(date) {
   if (!date) return "-";
@@ -226,27 +226,64 @@ const TableWorkFollow = ({
     );
   }, [groupedData]);
 
-  // Export Excel (always use JSON mode)
-  const handleExportExcel = () => {
-    const today = new Date().toLocaleDateString("th-TH", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
+  // ====== EXPORT EXCEL เฉพาะกลุ่มที่กดดรอปดาวน์ ======
+  const getFlatExportData = () => {
+  let rows = [];
+  Object.entries(groupedData).forEach(([groupKey, items]) => {
+    // แถวคั่นเจ้าหน้าที่ผู้รับผิดชอบ
+    rows.push({
+      "เจ้าหน้าที่ผู้รับผิดชอบ": groupKey,
+      "ลำดับ": "",
+      "เลขรับ สรร.": "",
+      "เรื่อง": "",
+      "วันที่รับงาน": "",
+      "วันที่เสนอ ผอ.สรร.": "",
+      "หน่วยงาน": "",
+      "เลขที่หนังสือจากส่วนราชการ": "",
+      "สถานะเรื่อง": "",
+      "ดำเนินการมาแล้ว (วัน)": "",
+      "หมายเหตุ": ""
     });
-    const filename = `รายงานการติดตามงานค้าง_${today}.xlsx`;
-    const exportLabel = `วันที่ export: ${today}`;
-    const jsonExport = exportData.map((row) =>
-      Object.fromEntries(
-        columns.map((col) => [col.label, row[col.field] ?? ""])
-      )
-    );
-    exportExcel(jsonExport, {
-      filename,
-      sheetName: "Sheet1",
-      title: "รายงานการติดตามงานค้าง",
-      exportDate: exportLabel,
-    });
-  };
+    // ลำดับของใครของมัน
+    let no = 1;
+    if (expandedGroups[groupKey]) {
+      items.forEach((item) => {
+        rows.push({
+          "เจ้าหน้าที่ผู้รับผิดชอบ": "",
+          "ลำดับ": no++,
+          "เลขรับ สรร.": item.receiptNumber ?? "",
+          "เรื่อง": item.complaint ?? "",
+          "วันที่รับงาน": item.receiveDate ?? "",
+          "วันที่เสนอ ผอ.สรร.": item.proposeDate ?? "",
+          "หน่วยงาน": item.agency ?? "",
+          "เลขที่หนังสือจากส่วนราชการ": item.letterNumber ?? "",
+          "สถานะเรื่อง": STATUS_TRANSLATION[item.status] || item.status || "",
+          "ดำเนินการมาแล้ว (วัน)": item.elapsedDays ?? "",
+          "หมายเหตุ": item.remark ?? ""
+        });
+      });
+    }
+  });
+  return rows;
+};
+
+const handleExportExcel = () => {
+  const today = new Date().toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const filename = `รายงานการติดตามงานค้าง_${today}.xlsx`;
+  const rows = getFlatExportData();
+  if (rows.filter(r => r["ลำดับ"] !== "").length === 0) {
+    alert("กรุณาเลือกกลุ่มที่ต้องการ Export โดยกดเปิดดรอปดาวน์เจ้าหน้าที่อย่างน้อย 1 กลุ่ม");
+    return;
+  }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  XLSX.writeFile(wb, filename);
+};
 
   const getDatePickerProps = () => {
     if (!isMounted || typeof window === "undefined") {

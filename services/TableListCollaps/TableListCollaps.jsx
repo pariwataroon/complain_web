@@ -24,7 +24,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
-
+import * as XLSX from "xlsx";
 const TableListCollaps = ({
   data = [],
   title = "",
@@ -84,6 +84,39 @@ const TableListCollaps = ({
     onSearch(initialFilters);
   };
 
+  const getFlatExportData = () => {
+    const rows = [];
+    // export เฉพาะรายการที่อยู่ในหน้านี้
+    pagedData.forEach((item) => {
+      // Parent row
+      rows.push({
+        "ชื่อเรื่อง": item.claimantName,
+        "หน่วยงาน": "", // parent ไม่มี
+        "เจ้าหน้าที่ผู้รับผิดชอบ": item.responsibleOfficer,
+        "เลขรับ สรร.": item.receiptNumber,
+        "เลขที่อ้างอิง": item.referenceNumber,
+        "ระยะเวลา (วันทำการ)": item.workingDays,
+        "สถานะเรื่อง": item.status,
+        "ระดับ": "เรื่องหลัก"
+      });
+      // ถ้า row นี้ถูกเปิด (openRow === item.id) ให้ export child (departmentsData)
+      if (openRow === item.id && Array.isArray(item.departmentsData)) {
+        item.departmentsData.forEach((dept) => {
+          rows.push({
+            "ชื่อเรื่อง": "", // child ไม่ใส่
+            "หน่วยงาน": dept.department,
+            "เจ้าหน้าที่ผู้รับผิดชอบ": "", // ไม่มีใน child
+            "เลขรับ สรร.": dept.receiptNumber,
+            "เลขที่อ้างอิง": dept.referenceNumber,
+            "ระยะเวลา (วันทำการ)": dept.workingDays,
+            "สถานะเรื่อง": dept.status,
+            "ระดับ": "รายละเอียด"
+          });
+        });
+      }
+    });
+    return rows;
+  };
   const handleExportExcel = () => {
     const today = new Date().toLocaleDateString("th-TH", {
       year: "numeric",
@@ -91,8 +124,11 @@ const TableListCollaps = ({
       day: "2-digit",
     });
     const filename = `รายงานติดตามสถานะ_${today}.xlsx`;
-    const exportLabel = `วันที่ export: ${today}`;
-    exportExcel(excelRef, filename, "Sheet1", title, exportLabel);
+    const rows = getFlatExportData();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, filename);
   };
 
   const columns = [

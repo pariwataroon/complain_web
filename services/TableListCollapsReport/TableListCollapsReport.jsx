@@ -26,7 +26,7 @@ import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
-
+import * as XLSX from "xlsx";
 const TableListCollapsReport = ({
   data = [],
   title = "",
@@ -171,20 +171,57 @@ const TableListCollapsReport = ({
     const key = `${parentId}_${idx}`;
     setOpenChild((o) => ({ ...o, [key]: !o[key] }));
   };
+  const getFlatExportData = () => {
+    const rows = [];
+    data.forEach((item) => {
+      // Parent
+      rows.push({
+        "รายชื่อผู้ตรวจ / หน่วยงานในสังกัด": item.claimantName,
+        "ระดับ": "ผู้ตรวจ",
+        "หน่วยงาน": "",
+        "จำนวน": item.departmentsData.reduce((s, d) => s + (d.totalDept || 0), 0),
+        "อยู่ระหว่างดำเนินการ": item.departmentsData.reduce((s, d) => s + (d.inProgressCnt || 0), 0),
+        "ยุติ": item.departmentsData.reduce((s, d) => s + (d.closedCnt || 0), 0),
+      });
+      // Children
+      item.departmentsData.forEach((d) => {
+        rows.push({
+          "รายชื่อผู้ตรวจ / หน่วยงานในสังกัด": "",
+          "ระดับ": "หน่วยงาน",
+          "หน่วยงาน": d.department,
+          "จำนวน": d.totalDept,
+          "อยู่ระหว่างดำเนินการ": d.inProgressCnt,
+          "ยุติ": d.closedCnt,
+        });
+        // Grandchildren
+        if (Array.isArray(d.children)) {
+          d.children.forEach((c) => {
+            rows.push({
+              "รายชื่อผู้ตรวจ / หน่วยงานในสังกัด": "",
+              "ระดับ": "หน่วยงานย่อย",
+              "หน่วยงาน": c.department,
+              "จำนวน": c.totalDept,
+              "อยู่ระหว่างดำเนินการ": c.inProgressCnt,
+              "ยุติ": c.closedCnt,
+            });
+          });
+        }
+      });
+    });
+    return rows;
+  };
   const handleExportExcel = () => {
+    const rows = getFlatExportData();
     const today = new Date().toLocaleDateString("th-TH", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
     });
     const filename = `รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ_${today}.xlsx`;
-    const exportLabel = `วันที่ export: ${today}`;
-    exportExcel(excelRef, {
-      filename,
-      sheetName: "Sheet1",
-      title: reportTitle,
-      exportDate: exportLabel,
-    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, filename);
   };
 
   // Columns

@@ -32,7 +32,7 @@ const Tab3 = ({
     height: HEIGHT_INPUT + "px",
     padding: "0 14px",
     border: `1px solid ${COLOR_BORDER}`,
-    borderRadius: "6px",
+    borderRadius: "12px", // มนขึ้น
     fontSize: FONT_SIZE_INPUT,
     fontFamily: "inherit",
     outline: "none",
@@ -41,7 +41,6 @@ const Tab3 = ({
     boxSizing: "border-box",
     transition: "border-color .15s, box-shadow .15s",
   };
-
   const inputStyle = {
     ...baseInput,
   };
@@ -78,13 +77,13 @@ const Tab3 = ({
     minHeight: 140,
     lineHeight: 1.5,
     resize: "vertical",
+    borderRadius: "12px", // มนขึ้น
   };
-
   const fileBarStyle = {
     position: "relative",
     width: "100%",
     border: `1px solid ${COLOR_BORDER}`,
-    borderRadius: 6,
+    borderRadius: 12, // มนขึ้น
     height: HEIGHT_INPUT + "px",
     display: "flex",
     alignItems: "center",
@@ -176,7 +175,7 @@ const Tab3 = ({
     left: 0,
     background: '#fff',
     border: '1px solid #dfe4ec',
-    borderRadius: 10,
+    borderRadius: 12, // มนขึ้น
     boxShadow: '0 6px 20px rgba(0,0,0,0.10)',
     zIndex: 50,
     width: 340,
