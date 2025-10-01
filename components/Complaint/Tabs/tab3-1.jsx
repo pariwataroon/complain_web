@@ -864,7 +864,7 @@ const ThaiDateTimeInline = ({ control, name, placeholder = "กรุณาเ�
       <FormProvider {...step3Methods}>
         <div className={styles.formSection}>
           <div className={styles.sectionHeader}>
-            <h3 className={styles.sectionTitle}>ข้อมูลเรื่องร้องทุกข์</h3>
+            <h3 className={styles.sectionTitle}>รายละเอียดเรื่องราวร้องทุกข์</h3>
           </div>
 
           <div className={styles.sectionContent}>
@@ -1214,12 +1214,11 @@ const ThaiDateTimeInline = ({ control, name, placeholder = "กรุณาเ�
       {/* ============== Section 5 ============== */}
       <FormProvider {...step3Methods}>
         <div className={styles.formSection}>
-          <div className={styles.sectionHeader}>
+          {/* <div className={styles.sectionHeader}>
             <h3 className={styles.sectionTitle}>ข้อมูลเรื่องร้องทุกข์เพิ่มเติม</h3>
-          </div>
+          </div> */}
 
-          <div className={styles.sectionContent}>
-            {/* ใช้ fieldRowTwo = 2 คอลัมน์ */}
+          {/* <div className={styles.sectionContent}>
             <div className={styles.fieldRowTwo}>
               <div className={styles.fieldGroupDate}>
                 <div className={`${styles.datePickerWrapper} ${styles.datePickerUX}`}>
@@ -1231,15 +1230,15 @@ const ThaiDateTimeInline = ({ control, name, placeholder = "กรุณาเ�
                   <ThaiDateTimeInline control={step3Methods.control} name="directorSubmittedDate" />
                 </div>
               </div>
-            </div>
+            </div> */}
 
-            <div className={styles.fieldRow} style={{ marginTop: 25 }}>
+            {/* <div className={styles.fieldRow} style={{ marginTop: 25 }}>
               <div className={styles.fieldGroup}>
                 <div className={`${styles.datePickerWrapper} ${styles.datePickerUX}`}>
                  <ThaiDateTimeInline control={step3Methods.control} name="incidentDateTime" />
                 </div>
               </div>
-            </div>
+            </div> */}
 
             <div className={styles.fieldGroup} style={{ marginTop: 20 }}>
               <label className={styles.label}>รายละเอียดเพิ่มเติม</label>
@@ -1250,8 +1249,53 @@ const ThaiDateTimeInline = ({ control, name, placeholder = "กรุณาเ�
                 placeholder="กรอกรายละเอียดเพิ่มเติม..."
               />
             </div>
+
+            {/* เอกสารประกอบการร้องเรียน */}
+            <div className={styles.sectionHeader} style={{ marginTop: 40, marginBottom: 20 }}>
+              <h3 className={styles.sectionTitle}>เอกสารประกอบการร้องเรียน</h3>
+            </div>
+
+            <div className={styles.fieldGroup} style={{ marginTop: 20 }}>
+              <div className={styles.fileUploadWrapper}>
+                <label className={styles.label}>เอกสารประกอบการร้องเรียน</label>
+                <div className={styles.fileBarStyle}>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files);
+                      step3Methods.setValue("attachment", files);
+                    }}
+                    className={styles.hiddenFileInput}
+                  />
+                  <span className={styles.fileLabelText}>
+                    {step3Methods.watch("attachment")?.length
+                      ? `อัปโหลดไฟล์ประกอบ (${step3Methods.watch("attachment").length} ไฟล์)`
+                      : "อัปโหลดไฟล์ประกอบ (0 ไฟล์)"}
+                  </span>
+                  <span className={styles.plusButton}>+</span>
+                </div>
+                <div className={styles.fileNote}>
+                  หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB
+                </div>
+                {step3Methods.watch("attachment") && step3Methods.watch("attachment").length > 0 && (
+                  <div className={styles.fileSelectedInfo}>
+                    ✅ ไฟล์ที่เลือก: {step3Methods.watch("attachment").length} ไฟล์
+                    <ul style={{ marginTop: 10, paddingLeft: 20 }}>
+                      {Array.from(step3Methods.watch("attachment")).map((file, idx) => (
+                        <li key={idx} style={{ marginBottom: 4 }}>
+                          {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
-        </div>
+        {/* </div> */}
       </FormProvider>
     </div>
   );

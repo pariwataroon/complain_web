@@ -74,7 +74,8 @@ $radius: 10px;
 /* ===== Label & Required ===== */
 .label {
   font-size: 13px;
-  color: #344054;
+  font-weight: 500;
+  color: #0b1f8f;
   line-height: 1.5;
   margin-bottom: 2px;
 }
@@ -327,3 +328,84 @@ $radius: 10px;
   border-color: #3fa9f5 !important;
   box-shadow: 0 0 0 3px rgba(63,169,245,.15);
 }
+
+/* ===== File Upload Styles ===== */
+.fileUploadWrapper {
+  width: 100%;
+}
+
+.fileBarStyle {
+  position: relative;
+  width: 100%;
+  border: 1.5px solid #0b1f8f;
+  border-radius: 10px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 10px;
+  background: #fff;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.fileBarStyle:hover {
+  border-color: #3fa9f5;
+  box-shadow: 0 0 0 3px rgba(63,169,245,.13);
+}
+
+.hiddenFileInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.fileLabelText {
+  color: #4f5a6a;
+  font-size: 14px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plusButton {
+  font-size: 20px;
+  line-height: 1;
+  color: #0b1f8f;
+  font-weight: 600;
+  pointer-events: none;
+  user-select: none;
+  padding-right: 4px;
+}
+
+.fileNote {
+  color: #6c6f7a;
+  font-size: 12px;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.fileSelectedInfo {
+  margin-top: 12px;
+  color: #0b1f8f;
+  font-size: 14px;
+  font-weight: 600;
+
+  ul {
+    list-style: disc;
+    margin-top: 10px;
+    padding-left: 20px;
+
+    li {
+      margin-bottom: 4px;
+      color: #4f5a6a;
+      font-weight: 400;
+    }
+  }
+}
+

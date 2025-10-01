@@ -221,7 +221,10 @@ export default function useComplaintForm() {
   try {
     showLoading("กำลังส่งข้อมูล...");
 
-    const originalAttachments = step3?.general?.attachment || [];
+    // รวมไฟล์จาก step3 และ step31 (ถ้ามี)
+    const step3Attachments = step3?.general?.attachment || [];
+    const step31Attachments = step31?.general?.attachment || [];
+    const originalAttachments = [...step3Attachments, ...step31Attachments].filter(file => file instanceof File || (file && typeof file === "object" && file.name));
 
     // เตรียมข้อมูล step3 สำหรับการสร้างเรื่องร้องเรียน
     // ถ้ามีข้อมูลจาก Tab3-1 ให้ใช้ค่าจาก Tab3-1 แทน
