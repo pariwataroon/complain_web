@@ -1,6 +1,7 @@
 import React, { useCallback, useState, useMemo, useEffect, useRef } from "react";
-import { Box, Grid, Typography } from "@mui/material";
+import { Box, Grid, Typography, Button, Stack } from "@mui/material";
 import styles from "./TabNav.module.scss";
+import { Add, InsertDriveFile, Close } from "@mui/icons-material";
 
 const Tab3 = ({
   stepKey,
@@ -15,12 +16,29 @@ const Tab3 = ({
   // 🎯 SAFE: ใช้ useCallback เพื่อป้องกัน re-render
   const handleChange = useCallback((fieldName, value) => {
     console.log(`Field ${fieldName} changed:`, value);
-    
-    updateStepData(stepKey, "general", {
-      ...tabData,
+
+    updateStepData(stepKey, "general", (prevData) => ({
+      ...prevData,
       [fieldName]: value
-    });
-  }, [stepKey, tabData, updateStepData]);
+    }));
+  }, [stepKey, updateStepData]);
+
+  // State สำหรับไฟล์แนบ
+  const [attachmentFiles, setAttachmentFiles] = useState([]);
+
+  // Sync กับ tabData เมื่อมีการเปลี่ยนแปลง
+  useEffect(() => {
+    if (tabData.attachment && Array.isArray(tabData.attachment)) {
+      setAttachmentFiles(tabData.attachment);
+    }
+  }, [tabData.attachment]);
+
+  // ฟังก์ชันสำหรับจัดการไฟล์อัพโหลด
+  const handleFileUpload = useCallback((files) => {
+    console.log("Files uploaded:", files);
+    setAttachmentFiles(files);
+    handleChange("attachment", files);
+  }, [handleChange]);
 
   const COLOR_PRIMARY = "#1120A3";
   const COLOR_BORDER = COLOR_PRIMARY;
@@ -374,38 +392,100 @@ const Tab3 = ({
             {/* ไฟล์แนบ */}
             <Grid item xs={12}>
               <div style={containerStyle}>
-        <label style={labelStyle}>เอกสารประกอบการร้องเรียน</label>
-                <div style={fileBarStyle}>
+                <label style={labelStyle}>เอกสารประกอบการร้องเรียน</label>
+
+                {/* File Upload Button */}
+                <Box sx={{ mb: 2 }}>
                   <input
                     type="file"
                     multiple
-                    accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                     onChange={(e) => {
-          const files = Array.from(e.target.files).slice(0,3);
-          handleChange("attachment", files);
+                      const files = Array.from(e.target.files).slice(0, 3);
+                      setAttachmentFiles(files);
+                      handleChange("attachment", files);
                     }}
-                    style={hiddenFileInputOverlay}
+                    style={{ display: 'none' }}
+                    ref={(ref) => (window.fileInputRef = ref)}
                   />
-                  <span style={fileLabelTextStyle}>
-                    {tabData.attachment?.length
-                      ? `อัปโหลดไฟล์ประกอบ (${tabData.attachment.length}/3)`
-                      : "อัปโหลดไฟล์ประกอบ (0/3)"}
-                  </span>
-                  <span style={plusButtonStyle}>+</span>
-                </div>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Add />}
+                    onClick={() => window.fileInputRef?.click()}
+                    disabled={attachmentFiles.length >= 3}
+                    sx={{
+                      width: '100%',
+                      height: '46px',
+                      borderColor: COLOR_PRIMARY,
+                      color: COLOR_PRIMARY,
+                      borderRadius: '12px',
+                      '&:hover': {
+                        borderColor: COLOR_PRIMARY,
+                        backgroundColor: `${COLOR_PRIMARY}10`
+                      }
+                    }}
+                  >
+                    {attachmentFiles.length >= 3
+                      ? `อัปโหลดครบแล้ว ${attachmentFiles.length}/3 ไฟล์`
+                      : `อัปโหลดไฟล์ประกอบ (${attachmentFiles.length}/3)`
+                    }
+                  </Button>
+                </Box>
+
+                {/* Display Selected Files */}
+                {attachmentFiles.length > 0 && (
+                  <Stack spacing={1} sx={{ mb: 2 }}>
+                    {attachmentFiles.map((file, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          background: '#F6F8FF',
+                          px: 2,
+                          py: 1,
+                          borderRadius: '8px',
+                          color: COLOR_PRIMARY,
+                        }}
+                      >
+                        <InsertDriveFile sx={{ fontSize: 20, mr: 1 }} />
+                        <Typography
+                          fontSize={14}
+                          noWrap
+                          sx={{ flex: 1 }}
+                          title={file.name}
+                        >
+                          {file.name}
+                        </Typography>
+                        <Typography
+                          fontSize={12}
+                          sx={{ color: '#666', mr: 1 }}
+                        >
+                          ({(file.size / (1024 * 1024)).toFixed(2)} MB)
+                        </Typography>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            const newFiles = attachmentFiles.filter((_, idx) => idx !== index);
+                            setAttachmentFiles(newFiles);
+                            handleChange("attachment", newFiles);
+                          }}
+                          sx={{
+                            minWidth: 'auto',
+                            color: '#ff5252',
+                            p: 0.5
+                          }}
+                        >
+                          <Close fontSize="small" />
+                        </Button>
+                      </Box>
+                    ))}
+                  </Stack>
+                )}
+
                 <div style={noteStyle}>
                   หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB
                 </div>
-                {tabData.attachment && tabData.attachment.length > 0 && (
-                    <div style={{ 
-                      marginTop: "12px", 
-                      color: "#1120A3", 
-                      fontSize: "14px",
-                      fontWeight: 600 
-                    }}>
-                      ✅ ไฟล์ที่เลือก: {tabData.attachment.length} ไฟล์
-                    </div>
-                  )}
               </div>
             </Grid>
           </Grid>

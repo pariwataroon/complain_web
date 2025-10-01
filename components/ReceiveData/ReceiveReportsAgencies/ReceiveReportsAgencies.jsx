@@ -12,6 +12,7 @@ import SelectField from "@services/SelectField/SelectField";
 import InputText from "@services/InputText/InputText";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import ButtonService from "@services/ButtonService/ButtonService";
+import InputFile from "@services/InputFile/InputFile";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import { alertWarning, alertSuccess, closeAlert } from "@utils/Alerts";
@@ -289,6 +290,7 @@ const ReceiveReportsAgencies = () => {
   }, [openSearchDialog2]);
 
   const handleFileUpload = useCallback((files) => {
+    console.log("Files uploaded:", files);
     let processedFiles = [];
     if (files?.target?.files) processedFiles = Array.from(files.target.files);
     else if (Array.isArray(files)) processedFiles = files;
@@ -297,6 +299,26 @@ const ReceiveReportsAgencies = () => {
     else if (files?.file) processedFiles = [files.file];
     setUploadedFiles(processedFiles);
   }, []);
+
+  // Helper functions for existing attachments
+  const normalizeFilePath = useCallback((p) => {
+    if (!p) return "";
+    let s = String(p);
+    s = s.replace(/\\\\/g, "/").replace(/\\/g, "/");
+    const idx = s.lastIndexOf("/uploads/");
+    if (idx !== -1) s = s.substring(idx);
+    if (!s.startsWith("/")) s = `/${s}`;
+    return s;
+  }, []);
+
+  const buildFileUrl = useCallback((p) => {
+    if (!p) return "";
+    const normalized = normalizeFilePath(p);
+    if (/^https?:\/\//i.test(normalized)) return normalized;
+    const baseRaw = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
+    const base = baseRaw.replace(/\/api\/v\d+$/, "/api");
+    return `${base}${normalized}`;
+  }, [normalizeFilePath]);
 
   const handleSelectReference2 = useCallback(
     (ref) => {
@@ -489,13 +511,19 @@ const ReceiveReportsAgencies = () => {
   }, [outgoingReport5Id]);
 
   const handleDeleteExistingAttachment = useCallback(async (att) => {
-    if (!att?.id || !outgoingReport5Id) return;
-    const res = await DeleteOutgoingReport5Attachment({ outgoing_report_id: outgoingReport5Id, attachment_id: att.id });
-    if (res?.success === false) {
-      alertWarning('ลบไฟล์ไม่สำเร็จ', res?.res_message || 'ไม่สามารถลบไฟล์ได้');
-      return;
+    if (!att?.id || !outgoingReport5Id) return false;
+    try {
+      const res = await DeleteOutgoingReport5Attachment({ outgoing_report_id: outgoingReport5Id, attachment_id: att.id });
+      if (res?.success === false) {
+        alertWarning('ลบไฟล์ไม่สำเร็จ', res?.res_message || 'ไม่สามารถลบไฟล์ได้');
+        return false;
+      }
+      setExistingAttachments(prev => prev.filter(x => x.id !== att.id));
+      return true;
+    } catch (error) {
+      alertWarning('ลบไฟล์ไม่สำเร็จ', 'เกิดข้อผิดพลาดในการลบไฟล์');
+      return false;
     }
-    setExistingAttachments(prev => prev.filter(x => x.id !== att.id));
   }, [outgoingReport5Id]);
 
 // ...โค้ดข้างบน unchanged...
@@ -1625,47 +1653,20 @@ const handleSave = useCallback(async () => {
 
           {/* แถวที่ 9: เอกสารแนบ */}
           <Box>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
-              เอกสารประกอบการร้องเรียน
-              <span style={{ color: "red", marginLeft: 4 }}>*</span>
-            </Typography>
-            <input
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            <InputFile
+              label="เอกสารประกอบการร้องเรียน"
+              name="attachment"
               onChange={handleFileUpload}
-              style={{
-                width: "100%",
-                padding: "10px",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                fontSize: "16px"
-              }}
+              helperText="หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              maxFiles={3}
+              maxSizeMB={10}
+              multiple={true}
+              required={true}
+              existingFiles={existingAttachments}
+              getFileUrl={(att) => buildFileUrl(att.file_path || att.file_url || att.url)}
+              onDeleteExisting={handleDeleteExistingAttachment}
             />
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: "block" }}>
-              หมายเหตุ : แนบหลักฐาน เช่น สัญญา รูปภาพ หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB
-            </Typography>
-              {isEditing && existingAttachments.length > 0 && (
-                <Box sx={{ mt: 1, p:1, border: '1px solid #e0e0e0', borderRadius: 1, background:'#fafafa' }}>
-                  <Typography variant="subtitle2" sx={{ mb: 0.5 }}>ไฟล์ที่มีอยู่</Typography>
-                  {existingAttachments.map(att => (
-                    <Box key={att.id} sx={{ display:'flex', alignItems:'center', justifyContent:'space-between', py:0.5, borderBottom:'1px dashed #ddd', '&:last-child':{borderBottom:'none'} }}>
-                      <Typography variant="body2" sx={{ maxWidth:'70%', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{att.file_name || att.name}</Typography>
-                      <Box sx={{ display:'flex', gap:1 }}>
-                        {att.file_url || att.url ? (
-                          <Button size="small" variant="outlined" onClick={()=> window.open(att.file_url || att.url, '_blank')} sx={{ fontSize:12, py:0.3 }}>เปิด</Button>
-                        ) : null}
-                        <Button size="small" color="error" variant="outlined" onClick={()=> handleDeleteExistingAttachment(att)} sx={{ fontSize:12, py:0.3 }}>ลบ</Button>
-                      </Box>
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            {uploadedFiles.length > 0 && (
-              <Typography variant="body2" sx={{ mt: 1, color: "green" }}>
-                ไฟล์ที่เลือก: {uploadedFiles.map(f => f.name).join(', ')}
-              </Typography>
-            )}
           </Box>
 
           {/* แถวที่ 10: หมายเหตุ (multiline) */}
