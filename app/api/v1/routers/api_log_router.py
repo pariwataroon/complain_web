@@ -187,6 +187,10 @@ async def get_user_counter(
     นับจำนวนผู้เข้าใช้งานระบบจาก chat_bot path
     - ใช้ cache 1 นาทีเพื่อความเร็ว
     - สามารถ refresh ข้อมูลใหม่ได้ด้วย parameter refresh=true
+    - ช่วงเวลาแบบมาตรฐาน:
+        - today: ตั้งแต่ 00:00 วันนี้ ถึงเวลาปัจจุบัน
+        - week: ย้อนหลัง 7 วันแบบ rolling
+        - month: ย้อนหลัง 30 วันแบบ rolling
     """
     try:
         # ตรวจสอบ API Key หรือ Token
@@ -214,6 +218,8 @@ async def get_user_counter(
             "month_unique_users": 0,
             "total_requests": 0,
             "today_requests": 0,
+            "total_week_requests": 0,
+            "total_month_requests": 0,
             "last_updated": datetime.now().isoformat()
         })
 

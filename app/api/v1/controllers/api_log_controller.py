@@ -180,6 +180,12 @@ def get_user_counter_from_chatbot_logs(db: Session, use_cache: bool = True) -> D
     """
     นับจำนวนผู้เข้าใช้งานระบบจาก path /chat_bot
     ใช้ cache เพื่อความเร็ว cache 1 นาที
+
+    มาตรฐานช่วงเวลา (standardized periods):
+    - today: ตั้งแต่ 00:00 วันนี้ ถึงเวลาปัจจุบัน
+    - week: ย้อนหลัง 7 วันแบบ rolling (รวมวันนี้)
+    - month: ย้อนหลัง 30 วันแบบ rolling (รวมวันนี้)
+    - total: ทั้งหมดตั้งแต่เริ่มบันทึก
     """
     cache_key = "user_counter_chatbot"
     
@@ -234,6 +240,18 @@ def get_user_counter_from_chatbot_logs(db: Session, use_cache: bool = True) -> D
             ApiLog.path.like('%/chat_bot%'),
             ApiLog.created_at >= today_start
         ).count()
+
+        # นับจำนวนครั้งที่เข้าใช้งาน 7 วันที่ผ่านมา (rolling 7 days)
+        week_requests = db.query(ApiLog).filter(
+            ApiLog.path.like('%/chat_bot%'),
+            ApiLog.created_at >= week_start
+        ).count()
+
+        # นับจำนวนครั้งที่เข้าใช้งาน 30 วันที่ผ่านมา (rolling 30 days)
+        month_requests = db.query(ApiLog).filter(
+            ApiLog.path.like('%/chat_bot%'),
+            ApiLog.created_at >= month_start
+        ).count()
         
         # สร้างผลลัพธ์
         result = {
@@ -243,6 +261,9 @@ def get_user_counter_from_chatbot_logs(db: Session, use_cache: bool = True) -> D
             "month_unique_users": month_unique_users,
             "total_requests": total_requests,
             "today_requests": today_requests,
+            # เพิ่มค่านับตามช่วงเวลาแบบ rolling
+            "total_week_requests": week_requests,
+            "total_month_requests": month_requests,
             "last_updated": datetime.now().isoformat(),
             "cached": False
         }
@@ -269,6 +290,8 @@ def get_user_counter_from_chatbot_logs(db: Session, use_cache: bool = True) -> D
             "month_unique_users": 0,
             "total_requests": 0,
             "today_requests": 0,
+            "total_week_requests": 0,
+            "total_month_requests": 0,
             "last_updated": datetime.now().isoformat(),
             "cached": False,
             "error": f"Database error: {str(e)}"
