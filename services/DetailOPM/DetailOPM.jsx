@@ -43,7 +43,7 @@ import CombinedReportModal from "./CombinedReportModal";
 import styles from "./DetailOPM.module.scss";
 import useDetailOPMData from "@hooks/admin/opm/useDetailOPMData";
 import { formatThaiOfficialDateTime } from "@utils/Formats";
-
+import DetailOPMExportPDF from "@services/DetailOPM/DetailOPMExport PDF";
 const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails, loading, formatDate, itemData }) => {
     const theme = useTheme();
     const router = useRouter();
@@ -227,6 +227,12 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             ข้อมูลหลัก
                         </Typography>
                         <Box sx={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
+                            <DetailOPMExportPDF
+                            caseDetails={caseDetails}
+                            operatingsDetails={operatingsDetails}
+                            accountData={accountData}
+                            customerData={customerData}
+                            />
                             <ButtonSent
                                 label={isTablet ? "รายงาน" : "รายงาน"}
                                 size={isTablet ? "small" : "medium"}

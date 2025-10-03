@@ -1304,6 +1304,7 @@ const handleSubmit = async () => {
             null;
 
       const payload = {
+        id: defaultData?.id,  // ✅ เพิ่ม id เพื่อให้ backend รู้ว่าต้อง update ไม่ใช่ insert
         complaint_type_id: finalComplaintTypeId,
         complaint_subtype_id: (complaintSubTypeId && complaintSubTypeId !== "-") ? complaintSubTypeId : "",
         complaint_channel_id: (complaintChannelId && complaintChannelId !== "-") ? complaintChannelId : null,
