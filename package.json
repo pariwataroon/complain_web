@@ -41,6 +41,7 @@
     "lucide-react": "^0.525.0",
     "next": "latest",
     "next-transpile-modules": "^10.0.1",
+    "pdfmake": "^0.2.20",
     "react": "latest",
     "react-color": "^2.19.3",
     "react-datepicker": "^8.3.0",
