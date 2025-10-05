@@ -21,7 +21,7 @@ import {
   formatFullNameFromParts,
 } from "@utils/Formats";
 import CheckIcon from "@mui/icons-material/Check";
-import { exportElementToPDF } from "@utils/exportPDF";
+import { exportElementToPDF2 } from "@utils/exportPDF2";
 import {
   showLoading,
   closeAlert,
@@ -1239,7 +1239,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
           label="ส่งออก"
           color="ส่งออก"
           variant="contained"
-          onClick={() => exportElementToPDF(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
+          onClick={() => exportElementToPDF2(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
           disabled={submitting || isSubmitting}
           iconRight={<CheckIcon />}
         />

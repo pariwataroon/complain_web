@@ -17,7 +17,7 @@ import {
   formatPhoneNumber_null,
   formatCitizenId_null,
 } from "@utils/Formats";
-import { exportElementToPDF } from "@utils/exportPDF";
+import { exportElementToPDF2 } from "@utils/exportPDF2";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import CheckIcon from "@mui/icons-material/Check";
 import UploadOutlinedIcon from "@mui/icons-material/UploadOutlined";
@@ -431,10 +431,23 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
                 value={formatThaiDateTime(complaint.incidentDate)}
               />
               <Grid item xs={12}>
-                <InfoItem
-                  label="รายละเอียดเรื่องร้องทุกข์"
-                  value={complaint.description}
-                />
+                <Typography fontSize={16}>
+                  <Box component="span" fontWeight="bold">
+                    รายละเอียดเรื่องร้องทุกข์:
+                  </Box>
+                </Typography>
+                <Typography
+                  fontSize={16}
+                  sx={{
+                    mt: 1,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.8,
+                    textAlign: 'justify'
+                  }}
+                >
+                  {complaint.description || "-"}
+                </Typography>
               </Grid>
             </Grid>
           </Section>
@@ -544,7 +557,7 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
                 label="ส่งออก"
                 color="ส่งออก"
                 variant="outlined"
-                onClick={() => exportElementToPDF(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
+                onClick={() => exportElementToPDF2(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
                 iconRight={<UploadOutlinedIcon />}
                 sx={{ width: { xs: "100%", sm: "auto" } }} 
               />
