@@ -145,7 +145,7 @@ const DetailOPMExportPDF = ({
       doc.text("รหัสเรื่อง :", margin, yPos);
       const dateOpenTxt = formatThaiDate(dateOpened);
       const codeWithDate = dateOpenTxt ? `${caseCode} (วันที่เปิดคำร้อง ${dateOpenTxt})` : caseCode || "-";
-      doc.setTextColor(255, 0, 0);
+      doc.setTextColor(0, 0, 0);
       doc.text(codeWithDate, margin + 16, yPos);
       doc.setTextColor(0, 0, 0);
       yPos += lineHeight + 1;
@@ -159,7 +159,7 @@ const DetailOPMExportPDF = ({
         const maxW = Math.max(10, (pageW - margin) - xVal);
         const lines = doc.splitTextToSize(val, maxW);
         doc.setTextColor(0,0,0); doc.text(lbl, margin, yPos);
-        doc.setTextColor(255,0,0); doc.text(lines[0], xVal, yPos);
+        doc.setTextColor(0,0,0); doc.text(lines[0], xVal, yPos);
         for (let i=1;i<lines.length;i++) doc.text(lines[i], xVal, yPos + i*lineHeight);
         doc.setTextColor(0,0,0);
         yPos += Math.max(1, lines.length) * lineHeight;
@@ -287,7 +287,7 @@ const DetailOPMExportPDF = ({
       doc.setTextColor(0, 0, 0);
       doc.text(lbl, margin, yPos);
 
-      doc.setTextColor(255, 0, 0);
+      doc.setTextColor(0, 0, 0);
 
       // ตัดบรรทัดแรกตามพื้นที่ที่เหลือ
       const firstLineFit = doc.splitTextToSize(val, firstLineMaxW)[0];
@@ -337,7 +337,7 @@ const DetailOPMExportPDF = ({
           checkNewPage(rowH);
 
           let y1 = yPos, y2 = yPos, y3 = yPos;
-          doc.setTextColor(255,0,0);
+          doc.setTextColor(0,0,0);
           orgLines.forEach(t => { doc.text(t, margin, y1); y1 += lineHeight; });
           statusLines.forEach(t => { doc.text(t, margin + colW1, y2); y2 += lineHeight; });
           resultLines.forEach(t => { doc.text(t, margin + colW1 + colW2, y3); y3 += lineHeight; });
@@ -363,7 +363,7 @@ const DetailOPMExportPDF = ({
       };
       const drawMeasured = (x, m) => {
         doc.setTextColor(0,0,0); doc.text(m.lbl, x, yPos);
-        doc.setTextColor(255,0,0); doc.text(m.lines[0] || "-", m.xVal, yPos);
+        doc.setTextColor(0,0,0); doc.text(m.lines[0] || "-", m.xVal, yPos);
         for (let i=1;i<m.lines.length;i++) doc.text(m.lines[i], m.xVal, yPos + i*lineHeight);
         doc.setTextColor(0,0,0);
       };
@@ -424,7 +424,7 @@ const DetailOPMExportPDF = ({
         const lines = doc.splitTextToSize(String(remark), maxW);
         checkNewPage(Math.max(1, lines.length) * lineHeight);
         doc.setTextColor(0,0,0); doc.text(lbl, x, yPos);
-        doc.setTextColor(255,0,0); doc.text(lines[0], xVal, yPos);
+        doc.setTextColor(0,0,0); doc.text(lines[0], xVal, yPos);
         for (let i=1;i<lines.length;i++) doc.text(lines[i], xVal, yPos + i*lineHeight);
         doc.setTextColor(0,0,0);
         yPos += Math.max(1, lines.length) * lineHeight;
@@ -531,15 +531,29 @@ const DetailOPMExportPDF = ({
   };
 
   return (
+    
     <Button
-      variant="contained"
-      color="primary"
-      startIcon={<PictureAsPdfIcon />}
+      variant="outlined"
+      startIcon={<PictureAsPdfIcon sx={{ color: "#1a33b0" }} />}
       onClick={handleExportPDF}
-      sx={{ mb: 2 }}
+      sx={{
+        backgroundColor: "#E8E9F6",
+            color: "#414DB5",
+            border: "2px solid #414DB5",
+            borderRadius: "12px",
+            fontWeight: "bold",
+            px: 3,
+            py: 1,
+            whiteSpace: "nowrap",
+            minWidth: "fit-content", 
+            "&:hover": {
+              backgroundColor: "#dfe0f0",
+            },
+      }}
     >
       Export PDF
     </Button>
+
   );
 };
 

@@ -1032,99 +1032,172 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
                 )}
               />
             </Grid>
-            <Grid item xs={12} mb={3}>
+
+            {/* รายละเอียดเรื่องร้องทุกข์ - ขึ้นหน้าใหม่ */}
+            <Box
+              id="complaint-detail-section"
+              data-pdf-section="complaint-detail-section"
+              sx={{
+                breakInside: "avoid",
+                pageBreakInside: "avoid",
+                pageBreakBefore: "always",
+                "@media print": {
+                  breakInside: "avoid",
+                  pageBreakInside: "avoid",
+                  pageBreakBefore: "always"
+                },
+              }}
+            >
+              <Grid
+                item
+                xs={12}
+                mb={3}
+                id="complaint-detail"
+                data-pdf-section="complaint-detail"
+                sx={{
+                  breakInside: "avoid",
+                  pageBreakInside: "avoid",
+                  "@media print": {
+                    breakInside: "avoid",
+                    pageBreakInside: "avoid"
+                  },
+                }}
+              >
+              <Typography fontSize={16}>
+                <Box component="span" fontWeight="bold">รายละเอียดเรื่องร้องทุกข์:</Box>
+              </Typography>
+
+              <Typography
+                fontSize={16}
+                sx={{
+                  mt: 1,
+                  whiteSpace: "pre-wrap",     // ✅ รักษา \n เป็นย่อหน้า
+                  wordBreak: "break-word",
+                  overflowWrap: "anywhere",
+                  lineHeight: 1.8,
+                  textAlign: "justify",
+                }}
+              >
+                {complaint.description || additionalDetails.additionalDescription || "-"}
+              </Typography>
+            </Grid>
+            </Box>
+
+            {/* วันที่รับเรื่องและเสนองาน */}
+            <Grid
+              container
+              spacing={2}
+              mb={3}
+              id="officer-dates"
+              data-pdf-section="officer-dates"
+              sx={{ breakInside: "avoid", pageBreakInside: "avoid",
+                    "@media print": { breakInside: "avoid", pageBreakInside: "avoid" } }}
+            >
               <InfoItem
-                label="รายละเอียดเรื่องร้องทุกข์"
-                value={complaint.description || additionalDetails.additionalDescription || "-"}
+                label="วันที่รับเรื่องของเจ้าพนักงาน"
+                value={formatThaiFullDateTime(officerReceived) || "-"}
+              />
+              <InfoItem
+                label="วันที่เสนองาน ผอ.สรร."
+                value={formatThaiFullDateTime(directorSubmitted) || "-"}
               />
             </Grid>
 
-            {/* วันที่รับเรื่องและเสนองาน */}
-            <Grid container spacing={2} mb={3}>
-             <InfoItem
-               label="วันที่รับเรื่องของเจ้าพนักงาน"
-               value={formatThaiFullDateTime(officerReceived) || "-"}
-             />
-             <InfoItem
-               label="วันที่เสนองาน ผอ.สรร."
-               value={formatThaiFullDateTime(directorSubmitted) || "-"}
-             />
-            </Grid>
 
             {/* ไฟล์แนบ */}
-            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-              เอกสารประกอบการร้องทุกข์
-            </Typography>
-            <Box mb={3}>
-              {files.length > 0 ? (
-                files.map((file, index) => {
-                  const ext = getFileExt(file.fileName || "");
-                  const fileSizeMB = formatFileSize(file.fileSize);
+            <Box
+              id="attachments-section"
+              data-pdf-section="attachments-section"
+              sx={{ breakInside: "avoid", pageBreakInside: "avoid",
+                    "@media print": { breakInside: "avoid", pageBreakInside: "avoid" } }}
+              mb={3}
+            >
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                เอกสารประกอบการร้องทุกข์
+              </Typography>
 
-                  return (
-                    <Box
-                      key={file.id || index}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        border: "1px solid #ccc",
-                        borderRadius: "8px",
-                        px: 2,
-                        py: 1,
-                        mb: 1,
-                        cursor: "pointer",
-                        "&:hover": {
-                          backgroundColor: "#f5f5f5",
-                        },
-                      }}
-                      onClick={() => window.open(file.fileUrl, "_blank")}
-                    >
-                      {getFileIcon(ext)}
-                      <Typography fontSize={14} color="text.secondary">
-                        {file.fileName} {fileSizeMB} MB
-                      </Typography>
-                    </Box>
-                  );
-                })
-              ) : (
-                <Typography fontSize={14}>ไม่มีไฟล์แนบ</Typography>
-              )}
+              <Box>
+                {files.length > 0 ? (
+                  files.map((file, index) => {
+                    const ext = getFileExt(file.fileName || "");
+                    const fileSizeMB = formatFileSize(file.fileSize);
+                    return (
+                      <Box
+                        key={file.id || index}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          border: "1px solid #ccc",
+                          borderRadius: "8px",
+                          px: 2,
+                          py: 1,
+                          mb: 1,
+                          cursor: "pointer",
+                          breakInside: "avoid",         // ✅ ไม่ตัดกลางการ์ด
+                          pageBreakInside: "avoid",
+                          "&:hover": { backgroundColor: "#f5f5f5" },
+                        }}
+                        onClick={() => window.open(file.fileUrl, "_blank")}
+                      >
+                        {getFileIcon(ext)}
+                        <Typography fontSize={14} color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
+                          {file.fileName} {fileSizeMB} MB
+                        </Typography>
+                      </Box>
+                    );
+                  })
+                ) : (
+                  <Typography fontSize={14}>ไม่มีไฟล์แนบ</Typography>
+                )}
+              </Box>
             </Box>
 
-            <Typography fontSize={16} mb={2}>
-              ข้าพเจ้าขอรับรองว่าข้อเท็จจริงที่ได้ยื่นเรื่องร้องเรียน/ร้องทุกข์ข้างต้นเป็นความจริงทุกประการ
-            </Typography>
-            <Typography fontSize={16} mb={3}>
-              หมายเหตุ : เอกสารฉบับนี้ไม่สามารถนำไปใช้อ้างอิงเอกสารอื่น
-            </Typography>
+
+            <Box
+              id="declaration-section"
+              data-pdf-section="declaration-section"
+              sx={{ breakInside: "avoid", pageBreakInside: "avoid",
+                    "@media print": { breakInside: "avoid", pageBreakInside: "avoid" } }}
+              mb={3}
+            >
+              <Typography fontSize={16} mb={2}>
+                ข้าพเจ้าขอรับรองว่าข้อเท็จจริงที่ได้ยื่นเรื่องร้องเรียน/ร้องทุกข์ข้างต้นเป็นความจริงทุกประการ
+              </Typography>
+              <Typography fontSize={16}>
+                หมายเหตุ : เอกสารฉบับนี้ไม่สามารถนำไปใช้อ้างอิงเอกสารอื่น
+              </Typography>
+            </Box>
 
             {/* ข้อมูลเจ้าหน้าที่ผู้รับผิดชอบ */}
-            <Box mb={3}>
+            <Box
+              id="processing-info"
+              data-pdf-section="processing-info"
+              sx={{ breakInside: "avoid", pageBreakInside: "avoid",
+                    "@media print": { breakInside: "avoid", pageBreakInside: "avoid" } }}
+              mb={3}
+            >
               <Typography variant="subtitle1" fontWeight="bold" fontSize={18} gutterBottom>
                 ข้อมูลการประมวลผล
               </Typography>
               <Grid container spacing={2}>
-                <InfoItem
-                  label="เจ้าหน้าที่ผู้รับผิดชอบ"
-                  value={responsibleOfficerName}
-                />
+                <InfoItem label="เจ้าหน้าที่ผู้รับผิดชอบ" value={responsibleOfficerName} />
                 <InfoItem
                   label="สถานะ"
-                  value={assignmentForm?.status === "reviewed" ? "แจ้งผลการพิจารณา" :
-                         assignmentForm?.status === "in_process" ? "กำลังดำเนินการ" :
-                         assignmentForm?.status === "submitted" ? "รับเรื่อง" :
-                         assignmentForm?.status || "ไม่ระบุสถานะ"}
+                  value={
+                    assignmentForm?.status === "reviewed" ? "แจ้งผลการพิจารณา" :
+                    assignmentForm?.status === "in_process" ? "กำลังดำเนินการ" :
+                    assignmentForm?.status === "submitted" ? "รับเรื่อง" :
+                    assignmentForm?.status || "ไม่ระบุสถานะ"
+                  }
                 />
                 {assignmentForm?.assigned_remark && (
                   <Grid item xs={12}>
-                    <InfoItem
-                      label="หมายเหตุการมอบหมาย"
-                      value={assignmentForm.assigned_remark}
-                    />
+                    <InfoItem label="หมายเหตุการมอบหมาย" value={assignmentForm.assigned_remark} />
                   </Grid>
                 )}
               </Grid>
             </Box>
+
 
             <Box
               component="hr"
@@ -1239,7 +1312,15 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
           label="ส่งออก"
           color="ส่งออก"
           variant="contained"
-          onClick={() => exportElementToPDF2(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
+          onClick={() => exportElementToPDF2(pdfRef, "แบบฟอร์มร้องทุกข์.pdf", {
+          marginTop: 7,       // ✅ เว้นขอบบน 10mm
+          marginBottom: 10,    // ✅ เว้นขอบล่าง 10mm (ปรับได้)
+          forcePageBreakSelectors: [
+            "#complaint-detail",
+            '[data-pdf-section="complaint-detail"]',
+          ],
+        })
+      }
           disabled={submitting || isSubmitting}
           iconRight={<CheckIcon />}
         />

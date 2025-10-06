@@ -430,98 +430,170 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
                 label="วันและเวลาที่เกิดเหตุ"
                 value={formatThaiDateTime(complaint.incidentDate)}
               />
-              <Grid item xs={12}>
+            </Grid>
+          </Section>
+
+          {/* รายละเอียดเรื่องร้องทุกข์ - ขึ้นหน้าใหม่ */}
+          <Box
+            id="complaint-detail-section"
+            data-pdf-section="complaint-detail-section"
+            sx={{
+              breakInside: "avoid",
+              pageBreakInside: "avoid",
+              pageBreakBefore: "always",
+              "@media print": {
+                breakInside: "avoid",
+                pageBreakInside: "avoid",
+                pageBreakBefore: "always"
+              },
+            }}
+          >
+            <Grid container spacing={2} mb={3}>
+              <Grid
+                item
+                xs={12}
+                id="complaint-detail"
+                data-pdf-section="complaint-detail"
+                sx={{
+                  breakInside: "avoid",
+                  pageBreakInside: "avoid",
+                  "@media print": {
+                    breakInside: "avoid",
+                    pageBreakInside: "avoid"
+                  },
+                }}
+              >
                 <Typography fontSize={16}>
-                  <Box component="span" fontWeight="bold">
-                    รายละเอียดเรื่องร้องทุกข์:
-                  </Box>
+                  <Box component="span" fontWeight="bold">รายละเอียดเรื่องร้องทุกข์:</Box>
                 </Typography>
+
                 <Typography
                   fontSize={16}
                   sx={{
                     mt: 1,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    overflowWrap: "anywhere",
                     lineHeight: 1.8,
-                    textAlign: 'justify'
+                    textAlign: "justify",
                   }}
                 >
                   {complaint.description || "-"}
                 </Typography>
               </Grid>
             </Grid>
-          </Section>
-
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            เอกสารประกอบการร้องทุกข์
-          </Typography>
-          <Box mb={3}>
-            {files.length > 0 ? (
-              files.map((file, index) => {
-                const ext = getFileExt(file.name || file.url);
-                const href = file.url || "";
-                return (
-                  <a
-                    key={index}
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ textDecoration: "none" }}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        border: "1px solid #ccc",
-                        borderRadius: "8px",
-                        px: 2,
-                        py: 1,
-                        mb: 1,
-                        transition: "background 0.2s",
-                        '&:hover': { background: "#f8f9fa" },
-                      }}
-                    >
-                      {getFileIcon(ext)}
-                      <Typography fontSize={14} color="text.secondary">
-                        {file.name}
-                      </Typography>
-                    </Box>
-                  </a>
-                );
-              })
-            ) : (
-              <Typography fontSize={14}>ไม่มีไฟล์แนบ</Typography>
-            )}
           </Box>
 
-          <Typography fontSize={16}>
-            ข้าพเจ้าขอรับรองว่าข้อเท็จจริงที่ได้ยื่นเรื่องร้องเรียน/ร้องทุกข์ข้างต้นเป็นความจริงทุกประการ
-          </Typography>
-          <Typography fontSize={16}>
-            หมายเหตุ : เอกสารฉบับนี้ไม่สามารถนำไปใช้อ้างอิงเอกสารอื่น
-          </Typography>
+          {/* เอกสารประกอบการร้องทุกข์ */}
+          <Box
+            id="attachments-section"
+            data-pdf-section="attachments-section"
+            sx={{
+              breakInside: "avoid",
+              pageBreakInside: "avoid",
+              "@media print": { breakInside: "avoid", pageBreakInside: "avoid" },
+            }}
+            mb={3}
+          >
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              เอกสารประกอบการร้องทุกข์
+            </Typography>
+
+            <Box>
+              {files.length > 0 ? (
+                files.map((file, index) => {
+                  const ext = getFileExt(file.name || file.url);
+                  const href = file.url || "";
+                  return (
+                    <a
+                      key={index}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: "none" }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          border: "1px solid #ccc",
+                          borderRadius: "8px",
+                          px: 2,
+                          py: 1,
+                          mb: 1,
+                          transition: "background 0.2s",
+                          "&:hover": { background: "#f8f9fa" },
+                          breakInside: "avoid",            // ✅ ไม่ตัดกลางการ์ดไฟล์
+                          pageBreakInside: "avoid",
+                        }}
+                      >
+                        {getFileIcon(ext)}
+                        <Typography fontSize={14} color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
+                          {file.name}
+                        </Typography>
+                      </Box>
+                    </a>
+                  );
+                })
+              ) : (
+                <Typography fontSize={14}>ไม่มีไฟล์แนบ</Typography>
+              )}
+            </Box>
+          </Box>
+
+
+          <Box
+            id="declaration-section"
+            data-pdf-section="declaration-section"
+            sx={{
+              breakInside: "avoid",
+              pageBreakInside: "avoid",
+              "@media print": { breakInside: "avoid", pageBreakInside: "avoid" },
+            }}
+            mb={3}
+          >
+            <Typography fontSize={16} mb={2}>
+              ข้าพเจ้าขอรับรองว่าข้อเท็จจริงที่ได้ยื่นเรื่องร้องเรียน/ร้องทุกข์ข้างต้นเป็นความจริงทุกประการ
+            </Typography>
+            <Typography fontSize={16}>
+              หมายเหตุ : เอกสารฉบับนี้ไม่สามารถนำไปใช้อ้างอิงเอกสารอื่น
+            </Typography>
+          </Box>
+
 
           <Divider />
 
-                <Grid container spacing={2} mb={3}>
-                  <InfoItem label="ลงชื่อผู้ร้องทุกข์" value={complainant.name} />
-                  <InfoItem label="ลงชื่อผู้รับมอบอำนาจ" value={delegate.name} />
-                  <InfoItem label="วันที่ผู้ร้องลงนาม" value={formatThaiDate(normalizeIso(data?.created_at || data?.updated_at || new Date().toISOString()))} />
-                  <InfoItem label="วันที่ผู้รับมอบลงนาม" value={formatThaiDate(normalizeIso(data?.created_at || data?.updated_at || new Date().toISOString()))} />
-                </Grid>
+                <Box
+                  id="signature-section"
+                  data-pdf-section="signature-section"
+                  sx={{
+                    breakInside: "avoid",
+                    pageBreakInside: "avoid",
+                    "@media print": { breakInside: "avoid", pageBreakInside: "avoid" },
+                  }}
+                >
+                  <Grid container spacing={2} mb={3}>
+                    <InfoItem label="ลงชื่อผู้ร้องทุกข์" value={complainant.name} />
+                    <InfoItem label="ลงชื่อผู้รับมอบอำนาจ" value={delegate.name} />
+                    <InfoItem
+                      label="วันที่ผู้ร้องลงนาม"
+                      value={formatThaiDate(normalizeIso(data?.created_at || data?.updated_at || new Date().toISOString()))}
+                    />
+                    <InfoItem
+                      label="วันที่ผู้รับมอบลงนาม"
+                      value={formatThaiDate(normalizeIso(data?.created_at || data?.updated_at || new Date().toISOString()))}
+                    />
+                  </Grid>
 
-                <Grid container spacing={2} mb={3}>
-                  <InfoItem
-                    label="เจ้าหน้าที่ผู้รับผิดชอบ"
-                    value={resolvedAssignedTo}
-                  />
-                  <InfoItem
-                    label="วันที่รับงาน"
-                    value={
-                      resolvedAssignedDate ? formatThaiDateTime(normalizeIso(resolvedAssignedDate)) : '-'
-                    }
-                  />
-                </Grid>
+                  <Grid container spacing={2} mb={3}>
+                    <InfoItem label="เจ้าหน้าที่ผู้รับผิดชอบ" value={resolvedAssignedTo} />
+                    <InfoItem
+                      label="วันที่รับงาน"
+                      value={resolvedAssignedDate ? formatThaiDateTime(normalizeIso(resolvedAssignedDate)) : "-"}
+                    />
+                  </Grid>
+                </Box>
+
             </Paper>
             </div>
             <Box
@@ -557,7 +629,17 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
                 label="ส่งออก"
                 color="ส่งออก"
                 variant="outlined"
-                onClick={() => exportElementToPDF2(pdfRef, "แบบฟอร์มร้องทุกข์.pdf")}
+                onClick={() => exportElementToPDF2(pdfRef, "แบบฟอร์มร้องทุกข์.pdf", {
+                marginTop: 7,          // ✅ ขอบบน 10mm
+                marginBottom: 10,       // ✅ ขอบล่าง 10mm
+                forcePageBreakSelectors: [
+                  "#complaint-detail",
+                  "#attachments-section",
+                  "#declaration-section",
+                  "#signature-section",
+                ],
+              })
+            }
                 iconRight={<UploadOutlinedIcon />}
                 sx={{ width: { xs: "100%", sm: "auto" } }} 
               />
