@@ -63,12 +63,18 @@ async function loadImageBase64(publicPath) {
 /* ================= Component ================= */
 
 const DetailOPMExportPDF = ({
-  caseDetails = {},
+  caseDetails,
   operatingsDetails = [],
   accountData = {},
   customerData = {},
 }) => {
   const handleExportPDF = async () => {
+    // ตรวจสอบว่ามีข้อมูลหรือไม่
+    if (!caseDetails || (Array.isArray(caseDetails) && caseDetails.length === 0)) {
+      alert("ไม่มีข้อมูลคำร้องสำหรับ Export PDF");
+      return;
+    }
+
     try {
       // -- getter ฟิลด์จาก caseDetails (รองรับทั้ง object/array ที่ field:value)
       const getFieldValue = (fieldName) => {
@@ -119,7 +125,7 @@ const DetailOPMExportPDF = ({
       const logoImg = await loadImageBase64("/logo_blue.png");
       if (logoImg) doc.addImage(logoImg, "PNG", margin, yPos, 14, 14);
       doc.setFont("THSarabunNew", "bold");
-      doc.setFontSize(16); doc.text("ระบบการจัดการเรื่องร้องทุกข์", margin + 22, yPos + 6);
+      doc.setFontSize(16); doc.text("ระบบบริหารจัดการเรื่องราวร้องทุกข์", margin + 22, yPos + 6);
       doc.setFontSize(14); doc.text("สำนักงานปลัดกระทรวงการคลัง", margin + 22, yPos + 12);
       yPos += 22;
 

@@ -2,6 +2,7 @@ import React, { useCallback, useState, useMemo, useEffect, useRef } from "react"
 import { Box, Grid, Typography, Button, Stack } from "@mui/material";
 import styles from "./TabNav.module.scss";
 import { Add, InsertDriveFile, Close } from "@mui/icons-material";
+import { GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
 
 const Tab3 = ({
   stepKey,
@@ -25,6 +26,39 @@ const Tab3 = ({
 
   // State สำหรับไฟล์แนบ
   const [attachmentFiles, setAttachmentFiles] = useState([]);
+
+  // State สำหรับ complaint types
+  const [complaintTypes, setComplaintTypes] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+
+  // Load complaint types from API
+  useEffect(() => {
+    const fetchComplaintTypes = async () => {
+      setLoadingOptions(true);
+      try {
+        const response = await GetAllSelectComplaintTypes();
+        if (response?.res_code === "0000" && response?.res_data) {
+          const normTypes = Array.isArray(response.res_data)
+            ? response.res_data.map((t) => ({
+                value: t.id,
+                label: t.name,
+                raw: t,
+              }))
+            : [];
+          setComplaintTypes(normTypes);
+        } else {
+          setComplaintTypes([]);
+        }
+      } catch (error) {
+        console.error("Error loading complaint types:", error);
+        setComplaintTypes([]);
+      } finally {
+        setLoadingOptions(false);
+      }
+    };
+
+    fetchComplaintTypes();
+  }, []);
 
   // Sync กับ tabData เมื่อมีการเปลี่ยนแปลง
   useEffect(() => {
@@ -281,21 +315,22 @@ const Tab3 = ({
               </div>
             </Grid>
 
-            {/* ประเภทเรื่องร้องทุกข์ */}
+            {/* ประเภทเรื่องร้องเรียน */}
             <Grid item xs={12} sm={6}>
               <div style={containerStyle}>
-                <label style={labelStyle}>ประเภทเรื่องร้องทุกข์<span style={requiredStyle}>*</span></label>
-                <select 
+                <label style={labelStyle}>ประเภทเรื่องร้องเรียน<span style={requiredStyle}>*</span></label>
+                <select
                   value={tabData.complaintType || ""}
                   onChange={(e) => handleChange("complaintType", e.target.value)}
                   style={selectStyle}
+                  disabled={loadingOptions}
                 >
-                  <option value="" disabled style={{ color: "#999" }}>เลือกประเภทเรื่องร้องทุกข์</option>
-                  <option value="ร้องเรียน">ร้องเรียน</option>
-                  <option value="ร้องทุกข์">ร้องทุกข์</option>
-                  <option value="เสนอแนะ">เสนอแนะ</option>
-                  <option value="แจ้งเบาะแส">แจ้งเบาะแส</option>
-                  <option value="อื่นๆ">อื่นๆ</option>
+                  <option value="">
+                    {loadingOptions ? "กำลังโหลด..." : "เลือกประเภทเรื่องร้องเรียน"}
+                  </option>
+                  {complaintTypes.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
                 </select>
               </div>
             </Grid>
