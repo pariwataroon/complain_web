@@ -44,6 +44,7 @@ const statusLabel = (s) =>
   ({
     submitted: "รับเรื่อง",
     sent_to_agency: "ส่งหน่วยงาน",
+    sent_to_external: "ส่งภายนอก",
     in_process: "กำลังดำเนินการ",
     in_review: "ตรวจสอบ",
     tracking: "ติดตาม",
@@ -52,13 +53,8 @@ const statusLabel = (s) =>
     cancelled: "ยุติ",
   }[s] ?? s);
 
-const getCurrentThaiFiscalYear = () => {
-  const now = new Date();
-  const gregYear = now.getFullYear();
-  const month = now.getMonth() + 1;
-  const beFiscal = gregYear + 543 + (month >= 10 ? 1 : 0);
-  return String(beFiscal);
-};
+// ✅ ปี พ.ศ. "ปัจจุบัน" (ไม่ใช่ปีงบฯ)
+const getCurrentThaiCalendarYear = () => String(new Date().getFullYear() + 543);
 
 const ComplaintCard = ({ complaint, index, backlog }) => {
   const bg = index < backlog ? "#FDEAEA" : "#EAF4FE";
@@ -156,8 +152,9 @@ const StaffProfile = ({ staff }) => {
 };
 
 const AccountBoxComponents = () => {
+  // ✅ ใช้ปี พ.ศ. ปัจจุบันเป็นค่าเริ่มต้น
   const [fiscalYear, setFiscalYear] = useState(() => {
-    const fy = getCurrentThaiFiscalYear();
+    const fy = getCurrentThaiCalendarYear();
     const exists = fiscalYearOptions.some((o) => o.value === fy);
     return exists ? fy : fiscalYearOptions[0].value;
   });
@@ -180,9 +177,8 @@ const AccountBoxComponents = () => {
   const [summaryState, setSummaryState] = useState({
     total_staff: 0,
     total_complaints: 0,
-    in_progress_cases: 0,
-    completed_cases: 0,
-    cancelled_cases: 0,
+    in_progress_cases: 0, // รวม 7 สถานะที่ยังไม่ปิด
+    closed_cases: 0,       // completed + cancelled
   });
   const [staffStats, setStaffStats] = useState([]);
 
@@ -190,7 +186,7 @@ const AccountBoxComponents = () => {
     () => [
       { label: "จำนวนเจ้าหน้าที่ทั้งหมด", value: summaryState.total_staff, unit: "คน", bg: "#1221B5" },
       { label: "เรื่องราวร้องทุกข์ทั้งหมด", value: summaryState.total_complaints, unit: "เรื่อง", bg: "#2499FF" },
-      { label: "เรื่องราวร้องทุกข์ยุติ", value: summaryState.cancelled_cases, unit: "เรื่อง", bg: "#9AD0FF" },
+      { label: "เรื่องราวร้องทุกข์ยุติ", value: summaryState.closed_cases, unit: "เรื่อง", bg: "#9AD0FF" },
       { label: "เรื่องราวร้องทุกข์ดำเนินการ", value: summaryState.in_progress_cases, unit: "เรื่อง", bg: "#F1CA4B" },
     ],
     [summaryState]
@@ -206,10 +202,15 @@ const AccountBoxComponents = () => {
       const apiSummary = data?.summary ?? {};
       const sc = apiSummary?.status_counts ?? {};
 
-      // in_progress: ไม่รวม cancelled และ completed
+      const completed = Number(sc.completed ?? 0);
+      const cancelled = Number(sc.cancelled ?? 0);
+      const closedSum = completed + cancelled;
+
+      // ✅ รวม 7 สถานะที่ยังไม่ปิด (เพิ่ม sent_to_external)
       const inProgressSum =
         Number(sc.submitted ?? 0) +
         Number(sc.sent_to_agency ?? 0) +
+        Number(sc.sent_to_external ?? 0) +
         Number(sc.in_process ?? 0) +
         Number(sc.in_review ?? 0) +
         Number(sc.tracking ?? 0) +
@@ -219,8 +220,7 @@ const AccountBoxComponents = () => {
         total_staff: Number(apiSummary.total_staff ?? 0),
         total_complaints: Number(apiSummary.total_complaints ?? 0),
         in_progress_cases: inProgressSum,
-        completed_cases: Number(sc.completed ?? 0),
-        cancelled_cases: Number(sc.cancelled ?? 0),
+        closed_cases: closedSum,
       });
 
       const rawStaff = Array.isArray(data?.staff_data) ? data.staff_data : [];
@@ -229,49 +229,55 @@ const AccountBoxComponents = () => {
           row?.staff_info?.id &&
           idx === self.findIndex((r) => r?.staff_info?.id === row?.staff_info?.id)
       );
+
       const nextStaff = uniqueStaff.map((row, idx) => {
-      const info = row?.staff_info ?? {};
-      const wl = row?.workload ?? {};
-      const wsc = wl?.status_counts ?? {};
+        const info = row?.staff_info ?? {};
+        const wl = row?.workload ?? {};
+        const wsc = wl?.status_counts ?? {};
 
-      const backlog =
-        Number(wsc.submitted ?? 0) +
-        Number(wsc.sent_to_agency ?? 0) +
-        Number(wsc.in_process ?? 0) +
-        Number(wsc.in_review ?? 0) +
-        Number(wsc.tracking ?? 0) +
-        Number(wsc.reviewed ?? 0);
+        // ✅ คงค้าง (รวม 7 สถานะ และเพิ่ม sent_to_external)
+        const backlog =
+          Number(wsc.submitted ?? 0) +
+          Number(wsc.sent_to_agency ?? 0) +
+          Number(wsc.sent_to_external ?? 0) +
+          Number(wsc.in_process ?? 0) +
+          Number(wsc.in_review ?? 0) +
+          Number(wsc.tracking ?? 0) +
+          Number(wsc.reviewed ?? 0);
 
-      const done = Number(wsc.completed ?? 0);
-      const cancelled = Number(wsc.cancelled ?? 0);
+        // ✅ สำเร็จ (completed + cancelled)
+        const done =
+          Number(wsc.completed ?? 0) + Number(wsc.cancelled ?? 0);
 
-      const received = Number(
-        wl.total_assigned ?? backlog + done + cancelled
-      );
+        // จำนวนที่รับงาน (เชื่อถือ total_assigned ก่อน ถ้าไม่มีให้คำนวณ)
+        const received = Number(
+          wl.total_assigned ?? backlog + done
+        );
 
-      const complaints = Array.isArray(row?.latest_complaints)
-        ? row.latest_complaints.map((c) => ({
-            topic: c.subject ?? "-",
-            channel: "เว็บไซต์รับเรื่องร้องทุกข์",
-            type: statusLabel(c.status),
-            code: c.complaint_number ?? "-",
-          }))
-        : [];
+        const complaints = Array.isArray(row?.latest_complaints)
+          ? row.latest_complaints.map((c) => ({
+              topic: c.subject ?? "-",
+              channel: "เว็บไซต์รับเรื่องร้องทุกข์",
+              type: statusLabel(c.status),
+              code: c.complaint_number ?? "-",
+            }))
+          : [];
 
-      return {
-        id: info.id ?? idx + 1,
-        name: info.name ?? "ไม่ระบุชื่อ",
-        role: info.position || "", // เก็บ role ไว้ตรง ๆ
-        role_name:
-          Array.isArray(info.roles) && info.roles.length > 0
-            ? info.roles[0].role_name
-            : "-",
-        received,
-        backlog,
-        done,
-        complaints,
-      };
-    });
+        return {
+          id: info.id ?? idx + 1,
+          name: info.name ?? "ไม่ระบุชื่อ",
+          role: info.position || "",
+          role_name:
+            Array.isArray(info.roles) && info.roles.length > 0
+              ? info.roles[0].role_name
+              : "-",
+          received,
+          backlog,
+          done,
+          complaints,
+        };
+      });
+
       setStaffStats(nextStaff);
     } catch (err) {
       console.error(err);
@@ -279,8 +285,7 @@ const AccountBoxComponents = () => {
         total_staff: 0,
         total_complaints: 0,
         in_progress_cases: 0,
-        completed_cases: 0,
-        cancelled_cases: 0,
+        closed_cases: 0,
       });
       setStaffStats([]);
     } finally {
@@ -308,6 +313,7 @@ const AccountBoxComponents = () => {
           placeholder="เลือกปี"
         />
       </Box>
+
       <Box display="flex" flexWrap="wrap" gap={3} mt={4} px={1}>
         {summaryCards.map((card) => (
           <Box
@@ -333,6 +339,7 @@ const AccountBoxComponents = () => {
           </Box>
         ))}
       </Box>
+
       <Box mt={6} px={1}>
         <Box display="flex" alignItems="center" mb={3}>
           <Typography color="#1120A3" fontWeight={700} fontSize={20} mr={2}>
@@ -340,6 +347,7 @@ const AccountBoxComponents = () => {
           </Typography>
           <Box flexGrow={1} height={1} bgcolor="#1120A3" opacity={0.2} />
         </Box>
+
         <Box display="flex" flexWrap="wrap" gap={3}>
           {staffStats.map((staff) => (
             <Box
@@ -366,24 +374,26 @@ const AccountBoxComponents = () => {
               <Box mr={2} flexShrink={0}>
                 <img src="/human.png" alt="avatar" width={72} height={90} />
               </Box>
+
               <Box>
                 <Typography fontWeight={600}>{staff.name}</Typography>
                 <Typography fontSize={14} mb={1}>
                   {staff.role ? (
-                  <>
-                    <Typography fontSize={14} mb={0.5}>
-                      {staff.role}
-                    </Typography>
+                    <>
+                      <Typography fontSize={14} mb={0.5}>
+                        {staff.role}
+                      </Typography>
+                      <Typography fontSize={14} mb={1}>
+                        {staff.role_name}
+                      </Typography>
+                    </>
+                  ) : (
                     <Typography fontSize={14} mb={1}>
                       {staff.role_name}
                     </Typography>
-                  </>
-                ) : (
-                  <Typography fontSize={14} mb={1}>
-                    {staff.role_name}
-                  </Typography>
-                )}
+                  )}
                 </Typography>
+
                 <Box display="grid" gridTemplateColumns="80px 1fr" rowGap={0.5}>
                   <Typography>รับงาน</Typography>
                   <Typography>{staff.received} เรื่อง</Typography>
@@ -397,6 +407,7 @@ const AccountBoxComponents = () => {
           ))}
         </Box>
       </Box>
+
       <Modal
         open={open}
         onClose={handleCloseModal}
@@ -435,6 +446,7 @@ const AccountBoxComponents = () => {
           >
             <CloseIcon />
           </IconButton>
+
           {selectedStaff && (
             <Box
               sx={{
@@ -480,12 +492,14 @@ const AccountBoxComponents = () => {
                     }}
                   />
                 </Box>
+
                 <Typography fontSize={{ xs: 18, sm: 24 }} mt={1} fontWeight={600} align="center" color="#FFFFFF">
                   {selectedStaff.name}
                 </Typography>
                 <Typography fontSize={{ xs: 14, sm: 18 }} mb={3} align="center" color="#FFFFFF">
                   {selectedStaff.role}
                 </Typography>
+
                 <Box
                   sx={{
                     display: "flex",
@@ -520,6 +534,7 @@ const AccountBoxComponents = () => {
                   ))}
                 </Box>
               </Box>
+
               <Box
                 sx={{
                   flexGrow: 1,
