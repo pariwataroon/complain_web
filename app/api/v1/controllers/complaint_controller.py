@@ -9,11 +9,12 @@ import copy
 import json
 import uuid
 import threading
+import os
 
 from models.comp_complaint import (
     Complaint, ComplaintStatus, ComplainantType, RespondentType, 
     ComplaintStatusHistory, ConfidentialityLevel, UrgencyLevel, 
-    ComplaintFilingType, SeverityLevel
+    ComplaintFilingType, SeverityLevel, ComplaintAttachment
 )
 from models.comp_provinces import Province
 from models.comp_amphures import Amphure
@@ -23,6 +24,7 @@ from app.api.v1.schemas.complaint import ComplaintListItem
 from app.api.v1.schemas.notification import NotificationCreate
 from app.api.v1.controllers.geography_controller import model_to_dict
 import app.api.v1.controllers.notification_controller as notification_controller
+from lib.file_upload import delete_upload_file, get_storage_config
 
 logger = logging.getLogger(__name__)
 
@@ -2334,6 +2336,68 @@ def get_complaint_attachments(complaint: Complaint) -> List[Dict]:
                 "fileType": attachment.file_type
             })
     return attachment_list
+
+def delete_complaint_attachment(
+    db: Session,
+    complaint_id: UUID,
+    attachment_id: UUID,
+    user_id: Optional[UUID] = None
+) -> Dict[str, Any]:
+    """ลบไฟล์แนบของเรื่องร้องเรียน พร้อมลบไฟล์จริงในระบบจัดเก็บ"""
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not complaint:
+        raise ValueError("Complaint not found")
+
+    attachment = db.query(ComplaintAttachment).filter(
+        ComplaintAttachment.id == attachment_id,
+        ComplaintAttachment.complaint_id == complaint_id
+    ).first()
+
+    if not attachment:
+        raise ValueError("Attachment not found")
+
+    file_url = getattr(attachment, "file_url", None)
+    abs_path = None
+    if isinstance(file_url, str) and file_url:
+        if file_url.startswith("/uploads/"):
+            try:
+                base_dir = get_storage_config().get("base_dir")
+                rel_path = file_url[len("/uploads/"):].lstrip("/\\")
+                abs_path = os.path.join(base_dir, rel_path)
+            except Exception as exc:
+                logger.warning(f"Cannot resolve attachment path for deletion: {exc}")
+                abs_path = None
+        else:
+            abs_path = file_url
+
+    if abs_path:
+        try:
+            if os.path.exists(abs_path):
+                delete_upload_file(abs_path)
+        except Exception as exc:
+            logger.warning(f"Failed to delete attachment file '{abs_path}': {exc}")
+
+    file_name = attachment.file_name
+    db.delete(attachment)
+    db.commit()
+
+    try:
+        create_status_history(
+            db=db,
+            complaint_id=complaint_id,
+            status=complaint.status,
+            notes=f"ลบไฟล์แนบ: {file_name}",
+            user_id=user_id
+        )
+    except Exception as exc:
+        logger.warning(f"Could not record status history for attachment deletion: {exc}")
+
+    return {
+        "complaint_id": str(complaint_id),
+        "attachment_id": str(attachment_id),
+        "fileName": file_name
+    }
+
 
 def get_complaint_status_history(db: Session, complaint_id: UUID) -> List[Dict]:
     """ดึงประวัติสถานะของข้อร้องเรียน - เรียงใหม่ล่าสุดก่อน"""

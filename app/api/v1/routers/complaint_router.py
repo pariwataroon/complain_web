@@ -21,7 +21,8 @@ from app.api.v1.controllers.complaint_controller import (
     get_complaints_grouped_by_channel,
     update_complaint_generic,
     create_complaint_list_item,
-    update_complaint_from_structured
+    update_complaint_from_structured,
+    delete_complaint_attachment
 )
 from app.api.v1.controllers.outgoing_report_controller import get_outgoing_tracking, get_user_related_complaints_with_tracking
 from app.api.v1.schemas.complaint import StatusUpdateRequest, ComplaintUpdateAdmin, ComplaintUpdateSelf
@@ -708,6 +709,34 @@ async def add_attachment_to_complaint(
             "fileSize": file_info["file_size"],
             "fileType": file_info["file_type"]
         })
+    except Exception as e:
+        return format_response("5000", {"error": str(e)})
+
+@router.delete("/{complaint_id}/attachments/{attachment_id}", response_model=FormatResponseModel)
+async def delete_attachment_from_complaint(
+    complaint_id: UUID,
+    attachment_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(verify_token)
+):
+    """Delete a specific attachment from a complaint"""
+    try:
+        user_uuid: Optional[UUID] = None
+        if current_user:
+            try:
+                user_uuid = UUID(current_user)
+            except Exception:
+                user_uuid = None
+
+        result = delete_complaint_attachment(
+            db=db,
+            complaint_id=complaint_id,
+            attachment_id=attachment_id,
+            user_id=user_uuid
+        )
+        return format_response("0003", result)
+    except ValueError as e:
+        return format_response("4040", {"error": str(e)})
     except Exception as e:
         return format_response("5000", {"error": str(e)})
 
