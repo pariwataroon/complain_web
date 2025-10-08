@@ -678,7 +678,7 @@ const merged = {
               labelText="ประเภทเรื่องร้องทุกข์"
               value={usedTab31 ? merged.complaintTypeId : label(step3.complaintType)}
             />
-            <InfoItem labelText="เรื่อง" value={step3.subject || "-"} />
+            <InfoItem labelText="เรื่อง" value={merged.subject || step3.subject || "-"}  />
             <InfoItem
               labelText="วันเวลาที่เกิดเหตุ"
               value={
@@ -733,11 +733,11 @@ const merged = {
                     <Typography sx={{ mt: 1 }}>{merged.description || step3.description || "-"}</Typography>
                   </Grid>
 
-                  <Grid item xs={12}>
+                  {/* <Grid item xs={12}>
                     <Typography fontSize={16} fontWeight="bold" sx={{ mt: 3, mb: 1 }}>
                       เอกสารประกอบการร้องเรียน
                     </Typography>
-                  </Grid>
+                  </Grid> */}
 
                   <InfoItem labelText="เลข สป.กค." value={merged.ref1 || "-"} />
                   <InfoItem labelText="วันที่ (สป.กค.)" value={fmtDate(merged.ref1Date)} />
@@ -761,7 +761,7 @@ const merged = {
                     }
                   />
 
-                  <InfoItem
+                  {/* <InfoItem
                     labelText="ประเภทการรับเรื่อง"
                     value={
                       merged.filingType === "additional"
@@ -770,15 +770,15 @@ const merged = {
                         ? "รับเรื่องจากคณะทำงานนักตรวจสอบ"
                         : merged.filingType || "เรื่องร้องเรียนใหม่"
                     }
-                  />
+                  /> */}
 
-                  <InfoItem labelText="เลขอ้างอิงเพิ่มเติม 1" value={merged.addRef1 || "-"} />
+                  {/* <InfoItem labelText="เลขอ้างอิงเพิ่มเติม 1" value={merged.addRef1 || "-"} />
                   <InfoItem labelText="วันที่อ้างอิงเพิ่มเติม 1" value={fmtDate(merged.addRef1Date)} />
                   <InfoItem labelText="เลขอ้างอิงเพิ่มเติม 2" value={merged.addRef2 || "-"} />
-                  <InfoItem labelText="วันที่อ้างอิงเพิ่มเติม 2" value={fmtDate(merged.addRef2Date)} />
+                  <InfoItem labelText="วันที่อ้างอิงเพิ่มเติม 2" value={fmtDate(merged.addRef2Date)} /> */}
 
-                  <InfoItem labelText="วันที่รับงานของเจ้าหน้าที่" value={fmtDateTime(merged.officerReceivedDate)} />
-                  <InfoItem labelText="วันที่เสนองาน ผอ.สรร." value={fmtDateTime(merged.directorSubmittedDate)} />
+                  {/* <InfoItem labelText="วันที่รับงานของเจ้าหน้าที่" value={fmtDateTime(merged.officerReceivedDate)} />
+                  <InfoItem labelText="วันที่เสนองาน ผอ.สรร." value={fmtDateTime(merged.directorSubmittedDate)} /> */}
                 </>
               ) : (
                 // กรณี Tab3 - แสดงข้อมูลพื้นฐาน
