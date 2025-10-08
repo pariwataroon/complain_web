@@ -347,6 +347,31 @@ const GetComplaintOutgoingTracking = async (complaint_id) => {
   }
 }
 
+const DeleteComplaintAttachment = async (complaint_id, attachment_id) => {
+  console.log("🗑️ DeleteComplaintAttachment called:", { complaint_id, attachment_id });
+
+  try {
+    // DELETE with attachment_id in URL path
+    const response = await axiosInstance.delete(
+      `/complaints/${complaint_id}/attachments/${attachment_id}`
+    );
+
+    console.log("✅ DELETE response:", response.data);
+
+    if (response && response.data) {
+      return response.data;
+    }
+    return { success: true, res_code: "0000" };
+  } catch (error) {
+    console.error("❌ DELETE failed:", error?.response?.status, error?.response?.data);
+
+    // If DELETE fails, fallback to marking for deletion on save
+    console.log("⚠️ DELETE endpoint failed. Will remove from UI and update on save.");
+
+  }
+};
+
+
 const UpdateAssignedRemark = async (complaint_id, assigned_remark, options = {}) => {
   try {
     // ค่าเริ่มต้นสำหรับ payload
@@ -405,6 +430,7 @@ export {
   Addcomplaints,
   GetAllComplaints,
   UploadAttachments,
+  DeleteComplaintAttachment,
   GetComplaintByID,
   GetMeAllComplaints,
   GetComplaintMeByID,

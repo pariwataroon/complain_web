@@ -5,7 +5,9 @@ import {
   GetComplaintsWithSearch,
   GetAssignmentCompleteByAdmin,
   UpdateAssignmentCompleteByAdmin,
-  UpdateComplaint
+  UpdateComplaint,
+  UploadAttachments,
+  DeleteComplaintAttachment,
 } from "@pages/api/complaint/complaint";
 import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/ComplaintPersonalFormAPI";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
@@ -40,6 +42,7 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import ClearIcon from "@mui/icons-material/Clear";
 import IconButton from "@mui/material/IconButton";
 import { alertSuccess, alertError, alertWarning } from "@utils/Alerts";
+import InputFile from "@services/InputFile/InputFile";
 
 const breadcrumbItems = [
   {
@@ -69,6 +72,10 @@ const SearchComplaints = () => {
   const [error, setError] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+
+  // File attachment states
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [existingAttachments, setExistingAttachments] = useState([]);
 
   const generalMethods = useForm({
     mode: "onChange",
@@ -202,6 +209,12 @@ useEffect(() => {
 
       const merged = { ...complaint, assignment_form: assignment };
       setDefaultData(merged);
+
+      // Load existing attachments
+      if (complaint?.step3?.general?.attachment) {
+        console.log("📎 Loaded attachments:", complaint.step3.general.attachment);
+        setExistingAttachments(complaint.step3.general.attachment);
+      }
 
       // === แก้จุดนี้: Map ชื่อ complaintType เป็น id ===
       let complaintTypeId =
@@ -914,6 +927,14 @@ useEffect(() => {
       step3General.complaint_channel_id || assignmentForm.complaint_channel_id || "",
   });
   step4Methods.reset(defaultData?.step4?.general || {});
+
+  // Reset file attachments
+  setUploadedFiles([]);
+  if (defaultData?.step3?.general?.attachment) {
+    setExistingAttachments(defaultData.step3.general.attachment);
+  } else {
+    setExistingAttachments([]);
+  }
 };
 
 
@@ -1051,6 +1072,15 @@ useEffect(() => {
       respondentType: "individual",
     });
 
+    // Include updated attachments in payload
+    payload.step3 = {
+      ...defaultData?.step3,
+      general: {
+        ...defaultData?.step3?.general,
+        attachment: existingAttachments,
+      }
+    };
+
     try {
       const res = await UpdateComplaint(defaultData.id, payload);
       const ok =
@@ -1069,6 +1099,54 @@ useEffect(() => {
       return false;
     }
   };
+
+  // File upload handlers
+  const handleFileUpload = useCallback((files) => {
+    setUploadedFiles(files);
+  }, []);
+
+  const buildFileUrl = useCallback((filePath) => {
+    if (!filePath) return "";
+    if (filePath.startsWith("http")) return filePath;
+    const baseUrl = process.env.NEXT_PUBLIC_UPLOADS_BASE_URL?.replace(/\/$/, "") || "";
+    return `${baseUrl}/${filePath.replace(/^\//, "")}`;
+  }, []);
+
+  const handleDeleteExistingAttachment = useCallback(async (att) => {
+    if (!att?.id || !id) {
+      console.log("❌ Missing att.id or id:", { att, id });
+      return false;
+    }
+
+    console.log("🗑️ Deleting attachment:", {
+      attachmentId: att.id,
+      complaintId: id,
+      attachment: att
+    });
+
+    try {
+      const res = await DeleteComplaintAttachment(id, att.id);
+      console.log("✅ Delete response:", res);
+
+      if (res?.success === false && res?.res_code !== "0000") {
+        alertWarning("ลบไฟล์ไม่สำเร็จ", res?.res_message || "เกิดข้อผิดพลาด");
+        return false;
+      }
+
+      // Remove from local state
+      setExistingAttachments(prev => prev.filter(x =>
+        String(x.id) !== String(att.id) &&
+        String(x.fileId) !== String(att.id)
+      ));
+
+      // alertSuccess("ทำเครื่องหมายลบไฟล์", "ไฟล์จะถูกลบเมื่อกดปุ่ม 'บันทึก'");
+      return true;
+    } catch (error) {
+      console.error("❌ Error deleting attachment:", error);
+      alertWarning("ลบไฟล์ไม่สำเร็จ", error?.response?.data?.res_message || error?.message || "เกิดข้อผิดพลาดในการลบไฟล์");
+      return false;
+    }
+  }, [id]);
 
 const handleSubmit = async () => {
   const ok12 = await updateStep12();
@@ -1270,6 +1348,8 @@ const handleSubmit = async () => {
         // Filing type & flags
         ...newComplaintFlags,
         senderAgencyName,
+        // Include current attachments (after user deletions)
+        attachment: existingAttachments,
       },
     },
     step4: {
@@ -1365,6 +1445,19 @@ const handleSubmit = async () => {
       );
       return;
     }
+
+    // Update complaint with attachment changes first
+    console.log("📎 Updating attachments:", existingAttachments);
+    await UpdateComplaint(defaultData.id, {
+      step3: {
+        ...defaultData?.step3,
+        general: {
+          ...defaultData?.step3?.general,
+          attachment: existingAttachments,
+        }
+      }
+    });
+
     const res = await UpdateAssignmentCompleteByAdmin(
       defaultData.id,
       submitData.assignment_form
@@ -1373,7 +1466,31 @@ const handleSubmit = async () => {
     console.log("✅ UpdateAssignmentCompleteByAdmin response:", res);
 
   if (["0000", "0002"].includes(res?.res_code)) {
-      // alertSuccess("บันทึกสำเร็จ", "ข้อมูลได้รับการบันทึกแล้ว");
+      // Upload new files if any
+      if (uploadedFiles.length > 0) {
+        try {
+          const formData = new FormData();
+          uploadedFiles.forEach((file) => {
+            formData.append("file", file, file.name);
+          });
+
+          const uploadRes = await UploadAttachments(defaultData.id, formData);
+          if (uploadRes?.res_code === "0000" || uploadRes?.success !== false) {
+            // Reload attachments after upload
+            const updatedComplaint = await GetComplaintByID(id);
+            if (updatedComplaint?.res_data?.step3?.general?.attachment) {
+              setExistingAttachments(updatedComplaint.res_data.step3.general.attachment);
+            }
+            setUploadedFiles([]);
+            alertSuccess("อัปโหลดไฟล์สำเร็จ", "ไฟล์แนบถูกบันทึกแล้ว");
+          } else {
+            alertWarning("อัปโหลดไฟล์ไม่สำเร็จ", uploadRes?.res_message || "ข้อมูลถูกบันทึกแล้ว แต่ไฟล์แนบอัปโหลดไม่สำเร็จ");
+          }
+        } catch (uploadErr) {
+          console.error("Error uploading files:", uploadErr);
+          alertWarning("อัปโหลดไฟล์ไม่สำเร็จ", uploadErr?.response?.data?.res_message || "ข้อมูลถูกบันทึกแล้ว แต่ไฟล์แนบอัปโหลดไม่สำเร็จ");
+        }
+      }
 
       // เก็บ preview ไว้แสดง
       setPreviewData(submitData);
@@ -2353,76 +2470,19 @@ const handleSubmit = async () => {
 
                       {/* เอกสารประกอบการร้องเรียน */}
                       <div className={styles.attachmentSection}>
-                        <h4>เอกสารประกอบการร้องเรียน</h4>
-                        <div className={styles.attachmentList}>
-                          {defaultData?.step3?.general?.attachment?.length >
-                          0 ? (
-                            defaultData.step3.general.attachment.map(
-                              (file, index) => {
-                                const fileSizeMB = (
-                                  file.fileSize /
-                                  (1024 * 1024)
-                                ).toFixed(2);
-
-                                const formatDate = (isoString) => {
-                                  const date = new Date(isoString);
-                                  const day = date
-                                    .getDate()
-                                    .toString()
-                                    .padStart(2, "0");
-                                  const month = (date.getMonth() + 1)
-                                    .toString()
-                                    .padStart(2, "0");
-                                  const year = (date.getFullYear() + 543)
-                                    .toString()
-                                    .slice(-2);
-                                  return `${day}/${month}/${year}`;
-                                };
-
-                                const baseUrl =
-                                  process.env.NEXT_PUBLIC_UPLOADS_BASE_URL?.replace(
-                                    /\/$/,
-                                    ""
-                                  ) || "";
-                                const fileUrl = file.fileUrl?.startsWith("http")
-                                  ? file.fileUrl
-                                  : `${baseUrl}/${
-                                      file.fileUrl?.replace(/^\//, "") || ""
-                                    }`;
-
-                                return (
-                                  <div
-                                    key={file.id || index}
-                                    className={styles.attachmentItem}
-                                  >
-                                    <span className={styles.pdfIcon}>📄</span>
-                                    <a
-                                      href={fileUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      style={{
-                                        color: "inherit",
-                                        textDecoration: "none",
-                                      }}
-                                    >
-                                      {file.fileName} {fileSizeMB} MB (
-                                      {formatDate(file.created_at)})
-                                    </a>
-                                  </div>
-                                );
-                              }
-                            )
-                          ) : (
-                            <div className={styles.attachmentItem}>
-                              <span className={styles.pdfIcon}>📄</span>
-                              ไม่มีเอกสารประกอบ
-                            </div>
-                          )}
-                        </div>
-                        <p className={styles.attachmentNote}>
-                          หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ
-                          หมายศาล
-                        </p>
+                        <InputFile
+                          label="เอกสารประกอบการร้องเรียน"
+                          name="attachment"
+                          onChange={handleFileUpload}
+                          helperText="หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          maxFiles={5}
+                          maxSizeMB={10}
+                          multiple={true}
+                          existingFiles={existingAttachments}
+                          getFileUrl={(att) => buildFileUrl(att.file_url || att.fileUrl || att.file_path)}
+                          onDeleteExisting={handleDeleteExistingAttachment}
+                        />
                       </div>
                     </div>
                   </div>

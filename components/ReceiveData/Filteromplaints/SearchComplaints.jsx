@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -19,6 +19,8 @@ import {
   GetComplaintsWithSearch,
   UpdateComplaint,
   UpdateAssignmentCompleteByAdmin,
+  UploadAttachments,
+  DeleteComplaintAttachment,
 } from "@pages/api/complaint/complaint";
 import ComplaintPersonalFormAPI from "@services/ComplaintPersonalFormAPI/ComplaintPersonalFormAPI";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
@@ -41,6 +43,7 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import ClearIcon from "@mui/icons-material/Clear";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
+import InputFile from "@services/InputFile/InputFile";
 
 const breadcrumbItems = [
   {
@@ -153,6 +156,9 @@ const SearchComplaints = () => {
     }
     return null;
   }, [router.query.id, router.query.data]);
+  // File attachment states
+    const [uploadedFiles, setUploadedFiles] = useState([]);
+    const [existingAttachments, setExistingAttachments] = useState([]);
 
   const [inputValue, setInputValue] = useState("");
   // State variables
@@ -531,6 +537,53 @@ const SearchComplaints = () => {
     subComplaintTypes,
     step3Methods,
   ]);
+// ✅ อัปเดตไฟล์ใหม่ (ยังไม่อัปขึ้นเซิร์ฟเวอร์จนกว่าจะบันทึก)
+const handleFileUpload = useCallback((files) => {
+  setUploadedFiles(files);
+}, []);
+
+// ✅ สร้าง URL แสดงไฟล์แนบที่เซิร์ฟเวอร์
+const buildFileUrl = useCallback((filePath) => {
+  if (!filePath) return "";
+  if (filePath.startsWith("http")) return filePath;
+  const baseUrl = process.env.NEXT_PUBLIC_UPLOADS_BASE_URL?.replace(/\/$/, "") || "";
+  return `${baseUrl}/${String(filePath).replace(/^\//, "")}`;
+}, []);
+
+// ✅ ลบไฟล์เดิม: ลบที่เซิร์ฟเวอร์ "ทันที" แล้วตัดออกจาก existingAttachments
+const handleDeleteExistingAttachment = useCallback(async (att) => {
+  if (!att?.id || !id) {
+    console.log("❌ Missing att.id or id:", { att, id });
+    return false;
+  }
+
+  try {
+    const res = await DeleteComplaintAttachment(defaultData.id, att.id);
+    console.log("✅ Delete response:", res);
+
+    if (res?.success === false && res?.res_code !== "0000") {
+      alertWarning("ลบไฟล์ไม่สำเร็จ", res?.res_message || "เกิดข้อผิดพลาด");
+      return false;
+    }
+
+    // ลบออกจาก state
+    setExistingAttachments(prev => prev.filter(x =>
+      String(x.id) !== String(att.id) &&
+      String(x.fileId) !== String(att.id)
+    ));
+
+    // alertSuccess("ลบไฟล์สำเร็จ", "ไฟล์ถูกลบออกจากระบบแล้ว");
+    return true;
+  } catch (error) {
+    console.error("❌ Error deleting attachment:", error);
+    alertWarning(
+      "ลบไฟล์ไม่สำเร็จ", 
+      error?.response?.data?.res_message || error?.message || "เกิดข้อผิดพลาด"
+    );
+    return false;
+  }
+}, [defaultData?.id]);
+
 
   const fetchComplaints = async (id) => {
     setLoading(true);
@@ -731,6 +784,13 @@ const SearchComplaints = () => {
         setSubComplaintTypesLoading(false);
       }
       // === END โหลดประเภทเรื่องย่อย ===
+
+      if (data?.step3?.general?.attachment) {
+        console.log("📎 Loaded attachments:", data.step3.general.attachment);
+        setExistingAttachments(data.step3.general.attachment);
+      } else {
+        setExistingAttachments([]);
+      }
     } catch (error) {
       console.error("Load complaints failed", error);
       setError("เกิดข้อผิดพลาดในการโหลดข้อมูล");
@@ -924,7 +984,14 @@ const SearchComplaints = () => {
     setValidationErrors({});
     setShowValidation(false);
     setComplaintFilingType("new");
-  };
+
+    setUploadedFiles([]);
+  if (defaultData?.step3?.general?.attachment) {
+    setExistingAttachments(defaultData.step3.general.attachment);
+  } else {
+    setExistingAttachments([]);
+  }
+};
 
   // ฟังก์ชันใหม่สำหรับการอัปเดตข้อมูล step 1 และ step 2 พร้อมไป preview
   const handleUpdateSteps = async () => {
@@ -972,138 +1039,203 @@ const SearchComplaints = () => {
   };
 
   const handleSubmit = async () => {
-    // 1) validate เหมือนเดิม
-    const isValid = validateForm();
-    if (!isValid) {
-      alertError("ข้อมูลไม่ครบถ้วน","กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (ฟิลด์ที่มีเครื่องหมาย *)");
-      return;
+  // 1) validate เหมือนเดิม
+  const isValid = validateForm();
+  if (!isValid) {
+    alertError(
+      "ข้อมูลไม่ครบถ้วน",
+      "กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (ฟิลด์ที่มีเครื่องหมาย *)"
+    );
+    return;
+  }
+
+  if (!defaultData?.id) {
+    alertError("ข้อผิดพลาด", "ไม่พบ ID ของเรื่องร้องเรียน");
+    return;
+  }
+
+  setSaving(true);
+  try {
+    const generalData = generalMethods.getValues();
+    const delegateData = delegateMethods.getValues();
+    const step2Data = step2Methods.getValues();
+
+    // 2) สร้าง payload เฉพาะ Step1 & Step2 พร้อมเพิ่ม attachments ที่มีอยู่
+    const payload12 = buildStep12Payload({
+      generalData,
+      delegateData,
+      delegateType, // state เดิมของคุณ
+      step2Data,
+      respondentType, // state เดิมของคุณ
+    });
+
+    // เพิ่ม step3 เข้าไปใน payload เพื่อรักษา attachments
+    payload12.step3 = {
+      ...defaultData?.step3,
+      general: {
+        ...defaultData?.step3?.general,
+        attachment: existingAttachments,
+      },
+    };
+
+    // 3) เรียก API UpdateComplaint เพื่ออัปเดต Step 1-2 และ attachments
+    const res = await UpdateComplaint(defaultData.id, payload12);
+
+    const ok =
+      ["0000", "0002"].includes(String(res?.res_code)) ||
+      res?.success === true ||
+      res?.status === "ok" ||
+      res?.message === "COMPLAINT_UPDATED" ||
+      /SUCCESS|UPDATED|OK/i.test(String(res?.res_message || ""));
+
+    if (!ok) {
+      throw new Error(
+        res?.res_message || res?.message || "อัปเดต Step 1-2 ไม่สำเร็จ"
+      );
     }
 
-    if (!defaultData?.id) {
-      alertError("ข้อผิดพลาด","ไม่พบ ID ของเรื่องร้องเรียน");
-      return;
-    }
-
-    setSaving(true);
+    // 4) อัปโหลดไฟล์ใหม่ (ถ้ามี)
+    if (uploadedFiles.length > 0) {
       try {
-        const generalData  = generalMethods.getValues();  
-        const delegateData = delegateMethods.getValues(); 
-        const step2Data    = step2Methods.getValues();   
-
-        // 3) สร้าง payload เฉพาะ Step1 & Step2 แล้วเรียก UpdateComplaint ก่อน
-        const payload12 = buildStep12Payload({
-          generalData,
-          delegateData,
-          delegateType,     // state เดิมของคุณ
-          step2Data,
-          respondentType,   // state เดิมของคุณ
+        const formData = new FormData();
+        uploadedFiles.forEach((file) => {
+          formData.append("file", file, file.name);
         });
 
-        const res = await UpdateComplaint(defaultData.id, payload12);
-
-        const ok =
-          ["0000","0002"].includes(String(res?.res_code)) ||
-          res?.success === true ||
-          res?.status === "ok" ||
-          res?.message === "COMPLAINT_UPDATED" ||
-          /SUCCESS|UPDATED|OK/i.test(String(res?.res_message || ""));
-
-        if (!ok) {
-          throw new Error(res?.res_message || res?.message || "อัปเดต Step 1-2 ไม่สำเร็จ");
+        const uploadRes = await UploadAttachments(defaultData.id, formData);
+        
+        if (uploadRes?.res_code === "0000" || uploadRes?.success !== false) {
+          // โหลดข้อมูลใหม่เพื่อรีเฟรช existingAttachments
+          const updated = await GetComplaintByID(defaultData.id);
+          const refreshed = updated?.res_data?.step3?.general?.attachment || [];
+          setExistingAttachments(Array.isArray(refreshed) ? refreshed : []);
+          setUploadedFiles([]);
+          alertSuccess("อัปโหลดไฟล์สำเร็จ", "ไฟล์แนบถูกบันทึกแล้ว");
+        } else {
+          alertWarning(
+            "อัปโหลดไฟล์ไม่สำเร็จ",
+            uploadRes?.res_message ||
+              "ข้อมูลถูกบันทึกแล้ว แต่ไฟล์แนบอัปโหลดไม่สำเร็จ"
+          );
         }
-
-        // 4) จากนั้นค่อยประกอบข้อมูลสำหรับ preview (เหมือนเดิม)
-        const step3Data = step3Methods.getValues();
-        const step4Data = step4Methods.getValues();
-
-        // หา senderAgencyName จาก positions (เหมือนโค้ดเดิม)
-        let senderAgencyName = "";
-        const selectedAgencyId = step3Data.senderAgency;
-        if (selectedAgencyId !== undefined && selectedAgencyId !== null && selectedAgencyId !== "") {
-          const foundPos = positions.find((pos) => String(pos.id) === String(selectedAgencyId));
-          if (foundPos) {
-            senderAgencyName = foundPos.name || foundPos.label || "";
-          } else {
-            const foundDept = departments.find((dept) => String(dept.id) === String(selectedAgencyId));
-            senderAgencyName = (foundDept && (foundDept.name || foundDept.department_name || foundDept.label)) || "";
-          }
-        }
-
-        const selectedOfficer = staffUsers.find(
-          (user) => user.value === step4Data.responsibleOfficer
+      } catch (uploadErr) {
+        console.error("Error uploading files:", uploadErr);
+        alertWarning(
+          "อัปโหลดไฟล์ไม่สำเร็จ",
+          uploadErr?.response?.data?.res_message ||
+            "ข้อมูลถูกบันทึกแล้ว แต่ไฟล์แนบอัปโหลดไม่สำเร็จ"
         );
-
-        const responsibleOfficerData = selectedOfficer
-          ? {
-              id: selectedOfficer.value,
-              name: selectedOfficer.label,
-              fullName: selectedOfficer.fullName || "",
-              email: selectedOfficer.email || "",
-              roles: selectedOfficer.roles || [],
-            }
-          : {
-              id: step4Data.responsibleOfficer || "",
-              name: "",
-              fullName: "",
-              email: "",
-              roles: [],
-            };
-
-        const enhancedStep4Data = {
-          ...step4Data,
-          responsibleOfficer: responsibleOfficerData,
-          responsibleOfficerId: step4Data.responsibleOfficer,
-        };
-
-        const complaintFilingData = {
-          new_complaint: complaintFilingType === "new",
-          add_more_complaint_to_ref: complaintFilingType === "additional",
-          group_work: complaintFilingType === "committee",
-          additional_reference_number1: step3Data.additionalReference1 || "",
-          additional_reference_date1: step3Data.additionalReferenceDate1 || "",
-          additional_reference_number2: step3Data.additionalReference2 || "",
-          additional_reference_date2: step3Data.additionalReferenceDate2 || "",
-        };
-
-        const submitData = {
-          id: defaultData?.id,
-          step1: {
-            general: {
-              general: generalData,
-              delegate: defaultDelegateRef.current ? delegateData : null,
-            },
-          },
-          step2: {
-            general: {
-              individual: step2Data,
-            },
-          },
-          step3: {
-            general: {
-              ...step3Data,
-              senderAgencyName,
-              complaintType: step3Data.complaintType,
-              complaintFilingType: complaintFilingType,
-              ...complaintFilingData,
-            },
-          },
-          step4: { general: enhancedStep4Data },
-        };
-
-        router.push(
-          `/admin/edit/search/Filteromplaints/${defaultData?.id}?preview`,
-          undefined,
-          { shallow: true }
-        );
-        setPreviewData(submitData);
-
-      } catch (err) {
-        console.error("Save & Preview error:", err);
-        alertError("ข้อผิดพลาด", err?.message || "ไม่สามารถอัปเดตข้อมูลได้");
-      } finally {
-        setSaving(false);
       }
+    }
+
+    // 5) จากนั้นค่อยประกอบข้อมูลสำหรับ preview
+    const step3Data = step3Methods.getValues();
+    const step4Data = step4Methods.getValues();
+
+    // หา senderAgencyName จาก positions
+    let senderAgencyName = "";
+    const selectedAgencyId = step3Data.senderAgency;
+    if (
+      selectedAgencyId !== undefined &&
+      selectedAgencyId !== null &&
+      selectedAgencyId !== ""
+    ) {
+      const foundPos = positions.find(
+        (pos) => String(pos.id) === String(selectedAgencyId)
+      );
+      if (foundPos) {
+        senderAgencyName = foundPos.name || foundPos.label || "";
+      } else {
+        const foundDept = departments.find(
+          (dept) => String(dept.id) === String(selectedAgencyId)
+        );
+        senderAgencyName =
+          (foundDept &&
+            (foundDept.name || foundDept.department_name || foundDept.label)) ||
+          "";
+      }
+    }
+
+    // หา responsibleOfficer data
+    const selectedOfficer = staffUsers.find(
+      (user) => user.value === step4Data.responsibleOfficer
+    );
+
+    const responsibleOfficerData = selectedOfficer
+      ? {
+          id: selectedOfficer.value,
+          name: selectedOfficer.label,
+          fullName: selectedOfficer.fullName || "",
+          email: selectedOfficer.email || "",
+          roles: selectedOfficer.roles || [],
+        }
+      : {
+          id: step4Data.responsibleOfficer || "",
+          name: "",
+          fullName: "",
+          email: "",
+          roles: [],
+        };
+
+    const enhancedStep4Data = {
+      ...step4Data,
+      responsibleOfficer: responsibleOfficerData,
+      responsibleOfficerId: step4Data.responsibleOfficer,
     };
+
+    // ข้อมูลประเภทการยื่นเรื่อง
+    const complaintFilingData = {
+      new_complaint: complaintFilingType === "new",
+      add_more_complaint_to_ref: complaintFilingType === "additional",
+      group_work: complaintFilingType === "committee",
+      additional_reference_number1: step3Data.additionalReference1 || "",
+      additional_reference_date1: step3Data.additionalReferenceDate1 || "",
+      additional_reference_number2: step3Data.additionalReference2 || "",
+      additional_reference_date2: step3Data.additionalReferenceDate2 || "",
+    };
+
+    // สร้าง submitData สำหรับ preview
+    const submitData = {
+      id: defaultData?.id,
+      step1: {
+        general: {
+          general: generalData,
+          delegate: defaultDelegateRef.current ? delegateData : null,
+        },
+      },
+      step2: {
+        general: {
+          individual: step2Data,
+        },
+      },
+      step3: {
+        general: {
+          ...step3Data,
+          senderAgencyName,
+          complaintType: step3Data.complaintType,
+          complaintFilingType: complaintFilingType,
+          ...complaintFilingData,
+          // เพิ่ม attachments ที่อัปเดตแล้วเข้าไปใน preview
+          attachment: existingAttachments,
+        },
+      },
+      step4: { general: enhancedStep4Data },
+    };
+
+    // 6) ไป Preview
+    router.push(
+      `/admin/edit/search/Filteromplaints/${defaultData?.id}?preview`,
+      undefined,
+      { shallow: true }
+    );
+    setPreviewData(submitData);
+  } catch (err) {
+    console.error("Save & Preview error:", err);
+    alertError("ข้อผิดพลาด", err?.message || "ไม่สามารถอัปเดตข้อมูลได้");
+  } finally {
+    setSaving(false);
+  }
+};
 
   // เปลี่ยนชื่อฟังก์ชันเพื่อแยกจาก dropdown
   const handleComplaintFilingTypeChange = (type) => {
@@ -2138,76 +2270,19 @@ const SearchComplaints = () => {
 
                       {/* เอกสารประกอบการร้องเรียน */}
                       <div className={styles.attachmentSection}>
-                        <h4>เอกสารประกอบการร้องเรียน</h4>
-                        <div className={styles.attachmentList}>
-                          {defaultData?.step3?.general?.attachment?.length >
-                          0 ? (
-                            defaultData.step3.general.attachment.map(
-                              (file, index) => {
-                                const fileSizeMB = (
-                                  file.fileSize /
-                                  (1024 * 1024)
-                                ).toFixed(2);
-
-                                const formatDate = (isoString) => {
-                                  const date = new Date(isoString);
-                                  const day = date
-                                    .getDate()
-                                    .toString()
-                                    .padStart(2, "0");
-                                  const month = (date.getMonth() + 1)
-                                    .toString()
-                                    .padStart(2, "0");
-                                  const year = (date.getFullYear() + 543)
-                                    .toString()
-                                    .slice(-2);
-                                  return `${day}/${month}/${year}`;
-                                };
-
-                                const baseUrl =
-                                  process.env.NEXT_PUBLIC_UPLOADS_BASE_URL?.replace(
-                                    /\/$/,
-                                    ""
-                                  ) || "";
-                                const fileUrl = file.fileUrl?.startsWith("http")
-                                  ? file.fileUrl
-                                  : `${baseUrl}/${
-                                      file.fileUrl?.replace(/^\//, "") || ""
-                                    }`;
-
-                                return (
-                                  <div
-                                    key={file.id || index}
-                                    className={styles.attachmentItem}
-                                  >
-                                    <span className={styles.pdfIcon}>📄</span>
-                                    <a
-                                      href={fileUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      style={{
-                                        color: "inherit",
-                                        textDecoration: "none",
-                                      }}
-                                    >
-                                      {file.fileName} {fileSizeMB} MB (
-                                      {formatDate(file.created_at)})
-                                    </a>
-                                  </div>
-                                );
-                              }
-                            )
-                          ) : (
-                            <div className={styles.attachmentItem}>
-                              <span className={styles.pdfIcon}>📄</span>
-                              ไม่มีเอกสารประกอบ
-                            </div>
-                          )}
-                        </div>
-                        <p className={styles.attachmentNote}>
-                          หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ
-                          หมายศาล
-                        </p>
+                        <InputFile
+                          label="เอกสารประกอบการร้องเรียน"
+                          name="attachment"
+                          onChange={handleFileUpload}
+                          helperText="หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          maxFiles={5}
+                          maxSizeMB={10}
+                          multiple={true}
+                          existingFiles={existingAttachments}
+                          getFileUrl={(att) => buildFileUrl(att.file_url || att.fileUrl || att.file_path)}
+                          onDeleteExisting={handleDeleteExistingAttachment}
+                        />
                       </div>
                     </div>
                   </div>
