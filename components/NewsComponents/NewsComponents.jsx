@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { sanitizeForDisplay } from "@utils/sanitizeNewsHtml";
 import { useRouter } from "next/router";
 import { getPublishedNewsById } from "@pages/api/news/news"; // API function to get the news by ID
 import styles from "./NewsComponent.module.scss"; // เพิ่มการ import สไตล์จากไฟล์ SCSS
@@ -81,6 +82,13 @@ const NewsComponent = () => {
         link.title.toLowerCase() === title.toLowerCase() && link.url
     );
   };
+
+  const safeContent = useMemo(() => {
+    if (typeof window === "undefined") return newsData?.content || "";
+    return sanitizeForDisplay(newsData?.content || "", {
+      imgBase: "https://complain.mof.go.th/api",
+    });
+  }, [newsData?.content]);
 
   // เปิด Dialog เพื่อแสดงภาพขนาดใหญ่
   const handleImageClick = (url) => {
@@ -165,7 +173,7 @@ const NewsComponent = () => {
       {/* เนื้อหาข่าวสาร */}
       <div
         className={styles.newsContent}
-        dangerouslySetInnerHTML={{ __html: newsData?.content || "" }}
+        dangerouslySetInnerHTML={{ __html: safeContent }}
       />
 
       {/* รูปภาพกิจกรรม */}

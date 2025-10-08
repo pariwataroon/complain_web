@@ -20,6 +20,7 @@ import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPicke
 import { showConfirm2 } from "@utils/Alerts";
 import BreadcrumbsServiceF from "@services/BreadCrumbs/breadcrumbsFunction";
 import RichTextEditor from "@services/RichTextEditor/RichTextEditor";
+import { sanitizeForStorage } from "@utils/sanitizeNewsHtml";
 
 export default function NewsDetails() {
   const router = useRouter();
@@ -188,6 +189,10 @@ export default function NewsDetails() {
       return;
     }
 
+    const cleanedContent = sanitizeForStorage(content, {
+      imgBase: "https://complain.mof.go.th/api"
+    });
+
     const cleanedGalleryImages = (galleryImages || [])
       .filter((img) => typeof img === "string")
       .map((img) =>
@@ -223,7 +228,7 @@ export default function NewsDetails() {
 
     const newData = {
       title,
-      content,
+      content: cleanedContent,
       cover_image_url: cleanedCoverImageUrl,
       gallery_images: cleanedGalleryImages,
       additional_links: additionalLinks,
