@@ -559,6 +559,19 @@ const mergeLocalParts = (current, part, value) => {
 
     const s3 = step3Methods.getValues();
     console.log("[Tab31] RHF dump just before parse:", JSON.stringify(s3, null, 2));
+
+    // แก้ไข: ตรวจสอบ attachment ว่ามีข้อมูลจริงหรือไม่
+    const attachment = s3?.attachment;
+    const validAttachment = attachment && Array.isArray(attachment) && attachment.length > 0
+      ? attachment.filter(file => file && (file instanceof File || (file.name && file.size)))
+      : [];
+
+    console.log("[Tab31] attachment check:", {
+      raw: attachment,
+      valid: validAttachment,
+      length: validAttachment.length
+    });
+
     const s4 = {
       officerReceivedDate: toPlainDate(s3?.officerReceivedDate),
       directorSubmittedDate: toPlainDate(s3?.directorSubmittedDate),
@@ -575,8 +588,10 @@ const mergeLocalParts = (current, part, value) => {
     const combinedData = {
       ...s3,
       ...s4, // มี Date จริงแล้ว
+      attachment: validAttachment, // ใช้ validAttachment แทน
     };
 
+    console.log("[Tab31] Final combinedData:", combinedData);
     updateStepData("step31", "general", combinedData);
     return true;
   };
@@ -1232,13 +1247,14 @@ const ThaiDateTimeInline = ({ control, name, placeholder = "กรุณาเ�
               </div>
             </div> */}
 
-            {/* <div className={styles.fieldRow} style={{ marginTop: 25 }}>
+            <div className={styles.fieldRow} style={{ marginTop: 25 }}>
               <div className={styles.fieldGroup}>
+                <label className={styles.label}>วันและเวลาที่เกิดเหตุ</label>
                 <div className={`${styles.datePickerWrapper} ${styles.datePickerUX}`}>
                  <ThaiDateTimeInline control={step3Methods.control} name="incidentDateTime" />
                 </div>
               </div>
-            </div> */}
+            </div>
 
             <div className={styles.fieldGroup} style={{ marginTop: 20 }}>
               <label className={styles.label}>รายละเอียดเพิ่มเติม</label>

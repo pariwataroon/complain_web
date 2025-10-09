@@ -68,7 +68,54 @@ const ComplaintIDService = ({ complaint }) => {
   // ====== STEP3: Complaint Detail ======
   const step3 = complaint.step3?.general ?? {};
   const tab31 = complaint.step31?.general ?? {};
-  const files = step3.attachment ?? [];
+
+  // รวม attachment จากทั้ง step3 และ tab31
+  const normalizeArray = (input) => {
+    if (!input) return [];
+    if (Array.isArray(input)) return input.filter(Boolean);
+    return [input].filter(Boolean);
+  };
+
+  const step3Files = normalizeArray(step3.attachment);
+  const tab31Files = normalizeArray(tab31.attachment);
+  const mergedAttachments = [
+    ...normalizeArray(complaint.attachments),
+    ...normalizeArray(complaint.attachment),
+    ...normalizeArray(complaint.evidences),
+    ...normalizeArray(complaint.evidence),
+    ...normalizeArray(complaint.assignment_form?.attachments),
+  ];
+
+  const fileKey = (file) => {
+    if (!file || typeof file !== "object") return String(file || "");
+    return (
+      file.id ||
+      file.uuid ||
+      file.file_uuid ||
+      file.fileId ||
+      file.file_id ||
+      file.fileUrl ||
+      file.file_url ||
+      file.file_path ||
+      file.path ||
+      file.name ||
+      JSON.stringify(file)
+    );
+  };
+
+  const fileCollector = new Map();
+  const pushFiles = (arr) => {
+    arr.forEach((item) => {
+      const key = fileKey(item);
+      if (!fileCollector.has(key)) {
+        fileCollector.set(key, item);
+      }
+    });
+  };
+
+  [step3Files, tab31Files, mergedAttachments].forEach(pushFiles);
+
+  const files = Array.from(fileCollector.values());
 
   const [maps, setMaps] = useState({ subtype: {}, agency: {} });
 
@@ -253,7 +300,14 @@ const merged = {
    flattenSubtypesFromTypes(complaint?.options?.complaint_types)
  ),
  complaintChannel: tryGetLabel(
-   pick(complaint?.complaint_channel_id, tab31?.complaintChannel),
+   pick(
+     tab31?.complaintChannel,
+     tab31?.complaintChannelName,
+     step3?.complaintChannel,
+     step3?.complaintChannelName,
+     complaint?.complaint_channel_name,
+     complaint?.complaint_channel_id
+   ),
    complaint?.options?.complaint_channels || []
  ),
 
@@ -684,6 +738,10 @@ const merged = {
               value={
                 step3.incidentDate
                   ? formatThaiDateTime(step3.incidentDate)
+                  : tab31.incidentDateTime
+                  ? formatThaiDateTime(tab31.incidentDateTime)
+                  : merged.incidentDateTime
+                  ? formatThaiDateTime(merged.incidentDateTime)
                   : "-"
               }
             />
@@ -715,9 +773,18 @@ const merged = {
                 <>
                   <InfoItem labelText="ช่องทางร้องทุกข์" value={merged.complaintChannel || "-"} />
                   <InfoItem labelText="ประเภทเรื่องร้องทุกข์" value={merged.complaintTypeId || "-"} />
-                  
+
                   <InfoItem labelText="ชื่อเรื่อง" value={merged.subject || step3.subject || "-"} />
-                  {/* <InfoItem labelText="วันและเวลาที่เกิดเหตุ" value={fmtDateTime(merged.incidentDateTime)} /> */}
+                  <InfoItem
+                    labelText="วันและเวลาที่เกิดเหตุ"
+                    value={
+                      tab31.incidentDateTime
+                        ? fmtDateTime(tab31.incidentDateTime)
+                        : merged.incidentDateTime
+                        ? fmtDateTime(merged.incidentDateTime)
+                        : "-"
+                    }
+                  />
                  <InfoItem
                     labelText="ประเภทเรื่องย่อย"
                     value={
@@ -783,9 +850,21 @@ const merged = {
               ) : (
                 // กรณี Tab3 - แสดงข้อมูลพื้นฐาน
                 <>
-                  <InfoItem labelText="ช่องทางร้องทุกข์" value={label(step3.complaintChannel)} />
+                  <InfoItem
+                    labelText="ช่องทางร้องทุกข์"
+                    value={label(step3.complaintChannel || step3.complaintChannelName || merged.complaintChannel)}
+                  />
                   <InfoItem labelText="ประเภทเรื่องร้องทุกข์" value={label(step3.complaintType)} />
-                  <InfoItem labelText="วันและเวลาที่เกิดเหตุ" value={step3?.incidentDate ? formatThaiDateTime(step3.incidentDate) : "-"} />
+                  <InfoItem
+                    labelText="วันและเวลาที่เกิดเหตุ"
+                    value={
+                      step3.incidentDate
+                        ? formatThaiDateTime(step3.incidentDate)
+                        : merged.incidentDateTime
+                        ? formatThaiDateTime(merged.incidentDateTime)
+                        : "-"
+                    }
+                  />
                   
                   <Grid item xs={12}>
                     <Typography fontSize={16}>

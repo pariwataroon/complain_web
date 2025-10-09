@@ -13,7 +13,11 @@ import { CheckCircle, HelpOutline, HourglassEmpty } from "@mui/icons-material";
 
 import NavbarMain from "@services/navbarMain/navbarMain";
 import ComplaintIDService from "@services/ComplaintIDService/ComplaintIDService";
-import { GetComplaintOutgoingTracking, GetAssignmentCompleteByAdmin } from "@pages/api/complaint/complaint";
+import {
+  GetComplaintOutgoingTracking,
+  GetAssignmentCompleteByAdmin,
+  GetComplaintByID,
+} from "@pages/api/complaint/complaint";
 import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 import { formatThaiDate } from "@utils/Formats";
 import styles from "./FollowupDetailPage.module.scss";
@@ -42,6 +46,7 @@ const STATUS_ALIAS = {
 
 // คำที่ถือว่า “ปิดเรื่องจากผลพิจารณา”
 const CLOSED_WORDS = ["ยุติเรื่อง", "ยุติเรื่องได้", "ปิดเรื่อง", "ปิดงาน"];
+const WEBSITE_CHANNEL_LABEL = "เว็บไซต์ (https://complain.mof.go.th/)";
 
 const normalizeStatus = (status) => {
   const s = String(status || "").trim();
@@ -57,6 +62,26 @@ const normalizeStatus = (status) => {
 const getWhen = (h) => h?.changed_at || h?.changedAt || h?.date || h?.at || "";
 
 const sortByTime = (a, b) => new Date(getWhen(a)).getTime() - new Date(getWhen(b)).getTime();
+
+const isPlainObject = (value) =>
+  Object.prototype.toString.call(value) === "[object Object]";
+
+const deepMerge = (target = {}, source = {}) => {
+  const output = { ...target };
+
+  Object.entries(source || {}).forEach(([key, value]) => {
+    if (isPlainObject(value)) {
+      const baseValue = isPlainObject(output[key]) ? output[key] : {};
+      output[key] = deepMerge(baseValue, value);
+    } else if (Array.isArray(value)) {
+      output[key] = [...value];
+    } else {
+      output[key] = value;
+    }
+  });
+
+  return output;
+};
 
 const liftClosure = (h) => {
   const isOutgoing = h?.type === "outgoing_report" || h?.status === "outgoing_report";
@@ -116,26 +141,86 @@ export default function FollowupDetailPage() {
       try {
         showLoading("กำลังโหลดข้อมูลเรื่องร้องทุกข์...");
 
-        const [resComplaint, resTracking] = await Promise.all([
+        const [resComplaintDetail, resAssignment, resTracking] = await Promise.all([
+          GetComplaintByID(id),
           GetAssignmentCompleteByAdmin(id),
           GetComplaintOutgoingTracking(id),
         ]);
 
-        if (resComplaint?.res_code === "0000" && resComplaint?.res_data?.complaint) {
-          const complaintData = {
-            ...resComplaint.res_data.complaint,
-            options: resComplaint.res_data.options,
-            subject: resComplaint.res_data.complaint.subject || "",
-            description: resComplaint.res_data.complaint.description || "",
-            status_history:
-              resComplaint?.res_data?.history ??
-              resComplaint?.res_data?.complaint?.status_history ??
-              [],
-          };
-          setComplaint(complaintData);
-        } else {
-          console.error("Invalid API response structure:", resComplaint);
+        const assignmentComplaint = resAssignment?.res_data?.complaint || {};
+        const detailComplaint = resComplaintDetail?.res_data || {};
+
+        if (
+          !isPlainObject(assignmentComplaint) &&
+          !isPlainObject(detailComplaint)
+        ) {
+          console.error("Invalid API response structure:", {
+            resComplaintDetail,
+            resAssignment,
+          });
           setErrorMsg("ไม่สามารถโหลดข้อมูลได้ - รูปแบบข้อมูลไม่ถูกต้อง");
+        } else {
+          const mergedComplaint = deepMerge(
+            isPlainObject(assignmentComplaint) ? assignmentComplaint : {},
+            isPlainObject(detailComplaint) ? detailComplaint : {}
+          );
+
+          const statusHistory =
+            resAssignment?.res_data?.history ??
+            mergedComplaint?.status_history ??
+            assignmentComplaint?.status_history ??
+            [];
+
+          mergedComplaint.status_history = Array.isArray(statusHistory)
+            ? statusHistory
+            : [];
+
+          mergedComplaint.options =
+            resAssignment?.res_data?.options ||
+            mergedComplaint.options ||
+            detailComplaint.options ||
+            assignmentComplaint.options ||
+            {};
+
+          mergedComplaint.subject =
+            mergedComplaint.subject ||
+            detailComplaint?.step3?.general?.subject ||
+            assignmentComplaint?.step3?.general?.subject ||
+            "";
+
+          mergedComplaint.description =
+            mergedComplaint.description ||
+            detailComplaint?.step3?.general?.description ||
+            assignmentComplaint?.step3?.general?.description ||
+            "";
+
+          mergedComplaint.step1 = mergedComplaint.step1 || {};
+          mergedComplaint.step2 = mergedComplaint.step2 || {};
+          mergedComplaint.step3 = mergedComplaint.step3 || {};
+          mergedComplaint.step31 = mergedComplaint.step31 || {};
+          mergedComplaint.step3.general = mergedComplaint.step3.general || {};
+          mergedComplaint.step31.general = mergedComplaint.step31.general || {};
+
+          const hasStep31General =
+            mergedComplaint.step31?.general &&
+            Object.keys(mergedComplaint.step31.general).length > 0;
+
+          if (!mergedComplaint.step3.general.complaintChannel) {
+            if (!hasStep31General) {
+              mergedComplaint.step3.general.complaintChannel = WEBSITE_CHANNEL_LABEL;
+              mergedComplaint.step3.general.complaintChannelName =
+                mergedComplaint.step3.general.complaintChannelName || WEBSITE_CHANNEL_LABEL;
+            } else if (mergedComplaint.step31.general.complaintChannelName) {
+              mergedComplaint.step3.general.complaintChannelName =
+                mergedComplaint.step3.general.complaintChannelName ||
+                mergedComplaint.step31.general.complaintChannelName;
+            }
+          } else if (!mergedComplaint.step3.general.complaintChannelName) {
+            mergedComplaint.step3.general.complaintChannelName =
+              mergedComplaint.step3.general.complaintChannel;
+          }
+
+          setComplaint(mergedComplaint);
         }
 
         const trackingData =
