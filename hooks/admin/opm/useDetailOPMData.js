@@ -245,10 +245,12 @@ const useDetailOPMData = ({
       };
     }
 
+    const subjectText = detailsData.summary || mainInfo.case_code || "";
+
     const step3 = {
       general: {
         complaintType: mainInfo.type_text || "",
-        subject: mainInfo.case_code || "",
+        subject: subjectText,
         incidentDate: incidentDate || "",
         description: detailsData.detail || "",
         attachment:
@@ -552,7 +554,7 @@ const useDetailOPMData = ({
     ) {
       setTimeout(() => {
         autoCreateComplaint();
-      }, 500);
+      }, 18000);
     }
   }, [
     isDataReady,
