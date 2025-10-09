@@ -423,7 +423,8 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
               </Typography>
             )}
           </Section>
-
+          
+          <Box id="complaint-info-section" data-pdf-section="complaint-info-section">
           <Section title="ข้อมูลเรื่องร้องทุกข์">
             <Grid container spacing={2} mb={3}>
               <InfoItem
@@ -432,6 +433,7 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
               />
             </Grid>
           </Section>
+          </Box>
 
           {/* รายละเอียดเรื่องร้องทุกข์ - ขึ้นหน้าใหม่ */}
           <Box
@@ -440,12 +442,12 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
             sx={{
               breakInside: "avoid",
               pageBreakInside: "avoid",
-              pageBreakBefore: "always",
-              "@media print": {
-                breakInside: "avoid",
-                pageBreakInside: "avoid",
-                pageBreakBefore: "always"
-              },
+              // pageBreakBefore: "always",
+              // "@media print": {
+              //   breakInside: "avoid",
+              //   pageBreakInside: "avoid",
+              //   pageBreakBefore: "always"
+              // },
             }}
           >
             <Grid container spacing={2} mb={3}>
@@ -629,17 +631,23 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
                 label="ส่งออก"
                 color="ส่งออก"
                 variant="outlined"
-                onClick={() => exportElementToPDF2(pdfRef, "แบบฟอร์มร้องทุกข์.pdf", {
-                marginTop: 7,          // ✅ ขอบบน 10mm
-                marginBottom: 10,       // ✅ ขอบล่าง 10mm
-                forcePageBreakSelectors: [
-                  "#complaint-detail",
-                  "#attachments-section",
-                  "#declaration-section",
-                  "#signature-section",
-                ],
-              })
-            }
+                onClick={() =>
+                  exportElementToPDF2(pdfRef, "แบบฟอร์มร้องทุกข์.pdf", {
+                    marginTop: 7,
+                    marginBottom: 10,
+                    marginLeft: 4,
+                    marginRight: 4,
+                    // ✅ บังคับเริ่มหน้าใหม่ที่ "ข้อมูลเรื่องร้องทุกข์"
+                    pageBreakBeforeSelectors: ["#complaint-info-section"],
+                    // กันการผ่ากลางรายละเอียดฯ ตามเดิม
+                    forcePageBreakSelectors: [
+                      "#complaint-detail",
+                      "#attachments-section",
+                      "#declaration-section",
+                      "#signature-section",
+                    ],
+                  })
+                }
                 iconRight={<UploadOutlinedIcon />}
                 sx={{ width: { xs: "100%", sm: "auto" } }} 
               />

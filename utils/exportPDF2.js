@@ -1,55 +1,63 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-/**
- * - marginTop เริ่มต้น 10mm
- * - marginBottom เริ่มต้น 10mm
- * - ฟอนต์ทุก element = 22px
- * - หั่น canvas เป็นหน้า ๆ (ไม่ซ้ำ/ไม่เกิดเส้นคั่น)
- * - forcePageBreakSelectors: บล็อกที่ถ้าพื้นที่ไม่พอจะขึ้นหน้าใหม่ทั้งก้อน
- */
-export const exportElementToPDF2 = async (
-  target,
-  filename = "document.pdf",
-  options = {
-    marginTop: 7,
-    marginBottom: 10,
-    forcePageBreakSelectors: [
-      '[data-pdf-section="complaint-detail"]',
-      '#complaint-detail',
-    ],
-  }
-) => {
+export const exportElementToPDF2 = async (target, filename = "document.pdf", options = {}) => {
+  const {
+    marginTop = 10,
+    marginBottom = 10,
+    marginLeft = 4,
+    marginRight = 4,
+    fontSizePx = 32,
+    lineHeight = 1.7,
+    // ✅ เปลี่ยนค่าเริ่มต้นให้ตัดหน้าใหม่ตรง "ข้อมูลเรื่องร้องทุกข์"
+    pageBreakBeforeSelectors = ["#complaint-info-section"],
+    // คงกันการผ่ากลางบล็อกเดิม
+    forcePageBreakSelectors = ["#complaint-detail", '[data-pdf-section="complaint-detail"]'],
+    scale = 3,
+  } = options;
+
+  // ---- resolve root ----
   let root = null;
   if (target && typeof target === "object" && "current" in target) root = target.current;
   else if (typeof target === "string") root = document.getElementById(target) || document.querySelector(target);
-  else if (target instanceof Element) root = target;
+  else if (typeof window !== "undefined" && target instanceof Element) root = target;
   if (!root) { console.error("❌ exportElementToPDF: ไม่พบ element ที่ต้องการ export"); return; }
 
-  // ✅ ฟอนต์ 22px
-  const elements = root.querySelectorAll("*");
+  // ---- bump font ----
+  const els = root.querySelectorAll("*");
   const originalStyles = [];
-  elements.forEach((el) => {
-    originalStyles.push({ el, fontSize: el.style.fontSize });
-    el.style.fontSize = "22px";
+  els.forEach((el) => {
+    originalStyles.push({ el, fontSize: el.style.fontSize, lineHeight: el.style.lineHeight });
+    el.style.fontSize = `${fontSizePx}px`;
+    el.style.lineHeight = el.style.lineHeight || String(lineHeight);
   });
 
-  const getOffsetTopRelRoot = (el, rootEl) => {
-    let y = 0, n = el;
-    while (n && n !== rootEl) { y += n.offsetTop; n = n.offsetParent; }
-    return y;
-  };
+  // ---- helpers (CSS px → Canvas px) ----
+  const rootRect = root.getBoundingClientRect();
+  const toCanvasPx = (cssPx) => Math.round(cssPx * scale);
+  const topCanvasPx = (el) => toCanvasPx(el.getBoundingClientRect().top - rootRect.top);
+  const heightCanvasPx = (el) => toCanvasPx(el.getBoundingClientRect().height);
 
+  // กันผ่ากลางบล็อก
   const forceBlocks = [];
-  (options.forcePageBreakSelectors || []).forEach((sel) => {
+  (forcePageBreakSelectors || []).forEach((sel) => {
     root.querySelectorAll(sel).forEach((el) => {
-      const top = getOffsetTopRelRoot(el, root);
-      forceBlocks.push({ topPx: top, heightPx: el.offsetHeight });
+      forceBlocks.push({ topPx: topCanvasPx(el), heightPx: heightCanvasPx(el) });
     });
   });
 
+  // ✅ hard break เฉพาะที่ "ข้อมูลเรื่องร้องทุกข์"
+  const hardBreaks = [];
+  (pageBreakBeforeSelectors || []).forEach((sel) => {
+    root.querySelectorAll(sel).forEach((el) => {
+      hardBreaks.push(topCanvasPx(el));
+    });
+  });
+  hardBreaks.sort((a, b) => a - b);
+
+  // ---- render ----
   const canvas = await html2canvas(root, {
-    scale: 3,
+    scale,
     useCORS: true,
     backgroundColor: "#ffffff",
     windowWidth: root.scrollWidth,
@@ -60,12 +68,9 @@ export const exportElementToPDF2 = async (
   const pdf = new jsPDF("p", "mm", "a4");
   const pdfW = pdf.internal.pageSize.getWidth();
   const pdfH = pdf.internal.pageSize.getHeight();
-
-  const marginTop = options.marginTop ?? 10;
-  const marginBottom = options.marginBottom ?? 10;
-
-  const usableHeightMM = pdfH - marginTop - marginBottom;     // ✅ พื้นที่ที่วางได้/หน้า
-  const mmPerPx = pdfW / canvas.width;
+  const usableWidthMM  = pdfW - marginLeft - marginRight;
+  const usableHeightMM = pdfH - marginTop - marginBottom;
+  const mmPerPx = usableWidthMM / canvas.width;
   const pageHeightPx = Math.floor(usableHeightMM / mmPerPx);
 
   let currentTopPx = 0;
@@ -74,12 +79,15 @@ export const exportElementToPDF2 = async (
   while (currentTopPx < canvas.height) {
     let nextBreakPx = Math.min(currentTopPx + pageHeightPx, canvas.height);
 
-    // ✅ ดันบล็อกที่ไม่ให้ตัดกลางขึ้นหน้าใหม่ทั้งก้อน
+    // hard break อยู่ภายในหน้า → ตัดที่จุดนั้น
+    const nextHard = hardBreaks.find((bp) => bp > currentTopPx && bp < nextBreakPx);
+    if (typeof nextHard === "number") nextBreakPx = nextHard;
+
+    // กันผ่ากลางก้อน
     for (const blk of forceBlocks) {
-      const blkStart = blk.topPx;
-      const fallsInThisPage = blkStart > currentTopPx && blkStart < nextBreakPx;
-      const blockFits = blk.heightPx <= (nextBreakPx - blkStart);
-      if (fallsInThisPage && !blockFits) nextBreakPx = blkStart;
+      const falls = blk.topPx > currentTopPx && blk.topPx < nextBreakPx;
+      const fits  = blk.heightPx <= (nextBreakPx - blk.topPx);
+      if (falls && !fits) nextBreakPx = blk.topPx;
     }
 
     let sliceHeightPx = nextBreakPx - currentTopPx;
@@ -93,23 +101,24 @@ export const exportElementToPDF2 = async (
     sliceCanvas.height = sliceHeightPx;
     const sctx = sliceCanvas.getContext("2d");
     sctx.imageSmoothingEnabled = true;
-    sctx.drawImage(
-      canvas,
-      0, currentTopPx, canvas.width, sliceHeightPx,
-      0, 0,           canvas.width, sliceHeightPx
-    );
+    if ("imageSmoothingQuality" in sctx) sctx.imageSmoothingQuality = "high";
+    sctx.drawImage(canvas, 0, currentTopPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
 
     const sliceData = sliceCanvas.toDataURL("image/png");
-    const sliceHeightMM = Math.min(sliceHeightPx * mmPerPx, usableHeightMM); // ✅ ไม่ให้เกินพื้นที่ใช้สอย
+    const sliceHeightMM = Math.min(sliceHeightPx * mmPerPx, usableHeightMM);
 
     if (pageIndex > 0) pdf.addPage();
-    pdf.addImage(sliceData, "PNG", 0, marginTop, pdfW, sliceHeightMM);       // ✅ วางที่ y = marginTop
+    pdf.addImage(sliceData, "PNG", marginLeft, marginTop, usableWidthMM, sliceHeightMM);
 
     currentTopPx = nextBreakPx;
     pageIndex += 1;
   }
 
-  // คืนสไตล์เดิม
-  originalStyles.forEach(({ el, fontSize }) => (el.style.fontSize = fontSize));
+  // restore styles
+  originalStyles.forEach(({ el, fontSize, lineHeight: lh }) => {
+    el.style.fontSize = fontSize;
+    el.style.lineHeight = lh;
+  });
+
   pdf.save(filename);
 };

@@ -21,7 +21,7 @@ import {
   formatFullNameFromParts,
 } from "@utils/Formats";
 import CheckIcon from "@mui/icons-material/Check";
-import { exportElementToPDF2 } from "@utils/exportPDF2";
+import { exportElementToPDF3 } from "@utils/exportPDF3";
 import {
   showLoading,
   closeAlert,
@@ -821,6 +821,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
             {/* ผู้รับมอบอำนาจร้องเรียน */}
             {delegate && Object.keys(delegate).length > 0 && (
               <>
+              <Box id="delegate-section" data-pdf-section="delegate-section">
                 <Typography
                   variant="subtitle1"
                   fontWeight="bold"
@@ -860,6 +861,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
                     value={formatPhoneNumber_null(delegate.phone)}
                   />
                 </Grid>
+                </Box>
               </>
             )}
 
@@ -928,6 +930,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
             />
 
             {/* ข้อมูลเรื่องร้องทุกข์ */}
+            <Box id="complaint-info-section" data-pdf-section="complaint-info-section">
             <Typography
               variant="subtitle1"
               fontWeight="bold"
@@ -1032,6 +1035,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
                 )}
               />
             </Grid>
+            </Box>
 
             {/* รายละเอียดเรื่องร้องทุกข์ - ขึ้นหน้าใหม่ */}
             <Box
@@ -1312,15 +1316,20 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
           label="ส่งออก"
           color="ส่งออก"
           variant="contained"
-          onClick={() => exportElementToPDF2(pdfRef, "แบบฟอร์มร้องทุกข์.pdf", {
-          marginTop: 7,       // ✅ เว้นขอบบน 10mm
-          marginBottom: 10,    // ✅ เว้นขอบล่าง 10mm (ปรับได้)
-          forcePageBreakSelectors: [
-            "#complaint-detail",
-            '[data-pdf-section="complaint-detail"]',
-          ],
-        })
-      }
+          onClick={() =>
+          exportElementToPDF3(pdfRef, "แบบฟอร์มร้องทุกข์.pdf", {
+            marginTop: 7,
+            marginBottom: 10,
+            marginLeft: 4,
+            marginRight: 4,
+            fontSizePx: 32,
+            lineHeight: 1.7,
+            scale: 3,
+            pageBreakBeforeSelectors: ["#complaint-detail-section"], // << เริ่มหน้าใหม่ตรงหัวข้อ
+            forcePageBreakSelectors: ["#complaint-detail", '[data-pdf-section="complaint-detail"]'],
+          })
+        }
+
           disabled={submitting || isSubmitting}
           iconRight={<CheckIcon />}
         />
