@@ -14,6 +14,8 @@ import {
   UpdateAssignmentCompleteByAdmin,
 } from "@pages/api/complaint/complaint";
 
+const WEBSITE_CHANNEL_LABEL = "เว็บไซต์ (https://complain.mof.go.th/)";
+
 export default function useComplaintForm() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -243,6 +245,12 @@ export default function useComplaintForm() {
       
       // ใช้ description จาก Tab3-1 ถ้ามี ไม่งั้นใช้จาก step3
       step3Data.description = step31.general.description || step3?.general?.description || "";
+      step3Data.complaintChannel = step31.general.complaintChannel || step3?.general?.complaintChannel || "";
+      if (step31.general.complaintChannelName) {
+        step3Data.complaintChannelName = step31.general.complaintChannelName;
+      } else if (step3?.general?.complaintChannelName) {
+        step3Data.complaintChannelName = step3.general.complaintChannelName;
+      }
       
       // ใช้ incidentDate จาก Tab3-1 (incidentDateTime) ถ้ามี ไม่งั้นใช้จาก step3
       if (step31.general.incidentDateTime) {
@@ -278,6 +286,15 @@ export default function useComplaintForm() {
       step3Data.subject = step3?.general?.subject || "";
       step3Data.description = step3?.general?.description || "";
       step3Data.incidentDate = step3?.general?.incidentDate || "";
+      step3Data.complaintChannel = step3?.general?.complaintChannel || "";
+      step3Data.complaintChannelName = step3?.general?.complaintChannelName || "";
+    }
+
+    if (!step3Data.complaintChannel) {
+      step3Data.complaintChannel = WEBSITE_CHANNEL_LABEL;
+    }
+    if (!step3Data.complaintChannelName) {
+      step3Data.complaintChannelName = step3Data.complaintChannel;
     }
 
     const restructuredBody = {

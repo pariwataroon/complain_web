@@ -300,7 +300,14 @@ const merged = {
    flattenSubtypesFromTypes(complaint?.options?.complaint_types)
  ),
  complaintChannel: tryGetLabel(
-   pick(complaint?.complaint_channel_id, tab31?.complaintChannel),
+   pick(
+     tab31?.complaintChannel,
+     tab31?.complaintChannelName,
+     step3?.complaintChannel,
+     step3?.complaintChannelName,
+     complaint?.complaint_channel_name,
+     complaint?.complaint_channel_id
+   ),
    complaint?.options?.complaint_channels || []
  ),
 
@@ -843,7 +850,10 @@ const merged = {
               ) : (
                 // กรณี Tab3 - แสดงข้อมูลพื้นฐาน
                 <>
-                  <InfoItem labelText="ช่องทางร้องทุกข์" value={label(step3.complaintChannel)} />
+                  <InfoItem
+                    labelText="ช่องทางร้องทุกข์"
+                    value={label(step3.complaintChannel || step3.complaintChannelName || merged.complaintChannel)}
+                  />
                   <InfoItem labelText="ประเภทเรื่องร้องทุกข์" value={label(step3.complaintType)} />
                   <InfoItem
                     labelText="วันและเวลาที่เกิดเหตุ"

@@ -46,6 +46,7 @@ const STATUS_ALIAS = {
 
 // คำที่ถือว่า “ปิดเรื่องจากผลพิจารณา”
 const CLOSED_WORDS = ["ยุติเรื่อง", "ยุติเรื่องได้", "ปิดเรื่อง", "ปิดงาน"];
+const WEBSITE_CHANNEL_LABEL = "เว็บไซต์ (https://complain.mof.go.th/)";
 
 const normalizeStatus = (status) => {
   const s = String(status || "").trim();
@@ -197,6 +198,27 @@ export default function FollowupDetailPage() {
           mergedComplaint.step2 = mergedComplaint.step2 || {};
           mergedComplaint.step3 = mergedComplaint.step3 || {};
           mergedComplaint.step31 = mergedComplaint.step31 || {};
+          mergedComplaint.step3.general = mergedComplaint.step3.general || {};
+          mergedComplaint.step31.general = mergedComplaint.step31.general || {};
+
+          const hasStep31General =
+            mergedComplaint.step31?.general &&
+            Object.keys(mergedComplaint.step31.general).length > 0;
+
+          if (!mergedComplaint.step3.general.complaintChannel) {
+            if (!hasStep31General) {
+              mergedComplaint.step3.general.complaintChannel = WEBSITE_CHANNEL_LABEL;
+              mergedComplaint.step3.general.complaintChannelName =
+                mergedComplaint.step3.general.complaintChannelName || WEBSITE_CHANNEL_LABEL;
+            } else if (mergedComplaint.step31.general.complaintChannelName) {
+              mergedComplaint.step3.general.complaintChannelName =
+                mergedComplaint.step3.general.complaintChannelName ||
+                mergedComplaint.step31.general.complaintChannelName;
+            }
+          } else if (!mergedComplaint.step3.general.complaintChannelName) {
+            mergedComplaint.step3.general.complaintChannelName =
+              mergedComplaint.step3.general.complaintChannel;
+          }
 
           setComplaint(mergedComplaint);
         }
