@@ -24,7 +24,6 @@ import {
   alertError,
 } from "@utils/Alerts";
 import { AddCase } from "@pages/api/opm/opm";
-import { GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
 import styles from "./SendComplaintOPm.module.scss";
 
 const SendComplaintOPM = () => {
@@ -37,8 +36,6 @@ const SendComplaintOPM = () => {
   const [selectedChannel, setSelectedChannel] = useState("6");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedType, setselectedType] = useState("");
-  const [complaintTypes, setComplaintTypes] = useState([]);
-  const [loadingTypes, setLoadingTypes] = useState(false);
   const [createdDate, setCreatedDate] = useState(new Date().toISOString());
   const [updatedDate, setUpdatedDate] = useState(new Date().toISOString());
   const [reporterFirstName, setReporterFirstName] = useState("");
@@ -65,30 +62,6 @@ const SendComplaintOPM = () => {
 
   const isPhoneValid = validatePhoneNumber(reporterPhone);
 
-  // Load complaint types
-  useEffect(() => {
-    const fetchComplaintTypes = async () => {
-      setLoadingTypes(true);
-      try {
-        const response = await GetAllSelectComplaintTypes();
-        if (response?.res_code === "0000" && response?.res_data) {
-          const types = Array.isArray(response.res_data)
-            ? response.res_data.map((t) => ({
-                value: t.id,
-                label: t.name,
-              }))
-            : [];
-          setComplaintTypes(types);
-        }
-      } catch (error) {
-        console.error("Error loading complaint types:", error);
-      } finally {
-        setLoadingTypes(false);
-      }
-    };
-
-    fetchComplaintTypes();
-  }, []);
 
   const isFormValid = useMemo(() => {
     const validations = {
@@ -671,65 +644,37 @@ const SendComplaintOPM = () => {
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <FormControl className={styles.formControl} sx={{ mb: 2 }}>
-                  <Typography
-                    variant="subtitle2"
-                    className={styles.fieldLabel}
-                    sx={{
-                      color: "#334155",
-                      fontWeight: 600,
-                      mb: 1,
-                    }}
-                  >
-                    ช่องทางดำเนินการ
-                    <span className={styles.requiredAsterisk}>*</span>
-                  </Typography>
-                  <SelectFieldPAAOPM
-                    name="channel"
-                    placeholder="เลือกช่องทางดำเนินการ"
-                    value={selectedChannel}
-                    onChange={handleChannelChange}
-                    required={true}
-                    disabled={false}
-                    readOnly={false}
-                  />
-                </FormControl>
+                <SelectFieldPAAOPM
+                  label="ช่องทางดำเนินการ"
+                  name="channel"
+                  placeholder="เลือกช่องทางดำเนินการ"
+                  value={selectedChannel}
+                  onChange={handleChannelChange}
+                  required={true}
+                  disabled={false}
+                  readOnly={false} 
+                />
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <FormControl className={styles.formControl} sx={{ mb: 2 }}>
-                  <Typography
-                    variant="subtitle2"
-                    className={styles.fieldLabel}
-                    sx={{
-                      color: "#334155",
-                      fontWeight: 600,
-                      mb: 1,
-                    }}
-                  >
-                    สถานะการดำเนินการ
-                    <span className={styles.requiredAsterisk}>*</span>
-                  </Typography>
-                  <SelectFieldPAAOPM
-                    name="status"
-                    placeholder="เลือกสถานะการดำเนินการ"
-                    value={selectedStatus}
-                    onChange={handleStatusChange}
-                    required={true}
-                  />
-                </FormControl>
+                <SelectFieldPAAOPM
+                  label="สถานะการดำเนินการ"
+                  name="status"
+                  placeholder="เลือกสถานะการดำเนินการ"
+                  value={selectedStatus}
+                  onChange={handleStatusChange}
+                  required={true}
+                />
               </Grid>
 
               <Grid item xs={12} md={6}>
                 <SelectFieldPAAOPM
                   label="ประเภทเรื่องร้องทุกข์"
-                  name="complaint_type"
+                  name="type"
                   placeholder="เลือกประเภทเรื่องร้องทุกข์"
                   value={selectedType}
                   onChange={handleTypeChange}
                   required={true}
-                  options={complaintTypes}
-                  disabled={loadingTypes}
                 />
               </Grid>
 
