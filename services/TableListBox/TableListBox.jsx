@@ -27,6 +27,7 @@ import styles from "./TableListBox.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportExcel } from "@utils/exportExcel";
 import { getDepartmentsPrefix } from "@pages/api/department/department";
 import { GetAllOutsideDepartments } from "@pages/api/outsideDepartments/outsideDepartments";
@@ -104,16 +105,21 @@ const TableListBox = ({
 
   // Filters
   const initialFilters = filterFields.reduce((acc, f) => {
-    acc[f.name] = "";
+    acc[f.name] = f.type === "date" ? null : "";
     return acc;
   }, {});
   const [filters, setFilters] = useState(initialFilters);
   
-  // แก้ไข handleChange ให้รองรับ SelectField
+  // แก้ไข handleChange ให้รองรับ SelectField และ DatePicker
   const handleChange = (field) => (e) => {
     let value;
-    
-    if (e?.target) {
+
+    // Check if this is a date field
+    const fieldConfig = filterFields.find(f => f.name === field);
+    if (fieldConfig?.type === "date") {
+      // For date picker, use the value directly (could be date object or null)
+      value = e;
+    } else if (e?.target) {
       // กรณี input text ธรรมดา
       value = e.target.value;
     } else if (typeof e === 'string') {
@@ -126,7 +132,7 @@ const TableListBox = ({
       // กรณีอื่นๆ
       value = e || "";
     }
-    
+
     setFilters({ ...filters, [field]: value });
   };
 
@@ -285,7 +291,7 @@ const TableListBox = ({
     } else if (isLarge) {
       return {
         layout: "large-responsive",
-        fieldsPerRow: Math.min(4, filterFields.length),
+        fieldsPerRow: Math.min(5, filterFields.length),
         gap: 2,
         padding: 3,
         inputHeight: "48px",
@@ -372,6 +378,16 @@ const TableListBox = ({
             options={outsidedepartmentOptions}
           />
         );
+    }
+
+    // รองรับ type date
+    if (f.type === "date") {
+      return (
+        <DateThaiPickerService
+          {...commonProps}
+          placeholder="กรุณาเลือกวันที่....."
+        />
+      );
     }
 
     return f.type === "select" ? (
@@ -818,27 +834,27 @@ const TableListBox = ({
             <Box
               display="grid"
               gridTemplateColumns={`repeat(${Math.min(
-                4,
+                5,
                 filterFields.length
               )}, 1fr)`}
               gap={layoutConfig.gap}
               mb={3}
             >
               {filterFields
-                .slice(0, Math.min(4, filterFields.length))
+                .slice(0, Math.min(5, filterFields.length))
                 .map((f) => (
                   <Box key={f.name}>{renderFilterField(f)}</Box>
                 ))}
             </Box>
 
-            {filterFields.length > 4 && (
+            {filterFields.length > 5 && (
               <Box
                 display="flex"
                 alignItems="center"
                 gap={layoutConfig.gap}
                 mb={2}
               >
-                {filterFields.slice(4).map((f) => (
+                {filterFields.slice(5).map((f) => (
                   <Box key={f.name} sx={{ flex: 1 }}>
                     {renderFilterField(f)}
                   </Box>
@@ -868,7 +884,7 @@ const TableListBox = ({
               </Box>
             )}
 
-            {filterFields.length <= 4 && (
+            {filterFields.length <= 5 && (
               <Box display="flex" justifyContent="center" gap={2}>
                 <SearchButton
                   onClick={handleSearchClick}
@@ -889,7 +905,59 @@ const TableListBox = ({
               </Box>
             )}
           </>
+        ) : filterFields.length > 9 ? (
+          // Single Row - แต่ถ้าฟิลด์เกิน 9 ให้แยก 2 แถว
+          <>
+            {/* แถวที่ 1: 5 ฟิลด์แรก */}
+            <Box
+              display="grid"
+              gridTemplateColumns="repeat(5, 1fr)"
+              gap={layoutConfig.gap}
+              mb={3}
+            >
+              {filterFields.slice(0, 5).map((f) => (
+                <Box key={f.name}>{renderFilterField(f)}</Box>
+              ))}
+            </Box>
+
+            {/* แถวที่ 2: ฟิลด์ที่เหลือ + ปุ่ม */}
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={layoutConfig.gap}
+              mb={2}
+            >
+              {filterFields.slice(5).map((f) => (
+                <Box key={f.name} sx={{ flex: 1 }}>
+                  {renderFilterField(f)}
+                </Box>
+              ))}
+              <Box
+                display="flex"
+                gap={2}
+                sx={{ flexShrink: 0, marginTop: "8px" }}
+              >
+                <SearchButton
+                  onClick={handleSearchClick}
+                  icon={<SearchIcon />}
+                  color="#1976d2"
+                  hoverColor="#1565c0"
+                  bgColor="#2196f3"
+                  title="ค้นหาข้อมูล"
+                />
+                <SearchButton
+                  onClick={handleClearSearch}
+                  icon={<CleaningServicesIcon />}
+                  color="#f44336"
+                  hoverColor="#e53935"
+                  bgColor="#ff5722"
+                  title="ล้างการค้นหา"
+                />
+              </Box>
+            </Box>
+          </>
         ) : (
+          // Single Row - ฟิลด์ไม่เกิน 9 แสดงแถวเดียว
           <Box
             display="flex"
             alignItems="center"

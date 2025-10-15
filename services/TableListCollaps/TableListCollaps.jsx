@@ -21,10 +21,12 @@ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import styles from "./TableListCollaps.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
 import * as XLSX from "xlsx";
+import dayjs from "dayjs";
 const TableListCollaps = ({
   data = [],
   title = "",
@@ -282,6 +284,15 @@ const TableListCollaps = ({
                       onChange={handleChange(f.name)}
                       size={isXs ? "small" : "medium"}
                     />
+                  ) : f.type === "date" ? (
+                    <DateThaiPickerService
+                      fullWidth
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size={isXs ? "small" : "medium"}
+                      placeholder="เลือกวันที่"
+                    />
                   ) : (
                     <InputText
                       fullWidth
@@ -355,6 +366,15 @@ const TableListCollaps = ({
                       value={filters[f.name]}
                       onChange={handleChange(f.name)}
                       size="medium"
+                    />
+                  ) : f.type === "date" ? (
+                    <DateThaiPickerService
+                      fullWidth
+                      label={f.label}
+                      value={filters[f.name]}
+                      onChange={handleChange(f.name)}
+                      size="medium"
+                      placeholder="เลือกวันที่"
                     />
                   ) : (
                     <InputText

@@ -27,6 +27,8 @@ const AssignedComplaintsComponents = () => {
     subject: "",
     complaint_number: "",
     confirm_assigned_date: null,
+    startDate: null,
+    endDate: null,
   });
 
   const [rows, setRows] = useState([]); // ใช้ state นี้แทน mockData
@@ -102,41 +104,89 @@ const AssignedComplaintsComponents = () => {
   };
 
   // ฟังก์ชันค้นหาข้อมูล
-  const handleSearch = () => {
-    console.log("🔍 Search filters:", searchFilters);
+  const handleSearch = (filters = searchFilters) => {
+    console.log("🔍 Search filters:", filters);
 
     const filtered = rows.filter((item) => {
       // ค้นหาตามชื่อผู้ร้องเรียน
-      const matchName = searchFilters.complainant_name
+      const matchName = filters.complainant_name
         ? item.complainant_name
             .toLowerCase()
-            .includes(searchFilters.complainant_name.toLowerCase())
+            .includes(filters.complainant_name.toLowerCase())
         : true;
 
       // ค้นหาตามหัวข้อ
-      const matchSubject = searchFilters.subject
+      const matchSubject = filters.subject
         ? item.subject
             .toLowerCase()
-            .includes(searchFilters.subject.toLowerCase())
+            .includes(filters.subject.toLowerCase())
         : true;
 
       // ค้นหาตาม complaint_number
-      const matchcomplaint_number = searchFilters.complaint_number
-        ? item.complaint_number.toLowerCase().includes(searchFilters.complaint_number.toLowerCase())
+      const matchcomplaint_number = filters.complaint_number
+        ? item.complaint_number.toLowerCase().includes(filters.complaint_number.toLowerCase())
         : true;
 
-      // ค้นหาตามวันที่รับเรื่อง
-      const matchDate = searchFilters.confirm_assigned_date
-        ? compareDates(item.confirm_assigned_date, searchFilters.confirm_assigned_date)
+      // ค้นหาตามวันที่รับเรื่อง (แบบเดิม)
+      const matchDate = filters.confirm_assigned_date
+        ? compareDates(item.confirm_assigned_date, filters.confirm_assigned_date)
         : true;
 
-      return matchName && matchSubject && matchcomplaint_number && matchDate;
+      // Filter ตามช่วงวันที่สร้าง
+      let matchDateRange = true;
+      if (filters.startDate || filters.endDate) {
+        if (!item.created_at) {
+          matchDateRange = false;
+        } else {
+          const itemDate = dayjs(item.created_at);
+          if (!itemDate.isValid()) {
+            matchDateRange = false;
+          } else {
+            // ถ้ามี startDate ให้เช็คว่าวันที่สร้างต้อง >= startDate
+            if (filters.startDate) {
+              const start = dayjs(filters.startDate).startOf('day');
+              if (itemDate.isBefore(start)) matchDateRange = false;
+            }
+
+            // ถ้ามี endDate ให้เช็คว่าวันที่สร้างต้อง <= endDate
+            if (filters.endDate) {
+              const end = dayjs(filters.endDate).endOf('day');
+              if (itemDate.isAfter(end)) matchDateRange = false;
+            }
+          }
+        }
+      }
+
+      return matchName && matchSubject && matchcomplaint_number && matchDate && matchDateRange;
     });
 
     console.log(
       `🎯 Filtered results: ${filtered.length} items from ${rows.length} total`
     );
     setRows(filtered);
+  };
+
+  // ฟังก์ชันโหลดข้อมูลจาก API
+  const fetchComplaints = async () => {
+    try {
+      setLoading(true);
+      const response = await GetComplaintsByPageType({
+        pageType: "website",
+        skip: 0,
+        limit: 10000,
+      });
+
+      if (response?.res_code === "0000" && Array.isArray(response?.res_data?.items)) {
+        const complaints = response.res_data.items.map((item) => item.complaint);
+        setRows(complaints);
+      } else {
+        console.error("Unexpected response format", response);
+      }
+    } catch (error) {
+      console.error("Error fetching complaints:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ฟังก์ชันเคลียร์การค้นหา
@@ -146,33 +196,15 @@ const AssignedComplaintsComponents = () => {
       subject: "",
       complaint_number: "",
       confirm_assigned_date: null,
+      startDate: null,
+      endDate: null,
     });
-    setRows([]);  // เคลียร์แถว
+    // โหลดข้อมูลใหม่ทั้งหมด
+    fetchComplaints();
   };
 
-// ฟังก์ชันโหลดข้อมูลจาก API
+  // โหลดข้อมูลครั้งแรก
   useEffect(() => {
-    const fetchComplaints = async () => {
-      try {
-        const response = await GetComplaintsByPageType({
-          pageType: "website",
-          skip: 0,
-          limit: 10000,
-        });
-
-        if (response?.res_code === "0000" && Array.isArray(response?.res_data?.items)) {
-          const complaints = response.res_data.items.map((item) => item.complaint);
-          setRows(complaints);
-        } else {
-          console.error("Unexpected response format", response);
-        }
-      } catch (error) {
-        console.error("Error fetching complaints:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchComplaints();
   }, []);
 

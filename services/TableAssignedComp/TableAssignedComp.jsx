@@ -38,6 +38,8 @@ const TableAssignedComp = ({
     subject: "",
     complaint_number: "",
     confirm_assigned_date: null,
+    startDate: null,
+    endDate: null,
   },
   onFilterChange = () => {},
   title = "รายการข้อมูล",
@@ -75,7 +77,7 @@ const TableAssignedComp = ({
   const handleFilterChange = (field) => (e) => {
     let value;
 
-    if (field === "confirm_assigned_date") {
+    if (field === "confirm_assigned_date" || field === "startDate" || field === "endDate") {
       // For date picker, pass the value directly
       value = e;
       console.log("DatePicker returned value:", e);
@@ -85,6 +87,15 @@ const TableAssignedComp = ({
     }
 
     onFilterChange(field, value);
+  };
+
+  // ฟังก์ชันสำหรับเปลี่ยนวันที่และค้นหาทันที
+  const handleDateChange = (field) => (date) => {
+    onFilterChange(field, date);
+    setPage(0);
+    // Auto-search when date is selected
+    const newFilters = { ...searchFilters, [field]: date };
+    onSearch(newFilters);
   };
 
   const handleSearchClick = () => {
@@ -286,6 +297,24 @@ const TableAssignedComp = ({
           {renderFilterField("subject", "ชื่อเรื่อง")}
           {renderFilterField("complaint_number", "เลขที่ สรร.")}
           {renderFilterField("confirm_assigned_date", "วันที่รับเรื่อง", "date")}
+          <DateThaiPickerService
+            fullWidth
+            label="ตั้งแต่วันที่"
+            value={searchFilters.startDate}
+            onChange={handleDateChange("startDate")}
+            size="small"
+            sx={getFilterFieldStyles()}
+            placeholder="กรุณาเลือกวันที่....."
+          />
+          <DateThaiPickerService
+            fullWidth
+            label="ถึงวันที่"
+            value={searchFilters.endDate}
+            onChange={handleDateChange("endDate")}
+            size="small"
+            sx={getFilterFieldStyles()}
+            placeholder="กรุณาเลือกวันที่....."
+          />
         </Box>
 
         {/* Search Buttons */}
@@ -355,113 +384,7 @@ const TableAssignedComp = ({
         </Box>
       </>
     ) : layoutConfig.layout === "two-row" ? (
-      // Two-row Layout (Medium screens)
-      <>
-        {/* First Row - First 3 fields */}
-        <Box
-          display="grid"
-          gridTemplateColumns="repeat(3, 1fr)"
-          gap={layoutConfig.gap}
-          mb={2}
-          sx={{
-            overflow: "visible",
-            width: "100%",
-          }}
-        >
-          {renderFilterField("complainant_name", "ชื่อผู้ร้อง")}
-          {renderFilterField("subject", "ชื่อเรื่อง")}
-          {renderFilterField("complaint_number", "เลขที่ สรร.")}
-        </Box>
-
-        {/* Second Row - Last field + Search Buttons */}
-        <Box
-          display="flex"
-          alignItems="center"
-          gap={layoutConfig.gap}
-          mb={2}
-          sx={{
-            overflow: "visible",
-            width: "100%",
-          }}
-        >
-          {/* Date field */}
-          <Box
-            sx={{
-              flex: "1 1 0",
-              minWidth: 0,
-            }}
-          >
-            {renderFilterField("confirm_assigned_date", "วันที่รับเรื่อง", "date")}
-          </Box>
-
-          {/* Search Buttons */}
-          <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
-            <IconButton
-              onClick={handleSearchClick}
-              sx={{
-                bgcolor: "#1120A3",
-                color: "#fff",
-                "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
-                width: layoutConfig.iconSize,
-                height: layoutConfig.iconSize,
-                borderRadius: "50%",
-                transition: "all 0.2s ease-in-out",
-                mt: 1,
-              }}
-              title="ค้นหา"
-            >
-              <SearchIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              onClick={handleClearSearch}
-              sx={{
-                bgcolor: "#dc3545",
-                color: "#fff",
-                "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
-                width: layoutConfig.iconSize,
-                height: layoutConfig.iconSize,
-                borderRadius: "50%",
-                transition: "all 0.2s ease-in-out",
-                mt: 1,
-              }}
-              title="ล้างการค้นหา"
-            >
-              <CleaningServicesIcon fontSize="small" />
-            </IconButton>
-          </Box>
-          <Box
-          display="flex"
-          alignItems="center"
-          gap={2}
-          sx={{
-            flexDirection: isExtraSmall ? "column" : "row",
-            width: isExtraSmall ? "100%" : "auto",
-          }}
-        >
-          <ExportButton
-            label="Export PDF"
-            onClick={handleExportPDF}
-            sx={{
-              fontSize: isExtraSmall ? "12px" : "14px",
-              minWidth: isExtraSmall ? "120px" : "auto",
-              width: isExtraSmall ? "100%" : "auto",
-            }}
-          />
-
-          <ExportButton
-            label="Export Excel"
-            onClick={handleExportExcel}
-            sx={{
-              fontSize: isExtraSmall ? "12px" : "14px",
-              minWidth: isExtraSmall ? "120px" : "auto",
-              width: isExtraSmall ? "100%" : "auto",
-            }}
-          />
-        </Box>
-        </Box>
-      </>
-    ) : (
-      // Single Row Layout (Large screens)
+      // Two-row Layout (Medium screens) - แสดงทุกอย่างในแถวเดียว
       <Box
         display="flex"
         alignItems="center"
@@ -472,41 +395,39 @@ const TableAssignedComp = ({
         }}
       >
         {/* Filter fields */}
-        <Box
-          sx={{
-            flex: "1 1 0",
-            minWidth: "140px",
-            maxWidth: "200px",
-          }}
-        >
+        <Box sx={{ flex: "1 1 0", minWidth: "120px", maxWidth: "180px" }}>
           {renderFilterField("complainant_name", "ชื่อผู้ร้อง")}
         </Box>
-        <Box
-          sx={{
-            flex: "1 1 0",
-            minWidth: "140px",
-            maxWidth: "200px",
-          }}
-        >
+        <Box sx={{ flex: "1 1 0", minWidth: "120px", maxWidth: "180px" }}>
           {renderFilterField("subject", "ชื่อเรื่อง")}
         </Box>
-        <Box
-          sx={{
-            flex: "1 1 0",
-            minWidth: "140px",
-            maxWidth: "200px",
-          }}
-        >
+        <Box sx={{ flex: "1 1 0", minWidth: "120px", maxWidth: "180px" }}>
           {renderFilterField("complaint_number", "เลขที่ สรร.")}
         </Box>
-        <Box
-          sx={{
-            flex: "1 1 0",
-            minWidth: "140px",
-            maxWidth: "200px",
-          }}
-        >
+        <Box sx={{ flex: "1 1 0", minWidth: "120px", maxWidth: "180px" }}>
           {renderFilterField("confirm_assigned_date", "วันที่รับเรื่อง", "date")}
+        </Box>
+        <Box sx={{ flex: "1 1 0", minWidth: "120px", maxWidth: "180px" }}>
+          <DateThaiPickerService
+            fullWidth
+            label="ตั้งแต่วันที่"
+            value={searchFilters.startDate}
+            onChange={handleDateChange("startDate")}
+            size="small"
+            sx={getFilterFieldStyles()}
+            placeholder="กรุณาเลือกวันที่....."
+          />
+        </Box>
+        <Box sx={{ flex: "1 1 0", minWidth: "120px", maxWidth: "180px" }}>
+          <DateThaiPickerService
+            fullWidth
+            label="ถึงวันที่"
+            value={searchFilters.endDate}
+            onChange={handleDateChange("endDate")}
+            size="small"
+            sx={getFilterFieldStyles()}
+            placeholder="กรุณาเลือกวันที่....."
+          />
         </Box>
 
         {/* Search Buttons */}
@@ -544,24 +465,22 @@ const TableAssignedComp = ({
             <CleaningServicesIcon fontSize="small" />
           </IconButton>
         </Box>
-        
+
         {/* Export buttons */}
         <Box
           display="flex"
           alignItems="center"
           gap={2}
           sx={{
-            flexDirection: isExtraSmall ? "column" : "row",
-            width: isExtraSmall ? "100%" : "auto",
+            flexShrink: 0,
           }}
         >
           <ExportButton
             label="Export PDF"
             onClick={handleExportPDF}
             sx={{
-              fontSize: isExtraSmall ? "12px" : "14px",
-              minWidth: isExtraSmall ? "120px" : "auto",
-              width: isExtraSmall ? "100%" : "auto",
+              fontSize: "14px",
+              minWidth: "auto",
             }}
           />
 
@@ -569,9 +488,119 @@ const TableAssignedComp = ({
             label="Export Excel"
             onClick={handleExportExcel}
             sx={{
-              fontSize: isExtraSmall ? "12px" : "14px",
-              minWidth: isExtraSmall ? "120px" : "auto",
-              width: isExtraSmall ? "100%" : "auto",
+              fontSize: "14px",
+              minWidth: "auto",
+            }}
+          />
+        </Box>
+      </Box>
+    ) : (
+      // Single Row Layout (Large screens) - แสดงทุกอย่างในแถวเดียว
+      <Box
+        display="flex"
+        alignItems="center"
+        gap={layoutConfig.gap}
+        sx={{
+          overflow: "visible",
+          flexWrap: "nowrap",
+        }}
+      >
+        {/* Filter fields */}
+        <Box sx={{ flex: "1 1 0", minWidth: "120px", maxWidth: "180px" }}>
+          {renderFilterField("complainant_name", "ชื่อผู้ร้อง")}
+        </Box>
+        <Box sx={{ flex: "1 1 0", minWidth: "120px", maxWidth: "180px" }}>
+          {renderFilterField("subject", "ชื่อเรื่อง")}
+        </Box>
+        <Box sx={{ flex: "1 1 0", minWidth: "120px", maxWidth: "180px" }}>
+          {renderFilterField("complaint_number", "เลขที่ สรร.")}
+        </Box>
+        <Box sx={{ flex: "1 1 0", minWidth: "120px", maxWidth: "180px" }}>
+          {renderFilterField("confirm_assigned_date", "วันที่รับเรื่อง", "date")}
+        </Box>
+        <Box sx={{ flex: "1 1 0", minWidth: "120px", maxWidth: "180px" }}>
+          <DateThaiPickerService
+            fullWidth
+            label="ตั้งแต่วันที่"
+            value={searchFilters.startDate}
+            onChange={handleDateChange("startDate")}
+            size="small"
+            sx={getFilterFieldStyles()}
+            placeholder="กรุณาเลือกวันที่....."
+          />
+        </Box>
+        <Box sx={{ flex: "1 1 0", minWidth: "120px", maxWidth: "180px" }}>
+          <DateThaiPickerService
+            fullWidth
+            label="ถึงวันที่"
+            value={searchFilters.endDate}
+            onChange={handleDateChange("endDate")}
+            size="small"
+            sx={getFilterFieldStyles()}
+            placeholder="กรุณาเลือกวันที่....."
+          />
+        </Box>
+
+        {/* Search Buttons */}
+        <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
+          <IconButton
+            onClick={handleSearchClick}
+            sx={{
+              bgcolor: "#1120A3",
+              color: "#fff",
+              "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+              width: layoutConfig.iconSize,
+              height: layoutConfig.iconSize,
+              borderRadius: "50%",
+              transition: "all 0.2s ease-in-out",
+              mt: 1,
+            }}
+            title="ค้นหา"
+          >
+            <SearchIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            onClick={handleClearSearch}
+            sx={{
+              bgcolor: "#dc3545",
+              color: "#fff",
+              "&:hover": { bgcolor: "#c82333", transform: "scale(1.05)" },
+              width: layoutConfig.iconSize,
+              height: layoutConfig.iconSize,
+              borderRadius: "50%",
+              transition: "all 0.2s ease-in-out",
+              mt: 1,
+            }}
+            title="ล้างการค้นหา"
+          >
+            <CleaningServicesIcon fontSize="small" />
+          </IconButton>
+        </Box>
+
+        {/* Export buttons */}
+        <Box
+          display="flex"
+          alignItems="center"
+          gap={2}
+          sx={{
+            flexShrink: 0,
+          }}
+        >
+          <ExportButton
+            label="Export PDF"
+            onClick={handleExportPDF}
+            sx={{
+              fontSize: "14px",
+              minWidth: "auto",
+            }}
+          />
+
+          <ExportButton
+            label="Export Excel"
+            onClick={handleExportExcel}
+            sx={{
+              fontSize: "14px",
+              minWidth: "auto",
             }}
           />
         </Box>

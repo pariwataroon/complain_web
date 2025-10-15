@@ -29,13 +29,18 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import { green, grey } from "@mui/material/colors";
+import dayjs from "dayjs";
+import "dayjs/locale/th";
 
 import styles from "./TableListOPM.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonSent from "@services/ButtonSent/ButtonSent";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { formatThaiShortDateTime } from "@utils/Formats";
+
+dayjs.locale("th");
 
 const statusReadOptions = [
   { value: "", label: "ทั้งหมด" },
@@ -105,11 +110,17 @@ const TableListOPM = ({
   ];
 
   const initialFilters = useMemo(
-    () =>
-      extendedFilterFields.reduce((acc, field) => {
+    () => {
+      const baseFilters = extendedFilterFields.reduce((acc, field) => {
         acc[field.name] = "";
         return acc;
-      }, {}),
+      }, {});
+      return {
+        ...baseFilters,
+        startDate: null,
+        endDate: null,
+      };
+    },
     [extendedFilterFields]
   );
 
@@ -167,7 +178,9 @@ const TableListOPM = ({
   // กรองข้อมูลโดยใช้ useMemo
   const filteredData = useMemo(() => {
     return sortedData.filter((item) => {
-      return Object.keys(filters).every((key) => {
+      // Filter by regular fields
+      const matchesRegularFilters = Object.keys(filters).every((key) => {
+        if (key === "startDate" || key === "endDate") return true; // Skip date filters here
         if (!filters[key]) return true;
         if (key === "isRead") {
           if (filters[key] === "read") return item.isRead === true;
@@ -178,6 +191,28 @@ const TableListOPM = ({
         const filterValue = filters[key]?.toString().toLowerCase() || "";
         return itemValue.includes(filterValue);
       });
+
+      if (!matchesRegularFilters) return false;
+
+      // Filter by date range (using ShowDateTime)
+      if (filters.startDate || filters.endDate) {
+        if (!item.ShowDateTime) return false;
+
+        const itemDate = dayjs(item.ShowDateTime);
+        if (!itemDate.isValid()) return false;
+
+        if (filters.startDate) {
+          const start = dayjs(filters.startDate).startOf('day');
+          if (itemDate.isBefore(start)) return false;
+        }
+
+        if (filters.endDate) {
+          const end = dayjs(filters.endDate).endOf('day');
+          if (itemDate.isAfter(end)) return false;
+        }
+      }
+
+      return true;
     });
   }, [sortedData, filters]);
 
@@ -204,6 +239,12 @@ const TableListOPM = ({
     const value = event?.target?.value || "";
     setFilters((prevFilters) => ({ ...prevFilters, [field]: value }));
     setPage(0); // รีเซ็ต page เมื่อ filter เปลี่ยน
+  };
+
+  // ฟังก์ชันสำหรับเปลี่ยนวันที่และค้นหาทันที
+  const handleDateChange = (field) => (date) => {
+    setFilters((prevFilters) => ({ ...prevFilters, [field]: date }));
+    setPage(0);
   };
 
   // ฟังก์ชันสำหรับจัดการการเปลี่ยนแปลง timeline type
@@ -554,6 +595,42 @@ const TableListOPM = ({
                     )}
                   </Box>
                 ))}
+
+              {/* Date Range Filters */}
+              <Box
+                sx={{
+                  minWidth: 140,
+                  maxWidth: 180,
+                  flex: "1 1 0",
+                  flexShrink: 1,
+                }}
+              >
+                <DateThaiPickerService
+                  fullWidth
+                  label="ตั้งแต่วันที่"
+                  value={filters.startDate}
+                  onChange={handleDateChange("startDate")}
+                  size="small"
+                  placeholder="กรุณาเลือกวันที่....."
+                />
+              </Box>
+              <Box
+                sx={{
+                  minWidth: 140,
+                  maxWidth: 180,
+                  flex: "1 1 0",
+                  flexShrink: 1,
+                }}
+              >
+                <DateThaiPickerService
+                  fullWidth
+                  label="ถึงวันที่"
+                  value={filters.endDate}
+                  onChange={handleDateChange("endDate")}
+                  size="small"
+                  placeholder="กรุณาเลือกวันที่....."
+                />
+              </Box>
             </Box>
             {/* ปุ่ม */}
             <Box
