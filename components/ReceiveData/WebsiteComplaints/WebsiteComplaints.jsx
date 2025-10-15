@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListWebComplaints from "@services/TableListWebComplaints/TableListWebComplaints";
 import { GetAllComplaints } from "@pages/api/complaint/complaint";
+import dayjs from "dayjs";
 
 const breadcrumbItems = [
   {
@@ -88,6 +89,8 @@ const WebsiteComplaints = () => {
       ssoNo,
       subject,
       accusedName,
+      startDate,
+      endDate,
     } = filters;
 
     const result = allComplaints.filter((item) => {
@@ -134,6 +137,26 @@ const WebsiteComplaints = () => {
       // ชื่อผู้ถูกร้อง - partial match
       if (accusedName && !safeIncludes(item.respondent_name, accusedName)) {
         return false;
+      }
+
+      // Filter ตามวันที่สร้าง
+      if (startDate || endDate) {
+        if (!item.created_at) return false;
+
+        const itemDate = dayjs(item.created_at);
+        if (!itemDate.isValid()) return false;
+
+        // ถ้ามี startDate ให้เช็คว่าวันที่สร้างต้อง >= startDate (เริ่มต้นวัน)
+        if (startDate) {
+          const start = dayjs(startDate).startOf('day');
+          if (itemDate.isBefore(start)) return false;
+        }
+
+        // ถ้ามี endDate ให้เช็คว่าวันที่สร้างต้อง <= endDate (สิ้นสุดวัน)
+        if (endDate) {
+          const end = dayjs(endDate).endOf('day');
+          if (itemDate.isAfter(end)) return false;
+        }
       }
 
       return true;

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableFilterList from "@services/TableFilterList/TableFilterList";
 import { GetComplaintsGroupedbyChannel } from "@pages/api/complaint/complaint";
+import dayjs from "dayjs";
 
 const breadcrumbItems = [
   {
@@ -285,13 +286,15 @@ const Filteromplaints = () => {
 
   const handleSearch = useCallback(
     (filters) => {
-      const { claimantName, subject, issueType, respondentName } = filters;
+      const { claimantName, subject, issueType, respondentName, startDate, endDate } = filters;
 
       const hasFilters =
         !isEmpty(claimantName) ||
         !isEmpty(subject) ||
         !isEmpty(issueType) ||
-        !isEmpty(respondentName);
+        !isEmpty(respondentName) ||
+        startDate ||
+        endDate;
 
       if (!hasFilters) {
         setFilteredGroups(allGroups);
@@ -309,6 +312,26 @@ const Filteromplaints = () => {
           if (!isEmpty(issueType) && !exactMatch(item.issueType, issueType)) return false;
 
           if (!isEmpty(respondentName) && !safeIncludes(item.respondentName, respondentName)) return false;
+
+          // Filter ตามวันที่สร้าง
+          if (startDate || endDate) {
+            if (!item.created_at) return false;
+
+            const itemDate = dayjs(item.created_at);
+            if (!itemDate.isValid()) return false;
+
+            // ถ้ามี startDate ให้เช็คว่าวันที่สร้างต้อง >= startDate (เริ่มต้นวัน)
+            if (startDate) {
+              const start = dayjs(startDate).startOf('day');
+              if (itemDate.isBefore(start)) return false;
+            }
+
+            // ถ้ามี endDate ให้เช็คว่าวันที่สร้างต้อง <= endDate (สิ้นสุดวัน)
+            if (endDate) {
+              const end = dayjs(endDate).endOf('day');
+              if (itemDate.isAfter(end)) return false;
+            }
+          }
 
           return true;
         }),

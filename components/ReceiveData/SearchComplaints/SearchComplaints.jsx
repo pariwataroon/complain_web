@@ -3,6 +3,7 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableList from "@services/TableList/TableList";
 import { useRouter } from "next/router";
 import { GetEnhancedComplaints } from "@pages/api/complaint/complaint";
+import dayjs from "dayjs";
 
 const breadcrumbItems = [
   {
@@ -127,6 +128,7 @@ const SearchComplaints = () => {
         const items = Array.isArray(res?.res_data?.items) ? res.res_data.items : [];
 
         const mapped = items.map((item) => {
+
           const status =
             item?.body?.status ??
             item?.status ??
@@ -214,6 +216,7 @@ const SearchComplaints = () => {
             status: status ?? "-",
             is_assigned: isAssigned,
             is_master: isMaster,
+            created_at: item?.created_at ?? null,
           };
         });
 
@@ -239,7 +242,7 @@ const SearchComplaints = () => {
   const handleNavigateTo = () => router.push("/admin/edit/search/Filteromplaints");
 
   const handleSearch = (filters) => {
-    const { claimantName, citizenId, subject, docGov, agency, docKk, docSr, docStp } = filters;
+    const { claimantName, citizenId, subject, docGov, agency, docKk, docSr, docStp, startDate, endDate } = filters;
 
     const result = allComplaints.filter((item) => {
       if (claimantName && !safeIncludes(item.nameRaw, claimantName)) return false;
@@ -250,6 +253,27 @@ const SearchComplaints = () => {
       if (docKk && !safeIncludes(item.docKk, docKk)) return false;
       if (docSr && !safeIncludes(item.docSr, docSr)) return false;
       if (docStp && !safeIncludes(item.docStp, docStp)) return false;
+
+      // Filter ตามวันที่สร้าง
+      if (startDate || endDate) {
+        if (!item.created_at) return false;
+
+        const itemDate = dayjs(item.created_at);
+        if (!itemDate.isValid()) return false;
+
+        // ถ้ามี startDate ให้เช็คว่าวันที่สร้างต้อง >= startDate (เริ่มต้นวัน)
+        if (startDate) {
+          const start = dayjs(startDate).startOf('day');
+          if (itemDate.isBefore(start)) return false;
+        }
+
+        // ถ้ามี endDate ให้เช็คว่าวันที่สร้างต้อง <= endDate (สิ้นสุดวัน)
+        if (endDate) {
+          const end = dayjs(endDate).endOf('day');
+          if (itemDate.isAfter(end)) return false;
+        }
+      }
+
       return true;
     });
 

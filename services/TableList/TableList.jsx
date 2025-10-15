@@ -23,6 +23,8 @@ import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
 import { formatCitizenId_null } from "@utils/Formats";
 import { exportExcel } from "@utils/exportExcel";
 import { exportElementToPDF } from "@utils/exportPDF";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
+import dayjs from "dayjs";
 const TableList = ({
   data = [],
   title = "",
@@ -46,11 +48,21 @@ const TableList = ({
     docKk: "",
     docSr: "",
     docStp: "",
+    startDate: null,
+    endDate: null,
   });
 
   const handleChange = (field) => (e) => {
     const value = e?.target ? e.target.value : e;
     setFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // ฟังก์ชันสำหรับเปลี่ยนวันที่และค้นหาทันที
+  const handleDateChange = (field) => (date) => {
+    const newFilters = { ...filters, [field]: date };
+    setFilters(newFilters);
+    setPage(0);
+    onSearch(newFilters);
   };
 
   /* pagination */
@@ -84,6 +96,8 @@ const TableList = ({
       docKk: "",
       docSr: "",
       docStp: "",
+      startDate: null,
+      endDate: null,
     };
     setFilters(cleared);
     setPage(0);
@@ -216,6 +230,29 @@ const TableList = ({
                 value={filters.agency}
                 onChange={handleChange("agency")}
               />
+
+              {/* DatePicker สำหรับช่วงวันที่ */}
+              <Box>
+                <Box sx={{ mb: 0.5, fontSize: "0.875rem", fontWeight: 500, color: "#1120A3" }}>
+                  ตั้งแต่วันที่
+                </Box>
+                <DateThaiPickerService
+                  value={filters.startDate}
+                  onChange={handleDateChange("startDate")}
+                  placeholder="เลือกวันที่เริ่มต้น"
+                />
+              </Box>
+
+              <Box>
+                <Box sx={{ mb: 0.5, fontSize: "0.875rem", fontWeight: 500, color: "#1120A3" }}>
+                  ถึงวันที่
+                </Box>
+                <DateThaiPickerService
+                  value={filters.endDate}
+                  onChange={handleDateChange("endDate")}
+                  placeholder="เลือกวันที่สิ้นสุด"
+                />
+              </Box>
             </Box>
 
             {/* Action Buttons - Responsive Layout */}
@@ -349,117 +386,145 @@ const TableList = ({
           </Box>
         ) : (
           // Desktop Layout (>= 1200px)
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            gap={1}
-            sx={{
-              flexWrap: "nowrap",
-              whiteSpace: "nowrap",
-              overflowX: "auto",
-            }}
-          >
+          <Box display="flex" flexDirection="column" gap={2}>
+            {/* แถวที่ 1: ฟิลด์ค้นหาทั่วไป */}
             <Box
               display="flex"
+              justifyContent="space-between"
               alignItems="center"
               gap={1}
-              sx={{ flexWrap: "nowrap" }}
+              sx={{
+                flexWrap: "nowrap",
+                whiteSpace: "nowrap",
+                overflowX: "auto",
+              }}
             >
-              <InputText
-                label="ชื่อผู้ร้อง"
-                inputLabel="กรอกชื่อผู้ร้อง"
-                value={filters.claimantName}
-                onChange={handleChange("claimantName")}
-                onKeyPress={handleKeyPress}
-              />
-              {/* <InputText
-                label="เลขบัตรประชาชน"
-                inputLabel="กรอกเลขบัตรประชาชน"
-                value={filters.citizenId}
-                onChange={handleChange("citizenId")}
-                onKeyPress={handleKeyPress}
-              /> */}
-              <InputText
-                label="ชื่อเรื่อง"
-                inputLabel="กรอกชื่อเรื่อง"
-                value={filters.subject}
-                onChange={handleChange("subject")}
-                onKeyPress={handleKeyPress}
-              />
-              <InputText
-                label="เลข สรร."
-                inputLabel="กรอกเลข สรร."
-                value={filters.docGov}
-                onChange={handleChange("docGov")}
-                onKeyPress={handleKeyPress}
-              />
-              <SelectField
-                label="หน่วยงานอื่นที่ส่งเรื่องมายัง กค."
-                inputLabel="เลือกหน่วยงาน"
-                options={agencyOptions}
-                value={filters.agency}
-                onChange={handleChange("agency")}
-              />
+              <Box
+                display="flex"
+                alignItems="center"
+                gap={1}
+                sx={{ flexWrap: "nowrap" }}
+              >
+                <InputText
+                  label="ชื่อผู้ร้อง"
+                  inputLabel="กรอกชื่อผู้ร้อง"
+                  value={filters.claimantName}
+                  onChange={handleChange("claimantName")}
+                  onKeyPress={handleKeyPress}
+                />
+                {/* <InputText
+                  label="เลขบัตรประชาชน"
+                  inputLabel="กรอกเลขบัตรประชาชน"
+                  value={filters.citizenId}
+                  onChange={handleChange("citizenId")}
+                  onKeyPress={handleKeyPress}
+                /> */}
+                <InputText
+                  label="ชื่อเรื่อง"
+                  inputLabel="กรอกชื่อเรื่อง"
+                  value={filters.subject}
+                  onChange={handleChange("subject")}
+                  onKeyPress={handleKeyPress}
+                />
+                <InputText
+                  label="เลข สรร."
+                  inputLabel="กรอกเลข สรร."
+                  value={filters.docGov}
+                  onChange={handleChange("docGov")}
+                  onKeyPress={handleKeyPress}
+                />
+                <SelectField
+                  label="หน่วยงานอื่นที่ส่งเรื่องมายัง กค."
+                  inputLabel="เลือกหน่วยงาน"
+                  options={agencyOptions}
+                  value={filters.agency}
+                  onChange={handleChange("agency")}
+                />
 
-              <IconButton
-                onClick={handleSearchClick}
-                sx={{
-                  bgcolor: "#1120A3",
-                  color: "#fff",
-                  "&:hover": { bgcolor: "#0b1580" },
-                  flexShrink: 0,
-                  height: 40,
-                  width: 40,
-                }}
-                title="ค้นหา"
-              >
-                <SearchIcon />
-              </IconButton>
-              <IconButton
-                onClick={handleClearSearch}
-                sx={{
-                  bgcolor: "#dc3545",
-                  color: "#fff",
-                  "&:hover": { bgcolor: "#c82333" },
-                  flexShrink: 0,
-                  height: 40,
-                  width: 40,
-                }}
-                title="ล้างการค้นหา"
-              >
-                <CleaningServicesIcon />
-              </IconButton>
+                <IconButton
+                  onClick={handleSearchClick}
+                  sx={{
+                    bgcolor: "#1120A3",
+                    color: "#fff",
+                    "&:hover": { bgcolor: "#0b1580" },
+                    flexShrink: 0,
+                    height: 40,
+                    width: 40,
+                  }}
+                  title="ค้นหา"
+                >
+                  <SearchIcon />
+                </IconButton>
+                <IconButton
+                  onClick={handleClearSearch}
+                  sx={{
+                    bgcolor: "#dc3545",
+                    color: "#fff",
+                    "&:hover": { bgcolor: "#c82333" },
+                    flexShrink: 0,
+                    height: 40,
+                    width: 40,
+                  }}
+                  title="ล้างการค้นหา"
+                >
+                  <CleaningServicesIcon />
+                </IconButton>
 
-              <Button
-                variant="contained"
-                onClick={handleNavigateTo}
-                sx={{
-                  backgroundColor: "#1120A3",
-                  color: "#fff",
-                  borderRadius: "12px",
-                  fontWeight: "bold",
-                  px: 3,
-                  py: 1,
-                  minWidth: 220,
-                  height: 40,
-                  "&:hover": { backgroundColor: "#0b1580" },
-                  flexShrink: 0,
-                }}
+                <Button
+                  variant="contained"
+                  onClick={handleNavigateTo}
+                  sx={{
+                    backgroundColor: "#1120A3",
+                    color: "#fff",
+                    borderRadius: "12px",
+                    fontWeight: "bold",
+                    px: 3,
+                    py: 1,
+                    minWidth: 220,
+                    height: 40,
+                    "&:hover": { backgroundColor: "#0b1580" },
+                    flexShrink: 0,
+                  }}
+                >
+                  คัดกรองเรื่องร้องเรียน
+                </Button>
+              </Box>
+
+              {/* Export buttons */}
+              <Box
+                display="flex"
+                flexDirection={isExtraSmallScreen ? "column" : "row"}
+                gap={1}
+                sx={{ flexShrink: 0 }}
               >
-                คัดกรองเรื่องร้องเรียน
-              </Button>
+                <ExportButton label="Export PDF" onClick={handleExportPDF}/>
+                <ExportButton label="Export Excel" onClick={handleExportExcel}/>
+              </Box>
             </Box>
 
-            {/* Export buttons - Responsive for xs */}
-            <Box
-              display="flex"
-              flexDirection={isExtraSmallScreen ? "column" : "row"}
-              gap={1}
-              sx={{ flexShrink: 0 }}
-            >
-              <ExportButton label="Export PDF" onClick={handleExportPDF}/>
-              <ExportButton label="Export Excel" onClick={handleExportExcel}/>
+            {/* แถวที่ 2: DatePicker */}
+            <Box display="flex" alignItems="center" gap={1}>
+              <Box sx={{ minWidth: 200 }}>
+                <Box sx={{ mb: 0.5, fontSize: "0.875rem", fontWeight: 500, color: "#1120A3" }}>
+                  ตั้งแต่วันที่
+                </Box>
+                <DateThaiPickerService
+                  value={filters.startDate}
+                  onChange={handleDateChange("startDate")}
+                  placeholder="เลือกวันที่เริ่มต้น"
+                />
+              </Box>
+
+              <Box sx={{ minWidth: 200 }}>
+                <Box sx={{ mb: 0.5, fontSize: "0.875rem", fontWeight: 500, color: "#1120A3" }}>
+                  ถึงวันที่
+                </Box>
+                <DateThaiPickerService
+                  value={filters.endDate}
+                  onChange={handleDateChange("endDate")}
+                  placeholder="เลือกวันที่สิ้นสุด"
+                />
+              </Box>
             </Box>
           </Box>
         )}

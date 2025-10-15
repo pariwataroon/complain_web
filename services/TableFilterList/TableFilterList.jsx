@@ -21,6 +21,8 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportExcel } from "@utils/exportExcel";
 import { exportElementToPDF } from "@utils/exportPDF";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
+import dayjs from "dayjs";
 
 const TableFilterList = ({
   groups = [],
@@ -37,6 +39,8 @@ const TableFilterList = ({
     subject: "",
     issueType: "",
     respondentName: "",
+    startDate: null,
+    endDate: null,
   });
 
   // Handle input text change
@@ -112,6 +116,8 @@ const TableFilterList = ({
       subject: "",
       issueType: "",
       respondentName: "",
+      startDate: null,
+      endDate: null,
     };
     setFilters(cleared);
     setPaginationStates(groups.map(() => ({ page: 0, rowsPerPage: 10 })));
@@ -120,6 +126,17 @@ const TableFilterList = ({
       onSearch(cleared);
     }
   }, [onSearch, groups]);
+
+  // ฟังก์ชันสำหรับเปลี่ยนวันที่และค้นหาทันที
+  const handleDateChange = (field) => (date) => {
+    const newFilters = { ...filters, [field]: date };
+    setFilters(newFilters);
+    setPaginationStates(groups.map(() => ({ page: 0, rowsPerPage: 10 })));
+
+    if (typeof onSearch === "function") {
+      onSearch(newFilters);
+    }
+  };
 
 
   const handleRowClick = (item) =>
@@ -216,110 +233,138 @@ const TableFilterList = ({
       <Box className={styles.headerBar}>{title}</Box>
 
       {/* Search Filters */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        gap={1}
-        mt={2}
-        sx={{
-          flexWrap: "nowrap",
-          whiteSpace: "nowrap",
-          overflowX: "auto",
-          px: 2,
-        }}
-      >
-        <Box
-          display="flex"
-          alignItems="center"
-          gap={1}
-          sx={{ flexWrap: "nowrap" }}
-        >
-          <InputText
-            label="ชื่อผู้ร้อง"
-            inputLabel="กรอกชื่อผู้ร้อง"
-            value={String(filters.claimantName || "")}
-            onChange={handleInputChange("claimantName")}
-            onKeyPress={handleKeyPress}
-          />
-
-          <SelectField
-            label="ประเภทเรื่อง"
-            inputLabel="เลือกประเภทเรื่อง"
-            options={issueTypeOptions}
-            value={String(filters.issueType || "")}
-            onChange={handleSelectChange("issueType")}
-            name="issueType"
-          />
-
-          <InputText
-            label="ชื่อเรื่อง"
-            inputLabel="กรอกชื่อเรื่อง"
-            value={String(filters.subject || "")}
-            onChange={handleInputChange("subject")}
-            onKeyPress={handleKeyPress}
-          />
-
-          <InputText
-            label="ชื่อผู้ถูกร้อง"
-            inputLabel="กรอกชื่อผู้ถูกร้อง"
-            value={String(filters.respondentName || "")}
-            onChange={handleInputChange("respondentName")}
-            onKeyPress={handleKeyPress}
-          />
-
-          <IconButton
-            onClick={handleSearchClick}
+      <Box sx={{ px: 2, mt: 2 }}>
+        <Box display="flex" flexDirection="column" gap={2}>
+          {/* แถวที่ 1: ฟิลด์ค้นหาทั่วไป */}
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            gap={1}
             sx={{
-              bgcolor: "#1120A3",
-              color: "#fff",
-              "&:hover": { bgcolor: "#0b1580" },
-              flexShrink: 0,
-              height: 40,
-              width: 40,
-            }}
-            title="ค้นหา"
-          >
-            <SearchIcon />
-          </IconButton>
-          <IconButton
-            onClick={handleClearSearch}
-            sx={{
-              bgcolor: "#dc3545",
-              color: "#fff",
-              "&:hover": { bgcolor: "#c82333" },
-              flexShrink: 0,
-              height: 40,
-              width: 40,
-            }}
-            title="ล้างการค้นหา"
-          >
-            <SearchOffIcon />
-          </IconButton>
-
-          <Button
-            variant="contained"
-            onClick={handleNavigateTo}
-            sx={{
-              backgroundColor: "#1120A3",
-              color: "#fff",
-              borderRadius: "12px",
-              fontWeight: "bold",
-              px: 3,
-              py: 1,
-              minWidth: 220,
-              height: 40,
-              "&:hover": { backgroundColor: "#0b1580" },
-              flexShrink: 0,
+              flexWrap: "nowrap",
+              whiteSpace: "nowrap",
+              overflowX: "auto",
             }}
           >
-            สถิติการทำงานของเจ้าหน้าที่
-          </Button>
-        </Box>
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={1}
+              sx={{ flexWrap: "nowrap" }}
+            >
+              <InputText
+                label="ชื่อผู้ร้อง"
+                inputLabel="กรอกชื่อผู้ร้อง"
+                value={String(filters.claimantName || "")}
+                onChange={handleInputChange("claimantName")}
+                onKeyPress={handleKeyPress}
+              />
 
-        <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
-          <ExportButton label="Export PDF" onClick={handleExportPDF} />
-          <ExportButton label="Export Excel" onClick={handleExportExcel} />
+              <SelectField
+                label="ประเภทเรื่อง"
+                inputLabel="เลือกประเภทเรื่อง"
+                options={issueTypeOptions}
+                value={String(filters.issueType || "")}
+                onChange={handleSelectChange("issueType")}
+                name="issueType"
+              />
+
+              <InputText
+                label="ชื่อเรื่อง"
+                inputLabel="กรอกชื่อเรื่อง"
+                value={String(filters.subject || "")}
+                onChange={handleInputChange("subject")}
+                onKeyPress={handleKeyPress}
+              />
+
+              <InputText
+                label="ชื่อผู้ถูกร้อง"
+                inputLabel="กรอกชื่อผู้ถูกร้อง"
+                value={String(filters.respondentName || "")}
+                onChange={handleInputChange("respondentName")}
+                onKeyPress={handleKeyPress}
+              />
+
+              <IconButton
+                onClick={handleSearchClick}
+                sx={{
+                  bgcolor: "#1120A3",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#0b1580" },
+                  flexShrink: 0,
+                  height: 40,
+                  width: 40,
+                }}
+                title="ค้นหา"
+              >
+                <SearchIcon />
+              </IconButton>
+              <IconButton
+                onClick={handleClearSearch}
+                sx={{
+                  bgcolor: "#dc3545",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "#c82333" },
+                  flexShrink: 0,
+                  height: 40,
+                  width: 40,
+                }}
+                title="ล้างการค้นหา"
+              >
+                <SearchOffIcon />
+              </IconButton>
+
+              <Button
+                variant="contained"
+                onClick={handleNavigateTo}
+                sx={{
+                  backgroundColor: "#1120A3",
+                  color: "#fff",
+                  borderRadius: "12px",
+                  fontWeight: "bold",
+                  px: 3,
+                  py: 1,
+                  minWidth: 220,
+                  height: 40,
+                  "&:hover": { backgroundColor: "#0b1580" },
+                  flexShrink: 0,
+                }}
+              >
+                สถิติการทำงานของเจ้าหน้าที่
+              </Button>
+            </Box>
+
+            <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
+              <ExportButton label="Export PDF" onClick={handleExportPDF} />
+              <ExportButton label="Export Excel" onClick={handleExportExcel} />
+            </Box>
+          </Box>
+
+          {/* แถวที่ 2: DatePicker */}
+          <Box display="flex" alignItems="center" gap={1}>
+            <Box sx={{ minWidth: 200 }}>
+              <Box sx={{ mb: 0.5, fontSize: "0.875rem", fontWeight: 500, color: "#1120A3" }}>
+                ตั้งแต่วันที่
+              </Box>
+              <DateThaiPickerService
+                value={filters.startDate}
+                onChange={handleDateChange("startDate")}
+                placeholder="เลือกวันที่เริ่มต้น"
+              />
+            </Box>
+
+            <Box sx={{ minWidth: 200 }}>
+              <Box sx={{ mb: 0.5, fontSize: "0.875rem", fontWeight: 500, color: "#1120A3" }}>
+                ถึงวันที่
+              </Box>
+              <DateThaiPickerService
+                value={filters.endDate}
+                onChange={handleDateChange("endDate")}
+                placeholder="เลือกวันที่สิ้นสุด"
+              />
+            </Box>
+          </Box>
         </Box>
       </Box>
 
