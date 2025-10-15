@@ -206,24 +206,29 @@ export default function NewsDetails() {
           : coverImageUrl
         : (galleryImages.length > 0 ? galleryImages[0] : "");
 
-    // 🎯 WORKAROUND: สำหรับ "แสดงผลตลอด" ให้กำหนดวันที่ไกลมากๆ แทน null
+    // 🎯 จัดการวันที่ให้ถูกต้อง
     let finalDisplayStartDate, finalDisplayEndDate;
-    
+
     if (showAlways) {
+      // แสดงผลตลอด: ใช้วันที่ไกลมาก
       finalDisplayStartDate = displayStartDate.toISOString();
-      // 🔥 แทนที่จะส่ง null ให้ส่งวันที่ไกลมากๆ เช่น 100 ปีข้างหน้า
       finalDisplayEndDate = dayjs().add(100, 'year').toISOString();
     } else {
+      // กำหนดระยะเวลา: ต้องมี end date และต้องมากกว่า start date
       finalDisplayStartDate = displayStartDate.toISOString();
-      finalDisplayEndDate = displayEndDate ? displayEndDate.toISOString() : null;
-    }
 
-    // ปรับปรุงการกำหนด status
-    let status;
-    if (showAlways) {
-      status = "ไม่จำกัดเวลา";
-    } else {
-      status = expireDate ? `แสดงผลถึงวันที่ ${dayjs(expireDate).format("D MMM YYYY")}` : "ไม่ได้กำหนดวันที่";
+      if (!displayEndDate || !displayEndDate.isValid()) {
+        alert("กรุณาเลือกวันที่สิ้นสุดการแสดงผล");
+        return;
+      }
+
+      // ตรวจสอบว่า end date มากกว่า start date
+      if (displayEndDate.isBefore(displayStartDate) || displayEndDate.isSame(displayStartDate)) {
+        alert("วันที่สิ้นสุดต้องมากกว่าวันที่เริ่มต้น");
+        return;
+      }
+
+      finalDisplayEndDate = displayEndDate.endOf('day').toISOString(); // ใช้เวลาสิ้นสุดของวัน
     }
 
     const newData = {
@@ -233,15 +238,10 @@ export default function NewsDetails() {
       gallery_images: cleanedGalleryImages,
       additional_links: additionalLinks,
       show_views: showViews,
-      is_published: true, // Force เป็น true
+      is_published: true,
       display_start_date: finalDisplayStartDate,
-      display_end_date: finalDisplayEndDate, // จะไม่เป็น null สำหรับ showAlways
-      date: dayjs().format("D MMM YYYY"),
-      update: dayjs().format("D MMM YYYY"),
-      status: status,
-      views: method === "EditNew" ? undefined : 0,
-      pinTop: false,
-      show_always: showAlways, // ส่งไปให้ Backend รู้ว่าเป็น showAlways
+      display_end_date: finalDisplayEndDate,
+      show_always: showAlways,
     };
 
     console.log("📤 Data to send:", newData);
@@ -255,13 +255,8 @@ export default function NewsDetails() {
         result = await updateNews(id, newData);
         console.log("✅ Update result:", result);
       } else {
-        const createData = {
-          ...newData,
-          views: 0,
-        };
-        
-        console.log("📤 Final createData:", createData);
-        result = await createNews(createData);
+        console.log("📤 Final createData:", newData);
+        result = await createNews(newData);
         console.log("✅ Created news:", result);
       }
 
@@ -284,6 +279,11 @@ export default function NewsDetails() {
     } catch (error) {
       console.error("❌ Error submitting the data", error.message);
       console.error("❌ Full error:", error);
+      console.error("❌ Response data:", error.response?.data);
+      console.error("❌ Response status:", error.response?.status);
+
+      // แสดง alert ให้เห็นชัดเจน
+      alert(`เกิดข้อผิดพลาด: ${JSON.stringify(error.response?.data || error.message)}`);
     }
   };
 
