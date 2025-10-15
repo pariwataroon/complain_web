@@ -274,7 +274,7 @@ const FollowStatusSummary = ({ data = {} }) => {
                   style={{ objectFit: "contain" }}
                 />
                 <Typography variant="h6" fontWeight="bold" ml={2}>
-                  แบบรับคำร้องเรียน / ร้องทุกข์กระทรวงการคลัง
+                  แบบรับคำร้องเรียนผ่านเว็บไซต์กระทรวงการคลัง
                 </Typography>
               </Box>
               <Typography variant="h6" fontWeight="bold">

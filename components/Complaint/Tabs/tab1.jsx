@@ -211,6 +211,14 @@ const Tab1 = ({
       {/* หน่วยงานของรัฐ */}
       {currentTab === 2 && hasGovernmentAccess && (
         <div className={styles.formContainer}>
+          <style jsx>{`
+            .${styles.formContainer} :global(.MuiGrid-root.MuiGrid-item):has(label:contains("หน่วยงาน")) {
+              display: none !important;
+            }
+            .${styles.formContainer} :global(.MuiGrid-container > .MuiGrid-item:nth-child(2)) {
+              display: none !important;
+            }
+          `}</style>
           <ComplaintMinistryMainForm
             data={tabData.government || {}}
             onChange={handleUpdate("government")}
