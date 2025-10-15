@@ -107,6 +107,11 @@ export function sanitizeForStorage(dirty, opts = {}) {
 
   walk(doc.body);
 
+  // ตรวจสอบว่า doc.body มีค่าหรือไม่ก่อนทำงานต่อ
+  if (!doc.body) {
+    return "";
+  }
+
   // ลด br ซ้อน และลบ <p> ว่าง
   doc.body.querySelectorAll("br+br+br").forEach((br) => {
     const one = doc.createElement("br");

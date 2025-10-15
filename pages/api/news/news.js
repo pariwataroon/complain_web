@@ -103,7 +103,9 @@ const createNews = async (newsData) => {
       return response.data; // ส่งข้อมูลที่ได้รับจาก API (อาจเป็น ID หรือข้อมูลที่สร้างขึ้น)
     }
   } catch (error) {
-    console.error('Error creating news:', error.response || error.message);
+    console.error('❌ Error creating news:', error.response?.data || error.response || error.message);
+    console.error('❌ Status:', error.response?.status);
+    console.error('❌ Data sent:', newsData);
     throw error;
   }
 };

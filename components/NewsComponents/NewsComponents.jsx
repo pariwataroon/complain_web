@@ -48,9 +48,6 @@ const NewsComponent = () => {
     }
   }, [id]);
 
-  if (loading) return <div>กำลังโหลดข้อมูล...</div>;
-  if (!newsData) return <div>ไม่พบข้อมูลข่าวสาร</div>;
-
   // กรณีที่ไม่สามารถโหลดภาพได้
   const fallbackImage =
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpe8Naj6LbXz7o_Gn6S9GszsfiRNZ5t3xJxA&s";
@@ -65,7 +62,7 @@ const NewsComponent = () => {
 
   // ฟังก์ชันเปิด URL จากข้อมูลใน additional_links
   const handleShareClick = (title) => {
-    const link = newsData.additional_links.find(
+    const link = newsData?.additional_links?.find(
       (link) => link.title.toLowerCase() === title.toLowerCase()
     );
     if (link) {
@@ -77,7 +74,7 @@ const NewsComponent = () => {
 
   // ฟังก์ชันเช็คว่า URL มีหรือไม่
   const isLinkAvailable = (title) => {
-    return newsData.additional_links.some(
+    return newsData?.additional_links?.some(
       (link) =>
         link.title.toLowerCase() === title.toLowerCase() && link.url
     );
@@ -89,6 +86,10 @@ const NewsComponent = () => {
       imgBase: "https://complain.mof.go.th/api",
     });
   }, [newsData?.content]);
+
+  // ย้าย early return มาไว้หลัง hooks ทั้งหมด
+  if (loading) return <div>กำลังโหลดข้อมูล...</div>;
+  if (!newsData) return <div>ไม่พบข้อมูลข่าวสาร</div>;
 
   // เปิด Dialog เพื่อแสดงภาพขนาดใหญ่
   const handleImageClick = (url) => {
