@@ -4,6 +4,10 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListBox from "@services/TableListBox/TableListBox";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import { getDocumentStorageForCard } from "@pages/api/document/document";
+import dayjs from "dayjs";
+import "dayjs/locale/th";
+
+dayjs.locale("th");
 
 /* ---------- สถานะ: Mapping 2 ทาง + helper ---------- */
 const statusMapEnToTh = {
@@ -121,6 +125,7 @@ const transformComplaintData = (apiItems) => {
       complaintNumber,
       isMaster,
       complaintNumberSorn,
+      created_at: item.created_at, // เก็บ created_at สำหรับ filter
     };
   });
 };
@@ -243,6 +248,30 @@ const AnonymousLetterRepository = () => {
       if (filters.complaintNumber && filters.complaintNumber.trim() !== "") {
         const q = filters.complaintNumber.toLowerCase();
         ok = ok && (item.complaintNumber || "").toLowerCase().includes(q);
+      }
+
+      // Filter ตามช่วงวันที่สร้าง
+      if (filters.startDate || filters.endDate) {
+        if (!item.created_at) {
+          ok = false;
+        } else {
+          const itemDate = dayjs(item.created_at);
+          if (!itemDate.isValid()) {
+            ok = false;
+          } else {
+            // ถ้ามี startDate ให้เช็คว่าวันที่สร้างต้อง >= startDate
+            if (filters.startDate) {
+              const start = dayjs(filters.startDate).startOf('day');
+              if (itemDate.isBefore(start)) ok = false;
+            }
+
+            // ถ้ามี endDate ให้เช็คว่าวันที่สร้างต้อง <= endDate
+            if (filters.endDate) {
+              const end = dayjs(filters.endDate).endOf('day');
+              if (itemDate.isAfter(end)) ok = false;
+            }
+          }
+        }
       }
 
       return ok;
@@ -389,6 +418,16 @@ const AnonymousLetterRepository = () => {
             name: "complaintNumberSorn",
             label: "เลข สรร.",
             type: "text",
+          },
+          {
+            name: "startDate",
+            label: "ตั้งแต่วันที่",
+            type: "date",
+          },
+          {
+            name: "endDate",
+            label: "ถึงวันที่",
+            type: "date",
           },
         ]}
       />

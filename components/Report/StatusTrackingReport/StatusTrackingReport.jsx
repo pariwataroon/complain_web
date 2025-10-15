@@ -4,6 +4,8 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListCollaps from "@services/TableListCollaps/TableListCollaps";
 import { GetMyRelatedComplaints, GetDepartments } from "@pages/api/complaint/complaint";
 import { GetAllSignatureAuthorities } from "@pages/api/allselect/allselect";
+import dayjs from "dayjs";
+import "dayjs/locale/th";
 
 /* ============= คำที่ถือว่า “ปิดเรื่องจากผลพิจารณา (outgoing)” ============= */
 const CLOSED_WORDS = ["ยุติเรื่อง", "ยุติเรื่องได้", "ปิดเรื่อง", "ปิดงาน"];
@@ -185,6 +187,7 @@ const StatusTrackingReport = () => {
             status: statusLabel,           // แสดง label เหมือนหน้า followup
             departmentsData: buildHistoryRows(it),
             rawData: it,
+            created_at: c.created_at,      // เพิ่มฟิลด์วันที่สร้างสำหรับกรอง
           };
         });
 
@@ -232,27 +235,61 @@ const StatusTrackingReport = () => {
       receiptNumber: fReceipt,
       referenceNumber: fReference,
       status: fStatus, // ใช้ STATUS_LABELS
+      startDate: fStartDate,
+      endDate: fEndDate,
     } = filters;
 
     const norm = (v) => (v ?? "").toString().toLowerCase().trim();
 
-    if (!fName && !fDept && !fOfficer && !fReceipt && !fReference && !fStatus) {
+    if (!fName && !fDept && !fOfficer && !fReceipt && !fReference && !fStatus && !fStartDate && !fEndDate) {
       setFilteredComplaints(allComplaints);
       return;
     }
 
     const result = allComplaints.filter((item) => {
-      let ok = false;
-      if (fName && norm(item.claimantName).includes(norm(fName))) ok = true;
-      if (fDept && (norm(item.department) === norm(fDept) || norm(item.department).includes(norm(fDept)))) ok = true;
-      if (fOfficer && norm(item.responsibleOfficer).includes(norm(fOfficer))) ok = true;
-      if (fReceipt && norm(item.receiptNumber).includes(norm(fReceipt))) ok = true;
-      if (fReference && norm(item.referenceNumber).includes(norm(fReference))) ok = true;
+      // เช็คแต่ละเงื่อนไข ถ้าไม่มีการกรอกฟิลด์นั้นๆ ถือว่าผ่าน
+      const matchName = !fName || norm(item.claimantName).includes(norm(fName));
+      const matchDept = !fDept || (norm(item.department) === norm(fDept) || norm(item.department).includes(norm(fDept)));
+      const matchOfficer = !fOfficer || norm(item.responsibleOfficer).includes(norm(fOfficer));
+      const matchReceipt = !fReceipt || norm(item.receiptNumber).includes(norm(fReceipt));
+      const matchReference = !fReference || norm(item.referenceNumber).includes(norm(fReference));
+      const matchStatus = !fStatus || norm(item.status) === norm(fStatus);
 
-      // กรองสถานะด้วย "label" ที่โชว์จริง (เหมือนหน้า followup)
-      if (fStatus && norm(item.status) === norm(fStatus)) ok = true;
+      // กรองตามช่วงวันที่สร้าง
+      let matchDateRange = true;
+      if (fStartDate || fEndDate) {
+        if (!item.created_at) {
+          matchDateRange = false;
+        } else {
+          const itemDate = dayjs(item.created_at);
+          if (!itemDate.isValid()) {
+            matchDateRange = false;
+          } else {
+            // ถ้ามี startDate ให้เช็คว่าวันที่สร้างต้อง >= startDate
+            if (fStartDate) {
+              const start = dayjs(fStartDate).startOf('day');
+              if (itemDate.isBefore(start)) {
+                matchDateRange = false;
+              }
+            }
 
-      return ok;
+            // ถ้ามี endDate ให้เช็คว่าวันที่สร้างต้อง <= endDate
+            if (fEndDate) {
+              const end = dayjs(fEndDate).endOf('day');
+              if (itemDate.isAfter(end)) {
+                matchDateRange = false;
+              }
+            }
+          }
+        }
+      }
+
+      // ต้องผ่านทุกเงื่อนไข หรือ อย่างน้อยต้องมีหนึ่งเงื่อนไขที่กรอกและผ่าน
+      const hasAnyFilter = fName || fDept || fOfficer || fReceipt || fReference || fStatus || fStartDate || fEndDate;
+      if (!hasAnyFilter) return true;
+
+      // ถ้ามีการกรองต้องผ่านทุกเงื่อนไขที่กรอก
+      return matchName && matchDept && matchOfficer && matchReceipt && matchReference && matchStatus && matchDateRange;
     });
 
     setFilteredComplaints(result);
@@ -288,6 +325,8 @@ const StatusTrackingReport = () => {
           { name: "receiptNumber", label: "เลข สรร.", type: "text" },
           { name: "referenceNumber", label: "เลขที่อ้างอิง", type: "text" },
           { name: "status", label: "สถานะเรื่อง", type: "select", options: statusFilterOptions },
+          { name: "startDate", label: "ตั้งแต่วันที่", type: "date" },
+          { name: "endDate", label: "ถึงวันที่", type: "date" },
         ]}
       />
     </>
