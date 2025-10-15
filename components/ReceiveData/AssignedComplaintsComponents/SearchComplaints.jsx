@@ -202,7 +202,7 @@ const SearchComplaints = () => {
       ),
     },
     {
-      label: "แบบรับคำร้องเรียน / ร้องทุกข์กระทรวง",
+      label: "แบบรับคำร้องเรียนผ่านเว็บไซต์กระทรวงการคลัง",
       url: id
         ? `/admin/edit/assigned-complaints/${id}`
         : "/admin/edit/assigned-complaints/",

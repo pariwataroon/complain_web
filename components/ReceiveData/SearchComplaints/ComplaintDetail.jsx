@@ -230,6 +230,7 @@ const ComplaintDetail = () => {
   const router = useRouter();
   const { id } = router.query;  // ดึง id จาก URL query
   const [data, setData] = useState(mockupData);  // ค่าเริ่มต้น
+  const [rawData, setRawData] = useState(null);  // เก็บ raw data จาก API
   const [loading, setLoading] = useState(false);
   const lastFetchRef = useRef(0);
   const initialRouteRef = useRef(true);
@@ -267,6 +268,7 @@ const ComplaintDetail = () => {
         console.error("No res_data in response!");
         return;
       }
+      setRawData(res.res_data); // เก็บ raw data ไว้
       const mappedData = mapComplaintData(res.res_data);
       setData(mappedData);
     } catch (error) {
@@ -348,9 +350,9 @@ const ComplaintDetail = () => {
 
   console.log("=======================================");
 
-  return <ComplaintSummaryService 
-    data={data} 
-    handleSubmit={handleSubmit} 
+  return <ComplaintSummaryService
+    data={{ ...data, ...rawData }}
+    handleSubmit={handleSubmit}
     onRefresh={() => fetchData({ force: true, reason: 'manual-refresh' })}
   />;
 };

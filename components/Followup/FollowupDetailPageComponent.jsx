@@ -409,7 +409,7 @@ export default function FollowupDetailPage() {
 
           <Box className={styles.headerBarLightBlue}>
             <Typography sx={{ color: "#1120A3" }}>
-              แบบรับคำร้องเรียน / เรียนทุกข์กระทรวงการคลัง
+              แบบรับคำร้องเรียนผ่านเว็บไซต์กระทรวงการคลัง
             </Typography>
           </Box>
 

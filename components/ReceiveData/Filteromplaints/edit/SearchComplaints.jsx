@@ -23,7 +23,7 @@ const breadcrumbItems = [
     label: "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์",
     url: "/admin/edit/website-complaints",
   },
-  { label: "แบบรับคำร้องเรียน / ร้องทุกข์กระทรวง" },
+  { label: "แบบรับคำร้องเรียนผ่านเว็บไซต์กระทรวงการคลัง" },
 ];
 
 const SearchComplaints = () => {
@@ -93,7 +93,7 @@ const SearchComplaints = () => {
       <BreadcrumbsService items={breadcrumbItems} />
       <div className={styles.container}>
         <div className={styles.headerBar}>
-          แบบรับคำร้องเรียน / ร้องทุกข์กระทรวง
+          แบบรับคำร้องเรียนผ่านเว็บไซต์กระทรวงการคลัง
         </div>
 
         {defaultData && generalMethods ? (

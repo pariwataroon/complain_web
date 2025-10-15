@@ -297,13 +297,83 @@ export default function useComplaintForm() {
       step3Data.complaintChannelName = step3Data.complaintChannel;
     }
 
-    const restructuredBody = {
-      step1: {
-        general: {
-          general: step1?.general?.general || step1?.general || {},
-          delegate: step1?.general?.delegate || {},
-        },
+    // ตรวจสอบว่ามีข้อมูลส่วนไหนที่ถูกกรอก (ไม่ใช่แค่ auto-populate)
+    const hasGeneralData = (data) => {
+      if (!data || typeof data !== 'object') return false;
+      // เช็คว่ามีฟิลด์สำคัญที่ไม่ใช่แค่ auto-populate
+      const importantFields = ['address', 'province', 'districts', 'subdistricts', 'zipcode'];
+      return importantFields.some(field => data[field] && data[field].trim && data[field].trim() !== '');
+    };
+
+    const hasCorporateData = (data) => {
+      if (!data || typeof data !== 'object') return false;
+      // นิติบุคคลต้องมีชื่อบริษัทหรือผู้มีอำนาจลงนาม
+      return (data.companyName && data.companyName.trim && data.companyName.trim() !== '') ||
+             (data.signatoryName && data.signatoryName.trim && data.signatoryName.trim() !== '');
+    };
+
+    const hasGovernmentData = (data) => {
+      if (!data || typeof data !== 'object') return false;
+      // หนังสือร้องเรียนถึง กค. ต้องมีชื่อหน่วยงานหรือชื่อผู้ติดต่อ
+      return (data.agencyName && data.agencyName.trim && data.agencyName.trim() !== '') ||
+             (data.fullName && data.fullName.trim && data.fullName.trim() !== '');
+    };
+
+    // กำหนด step1 ตามลำดับความสำคัญ
+    let step1Structure = {
+      general: {
+        general: {},
+        delegate: {},
       },
+    };
+
+    // ตรวจสอบข้อมูลแต่ละประเภทและเลือกที่ถูกต้อง
+    const generalData = step1?.general?.general || {};
+    const corporateData = step1?.general?.corporate || {};
+    const governmentData = step1?.general?.government || {};
+    const signerData = step1?.general?.signer || {};
+    const delegateData = step1?.general?.delegate || {};
+
+    // เลือกประเภทที่ถูกต้อง (ตามลำดับความสำคัญ)
+    console.log('=== STEP1 DATA DETECTION ===');
+    console.log('hasGovernmentData:', hasGovernmentData(governmentData));
+    console.log('hasCorporateData:', hasCorporateData(corporateData));
+    console.log('hasGeneralData:', hasGeneralData(generalData));
+    console.log('governmentData:', governmentData);
+    console.log('corporateData:', corporateData);
+    console.log('generalData:', generalData);
+
+    if (hasGovernmentData(governmentData)) {
+      // หนังสือร้องเรียนถึง กค. (มีข้อมูลหน่วยงาน)
+      console.log('✅ เลือก: หนังสือร้องเรียนถึง กค.');
+      step1Structure.general = {
+        government: governmentData,
+      };
+    } else if (hasCorporateData(corporateData)) {
+      // นิติบุคคล (มีข้อมูลบริษัท)
+      console.log('✅ เลือก: นิติบุคคล');
+      step1Structure.general = {
+        corporate: corporateData,
+        signer: signerData,
+      };
+    } else if (hasGeneralData(generalData)) {
+      // บุคคลทั่วไป (มีข้อมูลที่อยู่)
+      console.log('✅ เลือก: บุคคลทั่วไป');
+      step1Structure.general = {
+        general: generalData,
+        delegate: delegateData,
+      };
+    } else {
+      // fallback: ใช้ข้อมูลที่มีอยู่ (กรณีที่ไม่มีข้อมูลเลย หรือมีแค่ auto-populate)
+      console.log('⚠️ Fallback: ใช้บุคคลทั่วไป (ไม่มีข้อมูลเพียงพอ)');
+      step1Structure.general = {
+        general: generalData,
+        delegate: delegateData,
+      };
+    }
+
+    const restructuredBody = {
+      step1: step1Structure,
       step2: {
         general: {
           ...(step2?.general?.individual && {

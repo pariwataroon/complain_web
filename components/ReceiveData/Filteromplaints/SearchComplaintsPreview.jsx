@@ -132,7 +132,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
         handleBreadcrumbClick("/admin/edit/search/Filteromplaints"),
     },
     {
-      label: "แบบรับคำร้องเรียน / ร้องทุกข์กระทรวง",
+      label: "แบบรับคำร้องเรียนผ่านเว็บไซต์กระทรวงการคลัง",
       url: id
         ? `/admin/edit/search/Filteromplaints/${id}`
         : "/admin/edit/website-complaints/SearchComplaints",
@@ -478,8 +478,51 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   }
 
   const splitThaiName = (fullName) => parseThaiName(fullName);
+
+  // Helper function to safely get nested data
+  const getNestedData = (obj, ...paths) => {
+    for (const path of paths) {
+      const result = path.split('.').reduce((acc, key) => acc?.[key], obj);
+      if (result && Object.keys(result).length > 0) return result;
+    }
+    return {};
+  };
+
+  // ตรวจสอบว่ามีข้อมูลจริงหรือไม่ (ไม่ใช่แค่ object ว่าง)
+  const hasRealData = (dataObj) => dataObj && Object.keys(dataObj).length > 0 && Object.values(dataObj).some(v => v !== null && v !== undefined && v !== '');
+
+  // ดึงข้อมูลจาก step1 (รองรับทั้ง Backend และ Frontend structure)
+  const governmentDataStep1 = getNestedData(step1, 'general.government', 'general.general.government');
+  const corporateDataStep1 = getNestedData(step1, 'general.corporate', 'general.general.corporate');
+  const generalDataStep1 = getNestedData(step1, 'general.general', 'general.general.general');
+  const signerDataStep1 = getNestedData(step1, 'general.signer', 'general.general.signer');
+  const delegateDataStep1 = getNestedData(step1, 'general.delegate', 'general.general.delegate');
+
+  let complainant = {};
+  let complainantType = "individual";
+  let delegate = {};
+
+  if (hasRealData(governmentDataStep1)) {
+    // หนังสือร้องเรียนถึง กค.
+    complainant = governmentDataStep1;
+    complainantType = "government";
+    delegate = {}; // หน่วยงานรัฐไม่มีผู้รับมอบอำนาจ
+    console.log('✅ SearchComplaintsPreview: แสดง หนังสือร้องเรียนถึง กค.');
+  } else if (hasRealData(corporateDataStep1)) {
+    // นิติบุคคล
+    complainant = corporateDataStep1;
+    complainantType = "corporate";
+    delegate = signerDataStep1;
+    console.log('✅ SearchComplaintsPreview: แสดง นิติบุคคล');
+  } else {
+    // บุคคลทั่วไป (default)
+    complainant = generalDataStep1 || step1.general?.general || {};
+    complainantType = "individual";
+    delegate = delegateDataStep1 || step1.general?.delegate || {};
+    console.log('✅ SearchComplaintsPreview: แสดง บุคคลทั่วไป');
+  }
+
   // ข้อมูลจาก step1 (ผู้ร้องทุกข์)
-  const complainant = step1.general?.general || {};
   // พยายาม resolve จาก title_id/prefix_other ถ้ามี มิฉะนั้น fallback parseThaiName
   const complainantTitle = resolveTitleFromList(
     complainant.title_id,
@@ -489,7 +532,6 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   const { title, firstName, lastName } = complainantTitle
     ? { title: complainantTitle, firstName: complainant.first_name || splitThaiName(complainant.name).firstName, lastName: complainant.last_name || splitThaiName(complainant.name).lastName }
     : splitThaiName(complainant.name);
-  const delegate = step1.general?.delegate || {};
   const {
     title: delegateTitle,
     firstName: delegateFirstName,
@@ -787,35 +829,131 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
               ข้อมูลผู้ร้องทุกข์
             </Typography>
             <Grid container spacing={2} mb={3}>
-              <InfoItem
-                label="หมายเลขประจำตัวประชาชน"
-                value={formatCitizenId_null(complainant.idCard)}
-              />
-              <InfoItem label="คำนำหน้า" value={title || "-"} />
-              <InfoItem label="ชื่อ" value={firstName || "-"} />
-              <InfoItem label="นามสกุล" value={lastName || "-"} />
-              <InfoItem
-                label="ที่อยู่ที่ติดต่อได้"
-                value={complainant.address || "-"}
-              />
-              <InfoItem
-                label="ตำบล/แขวง"
-                value={complainant?.subdistricts?.label || "-"}
-              />
-              <InfoItem
-                label="อำเภอ/เขต"
-                value={complainant?.districts?.label || "-"}
-              />
-              <InfoItem label="จังหวัด" value={complainant.province || "-"} />
-              <InfoItem
-                label="รหัสไปรษณีย์"
-                value={complainant.zipcode || "-"}
-              />
-              <InfoItem label="อีเมล" value={complainant.email || "-"} />
-              <InfoItem
-                label="หมายเลขโทรศัพท์"
-                value={formatPhoneNumber_null(complainant.phone)}
-              />
+              {complainantType === "government" ? (
+                // หนังสือร้องเรียนถึง กค.
+                <>
+                  <InfoItem
+                    label="หมายเลขประจำตัวประชาชน"
+                    value={formatCitizenId_null(complainant.idCard)}
+                  />
+                  <InfoItem
+                    label="ชื่อ - นามสกุล ผู้ติดต่อ"
+                    value={complainant.fullName || "-"}
+                  />
+                  <InfoItem
+                    label="ที่อยู่ที่สามารถติดต่อได้"
+                    value={complainant.address || "-"}
+                  />
+                  <InfoItem
+                    label="หมายเลขโทรศัพท์"
+                    value={formatPhoneNumber_null(complainant.phone)}
+                  />
+                  <InfoItem
+                    label="จังหวัด"
+                    value={
+                      typeof complainant.province === 'object'
+                        ? complainant.province?.label || complainant.province?.name || "-"
+                        : complainant.province || "-"
+                    }
+                  />
+                  <InfoItem
+                    label="อำเภอ/เขต"
+                    value={
+                      typeof complainant.districts === 'object'
+                        ? complainant.districts?.label || complainant.districts?.name || "-"
+                        : complainant.districts || "-"
+                    }
+                  />
+                  <InfoItem label="อีเมล" value={complainant.email || "-"} />
+                  <InfoItem
+                    label="ตำบล/แขวง"
+                    value={
+                      typeof complainant.subdistricts === 'object'
+                        ? complainant.subdistricts?.label || complainant.subdistricts?.name || "-"
+                        : complainant.subdistricts || "-"
+                    }
+                  />
+                  <InfoItem
+                    label="รหัสไปรษณีย์"
+                    value={
+                      typeof complainant.zipcode === 'object'
+                        ? complainant.zipcode?.label || complainant.zipcode?.name || "-"
+                        : complainant.zipcode || "-"
+                    }
+                  />
+                </>
+              ) : complainantType === "corporate" ? (
+                // นิติบุคคล
+                <>
+                  <InfoItem
+                    label="หมายเลขประจำตัวประชาชน"
+                    value={formatCitizenId_null(complainant.idCard)}
+                  />
+                  <InfoItem
+                    label="ชื่อบริษัท"
+                    value={complainant.companyName || "-"}
+                  />
+                  <InfoItem
+                    label="ชื่อ - นามสกุล ผู้ลงนาม"
+                    value={delegate.signatoryName || delegate.name || "-"}
+                  />
+                  <InfoItem
+                    label="ที่อยู่ที่ติดต่อได้"
+                    value={complainant.address || "-"}
+                  />
+                  <InfoItem
+                    label="ตำบล/แขวง"
+                    value={complainant?.subdistricts?.label || "-"}
+                  />
+                  <InfoItem
+                    label="อำเภอ/เขต"
+                    value={complainant?.districts?.label || "-"}
+                  />
+                  <InfoItem label="จังหวัด" value={complainant.province || "-"} />
+                  <InfoItem
+                    label="รหัสไปรษณีย์"
+                    value={complainant.zipcode || "-"}
+                  />
+                  <InfoItem label="อีเมล" value={complainant.email || "-"} />
+                  <InfoItem
+                    label="หมายเลขโทรศัพท์"
+                    value={formatPhoneNumber_null(complainant.phone)}
+                  />
+                </>
+              ) : (
+                // บุคคลทั่วไป
+                <>
+                  <InfoItem
+                    label="หมายเลขประจำตัวประชาชน"
+                    value={formatCitizenId_null(complainant.idCard)}
+                  />
+                  <InfoItem label="คำนำหน้า" value={title || "-"} />
+                  <InfoItem label="ชื่อ" value={firstName || "-"} />
+                  <InfoItem label="นามสกุล" value={lastName || "-"} />
+                  <InfoItem
+                    label="ที่อยู่ที่ติดต่อได้"
+                    value={complainant.address || "-"}
+                  />
+                  <InfoItem
+                    label="ตำบล/แขวง"
+                    value={complainant?.subdistricts?.label || "-"}
+                  />
+                  <InfoItem
+                    label="อำเภอ/เขต"
+                    value={complainant?.districts?.label || "-"}
+                  />
+                  <InfoItem label="จังหวัด" value={complainant.province || "-"} />
+                  <InfoItem
+                    label="รหัสไปรษณีย์"
+                    value={complainant.zipcode || "-"}
+                  />
+                  <InfoItem label="อีเมล" value={complainant.email || "-"} />
+                  <InfoItem
+                    label="หมายเลขโทรศัพท์"
+                    value={formatPhoneNumber_null(complainant.phone)}
+                  />
+                </>
+              )}
             </Grid>
 
             {/* ผู้รับมอบอำนาจร้องเรียน */}

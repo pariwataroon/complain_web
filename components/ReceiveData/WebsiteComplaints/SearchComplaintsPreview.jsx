@@ -116,7 +116,7 @@ const SearchComplaintsPreview = ({
       url: "/admin/edit/website-complaints",
     },
     {
-      label: "แบบรับคำร้องเรียน / ร้องทุกข์กระทรวง",
+      label: "แบบรับคำร้องเรียนผ่านเว็บไซต์กระทรวงการคลัง",
       url: id
         ? `/admin/edit/website-complaints/${id}`
         : "/admin/edit/website-complaints/SearchComplaints",

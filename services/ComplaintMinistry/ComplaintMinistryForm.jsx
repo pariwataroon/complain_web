@@ -149,17 +149,6 @@ const ComplaintMinistryForm = ({
 
                 <Grid item xs={12}>
                     <InputText
-                        label={formatLabel("หน่วยงาน")}
-                        placeholder="ชื่อหน่วยงานของรัฐ"
-                        value={data.agencyName || ""}
-                        onChange={handleChange("agencyName")}
-                        error={hasFieldError("agencyName")}
-                        helperText={getFieldError("agencyName")}
-                    />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                    <InputText
                         label={formatLabel("ชื่อ - นามสกุล")}
                         placeholder="ชื่อ - นามสกุล ผู้ติดต่อ"
                         value={data.fullName || ""}

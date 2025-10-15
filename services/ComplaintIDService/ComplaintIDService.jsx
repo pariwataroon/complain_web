@@ -28,20 +28,54 @@ const ComplaintIDService = ({ complaint }) => {
       </Box>
     );
 
-  const step1 = complaint.step1?.general ?? {};
-  const generalMain = step1.general ?? {};
+  // Helper function to safely get nested data
+  const getNestedData = (obj, ...paths) => {
+    for (const path of paths) {
+      const result = path.split('.').reduce((acc, key) => acc?.[key], obj);
+      if (result && Object.keys(result).length > 0) return result;
+    }
+    return {};
+  };
+
+  // ตรวจสอบว่ามีข้อมูลประเภทไหน (รองรับทั้ง Backend และ Frontend structure)
+  const governmentData = getNestedData(complaint.step1, 'general.government', 'general.general.government');
+  const corporateData = getNestedData(complaint.step1, 'general.corporate', 'general.general.corporate');
+  const generalData = getNestedData(complaint.step1, 'general.general', 'general.general.general');
+  const signerData = getNestedData(complaint.step1, 'general.signer', 'general.general.signer');
+  const delegateData = getNestedData(complaint.step1, 'general.delegate', 'general.general.delegate');
+
+  console.log('=== ComplaintIDService DATA DEBUG ===');
+  console.log('step1:', complaint.step1);
+  console.log('governmentData:', governmentData);
+  console.log('corporateData:', corporateData);
+  console.log('generalData:', generalData);
+
+  // ตรวจสอบว่ามีข้อมูลจริงหรือไม่ (ไม่ใช่แค่ object ว่าง)
+  const hasData = (data) => data && Object.keys(data).length > 0 && Object.values(data).some(v => v !== null && v !== undefined && v !== '');
+
   let complainant = {};
   let complainantType = "individual";
-  if (generalMain.corporate) {
-    // new API: step1.general.general.corporate
-    complainant = generalMain.corporate;
+  let delegate = {};
+
+  if (hasData(governmentData)) {
+    // หนังสือร้องเรียนถึง กค.
+    complainant = governmentData;
+    complainantType = "government";
+    delegate = {}; // หน่วยงานรัฐไม่มีผู้รับมอบอำนาจ
+    console.log('✅ ComplaintIDService: แสดง หนังสือร้องเรียนถึง กค.');
+  } else if (hasData(corporateData)) {
+    // นิติบุคคล
+    complainant = corporateData;
     complainantType = "corporate";
+    delegate = signerData;
+    console.log('✅ ComplaintIDService: แสดง นิติบุคคล');
   } else {
-    complainant = generalMain;
+    // บุคคลทั่วไป (default)
+    complainant = generalData;
     complainantType = "individual";
+    delegate = delegateData;
+    console.log('✅ ComplaintIDService: แสดง บุคคลทั่วไป');
   }
-  // delegate/ผู้รับมอบอำนาจ
-  const delegate = step1.delegate || generalMain.signer || {};
 
   // ====== STEP2: Dynamic respondent (individual/corporate/government) ======
   const step2 = complaint.step2?.general ?? {};
@@ -592,6 +626,44 @@ const merged = {
 
   // ====== Render Complainant By Type ======
   const renderComplainantFields = () => {
+    if (complainantType === "government") {
+      // หนังสือร้องเรียนถึง กค.
+      return (
+        <>
+          <InfoItem
+            labelText="หมายเลขประจำตัวประชาชน"
+            value={formatCitizenId_null(complainant.idCard)}
+          />
+          {/* <InfoItem labelText="หน่วยงาน" value={complainant.agencyName || "-"} /> */}
+          <InfoItem
+            labelText="ชื่อ - นามสกุล"
+            value={complainant.fullName || "-"}
+          />
+          <InfoItem
+            labelText="ที่อยู่ที่ติดต่อได้"
+            value={complainant.address || "-"}
+          />
+          <InfoItem labelText="จังหวัด" value={label(complainant.province)} />
+          <InfoItem
+            labelText="อำเภอ/เขต"
+            value={label(complainant.districts)}
+          />
+          <InfoItem
+            labelText="ตำบล/แขวง"
+            value={label(complainant.subdistricts)}
+          />
+          <InfoItem
+            labelText="รหัสไปรษณีย์"
+            value={complainant.zipcode?.label || "-"}
+          />
+          <InfoItem labelText="อีเมล" value={complainant.email || "-"} />
+          <InfoItem
+            labelText="หมายเลขโทรศัพท์"
+            value={formatPhoneNumber_null(complainant.phone)}
+          />
+        </>
+      );
+    }
     if (complainantType === "corporate") {
       return (
         <>
@@ -655,6 +727,9 @@ const merged = {
 
   // ====== Render Delegate (ใช้ได้ทั้งบุคคล/นิติบุคคล) ======
   const renderDelegateFields = () => {
+    // ซ่อนสำหรับหนังสือร้องเรียนถึง กค.
+    if (complainantType === "government") return null;
+
     // show only if at least 1 field exists
     const hasData = delegate && Object.keys(delegate).some((k) => delegate[k]);
     if (!hasData) return null;
