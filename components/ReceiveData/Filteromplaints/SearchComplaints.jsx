@@ -68,10 +68,21 @@ const breadcrumbItems = [
 ];
 
 const getComplainantTypeAndData = (data) => {
-  if (data?.corporate) return { type: "corporate", data: data.corporate };
-  if (data?.individual) return { type: "individual", data: data.individual };
+  // ตรวจสอบว่ามีข้อมูลจริงหรือไม่ (ไม่ใช่แค่ object ว่าง)
+  const hasRealData = (obj) => obj && Object.keys(obj).length > 0 && Object.values(obj).some(v => v !== null && v !== undefined && v !== '');
+
+  // ลำดับความสำคัญ: government > corporate > individual
+  if (data?.government && hasRealData(data.government)) return { type: "government", data: data.government };
+  if (data?.corporate && hasRealData(data.corporate)) return { type: "corporate", data: data.corporate };
+  if (data?.individual && hasRealData(data.individual)) return { type: "individual", data: data.individual };
+
+  // ถ้าไม่มี nested structure แต่มีข้อมูลตรง ๆ ให้ถือว่าเป็น individual
   if (data?.idCard && data?.name) return { type: "individual", data };
-  return { type: "unknown", data: data || {} };
+
+  // ถ้ามีข้อมูลอะไรก็ตามใน data ให้ถือว่าเป็น individual (default)
+  if (hasRealData(data)) return { type: "individual", data };
+
+  return { type: "individual", data: data || {} };
 };
 
 const getDelegateTypeAndData = (data) => {
@@ -95,35 +106,91 @@ const getRespondentTypeAndData = (step2) => {
 
 const packPerson = (p = {}) => ({
   idCard: p.idCard || "",
-  name: p.name || "",
+  name: p.name || p.fullName || "",
+  fullName: p.fullName || p.name || "",
+  agencyName: p.agencyName || "",
+  companyName: p.companyName || "",
+  signatoryName: p.signatoryName || "",
   address: p.address || "",
   phone: p.phone || "",
-  province: p.province ?? null,   
-  districts: p.districts ?? null,    
-  subdistricts: p.subdistricts ?? null, 
-  zipcode: p.zipcode ?? null,       
+  province: p.province ?? null,
+  districts: p.districts ?? null,
+  subdistricts: p.subdistricts ?? null,
+  zipcode: p.zipcode ?? null,
   email: p.email || "",
 });
 
 const buildStep12Payload = ({
-  generalData,        
-  delegateData,        
-  delegateType,        
-  step2Data,          
-  respondentType,      
+  generalData,
+  delegateData,
+  delegateType,
+  step2Data,
+  respondentType,
+  complainantType,
 }) => {
-  const step1 = {
-    general: {
-      general: packPerson(generalData || {}),
-      // ส่งเฉพาะเมื่อมีข้อมูลผู้รับมอบอำนาจ
-      ...(delegateData && Object.keys(delegateData).length
-        ? (delegateType === "signer"
-            ? { signer: packPerson(delegateData) }
-            : { delegate: packPerson(delegateData) })
-        : {}),
-    },
+  // ฟังก์ชันตรวจสอบว่ามีข้อมูลจริงหรือไม่ (ไม่นับ auto-populate)
+  const hasRealData = (data) => {
+    if (!data || typeof data !== 'object') return false;
+    return Object.keys(data).length > 0 && Object.values(data).some(v => v !== null && v !== undefined && v !== '');
   };
 
+  const hasGovernmentData = (data) => {
+    if (!data || typeof data !== 'object') return false;
+    return (data.agencyName && data.agencyName.trim && data.agencyName.trim() !== '') ||
+           (data.fullName && data.fullName.trim && data.fullName.trim() !== '');
+  };
+
+  const hasCorporateData = (data) => {
+    if (!data || typeof data !== 'object') return false;
+    return (data.companyName && data.companyName.trim && data.companyName.trim() !== '') ||
+           (data.signatoryName && data.signatoryName.trim && data.signatoryName.trim() !== '');
+  };
+
+  const hasGeneralData = (data) => {
+    if (!data || typeof data !== 'object') return false;
+    // ตรวจสอบว่ามีข้อมูลนอกเหนือจาก auto-populate (idCard, name ที่มาจาก auth)
+    const importantFields = ['address', 'province', 'districts', 'subdistricts', 'zipcode'];
+    return importantFields.some(field => data[field] && data[field].toString().trim() !== '');
+  };
+
+  // สร้าง step1 structure
+  let step1Structure = { general: {} };
+
+  // ลำดับความสำคัญ: ตรวจสอบข้อมูลจริงก่อน government > corporate > individual
+  // ไม่ต้องดู complainantType เพราะมันเป็นแค่ state จากข้อมูลเก่า
+  if (hasGovernmentData(generalData)) {
+    console.log('✅ บันทึก: หนังสือร้องเรียนถึง กค. (มีข้อมูล agencyName หรือ fullName)');
+    step1Structure.general = {
+      government: packPerson(generalData),
+    };
+  } else if (hasCorporateData(generalData)) {
+    console.log('✅ บันทึก: นิติบุคคล (มีข้อมูล companyName หรือ signatoryName)');
+    step1Structure.general = {
+      corporate: packPerson(generalData),
+      ...(delegateData && Object.keys(delegateData).length
+        ? { signer: packPerson(delegateData) }
+        : {}),
+    };
+  } else if (hasGeneralData(generalData)) {
+    console.log('✅ บันทึก: บุคคลทั่วไป (มีข้อมูลนอกเหนือจาก auto-populate)');
+    step1Structure.general = {
+      general: packPerson(generalData),
+      ...(delegateData && Object.keys(delegateData).length
+        ? { delegate: packPerson(delegateData) }
+        : {}),
+    };
+  } else {
+    // กรณีมีแค่ข้อมูล auto-populate (idCard, name)
+    console.log('⚠️ บันทึก: บุคคลทั่วไป (auto-populate only)');
+    step1Structure.general = {
+      general: packPerson(generalData),
+      ...(delegateData && Object.keys(delegateData).length
+        ? { delegate: packPerson(delegateData) }
+        : {}),
+    };
+  }
+
+  // สร้าง step2 structure
   const step2General = { activeType: respondentType || "individual" };
   if (respondentType === "corporate") {
     step2General.corporate = packPerson(step2Data || {});
@@ -135,7 +202,7 @@ const buildStep12Payload = ({
 
   const step2 = { general: step2General };
 
-  return { step1, step2 };
+  return { step1: step1Structure, step2 };
 };
 
 const SearchComplaints = () => {
@@ -594,15 +661,28 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       const data = res?.res_data;
       setDefaultData(data);
 
-      // Step 1: Complainant
-      const general = data?.step1?.general?.general || {};
-      const delegate = data?.step1?.general?.delegate || {};
-      const { type: cType, data: cData } = getComplainantTypeAndData(general);
+      // Step 1: Complainant - ดึงข้อมูลจาก step1.general ทั้งหมด
+      const step1General = data?.step1?.general || {};
+
+      console.log('=== SearchComplaints DATA DEBUG ===');
+      console.log('step1.general:', step1General);
+      console.log('step1.general.general:', step1General.general);
+
+      // ส่ง step1.general.general ทั้งก้อนให้ getComplainantTypeAndData ตรวจสอบ
+      // มันจะหา .government, .corporate, .individual เอง
+      const complainantSource = step1General.general || step1General;
+      console.log('complainantSource ที่ส่งให้ getComplainantTypeAndData:', complainantSource);
+
+      const { type: cType, data: cData } = getComplainantTypeAndData(complainantSource);
       setComplainantType(cType);
       setComplainantData(cData);
       defaultGeneralRef.current = cData;
 
+      console.log('Complainant Type:', cType);
+      console.log('Complainant Data:', cData);
+
       // Step 1: Delegate
+      const delegate = data?.step1?.general?.delegate || {};
       const { type: dType, data: dData } = getDelegateTypeAndData(delegate);
       setDelegateType(dType);
       setDelegateData(dData);
@@ -1013,6 +1093,7 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       delegateType,      // 'delegate' | 'signer'
       step2Data,
       respondentType,    // 'individual' | 'corporate' | 'government'
+      complainantType,   // 'individual' | 'corporate' | 'government'
     });
 
     // เรียก API
@@ -1067,6 +1148,7 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       delegateType, // state เดิมของคุณ
       step2Data,
       respondentType, // state เดิมของคุณ
+      complainantType, // เพิ่ม complainantType เพื่อบันทึกประเภทผู้ร้องที่ถูกต้อง
     });
 
     // เพิ่ม step3 เข้าไปใน payload เพื่อรักษา attachments
@@ -1453,28 +1535,28 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                 บุคคลทั่วไป
               </div>
               <div
-                className={`${styles.tabV2} ${
-                  complainantType === "corporate" ? styles.activeV2 : ""
+                className={`${styles.tab} ${styles.tab1} ${
+                  complainantType === "corporate" ? styles.active : ""
                 }`}
               >
                 นิติบุคคล
               </div>
               <div
-                className={`${styles.tabV2} ${
-                  complainantType === "government" ? styles.activeV2 : ""
+                className={`${styles.tab} ${styles.tab2} ${
+                  complainantType === "government" ? styles.active : ""
                 }`}
               >
                 หน่วยงานของรัฐ
               </div>
               <div
-                className={styles.underlineBarV2}
+                className={styles.underlineBar}
                 style={{
-                  background:
+                  left:
                     complainantType === "corporate"
-                      ? "linear-gradient(90deg, #3FA9F5 0%, #0f67b1 100%)"
+                      ? "calc(33.33%)"
                       : complainantType === "government"
-                      ? "linear-gradient(90deg, #edc458 0%, #e3ebf7 100%)"
-                      : "linear-gradient(90deg, #2196f3 0%, #0f67b1 100%)",
+                      ? "calc(66.66%)"
+                      : "0",
                 }}
               />
             </div>
@@ -1485,7 +1567,9 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
                     <h3 className={styles.sectionTitle}>
-                      {complainantType === "corporate"
+                      {complainantType === "government"
+                        ? "ข้อมูลผู้ถูกร้องเรียน (หน่วยงานของรัฐ)"
+                        : complainantType === "corporate"
                         ? "ข้อมูลผู้ร้องทุกข์ (นิติบุคคล)"
                         : "ข้อมูลผู้ร้องทุกข์"}
                     </h3>
@@ -1494,11 +1578,18 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                     <ComplaintPersonalFormAPI
                       data={complainantData}
                       formType={
-                        complainantType === "corporate"
+                        complainantType === "government"
+                          ? "government"
+                          : complainantType === "corporate"
                           ? "corporate"
                           : "individual"
                       }
                     />
+                    {console.log('🔧 ComplaintPersonalFormAPI props:', {
+                      complainantType,
+                      formType: complainantType === "government" ? "government" : complainantType === "corporate" ? "corporate" : "individual",
+                      dataKeys: Object.keys(complainantData || {})
+                    })}
                   </div>
                 </div>
               </FormProvider>
@@ -1568,7 +1659,7 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                       {respondentType === "corporate"
                         ? "ข้อมูลผู้ถูกร้องเรียน (นิติบุคคล)"
                         : respondentType === "government"
-                        ? "ข้อมูลหน่วยงานของรัฐที่ถูกร้องเรียน"
+                        ? "ข้อมูลผู้ถูกร้องเรียน (หน่วยงานของรัฐ)"
                         : "ข้อมูลผู้ถูกร้องเรียน"}
                     </h3>
                   </div>
