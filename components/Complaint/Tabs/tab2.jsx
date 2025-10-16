@@ -98,7 +98,7 @@ const Tab2 = ({
             <ComplaintMinistryForm
               data={tabData.government || {}}
               onChange={handleChange("government")}
-              title="ข้อมูลหน่วยงานของรัฐที่ถูกร้องทุกข์"
+              title="ข้อมูลผู้ถูกร้องทุกข์ (หนังสือร้องเรียนถึง กค.)"
               validationErrors={validationErrors}
               shouldShowValidation={shouldShowValidation}
               fieldPrefix="government"
