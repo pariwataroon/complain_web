@@ -96,7 +96,7 @@ export default function Footer() {
                 <span className={styles.statsLabel}>7 วันที่ผ่านมา</span>
                 <span className={styles.statsValue}>
                   {apiLogsStats ? (
-                    apiLogsStats.week_unique_users ?? "-"
+                    apiLogsStats.total_week_requests ?? "-"
                   ) : (
                     <span className={styles.loadingSpinnerInline}></span>
                   )}
@@ -106,7 +106,7 @@ export default function Footer() {
                 <span className={styles.statsLabel}>30 วันที่ผ่านมา</span>
                 <span className={styles.statsValue}>
                   {apiLogsStats ? (
-                    apiLogsStats.month_unique_users ?? "-"
+                    apiLogsStats.total_month_requests ?? "-"
                   ) : (
                     <span className={styles.loadingSpinnerInline}></span>
                   )}
