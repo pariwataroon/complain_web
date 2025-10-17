@@ -13,11 +13,12 @@ import {
   useMediaQuery,
   useTheme,
   Stack,
+  Typography,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import styles from "./TableListAgency.module.scss";
-import InputText from "@services/InputText/InputText";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
@@ -46,7 +47,8 @@ const TableListAgency = ({
   // -------------------- ฟิลเตอร์ 5 ช่อง --------------------
   const [filters, setFilters] = useState({
     claimantName: "",
-    receiptNumber: "",
+    startDate: null,
+    endDate: null,
     agency: "",
     responsibleOfficer: "",
     status: "",
@@ -55,6 +57,11 @@ const TableListAgency = ({
   const handleChange = (field) => (e) => {
     const value = e?.target ? e.target.value : e;
     setFilters((s) => ({ ...s, [field]: value }));
+  };
+
+  // ฟังก์ชันสำหรับเปลี่ยนวันที่
+  const handleDateChange = (field) => (date) => {
+    setFilters((s) => ({ ...s, [field]: date }));
   };
 
   // options ดรอปดาวน์
@@ -137,7 +144,8 @@ const TableListAgency = ({
   const handleClearSearch = () => {
     const cleared = {
       claimantName: "",
-      receiptNumber: "",
+      startDate: null,
+      endDate: null,
       agency: "",
       responsibleOfficer: "",
       status: "",
@@ -160,7 +168,7 @@ const TableListAgency = ({
     { name: "note", label: "หนังสือส่งหน่วยงาน/ติดตามผล", width: 180 },
     { name: "responsibleOfficer", label: "เจ้าหน้าที่ผู้รับผิดชอบ", width: 150 },
     { name: "status", label: "สถานะเรื่อง", width: 140 },
-    { name: "workingDays", label: "ดำเนินการภายใน (วัน)", width: 100 },
+    // { name: "workingDays", label: "ดำเนินการภายใน (วัน)", width: 100 },
   ];
 
   // --- Excel Export Handler ---
@@ -280,20 +288,6 @@ const TableListAgency = ({
               },
             }}
           >
-            <InputText
-              label="ชื่อผู้ร้อง"
-              placeholder=""
-              value={filters.claimantName}
-              onChange={handleChange("claimantName")}
-              size="small"
-            />
-            <InputText
-              label="เลข สรร."
-              placeholder=""
-              value={filters.receiptNumber}
-              onChange={handleChange("receiptNumber")}
-              size="small"
-            />
             <SelectField
               label="หน่วยงาน"
               value={filters.agency}
@@ -301,6 +295,36 @@ const TableListAgency = ({
               options={agencyOptions}
               size="small"
             />
+            <Box>
+              <Typography
+                variant="subtitle2"
+                sx={{ color: "#1120A3", fontWeight: 600, mb: 1 }}
+              >
+                ตั้งแต่วันที่
+              </Typography>
+              <Box sx={{ "& .MuiFormControl-root": { mb: 0 } }}>
+                <DateThaiPickerService
+                  value={filters.startDate}
+                  onChange={handleDateChange("startDate")}
+                  placeholder="เลือกวันที่เริ่มต้น"
+                />
+              </Box>
+            </Box>
+            <Box>
+              <Typography
+                variant="subtitle2"
+                sx={{ color: "#1120A3", fontWeight: 600, mb: 1 }}
+              >
+                ถึงวันที่
+              </Typography>
+              <Box sx={{ "& .MuiFormControl-root": { mb: 0 } }}>
+                <DateThaiPickerService
+                  value={filters.endDate}
+                  onChange={handleDateChange("endDate")}
+                  placeholder="เลือกวันที่สิ้นสุด"
+                />
+              </Box>
+            </Box>
             <SelectField
               label="สถานะเรื่อง"
               value={filters.status}
