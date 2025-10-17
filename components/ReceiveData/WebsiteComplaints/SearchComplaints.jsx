@@ -2070,7 +2070,7 @@ const handleSubmit = async () => {
                           <div className={styles.fieldsColumn}>
                             <div className={styles.fieldPair}>
                               <div className={styles.fieldWithLabel}>
-                                <label>เลขที่อ้างอิง(เลข สรร.สารบัญ)</label>
+                                <label>เลขที่อ้างอิง (เลข สรร.)</label>
                                 <div className={styles.inputWithIcon}>
                                   <input
                                     type="text"
@@ -2352,7 +2352,7 @@ const handleSubmit = async () => {
                           </div>
                         </div>
 
-                        {/* รับเรื่องจากคณะทำงานนักตรวจสอบ */}
+                        {/* รับเรื่องจากคณะทำงานฯ บัตรสนเท่ห์ */}
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
                             <label
@@ -2371,13 +2371,13 @@ const handleSubmit = async () => {
                                   handleComplaintTypeChange("committee")
                                 }
                               />
-                              รับเรื่องจากคณะทำงานนักตรวจสอบ
+                              รับเรื่องจากคณะทำงานฯ บัตรสนเท่ห์
                             </label>
                           </div>
                           <div className={styles.fieldsColumn}>
                             <div className={styles.fieldPair}>
                               <div className={styles.fieldWithLabel}>
-                                <label>เลขที่อ้างอิง(เลข สรร.สานต่อ)</label>
+                                <label>เลขที่อ้างอิง (เลข สรร.)</label>
                                 <input
                                   type="text"
                                   disabled={

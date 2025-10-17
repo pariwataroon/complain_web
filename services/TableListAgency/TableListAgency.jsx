@@ -152,7 +152,7 @@ const TableListAgency = ({
 
   const columns = [
     { name: "claimantName", label: "ชื่อผู้ร้อง", width: 140 },
-    { name: "receiptNumber", label: "เลขรับ สรร.", width: 120 },
+    { name: "receiptNumber", label: "เลข สรร.", width: 120 },
     { name: "receiveDate", label: "ลงวันที่", width: 120 },
     { name: "agency", label: "หน่วยงาน", width: 150 },
     { name: "issue", label: "ชื่อเรื่อง", width: 180 },
@@ -288,7 +288,7 @@ const TableListAgency = ({
               size="small"
             />
             <InputText
-              label="เลขรับ สรร."
+              label="เลข สรร."
               placeholder=""
               value={filters.receiptNumber}
               onChange={handleChange("receiptNumber")}

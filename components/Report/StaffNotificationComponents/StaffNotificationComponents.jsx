@@ -133,7 +133,7 @@ const StaffNotificationComponents = () => {
       },
       { name: "claimantName", label: "ชื่อ - สกุล (ผู้ร้อง)", type: "text" },
 
-      { name: "receiptNumber", label: "เลขรับ สรร.", type: "text" },
+      { name: "receiptNumber", label: "เลข สรร.", type: "text" },
       { name: "issue", label: "ชื่อเรื่อง", type: "text" },
       {
         name: "issueType",
