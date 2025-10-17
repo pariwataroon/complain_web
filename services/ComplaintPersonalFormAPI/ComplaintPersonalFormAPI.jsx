@@ -23,11 +23,11 @@ const ComplaintPersonalFormAPI = ({
   // ถ้ามี data prop แต่ไม่มี form context ให้แสดงแบบ read-only
   const isReadOnly = !control && data && Object.keys(data).length > 0;
 
-  console.log('🔍 ComplaintPersonalFormAPI render:', { formType, dataKeys: Object.keys(data), isReadOnly });
+  console.log('🔍 ComplaintPersonalFormAPI render:', { formType, dataKeys: data ? Object.keys(data) : [], isReadOnly });
 
   // สำหรับ government form ให้ใช้ fullName แทน name
   const nameFieldKey = formType === "government" ? "fullName" : "name";
-  const nameValue = formType === "government" ? data.fullName : data.name;
+  const nameValue = formType === "government" ? data?.fullName : data?.name;
 
   console.log('🔍 Name field mapping:', { formType, nameFieldKey, nameValue });
 
