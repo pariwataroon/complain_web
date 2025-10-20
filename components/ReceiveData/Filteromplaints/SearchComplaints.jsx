@@ -2018,7 +2018,7 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                           <div className={styles.fieldsColumn}>
                             <div className={styles.fieldPair}>
                               <div className={styles.fieldWithLabel}>
-                                <label>เลขที่อ้างอิง(เลข สรร.สารบัญ)</label>
+                                <label>เลขที่อ้างอิง (เลข สรร.)</label>
                                 <div className={styles.inputWithIcon}>
                                   <input
                                     type="text"
@@ -2217,7 +2217,7 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                           </div>
                         </div>
 
-                        {/* รับเรื่องจากคณะทำงานนักตรวจสอบ */}
+                        {/* รับเรื่องจากคณะทำงานฯ บัตรสนเท่ห์ */}
                         <div className={styles.checkboxRowWithFields}>
                           <div className={styles.checkboxColumn}>
                             <label
@@ -2234,13 +2234,13 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                                   handleComplaintFilingTypeChange("committee");
                                 }}
                               />
-                              รับเรื่องจากคณะทำงานนักตรวจสอบ
+                              รับเรื่องจากคณะทำงานฯ บัตรสนเท่ห์
                             </label>
                           </div>
                           <div className={styles.fieldsColumn}>
                             <div className={styles.fieldPair}>
                               <div className={styles.fieldWithLabel}>
-                                <label>เลขที่อ้างอิง(เลข สรร.สารบัญ)</label>
+                                <label>เลขที่อ้างอิง (เลข สรร.)</label>
                                 <input
                                   type="text"
                                   disabled={complaintFilingType !== "committee"}

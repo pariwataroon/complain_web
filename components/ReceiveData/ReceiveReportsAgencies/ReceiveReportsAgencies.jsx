@@ -923,7 +923,7 @@ const handleSave = useCallback(async () => {
             px: { xs: 2, sm: 3, md: 5 },
           }}
         >
-          {/* แถวที่ 1: เลขที่อ้างอิง(เลข สรร.สารบัญ) | วันที่ | ขั้นตอนการดำเนินการ */}
+          {/* แถวที่ 1: เลขที่อ้างอิง (เลข สรร.) | วันที่ | ขั้นตอนการดำเนินการ */}
           <Box
             sx={{
               display: "grid",
@@ -939,7 +939,7 @@ const handleSave = useCallback(async () => {
             {/* <InputText
               label={
                 <span>
-                  เลขที่อ้างอิง(เลข สรร.สารบัญ)
+                  เลขที่อ้างอิง (เลข สรร.)
                   <span style={{ color: "red", marginLeft: 4 }}>*</span>
                 </span>
               }

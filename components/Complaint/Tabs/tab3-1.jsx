@@ -1086,7 +1086,7 @@ const ThaiDateTimeInline = ({ control, name, placeholder = "กรุณาเ�
                   <div className={styles.fieldsColumn}>
                     <div className={styles.fieldPair}>
                       <div className={styles.fieldWithLabel}>
-                        <label className={styles.label}>เลขที่อ้างอิง(เลข สรร.สารบัญ)</label>
+                        <label className={styles.label}>เลขที่อ้างอิง (เลข สรร.)</label>
                         <div className={styles.inputWithIcon}>
                           <input className={styles.inputControl} type="text" disabled={filingType !== "additional"} {...step3Methods.register("additionalReference1")} />
                           <span className={styles.icon} onClick={() => filingType === "additional" && setOpenSearchDialog(true)}>
@@ -1201,13 +1201,13 @@ const ThaiDateTimeInline = ({ control, name, placeholder = "กรุณาเ�
                   <div className={styles.checkboxColumn}>
                     <label className={`${styles.checkboxItem} ${filingType === "committee" ? styles.checked : ""}`}>
                       <input type="checkbox" checked={filingType === "committee"} onChange={() => setFilingType("committee")} />
-                      รับเรื่องจากคณะทำงานนักตรวจสอบ
+                      รับเรื่องจากคณะทำงานฯ บัตรสนเท่ห์
                     </label>
                   </div>
                   <div className={styles.fieldsColumn}>
                     <div className={styles.fieldPair}>
                       <div className={styles.fieldWithLabel}>
-                        <label className={styles.label}>เลขที่อ้างอิง(เลข สรร.สานต่อ)</label>
+                        <label className={styles.label}>เลขที่อ้างอิง (เลข สรร.)</label>
                         <input className={styles.inputControl} type="text" disabled={filingType !== "committee"} {...step3Methods.register("additionalReference2")} />
                       </div>
                       <div className={styles.fieldWithLabelDate}>

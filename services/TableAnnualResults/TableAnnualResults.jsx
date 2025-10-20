@@ -86,7 +86,7 @@ const TableAnnualResults = ({
       result = result.filter((item) => item.status === searchFilters.status);
     }
 
-    // กรองตาม receiptNumber (เลขรับ สรร.)
+    // กรองตาม receiptNumber (เลข สรร.)
     if (searchFilters.receiptNumber) {
       result = result.filter((item) =>
         item.receiptNumber
@@ -142,7 +142,7 @@ const TableAnnualResults = ({
   // Columns config
   const columns = [
     { label: "ลำดับ", width: 80, align: "center" },
-    { label: "เลขรับ สรร.", field: "receiptNumber", width: 120 },
+    { label: "เลข สรร.", field: "receiptNumber", width: 120 },
     { label: "ลงวันที่", field: "receiptDate", width: 120 },
     { label: "ชื่อ-สกุล (ผู้ร้อง)", field: "complainant", width: 200 },
     { label: "ชื่อเรื่อง", field: "complaint", width: 300 },
@@ -312,7 +312,7 @@ const handleExportExcel = () => {
   // คำนิยาม columns (ใช้ชื่อคอลัมน์ตามต้องการ)
   const columns = [
     "ลำดับ",
-    "เลขรับ สรร.",
+    "เลข สรร.",
     "ลงวันที่",
     "ชื่อ-สกุล (ผู้ร้อง)",
     "ชื่อเรื่อง",

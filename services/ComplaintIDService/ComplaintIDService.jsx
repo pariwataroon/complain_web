@@ -909,7 +909,7 @@ const merged = {
                       merged.filingType === "additional"
                         ? "เรื่องร้องเรียนเพิ่มเติม"
                         : merged.filingType === "committee"
-                        ? "รับเรื่องจากคณะทำงานนักตรวจสอบ"
+                        ? "รับเรื่องจากคณะทำงานฯ บัตรสนเท่ห์"
                         : merged.filingType || "เรื่องร้องเรียนใหม่"
                     }
                   /> */}

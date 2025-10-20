@@ -185,7 +185,7 @@ const TableWorkFollow = ({
   const baseColumns = [
     { label: "ลำดับ", width: 80, field: "no" },
     {
-      label: "เลขรับ สรร.",
+      label: "เลข สรร.",
       width: 120,
       field: "receiptNumber",
       render: (item) => (
@@ -234,7 +234,7 @@ const TableWorkFollow = ({
     rows.push({
       "เจ้าหน้าที่ผู้รับผิดชอบ": groupKey,
       "ลำดับ": "",
-      "เลขรับ สรร.": "",
+      "เลข สรร.": "",
       "เรื่อง": "",
       "วันที่รับงาน": "",
       "วันที่เสนอ ผอ.สรร.": "",
@@ -251,7 +251,7 @@ const TableWorkFollow = ({
         rows.push({
           "เจ้าหน้าที่ผู้รับผิดชอบ": "",
           "ลำดับ": no++,
-          "เลขรับ สรร.": item.receiptNumber ?? "",
+          "เลข สรร.": item.receiptNumber ?? "",
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": item.receiveDate ?? "",
           "วันที่เสนอ ผอ.สรร.": item.proposeDate ?? "",

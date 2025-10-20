@@ -95,7 +95,7 @@ const TableListCollaps = ({
         "ชื่อเรื่อง": item.claimantName,
         "หน่วยงาน": "", // parent ไม่มี
         "เจ้าหน้าที่ผู้รับผิดชอบ": item.responsibleOfficer,
-        "เลขรับ สรร.": item.receiptNumber,
+        "เลข สรร.": item.receiptNumber,
         "เลขที่อ้างอิง": item.referenceNumber,
         "ระยะเวลา (วันทำการ)": item.workingDays,
         "สถานะเรื่อง": item.status,
@@ -108,7 +108,7 @@ const TableListCollaps = ({
             "ชื่อเรื่อง": "", // child ไม่ใส่
             "หน่วยงาน": dept.department,
             "เจ้าหน้าที่ผู้รับผิดชอบ": "", // ไม่มีใน child
-            "เลขรับ สรร.": dept.receiptNumber,
+            "เลข สรร.": dept.receiptNumber,
             "เลขที่อ้างอิง": dept.referenceNumber,
             "ระยะเวลา (วันทำการ)": dept.workingDays,
             "สถานะเรื่อง": dept.status,
@@ -141,7 +141,7 @@ const TableListCollaps = ({
       label: "เจ้าหน้าที่ผู้รับผิดชอบ",
       width: 300,
     },
-    { name: "receiptNumber", label: "เลขรับ สรร.", width: 180 },
+    { name: "receiptNumber", label: "เลข สรร.", width: 180 },
     { name: "referenceNumber", label: "เลขที่อ้างอิง", width: 160 },
     { name: "workingDays", label: "ระยะเวลา (วันทำการ)", width: 160 },
     { name: "status", label: "สถานะเรื่อง", width: 160 },

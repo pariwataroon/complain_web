@@ -3,38 +3,35 @@ import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListAgency from "@services/TableListAgency/TableListAgency";
 
-// ─── สถานะ (label ไทย) เหมือนหน้า followup ─────────────────────
+// ─── สถานะ (label ไทย) จากหน้ารายงานผู้ตรวจ ─────────────────────
 const STATUS_LABELS = [
-  "รับเรื่อง",
-  "ส่งหน่วยงานที่เกี่ยวข้อง",
-  "กำลังดำเนินการ",
-  "ติดตามผล",
-  "มอบหมายเจ้าหน้าที่",
-  "แจ้งผลการพิจารณา",
-  "อยู่ระหว่างพิจารณา",
-  "ยุติเรื่องแล้ว",
+  "ทั้งหมด",
+  "ทราบ",
+  "ทราบไว้ชั้นหนึ่ง",
+  "ยุติเรื่องได้",
+  "เห็นชอบ",
+  "อยู่ระหว่างดำเนินการ",
 ];
 const statusFilterOptions = STATUS_LABELS.map((l) => ({ value: l, label: l }));
 
-// code -> label ไทย (ให้ตรงกับหน้า followup)
+// code -> label ไทย (ให้ตรงกับหน้ารายงานผู้ตรวจ)
 const toThaiLabel = (code = "") => {
   const s = String(code || "").toLowerCase();
   switch (s) {
-    case "submitted": return "รับเรื่อง";
-    case "sent_to_external":
-    case "sent_to_agency":
-    case "forwarded": return "ส่งหน่วยงานที่เกี่ยวข้อง";
+    case "รับทราบ": return "ทราบ";
+    case "อนุมัติ": return "ทราบไว้ชั้นหนึ่ง";
+    case "ยุติเรื่อง": return "ยุติเรื่องได้";
+    case "เพิ่มเติม": return "เห็นชอบ";
+    case "ดำเนินการ": return "อยู่ระหว่างดำเนินการ";
+    // Legacy mappings for compatibility
+    case "submitted": return "อยู่ระหว่างดำเนินการ";
     case "in_process":
-    case "in_progress": return "กำลังดำเนินการ";
-    case "tracking": return "ติดตามผล";
-    case "assigned": return "มอบหมายเจ้าหน้าที่";
-    case "reviewed": return "แจ้งผลการพิจารณา";
-    case "in_review": return "อยู่ระหว่างพิจารณา";
+    case "in_progress": return "อยู่ระหว่างดำเนินการ";
     case "completed":
     case "cancelled":
     case "closed":
     case "resolved":
-    case "done": return "ยุติเรื่องแล้ว";
+    case "done": return "ยุติเรื่องได้";
     default: return code || "-";
   }
 };
@@ -53,7 +50,7 @@ const mockComplaints = [
     issueType: "ภารกิจ",
     note: "รอเจ้าหน้าที่ติดต่อกลับ",
     responsibleOfficer: "นายกานต์ วรากร",
-    status: "กำลังดำเนินการ",
+    status: "อยู่ระหว่างดำเนินการ",
     workingDays: 3,
   },
   {
@@ -66,7 +63,7 @@ const mockComplaints = [
     issueType: "การแก้ไขปัญหาหนี้สิน",
     note: "ชำระค่าภาษีเรียบร้อย",
     responsibleOfficer: "นางกานต์รวี วรานี",
-    status: "ยุติเรื่องแล้ว",
+    status: "ยุติเรื่องได้",
     workingDays: 5,
   },
   {
@@ -79,7 +76,7 @@ const mockComplaints = [
     issueType: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
     note: "ส่งเรื่องไปยังส่วนกลาง",
     responsibleOfficer: "นายปิยภา ภูมิศา",
-    status: "ส่งหน่วยงานที่เกี่ยวข้อง",
+    status: "ทราบไว้ชั้นหนึ่ง",
     workingDays: 7,
   },
   {
@@ -92,7 +89,7 @@ const mockComplaints = [
     issueType: "นโยบายรัฐฯ ด้านสวัสดิการ",
     note: "ตอบกลับเรียบร้อย",
     responsibleOfficer: "นางกานต์รวี วรานี",
-    status: "แจ้งผลการพิจารณา",
+    status: "เห็นชอบ",
     workingDays: 4,
   },
   {
@@ -105,7 +102,7 @@ const mockComplaints = [
     issueType: "การแก้ไขปัญหาหนี้สิน",
     note: "เตรียมข้อมูลเพิ่มเติม",
     responsibleOfficer: "นายกานต์ วรากร",
-    status: "กำลังดำเนินการ",
+    status: "อยู่ระหว่างดำเนินการ",
     workingDays: 6,
   },
   {
@@ -118,7 +115,7 @@ const mockComplaints = [
     issueType: "ภารกิจ",
     note: "ดำเนินการสำเร็จ",
     responsibleOfficer: "นายปิยภา ภูมิศา",
-    status: "ยุติเรื่องแล้ว",
+    status: "ยุติเรื่องได้",
     workingDays: 2,
   },
   {
@@ -131,7 +128,7 @@ const mockComplaints = [
     issueType: "ภารกิจ",
     note: "รอตอบกลับ",
     responsibleOfficer: "นางกานต์รวี วรานี",
-    status: "รับเรื่อง",
+    status: "ทราบ",
     workingDays: 3,
   },
   {
@@ -144,7 +141,7 @@ const mockComplaints = [
     issueType: "ภารกิจ",
     note: "รอเอกสารเพิ่มเติม",
     responsibleOfficer: "นายสมชาย ใจดี",
-    status: "ติดตามผล",
+    status: "ทราบไว้ชั้นหนึ่ง",
     workingDays: 5,
   },
   {
@@ -157,7 +154,7 @@ const mockComplaints = [
     issueType: "การแก้ไขปัญหาหนี้สิน",
     note: "ทดสอบระบบแล้ว",
     responsibleOfficer: "นางวราภรณ์ ศรีสุข",
-    status: "อยู่ระหว่างพิจารณา",
+    status: "อยู่ระหว่างดำเนินการ",
     workingDays: 4,
   },
   {
@@ -170,7 +167,7 @@ const mockComplaints = [
     issueType: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
     note: "จัดส่ง PDF เรียบร้อย",
     responsibleOfficer: "นางอรวรรณ จันทร์งาม",
-    status: "มอบหมายเจ้าหน้าที่",
+    status: "เห็นชอบ",
     workingDays: 2,
   },
   {
@@ -183,7 +180,7 @@ const mockComplaints = [
     issueType: "นโยบายรัฐฯ ด้านสวัสดิการ",
     note: "ส่งรายงานให้แล้ว",
     responsibleOfficer: "นายณรินทร์ สวัสดิ์วงศ์",
-    status: "แจ้งผลการพิจารณา",
+    status: "ทราบ",
     workingDays: 3,
   },
   {
@@ -196,7 +193,7 @@ const mockComplaints = [
     issueType: "การแก้ไขปัญหาหนี้สิน",
     note: "รอเซ็นเอกสาร",
     responsibleOfficer: "นางจิตติมา นิลวรรณ",
-    status: "กำลังดำเนินการ",
+    status: "อยู่ระหว่างดำเนินการ",
     workingDays: 7,
   },
   {
@@ -209,7 +206,7 @@ const mockComplaints = [
     issueType: "ภารกิจ",
     note: "นำเข้าระบบเรียบร้อย",
     responsibleOfficer: "นายปรีชา เกษมสุข",
-    status: "ยุติเรื่องแล้ว",
+    status: "ยุติเรื่องได้",
     workingDays: 1,
   },
   {
@@ -222,7 +219,7 @@ const mockComplaints = [
     issueType: "ภารกิจ",
     note: "กำลังประสานงาน",
     responsibleOfficer: "นางสุดารัตน์ วงศ์วิเศษ",
-    status: "กำลังดำเนินการ",
+    status: "อยู่ระหว่างดำเนินการ",
     workingDays: 6,
   },
   {
@@ -235,7 +232,7 @@ const mockComplaints = [
     issueType: "การแก้ไขปัญหาหนี้สิน",
     note: "จัดอบรมเรียบร้อย",
     responsibleOfficer: "นายณัฐพล รุ่งเรือง",
-    status: "ยุติเรื่องแล้ว",
+    status: "ยุติเรื่องได้",
     workingDays: 4,
   },
   {
@@ -248,7 +245,7 @@ const mockComplaints = [
     issueType: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
     note: "รอสำเนาเซ็นรับ",
     responsibleOfficer: "น.ส.ปาณิสรา ไทยเจริญ",
-    status: "มอบหมายเจ้าหน้าที่",
+    status: "ทราบไว้ชั้นหนึ่ง",
     workingDays: 5,
   },
   {
@@ -261,7 +258,7 @@ const mockComplaints = [
     issueType: "นโยบายรัฐฯ ด้านสวัสดิการ",
     note: "จัดส่งผ่านอีเมลแล้ว",
     responsibleOfficer: "น.ส.กมลทิพย์ จันทร์ฉาย",
-    status: "ติดตามผล",
+    status: "เห็นชอบ",
     workingDays: 3,
   },
   {
@@ -274,7 +271,7 @@ const mockComplaints = [
     issueType: "การแก้ไขปัญหาหนี้สิน",
     note: "กำลังจัดทำสรุป",
     responsibleOfficer: "นายปริญญา ทรัพย์รุ่ง",
-    status: "อยู่ระหว่างพิจารณา",
+    status: "อยู่ระหว่างดำเนินการ",
     workingDays: 8,
   },
   {
@@ -287,7 +284,7 @@ const mockComplaints = [
     issueType: "ภารกิจ",
     note: "รอประกาศอย่างเป็นทางการ",
     responsibleOfficer: "นางสุภาภรณ์ ศรีแสง",
-    status: "รับเรื่อง",
+    status: "ทราบ",
     workingDays: 2,
   },
   {
@@ -300,7 +297,7 @@ const mockComplaints = [
     issueType: "ภารกิจ",
     note: "ได้รับ feedback แล้ว",
     responsibleOfficer: "นายเดชา พงษ์อนันต์",
-    status: "ยุติเรื่องแล้ว",
+    status: "ยุติเรื่องได้",
     workingDays: 5,
   },
 ];
@@ -375,7 +372,8 @@ const AgencyComplaintSummary = () => {
   const handleSearch = (filters) => {
     const {
       claimantName,
-      receiptNumber,
+      startDate,
+      endDate,
       agency,
       responsibleOfficer,
       status,
@@ -385,10 +383,28 @@ const AgencyComplaintSummary = () => {
 
     const result = allComplaints.filter((item) => {
       if (claimantName && !item.claimantName.includes(norm(claimantName))) return false;
-      if (receiptNumber && !item.receiptNumber.includes(norm(receiptNumber))) return false;
       if (agency && item.agency !== agency) return false;
       if (responsibleOfficer && item.responsibleOfficer !== responsibleOfficer) return false;
-      if (status && item.status !== status) return false;
+      // กรองสถานะ: ถ้าเลือก "ทั้งหมด" หรือไม่ได้เลือก ให้แสดงทั้งหมด
+      if (status && status !== "ทั้งหมด" && item.status !== status) return false;
+
+      // กรองตามวันที่
+      const itemDate = parseThaiDate(item.receiveDate);
+      if (itemDate) {
+        if (startDate) {
+          const start = new Date(startDate);
+          start.setHours(0, 0, 0, 0);
+          itemDate.setHours(0, 0, 0, 0);
+          if (itemDate < start) return false;
+        }
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          itemDate.setHours(0, 0, 0, 0);
+          if (itemDate > end) return false;
+        }
+      }
+
       return true;
     });
 

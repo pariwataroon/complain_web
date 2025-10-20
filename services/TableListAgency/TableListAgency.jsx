@@ -13,11 +13,12 @@ import {
   useMediaQuery,
   useTheme,
   Stack,
+  Typography,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import styles from "./TableListAgency.module.scss";
-import InputText from "@services/InputText/InputText";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
@@ -46,7 +47,8 @@ const TableListAgency = ({
   // -------------------- ฟิลเตอร์ 5 ช่อง --------------------
   const [filters, setFilters] = useState({
     claimantName: "",
-    receiptNumber: "",
+    startDate: null,
+    endDate: null,
     agency: "",
     responsibleOfficer: "",
     status: "",
@@ -55,6 +57,11 @@ const TableListAgency = ({
   const handleChange = (field) => (e) => {
     const value = e?.target ? e.target.value : e;
     setFilters((s) => ({ ...s, [field]: value }));
+  };
+
+  // ฟังก์ชันสำหรับเปลี่ยนวันที่
+  const handleDateChange = (field) => (date) => {
+    setFilters((s) => ({ ...s, [field]: date }));
   };
 
   // options ดรอปดาวน์
@@ -137,7 +144,8 @@ const TableListAgency = ({
   const handleClearSearch = () => {
     const cleared = {
       claimantName: "",
-      receiptNumber: "",
+      startDate: null,
+      endDate: null,
       agency: "",
       responsibleOfficer: "",
       status: "",
@@ -152,7 +160,7 @@ const TableListAgency = ({
 
   const columns = [
     { name: "claimantName", label: "ชื่อผู้ร้อง", width: 140 },
-    { name: "receiptNumber", label: "เลขรับ สรร.", width: 120 },
+    { name: "receiptNumber", label: "เลข สรร.", width: 120 },
     { name: "receiveDate", label: "ลงวันที่", width: 120 },
     { name: "agency", label: "หน่วยงาน", width: 150 },
     { name: "issue", label: "ชื่อเรื่อง", width: 180 },
@@ -160,28 +168,171 @@ const TableListAgency = ({
     { name: "note", label: "หนังสือส่งหน่วยงาน/ติดตามผล", width: 180 },
     { name: "responsibleOfficer", label: "เจ้าหน้าที่ผู้รับผิดชอบ", width: 150 },
     { name: "status", label: "สถานะเรื่อง", width: 140 },
-    { name: "workingDays", label: "ดำเนินการภายใน (วัน)", width: 100 },
+    // { name: "workingDays", label: "ดำเนินการภายใน (วัน)", width: 100 },
   ];
 
   // --- Excel Export Handler ---
-  const handleExportExcel = () => {
-    const today = new Date().toLocaleDateString("th-TH", {
+  const handleExportExcel = async () => {
+    const now = new Date();
+    const thaiDate = now.toLocaleDateString("th-TH", {
       year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
+      month: "long",
+      day: "numeric",
     });
-    const filename = `รายงานสรุปเรื่องร้องเรียนของหน่วยงาน_${today}.xlsx`;
-    const exportLabel = `วันที่ export: ${today}`;
 
-    const rows = data.map((item, idx) => {
-      const rowObj = { ลำดับ: idx + 1 };
-      columns.forEach((col) => {
-        rowObj[col.label] = item[col.name] ?? "-";
+    const filename = `รายงานสรุปเรื่องร้องเรียนของหน่วยงาน_${now.toLocaleDateString("th-TH").replace(/\//g, "-")}.xlsx`;
+
+    // สร้างช่วงวันที่สำหรับรายงาน
+    let dateRangeText = "";
+    if (filters.startDate && filters.endDate) {
+      const startDate = new Date(filters.startDate);
+      const endDate = new Date(filters.endDate);
+      const startDateThai = startDate.toLocaleDateString("th-TH", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
       });
-      return rowObj;
+      const endDateThai = endDate.toLocaleDateString("th-TH", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      dateRangeText = `ตั้งแต่วันที่ ${startDateThai} ถึงวันที่ ${endDateThai} ณ`;
+    } else if (filters.startDate) {
+      const startDate = new Date(filters.startDate);
+      const startDateThai = startDate.toLocaleDateString("th-TH", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      dateRangeText = `ตั้งแต่วันที่ ${startDateThai} ณ`;
+    } else if (filters.endDate) {
+      const endDate = new Date(filters.endDate);
+      const endDateThai = endDate.toLocaleDateString("th-TH", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      dateRangeText = `ถึงวันที่ ${endDateThai} ณ`;
+    } else {
+      dateRangeText = `ข้อมูล ณ วันที่ ${thaiDate}`;
+    }
+
+    // ใช้ dynamic import เพื่อโหลด xlsx-js-style
+    const XLSXStyle = await import("xlsx-js-style");
+
+    // สร้างข้อมูลแถวต่อแถว
+    const exportData = [];
+
+    // แถวที่ 1: หัวข้อรายงาน (จัดกึ่งกลาง)
+    exportData.push(["สรุปเรื่องร้องเรียนของหน่วยงาน"]);
+
+    // แถวที่ 2: ช่วงวันที่ (จัดกึ่งกลาง)
+    exportData.push([dateRangeText]);
+
+    // แถวที่ 3: หน่วยงาน (จัดกึ่งกลาง)
+    exportData.push(["หน่วยงาน กระทรวงการคลัง"]);
+
+    // แถวว่าง
+    exportData.push([]);
+
+    // แถวที่ 5: Header ของตาราง
+    const headerRow = ["ลำดับ"];
+    columns.forEach((col) => {
+      headerRow.push(col.label);
+    });
+    exportData.push(headerRow);
+
+    // แถวข้อมูล
+    data.forEach((item, idx) => {
+      const row = [idx + 1];
+      columns.forEach((col) => {
+        row.push(item[col.name] ?? "-");
+      });
+      exportData.push(row);
     });
 
-    exportExcel(excelRef, filename, "Sheet1", title, exportLabel);
+    // สร้าง worksheet
+    const ws = XLSXStyle.utils.aoa_to_sheet(exportData);
+
+    // จำนวนคอลัมน์ทั้งหมด
+    const numCols = headerRow.length;
+
+    // Merge cells สำหรับหัวข้อ (แถว 0-2)
+    ws["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: numCols - 1 } }, // หัวข้อ
+      { s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } }, // วันที่
+      { s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } }, // หน่วยงาน
+    ];
+
+    // กำหนดความกว้างคอลัมน์
+    ws["!cols"] = [
+      { wch: 8 },  // ลำดับ
+      { wch: 20 }, // ชื่อผู้ร้อง
+      { wch: 15 }, // เลข สรร.
+      { wch: 15 }, // ลงวันที่
+      { wch: 25 }, // หน่วยงาน
+      { wch: 30 }, // ชื่อเรื่อง
+      { wch: 20 }, // ประเภทเรื่อง
+      { wch: 30 }, // หนังสือส่งหน่วยงาน
+      { wch: 25 }, // เจ้าหน้าที่
+      { wch: 20 }, // สถานะ
+    ];
+
+    // จัดรูปแบบ style
+    const range = XLSXStyle.utils.decode_range(ws["!ref"]);
+
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const cellAddress = XLSXStyle.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) continue;
+
+        // สร้าง style object
+        let style = {
+          font: { name: "Calibri", sz: 11 },
+          alignment: { vertical: "center", wrapText: true },
+        };
+
+        // แถว 0-2: หัวข้อ (ตัวหนา, จัดกลาง, ไม่มีกรอบ)
+        if (R <= 2) {
+          style.font = { name: "Calibri", sz: 14, bold: true };
+          style.alignment = { horizontal: "center", vertical: "center" };
+        }
+        // แถวที่ 4: Header (ตัวหนา, จัดกลาง, มีกรอบ, พื้นหลังเทา)
+        else if (R === 4) {
+          style.font = { name: "Calibri", sz: 11, bold: true };
+          style.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+          style.fill = { fgColor: { rgb: "D9D9D9" } };
+          style.border = {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } },
+          };
+        }
+        // แถวข้อมูล (มีกรอบ, ลำดับจัดกลาง)
+        else if (R > 4) {
+          style.alignment = {
+            horizontal: C === 0 ? "center" : "left",
+            vertical: "center",
+            wrapText: true
+          };
+          style.border = {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } },
+          };
+        }
+
+        ws[cellAddress].s = style;
+      }
+    }
+
+    // Export file
+    const wb = XLSXStyle.utils.book_new();
+    XLSXStyle.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSXStyle.writeFile(wb, filename);
   };
 
   return (
@@ -280,20 +431,6 @@ const TableListAgency = ({
               },
             }}
           >
-            <InputText
-              label="ชื่อผู้ร้อง"
-              placeholder=""
-              value={filters.claimantName}
-              onChange={handleChange("claimantName")}
-              size="small"
-            />
-            <InputText
-              label="เลขรับ สรร."
-              placeholder=""
-              value={filters.receiptNumber}
-              onChange={handleChange("receiptNumber")}
-              size="small"
-            />
             <SelectField
               label="หน่วยงาน"
               value={filters.agency}
@@ -301,6 +438,36 @@ const TableListAgency = ({
               options={agencyOptions}
               size="small"
             />
+            <Box>
+              <Typography
+                variant="subtitle2"
+                sx={{ color: "#1120A3", fontWeight: 600, mb: 1 }}
+              >
+                ตั้งแต่วันที่
+              </Typography>
+              <Box sx={{ "& .MuiFormControl-root": { mb: 0 } }}>
+                <DateThaiPickerService
+                  value={filters.startDate}
+                  onChange={handleDateChange("startDate")}
+                  placeholder="เลือกวันที่เริ่มต้น"
+                />
+              </Box>
+            </Box>
+            <Box>
+              <Typography
+                variant="subtitle2"
+                sx={{ color: "#1120A3", fontWeight: 600, mb: 1 }}
+              >
+                ถึงวันที่
+              </Typography>
+              <Box sx={{ "& .MuiFormControl-root": { mb: 0 } }}>
+                <DateThaiPickerService
+                  value={filters.endDate}
+                  onChange={handleDateChange("endDate")}
+                  placeholder="เลือกวันที่สิ้นสุด"
+                />
+              </Box>
+            </Box>
             <SelectField
               label="สถานะเรื่อง"
               value={filters.status}
