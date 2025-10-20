@@ -30,9 +30,8 @@ const BottomRightService = () => {
   const getCurrentThaiYear = () => new Date().getFullYear() + 543;
 
   const getCurrentFiscalYearTH = () => {
-    const ad = new Date().getFullYear();  
-    const m = new Date().getMonth(); 
-    return (m >= 9) ? ad + 544 : ad + 543;
+    // ใช้ปี พ.ศ. ปัจจุบัน
+    return new Date().getFullYear() + 543;
   };
 
   const [selectedYear, setSelectedYear] = useState(getCurrentFiscalYearTH().toString());
@@ -55,12 +54,20 @@ const BottomRightService = () => {
       const fiscalNow = getCurrentFiscalYearTH().toString();
 
       if (result.success && Array.isArray(result.yearOptions)) {
-        setYearOptions(result.yearOptions);
+        // ตรวจสอบว่ามีปีปัจจุบันในรายการหรือไม่
         const hasFiscalNow = result.yearOptions.some(y => String(y.value) === fiscalNow);
-        setSelectedYear(hasFiscalNow
-          ? fiscalNow
-          : String(result.yearOptions[result.yearOptions.length - 1]?.value ?? fiscalNow)
-        );
+
+        // ถ้าไม่มีปีปัจจุบันในรายการ ให้เพิ่มเข้าไป
+        let finalYearOptions = [...result.yearOptions];
+        if (!hasFiscalNow) {
+          finalYearOptions.push({ value: fiscalNow, label: fiscalNow });
+          // เรียงลำดับปีจากน้อยไปมาก
+          finalYearOptions.sort((a, b) => parseInt(a.value) - parseInt(b.value));
+        }
+
+        setYearOptions(finalYearOptions);
+        // ตั้งค่าเริ่มต้นเป็นปีปัจจุบันเสมอ
+        setSelectedYear(fiscalNow);
       } else {
         // Fallback
         const fallback = [
