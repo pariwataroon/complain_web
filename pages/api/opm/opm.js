@@ -709,62 +709,23 @@ const GetCaseStatus = async () => {
 
 const GetCaseType = async () => {
   try {
-    const response = await soapInstance.post(
-      process.env.NEXT_PUBLIC_OPM_API_LISTOFVALUES,
-      `<?xml version="1.0" encoding="utf-8"?>
-        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-          <soap:Body>
-            <GetCaseType xmlns="http://tempuri.org/">
-              <ref_id>1</ref_id>
-              <is_thai>true</is_thai>
-            </GetCaseType>
-          </soap:Body>
-        </soap:Envelope>`,
-      {
-        soapActionSuffix: "GetCaseType",
-      }
-    );
-
-    let xmlString = response.data;
-
-    if (typeof xmlString === "string") {
-      if (typeof window !== "undefined") {
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlString, "text/xml");
-        const resultElement =
-          xmlDoc.getElementsByTagName("GetCaseTypeResult")[0];
-
-        if (resultElement && resultElement.textContent) {
-          const statuses = JSON.parse(resultElement.textContent);
-
-          return {
-            success: true,
-            data: Array.isArray(statuses)
-              ? statuses.map(({ val, text }) => ({ val, text }))
-              : [],
-          };
-        }
-      } else {
-        const match = xmlString.match(
-          /<GetCaseTypeResult>(.*?)<\/GetCaseTypeResult>/
-        );
-        if (match && match[1]) {
-          const statuses = JSON.parse(match[1]);
-
-          return {
-            success: true,
-            data: Array.isArray(statuses)
-              ? statuses.map(({ val, text }) => ({ val, text }))
-              : [],
-          };
-        }
-      }
-    }
+    // ใช้ข้อมูล hardcode เพราะ API GetCaseType ไม่พร้อมใช้งาน
+    // แมพตามตาราง Mof_Case_Type vs Opm_Case_Type (ไม่รวมแถวสีเหลือง)
+    const caseTypes = [
+      { val: "22", text: "การแก้ไขปัญหาหนี้สิน" },
+      // { val: "", text: "ที่ราชพัสดุ อาคาร เหรียญกษาปณ์" },
+      { val: "154", text: "นโยบายรัฐบาลที่เกี่ยวกับกระทรวง" },
+      { val: "486", text: "บัตรสนเท่ห์" },
+      // { val: "", text: "บำเหน็จบำนาญ/ค่ารักษาพยาบาล/การจัดซื้อจัดจ้าง" },
+      { val: "503", text: "พฤติกรรมเจ้าหน้าที่" },
+      { val: "137", text: "ภาษีอากร" },
+      { val: "161", text: "วินัย" },
+      { val: "9002", text: "อื่น ๆ" }
+    ];
 
     return {
-      success: false,
-      message: "No data received",
-      data: [],
+      success: true,
+      data: caseTypes,
     };
   } catch (error) {
     console.error("Error fetching case types:", error);

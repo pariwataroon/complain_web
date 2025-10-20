@@ -171,6 +171,12 @@ const TableListBox = ({
   // Columns with enhanced design - ปรับขนาดคอลัมน์ สถานะเรื่อง
   const columns = [
     {
+      name: "rowNumber",
+      label: "ลำดับ",
+      width: 80,
+      align: "center",
+    },
+    {
       name: "receiveDate",
       label: "วันที่ร้อง",
       width: 120,
@@ -443,10 +449,24 @@ const TableListBox = ({
   };
 
   // Enhanced cell renderers
-  const renderEnhancedCell = (item, col) => {
+  const renderEnhancedCell = (item, col, index) => {
     const value = item[col.name] ?? "-";
 
     switch (col.name) {
+      case "rowNumber":
+        return (
+          <Typography
+            sx={{
+              fontSize: "14px",
+              fontWeight: 600,
+              color: "#1565c0",
+              textAlign: "center",
+            }}
+          >
+            {page * rowsPerPage + index + 1}
+          </Typography>
+        );
+
       case "status":
         return renderStatusCell(item);
 
@@ -1162,7 +1182,7 @@ const TableListBox = ({
                             verticalAlign: "middle",
                           }}
                         >
-                          {renderEnhancedCell(item, col)}
+                          {renderEnhancedCell(item, col, index)}
                         </TableCell>
                       ))}
                     </TableRow>

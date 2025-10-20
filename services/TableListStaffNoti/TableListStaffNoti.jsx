@@ -18,6 +18,7 @@ import SearchOffIcon from "@mui/icons-material/SearchOff";
 import styles from "./TableListStaffNoti.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
@@ -94,6 +95,8 @@ const TableListStaffNoti = ({
 
   // Dynamic layout calculation with consistent sizing
   const getLayoutConfig = () => {
+    const totalFields = filterFields.length;
+
     if (isExtraSmall) {
       return {
         layout: "stacked",
@@ -118,7 +121,7 @@ const TableListStaffNoti = ({
       };
     } else if (isMedium) {
       return {
-        layout: "two-row", // New layout for medium screens
+        layout: "two-row",
         fieldsPerRow: 3,
         fieldWidth: "calc(33.33% - 6px)",
         buttonSize: "small",
@@ -127,10 +130,11 @@ const TableListStaffNoti = ({
         inputHeight: "40px",
         iconSize: 40,
       };
-    } else if (isLarge) {
+    } else if (isLarge || totalFields > 5) {
+      // สำหรับ large screen หรือ ฟิลด์มากกว่า 5 ช่อง ใช้ two-row layout
       return {
-        layout: "single-row",
-        fieldsPerRow: filterFields.length,
+        layout: "two-row",
+        fieldsPerRow: 4,
         fieldWidth: "auto",
         buttonSize: "small",
         gap: 1.5,
@@ -177,11 +181,13 @@ const TableListStaffNoti = ({
       sx: getFilterFieldStyles(),
     };
 
-    return f.type === "select" ? (
-      <SelectField {...commonProps} options={f.options} />
-    ) : (
-      <InputText {...commonProps} />
-    );
+    if (f.type === "select") {
+      return <SelectField {...commonProps} options={f.options} />;
+    } else if (f.type === "date") {
+      return <DateThaiPickerService {...commonProps} placeholder="เลือกวันที่" />;
+    } else {
+      return <InputText {...commonProps} />;
+    }
   };
 
 const handleExportExcel = () => {
@@ -344,112 +350,122 @@ const handleExportExcel = () => {
             </Box>
           </>
         ) : layoutConfig.layout === "two-row" ? (
-          // Two-row Layout (Medium screens below 1025px)
+          // Two-row Layout (Medium to Large screens)
           <>
-            {/* First Row - First 3 fields */}
+            {/* First Row - First 4 fields */}
             <Box
               display="grid"
-              gridTemplateColumns="repeat(3, 1fr)"
+              gridTemplateColumns={`repeat(${Math.min(layoutConfig.fieldsPerRow, filterFields.length)}, 1fr)`}
               gap={layoutConfig.gap}
-              mb={2}
+              mb={1.5}
               sx={{
                 overflow: "visible",
                 width: "100%",
               }}
             >
-              {filterFields.slice(0, 3).map((f) => (
+              {filterFields.slice(0, layoutConfig.fieldsPerRow).map((f) => (
                 <Box key={f.name} sx={{ minWidth: 0 }}>
                   {renderFilterField(f)}
                 </Box>
               ))}
             </Box>
 
-            {/* Second Row - Remaining fields + Search Buttons */}
+            {/* Second Row - Remaining fields + Search Buttons + Export Buttons */}
             <Box
               display="flex"
-              alignItems="center"
+              alignItems="flex-start"
               gap={layoutConfig.gap}
-              mb={2}
+              mb={0}
               sx={{
                 overflow: "visible",
                 width: "100%",
+                flexWrap: "wrap",
               }}
             >
               {/* Remaining filter fields */}
-              {filterFields.slice(3).map((f) => (
-                <Box
-                  key={f.name}
-                  sx={{
-                    flex: "1 1 0",
-                    minWidth: 0,
-                  }}
-                >
-                  {renderFilterField(f)}
+              <Box
+                display="flex"
+                gap={layoutConfig.gap}
+                sx={{
+                  flex: "1 1 auto",
+                  minWidth: 0,
+                  alignItems: "flex-start",
+                }}
+              >
+                {filterFields.slice(layoutConfig.fieldsPerRow).map((f) => (
+                  <Box
+                    key={f.name}
+                    sx={{
+                      flex: "1 1 0",
+                      minWidth: "140px",
+                      maxWidth: "220px",
+                    }}
+                  >
+                    {renderFilterField(f)}
+                  </Box>
+                ))}
+
+                {/* Search Buttons */}
+                <Box display="flex" gap={1} sx={{ flexShrink: 0, pt: 0.5 }}>
+                  <IconButton
+                    onClick={handleSearchClick}
+                    sx={{
+                      bgcolor: "#1120A3",
+                      color: "#fff",
+                      "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                      width: layoutConfig.iconSize,
+                      height: layoutConfig.iconSize,
+                      borderRadius: "50%",
+                      transition: "all 0.2s ease-in-out",
+                    }}
+                  >
+                    <SearchIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    onClick={handleClearSearch}
+                    sx={{
+                      bgcolor: "#1120A3",
+                      color: "#fff",
+                      "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
+                      width: layoutConfig.iconSize,
+                      height: layoutConfig.iconSize,
+                      borderRadius: "50%",
+                      transition: "all 0.2s ease-in-out",
+                    }}
+                  >
+                    <SearchOffIcon fontSize="small" />
+                  </IconButton>
                 </Box>
-              ))}
-
-              {/* Search Buttons */}
-              <Box display="flex" gap={1} sx={{ flexShrink: 0 }}>
-                <IconButton
-                  onClick={handleSearchClick}
-                  sx={{
-                    bgcolor: "#1120A3",
-                    color: "#fff",
-                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
-                    width: layoutConfig.iconSize,
-                    height: layoutConfig.iconSize,
-                    borderRadius: "50%",
-                    transition: "all 0.2s ease-in-out",
-                    mt: 1,
-                  }}
-                >
-                  <SearchIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                  onClick={handleClearSearch}
-                  sx={{
-                    bgcolor: "#1120A3",
-                    color: "#fff",
-                    "&:hover": { bgcolor: "#0b1580", transform: "scale(1.05)" },
-                    width: layoutConfig.iconSize,
-                    height: layoutConfig.iconSize,
-                    borderRadius: "50%",
-                    transition: "all 0.2s ease-in-out",
-                    mt: 1,
-                  }}
-                >
-                  <SearchOffIcon fontSize="small" />
-                </IconButton>
               </Box>
-            </Box>
 
-            {/* Export Buttons */}
-            <Box display="flex" justifyContent="center" gap={1}>
-              <ExportButton
-                label="Export PDF"
-                onClick={() =>
-                  exportElementToPDF(
-                    pdfRef,
-                    "รายงานการแจ้งเตือนเจ้าหน้าที่.pdf"
-                  )
-                }
-                size={layoutConfig.buttonSize}
-                sx={{
-                  minWidth: "120px",
-                  height: layoutConfig.inputHeight,
-                  fontSize: "12px",
-                }}
-              />
-              <ExportButton
-                label="Export Excel"
-                onClick={handleExportExcel}
-                size={layoutConfig.buttonSize}
-                sx={{
-                  minWidth: "120px",
-                  height: layoutConfig.inputHeight,
-                  fontSize: "12px",
-                }}
-              />
+              {/* Export Buttons */}
+              <Box display="flex" gap={1} sx={{ flexShrink: 0, pt: 0.5 }}>
+                <ExportButton
+                  label="Export PDF"
+                  onClick={() =>
+                    exportElementToPDF(
+                      pdfRef,
+                      "รายงานการแจ้งเตือนเจ้าหน้าที่.pdf"
+                    )
+                  }
+                  size={layoutConfig.buttonSize}
+                  sx={{
+                    minWidth: "120px",
+                    height: layoutConfig.inputHeight,
+                    fontSize: "12px",
+                  }}
+                />
+                <ExportButton
+                  label="Export Excel"
+                  onClick={handleExportExcel}
+                  size={layoutConfig.buttonSize}
+                  sx={{
+                    minWidth: "120px",
+                    height: layoutConfig.inputHeight,
+                    fontSize: "12px",
+                  }}
+                />
+              </Box>
             </Box>
           </>
         ) : (
