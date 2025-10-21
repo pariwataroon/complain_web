@@ -1412,7 +1412,7 @@ def auto_assign_complaint(
 def get_complaints_by_page_type_with_assignment_form(
     db: Session,
     current_user_id: UUID,
-    page_type: str = "website",
+    page_type: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
     status: Optional[str] = None,
@@ -1428,9 +1428,12 @@ def get_complaints_by_page_type_with_assignment_form(
     try:
         from models.comp_complaint_types import ComplaintChannel, ComplaintSubType
         from sqlalchemy import and_, or_, func
-        
+
+        normalized_page_type = (page_type or "").lower()
+        effective_page_type = normalized_page_type or "all"
+
         # กำหนด channel ตาม page_type
-        if page_type == "website":
+        if normalized_page_type == "website":
             target_channels = db.query(ComplaintChannel).filter(
                 ComplaintChannel.is_active == True,
                 or_(
@@ -1439,7 +1442,7 @@ def get_complaints_by_page_type_with_assignment_form(
                     ComplaintChannel.name.contains("ออนไลน์")
                 )
             ).all()
-        elif page_type == "card":
+        elif normalized_page_type == "card":
             target_channels = db.query(ComplaintChannel).filter(
                 ComplaintChannel.is_active == True,
                 or_(
@@ -1468,7 +1471,7 @@ def get_complaints_by_page_type_with_assignment_form(
                     "has_prev": False
                 },
                 "channels": [],
-                "page_type": page_type,
+                "page_type": effective_page_type,
                 "my_assignments": True
             }
 
@@ -1687,7 +1690,7 @@ def get_complaints_by_page_type_with_assignment_form(
                     "description": channel.description
                 } for channel in target_channels
             ],
-            "page_type": page_type,
+        "page_type": effective_page_type,
             "my_assignments": True,
             "assigned_user_id": str(current_user_id),
             

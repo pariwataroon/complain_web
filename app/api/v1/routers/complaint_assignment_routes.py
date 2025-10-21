@@ -263,7 +263,10 @@ async def update_assignment(
 
 @router.get("/by-page-type")
 async def get_complaints_by_page_type(
-    page_type: str = Query("website", description="ประเภทหน้า: 'website' หรือ 'card'"),
+    page_type: Optional[str] = Query(
+        None,
+        description="ประเภทหน้า: 'website', 'card' หรือเว้นว่างเพื่อดึงทุกช่องทาง"
+    ),
     skip: int = Query(0, description="จำนวนที่ข้าม"),
     limit: int = Query(100, description="จำนวนต่อหน้า"),
     status: Optional[str] = Query(None, description="สถานะ"),
