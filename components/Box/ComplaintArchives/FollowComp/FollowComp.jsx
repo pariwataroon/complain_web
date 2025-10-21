@@ -884,6 +884,7 @@ const FollowComp = () => {
   const [previewSrc, setPreviewSrc] = useState("");
   const [previewName, setPreviewName] = useState("");
   const [previewType, setPreviewType] = useState("image"); // 'image' | 'pdf' | 'gdoc' | 'text' | 'audio' | 'video'
+  const [previewOriginalUrl, setPreviewOriginalUrl] = useState(""); // เก็บ URL ต้นฉบับสำหรับไฟล์ text (สำหรับดาวน์โหลด)
   const [previewZoom, setPreviewZoom] = useState(1);
   const [pdfLoadError, setPdfLoadError] = useState(false);
   const [deleting, setDeleting] = useState({}); // {id: true}
@@ -1033,11 +1034,13 @@ const FollowComp = () => {
     setPreviewName(name || "ไฟล์แนบ");
     setPreviewZoom(1);
     setPdfLoadError(false);
+    setPreviewOriginalUrl(""); // รีเซ็ต URL ต้นฉบับ
 
     console.log("Opening preview:", { href, name, ext, type: e }); // Debug log
 
     // Text files: fetch content (limit size for safety)
     if (["txt", "json", "md", "log", "csv"].includes(e)) {
+      setPreviewOriginalUrl(href); // เก็บ URL ต้นฉบับไว้สำหรับดาวน์โหลด
       try {
         const res = await fetch(href);
         const text = await res.text();
@@ -1985,10 +1988,10 @@ const agencyReportRows = outgoingType5.map((item) => ({
                 </IconButton>
               </>
             )}
-            <IconButton color="inherit" onClick={() => downloadFile(previewSrc, previewName)}>
+            <IconButton color="inherit" onClick={() => downloadFile(previewType === 'text' && previewOriginalUrl ? previewOriginalUrl : previewSrc, previewName)}>
               <DownloadIcon sx={{ color: '#fff' }} />
             </IconButton>
-            <IconButton color="inherit" onClick={() => window.open(previewSrc, '_blank', 'noreferrer') }>
+            <IconButton color="inherit" onClick={() => window.open(previewType === 'text' && previewOriginalUrl ? previewOriginalUrl : previewSrc, '_blank', 'noreferrer') }>
               <OpenInNewIcon sx={{ color: '#fff' }} />
             </IconButton>
           </Box>
