@@ -596,7 +596,7 @@ const merged = {
           />
           <InfoItem labelText="หน่วยงาน" value={respondent.agencyName} />
           <InfoItem
-            labelText="ชื่อ - นามสกุล ผู้ติดต่อ"
+            labelText="ชื่อ - นามสกุล"
             value={respondent.fullName}
           />
           <InfoItem
