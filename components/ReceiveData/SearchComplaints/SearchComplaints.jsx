@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableList from "@services/TableList/TableList";
 import { useRouter } from "next/router";
-import { GetEnhancedComplaints } from "@pages/api/complaint/complaint";
+import { GetEnhancedComplaints, GetComplaintByID } from "@pages/api/complaint/complaint";
 import dayjs from "dayjs";
 
 const breadcrumbItems = [
@@ -127,7 +127,70 @@ const SearchComplaints = () => {
         // ป้องกัน res_data หรือ items เป็น undefined/null
         const items = Array.isArray(res?.res_data?.items) ? res.res_data.items : [];
 
-        const mapped = items.map((item) => {
+        // สำหรับรายการที่ complainant_name เป็น empty string ให้ดึงข้อมูลเต็มจาก GetComplaintByID
+        const itemsWithNames = await Promise.all(
+          items.map(async (item) => {
+            // ถ้า complainant_name ไม่ว่าง ให้ return ตัวเดิม
+            if (item?.complainant_name && item.complainant_name.trim() !== "") {
+              return item;
+            }
+
+            // ถ้าว่าง ให้ดึงข้อมูลเต็มจาก GetComplaintByID
+            try {
+              const targetDebugIds = ["e26c2a19-fc7d-4f3f-9f1f-03eb390158e3", "7d0b3e40-abc1-4bf1-9fcb-e3d1d3a9c430"];
+
+              if (targetDebugIds.includes(item.id)) {
+                console.log("=".repeat(80));
+                console.log(`🔄 Fetching full data for ID: ${item.id}`);
+              }
+
+              const fullDataResponse = await GetComplaintByID(item.id);
+
+              // ข้อมูลจริงอยู่ใน res_data
+              const fullData = fullDataResponse?.res_data || fullDataResponse;
+
+              if (targetDebugIds.includes(item.id)) {
+                console.log(`📦 Full response:`, fullDataResponse);
+                console.log(`📦 Full data (res_data):`, fullData);
+                console.log(`   step1:`, fullData?.step1);
+                console.log(`   step1.general:`, fullData?.step1?.general);
+                console.log(`   step1.general.general:`, fullData?.step1?.general?.general);
+                console.log(`   step1.general.general.government:`, fullData?.step1?.general?.general?.government);
+              }
+
+              // ดึงชื่อผู้ร้องจาก step1.general.general.government (หนังสือร้องเรียนถึง กค.)
+              const governmentName = fullData?.step1?.general?.general?.government?.fullName ||
+                                    fullData?.step1?.general?.general?.government?.name;
+
+              // ดึงชื่อผู้ร้องจาก step1.general.corporate (นิติบุคคล)
+              const corporateName = fullData?.step1?.general?.corporate?.name;
+
+              // ดึงชื่อผู้ร้องจาก step1.general.general (บุคคลทั่วไป)
+              const generalName = fullData?.step1?.general?.general?.name;
+
+              // ใช้ชื่อที่พบ
+              const extractedName = governmentName || corporateName || generalName || "";
+
+              if (targetDebugIds.includes(item.id)) {
+                console.log(`✅ Extracted name:`, extractedName);
+                console.log(`   governmentName:`, governmentName);
+                console.log(`   corporateName:`, corporateName);
+                console.log(`   generalName:`, generalName);
+                console.log("=".repeat(80));
+              }
+
+              return {
+                ...item,
+                complainant_name: extractedName
+              };
+            } catch (error) {
+              console.error(`❌ Error fetching full data for ${item.id}:`, error);
+              return item; // return ตัวเดิมถ้า error
+            }
+          })
+        );
+
+        const mapped = itemsWithNames.map((item) => {
 
           const status =
             item?.body?.status ??
@@ -196,14 +259,17 @@ const SearchComplaints = () => {
             </div>
           );
 
+          // ใช้ชื่อผู้ร้องที่ได้จากการดึงข้อมูลเต็ม (ถ้ามี)
+          const complainantName = item?.complainant_name || "-";
+
           return {
             id: item?.id ?? "-",
             name: (
               <span style={{ color: textColor }}>
-                {item?.complainant_name ?? "-"}
+                {complainantName}
               </span>
             ),
-            nameRaw: item?.complainant_name ?? "-",
+            nameRaw: complainantName,
             citizenId: item?.citizen_id ?? "-",
             subject: subjectWithDot,
             subjectRaw,

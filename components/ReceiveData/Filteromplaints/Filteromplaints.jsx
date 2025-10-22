@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableFilterList from "@services/TableFilterList/TableFilterList";
-import { GetComplaintsGroupedbyChannel } from "@pages/api/complaint/complaint";
+import { GetComplaintsGroupedbyChannel, GetComplaintByID } from "@pages/api/complaint/complaint";
 import dayjs from "dayjs";
 
 const breadcrumbItems = [
@@ -117,9 +117,13 @@ const Filteromplaints = () => {
   const mapItemToRow = (item) => {
     const isAssigned = getIsAssigned(item);
     const subjectRaw = item.subject || "-";
+    // ใช้ชื่อผู้ร้องที่ได้จากการดึงข้อมูลเต็ม (ถ้ามี)
+    const complainantName = (item.complainant_name && item.complainant_name.trim() !== "")
+      ? item.complainant_name
+      : "-";
     return {
       id: item.id,
-      name: item.complainant_name || "-",
+      name: complainantName,
       issueType: item.complaint_type || "-",
 
       // แสดงชื่อเรื่องพร้อม “จุดสถานะ” นำหน้า
@@ -173,9 +177,55 @@ const Filteromplaints = () => {
           const data = response.res_data;
           setApiData(data);
 
+          // ดึงชื่อผู้ร้องสำหรับรายการที่ complainant_name เป็น empty string
+          const enrichedGroups = await Promise.all(
+            data.groups.map(async (group) => {
+              const enrichedItems = await Promise.all(
+                group.items.map(async (item) => {
+                  // ถ้า complainant_name ไม่ว่าง ให้ return ตัวเดิม
+                  if (item?.complainant_name && item.complainant_name.trim() !== "") {
+                    return item;
+                  }
+
+                  // ถ้าว่าง ให้ดึงข้อมูลเต็มจาก GetComplaintByID
+                  try {
+                    const fullDataResponse = await GetComplaintByID(item.id);
+                    const fullData = fullDataResponse?.res_data || fullDataResponse;
+
+                    // ดึงชื่อผู้ร้องจาก step1.general.general.government (หนังสือร้องเรียนถึง กค.)
+                    const governmentName = fullData?.step1?.general?.general?.government?.fullName ||
+                                          fullData?.step1?.general?.general?.government?.name;
+
+                    // ดึงชื่อผู้ร้องจาก step1.general.corporate (นิติบุคคล)
+                    const corporateName = fullData?.step1?.general?.corporate?.name;
+
+                    // ดึงชื่อผู้ร้องจาก step1.general.general (บุคคลทั่วไป)
+                    const generalName = fullData?.step1?.general?.general?.name;
+
+                    // ใช้ชื่อที่พบ
+                    const extractedName = governmentName || corporateName || generalName || "";
+
+                    return {
+                      ...item,
+                      complainant_name: extractedName
+                    };
+                  } catch (error) {
+                    console.error(`Error fetching full data for ${item.id}:`, error);
+                    return item; // return ตัวเดิมถ้า error
+                  }
+                })
+              );
+
+              return {
+                ...group,
+                items: enrichedItems
+              };
+            })
+          );
+
           // สร้าง Map ของข้อมูลที่มี
           const dataMap = new Map();
-          data.groups.forEach((group) => {
+          enrichedGroups.forEach((group) => {
             const channelName = group.complaint_channel_name.toLowerCase();
             dataMap.set(channelName, {
               title: `ช่องทางการรับเรื่อง : ${group.complaint_channel_name}`,
@@ -202,7 +252,7 @@ const Filteromplaints = () => {
           });
 
           // เพิ่มกลุ่มจาก API ที่ไม่อยู่ใน ALL_CHANNELS
-          data.groups.forEach((group) => {
+          enrichedGroups.forEach((group) => {
             const channelName = group.complaint_channel_name.toLowerCase();
             const exists = ALL_CHANNELS.some(
               (ch) =>
@@ -232,7 +282,7 @@ const Filteromplaints = () => {
 
             const uniqueRespondents = [
               ...new Set(
-                data.groups
+                enrichedGroups
                   .flatMap((g) => g.items.map((item) => item.respondent_name))
                   .filter(Boolean)
               ),
