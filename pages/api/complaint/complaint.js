@@ -78,9 +78,25 @@ const GetComplaintTaskStatus = async (id) => {
   }
 };
 
-const Addcomplaints = async (data) => {
+const Addcomplaints = async (data, complaint_channel_id = null, complaint_type_id = null) => {
   try {
-    const response = await axiosInstance.post("/complaints", data);
+    let url = "/complaints";
+    const params = [];
+
+    if (complaint_channel_id) {
+      params.push(`complaint_channel_id=${complaint_channel_id}`);
+    }
+    if (complaint_type_id) {
+      params.push(`complaint_type_id=${complaint_type_id}`);
+    }
+
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
+    }
+
+    console.log('✅ Sending complaint:', { complaint_channel_id, complaint_type_id, url });
+
+    const response = await axiosInstance.post(url, data);
     if (response && response.data) {
       return response.data;
     }

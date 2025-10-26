@@ -242,15 +242,29 @@ export default function useComplaintForm() {
     if (step31?.general && Object.keys(step31.general).length > 0) {
       // ใช้ subject จาก Tab3-1 ถ้ามี ไม่งั้นใช้จาก step3
       step3Data.subject = step31.general.subject || step3?.general?.subject || "";
-      
+
       // ใช้ description จาก Tab3-1 ถ้ามี ไม่งั้นใช้จาก step3
       step3Data.description = step31.general.description || step3?.general?.description || "";
-      step3Data.complaintChannel = step31.general.complaintChannel || step3?.general?.complaintChannel || "";
-      if (step31.general.complaintChannelName) {
-        step3Data.complaintChannelName = step31.general.complaintChannelName;
-      } else if (step3?.general?.complaintChannelName) {
-        step3Data.complaintChannelName = step3.general.complaintChannelName;
-      }
+
+      // ใช้ complaintChannel จาก Tab3-1 ก่อน (เพราะ Tab3-1 มี dropdown ให้เลือก)
+      const channelId = step31.general.complaintChannel || step3?.general?.complaintChannel || "";
+      const channelName = step31.general.complaintChannelName || step3?.general?.complaintChannelName || "";
+
+      step3Data.complaintChannel = channelId;
+      step3Data.complaintChannelName = channelName;
+
+      // ใช้ complaintType จาก Tab3-1 ก่อน
+      const typeId = step31.general.complaintTypeId || step3?.general?.complaintType || "";
+      const typeName = step31.general.complaintTypeName || step3?.general?.complaintTypeName || "";
+
+      step3Data.complaintType = typeId;
+      step3Data.complaintTypeName = typeName;
+
+      console.log('=== COMPLAINT DATA FROM TAB31 ===');
+      console.log('complaintChannel (ID):', channelId);
+      console.log('complaintChannelName:', channelName);
+      console.log('complaintType (ID):', typeId);
+      console.log('complaintTypeName:', typeName);
       
       // ใช้ incidentDate จาก Tab3-1 (incidentDateTime) ถ้ามี ไม่งั้นใช้จาก step3
       if (step31.general.incidentDateTime) {
@@ -286,12 +300,28 @@ export default function useComplaintForm() {
       step3Data.subject = step3?.general?.subject || "";
       step3Data.description = step3?.general?.description || "";
       step3Data.incidentDate = step3?.general?.incidentDate || "";
-      step3Data.complaintChannel = step3?.general?.complaintChannel || "";
-      step3Data.complaintChannelName = step3?.general?.complaintChannelName || "";
+
+      const channelId = step3?.general?.complaintChannel || "";
+      const channelName = step3?.general?.complaintChannelName || "";
+      const typeId = step3?.general?.complaintType || "";
+      const typeName = step3?.general?.complaintTypeName || "";
+
+      step3Data.complaintChannel = channelId;
+      step3Data.complaintChannelName = channelName;
+      step3Data.complaintType = typeId;
+      step3Data.complaintTypeName = typeName;
+
+      console.log('=== COMPLAINT DATA FROM TAB3 ===');
+      console.log('complaintChannel (ID):', channelId);
+      console.log('complaintChannelName:', channelName);
+      console.log('complaintType (ID):', typeId);
+      console.log('complaintTypeName:', typeName);
     }
 
+    // ⚠️ fallback: ถ้าไม่มีค่า complaintChannel เลย ให้ใช้ค่าเริ่มต้น (แต่ควรเป็น ID จาก API)
     if (!step3Data.complaintChannel) {
-      step3Data.complaintChannel = WEBSITE_CHANNEL_LABEL;
+      console.warn('⚠️ No complaintChannel found, using fallback. This should not happen in production.');
+      step3Data.complaintChannel = WEBSITE_CHANNEL_LABEL; // ⚠️ อันนี้อาจเป็น label แทน ID
     }
     if (!step3Data.complaintChannelName) {
       step3Data.complaintChannelName = step3Data.complaintChannel;
@@ -435,10 +465,22 @@ export default function useComplaintForm() {
     };
 
     console.log('=== FINAL PAYLOAD FOR Addcomplaints ===');
-    console.log('restructuredBody:', JSON.stringify(restructuredBody, null, 2));
+    console.log('step3Data:', {
+      complaintChannel: step3Data.complaintChannel,
+      complaintChannelName: step3Data.complaintChannelName,
+      complaintType: step3Data.complaintType,
+      complaintTypeName: step3Data.complaintTypeName,
+      subject: step3Data.subject,
+    });
+    console.log('Full step3.general:', JSON.stringify(restructuredBody.step3.general, null, 2));
 
     // STEP 1: สร้างเรื่องร้องทุกข์
-    const res = await Addcomplaints(restructuredBody);
+    // ⚠️ ส่ง complaint_channel_id และ complaint_type_id เป็น query params (เหมือน Tab 3-1)
+    const res = await Addcomplaints(
+      restructuredBody,
+      step3Data.complaintChannel,   // complaint_channel_id
+      step3Data.complaintType        // complaint_type_id
+    );
     const { res_code, res_message, res_data } = res;
 
     if (res_code === "0001") {

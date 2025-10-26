@@ -209,7 +209,7 @@ const ComplaintMinistryMainForm = ({
         <Grid item xs={12} sm={6}>
           <InputText
             label={formatLabel("ชื่อ - นามสกุล")}
-            placeholder="ชื่อ - นามสกุล ผู้ติดต่อ"
+            placeholder="ชื่อ - นามสกุล"
             value={data.fullName || ""}
             onChange={handleChange("fullName")}
             error={hasFieldError("fullName")}

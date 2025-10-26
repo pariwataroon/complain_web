@@ -2,7 +2,7 @@ import React, { useCallback, useState, useMemo, useEffect, useRef } from "react"
 import { Box, Grid, Typography, Button, Stack } from "@mui/material";
 import styles from "./TabNav.module.scss";
 import { Add, InsertDriveFile, Close } from "@mui/icons-material";
-import { GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
+import { GetAllSelectComplaintTypes, GetAllComplaintChannels } from "@pages/api/allselect/allselect";
 
 const Tab3 = ({
   stepKey,
@@ -27,19 +27,26 @@ const Tab3 = ({
   // State สำหรับไฟล์แนบ
   const [attachmentFiles, setAttachmentFiles] = useState([]);
 
-  // State สำหรับ complaint types
+  // State สำหรับ complaint types และ channels
   const [complaintTypes, setComplaintTypes] = useState([]);
+  const [complaintChannels, setComplaintChannels] = useState([]);
+  const [websiteChannelId, setWebsiteChannelId] = useState(null);
   const [loadingOptions, setLoadingOptions] = useState(false);
 
-  // Load complaint types from API
+  // Load complaint types และ channels from API
   useEffect(() => {
-    const fetchComplaintTypes = async () => {
+    const fetchInitialData = async () => {
       setLoadingOptions(true);
       try {
-        const response = await GetAllSelectComplaintTypes();
-        if (response?.res_code === "0000" && response?.res_data) {
-          const normTypes = Array.isArray(response.res_data)
-            ? response.res_data.map((t) => ({
+        const [typesResponse, channelsResponse] = await Promise.all([
+          GetAllSelectComplaintTypes(),
+          GetAllComplaintChannels(),
+        ]);
+
+        // Process complaint types
+        if (typesResponse?.res_code === "0000" && typesResponse?.res_data) {
+          const normTypes = Array.isArray(typesResponse.res_data)
+            ? typesResponse.res_data.map((t) => ({
                 value: t.id,
                 label: t.name,
                 raw: t,
@@ -49,16 +56,62 @@ const Tab3 = ({
         } else {
           setComplaintTypes([]);
         }
+
+        // Process complaint channels และหา ID ของ "เว็บไซต์"
+        if (channelsResponse?.res_code === "0000" && channelsResponse?.res_data) {
+          const channelsData = channelsResponse.res_data;
+          if (channelsData.items && Array.isArray(channelsData.items)) {
+            const normChannels = channelsData.items.map((c) => ({
+              value: c.id,
+              label: c.name,
+              raw: c,
+            }));
+            setComplaintChannels(normChannels);
+
+            // หา ID ของช่องทาง "เว็บไซต์"
+            const websiteChannel = channelsData.items.find(
+              (c) => c.name && (
+                c.name.includes("เว็บไซต์") ||
+                c.name.toLowerCase().includes("website") ||
+                c.name.includes("complain.mof.go.th")
+              )
+            );
+
+            if (websiteChannel) {
+              setWebsiteChannelId(websiteChannel.id);
+              console.log("✅ Found website channel:", websiteChannel);
+            } else {
+              console.warn("⚠️ ไม่พบ channel 'เว็บไซต์' ใน API");
+            }
+          } else {
+            setComplaintChannels([]);
+          }
+        } else {
+          setComplaintChannels([]);
+        }
       } catch (error) {
-        console.error("Error loading complaint types:", error);
+        console.error("Error loading initial data:", error);
         setComplaintTypes([]);
+        setComplaintChannels([]);
       } finally {
         setLoadingOptions(false);
       }
     };
 
-    fetchComplaintTypes();
+    fetchInitialData();
   }, []);
+
+  // ตั้งค่า complaintChannel เริ่มต้นเป็น "เว็บไซต์" เมื่อมี websiteChannelId
+  useEffect(() => {
+    if (websiteChannelId && !tabData.complaintChannel) {
+      updateStepData(stepKey, "general", (prevData) => ({
+        ...prevData,
+        complaintChannel: websiteChannelId,
+        complaintChannelName: complaintChannels.find(c => c.value === websiteChannelId)?.label || "เว็บไซต์ (https://complain.mof.go.th/)"
+      }));
+      console.log("✅ Set default complaintChannel to website:", websiteChannelId);
+    }
+  }, [websiteChannelId, tabData.complaintChannel, stepKey, updateStepData, complaintChannels]);
 
   // Sync กับ tabData เมื่อมีการเปลี่ยนแปลง
   useEffect(() => {
@@ -95,13 +148,6 @@ const Tab3 = ({
   };
   const inputStyle = {
     ...baseInput,
-  };
-
-  const disabledInput = {
-    ...baseInput,
-    backgroundColor: "#fff",
-    color: "#4f5a6a",
-    cursor: "not-allowed",
   };
 
   const selectStyle = {
@@ -306,12 +352,31 @@ const Tab3 = ({
             <Grid item xs={12} sm={6}>
               <div style={containerStyle}>
                 <label style={labelStyle}>ช่องทางร้องทุกข์<span style={requiredStyle}>*</span></label>
-                <input
-                  type="text"
-                  value="เว็บไซต์แจ้งเรื่องราวร้องทุกข์"
-                  disabled
-                  style={disabledInput}
-                />
+                <select
+                  value={tabData.complaintChannel || websiteChannelId || ""}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const selectedChannel = complaintChannels.find(c => c.value === selectedId);
+                    handleChange("complaintChannel", selectedId);
+                    handleChange("complaintChannelName", selectedChannel?.label || "");
+                    console.log("✅ Channel set to:", selectedId, selectedChannel?.label);
+                  }}
+                  style={{
+                    ...selectStyle,
+                    backgroundColor: "#f5f5f5",
+                    color: "#4f5a6a",
+                    cursor: "not-allowed",
+                  }}
+                  disabled={true}
+                >
+                  {loadingOptions ? (
+                    <option value="">กำลังโหลด...</option>
+                  ) : (
+                    complaintChannels.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))
+                  )}
+                </select>
               </div>
             </Grid>
 
@@ -321,7 +386,13 @@ const Tab3 = ({
                 <label style={labelStyle}>ประเภทเรื่องร้องเรียน<span style={requiredStyle}>*</span></label>
                 <select
                   value={tabData.complaintType || ""}
-                  onChange={(e) => handleChange("complaintType", e.target.value)}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const selectedType = complaintTypes.find(t => t.value === selectedId);
+                    handleChange("complaintType", selectedId);
+                    handleChange("complaintTypeName", selectedType?.label || "");
+                    console.log("✅ Selected complaint type:", selectedId, selectedType?.label);
+                  }}
                   style={selectStyle}
                   disabled={loadingOptions}
                 >

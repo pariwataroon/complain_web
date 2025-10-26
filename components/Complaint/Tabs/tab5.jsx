@@ -146,7 +146,7 @@ const Tab5 = ({
           />
           <InfoItem label="หน่วยงาน" value={respondent.agencyName} />
           <InfoItem
-            label="ชื่อ - นามสกุล ผู้ติดต่อ"
+            label="ชื่อ - นามสกุล"
             value={respondent.fullName}
           />
           <InfoItem

@@ -837,7 +837,7 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
                     value={formatCitizenId_null(complainant.idCard)}
                   />
                   <InfoItem
-                    label="ชื่อ - นามสกุล ผู้ติดต่อ"
+                    label="ชื่อ - นามสกุล"
                     value={complainant.fullName || "-"}
                   />
                   <InfoItem
