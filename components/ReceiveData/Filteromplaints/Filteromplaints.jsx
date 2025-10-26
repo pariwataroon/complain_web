@@ -120,9 +120,10 @@ const Filteromplaints = () => {
     return {
       id: item.id,
       name: item.complainant_name || "-",
-      issueType: item.complaint_type || "-",
+      // ✅ แก้ไข: ใช้ complaint_type_name แทน complaint_type (UUID)
+      issueType: item.complaint_type_name || item.complaint_type || "-",
 
-      // แสดงชื่อเรื่องพร้อม “จุดสถานะ” นำหน้า
+      // แสดงชื่อเรื่องพร้อม "จุดสถานะ" นำหน้า
       subject: renderSubjectWithDot(subjectRaw, isAssigned),
       subjectRaw, // ใช้สำหรับค้นหา
 
