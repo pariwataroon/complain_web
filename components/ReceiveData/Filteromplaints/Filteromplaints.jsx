@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableFilterList from "@services/TableFilterList/TableFilterList";
 import { GetComplaintsGroupedbyChannel, GetComplaintByID } from "@pages/api/complaint/complaint";
+import { GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
 import dayjs from "dayjs";
 
 const breadcrumbItems = [
@@ -36,6 +37,9 @@ const Filteromplaints = () => {
   const [filteredGroups, setFilteredGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Master data for complaint types (for lookup)
+  const [complaintTypesMap, setComplaintTypesMap] = useState(new Map());
 
   // Dynamic options from API
   const [issueTypeOptions, setIssueTypeOptions] = useState([
@@ -121,11 +125,18 @@ const Filteromplaints = () => {
     const complainantName = (item.complainant_name && item.complainant_name.trim() !== "")
       ? item.complainant_name
       : "-";
+
+    // ✅ Lookup complaint type name from UUID using complaintTypesMap
+    let issueTypeName = item.complaint_type_name || "-";
+    if (issueTypeName === "-" && item.complaint_type) {
+      // ถ้าไม่มี complaint_type_name ให้ lookup จาก UUID
+      issueTypeName = complaintTypesMap.get(item.complaint_type) || item.complaint_type;
+    }
+
     return {
       id: item.id,
       name: item.complainant_name || "-",
-      // ✅ แก้ไข: ใช้ complaint_type_name แทน complaint_type (UUID)
-      issueType: item.complaint_type_name || item.complaint_type || "-",
+      issueType: issueTypeName,
 
       // แสดงชื่อเรื่องพร้อม "จุดสถานะ" นำหน้า
       subject: renderSubjectWithDot(subjectRaw, isAssigned),
@@ -161,6 +172,28 @@ const Filteromplaints = () => {
     };
   };
   // ----------------------------------------------------------------
+
+  // Fetch complaint types master data for lookup
+  useEffect(() => {
+    const fetchComplaintTypes = async () => {
+      try {
+        const response = await GetAllSelectComplaintTypes();
+        if (response?.res_code === "0000" && response?.res_data) {
+          const typesMap = new Map();
+          response.res_data.forEach((type) => {
+            // สร้าง Map: UUID -> ชื่อประเภท
+            typesMap.set(type.id, type.name);
+          });
+          setComplaintTypesMap(typesMap);
+          console.log('✅ Loaded complaint types map:', typesMap.size, 'types');
+        }
+      } catch (error) {
+        console.error('Failed to load complaint types:', error);
+      }
+    };
+
+    fetchComplaintTypes();
+  }, []);
 
   // Fetch data from API
   useEffect(() => {
@@ -316,7 +349,7 @@ const Filteromplaints = () => {
     };
 
     fetchData();
-  }, []);
+  }, [complaintTypesMap]);
 
   // ---------- ค้นหา ----------
   const safeIncludes = (text, query) => {
