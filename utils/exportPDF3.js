@@ -14,6 +14,10 @@ export const exportElementToPDF3 = async (target, filename = "document.pdf", opt
     // กันการผ่ากลางบล็อก (ไม่ทำให้ขึ้นหน้าใหม่เองถ้าบล็อกทั้งก้อนพอดี)
     forcePageBreakSelectors = ["#complaint-detail", '[data-pdf-section="complaint-detail"]'],
     scale = 3,
+    // ✅ ขนาด font สำหรับหัวข้อหลัก (โลโก้ + ชื่อเอกสาร)
+    headerFontSizePx = 48,
+    // ✅ ขนาด font ที่เล็กลง (สำหรับช่องทางเรื่องร้องเรียน)
+    smallTextFontSizePx = 24,
   } = options;
 
   // ---- resolve root ----
@@ -27,8 +31,36 @@ export const exportElementToPDF3 = async (target, filename = "document.pdf", opt
   const els = root.querySelectorAll("*");
   const originalStyles = [];
   els.forEach((el) => {
-    originalStyles.push({ el, fontSize: el.style.fontSize, lineHeight: el.style.lineHeight });
-    el.style.fontSize = `${fontSizePx}px`;
+    originalStyles.push({
+      el,
+      fontSize: el.style.fontSize,
+      lineHeight: el.style.lineHeight,
+      width: el.style.width,
+      height: el.style.height,
+    });
+
+    // ✅ ถ้าเป็น logo ให้ขยายขนาดรูป
+    if (el.classList.contains('pdf-header-logo')) {
+      const img = el.tagName === 'IMG' ? el : el.querySelector('img');
+      if (img) {
+        const scaleRatio = headerFontSizePx / fontSizePx; // 48/32 = 1.5
+        const currentWidth = parseInt(img.getAttribute('width') || img.width || 100);
+        const currentHeight = parseInt(img.getAttribute('height') || img.height || 100);
+        img.style.width = `${currentWidth * scaleRatio}px`;
+        img.style.height = `${currentHeight * scaleRatio}px`;
+      }
+    }
+
+    // ✅ กำหนดขนาด font ตาม class
+    let targetFontSize = fontSizePx; // default
+
+    if (el.classList.contains('pdf-header-title')) {
+      targetFontSize = headerFontSizePx; // หัวข้อใหญ่ขึ้น
+    } else if (el.classList.contains('pdf-small-text')) {
+      targetFontSize = smallTextFontSizePx; // ข้อความเล็กลง
+    }
+
+    el.style.fontSize = `${targetFontSize}px`;
     el.style.lineHeight = el.style.lineHeight || String(lineHeight);
   });
 
@@ -127,9 +159,20 @@ export const exportElementToPDF3 = async (target, filename = "document.pdf", opt
   }
 
   // restore styles
-  originalStyles.forEach(({ el, fontSize, lineHeight: lh }) => {
+  originalStyles.forEach(({ el, fontSize, lineHeight: lh, width, height }) => {
     el.style.fontSize = fontSize;
     el.style.lineHeight = lh;
+    el.style.width = width;
+    el.style.height = height;
+
+    // ✅ restore รูปภาพใน logo
+    if (el.classList.contains('pdf-header-logo')) {
+      const img = el.tagName === 'IMG' ? el : el.querySelector('img');
+      if (img) {
+        img.style.width = width;
+        img.style.height = height;
+      }
+    }
   });
 
   pdf.save(filename);

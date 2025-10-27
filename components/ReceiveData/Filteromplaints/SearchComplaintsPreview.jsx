@@ -222,13 +222,23 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
 
   useEffect(() => {
     const cookieInfo = Cookies.get("info");
+    console.log("🍪 Raw Cookie 'info':", cookieInfo);
     if (cookieInfo) {
       try {
         const parsedInfo = JSON.parse(cookieInfo);
+        console.log("📋 Parsed userInfo structure:", parsedInfo);
+        console.log("📋 userInfo keys:", Object.keys(parsedInfo));
+        console.log("📋 userInfo.full_name_with_title:", parsedInfo.full_name_with_title);
+        console.log("📋 userInfo.first_name:", parsedInfo.first_name);
+        console.log("📋 userInfo.last_name:", parsedInfo.last_name);
+        console.log("📋 userInfo.title_id:", parsedInfo.title_id);
+        console.log("📋 userInfo.prefix_other:", parsedInfo.prefix_other);
         setUserInfo(parsedInfo);
       } catch (err) {
-        console.error("Error parsing user info cookie:", err);
+        console.error("❌ Error parsing user info cookie:", err);
       }
+    } else {
+      console.warn("⚠️ Cookie 'info' not found!");
     }
   }, []);
 
@@ -583,9 +593,9 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
     additionalDetails: additionalDetails
   });
 
-  const InfoItem = ({ label, value }) => (
-    <Grid item xs={12} sm={6}>
-      <Typography fontSize={16}>
+  const InfoItem = ({ label, value, fullWidth = false, className = "" }) => (
+    <Grid item xs={12} sm={fullWidth ? 12 : 6}>
+      <Typography fontSize={16} sx={{ whiteSpace: "normal", wordBreak: "break-word" }} className={className}>
         <Box component="span" fontWeight="bold">
           {label}:
         </Box>{" "}
@@ -622,6 +632,12 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   // Current user name for display
   const currentUserName = (() => {
     if (!userInfo) return "กำลังโหลด...";
+
+    // ✅ ลองใช้ full_name_with_title ก่อน (ถ้ามีใน cookie)
+    if (userInfo.full_name_with_title) {
+      return userInfo.full_name_with_title;
+    }
+
     // ถ้า userInfo มี title_id/prefix_other ให้ resolve ชื่อเต็มอย่างเป็นทางการ
     const fullName = formatFullNameFromParts(
       {
@@ -760,49 +776,58 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
           <Box
             sx={{
               height: 40,
-              background: "linear-gradient(to right, #EDC458, #FEFAEF)",
+              background: "linear-gradient(to right, #ffffffff, #ffffffff)",
               borderTopRightRadius: 8,
               borderTopLeftRadius: 8,
             }}
           />
           <Paper sx={{ mt: -1, p: 4, borderRadius: 2 }}>
             {/* Title */}
-            <Box display="flex" alignItems="center" mb={3}>
+            <Box display="flex" alignItems="center" justifyContent="center" mb={3}>
               <Image
                 src="/logo_blue.png"
                 alt="โลโก้"
-                width={100}
-                height={100}
+                width={130}
+                height={130}
                 style={{ objectFit: "contain" }}
+                className="pdf-header-logo"
               />
-              <Typography variant="h6" fontWeight="bold" ml={2}>
+              <Typography variant="h5" fontWeight="bold" ml={2} className="pdf-header-title">
                 แบบรับคำร้องเรียนผ่านเว็บไซต์กระทรวงการคลัง
               </Typography>
             </Box>
 
             {/* ข้อมูลหัวเรื่อง */}
             <Grid container spacing={2} mb={3}>
+              <InfoItem label="วันที่ร้องทุกข์" value={formatThaiDate()} />
+              <InfoItem
+                label="ช่องทางเรื่องร้องเรียน"
+                value={(() => {
+                  const channelValue = complaint.channel || complaint.complaint_channel_name || data?.assignment_form?.complaint_channel_name || previewData?.complaintChannelLabel || "-";
+                  console.log("🔍 Debug ช่องทางเรื่องร้องเรียน:", {
+                    "complaint.channel": complaint.channel,
+                    "complaint.complaint_channel_name": complaint.complaint_channel_name,
+                    "data?.assignment_form?.complaint_channel_name": data?.assignment_form?.complaint_channel_name,
+                    "previewData?.complaintChannelLabel": previewData?.complaintChannelLabel,
+                    "Final Value": channelValue,
+                    "complaint object": complaint,
+                    "data object": data,
+                    "previewData object": previewData
+                  });
+                  return channelValue;
+                })()}
+                className="pdf-small-text"
+              />
+              <InfoItem
+                label="ประเภทเรื่องร้องทุกข์"
+                value={previewData.complaintTypeLabel || "-"}
+              />
+              <InfoItem
+                label="ประเภทเรื่องย่อย"
+                value={previewData.complaintSubTypeLabel || "-"}
+              />
+              <InfoItem label="เรื่อง" value={complaint.subject || "-"} fullWidth />
               <Grid item xs={12}>
-                <Box display="flex" gap={2} flexWrap="wrap">
-                  <Box flex={1} minWidth={280}>
-                    <InfoItem label="วันที่ร้องทุกข์" value={formatThaiDate()} />
-                  </Box>
-                  <Box flex={1} minWidth={280}>
-                    <InfoItem
-                      label="ช่องทางเรื่องร้องเรียน"
-                      value={complaint.channel || data?.assignment_form?.complaint_channel_name}
-                    />
-                  </Box>
-                </Box>
-                <InfoItem
-                  label="ประเภทเรื่องร้องทุกข์"
-                  value={previewData.complaintTypeLabel || "-"}
-                />
-                <InfoItem
-                  label="ประเภทเรื่องย่อย"
-                  value={previewData.complaintSubTypeLabel || "-"}
-                />
-                <InfoItem label="เรื่อง" value={complaint.subject || "-"} />
                 <Typography fontSize={16} fontWeight="bold">
                   เรียนปลัดกระทรวงการคลัง
                 </Typography>

@@ -21,10 +21,12 @@ import { exportElementToPDF2 } from "@utils/exportPDF2";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import CheckIcon from "@mui/icons-material/Check";
 import UploadOutlinedIcon from "@mui/icons-material/UploadOutlined";
+import { UsersSearchByRole } from "@pages/api/allselect/allselect";
 
 const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) => {
   const router = useRouter();
   const [complaintId, setComplaintId] = useState(null);
+  const [staffUsers, setStaffUsers] = useState([]);
 
   // Log ข้อมูลที่รับเข้ามา
   console.log("ComplaintSummaryService received data:", data);
@@ -40,6 +42,19 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
       // console.error("Complaint ID is missing in the data.");
     }
   }, [data]);
+
+  // Fetch staff users เพื่อ map assigned_to ให้มีคำนำหน้า
+  useEffect(() => {
+    const fetchStaffUsers = async () => {
+      try {
+        const users = await UsersSearchByRole();
+        setStaffUsers(users || []);
+      } catch (err) {
+        console.error("Error fetching staff users:", err);
+      }
+    };
+    fetchStaffUsers();
+  }, []);
 
   const handleEdit = () => {
     if (complaintId) {
@@ -152,7 +167,28 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
   );
   const resolvedComplaintSubtypeDisplay = resolvedComplaintSubtypeName || resolvedComplaintSubtypeId || '-';
 
-  const resolvedAssignedTo = assignmentForm.assigned_to || data?.assigned_to || '-';
+  // Map assigned_to เพื่อดึงชื่อพร้อมคำนำหน้า
+  const rawAssignedTo = assignmentForm.assigned_to || data?.assigned_to;
+  const resolvedAssignedTo = (() => {
+    if (!rawAssignedTo || rawAssignedTo === '-') return '-';
+
+    // ถ้า staffUsers ยังไม่โหลดเสร็จ ให้แสดงค่าเดิมไปก่อน
+    if (staffUsers.length === 0) return rawAssignedTo;
+
+    // หาจาก ID (ถ้า rawAssignedTo เป็นตัวเลข)
+    const foundById = staffUsers.find(user => String(user.value) === String(rawAssignedTo));
+    if (foundById) return foundById.label; // label มี full_name_with_title
+
+    // หาจากชื่อ (ถ้า rawAssignedTo เป็นชื่อ)
+    const foundByName = staffUsers.find(user =>
+      user.fullName === rawAssignedTo || user.label === rawAssignedTo
+    );
+    if (foundByName) return foundByName.label;
+
+    // ถ้าหาไม่เจอ ให้แสดงค่าเดิม
+    return rawAssignedTo;
+  })();
+
   const resolvedAssignedDate = assignmentForm.assigned_date || data?.assigned_date || '';
 
   if (typeof window !== 'undefined') {
@@ -259,47 +295,70 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
         <Box
           sx={{
             height: 40,
-            background: "linear-gradient(to right, #EDC458, #FEFAEF)",
+            background: "linear-gradient(to right, #ffffffff, #ffffffff)",
             borderTopRightRadius: 8,
             borderTopLeftRadius: 8,
           }}
         />
         <Paper sx={{ mt: -1, p: 4, borderRadius: 2 }}>
-          <Box display="flex" alignItems="center" mb={3}>
+          <Box display="flex" alignItems="center" justifyContent="center" mb={3}>
             <Image
               src="/logo_blue.png"
               alt="โลโก้"
-              width={100}
-              height={100}
+              width={130}
+              height={130}
               style={{ objectFit: "contain" }}
+              className="pdf-header-logo"
             />
-            <Typography variant="h6" fontWeight="bold" ml={2}>
+            <Typography variant="h5" fontWeight="bold" ml={2} className="pdf-header-title">
               แบบรับคำร้องเรียนผ่านเว็บไซต์กระทรวงการคลัง
             </Typography>
           </Box>
 
           <Grid container spacing={2} mb={3}>
             <Grid item xs={12}>
-              <Box display="flex" gap={2} flexWrap="wrap">
-                <Box flex={1} minWidth={280}>
-                  <InfoItem label="วันที่ร้องทุกข์" value={formatThaiDate()} />
+              <Box display="flex" gap={2} flexWrap="nowrap" mb={2}>
+                <Box flex={1} sx={{ minWidth: 0 }}>
+                  <Typography fontSize={16} sx={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+                    <Box component="span" fontWeight="bold">
+                      วันที่ร้องทุกข์:
+                    </Box>{" "}
+                    {formatThaiDate(normalizeIso(data?.created_at || data?.updated_at || new Date().toISOString()))}
+                  </Typography>
                 </Box>
-                <Box flex={1} minWidth={280}>
-                  <InfoItem
-                    label="ช่องทางเรื่องร้องเรียน"
-                    value={complaint.channel || data?.assignment_form?.complaint_channel_name}
-                  />
+                <Box flex={1} sx={{ minWidth: 0 }}>
+                  <Typography fontSize={16} sx={{ whiteSpace: "normal", wordBreak: "break-word" }} className="pdf-small-text">
+                    <Box component="span" fontWeight="bold">
+                      ช่องทางเรื่องร้องเรียน:
+                    </Box>{" "}
+                    {complaint.channel || data?.assignment_form?.complaint_channel_name || "-"}
+                  </Typography>
                 </Box>
               </Box>
-              <InfoItem
-                label="ประเภทเรื่องร้องทุกข์"
-                value={resolvedComplaintTypeDisplay}
-              />
-              <InfoItem
-                label="ประเภทย่อยเรื่องร้องเรียน"
-                value={resolvedComplaintSubtypeDisplay}
-              />
-              <InfoItem label="เรื่อง" value={complaint.subject} />
+              <Box display="flex" gap={2} flexWrap="nowrap" mb={2}>
+                <Box flex={1} sx={{ minWidth: 0 }}>
+                  <Typography fontSize={16} sx={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+                    <Box component="span" fontWeight="bold">
+                      ประเภทเรื่องร้องทุกข์:
+                    </Box>{" "}
+                    {resolvedComplaintTypeDisplay || "-"}
+                  </Typography>
+                </Box>
+                <Box flex={1} sx={{ minWidth: 0 }}>
+                  <Typography fontSize={16} sx={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+                    <Box component="span" fontWeight="bold">
+                      ประเภทย่อยเรื่องร้องเรียน:
+                    </Box>{" "}
+                    {resolvedComplaintSubtypeDisplay || "-"}
+                  </Typography>
+                </Box>
+              </Box>
+              <Typography fontSize={16} mb={1}>
+                <Box component="span" fontWeight="bold">
+                  เรื่อง:
+                </Box>{" "}
+                {complaint.subject || "-"}
+              </Typography>
               <Typography fontSize={16} fontWeight="bold">
                 เรียนปลัดกระทรวงการคลัง
               </Typography>
