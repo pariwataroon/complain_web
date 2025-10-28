@@ -174,6 +174,11 @@ const useFilteromplaintsPreview = () => {
         preparedData.complaint_type_id = step3Data.complaintType;
       }
 
+      // ช่องทางการรับเรื่อง
+      if (step3Data.complaintChannel) {
+        preparedData.complaint_channel_id = step3Data.complaintChannel;
+      }
+
       // ประเภทเรื่องย่อย (แก้ mapping ให้ถูกต้อง: backend ต้องการ complaint_subtype_id)
       if (step3Data.complaintSubType) {
         preparedData.complaint_subtype_id = step3Data.complaintSubType;

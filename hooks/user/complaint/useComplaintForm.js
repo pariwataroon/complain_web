@@ -12,6 +12,7 @@ import {
   UploadAttachments,
   GetComplaintTaskStatus,
   UpdateAssignmentCompleteByAdmin,
+  UpdateComplaint,
 } from "@pages/api/complaint/complaint";
 
 const WEBSITE_CHANNEL_LABEL = "เว็บไซต์ (https://complain.mof.go.th/)";
@@ -455,7 +456,12 @@ export default function useComplaintForm() {
         },
       },
       step3: {
-        general: step3Data,
+        general: {
+          ...step3Data,
+          // ✅ ส่งชื่อไปให้ Backend บันทึก (Backend ต้องรับด้วย)
+          complaint_type: step3Data.complaintTypeName || step3Data.complaintType,
+          complaint_channel: step3Data.complaintChannelName || step3Data.complaintChannel,
+        },
       },
       step4: {
         general: {
@@ -531,24 +537,56 @@ export default function useComplaintForm() {
       };
 
       const complaint_id = await waitForTaskCompletion(task_id);
-      
+
       console.log('=== COMPLAINT ID RECEIVED ===');
       console.log('complaint_id:', complaint_id);
-      
-      // STEP 3: อัพเดทข้อมูลเพิ่มเติมจาก Tab3-1 ผ่าน UpdateAssignmentCompleteByAdmin
+
+      // STEP 3: อัพเดทข้อมูล complaint_type_id และ complaint_channel_id
+      // ✅ ใช้ API เดียวกับ Tab 3-1 เพื่อให้ Backend lookup ชื่อ
+      console.log('=== CALLING UpdateAssignmentCompleteByAdmin to set type and channel ===');
+
+      const updatePayload = {
+        complaint_type_id: step3Data.complaintType || null,
+        complaint_channel_id: step3Data.complaintChannel || null,
+      };
+
+      // ลบค่า null
+      Object.keys(updatePayload).forEach(k => {
+        if (!updatePayload[k]) delete updatePayload[k];
+      });
+
+      console.log('updatePayload:', updatePayload);
+
+      if (Object.keys(updatePayload).length > 0) {
+        try {
+          await UpdateAssignmentCompleteByAdmin(complaint_id, updatePayload);
+          console.log('✅ Updated complaint type and channel successfully');
+        } catch (updateError) {
+          console.error('Failed to update type/channel:', updateError);
+          console.warn('⚠️ UpdateAssignmentCompleteByAdmin failed, trying UpdateComplaint...');
+
+          // Fallback: ลอง UpdateComplaint แทน
+          try {
+            await UpdateComplaint(complaint_id, updatePayload);
+            console.log('✅ Updated with UpdateComplaint successfully');
+          } catch (fallbackError) {
+            console.error('❌ Both APIs failed:', fallbackError);
+          }
+        }
+      }
+
+      // STEP 4: อัพเดทข้อมูลเพิ่มเติมจาก Tab3-1 (ถ้ามี)
       if (step31?.general && Object.keys(step31.general).length > 0) {
         console.log('=== CALLING handleTab31Submit for additional updates ===');
         try {
           await handleTab31Submit(complaint_id, step31.general);
         } catch (updateError) {
           console.error('Failed to update additional data:', updateError);
-          // ไม่ throw error เพราะข้อมูลหลักถูกสร้างแล้ว
-          // แต่แจ้งเตือนผู้ใช้
           console.warn('บางข้อมูลอาจไม่ถูกบันทึกครบถ้วน แต่เรื่องร้องเรียนถูกสร้างแล้ว');
         }
       }
 
-      // STEP 4: อัปโหลดไฟล์ (ถ้ามี)
+      // STEP 5: อัปโหลดไฟล์ (ถ้ามี)
       if (originalAttachments.length > 0) {
         try {
           showLoading("กำลังอัปโหลดไฟล์...");
