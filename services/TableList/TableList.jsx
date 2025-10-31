@@ -137,6 +137,7 @@ const TableList = ({
     "เลข สป.สร.",
     "เลข สตป.",
     "เลข สรร.",
+    "รหัสเรื่อง",
   ];
 
   // แปลงข้อมูลเป็น array of array (AOA)
@@ -149,6 +150,7 @@ const TableList = ({
     item?.docSr ?? "-",
     item?.docStp ?? "-",
     item?.docGov ?? "-",
+    item?.caseCode ?? "-",
   ]);
 
   // เว้น 1 แถวก่อน header ตามคำขอ
@@ -580,6 +582,9 @@ const TableList = ({
               <TableCell sx={{ width: 180, fontWeight: "bold" }}>
                 เลข สรร.
               </TableCell>
+              <TableCell sx={{ width: 180, fontWeight: "bold" }}>
+                รหัสเรื่อง
+              </TableCell>
             </TableRow>
           </TableHead>
 
@@ -612,12 +617,13 @@ const TableList = ({
                   <TableCell>{item?.docSr ?? "-"}</TableCell>
                   <TableCell>{item?.docStp ?? "-"}</TableCell>
                   <TableCell>{item?.docGov ?? "-"}</TableCell>
+                  <TableCell>{item?.caseCode ?? "-"}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   align="center"
                   sx={{ py: 3, color: "#999" }}
                 >

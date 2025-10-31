@@ -221,6 +221,8 @@ const SearchComplaints = () => {
 
           const docGovRaw = item?.reference_number4 ?? "-";
           const subjectRaw = item?.subject ?? "-";
+          // case_code (เลข นร.) ถูกเก็บไว้ใน reference_number5 สำหรับเรื่องจาก OPM
+          const caseCodeRaw = item?.reference_number5 ?? "-";
 
           const subjectWithDot = (
             <div
@@ -278,6 +280,7 @@ const SearchComplaints = () => {
             docStp: item?.reference_number3 ?? "-",
             docGov: docGovRaw,
             docGovRaw,
+            caseCode: caseCodeRaw, // เพิ่ม case_code สำหรับแสดงในตาราง
             agency: item?.incident_location ?? "-",
             status: status ?? "-",
             is_assigned: isAssigned,

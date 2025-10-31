@@ -245,14 +245,16 @@ const useDetailOPMData = ({
       };
     }
 
-    const subjectText = detailsData.summary || mainInfo.case_code || "";
+    // เก็บ summary เป็นชื่อเรื่อง และเก็บ case_code ไว้ใน reference_number5
+    const subjectText = detailsData.summary || "";
+    const descriptionText = detailsData.detail || "";
 
     const step3 = {
       general: {
         complaintType: mainInfo.type_text || "",
         subject: subjectText,
         incidentDate: incidentDate || "",
-        description: detailsData.detail || "",
+        description: descriptionText,
         attachment:
           attachments.attachments?.map((file) => ({
             id: file.attachment_id,
@@ -268,6 +270,7 @@ const useDetailOPMData = ({
     const step4 = {
       general: {
         accepted: true,
+        reference_number5: mainInfo.case_code || "", // เก็บ case_code (เลข นร.)
       },
     };
 
