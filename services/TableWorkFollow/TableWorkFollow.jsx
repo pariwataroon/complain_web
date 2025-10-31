@@ -35,7 +35,7 @@ import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 // --- Thai Date formatter helper ---
 function formatThaiDate(date) {
   if (!date) return "-";
@@ -227,44 +227,84 @@ const TableWorkFollow = ({
   }, [groupedData]);
 
   // ====== EXPORT EXCEL เฉพาะกลุ่มที่กดดรอปดาวน์ ======
-  const getFlatExportData = () => {
-  let rows = [];
-  Object.entries(groupedData).forEach(([groupKey, items]) => {
-    // แถวคั่นเจ้าหน้าที่ผู้รับผิดชอบ
-    rows.push({
-      "เจ้าหน้าที่ผู้รับผิดชอบ": groupKey,
-      "ลำดับ": "",
-      "เลข สรร.": "",
-      "เรื่อง": "",
-      "วันที่รับงาน": "",
-      "วันที่เสนอ ผอ.สรร.": "",
-      "หน่วยงาน": "",
-      "เลขที่หนังสือจากส่วนราชการ": "",
-      "สถานะเรื่อง": "",
-      "ดำเนินการมาแล้ว (วัน)": "",
-      "หมายเหตุ": ""
-    });
-    // ลำดับของใครของมัน
-    let no = 1;
-    if (expandedGroups[groupKey]) {
-      items.forEach((item) => {
-        rows.push({
-          "เจ้าหน้าที่ผู้รับผิดชอบ": "",
-          "ลำดับ": no++,
+  const getFlatExportData = (reportType) => {
+  let dataRows = [];
+
+  // กำหนดคอลัมน์ตามประเภทรายงาน - ไม่รวมคอลัมน์เจ้าหน้าที่
+  const getColumnHeaders = (type) => {
+    if (type === "new_complaint" || type === "additional_complaint") {
+      // เรื่องร้องเรียนใหม่ / เพิ่มเติม
+      return {
+        columns: ["ลำดับ", "เลข สรร.", "เลขที่ข้อมือ", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนอ ผอ.สรร. (วัน)", "หมายเหตุ"],
+        dataMapping: (item, no) => ({
+          "ลำดับ": no,
           "เลข สรร.": item.receiptNumber ?? "",
+          "เลขที่ข้อมือ": item.referenceNumber ?? "",
+          "ลงวันที่": item.receiptDate ?? "",
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": item.receiveDate ?? "",
-          "วันที่เสนอ ผอ.สรร.": item.proposeDate ?? "",
+          "วันที่เสนอ ผอ.สรร. (วัน)": item.proposeDate ?? "",
+          "หมายเหตุ": item.remark ?? ""
+        })
+      };
+    } else if (type === "department_decision") {
+      // ผลการพิจารณาจากหน่วยงาน
+      return {
+        columns: ["ลำดับ", "เลข สรร.", "เลขที่ข้อมือ", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนอ ผอ.สรร. (วัน)", "หน่วยงาน", "เลขที่หนังสือจากส่วนราชการ", "หมายเหตุ"],
+        dataMapping: (item, no) => ({
+          "ลำดับ": no,
+          "เลข สรร.": item.receiptNumber ?? "",
+          "เลขที่ข้อมือ": item.referenceNumber ?? "",
+          "ลงวันที่": item.receiptDate ?? "",
+          "เรื่อง": item.complaint ?? "",
+          "วันที่รับงาน": item.receiveDate ?? "",
+          "วันที่เสนอ ผอ.สรร. (วัน)": item.proposeDate ?? "",
           "หน่วยงาน": item.agency ?? "",
           "เลขที่หนังสือจากส่วนราชการ": item.letterNumber ?? "",
-          "สถานะเรื่อง": STATUS_TRANSLATION[item.status] || item.status || "",
-          "ดำเนินการมาแล้ว (วัน)": item.elapsedDays ?? "",
           "หมายเหตุ": item.remark ?? ""
-        });
-      });
+        })
+      };
+    } else {
+      // รูปแบบเริ่มต้น (ทั้งหมด)
+      return {
+        columns: ["ลำดับ", "เลข สรร.", "เลขที่ข้อมือ", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนอ ผอ.สรร. (วัน)", "หมายเหตุ"],
+        dataMapping: (item, no) => ({
+          "ลำดับ": no,
+          "เลข สรร.": item.receiptNumber ?? "",
+          "เลขที่ข้อมือ": item.referenceNumber ?? "",
+          "ลงวันที่": item.receiptDate ?? "",
+          "เรื่อง": item.complaint ?? "",
+          "วันที่รับงาน": item.receiveDate ?? "",
+          "วันที่เสนอ ผอ.สรร. (วัน)": item.proposeDate ?? "",
+          "หมายเหตุ": item.remark ?? ""
+        })
+      };
     }
+  };
+
+  const config = getColumnHeaders(reportType);
+
+  Object.entries(groupedData).forEach(([groupKey, items]) => {
+    // เพิ่มข้อมูลเจ้าหน้าที่ (จะ merge ภายหลัง)
+    dataRows.push({
+      type: "officer",
+      officerName: groupKey,
+      data: {}
+    });
+
+    // ลำดับของใครของมัน
+    let no = 1;
+    // Export ทุกรายการโดยไม่ต้องเปิดดรอปดาวน์
+    items.forEach((item) => {
+      dataRows.push({
+        type: "data",
+        officerName: groupKey,
+        data: config.dataMapping(item, no++)
+      });
+    });
   });
-  return rows;
+
+  return { rows: dataRows, columns: config.columns };
 };
 
 const handleExportExcel = () => {
@@ -273,15 +313,235 @@ const handleExportExcel = () => {
     month: "2-digit",
     day: "2-digit",
   });
-  const filename = `รายงานการติดตามงานค้าง_${today}.xlsx`;
-  const rows = getFlatExportData();
-  if (rows.filter(r => r["ลำดับ"] !== "").length === 0) {
-    alert("กรุณาเลือกกลุ่มที่ต้องการ Export โดยกดเปิดดรอปดาวน์เจ้าหน้าที่อย่างน้อย 1 กลุ่ม");
+
+  // ตรวจสอบประเภทรายงานจาก filters
+  const reportType = filters.dataType || "";
+
+  // กำหนดชื่อไฟล์และชื่อรายงานตามประเภท
+  let reportName = "ทั้งหมด";
+  let reportTitle = "การติดตามงานค้าง";
+  if (reportType === "new_complaint") {
+    reportName = "เรื่องร้องเรียนใหม่";
+  } else if (reportType === "additional_complaint") {
+    reportName = "เรื่องร้องเรียนเพิ่มเติม";
+  } else if (reportType === "department_decision") {
+    reportName = "ผลการพิจารณาจากหน่วยงาน";
+  }
+
+  const filename = `${reportName}_${today}.xlsx`;
+  const exportResult = getFlatExportData(reportType);
+
+  if (exportResult.rows.filter(r => r.type === "data").length === 0) {
+    alert("ไม่มีข้อมูลให้ Export กรุณากรองข้อมูลก่อน");
     return;
   }
-  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // สร้าง workbook
   const wb = XLSX.utils.book_new();
+
+  // กำหนดข้อมูลวันที่
+  const fromText = receiveDateFromVal ? formatThaiDate(receiveDateFromVal) : "-";
+  const toText = receiveDateToVal ? formatThaiDate(receiveDateToVal) : "-";
+
+  // จำนวนคอลัมน์
+  const numCols = exportResult.columns.length;
+
+  // สร้าง array สำหรับ worksheet
+  const wsData = [];
+
+  // แถวที่ 1: ชื่อรายงาน
+  wsData.push([reportTitle]);
+
+  // แถวที่ 2: วันที่
+  wsData.push([`ตั้งแต่วันที่ ${fromText} ถึงวันที่ ${toText}`]);
+
+  // แถวที่ 3: ประเภท
+  wsData.push([`ประเภท ${reportName}`]);
+
+  // แถวที่ 4: หัวคอลัมน์
+  wsData.push(exportResult.columns);
+
+  // เพิ่มข้อมูล
+  exportResult.rows.forEach((row) => {
+    if (row.type === "officer") {
+      // แถวเจ้าหน้าที่ (จะ merge ภายหลัง)
+      wsData.push([`เจ้าหน้าที่ผู้รับผิดชอบ : ${row.officerName}`]);
+    } else {
+      // แถวข้อมูล
+      const dataRow = [];
+      exportResult.columns.forEach(colName => {
+        dataRow.push(row.data[colName] ?? "");
+      });
+      wsData.push(dataRow);
+    }
+  });
+
+  // สร้าง worksheet
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Merge cells
+  if (!ws['!merges']) ws['!merges'] = [];
+
+  // Merge แถวที่ 1-3 (หัวข้อ)
+  ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: numCols - 1 } });
+  ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
+  ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } });
+
+  // Merge แถวเจ้าหน้าที่
+  let currentRow = 4; // เริ่มจากแถวหลังหัวคอลัมน์
+  exportResult.rows.forEach((row) => {
+    if (row.type === "officer") {
+      ws['!merges'].push({
+        s: { r: currentRow, c: 0 },
+        e: { r: currentRow, c: numCols - 1 }
+      });
+    }
+    currentRow++;
+  });
+
+  // กำหนดความกว้างคอลัมน์
+  const colWidths = [];
+  if (reportType === "new_complaint" || reportType === "additional_complaint") {
+    colWidths.push(
+      { wch: 8 },  // ลำดับ
+      { wch: 12 }, // เลข สรร.
+      { wch: 12 }, // เลขที่ข้อมือ
+      { wch: 15 }, // ลงวันที่
+      { wch: 40 }, // เรื่อง
+      { wch: 15 }, // วันที่รับงาน
+      { wch: 18 }, // วันที่เสนอผอ.สรร.
+      { wch: 20 }  // หมายเหตุ
+    );
+  } else if (reportType === "department_decision") {
+    colWidths.push(
+      { wch: 8 },  // ลำดับ
+      { wch: 12 }, // เลข สรร.
+      { wch: 12 }, // เลขที่ข้อมือ
+      { wch: 15 }, // ลงวันที่
+      { wch: 40 }, // เรื่อง
+      { wch: 15 }, // วันที่รับงาน
+      { wch: 18 }, // วันที่เสนอผอ.สรร.
+      { wch: 25 }, // หน่วยงาน
+      { wch: 20 }, // เลขที่หนังสือจากส่วนราชการ
+      { wch: 20 }  // หมายเหตุ
+    );
+  } else {
+    // รูปแบบเริ่มต้น
+    colWidths.push(
+      { wch: 8 },  // ลำดับ
+      { wch: 12 }, // เลข สรร.
+      { wch: 12 }, // เลขที่ข้อมือ
+      { wch: 15 }, // ลงวันที่
+      { wch: 40 }, // เรื่อง
+      { wch: 15 }, // วันที่รับงาน
+      { wch: 18 }, // วันที่เสนอผอ.สรร.
+      { wch: 25 }, // หน่วยงาน
+      { wch: 20 }, // เลขที่หนังสือจากส่วนราชการ
+      { wch: 15 }, // สถานะเรื่อง
+      { wch: 15 }, // ดำเนินการมาแล้ว (วัน)
+      { wch: 20 }  // หมายเหตุ
+    );
+  }
+  ws['!cols'] = colWidths;
+
+  // จัดรูปแบบเซลล์
+  const borderStyle = {
+    top: { style: "thin" },
+    bottom: { style: "thin" },
+    left: { style: "thin" },
+    right: { style: "thin" }
+  };
+
+  const range = XLSX.utils.decode_range(ws['!ref']);
+
+  // ติดตามว่าแถวไหนเป็นแถวเจ้าหน้าที่
+  const officerRows = new Set();
+  let trackRow = 4;
+  exportResult.rows.forEach((row) => {
+    if (row.type === "officer") {
+      officerRows.add(trackRow);
+    }
+    trackRow++;
+  });
+
+  // วนลูปทุกเซลล์เพื่อจัดรูปแบบ
+  for (let R = range.s.r; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!ws[cellAddress]) {
+        ws[cellAddress] = { t: 's', v: '' };
+      }
+
+      if (!ws[cellAddress].s) ws[cellAddress].s = {};
+
+      // ใส่เส้นตารางทุกเซลล์
+      ws[cellAddress].s.border = borderStyle;
+
+      // จัดรูปแบบแถวที่ 1-3 (หัวข้อรายงาน)
+      if (R >= 0 && R <= 2) {
+        ws[cellAddress].s.alignment = {
+          horizontal: "center",
+          vertical: "center",
+          wrapText: true
+        };
+        ws[cellAddress].s.font = {
+          bold: true,
+          size: 14
+        };
+      }
+      // จัดรูปแบบแถวที่ 3 (หัวคอลัมน์)
+      else if (R === 3) {
+        ws[cellAddress].s.alignment = {
+          horizontal: "center",
+          vertical: "center",
+          wrapText: true
+        };
+        ws[cellAddress].s.font = {
+          bold: true,
+          size: 11
+        };
+      }
+      // จัดรูปแบบแถวข้อมูล
+      else {
+        if (officerRows.has(R)) {
+          // แถวเจ้าหน้าที่
+          ws[cellAddress].s.font = {
+            bold: true,
+            size: 11
+          };
+          ws[cellAddress].s.alignment = {
+            horizontal: "left",
+            vertical: "center",
+            wrapText: true
+          };
+        } else {
+          // แถวข้อมูลปกติ
+          if (C === 0) {
+            // คอลัมน์ลำดับ จัดกลาง
+            ws[cellAddress].s.alignment = {
+              horizontal: "center",
+              vertical: "center",
+              wrapText: true
+            };
+          } else {
+            ws[cellAddress].s.alignment = {
+              horizontal: "left",
+              vertical: "center",
+              wrapText: true
+            };
+          }
+          ws[cellAddress].s.font = {
+            size: 11
+          };
+        }
+      }
+    }
+  }
+
+  // เพิ่ม worksheet เข้า workbook
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+
+  // บันทึกไฟล์
   XLSX.writeFile(wb, filename);
 };
 
@@ -330,7 +590,7 @@ const handleExportExcel = () => {
   const fieldKey = (name) => filterFields.find(f => f.name.includes(name))?.name || "";
   const receiveDateFromVal = filters[fieldKey("receiveDateFrom")];
   const receiveDateToVal = filters[fieldKey("receiveDateTo")];
-  const issueTypeVal = filters[fieldKey("issueType")];
+  const dataTypeVal = filters[fieldKey("dataType")];
 
   // format
   const fromText = receiveDateFromVal
@@ -339,9 +599,16 @@ const handleExportExcel = () => {
   const toText = receiveDateToVal
     ? formatThaiDate(receiveDateToVal)
     : "-";
-  const typeText = issueTypeVal
-    ? issueTypeVal
-    : "ทั้งหมด";
+
+  // แปลง dataType เป็นข้อความภาษาไทย
+  let typeText = "ทั้งหมด";
+  if (dataTypeVal === "new_complaint") {
+    typeText = "เรื่องร้องเรียนใหม่";
+  } else if (dataTypeVal === "additional_complaint") {
+    typeText = "เรื่องร้องเรียนเพิ่มเติม";
+  } else if (dataTypeVal === "department_decision") {
+    typeText = "ผลการพิจารณาจากหน่วยงาน";
+  }
 
   // เมื่อคลิกแถวเนื้อหาย่อย (collapse) ให้เปลี่ยนหน้า (push) ไป admin/box/list/{id}
   const handleSubRowClick = (id) => {
