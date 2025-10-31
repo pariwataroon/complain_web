@@ -557,7 +557,7 @@ const useDetailOPMData = ({
     ) {
       setTimeout(() => {
         autoCreateComplaint();
-      }, 18000);
+      }, 100000);
     }
   }, [
     isDataReady,
