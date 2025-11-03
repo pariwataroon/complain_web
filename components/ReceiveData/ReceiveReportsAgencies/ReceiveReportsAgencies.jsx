@@ -343,11 +343,13 @@ const ReceiveReportsAgencies = () => {
     try {
       const pad = (n) => String(n).padStart(2, '0');
       if (typeof v === 'object' && v.day && v.month && v.year) {
-        return `${v.year}-${pad(v.month)}-${pad(v.day)}T00:00:00Z`;
+        // ✅ ไม่ใส่ Z เพราะ Backend เก็บเป็น naive datetime (ไม่มี timezone)
+        return `${v.year}-${pad(v.month)}-${pad(v.day)}T00:00:00`;
       }
       const d = new Date(v);
       if (isNaN(d.getTime())) return null;
-      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}T00:00:00Z`;
+      // ✅ ไม่ใส่ Z เพื่อให้ตรงกับที่ Backend ส่งกลับมา
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T00:00:00`;
     } catch (e) { return null; }
   };
 
@@ -454,7 +456,21 @@ const ReceiveReportsAgencies = () => {
         setIsEditing(true);
         setExistingData(d);
         const parseDate = (iso) => {
-          if (!iso) return null; const dt = new Date(iso); if (isNaN(dt.getTime())) return null; return { day: dt.getDate(), month: dt.getMonth()+1, year: dt.getFullYear(), buddhistYear: dt.getFullYear()+543 };
+          if (!iso) return null;
+          try {
+            // ✅ Parse วันที่โดยตรงจาก ISO string เพื่อหลีกเลี่ยงปัญหา timezone
+            const dateStr = String(iso).split('T')[0]; // เอาแค่ส่วน YYYY-MM-DD
+            const [year, month, day] = dateStr.split('-').map(Number);
+            if (!year || !month || !day) return null;
+            return {
+              day: day,
+              month: month,
+              year: year,
+              buddhistYear: year + 543
+            };
+          } catch (e) {
+            return null;
+          }
         };
         const processStepRaw = (
           d.process_step || d.processStatus || d.process_status || d.step ||
@@ -481,11 +497,16 @@ const ReceiveReportsAgencies = () => {
           const key = String(processStepRaw).toLowerCase();
           normalizedProcessStep = processStepMap[key] || processStepRaw;
         }
-        const receiveWorkDateRaw = (
-          d.receive_work_date || d.receive_staff_date || d.staff_receive_date ||
-          d.officer_receive_date || d.receive_working_date || d.receiveWorkDate || d.receiveDateWork
-        );
+        // ✅ ตอนนี้ใช้ document_date เป็น "วันที่รับงานของเจ้าหน้าที่" แล้ว
+        const receiveWorkDateRaw = d.document_date;
         const embedded = extractEmbedded(d.remarks || '');
+
+        console.log('🔍 === LOADING DATA (ID:', d.id, ') ===');
+        console.log('remarks:', d.remarks);
+        console.log('Embedded data:', embedded);
+        console.log('processStepRaw:', processStepRaw, '→ normalized:', normalizedProcessStep);
+        console.log('receiveWorkDateRaw:', receiveWorkDateRaw);
+
         const receiveWorkDateParsed = parseDate(receiveWorkDateRaw || embedded.receiveWorkDate);
         setForm((prev) => ({
           ...prev,
@@ -498,7 +519,8 @@ const ReceiveReportsAgencies = () => {
           investigateGk: d.agency_reference_number || d.complaint_number || prev.investigateGk,
           investigateDate: parseDate(d.agency_reference_date || d.complaint_number_date) || prev.investigateDate,
           documentNo: d.internal_register_number || d.document_number || prev.documentNo,
-          documentDate: parseDate(d.internal_register_date || d.document_date) || prev.documentDate,
+          // ✅ วันที่หนังสือ (ใช้เฉพาะ internal_register_date เท่านั้น!)
+          documentDate: parseDate(d.internal_register_date) || prev.documentDate,
           receiveWorkDate: receiveWorkDateParsed || prev.receiveWorkDate,
           submitWorkDate: parseDate(d.present_to_director_date) || prev.submitWorkDate,
           subject: d.subject || prev.subject,
@@ -572,22 +594,18 @@ const handleSave = useCallback(async () => {
       receive_date: receiveDate,
       agency_reference_number: form.investigateGk,
       agency_reference_date: toISO(form.investigateDate),
+      // ✅ เลขที่หนังสือ
       internal_register_number: form.documentNo,
+      // ✅ วันที่หนังสือ (ใช้ documentDate)
       internal_register_date: toISO(form.documentDate),
+      // ✅ วันที่เสนองาน ผอ.
       present_to_director_date: toISO(form.submitWorkDate),
-      receive_work_date: toISO(form.receiveWorkDate),
-      receive_staff_date: toISO(form.receiveWorkDate),
-      staff_receive_date: toISO(form.receiveWorkDate),
       complaint_number: form.investigateGk,
       complaint_number_date: toISO(form.investigateDate),
       subject: form.subject,
       document_number: form.documentNo,
-      document_date: toISO(form.documentDate),
-      process_step: form.processStep,
-      process_status: form.processStep,
-      processStatus: form.processStep,
-      step: form.processStep,
-      current_step: form.processStep,
+      // ✅ วันที่รับงานของเจ้าหน้าที่ (ใช้ document_date แทน!)
+      document_date: toISO(form.receiveWorkDate),
       signature_authority_user_id: form.signatureAuthorityId,
       department_id: form.departmentId,
       user_id: form.userId,
@@ -609,12 +627,21 @@ const handleSave = useCallback(async () => {
       if (!finalPayload.complaint_number) delete finalPayload.complaint_number_date;
     }
 
+    console.log('🔍 === PAYLOAD TO SEND ===');
+    console.log('process_step:', finalPayload.process_step);
+    console.log('receive_work_date:', finalPayload.receive_work_date);
+    console.log('remarks:', finalPayload.remarks);
+    console.log('Full payload:', JSON.stringify(finalPayload, null, 2));
+
     let res;
     if (isEditing && outgoingReport5Id) {
       res = await UpdateOutgoingReport5(outgoingReport5Id, finalPayload);
     } else {
       res = await CreateOutgoingReport5(finalPayload);
     }
+
+    console.log('📥 === RESPONSE FROM BACKEND ===');
+    console.log('Full response:', JSON.stringify(res, null, 2));
 
     const extractReportId = (resp) => {
       if (!resp) return null;
@@ -803,7 +830,21 @@ const handleSave = useCallback(async () => {
         setIsEditing(true);
         setExistingData(d);
         const parseDate = (iso) => {
-          if (!iso) return null; const dt = new Date(iso); if (isNaN(dt.getTime())) return null; return { day: dt.getDate(), month: dt.getMonth()+1, year: dt.getFullYear(), buddhistYear: dt.getFullYear()+543 };
+          if (!iso) return null;
+          try {
+            // ✅ Parse วันที่โดยตรงจาก ISO string เพื่อหลีกเลี่ยงปัญหา timezone
+            const dateStr = String(iso).split('T')[0]; // เอาแค่ส่วน YYYY-MM-DD
+            const [year, month, day] = dateStr.split('-').map(Number);
+            if (!year || !month || !day) return null;
+            return {
+              day: day,
+              month: month,
+              year: year,
+              buddhistYear: year + 543
+            };
+          } catch (e) {
+            return null;
+          }
         };
         const processStepRaw = (
           d.process_step || d.processStatus || d.process_status || d.step ||
@@ -830,11 +871,16 @@ const handleSave = useCallback(async () => {
           const key = String(processStepRaw).toLowerCase();
           normalizedProcessStep = processStepMap[key] || processStepRaw;
         }
-        const receiveWorkDateRaw = (
-          d.receive_work_date || d.receive_staff_date || d.staff_receive_date ||
-          d.officer_receive_date || d.receive_working_date || d.receiveWorkDate || d.receiveDateWork
-        );
+        // ✅ ตอนนี้ใช้ document_date เป็น "วันที่รับงานของเจ้าหน้าที่" แล้ว
+        const receiveWorkDateRaw = d.document_date;
         const embedded = extractEmbedded(d.remarks || '');
+
+        console.log('🔍 === LOADING DATA (ID:', d.id, ') ===');
+        console.log('remarks:', d.remarks);
+        console.log('Embedded data:', embedded);
+        console.log('processStepRaw:', processStepRaw, '→ normalized:', normalizedProcessStep);
+        console.log('receiveWorkDateRaw:', receiveWorkDateRaw);
+
         const receiveWorkDateParsed = parseDate(receiveWorkDateRaw || embedded.receiveWorkDate);
         setForm((prev) => ({
           ...prev,
@@ -847,7 +893,8 @@ const handleSave = useCallback(async () => {
           investigateGk: d.agency_reference_number || d.complaint_number || prev.investigateGk,
           investigateDate: parseDate(d.agency_reference_date || d.complaint_number_date) || prev.investigateDate,
           documentNo: d.internal_register_number || d.document_number || prev.documentNo,
-          documentDate: parseDate(d.internal_register_date || d.document_date) || prev.documentDate,
+          // ✅ วันที่หนังสือ (ใช้เฉพาะ internal_register_date เท่านั้น!)
+          documentDate: parseDate(d.internal_register_date) || prev.documentDate,
           receiveWorkDate: receiveWorkDateParsed || prev.receiveWorkDate,
           submitWorkDate: parseDate(d.present_to_director_date) || prev.submitWorkDate,
           subject: d.subject || prev.subject,
