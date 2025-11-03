@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { GetAllComplaintChannels } from "@pages/api/allselect/allselect";
 import { CreateComplaint } from "@pages/api/complaint/complaint";
+import { MarkCaseAsRead } from "@pages/api/opm/opm";
 
 const useDetailOPMData = ({
   caseDetails,
@@ -470,6 +471,17 @@ const useDetailOPMData = ({
         });
         setCompiledData(compileAllData);
         setIsDataReady(true);
+
+        // Mark case as read เมื่อข้อมูลโหลดครบ
+        if (mainInfo.case_id) {
+          MarkCaseAsRead(mainInfo.case_id).then((result) => {
+            if (result.success) {
+              console.log('📖 อัพเดทสถานะการคลังเป็น "รับเรื่อง" สำเร็จ');
+            }
+          }).catch((error) => {
+            console.warn('⚠️ ไม่สามารถอัพเดทสถานะการคลังได้:', error);
+          });
+        }
       } else {
         console.warn('⚠️ ข้อมูลยังไม่ครบถ้วน รอข้อมูลเพิ่มเติม...');
       }

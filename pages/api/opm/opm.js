@@ -856,6 +856,47 @@ const OperatingAttachment = async (attachmentData) => {
   }
 };
 
+const MarkCaseAsRead = async (case_id) => {
+  try {
+    const token_id = Cookies.get("opm_token");
+    if (!token_id) {
+      throw new Error("Token not found in cookies. Please authenticate first.");
+    }
+
+    const response = await soapInstance.post(
+      process.env.NEXT_PUBLIC_OPM_API_OFFICER,
+      `<?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+            <MarkCaseAsRead xmlns="http://tempuri.org/">
+              <token_id>${token_id}</token_id>
+              <case_id>${case_id}</case_id>
+            </MarkCaseAsRead>
+          </soap:Body>
+        </soap:Envelope>`,
+      {
+        soapActionSuffix: "MarkCaseAsRead",
+      }
+    );
+
+    console.log('✅ Mark case as read successfully:', case_id);
+
+    return {
+      success: true,
+      message: "Case marked as read successfully",
+      case_id: case_id,
+    };
+  } catch (error) {
+    console.error("❌ Error marking case as read:", error);
+    // ไม่ throw error เพื่อไม่ให้กระทบกับการทำงานหลัก
+    return {
+      success: false,
+      message: error.message || "Unknown error",
+      case_id: case_id,
+    };
+  }
+};
+
 export {
   Encode,
   GetTimelineHeader,
@@ -872,4 +913,5 @@ export {
   GetAttachment,
   OperatingAttachment,
   GetOperatingsSelect,
+  MarkCaseAsRead,
 };
