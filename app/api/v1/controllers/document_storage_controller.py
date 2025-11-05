@@ -927,6 +927,8 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
                 "complaint_id": str(complaint_id),
                 "confidentiality_level": getattr(r, "confidentiality_level", None),
                 "urgency_level": getattr(r, "urgency_level", None),
+                # ✅ เพิ่ม process_step field
+                "process_step": getattr(r, "process_step", None),
                 "remarks": getattr(r, "remarks", None),
                 "created_at": _iso(getattr(r, "created_at", None)),
                 "department": _dept_min(getattr(r, "department", None)),

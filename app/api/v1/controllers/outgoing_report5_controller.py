@@ -301,6 +301,8 @@ def get_outgoing_report5_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
         "present_to_director_date": _iso(rec.present_to_director_date),
         "document_number": rec.document_number,
         "document_date": _iso(rec.document_date),
+        # ✅ เพิ่ม remarks field ที่ขาดหายไป
+        "remarks": rec.remarks,
 
         "complaint_id": _safe_str(rec.complaint_id) if rec.complaint_id else None,
         "created_at": _iso(rec.created_at),

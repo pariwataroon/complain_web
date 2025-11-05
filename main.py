@@ -1,12 +1,12 @@
 from Integrate.integrate_app import create_application
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from router.root import rootRouter 
+from router.root import rootRouter
 from router import test_errors
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-# เพิ่ม imports
+# เพิ่ม imports - Updated after migrations
 from app.api.middleware.security_middleware import SecurityHeadersMiddleware
 from app.api.middleware.rate_limit import RateLimitMiddleware, rate_limiter, get_client_ip
 from lib.cache_service import cache
