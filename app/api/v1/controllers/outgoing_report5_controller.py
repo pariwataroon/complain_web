@@ -103,6 +103,8 @@ async def create_outgoing_report5(
                 existing_doc.user_id = report_data.user_id
                 existing_doc.confidentiality_level = report_data.confidentiality_level
                 existing_doc.urgency_level = report_data.urgency_level
+                # ✅ เพิ่ม process_step
+                existing_doc.process_step = report_data.process_step
                 existing_doc.updated_by = current_user_id
 
                 db.flush()
@@ -188,6 +190,8 @@ async def create_outgoing_report5(
 
             confidentiality_level=report_data.confidentiality_level,
             urgency_level=report_data.urgency_level,
+            # ✅ เพิ่ม process_step
+            process_step=report_data.process_step,
 
             created_by=current_user_id
         )
@@ -287,6 +291,8 @@ def get_outgoing_report5_by_id(db: Session, report_id: UUID) -> Dict[str, Any]:
 
         "confidentiality_level": rec.confidentiality_level,
         "urgency_level": rec.urgency_level,
+        # ✅ เพิ่ม process_step
+        "process_step": rec.process_step,
 
         "agency_reference_number": rec.agency_reference_number,
         "agency_reference_date": _iso(rec.agency_reference_date),
