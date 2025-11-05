@@ -570,14 +570,8 @@ const handleSave = useCallback(async () => {
     return;
   }
   try {
+    // ✅ ไม่ต้อง embed process_step และ receiveWorkDate ใน remarks อีกต่อไป
     const baseRemarksClean = stripEmbeddedTags(form.remarks || '');
-    const embedLines = [];
-    if (form.processStep) embedLines.push(`${PROCESS_TAG}${form.processStep}`);
-    if (form.receiveWorkDate) {
-      const dtStr = toISO(form.receiveWorkDate)?.slice(0,10);
-      if (dtStr) embedLines.push(`${RECEIVE_WORK_TAG}${dtStr}`);
-    }
-    const mergedRemarks = [baseRemarksClean, ...embedLines].filter(Boolean).join('\n');
 
     // ==== Auto-generate required fields ====
     const receiveNumber = form.referenceNo?.trim()
@@ -611,8 +605,10 @@ const handleSave = useCallback(async () => {
       user_id: form.userId,
       confidentiality_level: form.confidentiality,
       urgency_level: form.urgency,
+      // ✅ เพิ่ม process_step เป็น field ตรงๆ
+      process_step: form.processStep,
       complaint_id: complaintId,
-      remarks: mergedRemarks,
+      remarks: baseRemarksClean,
     };
 
     Object.keys(payload).forEach(k => {
@@ -627,11 +623,7 @@ const handleSave = useCallback(async () => {
       if (!finalPayload.complaint_number) delete finalPayload.complaint_number_date;
     }
 
-    console.log('🔍 === PAYLOAD TO SEND ===');
-    console.log('process_step:', finalPayload.process_step);
-    console.log('receive_work_date:', finalPayload.receive_work_date);
-    console.log('remarks:', finalPayload.remarks);
-    console.log('Full payload:', JSON.stringify(finalPayload, null, 2));
+    console.log('🔍 Sending payload with process_step:', finalPayload.process_step);
 
     let res;
     if (isEditing && outgoingReport5Id) {
