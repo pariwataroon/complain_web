@@ -35,6 +35,8 @@ class OutgoingReport5Base(BaseModel):
     user_id: Optional[UUID] = Field(None, description="ผู้ปฏิบัติ (ถ้ามี)")
     confidentiality_level: Optional[str] = Field("ปกติ", description="ขั้นความลับ")
     urgency_level: Optional[str] = Field("ปกติ", description="ความเร่งด่วน")
+    # ✅ ขั้นตอนการดำเนินการ
+    process_step: Optional[str] = Field(None, description="ขั้นตอนการดำเนินการ")
 
     # อ้างอิงเสริม (optional)
     agency_reference_number: Optional[str] = Field(None, description="เลขอ้างอิงจากหน่วยงานต้นทาง")
@@ -70,6 +72,8 @@ class OutgoingReport5Update(BaseModel):
     user_id: Optional[UUID] = None
     confidentiality_level: Optional[str] = None
     urgency_level: Optional[str] = None
+    # ✅ ขั้นตอนการดำเนินการ
+    process_step: Optional[str] = None
     agency_reference_number: Optional[str] = None
     agency_reference_date: Optional[datetime] = None
     internal_register_number: Optional[str] = None
@@ -102,6 +106,8 @@ class OutgoingReport5(BaseModel):
     user_id: Optional[UUID] = None
     confidentiality_level: Optional[str] = None
     urgency_level: Optional[str] = None
+    # ✅ ขั้นตอนการดำเนินการ
+    process_step: Optional[str] = None
     agency_reference_number: Optional[str] = None
     agency_reference_date: Optional[datetime] = None
     internal_register_number: Optional[str] = None

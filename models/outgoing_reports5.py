@@ -52,6 +52,9 @@ class OutgoingReport5(Base):
     confidentiality_level = Column(NVARCHAR(50), nullable=True)
     urgency_level = Column(NVARCHAR(50), nullable=True)
 
+    # ✅ ขั้นตอนการดำเนินการ
+    process_step = Column(NVARCHAR(255), nullable=True, comment="ขั้นตอนการดำเนินการ")
+
     # audit
     is_active = Column(Boolean, default=True, index=True)
     created_by = Column(UNIQUEIDENTIFIER(as_uuid=True), ForeignKey("comp_users.id"), nullable=True)
