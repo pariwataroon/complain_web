@@ -183,8 +183,14 @@ const TableListBox = ({
       align: "center",
     },
     {
+      name: "agency2",
+      label: "หน่วยงานภายใน",
+      width: 200,
+      align: "left",  
+    },
+    {
       name: "agency",
-      label: "หน่วยงาน",
+      label: "หน่วยงานภายนอก",
       width: 200,
       align: "left",
     },
@@ -367,8 +373,17 @@ const TableListBox = ({
       };
     }
 
-    // แก้ไขการจัดการ agency และ outagency
+    // แก้ไขการจัดการ agency, agency2 และ outagency
     if (f.name === "agency") {
+      return (
+        <SelectField
+          {...commonProps}
+          options={departmentOptions}
+        />
+      );
+    }
+
+    if (f.name === "agency2") {
       return (
         <SelectField
           {...commonProps}
@@ -490,6 +505,27 @@ const TableListBox = ({
         );
 
       case "agency":
+        return (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <BusinessIcon
+              sx={{ fontSize: 18, color: item.isMaster ? "#1565c0" : "#94ccf9ff" }}
+            />
+            <Typography
+              sx={{
+                fontSize: "14px",
+                fontWeight: 400,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                color: item.isMaster ? "#1565c0" : "#94ccf9ff",
+              }}
+              title={value}
+            >
+              {value}
+            </Typography>
+          </Box>
+        );
+
+      case "agency2":
         return (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <BusinessIcon

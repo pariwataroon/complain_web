@@ -1,126 +1,80 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs.jsx";
 import TableListStaffNoti from "@services/TableListStaffNoti/TableListStaffNoti";
 import dayjs from "dayjs";
-
-// ─── mock data (20 รายการ) ─────────────────────────────────────────────────
-const mockComplaints = [
-  {
-    id: 1,
-    claimantName: "นายปริญญา ทรัพย์รุ่ง",
-    issue: "พฤติกรรมเจ้าหน้าที่ไม่เหมาะสม",
-    responsibleOfficer: "นางสาวนภัส มีความสุข",
-    receiptNumber: "841/68",
-    officerReceiveDate: "01 ต.ค. 2568",
-    officerReceiveDateISO: "2025-10-01",
-    issueType: "เรื่องร้องเรียนใหม่/ร้องเรียนเพิ่มเติม",
-    countTimes: 3,
-  },
-  {
-    id: 2,
-    claimantName: "นางอารดา บุญเลิศ",
-    issue: "ปัญหาค้างชำระหนี้ในระบบ",
-    responsibleOfficer: "นายธารกร ภูมิรัตน์",
-    receiptNumber: "841/68",
-    officerReceiveDate: "05 ต.ค. 2568",
-    officerReceiveDateISO: "2025-10-05",
-    issueType: "ขอให้ผู้ร้องส่งเอกสารเพิ่มเติม",
-    countTimes: 2,
-  },
-  {
-    id: 3,
-    claimantName: "บริษัท ไพรมีโชคอุตสาหกรรม จำกัด",
-    issue: "ไม่สามารถเบิกค่าใช้จ่ายทางรถยนต์ได้",
-    responsibleOfficer: "นางสาวปวิณา อมรชัยกุล",
-    receiptNumber: "841/68",
-    officerReceiveDate: "08 ต.ค. 2568",
-    officerReceiveDateISO: "2025-10-08",
-    issueType: "หน่วยงานรายงานผลการพิจารณา",
-    countTimes: 1,
-  },
-  // Add more mock data as needed
-  {
-    id: 4,
-    claimantName: "นายสมชาย ใจดี",
-    issue: "ปัญหาการอนุมัติเอกสาร",
-    responsibleOfficer: "นายธารกร ภูมิรัตน์",
-    receiptNumber: "842/68",
-    officerReceiveDate: "10 ต.ค. 2568",
-    officerReceiveDateISO: "2025-10-10",
-    issueType: "เรื่องร้องเรียนใหม่/ร้องเรียนเพิ่มเติม",
-    countTimes: 1,
-  },
-  {
-    id: 5,
-    claimantName: "นางสาวจิราพร สว่างใส",
-    issue: "ค่าธรรมเนียมไม่ถูกต้อง",
-    responsibleOfficer: "นางสาวนภัส มีความสุข",
-    receiptNumber: "843/68",
-    officerReceiveDate: "12 ต.ค. 2568",
-    officerReceiveDateISO: "2025-10-12",
-    issueType: "ขอให้ผู้ร้องส่งเอกสารเพิ่มเติม",
-    countTimes: 2,
-  },
-  {
-    id: 6,
-    claimantName: "นายพิชัย รุ่งเรือง",
-    issue: "ปัญหาการคำนวณภาษี",
-    responsibleOfficer: "นางสาวปวิณา อมรชัยกุล",
-    receiptNumber: "844/68",
-    officerReceiveDate: "15 ต.ค. 2568",
-    officerReceiveDateISO: "2025-10-15",
-    issueType: "หน่วยงานรายงานผลการพิจารณา",
-    countTimes: 1,
-  },
-  {
-    id: 7,
-    claimantName: "บริษัท สมบูรณ์ การค้า จำกัด",
-    issue: "ความล่าช้าในการดำเนินการ",
-    responsibleOfficer: "นายธารกร ภูมิรัตน์",
-    receiptNumber: "845/68",
-    officerReceiveDate: "17 ต.ค. 2568",
-    officerReceiveDateISO: "2025-10-17",
-    issueType: "เรื่องร้องเรียนใหม่/ร้องเรียนเพิ่มเติม",
-    countTimes: 3,
-  },
-  {
-    id: 8,
-    claimantName: "นางวิมล ขจรศิลป์",
-    issue: "ปัญหาการติดต่อเจ้าหน้าที่",
-    responsibleOfficer: "นางสาวนภัส มีความสุข",
-    receiptNumber: "846/68",
-    officerReceiveDate: "20 ต.ค. 2568",
-    officerReceiveDateISO: "2025-10-20",
-    issueType: "ขอให้ผู้ร้องส่งเอกสารเพิ่มเติม",
-    countTimes: 2,
-  },
-  {
-    id: 9,
-    claimantName: "นายสุรชาติ เจริญสุข",
-    issue: "ข้อมูลไม่ถูกต้องในระบบ",
-    responsibleOfficer: "นางสาวปวิณา อมรชัยกุล",
-    receiptNumber: "847/68",
-    officerReceiveDate: "22 ต.ค. 2568",
-    officerReceiveDateISO: "2025-10-22",
-    issueType: "หน่วยงานรายงานผลการพิจารณา",
-    countTimes: 1,
-  },
-  {
-    id: 10,
-    claimantName: "นางสาวอัญชลี มั่นใจ",
-    issue: "ปัญหาการออกใบรับรอง",
-    responsibleOfficer: "นายธารกร ภูมิรัตน์",
-    receiptNumber: "848/68",
-    officerReceiveDate: "25 ต.ค. 2568",
-    officerReceiveDateISO: "2025-10-25",
-    issueType: "เรื่องร้องเรียนใหม่/ร้องเรียนเพิ่มเติม",
-    countTimes: 2,
-  },
-];
+import { getStaffNotifications } from "@pages/api/reports/staffNotification";
 
 const StaffNotificationComponents = () => {
-  const [allComplaints] = useState(mockComplaints);
-  const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [statistics, setStatistics] = useState({
+    total: 0,
+    confirmed: 0,
+    pending: 0,
+    rejected: 0,
+  });
+
+  // Fetch data from API
+  useEffect(() => {
+    const fetchStaffNotifications = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await getStaffNotifications();
+
+        // Debug: log response structure
+        console.log("Raw response:", response);
+
+        // Map API response to frontend format
+        // format_response wraps data in { res_code, res_message, res_data }
+        const responseData = response.data || response;
+        console.log("Response data:", responseData);
+
+        const apiData = responseData.res_data || responseData.data || responseData;
+        console.log("API data:", apiData);
+
+        // Safety check
+        if (!apiData || !apiData.items) {
+          console.error("Invalid response structure:", apiData);
+          setError("ข้อมูลจาก API ไม่ถูกต้อง");
+          return;
+        }
+
+        const mappedData = apiData.items.map((item) => ({
+          id: item.id,
+          claimantName: item.claimant_name || "-",
+          issue: item.issue || "-",
+          responsibleOfficer: item.responsible_officer || "-",
+          receiptNumber: item.complaint_number || "-",
+          officerReceiveDate: item.officer_receive_date || "-",
+          officerReceiveDateISO: item.officer_receive_date_iso || null,
+          issueType: item.issue_type || "-",
+          countTimes: item.count_times || 0,
+          status: item.status || null,
+          confirmAssignedStatus: item.confirm_assigned_status,
+        }));
+
+        setAllComplaints(mappedData);
+        setFilteredComplaints(mappedData);
+        setStatistics({
+          total: apiData.total || 0,
+          confirmed: apiData.total_confirmed || 0,
+          pending: apiData.total_pending || 0,
+          rejected: apiData.total_rejected || 0,
+        });
+      } catch (err) {
+        console.error("Error fetching staff notifications:", err);
+        setError(err.response?.data?.detail || "เกิดข้อผิดพลาดในการโหลดข้อมูล");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStaffNotifications();
+  }, []);
 
   // สร้าง options ออกมาก่อน
   const responsibleOfficerOptions = useMemo(() => {
@@ -161,80 +115,109 @@ const StaffNotificationComponents = () => {
     [responsibleOfficerOptions, issueTypeOptions]
   );
 
-  const handleSearch = (filters) => {
+  const handleSearch = async (filters) => {
     console.log("🔍 handleSearch called with filters:", filters);
 
-    const result = allComplaints.filter((item) => {
-      // กรองตามฟิลด์ทั่วไป (text และ select)
-      const matchesTextAndSelect = filterFields
-        .filter(({ type }) => type !== "date")
-        .every(({ name, type }) => {
-          let value = filters[name];
+    try {
+      setLoading(true);
 
-          // ถ้าเป็น select แล้ว TableList คืนมาเป็น object {value,label}
-          if (type === "select" && value && typeof value === "object") {
-            value = value.value;
-          }
+      // Build query parameters
+      const params = {};
 
-          // ถ้าไม่มีค่ากรอง ก็ข้ามฟิลด์นี้
-          if (!value && value !== 0) return true;
-
-          if (type === "select") {
-            // select: เช็คเท่ากันเป๊ะ
-            const match = item[name] === value;
-            if (name === "issueType") {
-              console.log(`  issueType compare: "${item[name]}" === "${value}" = ${match}`);
-            }
-            return match;
-          } else {
-            // text: substring, case-insensitive
-            return (
-              item[name]
-                ?.toString()
-                .toLowerCase()
-                .includes(value.trim().toLowerCase()) ?? false
-            );
-          }
-        });
-
-      // กรองตามช่วงวันที่
-      let matchesDateRange = true;
-      const startDate = filters.startDate;
-      const endDate = filters.endDate;
-
-      if (startDate || endDate) {
-        if (!item.officerReceiveDateISO) {
-          matchesDateRange = false;
-        } else {
-          const itemDate = dayjs(item.officerReceiveDateISO);
-          if (!itemDate.isValid()) {
-            matchesDateRange = false;
-          } else {
-            // ถ้ามี startDate ให้เช็คว่าวันที่ต้อง >= startDate
-            if (startDate) {
-              const start = dayjs(startDate).startOf("day");
-              if (itemDate.isBefore(start)) {
-                matchesDateRange = false;
-              }
-            }
-
-            // ถ้ามี endDate ให้เช็คว่าวันที่ต้อง <= endDate
-            if (endDate) {
-              const end = dayjs(endDate).endOf("day");
-              if (itemDate.isAfter(end)) {
-                matchesDateRange = false;
-              }
-            }
-          }
-        }
+      // Text filters
+      if (filters.claimantName) {
+        params.search = filters.claimantName.trim();
+      }
+      if (filters.issue) {
+        params.issue_search = filters.issue.trim();
+      }
+      if (filters.receiptNumber) {
+        params.complaint_number = filters.receiptNumber.trim();
       }
 
-      return matchesTextAndSelect && matchesDateRange;
-    });
+      // Select filters
+      if (filters.responsibleOfficer) {
+        const officer = typeof filters.responsibleOfficer === "object"
+          ? filters.responsibleOfficer.value
+          : filters.responsibleOfficer;
+        params.officer_name = officer;
+      }
 
-    console.log(`✅ Found ${result.length} matching items out of ${allComplaints.length}`);
-    setFilteredComplaints(result);
+      if (filters.issueType) {
+        const issueType = typeof filters.issueType === "object"
+          ? filters.issueType.value
+          : filters.issueType;
+        params.status = issueType;
+      }
+
+      // Date range filters
+      if (filters.startDate) {
+        params.start_date = dayjs(filters.startDate).format("YYYY-MM-DD");
+      }
+      if (filters.endDate) {
+        params.end_date = dayjs(filters.endDate).format("YYYY-MM-DD");
+      }
+
+      const response = await getStaffNotifications(params);
+
+      // Map API response to frontend format
+      const responseData = response.data || response;
+      const apiData = responseData.res_data || responseData.data || responseData;
+
+      // Safety check
+      if (!apiData || !apiData.items) {
+        console.error("Invalid response structure:", apiData);
+        setError("ข้อมูลจาก API ไม่ถูกต้อง");
+        return;
+      }
+
+      const mappedData = apiData.items.map((item) => ({
+        id: item.id,
+        claimantName: item.claimant_name || "-",
+        issue: item.issue || "-",
+        responsibleOfficer: item.responsible_officer || "-",
+        receiptNumber: item.complaint_number || "-",
+        officerReceiveDate: item.officer_receive_date || "-",
+        officerReceiveDateISO: item.officer_receive_date_iso || null,
+        issueType: item.issue_type || "-",
+        countTimes: item.count_times || 0,
+        status: item.status || null,
+        confirmAssignedStatus: item.confirm_assigned_status,
+      }));
+
+      setFilteredComplaints(mappedData);
+      setStatistics({
+        total: apiData.total || 0,
+        confirmed: apiData.total_confirmed || 0,
+        pending: apiData.total_pending || 0,
+        rejected: apiData.total_rejected || 0,
+      });
+
+      console.log(`✅ Found ${mappedData.length} matching items`);
+    } catch (err) {
+      console.error("Error searching staff notifications:", err);
+      setError(err.response?.data?.detail || "เกิดข้อผิดพลาดในการค้นหา");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading && allComplaints.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: "50px" }}>
+        <p>กำลังโหลดข้อมูล...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ textAlign: "center", padding: "50px", color: "red" }}>
+        <p>เกิดข้อผิดพลาด: {error}</p>
+        <button onClick={() => window.location.reload()}>โหลดใหม่</button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -257,9 +240,10 @@ const StaffNotificationComponents = () => {
       <TableListStaffNoti
         data={filteredComplaints}
         title="รายงานการแจ้งเตือนเจ้าหน้าที่"
-        // navigateTo="/admin/edit/website-complaints"
         onSearch={handleSearch}
         filterFields={filterFields}
+        loading={loading}
+        statistics={statistics}
       />
     </>
   );
