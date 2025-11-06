@@ -66,7 +66,8 @@ const buildRows = (inspectors, reportItems, selectedInspectorId = "") => {
   const byUser = new Map();
   for (const it of reportItems || []) {
     const uid = it.signature_authority_user_id;
-    const deptKey = norm(it.outside_department_name || it.department_name);
+    // ใช้ department_name จาก outgoing_reports (ผ่าน complaint_number)
+    const deptKey = norm(it.department_name);
     if (!deptKey) continue;
     if (!byUser.has(uid)) byUser.set(uid, new Map());
     const m = byUser.get(uid);
@@ -75,7 +76,7 @@ const buildRows = (inspectors, reportItems, selectedInspectorId = "") => {
     const closed = Number(it.total_closed || 0);
     if (!m.has(deptKey)) {
       m.set(deptKey, {
-        name: it.outside_department_name || it.department_name || "",
+        name: it.department_name || "",
         total,
         inProgress,
         closed,
