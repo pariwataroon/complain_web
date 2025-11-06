@@ -10,7 +10,6 @@ import {
   closeAlert,
 } from "@utils/Alerts";
 import { CreateOutgoingReport, UploadOutgoingReportAttachments } from "@pages/api/outgoinreports/outgoinreports";
-import { getDepartments } from "@pages/api/department/department";
 import axiosInstance from "@pages/api/axiosInstance";
 
 // สร้าง validation schema (department ถูกทำให้ optional เสมอ ทั้งโหมดสร้างและแก้ไข)
@@ -335,6 +334,12 @@ export const useForwardToAgencyForm = () => {
         if (!originalDepartmentIdRef.current) originalDepartmentIdRef.current = data.department;
       }
       let deptToSend = data.department && isUUID(data.department) ? data.department : null;
+      console.log('🔍 Forward To Agency - Department Debug:', {
+        'data.department': data.department,
+        'isUUID(data.department)': data.department ? isUUID(data.department) : 'N/A',
+        'deptToSend': deptToSend,
+        'specialSalutation': specialSalutation
+      });
       if (!deptToSend) {
         if (specialSalutation) {
           if (lastDepartmentIdRef.current && isUUID(lastDepartmentIdRef.current)) {
@@ -346,25 +351,7 @@ export const useForwardToAgencyForm = () => {
           deptToSend = originalDepartmentIdRef.current;
         }
       }
-      const ensureRealDepartmentId = async (current) => {
-        if (current) return current;
-        try {
-          const resp = await getDepartments();
-          const raw = resp?.res_data || resp?.data || resp;
-          let list = [];
-          if (Array.isArray(raw)) list = raw; else if (Array.isArray(raw?.items)) list = raw.items;
-          const first = list.find(d => d && isUUID(d.id));
-          if (first) {
-            if (!originalDepartmentIdRef.current) originalDepartmentIdRef.current = first.id;
-            if (!lastDepartmentIdRef.current) lastDepartmentIdRef.current = first.id;
-            return first.id;
-          }
-        } catch (e) {
-          console.warn('fetch departments (forward) failed', e);
-        }
-        return current || process.env.NEXT_PUBLIC_DEFAULT_DEPARTMENT_ID || '11111111-1111-1111-1111-111111111111';
-      };
-      deptToSend = await ensureRealDepartmentId(deptToSend);
+      // ถ้าไม่มี department_id ให้ส่ง null ไปเลย ไม่ต้องใช้ default
       if (!data.original_department_id && deptToSend) {
         setValue('original_department_id', deptToSend, { shouldDirty: false, shouldValidate: false });
       }

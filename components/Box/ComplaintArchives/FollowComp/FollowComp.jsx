@@ -101,6 +101,12 @@ const breadcrumbItems = [
   { label: "คลังเรื่องราวร้องทุกข์" },
 ];
 
+// ฟังก์ชันกรองชื่อหน่วยงาน: ถ้าเป็น "ทดสอบ" หรือค่าว่าง ให้คืนค่า null เพื่อข้ามไปใช้ค่าอื่น
+const filterDepartmentName = (name) => {
+  if (!name || name === "ทดสอบ") return null;
+  return name;
+};
+
 const handleOpenDocument = (documentName) => {
   const w3schoolsPDF =
     "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
@@ -243,9 +249,14 @@ const sectionConfigs = [
       const isSpecialPosition = ["ผู้ร้อง", "ผู้ร้องเรียน", "อื่นๆ", "หน่วยงานอื่นๆ"].includes(posName);
       // FORWARDED context: use the selected posName (in parentheses) as prefix for special positions
       const prefix = isSpecialPosition ? `(${posName}) ` : "";
+
+      const deptName = filterDepartmentName(row.department?.name)
+        || filterDepartmentName(row.department_name)
+        || filterDepartmentName(row.outgoing_departments?.[0]?.name);
+
       const departmentDisplay = isSpecialPosition
-        ? (prefix + (other || row.department?.name || row.department_name || row.outgoing_departments?.[0]?.name || "-"))
-        : (row.department?.name || row.department_name || row.outgoing_departments?.[0]?.name || positionDisplay || "-");
+        ? (prefix + (other || deptName || "-"))
+        : (deptName || "-");
 
       return {
         ลำดับ: idx + 1,
@@ -339,9 +350,14 @@ const sectionConfigs = [
       const isSpecialPosition = ["ผู้ร้อง", "ผู้ร้องเรียน", "อื่นๆ", "หน่วยงานอื่นๆ"].includes(posName);
       // FORWARDED context: use the selected posName (in parentheses) as prefix for special positions
       const prefix = isSpecialPosition ? `(${posName}) ` : "";
+
+      const deptName = filterDepartmentName(row.department?.name)
+        || filterDepartmentName(row.department_name)
+        || filterDepartmentName(row.outgoing_departments?.[0]?.name);
+
       const departmentDisplay = isSpecialPosition
-        ? (prefix + (other || row.department?.name || row.department_name || row.outgoing_departments?.[0]?.name || "-"))
-        : (row.department?.name || row.department_name || row.outgoing_departments?.[0]?.name || positionDisplay || "-");
+        ? (prefix + (other || deptName || "-"))
+        : (deptName || "-");
 
       return {
         ลำดับ: idx + 1,
@@ -389,7 +405,7 @@ const sectionConfigs = [
       เรื่อง: row.issue || row.subject || "-",
       วันรับงาน: row.reference_date || "-",
       วันที่เสนองาน: row.created_at || "-",
-      หน่วยงาน: row.agency || row.department?.name || "-",
+      หน่วยงาน: filterDepartmentName(row.agency) || filterDepartmentName(row.department?.name) || "-",
       เอกสารแนบ:
         row.attachment_name ||
         (row.attachments && row.attachments.length > 0
@@ -1239,7 +1255,7 @@ const FollowComp = () => {
   const outgoingType1 = outgoing_reports.type1 || [];
   const forwardedExtra = outgoingType1.map((item, idx) => ({
     ...item,
-    agency: item.department?.name || "-",
+    agency: filterDepartmentName(item.department?.name) || "-",
     issue: item.subject || "-",
     document_number: item.document_number || "-",
     document_date: item.document_date
@@ -1271,7 +1287,7 @@ const FollowComp = () => {
   const initialNotifyExtra = outgoingType2.map((item, idx) => ({
     ...item,
     department: item.department,
-    agency: item.department?.name || "-",
+    agency: filterDepartmentName(item.department?.name) || "-",
     reference_number: item.reference_number || "-",
     complaint_number_date: item.complaint_number_date
       ? new Date(item.complaint_number_date).toLocaleDateString("th-TH")
@@ -1302,7 +1318,7 @@ const FollowComp = () => {
   const outgoingType3 = outgoing_reports.type3 || [];
   const requestUpdateExtra = outgoingType3.map((item, idx) => ({
     ...item,
-    agency: item.department?.name || "-",
+    agency: filterDepartmentName(item.department?.name) || "-",
     issue: item.subject || "-",
     document_number: item.document_number || "-",
     document_date: item.document_date
@@ -1342,7 +1358,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
   created_at: item.created_at
     ? new Date(item.created_at).toLocaleDateString("th-TH")
     : "-",
-  agency: item.department?.name || "-",
+  agency: filterDepartmentName(item.department?.name) || "-",
   attachment_name:
     item.attachments && item.attachments.length > 0
       ? item.attachments.map((a) => a.file_name || a.name).join(", ")
@@ -1366,7 +1382,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
   const outgoingType4 = outgoing_reports.type4 || [];
   const finalNotifyExtra = outgoingType4.map((item, idx) => ({
     ...item,
-    agency: item.department?.name || "-",
+    agency: filterDepartmentName(item.department?.name) || "-",
     complaint_id: item.complaint_id || id,
     document_number: item.document_number || item.reference_number || "-",
     receiveDate:
