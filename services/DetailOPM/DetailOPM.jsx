@@ -192,13 +192,13 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
         );
     }
 
-    // แสดง loading popup จนกว่าข้อมูลจะโหลดเสร็จ (isDataReady = true)
-    if (!isDataReady) {
+    // แสดง loading เมื่อกำลังสร้างข้อมูลอัตโนมัติ
+    if (isCreating && !autoCreateAttempted) {
         return (
             <Box className={styles.loadingContainer}>
                 <div className={styles.spinner}></div>
                 <Typography variant="body1" className={styles.loadingText}>
-                    กำลังโหลดข้อมูลรายละเอียด...
+                    กำลังสร้างคำร้องอัตโนมัติ...
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                     กรุณารอสักครู่

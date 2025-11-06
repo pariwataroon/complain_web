@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { GetAllComplaintChannels } from "@pages/api/allselect/allselect";
 import { CreateComplaint } from "@pages/api/complaint/complaint";
-import { MarkCaseAsRead } from "@pages/api/opm/opm";
 
 const useDetailOPMData = ({
   caseDetails,
@@ -459,32 +458,8 @@ const useDetailOPMData = ({
 
   useEffect(() => {
     if (compileAllData.length > 0) {
-      // ตรวจสอบว่าข้อมูลหลักครบถ้วน
-      const mainInfo = compileAllData.find(s => s.section === "main_information")?.data;
-      const accountInfo = compileAllData.find(s => s.section === "account_details")?.data;
-
-      if (mainInfo?.case_code && mainInfo?.case_id && accountInfo?.full_name && accountInfo?.full_name !== '-') {
-        console.log('✅ ข้อมูลโหลดครบแล้ว:', {
-          case_code: mainInfo.case_code,
-          case_id: mainInfo.case_id,
-          account_name: accountInfo.full_name
-        });
-        setCompiledData(compileAllData);
-        setIsDataReady(true);
-
-        // Mark case as read เมื่อข้อมูลโหลดครบ
-        if (mainInfo.case_id) {
-          MarkCaseAsRead(mainInfo.case_id).then((result) => {
-            if (result.success) {
-              console.log('📖 อัพเดทสถานะการคลังเป็น "รับเรื่อง" สำเร็จ');
-            }
-          }).catch((error) => {
-            console.warn('⚠️ ไม่สามารถอัพเดทสถานะการคลังได้:', error);
-          });
-        }
-      } else {
-        console.warn('⚠️ ข้อมูลยังไม่ครบถ้วน รอข้อมูลเพิ่มเติม...');
-      }
+      setCompiledData(compileAllData);
+      setIsDataReady(true);
     }
   }, [compileAllData]);
 
@@ -564,31 +539,11 @@ const useDetailOPMData = ({
 
   const autoCreateComplaint = async () => {
     try {
-      // ตรวจสอบข้อมูลก่อนสร้าง
-      if (!isValidForAPICreation()) {
-        console.warn('⚠️ ข้อมูลไม่ครบสำหรับการสร้างคำร้องอัตโนมัติ');
-        return null;
-      }
-
       setAutoCreateAttempted(true);
       const apiData = getFormattedDataForCreateAPI();
-
-      // Log ข้อมูลที่จะส่ง (เพื่อดีบัก)
-      console.log('📤 กำลังสร้างคำร้องอัตโนมัติด้วยข้อมูล:', {
-        case_code: apiData.step4?.general?.reference_number5,
-        subject: apiData.step3?.general?.subject,
-        accountName: apiData.step1?.general?.general?.name,
-      });
-
       const result = await createComplaintAPI(apiData);
-
-      if (result) {
-        console.log('✅ สร้างคำร้องอัตโนมัติสำเร็จ');
-      }
-
       return result;
     } catch (error) {
-      console.error('❌ Error in autoCreateComplaint:', error);
       throw error;
     }
   };
@@ -598,20 +553,17 @@ const useDetailOPMData = ({
       isDataReady &&
       opmChannelId &&
       !autoCreateAttempted &&
-      !isCreating &&
-      isValidForAPICreation()
+      !isCreating
     ) {
-      // สร้างคำร้องทันทีเมื่อข้อมูลครบถ้วน (รอ 500ms เพื่อให้ UI render เสร็จ)
       setTimeout(() => {
         autoCreateComplaint();
-      }, 500);
+      }, 18000);
     }
   }, [
     isDataReady,
     opmChannelId,
     autoCreateAttempted,
     isCreating,
-    compiledData,
   ]);
 
   useEffect(() => {
