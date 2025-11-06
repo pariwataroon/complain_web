@@ -5,7 +5,8 @@ from sqlalchemy import func, or_, case, and_
 from sqlalchemy.orm import Session
 
 from models.outgoing_reports4 import OutgoingReport4
-from models.outside_departments import OutsideDepartment
+from models.outgoing_reports import OutgoingReport
+from models.departments import Department
 from models.user import User
 from models.signature_authorities import SignatureAuthority
 from models.group_signature_authorities import GroupSignatureAuthority
@@ -83,8 +84,8 @@ def get_inspector_report(
 
     q = (
         db.query(
-            OutgoingReport4.outside_department_id,
-            OutsideDepartment.name.label("outside_department_name"),
+            OutgoingReport.department_id,
+            Department.name.label("department_name"),
             OutgoingReport4.signature_authority_user_id,
             User.first_name,
             User.last_name,
@@ -110,9 +111,13 @@ def get_inspector_report(
                 )
             ).label("total_in_progress"),
         )
+        .join(
+            OutgoingReport,
+            OutgoingReport4.complaint_number == OutgoingReport.complaint_number,
+        )
         .outerjoin(
-            OutsideDepartment,
-            OutgoingReport4.outside_department_id == OutsideDepartment.id,
+            Department,
+            OutgoingReport.department_id == Department.id,
         )
         .outerjoin(
             User,
@@ -130,8 +135,8 @@ def get_inspector_report(
         )
         .filter(date_expr >= start_date, date_expr < end_date)
         .group_by(
-            OutgoingReport4.outside_department_id,
-            OutsideDepartment.name,
+            OutgoingReport.department_id,
+            Department.name,
             OutgoingReport4.signature_authority_user_id,
             User.first_name,
             User.last_name,
@@ -142,7 +147,7 @@ def get_inspector_report(
             # nulls last: ถ้าไม่มีค่า order ให้ไปท้ายสุด
             case((sa_group_pick_subq.c.group_order_index.is_(None), 1), else_=0).asc(),
             sa_group_pick_subq.c.group_order_index.asc(),
-            OutsideDepartment.name.asc(),
+            Department.name.asc(),
             User.first_name.asc(),
             User.last_name.asc(),
         )
@@ -154,7 +159,7 @@ def get_inspector_report(
             or_(
                 User.first_name.ilike(like),
                 User.last_name.ilike(like),
-                OutsideDepartment.name.ilike(like),
+                Department.name.ilike(like),
             )
         )
 
@@ -164,12 +169,12 @@ def get_inspector_report(
     items = []
     for r in rows:
         items.append({
-            "outside_department_id": str(r.outside_department_id) if r.outside_department_id else None,
-            "outside_department_name": r.outside_department_name or "ไม่ระบุหน่วยงาน",
+            "department_id": str(r.department_id) if r.department_id else None,
+            "department_name": r.department_name or "ไม่ระบุหน่วยงาน",
             "signature_authority_user_id": str(r.signature_authority_user_id) if r.signature_authority_user_id else None,
             "signature_authority_user_name": (f"{r.first_name or ''} {r.last_name or ''}").strip() or "N/A",
             "signature_group_order_index": int(r.group_order_index) if r.group_order_index is not None else None,
-            "signature_group_name": r.group_name if hasattr(r, "group_name") else None,
+            "signature_group_name": r.group_name,
             "total_sent": int(r.total_sent or 0),
             "total_closed": int(r.total_closed or 0),
             "total_in_progress": int(r.total_in_progress or 0),

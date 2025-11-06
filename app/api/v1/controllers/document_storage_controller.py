@@ -1189,6 +1189,11 @@ def get_document_storage_by_channel(
         channel_ids = [channel.id for channel in target_channels]
         
         if not channel_ids:
+            # ดึง departments แม้ว่าจะไม่มี channels
+            departments_list = db.query(Department).filter(
+                Department.is_active == True
+            ).order_by(Department.order_index, Department.name).all()
+
             return {
                 "items": [],
                 "total": 0,
@@ -1197,7 +1202,18 @@ def get_document_storage_by_channel(
                     "page_size": limit,
                     "total_pages": 0
                 },
-                "channels": []
+                "channels": [],
+                "departments": [
+                    {
+                        "id": str(dept.id),
+                        "name": dept.name,
+                        "short_name": dept.short_name,
+                        "code": dept.code,
+                        "parent_id": str(dept.parent_id) if dept.parent_id else None,
+                        "group_id": str(dept.group_id) if dept.group_id else None,
+                        "order_index": dept.order_index
+                    } for dept in departments_list
+                ]
             }
         
         # สร้าง base query
@@ -1491,7 +1507,31 @@ def get_document_storage_by_channel(
             
             # หน่วยงาน (standardized)
             agency_name = _resolve_agency_name(db, complaint)
-            
+
+            # 🔥 ดึงข้อมูลหน่วยงานจาก OutgoingReport (หน่วยงาน 2)
+            outgoing_department_name = ""
+            outgoing_department_info = None
+            try:
+                outgoing_report = db.query(OutgoingReport).filter(
+                    OutgoingReport.complaint_id == complaint.id,
+                    OutgoingReport.is_active == True
+                ).first()
+
+                if outgoing_report and outgoing_report.department_id:
+                    department = db.query(Department).filter(
+                        Department.id == outgoing_report.department_id
+                    ).first()
+                    if department:
+                        outgoing_department_name = department.name
+                        outgoing_department_info = {
+                            "id": str(department.id),
+                            "name": department.name,
+                            "short_name": department.short_name,
+                            "code": department.code
+                        }
+            except Exception as e:
+                logger.warning(f"Error getting outgoing department for complaint {complaint.id}: {str(e)}")
+
             # ✅ ตรวจสอบสถานะการมอบหมาย
             is_assigned = bool(complaint.assigned_officer_id or complaint.assigned_to)
             
@@ -1500,6 +1540,8 @@ def get_document_storage_by_channel(
                 "receiveDate": complaint.created_at.isoformat() if complaint.created_at else None,
                 "receiveDateDisplay": received_date,
                 "agency": agency_name,
+                "agency2": outgoing_department_name,  # 🔥 เพิ่มหน่วยงาน 2 จาก OutgoingReport
+                "outgoing_department": outgoing_department_info,  # 🔥 ข้อมูลหน่วยงานแบบละเอียด
                 "claimantName": complainant_data.get("name", "") or f"{complainant_data.get('firstName', '')} {complainant_data.get('lastName', '')}".strip(),
                 "issue": complaint.subject or "",
                 "issueType": complaint_type_name,
@@ -1561,7 +1603,12 @@ def get_document_storage_by_channel(
         # Calculate pagination info
         total_pages = (total + limit - 1) // limit
         current_page = (skip // limit) + 1
-        
+
+        # ดึงข้อมูล departments ทั้งหมดที่ active
+        departments_list = db.query(Department).filter(
+            Department.is_active == True
+        ).order_by(Department.order_index, Department.name).all()
+
         return {
             "items": items,
             "total": total,
@@ -1579,11 +1626,24 @@ def get_document_storage_by_channel(
                     "description": channel.description
                 } for channel in target_channels
             ],
+            "departments": [
+                {
+                    "id": str(dept.id),
+                    "name": dept.name,
+                    "short_name": dept.short_name,
+                    "code": dept.code,
+                    "parent_id": str(dept.parent_id) if dept.parent_id else None,
+                    "group_id": str(dept.group_id) if dept.group_id else None,
+                    "order_index": dept.order_index
+                } for dept in departments_list
+            ],
             "page_type": "all" if normalized_page_type not in ("website", "card") else normalized_page_type,
             "legend": {
                 "receiveDate": "วันที่ยื่นเรื่องร้องเรียน (ISO UTC)",
                 "receiveDateDisplay": "วันที่ยื่นเรื่องร้องเรียน (แสดงผลตามโซนเวลา Asia/Bangkok)",
                 "agency": "ชื่อหน่วยงานภายนอก (outside_departments.name) ถ้า agency_sender เป็น UUID ของ outside_departments.id เท่านั้น; อื่นๆ จะเป็นค่าว่าง",
+                "agency2": "ชื่อหน่วยงานจาก OutgoingReport (departments.name) ที่ส่งเรื่องออก - หน่วยงาน 2",
+                "outgoing_department": "ข้อมูลหน่วยงานแบบละเอียดจาก OutgoingReport รวม id, name, short_name, code",
                 "is_assigned": "สถานะการมอบหมาย: true=มีการมอบหมายแล้ว, false=ยังไม่ได้มอบหมาย",
                 "confirmationStatus": {
                     "ยืนยันรับงานแล้ว": "เจ้าหน้าที่ยืนยันรับงานแล้ว",
@@ -1608,6 +1668,26 @@ def get_document_storage_by_channel(
         
     except Exception as e:
         logger.error(f"Error getting document storage: {str(e)}")
+
+        # แม้จะ error ก็ยังส่ง departments กลับไปได้
+        try:
+            departments_list = db.query(Department).filter(
+                Department.is_active == True
+            ).order_by(Department.order_index, Department.name).all()
+            departments_data = [
+                {
+                    "id": str(dept.id),
+                    "name": dept.name,
+                    "short_name": dept.short_name,
+                    "code": dept.code,
+                    "parent_id": str(dept.parent_id) if dept.parent_id else None,
+                    "group_id": str(dept.group_id) if dept.group_id else None,
+                    "order_index": dept.order_index
+                } for dept in departments_list
+            ]
+        except:
+            departments_data = []
+
         return {
             "items": [],
             "total": 0,
@@ -1617,6 +1697,7 @@ def get_document_storage_by_channel(
                 "total_pages": 0
             },
             "channels": [],
+            "departments": departments_data,
             "error": str(e)
         }
 
