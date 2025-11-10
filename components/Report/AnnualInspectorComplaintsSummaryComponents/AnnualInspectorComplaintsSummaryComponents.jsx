@@ -187,10 +187,12 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
     setLoading(true);
     try {
       const year = yearFrom(filters);
+      const dateFrom = filters.receiveDateFrom || "";
+      const dateTo = filters.receiveDateTo || "";
 
       const [sig, rep] = await Promise.all([
         getSignatureAuthorities(),
-        GetAllReportsInspector(year, "", "", ""),
+        GetAllReportsInspector(year, "", "", "", dateFrom, dateTo),
       ]);
 
       // รายชื่อผู้ตรวจ “ทุกคน”
@@ -244,7 +246,9 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
     setLoading(true);
     try {
       const year = yearFrom(filters);
-      const rep = await GetAllReportsInspector(year, "", "", "");
+      const dateFrom = filters.receiveDateFrom || "";
+      const dateTo = filters.receiveDateTo || "";
+      const rep = await GetAllReportsInspector(year, "", "", "", dateFrom, dateTo);
       const reportItems = rep?.res_data?.items || [];
 
       // อัปเดตตัวเลือก (กันกรณีมีผู้ตรวจใหม่โผล่มาจากข้อมูลรายงาน)

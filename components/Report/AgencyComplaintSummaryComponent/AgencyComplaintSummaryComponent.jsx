@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListAgency from "@services/TableListAgency/TableListAgency";
+import { GetAgencyComplaintReport } from "@pages/api/report/report";
 
 // ─── สถานะ (label ไทย) จากหน้ารายงานผู้ตรวจ ─────────────────────
 const STATUS_LABELS = [
@@ -360,55 +361,77 @@ const formatToThaiDate = (date) => {
 };
 
 const AgencyComplaintSummary = () => {
-  const [allComplaints] = useState(
-    mockComplaints.map((item) => ({
-      ...item,
-      status: STATUS_LABELS.includes(item.status) ? item.status : toThaiLabel(item.status),
-    }))
-  );
-  const [filteredComplaints, setFilteredComplaints] = useState(allComplaints);
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSearch = (filters) => {
-    const {
-      claimantName,
-      startDate,
-      endDate,
-      agency,
-      responsibleOfficer,
-      status,
-    } = filters;
+  // Fetch data on mount
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-    const norm = (v) => (v ?? "").toString().trim();
+  const fetchData = async (filters = {}) => {
+    setLoading(true);
+    try {
+      const year = filters.year || new Date().getFullYear();
 
-    const result = allComplaints.filter((item) => {
-      if (claimantName && !item.claimantName.includes(norm(claimantName))) return false;
-      if (agency && item.agency !== agency) return false;
-      if (responsibleOfficer && item.responsibleOfficer !== responsibleOfficer) return false;
-      // กรองสถานะ: ถ้าเลือก "ทั้งหมด" หรือไม่ได้เลือก ให้แสดงทั้งหมด
-      if (status && status !== "ทั้งหมด" && item.status !== status) return false;
+      // แปลงวันที่เป็น ISO format (YYYY-MM-DD) สำหรับ API
+      let date_from = "";
+      let date_to = "";
 
-      // กรองตามวันที่
-      const itemDate = parseThaiDate(item.receiveDate);
-      if (itemDate) {
-        if (startDate) {
-          const start = new Date(startDate);
-          start.setHours(0, 0, 0, 0);
-          itemDate.setHours(0, 0, 0, 0);
-          if (itemDate < start) return false;
+      if (filters.startDate) {
+        const fromDate = new Date(filters.startDate);
+        let fromYear = fromDate.getFullYear();
+        // แปลงเป็น ค.ศ. ถ้าเป็น พ.ศ.
+        if (fromYear > 2500) {
+          fromYear -= 543;
         }
-        if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          itemDate.setHours(0, 0, 0, 0);
-          if (itemDate > end) return false;
-        }
+        date_from = `${fromYear}-${String(fromDate.getMonth() + 1).padStart(2, '0')}-${String(fromDate.getDate()).padStart(2, '0')}`;
       }
 
-      return true;
-    });
+      if (filters.endDate) {
+        const toDate = new Date(filters.endDate);
+        let toYear = toDate.getFullYear();
+        // แปลงเป็น ค.ศ. ถ้าเป็น พ.ศ.
+        if (toYear > 2500) {
+          toYear -= 543;
+        }
+        date_to = `${toYear}-${String(toDate.getMonth() + 1).padStart(2, '0')}-${String(toDate.getDate()).padStart(2, '0')}`;
+      }
 
-    setFilteredComplaints(result);
+      const res = await GetAgencyComplaintReport(
+        0,
+        100,
+        year,
+        date_from,
+        date_to,
+        "", // department_id
+        filters.status || "",
+        filters.agency || "",
+        filters.responsibleOfficer || "",
+        filters.claimantName || ""
+      );
+      const items = res?.res_data?.items || [];
+
+      setAllComplaints(items);
+      setFilteredComplaints(items);
+    } catch (error) {
+      console.error("Error fetching agency complaint report:", error);
+      setAllComplaints([]);
+      setFilteredComplaints([]);
+    }
+    setLoading(false);
+  };
+
+  const handleSearch = async (filters) => {
+    // แปลง "ทั้งหมด" เป็น empty string
+    if (filters.status === "ทั้งหมด") {
+      filters.status = "";
+    }
+
+    // เรียก API ใหม่ด้วย filters
+    await fetchData(filters);
   };
 
   return (
@@ -431,6 +454,7 @@ const AgencyComplaintSummary = () => {
 
       <TableListAgency
         data={filteredComplaints}
+        loading={loading}
         title="รายงานสรุปเรื่องร้องเรียนของหน่วยงาน"
         navigateTo="/admin/edit/website-complaints"
         onSearch={handleSearch}

@@ -6,6 +6,14 @@ import { GetMyRelatedComplaints, GetDepartments } from "@pages/api/complaint/com
 import { GetAllSignatureAuthorities } from "@pages/api/allselect/allselect";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+// ตั้งค่า timezone สำหรับประเทศไทย
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale("th");
+dayjs.tz.setDefault("Asia/Bangkok");
 
 /* ============= คำที่ถือว่า “ปิดเรื่องจากผลพิจารณา (outgoing)” ============= */
 const CLOSED_WORDS = ["ยุติเรื่อง", "ยุติเรื่องได้", "ปิดเรื่อง", "ปิดงาน"];
@@ -147,14 +155,42 @@ const StatusTrackingReport = () => {
   }, []);
 
   // โหลดข้อมูลเรื่องร้องเรียน แล้ว map สถานะเป็น label แบบเดียวกับหน้า followup
-  useEffect(() => {
-    const fetchMyRelated = async () => {
-      try {
-        setLoading(true);
-        const res = await GetMyRelatedComplaints({ skip: 0, limit: 10000 });
-        const items = res?.res_data?.items ?? [];
+  const fetchMyRelated = async (filters = {}) => {
+    try {
+      setLoading(true);
 
-        const mapped = items.map((it, idx) => {
+      // แปลงวันที่เป็น ISO format (YYYY-MM-DD) สำหรับ API
+      let date_from = "";
+      let date_to = "";
+
+      if (filters.startDate) {
+        const fromDate = dayjs(filters.startDate).tz("Asia/Bangkok");
+        if (fromDate.isValid()) {
+          let fromYear = fromDate.year();
+          // แปลงเป็น ค.ศ. ถ้าเป็น พ.ศ.
+          if (fromYear > 2500) {
+            fromYear -= 543;
+          }
+          date_from = `${fromYear}-${String(fromDate.month() + 1).padStart(2, '0')}-${String(fromDate.date()).padStart(2, '0')}`;
+        }
+      }
+
+      if (filters.endDate) {
+        const toDate = dayjs(filters.endDate).tz("Asia/Bangkok");
+        if (toDate.isValid()) {
+          let toYear = toDate.year();
+          // แปลงเป็น ค.ศ. ถ้าเป็น พ.ศ.
+          if (toYear > 2500) {
+            toYear -= 543;
+          }
+          date_to = `${toYear}-${String(toDate.month() + 1).padStart(2, '0')}-${String(toDate.date()).padStart(2, '0')}`;
+        }
+      }
+
+      const res = await GetMyRelatedComplaints({ skip: 0, limit: 10000, date_from, date_to });
+      const items = res?.res_data?.items ?? [];
+
+      const mapped = items.map((it, idx) => {
           const c = it?.complaint ?? {};
           const latest = it?.latest ?? {};
           const history = Array.isArray(it?.history) ? it.history : [];
@@ -200,11 +236,15 @@ const StatusTrackingReport = () => {
         setResponsibleOfficerOptions(uniqueOfficers.map((x) => ({ value: x, label: x })));
       } catch (e) {
         console.error("Error fetching my-related complaints:", e);
+        setAllComplaints([]);
+        setFilteredComplaints([]);
       } finally {
         setLoading(false);
       }
     };
 
+  // เรียก API ครั้งแรกเมื่อ component mount
+  useEffect(() => {
     fetchMyRelated();
   }, []);
 
@@ -227,7 +267,7 @@ const StatusTrackingReport = () => {
     })();
   }, []);
 
-  const handleSearch = (filters) => {
+  const handleSearch = async (filters) => {
     const {
       claimantName: fName,
       department: fDept,
@@ -239,9 +279,15 @@ const StatusTrackingReport = () => {
       endDate: fEndDate,
     } = filters;
 
+    // ถ้ามีการกรองตามวันที่ ให้เรียก API ใหม่
+    if (fStartDate || fEndDate) {
+      await fetchMyRelated(filters);
+      return;
+    }
+
     const norm = (v) => (v ?? "").toString().toLowerCase().trim();
 
-    if (!fName && !fDept && !fOfficer && !fReceipt && !fReference && !fStatus && !fStartDate && !fEndDate) {
+    if (!fName && !fDept && !fOfficer && !fReceipt && !fReference && !fStatus) {
       setFilteredComplaints(allComplaints);
       return;
     }
@@ -255,41 +301,8 @@ const StatusTrackingReport = () => {
       const matchReference = !fReference || norm(item.referenceNumber).includes(norm(fReference));
       const matchStatus = !fStatus || norm(item.status) === norm(fStatus);
 
-      // กรองตามช่วงวันที่สร้าง
-      let matchDateRange = true;
-      if (fStartDate || fEndDate) {
-        if (!item.created_at) {
-          matchDateRange = false;
-        } else {
-          const itemDate = dayjs(item.created_at);
-          if (!itemDate.isValid()) {
-            matchDateRange = false;
-          } else {
-            // ถ้ามี startDate ให้เช็คว่าวันที่สร้างต้อง >= startDate
-            if (fStartDate) {
-              const start = dayjs(fStartDate).startOf('day');
-              if (itemDate.isBefore(start)) {
-                matchDateRange = false;
-              }
-            }
-
-            // ถ้ามี endDate ให้เช็คว่าวันที่สร้างต้อง <= endDate
-            if (fEndDate) {
-              const end = dayjs(fEndDate).endOf('day');
-              if (itemDate.isAfter(end)) {
-                matchDateRange = false;
-              }
-            }
-          }
-        }
-      }
-
-      // ต้องผ่านทุกเงื่อนไข หรือ อย่างน้อยต้องมีหนึ่งเงื่อนไขที่กรอกและผ่าน
-      const hasAnyFilter = fName || fDept || fOfficer || fReceipt || fReference || fStatus || fStartDate || fEndDate;
-      if (!hasAnyFilter) return true;
-
-      // ถ้ามีการกรองต้องผ่านทุกเงื่อนไขที่กรอก
-      return matchName && matchDept && matchOfficer && matchReceipt && matchReference && matchStatus && matchDateRange;
+      // ต้องผ่านทุกเงื่อนไข
+      return matchName && matchDept && matchOfficer && matchReceipt && matchReference && matchStatus;
     });
 
     setFilteredComplaints(result);

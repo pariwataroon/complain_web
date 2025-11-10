@@ -55,41 +55,86 @@
 
     .itemBox {
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        gap: 8px;
         background-color: rgba(255, 255, 255, 0.4);
         padding: 10px 12px;
         border-radius: 8px;
         margin-bottom: 8px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    .itemContent {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex: 1;
     }
 
     .rankCircle {
-        width: 24px;
-        height: 24px;
+        width: 28px;
+        height: 28px;
         background-color: white;
         color: #1976d2;
-        font-size: 12px;
+        font-size: 13px;
         font-weight: bold;
         display: flex;
         justify-content: center;
         align-items: center;
         border-radius: 50%;
-        margin-right: 8px;
+        flex-shrink: 0;
     }
 
     .label {
         font-size: 13px;
         font-weight: 500;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 200px;
     }
 
     .count {
-        font-size: 13px;
-        font-weight: bold;
-        color: #000;
+        font-size: 14px;
+        font-weight: 700;
+        color: #1976d2;
+        white-space: nowrap;
+        margin-left: 20px;
+    }
+
+    // Tablet
+    @media (max-width: 900px) {
+        .count {
+            font-size: 13px;
+            margin-left: 16px;
+        }
+    }
+
+    // Mobile
+    @media (max-width: 600px) {
+        .itemBox {
+            padding: 8px 10px;
+            gap: 6px;
+        }
+
+        .itemContent {
+            gap: 6px;
+        }
+
+        .rankCircle {
+            width: 24px;
+            height: 24px;
+            font-size: 12px;
+        }
+
+        .label {
+            font-size: 12px;
+        }
+
+        .count {
+            font-size: 12px;
+            font-weight: 700;
+            margin-left: 12px;
+        }
     }
 }
 

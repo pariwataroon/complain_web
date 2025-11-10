@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableAnnualCompSum from "@services/TableAnnualCompSum/TableAnnualCompSum";
+import { GetAnnualComplaintSummary } from "@pages/api/report/report";
 
 const mockComplaints = [
   {
@@ -271,9 +272,57 @@ const mockComplaints = [
 ];
 
 const AnnualComplaintSummaryComponents = () => {
-  const [allComplaints] = useState(mockComplaints);
-  const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async (filters = {}) => {
+    setLoading(true);
+    try {
+      const year = filters.year || new Date().getFullYear();
+
+      // แปลงวันที่เป็น ISO format (YYYY-MM-DD) สำหรับ API
+      let dateFrom = "";
+      let dateTo = "";
+
+      if (filters.receiveDateFrom) {
+        const fromDate = new Date(filters.receiveDateFrom);
+        // แปลงเป็น ค.ศ. ถ้าเป็น พ.ศ.
+        let fromYear = fromDate.getFullYear();
+        if (fromYear > 2500) {
+          fromYear -= 543;
+        }
+        dateFrom = `${fromYear}-${String(fromDate.getMonth() + 1).padStart(2, '0')}-${String(fromDate.getDate()).padStart(2, '0')}`;
+      }
+
+      if (filters.receiveDateTo) {
+        const toDate = new Date(filters.receiveDateTo);
+        // แปลงเป็น ค.ศ. ถ้าเป็น พ.ศ.
+        let toYear = toDate.getFullYear();
+        if (toYear > 2500) {
+          toYear -= 543;
+        }
+        dateTo = `${toYear}-${String(toDate.getMonth() + 1).padStart(2, '0')}-${String(toDate.getDate()).padStart(2, '0')}`;
+      }
+
+      const res = await GetAnnualComplaintSummary(year, dateFrom, dateTo);
+      const items = res?.res_data?.items || [];
+
+      setAllComplaints(items);
+      setFilteredComplaints(items);
+    } catch (error) {
+      console.error("Error fetching annual complaint summary:", error);
+      setAllComplaints([]);
+      setFilteredComplaints([]);
+    }
+    setLoading(false);
+  };
 
   // เปลี่ยนหน้า summary
   const handleSummaryByIssueType = () => {
@@ -311,41 +360,8 @@ const AnnualComplaintSummaryComponents = () => {
   };
 
   //ค้นหาวันที่ ตั้งแต่วันที - ถึงวันที่
-  const handleSearch = ({ receiveDateFrom, receiveDateTo, issueType }) => {
-    console.log("Search params:", {
-      receiveDateFrom,
-      receiveDateTo,
-      issueType,
-    });
-
-    let result = allComplaints;
-
-    const fromDate = formatDateForComparison(receiveDateFrom);
-    const toDate = formatDateForComparison(receiveDateTo);
-
-    console.log("From date formatted:", fromDate);
-    console.log("To date formatted:", toDate);
-
-    if (fromDate) {
-      result = result.filter((item) => {
-        const itemDate = formatDateForComparison(item.receiveDate);
-        return itemDate && itemDate >= fromDate;
-      });
-    }
-
-    if (toDate) {
-      result = result.filter((item) => {
-        const itemDate = formatDateForComparison(item.receiveDate);
-        return itemDate && itemDate <= toDate;
-      });
-    }
-
-    if (issueType) {
-      result = result.filter((item) => item.issueType === issueType);
-    }
-
-    console.log("Filtered result:", result);
-    setFilteredComplaints(result);
+  const handleSearch = async ({ receiveDateFrom, receiveDateTo, issueType }) => {
+    await fetchData({ receiveDateFrom, receiveDateTo, issueType });
   };
 
   return (
@@ -368,6 +384,7 @@ const AnnualComplaintSummaryComponents = () => {
 
       <TableAnnualCompSum
         data={filteredComplaints}
+        loading={loading}
         onSearch={handleSearch}
         actionButtonLabel="สรุปผลตามประเภทเรื่อง"
         onActionClick={handleSummaryByIssueType}

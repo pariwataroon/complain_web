@@ -137,6 +137,7 @@ const uuidv4 = () =>
 const isUUID = (s) => typeof s === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 // Position fallback (match other reports)
 const POSITION_FALLBACK = "7e18e4fe-d416-4580-b4d4-2a4032f67770";
+const DEPARTMENT_FALLBACK = process.env.NEXT_PUBLIC_DEFAULT_DEPARTMENT_ID || "11111111-1111-1111-1111-111111111111";
 
 
 // Hook หลัก
@@ -327,34 +328,37 @@ export const useForwardToAgencyForm = () => {
     try {
       showLoading("กำลังบันทึกข้อมูล...");
 
-      // (payload preparing logic unchanged)
-      const specialSalutation = data.salutation_is_other === true || ["อื่นๆ", "ผู้ร้อง", "ผู้ร้องเรียน"].includes(String(data.position_other_text || '').trim()) || ["อื่นๆ", "ผู้ร้อง", "ผู้ร้องเรียน"].includes(String(data.salutation_label || '').trim());
+      // เริ่มจาก data.department ที่เลือกจริง
+      let deptToSend = null;
+
+      // 1. ถ้ามีการเลือกหน่วยงานในฟอร์ม ใช้ค่านั้นก่อน
       if (data.department && isUUID(data.department)) {
+        deptToSend = data.department;
         lastDepartmentIdRef.current = data.department;
-        if (!originalDepartmentIdRef.current) originalDepartmentIdRef.current = data.department;
-      }
-      let deptToSend = data.department && isUUID(data.department) ? data.department : null;
-      console.log('🔍 Forward To Agency - Department Debug:', {
-        'data.department': data.department,
-        'isUUID(data.department)': data.department ? isUUID(data.department) : 'N/A',
-        'deptToSend': deptToSend,
-        'specialSalutation': specialSalutation
-      });
-      if (!deptToSend) {
-        if (specialSalutation) {
-          if (lastDepartmentIdRef.current && isUUID(lastDepartmentIdRef.current)) {
-            deptToSend = lastDepartmentIdRef.current;
-          } else if (originalDepartmentIdRef.current && isUUID(originalDepartmentIdRef.current)) {
-            deptToSend = originalDepartmentIdRef.current;
-          }
-        } else if (originalDepartmentIdRef.current && isUUID(originalDepartmentIdRef.current)) {
-          deptToSend = originalDepartmentIdRef.current;
+        if (!originalDepartmentIdRef.current) {
+          originalDepartmentIdRef.current = data.department;
         }
       }
-      // ถ้าไม่มี department_id ให้ส่ง null ไปเลย ไม่ต้องใช้ default
-      if (!data.original_department_id && deptToSend) {
-        setValue('original_department_id', deptToSend, { shouldDirty: false, shouldValidate: false });
+      // 2. ถ้าไม่มี ลองใช้ค่าเดิมที่เคยบันทึกไว้
+      else if (lastDepartmentIdRef.current && isUUID(lastDepartmentIdRef.current)) {
+        deptToSend = lastDepartmentIdRef.current;
       }
+      else if (originalDepartmentIdRef.current && isUUID(originalDepartmentIdRef.current)) {
+        deptToSend = originalDepartmentIdRef.current;
+      }
+      // 3. ถ้ายังไม่มีเลย ใช้ fallback
+      else {
+        deptToSend = DEPARTMENT_FALLBACK;
+      }
+
+      console.log('🔍 DEBUG Department Values:', {
+        'data.department (from form)': data.department,
+        'isUUID(data.department)': data.department ? isUUID(data.department) : 'N/A',
+        'deptToSend (final)': deptToSend,
+        'lastDepartmentIdRef.current': lastDepartmentIdRef.current,
+        'originalDepartmentIdRef.current': originalDepartmentIdRef.current
+      });
+
       const resolvedPositionId = (() => {
         if (isUUID(data.position_id)) return data.position_id;
         if (isUUID(data.salutation)) return data.salutation;

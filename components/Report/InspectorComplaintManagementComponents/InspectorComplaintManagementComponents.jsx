@@ -1,11 +1,21 @@
-import React, { useState, useRef } from "react";
-import { Box, Typography } from "@mui/material";
+import React, { useState, useRef, useEffect } from "react";
+import { Box, Typography, CircularProgress } from "@mui/material";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import styles from "./ReportTable.module.scss";
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
+import { GetInspectorComplaintManagement } from "@pages/api/report/report";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import "dayjs/locale/th";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale("th");
+dayjs.tz.setDefault("Asia/Bangkok");
 
 // ข้อมูลแยกตามผู้ตรวจ
 const dataByInspector = {
@@ -421,24 +431,151 @@ const INSPECTOR_OPTIONS = [
   { value: "inspector3", label: "นายวิทยา ศรีสุข" },
 ];
 
+// Mapping agency names to agency keys
+const AGENCY_MAPPING = {
+  "ธนาคารออมสิน": "gsb",
+  "สำนักงานการพัฒนาเขตพิเศษภาคตะวันออก": "pdmo",
+  "บริษัท บริการรื่นรมย์สงวนป่า จำกัด": "bss",
+  "การยางแห่งประเทศไทย": "yst",
+  "สรรพสุรา": "sura",
+  "โรงงานไผ่": "phai",
+};
+
 const InspectorComplaintManagementComponents = () => {
   const pdfRef = useRef();
   const [selectedInspector, setSelectedInspector] = useState("");
+  const [apiData, setApiData] = useState({});
+  const [inspectorOptions, setInspectorOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // แปลงชื่อจังหวัดเป็นชื่อย่อ
+  const getProvinceAbbr = (provinceName) => {
+    if (!provinceName) return "";
+    // ถ้ามีจุดอยู่แล้ว แสดงว่าเป็นชื่อย่อแล้ว
+    if (provinceName.includes(".")) return provinceName;
+    // ถ้าเป็นชื่อเต็ม ให้ตัดเอา 2-3 ตัวแรกแล้วใส่จุด
+    if (provinceName.length > 4) {
+      return provinceName.substring(0, Math.min(3, provinceName.length)) + ".";
+    }
+    return provinceName;
+  };
+
+  // แปลงข้อมูลจาก API format เป็น UI format
+  const transformApiData = (apiItems) => {
+    if (!apiItems || apiItems.length === 0) return [];
+
+    return apiItems.map((item, index) => {
+      // Map agency name to agency object
+      const agencies = {
+        gsb: "",
+        pdmo: "",
+        bss: "",
+        yst: "",
+        sura: "",
+        phai: "",
+      };
+
+      // Check if agency_name matches any of our known agencies
+      if (item.agency_name) {
+        for (const [fullName, key] of Object.entries(AGENCY_MAPPING)) {
+          if (item.agency_name.includes(fullName) || fullName.includes(item.agency_name)) {
+            agencies[key] = "1";
+            break;
+          }
+        }
+      }
+
+      // Map issue_type to issueTypes object
+      const issueTypes = {
+        agencyMoney: item.issue_type === "agencyMoney" ? "1" : "",
+        agencyNoMoney: item.issue_type === "agencyNoMoney" ? "1" : "",
+        personalMoney: item.issue_type === "personalMoney" ? "1" : "",
+        personalNoMoney: item.issue_type === "personalNoMoney" ? "1" : "",
+      };
+
+      // Map province to provinces object
+      const provinces = {
+        bkk: item.is_bangkok ? "1" : "",
+        regional: !item.is_bangkok && item.province_name ? getProvinceAbbr(item.province_name) : "",
+      };
+
+      // Map status
+      const status = {
+        coordination: item.coordination_count || "",
+        ongoing: item.is_ongoing ? "1" : "",
+        terminated: item.is_terminated ? item.elapsed_text : "",
+      };
+
+      return {
+        order: item.order || index + 1,
+        date: item.date || "",
+        subject: item.subject || "",
+        agencies,
+        issueTypes,
+        provinces,
+        status,
+        remark: item.remark || "",
+      };
+    });
+  };
+
+  // Fetch data from API
+  const fetchData = async (inspectorId = "") => {
+    setLoading(true);
+    try {
+      const response = await GetInspectorComplaintManagement(
+        0,
+        1000,
+        null,  // year - ส่ง null แทน "" เพื่อให้ FastAPI รับเป็น Optional[int]
+        "",
+        "",
+        inspectorId
+      );
+
+      if (response?.res_code === "0000" && response?.res_data?.items) {
+        const inspectors = response.res_data.items;
+
+        // Build apiData object
+        const newApiData = {};
+        const newOptions = [];
+
+        inspectors.forEach((inspector) => {
+          const inspectorKey = inspector.inspector_id;
+          newApiData[inspectorKey] = transformApiData(inspector.items);
+          newOptions.push({
+            value: inspectorKey,
+            label: inspector.inspector_name,
+          });
+        });
+
+        setApiData(newApiData);
+        setInspectorOptions(newOptions);
+      }
+    } catch (error) {
+      console.error("Error fetching inspector complaint management data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleInspectorChange = (event) => {
     const value = event?.target ? event.target.value : event;
-    console.log("🔄 Inspector changed:", value);
     setSelectedInspector(value);
   };
 
-  // เลือกข้อมูลตามผู้ตรวจที่เลือก
+  // เลือกข้อมูลตามผู้ตรวจที่เลือก - ใช้ apiData แทน mock data
   const currentData = selectedInspector
-    ? dataByInspector[selectedInspector] || []
+    ? apiData[selectedInspector] || []
     : [];
 
-  // หาชื่อผู้ตรวจที่เลือก
+  // หาชื่อผู้ตรวจที่เลือก - ใช้ inspectorOptions จาก API
   const selectedInspectorName =
-    INSPECTOR_OPTIONS.find((option) => option.value === selectedInspector)
+    inspectorOptions.find((option) => option.value === selectedInspector)
       ?.label || "";
 
       // ฟังก์ชันสำหรับ Export Excel
@@ -620,7 +757,7 @@ const InspectorComplaintManagementComponents = () => {
                 label="รายชื่อผู้ตรวจ"
                 value={selectedInspector}
                 onChange={handleInspectorChange}
-                options={INSPECTOR_OPTIONS}
+                options={inspectorOptions}
                 sx={{
                   width: { xs: "100%", sm: "250px" },
                   minWidth: { sm: "250px" },
@@ -693,8 +830,19 @@ const InspectorComplaintManagementComponents = () => {
             }}
           >
             <div ref={pdfRef}>
-              {/* แสดงข้อความเมื่อยังไม่ได้เลือกผู้ตรวจ */}
-              {!selectedInspector ? (
+              {/* แสดง loading indicator */}
+              {loading ? (
+                <Box
+                  sx={{
+                    textAlign: "center",
+                    py: 8,
+                    minWidth: "1200px",
+                  }}
+                >
+                  <CircularProgress />
+                  <Typography sx={{ mt: 2, color: "#666" }}>กำลังโหลดข้อมูล...</Typography>
+                </Box>
+              ) : !selectedInspector ? (
                 <Box
                   sx={{
                     textAlign: "center",

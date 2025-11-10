@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableAnnualResults from "@services/TableAnnualResults/TableAnnualResults";
+import { GetAnnualComplaintDetails } from "@pages/api/report/report";
 
 // mock data (ปรับสถานะให้มีแค่ 2 ค่า: "ยุติ" และ "อยู่ระหว่างดำเนินการ" และเพิ่มฟิลด์ "หน่วยงานในสังกัด")
 const mockComplaints = [
@@ -192,9 +193,67 @@ const statusOptions = [
 ];
 
 const ReportResultsComponents = () => {
-  const [allComplaints] = useState(mockComplaints);
-  const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async (filters = {}) => {
+    setLoading(true);
+    try {
+      const year = filters.year || new Date().getFullYear();
+      const departmentId = filters.agency || "";
+      const status = filters.status || "";
+
+      // แปลงวันที่เป็น ISO format (YYYY-MM-DD) สำหรับ API
+      let dateFrom = "";
+      let dateTo = "";
+
+      if (filters.receiveDateFrom) {
+        const fromDate = new Date(filters.receiveDateFrom);
+        // แปลงเป็น ค.ศ. ถ้าเป็น พ.ศ.
+        let fromYear = fromDate.getFullYear();
+        if (fromYear > 2500) {
+          fromYear -= 543;
+        }
+        dateFrom = `${fromYear}-${String(fromDate.getMonth() + 1).padStart(2, '0')}-${String(fromDate.getDate()).padStart(2, '0')}`;
+      }
+
+      if (filters.receiveDateTo) {
+        const toDate = new Date(filters.receiveDateTo);
+        // แปลงเป็น ค.ศ. ถ้าเป็น พ.ศ.
+        let toYear = toDate.getFullYear();
+        if (toYear > 2500) {
+          toYear -= 543;
+        }
+        dateTo = `${toYear}-${String(toDate.getMonth() + 1).padStart(2, '0')}-${String(toDate.getDate()).padStart(2, '0')}`;
+      }
+
+      const res = await GetAnnualComplaintDetails(
+        0,
+        100,
+        year,
+        dateFrom,
+        dateTo,
+        departmentId,
+        status
+      );
+      const items = res?.res_data?.items || [];
+
+      setAllComplaints(items);
+      setFilteredComplaints(items);
+    } catch (error) {
+      console.error("Error fetching annual complaint details:", error);
+      setAllComplaints([]);
+      setFilteredComplaints([]);
+    }
+    setLoading(false);
+  };
 
   // เปลี่ยนหน้า summary
   const handleSummaryByIssueType = () => {
@@ -203,43 +262,9 @@ const ReportResultsComponents = () => {
     );
   };
 
-  // แปลงวันที่ส่งไปหรอง
-  const formatDateForComparison = (dateInput) => {
-    if (!dateInput) return null;
-    const date = new Date(dateInput);
-    const year = date.getFullYear() + 543; // แปลงเป็น พ.ศ.
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  // กรองข้อมูลตามวันที่และประเภทเรื่อง
-  const handleSearch = ({ receiveDateFrom, receiveDateTo, issueType }) => {
-    let result = allComplaints;
-
-    const fromDate = formatDateForComparison(receiveDateFrom);
-    const toDate = formatDateForComparison(receiveDateTo); 
-
-    if (fromDate) {
-      result = result.filter((item) => {
-        const itemDate = convertThaiDateStringToBuddhistISO(item.receiptDate);
-        return itemDate && itemDate >= fromDate;
-      });
-    }
-
-    if (toDate) {
-      result = result.filter((item) => {
-        const itemDate = convertThaiDateStringToBuddhistISO(item.receiptDate);
-        return itemDate && itemDate <= toDate;
-      });
-    }
-
-    if (issueType) {
-      result = result.filter((item) => item.issueType === issueType);
-    }
-
-    console.log("Filtered result:", result);
-    setFilteredComplaints(result);
+  // ค้นหาข้อมูลจาก API
+  const handleSearch = async (filters) => {
+    await fetchData(filters);
   };
 
   return (
@@ -269,6 +294,7 @@ const ReportResultsComponents = () => {
 
       <TableAnnualResults
         data={filteredComplaints}
+        loading={loading}
         onSearch={handleSearch}
         actionButtonLabel="สรุปผลตามประเภทเรื่อง"
         onActionClick={handleSummaryByIssueType}

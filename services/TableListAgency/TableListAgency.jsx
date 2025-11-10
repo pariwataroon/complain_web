@@ -567,10 +567,8 @@ const TableListAgency = ({
                         sx={{
                           width: col.width,
                           fontSize: { xs: 12, sm: 14 },
-                          maxWidth: col.width,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
+                          wordWrap: "break-word",
+                          whiteSpace: "normal",
                         }}
                       >
                         {item[col.name] ?? "-"}

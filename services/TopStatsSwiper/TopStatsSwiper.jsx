@@ -10,10 +10,12 @@ import { formatThaiDateMonths } from "@utils/Formats";
 const TopStatsSwiper = ({
   title,
   data,
-  startDate, 
-  endDate, 
+  startDate,
+  endDate,
   variant = "high",
   loading = false,
+  className = "",
+  ...boxProps
 }) => {
   const dateRangeText =
     startDate && endDate
@@ -27,12 +29,26 @@ const TopStatsSwiper = ({
 
   const isHigh = variant === "high";
 
-  const hasData = data && data.length > 0 && data.some(chunk => chunk.length > 0);
+  const hasData =
+    Array.isArray(data) && data.length > 0 && data.some((chunk) => chunk.length > 0);
+
+  const formatCount = (value) => {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+      return "-";
+    }
+    try {
+      return new Intl.NumberFormat("th-TH").format(Number(value));
+    } catch {
+      return String(value);
+    }
+  };
 
   return (
     <Box
-      className={`${styles.topStatsBox} ${isHigh ? styles.cardBlue : styles.cardRed
-        }`}
+      className={`${styles.topStatsBox} ${
+        isHigh ? styles.cardBlue : styles.cardRed
+      } ${className}`}
+      {...boxProps}
     >
       <div className={styles.header}>{title}</div>
 
@@ -60,16 +76,22 @@ const TopStatsSwiper = ({
             autoHeight={true}
           >
             {data.map((pageData, slideIndex) => (
-              <SwiperSlide key={slideIndex}>
-                {pageData.map((item, i) => (
-                  <div key={i} className={styles.itemBox}>
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
+              <SwiperSlide key={`top-stats-slide-${slideIndex}`}>
+                {pageData.map((item, i) => {
+                  const label = item?.name || "-";
+                  const count = formatCount(item?.count);
+                  return (
+                    <div key={`${label}-${i}`} className={styles.itemBox}>
                       <div className={styles.rankCircle}>{i + 1}</div>
-                      <div className={styles.label}>{item.name}</div>
-                    </Box>
-                    <div className={styles.count}>{item.count}</div>
-                  </div>
-                ))}
+                      <div className={styles.itemContent}>
+                        <span className={styles.label} title={label}>
+                          {label}
+                        </span>
+                        <span className={styles.count}>{count}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </SwiperSlide>
             ))}
           </Swiper>

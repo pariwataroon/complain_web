@@ -538,17 +538,14 @@ const fillFormFromReport = useCallback(
     handleFileChange(files);
   };
 
-  const handleDepartmentChange = (department) => {
-    setSelectedDepartment(department);
-    if (department) {
-      setValue("department", department.id);
-    } else {
-      setValue("department", "");
-    }
-  };
-
   const handleDepartmentSelect = (department) => {
-    setSelectedDepartment(department);
+    // เฉพาะเมื่อมีการเลือกหน่วยงานจริงๆ เท่านั้นถึงจะ set
+    // ถ้าเป็น null/undefined ไม่ต้อง clear (เก็บค่าเดิมไว้)
+    if (department && department.id) {
+      setSelectedDepartment(department);
+      setValue("department", department.id, { shouldValidate: true, shouldDirty: true });
+    }
+    // ไม่ clear department ถ้าไม่มีค่าส่งมา (ป้องกันการ clear โดยไม่ตั้งใจ)
   };
 
  const fetchOptions = async () => {
@@ -1054,7 +1051,7 @@ const fillFormFromReport = useCallback(
                   value={field.value}
                   onChange={(e) => field.onChange(e.target.value)}
                   onUserSelect={handleSignerSelect}
-                  onDepartmentChange={handleDepartmentChange}
+                  onDepartmentChange={handleDepartmentSelect}
                   error={!!getFieldError("signer")}
                   helperText={getFieldError("signer")}
                   required={isRequired("signer")}

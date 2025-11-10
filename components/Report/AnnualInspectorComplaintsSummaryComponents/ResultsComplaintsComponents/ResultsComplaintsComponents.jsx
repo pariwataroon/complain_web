@@ -102,7 +102,9 @@ const ResultsComplaintsComponents = () => {
   const fetchSummaryData = async (filters = {}) => {
     setLoading(true);
     try {
-      const res = await GetAllReportsInspector("2025", "", "", "");
+      const dateFrom = filters.receiveDateFrom || "";
+      const dateTo = filters.receiveDateTo || "";
+      const res = await GetAllReportsInspector("2025", "", "", "", dateFrom, dateTo);
       const items = res?.res_data?.items ?? [];
       // เก็บข้อมูลดิบไว้ เพื่อใช้ในการแปลงข้อมูลเมื่อ inspectorPositions พร้อม
       setRawSummaryData(items);
@@ -150,7 +152,9 @@ const ResultsComplaintsComponents = () => {
   const fetchPendingData = async (filters = {}) => {
     setLoading(true);
     try {
-      const res = await GetAllReportsInspectorPending("2025", "", "");
+      const dateFrom = filters.receiveDateFrom || "";
+      const dateTo = filters.receiveDateTo || "";
+      const res = await GetAllReportsInspectorPending("2025", "", "", dateFrom, dateTo);
       const items = res?.res_data?.items ?? [];
       // เก็บข้อมูลดิบไว้ เพื่อใช้ในการแปลงข้อมูลเมื่อ inspectorPositions พร้อม
       setRawPendingData(items);
@@ -195,85 +199,13 @@ const ResultsComplaintsComponents = () => {
     setLoading(false);
   };
 
-  const convertThaiDateToDate = (input) => {
-    if (!input) return null;
-    if (input instanceof Date && !isNaN(input)) return input;
-    const parsed = new Date(input);
-    if (!isNaN(parsed)) return parsed;
-    const [year, month, day] = input.split("-").map(Number);
-    return new Date(year - 543, month - 1, day);
-  };
-  const convertStringToDate = (thaiDateStr) => {
-    if (!thaiDateStr) return null;
-    const months = {
-      "ม.ค.": 0,
-      "ก.พ.": 1,
-      "มี.ค.": 2,
-      "เม.ย.": 3,
-      "พ.ค.": 4,
-      "มิ.ย.": 5,
-      "ก.ค.": 6,
-      "ส.ค.": 7,
-      "ก.ย.": 8,
-      "ต.ค.": 9,
-      "พ.ย.": 10,
-      "ธ.ค.": 11,
-    };
-    const [day, monthThai, yearThai] = thaiDateStr.split(" ");
-    const month = months[monthThai];
-    const year = parseInt(yearThai, 10) - 543;
-    const d = parseInt(day, 10);
-    return new Date(year, month, d);
-  };
-
   // ฟิลเตอร์ข้อมูลสองตาราง
-  const handleSearch = (filters) => {
-    let filteredSummaryResult = [...allSummaryData];
-    let filteredPendingResult = [...allPendingData];
-
-    // ฟิลเตอร์วันที่ (ถ้ามี receiveDate จริง)
-    if (filters.receiveDateFrom) {
-      const fromDate = convertThaiDateToDate(filters.receiveDateFrom);
-      if (fromDate) {
-        fromDate.setHours(0, 0, 0, 0);
-        filteredSummaryResult = filteredSummaryResult.filter((item) => {
-          const itemDate = convertStringToDate(item.receiveDate);
-          return itemDate && itemDate >= fromDate;
-        });
-        filteredPendingResult = filteredPendingResult.filter((item) => {
-          const itemDate = convertStringToDate(item.receiveDate);
-          return itemDate && itemDate >= fromDate;
-        });
-      }
-    }
-    if (filters.receiveDateTo) {
-      const toDate = convertThaiDateToDate(filters.receiveDateTo);
-      if (toDate) {
-        toDate.setHours(23, 59, 59, 999);
-        filteredSummaryResult = filteredSummaryResult.filter((item) => {
-          const itemDate = convertStringToDate(item.receiveDate);
-          return itemDate && itemDate <= toDate;
-        });
-        filteredPendingResult = filteredPendingResult.filter((item) => {
-          const itemDate = convertStringToDate(item.receiveDate);
-          return itemDate && itemDate <= toDate;
-        });
-      }
-    }
-
-    // ฟิลเตอร์ตามชื่อ (ถ้ามี)
-    if (filters.searchName && filters.searchName.trim()) {
-      const searchTerm = filters.searchName.trim().toLowerCase();
-      filteredSummaryResult = filteredSummaryResult.filter((item) =>
-        item.claimantName.toLowerCase().includes(searchTerm)
-      );
-      filteredPendingResult = filteredPendingResult.filter((item) =>
-        item.claimantName.toLowerCase().includes(searchTerm)
-      );
-    }
-
-    setFilteredSummary(filteredSummaryResult);
-    setFilteredPending(filteredPendingResult);
+  const handleSearch = async (filters) => {
+    // เรียก API ใหม่พร้อมพารามิเตอร์วันที่
+    await Promise.all([
+      fetchSummaryData(filters),
+      fetchPendingData(filters)
+    ]);
   };
 
   return (
