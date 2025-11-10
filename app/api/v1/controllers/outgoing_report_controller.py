@@ -811,7 +811,9 @@ def get_user_related_complaints_with_tracking(
     complaint_subtype: Optional[str] = None,
     urgency: Optional[str] = None,
     search: Optional[str] = None,
-    complainant_name: Optional[str] = None
+    complainant_name: Optional[str] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
     รวม 'งานที่ผู้ใช้เกี่ยวข้อง' พร้อม timeline + pagination
@@ -912,6 +914,13 @@ def get_user_related_complaints_with_tracking(
                     clauses.append(func.lower(col).like(func.lower(pattern)))
         if clauses:
             q = q.filter(or_(*clauses))
+
+    # Date range filter
+    if date_from:
+        q = q.filter(Complaint.created_at >= date_from)
+
+    if date_to:
+        q = q.filter(Complaint.created_at < date_to)
 
     total = q.count()
     ordering = [

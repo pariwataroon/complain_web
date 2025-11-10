@@ -40,6 +40,9 @@ from app.api.v1.routers.news_router import router as news_router_v1
 from app.api.v1.routers.inspector_report_router import router as inspector_report_router_v1
 from app.api.v1.routers.inspector_pending_report_router import router as inspector_pending_report_router_v1
 from app.api.v1.routers.staff_notification_report_router import router as staff_notification_report_router_v1
+from app.api.v1.routers.annual_complaint_report_router import router as annual_complaint_report_router_v1
+from app.api.v1.routers.agency_complaint_report_router import router as agency_complaint_report_router_v1
+from app.api.v1.routers.inspector_complaint_management_router import router as inspector_complaint_management_router_v1
 from config.dotenv import PREFIX
 
 # สร้างตัวแปรสำหรับ prefixes แต่ละเวอร์ชัน
@@ -90,6 +93,9 @@ v1_router.include_router(news_router_v1)
 v1_router.include_router(inspector_report_router_v1)
 v1_router.include_router(inspector_pending_report_router_v1)
 v1_router.include_router(staff_notification_report_router_v1)
+v1_router.include_router(annual_complaint_report_router_v1)
+v1_router.include_router(agency_complaint_report_router_v1)
+v1_router.include_router(inspector_complaint_management_router_v1)
 
 # เมื่อมี router เวอร์ชัน 2 ในอนาคต จะเพิ่มได้ง่ายๆ
 # from router.v2.user import router as user_router_v2

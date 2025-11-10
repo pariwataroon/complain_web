@@ -430,6 +430,8 @@ async def read_my_related_complaints(
     urgency: Optional[str] = Query(None, description="ความเร่งด่วน"),
     search: Optional[str] = Query(None, description="คำค้นหา"),
     complainant_name: Optional[str] = Query(None, description="ชื่อผู้ร้องเรียน"),
+    date_from: Optional[str] = Query(None, description="วันที่เริ่มต้น (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="วันที่สิ้นสุด (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("dashboard"))  # เลือกสิทธิ์แบบเดียวกับ /by-page-type
 ):
@@ -439,6 +441,17 @@ async def read_my_related_complaints(
     """
     try:
         current_user_id = UUID(current_user)
+
+        # Parse date strings to datetime
+        from datetime import datetime
+        parsed_date_from = None
+        parsed_date_to = None
+
+        if date_from and date_from.strip():
+            parsed_date_from = datetime.fromisoformat(date_from)
+
+        if date_to and date_to.strip():
+            parsed_date_to = datetime.fromisoformat(date_to)
 
         result = get_user_related_complaints_with_tracking(
             db=db,
@@ -450,7 +463,9 @@ async def read_my_related_complaints(
             complaint_subtype=complaint_subtype,
             urgency=urgency,
             search=search,
-            complainant_name=complainant_name
+            complainant_name=complainant_name,
+            date_from=parsed_date_from,
+            date_to=parsed_date_to
         )
 
         if "error" in result:
