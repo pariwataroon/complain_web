@@ -276,48 +276,32 @@ const DetailOPMExportPDF = ({
 
       yPos += 2;
 
-      // สาระสำคัญ/รายละเอียด (ตัวแดง + wrap)
+      // สาระสำคัญ/รายละเอียด (แสดงข้อความแบบ wrap ทั้งหมด)
       const drawRedParagraph = (label, text) => {
-      if (!text) return;
+        if (!text) return;
 
-      const lbl = String(label);
-      const val = String(text);
+        const lbl = String(label);
+        const val = String(text);
 
-      // ตำแหน่งเริ่มของค่า = ต่อท้าย label พอดี
-      const xVal = margin + doc.getTextWidth(lbl) + 2;
-      const firstLineMaxW = (pageW - margin) - xVal; // ความกว้างที่เหลือในบรรทัดแรก
+        checkNewPage(lineHeight);
 
-      checkNewPage(lineHeight);
+        // พิมพ์หัวข้อ (ดำ) ในบรรทัดแรก
+        doc.setTextColor(0, 0, 0);
+        doc.text(lbl, margin, yPos);
+        yPos += lineHeight;
 
-      // พิมพ์หัวข้อ (ดำ)
-      doc.setTextColor(0, 0, 0);
-      doc.text(lbl, margin, yPos);
-
-      doc.setTextColor(0, 0, 0);
-
-      // ตัดบรรทัดแรกตามพื้นที่ที่เหลือ
-      const firstLineFit = doc.splitTextToSize(val, firstLineMaxW)[0];
-      doc.text(firstLineFit, xVal, yPos);
-      yPos += lineHeight;
-
-      // คำนวณข้อความที่เหลือ
-      const firstLineWidth = doc.getTextWidth(firstLineFit);
-      const charsFit = Math.floor(firstLineFit.length * (firstLineMaxW / firstLineWidth));
-      const remaining = val.substring(charsFit).trim();
-
-      // ตัดบรรทัดที่เหลือด้วยความกว้างเต็ม
-      if (remaining) {
-        const remainingLines = doc.splitTextToSize(remaining, maxWidth);
-        for (const line of remainingLines) {
+        // ตัดข้อความทั้งหมดด้วยความกว้างเต็ม แล้วแสดงทุกบรรทัด
+        doc.setTextColor(0, 0, 0);
+        const allLines = doc.splitTextToSize(val, maxWidth);
+        for (const line of allLines) {
           checkNewPage(lineHeight);
           doc.text(line, margin, yPos);
           yPos += lineHeight;
         }
-      }
 
-      // รีเซ็ตสี
-      doc.setTextColor(0, 0, 0);
-    };
+        // รีเซ็ตสี
+        doc.setTextColor(0, 0, 0);
+      };
 
     // ใช้เหมือนเดิม
     drawRedParagraph("สาระสำคัญของเรื่อง : ", summaryText);
